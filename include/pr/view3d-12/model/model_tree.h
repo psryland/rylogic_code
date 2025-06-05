@@ -37,5 +37,6 @@ namespace pr::rdr12
 			,m_level(level)
 		{}
 	};
+
 	using ModelTree = pr::vector<ModelTreeNode>;
 }

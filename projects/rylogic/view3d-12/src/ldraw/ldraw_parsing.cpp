@@ -1109,8 +1109,8 @@ namespace pr::rdr12::ldraw
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
 				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(fr, fr_brush.address_of()));
+				Check(dc->CreateSolidColorBrush(bk, bk_brush.address_of()));
 
 				// Draw the spot
 				dc->BeginDraw();
@@ -1150,8 +1150,8 @@ namespace pr::rdr12::ldraw
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							Check(geom->Open(&sink.m_ptr));
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(DegreesToRadians(60.0f));
@@ -1174,8 +1174,8 @@ namespace pr::rdr12::ldraw
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							Check(geom->Open(&sink.m_ptr));
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -4127,41 +4127,34 @@ namespace pr::rdr12::ldraw
 				args.handled = true;
 			};
 
+			// Model output helper
+			struct ModeOut : ModelGenerator::IModelOut
+			{
+				LdrObject* m_obj;
+				ModeOut(LdrObject* obj) : m_obj(obj) { ReadAnimation = true; }
+				virtual EResult Model(std::span<ModelTreeNode const> tree) override
+				{
+					ModelTreeToLdr(m_obj, tree);
+					return EResult::Continue;
+				}
+				virtual EResult Anim(std::span<KeyFrameAnimationPtr const> anims) override
+				{
+					// todo, handle multiple animations
+					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anims.front()), true };
+					m_obj->Apply([&](LdrObject* obj)
+					{
+						if (obj->m_model && obj->m_model->m_skinning)
+							obj->m_model->m_skinning->m_animator = animator;
+						return true;
+					}, "");
+
+					return EResult::Continue;
+				}
+			} model_out = {obj};
+
 			// Create the models
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, [&](ModelTree const& tree)
-				{
-					ModelTreeToLdr(obj, tree, obj->m_context_id);
-					return false;
-				}, &opts);
-		}
-
-		// Convert a model tree into a tree of LdrObjects
-		static void ModelTreeToLdr(LdrObject* root, ModelTree const& tree, Guid const& context_id)
-		{
-			if (tree.empty())
-				return;
-
-			pr::vector<LdrObject*> ancestors;
-			ancestors.push_back(root);
-
-			// Add the tree models
-			int lvl0 = tree[0].m_level - 1;
-			for (auto& node : tree)
-			{
-				for (; isize(ancestors) > 1 && isize(ancestors) > node.m_level - lvl0;)
-					ancestors.pop_back();
-
-				// Create an LdrObject for each model
-				LdrObjectPtr obj(new LdrObject(ELdrObject::Model, ancestors.back(), context_id), true);
-				obj->m_name = node.m_model->m_name;
-				obj->m_model = node.m_model;
-				obj->m_o2p = node.m_o2p;
-
-				// Add 'obj' as the current leaf node
-				ancestors.back()->m_child.push_back(obj);
-				ancestors.push_back(obj.get());
-			}
+			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
 		}
 	};
 
@@ -4567,8 +4560,8 @@ namespace pr::rdr12::ldraw
 			assert(ni <= (int)model.m_icount);
 
 			ResourceFactory factory(model.rdr());
-			auto update_v = model.UpdateVertices(factory);
-			auto update_i = model.UpdateIndices(factory);
+			auto update_v = model.UpdateVertices(factory.CmdList(), factory.UploadBuffer());
+			auto update_i = model.UpdateIndices(factory.CmdList(), factory.UploadBuffer());
 			auto vout = update_v.ptr<Vert>();
 			auto iout = update_i.ptr<uint32_t>();
 
@@ -4606,8 +4599,8 @@ namespace pr::rdr12::ldraw
 
 			assert(vout - update_v.ptr<Vert>() == nv);
 			assert(iout - update_i.ptr<uint32_t>() == ni);
-			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+			update_v.Commit();
+			update_i.Commit();
 
 			// Generate nuggets if initialising
 			if (init)
@@ -5200,30 +5193,42 @@ namespace pr::rdr12::ldraw
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
+		struct ModelOut :ModelGenerator::IModelOut
+		{
+			LdrObject* m_obj;
+			ModelOut(LdrObject* obj) :m_obj(obj) {}
+			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			{
+				ModelTreeToLdr(m_obj, tree);
+				return EResult::Continue;
+			}
+		} model_out = { obj.get() };
+
 		// Create the model
 		ResourceFactory factory(rdr);
 		std::ifstream src(p3d_filepath, std::ios::binary);
-		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
-			{
-				ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(obj.get(), tree, obj->m_context_id);
-				return false;
-			});
-
+		ModelGenerator::LoadP3DModel(factory, src, model_out);
 		return obj;
 	}
 	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, std::span<std::byte const> p3d_data, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
+		struct ModelOut :ModelGenerator::IModelOut
+		{
+			LdrObject* m_obj;
+			ModelOut(LdrObject* obj) :m_obj(obj) {}
+			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			{
+				ModelTreeToLdr(m_obj, tree);
+				return EResult::Continue;
+			}
+		} model_out = { obj.get() };
+
 		// Create the model
 		ResourceFactory factory(rdr);
 		mem_istream<char> src(p3d_data.data(), p3d_data.size());
-		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
-			{
-				ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(obj.get(), tree, obj->m_context_id);
-				return false;
-			});
-
+		ModelGenerator::LoadP3DModel(factory, src, model_out);
 		return obj;
 	}
 
@@ -5248,7 +5253,7 @@ namespace pr::rdr12::ldraw
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 	LdrObjectPtr CreateEditCB(Renderer& rdr, ELdrObject type, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(type, 0, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create buffers for a dynamic model
 		ModelDesc mdesc = ModelDesc()
@@ -5386,6 +5391,41 @@ namespace pr::rdr12::ldraw
 			out.Far(true, src.Far(true));
 		if (AllSet(fields, ECamField::Ortho))
 			out.Orthographic(src.Orthographic());
+	}
+
+	// Convert a model tree into a tree of LdrObjects
+	void ModelTreeToLdr(LdrObject* root, std::span<ModelTreeNode const> tree)
+	{
+		if (tree.empty())
+			return;
+
+		root->m_name = tree[0].m_model->m_name;
+		root->m_model = tree[0].m_model;
+		root->m_o2p = tree[0].m_o2p;
+
+		if (tree.size() == 1)
+			return;
+
+		// Recurse
+		pr::vector<LdrObject*> ancestors({ root });
+		for (auto& node : tree.subspan<1>())
+		{
+			// The size of the ancestor stack is also the tree level
+			for (auto lvl0 = tree[0].m_level; isize(ancestors) > 1 && isize(ancestors) > node.m_level - lvl0;)
+				ancestors.pop_back();
+
+			auto* parent = ancestors.back();
+
+			// Create an LdrObject for each model
+			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent, root->m_context_id), true);
+			obj->m_name = node.m_model->m_name;
+			obj->m_model = node.m_model;
+			obj->m_o2p = node.m_o2p;
+
+			// Add 'obj' as the current leaf node
+			parent->m_child.push_back(obj);
+			ancestors.push_back(obj.get());
+		}
 	}
 
 	// IReader ------------------------------------------------------------------------------------

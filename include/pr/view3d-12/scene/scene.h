@@ -11,7 +11,6 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/ray_cast.h"
-#include "pr/view3d-12/ldraw/ldraw_object.h"
 
 namespace pr::rdr12
 {
@@ -72,10 +71,6 @@ namespace pr::rdr12
 		void AddInstance(Inst const& inst)
 		{
 			AddInstance(inst.m_base);
-		}
-		void AddInstance(ldraw::LdrObjectPtr ldr_obj)
-		{
-			ldr_obj->AddToScene(*this);
 		}
 
 		// Remove an instance from the draw list

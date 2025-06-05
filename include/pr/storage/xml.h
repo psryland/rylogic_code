@@ -520,14 +520,14 @@ namespace pr::xml
 	{
 		// Create an 'IStream' from a file
 		Ptr<IStream> stream;
-		impl::Check(SHCreateStreamOnFileA(filename, STGM_READ, &stream.m_ptr));
+		impl::Check(SHCreateStreamOnFileA(filename, STGM_READ, stream.address_of()));
 		return Load(stream);
 	}
 	inline Node Load(wchar_t const* filename)
 	{
 		// Create an 'IStream' from a file
 		Ptr<IStream> stream;
-		impl::Check(SHCreateStreamOnFileW(filename, STGM_READ, &stream.m_ptr));
+		impl::Check(SHCreateStreamOnFileW(filename, STGM_READ, stream.address_of()));
 		return Load(stream);
 	}
 	inline Node Load(char const* xml_string, std::size_t length)
@@ -566,7 +566,7 @@ namespace pr::xml
 	{
 		// Create an 'IStream' from a file
 		Ptr<IStream> stream;
-		impl::Check(SHCreateStreamOnFileW(filename.c_str(), STGM_WRITE | STGM_CREATE, &stream.m_ptr));
+		impl::Check(SHCreateStreamOnFileW(filename.c_str(), STGM_WRITE | STGM_CREATE, stream.address_of()));
 		Save(stream, in, properties);
 	}
 

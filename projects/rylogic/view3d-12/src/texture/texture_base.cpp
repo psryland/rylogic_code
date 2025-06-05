@@ -16,7 +16,7 @@ namespace pr::rdr12
 	{
 		// Get the DXGI resource interface for the shared resource
 		D3DPtr<IDXGIResource> dxgi_resource;
-		Check(shared_resource->QueryInterface<IDXGIResource>(&dxgi_resource.m_ptr));
+		Check(shared_resource->QueryInterface<IDXGIResource>(dxgi_resource.address_of()));
 
 		// Get the handled of the shared resource so that we can open it with our d3d device
 		HANDLE shared_handle;
@@ -125,10 +125,10 @@ namespace pr::rdr12
 	{
 		// Open the shared resource in our d3d device
 		D3DPtr<IUnknown> resource;
-		Check(rdr.d3d()->OpenSharedHandle(shared_handle, __uuidof(ID3D12Resource), (void**)&resource.m_ptr));
+		Check(rdr.d3d()->OpenSharedHandle(shared_handle, __uuidof(ID3D12Resource), (void**)resource.address_of()));
 
 		// Query the resource interface from the resource
-		Check(resource->QueryInterface(__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
+		Check(resource->QueryInterface(__uuidof(ID3D12Resource), (void**)m_res.address_of()));
 	}
 	TextureBase::TextureBase(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc)
 		: TextureBase(rdr, SharedHandleFromSharedResource(shared_resource), desc)
@@ -186,7 +186,7 @@ namespace pr::rdr12
 	{
 		HANDLE handle;
 		D3DPtr<IDXGIResource> res;
-		Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+		Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)res.address_of()));
 		Check(res->GetSharedHandle(&handle));
 		return handle;
 	}
@@ -195,7 +195,7 @@ namespace pr::rdr12
 	D3DPtr<IDXGISurface> TextureBase::GetSurface()
 	{
 		D3DPtr<IDXGISurface> surf;
-		Check(m_res->QueryInterface(&surf.m_ptr));
+		Check(m_res->QueryInterface(surf.address_of()));
 		return surf;
 	}
 

@@ -17,6 +17,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/sortkey.h"
+#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/pipe_state.h"
@@ -41,6 +42,7 @@ namespace pr::rdr12
 		TintColour32,        // pr::Colour32
 		DiffTexture,         // An override of the main diffuse texture
 		DiffTextureSampler,  // An override of the main diffuse texture sampler
+		Skin,                // An override of the model skinning bones
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -274,11 +276,18 @@ namespace pr::rdr12
 		return ptex ? *ptex : nullptr;
 	}
 
-	// Return the sampler override in this isntance (if exists)
+	// Return the sampler override in this instance (if exists)
 	inline SamplerPtr FindDiffTextureSampler(BaseInstance const& inst)
 	{
 		auto const* psamp = inst.find<SamplerPtr>(EInstComp::DiffTextureSampler);
 		return psamp ? *psamp : nullptr;
+	}
+
+	// Return the skin override in this instance (if exists)
+	inline SkinningPtr FindSkin(BaseInstance const& inst)
+	{
+		auto const* pskin = inst.find<SkinningPtr>(EInstComp::Skin);
+		return pskin ? *pskin : nullptr;
 	}
 
 	// Cast from a 'BaseInstance' pointer to an instance type

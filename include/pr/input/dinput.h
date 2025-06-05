@@ -152,7 +152,7 @@ namespace pr::dinput
 	inline D3DPtr<IDirectInput8> GetDInput(HINSTANCE app_inst)
 	{
 		D3DPtr<IDirectInput8> ptr;
-		Check(::DirectInput8Create(app_inst, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&ptr.m_ptr, 0));
+		Check(::DirectInput8Create(app_inst, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)ptr.address_of(), 0));
 		return ptr;
 	}
 
@@ -330,7 +330,7 @@ namespace pr::dinput
 			Check(settings.m_instance.valid(), "direct input device instance invalid");
 
 			// Create the device
-			Check(settings.m_dinput->CreateDevice(settings.m_instance.m_instance_guid, &m_device.m_ptr, 0));
+			Check(settings.m_dinput->CreateDevice(settings.m_instance.m_instance_guid, m_device.address_of(), 0));
 
 			// Cooperate with windows
 			Check(m_device->SetCooperativeLevel(m_settings.m_hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE));

@@ -41,7 +41,7 @@ namespace pr::rdr12
 
 			// Create the pipeline state instance
 			D3DPtr<ID3D12PipelineState> pso;
-			Check(device->CreateGraphicsPipelineState(desc, __uuidof(ID3D12PipelineState), (void**)&pso.m_ptr));
+			Check(device->CreateGraphicsPipelineState(desc, __uuidof(ID3D12PipelineState), (void**)pso.address_of()));
 			iter = m_pool.insert(iter, PipeStateObject(pso, frame_number, desc.m_hash));
 		}
 

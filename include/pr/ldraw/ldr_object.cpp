@@ -1022,8 +1022,8 @@ namespace pr::ldr
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = pr::To<D3DCOLORVALUE>(Colour32(0xFFFFFFFF));
 				auto bk = pr::To<D3DCOLORVALUE>(Colour32(0x00000000));
-				pr::Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				pr::Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				pr::Check(dc->CreateSolidColorBrush(fr, fr_brush.address_of()));
+				pr::Check(dc->CreateSolidColorBrush(bk, bk_brush.address_of()));
 
 				// Draw the spot
 				dc->BeginDraw();
@@ -1062,8 +1062,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Check(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							pr::Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
@@ -1086,8 +1086,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Check(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							pr::Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -4258,7 +4258,7 @@ namespace pr::ldr
 		}
 
 		// Convert a model tree into a tree of LdrObjects
-		static LdrObjectPtr ModelTreeToLdr(ModelTree const& tree, Guid const& context_id)
+		static LdrObjectPtr ModelTreeToLdr(std::span<ModelTreeNode const> tree, Guid const& context_id)
 		{
 			std::vector<LdrObjectPtr> stack;
 			for (auto& node : tree)

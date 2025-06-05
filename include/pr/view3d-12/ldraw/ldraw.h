@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/model/animation.h"
+#include "pr/view3d-12/model/animator.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -343,16 +344,21 @@ namespace pr::rdr12::ldraw
 	struct Animation
 	{
 		SimpleAnimationPtr m_simple;
-		KeyFrameAnimationPtr m_keyframe;
+		float m_time_s;
 
-		// Returns the root motion at 'time'
-		m4x4 Step(double time) const
+		// Returns the root motion at the current time
+		m4x4 RootToWorld() const
 		{
+			auto i2w = m4x4::Identity();
 			if (m_simple)
-				return m_simple->Step(time);
-			if (m_keyframe)
-				(void)"todo - root motion?";
-			return m4x4::Identity();
+				i2w *= m_simple->EvaluateAtTime(m_time_s);
+			return i2w;
+		}
+
+		// Has animation?
+		explicit operator bool() const
+		{
+			return m_simple != nullptr;
 		}
 	};
 

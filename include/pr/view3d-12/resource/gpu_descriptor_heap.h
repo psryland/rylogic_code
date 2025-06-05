@@ -80,7 +80,7 @@ namespace pr::rdr12
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				.NodeMask = 0U,
 			};
-			Check(device()->CreateDescriptorHeap(&desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_heap.m_ptr));
+			Check(device()->CreateDescriptorHeap(&desc, __uuidof(ID3D12DescriptorHeap), (void**)m_heap.address_of()));
 			
 			// Add a dummy sync point to be the current tail.
 			m_sync.push_back({0ULL, 0});

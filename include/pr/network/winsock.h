@@ -243,6 +243,10 @@ namespace pr::network
 				m_ptr = m_ptr->ai_next;
 				return *this;
 			}
+			ADDRINFOA** address_of()
+			{
+				return &m_ptr;
+			}
 			
 			friend bool operator == (AddrIter lhs, AddrIter rhs)
 			{
@@ -267,7 +271,7 @@ namespace pr::network
 			hints.ai_family = addr_family;
 			hints.ai_socktype = socket_type;
 			hints.ai_protocol = proto;
-			auto r = ::getaddrinfo(std::string(ip).c_str(), std::string(service).c_str(), &hints, &m_first.m_ptr);
+			auto r = ::getaddrinfo(std::string(ip).c_str(), std::string(service).c_str(), &hints, m_first.address_of());
 			if (r != 0)
 				Throw(WSAGetLastError(), std::format("Failed to resolve address: {}:{}", ip, service));
 		}

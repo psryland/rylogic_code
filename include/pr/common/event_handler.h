@@ -678,7 +678,7 @@ namespace pr::common
 			}
 			{// static function handler using std::bind
 				Thing thg;
-				static auto Handler = [](void* ctx, Thing& thing, EmptyArgs const&) { thing.m_count += int(ctx == nullptr); };
+				auto Handler = [](void* ctx, Thing& thing, EmptyArgs const&) { thing.m_count += int(ctx == nullptr); };
 				{
 					AutoSub sub = thg.Event1 += std::bind(Handler, nullptr, _1, _2);
 					thg.Call1();
@@ -790,7 +790,7 @@ namespace pr::common
 			}
 			{// static function handler using std::bind
 				Thing thg;
-				static auto Handler = [](void* ctx, int* c) { *c += int(ctx == nullptr); };
+				auto Handler = [](void* ctx, int* c) { *c += int(ctx == nullptr); };
 				{
 					AutoSub sub = thg.Action1 += std::bind(Handler, nullptr, _1);
 					thg.Call3();

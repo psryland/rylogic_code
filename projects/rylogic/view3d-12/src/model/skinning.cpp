@@ -4,20 +4,28 @@
 //*********************************************
 #include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/skeleton.h"
+#include "pr/view3d-12/model/animator.h"
+#include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/resource/resource_factory.h"
+#include "pr/view3d-12/resource/resource_store.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
-	Skinning::Skinning(Model* model, int bone_count, int vert_count, ID3D12Resource* skel, ID3D12Resource* skin)
-		: m_model(model)
-		, m_skel(skel, true)
-		, m_skin(skin, true)
+	Skinning::Skinning(ResourceFactory& factory, std::span<Skinfluence const> verts, SkeletonPtr skeleton, AnimatorPtr animator)
+		: m_animator(animator)
+		, m_skeleton(skeleton)
+		, m_skel(factory.CreateResource(ResDesc::Buf<m4x4>(isize(skeleton->m_bones), skeleton->m_bones).usage(EUsage::UnorderedAccess), "skel"))
+		, m_skin(factory.CreateResource(ResDesc::Buf<Skinfluence>(isize(verts), verts).usage(EUsage::UnorderedAccess), "skin"))
 		, m_srv_skel()
 		, m_srv_skin()
-		, m_bone_count(bone_count)
-		, m_vert_count(vert_count)
+		, m_time0(-1.0)
+		, m_time1(-1.0)
+		, m_bone_count(isize(m_skeleton->m_bones))
+		, m_vert_count(isize(verts))
 	{
-		ResourceStore::Access store(rdr());
+		ResourceStore::Access store(factory.rdr());
 
 		// Create the skeleton SRV
 		{
@@ -32,7 +40,7 @@ namespace pr::rdr12
 					.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE,
 				},
 			};
-			m_srv_skel = store.Descriptors().Create(skel, srv_desc);
+			m_srv_skel = store.Descriptors().Create(m_skel.get(), srv_desc);
 		}
 
 		// Create the skin SRV
@@ -48,18 +56,43 @@ namespace pr::rdr12
 					.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE,
 				},
 			};
-			m_srv_skin = store.Descriptors().Create(skin, srv_desc);
+			m_srv_skin = store.Descriptors().Create(m_skin.get(), srv_desc);
 		}
 	}
-
-	// Renderer access
-	Renderer const& Skinning::rdr() const
+	
+	// Set the animation time (in seconds)
+	void Skinning::AnimTime(double time_s)
 	{
-		return m_model->rdr();
+		m_time1 = time_s;
 	}
-	Renderer& Skinning::rdr()
+
+	// Reset to the rest pose
+	void Skinning::ResetPose(GfxCmdList& cmd_list, GpuUploadBuffer& upload_buffer)
 	{
-		return m_model->rdr();
+		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_skel.get(), alignof(m4x4), 0, m_bone_count * sizeof(m4x4));
+		memcpy(update.ptr<m4x4>(), m_skeleton->m_bones.data(), m_skeleton->m_bones.size() * sizeof(m4x4));
+		update.Commit();
+	}
+
+	// Update the bone transforms
+	void Skinning::Update(GfxCmdList& cmd_list, GpuUploadBuffer& upload_buffer)
+	{
+		// No change in time, assume up to date already
+		if (m_time0 == m_time1)
+			return;
+
+		// No animator, return to the rest pose
+		if (m_animator == nullptr)
+		{
+			ResetPose(cmd_list, upload_buffer);
+			return;
+		}
+
+		// Ask the animator to populate the bone transforms
+		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_skel.get(), alignof(m4x4), 0, m_bone_count * sizeof(m4x4));
+		m_animator->Animate({ update.ptr<m4x4>(), s_cast<size_t>(m_bone_count) }, m_time1);
+		m_time0 = m_time1;
+		update.Commit();
 	}
 
 	// Ref-counting clean up function

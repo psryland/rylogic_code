@@ -14,7 +14,7 @@ namespace pr::rdr
 	{
 		// Get the DXGI resource interface for the shared resource
 		D3DPtr<IDXGIResource> dxgi_resource;
-		Check(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
+		Check(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)dxgi_resource.address_of()));
 
 		// Get the handled of the shared resource so that we can open it with our d3d device
 		HANDLE shared_handle;
@@ -41,10 +41,10 @@ namespace pr::rdr
 		// Open the shared resource in our d3d device
 		D3DPtr<IUnknown> resource;
 		Renderer::Lock lock(m_mgr->m_rdr);
-		Check(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
+		Check(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)resource.address_of()));
 
 		// Query the resource interface from the resource
-		Check(resource->QueryInterface(__uuidof(ID3D11Resource), (void**)&m_res.m_ptr));
+		Check(resource->QueryInterface(__uuidof(ID3D11Resource), (void**)m_res.address_of()));
 	}
 	TextureBase::TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name)
 		:TextureBase(mgr, id, SharedHandleFromSharedResource(shared_resource), src_id, name)
@@ -62,7 +62,7 @@ namespace pr::rdr
 	{
 		Renderer::Lock lock(m_mgr->m_rdr);
 		D3DPtr<ID3D11SamplerState> samp_state;
-		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
+		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, samp_state.address_of()));
 		m_samp = samp_state;
 	}
 
@@ -77,7 +77,7 @@ namespace pr::rdr
 
 		Renderer::Lock lock(m_mgr->m_rdr);
 		D3DPtr<ID3D11SamplerState> samp;
-		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
+		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, samp.address_of()));
 		m_samp = samp;
 	}
 
@@ -86,7 +86,7 @@ namespace pr::rdr
 	{
 		HANDLE handle;
 		D3DPtr<IDXGIResource> res;
-		pr::Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+		pr::Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)res.address_of()));
 		pr::Check(res->GetSharedHandle(&handle));
 		return handle;
 	}

@@ -117,7 +117,7 @@ namespace pr::rdr
 				
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11InputLayout> ip;
-			pr::Check(lock1.D3DDevice()->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, &ip.m_ptr));
+			pr::Check(lock1.D3DDevice()->CreateInputLayout(desc->m_iplayout, UINT(desc->m_iplayout_count), desc->m_data, desc->m_size, ip.address_of()));
 			return std::move(ip);
 		});
 	}
@@ -138,7 +138,7 @@ namespace pr::rdr
 			// Attach the input layout as private data to the vertex shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11VertexShader> vs;
-			pr::Check(lock1.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, nullptr, &vs.m_ptr));
+			pr::Check(lock1.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, nullptr, vs.address_of()));
 			return std::move(vs);
 		});
 	}
@@ -156,7 +156,7 @@ namespace pr::rdr
 			// Create the pixel shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11PixelShader> ps;
-			Check(lock1.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, nullptr, &ps.m_ptr), "Failed to create pixel shader.");
+			Check(lock1.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, nullptr, ps.address_of()), "Failed to create pixel shader.");
 			return std::move(ps);
 		});
 	}
@@ -174,7 +174,7 @@ namespace pr::rdr
 			// Create the geometry shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11GeometryShader> gs;
-			pr::Check(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, nullptr, &gs.m_ptr));
+			pr::Check(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, nullptr, gs.address_of()));
 			return std::move(gs);
 		});
 	}
@@ -190,7 +190,7 @@ namespace pr::rdr
 			// Create the geometry shader with stream out
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11GeometryShader> gs;
-			pr::Check(lock1.D3DDevice()->CreateGeometryShaderWithStreamOutput(desc->m_data, desc->m_size, so_desc.decl(), so_desc.num_entries(), so_desc.strides(), so_desc.num_strides(), so_desc.raster_stream(), so_desc.class_linkage(), &gs.m_ptr));
+			pr::Check(lock1.D3DDevice()->CreateGeometryShaderWithStreamOutput(desc->m_data, desc->m_size, so_desc.decl(), so_desc.num_entries(), so_desc.strides(), so_desc.num_strides(), so_desc.raster_stream(), so_desc.class_linkage(), gs.address_of()));
 			return std::move(gs);
 		});
 	}
@@ -208,7 +208,7 @@ namespace pr::rdr
 			// Create the pixel shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11ComputeShader> cs;
-			pr::Check(lock1.D3DDevice()->CreateComputeShader(desc->m_data, desc->m_size, nullptr, &cs.m_ptr));
+			pr::Check(lock1.D3DDevice()->CreateComputeShader(desc->m_data, desc->m_size, nullptr, cs.address_of()));
 			return std::move(cs);
 		});
 	}
@@ -225,7 +225,7 @@ namespace pr::rdr
 		// Create the 'cbuffer', add it to the lookup, and return it
 		D3DPtr<ID3D11Buffer> cbuf;
 		CBufferDesc cbdesc(sz);
-		pr::Check(lock.D3DDevice()->CreateBuffer(&cbdesc, 0, &cbuf.m_ptr));
+		pr::Check(lock.D3DDevice()->CreateBuffer(&cbdesc, 0, cbuf.address_of()));
 		PR_EXPAND(PR_DBG_RDR, NameResource(cbuf.get(), name)); (void)name;
 		m_lookup_cbuf[id] = cbuf;
 		return std::move(cbuf);

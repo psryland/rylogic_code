@@ -10,7 +10,7 @@
 
 namespace pr::rdr12
 {
-	// An allocation a GpuTransferBuffer
+	// An allocation in a GpuTransferBuffer
 	struct GpuTransferAllocation
 	{
 		// Notes:
@@ -62,12 +62,12 @@ namespace pr::rdr12
 				, m_sync_point(sync_point)
 			{
 				HeapProps heap_props(HeapType);
-				auto& desc = ResDesc::Buf(size, 1, {}, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
+				ResDesc desc = ResDesc::Buf(size, 1, {}, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
 				assert(desc.Check());
 				Check(device->CreateCommittedResource(
 					&heap_props, D3D12_HEAP_FLAG_NONE,
 					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-					__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
+					__uuidof(ID3D12Resource), (void**)m_res.address_of()));
 				Check(m_res->SetName(L"GpuTransferBuffer:Block"));
 
 				// Upload buffers can live mapped
@@ -90,16 +90,18 @@ namespace pr::rdr12
 
 		using Lookup = Lookup<int, D3D12_GPU_VIRTUAL_ADDRESS>;
 		using SyncPoint = struct { Block const* m_block; int64_t m_offset; };
-		using SyncPoints = pr::deque<SyncPoint>;
+		using SyncPoints = pr::deque<SyncPoint, 4>;
+		using UsedBlocks = pr::deque<Block, 4>;
+		using FreeBlocks = pr::vector<Block, 4>;
 		using Allocation = GpuTransferAllocation;
 
-		pr::deque<Block>  m_used;      // The set of blocks in use by the GPU (or currently being added to).
-		pr::vector<Block> m_free;      // Blocks that the GPU has finished with and can be recycled.
-		int64_t           m_blk_size;  // The default size of each block. (Will auto create large blocks if needed).
-		int32_t           m_blk_align; // The alignment to create blocks with.
-		GpuSync*          m_gsync;     // The GPU fence marking GPU progress.
-		Lookup            m_lookup;    // A lookup for buffer reuse (since the last sync point).
-		AutoSub           m_eh0;       // Event subscription
+		UsedBlocks m_used;      // The set of blocks in use by the GPU (or currently being added to).
+		FreeBlocks m_free;      // Blocks that the GPU has finished with and can be recycled.
+		int64_t    m_blk_size;  // The default size of each block. (Will auto create large blocks if needed).
+		int32_t    m_blk_align; // The alignment to create blocks with.
+		GpuSync*   m_gsync;     // The GPU fence marking GPU progress.
+		Lookup     m_lookup;    // A lookup for buffer reuse (since the last sync point).
+		AutoSub    m_eh0;       // Event subscription
 
 		GpuTransferBuffer(GpuSync& gsync, int64_t block_size, int block_alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 			:m_used()

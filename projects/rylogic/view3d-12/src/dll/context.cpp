@@ -9,6 +9,7 @@
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_file.h"
 #include "view3d-12/src/dll/context.h"
@@ -333,8 +334,8 @@ namespace pr::rdr12
 		ResourceFactory factory(model->rdr());
 
 		{// Update the model geometry
-			auto update_v = model->UpdateVertices(factory, { 0, new_vcount });
-			auto update_i = model->UpdateIndices(factory, { 0, new_icount });
+			auto update_v = model->UpdateVertices(factory.CmdList(), factory.UploadBuffer(), { 0, new_vcount });
+			auto update_i = model->UpdateIndices(factory.CmdList(), factory.UploadBuffer(), { 0, new_icount });
 
 			model->m_bbox.reset();
 
@@ -354,8 +355,8 @@ namespace pr::rdr12
 				*iout++ = *iin;
 			}
 
-			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+			update_v.Commit();
+			update_i.Commit();
 		}
 
 		// Update the model nuggets

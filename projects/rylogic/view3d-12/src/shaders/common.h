@@ -8,6 +8,7 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/resource/stock_resources.h"
@@ -28,7 +29,7 @@
 namespace pr::rdr12
 {
 	// How To Make A New Shader:
-	// - Add an HLSL file:  e.g. '/view3d/shaders/hlsl/<whatever>/your_file.hlsl'
+	// - Add an HLSL file:  e.g. '/view3d-12/shaders/hlsl/<whatever>/your_file.hlsl'
 	//   The HLSL file should contain the VS,GS,PS,etc shader definition (see existing examples)
 	//   Change the Item Type to 'Custom Build Tool'. The default python script should already
 	//   be set from the property sheets.

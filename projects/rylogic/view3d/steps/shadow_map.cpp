@@ -109,17 +109,17 @@ namespace pr::rdr
 		tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 		tdesc.CPUAccessFlags = 0;
 		tdesc.MiscFlags = 0;//D3D11_RESOURCE_MISC_TEXTURECUBE;
-		Check(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
+		Check(device->CreateTexture2D(&tdesc, 0, m_tex.address_of()));
 		PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap"));
 
 		// Get the render target view
 		RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
-		Check(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
+		Check(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, m_rtv.address_of()));
 
 		// Get the shader res view
 		ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 		srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-		Check(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
+		Check(device->CreateShaderResourceView(m_tex.get(), &srvdesc, m_srv.address_of()));
 	}
 
 	// Update the projection parameters for the given scene
@@ -293,7 +293,7 @@ namespace pr::rdr
 			sdesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 			sdesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
 			sdesc.ComparisonFunc = D3D11_COMPARISON_GREATER;
-			Check(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_samp.m_ptr));
+			Check(lock.D3DDevice()->CreateSamplerState(&sdesc, m_samp.address_of()));
 		}
 
 		AddLight(light);
@@ -319,7 +319,7 @@ namespace pr::rdr
 		if (caster != nullptr)
 		{
 			// Save a reference to the main render target/depth buffer
-			dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+			dc->OMGetRenderTargets(1, m_main_rtv.address_of(), m_main_dsv.address_of());
 
 			// Bind the smap RT to the OM
 			dc->OMSetRenderTargets(1, &caster->m_rtv.m_ptr, nullptr);
@@ -327,7 +327,7 @@ namespace pr::rdr
 		else
 		{
 			// Restore the main RT and depth buffer
-			dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+			dc->OMSetRenderTargets(1, m_main_rtv.address_of(), m_main_dsv.m_ptr);
 
 			// Release our reference to the main rtv/dsv
 			m_main_rtv = nullptr;

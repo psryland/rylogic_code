@@ -575,7 +575,7 @@ namespace pr
 			: All(value, [](auto x) { return IsFinite(x); });
 	}
 
-	// Ceil/Floor/Round/Fmod
+	// Ceil/Floor/Round/Modulus
 	template <Scalar S> inline S Ceil(S x)
 	{
 		return static_cast<S>(std::ceil(x));
@@ -588,9 +588,12 @@ namespace pr
 	{
 		return static_cast<S>(std::round(x));
 	}
-	template <Scalar S> inline S Fmod(S x, S y)
+	template <Scalar S> inline S Modulus(S x, S y)
 	{
-		return std::fmod(x, y);
+		if constexpr (std::floating_point<S>)
+			return std::fmod(x, y);
+		else
+			return x % y;
 	}
 	template <maths::VectorX T> inline T Ceil(T const& v)
 	{
@@ -607,9 +610,9 @@ namespace pr
 		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
 		return CompOp(v, [](auto x) { return Round(x); });
 	}
-	template <maths::VectorX T> inline T Fmod(T const& x, T const& y)
+	template <maths::VectorX T> inline T Modulus(T const& x, T const& y)
 	{
-		return CompOp(x, y, [](auto x, auto y) { return Fmod(x, y); });
+		return CompOp(x, y, [](auto x, auto y) { return Modulus(x, y); });
 	}
 
 	// Wrap 'x' to range [mn, mx)
@@ -618,7 +621,7 @@ namespace pr
 		// Given the range ['mn', 'mx') and 'x' somewhere on the number line.
 		// Return 'x' wrapped into the range, allowing for 'x' < 'mn'.
 		auto range = mx - mn;
-		return mn + (((x - mn) % range) + range) % range;
+		return mn + Modulus((Modulus(x - mn, range) + range), range);
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
@@ -1743,42 +1746,57 @@ namespace pr::maths
 			PR_CHECK(Clamp(12, 0, 10) == 10, true);
 		}
 		{// Wrap
-			PR_CHECK(Wrap(-1, 0, 3) == 2, true); // [0, 3)
-			PR_CHECK(Wrap(+0, 0, 3) == 0, true);
-			PR_CHECK(Wrap(+1, 0, 3) == 1, true);
-			PR_CHECK(Wrap(+2, 0, 3) == 2, true);
-			PR_CHECK(Wrap(+3, 0, 3) == 0, true);
-			PR_CHECK(Wrap(+4, 0, 3) == 1, true);
+			PR_EXPECT(Wrap(-1, 0, 3) == 2); // [0, 3)
+			PR_EXPECT(Wrap(+0, 0, 3) == 0);
+			PR_EXPECT(Wrap(+1, 0, 3) == 1);
+			PR_EXPECT(Wrap(+2, 0, 3) == 2);
+			PR_EXPECT(Wrap(+3, 0, 3) == 0);
+			PR_EXPECT(Wrap(+4, 0, 3) == 1);
 
-			PR_CHECK(Wrap(-3, -2, +3) == +2, true); // [-2,+2]
-			PR_CHECK(Wrap(-2, -2, +3) == -2, true);
-			PR_CHECK(Wrap(-1, -2, +3) == -1, true);
-			PR_CHECK(Wrap(+0, -2, +3) == 0, true);
-			PR_CHECK(Wrap(+1, -2, +3) == +1, true);
-			PR_CHECK(Wrap(+2, -2, +3) == +2, true);
-			PR_CHECK(Wrap(+3, -2, +3) == -2, true);
+			PR_EXPECT(Wrap(-1.0, 0.0, 3.0) == 2.0); // [0, 3)
+			PR_EXPECT(Wrap(+0.0, 0.0, 3.0) == 0.0);
+			PR_EXPECT(Wrap(+1.0, 0.0, 3.0) == 1.0);
+			PR_EXPECT(Wrap(+2.0, 0.0, 3.0) == 2.0);
+			PR_EXPECT(Wrap(+3.0, 0.0, 3.0) == 0.0);
+			PR_EXPECT(Wrap(+4.0, 0.0, 3.0) == 1.0);
 
-			PR_CHECK(Wrap(+1, +2, +5) == 4, true); // [+2,+5)
-			PR_CHECK(Wrap(+2, +2, +5) == 2, true);
-			PR_CHECK(Wrap(+3, +2, +5) == 3, true);
-			PR_CHECK(Wrap(+4, +2, +5) == 4, true);
-			PR_CHECK(Wrap(+5, +2, +5) == 2, true);
-			PR_CHECK(Wrap(+6, +2, +5) == 3, true);
+			PR_EXPECT(Wrap(-3, -2, +3) == +2); // [-2,+2]
+			PR_EXPECT(Wrap(-2, -2, +3) == -2);
+			PR_EXPECT(Wrap(-1, -2, +3) == -1);
+			PR_EXPECT(Wrap(+0, -2, +3) == +0);
+			PR_EXPECT(Wrap(+1, -2, +3) == +1);
+			PR_EXPECT(Wrap(+2, -2, +3) == +2);
+			PR_EXPECT(Wrap(+3, -2, +3) == -2);
 
-			PR_CHECK(Wrap(-3, 0, 1) == 0, true); // [0,1)
-			PR_CHECK(Wrap(-2, 0, 1) == 0, true);
-			PR_CHECK(Wrap(-1, 0, 1) == 0, true);
-			PR_CHECK(Wrap(+0, 0, 1) == 0, true);
-			PR_CHECK(Wrap(+1, 0, 1) == 0, true);
-			PR_CHECK(Wrap(+2, 0, 1) == 0, true);
-			PR_CHECK(Wrap(+3, 0, 1) == 0, true);
+			PR_EXPECT(Wrap(-3.0, -2.0, +3.0) == +2.0); // [-2,+2]
+			PR_EXPECT(Wrap(-2.0, -2.0, +3.0) == -2.0);
+			PR_EXPECT(Wrap(-1.0, -2.0, +3.0) == -1.0);
+			PR_EXPECT(Wrap(+0.0, -2.0, +3.0) == +0.0);
+			PR_EXPECT(Wrap(+1.0, -2.0, +3.0) == +1.0);
+			PR_EXPECT(Wrap(+2.0, -2.0, +3.0) == +2.0);
+			PR_EXPECT(Wrap(+3.0, -2.0, +3.0) == -2.0);
 
-			PR_CHECK(Wrap(-3, -1, 0) == -1, true); // [-1,0)
-			PR_CHECK(Wrap(-2, -1, 0) == -1, true);
-			PR_CHECK(Wrap(-1, -1, 0) == -1, true);
-			PR_CHECK(Wrap(+0, -1, 0) == -1, true);
-			PR_CHECK(Wrap(+1, -1, 0) == -1, true);
-			PR_CHECK(Wrap(+2, -1, 0) == -1, true);
+			PR_EXPECT(Wrap(+1, +2, +5) == 4); // [+2,+5)
+			PR_EXPECT(Wrap(+2, +2, +5) == 2);
+			PR_EXPECT(Wrap(+3, +2, +5) == 3);
+			PR_EXPECT(Wrap(+4, +2, +5) == 4);
+			PR_EXPECT(Wrap(+5, +2, +5) == 2);
+			PR_EXPECT(Wrap(+6, +2, +5) == 3);
+
+			PR_EXPECT(Wrap(-3, 0, 1) == 0); // [0,1)
+			PR_EXPECT(Wrap(-2, 0, 1) == 0);
+			PR_EXPECT(Wrap(-1, 0, 1) == 0);
+			PR_EXPECT(Wrap(+0, 0, 1) == 0);
+			PR_EXPECT(Wrap(+1, 0, 1) == 0);
+			PR_EXPECT(Wrap(+2, 0, 1) == 0);
+			PR_EXPECT(Wrap(+3, 0, 1) == 0);
+
+			PR_EXPECT(Wrap(-3, -1, 0) == -1); // [-1,0)
+			PR_EXPECT(Wrap(-2, -1, 0) == -1);
+			PR_EXPECT(Wrap(-1, -1, 0) == -1);
+			PR_EXPECT(Wrap(+0, -1, 0) == -1);
+			PR_EXPECT(Wrap(+1, -1, 0) == -1);
+			PR_EXPECT(Wrap(+2, -1, 0) == -1);
 		}
 		{// Smallest/Largest element
 			int arr0[] = {1, 2, 3, 4, 5};

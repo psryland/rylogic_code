@@ -25,7 +25,7 @@ Texture2D<float4> m_proj_texture[MaxProjectedTextures] :reg(t3, 0);
 SamplerState      m_proj_sampler[MaxProjectedTextures] :reg(s3, 0);
 
 // Skinned Meshes
-StructuredBuffer<float4x4> m_skeleton : reg(t4, 0);
+StructuredBuffer<Mat4x4> m_skeleton : reg(t4, 0);
 StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
 
 #include "../lighting/phong_lighting.hlsli"

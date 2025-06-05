@@ -79,7 +79,7 @@ namespace pr::fluid
 	void FluidVisualisation::UpdateVectorField(std::span<particle_t const> particles, float particle_radius, float scale, int mode) const
 	{
 		ResourceFactory factory(*m_rdr);
-		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices(factory);
+		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices(factory.CmdList(), factory.UploadBuffer());
 		auto* beg = update.ptr<Vert>();
 		auto* end = beg + m_gfx_vector_field.m_model->m_vcount;
 		memset(beg, 0, (end - beg) * sizeof(Vert));
@@ -176,14 +176,14 @@ namespace pr::fluid
 				break;
 			}
 		}
-		update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		update.Commit();
 	}
 
 	// Add the particles to the scene that renders them
 	void FluidVisualisation::AddToScene(Scene& scene, EScene flags, int particle_count) const
 	{
 		// Add the static scene
-		scene.AddInstance(m_gfx_scene);
+		m_gfx_scene->AddToScene(scene);
 
 		// The particles
 		if (AllSet(flags, EScene::Particles))

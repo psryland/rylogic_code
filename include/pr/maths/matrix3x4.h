@@ -47,6 +47,19 @@ namespace pr
 		template <maths::Matrix3 M> constexpr explicit Mat3x4(M const& m)
 			:Mat3x4(maths::comp<0>(m), maths::comp<1>(m), maths::comp<2>(m))
 		{}
+		explicit Mat3x4(Quat_cref<S, A, B> q)
+		{
+			assert("'quat' is a zero quaternion" && (q != Quat<S,A,B>{}));
+			auto s = S(2) / LengthSq(q);
+
+			S xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
+			S wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
+			S xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
+			S yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
+			x = Vec4<S, void>{S(1) - (yy + zz), xy + wz, xz - wy, S(0)};
+			y = Vec4<S, void>{xy - wz, S(1) - (xx + zz), yz + wx, S(0)};
+			z = Vec4<S, void>{xz + wy, yz - wx, S(1) - (xx + yy), S(0)};
+		}
 
 		// Reinterpret as a different matrix type
 		template <typename C, typename D> explicit operator Mat3x4<S, C, D> const&() const
@@ -111,18 +124,7 @@ namespace pr
 		// Construct a rotation matrix from a quaternion
 		static Mat3x4 Rotation(Quat<S,A,B> const& q)
 		{
-			assert("'quat' is a zero quaternion" && (q != Quat<S,A,B>{}));
-			auto s = S(2) / LengthSq(q);
-
-			Mat3x4<S,A,B> m;
-			S xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
-			S wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
-			S xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
-			S yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
-			m.x = Vec4<S, void>{S(1) - (yy + zz), xy + wz, xz - wy, S(0)};
-			m.y = Vec4<S, void>{xy - wz, S(1) - (xx + zz), yz + wx, S(0)};
-			m.z = Vec4<S, void>{xz + wy, yz - wx, S(1) - (xx + yy), S(0)};
-			return m;
+			return Mat3x4(q);
 		}
 
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)

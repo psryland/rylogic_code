@@ -4,7 +4,6 @@
 //********************************
 // Helper wrappers to 'std::algorithm'
 #pragma once
-
 #include <exception>
 #include <algorithm>
 #include <unordered_set>
@@ -12,10 +11,11 @@
 #include <iterator>
 #include <set>
 #include <map>
+#include <vector>
+#include <queue>
 #include <span>
 #include <ranges>
 #include <concepts>
-//#include "pr/container/span.h"
 
 namespace pr
 {
@@ -381,6 +381,23 @@ namespace pr
 	{
 		std::transform(std::begin(cont), std::end(cont), std::begin(cont), func);
 	}
+	template <Container TCont0, Container TCont1, typename Func>
+	inline TCont0 transform(TCont1 const& src, Func func)
+	{
+		TCont0 out = {};
+		out.reserve(std::distance(src.begin(), src.end()));
+		for (auto const& item : src)
+			out.push_back(func(item));
+		return out;
+	}
+
+	// Assign with transform
+	template <Container TCont0, Container TCont1, typename Func>
+	inline void append(TCont0& dst, TCont1 const& src, Func func)
+	{
+		for (auto const& item : src)
+			dst.push_back(func(item));
+	}
 
 	// Set intersection/union
 	namespace impl
@@ -454,6 +471,53 @@ namespace pr
 		else
 		{
 			return impl::set_union_ordered<TContOut>(cont0, cont1);
+		}
+	}
+
+	// Zip sorted collections into one ordered collection
+	template <typename TSrc, typename TOut> requires (requires (TSrc src, TOut out)
+	{
+		src.size();
+		src[0];
+		out(src[0]);
+	})
+	void zip(std::span<TSrc const> srcs, bool unique, TOut out)
+	{
+		// (value, source index, element index)
+		using Type = decltype(srcs[0][0]);
+		struct Elem
+		{
+			Type value;
+			size_t src_idx;
+			size_t elem_idx;
+			bool operator < (Elem const& rhs) const { return value > rhs.value; }
+		};
+
+		std::priority_queue<Elem> min_heap;
+		auto src_count = srcs.size();
+
+		// Initialize heap with the first element from each source
+		for (size_t i = 0; i != src_count; ++i)
+		{
+			if (srcs[i].size() == 0) continue;
+			min_heap.emplace(srcs[i][0], i, 0);
+		}
+
+		// Output each item in order
+		for (std::optional<Type> last_value = {}; !min_heap.empty(); )
+		{
+			auto [value, src_idx, elem_idx] = min_heap.top();
+			min_heap.pop();
+
+			if (!unique || value != last_value)
+			{
+				out(value);
+				last_value = value;
+			}
+
+			// Push next element from the same source
+			if (elem_idx + 1 < srcs[src_idx].size())
+				min_heap.emplace(srcs[src_idx][elem_idx + 1], src_idx, elem_idx + 1);
 		}
 	}
 

@@ -183,7 +183,7 @@ namespace pr::rdr12
 		auto wic = GetWIC();
 
 		RefPtr<IWICComponentInfo> cinfo;
-		Check(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
+		Check(wic->CreateComponentInfo(guid, cinfo.address_of()));
 
 		WICComponentType type;
 		Check(cinfo->GetComponentType(&type));
@@ -319,7 +319,7 @@ namespace pr::rdr12
 				if (resize_needed)
 				{
 					WICPixelFormatGUID pf;
-					Check(wic->CreateBitmapScaler(&scaler.m_ptr));
+					Check(wic->CreateBitmapScaler(scaler.address_of()));
 					Check(scaler->Initialize(frame.get(), s_cast<UINT>(dim.x), s_cast<UINT>(dim.y), WICBitmapInterpolationModeFant));
 					Check(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
@@ -328,7 +328,7 @@ namespace pr::rdr12
 				// Create a format converter if needed
 				if (conversion_needed)
 				{
-					Check(wic->CreateFormatConverter(&converter.m_ptr));
+					Check(wic->CreateFormatConverter(converter.address_of()));
 					Check(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
 				}
 
@@ -372,16 +372,16 @@ namespace pr::rdr12
 
 			// Create input stream for memory
 			RefPtr<IWICStream> stream;
-			Check(wic->CreateStream(&stream.m_ptr));
+			Check(wic->CreateStream(stream.address_of()));
 			Check(stream->InitializeFromMemory(const_cast<uint8_t*>(img.data()), static_cast<DWORD>(img.size())));
 
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Check(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, decoder.address_of()));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Check(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, frame.address_of()));
 			frames.push_back(frame);
 		}
 
@@ -398,11 +398,11 @@ namespace pr::rdr12
 		{
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Check(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, decoder.address_of()));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Check(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, frame.address_of()));
 
 			// Add the frame
 			frames.push_back(frame);

@@ -51,10 +51,10 @@ namespace pr::rdr12
 			auto source = resource::Read<char>(name, L"TEXT");
 		
 			D3DPtr<IDxcLibrary> library;
-			Check(DxcCreateInstance(CLSID_DxcLibrary, __uuidof(IDxcLibrary), (void**)&library.m_ptr));
+			Check(DxcCreateInstance(CLSID_DxcLibrary, __uuidof(IDxcLibrary), (void**)library.address_of()));
 
 			D3DPtr<IDxcBlobEncoding> blob;
-			Check(library->CreateBlobWithEncodingOnHeapCopy(source.m_data, static_cast<UINT32>(source.m_len), CP_UTF8, &blob.m_ptr));
+			Check(library->CreateBlobWithEncodingOnHeapCopy(source.m_data, static_cast<UINT32>(source.m_len), CP_UTF8, blob.address_of()));
 
 			*ppIncludeSource = blob.release();
 			return S_OK;

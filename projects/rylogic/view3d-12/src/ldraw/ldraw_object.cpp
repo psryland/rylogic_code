@@ -6,6 +6,7 @@
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "pr/view3d-12/utility/update_resource.h"
@@ -69,7 +70,7 @@ namespace pr::rdr12::ldraw
 		, m_o2p(m4x4Identity)
 		, m_type(type)
 		, m_parent(parent)
-		, m_child()
+		, m_child() // Populated by the ParseParams object (it holds a reference as 'm_objects')
 		, m_name()
 		, m_context_id(context_id)
 		, m_base_colour(Colour32White)
@@ -96,12 +97,12 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
+	void LdrObject::AddToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world.
 		// Take a copy in case the 'OnAddToScene' event changes it.
 		// We want parenting to be unaffected by the event handlers.
-		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
+		auto i2w = *p2w * m_o2p * m_anim.RootToWorld();
 		m_i2w = i2w;
 
 		// Combine recursive flags
@@ -120,15 +121,15 @@ namespace pr::rdr12::ldraw
 
 		// Rinse and repeat for all children
 		for (auto& child : m_child)
-			child->AddToScene(scene, time_s, &i2w, flags);
+			child->AddToScene(scene, &i2w, flags);
 	}
 
 	// Recursively add this object using 'bbox_model' instead of its
 	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
+	void LdrObject::AddBBoxToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world for this object
-		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
+		auto i2w = *p2w * m_o2p * m_anim.RootToWorld();
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
@@ -146,7 +147,7 @@ namespace pr::rdr12::ldraw
 
 		// Rinse and repeat for all children
 		for (auto& child : m_child)
-			child->AddBBoxToScene(scene, time_s, &i2w, flags);
+			child->AddBBoxToScene(scene, &i2w, flags);
 	}
 
 	// Get the first child object of this object that matches 'name' (see Apply)
@@ -158,7 +159,7 @@ namespace pr::rdr12::ldraw
 	}
 	LdrObject* LdrObject::Child(int index) const
 	{
-		if (index < 0 || index >= isize(m_child)) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, isize(m_child)));
+		if (index < 0 || index >= isize(m_child)) throw std::runtime_error(std::format("LdrObject child index ({}) out of range [0,{})", index, isize(m_child)));
 		return m_child[index].get();
 	}
 
@@ -199,6 +200,25 @@ namespace pr::rdr12::ldraw
 			assert(FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
 			assert(IsFinite(o2p) && "Invalid instance transform");
 			o->m_o2p = o2p;
+			return true;
+		}, name);
+	}
+
+	// Get/Set the animation time of this object or child objects matching 'name' (see Apply)
+	float LdrObject::AnimTime(char const* name) const
+	{
+		auto obj = Child(name);
+		return obj ? obj->m_anim.m_time_s : 0.0f;
+	}
+	void LdrObject::AnimTime(float time_s, char const* name)
+	{
+		Apply([&](LdrObject* o)
+		{
+			// Updating the skin for a model requires a command list and a GPU upload buffer.
+			// This means it needs to happen at render time, not immediately here.
+			o->m_anim.m_time_s = time_s;
+			if (o->m_model && o->m_model->m_skinning)
+				o->m_model->m_skinning->AnimTime(time_s);
 			return true;
 		}, name);
 	}
@@ -569,10 +589,10 @@ namespace pr::rdr12::ldraw
 	// Return the bounding box for this object in model space
 	// To convert this to parent space multiply by 'm_o2p'
 	// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-	BBox LdrObject::BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s, m4x4 const* p2w_, ELdrFlags parent_flags) const
+	BBox LdrObject::BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w_, ELdrFlags parent_flags) const
 	{
 		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
-		auto i2w = p2w * m_anim.Step(time_s);
+		auto i2w = p2w * m_anim.RootToWorld();
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
@@ -594,7 +614,7 @@ namespace pr::rdr12::ldraw
 			for (auto& child : m_child)
 			{
 				auto c2w = i2w * child->m_o2p;
-				auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w, flags);
+				auto cbbox = child->BBoxMS(include_children, pred, &c2w, flags);
 				if (cbbox.valid()) Grow(bbox, cbbox);
 			}
 		}
@@ -608,14 +628,14 @@ namespace pr::rdr12::ldraw
 	// Return the bounding box for this object in world space.
 	// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 	// If not then, then the returned bbox will be transformed to the top level object space
-	BBox LdrObject::BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s) const
+	BBox LdrObject::BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred) const
 	{
 		// Get the combined o2w transform;
 		m4x4 o2w = m_o2p;
 		for (LdrObject* parent = m_parent; parent; parent = parent->m_parent)
-			o2w = parent->m_o2p * parent->m_anim.Step(time_s) * o2w;
+			o2w = parent->m_o2p * parent->m_anim.RootToWorld() * o2w;
 
-		return BBoxMS(include_children, pred, time_s, &o2w);
+		return BBoxMS(include_children, pred, &o2w);
 	}
 	BBox LdrObject::BBoxWS(bool include_children) const
 	{

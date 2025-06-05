@@ -44,7 +44,7 @@ namespace pr::rdr
 			// Create a GBuffer sampler
 			Renderer::Lock lock(rdr());
 			auto sdesc = SamplerDesc::PointClamp();
-			pr::Check(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
+			pr::Check(lock.D3DDevice()->CreateSamplerState(&sdesc, m_point_sampler.address_of()));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler.get(), "dslighting point sampler"));
 
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_ps.cso"));
@@ -60,7 +60,7 @@ namespace pr::rdr
 			// Get the GBuffer render step and bind the GBuffer render targets to the PS
 			auto& gbuffer = state.m_rstep->as<DSLighting>().m_gbuffer;
 			dc->PSSetShaderResources(0, GBuffer::RTCount, (ID3D11ShaderResourceView* const*)gbuffer.m_srv);
-			dc->PSSetSamplers(0, 1, &m_point_sampler.m_ptr);
+			dc->PSSetSamplers(0, 1, m_point_sampler.address_of());
 		}
 
 		// Undo any changes made by this shader on the DC

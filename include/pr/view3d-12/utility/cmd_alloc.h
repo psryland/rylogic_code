@@ -17,7 +17,7 @@ namespace pr::rdr12
 	struct CmdAlloc
 	{
 		// Explanation:
-		//   Allocators basically point to a deque of memory blocks in GPU memory. When you add things to a command
+		//   Allocators basically point to a 'std::deque' of memory blocks in GPU memory. When you add things to a command
 		//   list, space gets allocated by the allocator and the command list just records the pointers.
 		//   When a command list is executed, the list is copied to GPU memory so the pointers it contains are still
 		//   valid. This is why allocators can't be reset until the GPU has finished with them, but command lists can.
@@ -25,9 +25,9 @@ namespace pr::rdr12
 		//   Instances of command lists can live wherever you need them, but must be reset to use the appropriate
 		//   allocator for the frame.
 		//
-		// Reuse:
-		//   Want to reuse allocators to prevent too much dynamic allocation.
-		//   Want allocators to automatically recycle when their sync point is reached
+		// Reuse efficiency:
+		//   We want to reuse allocators to prevent too much dynamic allocation.
+		//   We want allocators to automatically recycle when their sync point is reached.
 		// 
 		// Notes:
 		//  - One allocator per thread
@@ -109,7 +109,8 @@ namespace pr::rdr12
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdAllocPool
 	{
-		using pool_t = pr::vector<CmdAlloc<ListType>, 16, false>;
+		using pool_t = pr::vector<CmdAlloc<ListType>, 4, false>;
+
 		GpuSync* m_gsync;
 		pool_t m_pool;
 
@@ -140,7 +141,7 @@ namespace pr::rdr12
 
 				// Create a command allocator
 				D3DPtr<ID3D12CommandAllocator> cmd_alloc;
-				Check(device->CreateCommandAllocator(ListType, __uuidof(ID3D12CommandAllocator), (void**)&cmd_alloc.m_ptr));
+				Check(device->CreateCommandAllocator(ListType, __uuidof(ID3D12CommandAllocator), (void**)cmd_alloc.address_of()));
 				Check(cmd_alloc->SetName(L"CmdAllocPool:CmdAlloc"));
 				m_pool.emplace_back(cmd_alloc, sync_point, nullptr);
 			}

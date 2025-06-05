@@ -42,8 +42,8 @@ namespace pr::rdr12
 			Init(device);
 		}
 		GpuSync(GpuSync&&) = default;
-		GpuSync& operator=(GpuSync&&) = default;
 		GpuSync(GpuSync const&) = delete;
+		GpuSync& operator=(GpuSync&&) = default;
 		GpuSync& operator=(GpuSync const&) = delete;
 		~GpuSync()
 		{
@@ -62,7 +62,7 @@ namespace pr::rdr12
 			Release();
 
 			m_device = device;
-			Check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence.m_ptr));
+			Check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)m_fence.address_of()));
 			m_event = CreateEventExW(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 			Check(m_event != nullptr, "Creating an event for the thread fence failed");
 		}

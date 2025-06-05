@@ -64,7 +64,7 @@ namespace pr::sound
 	inline D3DPtr<IDirectSound8> InitDSound(HWND hwnd, GUID const* device = 0, DWORD coop_flags = DSSCL_EXCLUSIVE)
 	{
 		D3DPtr<IDirectSound8> dsound;
-		Check(::DirectSoundCreate8(device, &dsound.m_ptr, 0));
+		Check(::DirectSoundCreate8(device, dsound.address_of(), 0));
 		Check(dsound->Initialize(0));
 		Check(dsound->SetCooperativeLevel(hwnd, coop_flags));
 		return dsound;
@@ -157,11 +157,11 @@ namespace pr::sound
 
 		// Get a standard buffer
 		D3DPtr<IDirectSoundBuffer> buf;
-		Check(dsound->CreateSoundBuffer(&desc, &buf.m_ptr, 0));
+		Check(dsound->CreateSoundBuffer(&desc, buf.address_of(), 0));
 
 		// Query for the IDirectSoundBuffer8 interface
 		D3DPtr<IDirectSoundBuffer8> buf8;
-		Check(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)&buf8.m_ptr));
+		Check(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)buf8.address_of()));
 		return buf8;
 	}
 

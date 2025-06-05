@@ -7,6 +7,7 @@
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/dll/context.h"
 
 namespace pr::rdr12
@@ -607,11 +608,11 @@ namespace pr::rdr12
 #endif
 
 			// Recursively add the object to the scene
-			obj->AddToScene(m_scene, anim_time);
+			obj->AddToScene(m_scene);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
 			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
-				obj->AddBBoxToScene(m_scene, anim_time);
+				obj->AddBBoxToScene(m_scene);
 		}
 
 		// Add gizmos from the window to the scene
@@ -1146,7 +1147,7 @@ namespace pr::rdr12
 		static constexpr auto tick_size_s = seconds_t(0.01);
 
 		// Callback function that is polled as fast as the message queue will allow
-		static auto const AnimTick = [](void* ctx)
+		auto const AnimTick = [](void* ctx)
 		{
 			auto& me = *reinterpret_cast<V3dWindow*>(ctx);
 			me.Invalidate();

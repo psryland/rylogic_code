@@ -3,9 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/model/model_generator.h"
-#include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/model/skinning.h"
+#include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/model/model_tree.h"
+#include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/texture/texture_desc.h"
@@ -930,8 +932,7 @@ namespace pr::rdr12
 
 	// ModelFile **************************************************************************
 	// Load a P3D model from a stream, emitting models for each mesh via 'out'.
-	// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
-	void ModelGenerator::LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::LoadP3DModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
@@ -981,11 +982,11 @@ namespace pr::rdr12
 
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
-			ModelOutFunc m_out;
+			IModelOut& m_out;
 			Cache<> m_cache;
 			MatCont m_mats;
 
-			ModelOut(ResourceFactory& factory, CreateOptions const* opts, ModelOutFunc out)
+			ModelOut(ResourceFactory& factory, CreateOptions const* opts, IModelOut& out)
 				: m_factory(factory)
 				, m_opts(opts)
 				, m_out(out)
@@ -1005,7 +1006,7 @@ namespace pr::rdr12
 			{
 				ModelTree tree;
 				BuildModelTree(tree, mesh, 0);
-				return m_out(tree);
+				return m_out.Model(tree) == IModelOut::Stop;
 			}
 
 			// Recursive function for populating a model tree
@@ -1084,7 +1085,7 @@ namespace pr::rdr12
 		// Load each mesh in the P3D stream and emit it as a model
 		p3d::ExtractMeshes<std::istream, ModelOut&>(src, model_out);
 	}
-	void ModelGenerator::Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::Load3DSModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
@@ -1178,10 +1179,10 @@ namespace pr::rdr12
 			// 3DS models cannot nest, so each 'Model Tree' is one root node only
 			auto model = Create(factory, cache, opts);
 			auto tree = ModelTree{ {model, obj.m_mesh.m_o2p, 0} };
-			return out(tree);
+			return out.Model(tree);
 		});
 	}
-	void ModelGenerator::LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::LoadSTLModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
@@ -1230,19 +1231,19 @@ namespace pr::rdr12
 				// STL models cannot nest, so each 'Model Tree' is one root node only
 				auto model = Create(factory, cache, opts);
 				auto tree = ModelTree{{model, m4x4::Identity(), 0}};
-				return out(tree);
+				return out.Model(tree);
 			});
 	}
-	void ModelGenerator::LoadFBXModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::LoadFBXModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
 		struct ModelOut : fbx::IModelOut, fbx::IAnimOut
 		{
-			using Skel = struct Skel { int bone_count = 0; D3DPtr<ID3D12Resource> skin_buffer = nullptr; };
 			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
 			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
-			using SkelCont = std::unordered_map<uint64_t, Skel>;
+			using SkelCont = std::unordered_map<uint64_t, SkeletonPtr>;
+			using AnimCont = std::vector<KeyFrameAnimationPtr>;
 
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
@@ -1251,6 +1252,7 @@ namespace pr::rdr12
 			MeshCont m_meshes;
 			SkelCont m_skels;
 			ModelTree m_tree;
+			AnimCont m_anims;
 
 			ModelOut(ResourceFactory& factory, CreateOptions const* opts)
 				: m_factory(factory)
@@ -1260,6 +1262,7 @@ namespace pr::rdr12
 				, m_meshes()
 				, m_skels()
 				, m_tree()
+				, m_anims()
 			{}
 
 			// Add a material to the output
@@ -1282,7 +1285,7 @@ namespace pr::rdr12
 				auto vptr = m_cache.m_vcont.data();
 				for (auto const& v : mesh.m_vbuf)
 				{
-					SetPCNT(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0);
+					SetPCNTI(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0, v.m_idx0);
 					++vptr;
 				}
 
@@ -1328,8 +1331,12 @@ namespace pr::rdr12
 			// Add a skeleton to the output
 			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
 			{
-				auto skel = m_factory.CreateResource(ResDesc::Buf<m4x4>(isize(skeleton.m_b2p), skeleton.m_b2p), "skeleton");
-				m_skels[skeleton.m_ids.front()] = { isize(skeleton.m_b2p), skel };
+				m_skels[skeleton.m_ids.front()] = SkeletonPtr(rdr12::New<Skeleton>(
+					skeleton.m_ids,
+					transform<Skeleton::Names>(skeleton.m_names, [](auto& x) { return static_cast<string32>(x); }),
+					skeleton.m_b2p,
+					transform<Skeleton::Hierarchy>(skeleton.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
+				), true);
 			}
 
 			// Add Skinning data for a mesh to the output
@@ -1341,31 +1348,64 @@ namespace pr::rdr12
 				static_assert(offsetof(fbx::Skinning::Influence, m_weights) == offsetof(Skinfluence, m_weights));
 				std::span<Skinfluence const> verts = { reinterpret_cast<Skinfluence const*>(skinning.m_verts.data()), skinning.m_verts.size() };
 
-				auto skin = m_factory.CreateResource(ResDesc::Buf<Skinfluence>(isize(skinning.m_verts), verts), "skin");
 				auto const& mesh = m_meshes.at(skinning.m_mesh_id);
 				auto const& skel = m_skels.at(skinning.m_skel_id);
-				auto bone_count = skel.bone_count;
-				auto vert_count = isize(skinning.m_verts);
-				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(mesh.get(), bone_count, vert_count, skel.skin_buffer.get(), skin.get()), true);
+				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(m_factory, verts, skel), true);
 			}
 
 			// Add an animation sequence
-			virtual void AddBoneTracks(fbx::BoneTracks const& tracks) override
+			virtual void AddBoneTracks(uint64_t skel_id, fbx::BoneTracks const& bone_tracks) override
 			{
-				(void)tracks;
+				// Find the matching skeleton
+				auto iter = m_skels.find(skel_id);
+				if (iter == end(m_skels))
+					throw std::runtime_error(std::format("Skeleton with id '{}' not found", skel_id));
+
+				// Create a new animation sequence
+				auto& skel = *iter->second.get();
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(skel.Id(), EAnimStyle::Repeat), true);
+
+				// Read the key frame data
+				anim->m_tracks.resize(skel.m_bones.size());
+				for (auto const& [bone_id, track] : bone_tracks.m_tracks)
+				{
+					// Find the index of 'bone_id' in the skeleton
+					auto bone_index = index_of(skel.m_ids, bone_id);
+					if (bone_index == isize(skel.m_ids))
+						throw std::runtime_error(std::format("Bone id '{}' not found in given skeleton", bone_id));
+
+					// Copy the key data to the track
+					anim->m_tracks[bone_index].reserve(track.size());
+					append(anim->m_tracks[bone_index], track, [](auto& key)
+					{
+						return KeyFrame {
+							.m_rotation = key.m_rotation,
+							.m_translation = key.m_translation,
+							.m_scale = key.m_scale,
+							.m_time = key.m_time,
+						};
+					});
+				}
+
+				m_anims.push_back(anim);
 			}
 		};
 		ModelOut model_out(factory, opts);
 
 		fbx::Scene scene(src);
-		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
-		
-		if (scene.m_props.m_animation_stack_count != 0)
-			scene.ReadAnimCurves(model_out, 0);
 
-		out(std::move(model_out.m_tree));
+		// Read geometry
+		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
+		out.Model(model_out.m_tree);
+		
+		// Read animation data
+		if (out.ReadAnimation && scene.m_props.m_animation_stack_count != 0)
+		{
+			scene.ReadAnimCurves(model_out, 0);
+			out.Anim(model_out.m_anims);
+		}
 	}
-	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
+	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts)
 	{
 		using namespace geometry;
 		switch (format)
@@ -1396,7 +1436,7 @@ namespace pr::rdr12
 		//  A DIP is defined as 1/96th of a logical inch. In Direct2D, all drawing operations are
 		//  specified in DIPs and then scaled to the current DPI setting."
 		D3DPtr<IDWriteFactory> dwrite;
-		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dwrite.m_ptr));
+		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)dwrite.address_of()));
 
 		// Get the default format
 		auto def = !formatting.empty() && !formatting[0].empty() ? formatting[0] : TextFormat();
@@ -1407,11 +1447,11 @@ namespace pr::rdr12
 
 		// Create the default font
 		D3DPtr<IDWriteTextFormat> text_format;
-		Check(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
+		Check(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", text_format.address_of()));
 
 		// Create a text layout interface
 		D3DPtr<IDWriteTextLayout> text_layout;
-		Check(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
+		Check(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, text_layout.address_of()));
 		text_layout->SetTextAlignment(layout.m_align_h);
 		text_layout->SetParagraphAlignment(layout.m_align_v);
 		text_layout->SetWordWrapping(layout.m_word_wrapping);
@@ -1478,7 +1518,7 @@ namespace pr::rdr12
 				if (fmt.m_font.m_colour != def.m_font.m_colour)
 				{
 					D3DPtr<ID2D1SolidColorBrush> brush;
-					Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+					Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), brush.address_of()));
 					brush->SetOpacity(fmt.m_font.m_colour.a);
 
 					// Apply the colour
@@ -1488,12 +1528,12 @@ namespace pr::rdr12
 
 			// Create the default text colour brush
 			D3DPtr<ID2D1SolidColorBrush> brush_fr;
-			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), &brush_fr.m_ptr));
+			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), brush_fr.address_of()));
 			brush_fr->SetOpacity(def.m_font.m_colour.a);
 
 			// Create the default text colour brush
 			D3DPtr<ID2D1SolidColorBrush> brush_bk;
-			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), &brush_bk.m_ptr));
+			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), brush_bk.address_of()));
 			brush_bk->SetOpacity(layout.m_bk_colour.a);
 
 			// Draw the string

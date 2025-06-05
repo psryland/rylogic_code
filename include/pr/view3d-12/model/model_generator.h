@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/main/renderer.h"
 
@@ -80,7 +81,6 @@ namespace pr::rdr12
 				DiffuseTexture = 1 << 2,
 				NormalGeneration = 1 << 3,
 				TextureToSurface = 1 << 4,
-
 				_flags_enum = 0,
 			};
 
@@ -101,9 +101,6 @@ namespace pr::rdr12
 
 			// Algorithmically generate surface normals. Value is the smoothing angle.
 			float m_gen_normals = {};
-
-			// Animation frame
-			int m_anim_frame = 0;
 
 			// Flags for set options
 			EOptions m_options = EOptions::None;
@@ -219,13 +216,20 @@ namespace pr::rdr12
 
 		// ModelFile **************************************************************************
 		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
-		// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
-		using ModelOutFunc = std::function<bool(std::span<ModelTreeNode>)>;
-		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadFBXModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
+		struct IModelOut
+		{
+			enum EResult { Continue, Stop };
+			bool ReadAnimation = false;
+
+			virtual ~IModelOut() = default;
+			virtual EResult Model(std::span<ModelTreeNode const>) { return EResult::Stop; }
+			virtual EResult Anim(std::span<KeyFrameAnimationPtr const>) { return EResult::Stop; }
+		};
+		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void Load3DSModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadFBXModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts = nullptr);
 
 		// Text *******************************************************************************
 

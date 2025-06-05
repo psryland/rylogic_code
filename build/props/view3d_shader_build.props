@@ -11,14 +11,22 @@
 	<Target
 		Name="View3dShaderBuildTarget"
 		BeforeTargets="CLCompile"
-		Inputs="@(View3dShaderBuild);$(ScriptPath)BuildShader.csx"
+		Inputs="@(View3dShaderBuild);$(ScriptPath)BuildShader.csx;$(MSBuildThisFileFullPath)"
 		Outputs="@(View3dShaderBuild->'$(ProjectDir)src\shaders\hlsl\compiled\$(Configuration)\%(Filename).built')"
 	>
-		<Exec
+		<Exec Condition="$(Configuration) == 'Debug'"
+			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration) dbg"
+			ContinueOnError="ErrorAndContinue"
+		/>
+		<Exec Condition="$(Configuration) != 'Debug'"
 			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration)"
 			ContinueOnError="ErrorAndContinue"
 		/>
 	</Target>
+	<!-- 
+		<Message Importance="high" Text="%(View3dShaderBuild.Filename)%(View3dShaderBuild.Extension)" />
+		<Message Importance="high" Text="@( _DependencyLinkWithDest -> '%(FullPath) => %(DestFile)', '&#x0A;')" />
+	-->
 
 	<!-- Hook the custom target into the build pipeline -->  
 	<PropertyGroup>

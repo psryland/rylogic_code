@@ -1031,6 +1031,10 @@ extern "C"
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2PGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2PSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2p, char const* name);
 
+	// Get/Set the animation time to apply to 'object'
+	VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name);
+
 	// Return the model space bounding box for 'object'
 	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, int include_children);
 

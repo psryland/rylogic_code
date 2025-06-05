@@ -7,24 +7,24 @@
 #include "../types.hlsli"
 
 // Skin 'vert'. 'vert' is a vertex in model space when in the rest pose
-float4 SkinVertex(in uniform StructuredBuffer<float4x4> skeleton, in uniform Skinfluence influence, in float4 vert)
+float4 SkinVertex(in uniform StructuredBuffer<Mat4x4> skeleton, in uniform Skinfluence influence, in float4 vert)
 {
-	float4 skinned_vert = 0;
-	skinned_vert += mul(vert, skeleton[influence.m_bones.x]) * influence.m_weights.x;
-	skinned_vert += mul(vert, skeleton[influence.m_bones.y]) * influence.m_weights.y;
-	skinned_vert += mul(vert, skeleton[influence.m_bones.z]) * influence.m_weights.z;
-	skinned_vert += mul(vert, skeleton[influence.m_bones.w]) * influence.m_weights.w;
+	float4 skinned_vert = float4(0, 0, 0, 0);
+	skinned_vert += mul(vert, skeleton[influence.m_bones.x].m) * influence.m_weights.x;
+	skinned_vert += mul(vert, skeleton[influence.m_bones.y].m) * influence.m_weights.y;
+	skinned_vert += mul(vert, skeleton[influence.m_bones.z].m) * influence.m_weights.z;
+	skinned_vert += mul(vert, skeleton[influence.m_bones.w].m) * influence.m_weights.w;
 	return skinned_vert;
 }
 
 // Skin 'norm'. 'norm' is a normal in model space when in the rest pose
-float4 SkinNormal(in uniform StructuredBuffer<float4x4> skeleton, in uniform Skinfluence influence, in float4 norm)
+float4 SkinNormal(in uniform StructuredBuffer<Mat4x4> skeleton, in uniform Skinfluence influence, in float4 norm)
 {
-	float4 skinned_vert = 0;
-	skinned_vert += mul(norm, skeleton[influence.m_bones.x]) * influence.m_weights.x;
-	skinned_vert += mul(norm, skeleton[influence.m_bones.y]) * influence.m_weights.y;
-	skinned_vert += mul(norm, skeleton[influence.m_bones.z]) * influence.m_weights.z;
-	skinned_vert += mul(norm, skeleton[influence.m_bones.w]) * influence.m_weights.w;
+	float4 skinned_vert = float4(0, 0, 0, 0);
+	skinned_vert += mul(norm, skeleton[influence.m_bones.x].m) * influence.m_weights.x;
+	skinned_vert += mul(norm, skeleton[influence.m_bones.y].m) * influence.m_weights.y;
+	skinned_vert += mul(norm, skeleton[influence.m_bones.z].m) * influence.m_weights.z;
+	skinned_vert += mul(norm, skeleton[influence.m_bones.w].m) * influence.m_weights.w;
 	return skinned_vert;
 }
 

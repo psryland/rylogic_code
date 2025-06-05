@@ -242,10 +242,10 @@ namespace pr::rdr12
 		auto luid = m_device->GetAdapterLuid();
 
 		D3DPtr<IDXGIFactory4> factory;
-		Check(CreateDXGIFactory2(0, __uuidof(IDXGIFactory4), (void**)&factory.m_ptr));
+		Check(CreateDXGIFactory2(0, __uuidof(IDXGIFactory4), (void**)factory.address_of()));
 
 		D3DPtr<IDXGIAdapter1> adapter;
-		Check(factory->EnumAdapterByLuid(luid, __uuidof(IDXGIAdapter1), (void**)&adapter.m_ptr));
+		Check(factory->EnumAdapterByLuid(luid, __uuidof(IDXGIAdapter1), (void**)adapter.address_of()));
 
 		FeatureSupport::AdapterInfo desc = {};
 		Check(adapter->GetDesc1(&desc));

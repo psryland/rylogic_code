@@ -161,7 +161,7 @@ namespace pr::rdr12
 				.NodeMask = 0U,
 			};
 			Block block = {.heap = nullptr, .free = ~0ULL};
-			Check(m_device->CreateDescriptorHeap(&heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&block.heap.m_ptr));
+			Check(m_device->CreateDescriptorHeap(&heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)block.heap.address_of()));
 			store.push_back(block);
 			i = iend;
 		}

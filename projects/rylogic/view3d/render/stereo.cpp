@@ -29,26 +29,26 @@ namespace pr::rdr
 		nvdesc.BindFlags      = 0;
 		nvdesc.Usage          = D3D11_USAGE_STAGING;
 		nvdesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		pr::Check(device->CreateTexture2D(&nvdesc, &tex_data, &m_mark.m_ptr));
+		pr::Check(device->CreateTexture2D(&nvdesc, &tex_data, m_mark.address_of()));
 
 		// Create a render target with dimensions width*2, height+1
 		Texture2DDesc rtdesc(UINT(viewport.Width * 2), UINT(viewport.Height + 1), 1, target_format);
 		rtdesc.BindFlags = D3D11_BIND_RENDER_TARGET;
-		pr::Check(device->CreateTexture2D(&rtdesc, nullptr, &m_rt_tex.m_ptr));
+		pr::Check(device->CreateTexture2D(&rtdesc, nullptr, m_rt_tex.address_of()));
 
 		// Create a render target view of the render target texture
 		RenderTargetViewDesc rtvdesc(target_format);
-		pr::Check(device->CreateRenderTargetView(m_rt_tex.m_ptr, &rtvdesc, &m_rtv.m_ptr));
+		pr::Check(device->CreateRenderTargetView(m_rt_tex.m_ptr, &rtvdesc, m_rtv.address_of()));
 
 		// Create a depth stencil buffer to fit this rt
 		Texture2DDesc dsdesc(UINT(viewport.Width * 2), UINT(viewport.Height + 1), 1, DXGI_FORMAT_D24_UNORM_S8_UINT);
 		dsdesc.SampleDesc = MultiSamp(1,0);
 		dsdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
-		pr::Check(device->CreateTexture2D(&dsdesc, nullptr, &m_ds_tex.m_ptr));
+		pr::Check(device->CreateTexture2D(&dsdesc, nullptr, m_ds_tex.address_of()));
 
 		// Create a depth/stencil view of the texture buffer we just created
 		DepthStencilViewDesc dsvdesc(dsdesc.Format);
-		pr::Check(device->CreateDepthStencilView(m_ds_tex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
+		pr::Check(device->CreateDepthStencilView(m_ds_tex.m_ptr, &dsvdesc, m_dsv.address_of()));
 	}
 
 	// Add the NVidia magic data to the bottom row of the current render target
@@ -63,10 +63,10 @@ namespace pr::rdr
 	void Stereo::BlitRTV(ID3D11DeviceContext* dc) const
 	{
 		D3DPtr<ID3D11RenderTargetView> rtv;
-		dc->OMGetRenderTargets(1, &rtv.m_ptr, nullptr);
+		dc->OMGetRenderTargets(1, rtv.address_of(), nullptr);
 
 		D3DPtr<ID3D11Resource> rtv_res;
-		rtv->GetResource(&rtv_res.m_ptr);
+		rtv->GetResource(rtv_res.address_of());
 
 		CD3D11_BOX src_box(0, 0, 0, m_nv_magic.target_width(), m_nv_magic.target_height(), 1);
 		dc->CopySubresourceRegion(rtv_res.m_ptr, 0, 0, 0, 0, m_rt_tex.m_ptr, 0, &src_box);

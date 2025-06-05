@@ -15,6 +15,7 @@
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/resource/stock_resources.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
@@ -1966,6 +1967,30 @@ VIEW3D_API void __stdcall View3D_ObjectO2PSet(view3d::Object object, view3d::Mat
 	CatchAndReport(View3D_ObjectSetO2P, ,);
 }
 
+// Get/Set the animation time to apply to 'object'
+VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->AnimTime(name);
+	}
+	CatchAndReport(View3D_ObjectAnimTimeGet, , 0.0f);
+}
+VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->AnimTime(time_s, name);
+	}
+	CatchAndReport(View3D_ObjectAnimTimeSet, ,);
+}
+
 // Return the model space bounding box for 'object'
 VIEW3D_API view3d::BBox __stdcall View3D_ObjectBBoxMS(view3d::Object object, int include_children)
 {
@@ -2817,7 +2842,7 @@ VIEW3D_API view3d::Texture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UIN
 		
 		// Access the main surface of the render target texture
 		D3DPtr<IDirect3DSurface9> surf0;
-		tex->GetSurfaceLevel(0, &surf0.m_ptr);
+		tex->GetSurfaceLevel(0, surf0.address_of());
 
 		// Save the shared handle if the caller wants it.
 		if (shared_handle != nullptr)

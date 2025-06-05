@@ -68,6 +68,12 @@ static const int AlphaFlags_HasAlpha            = (1 << 0);
 
 #endif
 
+// Row major matrix for use in structured buffers
+struct Mat4x4
+{
+	row_major float4x4 m;
+};
+
 // Camera
 struct Camera
 {

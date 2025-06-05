@@ -45,6 +45,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12", "projects\rylogic\view3d-12\view3d-12.vcxproj", "{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12.dll", "projects\rylogic\view3d-12\view3d-12.dll.vcxproj", "{FB13BA51-F847-4804-90A8-61AB789F4061}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{AB9109F6-19E9-4087-B998-47A430030516}"
 EndProject
@@ -61,6 +64,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-test", "projects\tes
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12-test", "projects\tests\view3d-12-test\view3d-12-test.vcxproj", "{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}"
 	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
 	EndProjectSection
 EndProject

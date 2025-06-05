@@ -733,7 +733,7 @@ namespace view3d
 		static constexpr auto tick_size_s = seconds_t(0.01);
 
 		// Callback function that is polled as fast as the message queue will allow
-		static auto const AnimTick = [](void* ctx)
+		auto const AnimTick = [](void* ctx)
 		{
 			auto& me = *reinterpret_cast<Window*>(ctx);
 			me.Invalidate();

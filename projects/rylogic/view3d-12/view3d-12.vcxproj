@@ -47,13 +47,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
         ;PR_RDR_RUNTIME_SHADERS=1
         ;PR_LOGGING=1
         ;PR_SUPPORT_D3D11_ERRORS=1
         ;PR_VIEW3D_12=1
         ;PR_DBG_RDR=1
         ;USE_PIX
-        ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -64,11 +64,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
         ;PR_LOGGING=1
         ;PR_VIEW3D_12=1
         ;PR_RDR_RUNTIME_SHADERS=0
         ;PR_SUPPORT_D3D11_ERRORS=1
-        ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -96,9 +96,11 @@
     <ClCompile Include="src\main\renderer.cpp" />
     <ClCompile Include="src\main\window.cpp" />
     <ClCompile Include="src\model\animation.cpp" />
+    <ClCompile Include="src\model\animator.cpp" />
     <ClCompile Include="src\model\model.cpp" />
     <ClCompile Include="src\model\model_generator.cpp" />
     <ClCompile Include="src\model\nugget.cpp" />
+    <ClCompile Include="src\model\skeleton.cpp" />
     <ClCompile Include="src\model\skinning.cpp" />
     <ClCompile Include="src\render\back_buffer.cpp" />
     <ClCompile Include="src\render\render_forward.cpp" />
@@ -184,7 +186,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_builder.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
@@ -202,12 +204,14 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animation.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skeleton.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skinning.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />

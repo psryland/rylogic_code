@@ -110,6 +110,14 @@ namespace pr::rdr12
 		vert.m_norm = norm;
 		vert.m_tex0 = uv;
 	}
+	inline void SetPCNTI(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv, iv2 const& idx)
+	{
+		vert.m_vert = pos;
+		vert.m_diff = col;
+		vert.m_norm = norm;
+		vert.m_tex0 = uv;
+		vert.m_idx0 = idx;
+	}
 }
 namespace pr
 {

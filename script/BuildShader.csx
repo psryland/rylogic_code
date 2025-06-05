@@ -127,7 +127,7 @@ public class ShaderBuilder
 	// Compile the file as 'shader_type.Shader'
 	private void BuildShader(ShaderDesc shdr, string outdir, string platform, string config)
 	{
-		Trace($"Building: {shdr.Name}");
+		Console.WriteLine($"Shader: {shdr.Name}");
 
 		// Hash the full path to generate a unique temporary file name
 		var hash = HashName(shdr.FullPath);
@@ -295,7 +295,7 @@ public class ShaderBuilder
 }
 
 var args = Args.ToArray();
-//var args = (string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\dslighting.hlsl", "x64", "debug", "obj", "dbg", "trace"];
+//var args = (string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl", "x64", "debug", "obj", "dbg", "trace"];
 if (args.Length < 3)
 {
 	Console.WriteLine("Usage: BuildShader <fullpath> <platform> <config> [pp] [obj] [dbg] [trace]");

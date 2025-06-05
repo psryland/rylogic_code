@@ -279,6 +279,15 @@
     <ClCompile Include="src\model\skinning.cpp">
       <Filter>src\model</Filter>
     </ClCompile>
+    <ClCompile Include="src\model\skeleton.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\animation.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\animator.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h">
@@ -557,6 +566,15 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skinning.h">
       <Filter>src\model</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skeleton.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animation.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animator.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_thick_line.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
@@ -692,7 +710,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_builder.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="src\ldraw\sources\ldraw_sources.h">

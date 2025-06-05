@@ -178,12 +178,12 @@ namespace pr::rdr12
 			};
 			
 			D3DPtr<ID3DBlob> signature, error;
-			auto hr = D3D12SerializeVersionedRootSignature(&rs_desc, &signature.m_ptr, &error.m_ptr);
+			auto hr = D3D12SerializeVersionedRootSignature(&rs_desc, signature.address_of(), error.address_of());
 			if (error != nullptr) Check(hr, { static_cast<char const*>(error->GetBufferPointer()), error->GetBufferSize() });
 			Check(hr, "Create root signature failed");
 			
 			D3DPtr<ID3D12RootSignature> shader_sig;
-			Check(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&shader_sig.m_ptr));
+			Check(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)shader_sig.address_of()));
 			DebugName(shader_sig, name);
 			return shader_sig;
 		}

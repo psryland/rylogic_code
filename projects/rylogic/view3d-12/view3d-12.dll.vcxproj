@@ -44,10 +44,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>
+				;%(PreprocessorDefinitions)
 				;VIEW3D_EXPORTS
 				;PR_VIEW3D_12=1
 				;PR_MATHS_USE_DIRECTMATH=1
-				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
 				;$(RylogicRoot)projects\rylogic
@@ -83,9 +83,7 @@
   Dependencies
   -->
   <ItemGroup>
-    <ProjectReference Include="view3d-12.vcxproj">
-      <Project>{0a6cc9e3-76d2-4f4e-a193-1a816d24a555}</Project>
-    </ProjectReference>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\view3d-12\view3d-12.vcxproj" />
   </ItemGroup>
   <!--
   Targets

@@ -393,15 +393,15 @@ namespace pr::ldr
 				t = time_s < m_period ? time_s : m_period;
 				break;
 			case EAnimStyle::Repeat:
-				t = Fmod(time_s, m_period);
+				t = Modulus(time_s, m_period);
 				break;
 			case EAnimStyle::Continuous:
 				t = time_s;
 				break;
 			case EAnimStyle::PingPong:
-				t = Fmod(time_s, 2.0f*m_period) >= m_period
-					? m_period - Fmod(time_s, m_period)
-					: Fmod(time_s, m_period);
+				t = Modulus(time_s, 2.0f*m_period) >= m_period
+					? m_period - Modulus(time_s, m_period)
+					: Modulus(time_s, m_period);
 				break;
 			}
 

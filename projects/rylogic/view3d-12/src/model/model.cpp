@@ -67,15 +67,25 @@ namespace pr::rdr12
 	}
 	
 	// Allow update of the vertex/index buffers
-	UpdateSubresourceScope Model::UpdateVertices(ResourceFactory& factory, Range vrange)
+	UpdateSubresourceScope Model::UpdateVertices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange)
 	{
-		if (vrange == Range::Reset()) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope(factory, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
+		if (vrange == Range::Reset())
+			vrange = Range(0, m_vcount);
+
+		// Vertex buffers are 1-D buffers, so the "element" is bytes
+		vrange.m_beg *= m_vstride.size();
+		vrange.m_end *= m_vstride.size();
+		return UpdateSubresourceScope(cmd_list, upload, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size()));
 	}
-	UpdateSubresourceScope Model::UpdateIndices(ResourceFactory& factory, Range irange)
+	UpdateSubresourceScope Model::UpdateIndices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range irange)
 	{
-		if (irange == Range::Reset()) irange = Range(0, m_icount);
-		return UpdateSubresourceScope(factory, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
+		if (irange == Range::Reset())
+			irange = Range(0, m_icount);
+
+		// Index buffers are 1-D buffers, so the "element" is bytes
+		irange.m_beg *= m_istride.size();
+		irange.m_end *= m_istride.size();
+		return UpdateSubresourceScope(cmd_list, upload, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size()));
 	}
 
 	// Create a nugget from a range within this model

@@ -14,7 +14,7 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - Resources need to be tracked per command list because command lists can be built in
-		//    parallel. This means there isn't a 'current' state for a resource and any particular
+		//    parallel. This means there isn't a 'current' state for a resource at any particular
 		//    moment in time.
 
 	private:

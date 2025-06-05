@@ -44,8 +44,16 @@ namespace pr::rdr12
 		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
 
+		// Access the command list associated with this factory instance
+		GfxCmdList& CmdList();
+
+		// Access the upload buffer associated with this factory instance
+		GpuUploadBuffer& UploadBuffer();
+
 		// Flush creation commands to the GPU. Returns the sync point for when they've been executed
 		uint64_t FlushToGpu(EGpuFlush flush);
+
+		// Wait for the GPU to finish processing the internal command list
 		void Wait(uint64_t sync_point) const;
 		
 		// Create and initialise a resource
@@ -74,9 +82,5 @@ namespace pr::rdr12
 
 		// Create a shader
 		ShaderPtr CreateShader(EStockShader id, char const* config);
-
-	private:
-
-		friend struct UpdateSubresourceScope;
 	};
 }

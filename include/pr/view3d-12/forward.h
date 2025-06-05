@@ -213,18 +213,22 @@ namespace pr::rdr12
 	//typedef RefPtr<AllocPres> AllocPresPtr;
 	
 	// Models
-	struct ModelDesc;
-	struct NuggetDesc;
 	struct Model;
-	struct Nugget;
 	struct ModelTreeNode;
+	struct ModelDesc;
+	struct Nugget;
+	struct NuggetDesc;
 	struct MeshCreationData;
 	struct SimpleAnimation;
 	struct KeyFrameAnimation;
-	struct SkinInfluence;
+	struct Skeleton;
 	struct Skinning;
+	struct SkinInfluence;
+	struct Animator;
+	using AnimatorPtr = RefPtr<Animator>;
 	using SimpleAnimationPtr = RefPtr<SimpleAnimation>;
 	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
+	using SkeletonPtr = RefPtr<Skeleton>;
 	using SkinningPtr = RefPtr<Skinning>;
 	using ModelPtr = RefPtr<Model>;
 	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;

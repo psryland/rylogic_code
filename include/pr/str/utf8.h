@@ -158,7 +158,7 @@ namespace pr::str::utf8
 
 		ptr += 2;
 
-		constexpr static auto Nibble = [](char c)
+		constexpr auto Nibble = [](char c)
 		{
 			if (c >= '0' && c <= '9') return c - '0';
 			if (c >= 'A' && c <= 'F') return c - 'A' + 10;

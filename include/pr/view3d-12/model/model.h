@@ -59,8 +59,8 @@ namespace pr::rdr12
 		Renderer& rdr();
 
 		// Allow update of the vertex/index buffers
-		UpdateSubresourceScope UpdateVertices(ResourceFactory& factory, Range vrange = Range::Reset());
-		UpdateSubresourceScope UpdateIndices(ResourceFactory& factory, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateVertices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateIndices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange = Range::Reset());
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)

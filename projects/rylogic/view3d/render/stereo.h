@@ -84,7 +84,7 @@ namespace pr
 				{
 					// Save the current render target views so we can
 					// restore them later and set the off-screen render target
-					dc->OMGetRenderTargets(1, &m_rtv.m_ptr, &m_dsv.m_ptr);
+					dc->OMGetRenderTargets(1, m_rtv.address_of(), m_dsv.address_of());
 					dc->OMSetRenderTargets(1, &m_stereo->m_rtv.m_ptr, nullptr);//m_stereo->m_dsv.m_ptr);
 					dc->ClearRenderTargetView(m_rtv.m_ptr, ColourBlack.arr);
 					dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
@@ -92,7 +92,7 @@ namespace pr
 				~RenderScope()
 				{
 					m_stereo->BlitNvMagic(m_dc);
-					m_dc->OMSetRenderTargets(1, &m_rtv.m_ptr, m_dsv.m_ptr); // Restore the render target
+					m_dc->OMSetRenderTargets(1, m_rtv.address_of(), m_dsv.m_ptr); // Restore the render target
 					m_stereo->BlitRTV(m_dc);
 				}
 			};

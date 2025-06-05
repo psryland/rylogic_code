@@ -49,7 +49,7 @@ namespace pr::rdr12::ldraw
 		#undef PR_RDR_INST
 	};
 
-	// A line drawer object
+	// An LDraw object
 	struct LdrObject
 		:RdrInstance
 		,RefCounted<LdrObject>
@@ -82,11 +82,11 @@ namespace pr::rdr12::ldraw
 		EventHandler<LdrObject&, Scene const&, true> OnAddToScene;
 
 		// Recursively add this object and its children to a scene
-		void AddToScene(Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
+		void AddToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Recursively add the bounding box instance for this object using 'bbox_model'
 		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
+		void AddBBoxToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Notes:
 		//  - Methods with a 'name' parameter apply an operation on this object
@@ -98,7 +98,7 @@ namespace pr::rdr12::ldraw
 		//    expression.
 
 		// Apply an operation on this object or any of its child objects that match 'name'.
-		// 'func' should have a signature: 'bool func(ldr::LdrObject* obj);' returning false to 'quick-out'.
+		// 'func' should have a signature: 'bool func(LdrObject* obj);' returning false to 'quick-out'.
 		// 'obj' is a recursion parameter, callers should use 'nullptr'
 		// Returns 'true' if 'func' always returns 'true'.
 		template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
@@ -150,6 +150,10 @@ namespace pr::rdr12::ldraw
 		// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
 		m4x4 O2P(char const* name = nullptr) const;
 		void O2P(m4x4 const& o2p, char const* name = nullptr);
+
+		// Get/Set the animation time of this object or child objects matching 'name' (see Apply)
+		float AnimTime(char const* name = nullptr) const;
+		void AnimTime(float time_s, char const* name = nullptr);
 
 		// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
 		bool Visible(char const* name = nullptr) const;
@@ -209,13 +213,13 @@ namespace pr::rdr12::ldraw
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
 		// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-		BBox BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s = 0.0f, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
+		BBox BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
 		BBox BBoxMS(bool include_children) const;
 
 		// Return the bounding box for this object in world space.
 		// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 		// If not then, then the returned bbox will be transformed to the top level object space
-		BBox BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s = 0.0f) const;
+		BBox BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred) const;
 		BBox BBoxWS(bool include_children) const;
 
 		// Add/Remove 'child' as a child of this object

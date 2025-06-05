@@ -162,7 +162,7 @@ namespace pr::rdr12
 		m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 		// Set shader constants for the frame
-		m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), nullptr);
+		m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), nullptr);
 
 		// Add the shadow map textures
 		if (auto* smap_step = scn().FindRStep<RenderSmap>())
@@ -224,17 +224,17 @@ namespace pr::rdr12
 			}
 
 			// Add skinning data for skinned meshes
-			if (nugget.m_model->m_skinning != nullptr)
+			if (SkinningPtr skin = coalesce(FindSkin(instance), nugget.m_model->m_skinning))
 			{
-				auto const& skinning = *nugget.m_model->m_skinning.get();
-				auto srv_skeleton = wnd().m_heap_view.Add(skinning.m_srv_skel);
-				auto srv_skin = wnd().m_heap_view.Add(skinning.m_srv_skin);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skeleton, srv_skeleton);
+				skin->Update(m_cmd_list, m_upload_buffer);
+				auto srv_skel = wnd().m_heap_view.Add(skin->m_srv_skel);
+				auto srv_skin = wnd().m_heap_view.Add(skin->m_srv_skin);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skel, srv_skel);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skin, srv_skin);
 			}
 
 			// Set shader constants for the nugget
-			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
+			m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 			// Apply scene pipe state overrides
 			{
@@ -255,7 +255,7 @@ namespace pr::rdr12
 
 				// Set constants for the shader
 				auto& shader = *shdr.m_shader.get();
-				shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
+				shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 				// Update the pipe state with the shader byte code
 				if (shader.m_signature) desc.Apply(PSO<EPipeState::RootSignature>(shader.m_signature.get()));

@@ -49,6 +49,18 @@ namespace pr::rdr12
 		return m_rdr;
 	}
 
+	// Access the command list associated with this factory instance
+	GfxCmdList& ResourceFactory::CmdList()
+	{
+		return m_gfx_cmd_list;
+	}
+
+	// Access the upload buffer associated with this factory instance
+	GpuUploadBuffer& ResourceFactory::UploadBuffer()
+	{
+		return m_upload_buffer;
+	}
+
 	// Flush creation commands to the GPU. Returns the sync point for when they've been executed
 	uint64_t ResourceFactory::FlushToGpu(EGpuFlush flush)
 	{
@@ -79,6 +91,8 @@ namespace pr::rdr12
 		pix::EndEvent(rdr().GfxQueue());
 		return sync_point;
 	}
+
+	// Wait for the GPU to finish processing the internal command list
 	void ResourceFactory::Wait(uint64_t sync_point) const
 	{
 		m_gsync.Wait(sync_point);
@@ -106,7 +120,7 @@ namespace pr::rdr12
 		Check(device->CreateCommittedResource(
 			&desc.HeapProps, desc.HeapFlags, &rd, D3D12_RESOURCE_STATE_COMMON,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
-			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
+			__uuidof(ID3D12Resource), (void**)res.address_of()));
 
 		// Assume common state until the resource is initialised
 		DefaultResState(res.get(), D3D12_RESOURCE_STATE_COMMON);
@@ -121,9 +135,9 @@ namespace pr::rdr12
 			{
 				// Note: here 'desc.Data' is an array of mip-level-zero images.
 				// The span of images expected by 'UpdateSubresource' is for each mip level.
-				UpdateSubresourceScope map(*this, res.get(), i, 0, 1, desc.DataAlignment);
+				UpdateSubresourceScope map(m_gfx_cmd_list, m_upload_buffer, res.get(), i, 0, 1, desc.DataAlignment);
 				map.Write(desc.Data[i], AllSet(desc.MiscFlags, ResDesc::EMiscFlags::PartialInitData));
-				map.Commit(desc.DefaultState);
+				map.Commit(EFinalState::Override, desc.DefaultState);
 			}
 			
 			// Generate mip maps for the texture (if needed)

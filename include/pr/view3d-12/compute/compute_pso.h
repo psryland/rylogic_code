@@ -30,7 +30,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12PipelineState> Create(ID3D12Device* device, char const* name)
 		{
 			D3DPtr<ID3D12PipelineState> pso;
-			Check(device->CreateComputePipelineState(this, __uuidof(ID3D12PipelineState), (void**)&pso.m_ptr));
+			Check(device->CreateComputePipelineState(this, __uuidof(ID3D12PipelineState), (void**)pso.address_of()));
 			DebugName(pso, name);
 			return pso;
 		}

@@ -87,12 +87,13 @@ namespace pr::geometry::fbx
 	};
 	struct Mesh
 	{
+		using Name = std::string;
 		using VBuffer = std::vector<Vert>;
 		using IBuffer = std::vector<int>;
 		using NBuffer = std::vector<Nugget>;
 
 		uint64_t m_id;
-		std::string_view m_name;
+		Name m_name;
 		VBuffer m_vbuf;
 		IBuffer m_ibuf;
 		NBuffer m_nbuf;
@@ -101,7 +102,7 @@ namespace pr::geometry::fbx
 		void reset(uint64_t id)
 		{
 			m_id = id;
-			m_name = "";
+			m_name.resize(0);
 			m_vbuf.resize(0);
 			m_ibuf.resize(0);
 			m_nbuf.resize(0);
@@ -116,11 +117,11 @@ namespace pr::geometry::fbx
 		using BoneCont = std::vector<m4x4>;
 		using LvlCont = std::vector<int>;
 
-		IdCont m_ids;     // Bone unique ids (first is the root bone)
-		NameCont m_names; // Bone names
-		BoneCont m_b2p;   // Bone to parent transform hierarchy in the skeleton rest position
-		TypeCont m_types; // Bone types
-		LvlCont m_levels; // Hierarchy levels
+		IdCont m_ids;        // Bone unique ids (first is the root bone)
+		NameCont m_names;    // Bone names
+		BoneCont m_b2p;      // Bone to parent transform hierarchy in the skeleton rest position
+		TypeCont m_types;    // Bone types
+		LvlCont m_hierarchy; // Hierarchy levels
 
 		void reset()
 		{
@@ -128,7 +129,7 @@ namespace pr::geometry::fbx
 			m_names.resize(0);
 			m_b2p.resize(0);
 			m_types.resize(0);
-			m_levels.resize(0);
+			m_hierarchy.resize(0);
 		}
 	};
 	struct Skinning
@@ -153,6 +154,9 @@ namespace pr::geometry::fbx
 	};
 	struct BoneKey
 	{
+		// Notes:
+		//  - Keys are just the stored snapshot points in the animation
+		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
 		quat m_rotation;
 		v4 m_translation;
 		v4 m_scale;
@@ -160,17 +164,15 @@ namespace pr::geometry::fbx
 	};
 	struct BoneTracks
 	{
-		// Notes:
-		//  - Keys are just the stored snapshot points in the animation
-		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
-		
-		// There is a bone track for each bone (by id)
-		using Track = std::vector<BoneKey>;
+		using Track = std::vector<BoneKey>; 
 		using Tracks = std::unordered_map<uint64_t, Track>;
-		Tracks m_tracks;
 
-		void reset()
+		uint64_t m_skel_id; // The skeleton that these tracks should match
+		Tracks m_tracks;    // A bone track for each bone (by id)
+	
+		void reset(uint64_t skel_id)
 		{
+			m_skel_id = skel_id;
 			m_tracks.clear();
 		}
 	};
@@ -197,7 +199,7 @@ namespace pr::geometry::fbx
 		virtual ~IAnimOut() = default;
 
 		// Add an animation sequence
-		virtual void AddBoneTracks(BoneTracks const& tracks) { (void)tracks; }
+		virtual void AddBoneTracks(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
 	};
 
 	// Options for parsing FBXfiles

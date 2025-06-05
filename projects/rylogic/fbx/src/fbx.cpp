@@ -13,6 +13,7 @@
 #include <fbxsdk.h>
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
+#include "pr/common/algorithm.h"
 #include "pr/common/allocator.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bbox.h"
@@ -270,6 +271,7 @@ namespace pr::geometry::fbx
 {
 	static constexpr int NoIndex = -1;
 	static constexpr Vert NoVert = {};
+	static constexpr uint64_t NoUniqueId = 0;
 	using ErrorList = std::vector<std::string>;
 
 	// Check that 'ptr' is not null. Throw if it is
@@ -722,6 +724,39 @@ namespace pr::geometry::fbx
 		return nullptr;
 	}
 
+	// Find the unique id of the root bone of the skeleton
+	static uint64_t FindSkeletonId(FbxMesh const& mesh)
+	{
+		for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+		{
+			auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
+			for (int c = 0, cend = skin.GetClusterCount(); c != cend; ++c)
+			{
+				auto& cluster = *skin.GetCluster(c);
+				auto const* bone = cluster.GetLink();
+
+				// Find the bone with no parent and assume that is the root
+				FbxSkeleton const* root_bone = nullptr;
+				for (; bone != nullptr; bone = bone->GetParent())
+				{
+					// Look for skeleton attributes
+					auto const* attr = Find(FbxNodeAttribute::eSkeleton, *bone);
+					if (attr == nullptr)
+						break;
+
+					// Note: GetSkeletonType() is not always set. Just find the 
+					// top of the hierarchy and assume that is the root
+					root_bone = FbxCast<FbxSkeleton>(attr);
+				}
+
+				// If we found the root of the skeleton, return it's id
+				if (root_bone != nullptr)
+					return root_bone->GetUniqueID();
+			}
+		}
+		return NoUniqueId;
+	}
+
 	// Get the hierarchy address of 'node'
 	static std::string Address(FbxNode const* node)
 	{
@@ -1049,6 +1084,8 @@ namespace pr::geometry::fbx
 					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
 						continue;
 
+					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
+
 					// Reset the skeleton instance for the root bone
 					if (is_skel_root)
 					{
@@ -1056,14 +1093,12 @@ namespace pr::geometry::fbx
 						skel = &m_skel;
 					}
 
-					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
-
 					// Add the bone to the skeleton
 					skel->m_ids.push_back(bone.GetUniqueID());
 					skel->m_names.push_back(bone.GetNode()->GetName());
 					skel->m_b2p.push_back(To<m4x4>(node.EvaluateLocalTransform()));
 					skel->m_types.push_back(To<EBoneType>(bone.GetSkeletonType()));
-					skel->m_levels.push_back(level);
+					skel->m_hierarchy.push_back(level);
 				}
 
 				// Recurse
@@ -1074,8 +1109,8 @@ namespace pr::geometry::fbx
 				if (is_skel_root && skel != nullptr)
 				{
 					// Adjust the levels so that root is at 0
-					auto lvl0 = skel->m_levels[0];
-					for (auto& lvl : skel->m_levels)
+					auto lvl0 = skel->m_hierarchy[0];
+					for (auto& lvl : skel->m_hierarchy)
 						lvl -= lvl0;
 
 					m_out.AddSkeleton(*skel);
@@ -1093,21 +1128,20 @@ namespace pr::geometry::fbx
 					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
 						continue;
 
-					// Ignore meshes without skins
 					auto& mesh = *FbxCast<FbxMesh>(&attr);
-					if (mesh.GetDeformerCount(FbxDeformer::eSkin) == 0)
-						continue;
+
+					// Find the skeleton associated with this skinned mesh
+					auto skel_id = FindSkeletonId(mesh);
+					if (skel_id == NoUniqueId)
+						continue; // Mesh has no skeleton => not animated
 
 					// The id of this mesh
 					auto mesh_id = mesh.GetUniqueID();
 
-					// Find the skeleton associated with this skinned mesh
-					auto skel_id = FindSkeletonId(mesh);
-
 					// Create a new skin
 					m_skin.reset(mesh_id, skel_id);
 					m_skin.m_verts.resize(mesh.GetControlPointsCount());
-					static auto NextZero = [](v4 const& v) -> int
+					constexpr auto NextZero = [](v4 const& v) -> int
 					{
 						return int(v.x != 0) + int(v.y != 0) + int(v.z != 0) + int(v.w != 0);
 					};
@@ -1151,39 +1185,6 @@ namespace pr::geometry::fbx
 				// Recurse
 				for (int i = 0; i != node.GetChildCount(); ++i)
 					ReadSkinning(*node.GetChild(i), level + 1);
-			}
-
-			// Find the unique id of the root bone of the skeleton
-			uint64_t FindSkeletonId(FbxMesh const& mesh) const
-			{
-				for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
-				{
-					auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
-					for (int c = 0, cend = skin.GetClusterCount(); c != cend; ++c)
-					{
-						auto& cluster = *skin.GetCluster(c);
-						auto const* bone = cluster.GetLink();
-
-						// Find the bone with no parent and assume that is the root
-						FbxSkeleton const* root_bone = nullptr;
-						for (; bone != nullptr; bone = bone->GetParent())
-						{
-							// Look for skeleton attributes
-							auto const* attr = Find(FbxNodeAttribute::eSkeleton, *bone);
-							if (attr == nullptr)
-								break;
-
-							// Note: GetSkeletonType() is not always set. Just find the 
-							// top of the hierarchy and assume that is the root
-							root_bone = FbxCast<FbxSkeleton>(attr);
-						}
-
-						// If we found the root of the skeleton, return it's id
-						if (root_bone != nullptr)
-							return root_bone->GetUniqueID();
-					}
-				}
-				return 0;
 			}
 
 			// Ensure the geometry in 'mesh' is triangles not polygons
@@ -1260,10 +1261,6 @@ namespace pr::geometry::fbx
 					m_anim = Check(m_scene.GetSrcObject<FbxAnimStack>(anim_index), "Requested animation stack does not exist");
 					m_time_span = m_anim->GetLocalTimeSpan();
 					m_scene.SetCurrentAnimationStack(m_anim);
-
-					//FbxTime start_time = time_span.GetStart();
-					//FbxTime end_time   = time_span.GetStop();
-
 				}
 
 				//
@@ -1305,40 +1302,32 @@ namespace pr::geometry::fbx
 				}
 			}
 
-			// Read the animation data for the bone transforms
+			// Read the animation data for the bone node
 			void ReadBoneTransforms(FbxNode& node, BoneTracks* bone_tracks = nullptr)
 			{
 				bool is_root = bone_tracks == nullptr;
+				uint64_t skel_id = NoUniqueId;
 
+				// Find nodes containing bones, and read the animation curves for the transforms
 				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
 				{
 					// Look for meshes with animated node transforms
 					auto const& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
+					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
 						continue;
+
+					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
 
 					if (is_root)
 					{
-						m_tracks.reset();
+						skel_id = bone.GetUniqueID();
+						m_tracks.reset(skel_id);
 						bone_tracks = &m_tracks;
 					}
 
-					auto const& mesh = *FbxCast<FbxMesh>(&attr);
-
-					// Get the animation data for this mesh
-					for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
-					{
-						auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
-						for (int b = 0, bend = skin.GetClusterCount(); b != bend; ++b)
-						{
-							auto& cluster = *skin.GetCluster(b);
-							auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
-
-							// Read key frames for 'bone' and add them to the collection
-							auto& track = bone_tracks->m_tracks[bone.GetUniqueID()];
-							ReadBoneTrack(*bone.GetNode(), track);
-						}
-					}
+					// Read key frames for 'bone' and add them to the collection
+					auto& track = bone_tracks->m_tracks[bone.GetUniqueID()];
+					ReadBoneTrack(*bone.GetNode(), track);
 				}
 
 				// Recurse
@@ -1347,29 +1336,22 @@ namespace pr::geometry::fbx
 
 				// If this is the root, output the animation sequence
 				if (is_root && bone_tracks != nullptr)
-				{
-					// Ensure all tracks only contain unique keys
-					static auto Unique = [](BoneTracks::Track& keys)
-					{
-						// Ensure the keys are in time order
-						std::sort(begin(keys), end(keys), [](BoneKey const& lhs, BoneKey const& rhs) { return lhs.m_time < rhs.m_time; });
-						keys.erase(std::unique(begin(keys), end(keys), [](BoneKey const& lhs, BoneKey const& rhs) { return lhs.m_time == rhs.m_time; }), end(keys));
-					};
-					std::for_each(std::execution::par_unseq, begin(bone_tracks->m_tracks), end(bone_tracks->m_tracks), [](auto& track)
-					{
-						Unique(track.second);
-					});
-
-					// Output the bone track data
-					m_out.AddBoneTracks(*bone_tracks);
-				}
+					m_out.AddBoneTracks(skel_id, *bone_tracks);
 			}
 
 			// Read the animation keys for a node
 			void ReadBoneTrack(FbxNode& node, BoneTracks::Track& track)
 			{
-				// Read the transform animations
-				FbxAnimCurve const* curves[] = {
+				struct Curve
+				{
+					FbxAnimCurve const* m_curve = nullptr;
+					size_t size() const { return m_curve->KeyGetCount(); }
+					FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
+				};
+
+				// Read the non-null, non-empty transform animation curves
+				vector<Curve, 9, true> curves;
+				for (auto curve : {
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
@@ -1379,26 +1361,18 @@ namespace pr::geometry::fbx
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-				};
-
-				// Count the total number of (possibly duplicate) key times
-				int count = 0;
-				for (auto const& curve : curves)
-					count += curve ? curve->KeyGetCount() : 0;
-
-				// Make a unique collection of key times
-				m_times.resize(0);
-				m_times.reserve(count);
-				for (auto const& curve : curves)
+				})
 				{
-					if (!curve) continue;
-					for (int i = 0, iend = curve->KeyGetCount(); i != iend; ++i)
-						m_times.push_back(curve->KeyGetTime(i));
+					if (curve == nullptr || curve->KeyGetCount() == 0) continue;
+					curves.push_back({ curve });
 				}
+				if (curves.empty())
+					return;
 
-				// Ensure the keys are in time order
-				std::sort(begin(m_times), end(m_times));
-				m_times.resize(std::distance(begin(m_times), std::unique(begin(m_times), end(m_times))));
+				// Create a list of unique key times
+				m_times.resize(0);
+				m_times.reserve(1 + static_cast<int>(m_time_span.GetDuration().GetSecondDouble() * m_frame_rate));
+				zip(curves.cspan(), true, [&](FbxTime time) { m_times.push_back(time); });
 
 				// Sample the transform at each key time
 				track.reserve(track.size() + m_times.size());
@@ -2022,7 +1996,7 @@ namespace pr::geometry::fbx
 				m_out << Indent(indent) << "Materials:\n";
 				++indent;
 
-				static auto LookForImplementation = [](FbxSurfaceMaterial const* pMaterial) -> FbxImplementation const*
+				auto LookForImplementation = [](FbxSurfaceMaterial const* pMaterial) -> FbxImplementation const*
 				{
 					const FbxImplementation* lImplementation = nullptr;
 					if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_CGFX);
@@ -2032,7 +2006,7 @@ namespace pr::geometry::fbx
 					if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_SSSL);
 					return lImplementation;
 				};
-				auto WriteMaterial = [this](FbxSurfaceMaterial const& material, int indent)
+				auto WriteMaterial = [this, LookForImplementation](FbxSurfaceMaterial const& material, int indent)
 				{
 					m_out << Indent(indent) << "Name: \"" << material.GetName() << "\"\n";
 
@@ -3276,8 +3250,8 @@ namespace pr::geometry::fbx
 			}
 			void WriteCurveKeys(FbxAnimCurve const& pCurve, char const* label, int indent)
 			{
-				static const char* interpolation[] = { "?", "constant", "linear", "cubic" };
-				static auto InterpolationFlagToIndex = [](int flags) -> int
+				constexpr const char* interpolation[] = { "?", "constant", "linear", "cubic" };
+				constexpr auto InterpolationFlagToIndex = [](int flags) -> int
 				{
 					if ((flags & FbxAnimCurveDef::eInterpolationConstant) == FbxAnimCurveDef::eInterpolationConstant) return 1;
 					if ((flags & FbxAnimCurveDef::eInterpolationLinear) == FbxAnimCurveDef::eInterpolationLinear) return 2;
@@ -3285,16 +3259,16 @@ namespace pr::geometry::fbx
 					return 0;
 				};
 
-				static const char* constantMode[] = { "?", "Standard", "Next" };
-				static auto ConstantmodeFlagToIndex = [](int flags) -> int
+				constexpr const char* constantMode[] = { "?", "Standard", "Next" };
+				constexpr auto ConstantmodeFlagToIndex = [](int flags) -> int
 				{
 					if ((flags & FbxAnimCurveDef::eConstantStandard) == FbxAnimCurveDef::eConstantStandard) return 1;
 					if ((flags & FbxAnimCurveDef::eConstantNext) == FbxAnimCurveDef::eConstantNext) return 2;
 					return 0;
 				};
 
-				static const char* cubicMode[] = { "?", "Auto", "Auto break", "Tcb", "User", "Break", "User break" };
-				static auto TangentmodeFlagToIndex = [](int flags) -> int
+				constexpr const char* cubicMode[] = { "?", "Auto", "Auto break", "Tcb", "User", "Break", "User break" };
+				constexpr auto TangentmodeFlagToIndex = [](int flags) -> int
 				{
 					if ((flags & FbxAnimCurveDef::eTangentAuto) == FbxAnimCurveDef::eTangentAuto) return 1;
 					if ((flags & FbxAnimCurveDef::eTangentAutoBreak) == FbxAnimCurveDef::eTangentAutoBreak) return 2;
@@ -3305,15 +3279,15 @@ namespace pr::geometry::fbx
 					return 0;
 				};
 
-				static const char* tangentWVMode[] = { "?", "None", "Right", "Next left" };
-				static auto TangentweightFlagToIndex = [](int flags) -> int
+				constexpr const char* tangentWVMode[] = { "?", "None", "Right", "Next left" };
+				constexpr auto TangentweightFlagToIndex = [](int flags) -> int
 				{
 					if ((flags & FbxAnimCurveDef::eWeightedNone) == FbxAnimCurveDef::eWeightedNone) return 1;
 					if ((flags & FbxAnimCurveDef::eWeightedRight) == FbxAnimCurveDef::eWeightedRight) return 2;
 					if ((flags & FbxAnimCurveDef::eWeightedNextLeft) == FbxAnimCurveDef::eWeightedNextLeft) return 3;
 					return 0;
 				};
-				static auto TangentVelocityFlagToIndex = [](int flags) -> int
+				constexpr auto TangentVelocityFlagToIndex = [](int flags) -> int
 				{
 					if ((flags & FbxAnimCurveDef::eVelocityNone) == FbxAnimCurveDef::eVelocityNone) return 1;
 					if ((flags & FbxAnimCurveDef::eVelocityRight) == FbxAnimCurveDef::eVelocityRight) return 2;

@@ -62,7 +62,7 @@ namespace pr::rdr12
 			: CmdList(nullptr, {}, pool)
 		{
 			// Create an instance of a cmd list with no allocator assigned yet
-			Check(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			Check(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)m_list.address_of()));
 			if (name) DebugName(m_list, name);
 			DebugColour(m_list, pix_colour);
 		}
@@ -70,7 +70,7 @@ namespace pr::rdr12
 			: CmdList(nullptr, std::forward<alloc_t>(cmd_alloc), pool)
 		{
 			// Create an instance of an open cmd list based on 'cmd_alloc'
-			Check(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			Check(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)m_list.address_of()));
 			if (name) DebugName(m_list, name);
 			DebugColour(m_list, pix_colour);
 
@@ -118,6 +118,14 @@ namespace pr::rdr12
 		void UseThisThread()
 		{
 			m_thread_id = std::this_thread::get_id();
+		}
+
+		// Access the device that created this command list
+		ID3D12Device4* d3d() const
+		{
+			D3DPtr<ID3D12Device4> device;
+			Check(m_list->GetDevice(__uuidof(ID3D12Device4), (void**)device.address_of()));
+			return device.get();
 		}
 
 		// Access the list

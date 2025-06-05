@@ -29,7 +29,7 @@ namespace pr::rdr
 			,m_device()
 		{
 			// Create a d3d9 dll context
-			Check(Direct3DCreate9Ex(D3D_SDK_VERSION, &m_d3d9.m_ptr));
+			Check(Direct3DCreate9Ex(D3D_SDK_VERSION, m_d3d9.address_of()));
 
 			// Get a pointer to the d3d9 device
 			auto pp = D3DPRESENT_PARAMETERS{};
@@ -39,7 +39,7 @@ namespace pr::rdr
 			pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 			Check(m_d3d9->CreateDeviceEx(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd,
 				D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED | D3DCREATE_FPU_PRESERVE,
-				&pp, nullptr, &m_device.m_ptr));
+				&pp, nullptr, m_device.address_of()));
 
 			// Check it's good to go
 			Check(m_device->CheckDeviceState(nullptr));
@@ -77,7 +77,7 @@ namespace pr::rdr
 			//    If '*shared_handle == nullptr', the created texture is shareable.
 			//    If '*shared_handle != nullptr', the created texture uses the resource associated with the shared handle
 			D3DPtr<IDirect3DTexture9> tex;
-			Check(m_device->CreateTexture(width, height, levels, usage, format, pool, &tex.m_ptr, shared_handle));
+			Check(m_device->CreateTexture(width, height, levels, usage, format, pool, tex.address_of(), shared_handle));
 			return tex;
 		}
 	};

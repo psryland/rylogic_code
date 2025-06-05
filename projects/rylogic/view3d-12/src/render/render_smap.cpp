@@ -9,6 +9,7 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/sampler/sampler.h"
@@ -271,7 +272,7 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 			// Set shader constants for the frame
-			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, nullptr, caster, scn().m_cam);
+			m_shader.Setup(m_cmd_list.get(), m_upload_buffer, nullptr, caster, scn().m_cam);
 
 			// Draw each element in the draw list
 			Lock lock(*this);
@@ -287,7 +288,7 @@ namespace pr::rdr12
 				m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
 				// Set shader constants for the nugget
-				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, &dle, caster, scn().m_cam);
+				m_shader.Setup(m_cmd_list.get(), m_upload_buffer, &dle, caster, scn().m_cam);
 
 				// Bind textures to the pipeline
 				auto tex = coalesce(FindDiffTexture(*dle.m_instance), nugget.m_tex_diffuse, m_default_tex);

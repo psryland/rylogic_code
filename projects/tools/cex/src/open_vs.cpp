@@ -62,14 +62,14 @@ namespace cex
 			if (FAILED(result)) break;
 
 			Ptr<IUnknown> punk;
-			result = ::GetActiveObject(clsid, NULL, &punk.m_ptr);
+			result = ::GetActiveObject(clsid, NULL, punk.address_of());
 			if (FAILED(result)) break;
 
 			Ptr<EnvDTE::_DTE> DTE;
 			DTE = punk;
 
 			Ptr<EnvDTE::ItemOperations> item_ops;
-			result = DTE->get_ItemOperations(&item_ops.m_ptr);
+			result = DTE->get_ItemOperations(item_ops.address_of());
 			if (FAILED(result)) break;
 
 			auto filepath = m_file.wstring();
@@ -77,20 +77,20 @@ namespace cex
 			BSTR bstrFileName = ::SysAllocStringLen(filepath.c_str(), UINT(filepath.size()));
 			BSTR bstrKind = ::SysAllocStringLen(view_kind.c_str(), UINT(view_kind.size()));
 			Ptr<EnvDTE::Window> window;
-			result = item_ops->OpenFile(bstrFileName, bstrKind, &window.m_ptr);
+			result = item_ops->OpenFile(bstrFileName, bstrKind, window.address_of());
 			if (FAILED(result))
 				break;
 
 			Ptr<EnvDTE::Document> doc;
-			result = DTE->get_ActiveDocument(&doc.m_ptr);
+			result = DTE->get_ActiveDocument(doc.address_of());
 			if (FAILED(result)) break;
 
 			Ptr<IDispatch> selection_dispatch;
-			result = doc->get_Selection(&selection_dispatch.m_ptr);
+			result = doc->get_Selection(selection_dispatch.address_of());
 			if (FAILED(result)) break;
 
 			Ptr<EnvDTE::TextSelection> selection;
-			result = selection_dispatch->QueryInterface(&selection.m_ptr);
+			result = selection_dispatch->QueryInterface(selection.address_of());
 			if (FAILED(result)) break;
 
 			result = selection->GotoLine(m_line, TRUE);
