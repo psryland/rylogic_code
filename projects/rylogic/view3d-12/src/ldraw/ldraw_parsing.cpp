@@ -9,13 +9,14 @@
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
-#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/animation.h"
+#include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/scene/scene.h"
@@ -622,8 +623,9 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::Animation:
 			{
-				obj->m_anim.m_simple = SimpleAnimationPtr(rdr12::New<SimpleAnimation>(), true);
-				ParseAnimation(reader, pp, *obj->m_anim.m_simple.get());
+				SimpleAnimationPtr root_anim{ rdr12::New<SimpleAnimation>(), true };
+				ParseAnimation(reader, pp, *root_anim.get());
+				obj->m_root_anim.m_simple = root_anim;
 				return true;
 			}
 			case EKeyword::Hidden:
@@ -4128,31 +4130,48 @@ namespace pr::rdr12::ldraw
 			};
 
 			// Model output helper
-			struct ModeOut : ModelGenerator::IModelOut
+			struct ModelOut : ModelGenerator::IModelOut
 			{
-				LdrObject* m_obj;
-				ModeOut(LdrObject* obj) : m_obj(obj) { ReadAnimation = true; }
-				virtual EResult Model(std::span<ModelTreeNode const> tree) override
+				LdrObject& m_obj;
+				ResourceFactory& m_factory;
+
+				ModelOut(LdrObject& obj, ResourceFactory& factory)
+					: m_obj(obj)
+					, m_factory(factory)
 				{
-					ModelTreeToLdr(m_obj, tree);
+					ReadAnimation = true;
+				}
+				EResult Model(std::span<ModelTreeNode const> tree) override
+				{
+					ModelTreeToLdr(&m_obj, tree);
 					return EResult::Continue;
 				}
-				virtual EResult Anim(std::span<KeyFrameAnimationPtr const> anims) override
+				EResult Animation(std::span<SkeletonPtr const> skels, std::span<KeyFrameAnimationPtr const> anims) override
 				{
-					// todo, handle multiple animations
+					// Only use the first animation
+					auto const& animation = anims.front();
+					auto const& skeleton = pr::get_if(skels, [&](SkeletonPtr skel) { return skel->Id() == animation->m_skel_id; });
+
+					// Create an animator that uses the animation and a pose for it to animate
 					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anims.front()), true };
-					m_obj->Apply([&](LdrObject* obj)
+					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator), true };
+					pose->AnimTime(0.0);
+
+					// Set the pose for each model in the hierarchy.
+					// Alternatively, I could add a PosePtr in the LdrInstance type.
+					m_obj.Apply([&](LdrObject* obj)
 					{
-						if (obj->m_model && obj->m_model->m_skinning)
-							obj->m_model->m_skinning->m_animator = animator;
+						if (obj->m_model)
+							obj->m_model->m_pose = pose;
 						return true;
 					}, "");
 
 					return EResult::Continue;
 				}
-			} model_out = {obj};
+			};
 
 			// Create the models
+			ModelOut model_out(*obj, m_pp.m_factory);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
 		}
@@ -5327,7 +5346,7 @@ namespace pr::rdr12::ldraw
 			if (AllSet(flags, EUpdateObject::Flags))
 				std::swap(object->m_ldr_flags, rhs->m_ldr_flags);
 			if (AllSet(flags, EUpdateObject::Animation))
-				std::swap(object->m_anim, rhs->m_anim);
+				std::swap(object->m_root_anim, rhs->m_root_anim);
 			if (AllSet(flags, EUpdateObject::ColourMask))
 				std::swap(object->m_colour_mask, rhs->m_colour_mask);
 			if (AllSet(flags, EUpdateObject::Reflectivity))

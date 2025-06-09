@@ -234,8 +234,7 @@ namespace pr
 	template <Container TCont, typename Pred> inline auto get_if(TCont& cont, Pred pred) -> decltype(*std::begin(cont))
 	{
 		auto iter = find_if(cont, pred);
-		if (iter == std::end(cont)) throw std::runtime_error("get_if() - no match found");
-		return *iter;
+		return iter != std::end(cont) ? *iter : throw std::runtime_error("get_if() - no match found");
 	}
 
 	// Return the first pointer like argument that isn't null

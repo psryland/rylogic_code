@@ -25,7 +25,7 @@ Texture2D<float4> m_proj_texture[MaxProjectedTextures] :reg(t3, 0);
 SamplerState      m_proj_sampler[MaxProjectedTextures] :reg(s3, 0);
 
 // Skinned Meshes
-StructuredBuffer<Mat4x4> m_skeleton : reg(t4, 0);
+StructuredBuffer<Mat4x4> m_pose : reg(t4, 0);
 StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
 
 #include "../lighting/phong_lighting.hlsli"
@@ -47,8 +47,8 @@ PSIn VSDefault(VSIn In)
 	// Transform
 	if (IsSkinned)
 	{
-		float4 os_vert = SkinVertex(m_skeleton, m_skin[In.idx0.x], In.vert);
-		float4 os_norm = SkinNormal(m_skeleton, m_skin[In.idx0.x], In.norm);
+		float4 os_vert = SkinVertex(m_pose, m_skin[In.idx0.x], In.vert);
+		float4 os_norm = SkinNormal(m_pose, m_skin[In.idx0.x], In.norm);
 		Out.ss_vert = mul(os_vert, m_o2s);
 		Out.ws_vert = mul(os_vert, m_o2w);
 		Out.ws_norm = mul(os_norm, m_n2w);

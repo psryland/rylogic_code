@@ -219,22 +219,25 @@ namespace pr::rdr12
 	struct Nugget;
 	struct NuggetDesc;
 	struct MeshCreationData;
-	struct SimpleAnimation;
-	struct KeyFrameAnimation;
-	struct Skeleton;
-	struct Skinning;
-	struct SkinInfluence;
-	struct Animator;
-	using AnimatorPtr = RefPtr<Animator>;
-	using SimpleAnimationPtr = RefPtr<SimpleAnimation>;
-	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
-	using SkeletonPtr = RefPtr<Skeleton>;
-	using SkinningPtr = RefPtr<Skinning>;
 	using ModelPtr = RefPtr<Model>;
 	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
 
 	// Instances
 	struct BaseInstance;
+
+	// Animation
+	struct SimpleAnimation;
+	struct KeyFrameAnimation;
+	struct SkinInfluence;
+	struct Skeleton;
+	struct Pose;
+	struct Skin;
+	struct Animator;
+	using SimpleAnimationPtr = RefPtr<SimpleAnimation>;
+	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
+	using SkeletonPtr = RefPtr<Skeleton>;
+	using PosePtr = RefPtr<Pose>;
+	using AnimatorPtr = RefPtr<Animator>;
 
 	// Shaders
 	struct Vert;

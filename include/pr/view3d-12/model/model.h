@@ -4,6 +4,8 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/skin.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/utility/update_resource.h"
 
 namespace pr::rdr12
@@ -31,7 +33,8 @@ namespace pr::rdr12
 		TNuggetChain             m_nuggets;   // The nuggets for this model
 		int64_t                  m_vcount;    // The count of elements in the V-buffer
 		int64_t                  m_icount;    // The count of elements in the I-buffer
-		SkinningPtr              m_skinning;  // Skinning data for this model (null if not skinned)
+		Skin                     m_skin;      // Skinning data for this model.
+		PosePtr                  m_pose;      // Model pose. Null if not animated. Overridden in Instance.
 		BBox                     m_bbox;      // A bounding box for the model. Set by the client
 		string32                 m_name;      // A human readable name for the model
 		SizeAndAlign16           m_vstride;   // The size and alignment (in bytes) of a single V-element

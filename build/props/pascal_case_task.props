@@ -1,0 +1,30 @@
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<UsingTask
+		TaskName="PascalCaseTransform"
+		TaskFactory="CodeTaskFactory"
+		AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll"
+	>
+		<ParameterGroup>
+			<InputFilename ParameterType="System.String" Required="true" />
+			<OutputName ParameterType="System.String" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Reference Include="System.Core" />
+			<Using Namespace="System" />
+			<Using Namespace="System.Text" />
+			<Code Type="Fragment" Language="cs">
+			<![CDATA[
+				var name = System.IO.Path.GetFileNameWithoutExtension(InputFilename);
+				var parts = name.Split('_');
+				var sb = new StringBuilder();
+				foreach (var part in parts)
+				{
+				if (!string.IsNullOrEmpty(part))
+					sb.Append(char.ToUpper(part[0]) + part.Substring(1));
+				}
+				OutputName = sb.ToString();
+			]]>
+			</Code>
+		</Task>
+	</UsingTask>
+</Project>

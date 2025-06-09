@@ -132,7 +132,7 @@ namespace pr::geometry::fbx
 			m_hierarchy.resize(0);
 		}
 	};
-	struct Skinning
+	struct Skin
 	{
 		struct Influence
 		{
@@ -177,10 +177,10 @@ namespace pr::geometry::fbx
 		}
 	};
 
-	// Interfaces for emitting model parts during 'Read'
-	struct IModelOut
+	// Interfaces for emitting scene parts during 'Read'
+	struct ISceneOut
 	{
-		virtual ~IModelOut() = default;
+		virtual ~ISceneOut() = default;
 
 		// Add a material to the output
 		virtual void AddMaterial(uint64_t unique_id, Material const& mat) { (void)unique_id, mat; }
@@ -191,21 +191,17 @@ namespace pr::geometry::fbx
 		// Add a skeleton to the output
 		virtual void AddSkeleton(Skeleton const& skeleton) { (void)skeleton; }
 
-		// Add Skinning data for a mesh to the output
-		virtual void AddSkinning(Skinning const& skinning) { (void)skinning; }
-	};
-	struct IAnimOut
-	{
-		virtual ~IAnimOut() = default;
+		// Add Skin data for an existing mesh
+		virtual void AddSkin(Skin const& skin) { (void)skin; }
 
 		// Add an animation sequence
-		virtual void AddBoneTracks(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
+		virtual void AddAnimation(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
 	};
 
 	// Options for parsing FBXfiles
-	struct ReadModelOptions
+	struct ReadOptions
 	{
-		// Parts of the model to read
+		// Parts of the scene to read
 		EParts m_parts = EParts::All;
 	};
 
@@ -246,8 +242,7 @@ namespace pr::geometry::fbx
 			, LoadScene((Fbx_LoadSceneFn)GetProcAddress(m_module, "Fbx_LoadScene"))
 			, ReleaseScene((Fbx_ReleaseSceneFn)GetProcAddress(m_module, "Fbx_ReleaseScene"))
 			, ReadSceneProps((Fbx_ReadScenePropsFn)GetProcAddress(m_module, "Fbx_ReadSceneProps"))
-			, ReadModel((Fbx_ReadModelFn)GetProcAddress(m_module, "Fbx_ReadModel"))
-			, ReadAnimStack((Fbx_ReadAnimStackFn)GetProcAddress(m_module, "Fbx_ReadAnimStack"))
+			, ReadScene((Fbx_ReadSceneFn)GetProcAddress(m_module, "Fbx_ReadScene"))
 			, DumpScene((Fbx_DumpSceneFn)GetProcAddress(m_module, "Fbx_DumpScene"))
 			, RoundTripTest((Fbx_RoundTripTestFn)GetProcAddress(m_module, "Fbx_RoundTripTest"))
 		{}
@@ -264,13 +259,9 @@ namespace pr::geometry::fbx
 		using Fbx_ReadScenePropsFn = SceneProps (__stdcall*)(fbxsdk::FbxScene const& scene);
 		Fbx_ReadScenePropsFn ReadSceneProps;
 
-		// Read the model hierarchy from the scene
-		using Fbx_ReadModelFn = void (__stdcall *)(fbxsdk::FbxScene& scene, IModelOut& out, ReadModelOptions const& options);
-		Fbx_ReadModelFn ReadModel;
-
-		// Read animation sequence data for the given animation stack
-		using Fbx_ReadAnimStackFn = void(__stdcall*)(fbxsdk::FbxScene& scene, IAnimOut& out, int anim_stack);
-		Fbx_ReadAnimStackFn ReadAnimStack;
+		// Read the scene hierarchy
+		using Fbx_ReadSceneFn = void (__stdcall *)(fbxsdk::FbxScene& scene, ISceneOut& out, ReadOptions const& options);
+		Fbx_ReadSceneFn ReadScene;
 
 		// Dump info about the scene to 'out'
 		using Fbx_DumpSceneFn = void(__stdcall*)(fbxsdk::FbxScene& scene, std::ostream& out);
@@ -316,19 +307,13 @@ namespace pr::geometry::fbx
 				Fbx::get().ReleaseScene(m_scene);
 		}
 
-		// Read the model from the FBX scene
-		void ReadModel(IModelOut& out, ReadModelOptions const& options)
+		// Read the hierarchy from the FBX scene
+		void ReadScene(ISceneOut& out, ReadOptions const& options)
 		{
 			// Notes:
 			//  - If this is slow, it's probably spending most of the time trianguling the
 			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
-			Fbx::get().ReadModel(*m_scene, out, options);
-		}
-
-		// Read the animation sequence data from the FBX scene
-		void ReadAnimCurves(IAnimOut& out, int anim_stack)
-		{
-			Fbx::get().ReadAnimStack(*m_scene, out, anim_stack);
+			Fbx::get().ReadScene(*m_scene, out, options);
 		}
 	};
 }

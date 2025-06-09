@@ -10,18 +10,13 @@ namespace pr::rdr12
 {
 	struct Skeleton: RefCounted<Skeleton>
 	{
-		// Notes:
-		//  - A Skeleton is be shared by many Skinning instances.
-		//  - A Skinning instance creates a resource to hold the runtime bone state
-		//    initialised from 'm_bones'
-		//  - Skinning instances could (in-theory) be shared across multiple models.
-
+		// See description in "animation.h"
 		using Ids = pr::vector<uint64_t>;
 		using Bones = pr::vector<m4x4>;
 		using Names = pr::vector<string32>;
 		using Hierarchy = pr::vector<uint8_t>;
 
-		Ids m_ids;                     // A unique ID for each bone, used to check for skeleton mismatches
+		Ids m_ids;                     // A unique ID for each bone
 		Names m_names;                 // A name for each bone (debugging mostly)
 		Bones m_bones;                 // The rest-pose bone transforms (o2p transforms, *not* o2w or o2modelspace)
 		Hierarchy m_hierarchy;         // Depth-first ordered list of bones

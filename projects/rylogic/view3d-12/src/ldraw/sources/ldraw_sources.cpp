@@ -196,7 +196,7 @@ namespace pr::rdr12::ldraw
 	{
 		// Note: when called from a worker thread, this function returns after objects have
 		// been created, but before they've been added to the main 'm_srcs' collection.
-		// The 'on_add' callback function should be used as a continuation function.
+		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceString<Char>>(new SourceString<Char>(context_id, script, enc, includes));
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
 		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
@@ -212,7 +212,7 @@ namespace pr::rdr12::ldraw
 	{
 		// Note: when called from a worker thread, this function returns after objects have
 		// been created, but before they've been added to the main 'm_srcs' collection.
-		// The 'on_add' callback function should be used as a continuation function.
+		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceFile>(new SourceFile{ context_id, filepath, enc, includes });
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
 		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
@@ -226,7 +226,7 @@ namespace pr::rdr12::ldraw
 	{
 		// Note: when called from a worker thread, this function returns after objects have
 		// been created, but before they've been added to the main 'm_srcs' collection.
-		// The 'on_add' callback function should be used as a continuation function.
+		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceBinary>(new SourceBinary{ context_id, data });
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
 		src->Load(rdr(), EDataChangedReason::NewData, add_complete);

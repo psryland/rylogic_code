@@ -75,7 +75,7 @@ namespace pr::rdr12::ldraw
 		, m_context_id(context_id)
 		, m_base_colour(Colour32White)
 		, m_colour_mask()
-		, m_anim()
+		, m_root_anim()
 		, m_bbox_instance()
 		, m_screen_space()
 		, m_ldr_flags(ELdrFlags::None)
@@ -102,7 +102,7 @@ namespace pr::rdr12::ldraw
 		// Set the instance to world.
 		// Take a copy in case the 'OnAddToScene' event changes it.
 		// We want parenting to be unaffected by the event handlers.
-		auto i2w = *p2w * m_o2p * m_anim.RootToWorld();
+		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
 		m_i2w = i2w;
 
 		// Combine recursive flags
@@ -129,7 +129,7 @@ namespace pr::rdr12::ldraw
 	void LdrObject::AddBBoxToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world for this object
-		auto i2w = *p2w * m_o2p * m_anim.RootToWorld();
+		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
@@ -208,17 +208,18 @@ namespace pr::rdr12::ldraw
 	float LdrObject::AnimTime(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? obj->m_anim.m_time_s : 0.0f;
+		return obj ? s_cast<float>(obj->m_root_anim.m_time_s) : 0.0f;
 	}
 	void LdrObject::AnimTime(float time_s, char const* name)
 	{
 		Apply([&](LdrObject* o)
 		{
-			// Updating the skin for a model requires a command list and a GPU upload buffer.
-			// This means it needs to happen at render time, not immediately here.
-			o->m_anim.m_time_s = time_s;
-			if (o->m_model && o->m_model->m_skinning)
-				o->m_model->m_skinning->AnimTime(time_s);
+			// Set the time for the root animation
+			o->m_root_anim.AnimTime(time_s);
+
+			// Set the time for any skinned model animation
+			if (o->m_model && o->m_model->m_pose)
+				o->m_model->m_pose->AnimTime(time_s);
 			return true;
 		}, name);
 	}
@@ -592,7 +593,7 @@ namespace pr::rdr12::ldraw
 	BBox LdrObject::BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w_, ELdrFlags parent_flags) const
 	{
 		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
-		auto i2w = p2w * m_anim.RootToWorld();
+		auto i2w = p2w * m_root_anim.RootToWorld();
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
@@ -633,7 +634,7 @@ namespace pr::rdr12::ldraw
 		// Get the combined o2w transform;
 		m4x4 o2w = m_o2p;
 		for (LdrObject* parent = m_parent; parent; parent = parent->m_parent)
-			o2w = parent->m_o2p * parent->m_anim.RootToWorld() * o2w;
+			o2w = parent->m_o2p * parent->m_root_anim.RootToWorld() * o2w;
 
 		return BBoxMS(include_children, pred, &o2w);
 	}

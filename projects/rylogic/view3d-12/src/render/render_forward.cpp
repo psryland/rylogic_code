@@ -11,7 +11,8 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
-#include "pr/view3d-12/model/skinning.h"
+#include "pr/view3d-12/model/skin.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_forward.h"
@@ -224,12 +225,12 @@ namespace pr::rdr12
 			}
 
 			// Add skinning data for skinned meshes
-			if (SkinningPtr skin = coalesce(FindSkin(instance), nugget.m_model->m_skinning))
+			if (PosePtr pose = coalesce(FindPose(instance), nugget.m_model->m_pose); pose && nugget.m_model->m_skin)
 			{
-				skin->Update(m_cmd_list, m_upload_buffer);
-				auto srv_skel = wnd().m_heap_view.Add(skin->m_srv_skel);
-				auto srv_skin = wnd().m_heap_view.Add(skin->m_srv_skin);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skel, srv_skel);
+				pose->Update(m_cmd_list, m_upload_buffer);
+				auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);
+				auto srv_skin = wnd().m_heap_view.Add(nugget.m_model->m_skin.m_srv);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Pose, srv_pose);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skin, srv_skin);
 			}
 

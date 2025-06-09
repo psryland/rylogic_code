@@ -223,7 +223,7 @@ namespace pr::rdr12
 
 			virtual ~IModelOut() = default;
 			virtual EResult Model(std::span<ModelTreeNode const>) { return EResult::Stop; }
-			virtual EResult Anim(std::span<KeyFrameAnimationPtr const>) { return EResult::Stop; }
+			virtual EResult Animation(std::span<SkeletonPtr const>, std::span<KeyFrameAnimationPtr const>) { return EResult::Stop; }
 		};
 		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
 		static void Load3DSModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);

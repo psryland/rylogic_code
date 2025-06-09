@@ -92,8 +92,8 @@ struct Main :Form
 
 			m_obj0 = View3D_ObjectCreateLdrA(
 				//' "*Box first_box_eva FF00FF00 { *Data {1 2 3} }"
-				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
-				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
+				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
 				, false, nullptr, nullptr);
 
 			m_obj1 = View3D_ObjectCreateLdrA(
@@ -275,7 +275,11 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 			//main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 			
 			// Animation
-			View3D_ObjectAnimTimeSet(main.m_obj0, time, nullptr);
+			static bool animate = false;
+			if (animate)
+				View3D_ObjectAnimTimeSet(main.m_obj0, time, nullptr);
+			else
+				View3D_ObjectAnimTimeSet(main.m_obj0, 0, nullptr);
 			
 
 			auto c2w = View3D_CameraToWorldGet(main.m_win3d);

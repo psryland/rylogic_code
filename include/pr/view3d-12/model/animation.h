@@ -4,10 +4,24 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/utility/lookup.h"
 
 namespace pr::rdr12
 {
+	// Notes:
+	//  - Animation has these parts:
+	//     - KeyFrameAnimation = a buffer of Tracks (one per bone) containing KeyFrames at times.
+	//     - Skeleton = Source data describing a hierarchy of bone transforms
+	//     - Pose = A runtime skeleton instance, updated by an Animator using interpolated transforms from an Animation.
+	//     - Skin = A set of bones and weights for each unique vertex of a model.
+	//     - Animator = The class that determines the pose at a given time.
+	//  - Models contain a skin because the skin is 1:1 with the model and doesn't change.
+	//    Model verts need to contain the 'source vertex index' in order to lookup the skin weights.
+	//  - Instances contain a pose because poses change with time and can use the same model but at different animation times.
+	//  - Poses reference an Animator, a Skeleton, and an animation time. Multiple instances can reference the same pose.
+	//    Think of a Pose as a dynamic instance of a skeleton.
+	//  - A skeleton can be referenced by many poses. A skeleton is basically static data that animations are relative to.
+	//  - An Animator is used to update the transforms in a Pose. If a pose doesn't have an animator, it defaults to the skeleton's rest pose.
+
 	// Simple animation styles
 	enum class EAnimStyle : uint8_t
 	{
@@ -71,12 +85,12 @@ namespace pr::rdr12
 	// 2nd order polynomial animation
 	struct SimpleAnimation : RefCounted<SimpleAnimation>
 	{
-		EAnimStyle m_style;  // The animation style
-		double     m_period; // Seconds
 		v4         m_vel;    // Linear velocity of the animation in m/s
 		v4         m_acc;    // Linear velocity of the animation in m/s
 		v4         m_avel;   // Angular velocity of the animation in rad/s
 		v4         m_aacc;   // Angular velocity of the animation in rad/s
+		double     m_period; // Seconds
+		EAnimStyle m_style;  // The animation style
 
 		SimpleAnimation();
 

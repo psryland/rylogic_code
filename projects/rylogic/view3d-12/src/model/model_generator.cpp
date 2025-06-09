@@ -4,7 +4,7 @@
 //*********************************************
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/animation.h"
-#include "pr/view3d-12/model/skinning.h"
+#include "pr/view3d-12/model/skin.h"
 #include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/vertex_layout.h"
@@ -1238,12 +1238,12 @@ namespace pr::rdr12
 	{
 		using namespace geometry;
 
-		struct ModelOut : fbx::IModelOut, fbx::IAnimOut
+		struct SceneOut : fbx::ISceneOut
 		{
 			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
 			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
-			using SkelCont = std::unordered_map<uint64_t, SkeletonPtr>;
-			using AnimCont = std::vector<KeyFrameAnimationPtr>;
+			using SkelCont = pr::vector<SkeletonPtr, 2>;
+			using AnimCont = pr::vector<KeyFrameAnimationPtr, 2>;
 
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
@@ -1254,7 +1254,7 @@ namespace pr::rdr12
 			ModelTree m_tree;
 			AnimCont m_anims;
 
-			ModelOut(ResourceFactory& factory, CreateOptions const* opts)
+			SceneOut(ResourceFactory& factory, CreateOptions const* opts)
 				: m_factory(factory)
 				, m_opts(opts)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
@@ -1331,47 +1331,42 @@ namespace pr::rdr12
 			// Add a skeleton to the output
 			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
 			{
-				m_skels[skeleton.m_ids.front()] = SkeletonPtr(rdr12::New<Skeleton>(
+				m_skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
 					skeleton.m_ids,
 					transform<Skeleton::Names>(skeleton.m_names, [](auto& x) { return static_cast<string32>(x); }),
 					skeleton.m_b2p,
 					transform<Skeleton::Hierarchy>(skeleton.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
-				), true);
+				), true));
 			}
 
 			// Add Skinning data for a mesh to the output
-			virtual void AddSkinning(fbx::Skinning const& skinning) override
+			virtual void AddSkin(fbx::Skin const& skin) override
 			{
-				static_assert(sizeof(fbx::Skinning::Influence) == sizeof(Skinfluence));
-				static_assert(alignof(fbx::Skinning::Influence) == alignof(Skinfluence));
-				static_assert(offsetof(fbx::Skinning::Influence, m_bones) == offsetof(Skinfluence, m_bones));
-				static_assert(offsetof(fbx::Skinning::Influence, m_weights) == offsetof(Skinfluence, m_weights));
-				std::span<Skinfluence const> verts = { reinterpret_cast<Skinfluence const*>(skinning.m_verts.data()), skinning.m_verts.size() };
+				static_assert(sizeof(fbx::Skin::Influence) == sizeof(Skinfluence));
+				static_assert(alignof(fbx::Skin::Influence) == alignof(Skinfluence));
+				static_assert(offsetof(fbx::Skin::Influence, m_bones) == offsetof(Skinfluence, m_bones));
+				static_assert(offsetof(fbx::Skin::Influence, m_weights) == offsetof(Skinfluence, m_weights));
+				auto verts = std::span<Skinfluence const>{ reinterpret_cast<Skinfluence const*>(skin.m_verts.data()), skin.m_verts.size() };
 
-				auto const& mesh = m_meshes.at(skinning.m_mesh_id);
-				auto const& skel = m_skels.at(skinning.m_skel_id);
-				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(m_factory, verts, skel), true);
+				auto const& mesh = m_meshes.at(skin.m_mesh_id);
+				auto const& skel = pr::get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == skin.m_skel_id; });
+				mesh->m_skin = Skin(m_factory, verts, skel->Id());
 			}
 
 			// Add an animation sequence
-			virtual void AddBoneTracks(uint64_t skel_id, fbx::BoneTracks const& bone_tracks) override
+			virtual void AddAnimation(uint64_t skel_id, fbx::BoneTracks const& bone_tracks) override
 			{
-				// Find the matching skeleton
-				auto iter = m_skels.find(skel_id);
-				if (iter == end(m_skels))
-					throw std::runtime_error(std::format("Skeleton with id '{}' not found", skel_id));
-
 				// Create a new animation sequence
-				auto& skel = *iter->second.get();
-				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(skel.Id(), EAnimStyle::Repeat), true);
+				auto const& skel = pr::get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == skel_id; });
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(skel->Id(), EAnimStyle::Repeat), true);
 
 				// Read the key frame data
-				anim->m_tracks.resize(skel.m_bones.size());
+				anim->m_tracks.resize(skel->m_bones.size());
 				for (auto const& [bone_id, track] : bone_tracks.m_tracks)
 				{
 					// Find the index of 'bone_id' in the skeleton
-					auto bone_index = index_of(skel.m_ids, bone_id);
-					if (bone_index == isize(skel.m_ids))
+					auto bone_index = pr::index_of(skel->m_ids, bone_id);
+					if (bone_index == isize(skel->m_ids))
 						throw std::runtime_error(std::format("Bone id '{}' not found in given skeleton", bone_id));
 
 					// Copy the key data to the track
@@ -1390,20 +1385,16 @@ namespace pr::rdr12
 				m_anims.push_back(anim);
 			}
 		};
-		ModelOut model_out(factory, opts);
 
+		// Read the scene hierarchy
 		fbx::Scene scene(src);
+		SceneOut scene_out(factory, opts);
+		scene.ReadScene(scene_out, { .m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly });
 
-		// Read geometry
-		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
-		out.Model(model_out.m_tree);
-		
-		// Read animation data
-		if (out.ReadAnimation && scene.m_props.m_animation_stack_count != 0)
-		{
-			scene.ReadAnimCurves(model_out, 0);
-			out.Anim(model_out.m_anims);
-		}
+		// Output the results
+		out.Model(scene_out.m_tree);
+		if (out.ReadAnimation)
+			out.Animation(scene_out.m_skels, scene_out.m_anims);
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts)
 	{

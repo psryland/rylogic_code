@@ -3,19 +3,17 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/model/animation.h"
-#include "pr/view3d-12/model/skeleton.h"
-#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
 	SimpleAnimation::SimpleAnimation()
-		: m_style(EAnimStyle::NoAnimation)
+		: m_vel(v4::Zero())
+		, m_acc(v4::Zero())
+		, m_avel(v4::Zero())
+		, m_aacc(v4::Zero())
 		, m_period(1.0)
-		, m_vel(v4Zero)
-		, m_acc(v4Zero)
-		, m_avel(v4Zero)
-		, m_aacc(v4Zero)
+		, m_style(EAnimStyle::NoAnimation)
 	{
 	}
 
@@ -110,6 +108,7 @@ namespace pr::rdr12
 				case EAnimStyle::NoAnimation:
 				{
 					rtime_s = 0.0;
+					break;
 				}
 				case EAnimStyle::Once:
 				{

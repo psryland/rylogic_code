@@ -31,11 +31,10 @@ namespace pr::rdr12::ldraw
 		#undef PR_RDR_INST
 	};
 
-	// An instance for passing to the renderer
-	// A renderer instance type for the body
-	// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
+	// The base instance type for LdrObjects
 	struct RdrInstance
 	{
+		// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
 		#define PR_RDR_INST(x) \
 		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
 		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
@@ -48,28 +47,59 @@ namespace pr::rdr12::ldraw
 		PR_RDR12_INSTANCE_MEMBERS(RdrInstance , PR_RDR_INST);
 		#undef PR_RDR_INST
 	};
+	
+	// Root animation
+	struct RootAnimation
+	{
+		// Notes:
+		//  - This type is akin to the 'Pose' type.
+		//    It's a runtime instance of the simple animation data
+		//    Each LdrObject has one of these with it's own time value
+
+		SimpleAnimationPtr m_simple;
+		double m_time_s;
+
+		// Set the animation time
+		void AnimTime(double time_s)
+		{
+			m_time_s = time_s;
+		}
+
+		// Returns the root motion at the current time
+		m4x4 RootToWorld() const
+		{
+			return m_simple ? m_simple->EvaluateAtTime(m_time_s) : m4x4::Identity();
+		}
+
+		// Has animation?
+		explicit operator bool() const
+		{
+			return m_simple != nullptr;
+		}
+	};
 
 	// An LDraw object
 	struct LdrObject
 		:RdrInstance
 		,RefCounted<LdrObject>
 	{
-		// Note: try not to use the RdrInstance members for things other than rendering
-		// they can temporarily have different models/transforms/etc during rendering of
-		// object bounding boxes etc.
-		m4x4         m_o2p;           // Object to parent transform (or object to world if this is a top level object)
-		ELdrObject   m_type;          // Object type
-		LdrObject*   m_parent;        // The parent of this object, nullptr for top level instances.
-		ObjectCont   m_child;         // A container of pointers to child instances
-		string32     m_name;          // A name for the object
-		GUID         m_context_id;    // The id of the context this instance was created in
-		Colour32     m_base_colour;   // The original colour of this object
-		uint32_t     m_colour_mask;   // A bit mask for applying the base colour to child objects
-		Animation    m_anim;          // Animation data
-		BBoxInstance m_bbox_instance; // Used for rendering the bounding box for this instance
-		Sub          m_screen_space;  // True if this object should be rendered in screen space
-		ELdrFlags    m_ldr_flags;     // Property flags controlling meta behaviour of the object
-		UserData     m_user_data;     // User data
+		// Notes:
+		//  - Try not to use the RdrInstance members for things other than rendering
+		//    they can temporarily have different models/transforms/etc during rendering of
+		//    object bounding boxes etc.
+		m4x4            m_o2p;           // Object to parent transform (or object to world if this is a top level object)
+		ELdrObject      m_type;          // Object type
+		LdrObject*      m_parent;        // The parent of this object, nullptr for top level instances.
+		ObjectCont      m_child;         // A container of pointers to child instances
+		string32        m_name;          // A name for the object
+		GUID            m_context_id;    // The id of the context this instance was created in
+		Colour32        m_base_colour;   // The original colour of this object
+		uint32_t        m_colour_mask;   // A bit mask for applying the base colour to child objects
+		RootAnimation   m_root_anim;     // Animation of the model root position
+		BBoxInstance    m_bbox_instance; // Used for rendering the bounding box for this instance
+		Sub             m_screen_space;  // True if this object should be rendered in screen space
+		ELdrFlags       m_ldr_flags;     // Property flags controlling meta behaviour of the object
+		UserData        m_user_data;     // User data
 
 		LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id);
 		~LdrObject();

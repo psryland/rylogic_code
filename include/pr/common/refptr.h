@@ -247,7 +247,8 @@ namespace pr
 			#endif
 
 			// If you get 'use of undefined type' here. You need to include the header for type 'T'.
-			// RefPtr can't use forward declared types because it needs to call AddRef()/Release()
+			// RefPtr can't use forward declared types because it needs to call AddRef()/Release().
+			// 'using MyPtr = RefPtr<struct MyType>' is find, but if you use MyPtr in a class it needs to be fully defined.
 			ptr->Release();
 		}
 

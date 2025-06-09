@@ -16,8 +16,8 @@
 //   component
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/render/sortkey.h"
-#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/pipe_state.h"
@@ -42,7 +42,7 @@ namespace pr::rdr12
 		TintColour32,        // pr::Colour32
 		DiffTexture,         // An override of the main diffuse texture
 		DiffTextureSampler,  // An override of the main diffuse texture sampler
-		Skin,                // An override of the model skinning bones
+		PosePtr,             // A skeleton pose to skin to
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -284,9 +284,9 @@ namespace pr::rdr12
 	}
 
 	// Return the skin override in this instance (if exists)
-	inline SkinningPtr FindSkin(BaseInstance const& inst)
+	inline PosePtr FindPose(BaseInstance const& inst)
 	{
-		auto const* pskin = inst.find<SkinningPtr>(EInstComp::Skin);
+		auto const* pskin = inst.find<PosePtr>(EInstComp::PosePtr);
 		return pskin ? *pskin : nullptr;
 	}
 
@@ -307,7 +307,7 @@ namespace pr::rdr12
 	//     #define PR_RDR_INST(x)\
 	//     x(pr::rdr12::ModelPtr ,m_model  ,pr::rdr12::EInstComp::ModelPtr)\
 	//     x(pr::Colour32        ,m_colour ,pr::rdr12::EInstComp::TintColour32)
-	//     PR_RDR12_INSTANCE_MEMBERS(PR_RDR_INST);
+	//     PR_RDR12_INSTANCE_MEMBERS(MyInstance, PR_RDR_INST);
 	//     #undef PR_RDR_INST
 	//  };
 	#pragma region Instance Type Generator

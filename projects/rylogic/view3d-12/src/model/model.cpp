@@ -4,7 +4,6 @@
 //*********************************************
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/resource_store.h"
@@ -41,7 +40,8 @@ namespace pr::rdr12
 		, m_nuggets()
 		, m_vcount(vcount)
 		, m_icount(icount)
-		, m_skinning()
+		, m_skin()
+		, m_pose()
 		, m_bbox(bbox)
 		, m_name(name)
 		, m_vstride(vstride)

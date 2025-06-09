@@ -22,7 +22,7 @@ namespace pr::rdr12::shaders
 			EnvMap,
 			SMap,
 			ProjTex,
-			Skel,
+			Pose,
 			Skin,
 			DiffTextureSampler,
 		};

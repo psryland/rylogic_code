@@ -233,6 +233,16 @@ namespace pr
 		}
 	};
 
+	// Quaternion
+	template <Scalar S>
+	struct Convert<Quat<S, void, void>, FbxQuaternion>
+	{
+		static Quat<S, void, void> To_(FbxQuaternion const& q)
+		{
+			return Quat<S, void, void>(s_cast<S>(q[0]), s_cast<S>(q[1]), s_cast<S>(q[2]), s_cast<S>(q[3]));
+		}
+	};
+
 	// Mat4x4
 	template <Scalar S>
 	struct Convert<Mat4x4<S, void, void>, FbxAMatrix>
@@ -774,10 +784,10 @@ namespace pr::geometry::fbx
 		return props;
 	}
 
-	// Read the geometry from the scene
-	static void ReadModel(FbxScene& scene, IModelOut& out, ReadModelOptions const& options)
+	// Read the hierarchy from the scene
+	static void ReadScene(FbxScene& scene, ISceneOut& out, ReadOptions const& options)
 	{
-		// Read an fbx model
+		// Read an fbx scene
 		struct Reader
 		{
 			// Notes:
@@ -794,22 +804,35 @@ namespace pr::geometry::fbx
 			//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
 
 			using VertexLookup = std::vector<int>;
+			using TimeCont = std::vector<FbxTime>;
 
 			FbxScene& m_scene;
-			IModelOut& m_out;
-			ReadModelOptions const& m_opts;
+			ISceneOut& m_out;
+			ReadOptions const& m_opts;
 			Mesh m_mesh;
 			Skeleton m_skel;
-			Skinning m_skin;
+			Skin m_skin;
 			VertexLookup m_vlookup;
+			FbxAnimStack* m_anim;
+			FbxAnimLayer* m_layer;
+			BoneTracks m_tracks;
+			FbxTimeSpan m_time_span;
+			TimeCont m_times;
+			double m_frame_rate;
 
-			Reader(FbxScene& scene, IModelOut& out, ReadModelOptions const& opts)
+			Reader(FbxScene& scene, ISceneOut& out, ReadOptions const& opts)
 				: m_scene(scene)
 				, m_out(out)
 				, m_opts(opts)
 				, m_mesh()
 				, m_skel()
 				, m_vlookup()
+				, m_anim()
+				, m_layer()
+				, m_tracks()
+				, m_time_span()
+				, m_times()
+				, m_frame_rate(FbxTime::GetFrameRate(scene.GetGlobalSettings().GetTimeMode()))
 			{}
 
 			// Read the model
@@ -823,6 +846,8 @@ namespace pr::geometry::fbx
 					ReadSkeleton(*m_scene.GetRootNode());
 				if (AllSet(m_opts.m_parts, EParts::Skinning))
 					ReadSkinning(*m_scene.GetRootNode());
+				if (AllSet(m_opts.m_parts, EParts::AnimCurves))
+					ReadAnimation();
 			}
 
 			// Read the materials
@@ -1179,12 +1204,124 @@ namespace pr::geometry::fbx
 					}
 
 					// Output the skinning data for the mesh
-					m_out.AddSkinning(m_skin);
+					m_out.AddSkin(m_skin);
 				}
 
 				// Recurse
 				for (int i = 0; i != node.GetChildCount(); ++i)
 					ReadSkinning(*node.GetChild(i), level + 1);
+			}
+
+			// Read the animation data from the scene
+			void ReadAnimation()
+			{
+				// Set the animation to use
+				auto animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
+				for (int i = 0; i != animation_count; ++i)
+				{
+					m_anim = Check(m_scene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
+					m_time_span = m_anim->GetLocalTimeSpan();
+					m_scene.SetCurrentAnimationStack(m_anim);
+
+					// Only support one animation layer at the moment
+					auto layer_count = std::min(1, m_anim->GetMemberCount<FbxAnimLayer>());
+					for (int j = 0; j != layer_count; ++j)
+					{
+						m_layer = m_anim->GetMember<FbxAnimLayer>(j);
+						ReadBoneTransforms(*m_scene.GetRootNode());
+					}
+				}
+			}
+
+			// Read the animation data for the bone node
+			void ReadBoneTransforms(FbxNode& node, BoneTracks* bone_tracks = nullptr)
+			{
+				bool is_root = bone_tracks == nullptr;
+				uint64_t skel_id = NoUniqueId;
+
+				// Find nodes containing bones, and read the animation curves for the transforms
+				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				{
+					// Look for meshes with animated node transforms
+					auto const& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
+						continue;
+
+					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
+
+					if (is_root)
+					{
+						skel_id = bone.GetUniqueID();
+						m_tracks.reset(skel_id);
+						bone_tracks = &m_tracks;
+					}
+
+					// Read key frames for 'bone' and add them to the collection
+					auto& track = bone_tracks->m_tracks[bone.GetUniqueID()];
+					ReadBoneTrack(*bone.GetNode(), track);
+				}
+
+				// Recurse
+				for (int i = 0; i != node.GetChildCount(); ++i)
+					ReadBoneTransforms(*node.GetChild(i), bone_tracks);
+
+				// If this is the root, output the animation sequence
+				if (is_root && bone_tracks != nullptr)
+					m_out.AddAnimation(skel_id, *bone_tracks);
+			}
+
+			// Read the animation keys for a node
+			void ReadBoneTrack(FbxNode& node, BoneTracks::Track& track)
+			{
+				struct Curve
+				{
+					FbxAnimCurve const* m_curve = nullptr;
+					size_t size() const { return m_curve->KeyGetCount(); }
+					FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
+				};
+
+				// Read the non-null, non-empty transform animation curves
+				vector<Curve, 9, true> curves;
+				for (auto curve : {
+					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
+					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
+					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
+					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+				})
+				{
+					if (curve == nullptr || curve->KeyGetCount() == 0) continue;
+					curves.push_back({ curve });
+				}
+				if (curves.empty())
+					return;
+
+				// Create a list of unique key times
+				m_times.resize(0);
+				m_times.reserve(1 + static_cast<int>(m_time_span.GetDuration().GetSecondDouble() * m_frame_rate));
+				zip<Curve>(curves, true, [&](FbxTime time) { m_times.push_back(time); });
+
+				// Sample the transform at each key time
+				track.reserve(track.size() + m_times.size());
+				for (auto const& time : m_times)
+				{
+					auto rotation_order = node.RotationOrder.Get();
+					auto euler_angles = node.EvaluateLocalRotation(time);
+					auto translation = node.EvaluateLocalTranslation(time);
+					auto scaling = node.EvaluateLocalScaling(time);
+					FbxAMatrix rotation; rotation.SetR(euler_angles, rotation_order);
+
+					track.push_back({
+						To<quat>(rotation.GetQ()),
+						To<v4>(translation),
+						To<v4>(scaling),
+						time.GetSecondDouble(),
+					});
+				}
 			}
 
 			// Ensure the geometry in 'mesh' is triangles not polygons
@@ -1225,173 +1362,6 @@ namespace pr::geometry::fbx
 		};
 
 		Reader reader(scene, out, options);
-		reader.Do();
-	}
-
-	// Read the animation data from the scene
-	static void ReadAnimation(FbxScene& scene, IAnimOut& out, int anim_index)
-	{
-		struct Reader
-		{
-			using TimeCont = std::vector<FbxTime>;
-
-			FbxScene& m_scene;
-			IAnimOut& m_out;
-			FbxAnimStack* m_anim;
-			FbxAnimLayer* m_layer;
-			BoneTracks m_tracks;
-			FbxTimeSpan m_time_span;
-			TimeCont m_times;
-			double m_frame_rate;
-
-			Reader(FbxScene& scene, IAnimOut& out, int anim_index)
-				: m_scene(scene)
-				, m_out(out)
-				, m_anim()
-				, m_layer()
-				, m_tracks()
-				, m_time_span()
-				, m_times()
-				, m_frame_rate(FbxTime::GetFrameRate(scene.GetGlobalSettings().GetTimeMode()))
-			{
-				// Set the animation to use
-				int animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
-				if (anim_index >= 0 && anim_index < animation_count)
-				{
-					m_anim = Check(m_scene.GetSrcObject<FbxAnimStack>(anim_index), "Requested animation stack does not exist");
-					m_time_span = m_anim->GetLocalTimeSpan();
-					m_scene.SetCurrentAnimationStack(m_anim);
-				}
-
-				//
-				//// Get the time range
-				//auto& take = *m_scene.GetTakeInfo(anim_stack.GetName());
-
-				//for (int f = m_opts.m_frames.begin(); f != m_opts.m_frames.end(); ++f)
-				//{
-				//	FbxTime startTime = tCurveX ? tCurveX->KeyGetTime(0) : FbxTime(0);
-				//	FbxTime endTime = tCurveX ? tCurveX->KeyGetTime(tCurveX->KeyGetCount() - 1) : FbxTime(0);
-				//	FbxTime time;
-				//	FbxTime::EMode timeStep = FbxTime::eFrames30; // adjust for your framerate
-
-				//	for (time = startTime; time <= endTime; time += timeStep)
-				//	{
-				//		FbxAMatrix globalTransform = node.EvaluateGlobalTransform(time);
-				//		FbxVector4 translation = globalTransform.GetT();
-				//		FbxVector4 rotation = globalTransform.GetR();
-
-				//		// Store translation/rotation as a keyframe in your data structure
-				//	}
-				//	ReadAnimationFrame(*m_scene.GetRootNode(), *anim_layer);
-				//}
-
-			}
-
-			// Read the animation data
-			void Do()
-			{
-				// If this scene does not contain animation data, do nothing
-				if (m_anim == nullptr)
-					return;
-
-				// Only support one animation layer at the moment
-				for (int i = 0, iend = m_anim->GetMemberCount<FbxAnimLayer>(); i != iend && i != 1; ++i)
-				{
-					m_layer = m_anim->GetMember<FbxAnimLayer>(i);
-					ReadBoneTransforms(*m_scene.GetRootNode());
-				}
-			}
-
-			// Read the animation data for the bone node
-			void ReadBoneTransforms(FbxNode& node, BoneTracks* bone_tracks = nullptr)
-			{
-				bool is_root = bone_tracks == nullptr;
-				uint64_t skel_id = NoUniqueId;
-
-				// Find nodes containing bones, and read the animation curves for the transforms
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
-				{
-					// Look for meshes with animated node transforms
-					auto const& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
-						continue;
-
-					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
-
-					if (is_root)
-					{
-						skel_id = bone.GetUniqueID();
-						m_tracks.reset(skel_id);
-						bone_tracks = &m_tracks;
-					}
-
-					// Read key frames for 'bone' and add them to the collection
-					auto& track = bone_tracks->m_tracks[bone.GetUniqueID()];
-					ReadBoneTrack(*bone.GetNode(), track);
-				}
-
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadBoneTransforms(*node.GetChild(i), bone_tracks);
-
-				// If this is the root, output the animation sequence
-				if (is_root && bone_tracks != nullptr)
-					m_out.AddBoneTracks(skel_id, *bone_tracks);
-			}
-
-			// Read the animation keys for a node
-			void ReadBoneTrack(FbxNode& node, BoneTracks::Track& track)
-			{
-				struct Curve
-				{
-					FbxAnimCurve const* m_curve = nullptr;
-					size_t size() const { return m_curve->KeyGetCount(); }
-					FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
-				};
-
-				// Read the non-null, non-empty transform animation curves
-				vector<Curve, 9, true> curves;
-				for (auto curve : {
-					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-					node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-				})
-				{
-					if (curve == nullptr || curve->KeyGetCount() == 0) continue;
-					curves.push_back({ curve });
-				}
-				if (curves.empty())
-					return;
-
-				// Create a list of unique key times
-				m_times.resize(0);
-				m_times.reserve(1 + static_cast<int>(m_time_span.GetDuration().GetSecondDouble() * m_frame_rate));
-				zip(curves.cspan(), true, [&](FbxTime time) { m_times.push_back(time); });
-
-				// Sample the transform at each key time
-				track.reserve(track.size() + m_times.size());
-				for (auto const& time : m_times)
-				{
-					auto translation = To<v4>(node.EvaluateLocalTranslation(time));
-					auto euler = To<v4>(node.EvaluateLocalRotation(time));
-					auto scaling = To<v4>(node.EvaluateLocalScaling(time));
-					track.push_back({
-						quat(euler.x, euler.y, euler.z),
-						translation,
-						scaling,
-						FbxTime(time).GetSecondDouble(),
-					});
-				}
-			}
-		};
-
-		Reader reader(scene, out, anim_index);
 		reader.Do();
 	}
 
@@ -3475,30 +3445,14 @@ extern "C"
 		}
 	}
 
-	// Read the model hierarchy from the scene
-	__declspec(dllexport) void __stdcall Fbx_ReadModel(fbxsdk::FbxScene& scene, pr::geometry::fbx::IModelOut& out, pr::geometry::fbx::ReadModelOptions const& options)
+	// Read the hierarchy from the scene
+	__declspec(dllexport) void __stdcall Fbx_ReadScene(fbxsdk::FbxScene& scene, pr::geometry::fbx::ISceneOut& out, pr::geometry::fbx::ReadOptions const& options)
 	{
 		using namespace pr::geometry::fbx;
 
 		try
 		{
-			ReadModel(scene, out, options);
-		}
-		catch (std::exception const& ex)
-		{
-			OutputDebugStringA(ex.what());
-			DebugBreak();
-		}
-	}
-
-	// Read animation sequence data for the given animation stack
-	__declspec(dllexport) void __stdcall Fbx_ReadAnimStack(fbxsdk::FbxScene& scene, pr::geometry::fbx::IAnimOut& out, int anim_stack)
-	{
-		using namespace pr::geometry::fbx;
-
-		try
-		{
-			ReadAnimation(scene, out, anim_stack);
+			ReadScene(scene, out, options);
 		}
 		catch (std::exception const& ex)
 		{

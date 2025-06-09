@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/model/skeleton.h"
-#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12

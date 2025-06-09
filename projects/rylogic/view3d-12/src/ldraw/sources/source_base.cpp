@@ -29,7 +29,11 @@ namespace pr::rdr12::ldraw
 		try
 		{
 			m_output = ReadSource(rdr);
-			Notify(shared_from_this(), { ENotifyReason::LoadComplete, trigger, add_complete_cb });
+
+			// Only notify if there are attached handlers. This allows stack allocated Sources
+			// to be used (that won't work with shared_from_this()) if they don't attach to 'Notify'.
+			if (Notify)
+				Notify(shared_from_this(), { ENotifyReason::LoadComplete, trigger, add_complete_cb });
 		}
 		catch (std::exception const& ex)
 		{

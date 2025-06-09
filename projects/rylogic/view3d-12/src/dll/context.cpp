@@ -12,6 +12,7 @@
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_file.h"
+#include "view3d-12/src/ldraw/sources/source_string.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
@@ -219,23 +220,33 @@ namespace pr::rdr12
 		// Create an include handler
 		auto include_handler = IncludeHandler(includes);
 
-		// Record how many objects there are already for the context id (if it exists)
-		auto& srcs = m_sources.Sources();
-		auto iter = srcs.find(id);
-		auto count = iter != end(srcs) ? iter->second->m_output.m_objects.size() : 0U;
+		// Any LdrObject* we return must not get deleted by a Reload() of its source.
+		// That's why these sources are not added to 'm_sources'. The Reload() feature
+		// only works for objects that are managed by Guid. However, external code can
+		// watch for the Reload notification and manually reload objects, replacing the
+		// LdrObject* pointers they hold.
 
 		// Load the ldr script
+		ldraw::ParseResult output;
 		if (file)
-			LoadScriptFile(ldr_script, enc, &id, include_handler, nullptr);
+		{
+			ldraw::SourceFile src{ &id, ldr_script, enc, include_handler };
+			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
+			output = std::move(src.m_output);
+		}
 		else
-			LoadScriptString(ldr_script, enc, &id, include_handler, nullptr);
+		{
+			ldraw::SourceString<Char> src{ &id, ldr_script, enc, include_handler };
+			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
+			output = std::move(src.m_output);
+		}
+		if (output.m_objects.empty())
+			return nullptr;
 
-		// Return the first object, expecting 'ldr_script' to define one object only.
-		// It doesn't matter if more are defined however, they're just created as part of the context.
-		iter = srcs.find(id);
-		return iter != std::end(srcs) && iter->second->m_output.m_objects.size() > count
-			? iter->second->m_output.m_objects[count].get()
-			: nullptr;
+		// Return the first object.
+		auto& obj = output.m_objects.front();
+		m_sources.Add(obj);
+		return obj.get();
 	}
 	template ldraw::LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template ldraw::LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
@@ -707,10 +718,7 @@ namespace pr::rdr12
 						auto target = string32(cmd.m_object_name);
 
 						// Find the first object matching 'cmd.m_object_name' (in 'source.m_context')
-						auto iter = std::ranges::find_if(source.m_output.m_objects, [&target](LdrObjectPtr& ptr)
-						{
-							return ptr->m_name == target;
-						});
+						auto iter = pr::find_if(source.m_output.m_objects, [&target](LdrObjectPtr& ptr) { return ptr->m_name == target; });
 						if (iter == std::end(source.m_output.m_objects))
 							break;
 
