@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1334,7 +1334,7 @@ namespace pr::rdr12
 				m_skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
 					skeleton.m_ids,
 					transform<Skeleton::Names>(skeleton.m_names, [](auto& x) { return static_cast<string32>(x); }),
-					skeleton.m_b2p,
+					skeleton.m_o2bp,
 					transform<Skeleton::Hierarchy>(skeleton.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
 				), true));
 			}
@@ -1342,11 +1342,17 @@ namespace pr::rdr12
 			// Add Skinning data for a mesh to the output
 			virtual void AddSkin(fbx::Skin const& skin) override
 			{
-				static_assert(sizeof(fbx::Skin::Influence) == sizeof(Skinfluence));
-				static_assert(alignof(fbx::Skin::Influence) == alignof(Skinfluence));
-				static_assert(offsetof(fbx::Skin::Influence, m_bones) == offsetof(Skinfluence, m_bones));
-				static_assert(offsetof(fbx::Skin::Influence, m_weights) == offsetof(Skinfluence, m_weights));
-				auto verts = std::span<Skinfluence const>{ reinterpret_cast<Skinfluence const*>(skin.m_verts.data()), skin.m_verts.size() };
+				auto verts = transform<pr::vector<Skinfluence>>(skin.m_verts, [](fbx::Skin::Influence const& influence)
+				{
+					if (influence.size() > 4)
+						OutputDebugStringA("More than 4 bone influences not implemented"); // todo
+
+					Skinfluence s = {};
+					for (int i = 0, iend = influence.size(); i != iend && i != 4; ++i)
+						s.set(i, influence.get<Skinfluence::BoneWeight>(i));
+
+					return s;
+				});
 
 				auto const& mesh = m_meshes.at(skin.m_mesh_id);
 				auto const& skel = pr::get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == skin.m_skel_id; });
@@ -1361,7 +1367,7 @@ namespace pr::rdr12
 				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(skel->Id(), EAnimStyle::Repeat), true);
 
 				// Read the key frame data
-				anim->m_tracks.resize(skel->m_bones.size());
+				anim->m_tracks.resize(skel->BoneCount());
 				for (auto const& [bone_id, track] : bone_tracks.m_tracks)
 				{
 					// Find the index of 'bone_id' in the skeleton

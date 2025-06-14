@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -7,10 +7,10 @@
 
 namespace pr::rdr12
 {
-	Skeleton::Skeleton(std::span<uint64_t const> ids, std::span<string32 const> names, std::span<m4x4 const> bones, std::span<uint8_t const> hierarchy)
+	Skeleton::Skeleton(std::span<uint64_t const> ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy)
 		: m_ids(ids)
 		, m_names(names)
-		, m_bones(bones)
+		, m_o2bp(o2bp)
 		, m_hierarchy(hierarchy)
 	{
 	}
@@ -19,6 +19,12 @@ namespace pr::rdr12
 	uint64_t Skeleton::Id() const
 	{
 		return m_ids.empty() ? 0 : m_ids.front();
+	}
+
+	// The number of bones in this skeleton
+	int Skeleton::BoneCount() const
+	{
+		return isize(m_ids);
 	}
 
 	// Ref-counting clean up function

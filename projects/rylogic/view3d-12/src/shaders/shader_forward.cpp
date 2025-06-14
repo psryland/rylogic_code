@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -26,7 +26,7 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto EnvMap = ESRVReg::t1;
 		inline static constexpr auto SMap = ESRVReg::t2;
 		inline static constexpr auto ProjTex = ESRVReg::t3;
-		inline static constexpr auto Skeleton = ESRVReg::t4;
+		inline static constexpr auto Pose = ESRVReg::t4;
 		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 	struct ESamp
@@ -60,7 +60,7 @@ namespace pr::rdr12::shaders
 			.SRV(EReg::EnvMap, 1)
 			.SRV(EReg::SMap, shaders::MaxShadowMaps)
 			.SRV(EReg::ProjTex, shaders::MaxProjectedTextures)
-			.SRV(EReg::Skeleton, 1)
+			.SRV(EReg::Pose, 1)
 			.SRV(EReg::Skin, 1)
 			.Samp(ESamp::Diff, shaders::MaxSamplers)
 			.Samp(ESamp::EnvMap)

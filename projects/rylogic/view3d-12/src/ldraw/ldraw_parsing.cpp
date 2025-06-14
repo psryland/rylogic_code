@@ -5418,22 +5418,41 @@ namespace pr::rdr12::ldraw
 		if (tree.empty())
 			return;
 
-		root->m_name = tree[0].m_model->m_name;
-		root->m_model = tree[0].m_model;
-		root->m_o2p = tree[0].m_o2p;
+		// Count the number of roots.
+		auto num_roots = pr::count_if(tree, [](ModelTreeNode const& m) { return m.m_level == 0; });
+		if (num_roots == 0)
+			throw std::runtime_error("Model tree has no roots");
 
-		if (tree.size() == 1)
-			return;
+		pr::vector<std::pair<int, LdrObject*>> ancestors;
+
+		// Single root models have 'root' as the root.
+		if (num_roots == 1)
+		{
+			root->m_name = tree[0].m_model->m_name;
+			root->m_model = tree[0].m_model;
+			root->m_o2p = tree[0].m_o2p;
+
+			ancestors.push_back({ 0, root });
+			tree = tree.subspan<1>();
+		}
+
+		// Multi-root models have 'root' as dummy root (or Group)
+		else
+		{
+			root->m_name = "root";
+			root->m_model = nullptr;
+			root->m_o2p = m4x4::Identity();
+
+			ancestors.push_back({ -1, root });
+		}
 
 		// Recurse
-		pr::vector<LdrObject*> ancestors({ root });
-		for (auto& node : tree.subspan<1>())
+		for (auto& node : tree)
 		{
-			// The size of the ancestor stack is also the tree level
-			for (auto lvl0 = tree[0].m_level; isize(ancestors) > 1 && isize(ancestors) > node.m_level - lvl0;)
+			for (; node.m_level <= ancestors.back().first; )
 				ancestors.pop_back();
 
-			auto* parent = ancestors.back();
+			auto* parent = ancestors.back().second;
 
 			// Create an LdrObject for each model
 			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent, root->m_context_id), true);
@@ -5443,7 +5462,7 @@ namespace pr::rdr12::ldraw
 
 			// Add 'obj' as the current leaf node
 			parent->m_child.push_back(obj);
-			ancestors.push_back(obj.get());
+			ancestors.push_back({ node.m_level, obj.get() });
 		}
 	}
 

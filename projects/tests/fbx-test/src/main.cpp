@@ -1,4 +1,4 @@
-#include <fstream>
+﻿#include <fstream>
 #include "pr/geometry/fbx.h"
 #include "pr/geometry/p3d.h"
 #include "pr/maths/bbox.h"
@@ -68,7 +68,7 @@ int main()
 	//std::ofstream ofile(ofilepath, std::ios::binary);
 	//std::ofstream dfile(dfilepath);
 
-	struct ModelOut : fbx::IModelOut
+	struct ModelOut : fbx::ISceneOut
 	{
 		p3d::File file = {};
 
@@ -99,15 +99,15 @@ int main()
 			}
 			file.m_scene.m_meshes.push_back(std::move(m));
 		}
-	} model_out;
+	} out;
 
 	//dll.Fbx_RoundTripTest(ifile, ofile);
 	//dll.Fbx_DumpStream(ifile, dfile);
 	fbx::Scene scene(ifile);
-	scene.ReadModel(model_out, { .m_parts = fbx::EParts::ModelOnly });
+	scene.ReadScene(out, { .m_parts = fbx::EParts::ModelOnly });
 
 	if (std::ofstream ofile(p3doutpath, std::ios::binary); ofile)
-		p3d::Write(ofile, model_out.file);
+		p3d::Write(ofile, out.file);
 
 	return 0;
 }

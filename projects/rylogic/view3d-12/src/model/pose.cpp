@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -23,7 +23,7 @@ namespace pr::rdr12
 		ResourceStore::Access store(factory.rdr());
 
 		// Create the buffer for the bone matrices
-		ResDesc rdesc = ResDesc::Buf<m4x4>(isize(skeleton->m_bones), {}).def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		ResDesc rdesc = ResDesc::Buf<m4x4>(skeleton->BoneCount(), {}).def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 		m_res = factory.CreateResource(rdesc, "pose");
 
 		// Create the pose SRV
@@ -50,14 +50,17 @@ namespace pr::rdr12
 	// Number of bones in this pose
 	int Pose::BoneCount() const
 	{
-		return isize(m_skeleton->m_bones);
+		return m_skeleton->BoneCount();
 	}
 
 	// Reset to the rest pose
 	void Pose::ResetPose(GfxCmdList& cmd_list, GpuUploadBuffer& upload_buffer)
 	{
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
-		for (m4x4 *ptr = update.ptr<m4x4>(), *end = ptr + BoneCount(); ptr != end; ++ptr) *ptr = m4x4::Identity();
+		m4x4* ptr = update.ptr<m4x4>();
+		for (int i = 0, iend = BoneCount(); i != iend; ++i)
+			ptr[i] = InvertFast(m_skeleton->m_o2bp[i]);
+
 		update.Commit();
 	}
 
@@ -75,27 +78,31 @@ namespace pr::rdr12
 			return;
 		}
 
-		// Ask the animator to populate the bone transforms
+		assert(m_animator->SkelId() == m_skeleton->Id() && "Skeleton mismatch");
+
+		// Populate the pose buffer. These are transforms from object-space to deformed-object-space.
+		// I.e. object space verts are transformed to be bone relative, then deformed, then back to object space.
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
+		auto ptr = update.ptr<m4x4>();
 		{
-			// Read the animated bone positions into the buffer to start with.
-			// These are rest_pose-to-animated_pose transforms.
-			m_animator->Animate({ update.ptr<m4x4>(), s_cast<size_t>(BoneCount()) }, m_time1);
+			// Read the deformed bone transforms into the buffer to start with.
+			// These are bone-to-parent transforms for each bone.
+			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, m_time1);
 			m_time0 = m_time1;
 
-			// Bone transforms need to take points from object space -> rest-bone space -> animated position space -> object space
-			// We need to pre and post multiply from/to object space.
-			auto ptr = update.ptr<m4x4>();
-			for (int i = 0; i != BoneCount(); ++i, ++ptr)
+			// Convert the pose into object space transforms
+			m_skeleton->WalkHierarchy<m4x4>([ptr, &o2bp = m_skeleton->m_o2bp](int idx, m4x4 const* p2o) -> m4x4
 			{
-				// object space to bone space
-				auto o2b = InvertFast(m_skeleton->m_bones[i]);
-				
-				// Bone space to object space
-				auto b2o = m_skeleton->m_bones[i];
+				// Find the deformed bone-to-object space transform
+				auto b2o = p2o ? *p2o * ptr[idx] : ptr[idx];
 
-				*ptr = b2o * *ptr * o2b;
-			}
+				// Update the pose buffer with the transform that takes object space verts, transforms them to
+				// bind pose bone-relative, then from deformed bone space back to object space.
+				ptr[idx] = b2o * o2bp[idx];
+
+				// Return 'b2o' as the parent of any child bones
+				return b2o;
+			});
 		}
 		update.Commit();
 	}

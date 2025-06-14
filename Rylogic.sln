@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_SolutionItems", "_Solution
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
 		exclusions.dic = exclusions.dic
+		projects\rylogic\fbx\fbx.natvis = projects\rylogic\fbx\fbx.natvis
 		packages.config = packages.config
 		readme.md = readme.md
 		requirements.txt = requirements.txt

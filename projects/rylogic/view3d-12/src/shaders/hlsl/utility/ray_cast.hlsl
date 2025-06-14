@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -112,7 +112,7 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 		
 		// Snap to points/edges within 'snap_dist'
 		jend = SelectInt(HAS_VERT_SNAP, 7, 0);
-		[unroll] for (j = 0; j != jend; ++j)
+		for (j = 0; j != jend; ++j)
 		{
 			float4 p = points[j].vert;
 			float  d = distance(pt, p);
@@ -126,7 +126,7 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 		
 		// Only test edges if there are no vert snaps
 		jend = SelectInt(HAS_EDGE_SNAP && dist == m_snap_dist, 3, 0);
-		[unroll] for (j = 0; j != jend; ++j)
+		for (j = 0; j != jend; ++j)
 		{
 			float  t = ClosestPoint_PointVsRay(pt, edges[j].vert, edges[j].edge);
 			float4 p = edges[j].vert + saturate(t) * edges[j].edge;
@@ -200,7 +200,7 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Snap to points/edges within 'snap_dist'
 		jend = SelectInt(HAS_VERT_SNAP, 3, 0);
-		[unroll] for (j = 0; j != jend; ++j)
+		for (j = 0; j != jend; ++j)
 		{
 			float4 p = points[j].vert;
 			float  d = distance(pt, p);

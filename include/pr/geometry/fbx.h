@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // FBX Model file format
 //  Copyright (c) Rylogic Ltd 2018
 //********************************
@@ -12,6 +12,7 @@
 #include <filesystem>
 #include "pr/common/range.h"
 #include "pr/common/flags_enum.h"
+#include "pr/container/vector.h"
 #include "pr/maths/bbox.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
@@ -44,9 +45,9 @@ namespace pr::geometry::fbx
 		Materials = 1 << 1,
 		Skeleton = 1 << 2,
 		Skinning = 1 << 3,
-		AnimCurves = 1 << 4,
+		Animation = 1 << 4,
 
-		All = Meshes | Materials | Skeleton | Skinning | AnimCurves,
+		All = Meshes | Materials | Skeleton | Skinning | Animation,
 		ModelOnly = Meshes | Materials,
 		_flags_enum = 0,
 	};
@@ -119,7 +120,7 @@ namespace pr::geometry::fbx
 
 		IdCont m_ids;        // Bone unique ids (first is the root bone)
 		NameCont m_names;    // Bone names
-		BoneCont m_b2p;      // Bone to parent transform hierarchy in the skeleton rest position
+		BoneCont m_o2bp;     // Inverse of the bind-pose to root-object-space transform for each bone
 		TypeCont m_types;    // Bone types
 		LvlCont m_hierarchy; // Hierarchy levels
 
@@ -127,7 +128,7 @@ namespace pr::geometry::fbx
 		{
 			m_ids.resize(0);
 			m_names.resize(0);
-			m_b2p.resize(0);
+			m_o2bp.resize(0);
 			m_types.resize(0);
 			m_hierarchy.resize(0);
 		}
@@ -136,8 +137,19 @@ namespace pr::geometry::fbx
 	{
 		struct Influence
 		{
-			iv4 m_bones; // Indices of the bones that influence a vertex 'v' (i.e. m_bones[v])
-			v4 m_weights; // Weights of each bone's influence a vertex 'v' (i.e. m_weights[v])
+			pr::vector<int, 4> m_bones; // Indices of the bones that influence a vertex 'v' (i.e. m_bones[v])
+			pr::vector<float, 4> m_weights; // Weights of each bone's influence a vertex 'v' (i.e. m_weights[v])
+			
+			int size() const
+			{
+				assert(isize(m_bones) == isize(m_weights));
+				return isize(m_bones);
+			}
+			template <typename BW = std::pair<int, float>> BW get(int i) const
+			{
+				assert(i >= 0 && i < size());
+				return { m_bones[i], m_weights[i] };
+			}
 		};
 		using InfluenceCont = std::vector<Influence>;
 		

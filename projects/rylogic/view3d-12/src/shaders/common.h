@@ -94,7 +94,7 @@ namespace pr::rdr12
 				model_flags |= shaders::ModelFlags_HasNormals;
 
 			// Is Skinned
-			static bool enable_skinning = false;
+			static bool enable_skinning = true;
 			if (enable_skinning)
 				if (ModelPtr const* model = inst.find<ModelPtr>(EInstComp::ModelPtr); model && (*model)->m_skin)
 					if (PosePtr const* pose = inst.find<PosePtr>(EInstComp::PosePtr); pose || (*model)->m_pose)

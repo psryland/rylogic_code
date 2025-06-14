@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -48,7 +48,7 @@ PSIn VSDefault(VSIn In)
 	if (IsSkinned)
 	{
 		float4 os_vert = SkinVertex(m_pose, m_skin[In.idx0.x], In.vert);
-		float4 os_norm = SkinNormal(m_pose, m_skin[In.idx0.x], In.norm);
+		float4 os_norm = SkinNormal(m_pose, m_skin[In.idx0.x], In.norm);		
 		Out.ss_vert = mul(os_vert, m_o2s);
 		Out.ws_vert = mul(os_vert, m_o2w);
 		Out.ws_norm = mul(os_norm, m_n2w);
@@ -157,7 +157,7 @@ PSOut main(PSIn In)
 	PSOut Out = PSDefault(In);
 
 	// Fade pixels radially from 'centre'
-	float4 centre = m_fade_centre != float4(0,0,0,0) ? m_fade_centre : m_cam.m_c2w[3];
+	float4 centre = select(m_fade_centre != float4(0,0,0,0), m_fade_centre, m_cam.m_c2w[3]);
 	float4 radial = In.ws_vert - centre;
 	float radius = 
 		m_fade_type == 0 ? length(radial) : // Spherical

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -21,6 +21,9 @@ namespace pr::rdr12
 		Animator();
 		virtual ~Animator() = default;
 
+		// Return the ID of the skeleton we're animating
+		virtual uint64_t SkelId() const = 0;
+
 		// Apply an animation to the given bones
 		virtual void Animate(std::span<m4x4> bones, double time_s) = 0;
 
@@ -36,6 +39,9 @@ namespace pr::rdr12
 		KeyFrameAnimationPtr m_anim;   // The animation sequence to read from
 
 		Animator_SingleKeyFrameAnimation(KeyFrameAnimationPtr anim);
+
+		// Return the ID of the skeleton we're animating
+		uint64_t SkelId() const override;
 
 		// Apply an animation to the given bones
 		void Animate(std::span<m4x4> bones, double time_s) override;

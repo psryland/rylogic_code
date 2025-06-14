@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -11,9 +11,21 @@ namespace pr::rdr12
 	// Influence data for a single vertex in a mesh
 	struct Skinfluence
 	{
+		struct BoneWeight { int bone; float weight; };
+
 		// Supports up to 4 influences per vertex
 		iv4 m_bones;
 		v4 m_weights;
+
+		BoneWeight get(int i) const
+		{
+			return { m_bones[i], m_weights[i] };
+		}
+		void set(int i, BoneWeight influence)
+		{
+			m_bones.arr[i] = influence.bone;
+			m_weights.arr[i] = influence.weight;
+		}
 	};
 
 	// Data required to skin a mesh

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -25,6 +25,12 @@ namespace pr::rdr12
 		: Animator()
 		, m_anim(anim)
 	{
+	}
+
+	// Return the ID of the skeleton we're animating
+	uint64_t Animator_SingleKeyFrameAnimation::SkelId() const
+	{
+		return m_anim->m_skel_id;
 	}
 
 	// Apply an animation to the given bones

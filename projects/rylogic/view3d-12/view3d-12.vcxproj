@@ -10,6 +10,7 @@
     <ProjectName>view3d-12</ProjectName>
     <TargetName>view3d-12-static</TargetName>
     <ResolveNuGetPackages>false</ResolveNuGetPackages>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <!--
   Configurations
@@ -296,6 +297,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="src\shaders\hlsl\types.hlsli" />
     <None Include="src\shaders\hlsl\common\functions.hlsli" />
     <None Include="src\shaders\hlsl\common\geometry.hlsli" />

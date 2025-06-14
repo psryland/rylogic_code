@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -9,18 +9,31 @@ namespace pr::rdr12
 {
 	// Notes:
 	//  - Animation has these parts:
-	//     - KeyFrameAnimation = a buffer of Tracks (one per bone) containing KeyFrames at times.
-	//     - Skeleton = Source data describing a hierarchy of bone transforms
-	//     - Pose = A runtime skeleton instance, updated by an Animator using interpolated transforms from an Animation.
-	//     - Skin = A set of bones and weights for each unique vertex of a model.
-	//     - Animator = The class that determines the pose at a given time.
-	//  - Models contain a skin because the skin is 1:1 with the model and doesn't change.
-	//    Model verts need to contain the 'source vertex index' in order to lookup the skin weights.
+	//    - KeyFrameAnimation = a buffer of Tracks (one per bone), each containing KeyFrames at specific times.
+	//        The transform at each key frame is the *local transform* of that bone — that is: the transform from
+	//        the parent bone’s space to this bone’s space at that time. Therefore, in the rest pose (i.e., bind pose),
+	//        these transforms match the skeleton's local bone transforms.
+	//    - Skeleton = Source data describing a hierarchy of bone transforms. Bone transforms are parent relative
+	//        with the root bone in object space.
+	//    - Pose = A runtime skeleton instance, updated by an Animator using interpolated transforms from an Animation.
+	//        The pose transform array is used in the shader to skin the model so the transforms must be from object
+	//        space to deformed object space. They are then transformed using o2w into world space.
+	//    - Skin = A set of bones indices and weights for each unique vertex of a model.
+	//        Since model verts can be duplicated because of different normals, UVs, etc, each vert in the vertex buffer
+	//        should have an 'original vert index' value. This is used to look up the skin vert which then gives the
+	//        bone indices and weights.
+	//    - Animator = The class that determines the pose at a given time. Animator is intended to be a base class that
+	//        might one day support blend spaces or other things. For now, it just interpolates KeyFrameAnimation instances.
+	//
+	//  - Graphics Models contain a skin because the skin is 1:1 with the model and doesn't change.
 	//  - Instances contain a pose because poses change with time and can use the same model but at different animation times.
-	//  - Poses reference an Animator, a Skeleton, and an animation time. Multiple instances can reference the same pose.
+	//  - Poses reference an Animator, a Skeleton, and an animation time. Multiple Instances can reference the same pose.
 	//    Think of a Pose as a dynamic instance of a skeleton.
 	//  - A skeleton can be referenced by many poses. A skeleton is basically static data that animations are relative to.
-	//  - An Animator is used to update the transforms in a Pose. If a pose doesn't have an animator, it defaults to the skeleton's rest pose.
+	//  - An Animator is used when updating the transforms in a Pose. The Animator interpolates the bone offsets which are
+	//    then used when calculating the pose's bone-to-object space transforms.
+	//  - Model hierarchies need to include a transform from child model to root model space, because the pose transforms
+	//    are the same for all models in the hierarchy, i.e., in object space.
 
 	// Simple animation styles
 	enum class EAnimStyle : uint8_t
