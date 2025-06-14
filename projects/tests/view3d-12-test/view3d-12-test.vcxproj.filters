@@ -31,11 +31,11 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">
       <Filter>deps</Filter>
-    </CustomBuild>
-    <CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
+    </DependencyLink>
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\fbx.dll">
       <Filter>deps</Filter>
-    </CustomBuild>
+    </DependencyLink>
   </ItemGroup>
 </Project>

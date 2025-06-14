@@ -105,12 +105,12 @@ namespace pr::rdr
 		D3DPtr<ID3D11Texture2D> dtex;
 		tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		pr::Check(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
+		pr::Check(device->CreateTexture2D(&tdesc, 0, dtex.address_of()));
 		PR_EXPAND(PR_DBG_RDR, NameResource(dtex.get(), "GBuffer DSV"));
 
 		DepthStencilViewDesc dsvdesc(tdesc.Format);
 		dsvdesc.Texture2D.MipSlice = 0;
-		pr::Check(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
+		pr::Check(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, m_dsv.address_of()));
 	}
 
 	// Bind the GBuffer RTs to the output merger
@@ -121,7 +121,7 @@ namespace pr::rdr
 		if (bind)
 		{
 			// Save a reference to the main render target/depth buffer
-			dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+			dc->OMGetRenderTargets(1, m_main_rtv.address_of(), m_main_dsv.address_of());
 
 			// Bind the g-buffer RTs to the OM
 			dc->OMSetRenderTargets(GBuffer::RTCount, (ID3D11RenderTargetView*const*)&m_rtv[0], m_dsv.m_ptr);
@@ -129,7 +129,7 @@ namespace pr::rdr
 		else
 		{
 			// Restore the main RT and depth buffer
-			dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+			dc->OMSetRenderTargets(1, m_main_rtv.address_of(), m_main_dsv.get());
 
 			// Release our reference to the main RTV/DSV
 			m_main_rtv = nullptr;

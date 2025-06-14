@@ -35,6 +35,7 @@ namespace pr::rdr12::ldraw
 		Name(std::wstring_view str) :m_name(Narrow(str)) {}
 		template <int N> Name(char const (&str)[N]) :m_name(str) {}
 		template <int N> Name(wchar_t const (&str)[N]) :m_name(Narrow(str)) {}
+		Name(string32 const& str) :m_name(str.begin(), str.end()) {}
 	};
 	struct Colour
 	{

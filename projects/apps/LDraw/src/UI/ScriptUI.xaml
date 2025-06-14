@@ -59,7 +59,7 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
@@ -89,51 +89,10 @@
 				<Separator/>
 
 				<!-- Combo of available scenes -->
-				<DockPanel
-					ToolBar.OverflowMode="Never"
-					>
-					<ToggleButton
-						DockPanel.Dock="Right"
-						VerticalAlignment="Center"
-						BorderThickness="0"
-						Background="Transparent"
-						Foreground="Gray"
-						MinWidth="16"
-						Content="▼"
-						x:Name="m_btn_toggle_scene_select"
-						/>
-					<TextBlock
-						Text="{Binding Context.SelectedScenesDescription}"
-						VerticalAlignment="Center"
-						Background="White"
-						MinWidth="80"
-						Margin="3"
-						x:Name="m_tb_selected_scenes"
-						/>
-					<Popup
-						Placement="Bottom"
-						PlacementTarget="{Binding ElementName=m_tb_selected_scenes}"
-						IsOpen="{Binding IsChecked, ElementName=m_btn_toggle_scene_select}"
-						StaysOpen="False"
-						PopupAnimation="Fade"
-						x:Name="m_popup_scene_list"
-						>
-						<ListBox
-							ItemsSource="{Binding Context.AvailableScenes}"
-							SelectedItem="{Binding Context.AvailableScenes/, Mode=TwoWay}"
-							>
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<CheckBox
-										Content="{Binding Name}"
-										IsChecked="{Binding Selected}"
-										Background="White"
-										/>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-					</Popup>
-				</DockPanel>
+				<local:SceneSelectorUI
+					AvailableScenes="{Binding Source.AvailableScenes}"
+					SelectedScenes="{Binding Source.SelectedScenes}"
+				/>
 
 				<Separator/>
 
@@ -141,7 +100,7 @@
 				<Button
 					ToolTip="Display this script in the selected scene. [F5]"
 					Command="{Binding Render}"
-					IsEnabled="{Binding Context.CanRender}"
+					IsEnabled="{Binding Source.CanRender}"
 					>
 					<Image
 						Source="{StaticResource display}"
@@ -153,7 +112,7 @@
 				<Button
 					ToolTip="Remove script objects from the selected scene. [Shift+F5]"
 					Command="{Binding RemoveObjects}"
-					IsEnabled="{Binding Context.CanRender}"
+					IsEnabled="{Binding Source.CanRender}"
 					>
 					<Image
 						Source="{StaticResource bin}"
@@ -167,8 +126,8 @@
 		<avalon:TextEditor
 			Grid.Row="2"
 			ShowLineNumbers="True"
-			FontFamily="{Binding Model.Settings.FontName, FallbackValue=Consolas}"
 			SyntaxHighlighting="Ldr"
+			FontFamily="{Binding Settings.FontName, FallbackValue=Consolas}"
 			IsModified="{Binding SaveNeeded, Mode=TwoWay}"
 			ContextMenu="{StaticResource ScriptCMenu}"
 			Name="m_editor"

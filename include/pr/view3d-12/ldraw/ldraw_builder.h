@@ -1125,8 +1125,19 @@ namespace pr::rdr12::ldraw
 		};
 		struct LdrCommands :LdrBase<LdrCommands>
 		{
-			using variant_t = std::variant<bool, int, float, StringWithLength, v2, v4, m4x4>;
-			using params_t = pr::vector<variant_t, 4>;
+			using nstr_t = StringWithLength;
+			using param_t = union param_t
+			{
+				// Don't need type descrimination, the command implies the parameter types
+				m4x4 mat4;
+				v4 vec4;
+				v2 vec2;
+				nstr_t nstr;
+				float f;
+				int i;
+				bool b;
+			};
+			using params_t = pr::vector<param_t, 4>;
 			using cmd_t = struct Cmd
 			{
 				ECommandId m_id;
@@ -1138,14 +1149,14 @@ namespace pr::rdr12::ldraw
 			// Add objects created by this script to scene 'scene_id'
 			LdrCommands& add_to_scene(int scene_id)
 			{
-				m_cmds.push_back({ ECommandId::AddToScene, {scene_id} });
+				m_cmds.push_back({ ECommandId::AddToScene, {{.i = scene_id}} });
 				return *this;
 			}
 
 			// Apply a transform to an object with the given name
 			LdrCommands& object_transform(std::string_view object_name, m4x4 const& o2w)
 			{
-				m_cmds.push_back({ ECommandId::ObjectToWorld, { StringWithLength(object_name), o2w } });
+				m_cmds.push_back({ ECommandId::ObjectToWorld, {{.nstr = object_name}, {.mat4 = o2w}} });
 				return *this;
 			}
 
@@ -1153,7 +1164,6 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				using nstr_t = StringWithLength;
 				Writer::Write(out, EKeyword::Commands, [&]
 				{
 					for (auto& cmd : m_cmds)
@@ -1161,15 +1171,23 @@ namespace pr::rdr12::ldraw
 						Writer::Write(out, EKeyword::Data, [&]
 						{
 							Writer::Append(out, (int)cmd.m_id);
-							for (auto& p : cmd.m_params)
+							switch (cmd.m_id)
 							{
-								if (auto* param = std::get_if<bool  >(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<int   >(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<float >(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<nstr_t>(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<v2    >(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<v4    >(&p)) { Writer::Append(out, *param); continue; }
-								if (auto* param = std::get_if<m4x4  >(&p)) { Writer::Append(out, *param); continue; }
+								case ECommandId::AddToScene:
+								{
+									Writer::Append(out, cmd.m_params[0].i);
+									break;
+								}
+								case ECommandId::ObjectToWorld:
+								{
+									Writer::Append(out, cmd.m_params[0].nstr);
+									Writer::Append(out, cmd.m_params[1].mat4);
+									break;
+								}
+								default:
+								{
+									throw std::runtime_error("Unknown command id");
+								}
 							}
 						});
 					}

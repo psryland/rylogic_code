@@ -144,7 +144,7 @@ namespace pr::str
 		auto len = Size(str);
 		auto initial_len = len;
 
-		static auto digit = [](Char ch)
+		constexpr auto digit = [](Char ch)
 		{
 			if (ch >= '0' && ch <= '9') return ch - '0';
 			if (ch >= 'a' && ch <= 'z') return 10 + ch - 'a';

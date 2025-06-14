@@ -84,7 +84,7 @@ namespace pr::rdr12::ldraw
 		// Construct a new instance of the source (if possible)
 		virtual std::shared_ptr<SourceBase> Clone();
 
-		// Parse the contents of the script
+		// Parse the contents of the script from this source
 		void Load(Renderer& rdr, EDataChangedReason trigger, AddCompleteCB add_complete_cb);
 
 	protected:

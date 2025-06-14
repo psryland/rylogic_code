@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -19,16 +18,16 @@ namespace LDraw
 {
 	public sealed class Model :IDisposable
 	{
-		public Model(string[] args)
+		public Model(StartupOptions options)
 		{
+			StartupOptions = options;
 			Sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context available");
 			View3d = View3d.Create();
-			StartupOptions = new StartupOptions(args);
 			Settings = new SettingsData(StartupOptions.SettingsPath);
 			FileWatchTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
-			Scenes = new ObservableCollection<SceneUI>();
-			Scripts = new ObservableCollection<ScriptUI>();
-			Assets = new ObservableCollection<AssetUI>();
+			Sources = [];
+			Scenes = [];
+			Scripts = [];
 
 			// Ensure the temporary script directory exists
 			Path_.CreateDirs(TempScriptDirectory);
@@ -39,6 +38,9 @@ namespace LDraw
 			View3d = null!;
 			GC.SuppressFinalize(this);
 		}
+
+		/// <summary>Parsed command line options</summary>
+		public StartupOptions StartupOptions { get; }
 
 		/// <summary>The main thread synchronisation context</summary>
 		private SynchronizationContext Sync { get; }
@@ -72,17 +74,25 @@ namespace LDraw
 				}
 				void HandleSourcesChanged(object? sender, View3d.SourcesChangedEventArgs e)
 				{
-				// This implements auto range on load... but sources can change for reasons that don't require
-				// an auto range (e.g. measure tool graphics).
+					// Refresh the collection of sources
+					if (e.After)
+					{
+						Dictionary<Guid, Source> sources = [];
+						m_view3d.EnumSources(src => sources.Add(src.ContextId, new Source(this, src)));
+						Sources.SyncStable(sources.Values, (l, r) => l.ContextId == r.ContextId, (s, i) => s);
+						SourcesChanged?.Invoke(this, EventArgs.Empty);
+					}
+					// This implements auto range on load... but sources can change for reasons that don't require
+					// an auto range (e.g. measure tool graphics).
 
-				//	// Just prior to reloading sources
-				//	if (e.Before && Settings.ClearErrorLogOnReload)
-				//		Log.Clear();
-				//	
-				//	// After a source change, reset
-				//	if (e.After && Settings.ResetOnLoad)
-				//		foreach (var scene in Scenes)
-				//			scene.SceneView.AutoRange();
+					//	// Just prior to reloading sources
+					//	if (e.Before && Settings.ClearErrorLogOnReload)
+					//		Log.Clear();
+					//	
+					//	// After a source change, reset
+					//	if (e.After && Settings.ResetOnLoad)
+					//		foreach (var scene in Scenes)
+					//			scene.SceneView.AutoRange();
 				}
 				void HandleParsingProgress(object? sender, View3d.ParsingProgressEventArgs e) // worker thread context
 				{
@@ -110,9 +120,6 @@ namespace LDraw
 			}
 		}
 		private View3d m_view3d = null!;
-
-		/// <summary>Parsed command line options</summary>
-		public StartupOptions StartupOptions { get; }
 
 		/// <summary>Application settings</summary>
 		public SettingsData Settings
@@ -148,21 +155,19 @@ namespace LDraw
 		}
 		private SettingsData m_settings = null!;
 
+		/// <summary>The collection of current Ldraw object sources</summary>
+		public List<Source> Sources { get; }
+		public event EventHandler? SourcesChanged;
+
 		/// <summary>The scene instances</summary>
 		public ObservableCollection<SceneUI> Scenes { get; }
 
 		/// <summary>The script instances</summary>
 		public ObservableCollection<ScriptUI> Scripts { get; }
 
-		/// <summary>The asset instances</summary>
-		public ObservableCollection<AssetUI> Assets { get; }
-
 		/// <summary>Notify of a file about to be opened</summary>
 		public event EventHandler<ValueEventArgs<string>>? FileOpening;
-		public void NotifyFileOpening(string filepath)
-		{
-			FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
-		}
+		public void NotifyFileOpening(string filepath) => FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
 
 		/// <summary>Progress updates for parsing. Null while not parsing</summary>
 		public ParsingProgressData? ParsingProgress
@@ -203,11 +208,12 @@ namespace LDraw
 				{
 					try
 					{
-						foreach (var script in Scripts)
-							script.CheckForChangedScript();
-
-						if (Settings.AutoRefresh)
-							m_view3d.CheckForChangedSources();
+						//TODO: This should be done by the native code right?
+						//foreach (var script in Scripts)
+						//	script.CheckForChangedScript();
+						//
+						//if (Settings.AutoRefresh)
+						//	m_view3d.CheckForChangedSources();
 					}
 					catch (Exception ex)
 					{
@@ -218,12 +224,20 @@ namespace LDraw
 		}
 		private DispatcherTimer m_file_watch_timer = null!;
 
+		/// <summary>Add a file ldraw source</summary>
+		public Source AddFileSource(string filepath)
+		{
+			NotifyFileOpening(filepath);
+			var src = View3d.LoadScriptFromFile(filepath);
+			return Sources.Add2(new Source(this, src));
+		}
+
 		/// <summary>Return a generated name for a new scene UI</summary>
 		public string GenerateSceneName()
 		{
 			for (; ; )
 			{
-				var name = $"{UITag.Scene}{++m_scene_number}";
+				var name = $"{UITag.Scene}-{++m_scene_number}";
 				if (!Scenes.Any(x => string.Compare(x.SceneName, name, true) == 0))
 					return name;
 			}
@@ -235,53 +249,37 @@ namespace LDraw
 		{
 			for (; ; )
 			{
-				var name = $"{UITag.Script}{++m_script_number}";
+				var name = $"{UITag.Script}-{++m_script_number}";
 				if (!Scripts.Any(x => string.Compare(x.ScriptName, name, true) == 0))
 					return name;
 			}
 		}
 		private int m_script_number;
 
-		/// <summary>Return the full filepath for a temporary script file</summary>
-		public string GenerateTempScriptFilepath(out Guid context_id)
+		/// <summary>Create an empty script and return its filepath</summary>
+		public string CreateNewScriptFile()
 		{
-			context_id = Guid.NewGuid();
-			var filename = $"{UITag.Script}-{context_id}.ldr";
-			var filepath = Path_.CombinePath(TempScriptDirectory, filename);
-			return IsTempScriptFilepath(filepath) ? filepath : throw new Exception("Temp script filepath generation is incorrect");
+			var script_name = GenerateScriptName();
+			var filepath = Path_.CombinePath(TempScriptDirectory, $"{script_name}.ldr");
+			File.AppendText(filepath).Dispose();
+			return filepath;
 		}
 
-		/// <summary>True if 'name' is a generated scene name</summary>
-		public bool IsGeneratedSceneName(string name)
+		/// <summary>Open a ldr script text file in a script window</summary>
+		public ScriptUI? OpenInEditor(Source src)
 		{
-			var generated_name_pattern = $@"{UITag.Scene}\d*";
-			return Regex.IsMatch(name, generated_name_pattern);
-		}
+			if (src.FilePath.Length == 0)
+				return null;
 
-		/// <summary>True if 'name' is a generated script name</summary>
-		public bool IsGeneratedScriptName(string name)
-		{
-			var generated_name_pattern = $@"{UITag.Script}\d*";
-			return Regex.IsMatch(name, generated_name_pattern);
-		}
+			// See if there is already a script with this source
+			foreach (var script in Scripts)
+			{
+				if (script.Source.ContextId == src.ContextId)
+					return script;
+			}
 
-		/// <summary>True if filepath is a temporary script filepath</summary>
-		public bool IsTempScriptFilepath(string filepath)
-		{
-			var temp_script_pattern = $@"^{UITag.Script}[-]{Guid_.RegexPattern}\.ldr$";
-			return
-				Path_.Compare(Path_.Directory(filepath), TempScriptDirectory) == 0 &&
-				Regex.IsMatch(Path_.FileName(filepath), temp_script_pattern);
-		}
-
-		/// <summary>Extract the Guid from the temporary script filepath</summary>
-		public Guid TempScriptFilepathToGuid(string filepath)
-		{
-			if (!IsTempScriptFilepath(filepath))
-				throw new Exception($"'{filepath}' in not a valid temporary script filepath");
-
-			var m = Regex.Match(Path_.FileName(filepath), Guid_.RegexPattern);
-			return new Guid(m.Groups[1].Value);
+			// Otherwise, create a new one
+			return Scripts.Add2(new ScriptUI(src));
 		}
 
 		/// <summary>Clear all instances from all scenes</summary>
@@ -298,13 +296,13 @@ namespace LDraw
 		/// <summary>Clear all instances from one or more scenes</summary>
 		public void Clear(IEnumerable<SceneUI> scenes)
 		{
-			Clear(scenes, Array.Empty<Guid>(), 0, 0);
+			Clear(scenes, [], 0, 0);
 		}
 
 		/// <summary>Clear instances from one or more scenes</summary>
 		public void Clear(SceneUI scene) => Clear(new[] { scene });
-		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, new[] { context_id }, 1, 0);
-		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, new[] { context_id }, 1, 0);
+		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, [context_id], 1, 0);
+		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, [context_id], 1, 0);
 		public void Clear(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Remove objects from the scenes
@@ -315,16 +313,16 @@ namespace LDraw
 				view.Scene.Invalidate();
 			}
 
-			// Delete unused objects
-			if (context_ids.Length != 0)
-			{
-				View3d.DeleteUnused(context_ids, include_count, exclude_count);
-			}
+			//// Delete unused objects
+			//if (context_ids.Length != 0)
+			//{
+			//	View3d.DeleteUnused(context_ids, include_count, exclude_count);
+			//}
 		}
 
 		// Add objects associated with 'id' to the scenes
-		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, new[] { context_id }, 1, 0);
-		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, new[] { context_id }, 1, 0);
+		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, [context_id], 1, 0);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, [context_id], 1, 0);
 		public void AddObjects(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Add the objects from 'id' this scene.
@@ -341,29 +339,19 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>Delete temporary scripts that are not currently open</summary>
-		public void CleanTemporaryScripts()
-		{
-			// The filenames of temporary scripts that are currently open
-			var currently_open = Scripts
-				.Where(x => IsTempScriptFilepath(x.Filepath))
-				.Select(x => Path_.FileName(x.Filepath))
-				.ToHashSet(0);
-
-			// Delete temporary scripts that aren't in 'currently_open'
-			foreach (var file in TemporaryScripts())
-			{
-				if (currently_open.Contains(file.Name)) continue;
-				file.Delete();
-			}
-		}
-
-		/// <summary>The filepaths of existing temporary scripts</summary>
+		/// <summary>The file paths of existing temporary scripts</summary>
 		public IEnumerable<FileSystemInfo> TemporaryScripts()
 		{
 			// Treat anything in the temporary script directory as a temporary script
 			foreach (var file in Path_.EnumFileSystem(TempScriptDirectory, SearchOption.TopDirectoryOnly, exclude: FileAttributes.Directory))
+			{
+				// Filter out files that aren't ldr script
+				var temp_script_pattern = $@"^{UITag.Script}[-].*\.ldr$";
+				if (!Regex.IsMatch(file.FullName, temp_script_pattern))
+					continue;
+
 				yield return file;
+			}
 		}
 
 		/// <summary>Return a collection of scenes to add objects to</summary>
@@ -399,8 +387,8 @@ namespace LDraw
 
 		/// <summary></summary>
 		public static readonly string SupportedFilesFilter = Util.FileDialogFilter(
-			"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
-			"Ldr Script", "*.ldr",
+			"Supported Files", "*.ldr", "*.bdr", "*.p3d", "*.3ds", "*.stl", "*.csv",
+			"Ldr Script", "*.ldr", "*.bdr",
 			"Binary Model File", "*.p3d",
 			"3D Studio Max Model File", "*.3ds",
 			"STL CAD Model File", "*.stl",

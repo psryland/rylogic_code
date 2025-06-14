@@ -69,12 +69,12 @@ namespace pr::rdr
 				D3DPtr<ID3D11DeviceChild> dxshdr;
 				switch (m_shdr_type)
 				{
-					case EShaderType::VS: Throw(device->CreateVertexShader  (&buf[0], buf.size(), 0, (ID3D11VertexShader**)&dxshdr.m_ptr)); break;
-					case EShaderType::PS: Throw(device->CreatePixelShader   (&buf[0], buf.size(), 0, (ID3D11PixelShader**)&dxshdr.m_ptr)); break;
-					case EShaderType::GS: Throw(device->CreateGeometryShader(&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&dxshdr.m_ptr)); break;
-					case EShaderType::CS: Throw(device->CreateComputeShader (&buf[0], buf.size(), 0, (ID3D11ComputeShader**)&dxshdr.m_ptr)); break;
-					case EShaderType::HS: Throw(device->CreateHullShader    (&buf[0], buf.size(), 0, (ID3D11HullShader**)&dxshdr.m_ptr)); break;
-					case EShaderType::DS: Throw(device->CreateDomainShader  (&buf[0], buf.size(), 0, (ID3D11DomainShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::VS: Throw(device->CreateVertexShader  (&buf[0], buf.size(), 0, (ID3D11VertexShader**)dxshdr.address_of())); break;
+					case EShaderType::PS: Throw(device->CreatePixelShader   (&buf[0], buf.size(), 0, (ID3D11PixelShader**)dxshdr.address_of())); break;
+					case EShaderType::GS: Throw(device->CreateGeometryShader(&buf[0], buf.size(), 0, (ID3D11GeometryShader**)dxshdr.address_of())); break;
+					case EShaderType::CS: Throw(device->CreateComputeShader (&buf[0], buf.size(), 0, (ID3D11ComputeShader**)dxshdr.address_of())); break;
+					case EShaderType::HS: Throw(device->CreateHullShader    (&buf[0], buf.size(), 0, (ID3D11HullShader**)dxshdr.address_of())); break;
+					case EShaderType::DS: Throw(device->CreateDomainShader  (&buf[0], buf.size(), 0, (ID3D11DomainShader**)dxshdr.address_of())); break;
 					default: PR_ASSERT(PR_DBG_RDR, false, "Unknown shader type"); break;
 				}
 				m_dx_shdr = dxshdr;

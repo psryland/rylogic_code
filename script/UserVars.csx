@@ -70,7 +70,7 @@ public class UserVars
 	public static string? NugetApiKey = null; // Leave as none, set once per script run
 
 	/// <summary>The full path to the windows sdk and version</summary>
-	public static string WinSDKVersion => m_win_sdk_version ??= "10.0.22621.0";
+	public static string WinSDKVersion => m_win_sdk_version ??= "10.0.26100.0";
 	private static string? m_win_sdk_version;
 
 	/// <summary>The full path to the windows sdk</summary>

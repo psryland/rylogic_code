@@ -75,7 +75,7 @@ namespace pr::ini_file
 		void Next()
 		{
 			// Remove leading and trailing whitespace
-			static auto TrimWS = [](std::string_view str) -> std::string_view
+			constexpr auto TrimWS = [](std::string_view str) -> std::string_view
 			{
 				for (; !str.empty() && std::isspace(str.front()); str.remove_prefix(1)) {}
 				for (; !str.empty() && std::isspace(str.back()); str.remove_suffix(1)) {}

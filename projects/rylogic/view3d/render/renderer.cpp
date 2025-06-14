@@ -77,9 +77,9 @@ namespace pr::rdr
 			m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
 			static_cast<UINT>(m_settings.m_feature_levels.size()),
 			D3D11_SDK_VERSION,
-			&m_d3d_device.m_ptr,
+			m_d3d_device.address_of(),
 			&m_feature_level,
-			&immediate.m_ptr);
+			immediate.address_of());
 
 		// If the device type is unsupported, fall-back to a software device
 		if (hr == DXGI_ERROR_UNSUPPORTED && m_settings.m_fallback_to_sw_device)
@@ -92,12 +92,12 @@ namespace pr::rdr
 				m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
 				static_cast<UINT>(m_settings.m_feature_levels.size()),
 				D3D11_SDK_VERSION,
-				&m_d3d_device.m_ptr,
+				m_d3d_device.address_of(),
 				&m_feature_level,
-				&immediate.m_ptr);
+				immediate.address_of());
 		}
 		Check(hr);
-		Check(immediate->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)&m_immediate.m_ptr));
+		Check(immediate->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)m_immediate.address_of()));
 		PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device.get(), "D3D device"));
 		PR_EXPAND(PR_DBG_RDR, NameResource(immediate.get(), "immediate DC"));
 
@@ -116,20 +116,20 @@ namespace pr::rdr
 		// Create the direct2d factory
 		D2D1_FACTORY_OPTIONS d2dfactory_options;
 		d2dfactory_options.debugLevel = AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
-		Check(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+		Check(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)m_d2dfactory.address_of()));
 
 		// Create the direct write factory
-		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_dwrite.m_ptr));
+		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)m_dwrite.address_of()));
 
 		// Creating a D2D device for drawing 2D to the back buffer requires 'D3D11_CREATE_DEVICE_BGRA_SUPPORT'
 		if (AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
 		{
 			// Get the DXGI Device from the d3d device
 			D3DPtr<IDXGIDevice> dxgi_device;
-			Check(m_d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+			Check(m_d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)dxgi_device.address_of()));
 
 			// Create a D2D device
-			Check(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
+			Check(m_d2dfactory->CreateDevice(dxgi_device.get(), m_d2d_device.address_of()));
 		}
 	}
 
@@ -159,7 +159,7 @@ namespace pr::rdr
 			{
 				// Note: this will report that the D3D device is still live
 				D3DPtr<ID3D11Debug> dbg;
-				Check(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&dbg.m_ptr));
+				Check(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)dbg.address_of()));
 				Check(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
 			}
 			#endif

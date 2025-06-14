@@ -42,7 +42,7 @@ namespace pr
 	}
 
 	// Sets the masked bits of 'value' to the state 'state'
-	// If 'state' is boolean-true, returns 'value | mask'. If false, returns 'value &~ mask'
+	// If 'state' is boolean-true, returns 'value | mask'. If false, returns 'value & ~mask'
 	// If 'state' is integral, then applies 'mask & state' to 'value'
 	template <BitField T, BitField U, typename B>
 	requires (BitField<B> || std::is_same_v<B,bool>)
@@ -60,7 +60,7 @@ namespace pr
 			auto result = static_cast<UT>(value);
 			result &= ~static_cast<UT>(mask);         // clear masked bits to zero
 			result |=  static_cast<UT>(mask & state); // set bits from bit field
-			return result;
+			return static_cast<T>(result);
 		}
 	}
 

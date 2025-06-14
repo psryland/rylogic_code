@@ -1,13 +1,13 @@
-#include <stdexcept>
+﻿#include <stdexcept>
 #include <windows.h>
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 
-//#include "pr/view3d-12/view3d.h"
+#include "pr/view3d-12/view3d.h"
 #include "pr/view3d-12/view3d-dll.h"
-#include "pr/view3d-12/ldraw/ldraw_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 #include "pr/view3d-12/utility/conversion.h"
 
 using namespace pr;
@@ -34,11 +34,12 @@ struct Main :Form
 
 	view3d::DllHandle m_view3d;
 	view3d::Window m_win3d;
+	view3d::CubeMap m_envmap;
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
-	view3d::CubeMap m_envmap;
 	EStepMode m_step_mode;
 	int m_pending_steps;
+	double m_time = 0.0;
 	
 	// Error handler
 	static void __stdcall ReportError(void*, char const* msg, char const* filepath, int line, int64_t)
@@ -67,62 +68,77 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
-		, m_obj0()
-			//View3D_ObjectCreateLdrA(
-			//"*Box first_box_eva FF00FF00 { *Data {1 2 3} }"
-			//, false, nullptr, nullptr))
-		, m_obj1()
-			//View3D_ObjectCreateLdrA(
-			//"*Sphere sever FF0080FF { *Data {0.4} }"
-			//, false, nullptr, nullptr))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
+		, m_obj0()
+		, m_obj1()
 		, m_step_mode(EStepMode::Single)
 		, m_pending_steps()
 	{
-		std::default_random_engine rng;
-		std::uniform_real_distribution dist(-10.0f, 10.0f);
-
-		//auto builder = ldraw::Builder();
-		//auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
-		//for (int i = 0; i != 100; ++i)
-		//	pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
-		//m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
-
-		//auto builder = ldr::Builder();
-		//auto& points = builder.Point("points", 0xFF00FF00);
-		//points.size(10.0f);
-		//for (int i = 0; i != 10000; ++i) points.pt({ dist(rng), dist(rng), 0, 1 });
-		//auto& spline = builder.Spline("spline");
-		//spline.spline(v4{ 0, 0, 0, 1 }, v4{ -1, 1, 0, 1 }, v4{ -1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFF00FF00);
-		//spline.spline(v4{ 0, 0, 0, 1 }, v4{ +1, 1, 0, 1 }, v4{ +1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFFFF0000);
-		//spline.width(4);
-		//spline.pos(v4{ 0, 10, 0, 1 });
-
-		// Load script
-		//auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
-		//auto s = "*Box {*Data{1 2 3}} *Commands {*Data {AddToScene 0}}";
-		//auto ctx0 = View3D_LoadScriptFromString(s, nullptr, nullptr, nullptr, nullptr);
-		
 		// Set up the scene
-		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		//View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		//View3D_CameraPositionSet(m_win3d, {200, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 0});
+		View3D_CameraPositionSet(m_win3d, {0, 0, 200, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	
 		// Cast shadows
 		auto light = View3D_LightPropertiesGet(m_win3d);
 		light.m_type = view3d::ELight::Directional;
 		light.m_direction = To<view3d::Vec4>(v4::Normal(-1, -1, -1, 0));
-		light.m_cast_shadow = 10.0f;
+		light.m_cast_shadow = 0.0f;// 10.0f;
 		light.m_cam_relative = false;
 		View3D_LightPropertiesSet(m_win3d, light);
 
+		// Create 'm_obj0', 'm_obj1'
+		{
+			std::default_random_engine rng;
+			std::uniform_real_distribution dist(-10.0f, 10.0f);
+
+			m_obj0 = View3D_ObjectCreateLdrA(
+				//' "*Box first_box_eva FF00FF00 { *Data {1 2 3} }"
+				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\AJ-99.fbx\" } }"
+				//"*Model { *Filepath { \"C:\\Users\\paulryland\\OneDrive - Microsoft\\Dev\\Hyperpose\\hyperpose_sample.fbx\" } }"
+				, false, nullptr, nullptr);
+
+			m_obj1 = View3D_ObjectCreateLdrA(
+				//"*Sphere sever FF0080FF { *Data {0.4} }"
+				//"*Box Origin FF00FF00 { *Data {1 1 1} }"
+				"*CoordFrame origin { *Scale {10} }"
+				, false, nullptr, nullptr);
+
+			//auto builder = ldraw::Builder();
+			//auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
+			//for (int i = 0; i != 100; ++i)
+			//	pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
+			//m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
+
+			//auto builder = ldr::Builder();
+			//auto& points = builder.Point("points", 0xFF00FF00);
+			//points.size(10.0f);
+			//for (int i = 0; i != 10000; ++i) points.pt({ dist(rng), dist(rng), 0, 1 });
+			//auto& spline = builder.Spline("spline");
+			//spline.spline(v4{ 0, 0, 0, 1 }, v4{ -1, 1, 0, 1 }, v4{ -1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFF00FF00);
+			//spline.spline(v4{ 0, 0, 0, 1 }, v4{ +1, 1, 0, 1 }, v4{ +1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFFFF0000);
+			//spline.width(4);
+			//spline.pos(v4{ 0, 10, 0, 1 });
+
+			// Load script
+			//auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
+			//auto s = "*Box {*Data{1 2 3}} *Commands {*Data {AddToScene 0}}";
+			//auto ctx0 = View3D_LoadScriptFromString(s, nullptr, nullptr, nullptr, nullptr);
+		}
+
 		// Add objects to the scene
-		//View3D_WindowAddObject(m_win3d, m_obj0);
-		//View3D_WindowAddObject(m_win3d, m_obj1);
-		//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
-		//View3D_DemoSceneCreateText(m_win3d);
-		//View3D_DemoSceneCreateBinary(m_win3d);
+		{
+			View3D_WindowAddObject(m_win3d, m_obj0);
+			View3D_WindowAddObject(m_win3d, m_obj1);
+			//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
+			//View3D_DemoSceneCreateText(m_win3d);
+			//View3D_DemoSceneCreateBinary(m_win3d);
+		}
 
 		// EnvMap
-		View3D_WindowEnvMapSet(m_win3d, m_envmap);
+		//View3D_WindowEnvMapSet(m_win3d, m_envmap);
 		View3D_WindowEnumObjects(m_win3d, [](void*, view3d::Object obj)
 			{
 				View3D_ObjectReflectivitySet(obj, 0.2f, "");
@@ -139,6 +155,50 @@ struct Main :Form
 		View3D_ObjectDelete(m_obj0);
 		View3D_ObjectDelete(m_obj1);
 		View3D_Shutdown(m_view3d);
+	}
+	void Step(double dt)
+	{
+		static double time_scale = 0.5;
+		dt *= time_scale;
+
+		switch (m_step_mode)
+		{
+			case EStepMode::Run:
+			{
+				m_time += dt;
+				break;
+			}
+			case EStepMode::Single:
+			{
+				if (m_pending_steps > 0)
+				{
+					m_time += dt;
+					--m_pending_steps;
+				}
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown step mode");
+			}
+		}
+
+		//auto i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+		//View3D_ObjectO2WSet(m_obj0, To<view3d::Mat4x4>(i2w), nullptr);
+		//m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+		//m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+
+		// Animation
+		static bool animate = true;
+		if (animate)
+			View3D_ObjectAnimTimeSet(m_obj0, static_cast<float>(m_time), "");
+		else
+			View3D_ObjectAnimTimeSet(m_obj0, 0, "");
+
+
+		auto c2w = View3D_CameraToWorldGet(m_win3d);
+		SetWindowTextA(*this, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
+		View3D_WindowRender(m_win3d);
 	}
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
@@ -215,6 +275,12 @@ struct Main :Form
 				args.m_handled = true;
 				break;
 			}
+			case 'E':
+			{
+				m_step_mode = EStepMode::Single;
+				m_time = 0.0;
+				break;
+			}
 			case 'R':
 			{
 				m_step_mode = EStepMode::Run;
@@ -224,6 +290,7 @@ struct Main :Form
 			case 'T':
 			{
 				m_step_mode = EStepMode::Single;
+				++m_pending_steps;
 				args.m_handled = true;
 				break;
 			}
@@ -249,21 +316,9 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		Main main(hinstance);
 		main.Show();
 
-		float time = 0.0f;
 		SimMessageLoop loop;
 		loop.AddMessageFilter(main);
-		loop.AddLoop(10, true, [&main, &time](auto dt)
-		{
-			time += dt * 0.001f;
-			auto i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
-			//View3D_ObjectO2WSet(main.m_obj0, To<view3d::Mat4x4>(i2w), nullptr);
-			//main.m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
-			//main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
-		
-			auto c2w = View3D_CameraToWorldGet(main.m_win3d);
-			SetWindowTextA(main, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
-			View3D_WindowRender(main.m_win3d);
-		});
+		loop.AddLoop(10, true, [&main](auto dt) { main.Step(dt * 0.001); });
 		return loop.Run();
 	}
 	catch (std::exception const& ex)

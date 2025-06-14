@@ -37,7 +37,7 @@ namespace pr::audio
 		//  and are bounded by the lifetime of the XAudio2 object that owns them.
 
 		// Create The XAudio2 interface
-		Check(XAudio2Create(&m_xaudio.m_ptr, 0, XAUDIO2_DEFAULT_PROCESSOR));
+		Check(XAudio2Create(m_xaudio.address_of(), 0, XAUDIO2_DEFAULT_PROCESSOR));
 
 		// To see the trace output, you need to view ETW logs for this application:
 		// Go to Control Panel, Administrative Tools, Event Viewer.

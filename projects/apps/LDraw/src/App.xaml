@@ -42,6 +42,42 @@
 				<Setter Property="HorizontalContentAlignment" Value="Left" />
 				<Setter Property="VerticalContentAlignment" Value="Center" />
 			</Style>
+
+			<!-- No-Padding List Box style -->
+			<Style x:Key="NoPaddingListViewItem" TargetType="{x:Type ListViewItem}">
+				<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+				<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+				<Setter Property="BorderThickness" Value="0"/>
+				<Setter Property="Padding" Value="0"/>
+				<Setter Property="Margin" Value="0"/>
+				<Setter Property="Template">
+					<Setter.Value>
+						<ControlTemplate TargetType="{x:Type ListViewItem}">
+							<Border
+								x:Name="Border"
+								Background="{TemplateBinding Background}"
+								BorderBrush="{TemplateBinding BorderBrush}"
+								BorderThickness="{TemplateBinding BorderThickness}"
+							>
+								<ContentPresenter
+									HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+									VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+									Margin="{TemplateBinding Padding}"
+								/>
+							</Border>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsMouseOver" Value="True">
+									<Setter TargetName="Border" Property="Background" Value="LightBlue" />
+								</Trigger>
+								<Trigger Property="IsSelected" Value="True">
+									<Setter TargetName="Border" Property="Background" Value="LightBlue" />
+									<Setter TargetName="Border" Property="BorderBrush" Value="Blue" />
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</Setter.Value>
+				</Setter>
+			</Style>
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

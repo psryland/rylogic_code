@@ -472,8 +472,7 @@ namespace pr::storage::zip
 			m_filepath = filepath;
 			switch (mode)
 			{
-			default: throw std::runtime_error("Unknown ZipArchive mode.");
-			case EMode::ReadOnly:
+				case EMode::ReadOnly:
 				{
 					// File must exist
 					if (!std::filesystem::exists(filepath))
@@ -481,7 +480,7 @@ namespace pr::storage::zip
 
 					// Read/Write handlers
 					m_read = &IO::ReadIStream;
-					m_write = &IO::NoWrite; 
+					m_write = &IO::NoWrite;
 
 					// Read the central directory
 					m_istream = IO::OpenForReading(m_filepath);
@@ -489,7 +488,7 @@ namespace pr::storage::zip
 					ReadCentralDirectory(archive_size);
 					break;
 				}
-			case EMode::Writeable:
+				case EMode::Writeable:
 				{
 					// Read/Write handlers
 					m_read = &IO::ReadIStream;
@@ -513,6 +512,10 @@ namespace pr::storage::zip
 					m_istream = IO::OpenForReading(m_filepath);
 					break;
 				}
+				default:
+				{
+					throw std::runtime_error("Unknown ZipArchive mode.");
+				}
 			}
 		}
 
@@ -531,8 +534,7 @@ namespace pr::storage::zip
 			// If writeable, make a copy of 'rhs' in memory
 			switch (mode)
 			{
-			default: throw std::runtime_error("Unknown archive mode");
-			case EMode::ReadOnly:
+				case EMode::ReadOnly:
 				{
 					m_read = &IO::NoRead;
 					m_write = &IO::NoWrite;
@@ -568,7 +570,7 @@ namespace pr::storage::zip
 					}
 					break;
 				}
-			case EMode::Writeable:
+				case EMode::Writeable:
 				{
 					m_read = &IO::ReadOMem;
 					m_write = &IO::WriteOMem;
@@ -601,6 +603,10 @@ namespace pr::storage::zip
 						Reset();
 					}
 					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown archive mode");
 				}
 			}
 		}
@@ -1634,7 +1640,7 @@ namespace pr::storage::zip
 				return;
 			}
 
-			std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
+			throw std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
 		}
 
 		// Extract from a zip archive file
@@ -1709,7 +1715,7 @@ namespace pr::storage::zip
 				return;
 			}
 
-			std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
+			throw std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
 		}
 
 		// Lexicographically compare strings

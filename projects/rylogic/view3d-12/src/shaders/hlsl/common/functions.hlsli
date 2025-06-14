@@ -2,7 +2,6 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-
 #ifndef PR_RDR_FUNCTIONS_HLSLI
 #define PR_RDR_FUNCTIONS_HLSLI
 

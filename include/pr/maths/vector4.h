@@ -291,14 +291,7 @@ namespace pr
 		friend Vec4 pr_vectorcall operator % (Vec4_cref lhs, S rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (std::floating_point<S>)
-			{
-				return Vec4{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
-			}
-			else
-			{
-				return Vec4{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs};
-			}
+			return Vec4{ Modulus(lhs.x, rhs), Modulus(lhs.y, rhs), Modulus(lhs.z, rhs), Modulus(lhs.w, rhs) };
 		}
 		friend Vec4 pr_vectorcall operator / (S lhs, Vec4_cref rhs)
 		{
@@ -390,13 +383,25 @@ namespace pr
 		friend Vec4 pr_vectorcall operator % (Vec4_cref lhs, Vec4_cref rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (std::floating_point<S>)
+			if constexpr (IntrinsicF)
 			{
-				return Vec4{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
+				auto div = _mm_div_ps(lhs.vec, rhs.vec);                                // a / b
+				auto trunc = _mm_round_ps(div, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC); // trunc(a / b)
+				auto prod = _mm_mul_ps(trunc, rhs.vec);                                 // trunc(a / b) * b
+				auto rem = _mm_sub_ps(lhs.vec, prod);                                   // a - b * trunc(a / b) => fmod
+				return Vec4{ rem };
+			}
+			else if constexpr (IntrinsicD)
+			{
+				auto div = _mm256_div_ps(lhs.vec, rhs.vec);                                // a / b
+				auto trunc = _mm256_round_ps(div, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC); // trunc(a / b)
+				auto prod = _mm256_mul_ps(trunc, rhs.vec);                                 // trunc(a / b) * b
+				auto rem = _mm256_sub_ps(lhs.vec, prod);                                   // a - b * trunc(a / b) => fmod
+				return Vec4{ rem };
 			}
 			else
 			{
-				return Vec4{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
+				return Vec4{ Modulus(lhs.x, rhs.x), Modulus(lhs.y, rhs.y), Modulus(lhs.z, rhs.z), Modulus(lhs.w, rhs.w) };
 			}
 		}
 		friend bool pr_vectorcall operator == (Vec4_cref lhs, Vec4_cref rhs)

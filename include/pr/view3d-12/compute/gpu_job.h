@@ -9,6 +9,7 @@
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
+#include "pr/view3d-12/utility/keep_alive.h"
 
 namespace pr::rdr12
 {
@@ -99,7 +100,7 @@ namespace pr::rdr12
 				.NodeMask = 0,
 			};
 			D3DPtr<ID3D12CommandQueue> m_queue;
-			Check(device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_queue.m_ptr));
+			Check(device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)m_queue.address_of()));
 			return m_queue;
 		}
 

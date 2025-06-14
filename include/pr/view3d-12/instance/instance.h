@@ -16,6 +16,7 @@
 //   component
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/render/sortkey.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/sampler/sampler.h"
@@ -41,6 +42,7 @@ namespace pr::rdr12
 		TintColour32,        // pr::Colour32
 		DiffTexture,         // An override of the main diffuse texture
 		DiffTextureSampler,  // An override of the main diffuse texture sampler
+		PosePtr,             // A skeleton pose to skin to
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -274,11 +276,18 @@ namespace pr::rdr12
 		return ptex ? *ptex : nullptr;
 	}
 
-	// Return the sampler override in this isntance (if exists)
+	// Return the sampler override in this instance (if exists)
 	inline SamplerPtr FindDiffTextureSampler(BaseInstance const& inst)
 	{
 		auto const* psamp = inst.find<SamplerPtr>(EInstComp::DiffTextureSampler);
 		return psamp ? *psamp : nullptr;
+	}
+
+	// Return the skin override in this instance (if exists)
+	inline PosePtr FindPose(BaseInstance const& inst)
+	{
+		auto const* pskin = inst.find<PosePtr>(EInstComp::PosePtr);
+		return pskin ? *pskin : nullptr;
 	}
 
 	// Cast from a 'BaseInstance' pointer to an instance type
@@ -298,7 +307,7 @@ namespace pr::rdr12
 	//     #define PR_RDR_INST(x)\
 	//     x(pr::rdr12::ModelPtr ,m_model  ,pr::rdr12::EInstComp::ModelPtr)\
 	//     x(pr::Colour32        ,m_colour ,pr::rdr12::EInstComp::TintColour32)
-	//     PR_RDR12_INSTANCE_MEMBERS(PR_RDR_INST);
+	//     PR_RDR12_INSTANCE_MEMBERS(MyInstance, PR_RDR_INST);
 	//     #undef PR_RDR_INST
 	//  };
 	#pragma region Instance Type Generator

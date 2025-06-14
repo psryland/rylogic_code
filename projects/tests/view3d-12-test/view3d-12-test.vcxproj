@@ -7,6 +7,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}</ProjectGuid>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <RootNamespace>View3d</RootNamespace>
     <ProjectName>view3d-12-test</ProjectName>
   </PropertyGroup>
@@ -71,9 +72,17 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <!--
+  Dependencies
+  -->
+  <ItemGroup>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\view3d-12\view3d-12.dll.vcxproj"/>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\fbx\fbx.vcxproj"/>
+  </ItemGroup>
+  <!--
   Targets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
   <Import Project="$(TargetsPath)view3d-12.targets" />
+  <Import Project="$(TargetsPath)fbx.targets" />
 </Project>

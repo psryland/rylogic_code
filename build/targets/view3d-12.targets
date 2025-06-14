@@ -22,20 +22,7 @@ target directory.
 
 	<!-- Add a dependency on the dll (C++) -->
 	<ItemGroup>
-		<CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
-			<Message />
-			<FileType>Document</FileType>
-			<Link>$(RylogicRoot)lib\x64\debug\view3d-12.dll</Link>
-			<Outputs>$(OutDir)lib\x64\debug\view3d-12.dll</Outputs>
-			<Command Condition="'$(Configuration)'=='Debug'">copy $(RylogicRoot)lib\x64\debug\view3d-12.dll $(OutDir)lib\x64\debug\view3d-12.dll</Command>
-		</CustomBuild>
-		<CustomBuild Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
-			<Message />
-			<FileType>Document</FileType>
-			<Link>$(RylogicRoot)lib\x64\release\view3d-12.dll</Link>
-			<Outputs>$(OutDir)lib\x64\release\view3d-12.dll</Outputs>
-			<Command Condition="'$(Configuration)'!='Debug'">copy $(RylogicRoot)lib\x64\release\view3d-12.dll $(OutDir)lib\x64\release\view3d-12.dll</Command>
-		</CustomBuild>
+		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll" />
 	</ItemGroup>
 
 </Project>

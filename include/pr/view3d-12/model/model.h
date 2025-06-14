@@ -4,6 +4,8 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/skin.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/utility/update_resource.h"
 
 namespace pr::rdr12
@@ -31,14 +33,27 @@ namespace pr::rdr12
 		TNuggetChain             m_nuggets;   // The nuggets for this model
 		int64_t                  m_vcount;    // The count of elements in the V-buffer
 		int64_t                  m_icount;    // The count of elements in the I-buffer
+		Skin                     m_skin;      // Skinning data for this model.
+		PosePtr                  m_pose;      // Model pose. Null if not animated. Overridden in Instance.
 		BBox                     m_bbox;      // A bounding box for the model. Set by the client
 		string32                 m_name;      // A human readable name for the model
 		SizeAndAlign16           m_vstride;   // The size and alignment (in bytes) of a single V-element
 		SizeAndAlign16           m_istride;   // The size and alignment (in bytes) of a single I-element
 		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
-		Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
+		Model(Renderer& rdr,
+			int64_t vcount,
+			int64_t icount,
+			SizeAndAlign16 vstride,
+			SizeAndAlign16 istride,
+			ID3D12Resource* vb,
+			ID3D12Resource* ib,
+			BBox const& bbox,
+			std::string_view name
+		);
+		Model(Model&&) = delete;
 		Model(Model const&) = delete;
+		Model& operator =(Model&&) = delete;
 		Model& operator =(Model const&) = delete;
 		~Model();
 
@@ -47,8 +62,8 @@ namespace pr::rdr12
 		Renderer& rdr();
 
 		// Allow update of the vertex/index buffers
-		UpdateSubresourceScope UpdateVertices(ResourceFactory& factory, Range vrange = Range::Reset());
-		UpdateSubresourceScope UpdateIndices(ResourceFactory& factory, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateVertices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateIndices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange = Range::Reset());
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)

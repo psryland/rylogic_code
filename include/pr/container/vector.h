@@ -1249,6 +1249,12 @@ namespace pr
 		{
 			return !(lhs == rhs);
 		}
+
+		// Customisation
+		friend ptrdiff_t ssize(vector const& v)
+		{
+			return std::ssize(v);
+		}
 	};
 }
 

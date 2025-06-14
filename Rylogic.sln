@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_SolutionItems", "_Solution
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
 		exclusions.dic = exclusions.dic
+		projects\rylogic\fbx\fbx.natvis = projects\rylogic\fbx\fbx.natvis
 		packages.config = packages.config
 		readme.md = readme.md
 		requirements.txt = requirements.txt
@@ -45,6 +46,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12", "projects\rylogic\view3d-12\view3d-12.vcxproj", "{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12.dll", "projects\rylogic\view3d-12\view3d-12.dll.vcxproj", "{FB13BA51-F847-4804-90A8-61AB789F4061}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{AB9109F6-19E9-4087-B998-47A430030516}"
 EndProject
@@ -61,6 +65,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-test", "projects\tes
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12-test", "projects\tests\view3d-12-test\view3d-12-test.vcxproj", "{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}"
 	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
 	EndProjectSection
 EndProject
@@ -91,6 +97,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LDraw", "LDraw", "{29112D13-613F-4E05-8F76-B23B59D2EF1C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LDraw", "projects\apps\LDraw\LDraw.csproj", "{2EA55858-6738-426F-94B1-D7592453624B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AceInspaders", "AceInspaders", "{FCB985FA-EAC8-4837-9771-A2E24B0B43AD}"
 EndProject
@@ -111,7 +120,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.DirectShow", "proje
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Gfx", "projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj", "{88B5A2C0-78C9-4DFB-8B6D-373F53FBD1BE}"
 	ProjectSection(ProjectDependencies) = postProject
-		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
 	EndProjectSection
 EndProject
@@ -185,6 +193,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{02EA68
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fbx-test", "projects\tests\fbx-test\fbx-test.vcxproj", "{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fbx", "projects\rylogic\fbx\fbx.vcxproj", "{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -988,6 +1001,24 @@ Global
 		{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}.Release|x64.Build.0 = Release|x64
 		{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}.Release|x86.ActiveCfg = Release|Win32
 		{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}.Release|x86.Build.0 = Release|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|Any CPU.Build.0 = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|arm64.ActiveCfg = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|arm64.Build.0 = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|x64.ActiveCfg = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|x64.Build.0 = Debug|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|x86.ActiveCfg = Debug|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|x86.Build.0 = Debug|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Debug|x86.Deploy.0 = Debug|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|Any CPU.ActiveCfg = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|Any CPU.Build.0 = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|arm64.ActiveCfg = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|arm64.Build.0 = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|x64.ActiveCfg = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|x64.Build.0 = Release|x64
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|x86.ActiveCfg = Release|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|x86.Build.0 = Release|Win32
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}.Release|x86.Deploy.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1049,6 +1080,7 @@ Global
 		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2} = {8481DF42-91AA-44A3-AF06-64079B7CA26B}
 		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {F53CDE7D-1807-461E-B4F7-6AFFC43D1154}
 		{95590539-6CD8-4491-B7EC-67FBA5A8F0A1} = {AB9109F6-19E9-4087-B998-47A430030516}
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {F3863465-2D47-4787-8EEA-8A2BAEF62936}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7DD34DBC-7EE6-40E2-8641-CDA6D05E7838}

@@ -14,6 +14,7 @@ namespace pr::rdr12::ldraw
 		, m_filepath(filepath.lexically_normal())
 		, m_includes(includes)
 		, m_encoding(enc != EEncoding::auto_detect ? enc : filesys::DetectFileEncoding(m_filepath))
+		, m_text_format()
 	{
 		m_name = m_filepath.filename().string();
 		m_context_id = context_id ? *context_id : ContextIdFromFilepath(m_filepath);
@@ -52,6 +53,7 @@ namespace pr::rdr12::ldraw
 			case HashI(".ldr"):
 			{
 				filesys::LockFile lock(m_filepath, 10, 5000);
+				m_text_format = true;
 
 				// Parse the ldr script text file
 				switch (m_encoding)
@@ -81,6 +83,7 @@ namespace pr::rdr12::ldraw
 			case HashI(".bdr"):
 			{
 				filesys::LockFile lock(m_filepath, 10, 5000);
+				m_text_format = false;
 
 				// Parse the ldr script file
 				std::ifstream src(m_filepath, std::ios::binary);
@@ -96,6 +99,7 @@ namespace pr::rdr12::ldraw
 			case HashI(".3ds"):
 			{
 				auto ldr_script = std::format("*Model {{ *FilePath {{\"{}\"}} }}", m_filepath.string());
+				m_text_format = false;
 
 				mem_istream<char> src{ ldr_script, 0 };
 				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);
@@ -106,6 +110,7 @@ namespace pr::rdr12::ldraw
 			case HashI(".csv"):
 			{
 				auto ldr_script = std::format("*Chart {{ *FilePath {{\"{}\"}} }}", m_filepath.string());
+				m_text_format = true;
 
 				mem_istream<char> src{ ldr_script, 0 };
 				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);

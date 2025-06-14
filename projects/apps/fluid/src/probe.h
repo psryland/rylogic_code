@@ -121,7 +121,7 @@ namespace pr::fluid
 				0x40FFFFFF, 0xFFFFFFFF);
 
 			// Add the probe graphics
-			scene.AddInstance(m_gfx);
+			m_gfx->AddToScene(scene);
 		}
 
 		// Update the graphics position

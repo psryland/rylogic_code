@@ -15,6 +15,7 @@
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/resource/stock_resources.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
@@ -221,6 +222,28 @@ VIEW3D_API void __stdcall View3D_EnumSources(view3d::EnumGuidsCB enum_guids_cb, 
 	CatchAndReport(View3D_EnumSources,, );
 }
 
+// Reload objects from the source associated with 'context_id'
+VIEW3D_API void __stdcall View3D_SourceReload(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ReloadScriptSources({ &context_id, 1 });
+	}
+	CatchAndReport(View3D_SourceReload, , );
+}
+
+// Delete all objects and remove the source associated with 'context_id'
+VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().DeleteAllObjectsById({ &context_id, 1 }, {});
+	}
+	CatchAndReport(View3D_SourceDelete, , );
+}
+
 // Get information about a source
 VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id)
 {
@@ -230,6 +253,37 @@ VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id
 		return Dll().SourceInfo(context_id);
 	}
 	CatchAndReport(View3D_SourceInfo, , {});
+}
+
+// Get/Set the name of a source
+VIEW3D_API BSTR View3D_SourceNameGetBStr(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		auto const& src_name = Dll().SourceName(context_id);
+		auto name = Widen(src_name);
+		return ::SysAllocStringLen(name.c_str(), UINT(name.size()));
+	}
+	CatchAndReport(View3D_SourceNameGetBStr, , {});
+}
+VIEW3D_API char const* __stdcall View3D_SourceNameGet(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().SourceName(context_id).c_str();
+	}
+	CatchAndReport(View3D_SourceNameGet, , {});
+}
+VIEW3D_API void __stdcall View3D_SourceNameSet(GUID const& context_id, char const* name)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().SourceName(context_id, name);
+	}
+	CatchAndReport(View3D_SourceNameSet,,);
 }
 
 // Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
@@ -341,6 +395,16 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 }
 
 // Get/Set the window settings (as ldr script string)
+VIEW3D_API BSTR __stdcall View3D_WindowSettingsGetBStr(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		auto settings = Widen(window->Settings());
+		return ::SysAllocStringLen(settings.c_str(), UINT(settings.size()));
+	}
+	CatchAndReport(View3D_WindowSettingsGetBStr, , {});
+}
 VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(view3d::Window window)
 {
 	try
@@ -1903,6 +1967,30 @@ VIEW3D_API void __stdcall View3D_ObjectO2PSet(view3d::Object object, view3d::Mat
 	CatchAndReport(View3D_ObjectSetO2P, ,);
 }
 
+// Get/Set the animation time to apply to 'object'
+VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->AnimTime(name);
+	}
+	CatchAndReport(View3D_ObjectAnimTimeGet, , 0.0f);
+}
+VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->AnimTime(time_s, name);
+	}
+	CatchAndReport(View3D_ObjectAnimTimeSet, ,);
+}
+
 // Return the model space bounding box for 'object'
 VIEW3D_API view3d::BBox __stdcall View3D_ObjectBBoxMS(view3d::Object object, int include_children)
 {
@@ -2754,7 +2842,7 @@ VIEW3D_API view3d::Texture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UIN
 		
 		// Access the main surface of the render target texture
 		D3DPtr<IDirect3DSurface9> surf0;
-		tex->GetSurfaceLevel(0, &surf0.m_ptr);
+		tex->GetSurfaceLevel(0, surf0.address_of());
 
 		// Save the shared handle if the caller wants it.
 		if (shared_handle != nullptr)

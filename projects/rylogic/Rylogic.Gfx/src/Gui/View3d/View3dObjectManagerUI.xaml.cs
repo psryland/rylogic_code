@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF
 			Owner = owner;
 			Icon = Owner?.Icon;
 
-			PinState = new PinData(this, EPin.Centre);
+			PinState = new PinData(this, EPin.Centre, pinned: false);
 			ObjectManager = new View3d.ObjectManager(window, exclude ?? Array.Empty<Guid>());
 			ObjectsView = new ListCollectionView(ObjectManager.Objects);
 

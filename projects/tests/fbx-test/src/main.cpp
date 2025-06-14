@@ -1,9 +1,10 @@
-#include <iostream>
-//#include <eigen/Eigen/Core>
-#include "src/fbx.h"
-#include "pr/win32/win32.h"
+ï»¿#include <fstream>
+#include "pr/geometry/fbx.h"
+#include "pr/geometry/p3d.h"
+#include "pr/maths/bbox.h"
 
 using namespace pr;
+using namespace pr::geometry;
 
 #if 0
 // Helper for setting the DLL search path before main()
@@ -26,13 +27,13 @@ extern "C" void __cdecl InitDllDirectory()
 
 	__debugbreak();
 
-	// This function runs very, very early — before global/static initializers
+	// This function runs very, very early ï¿½ before global/static initializers
 	if (!SetDllDirectoryW(std::wstring(L"lib\\").append(platform).append(L"\\").append(config).c_str()))
 	{
 		DWORD err = GetLastError();
 
 		// Log the error somewhere safe
-		// You can't use fancy logging here yet — CRT is not fully ready
+		// You can't use fancy logging here yet ï¿½ CRT is not fully ready
 		char buf[256];
 		snprintf(buf, sizeof(buf), "SetDllDirectoryW failed with error %lu\n", err);
 
@@ -54,21 +55,59 @@ extern "C" void __cdecl InitDllDirectory()
 __declspec(allocate(".CRT$XCT")) void (__cdecl* pInitDllDirectory)(void) = &InitDllDirectory;
 #endif
 
-//int Init()
-//{
-//	win32::LoadDll<struct FbxSdk>("libfbxsdk.dll");
-//	return 1;
-//}
-//
-//static int g_setup = Init();
-
 int main()
 {
+	//std::filesystem::path ifilepath = "E:\\Dump\\biplane.fbx";
+	//std::filesystem::path ifilepath = "E:\\Dump\\Hyperpose\\AJ-99.fbx";
+	std::filesystem::path ifilepath = "E:\\Rylogic\\Code\\art\\models\\pendulum\\pendulum.fbx";
+	//std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
+	//std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
+	std::filesystem::path p3doutpath = "E:\\Dump\\model.p3d";
 
-	fbx::Manager fbx;
-	fbx::Settings settings(fbx);
-	fbx::Importer imp(fbx, settings);
-	auto scene = imp.Import("E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx");
-	WriteContent(scene, std::cout);
+	std::ifstream ifile(ifilepath, std::ios::binary);
+	//std::ofstream ofile(ofilepath, std::ios::binary);
+	//std::ofstream dfile(dfilepath);
+
+	struct ModelOut : fbx::ISceneOut
+	{
+		p3d::File file = {};
+
+		// Add a material to the output
+		virtual void AddMaterial(uint64_t unique_id, fbx::Material const& mat) override
+		{
+			p3d::Material material;
+			material.m_id = std::format("mat-{}", unique_id);
+			material.m_diffuse = mat.m_diffuse;
+			file.m_scene.m_materials.push_back(material);
+		}
+
+		virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
+		{
+			p3d::Mesh m;
+			m.m_name = mesh.m_name;
+			m.m_bbox = mesh.m_bbox;
+			m.m_o2p = o2p;
+			for (auto& v : mesh.m_vbuf)
+			{
+				m.add_vert({ v.m_vert, v.m_colr, v.m_norm, v.m_tex0 });
+			}
+			for (auto& n : mesh.m_nbuf)
+			{
+				p3d::Nugget nugget{ n.m_topo, n.m_geom, std::format("mat-{}", n.m_mat_id) };
+				nugget.m_vidx.append<int>(std::span{ mesh.m_ibuf }.subspan(n.m_irange.begin(), n.m_irange.size()));
+				m.add_nugget(nugget);
+			}
+			file.m_scene.m_meshes.push_back(std::move(m));
+		}
+	} out;
+
+	//dll.Fbx_RoundTripTest(ifile, ofile);
+	//dll.Fbx_DumpStream(ifile, dfile);
+	fbx::Scene scene(ifile);
+	scene.ReadScene(out, { .m_parts = fbx::EParts::ModelOnly });
+
+	if (std::ofstream ofile(p3doutpath, std::ios::binary); ofile)
+		p3d::Write(ofile, out.file);
+
 	return 0;
 }

@@ -12,11 +12,11 @@ namespace pr::rdr
 	{
 		// Create a DXGIFactory
 		D3DPtr<IDXGIFactory> factory;
-		pr::Check(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
+		pr::Check(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)factory.address_of()));
 
 		// Enumerate each adapter on the system
 		D3DPtr<IDXGIAdapter> adapter;
-		for (UINT i = 0; factory->EnumAdapters(i, &adapter.m_ptr) != DXGI_ERROR_NOT_FOUND; ++i)
+		for (UINT i = 0; factory->EnumAdapters(i, adapter.address_of()) != DXGI_ERROR_NOT_FOUND; ++i)
 			m_adapters.push_back(Adapter(adapter));
 	}
 
@@ -29,7 +29,7 @@ namespace pr::rdr
 
 		// Enumerate the outputs
 		D3DPtr<IDXGIOutput> output;
-		for (UINT i = 0; m_adapter->EnumOutputs(i, &output.m_ptr) != DXGI_ERROR_NOT_FOUND; ++i)
+		for (UINT i = 0; m_adapter->EnumOutputs(i, output.address_of()) != DXGI_ERROR_NOT_FOUND; ++i)
 			m_outputs.push_back(Output(output));
 	}
 

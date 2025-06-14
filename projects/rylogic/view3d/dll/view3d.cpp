@@ -2354,7 +2354,7 @@ VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UINT 
 		
 		// Access the main surface of the render target texture
 		D3DPtr<IDirect3DSurface9> surf0;
-		tex->GetSurfaceLevel(0, &surf0.m_ptr);
+		tex->GetSurfaceLevel(0, surf0.address_of());
 
 		// Save the shared handle if the caller wants it.
 		if (shared_handle != nullptr)

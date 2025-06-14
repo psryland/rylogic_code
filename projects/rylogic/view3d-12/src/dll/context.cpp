@@ -9,6 +9,10 @@
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/resource/resource_factory.h"
+#include "view3d-12/src/ldraw/sources/source_base.h"
+#include "view3d-12/src/ldraw/sources/source_file.h"
+#include "view3d-12/src/ldraw/sources/source_string.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
@@ -216,23 +220,33 @@ namespace pr::rdr12
 		// Create an include handler
 		auto include_handler = IncludeHandler(includes);
 
-		// Record how many objects there are already for the context id (if it exists)
-		auto& srcs = m_sources.Sources();
-		auto iter = srcs.find(id);
-		auto count = iter != end(srcs) ? iter->second->m_output.m_objects.size() : 0U;
+		// Any LdrObject* we return must not get deleted by a Reload() of its source.
+		// That's why these sources are not added to 'm_sources'. The Reload() feature
+		// only works for objects that are managed by Guid. However, external code can
+		// watch for the Reload notification and manually reload objects, replacing the
+		// LdrObject* pointers they hold.
 
 		// Load the ldr script
+		ldraw::ParseResult output;
 		if (file)
-			LoadScriptFile(ldr_script, enc, &id, include_handler, nullptr);
+		{
+			ldraw::SourceFile src{ &id, ldr_script, enc, include_handler };
+			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
+			output = std::move(src.m_output);
+		}
 		else
-			LoadScriptString(ldr_script, enc, &id, include_handler, nullptr);
+		{
+			ldraw::SourceString<Char> src{ &id, ldr_script, enc, include_handler };
+			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
+			output = std::move(src.m_output);
+		}
+		if (output.m_objects.empty())
+			return nullptr;
 
-		// Return the first object, expecting 'ldr_script' to define one object only.
-		// It doesn't matter if more are defined however, they're just created as part of the context.
-		iter = srcs.find(id);
-		return iter != std::end(srcs) && iter->second->m_output.m_objects.size() > count
-			? iter->second->m_output.m_objects[count].get()
-			: nullptr;
+		// Return the first object.
+		auto& obj = output.m_objects.front();
+		m_sources.Add(obj);
+		return obj.get();
 	}
 	template ldraw::LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template ldraw::LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
@@ -331,8 +345,8 @@ namespace pr::rdr12
 		ResourceFactory factory(model->rdr());
 
 		{// Update the model geometry
-			auto update_v = model->UpdateVertices(factory, { 0, new_vcount });
-			auto update_i = model->UpdateIndices(factory, { 0, new_icount });
+			auto update_v = model->UpdateVertices(factory.CmdList(), factory.UploadBuffer(), { 0, new_vcount });
+			auto update_i = model->UpdateIndices(factory.CmdList(), factory.UploadBuffer(), { 0, new_icount });
 
 			model->m_bbox.reset();
 
@@ -352,8 +366,8 @@ namespace pr::rdr12
 				*iout++ = *iin;
 			}
 
-			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+			update_v.Commit();
+			update_i.Commit();
 		}
 
 		// Update the model nuggets
@@ -496,17 +510,40 @@ namespace pr::rdr12
 	// Return details about a source
 	view3d::SourceInfo Context::SourceInfo(Guid const& context_id)
 	{
-		auto srcs = m_sources.Sources();
-		auto iter = srcs.find(context_id);
-		if (iter == std::end(srcs))
+		auto* src = FindSource(context_id);
+		if (src == nullptr)
 			return {};
 
-		auto const& src = *iter->second;
-		return view3d::SourceInfo {
-			.m_name = src.m_name.c_str(),
+		auto text_format = false;
+		auto filepath = (wchar_t const*)nullptr;
+		if (auto const* file_src = dynamic_cast<ldraw::SourceFile const*>(src))
+		{
+			filepath = file_src->m_filepath.c_str();
+			text_format = file_src->m_text_format;
+		}
+
+		return view3d::SourceInfo{
+			.m_name = src->m_name.c_str(),
+			.m_filepath = filepath,
 			.m_context_id = context_id,
-			.m_object_count = isize(src.m_output.m_objects)
+			.m_object_count = isize(src->m_output.m_objects),
+			.m_text_format = text_format ? 1 : 0,
 		};
+	}
+
+	// Get/Set the name of a source
+	string32 const& Context::SourceName(Guid const& context_id)
+	{
+		if (auto* src = FindSource(context_id))
+			return src->m_name;
+
+		static string32 const null_name = {};
+		return null_name;
+	}
+	void Context::SourceName(Guid const& context_id, std::string_view name)
+	{
+		if (auto* src = FindSource(context_id))
+			src->m_name = name;
 	}
 
 	// Create a gizmo object and add it to the gizmo collection
@@ -532,10 +569,30 @@ namespace pr::rdr12
 		m_sources.Reload();
 	}
 
+	// Reload objects from a source
+	void Context::ReloadScriptSources(std::span<Guid const> context_ids)
+	{
+		m_sources.Reload(context_ids);
+	}
+
 	// Poll for changed script source files, and reload any that have changed
 	void Context::CheckForChangedSources()
 	{
 		m_sources.RefreshChangedFiles();
+	}
+
+	// Find the source associated with a context id
+	ldraw::SourceBase const* Context::FindSource(Guid const& context_id) const
+	{
+		auto const& srcs = m_sources.Sources();
+		auto iter = srcs.find(context_id);
+		return iter != std::end(srcs) ? iter->second.get() : nullptr;
+	}
+	ldraw::SourceBase* Context::FindSource(Guid const& context_id)
+	{
+		auto& srcs = m_sources.Sources();
+		auto iter = srcs.find(context_id);
+		return iter != std::end(srcs) ? iter->second.get() : nullptr;
 	}
 
 	// Parse error event.
@@ -557,11 +614,11 @@ namespace pr::rdr12
 		args.m_cancel = cancel != 0;
 	}
 
-	// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-	void Context::OnReload()
-	{
-		SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
-	}
+	//// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+	//void Context::OnReload()
+	//{
+	//	SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
+	//}
 
 	// Store change event. Called before and after a change to the collection of objects in the store.
 	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
@@ -610,7 +667,7 @@ namespace pr::rdr12
 		}
 
 		// Notify of updated sources
-		SourcesChanged(reason, args.m_before);
+		SourcesChanged(reason, args.m_context_ids.data(), isize(args.m_context_ids), args.m_before);
 	}
 
 	// Process any received commands in the source
@@ -661,10 +718,7 @@ namespace pr::rdr12
 						auto target = string32(cmd.m_object_name);
 
 						// Find the first object matching 'cmd.m_object_name' (in 'source.m_context')
-						auto iter = std::ranges::find_if(source.m_output.m_objects, [&target](LdrObjectPtr& ptr)
-						{
-							return ptr->m_name == target;
-						});
+						auto iter = pr::find_if(source.m_output.m_objects, [&target](LdrObjectPtr& ptr) { return ptr->m_name == target; });
 						if (iter == std::end(source.m_output.m_objects))
 							break;
 
@@ -688,7 +742,7 @@ namespace pr::rdr12
 					default:
 					{
 						assert(false); // to trap them here
-						std::runtime_error("Unsupported command");
+						throw std::runtime_error("Unsupported command");
 					}
 				}
 			}

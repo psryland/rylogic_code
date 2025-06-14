@@ -11,6 +11,8 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/skin.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_forward.h"
@@ -161,7 +163,7 @@ namespace pr::rdr12
 		m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 		// Set shader constants for the frame
-		m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), nullptr);
+		m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), nullptr);
 
 		// Add the shadow map textures
 		if (auto* smap_step = scn().FindRStep<RenderSmap>())
@@ -202,36 +204,48 @@ namespace pr::rdr12
 			m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
 			// Bind textures to the pipeline
-			auto tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex);
-			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
-			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
-			#if PR_DBG_RDR
+			if (Texture2DPtr tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex))
 			{
-				// Ensure the diffuse texture is in the correct state
-				auto state = m_cmd_list.ResState(tex->m_res.get()).Mip0State();
-				assert(AllSet(state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
+				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+				#if PR_DBG_RDR
+				{
+					// Ensure the diffuse texture is in the correct state
+					auto state = m_cmd_list.ResState(tex->m_res.get()).Mip0State();
+					assert(AllSet(state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
+				}
+				#endif
 			}
-			#endif
 
 			// Bind samplers to the pipeline
-			auto sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam);
-			auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
-			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+			if (SamplerPtr sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam))
+			{
+				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+			}
+
+			// Add skinning data for skinned meshes
+			if (PosePtr pose = coalesce(FindPose(instance), nugget.m_model->m_pose); pose && nugget.m_model->m_skin)
+			{
+				pose->Update(m_cmd_list, m_upload_buffer);
+				auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);
+				auto srv_skin = wnd().m_heap_view.Add(nugget.m_model->m_skin.m_srv);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Pose, srv_pose);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::Skin, srv_skin);
+			}
 
 			// Set shader constants for the nugget
-			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
+			m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 			// Apply scene pipe state overrides
-			for (auto& ps : scn().m_pso)
-				desc.Apply(ps);
-
-			// Apply nugget pipe state overrides
-			for (auto& ps : nugget.m_pso)
-				desc.Apply(ps);
-
-			// Apply instance pipe state overrides
-			for (auto& ps : GetPipeStates(instance))
-				desc.Apply(ps);
+			{
+				for (auto& ps : scn().m_pso)
+					desc.Apply(ps);
+				for (auto& ps : nugget.m_pso)
+					desc.Apply(ps);
+				for (auto& ps : GetPipeStates(instance))
+					desc.Apply(ps);
+			}
 
 			// Apply nugget shader overrides
 			for (auto& shdr : nugget.m_shaders)
@@ -242,7 +256,7 @@ namespace pr::rdr12
 
 				// Set constants for the shader
 				auto& shader = *shdr.m_shader.get();
-				shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
+				shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 				// Update the pipe state with the shader byte code
 				if (shader.m_signature) desc.Apply(PSO<EPipeState::RootSignature>(shader.m_signature.get()));

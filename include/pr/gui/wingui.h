@@ -6217,8 +6217,8 @@ namespace pr
 					Control::Create(p.as<Control::Params<>>());
 				}
 
-				// Initialise the offset an menu state for pinned windows
-				if (PinWindow())
+				// Initialise the offset and menu state for pinned windows
+				if (PinWindow() && m_parent.hwnd() != nullptr)
 					PinWindow(true);
 			}
 

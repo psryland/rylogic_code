@@ -7,23 +7,26 @@
     <Filter Include="lib">
       <UniqueIdentifier>{c7b25275-2189-47cb-bbbe-47e387b5a5ee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{1aa99b6d-1b7c-47bb-81df-487744c982b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{0c07a33d-982d-47ff-b648-2e17fda1140a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\fbx.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\fbx.h">
-      <Filter>src</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <DependencyLink Include="$(SDKPath)fbx\fbx\lib\$(Platform)\$(Configuration)\libfbxsdk.dll">
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\fbx.dll">
       <Filter>lib</Filter>
     </DependencyLink>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

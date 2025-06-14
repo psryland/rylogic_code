@@ -627,18 +627,24 @@ namespace pr
 			// The name of the source
 			char const* m_name;
 
+			// The file associated with the source (can be null)
+			wchar_t const* m_filepath;
+
 			// The context id associated with the source
 			GUID m_context_id;
 
 			// The number of objects in this source
 			int m_object_count;
+
+			// True if the source is a text format, false if binary
+			int m_text_format;
 		};
 		#pragma endregion
 
 		// Callbacks
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
 		using ParsingProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
-		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, GUID const* ids, int count, BOOL before);
 		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
 		using AddCompleteCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
@@ -698,8 +704,19 @@ extern "C"
 	// Enumerate all sources in the store
 	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb, void* ctx);
 
+	// Reload objects from the source associated with 'context_id'
+	VIEW3D_API void __stdcall View3D_SourceReload(GUID const& context_id);
+
+	// Delete all objects and remove the source associated with 'context_id'
+	VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id);
+
 	// Get information about a source
 	VIEW3D_API pr::view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id);
+
+	// Get/Set the name of a source
+	VIEW3D_API BSTR __stdcall View3D_SourceNameGetBStr(GUID const& context_id);
+	VIEW3D_API char const* __stdcall View3D_SourceNameGet(GUID const& context_id);
+	VIEW3D_API void __stdcall View3D_SourceNameSet(GUID const& context_id, char const* name);
 
 	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 	VIEW3D_API void __stdcall View3D_ReloadScriptSources();
@@ -720,6 +737,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Get/Set the window settings (as ldr script string)
+	VIEW3D_API BSTR __stdcall View3D_WindowSettingsGetBStr(pr::view3d::Window window);
 	VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, char const* settings);
 
@@ -1012,6 +1030,10 @@ extern "C"
 	// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}".
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2PGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2PSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2p, char const* name);
+
+	// Get/Set the animation time to apply to 'object'
+	VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name);
 
 	// Return the model space bounding box for 'object'
 	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, int include_children);

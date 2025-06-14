@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{667527c8-b0bf-4c5a-975f-ac90bae4d191}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{c7b25275-2189-47cb-bbbe-47e387b5a5ee}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\fbx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(SDKPath)fbx\fbx\lib\$(Platform)\$(Configuration)\libfbxsdk.dll">
+      <Filter>lib</Filter>
+    </DependencyLink>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

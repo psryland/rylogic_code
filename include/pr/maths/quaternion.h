@@ -204,6 +204,16 @@ namespace pr
 			//' sin(x) == sqrt(1 - cos^2(x))
 			return Sqrt(S(1.0) - Sqr(CosAngle()));
 		}
+		
+		// Basic constants
+		static constexpr Quat Zero()
+		{
+			return {0, 0, 0, 0};
+		}
+		static constexpr Quat Identity()
+		{
+			return {0, 0, 0, 1};
+		}
 
 		// Construct random
 		template <typename Rng = std::default_random_engine> static Quat Random(Rng& rng, Vec4_cref<S, void> axis, S min_angle, S max_angle)

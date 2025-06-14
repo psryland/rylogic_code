@@ -547,10 +547,13 @@ namespace pr::ldr
 				else if (
 					str::EqualI(extn.c_str(), ".p3d") ||
 					str::EqualI(extn.c_str(), ".stl") ||
-					str::EqualI(extn.c_str(), ".3ds"))
+					str::EqualI(extn.c_str(), ".3ds") ||
+					str::EqualI(extn.c_str(), ".fbx"))
 				{
 					// P3D = My custom binary model file format
 					// STL = "Stereolithography" model files (binary and text)
+					// 3DS = 3D Studio Max file
+					// FBX = Filmbox file (autodesk standard 3d file)
 					StringSrc src(FmtS(L"*Model {\"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
 					Parse(*m_rdr, reader, out, context, { AddFileProgressCB, this });

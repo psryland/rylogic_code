@@ -6,10 +6,21 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/resource_factory.h"
+#include "pr/view3d-12/resource/resource_store.h"
 
 namespace pr::rdr12
 {
-	Model::Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
+	Model::Model(
+		Renderer& rdr,
+		int64_t vcount,
+		int64_t icount,
+		SizeAndAlign16 vstride,
+		SizeAndAlign16 istride,
+		ID3D12Resource* vb,
+		ID3D12Resource* ib,
+		BBox const& bbox,
+		std::string_view name
+	)
 		: m_rdr(&rdr)
 		, m_vb(vb, true)
 		, m_ib(ib, true)
@@ -29,6 +40,8 @@ namespace pr::rdr12
 		, m_nuggets()
 		, m_vcount(vcount)
 		, m_icount(icount)
+		, m_skin()
+		, m_pose()
 		, m_bbox(bbox)
 		, m_name(name)
 		, m_vstride(vstride)
@@ -54,15 +67,25 @@ namespace pr::rdr12
 	}
 	
 	// Allow update of the vertex/index buffers
-	UpdateSubresourceScope Model::UpdateVertices(ResourceFactory& factory, Range vrange)
+	UpdateSubresourceScope Model::UpdateVertices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range vrange)
 	{
-		if (vrange == Range::Reset()) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope(factory, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
+		if (vrange == Range::Reset())
+			vrange = Range(0, m_vcount);
+
+		// Vertex buffers are 1-D buffers, so the "element" is bytes
+		vrange.m_beg *= m_vstride.size();
+		vrange.m_end *= m_vstride.size();
+		return UpdateSubresourceScope(cmd_list, upload, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size()));
 	}
-	UpdateSubresourceScope Model::UpdateIndices(ResourceFactory& factory, Range irange)
+	UpdateSubresourceScope Model::UpdateIndices(GfxCmdList& cmd_list, GpuUploadBuffer& upload, Range irange)
 	{
-		if (irange == Range::Reset()) irange = Range(0, m_icount);
-		return UpdateSubresourceScope(factory, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
+		if (irange == Range::Reset())
+			irange = Range(0, m_icount);
+
+		// Index buffers are 1-D buffers, so the "element" is bytes
+		irange.m_beg *= m_istride.size();
+		irange.m_end *= m_istride.size();
+		return UpdateSubresourceScope(cmd_list, upload, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size()));
 	}
 
 	// Create a nugget from a range within this model
@@ -83,13 +106,13 @@ namespace pr::rdr12
 
 		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 		if (!IsWithin(Range(0, m_vcount), ndata.m_vrange))
-			throw std::runtime_error(FmtS("V-Range exceeds the size of this model  (%s)", m_name.c_str()));
+			throw std::runtime_error(std::format("V-Range exceeds the size of this model  ({})", m_name.c_str()));
 		if (!IsWithin(Range(0, m_icount), ndata.m_irange))
-			throw std::runtime_error(FmtS("I-Range exceeds the size of this model (%s)", m_name.c_str()));
+			throw std::runtime_error(std::format("I-Range exceeds the size of this model ({})", m_name.c_str()));
 		if (!AllSet(ndata.m_nflags, ENuggetFlag::RangesCanOverlap))
 			for (auto& nug : m_nuggets)
 				if (Intersects(ndata.m_irange, nug.m_irange))
-					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
+					throw std::runtime_error(std::format("A render nugget covering this index range already exists. Did you forget the 'ENuggetFlag::RangesCanOverlap' flag, or is a DeleteNuggets() call needed ({})", m_name.c_str()));
 		#endif
 
 		auto nug = factory.CreateNugget(ndata, this);

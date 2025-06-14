@@ -389,6 +389,9 @@ namespace pr::rdr12::ldraw
 	// Copy properties from 'src' to 'out' based on 'fields'
 	void CopyCamera(Camera const& src, ECamField fields, Camera& out);
 
+	// Convert a model tree into a tree of LdrObjects
+	void ModelTreeToLdr(LdrObject* root, std::span<ModelTreeNode const> tree);
+
 	// Generate a scene that demos the supported object types and modifiers.
 	std::string CreateDemoSceneText();
 	pr::byte_data<> CreateDemoSceneBinary();

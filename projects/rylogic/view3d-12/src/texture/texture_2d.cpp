@@ -28,7 +28,7 @@ namespace pr::rdr12
 	{
 		HDC dc;
 		D3DPtr<IDXGISurface2> surf;
-		pr::Check(m_res->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Check(m_res->QueryInterface(__uuidof(IDXGISurface2), (void**)surf.address_of()));
 		pr::Check(surf->GetDC(discard, &dc), "GetDC can only be called for textures that are GDI compatible");
 //		++m_mgr->m_gdi_dc_ref_count;
 		return dc;
@@ -38,7 +38,7 @@ namespace pr::rdr12
 	void Texture2D::ReleaseDC()
 	{
 		D3DPtr<IDXGISurface2> surf;
-		pr::Check(m_res->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Check(m_res->QueryInterface(__uuidof(IDXGISurface2), (void**)surf.address_of()));
 		pr::Check(surf->ReleaseDC(nullptr));
 //		--m_mgr->m_gdi_dc_ref_count;
 		// Note: the main RT must be restored once all ReleaseDC's have been called
@@ -58,7 +58,7 @@ namespace pr::rdr12
 		// Create a D2D render target which can draw into our off screen D3D surface.
 		D3DPtr<ID2D1RenderTarget> rt;
 		auto d2dfactory = rdr().D2DFactory();
-		Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
+		Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, rt.address_of()));
 		return rt;
 	}
 }

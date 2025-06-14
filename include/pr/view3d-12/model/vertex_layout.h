@@ -28,10 +28,10 @@ namespace pr::rdr12
 		Colour m_diff;
 		v4     m_norm;
 		v2     m_tex0;
-		v2     pad;
+		iv2    m_idx0;
 
 		// The vertex layout description
-		static D3D12_INPUT_ELEMENT_DESC const (&Layout())[4]
+		static D3D12_INPUT_ELEMENT_DESC const (&Layout())[5]
 		{
 			static D3D12_INPUT_ELEMENT_DESC const s_desc[] =
 			{
@@ -39,6 +39,7 @@ namespace pr::rdr12
 				{"COLOR"    , 0 , DXGI_FORMAT_R32G32B32A32_FLOAT , 0 , offsetof(Vert , m_diff) , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA , 0},
 				{"NORMAL"   , 0 , DXGI_FORMAT_R32G32B32A32_FLOAT , 0 , offsetof(Vert , m_norm) , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA , 0},
 				{"TEXCOORD" , 0 , DXGI_FORMAT_R32G32_FLOAT       , 0 , offsetof(Vert , m_tex0) , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA , 0},
+				{"INDICES"  , 0 , DXGI_FORMAT_R32G32_SINT        , 0 , offsetof(Vert , m_idx0) , D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA , 0},
 			};
 			return s_desc;
 		}
@@ -108,6 +109,14 @@ namespace pr::rdr12
 		vert.m_diff = col;
 		vert.m_norm = norm;
 		vert.m_tex0 = uv;
+	}
+	inline void SetPCNTI(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv, iv2 const& idx)
+	{
+		vert.m_vert = pos;
+		vert.m_diff = col;
+		vert.m_norm = norm;
+		vert.m_tex0 = uv;
+		vert.m_idx0 = idx;
 	}
 }
 namespace pr

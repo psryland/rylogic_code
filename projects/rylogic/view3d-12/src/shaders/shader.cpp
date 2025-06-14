@@ -56,20 +56,20 @@ namespace pr::rdr12
 		, m_extras()
 		, m_args()
 	{
-		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)&m_compiler.m_ptr));
+		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)m_compiler.address_of()));
 
 		D3DPtr<IDxcUtils> utils;
-		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
-		Check(utils->CreateDefaultIncludeHandler(&m_includes.m_ptr));
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)utils.address_of()));
+		Check(utils->CreateDefaultIncludeHandler(m_includes.address_of()));
 	}
 	ShaderCompiler& ShaderCompiler::File(std::filesystem::path file)
 	{		
 		D3DPtr<IDxcUtils> utils;
-		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)utils.address_of()));
 
 		m_source_blob = nullptr;
 		uint32_t code_page = DXC_CP_UTF8;
-		Check(utils->LoadFile(file.wstring().c_str(), &code_page, &m_source_blob.m_ptr));
+		Check(utils->LoadFile(file.wstring().c_str(), &code_page, m_source_blob.address_of()));
 
 		Source({ static_cast<char const*>(m_source_blob->GetBufferPointer()), m_source_blob->GetBufferSize() });
 		return *this;
@@ -158,7 +158,7 @@ namespace pr::rdr12
 
 		// Compile the shader code
 		m_result = nullptr;
-		auto hr = m_compiler->Compile(&m_source, m_args.data(), s_cast<uint32_t>(m_args.size()), m_includes.get(), __uuidof(IDxcResult), (void**)&m_result.m_ptr);
+		auto hr = m_compiler->Compile(&m_source, m_args.data(), s_cast<uint32_t>(m_args.size()), m_includes.get(), __uuidof(IDxcResult), (void**)m_result.address_of());
 		if (SUCCEEDED(hr))
 		{
 			Check(m_result->GetStatus(&hr));
@@ -169,7 +169,7 @@ namespace pr::rdr12
 			if (m_result)
 			{
 				D3DPtr<IDxcBlobEncoding> errors_blob;
-				if (SUCCEEDED(m_result->GetErrorBuffer(&errors_blob.m_ptr)))
+				if (SUCCEEDED(m_result->GetErrorBuffer(errors_blob.address_of())))
 				{
 					std::string error(static_cast<char const*>(errors_blob->GetBufferPointer()), errors_blob->GetBufferSize());
 					message.append(": ").append(error);
@@ -180,7 +180,7 @@ namespace pr::rdr12
 
 		// Get the compiled shader code
 		D3DPtr<IDxcBlob> shader;
-		Check(m_result->GetResult(&shader.m_ptr));
+		Check(m_result->GetResult(shader.address_of()));
 		std::vector<uint8_t> byte_code(shader->GetBufferSize());
 		memcpy(byte_code.data(), shader->GetBufferPointer(), shader->GetBufferSize());
 
@@ -189,7 +189,7 @@ namespace pr::rdr12
 		{
 			D3DPtr<IDxcBlob> pdb;
 			D3DPtr<IDxcBlobUtf16> pdb_name;
-			Check(m_result->GetOutput(DXC_OUT_PDB, __uuidof(IDxcBlob), (void**)&pdb.m_ptr, &pdb_name.m_ptr));
+			Check(m_result->GetOutput(DXC_OUT_PDB, __uuidof(IDxcBlob), (void**)pdb.address_of(), pdb_name.address_of()));
 			auto pdb_path = m_pdb_path / pdb_name->GetStringPointer();
 
 			std::ofstream file(pdb_path, std::ios::binary);

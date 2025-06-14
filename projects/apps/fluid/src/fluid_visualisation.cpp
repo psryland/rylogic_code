@@ -52,7 +52,7 @@ namespace pr::fluid
 		{
 			auto vb = ResDesc::VBuf<Vert>(particle_buffer.get()).usage(EUsage::UnorderedAccess);
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
-			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
+			auto mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("Fluid:Particles");
 			m_gfx_fluid.m_model = factory.CreateModel(mdesc, particle_buffer, nullptr);
 			m_gfx_fluid.m_model->CreateNugget(factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 				.use_shader(ERenderStep::RenderForward, m_gs_points)
@@ -65,7 +65,7 @@ namespace pr::fluid
 		{
 			auto vb = ResDesc::VBuf<Vert>(3LL * particle_capacity, {});
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
-			auto mdesc = ModelDesc(vb, ib).name("Fluid:VectorField");
+			auto mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("Fluid:VectorField");
 			m_gfx_vector_field.m_model = factory.CreateModel(mdesc);
 			m_gfx_vector_field.m_model->CreateNugget(factory, NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
 			m_gfx_vector_field.m_i2w = m4x4::Identity();
@@ -79,7 +79,7 @@ namespace pr::fluid
 	void FluidVisualisation::UpdateVectorField(std::span<particle_t const> particles, float particle_radius, float scale, int mode) const
 	{
 		ResourceFactory factory(*m_rdr);
-		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices(factory);
+		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices(factory.CmdList(), factory.UploadBuffer());
 		auto* beg = update.ptr<Vert>();
 		auto* end = beg + m_gfx_vector_field.m_model->m_vcount;
 		memset(beg, 0, (end - beg) * sizeof(Vert));
@@ -176,14 +176,14 @@ namespace pr::fluid
 				break;
 			}
 		}
-		update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		update.Commit();
 	}
 
 	// Add the particles to the scene that renders them
 	void FluidVisualisation::AddToScene(Scene& scene, EScene flags, int particle_count) const
 	{
 		// Add the static scene
-		scene.AddInstance(m_gfx_scene);
+		m_gfx_scene->AddToScene(scene);
 
 		// The particles
 		if (AllSet(flags, EScene::Particles))

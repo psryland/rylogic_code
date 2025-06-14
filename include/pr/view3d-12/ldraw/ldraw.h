@@ -1,9 +1,11 @@
 //********************************
-// Ldraw Script keywords
+// View3d
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/animation.h"
+#include "pr/view3d-12/model/animator.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -269,16 +271,6 @@ namespace pr::rdr12::ldraw
 		_flags_enum = 0,
 	};
 
-	// Simple animation styles
-	enum class EAnimStyle : uint8_t
-	{
-		NoAnimation,
-		Once,
-		Repeat,
-		Continuous,
-		PingPong,
-	};
-
 	// Flags for partial update of a model
 	enum class EUpdateObject :int
 	{
@@ -346,68 +338,5 @@ namespace pr::rdr12::ldraw
 		Subtract,
 		Multiply,
 		Lerp,
-	};
-
-	// Info on how to animate a ldr object
-	struct Animation
-	{
-		EAnimStyle m_style;
-		float      m_period; // Seconds
-		v4         m_vel;    // Linear velocity of the animation in m/s
-		v4         m_acc;    // Linear velocity of the animation in m/s
-		v4         m_avel;   // Angular velocity of the animation in rad/s
-		v4         m_aacc;   // Angular velocity of the animation in rad/s
-
-		Animation()
-			: m_style(EAnimStyle::NoAnimation)
-			, m_period(1.0f)
-			, m_vel(v4Zero)
-			, m_acc(v4Zero)
-			, m_avel(v4Zero)
-			, m_aacc(v4Zero)
-		{
-		}
-
-		// Return a transform representing the offset
-		// added by this object at time 'time_s'
-		m4x4 Step(float time_s) const
-		{
-			auto t = 0.0f;
-			switch (m_style)
-			{
-				case EAnimStyle::NoAnimation:
-				{
-					return m4x4::Identity();
-				}
-				case EAnimStyle::Once:
-				{
-					t = time_s < m_period ? time_s : m_period;
-					break;
-				}
-				case EAnimStyle::Repeat:
-				{
-					t = Fmod(time_s, m_period);
-					break;
-				}
-				case EAnimStyle::Continuous:
-				{
-					t = time_s;
-					break;
-				}
-				case EAnimStyle::PingPong:
-				{
-					t = Fmod(time_s, 2.0f * m_period) >= m_period ? m_period - Fmod(time_s, m_period) : Fmod(time_s, m_period);
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown animation style");
-				}
-			}
-
-			auto l = 0.5f * m_acc * Sqr(t) + m_vel * t + v4::Origin();
-			auto a = 0.5f * m_aacc * Sqr(t) + m_avel * t;
-			return m4x4::Transform(a, l);
-		}
 	};
 }

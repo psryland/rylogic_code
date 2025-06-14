@@ -88,7 +88,6 @@
 #include "pr/filesys/filewatch.h"
 #include "pr/filesys/lock_file.h"
 #include "pr/filesys/resolve_path.h"
-#include "pr/geometry/3ds.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/index_buffer.h"
@@ -105,6 +104,9 @@
 #include "pr/geometry/models_skybox.h"
 #include "pr/geometry/models_sphere.h"
 #include "pr/geometry/p3d.h"
+#include "pr/geometry/3ds.h"
+#include "pr/geometry/stl.h"
+#include "pr/geometry/fbx.h"
 #include "pr/geometry/triangle.h"
 #include "pr/geometry/utility.h"
 #include "pr/gfx/colour.h"
@@ -211,17 +213,31 @@ namespace pr::rdr12
 	//typedef RefPtr<AllocPres> AllocPresPtr;
 	
 	// Models
-	struct ModelDesc;
-	struct NuggetDesc;
 	struct Model;
-	struct Nugget;
 	struct ModelTreeNode;
+	struct ModelDesc;
+	struct Nugget;
+	struct NuggetDesc;
 	struct MeshCreationData;
 	using ModelPtr = RefPtr<Model>;
 	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
 
 	// Instances
 	struct BaseInstance;
+
+	// Animation
+	struct SimpleAnimation;
+	struct KeyFrameAnimation;
+	struct SkinInfluence;
+	struct Skeleton;
+	struct Pose;
+	struct Skin;
+	struct Animator;
+	using SimpleAnimationPtr = RefPtr<SimpleAnimation>;
+	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
+	using SkeletonPtr = RefPtr<Skeleton>;
+	using PosePtr = RefPtr<Pose>;
+	using AnimatorPtr = RefPtr<Animator>;
 
 	// Shaders
 	struct Vert;

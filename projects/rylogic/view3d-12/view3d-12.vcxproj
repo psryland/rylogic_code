@@ -10,6 +10,7 @@
     <ProjectName>view3d-12</ProjectName>
     <TargetName>view3d-12-static</TargetName>
     <ResolveNuGetPackages>false</ResolveNuGetPackages>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <!--
   Configurations
@@ -47,13 +48,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
         ;PR_RDR_RUNTIME_SHADERS=1
         ;PR_LOGGING=1
         ;PR_SUPPORT_D3D11_ERRORS=1
         ;PR_VIEW3D_12=1
         ;PR_DBG_RDR=1
         ;USE_PIX
-        ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -64,11 +65,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
         ;PR_LOGGING=1
         ;PR_VIEW3D_12=1
         ;PR_RDR_RUNTIME_SHADERS=0
         ;PR_SUPPORT_D3D11_ERRORS=1
-        ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -95,9 +96,14 @@
     <ClCompile Include="src\lighting\light.cpp" />
     <ClCompile Include="src\main\renderer.cpp" />
     <ClCompile Include="src\main\window.cpp" />
+    <ClCompile Include="src\model\animation.cpp" />
+    <ClCompile Include="src\model\animator.cpp" />
     <ClCompile Include="src\model\model.cpp" />
     <ClCompile Include="src\model\model_generator.cpp" />
     <ClCompile Include="src\model\nugget.cpp" />
+    <ClCompile Include="src\model\pose.cpp" />
+    <ClCompile Include="src\model\skeleton.cpp" />
+    <ClCompile Include="src\model\skin.cpp" />
     <ClCompile Include="src\render\back_buffer.cpp" />
     <ClCompile Include="src\render\render_forward.cpp" />
     <ClCompile Include="src\render\render_raycast.cpp" />
@@ -134,7 +140,6 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\index_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h" />
@@ -148,6 +153,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
@@ -181,7 +188,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_builder.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
@@ -199,11 +206,16 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animator.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animation.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skeleton.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skin.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\pose.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h" />
@@ -278,7 +290,14 @@
   <!--
   Shaders
   -->
+  <ItemDefinitionGroup>
+    <FxCompile>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="src\shaders\hlsl\types.hlsli" />
     <None Include="src\shaders\hlsl\common\functions.hlsli" />
     <None Include="src\shaders\hlsl\common\geometry.hlsli" />
@@ -289,6 +308,7 @@
     <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli" />
     <None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\skinned\skinned.hlsli" />
     <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\env_map.hlsli" />
     <View3dShaderBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
@@ -304,31 +324,15 @@
     <View3dShaderBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-      <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
-      <EntryPointName>ApplyForces</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
-    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
-      <EntryPointName>Integrate</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
-      <EntryPointName>SweepDown</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
-    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
-      <EntryPointName>BuildLookup</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli" />
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl" EntryPointName="ApplyForces" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl" EntryPointName="Integrate" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl" EntryPointName="SweepDown" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl" EntryPointName="BuildLookup" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />

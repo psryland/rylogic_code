@@ -10,6 +10,7 @@ namespace pr::rdr12::shaders
 {
 	namespace fwd
 	{
+		// This is the index order of parameters added to the root signature
 		enum class ERootParam
 		{
 			CBufFrame = 0,
@@ -21,6 +22,8 @@ namespace pr::rdr12::shaders
 			EnvMap,
 			SMap,
 			ProjTex,
+			Pose,
+			Skin,
 			DiffTextureSampler,
 		};
 

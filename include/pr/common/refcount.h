@@ -55,7 +55,7 @@ namespace pr
 		RefCount& operator = (RefCount&& rhs)
 		{
 			if (this == &rhs) return *this;
-			std::swap(m_ref_count, rhs.m_ref_count);
+			::InterlockedExchange(m_ref_count, rhs.m_ref_count);
 			return *this;
 		}
 

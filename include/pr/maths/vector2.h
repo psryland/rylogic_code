@@ -155,10 +155,7 @@ namespace pr
 		friend Vec2 operator % (Vec2_cref lhs, S rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (std::floating_point<S>)
-				return Vec2(Fmod(lhs.x, rhs), Fmod(lhs.y, rhs));
-			else
-				return Vec2(lhs.x % rhs, lhs.y % rhs);
+			return Vec2{ Modulus(lhs.x, rhs), Modulus(lhs.y, rhs) };
 		}
 		friend Vec2 operator + (Vec2_cref lhs, Vec2_cref rhs)
 		{
@@ -180,10 +177,7 @@ namespace pr
 		friend Vec2 operator % (Vec2_cref lhs, Vec2_cref rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (std::floating_point<S>)
-				return Vec2(Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y));
-			else
-				return Vec2(lhs.x % rhs.x, lhs.y % rhs.y);
+			return Vec2{ Modulus(lhs.x, rhs.x), Modulus(lhs.y, rhs.y) };
 		}
 		#pragma endregion
 	};

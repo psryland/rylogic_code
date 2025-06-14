@@ -330,16 +330,15 @@ namespace pr::rdr12
 
 		return &existing[0];
 	}
-	template <HasPrivateData T> void DebugName(T* res, char const* name)
+	template <HasPrivateData T> void DebugName(T* res, std::string_view name)
 	{
-		std::string_view res_name(name);
-		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
+		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(name.size()), name.data()));
 	}
 	template <HasPrivateData T> char const* DebugName(D3DPtr<T> res)
 	{
 		return DebugName(res.get());
 	}
-	template <HasPrivateData T> void DebugName(D3DPtr<T> res, char const* name)
+	template <HasPrivateData T> void DebugName(D3DPtr<T> res, std::string_view name)
 	{
 		DebugName(res.get(), name);
 	}

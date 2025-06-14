@@ -272,7 +272,7 @@ namespace pr::geometry
 			} while (link.m_body0 == link.m_body1);
 		}
 
-		static auto LdrDump = [&]
+		auto LdrDump = [&]
 		{
 			auto ldr = ldr::Builder{};
 			auto& ldr_bodies = ldr.Group("Body");

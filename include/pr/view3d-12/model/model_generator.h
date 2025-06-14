@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/main/renderer.h"
 
@@ -80,7 +81,6 @@ namespace pr::rdr12
 				DiffuseTexture = 1 << 2,
 				NormalGeneration = 1 << 3,
 				TextureToSurface = 1 << 4,
-
 				_flags_enum = 0,
 			};
 
@@ -109,6 +109,7 @@ namespace pr::rdr12
 				return (m_options & opt) == opt;
 			}
 
+			// Fluent API
 			CreateOptions& colours(std::span<Colour32 const> colours)
 			{
 				m_colours = colours;
@@ -215,12 +216,20 @@ namespace pr::rdr12
 
 		// ModelFile **************************************************************************
 		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
-		// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
-		using ModelOutFunc = std::function<bool(std::span<ModelTreeNode>)>;
-		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
+		struct IModelOut
+		{
+			enum EResult { Continue, Stop };
+			bool ReadAnimation = false;
+
+			virtual ~IModelOut() = default;
+			virtual EResult Model(std::span<ModelTreeNode const>) { return EResult::Stop; }
+			virtual EResult Animation(std::span<SkeletonPtr const>, std::span<KeyFrameAnimationPtr const>) { return EResult::Stop; }
+		};
+		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void Load3DSModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadFBXModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
+		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts = nullptr);
 
 		// Text *******************************************************************************
 
@@ -369,7 +378,7 @@ namespace pr::rdr12
 
 			Cache() = delete;
 			Cache(int vcount, int icount, int ncount, int idx_stride)
-				:m_buffers(this_thread_instance())
+				: m_buffers(this_thread_instance())
 				, m_in_use(this_thread_cache_in_use())
 				, m_name(m_buffers.m_name)
 				, m_vcont(m_buffers.m_vcont)
@@ -389,7 +398,9 @@ namespace pr::rdr12
 				Reset();
 				m_in_use = false;
 			}
+			Cache(Cache&& rhs) = delete;
 			Cache(Cache const& rhs) = delete;
+			Cache operator =(Cache&& rhs) = delete;
 			Cache operator =(Cache const& rhs) = delete;
 
 			// Resize all buffers to 0
@@ -413,10 +424,10 @@ namespace pr::rdr12
 				auto stride = m_icont.stride();
 				switch (stride)
 				{
-				case 4: return dx_format_v<uint32_t>;
-				case 2: return dx_format_v<uint16_t>;
-				case 1: return dx_format_v<uint8_t>;
-				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
+				case 4: return dx_format_v<uint32_t>.format;
+				case 2: return dx_format_v<uint16_t>.format;
+				case 1: return dx_format_v<uint8_t>.format;
+				default: throw std::runtime_error(std::format("Unsupported index stride: {}", stride));
 				}
 			}
 		};

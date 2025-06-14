@@ -49,8 +49,8 @@ public class ShaderBuilder
 	public ShaderBuilder(bool pp = false, bool obj = false, bool trace = false, bool dbg = false)
 	{
 		// Get the full path to the compiler
-		m_compiler = UserVars.Path([UserVars.WinSDK, "bin", UserVars.WinSDKVersion, "x64", "fxc.exe"]); // old compiler < SM 6
-		//m_compiler = UserVars.Path([UserVars.WinSDK, "bin", UserVars.WinSDKVersion, "x64", "dxc.exe"]); // new compiler >= SM 6
+		//m_compiler = UserVars.Path([UserVars.WinSDK, "bin", UserVars.WinSDKVersion, "x64", "fxc.exe"]); // old compiler < SM 6
+		m_compiler = UserVars.Path([UserVars.WinSDK, "bin", UserVars.WinSDKVersion, "x64", "dxc.exe"]); // new compiler >= SM 6
 
 		// Enable compiled shader objects in debug, for debugging and runtime shaders
 		m_pp = pp;
@@ -94,10 +94,10 @@ public class ShaderBuilder
 
 		// Careful with shader versions, if you bump up from 4_0 you'll need to change the minimum feature level in view3d.
 		var shader_types = (List<ShaderType>)[
-			new ShaderType{ShaderCode = "vs", Profile = "/Tvs_4_0", Patn = new Regex("^#ifdef PR_RDR_VSHADER_(?<name>.*)$")},
-			new ShaderType{ShaderCode = "ps", Profile = "/Tps_4_0", Patn = new Regex("^#ifdef PR_RDR_PSHADER_(?<name>.*)$")},
-			new ShaderType{ShaderCode = "gs", Profile = "/Tgs_4_0", Patn = new Regex("^#ifdef PR_RDR_GSHADER_(?<name>.*)$")},
-			new ShaderType{ShaderCode = "cs", Profile = "/Tcs_5_0", Patn = new Regex("^#ifdef PR_RDR_CSHADER_(?<name>.*)$")},
+			new ShaderType{ShaderCode = "vs", Profile = "/Tvs_6_6", Patn = new Regex("^#ifdef PR_RDR_VSHADER_(?<name>.*)$")},
+			new ShaderType{ShaderCode = "ps", Profile = "/Tps_6_6", Patn = new Regex("^#ifdef PR_RDR_PSHADER_(?<name>.*)$")},
+			new ShaderType{ShaderCode = "gs", Profile = "/Tgs_6_6", Patn = new Regex("^#ifdef PR_RDR_GSHADER_(?<name>.*)$")},
+			new ShaderType{ShaderCode = "cs", Profile = "/Tcs_6_6", Patn = new Regex("^#ifdef PR_RDR_CSHADER_(?<name>.*)$")},
 		];
 
 		// Scan the file looking for instances of each shader type (there can be more than one)
@@ -109,6 +109,9 @@ public class ShaderBuilder
 			// For each matching instance, build the shader
 			foreach (var match in shaders)
 			{
+				// Create the .built file, so that VS's custom build tool can check for it's existence to determine when a build is needed
+				File.Delete(UserVars.Path([outdir, $"{ftitle}.built"], check_exists: false));
+
 				var shdr = new ShaderDesc
 				{
 					Name = $"{match.Groups["name"].Value}_{shader_type.ShaderCode}",
@@ -117,7 +120,7 @@ public class ShaderBuilder
 					ShaderCode = shader_type.ShaderCode,
 				};
 				BuildShader(shdr, outdir, platform, config);
-				
+
 				// Create the .built file, so that VS's custom build tool can check for it's existence to determine when a build is needed
 				File.Create(UserVars.Path([outdir, $"{ftitle}.built"], check_exists: false)).Dispose();
 			}
@@ -127,7 +130,7 @@ public class ShaderBuilder
 	// Compile the file as 'shader_type.Shader'
 	private void BuildShader(ShaderDesc shdr, string outdir, string platform, string config)
 	{
-		Trace($"Building: {shdr.Name}");
+		Console.WriteLine($"Shader: {shdr.Name}");
 
 		// Hash the full path to generate a unique temporary file name
 		var hash = HashName(shdr.FullPath);
@@ -176,7 +179,7 @@ public class ShaderBuilder
 		if (!m_pp)
 		{
 			// Build the shader using fxc
-			Trace("Running fxc.exe...");
+			Trace($"Running {Path.GetFileName(m_compiler)}...");
 			var output = Run(args);
 			Trace(output);
 
@@ -295,7 +298,7 @@ public class ShaderBuilder
 }
 
 var args = Args.ToArray();
-//var args = (string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\dslighting.hlsl", "x64", "debug", "obj", "dbg", "trace"];
+//var args = (string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl", "x64", "debug", "obj", "dbg", "trace"];
 if (args.Length < 3)
 {
 	Console.WriteLine("Usage: BuildShader <fullpath> <platform> <config> [pp] [obj] [dbg] [trace]");

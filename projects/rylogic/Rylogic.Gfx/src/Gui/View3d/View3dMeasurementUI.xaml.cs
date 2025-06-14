@@ -22,7 +22,7 @@ namespace Rylogic.Gui.WPF
 
 			View3dCtrl = owner;
 			Measurement = new Measurement(owner.Window);
-			PinState = new PinData(this, EPin.TopRight);
+			PinState = new PinData(this, EPin.TopRight, pinned: true);
 
 			// Set up commands
 			SetSpotColour = Command.Create(this, SetSpotColourInternal);

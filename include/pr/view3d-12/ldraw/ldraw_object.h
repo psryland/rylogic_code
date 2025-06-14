@@ -11,8 +11,6 @@
 
 namespace pr::rdr12::ldraw
 {
-	#pragma region Instance Types
-
 	// An instance type for line drawer stock objects
 	struct StockInstance
 	{
@@ -33,11 +31,10 @@ namespace pr::rdr12::ldraw
 		#undef PR_RDR_INST
 	};
 
-	// An instance for passing to the renderer
-	// A renderer instance type for the body
-	// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
+	// The base instance type for LdrObjects
 	struct RdrInstance
 	{
+		// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
 		#define PR_RDR_INST(x) \
 		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
 		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
@@ -50,30 +47,59 @@ namespace pr::rdr12::ldraw
 		PR_RDR12_INSTANCE_MEMBERS(RdrInstance , PR_RDR_INST);
 		#undef PR_RDR_INST
 	};
+	
+	// Root animation
+	struct RootAnimation
+	{
+		// Notes:
+		//  - This type is akin to the 'Pose' type.
+		//    It's a runtime instance of the simple animation data
+		//    Each LdrObject has one of these with it's own time value
 
-	#pragma endregion
+		SimpleAnimationPtr m_simple;
+		double m_time_s;
 
-	// A line drawer object
+		// Set the animation time
+		void AnimTime(double time_s)
+		{
+			m_time_s = time_s;
+		}
+
+		// Returns the root motion at the current time
+		m4x4 RootToWorld() const
+		{
+			return m_simple ? m_simple->EvaluateAtTime(m_time_s) : m4x4::Identity();
+		}
+
+		// Has animation?
+		explicit operator bool() const
+		{
+			return m_simple != nullptr;
+		}
+	};
+
+	// An LDraw object
 	struct LdrObject
 		:RdrInstance
 		,RefCounted<LdrObject>
 	{
-		// Note: try not to use the RdrInstance members for things other than rendering
-		// they can temporarily have different models/transforms/etc during rendering of
-		// object bounding boxes etc.
-		m4x4         m_o2p;           // Object to parent transform (or object to world if this is a top level object)
-		ELdrObject   m_type;          // Object type
-		LdrObject*   m_parent;        // The parent of this object, nullptr for top level instances.
-		ObjectCont   m_child;         // A container of pointers to child instances
-		string32     m_name;          // A name for the object
-		GUID         m_context_id;    // The id of the context this instance was created in
-		Colour32     m_base_colour;   // The original colour of this object
-		uint32_t     m_colour_mask;   // A bit mask for applying the base colour to child objects
-		Animation    m_anim;          // Animation data
-		BBoxInstance m_bbox_instance; // Used for rendering the bounding box for this instance
-		Sub          m_screen_space;  // True if this object should be rendered in screen space
-		ELdrFlags    m_ldr_flags;     // Property flags controlling meta behaviour of the object
-		UserData     m_user_data;     // User data
+		// Notes:
+		//  - Try not to use the RdrInstance members for things other than rendering
+		//    they can temporarily have different models/transforms/etc during rendering of
+		//    object bounding boxes etc.
+		m4x4            m_o2p;           // Object to parent transform (or object to world if this is a top level object)
+		ELdrObject      m_type;          // Object type
+		LdrObject*      m_parent;        // The parent of this object, nullptr for top level instances.
+		ObjectCont      m_child;         // A container of pointers to child instances
+		string32        m_name;          // A name for the object
+		GUID            m_context_id;    // The id of the context this instance was created in
+		Colour32        m_base_colour;   // The original colour of this object
+		uint32_t        m_colour_mask;   // A bit mask for applying the base colour to child objects
+		RootAnimation   m_root_anim;     // Animation of the model root position
+		BBoxInstance    m_bbox_instance; // Used for rendering the bounding box for this instance
+		Sub             m_screen_space;  // True if this object should be rendered in screen space
+		ELdrFlags       m_ldr_flags;     // Property flags controlling meta behaviour of the object
+		UserData        m_user_data;     // User data
 
 		LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id);
 		~LdrObject();
@@ -86,11 +112,11 @@ namespace pr::rdr12::ldraw
 		EventHandler<LdrObject&, Scene const&, true> OnAddToScene;
 
 		// Recursively add this object and its children to a scene
-		void AddToScene(Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
+		void AddToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Recursively add the bounding box instance for this object using 'bbox_model'
 		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
+		void AddBBoxToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Notes:
 		//  - Methods with a 'name' parameter apply an operation on this object
@@ -102,7 +128,7 @@ namespace pr::rdr12::ldraw
 		//    expression.
 
 		// Apply an operation on this object or any of its child objects that match 'name'.
-		// 'func' should have a signature: 'bool func(ldr::LdrObject* obj);' returning false to 'quick-out'.
+		// 'func' should have a signature: 'bool func(LdrObject* obj);' returning false to 'quick-out'.
 		// 'obj' is a recursion parameter, callers should use 'nullptr'
 		// Returns 'true' if 'func' always returns 'true'.
 		template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
@@ -154,6 +180,10 @@ namespace pr::rdr12::ldraw
 		// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
 		m4x4 O2P(char const* name = nullptr) const;
 		void O2P(m4x4 const& o2p, char const* name = nullptr);
+
+		// Get/Set the animation time of this object or child objects matching 'name' (see Apply)
+		float AnimTime(char const* name = nullptr) const;
+		void AnimTime(float time_s, char const* name = nullptr);
 
 		// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
 		bool Visible(char const* name = nullptr) const;
@@ -213,13 +243,13 @@ namespace pr::rdr12::ldraw
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
 		// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-		BBox BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s = 0.0f, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
+		BBox BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
 		BBox BBoxMS(bool include_children) const;
 
 		// Return the bounding box for this object in world space.
 		// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 		// If not then, then the returned bbox will be transformed to the top level object space
-		BBox BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s = 0.0f) const;
+		BBox BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred) const;
 		BBox BBoxWS(bool include_children) const;
 
 		// Add/Remove 'child' as a child of this object

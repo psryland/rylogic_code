@@ -15,6 +15,8 @@
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/animation.h"
+#include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/scene/scene.h"
@@ -480,7 +482,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(IReader& reader, ParseParams& pp, Animation& anim)
+	void ParseAnimation(IReader& reader, ParseParams& pp, rdr12::SimpleAnimation& anim)
 	{
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
@@ -621,7 +623,9 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::Animation:
 			{
-				ParseAnimation(reader, pp, obj->m_anim);
+				SimpleAnimationPtr root_anim{ rdr12::New<SimpleAnimation>(), true };
+				ParseAnimation(reader, pp, *root_anim.get());
+				obj->m_root_anim.m_simple = root_anim;
 				return true;
 			}
 			case EKeyword::Hidden:
@@ -1107,8 +1111,8 @@ namespace pr::rdr12::ldraw
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
 				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(fr, fr_brush.address_of()));
+				Check(dc->CreateSolidColorBrush(bk, bk_brush.address_of()));
 
 				// Draw the spot
 				dc->BeginDraw();
@@ -1148,8 +1152,8 @@ namespace pr::rdr12::ldraw
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							Check(geom->Open(&sink.m_ptr));
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(DegreesToRadians(60.0f));
@@ -1172,8 +1176,8 @@ namespace pr::rdr12::ldraw
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							Check(geom->Open(&sink.m_ptr));
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+							Check(geom->Open(sink.address_of()));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -2129,7 +2133,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Create the model
-			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(cache.m_vcont.cspan())
+				.ibuf(cache.m_icont.span<uint16_t const>())
+				.bbox(props.m_bbox)
+				.name(obj->TypeAndName());
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
@@ -4121,41 +4129,51 @@ namespace pr::rdr12::ldraw
 				args.handled = true;
 			};
 
-			// Create the models
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, [&](ModelTree const& tree)
-				{
-					auto child = ModelTreeToLdr(tree, obj->m_context_id);
-					if (child != nullptr) obj->AddChild(child);
-					return false;
-				}, &opts);
-		}
-
-		// Convert a model tree into a tree of LdrObjects
-		static LdrObjectPtr ModelTreeToLdr(ModelTree const& tree, Guid const& context_id)
-		{
-			std::vector<LdrObjectPtr> stack;
-			for (auto& node : tree)
+			// Model output helper
+			struct ModelOut : ModelGenerator::IModelOut
 			{
-				// If 'node' is at the same level or above the current leaf,
-				// then all the children for that leaf have been added.
-				for (size_t lvl = s_cast<size_t>(node.m_level + 1); stack.size() > lvl; )
-					stack.pop_back();
+				LdrObject& m_obj;
+				ResourceFactory& m_factory;
 
-				// Create an LdrObject for each model
-				LdrObjectPtr obj(new LdrObject(ELdrObject::Model, nullptr, context_id), true);
-				obj->m_name = node.m_model->m_name;
-				obj->m_model = node.m_model;
-				obj->m_o2p = node.m_o2p;
+				ModelOut(LdrObject& obj, ResourceFactory& factory)
+					: m_obj(obj)
+					, m_factory(factory)
+				{
+					ReadAnimation = true;
+				}
+				EResult Model(std::span<ModelTreeNode const> tree) override
+				{
+					ModelTreeToLdr(&m_obj, tree);
+					return EResult::Continue;
+				}
+				EResult Animation(std::span<SkeletonPtr const> skels, std::span<KeyFrameAnimationPtr const> anims) override
+				{
+					// Only use the first animation
+					auto const& animation = anims.front();
+					auto const& skeleton = pr::get_if(skels, [&](SkeletonPtr skel) { return skel->Id() == animation->m_skel_id; });
 
-				// Add 'obj' as a child of the current leaf node
-				if (!stack.empty())
-					stack.back()->AddChild(obj);
+					// Create an animator that uses the animation and a pose for it to animate
+					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anims.front()), true };
+					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator), true };
+					pose->AnimTime(0.0);
 
-				// Add 'obj' as the current leaf node
-				stack.push_back(obj);
-			}
-			return !stack.empty() ? stack[0] : nullptr;
+					// Set the pose for each model in the hierarchy.
+					// Alternatively, I could add a PosePtr in the LdrInstance type.
+					m_obj.Apply([&](LdrObject* obj)
+					{
+						if (obj->m_model)
+							obj->m_model->m_pose = pose;
+						return true;
+					}, "");
+
+					return EResult::Continue;
+				}
+			};
+
+			// Create the models
+			ModelOut model_out(*obj, m_pp.m_factory);
+			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
+			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
 		}
 	};
 
@@ -4401,10 +4419,11 @@ namespace pr::rdr12::ldraw
 			obj->m_user_data.get<Cache>() = Cache{};
 
 			// Create buffers for a dynamic model
-			ModelDesc mdesc(
-				ResDesc::VBuf<Vert>(vcount, {}),
-				ResDesc::IBuf<uint32_t>(icount, {}),
-				BBox::Reset(), obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+				.ibuf(ResDesc::IBuf<uint32_t>(icount, {}))
+				.bbox(BBox::Reset())
+				.name(obj->TypeAndName());
 
 			// Create the model
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
@@ -4560,8 +4579,8 @@ namespace pr::rdr12::ldraw
 			assert(ni <= (int)model.m_icount);
 
 			ResourceFactory factory(model.rdr());
-			auto update_v = model.UpdateVertices(factory);
-			auto update_i = model.UpdateIndices(factory);
+			auto update_v = model.UpdateVertices(factory.CmdList(), factory.UploadBuffer());
+			auto update_i = model.UpdateIndices(factory.CmdList(), factory.UploadBuffer());
 			auto vout = update_v.ptr<Vert>();
 			auto iout = update_i.ptr<uint32_t>();
 
@@ -4599,8 +4618,8 @@ namespace pr::rdr12::ldraw
 
 			assert(vout - update_v.ptr<Vert>() == nv);
 			assert(iout - update_i.ptr<uint32_t>() == ni);
-			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+			update_v.Commit();
+			update_i.Commit();
 
 			// Generate nuggets if initialising
 			if (init)
@@ -5193,32 +5212,42 @@ namespace pr::rdr12::ldraw
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
+		struct ModelOut :ModelGenerator::IModelOut
+		{
+			LdrObject* m_obj;
+			ModelOut(LdrObject* obj) :m_obj(obj) {}
+			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			{
+				ModelTreeToLdr(m_obj, tree);
+				return EResult::Continue;
+			}
+		} model_out = { obj.get() };
+
 		// Create the model
 		ResourceFactory factory(rdr);
 		std::ifstream src(p3d_filepath, std::ios::binary);
-		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
-			{
-				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
-				if (child != nullptr) obj->AddChild(child);
-				return false;
-			});
-
+		ModelGenerator::LoadP3DModel(factory, src, model_out);
 		return obj;
 	}
 	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, std::span<std::byte const> p3d_data, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
+		struct ModelOut :ModelGenerator::IModelOut
+		{
+			LdrObject* m_obj;
+			ModelOut(LdrObject* obj) :m_obj(obj) {}
+			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			{
+				ModelTreeToLdr(m_obj, tree);
+				return EResult::Continue;
+			}
+		} model_out = { obj.get() };
+
 		// Create the model
 		ResourceFactory factory(rdr);
 		mem_istream<char> src(p3d_data.data(), p3d_data.size());
-		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
-			{
-				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
-				if (child != nullptr) obj->AddChild(child);
-				return false;
-			});
-
+		ModelGenerator::LoadP3DModel(factory, src, model_out);
 		return obj;
 	}
 
@@ -5243,17 +5272,18 @@ namespace pr::rdr12::ldraw
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 	LdrObjectPtr CreateEditCB(Renderer& rdr, ELdrObject type, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(type, 0, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create buffers for a dynamic model
-		ModelDesc settings(
-			ResDesc::VBuf<Vert>(vcount, {}),
-			ResDesc::IBuf<uint16_t>(icount, {}),
-			BBox::Reset(), obj->TypeAndName().c_str());
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+			.ibuf(ResDesc::IBuf<uint16_t>(icount, {}))
+			.bbox(BBox::Reset())
+			.name(obj->TypeAndName());
 
 		// Create the model
 		ResourceFactory factory(rdr);
-		obj->m_model = factory.CreateModel(settings);
+		obj->m_model = factory.CreateModel(mdesc);
 
 		// Create dummy nuggets
 		NuggetDesc nug(ETopo::PointList, EGeom::Vert);
@@ -5316,7 +5346,7 @@ namespace pr::rdr12::ldraw
 			if (AllSet(flags, EUpdateObject::Flags))
 				std::swap(object->m_ldr_flags, rhs->m_ldr_flags);
 			if (AllSet(flags, EUpdateObject::Animation))
-				std::swap(object->m_anim, rhs->m_anim);
+				std::swap(object->m_root_anim, rhs->m_root_anim);
 			if (AllSet(flags, EUpdateObject::ColourMask))
 				std::swap(object->m_colour_mask, rhs->m_colour_mask);
 			if (AllSet(flags, EUpdateObject::Reflectivity))
@@ -5380,6 +5410,60 @@ namespace pr::rdr12::ldraw
 			out.Far(true, src.Far(true));
 		if (AllSet(fields, ECamField::Ortho))
 			out.Orthographic(src.Orthographic());
+	}
+
+	// Convert a model tree into a tree of LdrObjects
+	void ModelTreeToLdr(LdrObject* root, std::span<ModelTreeNode const> tree)
+	{
+		if (tree.empty())
+			return;
+
+		// Count the number of roots.
+		auto num_roots = pr::count_if(tree, [](ModelTreeNode const& m) { return m.m_level == 0; });
+		if (num_roots == 0)
+			throw std::runtime_error("Model tree has no roots");
+
+		pr::vector<std::pair<int, LdrObject*>> ancestors;
+
+		// Single root models have 'root' as the root.
+		if (num_roots == 1)
+		{
+			root->m_name = tree[0].m_model->m_name;
+			root->m_model = tree[0].m_model;
+			root->m_o2p = tree[0].m_o2p;
+
+			ancestors.push_back({ 0, root });
+			tree = tree.subspan<1>();
+		}
+
+		// Multi-root models have 'root' as dummy root (or Group)
+		else
+		{
+			root->m_name = "root";
+			root->m_model = nullptr;
+			root->m_o2p = m4x4::Identity();
+
+			ancestors.push_back({ -1, root });
+		}
+
+		// Recurse
+		for (auto& node : tree)
+		{
+			for (; node.m_level <= ancestors.back().first; )
+				ancestors.pop_back();
+
+			auto* parent = ancestors.back().second;
+
+			// Create an LdrObject for each model
+			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent, root->m_context_id), true);
+			obj->m_name = node.m_model->m_name;
+			obj->m_model = node.m_model;
+			obj->m_o2p = node.m_o2p;
+
+			// Add 'obj' as the current leaf node
+			parent->m_child.push_back(obj);
+			ancestors.push_back({ node.m_level, obj.get() });
+		}
 	}
 
 	// IReader ------------------------------------------------------------------------------------

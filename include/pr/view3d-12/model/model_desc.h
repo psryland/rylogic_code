@@ -22,35 +22,45 @@ namespace pr::rdr12
 			, m_name()
 		{}
 
-		// Construct using a set number of verts and indices
-		ModelDesc(ResDesc const& vb, ResDesc const& ib, BBox const& bbox = BBox::Reset(), char const* name = "")
-			: m_vb(vb)
-			, m_ib(ib)
-			, m_bbox(bbox)
-			, m_name(name)
-		{}
-
-		// Construct the model buffer from spans of verts and indices
-		template <typename TVert, typename TIndx>
-		ModelDesc(std::span<TVert const> vert, std::span<TIndx const> idxs, BBox const& bbox = BBox::Reset(), char const* name = "")
-			: m_vb(ResDesc::VBuf<TVert>(vert.size(), vert))
-			, m_ib(ResDesc::IBuf<TIndx>(idxs.size(), idxs))
-			, m_bbox(bbox)
-			, m_name(name)
-		{}
-
-		// Construct the model buffer from static arrays of verts and indices
-		template <typename TVert, typename TIndx, size_t VSize, size_t ISize>
-		ModelDesc(TVert const (&vert)[VSize], TIndx const (&idxs)[ISize], BBox const& bbox = BBox::Reset(), char const* name = "")
-			: m_vb(ResDesc::VBuf<TVert>(VSize, { &vert[0], VSize }))
-			, m_ib(ResDesc::IBuf<TIndx>(ISize, { &idxs[0], ISize }))
-			, m_bbox(bbox)
-			, m_name(name)
-		{}
-
+		// Fluent interface for constructing a model description
 		ModelDesc& name(std::string_view name)
 		{
 			m_name = name;
+			return *this;
+		}
+		ModelDesc& bbox(BBox const& bbox)
+		{
+			m_bbox = bbox;
+			return *this;
+		}
+		ModelDesc& vbuf(ResDesc const& vb)
+		{
+			m_vb = vb;
+			return *this;
+		}
+		ModelDesc& ibuf(ResDesc const& ib)
+		{
+			m_ib = ib;
+			return *this;
+		}
+		template <typename TVert> ModelDesc& vbuf(std::span<TVert const> data = {})
+		{
+			m_vb = ResDesc::VBuf<TVert>(data.size(), data);
+			return *this;
+		}
+		template <typename TIndx> ModelDesc& ibuf(std::span<TIndx const> data = {})
+		{
+			m_ib = ResDesc::IBuf<TIndx>(data.size(), data);
+			return *this;
+		}
+		template <typename TVert, size_t VSize> ModelDesc& vbuf(TVert const (&vert)[VSize])
+		{
+			m_vb = ResDesc::VBuf<TVert>(VSize, { &vert[0], VSize });
+			return *this;
+		}
+		template <typename TIndx, size_t ISize> ModelDesc& ibuf(TIndx const (&idxs)[ISize])
+		{
+			m_ib = ResDesc::IBuf<TIndx>(ISize, { &idxs[0], ISize });
 			return *this;
 		}
 	};

@@ -30,10 +30,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>Construct a command from a delegate</summary>
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action execute)

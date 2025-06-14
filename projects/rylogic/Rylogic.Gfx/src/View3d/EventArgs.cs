@@ -56,14 +56,18 @@ namespace Rylogic.Gfx
 
 		public class SourcesChangedEventArgs :EventArgs
 		{
-			public SourcesChangedEventArgs(ESourcesChangedReason reason, bool before)
+			public SourcesChangedEventArgs(ESourcesChangedReason reason, IntPtr ids, int count, bool before)
 			{
 				Reason = reason;
+				ContextIds = Marshal_.PtrToArray<Guid>(ids, count);
 				Before = before;
 			}
 
 			/// <summary>The cause of the source changes</summary>
 			public ESourcesChangedReason Reason { get; }
+
+			/// <summary>The sources that changed</summary>
+			public Guid[] ContextIds { get; }
 
 			/// <summary>True if files are about to change</summary>
 			public bool Before { get; }

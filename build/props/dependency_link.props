@@ -18,18 +18,22 @@
 	<Target
 		Name="DependencyLinkTarget"
 		AfterTargets="Link"
-		Inputs="@(DependencyLink)"
-		Outputs="%(DependencyLink.OutDir)%(Filename)%(Extension)"
+		Inputs="@(DependencyLink);$(MSBuildThisFileFullPath)"
+		Outputs="@(DependencyLink->'%(OutDir)%(Filename)%(Extension)')"
 	>
-		<!--
-		Outputs="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\%(Filename)%(Extension)')"
-		-->
+		<!-- Construct the destination file paths -->
+		<ItemGroup>
+			<_DependencyLinkWithDest Include="@(DependencyLink)">
+				<DestFile>%(OutDir)%(Filename)%(Extension)</DestFile>
+			</_DependencyLinkWithDest>
+		</ItemGroup>
+
+		<Message Importance="high" Text="@( _DependencyLinkWithDest -> '%(FullPath) => %(DestFile)', '&#x0A;')" />
 		<Copy
-			SourceFiles="@(DependencyLink)"
-			DestinationFolder="%(DependencyLink.OutDir)"
-			SkipUnchangedFiles="true"
-			Condition="exists('@(DependencyLink)')"
+			SourceFiles="@(_DependencyLinkWithDest)"
+			DestinationFiles="@(_DependencyLinkWithDest->'%(DestFile)')"
 			ContinueOnError="ErrorAndContinue"
+			SkipUnchangedFiles="false"
 		/>
 	</Target>
 

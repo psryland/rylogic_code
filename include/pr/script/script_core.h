@@ -862,7 +862,7 @@ namespace pr::script
 		auto x = Scope<void>([]{}, [&] { if (len) *len = i; });
 
 		// Convert a character to it's numerical value
-		static auto digit = [](int ch)
+		constexpr auto digit = [](int ch)
 		{
 			if (ch >= '0' && ch <= '9') return ch - '0';
 			if (ch >= 'a' && ch <= 'z') return 10 + ch - 'a';

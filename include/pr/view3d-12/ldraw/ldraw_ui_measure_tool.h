@@ -7,7 +7,7 @@
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
-#include "pr/view3d-12/ldraw/ldraw_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 #include "pr/gui/wingui.h"
 
 namespace pr::rdr12::ldraw

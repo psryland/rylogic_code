@@ -25,10 +25,11 @@ namespace pr::rdr12
 
 		using AnimData = struct AnimData
 		{
-			std::thread  m_thread;
+			std::thread m_thread;
 			std::atomic_int m_issue;
 			std::atomic<seconds_t> m_clock;
 			AnimData() :m_thread() ,m_issue() ,m_clock() {}
+			explicit operator bool() const { return m_thread.joinable(); }
 		};
 		using LightingUIPtr = std::unique_ptr<LightingUI>;
 		using LdrObjectManagerUIPtr = std::unique_ptr<ldraw::ObjectManagerUI>;

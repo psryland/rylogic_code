@@ -82,7 +82,7 @@ namespace pr::rdr12
 
 			// Get the factory that was used to create 'rdr.m_device'
 			D3DPtr<IDXGIFactory4> factory;
-			Check(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
+			Check(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void**)factory.address_of()));
 
 			// Create the swap chain, if there is a HWND. (Depth Stencil created into BackBufferSize)
 			if (settings.m_hwnd != nullptr)
@@ -109,8 +109,8 @@ namespace pr::rdr12
 
 				// Create the swap chain. Swap chains only contain render targets, not deep buffers.
 				D3DPtr<IDXGISwapChain1> swap_chain;
-				Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
-				Check(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
+				Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, swap_chain.address_of()));
+				Check(swap_chain->QueryInterface(m_swap_chain.address_of()));
 				DebugName(m_swap_chain, "SwapChain");
 		
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
@@ -128,7 +128,7 @@ namespace pr::rdr12
 				.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
-			Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
+			Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_rtv_heap.address_of()));
 
 			// Create a descriptor heap for the depth stencil
 			D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
@@ -136,13 +136,13 @@ namespace pr::rdr12
 				.NumDescriptors = 1,
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
-			Check(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_dsv_heap.m_ptr));
+			Check(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_dsv_heap.address_of()));
 
 			// If D2D is enabled, create a device context for this window
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 			{
 				// Create a D2D device context
-				Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
+				Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, m_d2d_dc.address_of()));
 			}
 
 			// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
@@ -158,7 +158,7 @@ namespace pr::rdr12
 					.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 					.Flags = s_cast<DXGI_SWAP_CHAIN_FLAG>(0),
 				};
-				Check(factory->CreateSwapChain(rdr.GfxQueue(), &sd, &m_swap_chain_dbg.m_ptr));
+				Check(factory->CreateSwapChain(rdr.GfxQueue(), &sd, m_swap_chain_dbg.address_of()));
 				DebugName(m_swap_chain_dbg, FmtS("swap chain dbg"));
 			}
 
@@ -656,7 +656,7 @@ namespace pr::rdr12
 		assert(rtdesc.Check());
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
-			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)bb.m_render_target.address_of()));
 		DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 		DebugName(bb.m_render_target, "RenderTarget");
 
@@ -667,7 +667,7 @@ namespace pr::rdr12
 		assert(dsdesc.Check());
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
+			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)bb.m_depth_stencil.address_of()));
 		DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 		DebugName(bb.m_depth_stencil, "DepthStencil");
 
@@ -722,7 +722,7 @@ namespace pr::rdr12
 			bb.m_sync_point = m_gsync.CompletedSyncPoint();
 
 			// Get the render target resource pointer
-			Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+			Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)bb.m_render_target.address_of()));
 			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
 			DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
 
@@ -739,7 +739,7 @@ namespace pr::rdr12
 			{
 				// Direct2D needs the DXGI version of the back buffer
 				D3DPtr<IDXGISurface> dxgi_back_buffer;
-				Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+				Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)dxgi_back_buffer.address_of()));
 
 				// Create bitmap properties for the bitmap view of the back buffer
 				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));

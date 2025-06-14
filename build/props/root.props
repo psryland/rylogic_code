@@ -48,10 +48,10 @@
     </ClCompile>
     <ClCompile Condition="'$(Configuration)'=='Debug'">
       <PreprocessorDefinitions>
-        ;_DEBUG
-        ;_ITERATOR_DEBUG_LEVEL=1
-        ;_CONTAINER_DEBUG_LEVEL=1
         ;%(PreprocessorDefinitions)
+        ;_ITERATOR_DEBUG_LEVEL=1
+        ;_MSVC_STL_HARDENING=1
+        ;_DEBUG
       </PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
@@ -61,8 +61,8 @@
     </ClCompile>
     <ClCompile Condition="'$(Configuration)'!='Debug'">
       <PreprocessorDefinitions>
-        ;NDEBUG
         ;%(PreprocessorDefinitions)
+        ;NDEBUG
       </PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>Full</Optimization>

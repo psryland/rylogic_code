@@ -128,26 +128,26 @@ namespace pr::rdr
 
 			// Create the texture with the initialisation data
 			D3DPtr<ID3D11Resource> res;
-			pr::Check(DirectX::CreateTexture(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
-			pr::Check(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+			pr::Check(DirectX::CreateTexture(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), res.address_of()));
+			pr::Check(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)tex.address_of()));
 				
 			// If the texture is to be used in shaders, create a SRV
 			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
 			{
 				if (srvdesc)
-					pr::Check(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+					pr::Check(device->CreateShaderResourceView(tex.m_ptr, srvdesc, srv.address_of()));
 				else
-					pr::Check(DirectX::CreateShaderResourceView(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
+					pr::Check(DirectX::CreateShaderResourceView(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), srv.address_of()));
 			}
 		}
 		else
 		{
 			// Create an uninitialised texture
-			pr::Check(device->CreateTexture2D(&tdesc, nullptr, &tex.m_ptr));
+			pr::Check(device->CreateTexture2D(&tdesc, nullptr, tex.address_of()));
 				
 			// If the texture is to be used in shaders, create a SRV
 			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
-				pr::Check(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+				pr::Check(device->CreateShaderResourceView(tex.m_ptr, srvdesc, srv.address_of()));
 		}
 
 		// Copy the surface data from the existing texture
@@ -168,7 +168,7 @@ namespace pr::rdr
 
 			// Copy unscaled content from 
 			D3DPtr<ID3D11DeviceContext> dc;
-			device->GetImmediateContext(&dc.m_ptr);
+			device->GetImmediateContext(dc.address_of());
 			if (existing_desc.SampleDesc == tdesc.SampleDesc)
 			{
 				dc->CopyResource(tex.m_ptr, m_res.m_ptr);
@@ -227,7 +227,7 @@ namespace pr::rdr
 	{
 		HDC dc;
 		D3DPtr<IDXGISurface2> surf;
-		pr::Check(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Check(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)surf.address_of()));
 		pr::Check(surf->GetDC(discard, &dc), "GetDC can only be called for textures that were created with the D3D11_RESOURCE_MISC_GDI_COMPATIBLE flag");
 		++m_mgr->m_gdi_dc_ref_count;
 		return dc;
@@ -237,7 +237,7 @@ namespace pr::rdr
 	void Texture2D::ReleaseDC()
 	{
 		D3DPtr<IDXGISurface2> surf;
-		pr::Check(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Check(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)surf.address_of()));
 		pr::Check(surf->ReleaseDC(nullptr));
 		--m_mgr->m_gdi_dc_ref_count;
 		// Note: the main RT must be restored once all ReleaseDC's have been called
@@ -247,7 +247,7 @@ namespace pr::rdr
 	D3DPtr<IDXGISurface> Texture2D::GetSurface()
 	{
 		D3DPtr<IDXGISurface> surf;
-		pr::Check(dx_tex()->QueryInterface(&surf.m_ptr));
+		pr::Check(dx_tex()->QueryInterface(surf.address_of()));
 		return surf;
 	}
 
@@ -266,7 +266,7 @@ namespace pr::rdr
 		// Create a D2D render target which can draw into our off screen D3D surface.
 		D3DPtr<ID2D1RenderTarget> rt;
 		auto d2dfactory = lock.D2DFactory();
-		pr::Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
+		pr::Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, rt.address_of()));
 		return rt;
 	}
 
@@ -280,11 +280,11 @@ namespace pr::rdr
 
 		// Get the DXGI Device from the d3d device
 		D3DPtr<IDXGIDevice> dxgi_device;
-		pr::Check(d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+		pr::Check(d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)dxgi_device.address_of()));
 
 		// Create a device context
 		D3DPtr<ID2D1DeviceContext> d2d_dc;
-		pr::Check(d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &d2d_dc.m_ptr));
+		pr::Check(d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, d2d_dc.address_of()));
 
 		// Create a bitmap wrapper for 'surf'
 		D3DPtr<ID2D1Bitmap1> target;
@@ -292,7 +292,7 @@ namespace pr::rdr
 		auto dpi = m_mgr->m_rdr.SystemDpi();
 		bp.dpiX = dpi.x;
 		bp.dpiY = dpi.y;
-		pr::Check(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));
+		pr::Check(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, target.address_of()));
 			
 		// Set the render target
 		d2d_dc->SetTarget(target.get());

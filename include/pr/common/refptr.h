@@ -212,6 +212,12 @@ namespace pr
 			return ptr;
 		}
 
+		// Similar to the ComPtr::GetAddressOf() method
+		T** address_of()
+		{
+			return &m_ptr;
+		}
+
 	protected:
 
 		long IncRef(T* ptr) const
@@ -240,6 +246,9 @@ namespace pr
 			assert(pr::PtrRefCount(ptr) > 0 && "Pointer reference count is 0");
 			#endif
 
+			// If you get 'use of undefined type' here. You need to include the header for type 'T'.
+			// RefPtr can't use forward declared types because it needs to call AddRef()/Release().
+			// 'using MyPtr = RefPtr<struct MyType>' is find, but if you use MyPtr in a class it needs to be fully defined.
 			ptr->Release();
 		}
 

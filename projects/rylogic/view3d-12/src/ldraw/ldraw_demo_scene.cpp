@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/ldraw/ldraw_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::rdr12::ldraw
 {

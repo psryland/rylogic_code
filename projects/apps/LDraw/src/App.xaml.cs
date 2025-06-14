@@ -30,7 +30,8 @@ namespace LDraw
 					.SupportWPFTypes()
 					;
 
-				MainWindow = new MainWindow(new Model(e.Args));
+				var options = new StartupOptions(e.Args);
+				MainWindow = new MainWindow(new Model(options));
 				MainWindow.Show();
 			}
 			catch (Exception ex)

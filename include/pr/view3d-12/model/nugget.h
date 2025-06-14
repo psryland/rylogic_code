@@ -81,11 +81,11 @@ namespace pr::rdr12
 	// Nugget initialisation data
 	struct NuggetDesc
 	{
-		using shader_t = struct
+		using shader_t = struct shader_t
 		{
-			ShaderPtr   m_shader;   // The override shader description.
-			ERenderStep m_rdr_step; // The render step that the shader applies to.
-			int pad;
+			ShaderPtr m_shader = {};   // The override shader description.
+			ERenderStep m_rdr_step = ERenderStep::Invalid; // The render step that the shader applies to.
+			int pad = {};
 		};
 		using shaders_t = pr::vector<shader_t, 4, false>;
 

@@ -19,7 +19,7 @@ namespace pr::rdr12
 		, m_scene(&scene)
 		, m_drawlist()
 		, m_sort_needed(true)
-		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
+		, m_upload_buffer(wnd().m_gsync, 1ULL * 1024 * 1024)
 		, m_default_pipe_state()
 		, m_pipe_state_pool(wnd())
 		, m_evt_model_delete(rdr().store().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))

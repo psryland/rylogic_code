@@ -249,7 +249,7 @@ namespace pr::rdr
 			// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or RTV will be null
 			D3DPtr<ID3D11RenderTargetView> rtv;
 			D3DPtr<ID3D11DepthStencilView> dsv;
-			dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+			dc->OMGetRenderTargets(1, rtv.address_of(), dsv.address_of());
 			if (rtv == nullptr) throw std::runtime_error("Render target is null."); // Ensure RestoreRT has been called
 			if (dsv == nullptr) throw std::runtime_error("Depth buffer is null."); // Ensure RestoreRT has been called
 		}

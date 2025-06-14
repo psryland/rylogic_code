@@ -98,7 +98,7 @@ namespace pr::rdr12
 
 				// Enumerate the outputs
 				D3DPtr<IDXGIOutput> output;
-				for (UINT i = 0; ptr->EnumOutputs(i, &output.m_ptr) != DXGI_ERROR_NOT_FOUND; ++i)
+				for (UINT i = 0; ptr->EnumOutputs(i, output.address_of()) != DXGI_ERROR_NOT_FOUND; ++i)
 					outputs.emplace_back(output);
 			}
 		};
@@ -111,11 +111,11 @@ namespace pr::rdr12
 		{
 			// Create a DXGIFactory
 			D3DPtr<IDXGIFactory4> factory;
-			pr::Check(CreateDXGIFactory2(with_debug_layer ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void**)&factory.m_ptr));
+			pr::Check(CreateDXGIFactory2(with_debug_layer ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void**)factory.address_of()));
 
 			// Enumerate each adapter on the system (this includes the software  warp adapter)
 			D3DPtr<IDXGIAdapter1> adapter;
-			for (UINT i = 0; factory->EnumAdapters1(i, (IDXGIAdapter1**)&adapter.m_ptr) != DXGI_ERROR_NOT_FOUND; ++i)
+			for (UINT i = 0; factory->EnumAdapters1(i, (IDXGIAdapter1**)adapter.address_of()) != DXGI_ERROR_NOT_FOUND; ++i)
 				adapters.emplace_back(adapter);
 		}
 	};

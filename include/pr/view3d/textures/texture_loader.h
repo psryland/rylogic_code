@@ -13,7 +13,7 @@ namespace pr::rdr
 	//  - These functions create ID3D11Resources.
 	//    Use this to get the texture interface:
 	//       D3DPtr<ID3D11Texture2D> tex;
-	//       Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+	//       Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)tex.address_of()));
 	//  - tdesc is an output for these functions
 	//  - DDS textures can contain arrays of images, where as WIC images are simple 2D bitmaps.
 	//    WIC functions support arrays by filepath pattern or by array of raw data. Array textures

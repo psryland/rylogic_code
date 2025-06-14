@@ -108,6 +108,7 @@
 					ContextMenu="{Binding SceneCMenu}"
 					UseLayoutRounding="True"
 					Background="Transparent"
+					IsHitTestVisible="False"
 					x:Name="m_chart_overlay"
 					/>
 			</Grid>

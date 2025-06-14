@@ -28,7 +28,7 @@ namespace pr::rdr
 		,m_dbg()
 	{
 		// Create the debugging interface
-		PR_EXPAND(PR_DBG_RDR, pr::Check(dc->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&m_dbg.m_ptr)));
+		PR_EXPAND(PR_DBG_RDR, pr::Check(dc->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)m_dbg.address_of())));
 
 		// Apply initial state
 		ApplyState(m_current, m_init_state, true);

@@ -28,7 +28,7 @@ namespace pr::audio
 
 		// Create the XAudio interface
 		RefPtr<IXAudio2> xaudio;
-		Check(XAudio2Create(&xaudio.m_ptr, 0));
+		Check(XAudio2Create(xaudio.address_of(), 0));
 
 		// Initialise WinRT
 		RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
