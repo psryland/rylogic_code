@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -19,6 +19,7 @@ namespace pr::rdr12
 		ID3D12Resource* vb,
 		ID3D12Resource* ib,
 		BBox const& bbox,
+		m4x4 const& m2root,
 		std::string_view name
 	)
 		: m_rdr(&rdr)
@@ -40,6 +41,7 @@ namespace pr::rdr12
 		, m_nuggets()
 		, m_vcount(vcount)
 		, m_icount(icount)
+		, m_m2root(m2root)
 		, m_skin()
 		, m_pose()
 		, m_bbox(bbox)

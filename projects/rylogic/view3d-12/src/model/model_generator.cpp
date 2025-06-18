@@ -173,6 +173,7 @@ namespace pr::rdr12
 			.vbuf(ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont))
 			.ibuf(ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont))
 			.bbox(cache.m_bbox)
+			.m2root(cache.m_m2root)
 			.name(cache.m_name.c_str());
 		auto model = factory.CreateModel(mdesc);
 
@@ -1005,26 +1006,22 @@ namespace pr::rdr12
 			bool operator()(p3d::Mesh&& mesh)
 			{
 				ModelTree tree;
-				BuildModelTree(tree, mesh, 0);
+				BuildModelTree(tree, mesh, 0, m4x4::Identity());
 				return m_out.Model(tree) == IModelOut::Stop;
 			}
 
 			// Recursive function for populating a model tree
-			void BuildModelTree(ModelTree& tree, p3d::Mesh const& mesh, int level)
+			void BuildModelTree(ModelTree& tree, p3d::Mesh const& mesh, int level, m4x4 const& p2w)
 			{
-				tree.push_back(ModelTreeNode{MeshToModel(mesh), mesh.m_o2p, level});
-				for (auto& child : mesh.m_children)
-					BuildModelTree(tree, child, level + 1);
-			}
+				auto o2w = p2w * mesh.m_o2p;
 
-			// Convert a 'p3d::Mesh' into a 'rdr::Model'
-			ModelPtr MeshToModel(p3d::Mesh const& mesh)
-			{
+				// Convert a 'p3d::Mesh' into a 'rdr::Model'
 				m_cache.Reset();
 
 				// Name/Bounding box
 				m_cache.m_name = mesh.m_name;
 				m_cache.m_bbox = mesh.m_bbox;
+				m_cache.m_m2root = o2w;
 
 				// Copy the verts
 				m_cache.m_vcont.resize(mesh.vcount());
@@ -1074,7 +1071,12 @@ namespace pr::rdr12
 				}
 
 				// Return the renderer model
-				return Create(m_factory, m_cache, m_opts);
+				auto model = Create(m_factory, m_cache, m_opts);
+				tree.push_back({model, level});
+
+				// Add the children (in depth first order)
+				for (auto& child : mesh.m_children)
+					BuildModelTree(tree, child, level + 1, o2w);
 			}
 		};
 		ModelOut model_out(factory, opts, out);
@@ -1141,6 +1143,7 @@ namespace pr::rdr12
 			// Name/Bounding box
 			cache.m_name = obj.m_name;
 			cache.m_bbox = BBox::Reset();
+			cache.m_m2root = obj.m_mesh.m_o2p; //todo: hierarchy needed
 
 			// Populate 'cache' from the 3DS data
 			auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
@@ -1178,7 +1181,7 @@ namespace pr::rdr12
 			// Emit the model. 'out' returns true to stop searching
 			// 3DS models cannot nest, so each 'Model Tree' is one root node only
 			auto model = Create(factory, cache, opts);
-			auto tree = ModelTree{ {model, obj.m_mesh.m_o2p, 0} };
+			auto tree = ModelTree{ {model, 0} };
 			return out.Model(tree);
 		});
 	}
@@ -1230,7 +1233,7 @@ namespace pr::rdr12
 				// Emit the model. 'out' returns true to stop searching
 				// STL models cannot nest, so each 'Model Tree' is one root node only
 				auto model = Create(factory, cache, opts);
-				auto tree = ModelTree{{model, m4x4::Identity(), 0}};
+				auto tree = ModelTree{{model, 0}};
 				return out.Model(tree);
 			});
 	}
@@ -1244,14 +1247,19 @@ namespace pr::rdr12
 		// Create the models
 		{
 			ModelTree tree;
+			vector<m4x4> p2w = { m4x4::Identity() };
 			Cache<> cache(0, 0, 0, sizeof(uint32_t));
 			for (auto& mesh : scene.m_meshes)
 			{
+				for (; p2w.size() > mesh.m_level + 1; p2w.pop_back()) {}
+
 				cache.Reset();
 
 				// Name/Bounding box
 				cache.m_name = mesh.m_name;
 				cache.m_bbox = mesh.m_bbox;
+				cache.m_m2root = p2w.back() * mesh.m_o2p;
+				p2w.push_back(cache.m_m2root);
 
 				// Copy the verts
 				cache.m_vcont.resize(mesh.m_vbuf.size(), {});
@@ -1297,7 +1305,7 @@ namespace pr::rdr12
 				auto model = Create(factory, cache, opts);
 
 				// Add the mesh to the model tree
-				tree.push_back({ model, mesh.m_o2p, mesh.m_level });
+				tree.push_back({ model, mesh.m_level });
 
 				// Add skinning data if present and requested
 				if (mesh.m_skin && out.ReadAnimation)

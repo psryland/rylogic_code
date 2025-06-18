@@ -5423,16 +5423,15 @@ namespace pr::rdr12::ldraw
 		if (num_roots == 0)
 			throw std::runtime_error("Model tree has no roots");
 
-		pr::vector<std::pair<int, LdrObject*>> ancestors;
+		using Parent = struct { LdrObject* obj; int level; };
+		pr::vector<Parent> ancestors;
 
 		// Single root models have 'root' as the root.
 		if (num_roots == 1)
 		{
 			root->m_name = tree[0].m_model->m_name;
 			root->m_model = tree[0].m_model;
-			root->m_o2p = tree[0].m_o2p;
-
-			ancestors.push_back({ 0, root });
+			ancestors.push_back({ root, 0 });
 			tree = tree.subspan<1>();
 		}
 
@@ -5441,28 +5440,25 @@ namespace pr::rdr12::ldraw
 		{
 			root->m_name = "root";
 			root->m_model = nullptr;
-			root->m_o2p = m4x4::Identity();
-
-			ancestors.push_back({ -1, root });
+			ancestors.push_back({ root, -1 });
 		}
 
 		// Recurse
 		for (auto& node : tree)
 		{
-			for (; node.m_level <= ancestors.back().first; )
+			for (; node.m_level <= ancestors.back().level; )
 				ancestors.pop_back();
 
-			auto* parent = ancestors.back().second;
+			auto& parent = ancestors.back();
 
 			// Create an LdrObject for each model
-			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent, root->m_context_id), true);
+			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent.obj, root->m_context_id), true);
 			obj->m_name = node.m_model->m_name;
 			obj->m_model = node.m_model;
-			obj->m_o2p = node.m_o2p;
 
 			// Add 'obj' as the current leaf node
-			parent->m_child.push_back(obj);
-			ancestors.push_back({ node.m_level, obj.get() });
+			parent.obj->m_child.push_back(obj);
+			ancestors.push_back({ obj.get(), node.m_level });
 		}
 	}
 

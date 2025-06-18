@@ -1187,7 +1187,7 @@ namespace pr::geometry::fbx
 					}));
 				}
 
-				// Wait for each mesh. Note: tasks are in depth-first order
+				// Wait for each mesh. Note: tasks are in the same order as the mesh nodes (depth-first order)
 				for (auto& task : tasks)
 				{
 					task.wait();
@@ -1197,23 +1197,25 @@ namespace pr::geometry::fbx
 					auto ridx = idx; for (; ridx >= 0 && !m_meshes[ridx].is_root; --ridx) {}
 
 					// Find the associated FbxMesh and the hierarchy root
-					auto const& original = m_meshes[idx];
+					auto const& meshnode = m_meshes[idx];
 					auto const& root = m_meshes[ridx];
-					auto& node = *original.mesh->GetNode();
+					auto& node = *meshnode.mesh->GetNode();
 
-					// Populate non-mesh node data from the original
+					// Populate non-mesh node data from the 'meshnode'
 					mesh.m_name = node.GetName();
-					mesh.m_bbox = BoundingBox(*original.mesh);
-					mesh.m_level = original.level - root.level;
+					mesh.m_bbox = BoundingBox(*meshnode.mesh);
+					mesh.m_level = meshnode.level - root.level;
 
 					// Determine the object to parent transform.
-					auto o2w = To<m4x4>(node.EvaluateGlobalTransform()); // 'EvaluateLocalTransform' doesn't do what the name implies.
-					auto p2w = To<m4x4>(node.GetParent()->EvaluateGlobalTransform());
-					mesh.m_o2p = InvertFast(p2w) * o2w;
+					mesh.m_o2p = To<m4x4>(node.EvaluateLocalTransform());
 
-					auto o2p = To<m4x4>(node.EvaluateLocalTransform());
+					#if _DEBUG
+					auto o2w = To<m4x4>(node.EvaluateGlobalTransform());
+					auto p2w = To<m4x4>(node.GetParent()->EvaluateGlobalTransform());
+					auto o2p = InvertFast(p2w) * o2w;
 					assert(FEql(mesh.m_o2p, o2p)); // Could we actually use the local transform?
-					
+					#endif
+
 					// Output the mesh
 					m_scene.m_meshes.push_back(std::move(mesh));
 				}
@@ -1452,16 +1454,6 @@ namespace pr::geometry::fbx
 								m_b2w.push_back(To<m4x4>(node->EvaluateGlobalTransform(keytime.time)));
 							}
 						}
-
-						// Find the parent bone index
-						static int ParentOf(std::span<SkelNode const> skeleton, int bone_index)
-						{
-							assert(bone_index >= 0 && bone_index < isize(skeleton));
-							auto const& bone = skeleton[bone_index];
-							int parent_index = bone_index - 1;
-							for (; parent_index != -1 && skeleton[parent_index].level == bone.level; --parent_index) {}
-							return parent_index;
-						}
 					};
 
 					Pose pose(skeleton, indices, keytime);
@@ -1566,6 +1558,15 @@ namespace pr::geometry::fbx
 				return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
 			}
 
+			// Return the range of MeshNodes for a complete mesh tree.
+			std::span<MeshNode const> NextMeshTree(std::span<MeshNode const> const* prev = nullptr)
+			{
+				// Use for iteration: 'for (auto mesh = NextMeshTree(); !mesh.empty(); mesh = NextMeshTree(&mesh)) {}'
+				auto beg = prev ? prev->data() - m_meshes.data() + prev->size() : 0;
+				auto end = beg; for (; end != isize(m_meshes) && (beg == end || !m_meshes[end].is_root); ++end) {}
+				return { m_meshes.data() + beg, s_cast<size_t>(end - beg) };
+			}
+
 			// Return the range of SkelNodes for a complete skeleton.
 			std::span<SkelNode const> NextSkeleton(std::span<SkelNode const> const* prev = nullptr)
 			{
@@ -1573,6 +1574,26 @@ namespace pr::geometry::fbx
 				auto beg = prev ? prev->data() - m_skels.data() + prev->size() : 0;
 				auto end = beg; for (; end != isize(m_skels) && (beg == end || !m_skels[end].is_root); ++end) {}
 				return { m_skels.data() + beg, s_cast<size_t>(end - beg) };
+			}
+
+			// Find the parent mesh index
+			static int ParentOf(std::span<MeshNode const> meshtree, int mesh_index)
+			{
+				assert(mesh_index >= 0 && mesh_index < isize(meshtree));
+				auto const& mesh = meshtree[mesh_index];
+				int parent_index = mesh_index - 1;
+				for (; parent_index != -1 && meshtree[parent_index].level == mesh.level; --parent_index) {}
+				return parent_index;
+			}
+
+			// Find the parent bone index
+			static int ParentOf(std::span<SkelNode const> skeleton, int bone_index)
+			{
+				assert(bone_index >= 0 && bone_index < isize(skeleton));
+				auto const& bone = skeleton[bone_index];
+				int parent_index = bone_index - 1;
+				for (; parent_index != -1 && skeleton[parent_index].level == bone.level; --parent_index) {}
+				return parent_index;
 			}
 		};
 

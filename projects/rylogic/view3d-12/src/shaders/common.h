@@ -140,12 +140,14 @@ namespace pr::rdr12
 
 	// Set the transform properties of a constants buffer
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_o2s; x.m_o2w; x.m_n2w; })
-	void SetTxfm(TCBuf& cb, BaseInstance const& inst, SceneCamera const& view)
+	void SetTxfm(TCBuf& cb, BaseInstance const& inst, Model const* model, SceneCamera const& view)
 	{
 		m4x4 o2w = GetO2W(inst);
 		m4x4 w2c = InvertFast(view.CameraToWorld());
 		m4x4 c2s = FindC2S(inst, c2s) ? c2s : view.CameraToScreen();
+		m4x4 m2o = model ? model->m_m2root : m4x4::Identity();
 
+		cb.m_m2o = m2o;
 		cb.m_o2s = c2s * w2c * o2w;
 		cb.m_o2w = o2w;
 

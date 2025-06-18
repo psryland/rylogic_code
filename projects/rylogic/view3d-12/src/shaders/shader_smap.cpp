@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -63,7 +63,7 @@ namespace pr::rdr12::shaders
 
 			CBufNugget cb1 = {};
 			SetFlags(cb1, inst, nug, false);
-			SetTxfm(cb1, inst, cam); // todo frame constant?
+			SetTxfm(cb1, inst, nug.m_model, cam); // todo frame constant?
 			SetTint(cb1, inst, nug);
 			SetTex2Surf(cb1, inst, nug);
 			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);

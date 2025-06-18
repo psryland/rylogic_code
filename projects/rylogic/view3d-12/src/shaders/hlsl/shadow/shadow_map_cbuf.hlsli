@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -18,22 +18,24 @@ cbuffer CBufFrame :reg(b0,0)
 	row_major float4x4 m_l2s; // Light space to screen space
 };
 
-// Per nugget constants
+// Constants per render nugget.
 cbuffer CBufNugget :reg(b1,0)
 {
-	// x = Model flags:
-	//   1 << 0 = has normals
-	// y = Texture flags:
-	//   1 << 0 = has diffuse texture
-	//   1 << 1 = use env map
-	// z = Alpha flags:
-	//   1 << 0 = has alpha
+	// Sync with:
+	//   forward_cbuf.hlsli
+	//   shadow_map_cbuf.hlsli
+	//   gbuffer_cbuf.hlsli
+
+	// x = Model flags - See types.hlsli
+	// y = Texture flags
+	// z = Alpha flags
 	// w = Instance Id
 	int4 m_flags;
 
 	// Object transform
-	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_m2o; // model to object space
 	row_major float4x4 m_o2w; // object to world
+	row_major float4x4 m_o2s; // object to screen
 	row_major float4x4 m_n2w; // normal to world
 
 	// Texture2D
@@ -41,6 +43,10 @@ cbuffer CBufNugget :reg(b1,0)
 
 	// Tinting
 	float4 m_tint; // object tint colour
+
+	// EnvMap
+	float m_env_reflectivity; // Reflectivity of the environment map
 };
+
 #endif
 

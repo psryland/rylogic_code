@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -42,9 +42,9 @@ namespace pr::rdr12::ldraw
 	struct Location
 	{
 		std::filesystem::path m_filepath;
-		int64_t m_offset;
-		int m_column;
-		int m_line;
+		int64_t m_offset = {};
+		int m_column = {};
+		int m_line = {};
 	};
 
 	// The results of parsing ldr script

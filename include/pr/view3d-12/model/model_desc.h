@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -13,12 +13,14 @@ namespace pr::rdr12
 		ResDesc  m_vb;      // The vertex buffer description and initialisation data
 		ResDesc  m_ib;      // The index buffer description and initialisation data
 		BBox     m_bbox;    // Model space bounding box
+		m4x4     m_m2root;  // Model to root transform
 		string32 m_name;    // Debugging name for the model
 
 		ModelDesc()
 			: m_vb()
 			, m_ib()
 			, m_bbox(BBox::Reset())
+			, m_m2root(m4x4::Identity())
 			, m_name()
 		{}
 
@@ -31,6 +33,11 @@ namespace pr::rdr12
 		ModelDesc& bbox(BBox const& bbox)
 		{
 			m_bbox = bbox;
+			return *this;
+		}
+		ModelDesc& m2root(m4x4 const& m2root)
+		{
+			m_m2root = m2root;
 			return *this;
 		}
 		ModelDesc& vbuf(ResDesc const& vb)

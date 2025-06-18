@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -16,6 +16,11 @@ namespace pr::rdr12
 		//  - Models without index buffers are not supported because they are a rare case and
 		//    they would add loads of if statements. Just create a dummy index buffer, and create
 		//    nuggets with a zero range for the index buffer.
+		//  - 'm_m2root' records the model's position in model-space. Normally you'd want models
+		//    to be created at the origin, but for multi-part models (e.g. like a robot, or a plane
+		//    with moving parts) we need to record the relative positions of each part. This is also
+		//    needed for skinning because the skeleton is in model space but the model may have an offset.
+		//  - 'm_m2root' is model-to-root and not model-to-parent, because models do not track parenting.
 
 		enum class EDbgFlags
 		{
@@ -33,6 +38,7 @@ namespace pr::rdr12
 		TNuggetChain             m_nuggets;   // The nuggets for this model
 		int64_t                  m_vcount;    // The count of elements in the V-buffer
 		int64_t                  m_icount;    // The count of elements in the I-buffer
+		m4x4                     m_m2root;    // Model to root transform. Use for multi-part models, like skinned characters
 		Skin                     m_skin;      // Skinning data for this model.
 		PosePtr                  m_pose;      // Model pose. Null if not animated. Overridden in Instance.
 		BBox                     m_bbox;      // A bounding box for the model. Set by the client
@@ -49,6 +55,7 @@ namespace pr::rdr12
 			ID3D12Resource* vb,
 			ID3D12Resource* ib,
 			BBox const& bbox,
+			m4x4 const& m2root,
 			std::string_view name
 		);
 		Model(Model&&) = delete;

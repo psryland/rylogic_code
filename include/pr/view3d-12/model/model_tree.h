@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -18,9 +18,6 @@ namespace pr::rdr12
 	//  Children are all nodes to the right with level > the current.
 	struct ModelTreeNode
 	{
-		// Transform from this model to its parent
-		m4x4 m_o2p;
-
 		// The renderer model for this node in the model tree
 		ModelPtr m_model;
 
@@ -28,10 +25,9 @@ namespace pr::rdr12
 		int m_level;
 		
 		ModelTreeNode() = default;
-		ModelTreeNode(ModelPtr model, m4_cref o2p, int level)
-			:m_o2p(o2p)
-			,m_model(model)
-			,m_level(level)
+		ModelTreeNode(ModelPtr model, int level)
+			: m_model(model)
+			, m_level(level)
 		{}
 	};
 

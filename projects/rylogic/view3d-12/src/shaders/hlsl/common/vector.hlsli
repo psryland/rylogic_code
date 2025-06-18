@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -87,5 +87,22 @@ float3 RotationVectorApprox(float3x3 from, float3x3 to)
 	float3x3 cpm = mul((to - from), transpose(from));
 	return float3(cpm[1].z, cpm[2].x, cpm[0].y);
 }
+
+// Orthonormalise a rotation matrix
+float3x3 Orthonormalise(float3x3 mat)
+{
+	mat[0] = normalize(mat[0]);
+	mat[1] = normalize(cross(mat[2], mat[0]));
+	mat[2] = cross(mat[0], mat[1]);
+	return mat;
+}
+float4x4 Orthonormalise(float4x4 mat)
+{
+	mat[0].xyz = normalize(mat[0].xyz);
+	mat[1].xyz = normalize(cross(mat[2].xyz, mat[0].xyz));
+	mat[2].xyz = cross(mat[0].xyz, mat[1].xyz);
+	return mat;
+}
+
 
 #endif

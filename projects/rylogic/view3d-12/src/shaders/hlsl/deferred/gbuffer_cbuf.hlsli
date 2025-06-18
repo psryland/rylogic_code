@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -22,31 +22,34 @@ cbuffer CBufLighting :reg(b1,0)
 	Light m_light;
 };
 
-// Per-nugget constants
+// Constants per render nugget.
 cbuffer CBufNugget :reg(b2,0)
 {
-	// Note: A duplicate of this struct is in 'forward_cbuf.hlsli'
+	// Sync with:
+	//   forward_cbuf.hlsli
+	//   shadow_map_cbuf.hlsli
+	//   gbuffer_cbuf.hlsli
 
-	// x = Model flags:
-	//   1 << 0 = has normals
-	// y = Texture flags:
-	//   1 << 0 = has diffuse texture
-	//   1 << 1 = use env map
-	// z = Alpha flags:
-	//   1 < 0 = has alpha
+	// x = Model flags - See types.hlsli
+	// y = Texture flags
+	// z = Alpha flags
 	// w = Instance Id
 	int4 m_flags;
 
 	// Object transform
-	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_m2o; // model to object space
 	row_major float4x4 m_o2w; // object to world
-	row_major float4x4 m_n2w; // normal to world (o2w unscaled)
+	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_n2w; // normal to world
 
 	// Texture2D
 	row_major float4x4 m_tex2surf0; // texture to surface transform
 
 	// Tinting
 	float4 m_tint; // object tint colour
+
+	// EnvMap
+	float m_env_reflectivity; // Reflectivity of the environment map
 };
 
 #if SHADER_BUILD

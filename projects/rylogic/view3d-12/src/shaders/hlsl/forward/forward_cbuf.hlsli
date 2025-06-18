@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -30,7 +30,10 @@ cbuffer CBufFrame :reg(b0,0)
 // Constants per render nugget.
 cbuffer CBufNugget :reg(b1,0)
 {
-	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
+	// Sync with:
+	//   forward_cbuf.hlsli
+	//   shadow_map_cbuf.hlsli
+	//   gbuffer_cbuf.hlsli
 
 	// x = Model flags - See types.hlsli
 	// y = Texture flags
@@ -39,8 +42,9 @@ cbuffer CBufNugget :reg(b1,0)
 	int4 m_flags;
 
 	// Object transform
-	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_m2o; // model to object space
 	row_major float4x4 m_o2w; // object to world
+	row_major float4x4 m_o2s; // object to screen
 	row_major float4x4 m_n2w; // normal to world
 
 	// Texture2D

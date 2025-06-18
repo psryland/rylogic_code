@@ -346,11 +346,12 @@ namespace pr::rdr12
 			// The cached buffers
 			struct alignas(16) Buffers
 			{
-				string32 m_name;                 // Model name
-				VCont    m_vcont;                // Model verts
-				ICont    m_icont;                // Model faces/lines/points/etc
-				NCont    m_ncont;                // Model nuggets
-				BBox     m_bbox = BBox::Reset(); // Model bounding box
+				string32 m_name;                      // Model name
+				VCont    m_vcont;                     // Model verts
+				ICont    m_icont;                     // Model faces/lines/points/etc
+				NCont    m_ncont;                     // Model nuggets
+				BBox     m_bbox = BBox::Reset();      // Model bounding box
+				m4x4     m_m2root = m4x4::Identity(); // Model to root transform
 			};
 			static Buffers& this_thread_instance()
 			{
@@ -375,6 +376,7 @@ namespace pr::rdr12
 			ICont& m_icont;   // Model faces/lines/points/etc
 			NCont& m_ncont;   // Model nuggets
 			BBox& m_bbox;     // Model bounding box
+			m4x4& m_m2root;   // Model to root transform
 
 			Cache() = delete;
 			Cache(int vcount, int icount, int ncount, int idx_stride)
@@ -385,6 +387,7 @@ namespace pr::rdr12
 				, m_icont(m_buffers.m_icont)
 				, m_ncont(m_buffers.m_ncont)
 				, m_bbox(m_buffers.m_bbox)
+				, m_m2root(m_buffers.m_m2root)
 			{
 				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
 				m_vcont.resize(vcount, {});
@@ -411,6 +414,7 @@ namespace pr::rdr12
 				m_icont.resize(0);
 				m_ncont.resize(0);
 				m_bbox = BBox::Reset();
+				m_m2root = m4x4::Identity();
 			}
 
 			// Container item counts

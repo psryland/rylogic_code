@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -184,6 +184,7 @@ namespace pr::rdr12
 			vb.get(),
 			ib.get(),
 			mdesc.m_bbox,
+			mdesc.m_m2root,
 			mdesc.m_name
 		), true);
 		assert(m_rdr.mem_tracker().add(ptr.m_ptr));

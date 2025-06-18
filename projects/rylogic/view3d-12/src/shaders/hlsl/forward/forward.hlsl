@@ -45,20 +45,18 @@ PSIn VSDefault(VSIn In)
 	PSIn Out;
 
 	// Transform
+	float4 os_vert = mul(In.vert, m_m2o);
+	float4 os_norm = mul(In.norm, m_m2o);
+	
 	if (IsSkinned)
 	{
-		float4 os_vert = SkinVertex(m_pose, m_skin[In.idx0.x], In.vert);
-		float4 os_norm = SkinNormal(m_pose, m_skin[In.idx0.x], In.norm);		
-		Out.ss_vert = mul(os_vert, m_o2s);
-		Out.ws_vert = mul(os_vert, m_o2w);
-		Out.ws_norm = mul(os_norm, m_n2w);
+		os_vert = SkinVertex(m_pose, m_skin[In.idx0.x], os_vert);
+		os_norm = SkinNormal(m_pose, m_skin[In.idx0.x], os_norm);
 	}
-	else
-	{
-		Out.ss_vert = mul(In.vert, m_o2s);
-		Out.ws_vert = mul(In.vert, m_o2w);
-		Out.ws_norm = mul(In.norm, m_n2w);
-	}
+
+	Out.ws_vert = mul(os_vert, m_o2w);
+	Out.ws_norm = mul(os_norm, m_n2w);
+	Out.ss_vert = mul(os_vert, m_o2s);
 
 	// Tinting
 	Out.diff = m_tint;

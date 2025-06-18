@@ -91,7 +91,7 @@ namespace pr::rdr12::shaders
 
 			CBufNugget cb1 = {};
 			SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
-			SetTxfm(cb1, inst, scene.m_cam);
+			SetTxfm(cb1, inst, nug.m_model, scene.m_cam);
 			SetTint(cb1, inst, nug);
 			SetTex2Surf(cb1, inst, nug);
 			SetReflectivity(cb1, inst, nug);
