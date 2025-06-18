@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -376,7 +376,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 		// Sort the keys/values in 'm_sort[0]/m_payload[0]' assuming they're uploaded to the GPU already.
 		// This overload is intended for use when you want to leave the keys/values on the GPU without reading them back.
-		void Sort(CmdList& cmd_list) const
+		void Sort(CmdList& cmd_list)
 		{
 			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
 			pix::BeginEvent(cmd_list.get(), 0xFF90aa3f, "Gpu Radix Sort");

@@ -93,7 +93,7 @@ struct Main :Form
 			std::uniform_real_distribution dist(-10.0f, 10.0f);
 
 			m_obj0 = View3D_ObjectCreateLdrA(
-				//' "*Box first_box_eva FF00FF00 { *Data {1 2 3} }"
+				//"*Box nice_box FF00FF00 { *Data {1 2 3} }"
 				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\AJ-99.fbx\" } }"

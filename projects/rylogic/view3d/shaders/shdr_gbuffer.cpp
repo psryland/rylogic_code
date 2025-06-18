@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -20,7 +20,7 @@ namespace pr::rdr
 	struct GBufferVS :ShaderT<ID3D11VertexShader, GBufferVS>
 	{
 		using base = ShaderT<ID3D11VertexShader, GBufferVS>;
-		GBufferVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+		GBufferVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "gbuffer_vs.cso"));
@@ -31,7 +31,7 @@ namespace pr::rdr
 	struct GBufferPS :ShaderT<ID3D11PixelShader, GBufferPS>
 	{
 		using base = ShaderT<ID3D11PixelShader, GBufferPS>;
-		GBufferPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+		GBufferPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "gbuffer_ps.cso"));

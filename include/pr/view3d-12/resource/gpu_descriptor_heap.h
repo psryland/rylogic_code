@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -96,9 +96,13 @@ namespace pr::rdr12
 		}
 
 		// The pointer to the base of the shader visible heap
-		ID3D12DescriptorHeap* get() const
+		ID3D12DescriptorHeap const* get() const
 		{
 			return m_heap.get();
+		}
+		ID3D12DescriptorHeap* get()
+		{
+			return const_call(get());
 		}
 		
 		// Given a range of descriptors, ensure they exist in the GPU heap, and return the handle of the first one

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -17,7 +17,7 @@ namespace pr::rdr
 		v2 m_size;
 		bool m_depth;
 
-		PointSpritesGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		PointSpritesGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 
@@ -28,7 +28,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11Buffer> m_cbuf;
 		float m_width;
 			
-		ThickLineListGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		ThickLineListGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 
@@ -39,7 +39,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11Buffer> m_cbuf;
 		float m_width;
 
-		ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 
@@ -50,7 +50,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11Buffer> m_cbuf;
 		float m_size;
 
-		ArrowHeadGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		ArrowHeadGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 }

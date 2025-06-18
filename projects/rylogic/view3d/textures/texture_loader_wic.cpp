@@ -310,7 +310,7 @@ namespace pr::rdr
 				{
 					WICPixelFormatGUID pf;
 					Check(wic->CreateBitmapScaler(scaler.address_of()));
-					Check(scaler->Initialize(frame.get(), s_cast<UINT>(twidth), s_cast<UINT>(theight), WICBitmapInterpolationModeFant));
+					Check(scaler->Initialize(const_cast<IWICBitmapFrameDecode*>(frame.get()), s_cast<UINT>(twidth), s_cast<UINT>(theight), WICBitmapInterpolationModeFant));
 					Check(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
 				}
@@ -319,7 +319,7 @@ namespace pr::rdr
 				if (conversion_needed)
 				{
 					Check(wic->CreateFormatConverter(converter.address_of()));
-					Check(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
+					Check(converter->Initialize(const_cast<IWICBitmapFrameDecode*>(frame.get()), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
 				}
 
 				// Copy the data with optional reformat and resize

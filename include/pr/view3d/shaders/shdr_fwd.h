@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -13,14 +13,14 @@ namespace pr::rdr
 	struct FwdShaderVS :ShaderT<ID3D11VertexShader, FwdShaderVS>
 	{
 		using base = ShaderT<ID3D11VertexShader, FwdShaderVS>;
-		FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr);
+		FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr);
 	};
 
 	// Forward rendering pixel shader
 	struct FwdShaderPS :ShaderT<ID3D11PixelShader, FwdShaderPS>
 	{
 		using base = ShaderT<ID3D11PixelShader, FwdShaderPS>;
-		FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr);
+		FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr);
 	};
 
 	// Forward rendering pixel shader with radial fading
@@ -34,7 +34,7 @@ namespace pr::rdr
 		ERadial m_fade_type;
 		bool m_focus_relative;
 
-		FwdRadialFadePS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr);
+		FwdRadialFadePS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state);
 	};
 }

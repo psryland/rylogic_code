@@ -88,7 +88,7 @@ namespace pr::rdr
 
 		// Create an instance of a shader object derived from Shader.
 		template <typename ShaderType, typename DxShaderType, typename = std::enable_if_t<std::is_base_of_v<Shader, ShaderType>>>
-		RefPtr<ShaderType> CreateShader(RdrId id, typename D3DPtr<DxShaderType> const& d3d_shdr, char const* name)
+		RefPtr<ShaderType> CreateShader(RdrId id, typename D3DPtr<DxShaderType>& d3d_shdr, char const* name)
 		{
 			std::lock_guard<std::recursive_mutex> lock(m_mutex);
 			PR_ASSERT(PR_DBG_RDR, id == AutoId || FindShader(id) == nullptr, "A shader with this Id already exists");
@@ -141,7 +141,8 @@ namespace pr::rdr
 				Check(existing != nullptr, FmtS("Existing shader with id %d not found", base_id));
 
 				// Create a copy of 'existing'
-				shdr = CreateShader<ShaderType>(id, existing->dx_shader(), name ? name : existing->m_name.c_str());
+				auto dxshader = existing->dx_shader();
+				shdr = CreateShader<ShaderType>(id, dxshader, name ? name : existing->m_name.c_str());
 				shdr->m_bsb     = existing->m_bsb;
 				shdr->m_rsb     = existing->m_rsb;
 				shdr->m_dsb     = existing->m_dsb;

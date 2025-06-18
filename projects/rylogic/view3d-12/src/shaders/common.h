@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -244,7 +244,7 @@ namespace pr::rdr12
 	}
 
 	// Set the env-map to world orientation
-	inline void SetEnvMapConstants(shaders::EnvMap& cb, TextureCube* env_map)
+	inline void SetEnvMapConstants(shaders::EnvMap& cb, TextureCube const* env_map)
 	{
 		if (env_map == nullptr) return;
 		cb.m_w2env = InvertFast(env_map->m_cube2w);

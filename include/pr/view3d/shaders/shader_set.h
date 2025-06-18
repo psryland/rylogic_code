@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -100,7 +100,7 @@ namespace pr::rdr
 		ID3D11ComputeShader*  CS() const { return m_cs != nullptr ? static_cast<ID3D11ComputeShader* >(m_cs->m_dx_shdr.get()) : nullptr; }
 
 		// Implicit conversion to non-ownership pointers
-		operator ShaderSet1() const
+		operator ShaderSet1()
 		{
 			return ShaderSet1(m_vs.get(), m_ps.get(), m_gs.get(), m_cs.get());
 		}

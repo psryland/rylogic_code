@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -83,7 +83,7 @@ namespace pr::rdr12
 	{
 		using shader_t = struct shader_t
 		{
-			ShaderPtr m_shader = {};   // The override shader description.
+			mutable ShaderPtr m_shader = {};   // The override shader description.
 			ERenderStep m_rdr_step = ERenderStep::Invalid; // The render step that the shader applies to.
 			int pad = {};
 		};

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -40,9 +40,13 @@ namespace pr::rdr12
 		D2D1Context& operator=(D2D1Context const&) = delete;
 		~D2D1Context();
 
-		ID2D1DeviceContext* operator ->() const
+		ID2D1DeviceContext const* operator ->() const
 		{
 			return m_dc.get();
+		}
+		ID2D1DeviceContext* operator ->()
+		{
+			return const_call(operator->());
 		}
 	};
 }

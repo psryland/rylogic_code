@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -160,7 +160,7 @@ namespace pr::rdr12
 		{
 			return byte_ptr(&desc) + m_field.ofs;
 		}
-		void* ptr(D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc) const
+		void* ptr(D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc) const // Note: the returned pointer is into 'desc' not '*this'
 		{
 			return byte_ptr(&desc) + m_field.ofs;
 		}
@@ -286,13 +286,21 @@ namespace pr::rdr12
 		{}
 
 		// Access the allocator
-		ID3D12PipelineState* operator ->() const
+		ID3D12PipelineState const* operator ->() const
+		{
+			return m_pso.get();
+		}
+		ID3D12PipelineState* operator ->()
 		{
 			return m_pso.get();
 		}
 
 		// Convert to the allocator pointer
-		operator ID3D12PipelineState* () const
+		operator ID3D12PipelineState const* () const
+		{
+			return m_pso.get();
+		}
+		operator ID3D12PipelineState* ()
 		{
 			return m_pso.get();
 		}

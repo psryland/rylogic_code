@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -20,11 +20,11 @@ namespace pr::rdr
 		// - Shader objects group a D3D shader with it's per-nugget constants.
 		// - Shader objects can be created for each nugget that needs them.
 
-		D3DPtr<ID3D11DeviceChild> m_dx_shdr;   // Pointer to the dx shader
+		D3DPtr<ID3D11DeviceChild> m_dx_shdr;   // Pointer to the DX shader
 		EShaderType               m_shdr_type; // The type of shader this is
 		ShaderManager*            m_mgr;       // The shader manager that created this shader
 		RdrId                     m_id;        // Id for this shader
-		SortKeyId                 m_sort_id;   // A key used to order shaders next to each other in the drawlist
+		SortKeyId                 m_sort_id;   // A key used to order shaders next to each other in the draw-list
 		BSBlock                   m_bsb;       // The blend state for the shader
 		RSBlock                   m_rsb;       // The rasterizer state for the shader
 		DSBlock                   m_dsb;       // The depth buffering state for the shader
@@ -45,7 +45,7 @@ namespace pr::rdr
 
 		// Use the shader manager 'CreateShader' factory method to create new shaders
 		template <typename DxShaderType>
-		Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
+		Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType>& dx_shdr)
 			:pr::RefCount<Shader>()
 			,m_dx_shdr(dx_shdr.get(), true)
 			,m_shdr_type(ShaderTypeId<DxShaderType>::value)
@@ -86,14 +86,14 @@ namespace pr::rdr
 	struct ShaderT :Shader
 	{
 		// Return the D3D shader interface down-cast to 'DxShaderType'
-		D3DPtr<DxShaderType> dx_shader() const
+		D3DPtr<DxShaderType> dx_shader()
 		{
 			return static_cast<D3DPtr<DxShaderType>>(m_dx_shdr);
 		}
 
 	protected:
 
-		ShaderT(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
+		ShaderT(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType>& dx_shdr)
 			:Shader(mgr, id, sort_id, name, dx_shdr)
 		{}
 

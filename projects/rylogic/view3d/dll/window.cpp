@@ -491,7 +491,7 @@ namespace view3d
 			// Add objects from this source
 			new_guids.push_back(src.m_context_id);
 			for (auto& obj : src.m_objects)
-				m_objects.insert(obj.get());
+				m_objects.insert(const_cast<LdrObject*>(obj.get()));
 
 			// Apply camera settings from this source
 			if (src.m_cam_fields != ECamField::None)
@@ -1110,11 +1110,11 @@ namespace view3d
 	}
 
 	// Get/Set the global environment map for this window
-	View3DCubeMap Window::EnvMap() const
+	CubeMap const* Window::EnvMap() const
 	{
 		return m_scene.m_global_envmap.get();
 	}
-	void Window::EnvMap(View3DCubeMap env_map)
+	void Window::EnvMap(CubeMap* env_map)
 	{
 		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
 	}

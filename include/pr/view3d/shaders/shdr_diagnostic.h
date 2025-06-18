@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -15,7 +15,7 @@ namespace pr::rdr
 		using base = ShaderT<ID3D11GeometryShader, ShowNormalsGS>;
 		D3DPtr<ID3D11Buffer> m_cbuf;
 
-		ShowNormalsGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		ShowNormalsGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr);
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 }

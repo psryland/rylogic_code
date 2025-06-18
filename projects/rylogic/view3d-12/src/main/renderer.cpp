@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -300,7 +300,11 @@ namespace pr::rdr12
 	}
 
 	// Access the renderer manager classes
-	ID3D12Device4* Renderer::d3d() const
+	ID3D12Device4 const* Renderer::d3d() const
+	{
+		return D3DDevice();
+	}
+	ID3D12Device4* Renderer::d3d()
 	{
 		return D3DDevice();
 	}

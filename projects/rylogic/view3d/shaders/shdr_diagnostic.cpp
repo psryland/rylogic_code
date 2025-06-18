@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -16,7 +16,7 @@ namespace pr::rdr
 	// include generated header files
 	#include PR_RDR_SHADER_COMPILED_DIR(show_normals_gs.h)
 	
-	ShowNormalsGS::ShowNormalsGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+	ShowNormalsGS::ShowNormalsGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::diag::CBufFrame>("diag::CBufFrame"))
 	{

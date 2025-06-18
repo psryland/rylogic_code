@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -66,67 +66,104 @@ namespace pr::rdr12
 		~Renderer();
 
 		// Access the renderer manager classes
-		ID3D12Device4* d3d() const;
+		ID3D12Device4 const* d3d() const;
+		ID3D12Device4* d3d();
 		Renderer& rdr();
 		ResourceStore& store();
 		AllocationsTracker& mem_tracker();
 
 		// Access the adapter that the device was created on
-		IDXGIAdapter* Adapter() const
+		IDXGIAdapter const* Adapter() const
 		{
 			return m_state.m_settings.m_adapter.ptr.get();
 		}
+		IDXGIAdapter* Adapter()
+		{
+			return const_call(Adapter());
+		}
 
 		// Access the device
-		ID3D12Device4* D3DDevice() const
+		ID3D12Device4 const* D3DDevice() const
 		{
 			// The D3D device is free-threaded in DX12, no need to synchronise access to it.
 			return m_state.m_d3d_device.get();
 		}
+		ID3D12Device4* D3DDevice()
+		{
+			return const_call(D3DDevice());
+		}
 
 		// Return the graphics command queue
-		ID3D12CommandQueue* GfxQueue() const
+		ID3D12CommandQueue const* GfxQueue() const
 		{
 			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
 			return m_state.m_gfx_queue.get();
 		}
+		ID3D12CommandQueue* GfxQueue()
+		{
+			return const_call(GfxQueue());
+		}
 
 		// Return the compute command queue
-		ID3D12CommandQueue* ComQueue() const
+		ID3D12CommandQueue const* ComQueue() const
 		{
 			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
 			return m_state.m_com_queue.get();
 		}
+		ID3D12CommandQueue* ComQueue()
+		{
+			return const_call(ComQueue());
+		}
 
 		// Return the copy command queue
-		ID3D12CommandQueue* CpyQueue() const
+		ID3D12CommandQueue const* CpyQueue() const
 		{
 			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
 			return m_state.m_cpy_queue.get();
 		}
+		ID3D12CommandQueue* CpyQueue()
+		{
+			return const_call(CpyQueue());
+		}
 
 		// Return the Dx11 device
-		ID3D11On12Device* Dx11Device() const
+		ID3D11On12Device const* Dx11Device() const
 		{
 			return m_state.m_dx11_device.get();
 		}
+		ID3D11On12Device* Dx11Device()
+		{
+			return const_call(Dx11Device());
+		}
 
 		// Return the Dx11 device context
-		ID3D11DeviceContext* Dx11DeviceContext() const
+		ID3D11DeviceContext const* Dx11DeviceContext() const
 		{
 			return m_state.m_dx11_dc.get();
 		}
+		ID3D11DeviceContext* Dx11DeviceContext()
+		{
+			return const_call(Dx11DeviceContext());
+		}
 
 		// Return the direct2d factory
-		ID2D1Factory* D2DFactory() const
+		ID2D1Factory const* D2DFactory() const
 		{
 			return m_state.m_d2dfactory.get();
 		}
+		ID2D1Factory* D2DFactory()
+		{
+			return const_call(D2DFactory());
+		}
 
 		// Return the d2d device
-		ID2D1Device* D2DDevice() const
+		ID2D1Device const* D2DDevice() const
 		{
 			return m_state.m_d2d_device.get();
+		}
+		ID2D1Device* D2DDevice()
+		{
+			return const_call(D2DDevice());
 		}
 
 		// Read access to the initialisation settings
@@ -159,11 +196,11 @@ namespace pr::rdr12
 		EventHandler<Renderer const&, ResolvePathArgs&, true> ResolveFilepath;
 
 		// Execute a list of graphics command lists. Allows syntax: ExecuteCommandLists({list, list_array, ...})
-		void ExecuteGfxCommandLists(GfxCmdListCollection cmd_lists) const
+		void ExecuteGfxCommandLists(GfxCmdListCollection cmd_lists)
 		{
 			GfxQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
 		}
-		void ExecuteComCommandLists(ComCmdListCollection cmd_lists) const
+		void ExecuteComCommandLists(ComCmdListCollection cmd_lists)
 		{
 			ComQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
 		}

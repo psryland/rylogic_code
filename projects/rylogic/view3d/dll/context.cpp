@@ -185,7 +185,7 @@ namespace view3d
 		// It doesn't matter if more are defined however, they're just created as part of the context
 		iter = srcs.find(id);
 		return iter != std::end(srcs) && iter->second.m_objects.size() > count
-			? iter->second.m_objects[count].get()
+			? const_cast<LdrObject*>(iter->second.m_objects[count].get())
 			: nullptr;
 	}
 

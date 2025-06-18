@@ -45,8 +45,8 @@ namespace pr::rdr
 	// Update the provided shader set appropriate for this render step
 	void ForwardRender::ConfigShaders(ShaderSet1& ss, ETopo) const
 	{
-		if (ss.m_vs == nullptr) ss.m_vs = m_vs.get();
-		if (ss.m_ps == nullptr) ss.m_ps = m_ps.get();
+		if (ss.m_vs == nullptr) ss.m_vs = const_cast<Shader*>(m_vs.get());
+		if (ss.m_ps == nullptr) ss.m_ps = const_cast<Shader*>(m_ps.get());
 	}
 
 	// Perform the render step

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -179,6 +179,7 @@ namespace pr::rdr12
 
 		// Get/Set the render target for this window
 		rdr12::BackBuffer const& RenderTarget() const;
+		rdr12::BackBuffer& RenderTarget();
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);
@@ -270,7 +271,7 @@ namespace pr::rdr12
 		void GlobalLight(Light const& light);
 
 		// Get/Set the global environment map for this window
-		TextureCube* EnvMap() const;
+		TextureCube const* EnvMap() const;
 		void EnvMap(TextureCube* env_map);
 
 		// Enable/Disable the depth buffer

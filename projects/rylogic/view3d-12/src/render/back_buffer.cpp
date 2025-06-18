@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -31,7 +31,7 @@ namespace pr::rdr12
 	{}
 
 	// An empty back buffer
-	BackBuffer const& BackBuffer::Null()
+	BackBuffer& BackBuffer::Null()
 	{
 		static BackBuffer s_null;
 		return s_null;

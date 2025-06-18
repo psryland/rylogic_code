@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -27,7 +27,7 @@ namespace pr::rdr12
 		BackBuffer(Window& wnd, MultiSamp ms, Texture2D* render_target = nullptr, Texture2D* depth_stencil = nullptr);
 
 		// An empty back buffer
-		static BackBuffer const& Null();
+		static BackBuffer& Null();
 
 		// Accessors
 		Renderer& rdr() const;

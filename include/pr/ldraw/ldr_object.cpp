@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -1075,7 +1075,7 @@ namespace pr::ldr
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 							pr::Check(sink->Close());
 
-							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [&geom](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
 					}
 				case EStyle::Star:
@@ -1103,7 +1103,7 @@ namespace pr::ldr
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 							pr::Check(sink->Close());
 
-							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [&geom](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
 					}
 				case EStyle::Annulus:
@@ -5670,16 +5670,26 @@ namespace pr::ldr
 	}
 
 	// Get the first child object of this object that matches 'name' (see Apply)
-	LdrObject* LdrObject::Child(char const* name) const
+	LdrObject const* LdrObject::Child(char const* name) const
 	{
 		LdrObject* obj = nullptr;
 		Apply([&](LdrObject* o){ obj = o; return false; }, name);
 		return obj;
 	}
-	LdrObject* LdrObject::Child(int index) const
+	LdrObject* LdrObject::Child(char const* name)
+	{
+		return const_call(Child(name));
+	}
+
+	// Get a child object of this object by index
+	LdrObject const* LdrObject::Child(int index) const
 	{
 		if (index < 0 || index >= int(m_child.size())) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, int(m_child.size())));
 		return m_child[index].get();
+	}
+	LdrObject* LdrObject::Child(int index)
+	{
+		return const_call(Child(index));
 	}
 
 	// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)

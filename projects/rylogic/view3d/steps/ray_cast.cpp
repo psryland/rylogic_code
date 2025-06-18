@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -32,7 +32,7 @@ namespace pr::rdr
 	struct RayCastVS :ShaderT<ID3D11VertexShader, RayCastVS>
 	{
 		using base = ShaderT<ID3D11VertexShader, RayCastVS>;
-		RayCastVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+		RayCastVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_vs.cso"));
@@ -41,7 +41,7 @@ namespace pr::rdr
 	struct RayCastFaceGS :ShaderT<ID3D11GeometryShader, RayCastFaceGS>
 	{
 		using base = ShaderT<ID3D11GeometryShader, RayCastFaceGS>;
-		RayCastFaceGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+		RayCastFaceGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_face_gs.cso"));
@@ -50,7 +50,7 @@ namespace pr::rdr
 	struct RayCastEdgeGS :ShaderT<ID3D11GeometryShader, RayCastEdgeGS>
 	{
 		using base = ShaderT<ID3D11GeometryShader, RayCastEdgeGS>;
-		RayCastEdgeGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+		RayCastEdgeGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_edge_gs.cso"));
@@ -59,7 +59,7 @@ namespace pr::rdr
 	struct RayCastVertGS :ShaderT<ID3D11GeometryShader, RayCastVertGS>
 	{
 		using base = ShaderT<ID3D11GeometryShader, RayCastVertGS>;
-		RayCastVertGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+		RayCastVertGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_vert_gs.cso"));
@@ -332,21 +332,21 @@ namespace pr::rdr
 	void RayCastStep::ConfigShaders(ShaderSet1& ss, ETopo topo) const
 	{
 		ss = ShaderSet1{};
-		ss.m_vs = m_vs.get();
+		ss.m_vs = const_cast<Shader*>(m_vs.get());
 		switch (topo)
 		{
 		case ETopo::PointList:
-			ss.m_gs = m_gs_vert.get();
+			ss.m_gs = const_cast<Shader*>(m_gs_vert.get());
 			break;
 		case ETopo::LineList:
 		case ETopo::LineListAdj:
 		case ETopo::LineStrip:
 		case ETopo::LineStripAdj:
-			ss.m_gs = m_gs_edge.get();
+			ss.m_gs = const_cast<Shader*>(m_gs_edge.get());
 			break;
 		case ETopo::TriList:
 		case ETopo::TriStrip:
-			ss.m_gs = m_gs_face.get();
+			ss.m_gs = const_cast<Shader*>(m_gs_face.get());
 			break;
 		default:
 			throw std::runtime_error("Unsupported primitive type");

@@ -274,8 +274,8 @@ namespace view3d
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
 		// Get/Set the global environment map for this window
-		View3DCubeMap EnvMap() const;
-		void EnvMap(View3DCubeMap env_map);
+		CubeMap const* EnvMap() const;
+		void EnvMap(CubeMap* env_map);
 
 		// Implements standard key bindings. Returns true if handled
 		bool TranslateKey(pr::EKeyCodes vk_key);

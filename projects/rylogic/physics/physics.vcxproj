@@ -36,8 +36,6 @@
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
 			<PreprocessorDefinitions>
 				;_WIN32_WINNT=0x0700
 				;PR_PH_BUILD
@@ -152,9 +150,7 @@
 		<ClInclude Include="utility\ldrhelper_private.h" />
 		<ClInclude Include="utility\profile.h" />
 		<ClInclude Include="utility\stdafx.h" />
-		<ClCompile Include="utility\stdafx.cpp">
-			<PrecompiledHeader>Create</PrecompiledHeader>
-		</ClCompile>
+		<ClCompile Include="utility\stdafx.cpp" />
 	</ItemGroup>
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

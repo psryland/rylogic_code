@@ -75,7 +75,7 @@ namespace pr::rdr
 		SamDesc(sdesc);
 		TexDesc(src, tdesc, false, false, srvdesc);
 	}
-	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, char const* name)
+	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D& existing, char const* name)
 		:TextureBase(mgr, id, existing.m_res.get(), existing.m_srv.get(), existing.m_samp.get(), existing.m_src_id, name)
 		,m_t2s(existing.m_t2s)
 		,m_sort_id(existing.m_sort_id)
@@ -86,7 +86,7 @@ namespace pr::rdr
 	Texture2DDesc Texture2D::TexDesc() const
 	{
 		Texture2DDesc desc;
-		if (dx_tex() != nullptr) dx_tex()->GetDesc(&desc);
+		if (dx_tex() != nullptr) const_cast<ID3D11Texture2D*>(dx_tex())->GetDesc(&desc);
 		return desc;
 	}
 

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -121,20 +121,32 @@ namespace pr::rdr12
 		}
 
 		// Access the device that created this command list
-		ID3D12Device4* d3d() const
+		ID3D12Device4 const* d3d() const
 		{
 			D3DPtr<ID3D12Device4> device;
 			Check(m_list->GetDevice(__uuidof(ID3D12Device4), (void**)device.address_of()));
 			return device.get();
 		}
+		ID3D12Device4* d3d()
+		{
+			return const_call(d3d());
+		}
 
 		// Access the list
-		ICommandList* get() const
+		ICommandList const* get() const
 		{
 			ThrowOnCrossThreadUse();
 			return m_list.get();
 		}
-		operator ICommandList* () const
+		ICommandList* get()
+		{
+			return const_call(get());
+		}
+		operator ICommandList const* () const
+		{
+			return get();
+		}
+		operator ICommandList* ()
 		{
 			return get();
 		}

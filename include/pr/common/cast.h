@@ -12,6 +12,9 @@
 
 namespace pr
 {
+	// Helper for non-const member function overloads
+	#define const_call(fn) const_cast<std::remove_const_t<decltype(fn)>>(std::as_const(*this).fn)
+
 	// Casting from any type of pointer to a uint8_t pointer
 	// Use:
 	//   int* int_ptr = ...

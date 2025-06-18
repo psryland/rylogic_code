@@ -167,10 +167,12 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Get the first child object of this object that matches 'name' (see Apply)
-		LdrObject* Child(char const* name) const;
+		LdrObject const* Child(char const* name) const;
+		LdrObject* Child(char const* name);
 
 		// Get a child object of this object by index
-		LdrObject* Child(int index) const;
+		LdrObject const* Child(int index) const;
+		LdrObject* Child(int index);
 
 		// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
 		// Note, it is more efficient to set O2P.

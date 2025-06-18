@@ -659,6 +659,10 @@ namespace pr::rdr12
 	{
 		return m_wnd.m_msaa_bb;
 	}
+	rdr12::BackBuffer& V3dWindow::RenderTarget()
+	{
+		return const_call(RenderTarget());
+	}
 
 	// Call InvalidateRect on the HWND associated with this window
 	void V3dWindow::InvalidateRect(RECT const* rect, bool erase)
@@ -1042,7 +1046,7 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the global environment map for this window
-	TextureCube* V3dWindow::EnvMap() const
+	TextureCube const* V3dWindow::EnvMap() const
 	{
 		return m_scene.m_global_envmap.get();
 	}

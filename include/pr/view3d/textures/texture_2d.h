@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -26,12 +26,16 @@ namespace pr::rdr
 		Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 		Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 		Texture2D(TextureManager* mgr, RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc = nullptr);
-		Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, char const* name);
+		Texture2D(TextureManager* mgr, RdrId id, Texture2D& existing, char const* name);
 
 		// Get the DirectX texture 2D resource
-		ID3D11Texture2D* dx_tex() const
+		ID3D11Texture2D const* dx_tex() const
 		{
-			return static_cast<ID3D11Texture2D*>(m_res.get());
+			return static_cast<ID3D11Texture2D const*>(m_res.get());
+		}
+		ID3D11Texture2D* dx_tex()
+		{
+			return const_call(dx_tex());
 		}
 
 		// Get the description of the current texture pointed to by 'm_tex'

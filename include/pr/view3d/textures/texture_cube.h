@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -26,9 +26,13 @@ namespace pr::rdr
 		TextureCube(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, char const* name);
 
 		// Get the DirectX texture cube resource
-		ID3D11Texture2D* dx_tex() const
+		ID3D11Texture2D const* dx_tex() const
 		{
-			return static_cast<ID3D11Texture2D*>(m_res.get());
+			return static_cast<ID3D11Texture2D const*>(m_res.get());
+		}
+		ID3D11Texture2D* dx_tex()
+		{
+			return const_call(dx_tex());
 		}
 	};
 }

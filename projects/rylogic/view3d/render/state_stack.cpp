@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -234,10 +234,10 @@ namespace pr::rdr
 				int i = 0;
 				for (auto& caster : pending.m_rstep_smap->m_caster)
 				{
-					srv[i] = caster.m_srv.get();
+					srv[i] = const_cast<ID3D11ShaderResourceView*>(caster.m_srv.get());
 					if (++i == hlsl::MaxShadowMaps) break;
 				}
-				samp[0] = pending.m_rstep_smap->m_samp.get();
+				samp[0] = const_cast<ID3D11SamplerState*>(pending.m_rstep_smap->m_samp.get());
 			}
 
 			//todo, shadow map texture hard-coded to slot 2 here
@@ -265,7 +265,8 @@ namespace pr::rdr
 
 		// Get the shaders to use for this nugget.
 		// Pass them to the renderer to override or provide defaults
-		m_ss.m_pending.m_shdrs = nugget.m_smap[m_ss.m_pending.m_rstep->GetId()];
+		ShaderSet0 shaderset = nugget.m_smap[m_ss.m_pending.m_rstep->GetId()];
+		m_ss.m_pending.m_shdrs = shaderset;
 		m_ss.m_pending.m_rstep->ConfigShaders(m_ss.m_pending.m_shdrs, nugget.m_topo);
 
 		// IA states
@@ -273,7 +274,7 @@ namespace pr::rdr
 		m_ss.m_pending.m_topo = dle.m_nugget->m_topo;
 
 		// Texture
-		m_ss.m_pending.m_tex_diffuse = dle.m_nugget->m_tex_diffuse.get();
+		m_ss.m_pending.m_tex_diffuse = const_cast<Texture2D*>(dle.m_nugget->m_tex_diffuse.get());
 	}
 
 	// State stack frame for shadow map texture

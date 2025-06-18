@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -24,7 +24,7 @@ namespace pr::rdr
 	struct DSLightingVS :ShaderT<ID3D11VertexShader, DSLightingVS>
 	{
 		using base = ShaderT<ID3D11VertexShader, DSLightingVS>;
-		DSLightingVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+		DSLightingVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_vs.cso"));
@@ -37,7 +37,7 @@ namespace pr::rdr
 		using base = ShaderT<ID3D11PixelShader, DSLightingPS>;
 		D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the GBuffer
 
-		DSLightingPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+		DSLightingPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 			,m_point_sampler()
 		{

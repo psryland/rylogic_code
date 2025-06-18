@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -87,7 +87,7 @@ namespace pr::rdr12
 		}
 
 		// Access the allocator
-		ID3D12CommandAllocator* get() const
+		ID3D12CommandAllocator const* get() const
 		{
 			auto const this_thread = std::this_thread::get_id();
 			if (this_thread != m_thread_id)
@@ -95,11 +95,23 @@ namespace pr::rdr12
 
 			return m_alloc.get();
 		}
-		ID3D12CommandAllocator* operator ->() const
+		ID3D12CommandAllocator* get()
+		{
+			return const_call(get());
+		}
+		ID3D12CommandAllocator const* operator ->() const
 		{
 			return get();
 		}
-		operator ID3D12CommandAllocator* () const
+		ID3D12CommandAllocator* operator ->()
+		{
+			return get();
+		}
+		operator ID3D12CommandAllocator const* () const
+		{
+			return get();
+		}
+		operator ID3D12CommandAllocator* ()
 		{
 			return get();
 		}

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -22,21 +22,21 @@ namespace pr::rdr
 	#include PR_RDR_SHADER_COMPILED_DIR(forward_radial_fade_ps.h)
 
 	// Forward rendering vertex shader
-	FwdShaderVS::FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+	FwdShaderVS::FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 	{
 		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_vs.cso"));
 	}
 
 	// Forward rendering pixel shader
-	FwdShaderPS::FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+	FwdShaderPS::FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 	{
 		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_ps.cso"));
 	}
 
 	// Forward rendering pixel shader with radial fading
-	FwdRadialFadePS::FwdRadialFadePS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+	FwdRadialFadePS::FwdRadialFadePS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::fwd::CBufFade>("fwd::CbufFade"))
 		,m_fade_centre()

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -21,7 +21,7 @@ namespace pr::rdr
 	struct ShadowMapVS :ShaderT<ID3D11VertexShader, ShadowMapVS>
 	{
 		using base = ShaderT<ID3D11VertexShader, ShadowMapVS>;
-		ShadowMapVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+		ShadowMapVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_vs.cso"));
@@ -32,7 +32,7 @@ namespace pr::rdr
 	struct ShadowMapPS :ShaderT<ID3D11PixelShader, ShadowMapPS>
 	{
 		using base = ShaderT<ID3D11PixelShader, ShadowMapPS>;
-		ShadowMapPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+		ShadowMapPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader>& shdr)
 			:base(mgr, id, sort_id, name, shdr)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_ps.cso"));

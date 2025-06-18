@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1096,7 +1096,7 @@ namespace pr::rdr12::ldraw
 					.tex_diffuse(PointStyleTexture(pp)));
 			}
 
-			template <typename TDrawOnIt>
+			template <std::invocable<D2D1Context&, ID2D1SolidColorBrush*, ID2D1SolidColorBrush*> TDrawOnIt>
 			Texture2DPtr CreatePointStyleTexture(ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
 			{
 				ResDesc tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget | EUsage::SimultaneousAccess).heap_flags(D3D12_HEAP_FLAG_SHARED);
@@ -1165,7 +1165,7 @@ namespace pr::rdr12::ldraw
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 							Check(sink->Close());
 
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
 					}
 					case EPointStyle::Star:
@@ -1193,7 +1193,7 @@ namespace pr::rdr12::ldraw
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 							Check(sink->Close());
 
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
 					}
 					case EPointStyle::Annulus:

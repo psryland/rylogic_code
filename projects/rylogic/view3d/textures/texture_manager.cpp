@@ -476,7 +476,7 @@ namespace pr::rdr
 			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
 
 		// Allocate a new texture instance that reuses the DX texture resource
-		Texture2DPtr inst(rdr::New<Texture2D>(this, id, *existing, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, *const_cast<Texture2D*>(existing), name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Assign a new sort id since it will be used with a different sampler state

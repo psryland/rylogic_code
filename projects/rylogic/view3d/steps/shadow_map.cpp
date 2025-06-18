@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -343,8 +343,8 @@ namespace pr::rdr
 	// Update the provided shader set to the shaders required by this render step
 	void ShadowMap::ConfigShaders(ShaderSet1& ss, ETopo) const
 	{
-		ss.m_vs = m_vs.get();
-		ss.m_ps = m_ps.get();
+		ss.m_vs = const_cast<Shader*>(m_vs.get());
+		ss.m_ps = const_cast<Shader*>(m_ps.get());
 	}
 
 	// Reset the drawlist

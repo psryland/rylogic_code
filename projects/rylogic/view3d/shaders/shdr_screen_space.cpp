@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -31,7 +31,7 @@ namespace pr::rdr
 	// include generated header files
 	#include PR_RDR_SHADER_COMPILED_DIR(point_sprites_gs.h)
 
-	PointSpritesGS::PointSpritesGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+	PointSpritesGS::PointSpritesGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_size(10.0f, 10.0f)
@@ -66,7 +66,7 @@ namespace pr::rdr
 	// include generated header files
 	#include PR_RDR_SHADER_COMPILED_DIR(thick_line_list_gs.h)
 
-	ThickLineListGS::ThickLineListGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+	ThickLineListGS::ThickLineListGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_width(2.0f)
@@ -99,7 +99,7 @@ namespace pr::rdr
 	// include generated header files
 	#include PR_RDR_SHADER_COMPILED_DIR(thick_line_strip_gs.h)
 
-	ThickLineStripGS::ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+	ThickLineStripGS::ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_width(2.0f)
@@ -132,7 +132,7 @@ namespace pr::rdr
 	// include generated header files
 	#include PR_RDR_SHADER_COMPILED_DIR(arrow_head_gs.h)
 
-	ArrowHeadGS::ArrowHeadGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+	ArrowHeadGS::ArrowHeadGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader>& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_size(2.0f)
