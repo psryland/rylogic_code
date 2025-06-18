@@ -1238,51 +1238,24 @@ namespace pr::rdr12
 	{
 		using namespace geometry;
 
-		struct SceneOut : fbx::ISceneOut
+		// Read the fbx scene
+		fbx::Scene scene(src, { .m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly });
+
+		// Create the models
 		{
-			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
-			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
-			using SkelCont = pr::vector<SkeletonPtr, 2>;
-			using AnimCont = pr::vector<KeyFrameAnimationPtr, 2>;
-
-			ResourceFactory& m_factory;
-			CreateOptions const* m_opts;
-			Cache<> m_cache;
-			MatCont m_mats;
-			MeshCont m_meshes;
-			SkelCont m_skels;
-			ModelTree m_tree;
-			AnimCont m_anims;
-
-			SceneOut(ResourceFactory& factory, CreateOptions const* opts)
-				: m_factory(factory)
-				, m_opts(opts)
-				, m_cache(0, 0, 0, sizeof(uint32_t))
-				, m_mats()
-				, m_meshes()
-				, m_skels()
-				, m_tree()
-				, m_anims()
-			{}
-
-			// Add a material to the output
-			virtual void AddMaterial(uint64_t unqiue_id, fbx::Material const& material) override
+			ModelTree tree;
+			Cache<> cache(0, 0, 0, sizeof(uint32_t));
+			for (auto& mesh : scene.m_meshes)
 			{
-				m_mats[unqiue_id] = material;
-			}
-
-			// Add a mesh to the output
-			virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
-			{
-				m_cache.Reset();
+				cache.Reset();
 
 				// Name/Bounding box
-				m_cache.m_name = mesh.m_name;
-				m_cache.m_bbox = mesh.m_bbox;
+				cache.m_name = mesh.m_name;
+				cache.m_bbox = mesh.m_bbox;
 
 				// Copy the verts
-				m_cache.m_vcont.resize(mesh.m_vbuf.size(), {});
-				auto vptr = m_cache.m_vcont.data();
+				cache.m_vcont.resize(mesh.m_vbuf.size(), {});
+				auto vptr = cache.m_vcont.data();
 				for (auto const& v : mesh.m_vbuf)
 				{
 					SetPCNTI(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0, v.m_idx0);
@@ -1296,79 +1269,81 @@ namespace pr::rdr12
 				if (vcount > 0xFFFF)
 				{
 					// Use 32bit indices
-					m_cache.m_icont.m_stride = sizeof(uint32_t);
-					m_cache.m_icont.resize<uint32_t>(icount);
-					memcpy(m_cache.m_icont.data<uint32_t>(), mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
+					cache.m_icont.m_stride = sizeof(uint32_t);
+					cache.m_icont.resize<uint32_t>(icount);
+					memcpy(cache.m_icont.data<uint32_t>(), mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
 				}
 				else
 				{
 					// Use 16bit indices
-					m_cache.m_icont.m_stride = sizeof(uint16_t);
-					m_cache.m_icont.resize<uint16_t>(icount);
+					cache.m_icont.m_stride = sizeof(uint16_t);
+					cache.m_icont.resize<uint16_t>(icount);
 					auto isrc = mesh.m_ibuf.data();
-					auto idst = m_cache.m_icont.data<uint16_t>();
+					auto idst = cache.m_icont.data<uint16_t>();
 					for (auto count = mesh.m_ibuf.size(); count-- != 0;)
 						*idst++ = s_cast<uint16_t>(*isrc++);
 				}
 
 				// Copy the nuggets
-				m_cache.m_ncont.resize(mesh.m_nbuf.size());
-				auto nptr = m_cache.m_ncont.data();
+				cache.m_ncont.resize(mesh.m_nbuf.size());
+				auto nptr = cache.m_ncont.data();
 				for (auto const& n : mesh.m_nbuf)
 				{
-					auto const& mat = m_mats.at(n.m_mat_id);
-					*nptr++ = NuggetDesc{n.m_topo, n.m_geom}.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
+					auto const& mat = scene.m_materials.at(n.m_mat_id);
+					*nptr++ = NuggetDesc{ n.m_topo, n.m_geom }.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
 				}
 
 				// Emit the model.
-				auto model = Create(m_factory, m_cache, m_opts);
-				m_meshes[mesh.m_id] = model;
-				
+				auto model = Create(factory, cache, opts);
+
 				// Add the mesh to the model tree
-				m_tree.push_back({ model, o2p, level });
-			}
+				tree.push_back({ model, mesh.m_o2p, mesh.m_level });
 
-			// Add a skeleton to the output
-			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
-			{
-				m_skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
-					skeleton.m_ids,
-					transform<Skeleton::Names>(skeleton.m_names, [](auto& x) { return static_cast<string32>(x); }),
-					skeleton.m_o2bp,
-					transform<Skeleton::Hierarchy>(skeleton.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
-				), true));
-			}
-
-			// Add Skinning data for a mesh to the output
-			virtual void AddSkin(fbx::Skin const& skin) override
-			{
-				auto verts = transform<pr::vector<Skinfluence>>(skin.m_verts, [](fbx::Skin::Influence const& influence)
+				// Add skinning data if present and requested
+				if (mesh.m_skin && out.ReadAnimation)
 				{
-					if (influence.size() > 4)
-						OutputDebugStringA("More than 4 bone influences not implemented"); // todo
+					auto verts = transform<pr::vector<Skinfluence>>(mesh.m_skin.m_verts, [](fbx::Skin::Influence const& influence)
+					{
+						if (influence.size() > 4)
+							OutputDebugStringA("More than 4 bone influences not implemented"); // todo
 
-					Skinfluence s = {};
-					for (int i = 0, iend = influence.size(); i != iend && i != 4; ++i)
-						s.set(i, influence.get<Skinfluence::BoneWeight>(i));
+						Skinfluence s = {};
+						for (int i = 0, iend = influence.size(); i != iend && i != 4; ++i)
+							s.set(i, influence.get<Skinfluence::BoneWeight>(i));
 
-					return s;
-				});
-
-				auto const& mesh = m_meshes.at(skin.m_mesh_id);
-				auto const& skel = pr::get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == skin.m_skel_id; });
-				mesh->m_skin = Skin(m_factory, verts, skel->Id());
+						return s;
+					});
+					model->m_skin = Skin(factory, verts, mesh.m_skin.m_skel_id);
+				}
 			}
 
-			// Add an animation sequence
-			virtual void AddAnimation(uint64_t skel_id, fbx::BoneTracks const& bone_tracks) override
+			// Emit the model tree
+			out.Model(tree);
+		}
+
+		// Read animation data
+		if (out.ReadAnimation)
+		{
+			// Skeletons
+			auto skels = transform<vector<SkeletonPtr, 2>>(scene.m_skeletons, [](fbx::Skeleton const& skel)
 			{
-				// Create a new animation sequence
-				auto const& skel = pr::get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == skel_id; });
-				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(skel->Id(), EAnimStyle::Repeat), true);
+				return SkeletonPtr(rdr12::New<Skeleton>(
+					skel.m_ids,
+					transform<Skeleton::Names>(skel.m_names, [](auto& x) { return static_cast<string32>(x); }),
+					skel.m_o2bp,
+					transform<Skeleton::Hierarchy>(skel.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
+				), true);
+			});
+
+			// Animations
+			auto anims = transform<vector<KeyFrameAnimationPtr, 2>>(scene.m_animations, [&skels](fbx::Animation const& fbxanim)
+			{
+				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimStyle::Repeat), true);
 
 				// Read the key frame data
 				anim->m_tracks.resize(skel->BoneCount());
-				for (auto const& [bone_id, track] : bone_tracks.m_tracks)
+				for (auto const& [bone_id, track] : fbxanim.m_tracks)
 				{
 					// Find the index of 'bone_id' in the skeleton
 					auto bone_index = pr::index_of(skel->m_ids, bone_id);
@@ -1379,7 +1354,7 @@ namespace pr::rdr12
 					anim->m_tracks[bone_index].reserve(track.size());
 					append(anim->m_tracks[bone_index], track, [](auto& key)
 					{
-						return KeyFrame {
+						return KeyFrame{
 							.m_rotation = key.m_rotation,
 							.m_translation = key.m_translation,
 							.m_scale = key.m_scale,
@@ -1387,20 +1362,13 @@ namespace pr::rdr12
 						};
 					});
 				}
+				return anim;
+			});
 
-				m_anims.push_back(anim);
-			}
-		};
-
-		// Read the scene hierarchy
-		fbx::Scene scene(src);
-		SceneOut scene_out(factory, opts);
-		scene.ReadScene(scene_out, { .m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly });
-
-		// Output the results
-		out.Model(scene_out.m_tree);
-		if (out.ReadAnimation)
-			out.Animation(scene_out.m_skels, scene_out.m_anims);
+			// Emit the animation data
+			if (!anims.empty())
+				out.Animation(skels, anims);
+		}
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts)
 	{

@@ -68,12 +68,15 @@ int main()
 	//std::ofstream ofile(ofilepath, std::ios::binary);
 	//std::ofstream dfile(dfilepath);
 
-	struct ModelOut : fbx::ISceneOut
-	{
-		p3d::File file = {};
+	//dll.Fbx_RoundTripTest(ifile, ofile);
+	//dll.Fbx_DumpStream(ifile, dfile);
+	fbx::Scene fbxscene(ifile, { .m_parts = fbx::EParts::ModelOnly });
 
-		// Add a material to the output
-		virtual void AddMaterial(uint64_t unique_id, fbx::Material const& mat) override
+	// Convert the models the p3d
+	p3d::File file = {};
+	{
+		// Materials
+		for (auto const& [unique_id, mat] : fbxscene.m_materials)
 		{
 			p3d::Material material;
 			material.m_id = std::format("mat-{}", unique_id);
@@ -81,12 +84,14 @@ int main()
 			file.m_scene.m_materials.push_back(material);
 		}
 
-		virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
+		// Models
+		for (fbx::Mesh const& mesh : fbxscene.m_meshes)
 		{
+			// Ignoring 'mesh.m_level'
 			p3d::Mesh m;
 			m.m_name = mesh.m_name;
 			m.m_bbox = mesh.m_bbox;
-			m.m_o2p = o2p;
+			m.m_o2p = mesh.m_o2p;
 			for (auto& v : mesh.m_vbuf)
 			{
 				m.add_vert({ v.m_vert, v.m_colr, v.m_norm, v.m_tex0 });
@@ -99,15 +104,10 @@ int main()
 			}
 			file.m_scene.m_meshes.push_back(std::move(m));
 		}
-	} out;
-
-	//dll.Fbx_RoundTripTest(ifile, ofile);
-	//dll.Fbx_DumpStream(ifile, dfile);
-	fbx::Scene scene(ifile);
-	scene.ReadScene(out, { .m_parts = fbx::EParts::ModelOnly });
+	}
 
 	if (std::ofstream ofile(p3doutpath, std::ios::binary); ofile)
-		p3d::Write(ofile, out.file);
+		p3d::Write(ofile, file);
 
 	return 0;
 }

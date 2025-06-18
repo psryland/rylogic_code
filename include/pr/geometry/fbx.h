@@ -25,9 +25,8 @@ namespace fbxsdk
 namespace pr::geometry::fbx
 {
 	// Notes:
-	//  - FBX scenes are a hierarchy of FbxNodes.
-	//  - Meshes, skeletons, etc are output using the ModelTree serialisation of the hierarchy.
-	//    The nodes are output in depth-first order with the hierarchy level.
+	//  - FBX scenes are a hierarchy of FbxNodes. Under the Root node are trees of nodes representing
+	//    meshes, skeletons, etc. These trees are serialised depth-first into arrays.
 	//    e.g.,
 	//             A
 	//           /   \
@@ -86,53 +85,6 @@ namespace pr::geometry::fbx
 		Range<int64_t> m_vrange = Range<int64_t>::Reset();
 		Range<int64_t> m_irange = Range<int64_t>::Reset();
 	};
-	struct Mesh
-	{
-		using Name = std::string;
-		using VBuffer = std::vector<Vert>;
-		using IBuffer = std::vector<int>;
-		using NBuffer = std::vector<Nugget>;
-
-		uint64_t m_id;
-		Name m_name;
-		VBuffer m_vbuf;
-		IBuffer m_ibuf;
-		NBuffer m_nbuf;
-		BBox m_bbox;
-
-		void reset(uint64_t id)
-		{
-			m_id = id;
-			m_name.resize(0);
-			m_vbuf.resize(0);
-			m_ibuf.resize(0);
-			m_nbuf.resize(0);
-			m_bbox = BBox::Reset();
-		}
-	};
-	struct Skeleton
-	{
-		using IdCont = std::vector<uint64_t>;
-		using NameCont = std::vector<std::string>;
-		using TypeCont = std::vector<EBoneType>;
-		using BoneCont = std::vector<m4x4>;
-		using LvlCont = std::vector<int>;
-
-		IdCont m_ids;        // Bone unique ids (first is the root bone)
-		NameCont m_names;    // Bone names
-		BoneCont m_o2bp;     // Inverse of the bind-pose to root-object-space transform for each bone
-		TypeCont m_types;    // Bone types
-		LvlCont m_hierarchy; // Hierarchy levels
-
-		void reset()
-		{
-			m_ids.resize(0);
-			m_names.resize(0);
-			m_o2bp.resize(0);
-			m_types.resize(0);
-			m_hierarchy.resize(0);
-		}
-	};
 	struct Skin
 	{
 		struct Influence
@@ -152,62 +104,85 @@ namespace pr::geometry::fbx
 			}
 		};
 		using InfluenceCont = std::vector<Influence>;
-		
-		uint64_t m_mesh_id;
+
 		uint64_t m_skel_id;
 		InfluenceCont m_verts;
 
-		void reset(uint64_t mesh_id, uint64_t skel_id)
+		explicit operator bool() const
 		{
-			m_mesh_id = mesh_id;
-			m_skel_id = skel_id;
-			m_verts.resize(0);
+			return !m_verts.empty();
 		}
+	};
+	struct Skeleton
+	{
+		using IdCont = std::vector<uint64_t>;
+		using NameCont = std::vector<std::string>;
+		using TypeCont = std::vector<EBoneType>;
+		using BoneCont = std::vector<m4x4>;
+		using LvlCont = std::vector<int>;
+
+		IdCont m_ids;        // Bone unique ids (first is the root bone)
+		NameCont m_names;    // Bone names
+		BoneCont m_o2bp;     // Inverse of the bind-pose to root-object-space transform for each bone
+		TypeCont m_types;    // Bone types
+		LvlCont m_hierarchy; // Hierarchy levels
+
+		// The root bone id is the skeleton id
+		uint64_t Id() const { return m_ids[0]; }
 	};
 	struct BoneKey
 	{
 		// Notes:
 		//  - Keys are just the stored snapshot points in the animation
 		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
+
+		enum class EInterpolation
+		{
+			Constant = 0,
+			Linear = 1,
+			Cubic = 2,
+		};
+
 		quat m_rotation;
 		v4 m_translation;
 		v4 m_scale;
 		double m_time;
+		uint64_t m_flags; // [0,2) = EInterpolation flags
 	};
-	struct BoneTracks
+	struct Animation
 	{
 		using Track = std::vector<BoneKey>; 
 		using Tracks = std::unordered_map<uint64_t, Track>;
 
 		uint64_t m_skel_id; // The skeleton that these tracks should match
 		Tracks m_tracks;    // A bone track for each bone (by id)
-	
-		void reset(uint64_t skel_id)
+
+		explicit operator bool() const
 		{
-			m_skel_id = skel_id;
-			m_tracks.clear();
+			for (auto& [id, track] : m_tracks)
+			{
+				if (track.empty()) continue;
+				return true;
+			}
+			return false;
 		}
 	};
-
-	// Interfaces for emitting scene parts during 'Read'
-	struct ISceneOut
+	struct Mesh
 	{
-		virtual ~ISceneOut() = default;
+		using Name = std::string;
+		using VBuffer = std::vector<Vert>;
+		using IBuffer = std::vector<int>;
+		using NBuffer = std::vector<Nugget>;
 
-		// Add a material to the output
-		virtual void AddMaterial(uint64_t unique_id, Material const& mat) { (void)unique_id, mat; }
-
-		// Add a mesh to the output
-		virtual void AddMesh(Mesh const& mesh, m4x4 const& o2p, int level) { (void)mesh, o2p, level; }
-
-		// Add a skeleton to the output
-		virtual void AddSkeleton(Skeleton const& skeleton) { (void)skeleton; }
-
-		// Add Skin data for an existing mesh
-		virtual void AddSkin(Skin const& skin) { (void)skin; }
-
-		// Add an animation sequence
-		virtual void AddAnimation(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
+		uint64_t m_id;
+		Name m_name;
+		VBuffer m_vbuf;
+		IBuffer m_ibuf;
+		NBuffer m_nbuf;
+		Skin m_skin;
+		BBox m_bbox;
+		m4x4 m_o2p;
+		int m_level;
 	};
 
 	// Options for parsing FBXfiles
@@ -272,7 +247,7 @@ namespace pr::geometry::fbx
 		Fbx_ReadScenePropsFn ReadSceneProps;
 
 		// Read the scene hierarchy
-		using Fbx_ReadSceneFn = void (__stdcall *)(fbxsdk::FbxScene& scene, ISceneOut& out, ReadOptions const& options);
+		using Fbx_ReadSceneFn = void (__stdcall *)(Scene& scene, ReadOptions const& options);
 		Fbx_ReadSceneFn ReadScene;
 
 		// Dump info about the scene to 'out'
@@ -287,45 +262,89 @@ namespace pr::geometry::fbx
 	// FBX Scene
 	struct Scene
 	{
-		// Notes:
-		//  - Remember to open streams in binary mode!
+		using MeshCont = std::vector<Mesh>;
+		using MaterialCont = std::unordered_map<uint64_t, Material>;
+		using SkeletonCont = std::vector<Skeleton>;
+		using AnimationCont = std::vector<Animation>;
 
-		fbxsdk::FbxScene* m_scene;
+		fbxsdk::FbxScene* m_fbxscene;
 		SceneProps m_props;
 
-		Scene(std::istream& src)
-			: m_scene(Fbx::get().LoadScene(src))
-			, m_props(Fbx::get().ReadSceneProps(*m_scene))
+		// One or more model hierarchies.
+		// Meshes with 'm_level == 0' are the roots of a model tree
+		MeshCont m_meshes;
+
+		// Material definitions
+		MaterialCont m_materials;
+
+		SkeletonCont m_skeletons;
+		AnimationCont m_animations;
+
+		// Remember to open streams in binary mode!
+		Scene(std::istream& src, ReadOptions const& options)
+			: m_fbxscene(Fbx::get().LoadScene(src))
+			, m_props(Fbx::get().ReadSceneProps(*m_fbxscene))
+			, m_meshes()
+			, m_materials()
+			, m_skeletons()
+			, m_animations()
 		{
+			// Notes:
+			//  - If this is slow, it's probably spending most of the time trianguling the
+			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
+			Fbx::get().ReadScene(*this, options);
 		}
 		Scene(Scene&& rhs) noexcept
-			: m_scene()
+			: m_fbxscene()
 			, m_props()
 		{
-			std::swap(m_scene, rhs.m_scene);
+			std::swap(m_fbxscene, rhs.m_fbxscene);
 			std::swap(m_props, rhs.m_props);
 		}
 		Scene(Scene const&) = delete;
 		Scene& operator=(Scene&& rhs) noexcept
 		{
-			std::swap(m_scene, rhs.m_scene);
+			std::swap(m_fbxscene, rhs.m_fbxscene);
 			std::swap(m_props, rhs.m_props);
 			return *this;
 		}
 		Scene& operator=(Scene const&) = delete;
 		~Scene()
 		{
-			if (m_scene != nullptr)
-				Fbx::get().ReleaseScene(m_scene);
+			if (m_fbxscene != nullptr)
+				Fbx::get().ReleaseScene(m_fbxscene);
 		}
 
-		// Read the hierarchy from the FBX scene
-		void ReadScene(ISceneOut& out, ReadOptions const& options)
-		{
-			// Notes:
-			//  - If this is slow, it's probably spending most of the time trianguling the
-			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
-			Fbx::get().ReadScene(*m_scene, out, options);
-		}
 	};
 }
+
+
+	//// Interfaces for emitting scene parts during 'Read'
+	//struct ISceneOut
+	//{
+	//	virtual ~ISceneOut() = default;
+
+	//	// Add a material to the output
+	//	virtual void AddMaterial(uint64_t unique_id, Material const& mat) { (void)unique_id, mat; }
+
+	//	// Add a mesh to the output
+	//	virtual void AddMesh(Mesh const& mesh, m4x4 const& o2p, int level) { (void)mesh, o2p, level; }
+
+	//	// Add a skeleton to the output
+	//	virtual void AddSkeleton(Skeleton const& skeleton) { (void)skeleton; }
+
+	//	// Add Skin data for an existing mesh
+	//	virtual void AddSkin(Skin const& skin) { (void)skin; }
+
+	//	// Add an animation sequence
+	//	virtual void AddAnimation(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
+	//};
+
+		//// Read the hierarchy from the FBX scene
+		//void ReadScene(ISceneOut& out, ReadOptions const& options)
+		//{
+		//	// Notes:
+		//	//  - If this is slow, it's probably spending most of the time trianguling the
+		//	//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
+		//	Fbx::get().ReadScene(*m_scene, out, options);
+		//}

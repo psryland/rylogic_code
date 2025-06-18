@@ -4,17 +4,18 @@
 //********************************
 // FBX files come in two variants; binary and text.
 // The format is closed source however, so we need to use the AutoDesk FBX SDK.
-#include <stdexcept>
+#include <vector>
+#include <format>
 #include <string_view>
 #include <unordered_set>
-#include <format>
-#include <deque>
-#include <execution>
+#include <stdexcept>
+#include <future>
 #include <fbxsdk.h>
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/allocator.h"
+#include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bbox.h"
 #include "pr/geometry/fbx.h"
@@ -31,11 +32,13 @@ namespace fbxsdk
 		void operator()(FbxManager* man) { man->Destroy(); }
 		void operator()(FbxObject* imp) { imp->Destroy(); }
 		void operator()(FbxScene* scene) { scene->Destroy(); }
+		void operator()(FbxPose* pose) { pose->Destroy(); }
 	};
 	using ManagerPtr = std::unique_ptr<FbxManager, FbxObjectCleanUp>;
 	using ImporterPtr = std::unique_ptr<FbxImporter, FbxObjectCleanUp>;
 	using ExporterPtr = std::unique_ptr<FbxExporter, FbxObjectCleanUp>;
 	using ScenePtr = std::unique_ptr<FbxScene, FbxObjectCleanUp>;
+	using PosePtr = std::unique_ptr<FbxPose, FbxObjectCleanUp>;
 
 	inline double FloatClamp(double f)
 	{
@@ -286,6 +289,21 @@ namespace pr
 			}
 		}
 	};
+	template <>
+	struct Convert<geometry::fbx::BoneKey::EInterpolation, FbxAnimCurveDef::EInterpolationType>
+	{
+		static geometry::fbx::BoneKey::EInterpolation To_(FbxAnimCurveDef::EInterpolationType ty)
+		{
+			using EType = geometry::fbx::BoneKey::EInterpolation;
+			switch (ty)
+			{
+				case FbxAnimCurveDef::EInterpolationType::eInterpolationConstant: return EType::Constant;
+				case FbxAnimCurveDef::EInterpolationType::eInterpolationLinear: return EType::Linear;
+				case FbxAnimCurveDef::EInterpolationType::eInterpolationCubic: return EType::Cubic;
+				default: throw std::runtime_error(std::format("Unknown bone type: {}", int(ty)));
+			}
+		}
+	};
 }
 
 // FBX support
@@ -393,7 +411,7 @@ namespace pr::geometry::fbx
 		{
 			// Notes:
 			//  - FbxImporter must be destroyed before any FbxScenes it creates because of bugs in the 'fbxsdk' dll.
-			
+
 			// Clean up settings
 			if (m_settings != nullptr)
 				m_settings->Destroy();
@@ -639,7 +657,7 @@ namespace pr::geometry::fbx
 
 		return scene;
 	}
-	
+
 	// Get a value from a layer element
 	template <typename T>
 	static T GetLayerElement(FbxLayerElementTemplate<T> const* layer_elements, int fidx, int iidx, int vidx)
@@ -737,46 +755,37 @@ namespace pr::geometry::fbx
 	}
 	static FbxNodeAttribute* Find(FbxNodeAttribute::EType attr_type, FbxNode& node, int start = 0)
 	{
-		for (int i = start, iend = node.GetNodeAttributeCount(); i < iend; ++i)
-		{
-			auto& attr = *node.GetNodeAttributeByIndex(i);
-			if (attr.GetAttributeType() == attr_type)
-				return &attr;
-		}
-		return nullptr;
+		return const_cast<FbxNodeAttribute*>(Find(attr_type, std::as_const(node), start));
 	}
 
-	// Find the unique id of the root bone of the skeleton
-	static uint64_t FindSkeletonId(FbxMesh const& mesh)
+	// Find the top-most node with the given attribute
+	static FbxNodeAttribute const* FindRoot(FbxNodeAttribute::EType attr_type, FbxNode const& node)
 	{
-		for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+		FbxNodeAttribute const* attr = Find(attr_type, node);
+		for (auto* parent = node.GetParent(); parent; parent = parent->GetParent())
 		{
-			auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
-			for (int c = 0, cend = skin.GetClusterCount(); c != cend; ++c)
+			auto const* a = Find(attr_type, *parent);
+			if (!a) break;
+			attr = a;
+		}
+		return attr;
+	}
+
+	// Find the skeleton associated with 'mesh'
+	static FbxSkeleton const* FindSkeleton(FbxMesh const& mesh)
+	{
+		if (int dcount = mesh.GetDeformerCount(FbxDeformer::eSkin); dcount != 0)
+		{
+			auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(0, FbxDeformer::eSkin));
+			if (int ccount = skin.GetClusterCount(); ccount != 0)
 			{
-				auto& cluster = *skin.GetCluster(c);
-				auto const* bone = cluster.GetLink();
-
 				// Find the bone with no parent and assume that is the root
-				FbxSkeleton const* root_bone = nullptr;
-				for (; bone != nullptr; bone = bone->GetParent())
-				{
-					// Look for skeleton attributes
-					auto const* attr = Find(FbxNodeAttribute::eSkeleton, *bone);
-					if (attr == nullptr)
-						break;
-
-					// Note: GetSkeletonType() is not always set. Just find the 
-					// top of the hierarchy and assume that is the root
-					root_bone = FbxCast<FbxSkeleton>(attr);
-				}
-
-				// If we found the root of the skeleton, return it's id
-				if (root_bone != nullptr)
-					return root_bone->GetUniqueID();
+				auto& cluster = *skin.GetCluster(0);
+				auto const& bone = *cluster.GetLink();
+				return FbxCast<FbxSkeleton>(FindRoot(FbxNodeAttribute::eSkeleton, bone));
 			}
 		}
-		return NoUniqueId;
+		return nullptr;
 	}
 
 	// Get the hierarchy address of 'node'
@@ -797,7 +806,7 @@ namespace pr::geometry::fbx
 	}
 
 	// Read the hierarchy from the scene
-	static void ReadScene(FbxScene& scene, ISceneOut& out, ReadOptions const& options)
+	static void ReadScene(Scene& scene, ReadOptions const& options)
 	{
 		// Read an fbx scene
 		struct Reader
@@ -813,6 +822,9 @@ namespace pr::geometry::fbx
 			//  - Relationships like materials and textures are represented via FBX connections, not ownership.
 			//  - Units, axis orientation, and coordinate systems should be checked via GlobalSettings.
 			//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
+			//  - The root nodes of Meshes or Skeletons can begin at any level, e.g. Nodes might be a Group which then
+			//    contain meshes or skeletons starting below the group.
+			//  - Nodes can only have one attribute of each type.
 			//  - The FbxSDK library is very slow, single threaded, poorly documented.
 
 			// TODO:
@@ -820,91 +832,124 @@ namespace pr::geometry::fbx
 			//    are not used when skinning. Need to bake the mesh transform into the model (probably).
 			//  - Use the Clone() method to clone meshes so that triangulation can be done in parallel
 			//  - Record all skeletons because skin's can refer to different skeletons so all need to be available.
+			//  - LOD Groups?
 
 			using VertexLookup = std::vector<int>;
 			using TimeCont = std::vector<FbxTime>;
-			using MeshCont = std::vector<Mesh>;
-			using SkeletonCont = std::vector<Skeleton>;
+			using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
+			using MeshNode = struct MeshNode { FbxMesh* mesh; int level; bool is_root; };
+			using SkelNode = struct SkelNode { FbxSkeleton* bone; int level; bool is_root; };
+			using KeyTime = struct KeyTime
+			{
+				FbxTime time;
+				FbxAnimCurveDef::EInterpolationType interpolation;
+				bool operator == (KeyTime const& rhs) const { return time == rhs.time; }
+				bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
+			};
+			
+			using KeyTimes = std::vector<KeyTime>;
+			using MeshNodes = std::vector<MeshNode>; // Hierarchy flattened in depth-first order
+			using SkelNodes = std::vector<SkelNode>; // Same
 
-			FbxScene& m_scene;
-			ISceneOut& m_out;
+			Scene& m_scene;
+			FbxScene& m_fbxscene;
 			ReadOptions const& m_opts;
-			MeshCont m_meshes;
-			SkeletonCont m_skeletons;
-			Mesh m_mesh;
-			Skeleton m_skel;
-			Skin m_skin;
-			VertexLookup m_vlookup;
-			FbxAnimStack* m_anim;
+			MeshNodes m_meshes;
+			SkelNodes m_skels;
+			FbxAnimStack* m_animstack;
 			FbxAnimLayer* m_layer;
-			BoneTracks m_tracks;
 			FbxTimeSpan m_time_span;
-			TimeCont m_times;
 			double m_frame_rate;
 
-			Reader(FbxScene& scene, ISceneOut& out, ReadOptions const& opts)
+			Reader(Scene& scene, ReadOptions const& opts)
 				: m_scene(scene)
-				, m_out(out)
+				, m_fbxscene(*scene.m_fbxscene)
 				, m_opts(opts)
 				, m_meshes()
-				, m_skeletons()
-				, m_mesh()
-				, m_skel()
-				, m_vlookup()
-				, m_anim()
+				, m_skels()
+				, m_animstack()
 				, m_layer()
-				, m_tracks()
 				, m_time_span()
-				, m_times()
-				, m_frame_rate(FbxTime::GetFrameRate(scene.GetGlobalSettings().GetTimeMode()))
+				, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
 			{
 				auto basis0 = FbxAxisSystem{FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded};
-				auto basis1 = m_scene.GetGlobalSettings().GetAxisSystem();
+				auto basis1 = m_fbxscene.GetGlobalSettings().GetAxisSystem();
 				if (basis0 != basis1)
-					basis0.ConvertScene(&m_scene);
-
-				// Triangulate the whole scene in one hit
-				if (AllSet(m_opts.m_parts, EParts::Meshes))
-				{
-					FbxGeometryConverter converter(m_scene.GetFbxManager());
-					converter.Triangulate(&m_scene, true);
-				}
+					basis0.ConvertScene(&m_fbxscene);
 			}
 
-			// Read the model
+			// Read the scene
 			void Do()
 			{
+				TraverseHierarchy();
+
 				if (AllSet(m_opts.m_parts, EParts::Materials))
 					ReadMaterials();
 				if (AllSet(m_opts.m_parts, EParts::Meshes))
-					ReadGeometry(*m_scene.GetRootNode());
+					ReadGeometry();
 				if (AllSet(m_opts.m_parts, EParts::Skeleton))
-					ReadSkeleton(*m_scene.GetRootNode());
+					ReadSkeletons();
 				if (AllSet(m_opts.m_parts, EParts::Skinning))
-					ReadSkinning(*m_scene.GetRootNode());
+					ReadSkinning();
 				if (AllSet(m_opts.m_parts, EParts::Animation))
 					ReadAnimation();
+			}
+
+			// Traverse the scene hierarchy
+			void TraverseHierarchy()
+			{
+				// Root nodes for meshes, skeletons can occur at any level.
+				// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
+				vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
+				for (; !stack.empty(); )
+				{
+					auto [node, level] = stack.back();
+					stack.pop_back();
+
+					// Process all attributes of the node
+					for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
+					{
+						auto& attr = *node->GetNodeAttributeByIndex(i);
+
+						if (AllSet(m_opts.m_parts, EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
+						{
+							auto* mesh = FbxCast<FbxMesh>(&attr);
+							auto is_root = FindRoot(FbxNodeAttribute::eMesh, *node) == mesh;
+							m_meshes.push_back({ mesh, level, is_root });
+						}
+						if (AllSet(m_opts.m_parts, EParts::Skeleton) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
+						{
+							auto* bone = FbxCast<FbxSkeleton>(&attr);
+							auto is_root = FindRoot(FbxNodeAttribute::eSkeleton, *node) == bone;
+							m_skels.push_back({ bone, level, is_root });
+						}
+					}
+
+					// Recurse in depth first order
+					for (int i = node->GetChildCount(); i-- != 0; )
+						stack.push_back({ node->GetChild(i), level + 1 });
+				}
 			}
 
 			// Read the materials
 			void ReadMaterials()
 			{
 				// Add a default material for unknown materials
-				m_out.AddMaterial(0, {});
+				m_scene.m_materials[0] = {};
 
 				// Output each material in the scene
-				for (int m = 0, mend = m_scene.GetMaterialCount(); m != mend; ++m)
+				for (int m = 0, mend = m_scene.m_fbxscene->GetMaterialCount(); m != mend; ++m)
 				{
 					Material material = {};
 
-					auto const& mat = *m_scene.GetMaterial(m);
+					auto const& mat = *m_fbxscene.GetMaterial(m);
 					if (mat.GetClassId().Is(FbxSurfacePhong::ClassId))
 					{
 						auto const& phong = static_cast<FbxSurfacePhong const&>(mat);
 						material.m_ambient = To<Colour>(phong.Ambient.Get());
 						material.m_diffuse = To<Colour>(phong.Diffuse.Get());
 						material.m_specular = To<Colour>(phong.Specular.Get());
-	#if 0
+						#if 0
 						phong.AmbientFactor;
 						phong.Bump;
 						phong.BumpFactor;
@@ -923,7 +968,7 @@ namespace pr::geometry::fbx
 						phong.MultiLayer;
 						phong.VectorDisplacementColor;
 						phong.VectorDisplacementFactor;
-	#endif
+						#endif
 					}
 					else if (mat.GetClassId().Is(FbxSurfaceLambert::ClassId))
 					{
@@ -957,458 +1002,516 @@ namespace pr::geometry::fbx
 						}
 					}
 
-					m_out.AddMaterial(mat.GetUniqueID(), material);
+					m_scene.m_materials[mat.GetUniqueID()] = material;
 				}
 			}
 
-			// Parse the FBX file
-			void ReadGeometry(FbxNode& node, int* root_level = nullptr, m4x4 const* p2w = nullptr, int level = 0)
+			// Read meshes from the FBX scene
+			void ReadGeometry()
 			{
-				auto is_root = root_level == nullptr;
-				auto o2w = m4x4::Identity();
+				std::vector<std::future<Mesh>> tasks;
 
-				// Process all attributes of the node
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				// Process each mesh in a worker thread, because triangulation is really slow
+				for (auto const& meshnode : m_meshes)
 				{
-					// Look for mesh attributes
-					auto& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
-						continue;
+					// Create thread-local manager and scene
+					ManagerPtr manager{ FbxManager::Create() };
+					ScenePtr scene{ FbxScene::Create(manager.get(), "IsolatedScene") };
 
-					if (is_root)
+					// Clone the mesh
+					auto fbxmesh = FbxCast<FbxMesh>(meshnode.mesh->Clone(FbxObject::eDeepClone, scene.get()));
+					
+					// Start a task to convert the geometry
+					tasks.emplace_back(std::async(std::launch::async, [m = std::move(manager), s = std::move(scene), id = meshnode.mesh->GetUniqueID(), fbxmesh]
 					{
-						root_level = &level;
-					}
+						Mesh out;
+						out.m_id = id;
 
-					// Populate 'm_mesh' from the triangulated mesh
-					auto& trimesh = *EnsureTriangulated(FbxCast<FbxMesh>(&attr));
-					{
-						// Can't just output verts directly because each vert can have multiple normals
-						// "Inflate" the verts into a unique list of each required combination
-						auto vcount = trimesh.GetControlPointsCount();
-						auto fcount = trimesh.GetPolygonCount();
-						auto ncount = trimesh.GetElementMaterialCount();
-						auto const* verts = trimesh.GetControlPoints();
-						auto const* layer0 = trimesh.GetLayer(0);
-						auto const* materials = layer0->GetMaterials();
-						auto const* colours = layer0->GetVertexColors();
-						auto const* normals = layer0->GetNormals();
-						auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
-
-						// Initialise buffers
-						m_mesh.reset(trimesh.GetUniqueID());
-						m_mesh.m_vbuf.reserve(vcount * 3 / 2);
-						m_mesh.m_ibuf.reserve(fcount * 3);
-						m_mesh.m_nbuf.reserve(ncount);
-						m_vlookup.reserve(vcount * 3 / 2);
-						m_vlookup.resize(0);
-
-						// Add a vertex to 'm_vbuf' and return its index
-						auto AddVert = [this](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+						// Ensure the mesh is triangles
+						auto trimesh = fbxmesh;
+						if (!trimesh->IsTriangleMesh())
 						{
-							Vert v = {
-								.m_vert = pos,
-								.m_colr = col,
-								.m_norm = norm,
-								.m_tex0 = uv,
-								.m_idx0 = {src_vidx, 0},
+							// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
+							// Edge hardnees triangulation give wrong edge hardness so we convert them to a smooth group during the triangulation.
+							FbxGeometryConverter converter(m.get());
+							for (int j = 0, jend = trimesh->GetLayerCount(FbxLayerElement::eSmoothing); j != jend; ++j)
+							{
+								auto* smoothing = fbxmesh->GetLayer(j)->GetSmoothing();
+								if (smoothing && smoothing->GetMappingMode() != FbxLayerElement::eByPolygon)
+									converter.ComputePolygonSmoothingFromEdgeSmoothing(trimesh, j);
+							}
+
+							// Convert polygons to triangles
+							trimesh = FbxCast<FbxMesh>(converter.Triangulate(trimesh, true));
+							if (!trimesh->IsTriangleMesh()) // If triangulation failed, ignore the mesh
+								throw std::runtime_error(std::format("Failed to convert mesh '{}' to a triangle mesh", trimesh->GetName()));
+						}
+
+						// "Inflate" the verts into a unique list of each required combination
+						{
+							auto vcount = trimesh->GetControlPointsCount();
+							auto fcount = trimesh->GetPolygonCount();
+							auto ncount = trimesh->GetElementMaterialCount();
+							auto const* verts = trimesh->GetControlPoints();
+							auto const* layer0 = trimesh->GetLayer(0);
+							auto const* materials = layer0->GetMaterials();
+							auto const* colours = layer0->GetVertexColors();
+							auto const* normals = layer0->GetNormals();
+							auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
+							VertexLookup vlookup;
+
+							// Initialise buffers
+							out.m_vbuf.reserve(vcount * 3 / 2);
+							out.m_ibuf.reserve(fcount * 3);
+							out.m_nbuf.reserve(ncount);
+							vlookup.reserve(vcount * 3 / 2);
+
+							// Add a vertex to 'm_vbuf' and return its index
+							auto AddVert = [&out, &vlookup](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+							{
+								Vert v = {
+									.m_vert = pos,
+									.m_colr = col,
+									.m_norm = norm,
+									.m_tex0 = uv,
+									.m_idx0 = {src_vidx, 0},
+								};
+
+								// 'Vlookup' is a linked list of vertices that are permutations of 'src_idx'
+								for (int vidx = src_vidx;;)
+								{
+									// If 'vidx' is outside the buffer, add it
+									auto vbuf_count = isize(out.m_vbuf);
+									if (vidx >= vbuf_count)
+									{
+										out.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
+										vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
+										out.m_vbuf[vidx] = v;
+										vlookup[vidx] = NoIndex;
+										return vidx;
+									}
+
+									// If 'v' is already in the buffer, use it's index
+									if (out.m_vbuf[vidx] == v)
+									{
+										return vidx;
+									}
+
+									// If the position 'vidx' is an unused slot, use it
+									if (out.m_vbuf[vidx] == NoVert)
+									{
+										out.m_vbuf[vidx] = v;
+										return vidx;
+									}
+
+									// If there is no "next", prepare to insert it at the end
+									if (vlookup[vidx] == NoIndex)
+									{
+										vlookup[vidx] = vbuf_count;
+									}
+
+									// Go to the next vertex to check
+									vidx = vlookup[vidx];
+								}
 							};
 
-							// 'Vlookup' is a linked list of vertices that are permutations of 'src_idx'
-							for (int vidx = src_vidx;;)
+							// Get or add a nugget
+							auto GetOrAddNugget = [&out](uint64_t mat_id) -> Nugget&
 							{
-								// If 'vidx' is outside the buffer, add it
-								auto vbuf_count = isize(m_mesh.m_vbuf);
-								if (vidx >= vbuf_count)
+								for (auto& n : out.m_nbuf)
 								{
-									m_mesh.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
-									m_vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
-									m_mesh.m_vbuf[vidx] = v;
-									m_vlookup[vidx] = NoIndex;
-									return vidx;
+									if (n.m_mat_id != mat_id) continue;
+									return n;
 								}
+								out.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
+								return out.m_nbuf.back();
+							};
 
-								// If 'v' is already in the buffer, use it's index
-								if (m_mesh.m_vbuf[vidx] == v)
-								{
-									return vidx;
-								}
-
-								// If the position 'vidx' is an unused slot, use it
-								if (m_mesh.m_vbuf[vidx] == NoVert)
-								{
-									m_mesh.m_vbuf[vidx] = v;
-									return vidx;
-								}
-
-								// If there is no "next", prepare to insert it at the end
-								if (m_vlookup[vidx] == NoIndex)
-								{
-									m_vlookup[vidx] = vbuf_count;
-								}
-
-								// Go to the next vertex to check
-								vidx = m_vlookup[vidx];
-							}
-						};
-
-						// Get or add a nugget
-						auto GetOrAddNugget = [this](uint64_t mat_id) -> Nugget&
-						{
-							for (auto& n : m_mesh.m_nbuf)
+							// Read the faces of 'mesh' adding them to a nugget based on their material
+							for (int f = 0, fend = trimesh->GetPolygonCount(); f != fend; ++f)
 							{
-								if (n.m_mat_id != mat_id) continue;
-								return n;
-							}
-							m_mesh.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
-							return m_mesh.m_nbuf.back();
-						};
+								if (trimesh->GetPolygonSize(f) != 3)
+									throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", trimesh->GetName(), trimesh->GetPolygonSize(f)));
 
-						// Read the faces of 'mesh' adding them to a nugget based on their material
-						for (int f = 0, fend = trimesh.GetPolygonCount(); f != fend; ++f)
-						{
-							if (trimesh.GetPolygonSize(f) != 3)
-								throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", trimesh.GetName(), trimesh.GetPolygonSize(f)));
-
-							// Get the material used on this face
-							uint64_t mat_id = 0;
-							if (materials != nullptr)
-							{
-								auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
-								mat_id = mat ? mat->GetUniqueID() : 0;
-							}
-
-							// Add the triangle to the nugget associated with the material
-							auto& nugget = GetOrAddNugget(mat_id);
-							for (int j = 0, jend = 3; j != jend; ++j)
-							{
-								auto iidx = f * 3 + j;
-								auto vidx = trimesh.GetPolygonVertex(f, j);
-								v4 pos = To<v4>(verts[vidx]).w1();
-
-								// Get the vertex colour
-								Colour col = ColourWhite;
-								if (colours != nullptr)
+								// Get the material used on this face
+								uint64_t mat_id = 0;
+								if (materials != nullptr)
 								{
-									nugget.m_geom |= EGeom::Colr;
-									col = To<Colour>(GetLayerElement<FbxColor>(colours, f, iidx, vidx));
+									auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
+									mat_id = mat ? mat->GetUniqueID() : 0;
 								}
 
-								// Get the vertex normal
-								v4 norm = {};
-								if (normals != nullptr)
+								// Add the triangle to the nugget associated with the material
+								auto& nugget = GetOrAddNugget(mat_id);
+								for (int j = 0, jend = 3; j != jend; ++j)
 								{
-									nugget.m_geom |= EGeom::Norm;
-									norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, iidx, vidx)).w0();
+									auto iidx = f * 3 + j;
+									auto vidx = trimesh->GetPolygonVertex(f, j);
+									v4 pos = To<v4>(verts[vidx]).w1();
+
+									// Get the vertex colour
+									Colour col = ColourWhite;
+									if (colours != nullptr)
+									{
+										nugget.m_geom |= EGeom::Colr;
+										col = To<Colour>(GetLayerElement<FbxColor>(colours, f, iidx, vidx));
+									}
+
+									// Get the vertex normal
+									v4 norm = {};
+									if (normals != nullptr)
+									{
+										nugget.m_geom |= EGeom::Norm;
+										norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, iidx, vidx)).w0();
+									}
+
+									// Get the vertex UV
+									v2 uv = {};
+									if (uvs != nullptr)
+									{
+										nugget.m_geom |= EGeom::Tex0;
+										uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, iidx, vidx));
+									}
+
+									// Add the vertex to the vertex buffer and it's index to the index buffer
+									vidx = AddVert(vidx, pos, col, norm, uv);
+									out.m_ibuf.push_back(vidx);
+
+									nugget.m_vrange.grow(vidx);
+									nugget.m_irange.grow(isize(out.m_ibuf) - 1);
 								}
-
-								// Get the vertex UV
-								v2 uv = {};
-								if (uvs != nullptr)
-								{
-									nugget.m_geom |= EGeom::Tex0;
-									uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, iidx, vidx));
-								}
-
-								// Add the vertex to the vertex buffer and it's index to the index buffer
-								vidx = AddVert(vidx, pos, col, norm, uv);
-								m_mesh.m_ibuf.push_back(vidx);
-
-								nugget.m_vrange.grow(vidx);
-								nugget.m_irange.grow(isize(m_mesh.m_ibuf) - 1);
 							}
 						}
-					}
+
+						return out;
+					}));
+				}
+
+				// Wait for each mesh. Note: tasks are in depth-first order
+				for (auto& task : tasks)
+				{
+					task.wait();
+
+					auto mesh = task.get();
+					auto idx = s_cast<int>(&task - tasks.data());
+					auto ridx = idx; for (; ridx >= 0 && !m_meshes[ridx].is_root; --ridx) {}
+
+					// Find the associated FbxMesh and the hierarchy root
+					auto const& original = m_meshes[idx];
+					auto const& root = m_meshes[ridx];
+					auto& node = *original.mesh->GetNode();
+
+					// Populate non-mesh node data from the original
+					mesh.m_name = node.GetName();
+					mesh.m_bbox = BoundingBox(*original.mesh);
+					mesh.m_level = original.level - root.level;
 
 					// Determine the object to parent transform.
-					// 'EvaluateLocalTransform' doesn't do what the name implies.
-					o2w = To<m4x4>(node.EvaluateGlobalTransform());
-					auto o2p = p2w ? InvertFast(*p2w) * o2w : o2w;
+					auto o2w = To<m4x4>(node.EvaluateGlobalTransform()); // 'EvaluateLocalTransform' doesn't do what the name implies.
+					auto p2w = To<m4x4>(node.GetParent()->EvaluateGlobalTransform());
+					mesh.m_o2p = InvertFast(p2w) * o2w;
 
+					auto o2p = To<m4x4>(node.EvaluateLocalTransform());
+					assert(FEql(mesh.m_o2p, o2p)); // Could we actually use the local transform?
+					
 					// Output the mesh
-					m_mesh.m_name = node.GetName();
-					m_mesh.m_bbox = BoundingBox(trimesh);
-					m_out.AddMesh(m_mesh, o2p, level - *root_level);
+					m_scene.m_meshes.push_back(std::move(mesh));
 				}
-
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadGeometry(*node.GetChild(i), root_level, &o2w, level + 1);
 			}
 
-			// Recursively read skeletons
-			void ReadSkeleton(FbxNode& node, Skeleton* skel = nullptr, FbxPose* bind_pose = nullptr, int level = 0)
+			// Read skeletons from the FBX scene
+			void ReadSkeletons()
 			{
-				// If no skeleton is provided, then this could be the root bone
-				auto is_skel_root = skel == nullptr;
-				auto b2w = m4x4::Identity();
-
-				// Process all attributes of the node
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel))
 				{
-					// Look for skeleton attributes
-					auto const& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
-						continue;
+					Skeleton skeleton;
+					auto const& root = skel[0];
+					auto bind_pose = FindBindPose(*root.bone->GetNode());
 
-					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
-
-					// Reset the skeleton instance for the root bone
-					if (is_skel_root)
+					for (auto const& skelnode : skel)
 					{
-						m_skel.reset();
-						skel = &m_skel;
-						bind_pose = FindBindPose(*bone.GetNode());
+						auto& node = *skelnode.bone->GetNode();
+
+						// The bind pose is a snapshot of the global transforms of the bones
+						// at the time skinning was authored in the DCC tool.
+						m4x4 o2bp = {}; // Object space to bind pose
+						if (int idx = bind_pose ? bind_pose->Find(&node) : -1; idx != -1)
+							o2bp = InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)));
+						else // Fall-back to time zero as the bind pose
+							o2bp = InvertFast(To<m4x4>(node.EvaluateGlobalTransform(0)));
+
+						// Add the bone to the skeleton
+						skeleton.m_ids.push_back(skelnode.bone->GetUniqueID());
+						skeleton.m_names.push_back(node.GetName());
+						skeleton.m_o2bp.push_back(o2bp);
+						skeleton.m_types.push_back(To<EBoneType>(skelnode.bone->GetSkeletonType()));
+						skeleton.m_hierarchy.push_back(skelnode.level - root.level);
 					}
 
-					// The bind pose is a snapshot of the global transforms of the bones and the mesh node
-					// at the time skinning was authored in the DCC tool (Blender in this case).
-					m4x4 o2bp = {}; // Object space to bind pose
-					if (int idx = bind_pose ? bind_pose->Find(&node) : -1; idx != -1)
-						o2bp = InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)));
-					else // Fall-back to time zero as the bind pose
-						o2bp = InvertFast(To<m4x4>(node.EvaluateGlobalTransform(0)));
-
-					// Add the bone to the skeleton
-					skel->m_ids.push_back(bone.GetUniqueID());
-					skel->m_names.push_back(bone.GetNode()->GetName());
-					skel->m_o2bp.push_back(o2bp);
-					skel->m_types.push_back(To<EBoneType>(bone.GetSkeletonType()));
-					skel->m_hierarchy.push_back(level);
-				}
-
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadSkeleton(*node.GetChild(i), skel, bind_pose, level + 1);
-
-				// Output the skeleton if this is the root node
-				if (is_skel_root && skel != nullptr)
-				{
-					// Adjust the levels so that root is at 0
-					auto lvl0 = skel->m_hierarchy[0];
-					for (auto& lvl : skel->m_hierarchy)
-						lvl -= lvl0;
-
-					m_out.AddSkeleton(*skel);
+					m_scene.m_skeletons.push_back(std::move(skeleton));
 				}
 			}
 
 			// Read skinning information from mesh nodes in 'node'
-			void ReadSkinning(FbxNode& node, int level = 0)
+			void ReadSkinning()
 			{
-				// Process all attributes of the node
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				// Add skinning data to meshes we've already found
+				for (auto& mesh : m_scene.m_meshes)
 				{
-					// Look for mesh attributes
-					auto& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
-						continue;
-
-					auto& mesh = *FbxCast<FbxMesh>(&attr);
+					// Find the corresponding FbxMesh
+					auto& meshnode = pr::get_if(m_meshes, [mesh_id = mesh.m_id](MeshNode const& m) { return m.mesh->GetUniqueID() == mesh_id; });
+					auto& fbxmesh = *meshnode.mesh;
 
 					// Find the skeleton associated with this skinned mesh
-					auto skel_id = FindSkeletonId(mesh);
-					if (skel_id == NoUniqueId)
+					auto const* fbxskeleton = FindSkeleton(fbxmesh);
+					if (fbxskeleton == nullptr)
 						continue; // Mesh has no skeleton => not animated
 
-					// The id of this mesh
-					auto mesh_id = mesh.GetUniqueID();
+					auto const& skeleton = pr::get_if(m_scene.m_skeletons, [id = fbxskeleton->GetUniqueID()](Skeleton const& s) { return s.Id() == id; });
 
-					// Create a new skin
-					m_skin.reset(mesh_id, skel_id);
-					m_skin.m_verts.resize(mesh.GetControlPointsCount());
+					// Populate the skinning data
+					auto& skin = mesh.m_skin;
+					skin.m_skel_id = skeleton.Id();
+					skin.m_verts.resize(fbxmesh.GetControlPointsCount());
 
 					// Get the skinning data for this mesh
-					for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+					for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 					{
-						auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
-						for (int b = 0, bend = skin.GetClusterCount(); b != bend; ++b)
-							ReadDeformer(*skin.GetCluster(b));
+						auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
+						for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
+						{
+							auto& cluster = *fbxskin.GetCluster(b);
+							auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
+
+							#if 0
+							// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
+							// If set, the associate model is the node used as a reference to measure the relative displacement of the link node.
+							// Otherwise, the displacement of the link node is measured relative the node containing the control points.
+							// Typically, the associate model node is the parent of the bone a skin is attached to.
+							if (cluster.GetLinkMode() == FbxCluster::eAdditive && cluster.GetAssociateModel())
+							{
+								throw std::runtime_error("not implemented");
+							}
+							else
+							{
+								FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
+								FbxAMatrix geom_offset; mesh.GetNode();
+								ref_to_world *= geom_offset;
+
+
+								// Get the link initial global position and the link current global position.
+								pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
+								lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
+
+								// Compute the initial position of the link relative to the reference.
+								lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
+
+								// Compute the current position of the link relative to the reference.
+								lClusterRelativeCurrentPositionInverse = lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
+
+								// Compute the shift of the link relative to the reference.
+								pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
+							}
+							#endif
+
+							// Find the bone in the skeleton
+							auto bone_index = pr::index_of(skeleton.m_ids, bone.GetUniqueID());
+							if (bone_index >= isize(skeleton.m_o2bp))
+								throw std::runtime_error("Bone index out of range in skeleton");
+
+							// Get the span of vert indices and weights
+							auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+							auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+							for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
+							{
+								auto vidx = indices[w];
+								auto weight = weights[w];
+								skin.m_verts[vidx].m_bones.push_back(bone_index);
+								skin.m_verts[vidx].m_weights.push_back(static_cast<float>(weight));
+							}
+						}
 					}
 
 					//hack
 					{
 						static int bone_index = 0;
-						for (auto& v : m_skin.m_verts)
+						for (auto& v : skin.m_verts)
 						{
 							v.m_bones = { bone_index, 0, 0, 0 };
 							v.m_weights = { 1, 0, 0, 0 };
 						}
 						++bone_index;
 					}
-
-					// Output the skinning data for the mesh
-					m_out.AddSkin(m_skin);
-				}
-
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadSkinning(*node.GetChild(i), level + 1);
-			}
-
-			// Read the weights and bones for a cluster of verts
-			void ReadDeformer(FbxCluster& cluster)
-			{
-				auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
-
-#if 0
-				// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
-				// If set, the associate model is the node used as a reference to measure the relative displacement of the link node.
-				// Otherwise, the displacement of the link node is measured relative the node containing the control points.
-				// Typically, the associate model node is the parent of the bone a skin is attached to.
-				if (cluster.GetLinkMode() == FbxCluster::eAdditive && cluster.GetAssociateModel())
-				{
-					throw std::runtime_error("not implemented");
-				}
-				else
-				{
-					FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
-					FbxAMatrix geom_offset; mesh.GetNode();
-					ref_to_world *= geom_offset;
-
-
-					// Get the link initial global position and the link current global position.
-					pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
-					lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
-
-					// Compute the initial position of the link relative to the reference.
-					lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
-
-					// Compute the current position of the link relative to the reference.
-					lClusterRelativeCurrentPositionInverse = lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
-
-					// Compute the shift of the link relative to the reference.
-					pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
-				}
-#endif
-
-				// Find the bone in the skeleton
-				auto bone_index = pr::index_of(m_skel.m_ids, bone.GetUniqueID());
-				if (bone_index >= isize(m_skel.m_o2bp))
-					throw std::runtime_error("Bone index out of range in skeleton");
-
-				// Get the span of vert indices and weights
-				auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-				auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-				for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
-				{
-					auto vidx = indices[w];
-					auto weight = weights[w];
-					m_skin.m_verts[vidx].m_bones.push_back(bone_index);
-					m_skin.m_verts[vidx].m_weights.push_back(static_cast<float>(weight));
 				}
 			}
 
 			// Read the animation data from the scene
 			void ReadAnimation()
 			{
-				// Set the animation to use
-				auto animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
-				for (int i = 0; i != animation_count; ++i)
-				{
-					m_anim = Check(m_scene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
-					m_time_span = m_anim->GetLocalTimeSpan();
-					m_scene.SetCurrentAnimationStack(m_anim);
+				// Notes:
+				//  - FbxAnimStack can affect any node in the scene so it's possible for one animation
+				//    to affect multiple skeletons. So, loop over skeletons, then over animations stacks.
+				//  - Fbx allows each key frame of each channel to have it's own interpolation mode. Since
+				//    we're merge transform channels into one, thi
 
-					// Only support one animation layer at the moment
-					auto layer_count = std::min(1, m_anim->GetMemberCount<FbxAnimLayer>());
-					for (int j = 0; j != layer_count; ++j)
+				// Check each skeleton for animation.
+				for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel))
+				{
+					// Set the animation to use
+					auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
+					for (int i = 0; i != animation_count; ++i)
 					{
-						m_layer = m_anim->GetMember<FbxAnimLayer>(j);
-						ReadBoneTransforms(*m_scene.GetRootNode());
+						m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
+						m_time_span = m_animstack->GetLocalTimeSpan();
+						m_fbxscene.SetCurrentAnimationStack(m_animstack);
+
+						// Only support one animation layer at the moment
+						auto layer_count = std::min(1, m_animstack->GetMemberCount<FbxAnimLayer>());
+						for (int j = 0; j != layer_count; ++j)
+						{
+							m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
+							
+							// Read the animation for this skeleton with the given key frame times
+							auto anim = ReadAnimation(skel);
+
+							// Output the animation
+							if (anim)
+								m_scene.m_animations.push_back(std::move(anim));
+						}
 					}
 				}
 			}
 
-			// Read the animation data for the bone node
-			void ReadBoneTransforms(FbxNode& node, BoneTracks* bone_tracks = nullptr)
+			// Output an animation for 'skeleton' based on the selected animation stack
+			Animation ReadAnimation(std::span<SkelNode const> skeleton)
 			{
-				bool is_root = bone_tracks == nullptr;
-				uint64_t skel_id = NoUniqueId;
+				// Notes:
+				//  - Only want to iterate through the times once, because calling 'EvaluateGlobalTransform' is expensive.
+				//  - In order to parallelize reading the animation data, we have to cache the transforms in a snapshot
+				//    of the node transforms for every bone in the skeleton at a key frame time.
+				//  - Each thread worker needs to add a transform to 'animation' for each bone that has a key frame at the
+				//    given time.
+				//  - Fbx curve keys have an interpolation type, they are either constant, linear, or cubic. 
 
-				// Find nodes containing bones, and read the animation curves for the transforms
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				Animation animation = { .m_skel_id = skeleton[0].bone->GetUniqueID() };
+
+				// Read the key frame times for all bones in 'skeleton'
+				std::vector<KeyTimes> times_per_bone; times_per_bone.reserve(skeleton.size());
+				for (auto const& skelnode : skeleton)
+					times_per_bone.push_back(FindKeyFrameTimes(*skelnode.bone->GetNode()));
+
+				// Preallocate the tracks for each bone.
+				for (auto const& [skelnode, i] : with_index(skeleton))
+					animation.m_tracks[skelnode.bone->GetUniqueID()].resize(times_per_bone[i].size());
+
+				std::vector<std::future<void>> tasks;
+
+				// For each key frame time, start a worker that adds the key frame to each bone with that key
+				zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &skeleton, &animation, &tasks](KeyTime keytime, std::span<ZipSet const> indices)
 				{
-					// Look for meshes with animated node transforms
-					auto const& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
-						continue;
-
-					auto const& bone = *FbxCast<FbxSkeleton>(&attr);
-
-					if (is_root)
+					// A snapshot of the skeleton transforms at a time
+					struct Pose
 					{
-						skel_id = bone.GetUniqueID();
-						m_tracks.reset(skel_id);
-						bone_tracks = &m_tracks;
-					}
+						struct Key
+						{
+							int m_key_index; // Which key that is for the bone
+							int m_bone_index; // The bone that has the key
+							int m_parent_index; // The parent bone index
+							BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
+						};
 
-					// Read key frames for 'bone' and add them to the collection
-					auto& track = bone_tracks->m_tracks[bone.GetUniqueID()];
-					ReadBoneTrack(*bone.GetNode(), track);
-				}
+						std::span<SkelNode const> m_skeleton; // The skeleton that the pose is for
+						std::vector<Key> m_keys; // The bones with a key frame at this time
+						std::vector<m4x4> m_b2w; // One for each skeleton bone
+						double m_time;           // The time value in seconds of this key frame
 
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadBoneTransforms(*node.GetChild(i), bone_tracks);
+						Pose(std::span<SkelNode const> skeleton, std::span<ZipSet const> indices, KeyTime const& keytime)
+							: m_skeleton(skeleton)
+							, m_keys()
+							, m_b2w()
+							, m_time(keytime.time.GetSecondDouble())
+						{
+							// Record the bones with a key frame at this time, and which key frame that is
+							m_keys.reserve(indices.size());
+							for (auto& [bone_idx, key_idx] : indices)
+							{
+								m_keys.push_back({
+									.m_key_index = s_cast<int>(key_idx),
+									.m_bone_index = s_cast<int>(bone_idx),
+									.m_parent_index = ParentOf(skeleton, s_cast<int>(bone_idx)),
+									.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
+								});
+							}
 
-				// If this is the root, output the animation sequence
-				if (is_root && bone_tracks != nullptr)
-					m_out.AddAnimation(skel_id, *bone_tracks);
+							// Buffer the transforms for each node. All bones are needed because we need the
+							// parent transforms to be correct, even if there isn't a key frame for the parent.
+							m_b2w.reserve(skeleton.size());
+							for (auto const& skelnode : skeleton)
+							{
+								auto* node = skelnode.bone->GetNode();
+								m_b2w.push_back(To<m4x4>(node->EvaluateGlobalTransform(keytime.time)));
+							}
+						}
+
+						// Find the parent bone index
+						static int ParentOf(std::span<SkelNode const> skeleton, int bone_index)
+						{
+							assert(bone_index >= 0 && bone_index < isize(skeleton));
+							auto const& bone = skeleton[bone_index];
+							int parent_index = bone_index - 1;
+							for (; parent_index != -1 && skeleton[parent_index].level == bone.level; --parent_index) {}
+							return parent_index;
+						}
+					};
+
+					Pose pose(skeleton, indices, keytime);
+
+					// Start the worker to add key frames for each bone with a key at this time
+					tasks.emplace_back(std::async(std::launch::async, [pose = std::move(pose), &animation]
+					{
+						for (auto const& key : pose.m_keys)
+						{
+							auto const& skelnode = pose.m_skeleton[key.m_bone_index];
+
+							// All bone nodes should be captured in the pose snapshot
+							auto const& b2w = pose.m_b2w[key.m_bone_index];
+							auto const& p2w = !skelnode.is_root ? pose.m_b2w[key.m_parent_index] : m4x4::Identity();
+							auto b2p = InvertFast(p2w) * b2w;
+
+							BoneKey keyframe = {
+								quat(b2p.rot),
+								b2p.pos,
+								v4::One().w0(), // TODO
+								pose.m_time,
+								uint64_t(key.m_interpolation),
+							};
+
+							// These transforms are the bone offset relative to the parent over time.
+							// i.e. at time=0, b2p should be identity assuming frame 0 = rest pose.
+							auto& track = animation.m_tracks[skelnode.bone->GetUniqueID()];
+							track[key.m_key_index] = keyframe;
+						}
+					}));
+				});
+
+				// Wait for all tasks
+				for (auto& task : tasks)
+					task.wait();
+
+				return animation;
 			}
 
-			// Read the animation keys for a node
-			void ReadBoneTrack(FbxNode& node, BoneTracks::Track& track)
+			// Find the set of unique key frame times for 'node'
+			KeyTimes FindKeyFrameTimes(FbxNode& node) const
 			{
-				auto const& times = FindKeyFrameTimes(node);
-
-				// For blender, if node is the root, then this will be the 'Armature' node. It has the same node-to-world as the root bone.
-				auto parent = node.GetParent();
-				if (parent && std::string_view("Armature") == parent->GetName())
-					parent = nullptr;
-
-				// Sample the transform at each key time
-				track.reserve(track.size() + times.size());
-				for (auto const& time : times)
-				{
-					auto b2w = To<m4x4>(node.EvaluateGlobalTransform(time));
-					auto p2w = parent != nullptr ? To<m4x4>(parent->EvaluateGlobalTransform(time)) : m4x4::Identity();
-					auto b2p = InvertFast(p2w) * b2w;
-
-					// These transforms are the bone offset relative to the parent over time.
-					// i.e. at time=0, b2p should be identity assuming frame 0 = rest pose.
-					track.push_back({ quat(b2p.rot), b2p.pos, v4::One().w0(), time.GetSecondDouble() });
-				}
-			}
-
-			// Find the bind pose for 'node'
-			FbxPose* FindBindPose(FbxNode const& node) const
-			{
-				for (int i = 0, iend = m_scene.GetPoseCount(); i != iend; ++i)
-				{
-					auto* pose = m_scene.GetPose(i);
-					if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
-						return pose;
-				}
-				return nullptr;
-			}
-
-			// Find key-frame times that are the union of all transform curves
-			TimeCont& FindKeyFrameTimes(FbxNode& node)
-			{
-				m_times.resize(0);
-				m_times.reserve(1 + static_cast<int>(m_time_span.GetDuration().GetSecondDouble() * m_frame_rate));
-
+				// Channels of a node's transform (x, y, z etc)
 				struct Curve
 				{
 					FbxAnimCurve const* m_curve = nullptr;
 					size_t size() const { return m_curve->KeyGetCount(); }
 					FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
 				};
-
-				// Read the non-null, non-empty transform animation curves
-				vector<Curve, 9, true> curves;
-				for (auto curve : {
+				auto channels = {
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
 					node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
@@ -1418,58 +1521,62 @@ namespace pr::geometry::fbx
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
 					node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-				})
+				};
+
+				vector<Curve, 9, true> curves;
+				size_t max_keys = 0;
+
+				// Read the non-null, non-empty transform animation curves
+				for (auto curve : channels)
 				{
 					if (curve == nullptr || curve->KeyGetCount() == 0) continue;
+					max_keys = std::max(max_keys, s_cast<size_t>(curve->KeyGetCount()));
 					curves.push_back({ curve });
 				}
-				if (curves.empty())
-					return m_times;
 
-				// Create a list of unique key times
-				zip<Curve>(curves, true, [&](FbxTime time) { m_times.push_back(time); });
-
-				return m_times;
+				// Find the set of unique key frame times for 'node'
+				KeyTimes keytimes; keytimes.reserve(max_keys); // could be more than this, but it's a reasonable inital guess
+				zip<EZip::Unique, FbxTime>(curves, [&keytimes, &curves](FbxTime time, size_t idx)
+				{
+					// Assume the same interpolation for all transform channels
+					auto interp = curves[idx].m_curve->KeyGetInterpolation(0);
+					keytimes.push_back({ time, interp });
+				});
+				return keytimes;
 			}
 
-			// Ensure the geometry in 'mesh' is triangles not polygons
-			FbxMesh* EnsureTriangulated(FbxMesh* mesh)
+			// Find the bind pose for 'node'
+			FbxPose* FindBindPose(FbxNode const& node) const
 			{
-				// Ensure the mesh is triangles
-				if (mesh->IsTriangleMesh())
-					return mesh;
-
-				// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
-				// Edge hardnees triangulation give wrong edge hardness so we convert them to a smooth group during the triangulation.
-				FbxGeometryConverter converter(m_scene.GetFbxManager());
-				for (int j = 0, jend = mesh->GetLayerCount(FbxLayerElement::eSmoothing); j != jend; ++j)
+				for (int i = 0, iend = m_fbxscene.GetPoseCount(); i != iend; ++i)
 				{
-					auto* smoothing = mesh->GetLayer(j)->GetSmoothing();
-					if (smoothing && smoothing->GetMappingMode() != FbxLayerElement::eByPolygon)
-						converter.ComputePolygonSmoothingFromEdgeSmoothing(mesh, j);
+					auto* pose = m_fbxscene.GetPose(i);
+					if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
+						return pose;
 				}
-
-				// Convert polygons to triangles
-				mesh = FbxCast<FbxMesh>(converter.Triangulate(mesh, true));
-
-				// If triangulation failed, ignore the mesh
-				if (!mesh->IsTriangleMesh())
-					throw std::runtime_error(std::format("Failed to convert mesh '{}' to a triangle mesh", mesh->GetName()));
-
-				return mesh;
+				return nullptr;
 			}
 
 			// Get the mesh bounding box
-			BBox BoundingBox(FbxMesh& mesh)
+			BBox BoundingBox(FbxMesh& mesh) const
 			{
 				mesh.ComputeBBox();
 				auto min = To<v4>(mesh.BBoxMin.Get());
 				auto max = To<v4>(mesh.BBoxMax.Get());
 				return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
 			}
+
+			// Return the range of SkelNodes for a complete skeleton.
+			std::span<SkelNode const> NextSkeleton(std::span<SkelNode const> const* prev = nullptr)
+			{
+				// Use for iteration: 'for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel)) {}'
+				auto beg = prev ? prev->data() - m_skels.data() + prev->size() : 0;
+				auto end = beg; for (; end != isize(m_skels) && (beg == end || !m_skels[end].is_root); ++end) {}
+				return { m_skels.data() + beg, s_cast<size_t>(end - beg) };
+			}
 		};
 
-		Reader reader(scene, out, options);
+		Reader reader(scene, options);
 		reader.Do();
 	}
 
@@ -3554,13 +3661,13 @@ extern "C"
 	}
 
 	// Read the hierarchy from the scene
-	__declspec(dllexport) void __stdcall Fbx_ReadScene(fbxsdk::FbxScene& scene, pr::geometry::fbx::ISceneOut& out, pr::geometry::fbx::ReadOptions const& options)
+	__declspec(dllexport) void __stdcall Fbx_ReadScene(pr::geometry::fbx::Scene& scene, pr::geometry::fbx::ReadOptions const& options)
 	{
 		using namespace pr::geometry::fbx;
 
 		try
 		{
-			ReadScene(scene, out, options);
+			ReadScene(scene, options);
 		}
 		catch (std::exception const& ex)
 		{
@@ -3603,288 +3710,3 @@ extern "C"
 		}
 	}
 }
-
-
-
-#if 0
-
-
-void InspectAnimatedProperties(FbxNode* node, FbxAnimLayer* layer)
-{
-    FbxProperty property = node->GetFirstProperty();
-    while (property.IsValid())
-    {
-        if (property.GetSrcObjectCount<FbxAnimCurve>() > 0)
-        {
-            const char* propName = property.GetNameAsCStr();
-            FbxDataType dataType = property.GetPropertyDataType();
-
-            printf("Animated property: %s (type: %s)\n", propName, dataType.GetName());
-
-            int numComponents = property.GetSrcObjectCount<FbxAnimCurve>();
-            for (int i = 0; i < numComponents; ++i)
-            {
-                FbxAnimCurve* curve = property.GetSrcObject<FbxAnimCurve>(i);
-                if (!curve) continue;
-
-                printf("  Curve %d has %d keys\n", i, curve->KeyGetCount());
-
-                for (int k = 0; k < curve->KeyGetCount(); ++k)
-                {
-                    FbxTime time = curve->KeyGetTime(k);
-                    float value = curve->KeyGetValue(k);
-                    printf("    Time: %f, Value: %f\n", time.GetSecondDouble(), value);
-                }
-            }
-        }
-
-        property = node->GetNextProperty(property);
-    }
-
-    // Recurse children
-    for (int i = 0; i < node->GetChildCount(); ++i)
-        InspectAnimatedProperties(node->GetChild(i), layer);
-}
-void GetAnimationTimeRange(FbxAnimStack* animStack, FbxTime& outStart, FbxTime& outEnd)
-{
-    FbxTakeInfo* takeInfo = animStack->GetTakeInfo();
-    if (takeInfo)
-    {
-        outStart = takeInfo->mLocalTimeSpan.GetStart();
-        outEnd = takeInfo->mLocalTimeSpan.GetStop();
-    }
-    else
-    {
-        // Fallback: Walk through all nodes and find min/max times
-        outStart = FbxTime::GetZero();
-        outEnd = FbxTime(0);
-
-        FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
-        // Call a recursive function to inspect all nodes and get the time span
-        // (not shown here for brevity)
-    }
-}
-
-	// RAII wrapper for FBX Exporter
-	struct Exporter
-	{
-		Manager& m_manager;
-		FbxExporter* m_exporter;
-
-		Exporter(Manager& manager, Settings const& settings)
-			: m_manager(manager)
-			, m_exporter(FbxExporter::Create(m_manager, ""))
-		{
-			m_exporter->SetIOSettings(settings);
-		}
-		Exporter(Exporter&&) = delete;
-		Exporter(Exporter const&) = delete;
-		Exporter& operator=(Exporter&&) = delete;
-		Exporter& operator=(Exporter const&) = delete;
-		~Exporter()
-		{
-			if (m_exporter != nullptr)
-				m_exporter->Destroy();
-		}
-
-		// Choose an output format
-		static int ChooseFormat(FbxManager& manager, int format = -1)
-		{
-			auto& plugin_registry = *manager.GetIOPluginRegistry();
-			if (format >= 0 && format < plugin_registry.GetWriterFormatCount())
-				return format;
-
-			// Try to export in ASCII if possible
-			auto format_count = plugin_registry.GetWriterFormatCount();
-			for (int i = 0; i != format_count; ++i)
-			{
-				if (!plugin_registry.WriterIsFBX(i))
-					continue;
-
-				FbxString desc = plugin_registry.GetWriterFormatDescription(i);
-				if (desc.Find("ascii") < 0)
-					continue;
-
-				return i;
-			}
-
-			// Write in fall-back format if no ASCII format is found
-			return plugin_registry.GetNativeWriterFormat();
-		}
-
-		// Export a scene
-		void Export(Scene const& scene, std::filesystem::path const& filepath, int format = -1)
-		{
-			// Choose a format
-			format = ChooseFormat(*m_manager, format);
-
-			// Initialise the exporter
-			if (!m_exporter->Initialize(filepath.string().c_str(), format))
-				throw std::runtime_error(std::format("FbxExporter::Initialize() failed. {}", m_exporter->GetStatus().GetErrorString()));
-
-			// Do the export
-			auto status = m_exporter->Export(scene);
-			if (status != 0)
-				throw std::runtime_error("Export failed");
-		}
-
-		FbxExporter* operator ->() const
-		{
-			return m_exporter;
-		}
-		operator FbxExporter* () const
-		{
-			return m_exporter;
-		}
-	};
-
-	// RAII wrapper for FBX Importer
-	struct Importer
-	{
-		Manager& m_manager;
-		FbxImporter* m_importer;
-
-		Importer(Manager& manager, Settings const& settings)
-			: m_manager(manager)
-			, m_importer(Check(FbxImporter::Create(m_manager, ""), "Failed to create Importer"))
-		{
-			m_importer->SetIOSettings(settings);
-		}
-		Importer(Importer&&) = delete;
-		Importer(Importer const&) = delete;
-		Importer& operator=(Importer&&) = delete;
-		Importer& operator=(Importer const&) = delete;
-		~Importer()
-		{
-			if (m_importer != nullptr)
-				m_importer->Destroy();
-		}
-
-		// Initialise the importer with a data source
-		// After this call it is possible to access animation stack information without the expense of loading the entire scene.
-		void Source(std::filesystem::path const& filepath, char const* format = Formats::FbxBinary, std::vector<std::string>* errors = nullptr)
-		{
-			// Initialize the importer by providing a filename.
-			if (!m_importer->Initialize(filepath.string().c_str(), m_manager.FileFormatID(format)))
-			{
-				FbxArray<FbxString*> history;
-				m_importer->GetStatus().GetErrorStringHistory(history);
-
-				// Record any errors
-				if (errors != nullptr)
-				{
-					for (int i = 0; i != history.GetCount(); ++i)
-						errors->push_back(history[i]->Buffer());
-				}
-
-				auto status = m_importer->GetStatus();
-				switch (status.GetCode())
-				{
-					case FbxStatus::eInvalidFileVersion:
-					{
-						FbxVersion sdk, file;
-						FbxManager::GetFileFormatVersion(sdk.Major, sdk.Minor, sdk.Revs);
-						m_importer->GetFileVersion(file.Major, file.Minor, file.Revs);
-						throw std::runtime_error(std::format("Unsupported file version '{}.{}.{}'. SDK Version supports '{}.{}.{}'", file.Major, file.Minor, file.Revs, sdk.Major, sdk.Minor, sdk.Revs));
-					}
-					default:
-					{
-						throw std::runtime_error(std::format("FbxImporter::Initialize() failed. {}", status.GetErrorString()));
-					}
-				}
-			}
-
-			// Check the file is actually an fbx file
-			if (!m_importer->IsFBX())
-				throw std::runtime_error(std::format("Imported file is not an FBX file"));
-		}
-		void Source(Stream& src, char const* format = Formats::FbxBinary, std::vector<std::string>* errors = nullptr)
-		{
-			if (!m_importer->Initialize(&src, nullptr, m_manager.FileFormatID(format)))
-			{
-				FbxArray<FbxString*> history;
-				m_importer->GetStatus().GetErrorStringHistory(history);
-
-				// Record any errors
-				if (errors != nullptr)
-				{
-					for (int i = 0; i != history.GetCount(); ++i)
-						errors->push_back(history[i]->Buffer());
-				}
-
-				auto status = m_importer->GetStatus();
-				switch (status.GetCode())
-				{
-					case FbxStatus::eInvalidFileVersion:
-					{
-						FbxVersion sdk, file;
-						FbxManager::GetFileFormatVersion(sdk.Major, sdk.Minor, sdk.Revs);
-						m_importer->GetFileVersion(file.Major, file.Minor, file.Revs);
-						throw std::runtime_error(std::format("Unsupported file version '{}.{}.{}'. SDK Version supports '{}.{}.{}'", file.Major, file.Minor, file.Revs, sdk.Major, sdk.Minor, sdk.Revs));
-					}
-					default:
-					{
-						throw std::runtime_error(std::format("FbxImporter::Initialize() failed. {}", status.GetErrorString()));
-					}
-				}
-			}
-
-			// Check the file is actually an fbx file
-			if (!m_importer->IsFBX())
-				throw std::runtime_error(std::format("Imported file is not an FBX file"));
-		}
-
-		// Read the entire scene into memory
-		void LoadScene(Scene& scene)
-		{
-			// This cannot create the scene and return it because of the crappy memory management in 'fbxsdk.dll'.
-			// The importer is intended to be a short lived object that is destroyed before the scenes.
-
-			// Import the scene.
-			auto result = m_importer->Import(scene.m_scene);
-			if (result && m_importer->GetStatus() == FbxStatus::eSuccess)
-				return;
-			
-			throw std::runtime_error("Failed to read fbx from file");
-		}
-
-		// Access the animation stack
-		void AnimationStack()
-		{
-			//m_out << "Animation Stack Information\n";
-
-			//auto lAnimStackCount = m_importer->GetAnimStackCount();
-
-			//m_out << "    Number of Animation Stacks: %d\n", lAnimStackCount;
-			//m_out << "    Current Animation Stack: \"%s\"\n", lImporter->GetActiveAnimStackName().Buffer();
-			//m_out << "\n";
-
-			//for (int i = 0; i < lAnimStackCount; i++)
-			//{
-			//	FbxTakeInfo* lTakeInfo = lImporter->GetTakeInfo(i);
-
-			//	m_out << "    Animation Stack %d\n", i;
-			//	m_out << "         Name: \"%s\"\n", lTakeInfo->mName.Buffer();
-			//	m_out << "         Description: \"%s\"\n", lTakeInfo->mDescription.Buffer();
-
-			//	// Change the value of the import name if the animation stack should be imported 
-			//	// under a different name.
-			//	m_out << "         Import Name: \"%s\"\n", lTakeInfo->mImportName.Buffer();
-
-			//	// Set the value of the import state to false if the animation stack should be not
-			//	// be imported. 
-			//	m_out << "         Import State: %s\n", lTakeInfo->mSelect ? "true" : "false";
-			//	m_out << "\n";
-			//}
-		}
-
-		FbxImporter* operator ->() const
-		{
-			return m_importer;
-		}
-		operator FbxImporter* () const
-		{
-			return m_importer;
-		}
-	};
-#endif

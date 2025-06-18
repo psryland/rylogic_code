@@ -54,6 +54,14 @@ namespace pr::rdr12
 		PingPong,
 	};
 
+	// Different methods for interpolating between key-frames
+	enum class EAnimInterpolation
+	{
+		Constant,
+		Linear,
+		Cubic,
+	};
+
 	// A transform key frame
 	struct KeyFrame
 	{
@@ -68,6 +76,16 @@ namespace pr::rdr12
 		operator m4x4() const
 		{
 			return m4x4(m3x4(m_rotation) * m3x4::Scale(m_scale.x, m_scale.y, m_scale.z), m_translation);
+		}
+
+		// Get/Set the interpolation style of this key frame
+		EAnimInterpolation Interpolation() const
+		{
+			return static_cast<EAnimInterpolation>(GrabBits<int, uint64_t>(m_flags, 2, 0));
+		}
+		void Interpolation(EAnimInterpolation interp)
+		{
+			m_flags = PackBits<int>(m_flags, static_cast<int>(interp), 2, 0);
 		}
 
 		// Identity key frame
@@ -85,6 +103,13 @@ namespace pr::rdr12
 		// Linearly interpolate between two key frames
 		friend KeyFrame Lerp(KeyFrame const& lhs, KeyFrame const& rhs, float frac)
 		{
+			switch (lhs.Interpolation())
+			{
+				case EAnimInterpolation::Constant: frac = 0; break;
+				case EAnimInterpolation::Linear: frac = frac; break;
+				case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
+				default: throw std::runtime_error("Unknown interpolation style");
+			}
 			return KeyFrame{
 				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
 				.m_translation = pr::Lerp(lhs.m_translation, rhs.m_translation, frac),
