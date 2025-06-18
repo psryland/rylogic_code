@@ -158,6 +158,14 @@ namespace Rylogic.LDraw
 			foreach (var obj in m_objects)
 				obj.WriteTo(res);
 		}
+
+		/// <summary>Write to a file</summary>
+		public void Save(string filepath, bool text = true)
+		{
+			using var file = File.Create(filepath);
+			var mem = text ? ToText() : ToBinary();
+			mem.CopyTo(file);
+		}
 	}
 	public class LdrBase<TDerived> : LdrObj where TDerived : LdrBase<TDerived>
 	{

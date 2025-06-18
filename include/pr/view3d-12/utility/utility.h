@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -309,6 +309,32 @@ namespace pr::rdr12
 		return static_cast<Value const&>(iter->second);
 	}
 
+	// Walk a depth first hierarchy calling 'func' for each item in the hierarchy.
+	// The caller decides what is pushed to the stack at each level ('Parent').
+	// 'hierarchy' is the level of each element in depth first order.
+	// 'Func' is 'Parent Func(int idx, Parent const* parent) {... return current; }' (the current value is the parent for the next call).
+	template <typename Parent, std::integral Int, std::invocable<int, Parent const*> Func> requires std::same_as<std::invoke_result_t<Func, int, Parent const*>, Parent>
+	void WalkHierarchy(std::span<Int const> hierarchy, Func func)
+	{
+		// Tree example:
+		//        A
+		//      /   \
+		//     B     C
+		//   / | \   |
+		//  D  E  F  G
+		//  Hierarchy = [A0 B1 D2 E2 F2 C1 G2]
+		//  Children are all nodes to the right with level > the current.
+		pr::vector<Parent> ancestors = {};
+		for (int idx = 0, iend = isize(hierarchy); idx != iend; ++idx)
+		{
+			for (; !ancestors.empty() && hierarchy[idx] <= hierarchy[idx - 1];)
+				ancestors.pop_back();
+
+			auto const* parent = !ancestors.empty() ? &ancestors.back() : nullptr;
+			ancestors.push_back(func(idx, parent));
+		}
+	}
+
 	// Concept for interface with private data
 	template <typename T>
 	concept HasPrivateData = requires(T v, Guid const& guid, UINT* mdata_size, UINT cdata_size, void* mdata, void const* cdata)
@@ -334,11 +360,11 @@ namespace pr::rdr12
 	{
 		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(name.size()), name.data()));
 	}
-	template <HasPrivateData T> char const* DebugName(D3DPtr<T> res)
+	template <HasPrivateData T> char const* DebugName(D3DPtr<T>& res)
 	{
 		return DebugName(res.get());
 	}
-	template <HasPrivateData T> void DebugName(D3DPtr<T> res, std::string_view name)
+	template <HasPrivateData T> void DebugName(D3DPtr<T>& res, std::string_view name)
 	{
 		DebugName(res.get(), name);
 	}
@@ -361,11 +387,11 @@ namespace pr::rdr12
 		extern GUID const Guid_DebugColour;
 		Check(res->SetPrivateData(Guid_DebugColour, sizeof(colour), &colour));
 	}
-	template <HasPrivateData T> Colour32 DebugColour(D3DPtr<T> res)
+	template <HasPrivateData T> Colour32 DebugColour(D3DPtr<T>& res)
 	{
 		return DebugColour(res.get());
 	}
-	template <HasPrivateData T> void DebugColour(D3DPtr<T> res, Colour32 colour)
+	template <HasPrivateData T> void DebugColour(D3DPtr<T>& res, Colour32 colour)
 	{
 		DebugColour(res.get(), colour);
 	}

@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -250,7 +250,7 @@ namespace pr
 	// 'lo' is the LSB, 'hi' is one past the MSB.
 	// e.g. PackBits(0b00000001, 0b101, 6, 3) => 0b00101001
 	template <std::integral T, std::unsigned_integral U>
-	constexpr U PackBits(U bits, T value, int hi, int lo)
+	[[nodiscard]] constexpr U PackBits(U bits, T value, int hi, int lo)
 	{
 		const U mask = (1ULL << (hi - lo)) - 1;
 		return static_cast<U>((bits & ~(mask << lo)) | ((value & mask) << lo));
@@ -260,7 +260,7 @@ namespace pr
 	// 'lo' is the LSB, 'hi' is one past the MSB.
 	// e.g. GrabBits(0b00101001, 6, 3) => 0b101
 	template <std::integral T, std::unsigned_integral U>
-	constexpr T GrabBits(U bits, int hi, int lo)
+	[[nodiscard]] constexpr T GrabBits(U bits, int hi, int lo)
 	{
 		const U mask = (1ULL << (hi - lo)) - 1;
 		return static_cast<T>((bits >> lo) & mask);

@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Algorithm
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
@@ -473,44 +473,94 @@ namespace pr
 		}
 	}
 
+	enum class EZip { All, Unique, SetsBitmask, SetsFull };
+	using ZipSet = struct { size_t src_index, elem_index; };
+	template<typename R, typename T> concept RangeOf = std::ranges::range<R> && std::same_as<std::ranges::range_value_t<R>, T>;
+	template <typename R, typename T> concept RangeOfRangefOf = std::ranges::range<R> && RangeOf<std::ranges::range_value_t<R>, T>;
+
 	// Zip sorted collections into one ordered collection
-	template <typename TSrc, typename TOut> requires (requires (TSrc src, TOut out)
+	template <EZip Dup, typename Type, typename TSources, typename TOut>
+	requires (requires (TSources srcs, TOut out)
 	{
-		src.size();
-		src[0];
-		out(src[0]);
+		srcs[0];
+		srcs[0][0];
+		out(srcs[0][0], {});
 	})
-	void zip(std::span<TSrc const> srcs, bool unique, TOut out)
+	void zip(TSources& srcs, TOut out)
 	{
-		// (value, source index, element index)
-		using Type = decltype(srcs[0][0]);
+		// Notes:
+		//  - 'All' -> returns all values. Second parameter is the 'src_index'
+		//  - 'Unique' -> return unique values only. Second parameter is the 'src_index' of one of the sources with this value
+		//  - 'SetsBitmask' -> return unique values only. Second parameter is a bitmask of the sources with this value.
+		//  - 'SetsFull' -> return unique values only. Second parameter is the source index and element within that source that has this value.
+
 		struct Elem
 		{
 			Type value;
 			size_t src_idx;
 			size_t elem_idx;
-			bool operator < (Elem const& rhs) const { return value > rhs.value; }
+			bool operator < (Elem const& rhs) const { return rhs.value < value; }
 		};
 
 		std::priority_queue<Elem> min_heap;
-		auto src_count = srcs.size();
+		std::vector<ZipSet> set_items; // { src_index, elem_idx }
+		uint64_t set_mask = 0;
+
+		// Check the number of sources can be represented in the set mask
+		if constexpr (Dup == EZip::SetsBitmask)
+		{
+			if (srcs.size() > sizeof(set_mask) * 8)
+				throw std::runtime_error("SetsBitmask mode requires the number of sources to be <= mask bit count");
+		}
 
 		// Initialize heap with the first element from each source
-		for (size_t i = 0; i != src_count; ++i)
+		for (size_t i = 0, src_count = srcs.size(); i != src_count; ++i)
 		{
 			if (srcs[i].size() == 0) continue;
 			min_heap.emplace(srcs[i][0], i, 0);
 		}
 
 		// Output each item in order
-		for (std::optional<Type> last_value = {}; !min_heap.empty(); )
+		std::optional<Type> last_value = {};
+		for (; !min_heap.empty(); )
 		{
 			auto [value, src_idx, elem_idx] = min_heap.top();
 			min_heap.pop();
 
-			if (!unique || value != last_value)
+			if constexpr (Dup == EZip::All)
 			{
-				out(value);
+				out(value, src_idx);
+			}
+			if constexpr (Dup == EZip::Unique)
+			{
+				if (!(value == last_value))
+				{
+					out(value, src_idx);
+					last_value = value;
+				}
+			}
+			if constexpr (Dup == EZip::SetsBitmask)
+			{
+				if (!(value == last_value))
+				{
+					if (set_mask != 0)
+						out(*last_value, set_mask);
+					
+					set_mask = 0;
+				}
+				set_mask |= 1ULL << src_idx;
+				last_value = value;
+			}
+			if constexpr (Dup == EZip::SetsFull)
+			{
+				if (!(value == last_value))
+				{
+					if (!set_items.empty())
+						out(*last_value, set_items);
+					
+					set_items.resize(0);
+				}
+				set_items.push_back({ src_idx, elem_idx });
 				last_value = value;
 			}
 
@@ -518,6 +568,42 @@ namespace pr
 			if (elem_idx + 1 < srcs[src_idx].size())
 				min_heap.emplace(srcs[src_idx][elem_idx + 1], src_idx, elem_idx + 1);
 		}
+
+		// In sets mode, output the last set
+		if constexpr (Dup == EZip::SetsBitmask)
+		{
+			if (set_mask != 0)
+				out(*last_value, set_mask);
+		}
+		if constexpr (Dup == EZip::SetsFull)
+		{
+			if (!set_items.empty())
+				out(*last_value, set_items);
+		}
+	}
+
+	// Helper for ranged for to return a pair of the item and the iteration index
+	template <std::ranges::input_range R>
+	auto with_index(R&& range)
+	{
+		struct iterator
+		{
+			std::ranges::iterator_t<R> iter;
+			size_t index;
+
+			auto operator*() const { return std::pair{ *iter, index }; }
+			auto operator++() { ++iter; ++index; return *this; }
+			bool operator!=(const iterator& other) const { return iter != other.iter; }
+		};
+
+		struct iterable
+		{
+			R range;
+			auto begin() { return iterator{ std::ranges::begin(range), 0 }; }
+			auto end() { return iterator{ std::ranges::end(range), 0 }; }
+		};
+
+		return iterable{ std::forward<R>(range) };
 	}
 
 	// Returns true if 'item' is in the "include" set implied by the ranges 'include' and 'exclude'

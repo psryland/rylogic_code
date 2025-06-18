@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -588,7 +588,7 @@ namespace pr::rdr12
 
 		// Get the animation clock time
 		auto anim_time = (float)m_anim_data.m_clock.load().count();
-		assert(IsFinite(anim_time));
+		assert(IsFinite(anim_time)); (void)anim_time;
 
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)

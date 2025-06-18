@@ -28,14 +28,14 @@ namespace pr::geometry::p3d
 {
 	// Notes:
 	//  - The original design goal for P3D was load speed. Models where stored in a format that could be
-	//    directly memcpy'd into gfx memory. This results in very large p3d files, however, and doesn't give
+	//    directly 'memcpy'd into gfx memory. This results in very large p3d files, however, and doesn't give
 	//    much load speed benefit. The idea was that models could be zipped if compression was needed. Data
 	//    aware compression is way better than zip, and unzip is pretty slow so the original idea didn't work
 	//    that well.
 	//  - In this version, the binary format is small on disk, but easily map-able to renderer models. There
 	//    is also options for highly effective data-aware compression.
 	//  - The in-memory version is decompressed but still fairly memory efficient.
-	//  - This means memcpy can't be used to initialise a DX model.
+	//  - This means 'memcpy' can't be used to initialise a DX model.
 	//  - To examine a file without fully loading all the data, use a 'p3d::ChunkIndex'.
 	//  - Use order: Vert, Colour, Norm, UV for consistency.
 	//
@@ -49,6 +49,8 @@ namespace pr::geometry::p3d
 	//    normals or none.
 	//  Although there will be some redundancy with vertex position data, it's the only option for fast loading.
 	//
+	// TODO:
+	//  - Add structures for animation data (skeletons, skinning weights, and bone-tracks)
 
 	struct ChunkHeader;
 	struct ChunkIndex;
