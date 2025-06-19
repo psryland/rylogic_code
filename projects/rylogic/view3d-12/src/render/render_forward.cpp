@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -152,7 +152,7 @@ namespace pr::rdr12
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Get the back buffer view handle and set the back buffer as the render target.
-		m_cmd_list.OMSetRenderTargets({ &frame.m_bb_main.m_rtv, 1 }, FALSE, &frame.m_bb_main.m_dsv);
+		m_cmd_list.OMSetRenderTargets({ &frame.bb_main().m_rtv, 1 }, FALSE, &frame.bb_main().m_dsv);
 
 		// Set the viewport and scissor rect.
 		auto const& vp = scn().m_viewport;

@@ -1313,7 +1313,7 @@ namespace pr::rdr12
 					auto verts = transform<pr::vector<Skinfluence>>(mesh.m_skin.m_verts, [](fbx::Skin::Influence const& influence)
 					{
 						if (influence.size() > 4)
-							OutputDebugStringA("More than 4 bone influences not implemented"); // todo
+							OutputDebugStringA("More than 4 bone influences not implemented\n"); // todo
 
 						Skinfluence s = {};
 						for (int i = 0, iend = influence.size(); i != iend && i != 4; ++i)

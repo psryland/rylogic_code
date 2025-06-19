@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -52,6 +52,7 @@ namespace pr::rdr12
 		GpuViewHeap                  m_heap_view;        // Shader visible heap for CBV/SRV/UAV
 		GpuSampHeap                  m_heap_samp;        // Shader visible heap for Samplers
 		ResStateStore                m_res_state;        // Tracks the resource state of render targets and depth stencil resources
+		Frame                        m_frame;            // Class for managing the rendering of a frame (for reuse)
 		DiagState                    m_diag;             // Diagnostic variables
 		int64_t                      m_frame_number;     // The number of times 'RenderFrame' has been called.
 		UINT                         m_vsync;            // Present SyncInterval value
@@ -92,7 +93,7 @@ namespace pr::rdr12
 		void CustomSwapChain(std::span<Texture2D*> back_buffers);
 
 		// Start rendering a new frame. Returns an object that scenes can render into
-		Frame NewFrame();
+		Frame& NewFrame();
 
 		// Present the frame to the display
 		void Present(Frame& frame, EGpuFlush flush = EGpuFlush::Async);

@@ -630,7 +630,7 @@ namespace pr::rdr12
 			m_ui_angle_tool->Gfx()->AddToScene(m_scene);
 
 		// Render the scene
-		auto frame = m_wnd.NewFrame();
+		auto& frame = m_wnd.NewFrame();
 		m_scene.Render(frame);
 		m_wnd.Present(frame);
 

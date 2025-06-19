@@ -36,19 +36,19 @@ namespace pr::rdr12
 	private:
 
 		friend CmdListPool<ListType>;
-		using alloc_t = typename CmdAlloc<ListType>;
-		using pool_t = typename CmdListPool<ListType>;
+		using CmdAlloc = typename CmdAlloc<ListType>;
+		using CmdListPool = typename CmdListPool<ListType>;
 
 	private:
 
-		D3DPtr<ICommandList> m_list;     // The interface for buffering GPU commands.
-		alloc_t m_cmd_allocator;         // The current allocator in use by this cmd list.
-		std::thread::id m_thread_id;     // The thread id of the thread that called Reset.
-		ResStateStore m_res_state;       // Track the state of resources used in this command list
-		pool_t* m_pool;                  // The pool to return this list too. (can be null)
-		UINT m_root_sig_idx;             // The index of the next root parameter to add
+		D3DPtr<ICommandList> m_list; // The interface for buffering GPU commands.
+		CmdAlloc m_cmd_allocator;    // The current allocator in use by this cmd list.
+		std::thread::id m_thread_id; // The thread id of the thread that called Reset.
+		ResStateStore m_res_state;   // Track the state of resources used in this command list
+		CmdListPool* m_pool;         // The pool to return this list too. (can be null)
+		UINT m_root_sig_idx;         // The index of the next root parameter to add
 
-		CmdList(D3DPtr<ICommandList> list, alloc_t&& cmd_alloc, pool_t* pool)
+		CmdList(D3DPtr<ICommandList> list, CmdAlloc&& cmd_alloc, CmdListPool* pool)
 			: m_list(list)
 			, m_cmd_allocator(std::move(cmd_alloc))
 			, m_thread_id(std::this_thread::get_id())
@@ -58,7 +58,7 @@ namespace pr::rdr12
 
 	public:
 
-		CmdList(ID3D12Device4* device, pool_t* pool, char const* name, Colour32 pix_colour)
+		CmdList(ID3D12Device4* device, CmdListPool* pool, char const* name, Colour32 pix_colour)
 			: CmdList(nullptr, {}, pool)
 		{
 			// Create an instance of a cmd list with no allocator assigned yet
@@ -66,8 +66,8 @@ namespace pr::rdr12
 			if (name) DebugName(m_list, name);
 			DebugColour(m_list, pix_colour);
 		}
-		CmdList(ID3D12Device4* device, alloc_t&& cmd_alloc, pool_t* pool, char const* name, Colour32 pix_colour)
-			: CmdList(nullptr, std::forward<alloc_t>(cmd_alloc), pool)
+		CmdList(ID3D12Device4* device, CmdAlloc&& cmd_alloc, CmdListPool* pool, char const* name, Colour32 pix_colour)
+			: CmdList(nullptr, std::forward<CmdAlloc>(cmd_alloc), pool)
 		{
 			// Create an instance of an open cmd list based on 'cmd_alloc'
 			Check(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)m_list.address_of()));
@@ -229,7 +229,7 @@ namespace pr::rdr12
 		}
 
 		// Reset the command list
-		void Reset(alloc_t&& cmd_alloc, ID3D12PipelineState* pipeline_state = nullptr)
+		void Reset(CmdAlloc&& cmd_alloc, ID3D12PipelineState* pipeline_state = nullptr)
 		{
 			ThrowOnCrossThreadUse();
 			m_cmd_allocator = std::move(cmd_alloc);

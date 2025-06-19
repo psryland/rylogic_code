@@ -39,6 +39,7 @@ namespace pr::rdr12
 		,m_heap_view(HeapCapacityView, m_gsync)
 		,m_heap_samp(HeapCapacitySamp, m_gsync)
 		,m_res_state()
+		,m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
 		,m_diag(*this)
 		,m_frame_number()
 		,m_vsync(settings.m_vsync)
@@ -459,7 +460,7 @@ namespace pr::rdr12
 	}
 
 	// Start rendering a new frame. Returns an object that scenes can render into
-	Frame Window::NewFrame()
+	Frame& Window::NewFrame()
 	{
 		++m_frame_number;
 
@@ -486,24 +487,24 @@ namespace pr::rdr12
 			m_d2d_dc->SetTarget(bb_post.m_d2d_target.get());
 
 		// Create the frame object to be passed to the scenes 
-		Frame frame(d3d(), bb_main, bb_post, m_cmd_alloc_pool);
+		m_frame.Reset(bb_main, bb_post);
 
 		// Prepare
 		if (bb_main.m_render_target != nullptr && bb_post.m_render_target != nullptr)
 		{
 			// The MSAA render target goes to the 'render target' state
-			BarrierBatch bb(frame.m_prepare);
+			BarrierBatch bb(m_frame.m_prepare);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Commit();
 
-			frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
-			frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
+			m_frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
+			m_frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
 		}
 		else if (bb_main.m_render_target != nullptr)
 		{
 			// The MSAA render target goes to the 'resolve source' state
-			BarrierBatch bb(frame.m_prepare);
+			BarrierBatch bb(m_frame.m_prepare);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Commit();
 		}
@@ -514,13 +515,13 @@ namespace pr::rdr12
 			if (bb_main.m_multisamp.Count > 1)
 			{
 				// Resolve the MSAA render target into the swap chain render target
-				BarrierBatch bb(frame.m_resolve);
+				BarrierBatch bb(m_frame.m_resolve);
 				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
 				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST);
 				bb.Commit();
 
 				// Resolve the MSAA render target into the swap chain render target
-				frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
+				m_frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
 
 				// The swap chain render target goes to the 'render target' state
 				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -530,12 +531,12 @@ namespace pr::rdr12
 			else
 			{
 				// Copy the MSAA render target into the swap chain render target
-				BarrierBatch bb(frame.m_resolve);
+				BarrierBatch bb(m_frame.m_resolve);
 				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 				bb.Commit();
 
-				frame.m_resolve.CopyResource(bb_post.m_render_target.get(), bb_main.m_render_target.get());
+				m_frame.m_resolve.CopyResource(bb_post.m_render_target.get(), bb_main.m_render_target.get());
 
 				// The swap chain render target goes to the 'render target' state
 				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -548,13 +549,13 @@ namespace pr::rdr12
 		if (bb_post.m_render_target != nullptr)
 		{
 			// The swap chain render target goes to the 'present' state
-			BarrierBatch bb(frame.m_present);
+			BarrierBatch bb(m_frame.m_present);
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
 			bb.Commit();
 		}
 
 		// Return the frame object
-		return frame;
+		return m_frame;
 	}
 	
 	// Present the frame to the display
@@ -634,8 +635,8 @@ namespace pr::rdr12
 
 		// Set the next sync point for the swap chain back buffer
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
-		frame.m_bb_main.m_sync_point = sync_point;
-		frame.m_bb_post.m_sync_point = sync_point;
+		frame.bb_main().m_sync_point = sync_point;
+		frame.bb_post().m_sync_point = sync_point;
 		++m_bb_index %= BBCount();
 
 		if (flush == EGpuFlush::Block)
