@@ -1242,7 +1242,8 @@ namespace pr::rdr12
 		using namespace geometry;
 
 		// Read the fbx scene
-		fbx::Scene scene(src, { .m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly });
+		fbx::Scene scene(src);
+		scene.Read({ .m_parts = out.ReadAnimation ? fbx::ReadOptions::EParts::All : fbx::ReadOptions::EParts::ModelOnly });
 
 		// Create the models
 		{

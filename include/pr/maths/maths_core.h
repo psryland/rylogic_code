@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -588,6 +588,35 @@ namespace pr
 	{
 		return static_cast<S>(std::round(x));
 	}
+	template <Scalar S> inline S RoundSD(S d, int significant_digits)
+	{
+		assert(significant_digits >= 0 && "'significant_digits' value must be >= 0");
+
+		// No significant digits is always zero
+		if (d == 0 || significant_digits == 0)
+			return 0;
+
+		if constexpr (std::is_same_v<S, long long>) // int64_t is 19 digits
+		{
+			if (significant_digits > 19)
+				return d;
+		}
+		if constexpr (std::is_same_v<S, float>) // float's mantissa is 7 digits
+		{
+			if (significant_digits > 7)
+				return d;
+		}
+		if constexpr (std::is_same_v<S, double>) // double's mantissa is 17 digits
+		{
+			if (significant_digits > 17)
+				return d;
+		}
+
+		auto pow = static_cast<int>(std::floor(std::log10(std::abs(d))));
+		auto scale = std::pow(S(10), significant_digits - pow - 1);
+		auto result = scale != 0 ? static_cast<S>(Round<double>(d * scale) / scale) : S{};
+		return result;
+	}
 	template <Scalar S> inline S Modulus(S x, S y)
 	{
 		if constexpr (std::floating_point<S>)
@@ -609,6 +638,11 @@ namespace pr
 	{
 		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
 		return CompOp(v, [](auto x) { return Round(x); });
+	}
+	template <maths::VectorX T> inline T RoundSD(T const& v, int significant_digits)
+	{
+		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
+		return CompOp(v, [=](auto x) { return RoundSD(x, significant_digits); });
 	}
 	template <maths::VectorX T> inline T Modulus(T const& x, T const& y)
 	{
@@ -811,6 +845,26 @@ namespace pr
 	template <std::floating_point T> constexpr inline T RadiansToDegrees(T radians)
 	{
 		return static_cast<T>(radians * maths::E60_by_tau);
+	}
+	template <maths::VectorX T> constexpr inline T DegreesToRadians(T v)
+	{
+		return CompOp(v, [](auto x)
+			{
+				if constexpr (maths::VectorX<maths::vec_elem_t<T>>)
+					return DegreesToRadians(x);
+				else
+					return DegreesToRadians(x);
+			});
+	}
+	template <maths::VectorX T> constexpr inline T RadiansToDegrees(T v)
+	{
+		return CompOp(v, [](auto x)
+			{
+				if constexpr (maths::VectorX<maths::vec_elem_t<T>>)
+					return RadiansToDegrees(x);
+				else
+					return RadiansToDegrees(x);
+			});
 	}
 
 	// Trig functions

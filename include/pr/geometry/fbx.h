@@ -37,19 +37,6 @@ namespace pr::geometry::fbx
 	//    Children are all nodes to the right with level > the current.
 	//  - The 'fbxsdk' library is *NOT* thread-safe
 
-	enum class EParts
-	{
-		None = 0,
-		Meshes = 1 << 0,
-		Materials = 1 << 1,
-		Skeleton = 1 << 2,
-		Skinning = 1 << 3,
-		Animation = 1 << 4,
-
-		All = Meshes | Materials | Skeleton | Skinning | Animation,
-		ModelOnly = Meshes | Materials,
-		_flags_enum = 0,
-	};
 	enum class EBoneType
 	{
 		Root,
@@ -188,8 +175,50 @@ namespace pr::geometry::fbx
 	// Options for parsing FBXfiles
 	struct ReadOptions
 	{
+		enum class EParts
+		{
+			None = 0,
+			Meshes = 1 << 0,
+			Materials = 1 << 1,
+			Skeletons = 1 << 2,
+			Skinning = 1 << 3,
+			Animation = 1 << 4,
+
+			All = Meshes | Materials | Skeletons | Skinning | Animation,
+			ModelOnly = Meshes | Materials,
+			_flags_enum = 0,
+		};
+
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
+	};
+
+	// Options for outputting the FBX scene dump
+	struct DumpOptions
+	{
+		enum class EParts
+		{
+			None           = 0,
+			GlobalSettings = 1 << 0,
+			NodeHierarchy  = 1 << 1,
+			Materials      = 1 << 2,
+			Meshes         = 1 << 3,
+			Skeletons      = 1 << 4,
+			All            = ~0,
+			_flags_enum    = 0,
+		};
+
+		// Parts of the scene to dump
+		EParts m_parts = EParts::All;
+
+		// The number to cap output of arrays at
+		int m_summary_length = 10;
+
+		// Significant figures for float rounding
+		int m_precision = 6;
+
+		// Transform the scene to 'Y=up, -Z=forward"
+		bool m_convert_axis_system = true;
 	};
 
 	// Fbx File Formats
@@ -251,7 +280,7 @@ namespace pr::geometry::fbx
 		Fbx_ReadSceneFn ReadScene;
 
 		// Dump info about the scene to 'out'
-		using Fbx_DumpSceneFn = void(__stdcall*)(fbxsdk::FbxScene& scene, std::ostream& out);
+		using Fbx_DumpSceneFn = void(__stdcall*)(pr::geometry::fbx::Scene const& scene, pr::geometry::fbx::DumpOptions const& options, std::ostream& out);
 		Fbx_DumpSceneFn DumpScene;
 
 		// Round trip test an fbx scene
@@ -267,7 +296,10 @@ namespace pr::geometry::fbx
 		using SkeletonCont = std::vector<Skeleton>;
 		using AnimationCont = std::vector<Animation>;
 
+		// The FBX scene instance
 		fbxsdk::FbxScene* m_fbxscene;
+
+		// Scene global properties
 		SceneProps m_props;
 
 		// One or more model hierarchies.
@@ -277,23 +309,22 @@ namespace pr::geometry::fbx
 		// Material definitions
 		MaterialCont m_materials;
 
+		// One or more skeleton hierarchies.
+		// Skeletons with 'm_level == 0' are the roots of a skeleton hierarchy
 		SkeletonCont m_skeletons;
+
+		// Animation data
 		AnimationCont m_animations;
 
 		// Remember to open streams in binary mode!
-		Scene(std::istream& src, ReadOptions const& options)
+		Scene(std::istream& src)
 			: m_fbxscene(Fbx::get().LoadScene(src))
 			, m_props(Fbx::get().ReadSceneProps(*m_fbxscene))
 			, m_meshes()
 			, m_materials()
 			, m_skeletons()
 			, m_animations()
-		{
-			// Notes:
-			//  - If this is slow, it's probably spending most of the time trianguling the
-			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
-			Fbx::get().ReadScene(*this, options);
-		}
+		{}
 		Scene(Scene&& rhs) noexcept
 			: m_fbxscene()
 			, m_props()
@@ -315,36 +346,20 @@ namespace pr::geometry::fbx
 				Fbx::get().ReleaseScene(m_fbxscene);
 		}
 
+		// Read the full scene into memory
+		void Read(ReadOptions const& options)
+		{
+			// Notes:
+			//  - If this is slow, it's probably spending most of the time trianguling the
+			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
+			Fbx::get().ReadScene(*this, options);
+		}
+
+		// Read the full scene into memory
+		void Dump(DumpOptions const& options, std::ostream& out)
+		{
+			// You probably want to read first
+			Fbx::get().DumpScene(*this, options, out);
+		}
 	};
 }
-
-
-	//// Interfaces for emitting scene parts during 'Read'
-	//struct ISceneOut
-	//{
-	//	virtual ~ISceneOut() = default;
-
-	//	// Add a material to the output
-	//	virtual void AddMaterial(uint64_t unique_id, Material const& mat) { (void)unique_id, mat; }
-
-	//	// Add a mesh to the output
-	//	virtual void AddMesh(Mesh const& mesh, m4x4 const& o2p, int level) { (void)mesh, o2p, level; }
-
-	//	// Add a skeleton to the output
-	//	virtual void AddSkeleton(Skeleton const& skeleton) { (void)skeleton; }
-
-	//	// Add Skin data for an existing mesh
-	//	virtual void AddSkin(Skin const& skin) { (void)skin; }
-
-	//	// Add an animation sequence
-	//	virtual void AddAnimation(uint64_t skel_id, BoneTracks const& tracks) { (void)skel_id, tracks; }
-	//};
-
-		//// Read the hierarchy from the FBX scene
-		//void ReadScene(ISceneOut& out, ReadOptions const& options)
-		//{
-		//	// Notes:
-		//	//  - If this is slow, it's probably spending most of the time trianguling the
-		//	//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
-		//	Fbx::get().ReadScene(*m_scene, out, options);
-		//}

@@ -57,21 +57,34 @@ __declspec(allocate(".CRT$XCT")) void (__cdecl* pInitDllDirectory)(void) = &Init
 
 int main()
 {
-	//std::filesystem::path ifilepath = "E:\\Dump\\biplane.fbx";
-	//std::filesystem::path ifilepath = "E:\\Dump\\Hyperpose\\AJ-99.fbx";
-	std::filesystem::path ifilepath = "E:\\Rylogic\\Code\\art\\models\\pendulum\\pendulum.fbx";
-	//std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
-	//std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
-	std::filesystem::path p3doutpath = "E:\\Dump\\model.p3d";
+	std::filesystem::path ifilepath{
+		//"E:\\Rylogic\\Code\\art\\models\\pendulum\\pendulum.fbx"
+		"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx"
+		//"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx"
+		//"E:\\Dump\\biplane.fbx"
+	};
+	std::filesystem::path p3doutpath{
+		"E:\\Dump\\model.p3d"
+	};
+	std::filesystem::path ofilepath{
+		"E:\\Dump\\Hyperpose\\fbx-round-trip.fbx"
+	};
+	std::filesystem::path dfilepath{
+		"E:\\Dump\\Hyperpose\\fbx-dump.txt"
+	};
 
 	std::ifstream ifile(ifilepath, std::ios::binary);
-	//std::ofstream ofile(ofilepath, std::ios::binary);
-	//std::ofstream dfile(dfilepath);
+	//' std::ofstream ofile(ofilepath, std::ios::binary);
+	std::ofstream dfile(dfilepath);
 
-	//dll.Fbx_RoundTripTest(ifile, ofile);
-	//dll.Fbx_DumpStream(ifile, dfile);
-	fbx::Scene fbxscene(ifile, { .m_parts = fbx::EParts::ModelOnly });
+	//' dll.Fbx_RoundTripTest(ifile, ofile);
+	//' dll.Fbx_DumpStream(ifile, dfile);
+	fbx::Scene scene(ifile);
+	scene.Dump({
+		.m_parts = fbx::DumpOptions::EParts::Meshes| fbx::DumpOptions::EParts::Skeletons,
+	}, dfile);
 
+#if 0
 	// Convert the models the p3d
 	p3d::File file = {};
 	{
@@ -108,6 +121,7 @@ int main()
 
 	if (std::ofstream ofile(p3doutpath, std::ios::binary); ofile)
 		p3d::Write(ofile, file);
+#endif
 
 	return 0;
 }

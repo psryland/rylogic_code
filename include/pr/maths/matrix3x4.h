@@ -569,7 +569,7 @@ namespace pr
 		return a;
 	}
 
-	// Orthonormalises the rotation component of 'mat'
+	// Orthonormalise the rotation component of 'mat'
 	template <Scalar S, typename A, typename B> inline Mat3x4<S,A,B> pr_vectorcall Orthonorm(Mat3x4_cref<S,A,B> mat)
 	{
 		auto m = mat;
@@ -577,6 +577,12 @@ namespace pr
 		m.y = Normalise(Cross3(m.z, m.x));
 		m.z = Cross3(m.x, m.y);
 		return m;
+	}
+
+	// Return the scale of the axis of a rotation matrix
+	template <Scalar S, typename A, typename B> inline Vec4<S, void> pr_vectorcall GetScale(Mat3x4_cref<S, A, B> mat)
+	{
+		return Vec4<S, void>(Length(mat.x), Length(mat.y), Length(mat.z), S{});
 	}
 
 	// Return the axis and angle of a rotation matrix
@@ -608,69 +614,6 @@ namespace pr
 		auto XcXp = Cross3(X, Xprim);
 		if (Dot3(XcXp, axis) < S(0))
 			angle = -angle;
-	}
-
-	// Return the Euler angles for a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-	template <Scalar S, typename A, typename B> inline Vec4<S,void> pr_vectorcall GetEulerAngles(Mat3x4_cref<S,A,B> mat)
-	{
-		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
-		(void)mat;
-		#if 0
-		v4 euler = {};
-
-		// roll, pitch, yaw are applied to a body sequentially, so to undo the rotations
-		// we first "un-rotate" around mat.y, then around mat.x, then around mat.z.
-		// Let X,Y,Z be the world space axes, and x,y,z be the axis of 'mat'.
-		// When roll is applied, x and y move within the XY plane, z is still aligned to Z.
-		// When pitch is applied, y moves out of the XY plane, z moves away from Z, and x stays within the XY plane.
-		// When yaw is applied, z moves again, y remains one rotation out of the XY plane, and x moves out of the XY plane.
-		// To reverse this,
-		// Undo yaw => rotate x back into the XY plane (a rotation about y)
-		// Undo pitch => rotate y back into the XY plane (a rotation about x after removing yaw)
-		// Undo roll => rotate x and y back to X and Y (a rotation about z after removing yaw and pitch)
-
-		auto x_xy_sq = Sqr(mat.x.x) + Sqr(mat.x.y);
-		auto y_xy_sq = Sqr(mat.y.x) + Sqr(mat.y.y);
-
-		euler.x = atan2(Sqrt(1 - y_xy_sq), Sqrt(y_xy_sq)); // un-pitch
-		euler.y = atan2(Sqrt(1 - x_xy_sq), Sqrt(x_xy_sq)); // un-yaw
-		euler.z = atan2(mat.x.y); // un-roll
-
-
-
-
-
-		// yaw   - rotate y or z onto the YZ plane
-		// pitch - if y, rotate y to the Y axis, else if x, rotate z to the Z axis
-		// roll  - get x onto the X axis, or Y onto the Y axis
-
-		// To get yaw, we rotate about the Y axis, so use the axis with the smallest Y value for accuracy
-		if (abs(mat.y.y) < abs(mat.z.y))
-		{
-			// 'y' is least aligned with the Y axis. Rotate Y onto the YZ plane to get yaw
-			euler.x = atan2(mat.y.z, Sqrt(1.0 - Sqr(mat.y.y))); // pitch = rotate y onto the Y axis
-			euler.z = atan2(
-		}
-		else
-		{
-			// 'z' is least aligned with the Y axis
-
-		}
-		// Z aligned with the Y axis
-		if (abs(mat.z.y) > 1.0f - maths::tinyf)
-		{
-			euler.x = Sign(mat.z.y) * maths::tau_by_4;
-			euler.y = 0.0f;
-			euler.z = atan2(mat.x.y, mat.x.x);
-		}
-		else
-		{
-			euler.x = asin(m.m10); // pitch
-			euler.y = atan2(mat.z.x, mat.z.z); // yaw
-			euler.z = atan2(-m.m12, m.m11); // roll
-		}
-		#endif
-		throw std::runtime_error("not implemented");
 	}
 
 	// Diagonalise a 3x3 matrix. From numerical recipes
