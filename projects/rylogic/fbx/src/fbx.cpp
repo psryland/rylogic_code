@@ -341,6 +341,19 @@ namespace pr
 			}
 		}
 	};
+	template <> struct Convert<std::string_view, FbxCluster::ELinkMode>
+	{
+		static std::string_view To_(FbxCluster::ELinkMode ty)
+		{
+			switch (ty)
+			{
+				case FbxCluster::ELinkMode::eNormalize: return "eNormalize";
+				case FbxCluster::ELinkMode::eAdditive: return "eAdditive";
+				case FbxCluster::ELinkMode::eTotalOne: return "eTotalOne";
+				default: return "<unknown cluster link mode type>";
+			}
+		}
+	};
 }
 
 // FBX support
@@ -821,6 +834,19 @@ namespace pr::geometry::fbx
 				auto const& bone = *cluster.GetLink();
 				return FbxCast<FbxSkeleton>(FindRoot(FbxNodeAttribute::eSkeleton, bone));
 			}
+		}
+		return nullptr;
+	}
+	
+	// Find the bind pose for 'node'
+	static FbxPose const* FindBindPose(FbxNode const& node)
+	{
+		auto& fbxscene = *node.GetScene();
+		for (int i = 0, iend = fbxscene.GetPoseCount(); i != iend; ++i)
+		{
+			auto* pose = fbxscene.GetPose(i);
+			if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
+				return pose;
 		}
 		return nullptr;
 	}
@@ -1317,7 +1343,14 @@ namespace pr::geometry::fbx
 						for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
 						{
 							auto& cluster = *fbxskin.GetCluster(b);
+							if (cluster.GetControlPointIndicesCount() == 0)
+								continue;
+
 							auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
+
+							auto link_mode = cluster.GetLinkMode();
+							if (link_mode != FbxCluster::ELinkMode::eNormalize)
+								throw std::runtime_error("Non-normalise link modes not implemented");
 
 							#if 0
 							// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
@@ -1571,18 +1604,6 @@ namespace pr::geometry::fbx
 				return keytimes;
 			}
 
-			// Find the bind pose for 'node'
-			FbxPose* FindBindPose(FbxNode const& node) const
-			{
-				for (int i = 0, iend = m_fbxscene.GetPoseCount(); i != iend; ++i)
-				{
-					auto* pose = m_fbxscene.GetPose(i);
-					if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
-						return pose;
-				}
-				return nullptr;
-			}
-
 			// Get the mesh bounding box
 			BBox BoundingBox(FbxMesh& mesh) const
 			{
@@ -1668,6 +1689,8 @@ namespace pr::geometry::fbx
 					if (basis0 != basis1)
 						basis0.ConvertScene(&m_fbxscene);
 				}
+
+				out << std::showpos;
 			}
 
 			// Read the scene
@@ -1684,8 +1707,6 @@ namespace pr::geometry::fbx
 					DumpGeometry();
 				if (AllSet(m_opts.m_parts, DumpOptions::EParts::Skeletons))
 					DumpSkeletons();
-				//if (AllSet(m_opts.m_parts, EParts::Skinning))
-				//	ReadSkinning();
 				//if (AllSet(m_opts.m_parts, EParts::Animation))
 				//	ReadAnimation();
 			}
@@ -1794,12 +1815,17 @@ namespace pr::geometry::fbx
 				// Process each mesh in a worker thread, because triangulation is really slow
 				for (auto const& meshnode : m_meshes)
 				{
+					if (m_opts.m_triangulate_meshes && !meshnode.mesh->IsTriangleMesh())
+					{
+						FbxGeometryConverter converter(m_fbxscene.GetFbxManager());
+						const_cast<MeshNode&>(meshnode).mesh = FbxCast<FbxMesh>(converter.Triangulate(meshnode.mesh, true));
+					}
+
 					auto& mesh = *meshnode.mesh;
 					auto& node = *mesh.GetNode();
 					auto level = meshnode.level;
 
-					m_out << Indent(level) << "Mesh \"" << node.GetName() << "\":\n";
-					m_out << Indent(level + 1) << "ID: " << mesh.GetUniqueID() << "\n";
+					m_out << Indent(level) << "Mesh \"" << node.GetName() << "\" (" << mesh.GetUniqueID() << "):\n";
 					m_out << Indent(level + 1) << "IsRoot: " << (meshnode.is_root ? "ROOT" : "CHILD") << "\n";
 					m_out << Indent(level + 1) << "Polys: " << (mesh.IsTriangleMesh() ? "TRIANGLES" : "POLYGONS") << "\n";
 					m_out << Indent(level + 1) << "Mat #: " << mesh.GetElementMaterialCount() << "\n";
@@ -1811,12 +1837,9 @@ namespace pr::geometry::fbx
 						m_out << Indent(level + 1) << "Verts: [" << mesh.GetControlPointsCount() << "]\n";
 						for (int i = 0, iend = std::min(m_opts.m_summary_length, mesh.GetControlPointsCount()); i != iend; ++i)
 						{
-							m_out << Indent(level + 2) << RoundSD(To<v4>(verts[i]).xyz, m_opts.m_precision) << "\n";
+							m_out << Indent(level + 2) << Round(To<v4>(verts[i]).xyz) << "\n";
 						}
-						if (mesh.GetControlPointsCount() > m_opts.m_summary_length)
-						{
-							m_out << Indent(level + 2) << "...\n";
-						}
+						DumpSummary(level + 2, mesh.GetControlPointsCount());
 					}
 
 					// Faces
@@ -1845,10 +1868,7 @@ namespace pr::geometry::fbx
 
 							m_out << "\n";
 						}
-						if (mesh.GetPolygonCount() > m_opts.m_summary_length)
-						{
-							m_out << Indent(level + 2) << "...\n";
-						}
+						DumpSummary(level + 2, mesh.GetPolygonCount());
 					}
 
 					// Bounding Box
@@ -1857,7 +1877,7 @@ namespace pr::geometry::fbx
 						auto min = To<v4>(mesh.BBoxMin.Get());
 						auto max = To<v4>(mesh.BBoxMax.Get());
 						BBox bb{ (max + min) * 0.5f, (max - min) * 0.5f };
-						m_out << Indent(level + 1) << "BBox: c=(" << RoundSD(bb.Centre().xyz, m_opts.m_precision) << "), r=(" << RoundSD(bb.Radius().xyz, m_opts.m_precision) << ")\n";
+						m_out << Indent(level + 1) << "BBox: c=(" << Round(bb.Centre().xyz) << "), r=(" << Round(bb.Radius().xyz) << ")\n";
 					}
 
 					// Node Transform
@@ -1867,6 +1887,10 @@ namespace pr::geometry::fbx
 						m_out << Indent(level + 1) << "Mesh-to-Parent:\n";
 						DumpTransform(level + 2, To<m4x4>(node.EvaluateLocalTransform()));
 					}
+
+					// Skinning info
+					if (AllSet(m_opts.m_parts, DumpOptions::EParts::Skinning))
+						DumpSkinning(meshnode, level + 1);
 				}
 
 				m_out << "\n";
@@ -1905,25 +1929,89 @@ namespace pr::geometry::fbx
 				}
 				m_out << "\n";
 			}
-			
-			// Find the bind pose for 'node'
-			FbxPose* FindBindPose(FbxNode const& node) const
+
+			// Output the skinning info for 'meshnode'
+			void DumpSkinning(MeshNode const& meshnode, int level)
 			{
-				for (int i = 0, iend = m_fbxscene.GetPoseCount(); i != iend; ++i)
+				auto& fbxmesh = *meshnode.mesh;
+
+				auto const* fbxskeleton = FindSkeleton(fbxmesh);
+				if (fbxskeleton == nullptr)
+					return; // Mesh has no skeleton => not animated
+
+				m_out << Indent(level) << "Skin:\n";
+				m_out << Indent(level + 1) << "Skeleton: \"" << fbxskeleton->GetNode()->GetName() << "\" (" << fbxskeleton->GetUniqueID() << ")\n";
+				m_out << Indent(level + 1) << "Deformers: [" << fbxmesh.GetDeformerCount(FbxDeformer::eSkin) << "]\n";
+
+				// Get the skinning data for this mesh
+				for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 				{
-					auto* pose = m_fbxscene.GetPose(i);
-					if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
-						return pose;
+					auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
+
+					m_out << Indent(level + 2) << "Clusters: [" << fbxskin.GetClusterCount() << "]\n";
+					for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
+					{
+						auto& cluster = *fbxskin.GetCluster(b);
+						if (cluster.GetControlPointIndicesCount() == 0)
+							continue;
+
+						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
+						m_out << Indent(level + 3)
+							<< "Cluster=(" << cluster.GetName() << "), "
+							<< "Bone=(" << bone.GetName() << "(" << bone.GetUniqueID() << ")), "
+							<< "LinkMode=(" << To<std::string_view>(cluster.GetLinkMode()) << "), "
+							<< "\n";
+
+						// Get the span of vert indices and weights
+						auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+						auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+						for (int w = 0, wend = std::min(cluster.GetControlPointIndicesCount(), m_opts.m_summary_length); w != wend; ++w)
+						{
+							m_out << Indent(level + 4) << "VIdx=(" << indices[w] << "), Weight=(" << weights[w] << ")\n";
+						}
+						DumpSummary(level + 4, cluster.GetControlPointIndicesCount());
+
+						FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
+						FbxAMatrix link_to_world; cluster.GetTransformLinkMatrix(link_to_world);
+						m_out << Indent(level + 4) << "Cluster Xform:\n";
+						DumpTransform(level + 5, To<m4x4>(ref_to_world));
+						m_out << Indent(level + 4) << "Link Xform:\n";
+						DumpTransform(level + 5, To<m4x4>(link_to_world));
+					}
 				}
-				return nullptr;
 			}
 
 			// Dump transform helper
 			void DumpTransform(int level, m4x4 const& a2b) const
 			{
-				m_out << Indent(level) << "Position: " << RoundSD(a2b.pos.xyz, m_opts.m_precision) << "\n";
-				m_out << Indent(level) << "Rotation: " << RoundSD(RadiansToDegrees(EulerAngles(quat(a2b.rot)).xyz), m_opts.m_precision) << "\n";
-				m_out << Indent(level) << "Scale   : " << RoundSD(GetScale(a2b.rot).xyz, m_opts.m_precision) << "\n";
+				m_out << Indent(level) << "Position: " << Round(a2b.pos.xyz) << "\n";
+				m_out << Indent(level) << "Rotation: " << Round(RadiansToDegrees(EulerAngles(quat(a2b.rot)).xyz)) << "\n";
+				m_out << Indent(level) << "Scale   : " << Round(GetScale(a2b.rot).xyz) << "\n";
+			}
+
+			// Output the 'and so on' indicator if 'count' is greater than the summary length
+			void DumpSummary(int level, int count)
+			{
+				if (count > m_opts.m_summary_length)
+					m_out << Indent(level) << "...\n";
+			}
+
+			// Rounding helpers
+			static float Round(float v)
+			{
+				return Quantise(v, 1 << 15);
+			}
+			static v3 Round(v3 const& v)
+			{
+				return CompOp(v, [](float x) { return Round(x); });
+			}
+			static v4 Round(v4 const& v)
+			{
+				return CompOp(v, [](float x) { return Round(x); });
+			}
+			static m4x4 Round(m4x4 const& m)
+			{
+				CompOp(m, [](v4 const& v) { return Round(v); });
 			}
 
 			// Indent helper

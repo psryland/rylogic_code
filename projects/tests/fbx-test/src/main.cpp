@@ -70,7 +70,7 @@ int main()
 		"E:\\Dump\\Hyperpose\\fbx-round-trip.fbx"
 	};
 	std::filesystem::path dfilepath{
-		"E:\\Dump\\Hyperpose\\fbx-dump.txt"
+		"E:\\Dump\\Hyperpose\\fbx-dump-animchar.txt"
 	};
 
 	std::ifstream ifile(ifilepath, std::ios::binary);
@@ -81,7 +81,13 @@ int main()
 	//' dll.Fbx_DumpStream(ifile, dfile);
 	fbx::Scene scene(ifile);
 	scene.Dump({
-		.m_parts = fbx::DumpOptions::EParts::Meshes| fbx::DumpOptions::EParts::Skeletons,
+		.m_parts =
+			fbx::DumpOptions::EParts::Meshes |
+			fbx::DumpOptions::EParts::Skeletons |
+			fbx::DumpOptions::EParts::Skinning |
+			fbx::DumpOptions::EParts::None,
+		.m_convert_axis_system = true,
+		.m_triangulate_meshes = true,
 	}, dfile);
 
 #if 0

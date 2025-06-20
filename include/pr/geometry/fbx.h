@@ -204,6 +204,7 @@ namespace pr::geometry::fbx
 			Materials      = 1 << 2,
 			Meshes         = 1 << 3,
 			Skeletons      = 1 << 4,
+			Skinning       = 1 << 5 | Meshes,
 			All            = ~0,
 			_flags_enum    = 0,
 		};
@@ -214,11 +215,11 @@ namespace pr::geometry::fbx
 		// The number to cap output of arrays at
 		int m_summary_length = 10;
 
-		// Significant figures for float rounding
-		int m_precision = 6;
-
 		// Transform the scene to 'Y=up, -Z=forward"
 		bool m_convert_axis_system = true;
+
+		// Run triangulation on meshes before outputting them
+		bool m_triangulate_meshes = false;
 	};
 
 	// Fbx File Formats
