@@ -431,6 +431,7 @@
 #include "pr\view3d-12\utility\wrappers.h"
 #include "pr\win32\dummy_window.h"
 #include "pr\win32\key_codes.h"
+#include "pr\win32\mem_checks.h"
 #include "pr\win32\stackdump.h"
 #include "pr\win32\user_directories.h"
 #include "pr\win32\win32.h"

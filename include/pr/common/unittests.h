@@ -1,4 +1,4 @@
-//*******************************************************************************************
+﻿//*******************************************************************************************
 // UnitTests
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
@@ -23,6 +23,7 @@ namespace pr::unittests
 // need to add an include of the file containing the unit test, so that it gets included
 // in the build.
 #pragma once
+#include <span>
 #include <memory>
 #include <iostream>
 #include <string>
@@ -32,11 +33,14 @@ namespace pr::unittests
 #include <filesystem>
 #include <algorithm>
 #include <functional>
+#include <execution>
+#include <ranges>
 #include <random>
 #include <chrono>
 #include <cstdarg>
 #include <locale>
 #include <format>
+#include <Windows.h>
 
 // Optionally use Microsoft's C++ unit test framework
 #define USE_MS_UNITTESTS 0 // Set this to 0 when compiling as an executable

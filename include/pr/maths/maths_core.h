@@ -811,6 +811,24 @@ namespace pr
 			: limits<double>::quiet_NaN();
 	}
 
+	// Integer square root
+	template <std::integral T> constexpr T ISqrt(T x)
+	{
+		// Compile time version of the square root.
+		//  - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
+		//  - This method always converges or oscillates about the answer with a difference of 1.
+		//  - Otherwise, returns 0
+		struct L {
+			constexpr static int64_t NewtonRaphson(int64_t x, int64_t curr, int64_t prev, int64_t pprev) {
+				if (curr != prev && curr != pprev)
+					return NewtonRaphson(x, (curr + x / curr) >> 1, curr, prev);
+
+				return abs(x - curr * curr) < abs(x - prev * prev) ? curr : prev;
+			}
+		};
+		return x >= 0 ? L::NewtonRaphson(x, x, 0, 0) : std::numeric_limits<int64_t>::quiet_NaN();
+	}
+
 	// Signed Sqr
 	template <Scalar S> constexpr S SignedSqr(S x)
 	{
@@ -1935,6 +1953,13 @@ namespace pr::maths
 			auto a = 1.23456789123456789;
 			auto b = Cubert(a * a * a);
 			PR_CHECK(FEqlRelative(a, b, 0.000000000001), true);
+		}
+		{// Sqrt Root
+			PR_EXPECT(Sqrt(64.0) == 8.0);
+			static_assert(ISqrt(64) == 8);
+			static_assert(ISqrt(4294836225) == 65535);
+			static_assert(ISqrt(10000000000000000000LL) == 3162277660LL);
+			static_assert(ISqrt(18446744065119617025LL) == 4294967295LL);
 		}
 		{// Arithmetic sequence
 			ArithmeticSequence a(2, 5);

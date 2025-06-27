@@ -115,6 +115,12 @@ namespace pr
 			w[i] = row.w;
 		}
 
+		// Return the trace of this matrix
+		Vec4<S, void> trace() const
+		{
+			return { x.x, y.y, z.z, w.w };
+		}
+
 		// Create a 4x4 matrix with this matrix as the rotation part
 		Mat4x4 w0() const
 		{

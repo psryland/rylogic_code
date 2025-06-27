@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 // UnitTest
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
@@ -43,6 +43,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/container/kdtree.h"
 //#include "pr/container/ring_buffer.h"
 //#include "pr/container/suffix_array.h"
+//#include "pr/container/tri_table.h"
 //#include "pr/container/vector.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"

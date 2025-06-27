@@ -1,4 +1,4 @@
-// Fluid
+﻿// Fluid
 #include "src/forward.h"
 #include "src/fluid_visualisation.h"
 #include "src/idemo_scene.h"
@@ -282,7 +282,7 @@ struct Main :Form, IProbeActions
 		m_fluid_vis.AddToScene(m_scn, scene, m_fluid_sim.Config.NumParticles);
 
 		// Render the frame
-		auto frame = m_wnd.NewFrame();
+		auto& frame = m_wnd.NewFrame();
 		m_scn.Render(frame);
 		m_wnd.Present(frame, rdr12::EGpuFlush::Block);
 

@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -39,7 +39,25 @@ float2 ClipPlanes(float4x4 c2s)
 	return dist;
 }
 
-
+// Integer square root
+int64_t ISqrt(int64_t x)
+{
+	// Compile time version of the square root.
+	//  - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
+	//  - This method always converges or oscillates about the answer with a difference of 1.
+	//  - returns 0 for x < 0
+	if (x < 0)
+		return 0;
+	
+	int64_t curr = x, prev = 0, pprev = 0;
+	for (; curr != prev && curr != pprev; )
+	{
+		pprev = prev;
+		prev = curr;
+		curr = (curr + x / curr) >> 1;
+	}
+	return abs(x - curr * curr) < abs(x - prev * prev) ? curr : prev;
+}
 
 
 

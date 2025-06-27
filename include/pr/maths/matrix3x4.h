@@ -111,6 +111,32 @@ namespace pr
 			z[i] = row.z;
 		}
 
+		// Return the trace of this matrix
+		Vec4<S, void> trace() const
+		{
+			return { x.x, y.y, z.z, S{} };
+		}
+
+		// Return the scale of this matrix
+		Mat3x4 scale() const
+		{
+			return Mat3x4{
+				{Length(x.xyz), 0, 0, 0},
+				{0, Length(y.xyz), 0, 0},
+				{0, 0, Length(z.xyz), 0},
+			};
+		}
+
+		// Return this matrix with the scale removed
+		Mat3x4 unscaled() const
+		{
+			return Mat3x4{
+				Normalise(x),
+				Normalise(y),
+				Normalise(z),
+			};
+		}
+
 		// Basic constants
 		static constexpr Mat3x4 Zero()
 		{
@@ -577,12 +603,6 @@ namespace pr
 		m.y = Normalise(Cross3(m.z, m.x));
 		m.z = Cross3(m.x, m.y);
 		return m;
-	}
-
-	// Return the scale of the axis of a rotation matrix
-	template <Scalar S, typename A, typename B> inline Vec4<S, void> pr_vectorcall GetScale(Mat3x4_cref<S, A, B> mat)
-	{
-		return Vec4<S, void>(Length(mat.x), Length(mat.y), Length(mat.z), S{});
 	}
 
 	// Return the axis and angle of a rotation matrix
