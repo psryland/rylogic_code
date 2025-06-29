@@ -557,7 +557,7 @@ namespace pr::geometry::fbx
 			virtual bool Flush() override { return m_out.flush().good(); }
 
 			// Writes a memory block.
-			virtual size_t Write(const void* data, FbxUInt64 size) override { return m_out.write(static_cast<char const*>(data), static_cast<std::streamsize>(size)).good() ? size : 0; }
+			virtual size_t Write(const void* data, FbxUInt64 size) override { return m_out.write(static_cast<char const*>(data), static_cast<std::streamsize>(size)).good() ? s_cast<size_t>(size) : 0; }
 
 			// Read bytes from the stream and store them in the memory block.
 			virtual size_t Read(void* /*data*/, FbxUInt64 /*size*/) const override { throw std::runtime_error("not implemented"); }
@@ -644,7 +644,7 @@ namespace pr::geometry::fbx
 			virtual size_t Write(const void* /*pData*/, FbxUInt64 /*pSize*/) override { throw std::runtime_error("not implemented"); }
 
 			// Read bytes from the stream and store them in the memory block.
-			virtual size_t Read(void* pData, FbxUInt64 pSize) const override { return m_src.read(static_cast<char*>(pData), static_cast<std::streamsize>(pSize)).gcount(); }
+			virtual size_t Read(void* pData, FbxUInt64 pSize) const override { return s_cast<size_t>(m_src.read(static_cast<char*>(pData), static_cast<std::streamsize>(pSize)).gcount()); }
 
 			// Adjust the current stream position.
 			virtual void Seek(const FbxInt64& offset, FbxFile::ESeekPos const& seek_pos) override { m_src.seekg(static_cast<std::streamoff>(offset), static_cast<int>(seek_pos)); }
@@ -1436,7 +1436,7 @@ namespace pr::geometry::fbx
 				auto NextMeshTree = [this](std::span<Mesh> const* prev = nullptr) -> std::span<Mesh>
 				{
 					// Use for iteration: 'for (auto mesh = NextMeshTree(); !mesh.empty(); mesh = NextMeshTree(&mesh)) {}'
-					auto beg = prev ? prev->data() - m_scene.m_meshes.data() + prev->size() : 0;
+					auto beg = prev ? s_cast<int>(prev->data() - m_scene.m_meshes.data() + prev->size()) : 0;
 					auto end = beg;
 
 					auto scene_count = isize(m_scene.m_meshes);

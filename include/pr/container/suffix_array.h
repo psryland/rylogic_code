@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Suffix Array
 //  Copyright (c) Rylogic Ltd 2024
 //******************************************
@@ -282,7 +282,7 @@ namespace pr::suffix_array
 			SA[0] = 0;
 			return;
 		}
-		if (data.size() > std::numeric_limits<int>::max())
+		if (data.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
 		{
 			throw std::runtime_error("The input data size must be <= INT_MAX");
 		}
@@ -454,7 +454,7 @@ namespace pr::container
 
 			// Check that each substring is less than the next
 			std::string_view sdata(data);
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);
@@ -480,7 +480,7 @@ namespace pr::container
 				for (auto i = 0; i != std::ssize(sa); ++i)
 				{
 					auto s = data.substr(sa[i]);
-					PR_CHECK(s.substr(0, 2) == "ii", i >= mr.sa_beg && i < mr.sa_end);
+					PR_CHECK(s.substr(0, 2) == "ii", size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end);
 				}
 			}
 			{
@@ -488,7 +488,7 @@ namespace pr::container
 				for (auto i = 0; i != std::ssize(sa); ++i)
 				{
 					auto s = data.substr(sa[i]);
-					PR_CHECK(s.substr(0, 3) == "isi", i >= mr.sa_beg && i < mr.sa_end);
+					PR_CHECK(s.substr(0, 3) == "isi", size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end);
 				}
 			}
 		}
@@ -505,7 +505,7 @@ namespace pr::container
 
 			// Check that each substring is less than the next
 			std::string_view sdata(data);
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);
@@ -523,7 +523,7 @@ namespace pr::container
 
 			// Check that each substring is less than the next
 			auto sdata = std::string_view(reinterpret_cast<char const*>(data.data()), data.size());
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = sdata.substr(sa[i]);
 				auto b = sdata.substr(sa[i + 1]);
@@ -539,7 +539,7 @@ namespace pr::container
 			for (auto& c : data) c += 'a';
 
 			// Check that each substring is less than the next
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = std::string_view(data.data() + sa[i]);
 				auto b = std::string_view(data.data() + sa[i + 1]);
@@ -558,7 +558,7 @@ namespace pr::container
 
 			// Check that each substring is less than the next
 			std::u32string_view sdata(reinterpret_cast<char32_t const*>(data.data()), data.size());
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = sdata.substr(sa[i]);
 				auto b = sdata.substr(sa[i + 1]);
@@ -566,7 +566,7 @@ namespace pr::container
 			}
 		}
 		{// use this file
-			std::string data(std::filesystem::file_size(__FILE__), '\0');
+			std::string data(s_cast<size_t>(std::filesystem::file_size(__FILE__)), '\0');
 			{
 				std::ifstream ifile(__FILE__, std::ios::in | std::ios::binary);
 				ifile.read(data.data(), data.size());
@@ -577,7 +577,7 @@ namespace pr::container
 
 			// Check that each substring is less than the next
 			std::string_view sdata(data);
-			for (auto i = 0; i != sa.size() - 1; ++i)
+			for (auto i = 0; i != isize(sa) - 1; ++i)
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);

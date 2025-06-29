@@ -43,8 +43,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{AB9109F6-19E9-4087-B998-47A430030516}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gui", "projects\tests\gui\gui.vcxproj", "{87A78A7C-5B8D-4816-ABB2-CCEB41214529}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics2", "projects\tests\physics2\physics2.vcxproj", "{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "projects\tests\unittests\unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
 EndProject

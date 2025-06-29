@@ -91,7 +91,7 @@ namespace pr::tri_table
 	}
 
 	// Returns the required array size for a 'num_elements' tri-table
-	constexpr int64_t Size(EType type, size_t num_elements)
+	constexpr int64_t Size(EType type, int64_t num_elements)
 	{
 		return num_elements * (num_elements + int(type)) / 2;
 	}
@@ -162,12 +162,12 @@ namespace pr::tri_table
 	// Type for using statements
 	template <EType Type> struct TriTable
 	{
-		static constexpr size_t Size(int64_t num_elements)
+		static constexpr int64_t Size(int64_t num_elements)
 		{
 			return tri_table::Size(Type, num_elements);
 		}
 
-		static constexpr int64_t Dimension(size_t array_size)
+		static constexpr int64_t Dimension(int64_t array_size)
 		{
 			return tri_table::Dimension(Type, array_size);
 		}

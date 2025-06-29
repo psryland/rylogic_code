@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Bit Array
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
@@ -297,7 +297,7 @@ namespace pr
 		template <size_t N>
 		bitsetRT& append(std::bitset<N> const& rhs)
 		{
-			for (auto i = 0ULL; i != rhs.size(); ++i)
+			for (size_t i = 0; i != rhs.size(); ++i)
 				AppendBits(rhs.test(i), 1);
 
 			return *this;
@@ -528,7 +528,7 @@ namespace pr
 			}
 			if (shift != 0)
 			{
-				for (auto i = lhs.m_bits.size(); i-- != std::max(1ULL, count); )
+				for (auto i = lhs.m_bits.size(); i-- != std::max<size_t>(1, count); )
 					lhs.m_bits[i] = (lhs.m_bits[i - 1] >> (BitsPerWord - shift)) | (lhs.m_bits[i] << shift);
 				lhs.m_bits.front() <<= shift;
 			}

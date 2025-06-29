@@ -1254,7 +1254,7 @@ namespace pr::rdr12
 
 			for (auto& mesh : scene.m_meshes)
 			{
-				for (; p2w.size() > mesh.m_level + 1; p2w.pop_back()) {}
+				for (; isize(p2w) > mesh.m_level + 1; p2w.pop_back()) {}
 
 				cache.Reset();
 

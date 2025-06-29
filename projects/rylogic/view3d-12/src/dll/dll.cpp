@@ -256,7 +256,7 @@ VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id
 }
 
 // Get/Set the name of a source
-VIEW3D_API BSTR View3D_SourceNameGetBStr(GUID const& context_id)
+VIEW3D_API BSTR __stdcall View3D_SourceNameGetBStr(GUID const& context_id)
 {
 	try
 	{

@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // String Util
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -650,11 +650,11 @@ namespace pr::str
 		// This row is A[0][i] = edit distance for an empty 'lhs'.
 		// The distance is just the number of characters to delete from 'rhs'
 		auto& buf0 = bufs[0];
-		for (int i = 0; i != buf0.size(); ++i)
+		for (int i = 0; i != isize(buf0); ++i)
 			buf0[i] = i;
 
 		// Calculate current row distances from the previous row
-		for (int i = 0; i != Size(lhs); ++i)
+		for (int i = 0; i != s_cast<int>(Size(lhs)); ++i)
 		{
 			// Swap buffers on alternate iterations
 			auto& v0 = bufs[(i + 0) & 1];
@@ -664,7 +664,7 @@ namespace pr::str
 			v1[0] = i + 1;
 
 			// Use formula to fill in the rest of the row
-			for (int j = 0; j != Size(rhs); ++j)
+			for (int j = 0; j != s_cast<int>(Size(rhs)); ++j)
 			{
 				auto ins_cost = v1[j] + 1;
 				auto del_cost = v0[j + 1] + 1;
