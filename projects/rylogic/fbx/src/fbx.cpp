@@ -264,21 +264,6 @@ namespace pr
 	};
 
 	// Bone type
-	template <> struct Convert<geometry::fbx::EBoneType, FbxSkeleton::EType>
-	{
-		static geometry::fbx::EBoneType To_(FbxSkeleton::EType ty)
-		{
-			using EType = geometry::fbx::EBoneType;
-			switch (ty)
-			{
-				case FbxSkeleton::EType::eRoot: return EType::Root;
-				case FbxSkeleton::EType::eLimb: return EType::Limb;
-				case FbxSkeleton::EType::eLimbNode: return EType::Limb;
-				case FbxSkeleton::EType::eEffector: return EType::Effector;
-				default: throw std::runtime_error(std::format("Unknown bone type: {}", int(ty)));
-			}
-		}
-	};
 	template <> struct Convert<geometry::fbx::BoneKey::EInterpolation, FbxAnimCurveDef::EInterpolationType>
 	{
 		static geometry::fbx::BoneKey::EInterpolation To_(FbxAnimCurveDef::EInterpolationType ty)
@@ -838,18 +823,31 @@ namespace pr::geometry::fbx
 		return nullptr;
 	}
 	
-	// Find the bind pose for 'node'
-	static FbxPose const* FindBindPose(FbxNode const& node)
+#if 0
+	// Find a single bind pose that best matches 'mesh' and a set of nodes
+	template <std::ranges::range R> static FbxPose* FindBindPose(FbxMesh& fbxmesh, R&& bones)
 	{
-		auto& fbxscene = *node.GetScene();
+		int best_match = 0;
+		FbxPose* bind_pose = nullptr;
 		for (int i = 0, iend = fbxscene.GetPoseCount(); i != iend; ++i)
 		{
 			auto* pose = fbxscene.GetPose(i);
-			if (pose && pose->IsBindPose() && pose->Find(&node) != -1)
-				return pose;
+			if (!pose || !pose->IsBindPose())
+				continue;
+
+			auto match = pose->Find(fbxmesh.GetNode()) ? 1 : 0;
+			for (auto& bone : bones)
+				match += pose->Find(bone) ? 1 : 0;
+
+			if (match <= best_match)
+				continue;
+
+			best_match = match;
+			bind_pose = pose;
 		}
-		return nullptr;
+		return bind_pose;
 	}
+#endif
 
 	// Get the hierarchy address of 'node'
 	static std::string Address(FbxNode const* node)
@@ -875,10 +873,12 @@ namespace pr::geometry::fbx
 		struct Reader
 		{
 			// Notes:
+			//  - The FbxSDK library is very slow, single threaded, poorly documented.
 			//  - The FBX file contains collections of attributes (meshes, materials, skeletons, animations, etc.)
 			//    and a hierarchical node tree (scene graph) where each node may reference one or more attributes.
 			//  - There are two main ways to read data:
-			//    - Iterate all objects of a specific type (e.g., GetSrcObject<FbxMesh>)
+			//    - Iterate all objects of a specific type (e.g., GetSrcObject<FbxMesh>), but not all these objects
+			//      are necessarily in the scene.
 			//    - Recursively traverse the node hierarchy from GetRootNode() and iterate over attributes.
 			//  - Animation data is stored in FbxAnimStacks (takes), each containing one or more FbxAnimLayers.
 			//    - Curves are attached to animate-able properties and can be retrieved per layer.
@@ -887,8 +887,8 @@ namespace pr::geometry::fbx
 			//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
 			//  - The root nodes of Meshes or Skeletons can begin at any level, e.g. Nodes might be a Group which then
 			//    contain meshes or skeletons starting below the group.
+			//  - Mesh hierarchies can reference multiple disconnected skeletons.
 			//  - Nodes can only have one attribute of each type.
-			//  - The FbxSDK library is very slow, single threaded, poorly documented.
 
 			// TODO:
 			//  - Record all skeletons because skin's can refer to different skeletons so all need to be available.
@@ -896,9 +896,24 @@ namespace pr::geometry::fbx
 
 			using VertexLookup = std::vector<int>;
 			using TimeCont = std::vector<FbxTime>;
-			using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
-			using MeshNode = struct MeshNode { FbxMesh* mesh; int level; bool is_root; };
-			using SkelNode = struct SkelNode { FbxSkeleton* bone; int level; bool is_root; };
+			using NodeAndLevel = struct NodeAndLevel
+			{
+				FbxNode* node;
+				int level;
+			};
+			using MeshNode = struct MeshNode
+			{
+				FbxMesh* mesh;
+				FbxMesh const* root;
+				int level;
+				int scene_mesh_idx;
+			};
+			using BoneNode = struct BoneNode
+			{
+				FbxSkeleton* bone;
+				FbxSkeleton const* root;
+				int level;
+			};
 			using KeyTime = struct KeyTime
 			{
 				FbxTime time;
@@ -908,14 +923,14 @@ namespace pr::geometry::fbx
 			};
 			
 			using KeyTimes = std::vector<KeyTime>;
-			using MeshNodes = std::vector<MeshNode>; // Hierarchy flattened in depth-first order
-			using SkelNodes = std::vector<SkelNode>; // Same
+			using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
+			using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
 
 			Scene& m_scene;
 			FbxScene& m_fbxscene;
 			ReadOptions const& m_opts;
-			MeshNodes m_meshes;
-			SkelNodes m_skels;
+			MeshNodeMap m_meshes;
+			BoneNodeMap m_bones;
 			FbxAnimStack* m_animstack;
 			FbxAnimLayer* m_layer;
 			FbxTimeSpan m_time_span;
@@ -926,7 +941,7 @@ namespace pr::geometry::fbx
 				, m_fbxscene(*scene.m_fbxscene)
 				, m_opts(opts)
 				, m_meshes()
-				, m_skels()
+				, m_bones()
 				, m_animstack()
 				, m_layer()
 				, m_time_span()
@@ -949,19 +964,17 @@ namespace pr::geometry::fbx
 					ReadGeometry();
 				if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skeletons))
 					ReadSkeletons();
-				if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skinning))
-					ReadSkinning();
 				if (AllSet(m_opts.m_parts, ReadOptions::EParts::Animation))
 					ReadAnimation();
 			}
 
-			// Traverse the scene hierarchy
+			// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
 			void TraverseHierarchy()
 			{
 				// Root nodes for meshes, skeletons can occur at any level.
 				// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
 				vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
-				for (; !stack.empty(); )
+				for (int index = 0; !stack.empty(); )
 				{
 					auto [node, level] = stack.back();
 					stack.pop_back();
@@ -971,17 +984,18 @@ namespace pr::geometry::fbx
 					{
 						auto& attr = *node->GetNodeAttributeByIndex(i);
 
+						// Create a map from attribute unique id to node data
 						if (AllSet(m_opts.m_parts, ReadOptions::EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
 						{
 							auto* mesh = FbxCast<FbxMesh>(&attr);
-							auto is_root = FindRoot(FbxNodeAttribute::eMesh, *node) == mesh;
-							m_meshes.push_back({ mesh, level, is_root });
+							auto* root = FbxCast<FbxMesh>(FindRoot(FbxNodeAttribute::eMesh, *node));
+							m_meshes[mesh->GetUniqueID()] = { mesh, root, level, index++ };
 						}
 						if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
 						{
 							auto* bone = FbxCast<FbxSkeleton>(&attr);
-							auto is_root = FindRoot(FbxNodeAttribute::eSkeleton, *node) == bone;
-							m_skels.push_back({ bone, level, is_root });
+							auto* root = FbxCast<FbxSkeleton>(FindRoot(FbxNodeAttribute::eSkeleton, *node));
+							m_bones[bone->GetUniqueID()] = { bone, root, level };
 						}
 					}
 
@@ -1072,7 +1086,7 @@ namespace pr::geometry::fbx
 				std::vector<std::future<Mesh>> tasks;
 
 				// Process each mesh in a worker thread, because triangulation is really slow
-				for (auto const& meshnode : m_meshes)
+				for (auto const& [id, meshnode] : m_meshes)
 				{
 					// Create thread-local manager and scene
 					ManagerPtr manager{ FbxManager::Create() };
@@ -1082,7 +1096,7 @@ namespace pr::geometry::fbx
 					auto fbxmesh = FbxCast<FbxMesh>(meshnode.mesh->Clone(FbxObject::eDeepClone, scene.get()));
 					
 					// Start a task to convert the geometry
-					tasks.emplace_back(std::async(std::launch::async, [m = std::move(manager), s = std::move(scene), id = meshnode.mesh->GetUniqueID(), fbxmesh]
+					tasks.emplace_back(std::async(std::launch::async, [m = std::move(manager), s = std::move(scene), id, fbxmesh]
 					{
 						Mesh out;
 						out.m_id = id;
@@ -1247,24 +1261,24 @@ namespace pr::geometry::fbx
 					}));
 				}
 
-				// Wait for each mesh. Note: tasks are in the same order as the mesh nodes (depth-first order)
+				// There should be one mesh for each mesh node
+				m_scene.m_meshes.resize(m_meshes.size());
+
+				// Wait for each mesh.
 				for (auto& task : tasks)
 				{
 					task.wait();
-
 					auto mesh = task.get();
-					auto idx = s_cast<int>(&task - tasks.data());
-					auto ridx = idx; for (; ridx >= 0 && !m_meshes[ridx].is_root; --ridx) {}
 
 					// Find the associated FbxMesh and the hierarchy root
-					auto const& meshnode = m_meshes[idx];
-					auto const& root = m_meshes[ridx];
+					auto& meshnode = m_meshes[mesh.m_id];
+					auto& rootnode = m_meshes[meshnode.root->GetUniqueID()];
 					auto& node = *meshnode.mesh->GetNode();
 
-					// Populate non-mesh node data from the 'meshnode'
+					// Populate the other mesh data from the 'meshnode'
 					mesh.m_name = node.GetName();
 					mesh.m_bbox = BoundingBox(*meshnode.mesh);
-					mesh.m_level = meshnode.level - root.level;
+					mesh.m_level = meshnode.level - rootnode.level;
 
 					// Determine the object to parent transform.
 					mesh.m_o2p = To<m4x4>(node.EvaluateLocalTransform());
@@ -1276,141 +1290,182 @@ namespace pr::geometry::fbx
 					assert(FEql(mesh.m_o2p, o2p)); // Could we actually use the local transform?
 					#endif
 
+					// Read the skinning data for this mesh
+					if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skinning))
+						mesh.m_skin = ReadSkin(meshnode);
+
 					// Output the mesh
-					m_scene.m_meshes.push_back(std::move(mesh));
+					m_scene.m_meshes[meshnode.scene_mesh_idx] = std::move(mesh);
 				}
+			}
+
+			// Read the skin data for 'meshnode'
+			Skin ReadSkin(MeshNode const& meshnode)
+			{
+				// Find the corresponding FbxMesh
+				auto& fbxmesh = *meshnode.mesh;
+
+				// Populate the skinning data
+				Skin skin;
+				skin.m_influences.resize(fbxmesh.GetControlPointsCount());
+
+				// Get the skinning data for this mesh
+				for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+				{
+					auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
+					for (int c = 0, cend = fbxskin.GetClusterCount(); c != cend; ++c)
+					{
+						auto& cluster = *fbxskin.GetCluster(c);
+						if (cluster.GetControlPointIndicesCount() == 0)
+							continue;
+
+						// Check for supported features
+						auto link_mode = cluster.GetLinkMode();
+						if (link_mode != FbxCluster::ELinkMode::eNormalize)
+							throw std::runtime_error("Non-normalise link modes not implemented");
+
+						// Get the bone that influences this cluster
+						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
+
+						// Get the span of vert indices and weights
+						auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+						auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+						for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
+						{
+							auto vidx = indices[w];
+							auto weight = weights[w];
+							skin.m_influences[vidx].m_bones.push_back(bone.GetUniqueID());
+							skin.m_influences[vidx].m_weights.push_back(weight);
+						}
+					}
+				}
+
+				return skin;
 			}
 
 			// Read skeletons from the FBX scene
 			void ReadSkeletons()
 			{
-				for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel))
+				// Mesh hierarchies (trees) can reference multiple disconnected skeletons.
+				// Create 'skeletons' by traversing each mesh tree and adding all the bones
+				// referenced by any mesh in that tree.
+				struct SkeletonBuilder
 				{
-					Skeleton skeleton;
-					auto const& root = skel[0];
-					auto bind_pose = FindBindPose(*root.bone->GetNode());
+					Skeleton m_skeleton;
+					pr::vector<FbxNode*, 10> m_roots;
+					std::unordered_map<FbxNode*, m4x4> m_bone_set; // map to bind pose
 
-					for (auto const& skelnode : skel)
+					SkeletonBuilder()
+						: m_skeleton()
+						, m_roots()
+						, m_bone_set()
+					{}
+					void Reset()
 					{
-						auto& node = *skelnode.bone->GetNode();
-
-						// The bind pose is a snapshot of the global transforms of the bones
-						// at the time skinning was authored in the DCC tool.
-						m4x4 o2bp = {}; // Object space to bind pose
-						if (int idx = bind_pose ? bind_pose->Find(&node) : -1; idx != -1)
-							o2bp = InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)));
-						else // Fall-back to time zero as the bind pose
-							o2bp = InvertFast(To<m4x4>(node.EvaluateGlobalTransform(0)));
-
-						// Add the bone to the skeleton
-						skeleton.m_ids.push_back(skelnode.bone->GetUniqueID());
-						skeleton.m_names.push_back(node.GetName());
-						skeleton.m_o2bp.push_back(o2bp);
-						skeleton.m_types.push_back(To<EBoneType>(skelnode.bone->GetSkeletonType()));
-						skeleton.m_hierarchy.push_back(skelnode.level - root.level);
+						m_skeleton.m_ids.resize(0);
+						m_skeleton.m_names.resize(0);
+						m_skeleton.m_o2bp.resize(0);
+						m_skeleton.m_hierarchy.resize(0);
+						m_roots.resize(0);
+						m_bone_set.clear();
 					}
-
-					m_scene.m_skeletons.push_back(std::move(skeleton));
-				}
-			}
-
-			// Read skinning information from mesh nodes in 'node'
-			void ReadSkinning()
-			{
-				// Add skinning data to meshes we've already found
-				for (auto& mesh : m_scene.m_meshes)
-				{
-					// Find the corresponding FbxMesh
-					auto& meshnode = pr::get_if(m_meshes, [mesh_id = mesh.m_id](MeshNode const& m) { return m.mesh->GetUniqueID() == mesh_id; });
-					auto& fbxmesh = *meshnode.mesh;
-
-					// Find the skeleton associated with this skinned mesh
-					auto const* fbxskeleton = FindSkeleton(fbxmesh);
-					if (fbxskeleton == nullptr)
-						continue; // Mesh has no skeleton => not animated
-
-					auto const& skeleton = pr::get_if(m_scene.m_skeletons, [id = fbxskeleton->GetUniqueID()](Skeleton const& s) { return s.Id() == id; });
-
-					// Populate the skinning data
-					auto& skin = mesh.m_skin;
-					skin.m_skel_id = skeleton.Id();
-					skin.m_verts.resize(fbxmesh.GetControlPointsCount());
-
-					// Get the skinning data for this mesh
-					for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+					void Collect(std::span<Mesh const> meshtree, MeshNodeMap& mesh_map)
 					{
-						auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
-						for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
+						// Find all bones referenced by this mesh-tree
+						for (auto const& mesh : meshtree)
 						{
-							auto& cluster = *fbxskin.GetCluster(b);
-							if (cluster.GetControlPointIndicesCount() == 0)
-								continue;
-
-							auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
-
-							auto link_mode = cluster.GetLinkMode();
-							if (link_mode != FbxCluster::ELinkMode::eNormalize)
-								throw std::runtime_error("Non-normalise link modes not implemented");
-
-							#if 0
-							// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
-							// If set, the associate model is the node used as a reference to measure the relative displacement of the link node.
-							// Otherwise, the displacement of the link node is measured relative the node containing the control points.
-							// Typically, the associate model node is the parent of the bone a skin is attached to.
-							if (cluster.GetLinkMode() == FbxCluster::eAdditive && cluster.GetAssociateModel())
+							auto& fbxmesh = *mesh_map[mesh.m_id].mesh;
+							for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 							{
-								throw std::runtime_error("not implemented");
-							}
-							else
-							{
-								FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
-								FbxAMatrix geom_offset; mesh.GetNode();
-								ref_to_world *= geom_offset;
+								auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
+								for (int c = 0, cend = fbxskin.GetClusterCount(); c != cend; ++c)
+								{
+									auto& cluster = *fbxskin.GetCluster(c);
+									if (cluster.GetControlPointIndicesCount() == 0)
+										continue;
 
-
-								// Get the link initial global position and the link current global position.
-								pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
-								lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
-
-								// Compute the initial position of the link relative to the reference.
-								lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
-
-								// Compute the current position of the link relative to the reference.
-								lClusterRelativeCurrentPositionInverse = lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
-
-								// Compute the shift of the link relative to the reference.
-								pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
-							}
-							#endif
-
-							// Find the bone in the skeleton
-							auto bone_index = pr::index_of(skeleton.m_ids, bone.GetUniqueID());
-							if (bone_index >= isize(skeleton.m_o2bp))
-								throw std::runtime_error("Bone index out of range in skeleton");
-
-							// Get the span of vert indices and weights
-							auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-							auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-							for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
-							{
-								auto vidx = indices[w];
-								auto weight = weights[w];
-								skin.m_verts[vidx].m_bones.push_back(bone_index);
-								skin.m_verts[vidx].m_weights.push_back(static_cast<float>(weight));
+									auto node = cluster.GetLink();
+									FbxAMatrix mesh_to_object; cluster.GetTransformMatrix(mesh_to_object);
+									FbxAMatrix bone_to_object; cluster.GetTransformLinkMatrix(bone_to_object);
+									m_bone_set[node] = m4x4::Identity();// InvertFast(To<m4x4>(bone_to_object));// *To<m4x4>(mesh_to_object); // Converts a vertex from bind pose into bone space:
+								}
 							}
 						}
 					}
+					void Build()
+					{
+						// No bones, no skeleton
+						if (m_bone_set.empty())
+							return;
 
-					////hack
-					//{
-					//	static int bone_index = 0;
-					//	for (auto& v : skin.m_verts)
-					//	{
-					//		v.m_bones = { bone_index, 0, 0, 0 };
-					//		v.m_weights = { 1, 0, 0, 0 };
-					//	}
-					//	++bone_index;
-					//}
+						// Find the root bones
+						for (auto& [bone, o2bp] : m_bone_set)
+						{
+							if (m_bone_set.contains(bone->GetParent())) continue;
+							m_roots.push_back(bone);
+						}
+
+						m_skeleton.m_ids.reserve(m_bone_set.size());
+						m_skeleton.m_names.reserve(m_bone_set.size());
+						m_skeleton.m_o2bp.reserve(m_bone_set.size());
+						m_skeleton.m_hierarchy.reserve(m_bone_set.size());
+
+						// Construct a skeleton
+						for (auto root : m_roots)
+							Build(root, 0);
+					}
+					void Build(FbxNode* node, int level)
+					{
+						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *node);
+						auto& o2bp = m_bone_set[node];
+
+						m_skeleton.m_ids.push_back(bone.GetUniqueID());
+						m_skeleton.m_names.push_back(node->GetName());
+						m_skeleton.m_o2bp.push_back(o2bp);
+						m_skeleton.m_hierarchy.push_back(level);
+
+						for (int i = 0, iend = node->GetChildCount(); i != iend; ++i)
+						{
+							if (FbxNode* child = node->GetChild(i); m_bone_set.contains(child))
+								Build(child, level + 1);
+						}
+					}
+				};
+
+				// Return the range of Mesh objects for a complete mesh tree.
+				auto NextMeshTree = [this](std::span<Mesh> const* prev = nullptr) -> std::span<Mesh>
+				{
+					// Use for iteration: 'for (auto mesh = NextMeshTree(); !mesh.empty(); mesh = NextMeshTree(&mesh)) {}'
+					auto beg = prev ? prev->data() - m_scene.m_meshes.data() + prev->size() : 0;
+					auto end = beg;
+
+					auto scene_count = isize(m_scene.m_meshes);
+					for (; end != scene_count && (beg == end || m_scene.m_meshes[end].m_level > m_scene.m_meshes[beg].m_level); ++end) {}
+					return { m_scene.m_meshes.data() + beg, s_cast<size_t>(end - beg) };
+				};
+
+				// Skeleton builder helper
+				SkeletonBuilder skelbuilder;
+
+				// Find a unique set of all the bones referenced by this mesh tree
+				for (auto meshtree = NextMeshTree(); !meshtree.empty(); meshtree = NextMeshTree(&meshtree))
+				{
+					skelbuilder.Reset();
+					skelbuilder.Collect(meshtree, m_meshes);
+					skelbuilder.Build();
+
+					// Get the skeleton ID for the skeleton used by this mesh tree
+					auto skel_id = skelbuilder.m_skeleton.Id();
+
+					// Add the skeleton to the output (if unique)
+					auto is_duplicate = std::any_of(begin(m_scene.m_skeletons), end(m_scene.m_skeletons), [&skel = skelbuilder.m_skeleton](Skeleton const& s) { return s.m_ids == skel.m_ids; });
+					if (!is_duplicate)
+						m_scene.m_skeletons.push_back(std::move(skelbuilder.m_skeleton));
+
+					// Update the skeleton ID in each scene mesh. Note: FBX does not guarantee that each
+					// bone is only used in one skeleton. That's why we have to build skeletons by looping over mesh nodes.
+					for (auto& mesh : meshtree)
+						mesh.m_skin.m_skel_id = skel_id;
 				}
 			}
 
@@ -1424,7 +1479,7 @@ namespace pr::geometry::fbx
 				//    we're merge transform channels into one, thi
 
 				// Check each skeleton for animation.
-				for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel))
+				for (auto const& skel : m_scene.m_skeletons)
 				{
 					// Set the animation to use
 					auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
@@ -1452,7 +1507,7 @@ namespace pr::geometry::fbx
 			}
 
 			// Output an animation for 'skeleton' based on the selected animation stack
-			Animation ReadAnimation(std::span<SkelNode const> skeleton)
+			Animation ReadAnimation(Skeleton const& skeleton)
 			{
 				// Notes:
 				//  - Only want to iterate through the times once, because calling 'EvaluateGlobalTransform' is expensive.
@@ -1462,92 +1517,107 @@ namespace pr::geometry::fbx
 				//    given time.
 				//  - Fbx curve keys have an interpolation type, they are either constant, linear, or cubic. 
 
-				Animation animation = { .m_skel_id = skeleton[0].bone->GetUniqueID() };
+				// A snapshot of the skeleton transforms at a time
+				struct Pose
+				{
+					// At a given time (the snapshot time) one or more bones in the skeleton may have
+					// a 'Key'. Each bone has a different number of keys, so this key has a different
+					// indices within each bone (m_key_index).
+					struct Key
+					{
+						int m_key_index; // The index of this key within the bone's keys
+						int m_bone_index; // The bone that has the key
+						int m_parent_index; // The parent bone index
+						BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
+					};
+
+					Skeleton const& m_skeleton; // The skeleton that the pose is for
+					std::vector<Key> m_keys;    // The keys at this snapshot
+					std::vector<m4x4> m_b2w;    // Bone to world for each skeleton bone at this time
+					double m_time;              // The time value in seconds of this key frame
+
+					Pose(Skeleton const& skeleton, BoneNodeMap& bone_map, std::span<ZipSet const> indices, KeyTime const& keytime)
+						: m_skeleton(skeleton)
+						, m_keys()
+						, m_b2w()
+						, m_time(keytime.time.GetSecondDouble())
+					{
+						// Find the parent bone index in 'm_skeleton'
+						auto ParentOf = [this](int bone_index)
+						{
+							assert(bone_index >= 0 && bone_index < m_skeleton.size());
+							auto lvl = m_skeleton.m_hierarchy[bone_index];
+							int parent_index = bone_index - 1;
+							for (; parent_index != -1 && m_skeleton.m_hierarchy[parent_index] == lvl; --parent_index) {}
+							return parent_index;
+						};
+
+						// Record the bones with a key frame at this time, and which key frame that is
+						m_keys.reserve(indices.size());
+						for (auto& [bone_idx, key_idx] : indices)
+						{
+							m_keys.push_back({
+								.m_key_index = s_cast<int>(key_idx),
+								.m_bone_index = s_cast<int>(bone_idx),
+								.m_parent_index = ParentOf(s_cast<int>(bone_idx)),
+								.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
+							});
+						}
+
+						// Buffer the transforms for each node. All bones are needed because we need the
+						// parent transforms to be correct, even if there isn't a key frame for the parent.
+						m_b2w.reserve(skeleton.size());
+						for (auto id : skeleton.m_ids)
+						{
+							auto& node = *bone_map[id].bone->GetNode();
+							m_b2w.push_back(To<m4x4>(node.EvaluateGlobalTransform(keytime.time)));
+						}
+					}
+				};
+
+				// The animation
+				Animation animation = { .m_skel_id = skeleton.Id() };
 
 				// Read the key frame times for all bones in 'skeleton'
-				std::vector<KeyTimes> times_per_bone; times_per_bone.reserve(skeleton.size());
-				for (auto const& skelnode : skeleton)
-					times_per_bone.push_back(FindKeyFrameTimes(*skelnode.bone->GetNode()));
-
-				// Preallocate the tracks for each bone.
-				for (auto const& [skelnode, i] : with_index(skeleton))
-					animation.m_tracks[skelnode.bone->GetUniqueID()].resize(times_per_bone[i].size());
+				std::vector<KeyTimes> times_per_bone;
+				times_per_bone.reserve(skeleton.size());
+				for (auto id : skeleton.m_ids)
+				{
+					auto times = FindKeyFrameTimes(*m_bones[id].bone->GetNode());
+					animation.m_tracks[id].resize(times.size()); // Preallocate the tracks for each bone.
+					times_per_bone.push_back(std::move(times));					
+				}
 
 				std::vector<std::future<void>> tasks;
 
 				// For each key frame time, start a worker that adds the key frame to each bone with that key
 				zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &skeleton, &animation, &tasks](KeyTime keytime, std::span<ZipSet const> indices)
 				{
-					// A snapshot of the skeleton transforms at a time
-					struct Pose
-					{
-						struct Key
-						{
-							int m_key_index; // Which key that is for the bone
-							int m_bone_index; // The bone that has the key
-							int m_parent_index; // The parent bone index
-							BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
-						};
-
-						std::span<SkelNode const> m_skeleton; // The skeleton that the pose is for
-						std::vector<Key> m_keys; // The bones with a key frame at this time
-						std::vector<m4x4> m_b2w; // One for each skeleton bone
-						double m_time;           // The time value in seconds of this key frame
-
-						Pose(std::span<SkelNode const> skeleton, std::span<ZipSet const> indices, KeyTime const& keytime)
-							: m_skeleton(skeleton)
-							, m_keys()
-							, m_b2w()
-							, m_time(keytime.time.GetSecondDouble())
-						{
-							// Record the bones with a key frame at this time, and which key frame that is
-							m_keys.reserve(indices.size());
-							for (auto& [bone_idx, key_idx] : indices)
-							{
-								m_keys.push_back({
-									.m_key_index = s_cast<int>(key_idx),
-									.m_bone_index = s_cast<int>(bone_idx),
-									.m_parent_index = ParentOf(skeleton, s_cast<int>(bone_idx)),
-									.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
-								});
-							}
-
-							// Buffer the transforms for each node. All bones are needed because we need the
-							// parent transforms to be correct, even if there isn't a key frame for the parent.
-							m_b2w.reserve(skeleton.size());
-							for (auto const& skelnode : skeleton)
-							{
-								auto* node = skelnode.bone->GetNode();
-								m_b2w.push_back(To<m4x4>(node->EvaluateGlobalTransform(keytime.time)));
-							}
-						}
-					};
-
-					Pose pose(skeleton, indices, keytime);
+					Pose pose(skeleton, m_bones, indices, keytime);
 
 					// Start the worker to add key frames for each bone with a key at this time
-					tasks.emplace_back(std::async(std::launch::async, [pose = std::move(pose), &animation]
+					tasks.emplace_back(std::async(std::launch::async, [&skeleton, &animation, pose = std::move(pose)]
 					{
+						// Loop over the keys in this snapshot
 						for (auto const& key : pose.m_keys)
 						{
-							auto const& skelnode = pose.m_skeleton[key.m_bone_index];
-
 							// All bone nodes should be captured in the pose snapshot
 							auto const& b2w = pose.m_b2w[key.m_bone_index];
-							auto const& p2w = !skelnode.is_root ? pose.m_b2w[key.m_parent_index] : m4x4::Identity();
+							auto const& p2w = key.m_parent_index != -1 ? pose.m_b2w[key.m_parent_index] : m4x4::Identity();
 							auto b2p = InvertFast(p2w) * b2w;
 
 							BoneKey keyframe = {
 								quat(b2p.rot),
 								b2p.pos,
-								v4::One().w0(), // TODO
+								b2p.rot.scale().trace(),
 								pose.m_time,
 								uint64_t(key.m_interpolation),
 							};
 
 							// These transforms are the bone offset relative to the parent over time.
 							// i.e. at time=0, b2p should be identity assuming frame 0 = rest pose.
-							auto& track = animation.m_tracks[skelnode.bone->GetUniqueID()];
+							auto bone_id = skeleton.m_ids[key.m_bone_index];
+							auto& track = animation.m_tracks[bone_id];
 							track[key.m_key_index] = keyframe;
 						}
 					}));
@@ -1612,44 +1682,6 @@ namespace pr::geometry::fbx
 				auto max = To<v4>(mesh.BBoxMax.Get());
 				return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
 			}
-
-			// Return the range of MeshNodes for a complete mesh tree.
-			std::span<MeshNode const> NextMeshTree(std::span<MeshNode const> const* prev = nullptr)
-			{
-				// Use for iteration: 'for (auto mesh = NextMeshTree(); !mesh.empty(); mesh = NextMeshTree(&mesh)) {}'
-				auto beg = prev ? prev->data() - m_meshes.data() + prev->size() : 0;
-				auto end = beg; for (; end != isize(m_meshes) && (beg == end || !m_meshes[end].is_root); ++end) {}
-				return { m_meshes.data() + beg, s_cast<size_t>(end - beg) };
-			}
-
-			// Return the range of SkelNodes for a complete skeleton.
-			std::span<SkelNode const> NextSkeleton(std::span<SkelNode const> const* prev = nullptr)
-			{
-				// Use for iteration: 'for (auto skel = NextSkeleton(); !skel.empty(); skel = NextSkeleton(&skel)) {}'
-				auto beg = prev ? prev->data() - m_skels.data() + prev->size() : 0;
-				auto end = beg; for (; end != isize(m_skels) && (beg == end || !m_skels[end].is_root); ++end) {}
-				return { m_skels.data() + beg, s_cast<size_t>(end - beg) };
-			}
-
-			// Find the parent mesh index
-			static int ParentOf(std::span<MeshNode const> meshtree, int mesh_index)
-			{
-				assert(mesh_index >= 0 && mesh_index < isize(meshtree));
-				auto const& mesh = meshtree[mesh_index];
-				int parent_index = mesh_index - 1;
-				for (; parent_index != -1 && meshtree[parent_index].level == mesh.level; --parent_index) {}
-				return parent_index;
-			}
-
-			// Find the parent bone index
-			static int ParentOf(std::span<SkelNode const> skeleton, int bone_index)
-			{
-				assert(bone_index >= 0 && bone_index < isize(skeleton));
-				auto const& bone = skeleton[bone_index];
-				int parent_index = bone_index - 1;
-				for (; parent_index != -1 && skeleton[parent_index].level == bone.level; --parent_index) {}
-				return parent_index;
-			}
 		};
 
 		Reader reader(scene, options);
@@ -1663,16 +1695,16 @@ namespace pr::geometry::fbx
 		{
 			using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
 			using MeshNode = struct MeshNode { FbxMesh* mesh; int level; bool is_root; };
-			using SkelNode = struct SkelNode { FbxSkeleton* bone; int level; bool is_root; };
+			using BoneNode = struct BoneNode { FbxSkeleton* bone; int level; bool is_root; };
 			using MeshNodes = std::vector<MeshNode>; // Hierarchy flattened in depth-first order
-			using SkelNodes = std::vector<SkelNode>; // Same
+			using BoneNodes = std::vector<BoneNode>; // Same
 
 			std::ostream& m_out;
 			Scene const& m_scene;
 			FbxScene& m_fbxscene;
 			DumpOptions const& m_opts;
 			MeshNodes m_meshes;
-			SkelNodes m_skels;
+			BoneNodes m_bones;
 			
 			Writer(Scene const& scene, DumpOptions const& opts, std::ostream& out)
 				: m_out(out)
@@ -1680,7 +1712,7 @@ namespace pr::geometry::fbx
 				, m_fbxscene(*scene.m_fbxscene)
 				, m_opts(opts)
 				, m_meshes()
-				, m_skels()
+				, m_bones()
 			{
 				if (m_opts.m_convert_axis_system)
 				{
@@ -1737,7 +1769,7 @@ namespace pr::geometry::fbx
 						{
 							auto* bone = FbxCast<FbxSkeleton>(&attr);
 							auto is_root = FindRoot(FbxNodeAttribute::eSkeleton, *node) == bone;
-							m_skels.push_back({ bone, level, is_root });
+							m_bones.push_back({ bone, level, is_root });
 						}
 					}
 
@@ -1903,18 +1935,19 @@ namespace pr::geometry::fbx
 				m_out << " SKELETONS \n";
 				m_out << std::string(100, '=') << "\n";
 
-				for (auto const& skelnode : m_skels)
+				for (auto const& bonenode : m_bones)
 				{
-					auto& bone = *skelnode.bone;
+					auto& bone = *bonenode.bone;
 					auto& node = *bone.GetNode();
-					auto level = skelnode.level;
+					auto level = bonenode.level;
 
 					m_out << Indent(level) << "Bone \"" << node.GetName() << "\":\n";
 					m_out << Indent(level + 1) << "ID: " << bone.GetUniqueID() << "\n";
-					m_out << Indent(level + 1) << "IsRoot: " << (skelnode.is_root ? "ROOT" : "CHILD") << "\n";
+					m_out << Indent(level + 1) << "IsRoot: " << (bonenode.is_root ? "ROOT" : "CHILD") << "\n";
 					m_out << Indent(level + 1) << "Type: " << To<std::string_view>(bone.GetSkeletonType()) << "\n";
 
 					// Bind pose
+#if 0 //todo
 					{
 						m4x4 bp2o;
 						auto bind_pose = FindBindPose(node);
@@ -1926,6 +1959,7 @@ namespace pr::geometry::fbx
 						m_out << Indent(level + 1) << "BindPose-to-Object:\n";
 						DumpTransform(level + 2, bp2o);
 					}
+#endif
 				}
 				m_out << "\n";
 			}
@@ -1941,9 +1975,9 @@ namespace pr::geometry::fbx
 
 				m_out << Indent(level) << "Skin:\n";
 				m_out << Indent(level + 1) << "Skeleton: \"" << fbxskeleton->GetNode()->GetName() << "\" (" << fbxskeleton->GetUniqueID() << ")\n";
-				m_out << Indent(level + 1) << "Deformers: [" << fbxmesh.GetDeformerCount(FbxDeformer::eSkin) << "]\n";
 
 				// Get the skinning data for this mesh
+				m_out << Indent(level + 1) << "Deformers: [" << fbxmesh.GetDeformerCount(FbxDeformer::eSkin) << "]\n";
 				for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 				{
 					auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
@@ -1956,20 +1990,20 @@ namespace pr::geometry::fbx
 							continue;
 
 						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
-						m_out << Indent(level + 3)
-							<< "Cluster=(" << cluster.GetName() << "), "
-							<< "Bone=(" << bone.GetName() << "(" << bone.GetUniqueID() << ")), "
-							<< "LinkMode=(" << To<std::string_view>(cluster.GetLinkMode()) << "), "
-							<< "\n";
+						m_out << Indent(level + 3) << "Cluster: \"" << cluster.GetName() << "\" (" << b << "):\n";
+						m_out << Indent(level + 4) << "Link: " << *cluster.GetLink()->GetName() << "\n";
+						m_out << Indent(level + 4) << "Bone: " << bone.GetName() << "(" << bone.GetUniqueID() << ")\n";
+						m_out << Indent(level + 4) << "LinkMode: " << To<std::string_view>(cluster.GetLinkMode()) << "\n";
 
 						// Get the span of vert indices and weights
 						auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
 						auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+						m_out << Indent(level + 4) << "Bone Weights:\n";
 						for (int w = 0, wend = std::min(cluster.GetControlPointIndicesCount(), m_opts.m_summary_length); w != wend; ++w)
 						{
-							m_out << Indent(level + 4) << "VIdx=(" << indices[w] << "), Weight=(" << weights[w] << ")\n";
+							m_out << Indent(level + 5) << "VIdx=(" << indices[w] << "), Weight=(" << weights[w] << ")\n";
 						}
-						DumpSummary(level + 4, cluster.GetControlPointIndicesCount());
+						DumpSummary(level + 5, cluster.GetControlPointIndicesCount());
 
 						FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
 						FbxAMatrix link_to_world; cluster.GetTransformLinkMatrix(link_to_world);
@@ -1986,7 +2020,7 @@ namespace pr::geometry::fbx
 			{
 				m_out << Indent(level) << "Position: " << Round(a2b.pos.xyz) << "\n";
 				m_out << Indent(level) << "Rotation: " << Round(RadiansToDegrees(EulerAngles(quat(a2b.rot)).xyz)) << "\n";
-				m_out << Indent(level) << "Scale   : " << Round(GetScale(a2b.rot).xyz) << "\n";
+				m_out << Indent(level) << "Scale   : " << Round(a2b.rot.scale().trace().xyz) << "\n";
 			}
 
 			// Output the 'and so on' indicator if 'count' is greater than the summary length
@@ -2161,7 +2195,97 @@ extern "C"
 	}
 }
 
+
 #if 0
+// Read skinning information from mesh nodes in 'node'
+void ReadSkinning()
+{
+	// Add skinning data to meshes we've already found
+	for (auto& mesh : m_scene.m_meshes)
+	{
+		// Find the corresponding FbxMesh
+		auto& meshnode = pr::get_if(m_meshes, [mesh_id = mesh.m_id](MeshNode const& m) { return m.mesh->GetUniqueID() == mesh_id; });
+		auto& fbxmesh = *meshnode.mesh;
+
+		// Find the skeleton associated with this skinned mesh
+		auto const* fbxskeleton = FindSkeleton(fbxmesh);
+		if (fbxskeleton == nullptr)
+			continue; // Mesh has no skeleton => not animated
+
+		auto const& skeleton = pr::get_if(m_scene.m_skeletons, [id = fbxskeleton->GetUniqueID()](Skeleton const& s) { return s.Id() == id; });
+
+		// Populate the skinning data
+		auto& skin = mesh.m_skin;
+		skin.m_skel_id = skeleton.Id();
+		skin.m_verts.resize(fbxmesh.GetControlPointsCount());
+
+		// Get the skinning data for this mesh
+		for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+		{
+			auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
+			for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
+			{
+				auto& cluster = *fbxskin.GetCluster(b);
+				if (cluster.GetControlPointIndicesCount() == 0)
+					continue;
+
+				auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
+
+				auto link_mode = cluster.GetLinkMode();
+				if (link_mode != FbxCluster::ELinkMode::eNormalize)
+					throw std::runtime_error("Non-normalise link modes not implemented");
+
+				#if 0
+				// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
+				// If set, the associate model is the node used as a reference to measure the relative displacement of the link node.
+				// Otherwise, the displacement of the link node is measured relative the node containing the control points.
+				// Typically, the associate model node is the parent of the bone a skin is attached to.
+				if (cluster.GetLinkMode() == FbxCluster::eAdditive && cluster.GetAssociateModel())
+				{
+					throw std::runtime_error("not implemented");
+				}
+				else
+				{
+					FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
+					FbxAMatrix geom_offset; mesh.GetNode();
+					ref_to_world *= geom_offset;
+
+
+					// Get the link initial global position and the link current global position.
+					pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
+					lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
+
+					// Compute the initial position of the link relative to the reference.
+					lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
+
+					// Compute the current position of the link relative to the reference.
+					lClusterRelativeCurrentPositionInverse = lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
+
+					// Compute the shift of the link relative to the reference.
+					pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
+				}
+				#endif
+
+				// Find the bone in the skeleton
+				auto bone_index = pr::index_of(skeleton.m_ids, bone.GetUniqueID());
+				if (bone_index >= isize(skeleton.m_o2bp))
+					throw std::runtime_error("Bone index out of range in skeleton");
+
+				// Get the span of vert indices and weights
+				auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+				auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+				for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
+				{
+					auto vidx = indices[w];
+					auto weight = weights[w];
+					skin.m_verts[vidx].m_bones.push_back(bone_index);
+					skin.m_verts[vidx].m_weights.push_back(static_cast<float>(weight));
+				}
+			}
+		}
+	}
+}
+
 struct Writer
 {
 	std::ostream& m_out;

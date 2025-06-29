@@ -37,13 +37,6 @@ namespace pr::geometry::fbx
 	//    Children are all nodes to the right with level > the current.
 	//  - The 'fbxsdk' library is *NOT* thread-safe
 
-	enum class EBoneType
-	{
-		Root,
-		Limb,
-		Effector,
-	};
-
 	struct Vert
 	{
 		v4 m_vert = {};
@@ -72,50 +65,61 @@ namespace pr::geometry::fbx
 		Range<int64_t> m_vrange = Range<int64_t>::Reset();
 		Range<int64_t> m_irange = Range<int64_t>::Reset();
 	};
-	struct Skin
-	{
-		struct Influence
-		{
-			pr::vector<int, 4> m_bones; // Indices of the bones that influence a vertex 'v' (i.e. m_bones[v])
-			pr::vector<float, 4> m_weights; // Weights of each bone's influence a vertex 'v' (i.e. m_weights[v])
-			
-			int size() const
-			{
-				assert(isize(m_bones) == isize(m_weights));
-				return isize(m_bones);
-			}
-			template <typename BW = std::pair<int, float>> BW get(int i) const
-			{
-				assert(i >= 0 && i < size());
-				return { m_bones[i], m_weights[i] };
-			}
-		};
-		using InfluenceCont = std::vector<Influence>;
-
-		uint64_t m_skel_id;
-		InfluenceCont m_verts;
-
-		explicit operator bool() const
-		{
-			return !m_verts.empty();
-		}
-	};
 	struct Skeleton
 	{
+		// Notes:
+		//  - Skeletons can have multiple root bones. Check for a 'm_hierarchy[i] == 0' values
+
 		using IdCont = std::vector<uint64_t>;
 		using NameCont = std::vector<std::string>;
-		using TypeCont = std::vector<EBoneType>;
 		using BoneCont = std::vector<m4x4>;
 		using LvlCont = std::vector<int>;
 
 		IdCont m_ids;        // Bone unique ids (first is the root bone)
 		NameCont m_names;    // Bone names
 		BoneCont m_o2bp;     // Inverse of the bind-pose to root-object-space transform for each bone
-		TypeCont m_types;    // Bone types
-		LvlCont m_hierarchy; // Hierarchy levels
+		LvlCont m_hierarchy; // Hierarchy levels. lvl == 0 are root bones.
 
 		// The root bone id is the skeleton id
 		uint64_t Id() const { return m_ids[0]; }
+
+		// The number of bones in this skeleton
+		int size() const
+		{
+			assert(isize(m_ids) == isize(m_names) && isize(m_names) == isize(m_o2bp) && isize(m_o2bp) == isize(m_hierarchy));
+			return isize(m_ids);
+		}
+
+		// Create a lookup table from bone id to bone index
+		std::unordered_map<uint64_t, int> BoneIndexMap() const
+		{
+			std::unordered_map<uint64_t, int> map;
+			map.reserve(m_ids.size());
+			for (auto const& id : m_ids) map[id] = s_cast<int>(&id - m_ids.data());
+			return map;
+		}
+	};
+	struct Skin
+	{
+		struct Influence
+		{
+			vector<uint64_t, 8> m_bones; // The ID of the bones that influence a vertex 'v' (i.e. m_bones[v])
+			vector<double, 8> m_weights; // Weights of each bone's influence a vertex 'v' (i.e. m_weights[v])
+			
+			int size() const
+			{
+				assert(isize(m_bones) == isize(m_weights));
+				return isize(m_bones);
+			}
+		};
+		using InfluenceCont = std::vector<Influence>;
+
+		uint64_t m_skel_id = ~0ULL;
+		InfluenceCont m_influences; // An influence per vertex
+		explicit operator bool() const
+		{
+			return !m_influences.empty();
+		}
 	};
 	struct BoneKey
 	{
@@ -181,7 +185,7 @@ namespace pr::geometry::fbx
 			Meshes = 1 << 0,
 			Materials = 1 << 1,
 			Skeletons = 1 << 2,
-			Skinning = 1 << 3,
+			Skinning = 1 << 3 | Meshes | Skeletons,
 			Animation = 1 << 4,
 
 			All = Meshes | Materials | Skeletons | Skinning | Animation,
@@ -204,7 +208,7 @@ namespace pr::geometry::fbx
 			Materials      = 1 << 2,
 			Meshes         = 1 << 3,
 			Skeletons      = 1 << 4,
-			Skinning       = 1 << 5 | Meshes,
+			Skinning       = 1 << 5 | Meshes | Skeletons,
 			All            = ~0,
 			_flags_enum    = 0,
 		};
@@ -305,13 +309,13 @@ namespace pr::geometry::fbx
 
 		// One or more model hierarchies.
 		// Meshes with 'm_level == 0' are the roots of a model tree
+		// Meshes are in depth-first order.
 		MeshCont m_meshes;
 
 		// Material definitions
 		MaterialCont m_materials;
 
 		// One or more skeleton hierarchies.
-		// Skeletons with 'm_level == 0' are the roots of a skeleton hierarchy
 		SkeletonCont m_skeletons;
 
 		// Animation data

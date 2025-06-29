@@ -1041,6 +1041,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\win32\user_directories.h">
       <Filter>pr\win32</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\mem_checks.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\threads\thread_pool.h">
       <Filter>pr\threads</Filter>
     </ClInclude>

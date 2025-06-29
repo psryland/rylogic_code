@@ -818,15 +818,17 @@ namespace pr
 		//  - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
 		//  - This method always converges or oscillates about the answer with a difference of 1.
 		//  - Otherwise, returns 0
-		struct L {
-			constexpr static int64_t NewtonRaphson(int64_t x, int64_t curr, int64_t prev, int64_t pprev) {
-				if (curr != prev && curr != pprev)
-					return NewtonRaphson(x, (curr + x / curr) >> 1, curr, prev);
+		if (x < 0)
+			return std::numeric_limits<T>::quiet_NaN();
 
-				return abs(x - curr * curr) < abs(x - prev * prev) ? curr : prev;
-			}
-		};
-		return x >= 0 ? L::NewtonRaphson(x, x, 0, 0) : std::numeric_limits<int64_t>::quiet_NaN();
+		T curr = x, prev = 0, pprev = 0;
+		for (;curr != prev && curr != pprev;)
+		{
+			pprev = prev;
+			prev = curr;
+			curr = (curr + x / curr) >> 1;
+		}
+		return Abs(x - curr * curr) < Abs(x - prev * prev) ? curr : prev;
 	}
 
 	// Signed Sqr

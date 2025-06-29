@@ -7,7 +7,7 @@
 		</AvailableItemName>
 	</ItemGroup>
 
-	<!-- Custom Target for Building Shaders -->  
+	<!-- Custom Target for Building Shaders -->
 	<Target
 		Name="View3dShaderBuildTarget"
 		BeforeTargets="CLCompile"
@@ -31,7 +31,7 @@
 
 	<!-- Hook the custom target into the build pipeline -->  
 	<PropertyGroup>
-		<BuildDependsOn>$(BuildDependsOn);View3dShaderBuildTarget</BuildDependsOn>
+		<BuildDependsOn>View3dShaderBuildTarget;$(BuildDependsOn)</BuildDependsOn>
 	</PropertyGroup>
 
 </Project>

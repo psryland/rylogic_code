@@ -832,6 +832,9 @@
       <Filter>src\shaders\hlsl\skinned</Filter>
     </None>
     <None Include="cpp.hint" />
+    <None Include="src\shaders\hlsl\utility\tri_table.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">

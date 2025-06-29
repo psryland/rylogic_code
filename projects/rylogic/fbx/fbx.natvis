@@ -46,5 +46,11 @@ old:
 	<Type Name="fbxsdk::FbxMesh">
 		<DisplayString>[Mesh] {mName.mInitialName.mData}</DisplayString>
 	</Type>
-
+	<Type Name="fbxsdk::FbxVectorTemplate4&lt;*&gt;">
+		<DisplayString>{mData[0],g}  {mData[1],g}  {mData[2],g}  {mData[3],g}</DisplayString>
+	</Type>
+	<Type Name="fbxsdk::FbxAMatrix">
+		<DisplayString>{mData[0],g} &#10;{mData[1],g} &#10;{mData[2],g} &#10;{mData[3],g}</DisplayString>
+	</Type>
+	
 </AutoVisualizer>

@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -121,8 +121,8 @@ struct ProjTexture
 // Skinned Meshes
 struct Skinfluence
 {
-	int4 m_bones; // Up to 4 bone indices
-	float4 m_weights; // Weights for each bone
+	int4 m_bones;    // 8 16-bit bone indices
+	uint4 m_weights; // 8 16-bit bone weights
 };
 
 #ifdef SHADER_BUILD

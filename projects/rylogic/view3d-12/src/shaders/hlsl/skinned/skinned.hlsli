@@ -9,22 +9,40 @@
 // Skin 'vert'. 'vert' is a vertex in model space when in the rest pose
 float4 SkinVertex(in uniform StructuredBuffer<Mat4x4> pose, in uniform Skinfluence influence, in float4 os_vert)
 {
-	float4 skinned_vert = float4(0, 0, 0, 0);
-	skinned_vert += mul(os_vert, pose[influence.m_bones.x].m) * influence.m_weights.x;
-	skinned_vert += mul(os_vert, pose[influence.m_bones.y].m) * influence.m_weights.y;
-	skinned_vert += mul(os_vert, pose[influence.m_bones.z].m) * influence.m_weights.z;
-	skinned_vert += mul(os_vert, pose[influence.m_bones.w].m) * influence.m_weights.w;
+	int4 idx_lo = (influence.m_bones >>  0) & 0xFFFF;
+	int4 idx_hi = (influence.m_bones >> 16) & 0xFFFF;
+	float4 wgt_lo = ((influence.m_weights >>  0) & 0xFFFF) / 65535.0f;
+	float4 wgt_hi = ((influence.m_weights >> 16) & 0xFFFF) / 65535.0f;
+
+	float4 skinned_vert = float4(0, 0, 0, 1);
+	skinned_vert.xyz += mul(os_vert, pose[idx_lo.x].m).xyz * wgt_lo.x;
+	skinned_vert.xyz += mul(os_vert, pose[idx_hi.x].m).xyz * wgt_hi.x;
+	skinned_vert.xyz += mul(os_vert, pose[idx_lo.y].m).xyz * wgt_lo.y;
+	skinned_vert.xyz += mul(os_vert, pose[idx_hi.y].m).xyz * wgt_hi.y;
+	skinned_vert.xyz += mul(os_vert, pose[idx_lo.z].m).xyz * wgt_lo.z;
+	skinned_vert.xyz += mul(os_vert, pose[idx_hi.z].m).xyz * wgt_hi.z;
+	skinned_vert.xyz += mul(os_vert, pose[idx_lo.w].m).xyz * wgt_lo.w;
+	skinned_vert.xyz += mul(os_vert, pose[idx_hi.w].m).xyz * wgt_hi.w;
 	return skinned_vert;
 }
 
 // Skin 'norm'. 'norm' is a normal in model space when in the rest pose
 float4 SkinNormal(in uniform StructuredBuffer<Mat4x4> pose, in uniform Skinfluence influence, in float4 os_norm)
 {
+	int4 idx_lo = (influence.m_bones >>  0) & 0xFFFF;
+	int4 idx_hi = (influence.m_bones >> 16) & 0xFFFF;
+	float4 wgt_lo = ((influence.m_weights >>  0) & 0xFFFF) / 65535.0f;
+	float4 wgt_hi = ((influence.m_weights >> 16) & 0xFFFF) / 65535.0f;
+
 	float4 skinned_norm = float4(0, 0, 0, 0);
-	skinned_norm += mul(os_norm, pose[influence.m_bones.x].m) * influence.m_weights.x;
-	skinned_norm += mul(os_norm, pose[influence.m_bones.y].m) * influence.m_weights.y;
-	skinned_norm += mul(os_norm, pose[influence.m_bones.z].m) * influence.m_weights.z;
-	skinned_norm += mul(os_norm, pose[influence.m_bones.w].m) * influence.m_weights.w;
+	skinned_norm.xyz += mul(os_norm, pose[idx_lo.x].m).xyz * wgt_lo.x;
+	skinned_norm.xyz += mul(os_norm, pose[idx_hi.x].m).xyz * wgt_hi.x;
+	skinned_norm.xyz += mul(os_norm, pose[idx_lo.y].m).xyz * wgt_lo.y;
+	skinned_norm.xyz += mul(os_norm, pose[idx_hi.y].m).xyz * wgt_hi.y;
+	skinned_norm.xyz += mul(os_norm, pose[idx_lo.z].m).xyz * wgt_lo.z;
+	skinned_norm.xyz += mul(os_norm, pose[idx_hi.z].m).xyz * wgt_hi.z;
+	skinned_norm.xyz += mul(os_norm, pose[idx_lo.w].m).xyz * wgt_lo.w;
+	skinned_norm.xyz += mul(os_norm, pose[idx_hi.w].m).xyz * wgt_hi.w;
 	return skinned_norm;
 }
 

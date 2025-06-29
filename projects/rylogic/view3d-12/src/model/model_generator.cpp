@@ -1250,6 +1250,8 @@ namespace pr::rdr12
 			ModelTree tree;
 			vector<m4x4> p2w = { m4x4::Identity() };
 			Cache<> cache(0, 0, 0, sizeof(uint32_t));
+			std::unordered_map<uint64_t, int> bone_map;
+
 			for (auto& mesh : scene.m_meshes)
 			{
 				for (; p2w.size() > mesh.m_level + 1; p2w.pop_back()) {}
@@ -1311,18 +1313,33 @@ namespace pr::rdr12
 				// Add skinning data if present and requested
 				if (mesh.m_skin && out.ReadAnimation)
 				{
-					auto verts = transform<pr::vector<Skinfluence>>(mesh.m_skin.m_verts, [](fbx::Skin::Influence const& influence)
+					// Find the skeleton used by this mesh skin and make a map from bone id to index
+					auto& skeleton = get_if(scene.m_skeletons, [&mesh](fbx::Skeleton const& s) { return s.Id() == mesh.m_skin.m_skel_id; });
+					auto bone_idx = skeleton.BoneIndexMap();
+
+					constexpr auto norm_to_u16 = [](double w) { return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535); };
+
+					// Read the influences per vertex
+					vector<Skinfluence> influences(mesh.m_skin.m_influences.size());
+					for (auto const& vert_influence : mesh.m_skin.m_influences)
 					{
-						if (influence.size() > 4)
-							OutputDebugStringA("More than 4 bone influences not implemented\n"); // todo
+						constexpr int max_influences = _countof(Skinfluence::m_bones);
+						if (vert_influence.size() > max_influences)
+							OutputDebugStringA("Unsupported number of bone influences\n");
 
-						Skinfluence s = {};
-						for (int i = 0, iend = influence.size(); i != iend && i != 4; ++i)
-							s.set(i, influence.get<Skinfluence::BoneWeight>(i));
+						// The source index of the influenced vertex
+						auto vidx = &vert_influence - mesh.m_skin.m_influences.data();
 
-						return s;
-					});
-					model->m_skin = Skin(factory, verts, mesh.m_skin.m_skel_id);
+						// Convert the bone weights to the compressed format
+						auto& influence = influences[vidx];
+						for (int i = 0, iend = vert_influence.size(); i != iend && i != max_influences; ++i)
+						{
+							influence.m_bones[i] = s_cast<int16_t>(bone_idx[vert_influence.m_bones[i]]);
+							influence.m_weights[i] = norm_to_u16(vert_influence.m_weights[i]);
+						}
+					}
+
+					model->m_skin = Skin(factory, influences, skeleton.Id());
 				}
 			}
 
