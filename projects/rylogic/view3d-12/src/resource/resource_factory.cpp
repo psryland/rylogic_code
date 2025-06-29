@@ -52,12 +52,14 @@ namespace pr::rdr12
 	// Access the command list associated with this factory instance
 	GfxCmdList& ResourceFactory::CmdList()
 	{
+		m_flush_required = true;
 		return m_gfx_cmd_list;
 	}
 
 	// Access the upload buffer associated with this factory instance
 	GpuUploadBuffer& ResourceFactory::UploadBuffer()
 	{
+		m_flush_required = true;
 		return m_upload_buffer;
 	}
 
@@ -490,7 +492,7 @@ namespace pr::rdr12
 					filepath = rdr().ResolvePath(filepath.string());
 
 				// Load the texture from disk
-				auto [images, tdesc] = LoadImageData(filepath, 1, true, 0, &rdr().Features());
+				auto [images, tdesc] = LoadImageData(filepath, 1, false, 0, &rdr().Features());
 				desc.m_tdesc = tdesc;
 				desc.m_tdesc.Data = images;
 
@@ -899,8 +901,8 @@ namespace pr::rdr12
 		}
 	}
 	
-	// Get or Create a new sampler instance.
-	SamplerPtr ResourceFactory::GetSampler(SamplerDesc const& desc)
+	// Create (or Get) a new sampler instance.
+	SamplerPtr ResourceFactory::CreateSampler(SamplerDesc const& desc)
 	{
 		// Check whether 'id' already exists, if so, return it.
 		// There is no per-instance data in samplers, so they can be shared.
@@ -927,39 +929,39 @@ namespace pr::rdr12
 
 		return inst;
 	}
-	SamplerPtr ResourceFactory::GetSampler(EStockSampler id)
+	SamplerPtr ResourceFactory::CreateSampler(EStockSampler id)
 	{
 		switch (id)
 		{
 			case EStockSampler::PointClamp:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			case EStockSampler::PointWrap:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			case EStockSampler::LinearClamp:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			case EStockSampler::LinearWrap:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicClamp:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicWrap:
 			{
 				SamplerDesc sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
-				return GetSampler(sdesc);
+				return CreateSampler(sdesc);
 			}
 			default:
 			{

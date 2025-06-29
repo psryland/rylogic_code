@@ -744,7 +744,7 @@ namespace pr::rdr12::ldraw
 						try
 						{
 							auto desc = SamplerDesc(tex_info.m_sdesc.Id(), tex_info.m_sdesc);
-							m_sampler = pp.m_factory.GetSampler(desc);
+							m_sampler = pp.m_factory.CreateSampler(desc);
 						}
 						catch(std::exception const& e)
 						{

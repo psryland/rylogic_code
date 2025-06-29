@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -10,8 +10,8 @@ namespace pr::app
 	// This type is a default and example of a set up object for the app.
 	struct DefaultSetup
 	{
-		using RSettings = pr::rdr::RdrSettings;
-		using WSettings = pr::rdr::WndSettings;
+		using RSettings = pr::rdr12::RdrSettings;
+		using WSettings = pr::rdr12::WndSettings;
 
 		// The Main object contains a user defined 'UserSettings' type which may be needed before
 		// configuring the renderer. In order to construct the UserSettings instance a method with
@@ -30,13 +30,13 @@ namespace pr::app
 		// Return settings to configure the render
 		RSettings RdrSettings()
 		{
-			return RSettings(GetModuleHandleW(nullptr), D3D11_CREATE_DEVICE_FLAG(0));
+			return RSettings(GetModuleHandleW(nullptr));
 		}
 
 		// Return settings for the render window
-		WSettings RdrWindowSettings(HWND hwnd, iv2 const& client_area = iv2Zero)
+		WSettings RdrWindowSettings(HWND hwnd, RSettings const& rdr_settings)//, iv2 const& client_area = iv2::Zero())
 		{
-			return WSettings(hwnd, TRUE, D3D11_CREATE_DEVICE_FLAG(0), client_area);
+			return WSettings(hwnd, true, rdr_settings);// .Mode(rdr12::DisplayMode(client_area));
 		}
 	};
 }

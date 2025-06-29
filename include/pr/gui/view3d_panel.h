@@ -1,11 +1,11 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
 
 #include "pr/gui/wingui.h"
-#include "pr/view3d/dll/view3d.h"
+#include "pr/view3d-12/view3d-dll.h"
 
 namespace pr::gui
 {
@@ -15,69 +15,68 @@ namespace pr::gui
 		{
 			using this_type = typename Params::this_type;
 
-			View3D_ReportErrorCB     m_error_cb;         // View3D error reporting callback function
-			void*                    m_error_ctx;        // View3D error reporting callback context
-			D3D11_CREATE_DEVICE_FLAG m_device_flags;     // Device creation flags
-			bool                     m_show_focus_point; // True if the focus cross hair should be rendered
-			bool                     m_gdi_compat;       // True if 'GDI' compatibility is enabled
+			view3d::WindowOptions m_win_opts;
+			bool m_show_focus_point; // True if the focus cross hair should be rendered
 
 			Params()
-				:m_error_cb(DefaultErrorHandler)
-				,m_error_ctx()
-				,m_device_flags()
+				: m_win_opts()
 				,m_show_focus_point(false)
-				,m_gdi_compat(false)
 			{
+				m_win_opts.multisamp(4);
 				name("view3d")
 					.margin(0)
 					.selectable();
 			}
-			View3DWindowOptions wnd_opts() const
+			view3d::WindowOptions const& wnd_opts() const
 			{
-				auto opts = View3DWindowOptions{};
-				opts.m_error_cb = m_error_cb;
-				opts.m_error_cb_ctx = m_error_ctx;
-				opts.m_gdi_compatible_backbuffer = m_gdi_compat ? AllSet(m_device_flags, D3D11_CREATE_DEVICE_BGRA_SUPPORT) : 0;
-				opts.m_multisampling = 4;
-				opts.m_dbg_name = "vrex_gui";
-				return opts;
+				return m_win_opts;
 			}
-			this_type& error_cb(View3D_ReportErrorCB error_cb, void* error_ctx)
+			this_type& error_cb(view3d::ReportErrorCB error_cb)
 			{
-				m_error_cb = error_cb;
-				m_error_ctx = error_ctx;
+				m_win_opts.error_cb(error_cb);
+				return me();
+			}
+			this_type& error_cb(view3d::ReportErrorCB::FuncCB cb, void* ctx)
+			{
+				m_win_opts.error_cb({ cb, ctx });
 				return me();
 			}
 			this_type& gdi_compat(bool on = true)
 			{
-				m_gdi_compat = on;
+				m_win_opts.gdi_compat(on);
 				return me();
 			}
+			this_type& multisamp(int samples)
+			{
+				m_win_opts.multisamp(samples);
+				return me();
+			}
+
 			this_type& show_focus_point(bool on = true)
 			{
 				m_show_focus_point = on;
 				return me();
 			}
 		
-			static void __stdcall DefaultErrorHandler(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+			static void __stdcall DefaultErrorHandler(void*, char const* msg, char const* filepath, int line, int64_t)
 			{
-				throw std::runtime_error(Narrow(std::format(L"{}({}): {}", filepath, line, msg)));
+				throw std::runtime_error(std::format("{}({}): {}", filepath, line, msg));
 			}
 		};
 
-		View3DContext m_ctx;
-		View3DWindow m_win;
+		view3d::DllHandle m_ctx;
+		view3d::Window m_win;
 
 		View3DPanel()
 			:View3DPanel(Params())
 		{}
 		explicit View3DPanel(Params const& p)
 			:Panel(p)
-			,m_ctx(View3D_Initialise(p.m_error_cb, p.m_error_ctx, p.m_device_flags))
+			,m_ctx(View3D_Initialise(p.m_win_opts.m_error_cb))
 			,m_win(View3D_WindowCreate(CreateHandle(), p.wnd_opts()))
 		{
 			//View3D_CreateDemoScene(m_win);
-			View3D_FocusPointVisibleSet(m_win, cp().m_show_focus_point);
+			View3D_StockObjectVisibleSet(m_win, view3d::EStockObject::FocusPoint, cp().m_show_focus_point);
 		}
 		~View3DPanel()
 		{
@@ -110,7 +109,7 @@ namespace pr::gui
 		void OnMouseButton(MouseEventArgs& args) override
 		{
 			auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-			if (View3D_MouseNavigate(m_win, To<View3DV2>(args.m_point), args.m_down ? op : EView3DNavOp::None, TRUE))
+			if (View3D_MouseNavigate(m_win, To<view3d::Vec2>(args.m_point), args.m_down ? op : view3d::ENavOp::None, TRUE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -119,7 +118,7 @@ namespace pr::gui
 		void OnMouseMove(MouseEventArgs& args) override
 		{
 			auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-			if (View3D_MouseNavigate(m_win, To<View3DV2>(args.m_point), op, FALSE))
+			if (View3D_MouseNavigate(m_win, To<view3d::Vec2>(args.m_point), op, FALSE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -127,7 +126,7 @@ namespace pr::gui
 		}
 		void OnMouseWheel(MouseWheelArgs& args) override
 		{
-			if (View3D_MouseNavigateZ(m_win, To<View3DV2>(args.m_point), args.m_delta, TRUE))
+			if (View3D_MouseNavigateZ(m_win, To<view3d::Vec2>(args.m_point), args.m_delta, TRUE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -139,8 +138,7 @@ namespace pr::gui
 		{
 			if (m_win)
 			{
-				View3D_Render(m_win);
-				View3D_Present(m_win);
+				View3D_WindowRender(m_win);
 				args.m_handled = true;
 				return;
 			}
@@ -152,22 +150,22 @@ namespace pr::gui
 		{
 			Control::OnWindowPosChange(args);
 			if (!args.m_before && args.IsResize() && !args.Iconic())
-				View3D_BackBufferSizeSet(m_win, args.m_wp->cx, args.m_wp->cy);
+				View3D_WindowBackBufferSizeSet(m_win, { args.m_wp->cx, args.m_wp->cy }, FALSE);
 		}
 	};
 }
 namespace pr
 {
-	template <> struct Convert<View3DV2, gui::Point>
+	template <> struct Convert<view3d::Vec2, gui::Point>
 	{
-		static View3DV2 To_(gui::Point const& v)
+		static view3d::Vec2 To_(gui::Point const& v)
 		{
-			return View3DV2{float(v.x), float(v.y)};
+			return view3d::Vec2{float(v.x), float(v.y)};
 		}
 	};
-	template <> struct Convert<gui::Point, View3DV2>
+	template <> struct Convert<gui::Point, view3d::Vec2>
 	{
-		static gui::Point To_(View3DV2 const& v)
+		static gui::Point To_(view3d::Vec2 const& v)
 		{
 			return gui::Point(long(v.x), long(v.y));
 		}

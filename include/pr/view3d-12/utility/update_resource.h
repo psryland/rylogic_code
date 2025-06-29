@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -67,9 +67,13 @@ namespace pr::rdr12
 		staging_buf_t    m_staging;      // The allocation within the upload buffer
 
 		// ** Remember to call Commit before the leaving the scope **
+
+		// Constructor for updating 1D buffers
 		UpdateSubresourceScope(GfxCmdList& cmd_list, GpuUploadBuffer& upload, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
 			: UpdateSubresourceScope(cmd_list, upload, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
 		{}
+
+		// Constructor for updating 2D/3D textures
 		UpdateSubresourceScope(GfxCmdList& cmd_list, GpuUploadBuffer& upload, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
 			: m_cmd_list(cmd_list)
 			, m_dest(dest)
@@ -157,7 +161,7 @@ namespace pr::rdr12
 		// Return a pointer to the staging buffer memory for the given mip level.
 		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
 		// Note: there is no 'end' because RowPitch != Width which means 'end' isn't well defined.
-		template <typename TElement> TElement* ptr(int mip = 0) const
+		template <typename TElement> TElement const* ptr(int mip = 0) const
 		{
 			// Make sure the mip is within the range of mips being updated
 			if (mip < 0 || mip >= m_mipN)
@@ -167,10 +171,14 @@ namespace pr::rdr12
 			auto const& layout = m_layout[mip];
 			return type_ptr<TElement>(m_staging.m_mem + layout.Offset);
 		}
-		template <typename TElement> TElement* ptr(iv3 pos, int mip = 0) const
+		template <typename TElement> TElement* ptr(int mip = 0)
+		{
+			return const_call(ptr<TElement>(mip));
+		}
+		template <typename TElement> TElement const* ptr(iv3 pos, int mip = 0) const
 		{
 			// The z slice in the staging buffer
-			auto slice = byte_ptr(ptr(mip));
+			auto slice = byte_ptr(ptr<TElement>(mip));
 
 			// The dimensions of the range being updated
 			auto const& dim = m_range.size(mip);
@@ -186,6 +194,10 @@ namespace pr::rdr12
 				(layout.Footprint.RowPitch * layout.Footprint.Height) * pos.z +
 				(layout.Footprint.RowPitch) * pos.y +
 				sizeof(TElement) * pos.x);
+		}
+		template <typename TElement> TElement* ptr(iv3 pos, int mip = 0)
+		{
+			return const_call(ptr<TElement>(pos, mip));
 		}
 
 		// Copy data from the given images to the staging buffer. Each image is a mip.

@@ -1,4 +1,4 @@
-#include "src/forward.h"
+﻿#include "src/forward.h"
 #include "src/body.h"
 
 using namespace pr;
@@ -27,18 +27,18 @@ struct MainUI :Form
 	ShapeBox m_box;
 
 	MainUI()
-		:Form(Params<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
-		,m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
-		,m_view3d(View3DPanel::Params().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
-		,m_clock()
-		,m_steps()
-		,m_body()
-		,m_physics()
-		,m_sph(0.5f)
+		: Form(Params<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
+		, m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
+		, m_view3d(View3DPanel::Params().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
+		, m_clock()
+		, m_steps()
+		, m_body()
+		, m_physics()
+		, m_sph(0.5f)
 		#if TEST_PAIR
-		,m_box(v4{maths::inv_root2f, maths::inv_root2f, maths::inv_root2f, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4Origin))
+		, m_box(v4{maths::inv_root2f, maths::inv_root2f, maths::inv_root2f, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4Origin))
 		#else
-		,m_box(Abs(Random3(rng, v4{0.8f}, v4{1.4f}, 0)))
+		, m_box(Abs(Random3(rng, v4{0.8f}, v4{1.4f}, 0)))
 		#endif
 	{
 		Reset();
@@ -119,7 +119,7 @@ struct MainUI :Form
 
 		Render(0);
 
-		View3D_ResetView(m_view3d.m_win, View3DV4{+0.0f,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
+		View3D_ResetView(m_view3d.m_win, view3d::Vec4{+0.0f,0,-1,0}, view3d::Vec4{0,1,0,0}, 0, TRUE, TRUE);
 	}
 
 	// Step the main loop
@@ -192,19 +192,19 @@ struct MainUI :Form
 	// Export the scene as LDraw script
 	void Dump()
 	{
-		using namespace ldr;
+		using namespace pr::rdr12::ldraw;
 
 		//auto flags = ERigidBodyFlags::LVel|ERigidBodyFlags::AVel|ERigidBodyFlags::Force|ERigidBodyFlags::Torque;
 		auto flags = ERigidBodyFlags::All;
 
-		std::string str;
-		ldr::RigidBody(str, "body0", 0x8000FF00, m_body[0], flags, nullptr, 0.1f);
-		ldr::RigidBody(str, "body1", 0x10FF0000, m_body[1], flags, nullptr, 0.1f);
-		ldr::Write(str, L"\\dump\\physics_dump.ldr");
+		Builder builder;
+		builder._<LdrRigidBody>("body0", 0x8000FF00).rigid_body(m_body[0]).flags(flags);
+		builder._<LdrRigidBody>("body1", 0x10FF0000).rigid_body(m_body[1]).flags(flags);
+		builder.Write(L"\\dump\\physics_dump.ldr");
 	}
 
 	// Handle errors reported within view3d
-	static void __stdcall ReportErrorCB(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+	static void __stdcall ReportErrorCB(void* ctx, char const* msg, char const* filepath, int line, int64_t)
 	{
 		auto this_ = static_cast<MainUI*>(ctx);
 		auto message = pr::FmtS(L"%s(%d): %s", filepath, line, msg);

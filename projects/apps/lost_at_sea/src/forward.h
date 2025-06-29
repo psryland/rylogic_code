@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2011
 //************************************
@@ -41,7 +41,6 @@
 //#include "pr/camera/camera.h"
 ////#include "pr/camera/camctrl_dinput_wasd.h"
 //#include "pr/input/dinput.h"
-#include "pr/view3d/renderer.h"
 #include "pr/storage/settings.h"
 #include "pr/audio/directsound/sound.h"
 #include "pr/audio/directsound/player.h"
@@ -55,7 +54,7 @@
 namespace las
 {
 	using namespace pr;
-	using namespace pr::rdr;
+	using namespace pr::rdr12;
 	using namespace pr::gui;
 	using namespace pr::app;
 

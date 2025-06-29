@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "src/forward.h"
 #include "src/idemo_scene.h"
 
@@ -17,7 +17,7 @@ namespace pr::fluid
 		std::vector<fluid::Particle> m_particles;
 		std::vector<fluid::Dynamics> m_dynamics;
 		CollisionBuilder m_col;
-		ldr::Builder m_ldr;
+		rdr12::ldraw::Builder m_ldr;
 
 		explicit Scene2d(int particle_count)
 			: m_col()
@@ -67,7 +67,7 @@ namespace pr::fluid
 		// Return the visualisation scene
 		std::string LdrScene() const override
 		{
-			return m_ldr.ToString();
+			return m_ldr.ToString(true);
 		}
 
 		// Returns initialisation data for the particle positions.

@@ -403,12 +403,26 @@
     <ClInclude Include="lexlib\SubStyles.h">
       <Filter>src\lexlib</Filter>
     </ClInclude>
-    <ClInclude Include="src\Geometry.h" />
-    <ClInclude Include="win32\HanjaDic.h" />
-    <ClInclude Include="win32\PlatWin.h" />
-    <ClInclude Include="win32\ScintillaWin.h" />
-    <ClInclude Include="win32\WinTypes.h" />
-    <ClInclude Include="lexlib\CatalogueModules.h" />
-    <ClInclude Include="lexlib\LexAccessor.h" />
+    <ClInclude Include="lexlib\CatalogueModules.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\WinTypes.h">
+      <Filter>src\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\ScintillaWin.h">
+      <Filter>src\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\PlatWin.h">
+      <Filter>src\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\LexAccessor.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\HanjaDic.h">
+      <Filter>src\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Geometry.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

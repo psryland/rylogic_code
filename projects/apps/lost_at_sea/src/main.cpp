@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2011
 //************************************
@@ -9,7 +9,7 @@
 using namespace pr;
 using namespace pr::app;
 using namespace pr::gui;
-using namespace pr::rdr;
+using namespace pr::rdr12;
 
 // Create the GUI window
 std::unique_ptr<IAppMainUI> pr::app::CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow)
@@ -26,8 +26,8 @@ namespace las
 
 	struct Setup
 	{
-		using RSettings = pr::rdr::RdrSettings;
-		using WSettings = pr::rdr::WndSettings;
+		using RSettings = pr::rdr12::RdrSettings;
+		using WSettings = pr::rdr12::WndSettings;
 
 		MainUI* m_ui;
 
@@ -40,7 +40,7 @@ namespace las
 		// Return configuration settings for the renderer
 		RSettings RdrSettings()
 		{
-			RSettings s(GetModuleHandleW(nullptr), D3D11_CREATE_DEVICE_FLAG(0));
+			RSettings s(GetModuleHandleW(nullptr));
 			//s.m_window_handle      = hwnd;
 			//s.m_device_config      = settings.m_fullscreen ?
 			//	pr::rdr::GetDefaultDeviceConfigFullScreen(settings.m_res_x, settings.m_res_y, D3DDEVTYPE_HAL) :
@@ -58,9 +58,9 @@ namespace las
 		}
 
 		// Return settings for the renderer window
-		WSettings RdrWindowSettings(HWND hwnd)
+		WSettings RdrWindowSettings(HWND hwnd, RSettings const& rdr_settings)
 		{
-			return WSettings(hwnd);
+			return WSettings(hwnd, true, rdr_settings);
 		}
 	};
 

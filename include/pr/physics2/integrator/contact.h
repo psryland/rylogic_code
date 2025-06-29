@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -69,12 +69,16 @@ namespace pr::physics
 	// Dump the collision scene to LDraw script
 	template <typename = void> void Dump(Contact const& c)
 	{
-		std::string str;
-		ldr::RigidBody(str, "ObjA", 0x80FF0000, *c.m_objA, ldr::ERigidBodyFlags::None, &m4x4Identity);
-		ldr::RigidBody(str, "ObjB", 0x8000FF00, *c.m_objB, ldr::ERigidBodyFlags::None, &c.m_b2a);
+		using namespace pr::rdr12::ldraw;
+
+		Builder builder;
+		builder._<LdrRigidBody>("ObjA", 0x80FF0000).rigid_body(*c.m_objA).flags(ERigidBodyFlags::None);
+		builder._<LdrRigidBody>("ObjB", 0x8000FF00).rigid_body(*c.m_objB).flags(ERigidBodyFlags::None).o2w(c.m_b2a);
+		#if 0 //TODO
 		ldr::VectorField(str, "Velocity", 0xFFFFFF00, (v8)c.m_velocity * 0.1f, v4Origin, 2, 0.25f);
 		ldr::Arrow(str, "Normal", 0xFFFFFFFF, ldr::EArrowType::Fwd, c.m_point_at_t, c.m_axis * 0.1f, 5);
-		ldr::Box(str, "Contact", 0xFFFFFF00, 0.005f, c.m_point_at_t.w1());
-		ldr::Write(str, L"\\dump\\collision.ldr");
+		#endif
+		builder.Box("Contact", 0xFFFFFF00).dim(0.005f).pos(c.m_point_at_t.w1());
+		builder.Write(L"\\dump\\collision.ldr");
 	}
 }

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -25,7 +25,7 @@ namespace pr::rdr12
 		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;
 
-		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb);
+		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB::FuncCB> global_error_cb);
 		Context(Context&&) = delete;
 		Context(Context const&) = delete;
 		Context& operator=(Context&) = delete;
@@ -44,7 +44,7 @@ namespace pr::rdr12
 		void WindowDestroy(V3dWindow* window);
 
 		// Global error callback. Can be called in a worker thread context
-		MultiCast<StaticCB<view3d::ReportErrorCB>, true> ReportError;
+		MultiCast<StaticCB<view3d::ReportErrorCB::FuncCB>, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
 		MultiCast<StaticCB<view3d::ParsingProgressCB>, true> ParsingProgress;

@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2011
 //************************************
@@ -9,16 +9,19 @@ namespace las
 {
 	struct Ship
 	{
-		#define PR_RDR_INST(x)\
-			x(rdr::ModelPtr ,m_model ,rdr::EInstComp::ModelPtr)\
-			x(m4x4          ,m_i2w   ,rdr::EInstComp::I2WTransform)
-		PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
-		#undef PR_RDR_INST
+		struct Instance
+		{
+			#define PR_RDR_INST(x)\
+			x(m4x4     , m_i2w   , EInstComp::I2WTransform)\
+			x(ModelPtr , m_model , EInstComp::ModelPtr)
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST);
+			#undef PR_RDR_INST
+		};
 
 		// The ship instance
 		Instance m_inst;
 
-		Ship(Renderer& rdr);
+		Ship(ResourceFactory& factory);
 		void AddToScene(Scene& scene);
 	};
 }

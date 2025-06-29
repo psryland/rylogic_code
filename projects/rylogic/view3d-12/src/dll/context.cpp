@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -18,7 +18,7 @@
 
 namespace pr::rdr12
 {
-	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb)
+	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB::FuncCB> global_error_cb)
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
 		, m_windows()
 		, m_sources(m_rdr, *this)
@@ -63,12 +63,12 @@ namespace pr::rdr12
 		}
 		catch (std::exception const& e)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\n%s", e.what()), "", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(FmtS("Failed to create View3D Window.\n%s", e.what()), "", 0, 0);
 			return nullptr;
 		}
 		catch (...)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\nUnknown reason"), "", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(FmtS("Failed to create View3D Window.\nUnknown reason"), "", 0, 0);
 			return nullptr;
 		}
 	}

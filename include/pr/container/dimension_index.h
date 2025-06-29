@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <algorithm>
 #include <execution>
@@ -162,7 +162,7 @@ namespace pr::spatial
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::container
 {
@@ -214,7 +214,7 @@ namespace pr::container
 		std::random_device rd;
 		std::default_random_engine rng(rd());
 		std::uniform_real_distribution dist(0.2f, 0.5f);
-		ldr::Builder builder;
+		rdr12::ldraw::Builder builder;
 
 		const int N = 10000;
 		std::vector<v4> points;
@@ -237,7 +237,7 @@ namespace pr::container
 
 		auto search = v3::Random(rng, -v3::One(), +v3::One()).w1();
 		auto radius = dist(rng);
-		builder.Sphere("search", 0x8000FF00).r(radius).pos(search);
+		builder.Sphere("search", 0x8000FF00).radius(radius).pos(search);
 
 		{
 			auto& results = builder.Point("results", 0xFF00FF00).size(10.0f);

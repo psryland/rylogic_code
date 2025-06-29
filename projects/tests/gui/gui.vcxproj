@@ -52,6 +52,7 @@
 		<Link>
 			<AdditionalDependencies>
 				;gdiplus.lib
+				;view3d-12.imp
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 		</Link>
@@ -79,6 +80,6 @@
 
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<Import Project="$(TargetsPath)view3d.targets" />
 	<Import Project="$(TargetsPath)scintilla.targets" />
+	<Import Project="$(TargetsPath)view3d-12.targets" />
 </Project>

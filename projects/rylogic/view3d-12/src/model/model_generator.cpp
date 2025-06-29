@@ -1556,7 +1556,7 @@ namespace pr::rdr12
 		cache.m_ncont.push_back(
 			NuggetDesc(ETopo::TriList, props.m_geom & ~EGeom::Norm)
 			.tex_diffuse(tex)
-			.sam_diffuse(factory.GetSampler(EStockSampler::AnisotropicClamp))
+			.sam_diffuse(factory.CreateSampler(EStockSampler::AnisotropicClamp))
 			.alpha_geom(has_alpha));
 
 		cache.m_bbox = props.m_bbox;

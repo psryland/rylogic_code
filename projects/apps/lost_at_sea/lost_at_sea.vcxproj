@@ -36,8 +36,6 @@
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
 			<AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
@@ -53,8 +51,8 @@
 				;%(AdditionalLibraryDirectories)
 			</AdditionalLibraryDirectories>
 			<AdditionalDependencies>
-				;view3d-static.lib
 				;audio.lib
+				;view3d-12-static.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 		</Link>
@@ -70,19 +68,11 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\camera\camctrl_dinput_wasd.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\audio\ogg\ogg_stream.h" />
-		<ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
-			<PrecompiledHeader>NotUsing</PrecompiledHeader>
-		</ClCompile>
-		<ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c">
-			<PrecompiledHeader>NotUsing</PrecompiledHeader>
-		</ClCompile>
-		<ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c">
-			<PrecompiledHeader>NotUsing</PrecompiledHeader>
-		</ClCompile>
+		<ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp"/>
+		<ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c"/>
+		<ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c"/>
 		<ClInclude Include="src\main.h" />
-		<ClCompile Include="src\main.cpp">
-			<PrecompiledHeader>Create</PrecompiledHeader>
-		</ClCompile>
+		<ClCompile Include="src\main.cpp" />
 		<ClInclude Include="src\cam\cam.h" />
 		<ClCompile Include="src\cam\cam.cpp" />
 		<ClInclude Include="src\forward.h" />
@@ -93,14 +83,25 @@
 		<ClCompile Include="src\world\terrain.cpp" />
 		<ClInclude Include="src\util.h" />
 	</ItemGroup>
+
+	<!-- Custom Target for DLL Dependencies -->
 	<ItemGroup>
-		<None Include="data\menu\menu.ldr" >
-			<DeploymentContent>true</DeploymentContent>
-		</None>
-		<Image Include="data\skybox\SkyBox-Clouds-Few-Noon.png">
-			<DeploymentContent>true</DeploymentContent>
-		</Image>
+		<DataFiles Include="$(ProjectDir)data\**\*.*" />
 	</ItemGroup>
+	<Target Name="CopyDataDirectory" AfterTargets="Link">
+		<!--
+		<Message Importance="high" Text="@( _DependencyLinkWithDest -> '%(FullPath) => %(DestFile)', '&#x0A;')" />
+		-->
+		<Copy
+			SourceFiles="@(DataFiles)"
+			DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')"
+			ContinueOnError="ErrorAndContinue"
+			SkipUnchangedFiles="true"
+		/>
+	</Target>
+	<PropertyGroup>
+		<BuildDependsOn>CopyDataDirectory;$(BuildDependsOn)</BuildDependsOn>
+	</PropertyGroup>
 
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

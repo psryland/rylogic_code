@@ -1,4 +1,4 @@
-// Scintilla source code edit control
+﻿// Scintilla source code edit control
 /** @file LexLdr.cxx
  ** Lexer for LineDrawer Script.
  **
@@ -29,14 +29,14 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-#include "pr/ldraw/ldr_object.h"
 #include "pr/script/forward.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 
 using namespace Scintilla;
 using namespace Lexilla;
 
-using namespace pr::ldr;
 using namespace pr::script;
+using namespace pr::rdr12::ldraw;
 
 namespace
 {
@@ -175,8 +175,8 @@ namespace
 						StyleNameAndColour(sc);
 						break;
 					}
-					pr::ldr::EKeyword kw;
-					if (pr::Enum<pr::ldr::EKeyword>::TryParse(kw, std::string_view{ p }, false))
+					pr::rdr12::ldraw::EKeyword kw;
+					if (pr::Enum<pr::rdr12::ldraw::EKeyword>::TryParse(kw, std::string_view{ p }, false))
 					{
 						sc.ChangeState(SCE_LDR_KEYWORD);
 						sc.SetState(SCE_LDR_DEFAULT);

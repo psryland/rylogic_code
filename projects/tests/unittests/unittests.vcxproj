@@ -242,13 +242,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\hardware\cpuinfo.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\hardware\find_bt_device.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper_c.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_objects_dlg.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_script_editor_dlg.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_sources.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_tools.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\macros\align.h" />

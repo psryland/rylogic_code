@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -48,8 +48,7 @@ namespace pr
 		using Sampler = pr::rdr12::Sampler*;
 		using Shader = pr::rdr12::Shader*;
 		using Window = pr::rdr12::V3dWindow*;
-
-		using ReportErrorCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
+		using Colour = unsigned int;
 
 		#pragma region Enumerations
 		enum class EResult :int
@@ -422,7 +421,22 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Structures
-		using Colour = unsigned int;
+		struct ReportErrorCB
+		{
+			using FuncCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
+
+			FuncCB m_cb;
+			void* m_ctx;
+
+			void operator()(char const* msg, char const* filepath, int line, int64_t pos) const
+			{
+				m_cb(m_ctx, msg, filepath, line, pos);
+			}
+			explicit operator bool() const
+			{
+				return m_cb != nullptr;
+			}
+		};
 		struct Vec2
 		{
 			float x, y;
@@ -536,12 +550,51 @@ namespace pr
 		struct WindowOptions
 		{
 			ReportErrorCB m_error_cb;
-			void*         m_error_cb_ctx;
 			Colour        m_background_colour;
 			BOOL          m_allow_alt_enter;
 			BOOL          m_gdi_compatible_backbuffer;
 			int           m_multisampling;
 			char const*   m_dbg_name;
+
+			WindowOptions()
+				: m_error_cb()
+				, m_background_colour(0xFF808080)
+				, m_allow_alt_enter(true)
+				, m_gdi_compatible_backbuffer(false)
+				, m_multisampling(1)
+				, m_dbg_name()
+			{
+			}
+			WindowOptions& error_cb(ReportErrorCB error_cb)
+			{
+				m_error_cb = error_cb;
+				return *this;
+			}
+			WindowOptions& back_colour(Colour colour)
+			{
+				m_background_colour = colour;
+				return *this;
+			}
+			WindowOptions& alt_enter(bool enable = true)
+			{
+				m_allow_alt_enter = enable;
+				return *this;
+			}
+			WindowOptions& gdi_compat(bool enable = true)
+			{
+				m_gdi_compatible_backbuffer = enable;
+				return *this;
+			}
+			WindowOptions& multisamp(int samples)
+			{
+				m_multisampling = samples;
+				return *this;
+			}
+			WindowOptions& name(char const* dbg_name)
+			{
+				m_dbg_name = dbg_name;
+				return *this;
+			}
 		};
 		struct HitTestRay
 		{
@@ -671,11 +724,11 @@ extern "C"
 	// Initialise calls are reference counted and must be matched with Shutdown calls
 	// 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 	// Note: this function is not thread safe, avoid race calls
-	VIEW3D_API pr::view3d::DllHandle __stdcall View3D_Initialise(pr::view3d::ReportErrorCB global_error_cb, void* ctx);
+	VIEW3D_API pr::view3d::DllHandle __stdcall View3D_Initialise(pr::view3d::ReportErrorCB global_error_cb);
 	VIEW3D_API void __stdcall View3D_Shutdown(pr::view3d::DllHandle context);
 
 	// This error callback is called for errors that are associated with the dll (rather than with a window).
-	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, BOOL add);
 
 	// Set the callback for progress events when script sources are loaded or updated
 	VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(pr::view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add);
@@ -734,7 +787,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowDestroy(pr::view3d::Window window);
 	
 	// Add/Remove a window error callback. Note: The callback function can be called in a worker thread context.
-	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, BOOL add);
 
 	// Get/Set the window settings (as ldr script string)
 	VIEW3D_API BSTR __stdcall View3D_WindowSettingsGetBStr(pr::view3d::Window window);

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "src/forward.h"
 
 static int BodyIndex;
@@ -6,7 +6,7 @@ static int BodyIndex;
 struct Body :physics::RigidBody
 {
 	// Graphics for the object
-	View3DObject m_gfx;
+	view3d::Object m_gfx;
 
 	Body()
 		:physics::RigidBody()
@@ -23,11 +23,11 @@ struct Body :physics::RigidBody
 			{
 				if (HasShape())
 				{
+					using namespace pr::rdr12::ldraw;
 					static std::default_random_engine rng;
-
-					std::string str;
-					ldr::RigidBody(str, "Body", RandomRGB(rng, 0.0f, 1.0f), *this);
-					m_gfx = View3D_ObjectCreateLdr(::pr::Widen(str).c_str(), false, nullptr, nullptr);
+					Builder builder;
+					builder._<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f)).rigid_body(*this);
+					m_gfx = View3D_ObjectCreateLdrA(builder.ToString(false).c_str(), false, nullptr, nullptr); // TODO use binary
 				}
 				UpdateGfx();
 			}
@@ -43,6 +43,6 @@ struct Body :physics::RigidBody
 	void UpdateGfx()
 	{
 		if (m_gfx)
-			View3D_ObjectO2WSet(m_gfx, To<View3DM4x4>(m_o2w), nullptr);
+			View3D_ObjectO2WSet(m_gfx, To<view3d::Mat4x4>(m_o2w), nullptr);
 	}
 };

@@ -101,7 +101,7 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 
 		// Error event. Can be called in a worker thread context
-		MultiCast<StaticCB<view3d::ReportErrorCB>, true> ReportError;
+		MultiCast<StaticCB<view3d::ReportErrorCB::FuncCB>, true> ReportError;
 
 		// Settings changed event
 		MultiCast<StaticCB<view3d::SettingsChangedCB>, true> OnSettingsChanged;

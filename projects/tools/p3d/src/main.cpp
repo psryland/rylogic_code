@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // P3D Graphics Tool
 //  Copyright (c) Rylogic Ltd 2019
 //**********************************************
@@ -137,19 +137,21 @@ struct Main
 			// Otherwise, convert the command line parameters into a script
 			struct Parser :cmdline::IOptionReceiver<wchar_t>
 			{
-				std::string m_str;
+				std::string m_script;
 				int m_verbosity;
 				bool m_ends_with_fileout;
+
 				Parser()
-					:m_str()
+					:m_script()
 					,m_verbosity()
 					,m_ends_with_fileout()
 				{}
 
-				// Read the option passed to Cex
+				// Read the options
 				bool CmdLineOption(std::wstring const& option, TArgIter& arg, TArgIter arg_end) override
 				{
 					m_ends_with_fileout = false;
+					std::ostringstream ss;
 					for (;;)
 					{
 						if (str::EqualI(option, "-verbosity"))
@@ -157,31 +159,31 @@ struct Main
 							if (arg == arg_end || IsOption(*arg) || !str::ExtractIntC(m_verbosity, 10, arg->c_str()) || m_verbosity < 0 || m_verbosity > 3)
 								throw std::runtime_error("Verbosity level must be in the range [0..3]");
 
-							ldr::Append(m_str, "*Verbosity", "{", m_verbosity, "}\n");
+							ss << "*Verbosity {" << m_verbosity << "}\n";
 							break;
 						}
 						if (str::EqualI(option, "-fi"))
 						{
-							ldr::Append(m_str, "*fi", "{", ldr::Str(*arg++), "}\n");
+							ss << "*fi {" << Narrow(*arg++) << "}\n";
 							break;
 						}
 						if (str::EqualI(option, "-fo"))
 						{
-							ldr::Append(m_str, "*fo", "{", ldr::Str(*arg++));
+							ss << "*fo {" << Narrow(*arg++) << " ";
 							if (arg != arg_end)
 							{
 								if (false) {}
-								else if (str::EqualI(*arg, "code")) ldr::Append(m_str, "*Code");
-								else if (str::EqualI(*arg, "ldr" )) ldr::Append(m_str, "*Ldr");
-								else ldr::Append(m_str, "*Flags", "{", ldr::Str(*arg++), "}\n");
+								else if (str::EqualI(*arg, "code")) ss << "*Code";
+								else if (str::EqualI(*arg, "ldr" )) ss << "*Ldr";
+								else ss << "*Flags {" << Narrow(*arg++) << "}\n";
 							}
-							ldr::Append(m_str, "}\n");
+							ss << "}\n";
 							m_ends_with_fileout = true;
 							break;
 						}
 						if (str::EqualI(option, "-RemoveDegenerates"))
 						{
-							ldr::Append(m_str, "*RemoveDegenerates", "{");
+							ss << "*RemoveDegenerates {";
 							if (!IsOption(*arg))
 							{
 								int field = 0;
@@ -189,31 +191,31 @@ struct Main
 								{
 									switch (field++)
 									{
-									case 0: if (!sub.empty()) ldr::Append(m_str, "*Quantisation", "{", sub, "}"); break;
-									case 1: if (!sub.empty()) ldr::Append(m_str, "*NormalSmoothingAngle", "{", sub, "}"); break;
-									case 2: if (!sub.empty()) ldr::Append(m_str, "*ColourDistance", "{", sub, "}"); break;
-									case 3: if (!sub.empty()) ldr::Append(m_str, "*UVDistance", "{", sub, "}"); break;
-									default: throw std::runtime_error(FmtS("RemoveDegenerates - too many parameter fields. Expected %d", field - 1));
+										case 0: if (!sub.empty()) ss << "*Quantisation {" << Narrow(sub) << "}"; break;
+										case 1: if (!sub.empty()) ss << "*NormalSmoothingAngle {" << Narrow(sub) << "}"; break;
+										case 2: if (!sub.empty()) ss << "*ColourDistance {" << Narrow(sub) << "}"; break;
+										case 3: if (!sub.empty()) ss << "*UVDistance {" << Narrow(sub) << "}"; break;
+										default: throw std::runtime_error(FmtS("RemoveDegenerates - too many parameter fields. Expected %d", field - 1));
 									}
 								});
 							}
-							ldr::Append(m_str, "}\n");
+							ss << "}\n";
 							break;
 						}
 						if (str::EqualI(option, "-GenerateNormals"))
 						{
-							ldr::Append(m_str, "*GenerateNormals", "{");
+							ss << "*GenerateNormals {";
 							for (; arg != arg_end && !IsOption(*arg); ++arg)
 							{
-								if (int i; str::ExtractIntC(i, 10, arg->c_str())) { ldr::Append(m_str, "*SmoothingAngle {", i, "}"); continue; }
+								if (int i; str::ExtractIntC(i, 10, arg->c_str())) { ss << "*SmoothingAngle {" << i << "}"; continue; }
 								throw std::runtime_error(FmtS("GenerateNormals - unknown argument:  %s", arg->c_str()));
 							}
-							ldr::Append(m_str, "}\n");
+							ss << "}\n";
 							break;
 						}
 						if (str::EqualI(option, "-Transform"))
 						{
-							ldr::Append(m_str, "*Transform", "{", *arg, "}\n");
+							ss << "*Transform {" << Narrow(*arg) << "}\n";
 							break;
 						}
 						if (str::EqualI(option, "--help"))
@@ -232,13 +234,14 @@ struct Main
 						// NEW_COMMAND
 						throw std::runtime_error(FmtS("Unknown command line option: %S", option.c_str()));
 					}
+					m_script = ss.str();
 					return true;
 				}
 			};
 
 			Parser p;
 			EnumCommandLine<wchar_t>(argc, argv, p);
-			if (p.m_str.empty())
+			if (p.m_script.empty())
 				throw std::runtime_error("Invalid command line");
 
 			// Warn if -fo is not the last operation
@@ -247,11 +250,11 @@ struct Main
 
 			// Dump the script
 			if (p.m_verbosity >= 3)
-				std::cout << "Command Script:\n" << p.m_str << "\n";
+				std::cout << "Command Script:\n" << p.m_script << "\n";
 
 			// Create a string source
 			m_base_dir = current_path();
-			return std::unique_ptr<StringSrc>(new StringSrc(p.m_str, StringSrc::EFlags::BufferLocally));
+			return std::unique_ptr<StringSrc>(new StringSrc(p.m_script, StringSrc::EFlags::BufferLocally));
 		}
 	}
 

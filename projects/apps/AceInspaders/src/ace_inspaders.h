@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
@@ -32,20 +32,25 @@ namespace ace
 		,pr::SpaceInvaders::ISystem
 	{
 		using base = pr::app::Main<Main, MainUI, UserSettings>;
-		using Texture2DPtr = pr::rdr::Texture2DPtr;
+		using ResourceFactory = pr::rdr12::ResourceFactory;
+		using Texture2DPtr = pr::rdr12::Texture2DPtr;
 		using SpaceInvaders = pr::SpaceInvaders;
 		using Screen = pr::SpaceInvaders::Screen;
 		using SoundBank = std::vector<pr::ByteData<4>>;
 		using AudioManager = pr::audio::AudioManager;
 		static char const* AppName() { return "AceInspaders"; };
 
-		#define PR_FIELDS(x)\
-		x(pr::m4x4, m_i2w, pr::rdr::EInstComp::I2WTransform)\
-		x(pr::rdr::ModelPtr, m_model, pr::rdr::EInstComp::ModelPtr)
-		PR_RDR_DEFINE_INSTANCE(ScreenQuad, PR_FIELDS);
-		#undef PR_FIELDS
+		struct ScreenQuad
+		{
+			#define PR_RDR_INST(x)\
+			x(pr::m4x4           , m_i2w, pr::rdr12::EInstComp::I2WTransform)\
+			x(pr::rdr12::ModelPtr, m_model, pr::rdr12::EInstComp::ModelPtr)
+			PR_RDR12_INSTANCE_MEMBERS(ScreenQuad, PR_RDR_INST);
+			#undef PR_RDR_INST
+		};
 
 		SpaceInvaders m_space_invaders;
+		ResourceFactory m_factory;
 		Texture2DPtr m_screen_tex;
 		ScreenQuad m_screen_quad;
 		AudioManager m_audio;
@@ -54,6 +59,7 @@ namespace ace
 
 		Main(MainUI& ui)
 			: base(pr::app::DefaultSetup(), ui)
+			, m_factory(m_rdr)
 			, m_space_invaders(this)
 			, m_screen_tex()
 			, m_screen_quad()
@@ -62,16 +68,14 @@ namespace ace
 			, m_display()
 		{
 			using namespace pr;
-			using namespace pr::rdr;
+			using namespace pr::rdr12;
 		
 			// Orthographic camera
 			m_cam.Orthographic(true);
 
-			// Create a texture to use as the 2D render target
-			auto sdesc = SamplerDesc::PointClamp();
-			auto tdesc = Texture2DDesc { SpaceInvaders::ScreenDimX, SpaceInvaders::ScreenDimY, 1, DXGI_FORMAT_R8G8B8A8_UNORM, EUsage::Dynamic };
-			tdesc.CPUAccessFlags = static_cast<UINT>(ECPUAccess::Write);
-			m_screen_tex = m_rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, sdesc, false, "ScreenBuf");
+			ResDesc rdesc = ResDesc::Tex2D(Image{SpaceInvaders::ScreenDimX, SpaceInvaders::ScreenDimY});
+			TextureDesc tdesc = TextureDesc(rdr12::AutoId, rdesc).name("ScreenBuf");
+			m_screen_tex = m_factory.CreateTexture2D(tdesc);
 			m_screen_tex->m_t2s.y = -m_screen_tex->m_t2s.y;
 			m_screen_tex->m_t2s.pos.y = 1.0f;
 
@@ -80,11 +84,9 @@ namespace ace
 			m_scene.m_global_light.m_ambient = 0xFF808080;
 
 			// Set up the renderer to render a quad containing a texture
-			auto mat = NuggetProps{};
-			mat.m_tint = Colour32White;
-			mat.m_tex_diffuse = m_screen_tex;
-			m_screen_quad.m_model = ModelGenerator<>::Quad(m_rdr, &mat);
-			m_screen_quad.m_i2w = pr::m4x4::Scale((float)SpaceInvaders::ScreenDimX / SpaceInvaders::ScreenDimY, 1.0f, 1.0f, pr::v4Origin);
+			ModelGenerator::CreateOptions opts = ModelGenerator::CreateOptions().tex_diffuse(m_screen_tex, m_factory.CreateSampler(EStockSampler::PointClamp));
+			m_screen_quad.m_model = ModelGenerator::Quad(m_factory, &opts);
+			m_screen_quad.m_i2w = m4x4::Scale((float)SpaceInvaders::ScreenDimX / SpaceInvaders::ScreenDimY, 1.0f, 1.0f, v4::Origin());
 
 			// Add the quad to the scene
 			m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1);
@@ -97,7 +99,7 @@ namespace ace
 		}
 		~Main()
 		{
-			// Clear the drawlists so that destructing models
+			// Clear the draw lists so that destructing models
 			// don't assert because they're still in a drawlist.
 			m_scene.ClearDrawlists();
 		}
@@ -109,19 +111,18 @@ namespace ace
 		}
 
 		// Prepare the scene for render
-		void UpdateScene(pr::rdr::Scene& scene)
+		void UpdateScene(pr::rdr12::Scene& scene)
 		{
 			using namespace pr;
-			using namespace pr::rdr;
+			using namespace pr::rdr12;
 
 			// Render the display
 			m_space_invaders.Render(m_display);
 			{
-				Lock lock;
-				auto img = m_screen_tex->GetPixels(lock);
+				UpdateSubresourceScope update(m_factory.CmdList(), m_factory.UploadBuffer(), m_screen_tex->m_res.get(), 0, 0, 1, alignof(uint32_t));
 				for (int y = 0; y != m_display.m_dimy; ++y)
 				{
-					auto px = img.Pixels<uint32_t>(y);
+					auto* px = update.ptr<uint32_t>(iv3{ 0, y, 0 });
 					for (int x = 0; x != m_display.m_dimx; ++x)
 					{
 						if (m_display(x, y))
@@ -130,6 +131,8 @@ namespace ace
 							*px++ = 0xFFA0A0A0;
 					}
 				}
+				update.Commit();
+				m_factory.FlushToGpu(EGpuFlush::Block);
 			}
 
 			scene.AddInstance(m_screen_quad);
@@ -287,8 +290,14 @@ namespace ace
 			.wh(Scale * pr::SpaceInvaders::ScreenDimX, Scale * pr::SpaceInvaders::ScreenDimY, true)
 			.default_mouse_navigation(false))
 		{
-			m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 60.0f, false);
-			m_msg_loop.AddStepContext("step", [this](double s) { m_main->Step(s); }, 60.0f, true);
+			m_msg_loop.AddStepContext("render", [this](double)
+			{
+				m_main->DoRender(true);
+			}, 60.0f, false);
+			m_msg_loop.AddStepContext("step", [this](double s)
+			{
+				m_main->Step(s);
+			}, 60.0f, true);
 		}
 	};
 

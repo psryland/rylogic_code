@@ -1,4 +1,4 @@
-//#define PR_VIEW3D_CREATE_STACKTRACE
+﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -567,6 +567,22 @@ namespace Rylogic.Gfx
 
 		#region Structures
 
+		/// <summary>Report errors callback</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ReportErrorCB
+		{
+			public delegate void FuncCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPStr)] string msg, [MarshalAs(UnmanagedType.LPStr)] string filepath, int line, long pos);
+
+			public FuncCB m_cb;
+			public IntPtr m_ctx;
+
+			public static ReportErrorCB Default()
+			{
+				static void ErrorSink(IntPtr ctx, string msg, string filepath, int line, long pos) => throw new Exception(msg);
+				return new ReportErrorCB { m_cb = ErrorSink, m_ctx = IntPtr.Zero };
+			}
+		}
+
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct VICount
@@ -826,20 +842,18 @@ namespace Rylogic.Gfx
 		public struct WindowOptions
 		{
 			public ReportErrorCB ErrorCB;
-			public IntPtr ErrorCBCtx;
 			public Colour32 BackgroundColour;
 			public bool AllowAltEnter;
 			public bool GdiCompatibleBackBuffer;
 			public int Multisampling;
 			public string DbgName;
 
-			public static WindowOptions New(ReportErrorCB? error_cb = null, IntPtr? error_cb_ctx = null, Colour32? background_colour = null, bool? allow_alt_enter = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
+			public static WindowOptions New(ReportErrorCB? error_cb = null, Colour32? background_colour = null, bool? allow_alt_enter = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
 			{
-				static void ErrorSink(IntPtr ctx, string msg, string filepath, int line, long pos) => throw new Exception(msg);
+				
 				return new()
 				{
-					ErrorCB = error_cb ?? ErrorSink,
-					ErrorCBCtx = error_cb_ctx ?? IntPtr.Zero,
+					ErrorCB = error_cb ?? ReportErrorCB.Default(),
 					BackgroundColour = background_colour ?? Colour32.Gray,
 					AllowAltEnter = allow_alt_enter ?? false,
 					GdiCompatibleBackBuffer = gdi_compatible_bb ?? false,
@@ -1074,9 +1088,6 @@ namespace Rylogic.Gfx
 
 		#region Callback Functions
 
-		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPStr)] string msg, [MarshalAs(UnmanagedType.LPStr)] string filepath, int line, long pos);
-
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
 
@@ -1171,7 +1182,7 @@ namespace Rylogic.Gfx
 			try
 			{
 				// Initialise view3d
-				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero);
+				m_context = View3D_Initialise(m_error_cb = new ReportErrorCB { m_cb = HandleError, m_ctx = IntPtr.Zero });
 				if (m_context == HContext.Zero) throw LastError ?? new Exception("Failed to initialised View3d");
 				void HandleError(IntPtr ctx, string msg, string filepath, int line, long pos)
 				{
@@ -1231,7 +1242,7 @@ namespace Rylogic.Gfx
 			{
 				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
 				View3D_ParsingProgressCBSet(m_parsing_progress_cb, IntPtr.Zero, false);
-				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
+				View3D_GlobalErrorCBSet(m_error_cb, false);
 
 				while (m_windows.Count != 0)
 					m_windows[0].Dispose();
@@ -1384,11 +1395,11 @@ namespace Rylogic.Gfx
 		// Initialise calls are reference counted and must be matched with Shutdown calls
 		// 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 		// Note: this function is not thread safe, avoid race calls
-		[DllImport(Dll)] private static extern HContext View3D_Initialise(ReportErrorCB global_error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern HContext View3D_Initialise(ReportErrorCB global_error_cb);
 		[DllImport(Dll)] private static extern void View3D_Shutdown(HContext context);
 
 		// This error callback is called for errors that are associated with the dll (rather than with a window).
-		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, bool add);
 
 		// Set the callback for progress events when script sources are loaded or updated
 		[DllImport(Dll)] private static extern void View3D_ParsingProgressCBSet(ParsingProgressCB progress_cb, IntPtr ctx, bool add);
@@ -1443,7 +1454,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_WindowDestroy(HWindow window);
 
 		// Add/Remove a window error callback. Note: The callback function can be called in a worker thread context.
-		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, bool add);
 
 		// Get/Set the window settings (as ldr script string)
 		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_WindowSettingsGetBStr(HWindow window);

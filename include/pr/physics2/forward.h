@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -19,7 +19,6 @@
 #include "pr/collision/shapes.h"
 #include "pr/geometry/closest_point.h"
 #include "pr/geometry/intersect.h"
-#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::physics
 {
