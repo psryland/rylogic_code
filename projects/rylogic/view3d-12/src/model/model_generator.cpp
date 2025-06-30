@@ -1240,10 +1240,18 @@ namespace pr::rdr12
 	void ModelGenerator::LoadFBXModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
 		using namespace geometry;
+		auto OutputProgress = [](void*, int64_t step, int64_t total, char const* message, int nest)
+		{
+			OutputDebugStringA(std::format("{}{} ({} of {}){}", Indent(nest), message, step, total, nest == 0 ? '\n' : '\r').c_str());
+			return true;
+		};
 
 		// Read the fbx scene
 		fbx::Scene scene(src);
-		scene.Read({ .m_parts = out.ReadAnimation ? fbx::ReadOptions::EParts::All : fbx::ReadOptions::EParts::ModelOnly });
+		scene.Read({
+			.m_parts = out.ReadAnimation ? fbx::ReadOptions::EParts::All : fbx::ReadOptions::EParts::ModelOnly,
+			.m_progress = IsDebuggerPresent() ? fbx::ReadOptions::ProgressCB{nullptr, OutputProgress} : fbx::ReadOptions::ProgressCB{nullptr, nullptr},
+		});
 
 		// Create the models
 		{

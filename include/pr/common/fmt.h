@@ -5,14 +5,13 @@
 // Note about __declspec(thread):
 //  Doesn't work in dll's on windows <= XP
 //  In multithreaded situations use Fmt() or a FmtX<> per thread
-
 #pragma once
-
 #include <cstdio>
 #include <cstdarg>
 #include <cassert>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <malloc.h>
 
@@ -169,6 +168,14 @@ namespace pr
 		auto s = FmtArgs<struct S, 1024, TChar>(format, arg_list);
 		va_end(arg_list);
 		return s;
+	}
+
+	// Indent helper
+	inline std::string_view Indent(int amount)
+	{
+		constexpr static char const space[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
+		constexpr static int len = (int)_countof(space);
+		return std::string_view(space, amount < len ? amount : len);
 	}
 }
 #else

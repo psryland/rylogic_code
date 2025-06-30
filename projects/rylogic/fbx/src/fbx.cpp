@@ -806,6 +806,13 @@ namespace pr::geometry::fbx
 		return attr;
 	}
 
+	// Return the parent node with the given attribute
+	static FbxNodeAttribute const* FindParent(FbxNodeAttribute::EType attr_type, FbxNode const& node)
+	{
+		auto* parent = node.GetParent();
+		return parent ? Find(attr_type, *parent) : nullptr;
+	}
+
 	// Find the skeleton associated with 'mesh'
 	static FbxSkeleton const* FindSkeleton(FbxMesh const& mesh)
 	{
@@ -822,32 +829,6 @@ namespace pr::geometry::fbx
 		}
 		return nullptr;
 	}
-	
-#if 0
-	// Find a single bind pose that best matches 'mesh' and a set of nodes
-	template <std::ranges::range R> static FbxPose* FindBindPose(FbxMesh& fbxmesh, R&& bones)
-	{
-		int best_match = 0;
-		FbxPose* bind_pose = nullptr;
-		for (int i = 0, iend = fbxscene.GetPoseCount(); i != iend; ++i)
-		{
-			auto* pose = fbxscene.GetPose(i);
-			if (!pose || !pose->IsBindPose())
-				continue;
-
-			auto match = pose->Find(fbxmesh.GetNode()) ? 1 : 0;
-			for (auto& bone : bones)
-				match += pose->Find(bone) ? 1 : 0;
-
-			if (match <= best_match)
-				continue;
-
-			best_match = match;
-			bind_pose = pose;
-		}
-		return bind_pose;
-	}
-#endif
 
 	// Get the hierarchy address of 'node'
 	static std::string Address(FbxNode const* node)
@@ -906,13 +887,14 @@ namespace pr::geometry::fbx
 				FbxMesh* mesh;
 				FbxMesh const* root;
 				int level;
-				int scene_mesh_idx;
+				int index;
 			};
 			using BoneNode = struct BoneNode
 			{
 				FbxSkeleton* bone;
 				FbxSkeleton const* root;
 				int level;
+				int index;
 			};
 			using KeyTime = struct KeyTime
 			{
@@ -974,7 +956,7 @@ namespace pr::geometry::fbx
 				// Root nodes for meshes, skeletons can occur at any level.
 				// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
 				vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
-				for (int index = 0; !stack.empty(); )
+				for (int mindex = 0, bindex = 0; !stack.empty(); )
 				{
 					auto [node, level] = stack.back();
 					stack.pop_back();
@@ -989,13 +971,13 @@ namespace pr::geometry::fbx
 						{
 							auto* mesh = FbxCast<FbxMesh>(&attr);
 							auto* root = FbxCast<FbxMesh>(FindRoot(FbxNodeAttribute::eMesh, *node));
-							m_meshes[mesh->GetUniqueID()] = { mesh, root, level, index++ };
+							m_meshes[mesh->GetUniqueID()] = { mesh, root, level, mindex++ };
 						}
 						if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
 						{
 							auto* bone = FbxCast<FbxSkeleton>(&attr);
 							auto* root = FbxCast<FbxSkeleton>(FindRoot(FbxNodeAttribute::eSkeleton, *node));
-							m_bones[bone->GetUniqueID()] = { bone, root, level };
+							m_bones[bone->GetUniqueID()] = { bone, root, level, bindex++ };
 						}
 					}
 
@@ -1015,6 +997,7 @@ namespace pr::geometry::fbx
 				for (int m = 0, mend = m_scene.m_fbxscene->GetMaterialCount(); m != mend; ++m)
 				{
 					Material material = {};
+					Progress(m, mend, "Reading materials...");
 
 					auto const& mat = *m_fbxscene.GetMaterial(m);
 					if (mat.GetClassId().Is(FbxSurfacePhong::ClassId))
@@ -1267,6 +1250,8 @@ namespace pr::geometry::fbx
 				// Wait for each mesh.
 				for (auto& task : tasks)
 				{
+					Progress(&task - tasks.data(), ssize(tasks), "Reading models...");
+
 					task.wait();
 					auto mesh = task.get();
 
@@ -1295,7 +1280,7 @@ namespace pr::geometry::fbx
 						mesh.m_skin = ReadSkin(meshnode);
 
 					// Output the mesh
-					m_scene.m_meshes[meshnode.scene_mesh_idx] = std::move(mesh);
+					m_scene.m_meshes[meshnode.index] = std::move(mesh);
 				}
 			}
 
@@ -1387,7 +1372,7 @@ namespace pr::geometry::fbx
 									auto bone_node = cluster.GetLink();
 									FbxAMatrix mesh_to_object; cluster.GetTransformMatrix(mesh_to_object);
 									FbxAMatrix bone_to_object; cluster.GetTransformLinkMatrix(bone_to_object);
-									m_bone_set[bone_node] = InvertFast(To<m4x4>(bone_to_object)); // Transform form object space to bone space for bone 
+									m_bone_set[bone_node] = InvertFast(To<m4x4>(bone_to_object)); // Transform from object space to bone space for bone 
 								}
 							}
 						}
@@ -1450,6 +1435,8 @@ namespace pr::geometry::fbx
 				// Find a unique set of all the bones referenced by this mesh tree
 				for (auto meshtree = NextMeshTree(); !meshtree.empty(); meshtree = NextMeshTree(&meshtree))
 				{
+					Progress(meshtree.data() - m_scene.m_meshes.data(), ssize(m_scene.m_meshes), "Reading skeletons...");
+
 					skelbuilder.Reset();
 					skelbuilder.Collect(meshtree, m_meshes);
 					skelbuilder.Build();
@@ -1473,161 +1460,178 @@ namespace pr::geometry::fbx
 			void ReadAnimation()
 			{
 				// Notes:
-				//  - FbxAnimStack can affect any node in the scene so it's possible for one animation
-				//    to affect multiple skeletons. So, loop over skeletons, then over animations stacks.
-				//  - Fbx allows each key frame of each channel to have it's own interpolation mode. Since
-				//    we're merge transform channels into one, thi
-
-				// Check each skeleton for animation.
-				for (auto const& skel : m_scene.m_skeletons)
-				{
-					// Set the animation to use
-					auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
-					for (int i = 0; i != animation_count; ++i)
-					{
-						m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
-						m_time_span = m_animstack->GetLocalTimeSpan();
-						m_fbxscene.SetCurrentAnimationStack(m_animstack);
-
-						// Only support one animation layer at the moment
-						auto layer_count = std::min(1, m_animstack->GetMemberCount<FbxAnimLayer>());
-						for (int j = 0; j != layer_count; ++j)
-						{
-							m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
-							
-							// Read the animation for this skeleton with the given key frame times
-							auto anim = ReadAnimation(skel);
-
-							// Output the animation
-							if (anim)
-								m_scene.m_animations.push_back(std::move(anim));
-						}
-					}
-				}
-			}
-
-			// Output an animation for 'skeleton' based on the selected animation stack
-			Animation ReadAnimation(Skeleton const& skeleton)
-			{
-				// Notes:
-				//  - Only want to iterate through the times once, because calling 'EvaluateGlobalTransform' is expensive.
+				//  - FbxAnimStack can affect any node in the scene so it's possible for one animation to affect multiple skeletons.
+				//  - By far the slowest part of this is calling 'EvaluateXXXXTransform', so we only want to loop over time once.
+				//    This means collecting animation key frames for all skeletons at the same time.
 				//  - In order to parallelize reading the animation data, we have to cache the transforms in a snapshot
 				//    of the node transforms for every bone in the skeleton at a key frame time.
 				//  - Each thread worker needs to add a transform to 'animation' for each bone that has a key frame at the
 				//    given time.
-				//  - Fbx curve keys have an interpolation type, they are either constant, linear, or cubic. 
+				//  - Fbx curve keys have an interpolation type, they are either constant, linear, or cubic.
 
-				// A snapshot of the skeleton transforms at a time
-				struct Pose
+				// Set the animation to use
+				auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
+				for (int i = 0; i != animation_count; ++i)
 				{
-					// At a given time (the snapshot time) one or more bones in the skeleton may have
-					// a 'Key'. Each bone has a different number of keys, so this key has a different
-					// indices within each bone (m_key_index).
-					struct Key
+					Progress(i, animation_count, "Reading animation...");
+
+					m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
+					m_time_span = m_animstack->GetLocalTimeSpan();
+					m_fbxscene.SetCurrentAnimationStack(m_animstack);
+
+					// Only support one animation layer at the moment
+					auto layer_count = std::min(1, m_animstack->GetMemberCount<FbxAnimLayer>());
+					for (int j = 0; j != layer_count; ++j)
 					{
-						int m_key_index; // The index of this key within the bone's keys
-						int m_bone_index; // The bone that has the key
-						int m_parent_index; // The parent bone index
-						BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
-					};
+						m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
 
-					Skeleton const& m_skeleton; // The skeleton that the pose is for
-					std::vector<Key> m_keys;    // The keys at this snapshot
-					std::vector<m4x4> m_b2w;    // Bone to world for each skeleton bone at this time
-					double m_time;              // The time value in seconds of this key frame
-
-					Pose(Skeleton const& skeleton, BoneNodeMap& bone_map, std::span<ZipSet const> indices, KeyTime const& keytime)
-						: m_skeleton(skeleton)
-						, m_keys()
-						, m_b2w()
-						, m_time(keytime.time.GetSecondDouble())
-					{
-						// Find the parent bone index in 'm_skeleton'
-						auto ParentOf = [this](int bone_index)
+						// Read the key frame times for all bones
+						std::vector<uint64_t> bone_id_lookup(m_bones.size());
+						std::vector<KeyTimes> times_per_bone(m_bones.size());
+						for (auto& [id, bonenode] : m_bones)
 						{
-							assert(bone_index >= 0 && bone_index < m_skeleton.size());
-							auto lvl = m_skeleton.m_hierarchy[bone_index];
-							int parent_index = bone_index - 1;
-							for (; parent_index != -1 && m_skeleton.m_hierarchy[parent_index] == lvl; --parent_index) {}
-							return parent_index;
-						};
-
-						// Record the bones with a key frame at this time, and which key frame that is
-						m_keys.reserve(indices.size());
-						for (auto& [bone_idx, key_idx] : indices)
-						{
-							m_keys.push_back({
-								.m_key_index = s_cast<int>(key_idx),
-								.m_bone_index = s_cast<int>(bone_idx),
-								.m_parent_index = ParentOf(s_cast<int>(bone_idx)),
-								.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
-							});
+							times_per_bone[bonenode.index] = FindKeyFrameTimes(*bonenode.bone->GetNode());
+							bone_id_lookup[bonenode.index] = id;
 						}
 
-						// Buffer the transforms for each node. All bones are needed because we need the
-						// parent transforms to be correct, even if there isn't a key frame for the parent.
-						m_b2w.reserve(skeleton.size());
-						for (auto id : skeleton.m_ids)
+						std::vector<Animation> animations;
+
+						// Animations are associated with a skeleton. Create an animation for each
+						// skeleton that contains a bone that is moved by this animation.
+						for (auto const& skel : m_scene.m_skeletons)
 						{
-							auto& node = *bone_map[id].bone->GetNode();
-							m_b2w.push_back(To<m4x4>(node.EvaluateGlobalTransform(keytime.time)));
-						}
-					}
-				};
-
-				// The animation
-				Animation animation = { .m_skel_id = skeleton.Id() };
-
-				// Read the key frame times for all bones in 'skeleton'
-				std::vector<KeyTimes> times_per_bone;
-				times_per_bone.reserve(skeleton.size());
-				for (auto id : skeleton.m_ids)
-				{
-					auto times = FindKeyFrameTimes(*m_bones[id].bone->GetNode());
-					animation.m_tracks[id].resize(times.size()); // Preallocate the tracks for each bone.
-					times_per_bone.push_back(std::move(times));					
-				}
-
-				std::vector<std::future<void>> tasks;
-
-				// For each key frame time, start a worker that adds the key frame to each bone with that key
-				zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &skeleton, &animation, &tasks](KeyTime keytime, std::span<ZipSet const> indices)
-				{
-					Pose pose(skeleton, m_bones, indices, keytime);
-
-					// Start the worker to add key frames for each bone with a key at this time
-					tasks.emplace_back(std::async(std::launch::async, [&skeleton, &animation, pose = std::move(pose)]
-					{
-						// Loop over the keys in this snapshot
-						for (auto const& key : pose.m_keys)
-						{
-							// All bone nodes should be captured in the pose snapshot
-							auto const& b2w = pose.m_b2w[key.m_bone_index];
-							auto const& p2w = key.m_parent_index != -1 ? pose.m_b2w[key.m_parent_index] : m4x4::Identity();
-							auto b2p = InvertFast(p2w) * b2w;
-
-							BoneKey keyframe = {
-								quat(b2p.rot),
-								b2p.pos,
-								b2p.rot.scale().trace(),
-								pose.m_time,
-								uint64_t(key.m_interpolation),
+							// Create an animation for 'skel'
+							Animation animation = {
+								.m_skel_id = skel.Id(),
+								.m_tracks = {},
+								.m_time_range = Animation::TimeRange::Reset()
 							};
 
-							// These transforms are the bone offset relative to the parent over time.
-							// i.e. at time=0, b2p should be identity assuming frame 0 = rest pose.
-							auto bone_id = skeleton.m_ids[key.m_bone_index];
-							auto& track = animation.m_tracks[bone_id];
-							track[key.m_key_index] = keyframe;
+							// Preallocate the bone tracks for this animation
+							for (auto id : skel.m_ids)
+							{
+								auto& times = times_per_bone[m_bones[id].index];
+								if (!times.empty())
+								{
+									animation.m_tracks[id].resize(times.size());
+									animation.m_time_range.grow(times.front().time.GetSecondDouble());
+									animation.m_time_range.grow(times.back().time.GetSecondDouble());
+								}
+							}
+
+							// Ignore animations with no tracks
+							if (animation.m_tracks.empty())
+								continue;
+
+							animations.push_back(std::move(animation));
 						}
-					}));
-				});
 
-				// Wait for all tasks
-				for (auto& task : tasks)
-					task.wait();
+						std::vector<std::future<void>> tasks;
 
-				return animation;
+						// For each key frame time, start a worker that adds the key frame to each bone with that key
+						zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &animations, &tasks, &bone_id_lookup](KeyTime keytime, std::span<ZipSet const> indices)
+						{
+							// A snapshot of all bone transforms at a time
+							struct Snapshot
+							{
+								// At a given time (the snapshot time) one or more bones may have a 'Key'.
+								// Each bone has a different number of keys, so this key has a different
+								// index within each bone (m_key_index).
+								struct Key
+								{
+									int m_bone_index; // The bone that has this key
+									int m_key_index; // The index of this key within the bone's keys
+									int m_parent_index; // The index of the parent bone
+									BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
+								};
+
+								std::vector<Key> m_keys;    // The keys at this snapshot
+								std::vector<m4x4> m_b2w;    // Bone to world for each bone at this time
+								double m_time;              // The time value in seconds at this snapshot time
+							};
+
+							Progress((keytime.time - m_time_span.GetStart()).GetSecondCount(), m_time_span.GetDuration().GetSecondCount(), "Reading key frames...", 1);
+
+							// Capture a snapshot of the bone transforms at this time
+							Snapshot snapshot = {
+								.m_keys = {},
+								.m_b2w = {},
+								.m_time = keytime.time.GetSecondDouble(), 
+							};
+
+							// Find the parent bone index
+							auto ParentOf = [this, &bone_id_lookup](int bone_index)
+							{
+								auto* parent = FindParent(FbxNodeAttribute::eSkeleton, *m_bones[bone_id_lookup[bone_index]].bone->GetNode());
+								return parent ? m_bones[parent->GetUniqueID()].index : -1;
+							};
+
+							// Record the bones with a key frame at this time, and which key frame that is
+							snapshot.m_keys.reserve(indices.size());
+							for (auto& [bone_idx, key_idx] : indices)
+							{
+								snapshot.m_keys.push_back({
+									.m_bone_index = s_cast<int>(bone_idx),
+									.m_key_index = s_cast<int>(key_idx),
+									.m_parent_index = ParentOf(s_cast<int>(bone_idx)),
+									.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
+								});
+							}
+
+							// Buffer the transforms for each bone node. All bones are needed because we need the
+							// parent transforms to be correct, even if there isn't a key frame for the parent.
+							snapshot.m_b2w.reserve(m_bones.size());
+							for (auto id : bone_id_lookup)
+							{
+								auto& node = *m_bones[id].bone->GetNode();
+								auto b2w = To<m4x4>(node.EvaluateGlobalTransform(keytime.time));
+								//auto b2w = To<m4x4>(node.EvaluateLocalTransform(keytime.time)); //todo test local
+								snapshot.m_b2w.push_back(b2w);
+							}
+
+							// Start the worker to add key frames for each bone with a key at this time
+							tasks.emplace_back(std::async(std::launch::async, [&animations, &bone_id_lookup, snapshot = std::move(snapshot)]
+							{
+								// Loop over the keys in this snapshot
+								for (auto const& key : snapshot.m_keys)
+								{
+									// All bone nodes should be captured in the pose snapshot
+									auto const& bone_id = bone_id_lookup[key.m_bone_index];
+									auto const& b2w = snapshot.m_b2w[key.m_bone_index];
+									auto const& p2w = key.m_parent_index != -1 ? snapshot.m_b2w[key.m_parent_index] : m4x4::Identity();
+									auto b2p = InvertFast(p2w) * b2w;
+
+									BoneKey keyframe = {
+										quat(b2p.rot),
+										b2p.pos,
+										b2p.rot.scale().trace(),
+										snapshot.m_time,
+										uint64_t(key.m_interpolation),
+									};
+
+									// Add this key frame to the appropriate track of each animation that contains this bone.
+									for (auto& animation : animations)
+									{
+										if (!animation.m_tracks.contains(bone_id))
+											continue;
+
+										// These transforms are the bone offset relative to the parent over time.
+										auto& track = animation.m_tracks[bone_id];
+										track[key.m_key_index] = keyframe;
+									}
+								}
+							}));
+						});
+
+						// Wait for all tasks
+						for (auto& task : tasks)
+							task.wait();
+
+						// Output the animations
+						for (auto& anim : animations)
+							m_scene.m_animations.push_back(std::move(anim));
+					}
+				}
 			}
 
 			// Find the set of unique key frame times for 'node'
@@ -1681,6 +1685,14 @@ namespace pr::geometry::fbx
 				auto min = To<v4>(mesh.BBoxMin.Get());
 				auto max = To<v4>(mesh.BBoxMax.Get());
 				return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
+			}
+
+			// Report progress
+			void Progress(int64_t step, int64_t total, char const* message, int nest = 0) const
+			{
+				if (m_opts.m_progress.cb == nullptr) return;
+				if (m_opts.m_progress.cb(m_opts.m_progress.ctx, step, total, message, nest)) return;
+				throw std::runtime_error("user cancelled");
 			}
 		};
 

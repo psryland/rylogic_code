@@ -144,9 +144,11 @@ namespace pr::geometry::fbx
 	{
 		using Track = std::vector<BoneKey>; 
 		using Tracks = std::unordered_map<uint64_t, Track>;
+		using TimeRange = Range<double>;
 
 		uint64_t m_skel_id; // The skeleton that these tracks should match
-		Tracks m_tracks;    // A bone track for each bone (by id)
+		Tracks m_tracks; // A bone track for each bone (by id)
+		TimeRange m_time_range; // The time span of the animation
 
 		explicit operator bool() const
 		{
@@ -195,6 +197,10 @@ namespace pr::geometry::fbx
 
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
+
+		// Progress callback
+		using ProgressCB = struct { void* ctx; bool (*cb)(void* ctx, int64_t step, int64_t total, char const* message, int nest); };
+		ProgressCB m_progress = { nullptr, nullptr };
 	};
 
 	// Options for outputting the FBX scene dump
