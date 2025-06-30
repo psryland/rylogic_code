@@ -1384,10 +1384,10 @@ namespace pr::geometry::fbx
 									if (cluster.GetControlPointIndicesCount() == 0)
 										continue;
 
-									auto node = cluster.GetLink();
+									auto bone_node = cluster.GetLink();
 									FbxAMatrix mesh_to_object; cluster.GetTransformMatrix(mesh_to_object);
 									FbxAMatrix bone_to_object; cluster.GetTransformLinkMatrix(bone_to_object);
-									m_bone_set[node] = m4x4::Identity();// InvertFast(To<m4x4>(bone_to_object));// *To<m4x4>(mesh_to_object); // Converts a vertex from bind pose into bone space:
+									m_bone_set[bone_node] = InvertFast(To<m4x4>(bone_to_object)); // Transform form object space to bone space for bone 
 								}
 							}
 						}
@@ -1414,19 +1414,19 @@ namespace pr::geometry::fbx
 						for (auto root : m_roots)
 							Build(root, 0);
 					}
-					void Build(FbxNode* node, int level)
+					void Build(FbxNode* bone_node, int level)
 					{
-						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *node);
-						auto& o2bp = m_bone_set[node];
+						auto& bone = *Find(FbxNodeAttribute::eSkeleton, *bone_node);
+						auto& o2bp = m_bone_set[bone_node];
 
 						m_skeleton.m_ids.push_back(bone.GetUniqueID());
-						m_skeleton.m_names.push_back(node->GetName());
+						m_skeleton.m_names.push_back(bone_node->GetName());
 						m_skeleton.m_o2bp.push_back(o2bp);
 						m_skeleton.m_hierarchy.push_back(level);
 
-						for (int i = 0, iend = node->GetChildCount(); i != iend; ++i)
+						for (int i = 0, iend = bone_node->GetChildCount(); i != iend; ++i)
 						{
-							if (FbxNode* child = node->GetChild(i); m_bone_set.contains(child))
+							if (FbxNode* child = bone_node->GetChild(i); m_bone_set.contains(child))
 								Build(child, level + 1);
 						}
 					}

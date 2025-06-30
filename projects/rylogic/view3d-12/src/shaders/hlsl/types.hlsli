@@ -130,21 +130,22 @@ struct Skinfluence
 	// Vertex shader input format
 	struct VSIn
 	{
-		float4 vert :Position;
-		float4 diff :Color0;
-		float4 norm :Normal;
-		float2 tex0 :TexCoord0;
-		int2   idx0 :Indices;
+		float4 vert :POSITION0;
+		float4 diff :COLOR0;
+		float4 norm :NORMAL0;
+		float2 tex0 :TEXCOORD0;
+		int2   idx0 :INDICES0;
 	};
 
 	// Pixel shader input format
 	struct PSIn
 	{
-		float4 ss_vert :SV_Position;
-		float4 ws_vert :Position1;
-		float4 ws_norm :Normal;
-		float4 diff    :Color0;
-		float2 tex0    :TexCoord0;
+		float4 ss_vert :SV_POSITION;
+		float4 ws_vert :POSITION1;
+		float4 ws_norm :NORMAL0;
+		float4 diff    :COLOR0;
+		float2 tex0    :TEXCOORD0;
+		float2 pad     :INDICES0;
 	};
 
 	// Compute shader input

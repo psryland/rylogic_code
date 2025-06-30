@@ -36,13 +36,13 @@ StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
 // PS output format
 struct PSOut
 {
-	float4 diff :SV_Target;
+	float4 diff :SV_TARGET;
 };
 
 // Default VS
 PSIn VSDefault(VSIn In)
 {
-	PSIn Out;
+	PSIn Out = (PSIn)0;
 
 	// Transform
 	float4 os_vert = mul(In.vert, m_m2o);
@@ -78,7 +78,7 @@ PSOut PSDefault(PSIn In)
 	//  - Models without normals can still use 'HasNormals' as true. For this case, and normal to
 	//    the light source is used.
 
-	PSOut Out;
+	PSOut Out = (PSOut)0;
 
 	// Tinting
 	Out.diff = In.diff;
