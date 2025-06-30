@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Scatter
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
@@ -239,7 +239,7 @@ namespace pr::geometry
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::geometry
 {
@@ -274,7 +274,7 @@ namespace pr::geometry
 
 		auto LdrDump = [&]
 		{
-			auto ldr = ldr::Builder{};
+			auto ldr = rdr12::ldraw::Builder{};
 			auto& ldr_bodies = ldr.Group("Body");
 			for (auto const& body : bodies)
 				ldr_bodies.Box("Box", 0xFF00FF00).dim(body.m_size).pos(body.m_point);

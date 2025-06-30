@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // LineDrawer Helper
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -125,12 +125,13 @@ namespace pr::rdr12::ldraw
 			LdrCommands& Command(Name name = {}, Colour colour = Colour());
 
 			// Extension objects
+			// Use: `builder._<LdrCustom>("name", 0xFFFFFFFF)`
 			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
-			LdrCustom& Custom(std::string_view name = "", Colour colour = Colour())
+			LdrCustom& _(std::string_view name = "", Colour colour = Colour())
 			{
 				auto ptr = new LdrCustom;
 				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
+				return (*ptr).name(name).colour(colour);
 			}
 
 			// Wrap all objects into a group

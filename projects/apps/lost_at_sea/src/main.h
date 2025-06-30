@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2015
 //************************************
@@ -30,7 +30,7 @@ namespace las
 		void Step(double elapsed_seconds);
 
 		// Add instances to the scene
-		void AddToScene(pr::rdr::Scene& scene);
+		void AddToScene(Scene& scene);
 	};
 
 	// Main app window

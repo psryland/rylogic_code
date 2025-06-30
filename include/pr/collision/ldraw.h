@@ -8,56 +8,97 @@
 #include "pr/collision/shapes.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
-namespace pr::ldr
+namespace pr::rdr12::ldraw
 {
-	// Forward declare Shape function for recursive shape types
-	TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref o2w = m4x4::Identity());
+	struct LdrPhysicsShape : fluent::LdrBase<LdrPhysicsShape>
+	{
+		collision::Shape const* m_shape;
 
-	// Create ldr script for a collision shape
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeSphere const& shape, m4_cref o2w = m4x4::Identity())
-	{
-		return Sphere(str, name, colour, shape.m_radius, o2w * shape.m_base.m_s2p);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeBox const& shape, m4_cref o2w = m4x4::Identity())
-	{
-		return Box(str, name, colour, shape.m_radius * 2, o2w * shape.m_base.m_s2p);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeTriangle const& shape, m4_cref o2w = m4x4::Identity())
-	{
-		return Triangle(str, name, colour, shape.m_v.x, shape.m_v.y, shape.m_v.z, o2w * shape.m_base.m_s2p);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeLine const& shape, m4_cref o2w_ = m4x4::Identity())
-	{
-		auto o2w = o2w_ * shape.m_base.m_s2p;
-		auto r = shape.m_radius * o2w.z;
-		return Line(str, name, colour, o2w.pos - r, o2w.pos + r);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeArray const& shape, m4_cref o2w = m4x4::Identity())
-	{
-		GroupStart(str, name, colour);
-		for (collision::Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s))
+		LdrPhysicsShape()
+			: m_shape()
+		{}
+
+		// Add a physics shape
+		LdrPhysicsShape& shape(collision::Shape const& shape)
 		{
-			Shape(str, collision::ToString(s->m_type), colour, *s);
+			m_shape = &shape;
+			return *this;
 		}
-		GroupEnd(str, o2w * shape.m_base.m_s2p);
-		return str;
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref o2w)
-	{
-		using namespace collision;
-		switch (shape.m_type)
+
+		// Write to 'out'
+		template <fluent::WriterType Writer, typename TOut>
+		void WriteTo(TOut& out) const
 		{
-			case EShape::Sphere:     return Shape(str, name, colour, shape_cast<ShapeSphere>(shape), o2w);
-			case EShape::Box:        return Shape(str, name, colour, shape_cast<ShapeBox>(shape), o2w);
-			case EShape::Triangle:   return Shape(str, name, colour, shape_cast<ShapeTriangle>(shape), o2w);
-			case EShape::Line:       return Shape(str, name, colour, shape_cast<ShapeLine>(shape), o2w);
-			case EShape::Array:      return Shape(str, name, colour, shape_cast<ShapeArray>(shape), o2w);
-			default: throw std::runtime_error("Unknown shape type");
-				//case EShape::Polytope: return Shape(str, name, colour, shape_cast<ShapePolytope>(shape), o2w);
-				//case EShape::Cylinder: return Shape(str, name, colour, shape_cast<ShapeCylinder>(shape), o2w);
+			struct L
+			{
+				TOut& m_out;
+				LdrPhysicsShape const& m_me;
+				L(LdrPhysicsShape const& me, TOut& out) :m_out(out), m_me(me) {}
+
+				void Write(collision::ShapeSphere const& shape) const
+				{
+					fluent::LdrSphere().radius(shape.m_radius).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
+				}
+				void Write(collision::ShapeBox const& shape) const
+				{
+					fluent::LdrBox().dim(shape.m_radius).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
+				}
+				void Write(collision::ShapeTriangle const& shape) const
+				{
+					fluent::LdrTriangle().tri(shape.m_v.x, shape.m_v.y, shape.m_v.z).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
+				}
+				void Write(collision::ShapeLine const& shape) const
+				{
+					auto const& s2p = shape.m_base.m_s2p;
+					auto r = shape.m_radius * s2p.z;
+					fluent::LdrLine().line(s2p.pos - r, s2p.pos + r).o2w(s2p).WriteTo<Writer>(m_out);
+				}
+				void Write(collision::ShapeArray const& shape) const
+				{
+					Writer::Write(m_out, EKeyword::Group, {}, {}, [&]
+					{
+						for (collision::Shape const* s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s))
+							Write(*s);
+
+						Writer::Append(m_out, O2W(shape.m_base.m_s2p));
+					});
+				}
+				void Write(collision::Shape const& shape) const
+				{
+					using namespace collision;
+					switch (shape.m_type)
+					{
+						case EShape::Sphere:     return Write(shape_cast<ShapeSphere>(shape));
+						case EShape::Box:        return Write(shape_cast<ShapeBox>(shape));
+						case EShape::Triangle:   return Write(shape_cast<ShapeTriangle>(shape));
+						case EShape::Line:       return Write(shape_cast<ShapeLine>(shape));
+						case EShape::Array:      return Write(shape_cast<ShapeArray>(shape));
+						//case EShape::Polytope: return Shape(str, name, colour, shape_cast<ShapePolytope>(shape));
+						//case EShape::Cylinder: return Shape(str, name, colour, shape_cast<ShapeCylinder>(shape));
+						default: throw std::runtime_error("Unknown shape type");
+					}
+				}
+			};
+
+			L helper(*this, out);
+			helper.Write(*m_shape);
+
+			LdrBase::WriteTo<Writer>(out);
 		}
-	}
+	};
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::rdr12::ldraw
+{
+	PRUnitTest(LdrPhysicsShapeTests)
+	{
+		Builder L;
+		auto& shape = L._<LdrPhysicsShape>();
+		(void)shape;
+	}
+}
+#endif

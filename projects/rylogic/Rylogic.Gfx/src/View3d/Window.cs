@@ -33,8 +33,7 @@ namespace Rylogic.Gfx
 				Hwnd = hwnd;
 				Diag = new Diagnostics(this);
 				m_opts = opts ?? WindowOptions.New();
-				m_opts.ErrorCB = HandleError;
-				m_opts.ErrorCBCtx = IntPtr.Zero;
+				m_opts.ErrorCB = new ReportErrorCB { m_cb = HandleError, m_ctx = IntPtr.Zero };
 
 				// Create the window
 				Handle = View3D_WindowCreate(hwnd, ref m_opts);

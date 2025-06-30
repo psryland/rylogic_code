@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -36,7 +36,7 @@ namespace pr::rdr12
 		}
 
 		/// <inheritdoc/>
-		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
+		HRESULT STDMETHODCALLTYPE LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
 			// Ignore the directory path, just lookup the filename in the resources
 			std::filesystem::path path(pFilename);

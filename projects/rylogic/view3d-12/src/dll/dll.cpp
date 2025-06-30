@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -76,13 +76,13 @@ using LockGuard = std::lock_guard<std::recursive_mutex>;
 // Initialise calls are reference counted and must be matched with Shutdown calls
 // 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_error_cb, void* ctx)
+VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_error_cb)
 {
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, { global_error_cb, ctx });
+			g_ctx = new Context(g_hInstance, { global_error_cb.m_cb, global_error_cb.m_ctx });
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static DllHandle handles = nullptr;
@@ -91,12 +91,12 @@ VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_e
 	}
 	catch (std::exception const& e)
 	{
-		global_error_cb(ctx, FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()), "", 0, 0);
+		global_error_cb(FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()), "", 0, 0);
 		return nullptr;
 	}
 	catch (...)
 	{
-		global_error_cb(ctx, "Failed to initialise View3D.\nReason: An unknown exception occurred\n", "", 0, 0);
+		global_error_cb("Failed to initialise View3D.\nReason: An unknown exception occurred\n", "", 0, 0);
 		return nullptr;
 	}
 }
@@ -113,15 +113,15 @@ VIEW3D_API void __stdcall View3D_Shutdown(DllHandle context)
 }
 
 // Replace the global error handler
-VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb, BOOL add)
 {
 	try
 	{
 		DllLockGuard;
 		if (add)
-			Dll().ReportError += {error_cb, ctx};
+			Dll().ReportError += {error_cb.m_cb, error_cb.m_ctx};
 		else
-			Dll().ReportError -= {error_cb, ctx};
+			Dll().ReportError -= {error_cb.m_cb, error_cb.m_ctx};
 	}
 	CatchAndReport(View3D_GlobalErrorCBSet, , );
 }
@@ -256,7 +256,7 @@ VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id
 }
 
 // Get/Set the name of a source
-VIEW3D_API BSTR View3D_SourceNameGetBStr(GUID const& context_id)
+VIEW3D_API BSTR __stdcall View3D_SourceNameGetBStr(GUID const& context_id)
 {
 	try
 	{
@@ -381,15 +381,15 @@ VIEW3D_API void __stdcall View3D_WindowDestroy(view3d::Window window)
 }
 
 // Add/Remove a window error callback. Note: The callback function can be called in a worker thread context.
-VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d::ReportErrorCB error_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d::ReportErrorCB error_cb, BOOL add)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->ReportError += {error_cb, ctx};
+			window->ReportError += {error_cb.m_cb, error_cb.m_ctx};
 		else
-			window->ReportError -= {error_cb, ctx};
+			window->ReportError -= {error_cb.m_cb, error_cb.m_ctx};
 	}
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
@@ -2333,7 +2333,7 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreate(view3d::SamplerOptions
 
 		DllLockGuard;
 		ResourceFactory factory(Dll().m_rdr);
-		auto sam = factory.GetSampler(sdesc);
+		auto sam = factory.CreateSampler(sdesc);
 
 		// Rely on the caller for correct reference counting
 		return sam.release();
@@ -2348,7 +2348,7 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreateStock(view3d::EStockSam
 	{
 		DllLockGuard;
 		ResourceFactory factory(Dll().m_rdr);
-		auto sam = factory.GetSampler(static_cast<rdr12::EStockSampler>(stock_sampler));
+		auto sam = factory.CreateSampler(static_cast<rdr12::EStockSampler>(stock_sampler));
 		return sam.release();
 	}
 	CatchAndReport(View3D_SamplerCreateStock, , nullptr);

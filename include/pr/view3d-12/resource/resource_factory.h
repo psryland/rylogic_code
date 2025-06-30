@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -73,9 +73,9 @@ namespace pr::rdr12
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
 		Texture2DPtr CreateTexture(EStockTexture id);
 
-		// Create a new sampler instance
-		SamplerPtr GetSampler(SamplerDesc const& desc);
-		SamplerPtr GetSampler(EStockSampler id);
+		// Create (or Get) a new sampler instance.
+		SamplerPtr CreateSampler(SamplerDesc const& desc);
+		SamplerPtr CreateSampler(EStockSampler id);
 
 		// Create a texture that references a shared resource
 		Texture2DPtr OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc);

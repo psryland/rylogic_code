@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Ring Buffer
 //  Copyright (c) Rylogic Ltd 2015
 //******************************************
@@ -213,15 +213,23 @@ namespace pr
 
 			// Not wrapped
 			if (m_tail <= m_head)
-				return { &m_data[m_tail + offset], static_cast<size_t>(m_head - (m_tail + offset)) };
+			{
+				auto first = static_cast<size_t>(m_tail + offset);
+				return { &m_data[first], static_cast<size_t>(m_head) - first };
+			}
 
 			// Wrapped, front block
 			if (offset < std::ssize(m_data) - m_tail)
-				return { &m_data[m_tail + offset], static_cast<size_t>(std::ssize(m_data) - (m_tail + offset)) };
+			{
+				auto first = static_cast<size_t>(m_tail + offset);
+				return { &m_data[first], m_data.size() - first };
+			}
 
 			// Wrapped, back block
-			offset -= std::ssize(m_data) - m_tail;
-			return { &m_data[offset], static_cast<size_t>(m_head - offset) };
+			{
+				offset -= std::ssize(m_data) - m_tail;
+				return { &m_data[offset], static_cast<size_t>(m_head - offset) };
+			}
 		}
 	};
 }

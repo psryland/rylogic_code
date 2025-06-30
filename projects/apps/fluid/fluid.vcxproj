@@ -48,7 +48,6 @@
 		<Link>
 			<AdditionalDependencies>
 				;view3d-12-static.lib
-				;dxcompiler.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 			<AdditionalLibraryDirectories>

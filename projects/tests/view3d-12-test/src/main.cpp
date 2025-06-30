@@ -48,14 +48,12 @@ struct Main :Form
 	}
 	static view3d::WindowOptions WndOptions(Main& main)
 	{
-		return {
-			.m_error_cb = ReportError,
-			.m_error_cb_ctx = &main,
-			.m_background_colour = 0xFF908080,
-			.m_allow_alt_enter = true,
-			.m_multisampling = 8,
-			.m_dbg_name = "TestWnd"
-		};
+		return view3d::WindowOptions()
+			.error_cb({ ReportError, &main })
+			.back_colour(0xFF908080)
+			.alt_enter()
+			.multisamp(8)
+			.name("TestWnd");
 	}
 
 	Main(HINSTANCE)
@@ -66,7 +64,7 @@ struct Main :Form
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
-		, m_view3d(View3D_Initialise(ReportError, this))
+		, m_view3d(View3D_Initialise({ ReportError, this }))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 		, m_obj0()

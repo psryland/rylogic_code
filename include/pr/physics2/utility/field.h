@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -261,7 +261,7 @@ namespace pr::physics
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::physics
 {
@@ -272,7 +272,7 @@ namespace pr::physics
 
 		/*
 		// Draw the vector field
-		ldr::Builder builder;
+		rdr12::ldraw::Builder builder;
 		auto& points = ldr.Point("Field", 0xFF00FF00).size(0.1f);
 		for (int y = 0; y != 100; ++y)
 		{

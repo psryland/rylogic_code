@@ -50,7 +50,7 @@
 				;%(AdditionalLibraryDirectories)
 			</AdditionalLibraryDirectories>
 			<AdditionalDependencies>
-				;view3d.imp
+				;view3d-12.imp
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 		</Link>
@@ -108,7 +108,7 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_mass.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\ldraw.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\misc.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d\view3d.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
 		<ClInclude Include="src\body.h" />
 		<ClInclude Include="src\forward.h" />
 		<ClCompile Include="src\main.cpp" />
@@ -116,5 +116,5 @@
 
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<Import Project="$(TargetsPath)view3d.targets" />
+	<Import Project="$(TargetsPath)view3d-12.targets" />
 </Project>

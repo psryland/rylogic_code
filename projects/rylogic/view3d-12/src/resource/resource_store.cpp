@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -40,7 +40,7 @@ namespace pr::rdr12
 		for (auto id : EStockSampler_::Members())
 		{
 			if (id == EStockSampler::Invalid) continue;
-			m_stock_samplers[s_cast<int>(id)] = factory.GetSampler(id);
+			m_stock_samplers[s_cast<int>(id)] = factory.CreateSampler(id);
 		}
 	}
 	

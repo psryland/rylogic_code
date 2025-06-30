@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -10,7 +10,7 @@
 #include "pr/geometry/point.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/closest_point.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 namespace pr::geometry
 {
 	PRUnitTest(PointTests)
@@ -59,13 +59,13 @@ namespace pr::geometry
 				//auto dist = -sep.Depth();
 				auto axis = sep.SeparatingAxis();
 
-				std::string str;
-				ldr::Box(str, "bbox", 0x8000FF00, bbox.m_radius*2, bbox.m_centre);
-				ldr::Line(str, "line", 0xFFFF0000, s, e);
-				ldr::Box(str, "cp1", 0xFF0000FF, 0.01f, pt0);
-				ldr::Box(str, "cp2", 0xFF0000FF, 0.01f, pt1);
-				ldr::Line(str, "axis", 0xFF0000FF, pt0, pt1);
-				//ldr::Write(str, L"\\dump\\test.ldr");
+				rdr12::ldraw::Builder builder;
+				builder.Box("bbox", 0x8000FF00).bbox(bbox);
+				builder.Line("line", 0xFFFF0000).line(s, e);
+				builder.Box("cp1", 0xFF0000FF).dim(0.01f).pos(pt0);
+				builder.Box("cp2", 0xFF0000FF).dim(0.01f).pos(pt1);
+				builder.Line("axis", 0xFF0000FF).line(pt0, pt1);
+				//builder.Write(L"\\dump\\test.ldr");
 			}
 		}
 	}

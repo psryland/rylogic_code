@@ -37,8 +37,8 @@
 	<ItemDefinitionGroup>
 		<ClCompile>
 			<PreprocessorDefinitions>
-				;PR_APP_MAIN_INCLUDE="src/ace_inspaders.h"
 				;%(PreprocessorDefinitions)
+				;PR_APP_MAIN_INCLUDE="src/ace_inspaders.h"
 			</PreprocessorDefinitions>
 			<AdditionalIncludeDirectories>
 				;$(ProjectDir)
@@ -48,7 +48,7 @@
 		</ClCompile>
 		<Link>
 			<AdditionalDependencies>
-				;view3d-static.lib
+				;view3d-12-static.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 			<AdditionalLibraryDirectories>

@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -48,12 +48,12 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/stop_watch.h"
 #include "pr/common/keystate.h"
-#include "pr/gfx/colour.h"
 #include "pr/common/log.h"
 #include "pr/common/console.h"
-#include "pr/maths/maths.h"
-#include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
+#include "pr/maths/maths.h"
+#include "pr/gfx/colour.h"
+#include "pr/filesys/filesys.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/misc.h"
 #include "pr/gui/menu_list.h"
@@ -61,7 +61,7 @@
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/win32/windows_com.h"
 #include "pr/script/forward.h"
-#include "pr/view3d/renderer.h"
+#include "pr/view3d-12/view3d.h"
 
 namespace pr::app
 {
@@ -78,7 +78,6 @@ namespace pr::app
 	PR_ENUM_REFLECTION2(EResult, PR_ENUM);
 	#undef PR_ENUM
 
-	using Renderer = pr::rdr::Renderer;
 	using Exception = pr::Exception<EResult>;
 
 	// App interface

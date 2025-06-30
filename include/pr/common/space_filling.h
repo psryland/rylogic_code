@@ -1,4 +1,4 @@
-//*************************************
+﻿//*************************************
 // Hilbert space filling curve.
 //  Copyright (c) Rylogic Ltd 2024
 //*************************************
@@ -236,7 +236,7 @@ namespace pr::space_filling
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::common
 {
@@ -267,7 +267,7 @@ namespace pr::common
 		std::sort(std::begin(indices), std::end(indices));
 
 		// Plot them by converting indices to points.
-		ldr::Builder builder;
+		rdr12::ldraw::Builder builder;
 		auto& line1 = builder.Line("COrder", Colour32Blue).strip(v4::Origin());
 		for (auto idx : indices)
 		{

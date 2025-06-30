@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -27,14 +27,17 @@ namespace pr::app
 		};
 
 		// A renderer instance type for the sky box
-		#define PR_RDR_INST(x)\
-			x(m4x4            ,m_i2w   ,rdr::EInstComp::I2WTransform   )\
-			x(rdr::ModelPtr   ,m_model ,rdr::EInstComp::ModelPtr       )\
-			x(rdr::SKOverride ,m_sko   ,rdr::EInstComp::SortkeyOverride)
-		PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
-		#undef PR_RDR_INST
+		struct Instance
+		{
+			#define PR_RDR_INST(x)\
+			x(m4x4              ,m_i2w   ,rdr12::EInstComp::I2WTransform   )\
+			x(rdr12::ModelPtr   ,m_model ,rdr12::EInstComp::ModelPtr       )\
+			x(rdr12::SKOverride ,m_sko   ,rdr12::EInstComp::SortkeyOverride)
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST);
+			#undef PR_RDR_INST
+		};
 
-		using TexCont = pr::vector<rdr::Texture2DPtr>;
+		using TexCont = pr::vector<rdr12::Texture2DPtr>;
 
 		Instance m_inst;  // The sky box instance
 		TexCont  m_tex;   // The textures used in the sky box
@@ -43,7 +46,7 @@ namespace pr::app
 
 		// Constructs a sky box model and instance.
 		// 'texpath' should be an unrolled cube texture
-		Skybox(Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 100.0f)
+		Skybox(rdr12::Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 100.0f)
 			:m_inst()
 			,m_tex()
 			,m_scale(scale)
@@ -51,47 +54,50 @@ namespace pr::app
 		{
 			switch (tex_style)
 			{
-			default: PR_ASSERT(PR_DBG, false, "Unsupported texture style");
-			case EStyle::Geosphere:     InitGeosphere(rdr, texpath); break;
-			case EStyle::FiveSidedCube: InitFiveSidedCube(rdr, texpath); break;
-			case EStyle::SixSidedCube:  InitSixSidedCube(rdr, texpath); break;
+				case EStyle::Geosphere:     InitGeosphere(rdr, texpath); break;
+				case EStyle::FiveSidedCube: InitFiveSidedCube(rdr, texpath); break;
+				case EStyle::SixSidedCube:  InitSixSidedCube(rdr, texpath); break;
+				default: PR_ASSERT(PR_DBG, false, "Unsupported texture style");
 			}
 
 			// Set the sort key so that the sky box draws last
-			m_inst.m_sko.Group(pr::rdr::ESortGroup::Skybox);
+			m_inst.m_sko.Group(rdr12::ESortGroup::Skybox);
 			m_inst.m_model->m_name = "sky box";
 		}
 
 		// Add the sky box to a viewport
-		void AddToScene(rdr::Scene& scene)
+		void AddToScene(rdr12::Scene& scene)
 		{
-			auto& view = scene.m_view;
 			m_inst.m_i2w = m_i2w;
-			m_inst.m_i2w.pos = view.CameraToWorld().pos;
+			m_inst.m_i2w.pos = scene.m_cam.CameraToWorld().pos;
 			scene.AddInstance(m_inst);
 		}
 
 	private:
 
 		// Create a model for a geosphere sky box
-		void InitGeosphere(Renderer& rdr, std::filesystem::path const& texpath)
+		void InitGeosphere(rdr12::Renderer& rdr, std::filesystem::path const& texpath)
 		{
-			using namespace pr::rdr;
+			using namespace pr::rdr12;
+			ResourceFactory factory(rdr);
 
-			// Model nugget properties for the sky box
-			NuggetProps ddata;
-			ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, texpath.c_str(), SamplerDesc::LinearWrap(), false, "skybox");
-			ddata.m_geom = EGeom::Vert | EGeom::Tex0;
-			ddata.m_rsb = RSBlock::SolidCullFront();
+			ResDesc rdesc = ResDesc::Tex2D({});
+			TextureDesc tdesc = TextureDesc(rdr12::AutoId, rdesc).name("skybox");
+			auto skytex = factory.CreateTexture2D(texpath, tdesc);
+
+			//ddata.m_geom = EGeom::Vert | EGeom::Tex0;
+			//ddata.m_rsb = RSBlock::SolidCullFront();
 
 			// Create the sky box model
-			m_inst.m_model = ModelGenerator<>::Geosphere(rdr, 1.0f, 3, Colour32White, &ddata);
+			ModelGenerator::CreateOptions opts = ModelGenerator::CreateOptions().tex_diffuse(skytex, factory.CreateSampler(EStockSampler::LinearWrap));
+			m_inst.m_model = ModelGenerator::Geosphere(factory, 1.0f, 3, &opts);
 		}
 
 		// Create a model for a 5-sided cubic dome
-		void InitFiveSidedCube(Renderer& rdr, std::filesystem::path const& texpath)
+		void InitFiveSidedCube(rdr12::Renderer& rdr, std::filesystem::path const& texpath)
 		{
-			using namespace pr::rdr;
+			using namespace pr::rdr12;
+			ResourceFactory factory(rdr);
 
 			float const s = 0.5f;
 			static Vert const verts[] =
@@ -119,20 +125,23 @@ namespace pr::app
 			};
 
 			// Create the sky box model
-			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Reset(), "sky box"));
+			auto vb = ResDesc::VBuf<Vert>(_countof(verts), verts);
+			auto ib = ResDesc::IBuf<uint16_t>(_countof(indices), indices);
+			ModelDesc mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("sky box");
+			m_inst.m_model = factory.CreateModel(mdesc);
 
 			// Create a model nugget for the sky box
-			NuggetProps ddata;
-			ddata.m_topo = ETopo::TriList;
-			ddata.m_geom = EGeom::Vert|EGeom::Tex0;
-			ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, texpath.c_str(), SamplerDesc::LinearClamp(), false, "skybox");
-			m_inst.m_model->CreateNugget(ddata);
+			ResDesc rdesc = ResDesc::Tex2D({});
+			TextureDesc tdesc = TextureDesc(AutoId, rdesc);
+			NuggetDesc ndesc = NuggetDesc(ETopo::TriList, EGeom::Vert | EGeom::Tex0).tex_diffuse(factory.CreateTexture2D(texpath, tdesc)).sam_diffuse(factory.CreateSampler(EStockSampler::LinearClamp));
+			m_inst.m_model->CreateNugget(factory, ndesc);
 		}
 
 		// Create a model for a 6-sided cube
-		void InitSixSidedCube(Renderer& rdr, std::filesystem::path  const& texpath)
+		void InitSixSidedCube(rdr12::Renderer& rdr, std::filesystem::path  const& texpath)
 		{
-			using namespace pr::rdr;
+			using namespace pr::rdr12;
+			ResourceFactory factory(rdr);
 
 			constexpr float s = 0.5f, t0 = 0.0f, t1 = 1.0f;
 			static Vert const verts[] =
@@ -173,10 +182,13 @@ namespace pr::app
 			};
 
 			// Create the sky box model
-			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Reset(), "sky box"));
+			auto vb = ResDesc::VBuf<Vert>(_countof(verts), verts);
+			auto ib = ResDesc::IBuf<uint16_t>(_countof(indices), indices);
+			ModelDesc mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("sky box");
+			m_inst.m_model = factory.CreateModel(mdesc);
 
 			// Create the model nuggets for the sky box
-			NuggetProps ddata(ETopo::TriList, EGeom::Vert|EGeom::Tex0);
+			NuggetDesc ndesc = NuggetDesc(ETopo::TriList, EGeom::Vert|EGeom::Tex0);
 
 			// One texture per nugget
 			auto tpath = texpath.wstring();
@@ -190,12 +202,14 @@ namespace pr::app
 				// Load the texture for this face of the sky box
 				tpath[ofs+0] = axes[i][0];
 				tpath[ofs+1] = axes[i][1];
-				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, tpath.c_str(), SamplerDesc::LinearClamp(), false, "skybox");
+				auto rdesc = ResDesc::Tex2D({});
+				auto tdesc = TextureDesc(AutoId, rdesc).name("sky box");
+				ndesc.tex_diffuse(factory.CreateTexture2D(tpath, tdesc)).sam_diffuse(factory.CreateSampler(EStockSampler::LinearClamp));
 
 				// Create the render nugget for this face of the sky box
-				ddata.m_vrange = rdr::Range(i*4, (i+1)*4);
-				ddata.m_irange = rdr::Range(i*6, (i+1)*6);
-				m_inst.m_model->CreateNugget(ddata);
+				ndesc.m_vrange = rdr12::Range(i*4, (i+1)*4);
+				ndesc.m_irange = rdr12::Range(i*6, (i+1)*6);
+				m_inst.m_model->CreateNugget(factory, ndesc);
 			}
 		}
 	};

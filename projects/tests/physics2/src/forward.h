@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <functional>
 
 #include "pr/common/assert.h"
@@ -9,10 +9,7 @@
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/view3d_panel.h"
 #include "pr/gui/sim_message_loop.h"
-#include "pr/ldraw/ldr_object.h"
-#include "pr/ldraw/ldr_helper.h"
-#include "pr/view3d/dll/view3d.h"
-#include "pr/view3d/dll/conversion.h"
+#include "pr/view3d-12/view3d-dll.h"
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 

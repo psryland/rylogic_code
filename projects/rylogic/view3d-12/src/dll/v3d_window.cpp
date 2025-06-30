@@ -60,7 +60,7 @@ namespace pr::rdr12
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us.
-			ReportError += {opts.m_error_cb, opts.m_error_cb_ctx};
+			ReportError += {opts.m_error_cb.m_cb, opts.m_error_cb.m_ctx};
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.BackBufferSize();

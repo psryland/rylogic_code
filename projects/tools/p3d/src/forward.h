@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // P3D Graphics Tool
 //  Copyright (c) Rylogic Ltd 2019
 //**********************************************
@@ -6,6 +6,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <filesystem>
 
 #include <sdkddkver.h>
@@ -21,6 +22,5 @@
 #include "pr/filesys/filesys.h"
 #include "pr/script/script.h"
 #include "pr/script/reader.h"
-#include "pr/ldraw/ldr_helper.h"
 
 #include "pr/geometry/p3d.h"

@@ -80,9 +80,6 @@
     <Filter Include="pr\physics\shape">
       <UniqueIdentifier>{dd869478-365f-47a5-82be-d217d2dc60bc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\ldraw">
-      <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\sound">
       <UniqueIdentifier>{5294c170-2100-4f5a-bc2f-0fa8c66d3bfd}</UniqueIdentifier>
     </Filter>
@@ -914,27 +911,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\str\string_filter.h">
       <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper_c.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_objects_dlg.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_script_editor_dlg.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_sources.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_tools.h">
-      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\gui\messagemap_dbg.h">
       <Filter>pr\gui</Filter>

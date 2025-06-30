@@ -1254,7 +1254,7 @@ namespace pr::rdr12
 
 			for (auto& mesh : scene.m_meshes)
 			{
-				for (; p2w.size() > mesh.m_level + 1; p2w.pop_back()) {}
+				for (; isize(p2w) > mesh.m_level + 1; p2w.pop_back()) {}
 
 				cache.Reset();
 
@@ -1556,7 +1556,7 @@ namespace pr::rdr12
 		cache.m_ncont.push_back(
 			NuggetDesc(ETopo::TriList, props.m_geom & ~EGeom::Norm)
 			.tex_diffuse(tex)
-			.sam_diffuse(factory.GetSampler(EStockSampler::AnisotropicClamp))
+			.sam_diffuse(factory.CreateSampler(EStockSampler::AnisotropicClamp))
 			.alpha_geom(has_alpha));
 
 		cache.m_bbox = props.m_bbox;

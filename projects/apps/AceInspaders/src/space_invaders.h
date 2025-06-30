@@ -951,14 +951,14 @@ namespace pr
 			// Step the game state machine
 			switch (m_state)
 			{
-			case EState::StartNewGame:
+				case EState::StartNewGame:
 				{
 					m_score = 0;
 					m_level = 0;
 					ChangeState(EState::StartNewLevel);
 					break;
 				}
-			case EState::StartNewLevel:
+				case EState::StartNewLevel:
 				{
 					++m_level;
 					Init();
@@ -966,16 +966,16 @@ namespace pr
 					ChangeState(EState::StartDelay);
 					break;
 				}
-			case EState::StartDelay:
+				case EState::StartDelay:
 				{
 					if (m_clock_ms - m_timer_start_ms < StartGameDelayMS) break;
 					m_aliens.m_last_step_ms = m_clock_ms;
 					ChangeState(EState::MainRun);
 					break;
 				}
-			case EState::MainRun:
-			case EState::PlayerHit:
-			case EState::AliensDefeated:
+				case EState::MainRun:
+				case EState::PlayerHit:
+				case EState::AliensDefeated:
 				{
 					// Update the player
 					UpdatePlayer(elapsed_ms);
@@ -1001,12 +1001,12 @@ namespace pr
 					}
 					break;
 				}
-			case EState::LevelComplete:
+				case EState::LevelComplete:
 				{
 					ChangeState(EState::StartNewLevel);
 					break;
 				}
-			case EState::GameEnd:
+				case EState::GameEnd:
 				{
 					if (m_user_input.FireButton)
 						ChangeState(EState::StartNewGame);

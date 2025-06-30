@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -50,14 +50,14 @@ namespace pr::app
 		//  - The App framework creates the UI first so that the HWND exists before 'Main'
 		//    is created. This allows normal construction of the renderer etc.
 
-		log::Logger   m_log;         // App log
-		UserSettings  m_settings;    // Application-wide user settings
-		rdr::Renderer m_rdr;         // The renderer
-		rdr::Window   m_window;      // The window that will be rendered into
-		rdr::Scene    m_scene;       // The main view
-		Camera        m_cam;         // A camera
-		MainUI&       m_ui;          // The GUI that owns this app logic class
-		bool          m_rdr_pending; // Render call batching, true if 'RenderNeeded' has been called
+		log::Logger     m_log;         // App log
+		UserSettings    m_settings;    // Application-wide user settings
+		rdr12::Renderer m_rdr;         // The renderer
+		rdr12::Window   m_window;      // The window that will be rendered into
+		rdr12::Scene    m_scene;       // The main view
+		Camera&         m_cam;         // The main scene camera
+		MainUI&         m_ui;          // The GUI that owns this app logic class
+		bool            m_rdr_pending; // Render call batching, true if 'RenderNeeded' has been called
 
 		static log::Logger::OutputCB LoggerOutput()
 		{
@@ -70,32 +70,18 @@ namespace pr::app
 			:m_log(Derived::AppName(), LoggerOutput(), log::EMode::Async)
 			,m_settings(setup.UserSettings())
 			,m_rdr(setup.RdrSettings())
-			,m_window(m_rdr, setup.RdrWindowSettings(ui))
-			,m_scene(m_window,{rdr::ERenderStep::ForwardRender})
-			,m_cam()
+			,m_window(m_rdr, setup.RdrWindowSettings(ui, m_rdr.Settings()))
+			,m_scene(m_window)
+			,m_cam(m_scene.m_cam)
 			,m_ui(ui)
 			,m_rdr_pending(false)
 		{
-			// Bind the window to the OM
-			m_window.RestoreRT();
-
 			// Position the camera
 			m_cam.FovY(maths::tau_by_8f);
 			m_cam.LookAt(
 				v4(0, 0, 1.0f / (float)tan(m_cam.FovY()/2.0f), 1.0f),
-				v4Origin,
-				v4YAxis, true);
-
-			// Initialise the viewport to the padded client area
-			auto area = To<FRect>(m_ui.ClientRect(true));
-			if (area.SizeX() != 0 && area.SizeY() != 0)
-			{
-				m_cam.Aspect(area.Aspect());
-				m_scene.m_viewport.TopLeftX = area.Left();
-				m_scene.m_viewport.TopLeftY = area.Top();
-				m_scene.m_viewport.Width = area.SizeX();
-				m_scene.m_viewport.Height = area.SizeY();
-			}
+				v4::Origin(),
+				v4::YAxis());
 
 			// The first frame is needed
 			RenderNeeded();
@@ -123,22 +109,11 @@ namespace pr::app
 		}
 
 		// The size of the window has changed
-		virtual void Resize(IRect const& area)
+		virtual void Resize(iv2 const& size)
 		{
-			// 'area' is the client area of the form including padding.
-			// The back buffer needs to match that actual window client area.
-			auto area_unpadded = To<IRect>(m_ui.ClientRect(false));
-			m_window.BackBufferSize(area_unpadded.Size());
-
-			// Adjust the viewport to the padded client area
-			auto areaf = To<FRect>(area);
-			m_scene.m_viewport.TopLeftX = areaf.Left();
-			m_scene.m_viewport.TopLeftY = areaf.Top();
-			m_scene.m_viewport.Width    = areaf.SizeX();
-			m_scene.m_viewport.Height   = areaf.SizeY();
-
-			// Update the camera
-			m_cam.Aspect(area.Aspect());
+			m_window.BackBufferSize(size, false);
+			m_scene.m_viewport.Set(size);
+			m_scene.m_cam.Aspect(1.0 * size.x / size.y);
 		}
 
 		// Request a render.
@@ -162,18 +137,10 @@ namespace pr::app
 			// Allow new render requests now
 			m_rdr_pending = false;
 
-			// Set the camera position
-			m_scene.SetView(m_cam);
-
-			// Reset and rebuild the drawlist
 			m_scene.ClearDrawlists();
-			m_scene.UpdateDrawlists();
-
-			// Render the viewports
-			m_scene.Render();
-
-			// Show the result
-			Present();
+			auto& frame = m_window.NewFrame();
+			m_scene.Render(frame);
+			m_window.Present(frame, pr::rdr12::EGpuFlush::Block);
 		}
 
 		// Show the last rendered scene

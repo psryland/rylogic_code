@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -266,7 +266,6 @@ namespace pr::maths::spatial
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::maths
 {

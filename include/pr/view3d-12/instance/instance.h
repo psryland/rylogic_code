@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -323,7 +323,7 @@ namespace pr::rdr12
 
 	#define PR_RDR12_INSTANCE_MEMBERS(name, fields)\
 		static constexpr int CompCount = 0 fields(PR_RDR12_INST_MEMBER_COUNT);\
-		static constexpr int CompCapacity = CompCount + pr::Pad<int>(sizeof(pr::rdr12::BaseInstance) + CompCount*sizeof(pr::rdr12::EInstComp), 16U);\
+		static constexpr int CompCapacity = CompCount + static_cast<int>(pr::Pad(sizeof(pr::rdr12::BaseInstance) + CompCount*sizeof(pr::rdr12::EInstComp), 16U));\
 		pr::rdr12::BaseInstance m_base;\
 		pr::rdr12::EInstComp m_cpt[CompCapacity];\
 		fields(PR_RDR12_INST_MEMBERS)\
@@ -340,7 +340,7 @@ namespace pr::rdr12
 			constexpr auto AlignCheck = []()\
 			{\
 				constexpr int Sizes[] = {fields(PR_RDR12_INST_COMPONENT_SIZES)};\
-				int i = 0, ofs = PadTo<int>(sizeof(BaseInstance) + CompCount*sizeof(EInstComp), 16);\
+				int i = 0, ofs = static_cast<int>(pr::PadTo(sizeof(BaseInstance) + CompCount*sizeof(EInstComp), 16));\
 				fields(PR_RDR12_INST_ALIGNMENT_CHECK)\
 				return true;\
 			};\

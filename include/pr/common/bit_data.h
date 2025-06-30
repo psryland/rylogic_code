@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Bit Reader
 //  Copyright (c) Rylogic Ltd 2024
 //*********************************************
@@ -45,9 +45,9 @@ namespace pr
 			size_t m_bit_count;
 			size_t m_offset;
 
-			ContiguousDataSource(std::span<WordType const> data, size_t bit_count = ~0ULL)
+			ContiguousDataSource(std::span<WordType const> data, size_t bit_count = std::dynamic_extent)
 				: m_data(data)
-				, m_bit_count(bit_count != ~0ULL ? bit_count : data.size() * sizeof(WordType) * 8)
+				, m_bit_count(bit_count != std::dynamic_extent ? bit_count : data.size() * sizeof(WordType) * 8)
 				, m_offset(0)
 			{}
 			WordType ReadWord()
@@ -426,12 +426,12 @@ namespace pr
 
 	// Construct a bit reader for contiguous data
 	template <std::unsigned_integral T = uint8_t>
-	inline bit_data::Reader<T, bit_data::ContiguousDataSource<T>> BitReader(std::span<T const> data, size_t bit_count = ~0ULL)
+	inline bit_data::Reader<T, bit_data::ContiguousDataSource<T>> BitReader(std::span<T const> data, size_t bit_count = std::dynamic_extent)
 	{
 		using SrcType = bit_data::ContiguousDataSource<T>;
 		return bit_data::Reader<T, SrcType>(SrcType(data, bit_count));
 	}
-	inline bit_data::Reader<uint8_t, bit_data::ContiguousDataSource<uint8_t>> BitReader(std::span<uint8_t const> data, size_t bit_count = ~0ULL)
+	inline bit_data::Reader<uint8_t, bit_data::ContiguousDataSource<uint8_t>> BitReader(std::span<uint8_t const> data, size_t bit_count = std::dynamic_extent)
 	{
 		return BitReader<uint8_t>(data, bit_count);
 	}

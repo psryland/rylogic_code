@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -12,7 +12,7 @@ namespace pr::app
 {
 	// A base class for a main app window.
 	template<typename DerivedUI, typename Main, typename MessageLoop = gui::MessageLoop>
-	struct MainUI :gui::Form ,IAppMainUI
+	struct MainUI :gui::Form, IAppMainUI
 	{
 		// Notes:
 		//  - The MainUI derived class handles the HWND and WndProc for the application
@@ -28,7 +28,7 @@ namespace pr::app
 		bool        m_nav_enabled;               // True while a mouse button is down during default mouse navigation
 		bool        m_fullscreen_toggle_enabled; // Allow Alt+Enter to toggle between full screen and windowed
 		LONG        m_click_thres;               // Single click time threshold in ms
-		LONG        m_down_at[4];                // Button down timestamp
+		LONG        m_down_at[4];                // Button down time stamp
 		int         m_exit_code;                 // Exit code
 
 		// WinGui form construction parameters
@@ -177,23 +177,16 @@ namespace pr::app
 		// Resizing handlers
 		virtual void OnWindowPosChange(gui::WindowPosEventArgs const& args) override
 		{
-			if (args.IsResize() && !args.Iconic())
-			{
-				m_resizing = args.m_before;
-				if (!args.m_before)
-				{
-					// Find the new client area
-					auto area = ExcludeDockedChildren(ClientRect(true));
-					if (m_main && area.width() > 0 && area.height() > 0)
-					{
-						m_main->Resize(To<IRect>(area));
-						m_main->RenderNeeded();
-					}
-				}
-			}
-
-			// Raise the event after the render target has been resized
 			base::OnWindowPosChange(args);
+			if (!args.m_before && args.IsResize() && !IsIconic(*this))
+			{
+				auto rect = ClientRect(false);
+				auto dpi = GetDpiForWindow(*this);
+				auto w = s_cast<int>(rect.width() * dpi / 96.0);
+				auto h = s_cast<int>(rect.height() * dpi / 96.0);
+				m_main->Resize({ w, h });
+				m_main->RenderNeeded();
+			}
 		}
 
 		// Handle system menu keys
@@ -205,7 +198,7 @@ namespace pr::app
 			if (m_fullscreen_toggle_enabled && vk_key == VK_RETURN)
 			{
 				// If currently in full screen mode, switch to windowed or visa versa
-				OnFullScreenToggle(!m_main->m_window.FullScreenMode());
+				//OnFullScreenToggle(!m_main->m_window.FullScreenMode());
 
 				m_main->DoRender(true);
 			}

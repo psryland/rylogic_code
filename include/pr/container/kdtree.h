@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // KD Tree
 //  Copyright (c) March 2005 Paul Ryland
 //*****************************************
@@ -612,7 +612,7 @@ namespace pr::kdtree
 #if PR_UNITTESTS
 #include <bitset>
 #include "pr/common/unittests.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::container
 {
@@ -754,7 +754,7 @@ namespace pr::container
 
 			#if 0
 			{
-				ldr::Builder builder;
+				rdr12::ldraw::Builder builder;
 				builder.Circle("search", 0x8000FF00).radius(search_radius).pos(v4(search_point, 0, 1));
 
 				auto& ldr_points = builder.Point("Points").size(10.0f);
@@ -815,9 +815,9 @@ namespace pr::container
 			}
 
 			// Show output
-			#if	1
+			#if	0
 			{
-				ldr::Builder builder;
+				rdr12::ldraw::Builder builder;
 
 				auto& ldr_points = builder.Point("Points").size(10.0f);
 				for (auto const& p : points)

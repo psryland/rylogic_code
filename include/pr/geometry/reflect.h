@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -6,7 +6,6 @@
 #include "pr/common/cast.h"
 #include "pr/geometry/common.h"
 #include "pr/common/fmt.h"
-#include "pr/ldraw/ldr_helper.h"
 
 namespace pr
 {

@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Pipe
 //  Copyright (C) Rylogic Ltd 2007
 //**********************************
@@ -126,7 +126,7 @@ namespace pr::pipe
 			void append(std::span<uint8_t const> data)
 			{
 				if (m_len + data.size() > m_data.size())
-					grow(m_len + data.size());
+					grow(s_cast<size_t>(m_len + data.size()));
 
 				memcpy(m_data.data() + m_len, data.data(), data.size());
 				m_len += isize(data);
@@ -146,7 +146,7 @@ namespace pr::pipe
 			}
 			void shrink()
 			{
-				m_data.resize(m_len);
+				m_data.resize(s_cast<size_t>(m_len));
 			}
 		};
 
@@ -377,7 +377,7 @@ namespace pr::pipe
 			if (m_used == isize(m_pool))
 				m_pool.push_back(OverlappedPtr{ new Overlapped() });
 
-			Overlapped& overlapped = *m_pool[m_used++];
+			Overlapped& overlapped = *m_pool[s_cast<size_t>(m_used++)];
 			overlapped.m_op = op;
 			overlapped.m_owner = m_mode;
 			overlapped.m_data.resize(PipeBufferSize);
@@ -393,7 +393,7 @@ namespace pr::pipe
 			overlapped.m_used = false;
 			//overlapped.m_op = EAsyncOp::None;
 
-			auto beg = std::begin(m_pool);
+			auto beg = m_pool.data();
 			auto end = beg + m_used;
 			for (; beg != end; ++beg)
 			{
@@ -769,7 +769,7 @@ namespace pr::pipe
 
 			// Read into 'overlapped.data'
 			DWORD bytes_read = 0;
-			auto buf = overlapped.buf().subspan(overlapped.m_len);
+			auto buf = overlapped.buf().subspan(static_cast<size_t>(overlapped.m_len));
 			auto r = ReadFile(m_pipe.get(), buf.data(), s_cast<DWORD>(buf.size()), &bytes_read, &overlapped);
 			auto error = r ? ERROR_SUCCESS : GetLastError();
 			switch (error)
@@ -843,7 +843,7 @@ namespace pr::pipe
 		// Summaries 'data'
 		std::string Summary(std::span<uint8_t const> data)
 		{
-			return std::string(reinterpret_cast<char const*>(data.data()), std::min(50ULL, data.size()));
+			return std::string(reinterpret_cast<char const*>(data.data()), std::min(50, isize(data)));
 		}
 	};
 }
