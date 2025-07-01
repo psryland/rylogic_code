@@ -78,8 +78,39 @@
         ```
 
 1. Build the image list
+
+    ```py
+    python picture.py --scan
+    ```
+
 1. Run
 
     ```py
-    python Picture.py
+    python picture.py
     ```
+
+1. Create a Desktop shortcut
+
+  1. Create a `PictureFrame.desktop` file on the desktop
+
+  ```bash
+  nano ~/desktop/PictureFrame.desktop
+  ```
+
+  1. Add this to the file
+
+  ```ini
+  [Desktop Entry]
+  Name=Picture Frame
+  Comment=Launch Picture Frame
+  Exec=python3 /home/pi/rylogic_code/projects/apps/PictureFrame/picture.py
+  Icon=/home/pi/rylogic_code/projects/apps/PictureFrame/icon.png
+  Terminal=false
+  Type=Application
+  ```
+
+  1. Make it executable
+
+  ```bash
+  chmod +x ~/Desktop/PictureFrame.desktop
+  ```

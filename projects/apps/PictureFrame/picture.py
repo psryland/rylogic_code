@@ -52,6 +52,7 @@ class PictureFrame:
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
 		self.bb.bind("<Button-1>", self._ShowOverlays)
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
+		self.bb.update_idletasks() # Force realization of the window
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -100,7 +101,7 @@ class PictureFrame:
 		# No images text
 		self.no_images_label = Tk.Label(self.window, text="No images found", bg="black", fg="white", font=("Arial", 20))
 
-		# Create a vlc player and set the video output to the Tkinter window
+		# Create a player and set the video output to the Tkinter window
 		self.player = mpv.MPV(
 			wid=str(self.bb.winfo_id()),
 			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
