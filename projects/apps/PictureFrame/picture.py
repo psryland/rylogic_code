@@ -97,23 +97,105 @@ class PictureFrame:
 		# No images text
 		self.no_images_label = Tk.Label(self.window, text="No images found", bg="black", fg="white", font=("Arial", 20))
 
-		# Create a player and set the video output to the Tkinter window
-		self.bb.update_idletasks() # Force realization of the window
-		self.player = mpv.MPV(
-			wid=str(self.bb.winfo_id()),
-			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
-			input_default_bindings=True,
-			input_vo_keyboard=True,
-			ytdl=False,
-			osc=True,
-			image_display_duration=60
-		)
+		# Initialize player as None - will be created later when window is ready
+		self.player = None
 
 		# Key binds
 		self.window.bind("<Escape>", lambda e: self._Shutdown())  # Exit on ESC key
 		self.window.bind("<Configure>", lambda e: self._UpdateUI())
 		self.bb.bind("<Button-1>", self._ShowOverlays)
 		return
+
+	# Initialize the MPV player when the window is ready
+	def _InitPlayer(self):
+		if self.player is not None:
+			return
+		
+		print("Attempting to initialize MPV player...")
+		
+		# Force the frame to be displayed and get its actual window ID
+		try:
+			self.bb.update()
+			self.window.update()
+			
+			# Get the window ID after everything is properly realized
+			wid = self.bb.winfo_id()
+			print(f"Window ID obtained: {wid}")
+			print(f"Frame geometry: {self.bb.winfo_width()}x{self.bb.winfo_height()}")
+			print(f"Frame is viewable: {self.bb.winfo_viewable()}")
+			
+		except Exception as e:
+			print(f"Error getting window information: {e}")
+			wid = None
+		
+		# Try different MPV configurations in order of preference
+		configs = [
+			# Config 1: Full embedding with window ID
+			{
+				"name": "Embedded with window ID",
+				"config": {
+					"wid": str(wid) if wid else None,
+					"input_default_bindings": False,
+					"input_vo_keyboard": False,
+					"osc": False,
+					"ytdl": False,
+					"image_display_duration": 60,
+					"vo": "x11" if platform.system() == "Linux" else None
+				}
+			},
+			# Config 2: Simple embedded (no geometry control)
+			{
+				"name": "Simple embedded",
+				"config": {
+					"wid": str(wid) if wid else None,
+					"ytdl": False,
+					"image_display_duration": 60,
+					"osc": False
+				}
+			},
+			# Config 3: Minimal embedded
+			{
+				"name": "Minimal embedded",
+				"config": {
+					"wid": str(wid) if wid else None,
+					"ytdl": False,
+					"image_display_duration": 60
+				}
+			},
+			# Config 4: Basic MPV (will create separate window)
+			{
+				"name": "Basic MPV",
+				"config": {
+					"ytdl": False,
+					"image_display_duration": 60
+				}
+			}
+		]
+		
+		for i, attempt in enumerate(configs):
+			if wid is None and "wid" in attempt["config"]:
+				print(f"Skipping {attempt['name']} - no window ID available")
+				continue
+				
+			try:
+				print(f"Trying configuration {i+1}: {attempt['name']}")
+				
+				# Filter out None values
+				config = {k: v for k, v in attempt["config"].items() if v is not None}
+				print(f"MPV config: {config}")
+				
+				self.player = mpv.MPV(**config)
+				print(f"MPV player initialized successfully with {attempt['name']}")
+				return
+				
+			except Exception as e:
+				print(f"Failed with {attempt['name']}: {e}")
+				if i < len(configs) - 1:
+					print("Trying next configuration...")
+				continue
+		
+		print("All MPV configurations failed!")
+		self.player = None
 
 	# Scan for images and videos
 	def Scan(self):
@@ -161,6 +243,9 @@ class PictureFrame:
 				self.window.after(500, WaitTillShown)
 				return
 
+			# Initialize the MPV player now that the window is ready
+			self._InitPlayer()
+			
 			# Start displaying images
 			self._NextImage()
 			return
@@ -242,29 +327,47 @@ class PictureFrame:
 
 	# Display a still image
 	def _ShowImage(self, image_fullpath, issue_number):
+		if self.player is None:
+			print("MPV player not initialized, skipping image display")
+			self.window.after(100, self._NextImage)
+			return
+			
 		def Stop():
 			if issue_number != self.issue_number: return
 			self._StopMedia()
 			self._NextImage()
 			return
 
-		self.player.play(str(image_fullpath))
-		self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
+		try:
+			self.player.play(str(image_fullpath))
+			self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
+		except Exception as e:
+			print(f"Error playing image {image_fullpath}: {e}")
+			self.window.after(100, self._NextImage)
 		return
 
 	# Display a video
 	def _ShowVideo(self, video_fullpath, issue_number):
+		if self.player is None:
+			print("MPV player not initialized, skipping video display")
+			self.window.after(100, self._NextImage)
+			return
+			
 		def Stop():
 			if issue_number != self.issue_number: return
-			if self.player.eof_reached == False:
+			if self.player and self.player.eof_reached == False:
 				self.window.after(500, Stop)
 				return
 			self._StopMedia()
 			self._NextImage()
 			return
 
-		self.player.play(str(video_fullpath))
-		self.window.after(500, Stop)
+		try:
+			self.player.play(str(video_fullpath))
+			self.window.after(500, Stop)
+		except Exception as e:
+			print(f"Error playing video {video_fullpath}: {e}")
+			self.window.after(100, self._NextImage)
 		return
 
 	# Stop and clean up any media
@@ -272,7 +375,11 @@ class PictureFrame:
 		if threading.current_thread() != threading.main_thread():
 			raise Exception("ReleaseMedia called from non-main thread")
 
-		self.player.stop()
+		if self.player is not None:
+			try:
+				self.player.stop()
+			except Exception as e:
+				print(f"Error stopping player: {e}")
 		return
 
 	# Show/Hide UI elements
@@ -486,6 +593,11 @@ class PictureFrame:
 
 	def _Shutdown(self):
 		self._StopMedia()
+		if self.player is not None:
+			try:
+				self.player.terminate()
+			except Exception as e:
+				print(f"Error terminating player: {e}")
 		self.window.quit()
 		return
 

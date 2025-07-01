@@ -1,6 +1,6 @@
 # Picture Frame Setup
 
-## Raspberry Pi 3 B+
+## Raspberry Pi
 
 1. Make sure raspi-config->Advanced->Wayland is set to x11
 
