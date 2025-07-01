@@ -45,14 +45,10 @@ class PictureFrame:
 		self.window.title("Picture Frame")
 		self.window.geometry("1024x768")  # Set initial size
 		self.window.attributes("-fullscreen", bool(self.config['FullScreen']))
-		self.window.bind("<Escape>", lambda e: self._Shutdown())  # Exit on ESC key
-		self.window.bind("<Configure>", lambda e: self._UpdateUI())
 
 		# Create a backbuffer for images and video
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
-		self.bb.bind("<Button-1>", self._ShowOverlays)
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
-		self.bb.update_idletasks() # Force realization of the window
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -102,6 +98,7 @@ class PictureFrame:
 		self.no_images_label = Tk.Label(self.window, text="No images found", bg="black", fg="white", font=("Arial", 20))
 
 		# Create a player and set the video output to the Tkinter window
+		self.bb.update_idletasks() # Force realization of the window
 		self.player = mpv.MPV(
 			wid=str(self.bb.winfo_id()),
 			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
@@ -111,6 +108,11 @@ class PictureFrame:
 			osc=True,
 			image_display_duration=60
 		)
+
+		# Key binds
+		self.window.bind("<Escape>", lambda e: self._Shutdown())  # Exit on ESC key
+		self.window.bind("<Configure>", lambda e: self._UpdateUI())
+		self.bb.bind("<Button-1>", self._ShowOverlays)
 		return
 
 	# Scan for images and videos

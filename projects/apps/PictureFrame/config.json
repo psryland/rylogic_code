@@ -1,8 +1,8 @@
 {
     "FullScreen": false,
-    "ShowImageInfo": false,
+    "ShowImageInfo": true,
     "LogToTerminal": true,
-    "DisplayPeriodSeconds": 10,
+    "DisplayPeriodSeconds": 30,
     "ImageRoot-Windows": "Z:\\Pictures\\Albums",
     "ImageRoot-Linux": "/mnt/ZDrive/Pictures/Albums",
     "ImageList": "./image_list.txt",
