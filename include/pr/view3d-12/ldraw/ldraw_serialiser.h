@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Ldraw Script type wrappers
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -152,29 +152,28 @@ namespace pr::rdr12::ldraw
 			return char_traits<char>::eof();
 		}
 	};
-	template <> struct traits<std::string>
+	template <> struct traits<textbuf>
 	{
-		static std::string& append(std::string& out, std::string_view data)
+		static textbuf& append(textbuf& out, std::string_view data)
 		{
 			out.append(data);
 			return out;
 		}
-		static int last(std::string& out)
+		static int last(textbuf& out)
 		{
 			return !out.empty() ? out.back() : char_traits<char>::eof();
 		}
 	};
-	template <> struct traits<byte_data<4>>
+	template <> struct traits<bytebuf>
 	{
-		static byte_data<4>& write(byte_data<4>& out, std::span<std::byte const> data, int64_t ofs = -1)
+		static bytebuf& write(bytebuf& out, std::span<std::byte const> data, int64_t ofs = -1)
 		{
-			if (ofs != -1)
-				out.overwrite(s_cast<ptrdiff_t>(ofs), data);
-			else
-				out.append(data);
+			ofs = ofs != -1 ? ofs : ssize(out);
+			out.resize(std::max(out.size(), ofs + data.size()));
+			std::memcpy(out.data() + ofs, data.data(), data.size());
 			return out;
 		}
-		static int64_t tellp(byte_data<4>& out)
+		static int64_t tellp(bytebuf& out)
 		{
 			return out.size();
 		}

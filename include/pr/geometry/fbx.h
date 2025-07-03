@@ -36,6 +36,9 @@ namespace pr::geometry::fbx
 	struct Context;
 	struct SceneData;
 	struct MeshData;
+	struct MaterialData;
+	struct SkinData;
+
 	struct ErrorHandler
 	{
 		using FuncCB = void(*)(void*, char const* message);
@@ -48,24 +51,6 @@ namespace pr::geometry::fbx
 			if (m_cb) m_cb(m_ctx, message);
 			else throw std::runtime_error(message);
 		}
-	};
-
-	// Mix-in for range and iteration
-	template <typename TDerived, typename TData> struct Iterable
-	{
-		struct Iter
-		{
-			TData const* m_ptr;
-			Iter& operator++() { ++m_ptr; return *this; }
-			TDerived operator*() const { return { m_ptr }; }
-			friend bool operator == (Iter const& lhs, Iter const& rhs) { return lhs.m_ptr == rhs.m_ptr; }
-		};
-		struct Range
-		{
-			std::span<TData const* const> m_span;
-			Iter begin() const { return Iter{ *m_span.begin() }; }
-			Iter end() const { return Iter{ *m_span.end() }; }
-		};
 	};
 
 	// Fbx File Formats
@@ -83,6 +68,12 @@ namespace pr::geometry::fbx
 
 		// The animation frame rate
 		double m_frame_rate = 0;
+
+		// Scene object counts
+		int m_mesh_count = 0;
+		int m_material_count = 0;
+		int m_skeleton_count = 0;
+		int m_animation_count = 0;
 	};
 
 	// Options for parsing FBXfiles
@@ -139,6 +130,51 @@ namespace pr::geometry::fbx
 		bool m_triangulate_meshes = false;
 	};
 
+	// Dynamically loaded FBX dll
+	class Fbx
+	{
+		// Fbx is private only, only friends can access the API functions.
+		friend struct Scene;
+		friend struct Mesh;
+		friend struct Material;
+		friend struct Skin;
+
+		// Dll module handle
+		HMODULE m_module;
+
+		#define PR_FBX_API(x)\
+		x(         , Initialise, Context* (__stdcall*)(ErrorHandler error_cb))\
+		x(         , Release, void (__stdcall*)(Context* ctx))\
+		\
+		x(Scene_   , Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src))\
+		x(Scene_   , Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, char const* format))\
+		x(Scene_   , ReadProps, SceneProps (__stdcall *)(Context& ctx, SceneData const& scene))\
+		x(Scene_   , Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options))\
+		x(Scene_   , Dump, void (__stdcall *)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))\
+		x(Scene_   , MeshGet, Mesh (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
+		x(Scene_   , MaterialGet, Material (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t mat_id))\
+
+		#define PR_FBX_FUNCTION_MEMBERS(prefix, name, function_type) using prefix##name##Fn = function_type; prefix##name##Fn prefix##name = {};
+		PR_FBX_API(PR_FBX_FUNCTION_MEMBERS)
+		#undef PR_FBX_FUNCTION_MEMBERS
+
+		Fbx()
+			: m_module(win32::LoadDll<struct FbxDll>("fbx.dll"))
+		{
+			#define PR_FBX_GET_PROC_ADDRESS(prefix, name, function_type) prefix##name = ((prefix##name##Fn)GetProcAddress(m_module, "Fbx_"#prefix###name));
+			PR_FBX_API(PR_FBX_GET_PROC_ADDRESS)
+			#undef PR_FBX_GET_PROC_ADDRESS
+		}
+
+		// Singleton Instance
+		static Fbx& get()
+		{
+			static Fbx s_this;
+			return s_this;
+		}
+		static void StaticChecks();
+	};
+
 	// Model types
 	struct Vert
 	{
@@ -180,134 +216,38 @@ namespace pr::geometry::fbx
 		Range<int64_t> m_vrange = Range<int64_t>::Reset();
 		Range<int64_t> m_irange = Range<int64_t>::Reset();
 	};
-
-	// Dynamically loaded FBX dll
-	class Fbx
+	struct Material
 	{
-		// Fbx is private only, only friends can access the API functions.
-		friend struct Scene;
-		friend struct Mesh;
+		Colour m_ambient;
+		Colour m_diffuse;
+		Colour m_specular;
+		std::string_view m_tex_diff;
 
-		// Dll module handle
-		HMODULE m_module;
-
-		#define PR_FBX_API(x)\
-		x(Initialise, Context* (__stdcall*)(ErrorHandler error_cb))\
-		x(Release, void (__stdcall*)(Context* ctx))
-		#define PR_FBX_FUNCTION_MEMBERS(name, function_type) using name##Fn = function_type; name##Fn name = {};
-		PR_FBX_API(PR_FBX_FUNCTION_MEMBERS)
-		#undef PR_FBX_FUNCTION_MEMBERS
-
-		Fbx()
-			: m_module(win32::LoadDll<struct FbxDll>("fbx.dll"))
-			, Scene(m_module)
-			, Mesh(m_module)
-		{
-			#define PR_FBX_GET_PROC_ADDRESS(name, function_type) name = ((name##Fn)GetProcAddress(m_module, "Fbx_"#name));
-			PR_FBX_API(PR_FBX_GET_PROC_ADDRESS)
-			#undef PR_FBX_GET_PROC_ADDRESS
-		}
-
-		// Singleton Instance
-		static Fbx& get()
-		{
-			static Fbx s_this;
-			return s_this;
-		}
-
-		// Scene API
-		struct SceneApi
-		{
-			#define PR_FBX_SCENE_API(x)\
-			x(Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src))\
-			x(Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, char const* format))\
-			x(ReadProps, SceneProps (__stdcall*)(Context& ctx, SceneData& scene))\
-			x(Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options))\
-			x(Dump, void(__stdcall*)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))\
-			x(MeshesGet, std::span<MeshData const* const> (__stdcall*)(Context& ctx, SceneData const& scene))
-			#define PR_FBX_FUNCTION_MEMBERS(name, function_type) using name##Fn = function_type; name##Fn name = {};
-			PR_FBX_SCENE_API(PR_FBX_FUNCTION_MEMBERS)
-			#undef PR_FBX_FUNCTION_MEMBERS
-
-			SceneApi(HMODULE hmodule)
-			{
-				#define PR_FBX_GET_PROC_ADDRESS(name, function_type) name = ((name##Fn)GetProcAddress(hmodule, "Fbx_Scene_"#name));
-				PR_FBX_SCENE_API(PR_FBX_GET_PROC_ADDRESS)
-				#undef PR_FBX_GET_PROC_ADDRESS
-			}
-		} Scene;
-
-		// Mesh API
-		struct MeshApi
-		{
-			#define PR_FBX_MESH_API(x)\
-			x(IdGet, uint64_t (__stdcall*)(MeshData const& mesh))\
-			x(NameGet, char const* (__stdcall*)(MeshData const& mesh))\
-			x(VBufferGet, std::span<Vert const> (__stdcall*)(MeshData const& mesh))\
-			x(IBufferGet, std::span<int const> (__stdcall*)(MeshData const& mesh))\
-			x(NBufferGet, std::span<Nugget const> (__stdcall*)(MeshData const& mesh))\
-			x(BBoxGet, BBox const& (__stdcall*)(MeshData const& mesh))\
-			x(O2PGet, m4x4 const& (__stdcall*)(MeshData const& mesh))\
-			x(LevelGet, int (__stdcall*)(MeshData const& mesh))
-			#define PR_FBX_FUNCTION_MEMBERS(name, function_type) using name##Fn = function_type; name##Fn name = {};
-			PR_FBX_MESH_API(PR_FBX_FUNCTION_MEMBERS)
-			#undef PR_FBX_FUNCTION_MEMBERS
-
-			MeshApi(HMODULE hmodule)
-			{
-				#define PR_FBX_GET_PROC_ADDRESS(name, function_type) name = ((name##Fn)GetProcAddress(hmodule, "Fbx_Mesh_"#name));
-				PR_FBX_MESH_API(PR_FBX_GET_PROC_ADDRESS)
-				#undef PR_FBX_GET_PROC_ADDRESS
-			}
-		} Mesh;
 	};
-
-	// Model accessors
-	struct Material : Iterable<Material, MaterialData>
+	struct Skin
 	{
-		MaterialData const* m_matdata;
-	};
+		SkinData const* m_skindata;
+		uint64_t m_skel_id;
+		int m_influence_count;
+		int m_max_bones;
 
-	struct Mesh : Iterable<Mesh, MeshData>
-	{
-		MeshData const* m_meshdata;
-
-		uint64_t id() const
+		explicit operator bool() const
 		{
-			return Fbx::get().Mesh.IdGet(*m_meshdata);
-		}
-		std::string_view name() const
-		{
-			return Fbx::get().Mesh.NameGet(*m_meshdata);
-		}
-		std::span<Vert const> vbuf() const
-		{
-			return Fbx::get().Mesh.VBufferGet(*m_meshdata);
-		}
-		std::span<int const> ibuf() const
-		{
-			return Fbx::get().Mesh.IBufferGet(*m_meshdata);
-		}
-		std::span<Nugget const> nbuf() const
-		{
-			return Fbx::get().Mesh.NBufferGet(*m_meshdata);
-		}
-		//Skin m_skin;
-		BBox const& bbox() const
-		{
-			return Fbx::get().Mesh.BBoxGet(*m_meshdata);
-		}
-		m4x4 const& o2p() const
-		{
-			return Fbx::get().Mesh.O2PGet(*m_meshdata);
-		}
-		int level() const
-		{
-			return Fbx::get().Mesh.LevelGet(*m_meshdata);
+			return m_skindata != nullptr && m_influence_count != 0;
 		}
 	};
-
-	// FBX Scene
+	struct Mesh
+	{
+		uint64_t m_id;
+		std::string_view m_name;
+		std::span<Vert const> m_vbuf;
+		std::span<int const> m_ibuf;
+		std::span<Nugget const> m_nbuf;
+		Skin m_skin;
+		BBox m_bbox;
+		m4x4 m_o2p;
+		int m_level;
+	};
 	struct Scene
 	{
 		// The dll context
@@ -322,8 +262,8 @@ namespace pr::geometry::fbx
 		// Remember to open streams in binary mode!
 		Scene(std::istream& src, ErrorHandler error_cb = {})
 			: m_ctx(Fbx::get().Initialise(error_cb))
-			, m_scene(Fbx::get().Scene.Load(*m_ctx, src))
-			, m_props(Fbx::get().Scene.ReadProps(*m_ctx, *m_scene))
+			, m_scene(Fbx::get().Scene_Load(*m_ctx, src))
+			, m_props(Fbx::get().Scene_ReadProps(*m_ctx, *m_scene))
 		{}
 		Scene(Scene&& rhs) noexcept
 			: m_ctx()
@@ -348,14 +288,49 @@ namespace pr::geometry::fbx
 			Fbx::get().Release(m_ctx);
 		}
 
-		Material::Range materials() const
+		// The number of meshes that have been loaded
+		int material_count() const
 		{
+			return m_props.m_material_count;
 		}
 
-		// Access the meshes in the scene
-		Mesh::Range meshes() const
+		// Get a material in the scene
+		Material material(uint64_t mat_id) const
 		{
-			return { Fbx::get().Scene.MeshesGet(*m_ctx, *m_scene) };
+			return { Fbx::get().Scene_MaterialGet(*m_ctx, *m_scene, mat_id) };
+		}
+
+		// The number of meshes that have been loaded
+		int mesh_count() const
+		{
+			return m_props.m_mesh_count;
+		}
+
+		// Access a mesh in the scene
+		Mesh mesh(int i) const
+		{
+			assert(i >= 0 && i < mesh_count());
+			return Fbx::get().Scene_MeshGet(*m_ctx, *m_scene, i);
+		}
+
+		// Allow range-based for over meshes
+		auto meshes() const
+		{
+			struct Iterator
+			{
+				Scene const* scene;
+				int index;
+				void operator++() { ++index; }
+				Mesh operator*() const { return scene->mesh(index); }
+				bool operator!=(Iterator const& rhs) const { return index != rhs.index; }
+			};
+			struct MeshRange
+			{
+				Scene const* scene;
+				Iterator begin() const { return { scene, 0 }; }
+				Iterator end() const { return { scene, scene->mesh_count() }; }
+			};
+			return MeshRange{ this };
 		}
 
 		// Read the full scene into memory
@@ -364,14 +339,15 @@ namespace pr::geometry::fbx
 			// Notes:
 			//  - If this is slow, it's probably spending most of the time trianguling the
 			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
-			Fbx::get().Scene.Read(*m_ctx, *m_scene, options);
+			Fbx::get().Scene_Read(*m_ctx, *m_scene, options);
+			m_props = Fbx::get().Scene_ReadProps(*m_ctx, *m_scene);
 		}
 
 		// Read the full scene into memory
 		void Dump(DumpOptions const& options, std::ostream& out)
 		{
 			// You probably want to read first
-			Fbx::get().Scene.Dump(*m_ctx, *m_scene, options, out);
+			Fbx::get().Scene_Dump(*m_ctx, *m_scene, options, out);
 		}
 	};
 }

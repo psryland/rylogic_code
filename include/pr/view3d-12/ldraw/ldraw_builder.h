@@ -1,5 +1,5 @@
-﻿//************************************
-// LineDrawer Helper
+//************************************
+// LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
 #pragma once
@@ -11,35 +11,41 @@
 
 namespace pr::rdr12::ldraw
 {
-	using TStr = std::string;
-	using TData = pr::byte_data<4>;
-	using Scope = pr::Scope<void>;
+	template <typename T> concept TString = requires(T t)
+	{
+		t.reserve(0);
+		t.push_back('c');
+		{ t.append(0, 'c') } -> std::convertible_to<T&>;
+	};
 
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf8, append);
+		std::ofstream file(filepath, append ? std::ios::app : std::ios::out);
+		file << ldr;
+		file.close();
 	}
 	inline void Write(std::wstring_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
+		std::wofstream file(filepath, append ? std::ios::app : std::ios::out);
+		file << ldr;
+		file.close();
 	}
 	inline void Write(std::span<std::byte const> ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		std::ofstream ofile(filepath, append ? std::ios::app : std::ios::out);
-		ofile.write(char_ptr(ldr.data()), ldr.size());
+		std::ofstream file(filepath, std::ios::binary | (append ? std::ios::app : std::ios::out));
+		file.write(reinterpret_cast<char const*>(ldr.data()), static_cast<std::streamsize>(ldr.size()));
+		file.close();
 	}
 
 	// Pretty format Ldraw script
-	template <typename TStr> TStr FormatScript(TStr const& str)
+	template <TString TStr>
+	TStr FormatScript(TStr const& str)
 	{
-		TStr out;
+		TStr out = {};
 		out.reserve(str.size());
 
 		int indent = 0;
@@ -142,27 +148,27 @@ namespace pr::rdr12::ldraw
 			LdrObj& TextStream();
 
 			// Serialise the ldr script to a string
-			std::string ToString(bool pretty) const
+			textbuf ToString(bool pretty) const
 			{
-				std::string out;
+				textbuf out;
 				WriteTo(out);
 				if (pretty) out = FormatScript(out);
 				return out;
 			}
-			virtual void WriteTo(std::string& out) const
+			virtual void WriteTo(textbuf& out) const
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
 			}
 
 			// Serialise the ldr script to binary
-			byte_data<4> ToBinary() const
+			bytebuf ToBinary() const
 			{
-				byte_data<4> out;
+				bytebuf out;
 				WriteTo(out);
 				return out;
 			}
-			virtual void WriteTo(byte_data<4>& out) const
+			virtual void WriteTo(bytebuf& out) const
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
@@ -187,7 +193,7 @@ namespace pr::rdr12::ldraw
 			}
 			LdrObj& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
-				std::string out;
+				textbuf out;
 				WriteTo(out);
 				if (pretty) out = FormatScript(out);
 				ldraw::Write(out, filepath, append);
@@ -316,12 +322,12 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write nested objects to 'out'
-			void WriteTo(std::string& out) const override
+			void WriteTo(textbuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<TextWriter>(out);
 			}
-			void WriteTo(byte_data<4>& out) const override
+			void WriteTo(bytebuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<BinaryWriter>(out);

@@ -4,13 +4,13 @@
 //********************************
 // FBX files come in two variants; binary and text.
 // The format is closed source however, so we need to use the AutoDesk FBX SDK.
+#include <string>
 #include <vector>
 #include <format>
-//#include <string>
-//#include <vector>
-//#include <iostream>
-//#include <functional>
-//#include <filesystem>
+#include <ranges>
+#include <iostream>
+#include <functional>
+#include <filesystem>
 #include <unordered_set>
 #include <stdexcept>
 #include <future>
@@ -701,7 +701,7 @@ namespace pr::geometry::fbx
 		Colour m_ambient = ColourBlack;
 		Colour m_diffuse = ColourWhite;
 		Colour m_specular = ColourZero;
-		std::filesystem::path m_tex_diff;
+		std::string m_tex_diff;
 	};
 	struct SkeletonData
 	{
@@ -800,7 +800,7 @@ namespace pr::geometry::fbx
 	// Loaded scene data
 	struct SceneData
 	{
-		using MeshCont = std::vector<std::unique_ptr<MeshData>>;
+		using MeshCont = std::vector<MeshData>;
 		using MaterialCont = std::unordered_map<uint64_t, MaterialData>;
 		using SkeletonCont = std::vector<SkeletonData>;
 		using AnimationCont = std::vector<AnimationData>;
@@ -2269,7 +2269,7 @@ extern "C"
 	}
 
 	// Load an fbx scene
-	__declspec(dllexport) SceneData* __stdcall Fbx_LoadScene(Context& ctx, std::istream& src)
+	__declspec(dllexport) SceneData* __stdcall Fbx_Scene_Load(Context& ctx, std::istream& src)
 	{
 		try
 		{
@@ -2285,7 +2285,7 @@ extern "C"
 	}
 
 	// Save an fbx scene
-	__declspec(dllexport) void __stdcall Fbx_SaveScene(Context& ctx, SceneData const& scene, std::ostream& out, char const* format)
+	__declspec(dllexport) void __stdcall Fbx_Scene_Save(Context& ctx, SceneData const& scene, std::ostream& out, char const* format)
 	{
 		try
 		{
@@ -2298,7 +2298,7 @@ extern "C"
 	}
 
 	// Read meta data about the scene
-	__declspec(dllexport) SceneProps __stdcall Fbx_ReadSceneProps(Context& ctx, SceneData& scene)
+	__declspec(dllexport) SceneProps __stdcall Fbx_Scene_ReadProps(Context& ctx, SceneData const& scene)
 	{
 		try
 		{
@@ -2309,6 +2309,10 @@ extern "C"
 			SceneProps props = {};
 			props.m_animation_stack_count = scene.m_fbxscene->GetSrcObjectCount<FbxAnimStack>();
 			props.m_frame_rate = FbxTime::GetFrameRate(scene.m_fbxscene->GetGlobalSettings().GetTimeMode());
+			props.m_mesh_count = pr::isize(scene.m_meshes);
+			props.m_material_count = pr::isize(scene.m_materials);
+			props.m_skeleton_count = pr::isize(scene.m_skeletons);
+			props.m_animation_count = pr::isize(scene.m_animations);
 			return props;
 		}
 		catch (std::exception const& ex)
@@ -2319,7 +2323,7 @@ extern "C"
 	}
 
 	// Read the hierarchy from the scene
-	__declspec(dllexport) void __stdcall Fbx_ReadScene(Context& ctx, SceneData& scene, ReadOptions const& options)
+	__declspec(dllexport) void __stdcall Fbx_Scene_Read(Context& ctx, SceneData& scene, ReadOptions const& options)
 	{
 		try
 		{
@@ -2336,7 +2340,7 @@ extern "C"
 	}
 
 	// Dump info about the scene to 'out'
-	__declspec(dllexport) void __stdcall Fbx_DumpScene(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out)
+	__declspec(dllexport) void __stdcall Fbx_Scene_Dump(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out)
 	{
 		try
 		{
@@ -2348,7 +2352,67 @@ extern "C"
 			ctx.m_error_cb(ex.what());
 		}
 	}
+
+	// Access a mesh by index
+	__declspec(dllexport) Mesh __stdcall Fbx_Scene_MeshGet(Context& ctx, SceneData const& scene, int i)
+	{
+		try
+		{
+			auto& m = scene.m_meshes[i];
+			return Mesh{
+				.m_id = m.m_id,
+				.m_name = m.m_name,
+				.m_vbuf = m.m_vbuf,
+				.m_ibuf = m.m_ibuf,
+				.m_nbuf = m.m_nbuf,
+				.m_skin = Skin{
+					.m_skindata = &m.m_skin,
+					.m_skel_id = m.m_skin.m_skel_id,
+					.m_influence_count = pr::isize(m.m_skin.m_influences),
+					.m_max_bones = std::ranges::max(m.m_skin.m_influences, {}, &SkinData::Influence::size).size(),
+				},
+				.m_bbox = m.m_bbox,
+				.m_o2p = m.m_o2p,
+				.m_level = m.m_level,
+			};
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return {};
+		}
+	}
+
+	// Access a material by id
+	__declspec(dllexport) Material __stdcall Fbx_Scene_MaterialGet(Context& ctx, SceneData const& scene, uint64_t mat_id)
+	{
+		try
+		{
+			auto& m = scene.m_materials.at(mat_id);
+			return Material{
+				.m_ambient = m.m_ambient,
+				.m_diffuse = m.m_diffuse,
+				.m_specular = m.m_specular,
+				.m_tex_diff = m.m_tex_diff,
+			};
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return {};
+		}
+	}
+
+	// Static function signature checks
+	void Fbx::StaticChecks()
+	{
+		#define PR_FBX_API_CHECK(prefix, name, function_type) static_assert(std::is_same_v<Fbx::prefix##name##Fn, decltype(&Fbx_##prefix##name)>, "Function signature mismatch for Fbx_"#prefix#name);
+		PR_FBX_API(PR_FBX_API_CHECK)
+		#undef PR_FBX_API_CHECK
+	}
 }
+
+
 
 #if 0
 // Read skinning information from mesh nodes in 'node'

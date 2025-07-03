@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Settings
 // Copyright (c) Rylogic Ltd 2013
 //*****************************************
@@ -19,10 +19,10 @@
 #include <filesystem>
 #include <type_traits>
 #include "pr/common/assert.h"
-#include "pr/common/fmt.h"
-#include "pr/gfx/colour.h"
-#include "pr/common/hash.h"
 #include "pr/common/event_handler.h"
+#include "pr/common/fmt.h"
+#include "pr/common/hash.h"
+#include "pr/gfx/colour.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
 #include "pr/str/string_util.h"
@@ -188,17 +188,21 @@ namespace pr
 		{
 			return Load(m_filepath);
 		}
-		bool Load(std::filesystem::path const& file)
+		bool Load(std::filesystem::path const& filepath)
 		{
-			m_filepath = file;
+			m_filepath = filepath;
 			if (!std::filesystem::exists(m_filepath))
 				OnError(*this, { Fmt(L"User settings file '%s' not found", m_filepath.c_str()) });
 
 			// Read the settings into a buffer
-			std::string settings;
-			if (!pr::filesys::FileToBuffer(m_filepath, settings))
-				OnError(*this, { Fmt(L"User settings file '%s' could not be read", m_filepath.c_str()) });
+			std::ifstream file(m_filepath, std::ios::in | std::ios::binary);
+			if (!file)
+			{
+				OnError(*this, { Fmt(L"User settings file '%s' could not be opened", m_filepath.c_str()) });
+				return false;
+			}
 
+			std::string settings{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 			return Import(settings);
 		}
 
@@ -207,9 +211,9 @@ namespace pr
 		{
 			return Save(m_filepath);
 		}
-		bool Save(std::filesystem::path const& file)
+		bool Save(std::filesystem::path const& filepath)
 		{
-			m_filepath = file;
+			m_filepath = filepath;
 
 			auto dir = m_filepath.parent_path();
 			if (!std::filesystem::exists(dir) && !std::filesystem::create_directories(dir))
@@ -218,12 +222,16 @@ namespace pr
 				return false;
 			}
 
-			auto settings = Export();
-			if (!filesys::BufferToFile(settings, m_filepath))
+			std::ofstream file(m_filepath, std::ios::out | std::ios::binary);
+			if (!file)
 			{
 				OnError(*this, { Fmt(L"Failed to save user settings file '%S'", m_filepath.c_str()) });
 				return false;
 			}
+
+			auto settings = Export();
+			file << settings;
+			file.close();
 
 			m_crc = Crc(settings);
 			return true;

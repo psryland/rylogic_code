@@ -8,6 +8,8 @@
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/animation.h"
+#include "pr/view3d-12/model/animator.h"
 
 namespace pr::rdr12::ldraw
 {

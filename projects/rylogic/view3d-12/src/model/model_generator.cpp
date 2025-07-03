@@ -1262,27 +1262,27 @@ namespace pr::rdr12
 
 			for (auto mesh : scene.meshes())
 			{
-				for (; isize(p2w) > mesh.level() + 1; p2w.pop_back()) {}
+				for (; isize(p2w) > mesh.m_level + 1; p2w.pop_back()) {}
 
 				cache.Reset();
 
 				// Name/Bounding box
-				cache.m_name = mesh.name();
-				cache.m_bbox = mesh.bbox();
-				cache.m_m2root = p2w.back() * mesh.o2p();
+				cache.m_name = mesh.m_name;
+				cache.m_bbox = mesh.m_bbox;
+				cache.m_m2root = p2w.back() * mesh.m_o2p;
 				p2w.push_back(cache.m_m2root);
 
 				// Copy the verts
-				cache.m_vcont.resize(mesh.vbuf().size(), {});
+				cache.m_vcont.resize(mesh.m_vbuf.size(), {});
 				auto vptr = cache.m_vcont.data();
-				for (auto const& v : mesh.vbuf())
+				for (auto const& v : mesh.m_vbuf)
 				{
 					SetPCNTI(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0, v.m_idx0);
 					++vptr;
 				}
 
-				auto vcount = isize(mesh.vbuf());
-				auto icount = isize(mesh.ibuf());
+				auto vcount = isize(mesh.m_vbuf);
+				auto icount = isize(mesh.m_ibuf);
 
 				// Copy indices
 				if (vcount > 0xFFFF)
@@ -1290,25 +1290,25 @@ namespace pr::rdr12
 					// Use 32bit indices
 					cache.m_icont.m_stride = sizeof(uint32_t);
 					cache.m_icont.resize<uint32_t>(icount);
-					memcpy(cache.m_icont.data<uint32_t>(), mesh.ibuf().data(), mesh.ibuf().size() * sizeof(int));
+					memcpy(cache.m_icont.data<uint32_t>(), mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
 				}
 				else
 				{
 					// Use 16bit indices
 					cache.m_icont.m_stride = sizeof(uint16_t);
 					cache.m_icont.resize<uint16_t>(icount);
-					auto isrc = mesh.ibuf().data();
+					auto isrc = mesh.m_ibuf.data();
 					auto idst = cache.m_icont.data<uint16_t>();
-					for (auto count = mesh.ibuf().size(); count-- != 0;)
+					for (auto count = mesh.m_ibuf.size(); count-- != 0;)
 						*idst++ = s_cast<uint16_t>(*isrc++);
 				}
 
 				// Copy the nuggets
-				cache.m_ncont.resize(mesh.nbuf().size());
+				cache.m_ncont.resize(mesh.m_nbuf.size());
 				auto nptr = cache.m_ncont.data();
-				for (auto const& n : mesh.nbuf())
+				for (auto const& n : mesh.m_nbuf)
 				{
-					auto const& mat = scene.m_materials.at(n.m_mat_id);
+					auto const& mat = scene.material(n.m_mat_id);
 					*nptr++ = NuggetDesc{ n.m_topo, n.m_geom }.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
 				}
 
@@ -1316,10 +1316,10 @@ namespace pr::rdr12
 				auto model = Create(factory, cache, opts);
 
 				// Add the mesh to the model tree
-				tree.push_back({ model, mesh.level() });
+				tree.push_back({ model, mesh.m_level });
 
 				// Add skinning data if present and requested
-				if (mesh.m_skin && out.ReadAnimation)
+				if (fbx::Skin skin = mesh.m_skin; skin && out.ReadAnimation)
 				{
 					// Find the skeleton used by this mesh skin and make a map from bone id to index
 					auto& skeleton = get_if(scene.m_skeletons, [&mesh](fbx::Skeleton const& s) { return s.Id() == mesh.m_skin.m_skel_id; });
@@ -1328,8 +1328,8 @@ namespace pr::rdr12
 					constexpr auto norm_to_u16 = [](double w) { return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535); };
 
 					// Read the influences per vertex
-					vector<Skinfluence> influences(mesh.m_skin.m_influences.size());
-					for (auto const& vert_influence : mesh.m_skin.m_influences)
+					vector<Skinfluence> influences(skin.m_influences.size());
+					for (auto const& vert_influence : skin.m_influences)
 					{
 						constexpr int max_influences = _countof(Skinfluence::m_bones);
 						if (vert_influence.size() > max_influences)

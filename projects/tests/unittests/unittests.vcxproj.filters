@@ -243,6 +243,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\filewatch.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_encoding.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_snapshot.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>

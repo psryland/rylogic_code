@@ -393,8 +393,8 @@ namespace pr::rdr12::ldraw
 	void ModelTreeToLdr(LdrObject* root, std::span<ModelTreeNode const> tree);
 
 	// Generate a scene that demos the supported object types and modifiers.
-	std::string CreateDemoSceneText();
-	pr::byte_data<> CreateDemoSceneBinary();
+	textbuf CreateDemoSceneText();
+	bytebuf CreateDemoSceneBinary();
 
 	// Return the auto completion templates
 	std::string AutoCompleteTemplates();

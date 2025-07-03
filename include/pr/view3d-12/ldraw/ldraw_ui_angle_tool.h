@@ -118,7 +118,7 @@ namespace pr::rdr12::ldraw
 				group.Line("edge2", 0xFF00FF00).line(m_point0, m_point1);
 				auto data = ldr.ToBinary();
 
-				mem_istream<char> src{ data };
+				mem_istream<char> src{ data.data(), data.size() };
 				BinaryReader reader(src, {});
 				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())

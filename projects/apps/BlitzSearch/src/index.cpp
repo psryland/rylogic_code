@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 // BlitzSearch
 //  Copyright (c) Rylogic Ltd 2024
 //***********************************************************************
@@ -8,11 +8,11 @@
 
 namespace blitzsearch
 {
-		void LoadToMemory(std::filesystem::path filepath)
+	void LoadToMemory(std::filesystem::path filepath)
 	{
-		std::vector<uint8_t> data;
-		if (!pr::filesys::FileToBuffer(filepath, data))
-			throw std::runtime_error("Failed to read file");
+		std::ifstream file(filepath, std::ios::binary);
+		if (!file) throw std::runtime_error("Failed to read file");
+		std::vector<uint8_t> data{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 	}
 
 	MainIndex::MainIndex(Settings const& settings)
@@ -55,9 +55,9 @@ namespace blitzsearch
 		file_index.m_filepath = filepath;
 
 		// Read the file into memory
-		std::vector<uint8_t> data;
-		if (!pr::filesys::FileToBuffer(filepath, data))
-			throw std::runtime_error("Failed to read file");
+		std::ifstream file(filepath, std::ios::binary);
+		if (!file) throw std::runtime_error("Failed to read file");
+		std::vector<uint8_t> data{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 
 		// Generate the full suffix array
 		file_index.m_sa = std::vector<int>(data.size());
@@ -70,14 +70,14 @@ namespace blitzsearch
 	void MainIndex::Search(std::span<uint8_t const> pattern)
 	{
 		// Search each file
-		for (auto& file : m_files)
+		for (auto& searchee : m_files)
 		{
 			// Read the file into memory
-			std::vector<uint8_t> data;
-			if (!pr::filesys::FileToBuffer(file.m_filepath, data))
-				throw std::runtime_error("Failed to read file");
+			std::ifstream file(searchee.m_filepath, std::ios::binary);
+			if (!file) throw std::runtime_error("Failed to read file");
+			std::vector<uint8_t> data{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 
-			auto result = pr::suffix_array::Find<uint8_t>(pattern, data, file.m_sa);
+			auto result = pr::suffix_array::Find<uint8_t>(pattern, data, searchee.m_sa);
 			
 		}
 	}

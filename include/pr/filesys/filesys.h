@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************
 #pragma once
+#if 0
 #include <cstdint>
 #include <string>
 #include <algorithm>
@@ -1625,4 +1626,5 @@ namespace pr::filesys
 #endif
 
 #pragma warning(default:4996)
+#endif
 #endif
