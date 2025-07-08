@@ -33,7 +33,7 @@ namespace Rylogic.Maths
 			Xml_.ToMap[typeof(v4)] = (obj, node) =>
 			{
 				var vec = (v4)obj;
-				node.SetValue(vec.ToString4());
+				node.SetValue(vec.ToString());
 				return node;
 			};
 			Xml_.AsMap[typeof(v4)] = (elem, type, instance) =>

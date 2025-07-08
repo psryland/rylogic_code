@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Ldraw Script Text Serialiser
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
@@ -214,6 +214,11 @@ namespace pr::rdr12::ldraw
 		{
 			if (!s.m_solid) return;
 			Write(out, EKeyword::Solid);
+		}
+		template <typename TOut> static void Append(TOut& out, Smooth s)
+		{
+			if (!s.m_smooth) return;
+			Write(out, EKeyword::Smooth);
 		}
 		template <typename TOut> static void Append(TOut& out, Alpha a)
 		{

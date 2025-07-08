@@ -209,6 +209,7 @@ namespace Rylogic.Maths
 		/// <summary>ToString</summary>
 		public override string ToString() => $"{x} {y} {z} {w}";
 		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
+		public string ToCodeString() => $"{x}f, {y}f, {z}f, {w}f";
 
 		/// <summary>ToArray()</summary>
 		public float[] ToArray()

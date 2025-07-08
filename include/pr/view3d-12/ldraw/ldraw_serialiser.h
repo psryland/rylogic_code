@@ -110,6 +110,12 @@ namespace pr::rdr12::ldraw
 		Solid() :m_solid(false) {}
 		Solid(bool s) : m_solid(s) {}
 	};
+	struct Smooth
+	{
+		bool m_smooth;
+		Smooth() :m_smooth(false) {}
+		Smooth(bool s) : m_smooth(s) {}
+	};
 	struct VariableInt
 	{
 		int m_value;

@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -86,6 +86,7 @@ namespace pr::rdr12::ldraw
 		struct LdrPoint;
 		struct LdrLine;
 		struct LdrLineD;
+		struct LdrArrow;
 		struct LdrTriangle;
 		struct LdrPlane;
 		struct LdrCircle;
@@ -118,6 +119,7 @@ namespace pr::rdr12::ldraw
 			LdrPoint& Point(Name name = {}, Colour colour = Colour());
 			LdrLine& Line(Name name = {}, Colour colour = Colour());
 			LdrLineD& LineD(Name name = {}, Colour colour = Colour());
+			LdrArrow& Arrow(Name name = {}, Colour colour = Colour());
 			LdrTriangle& Triangle(Name name = {}, Colour colour = Colour());
 			LdrPlane& Plane(Name name = {}, Colour colour = Colour());
 			LdrCircle& Circle(Name name = {}, Colour colour = Colour());
@@ -272,6 +274,10 @@ namespace pr::rdr12::ldraw
 			Derived& scale(float sx, float sy, float sz)
 			{
 				return ori(m3x4::Scale(sx, sy, sz));
+			}
+			Derived& scale(v4_cref scale)
+			{
+				return ori(m3x4::Scale(scale.x, scale.y, scale.z));
 			}
 			Derived& quat(pr::quat const& q)
 			{
@@ -494,16 +500,25 @@ namespace pr::rdr12::ldraw
 		{
 			struct Line { v4 a, b; Colour col; };
 			pr::vector<Line> m_lines;
+			Smooth m_smooth;
 			Width m_width;
 			bool m_strip;
 			PerItemColour m_per_item_colour;
 
 			LdrLine()
 				:m_lines()
+				,m_smooth()
 				,m_width()
 				,m_strip()
 				,m_per_item_colour()
 			{}
+
+			// Smooth line
+			LdrLine& smooth(bool smooth = true)
+			{
+				m_smooth = smooth;
+				return *this;
+			}
 
 			// Line width
 			LdrLine& width(Width w)
@@ -572,9 +587,9 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Write(out, EKeyword::Line, m_name, m_colour, [&]
+				Writer::Write(out, m_strip ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
 				{
-					Writer::Append(out, m_width, m_per_item_colour);
+					Writer::Append(out, m_smooth, m_width, m_per_item_colour);
 					Writer::Write(out, EKeyword::Data, [&]
 					{
 						for (auto& line : m_lines)
@@ -636,6 +651,92 @@ namespace pr::rdr12::ldraw
 							Writer::Append(out, line.pt.xyz, line.dir.xyz);
 							if (m_per_item_colour)
 								Writer::Append(out, line.col);
+						}
+					});
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
+		struct LdrArrow :LdrBase<LdrArrow>
+		{
+			struct Pt { v4 p; Colour col; };
+			pr::vector<Pt> m_pts;
+			EArrowType m_style;
+			bool m_smooth;
+			Width m_width;
+			PerItemColour m_per_item_colour;
+
+			LdrArrow()
+				:m_pts()
+				,m_style(EArrowType::Fwd)
+				,m_smooth()
+				,m_width()
+				,m_per_item_colour()
+			{}
+
+			// Arrow style
+			LdrArrow& style(EArrowType style)
+			{
+				m_style = style;
+				return *this;
+			}
+
+			// Spline arrow
+			LdrArrow& smooth(bool smooth = true)
+			{
+				m_smooth = smooth;
+				return *this;
+			}
+
+			// Line width
+			LdrArrow& width(Width w)
+			{
+				m_width = w;
+				return *this;
+			}
+
+			// Line strip parts
+			LdrArrow& start(v4_cref p, Colour colour)
+			{
+				start(p);
+				m_pts.back().col = colour;
+				m_per_item_colour = true;
+				return *this;
+			}
+			LdrArrow& start(v4_cref p)
+			{
+				assert(m_pts.empty() && "Arrows can only have one start point");
+				m_pts.push_back({ p, {} });
+				return *this;
+			}
+			LdrArrow& line_to(v4_cref p, Colour colour)
+			{
+				line_to(p);
+				m_pts.back().col = colour;
+				m_per_item_colour = true;
+				return *this;
+			}
+			LdrArrow& line_to(v4_cref p)
+			{
+				assert(!m_pts.empty() && "Arrows require a start point first");
+				m_pts.push_back({ p, {} });
+				return *this;
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Arrow, m_name, m_colour, [&]
+				{
+					Writer::Append(out, m_style, m_width, m_per_item_colour);
+					Writer::Write(out, EKeyword::Data, [&]
+					{
+						for (auto& pt : m_pts)
+						{
+							Writer::Append(out, pt.p.xyz);
+							if (m_per_item_colour)
+								Writer::Append(out, pt.col);
 						}
 					});
 					LdrBase::WriteTo<Writer>(out);
@@ -1236,6 +1337,12 @@ namespace pr::rdr12::ldraw
 		inline LdrLineD& LdrObj::LineD(Name name, Colour colour)
 		{
 			auto ptr = new LdrLineD;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrArrow& LdrObj::Arrow(Name name, Colour colour)
+		{
+			auto ptr = new LdrArrow;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

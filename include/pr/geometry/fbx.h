@@ -130,51 +130,6 @@ namespace pr::geometry::fbx
 		bool m_triangulate_meshes = false;
 	};
 
-	// Dynamically loaded FBX dll
-	class Fbx
-	{
-		// Fbx is private only, only friends can access the API functions.
-		friend struct Scene;
-		friend struct Mesh;
-		friend struct Material;
-		friend struct Skin;
-
-		// Dll module handle
-		HMODULE m_module;
-
-		#define PR_FBX_API(x)\
-		x(         , Initialise, Context* (__stdcall*)(ErrorHandler error_cb))\
-		x(         , Release, void (__stdcall*)(Context* ctx))\
-		\
-		x(Scene_   , Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src))\
-		x(Scene_   , Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, char const* format))\
-		x(Scene_   , ReadProps, SceneProps (__stdcall *)(Context& ctx, SceneData const& scene))\
-		x(Scene_   , Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options))\
-		x(Scene_   , Dump, void (__stdcall *)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))\
-		x(Scene_   , MeshGet, Mesh (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
-		x(Scene_   , MaterialGet, Material (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t mat_id))\
-
-		#define PR_FBX_FUNCTION_MEMBERS(prefix, name, function_type) using prefix##name##Fn = function_type; prefix##name##Fn prefix##name = {};
-		PR_FBX_API(PR_FBX_FUNCTION_MEMBERS)
-		#undef PR_FBX_FUNCTION_MEMBERS
-
-		Fbx()
-			: m_module(win32::LoadDll<struct FbxDll>("fbx.dll"))
-		{
-			#define PR_FBX_GET_PROC_ADDRESS(prefix, name, function_type) prefix##name = ((prefix##name##Fn)GetProcAddress(m_module, "Fbx_"#prefix###name));
-			PR_FBX_API(PR_FBX_GET_PROC_ADDRESS)
-			#undef PR_FBX_GET_PROC_ADDRESS
-		}
-
-		// Singleton Instance
-		static Fbx& get()
-		{
-			static Fbx s_this;
-			return s_this;
-		}
-		static void StaticChecks();
-	};
-
 	// Model types
 	struct Vert
 	{
@@ -222,18 +177,78 @@ namespace pr::geometry::fbx
 		Colour m_diffuse;
 		Colour m_specular;
 		std::string_view m_tex_diff;
-
 	};
 	struct Skin
 	{
-		SkinData const* m_skindata;
-		uint64_t m_skel_id;
-		int m_influence_count;
-		int m_max_bones;
+		uint64_t m_skel_id;                // The skeleton that this skin is based on
+		std::span<int const> m_offsets;    // Index offset to the first influence for each vertex
+		std::span<uint64_t const> m_bones; // The Ids of the bones that influence a vertex
+		std::span<double const> m_weights; // The influence weights
 
+		// The number of vertices influenced by this skin
+		int vert_count() const
+		{
+			return static_cast<int>(ssize(m_offsets) - 1);
+		}
+		int influence_count(int vidx) const
+		{
+			return static_cast<int>(m_offsets[vidx+1] - m_offsets[vidx]);
+		}
 		explicit operator bool() const
 		{
-			return m_skindata != nullptr && m_influence_count != 0;
+			return !m_offsets.empty() && m_offsets.back() != 0;
+		}
+	};
+	struct Skeleton
+	{
+		uint64_t m_id = 0ULL;                 // Unique skeleton Id
+		std::span<uint64_t const> m_bone_ids; // Bone unique ids (first is the root bone)
+		std::span<std::string const> m_names; // Bone names
+		std::span<m4x4 const> m_o2bp;         // Inverse of the bind-pose to root-object-space transform for each bone
+		std::span<int const> m_hierarchy;     // Hierarchy levels. level == 0 are root bones.
+
+		// The number of bones in this skeleton
+		int size() const
+		{
+			assert(isize(m_bone_ids) == isize(m_names) && isize(m_names) == isize(m_o2bp) && isize(m_o2bp) == isize(m_hierarchy));
+			return isize(m_bone_ids);
+		}
+
+		// Create a lookup table from bone id to bone index
+		std::unordered_map<uint64_t, int> BoneIndexMap() const
+		{
+			std::unordered_map<uint64_t, int> map;
+			map.reserve(s_cast<size_t>(size()));
+			for (auto const& id : m_bone_ids) map[id] = s_cast<int>(&id - m_bone_ids.data());
+			return map;
+		}
+	};
+	struct Animation
+	{
+		using TimeRange = Range<double>;
+
+		uint64_t m_skel_id;                // The skeleton that these tracks should match
+		std::span<int const> m_offsets;    // Index offsets to the start of each bone track (one for each bone in the skeleton)
+		std::span<BoneKey const> m_tracks; // A bone track for each bone
+		TimeRange m_time_range;            // The time span of the animation
+		
+		// The number of tracks in this animation (one for each bone)
+		int track_count() const
+		{
+			return isize(m_offsets) - 1;
+		}
+
+		// Return the 'track_index'th track (corresponding to the 'track_index'th bone in the skeleton)
+		std::span<BoneKey const> track(int track_index) const
+		{
+			assert(track_index >= 0 && track_index < track_count());
+			auto ofs = m_offsets[track_index + 0];
+			auto len = m_offsets[track_index + 1] - ofs;
+			return std::span{ m_tracks.data() + ofs, s_cast<size_t>(len) };
+		}
+		explicit operator bool() const
+		{
+			return !m_offsets.empty() && m_offsets.back() != 0;
 		}
 	};
 	struct Mesh
@@ -248,6 +263,56 @@ namespace pr::geometry::fbx
 		m4x4 m_o2p;
 		int m_level;
 	};
+
+	// Dynamically loaded FBX dll
+	class Fbx
+	{
+		// Fbx is private only, only friends can access the API functions.
+		friend struct Scene;
+		friend struct Mesh;
+		friend struct Material;
+		friend struct Skin;
+
+		// Dll module handle
+		HMODULE m_module;
+
+		#define PR_FBX_API(x)\
+		x(         , Initialise, Context* (__stdcall*)(ErrorHandler error_cb))\
+		x(         , Release, void (__stdcall*)(Context* ctx))\
+		\
+		x(Scene_   , Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src))\
+		x(Scene_   , Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, char const* format))\
+		x(Scene_   , ReadProps, SceneProps (__stdcall *)(Context& ctx, SceneData const& scene))\
+		x(Scene_   , Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options))\
+		x(Scene_   , Dump, void (__stdcall *)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))\
+		x(Scene_   , MeshGet, Mesh (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
+		x(Scene_   , SkeletonGet, Skeleton (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
+		x(Scene_   , AnimationGet, Animation (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
+		x(Scene_   , MaterialGetById, Material (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t mat_id))\
+		x(Scene_   , SkeletonGetById, Skeleton (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t skel_id))
+
+		#define PR_FBX_FUNCTION_MEMBERS(prefix, name, function_type) using prefix##name##Fn = function_type; prefix##name##Fn prefix##name = {};
+		PR_FBX_API(PR_FBX_FUNCTION_MEMBERS)
+		#undef PR_FBX_FUNCTION_MEMBERS
+
+		Fbx()
+			: m_module(win32::LoadDll<struct FbxDll>("fbx.dll"))
+		{
+			#define PR_FBX_GET_PROC_ADDRESS(prefix, name, function_type) prefix##name = ((prefix##name##Fn)GetProcAddress(m_module, "Fbx_"#prefix###name));
+			PR_FBX_API(PR_FBX_GET_PROC_ADDRESS)
+			#undef PR_FBX_GET_PROC_ADDRESS
+		}
+
+		// Singleton Instance
+		static Fbx& get()
+		{
+			static Fbx s_this;
+			return s_this;
+		}
+		static void StaticChecks();
+	};
+
+	// A loaded FBX scene
 	struct Scene
 	{
 		// The dll context
@@ -297,7 +362,7 @@ namespace pr::geometry::fbx
 		// Get a material in the scene
 		Material material(uint64_t mat_id) const
 		{
-			return { Fbx::get().Scene_MaterialGet(*m_ctx, *m_scene, mat_id) };
+			return { Fbx::get().Scene_MaterialGetById(*m_ctx, *m_scene, mat_id) };
 		}
 
 		// The number of meshes that have been loaded
@@ -306,7 +371,7 @@ namespace pr::geometry::fbx
 			return m_props.m_mesh_count;
 		}
 
-		// Access a mesh in the scene
+		// Access a mesh by index in the scene
 		Mesh mesh(int i) const
 		{
 			assert(i >= 0 && i < mesh_count());
@@ -331,6 +396,78 @@ namespace pr::geometry::fbx
 				Iterator end() const { return { scene, scene->mesh_count() }; }
 			};
 			return MeshRange{ this };
+		}
+
+		// The number of skeletons that have been loaded
+		int skeleton_count() const
+		{
+			return m_props.m_skeleton_count;
+		}
+
+		// Access a skeleton by index in the scene
+		Skeleton skeleton(int i) const
+		{
+			assert(i >= 0 && i < skeleton_count());
+			return Fbx::get().Scene_SkeletonGet(*m_ctx, *m_scene, i);
+		}
+
+		// Allow range-based for over skeletons
+		auto skeletons() const
+		{
+			struct Iterator
+			{
+				Scene const* scene;
+				int index;
+				void operator++() { ++index; }
+				Skeleton operator*() const { return scene->skeleton(index); }
+				bool operator!=(Iterator const& rhs) const { return index != rhs.index; }
+			};
+			struct SkelRange
+			{
+				Scene const* scene;
+				Iterator begin() const { return { scene, 0 }; }
+				Iterator end() const { return { scene, scene->skeleton_count() }; }
+			};
+			return SkelRange{ this };
+		}
+
+		// Access a skeleton in the scene by Id
+		Skeleton skeleton(uint64_t skel_id) const
+		{
+			return { Fbx::get().Scene_SkeletonGetById(*m_ctx, *m_scene, skel_id) };
+		}
+
+		// The number of animations in the scene
+		int animation_count() const
+		{
+			return m_props.m_animation_count;
+		}
+
+		// Access an Animation by index in the scene
+		Animation animation(int i) const
+		{
+			assert(i >= 0 && i < animation_count());
+			return Fbx::get().Scene_AnimationGet(*m_ctx, *m_scene, i);
+		}
+
+		// Allow range-based for over animations
+		auto animations() const
+		{
+			struct Iterator
+			{
+				Scene const* scene;
+				int index;
+				void operator++() { ++index; }
+				Animation operator*() const { return scene->animation(index); }
+				bool operator!=(Iterator const& rhs) const { return index != rhs.index; }
+			};
+			struct AnimRange
+			{
+				Scene const* scene;
+				Iterator begin() const { return { scene, 0 }; }
+				Iterator end() const { return { scene, scene->animation_count() }; }
+			};
+			return AnimRange{ this };
 		}
 
 		// Read the full scene into memory

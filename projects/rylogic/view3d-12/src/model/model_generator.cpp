@@ -1321,33 +1321,35 @@ namespace pr::rdr12
 				// Add skinning data if present and requested
 				if (fbx::Skin skin = mesh.m_skin; skin && out.ReadAnimation)
 				{
-					// Find the skeleton used by this mesh skin and make a map from bone id to index
-					auto& skeleton = get_if(scene.m_skeletons, [&mesh](fbx::Skeleton const& s) { return s.Id() == mesh.m_skin.m_skel_id; });
+					// Find the skeleton used by this mesh skin
+					auto skeleton = scene.skeleton(mesh.m_skin.m_skel_id);
+
+					// Make a map from bone id to index
 					auto bone_idx = skeleton.BoneIndexMap();
 
-					constexpr auto norm_to_u16 = [](double w) { return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535); };
+					const auto id_to_u16idx = [&bone_idx](uint64_t id) { return s_cast<int16_t>(bone_idx[id]); };
+					const auto norm_to_u16 = [](double w) { return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535); };
 
 					// Read the influences per vertex
-					vector<Skinfluence> influences(skin.m_influences.size());
-					for (auto const& vert_influence : skin.m_influences)
+					vector<Skinfluence> influences(skin.vert_count());
+					for (int vidx = 0, vidx_count = skin.vert_count(); vidx != vidx_count; ++vidx)
 					{
-						constexpr int max_influences = _countof(Skinfluence::m_bones);
-						if (vert_influence.size() > max_influences)
+						constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
+						auto const influence_count = skin.influence_count(vidx);
+						if (influence_count > max_influences_per_vertex)
 							OutputDebugStringA("Unsupported number of bone influences\n");
 
-						// The source index of the influenced vertex
-						auto vidx = &vert_influence - mesh.m_skin.m_influences.data();
-
 						// Convert the bone weights to the compressed format
+						auto ibase = skin.m_offsets[vidx];
 						auto& influence = influences[vidx];
-						for (int i = 0, iend = vert_influence.size(); i != iend && i != max_influences; ++i)
+						for (int i = 0; i != influence_count && i != max_influences_per_vertex; ++i)
 						{
-							influence.m_bones[i] = s_cast<int16_t>(bone_idx[vert_influence.m_bones[i]]);
-							influence.m_weights[i] = norm_to_u16(vert_influence.m_weights[i]);
+							influence.m_bones[i] = id_to_u16idx(skin.m_bones[ibase + i]);
+							influence.m_weights[i] = norm_to_u16(skin.m_weights[ibase + i]);
 						}
 					}
 
-					model->m_skin = Skin(factory, influences, skeleton.Id());
+					model->m_skin = Skin(factory, influences, skeleton.m_id);
 				}
 			}
 
@@ -1359,45 +1361,46 @@ namespace pr::rdr12
 		if (out.ReadAnimation)
 		{
 			// Skeletons
-			auto skels = transform<vector<SkeletonPtr, 2>>(scene.m_skeletons, [](fbx::Skeleton const& skel)
+			vector<SkeletonPtr, 2> skels;
+			for (auto const& fbxskel : scene.skeletons())
 			{
-				return SkeletonPtr(rdr12::New<Skeleton>(
-					skel.m_ids,
-					transform<Skeleton::Names>(skel.m_names, [](auto& x) { return static_cast<string32>(x); }),
-					skel.m_o2bp,
-					transform<Skeleton::Hierarchy>(skel.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
-				), true);
-			});
+				skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
+					fbxskel.m_id,
+					fbxskel.m_bone_ids,
+					transform<Skeleton::Names>(fbxskel.m_names, [](auto& x) { return static_cast<string32>(x); }),
+					fbxskel.m_o2bp,
+					transform<Skeleton::Hierarchy>(fbxskel.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
+				), true));
+			}
 
 			// Animations
-			auto anims = transform<vector<KeyFrameAnimationPtr, 2>>(scene.m_animations, [&skels](fbx::Animation const& fbxanim)
+			vector<KeyFrameAnimationPtr, 2> anims;
+			for (auto const& fbxanim : scene.animations())
 			{
-				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
 				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimStyle::Repeat), true);
+				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
 
 				// Read the key frame data
 				anim->m_tracks.resize(skel->BoneCount());
-				for (auto const& [bone_id, track] : fbxanim.m_tracks)
-				{
-					// Find the index of 'bone_id' in the skeleton
-					auto bone_index = pr::index_of(skel->m_ids, bone_id);
-					if (bone_index == isize(skel->m_ids))
-						throw std::runtime_error(std::format("Bone id '{}' not found in given skeleton", bone_id));
 
-					// Copy the key data to the track
-					anim->m_tracks[bone_index].reserve(track.size());
-					append(anim->m_tracks[bone_index], track, [](auto& key)
+				// Copy the key data to the track
+				for (int bone_index = 0, bone_count = skel->BoneCount(); bone_index != bone_count; ++bone_index)
+				{
+					auto const& track_in = fbxanim.track(bone_index);
+					auto& track_out = anim->m_tracks[bone_index];
+					track_out.reserve(track_in.size());
+					for (auto const& key : track_in)
 					{
-						return KeyFrame{
+						track_out.push_back(KeyFrame{
 							.m_rotation = key.m_rotation,
 							.m_translation = key.m_translation,
 							.m_scale = key.m_scale,
 							.m_time = key.m_time,
-						};
-					});
+						});
+					}
 				}
-				return anim;
-			});
+				anims.push_back(anim);
+			}
 
 			// Emit the animation data
 			if (!anims.empty())

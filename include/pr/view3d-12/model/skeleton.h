@@ -16,12 +16,13 @@ namespace pr::rdr12
 		using Names = pr::vector<string32>;
 		using Hierarchy = pr::vector<uint8_t>;
 
-		Ids m_ids;             // A unique ID for each bone
+		uint64_t m_id;         // A unique ID for the skeleton
+		Ids m_bone_ids;        // A unique ID for each bone
 		Names m_names;         // A name for each bone (debugging mostly)
 		Bones m_o2bp;          // The inverse of the bind-pose to object-space transform for each bone
 		Hierarchy m_hierarchy; // Depth-first ordered list of bones. First == root == 0.
 
-		Skeleton(std::span<uint64_t const> ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy);
+		Skeleton(uint64_t id, std::span<uint64_t const> bone_ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy);
 
 		// The ID of the root bone
 		uint64_t Id() const;

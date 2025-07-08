@@ -77,9 +77,9 @@ namespace Rylogic.Maths
 		public float Length => (float)Math.Sqrt(LengthSq);
 
 		/// <summary>ToString</summary>
-		public string ToString2() => $"{x} {y}";
-		public string ToString2(string format) => $"{x.ToString(format)} {y.ToString(format)}";
-		public override string ToString() => ToString2();
+		public override string ToString() => $"{x} {y}";
+		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)}";
+		public string ToCodeString() => $"{x}f, {y}f";
 
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v2 to an object type. e.g. v2? x = v2.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v2(float[] a)
