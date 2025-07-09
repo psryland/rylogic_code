@@ -87,11 +87,23 @@ namespace pr::geometry::fbx
 		// The animation frame rate
 		double m_frame_rate = 0;
 
-		// Scene object counts
-		int m_mesh_count = 0;
+		// Scene objects available (i.e. in the scene, but not necessarily loaded)
+		int m_material_available = 0;
+		int m_meshes_available = 0;
+		int m_skeletons_available = 0;
+		int m_animations_available = 0;
+
+		// Scene object counts (loaded scene objects)
 		int m_material_count = 0;
+		int m_mesh_count = 0;
 		int m_skeleton_count = 0;
 		int m_animation_count = 0;
+
+		// Names of the root mesh nodes
+		std::span<std::string const> m_mesh_names;
+
+		// Names of the root bone nodes
+		std::span<std::string const> m_skel_names;
 	};
 
 	// Options for parsing FBXfiles
@@ -99,6 +111,12 @@ namespace pr::geometry::fbx
 	{
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
+
+		// The subset of meshes to load. Empty means load all.
+		std::span<std::string_view const> m_mesh_names;
+
+		// The subset of skeletons to load. Empty means load all.
+		std::span<std::string_view const> m_skel_names;
 
 		// Progress callback
 		using ProgressCB = struct { void* ctx; bool (*cb)(void* ctx, int64_t step, int64_t total, char const* message, int nest); };
@@ -312,7 +330,7 @@ namespace pr::geometry::fbx
 		// The loaded scene
 		SceneData* m_scene;
 
-		// Scene global properties
+		// Scene props
 		SceneProps m_props;
 
 		// Remember to open streams in binary mode!
@@ -342,6 +360,12 @@ namespace pr::geometry::fbx
 		~Scene()
 		{
 			Fbx::get().Release(m_ctx);
+		}
+
+		// Scene global properties
+		SceneProps const& props() const
+		{
+			return m_props;
 		}
 
 		// The number of meshes that have been loaded

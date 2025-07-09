@@ -1255,6 +1255,12 @@ namespace pr
 		{
 			return std::ssize(v);
 		}
+
+		// ADL
+		friend const_iterator begin(vector const& v) { return v.begin(); }
+		friend const_iterator end(vector const& v) { return v.end(); }
+		friend iterator begin(vector& v) { return v.begin(); }
+		friend iterator end(vector& v) { return v.end(); }
 	};
 }
 

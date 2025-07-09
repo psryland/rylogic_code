@@ -909,12 +909,18 @@ namespace pr::geometry::fbx
 	// Loaded scene data
 	struct SceneData
 	{
+		using NameCont = std::vector<std::string>;
 		using MeshCont = std::vector<MeshData>;
 		using MaterialCont = std::unordered_map<uint64_t, MaterialData>;
 		using SkeletonCont = std::vector<SkeletonData>;
 		using AnimationCont = std::vector<AnimationData>;
 
 		FbxScene* m_fbxscene;
+		MeshNodeMap m_mesh_node_map;
+		BoneNodeMap m_bone_node_map;
+		NameCont m_mesh_names;
+		NameCont m_skel_names;
+		SceneProps m_props;
 
 		// One or more model hierarchies.
 		// Meshes with 'm_level == 0' are the roots of a model tree
@@ -932,7 +938,39 @@ namespace pr::geometry::fbx
 
 		SceneData(FbxScene* fbxscene)
 			:m_fbxscene(fbxscene)
-		{}
+		{
+			TraverseHierarchy(*m_fbxscene, EParts::All, m_mesh_node_map, m_bone_node_map);
+			
+			// Create a list of the root mesh names
+			for (auto const& [id, meshnode] : m_mesh_node_map)
+			{
+				if (meshnode.mesh != meshnode.root) continue;
+				m_mesh_names.push_back(meshnode.root->GetNode()->GetName());
+			}
+
+			// Create a list of the root bone names
+			for (auto const& [id, bonenode] : m_bone_node_map)
+			{
+				if (bonenode.bone != bonenode.root) continue;
+				m_skel_names.push_back(bonenode.root->GetNode()->GetName());
+			}
+
+			// Read properties from the scene
+			m_props = SceneProps{
+				.m_animation_stack_count = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
+				.m_frame_rate = FbxTime::GetFrameRate(m_fbxscene->GetGlobalSettings().GetTimeMode()),
+				.m_material_available = m_fbxscene->GetMaterialCount(),
+				.m_meshes_available = s_cast<int>(count_if(m_mesh_node_map, [](auto const& x) { return x.second.mesh == x.second.root; })),
+				.m_skeletons_available = s_cast<int>(count_if(m_bone_node_map, [](auto const& x) { return x.second.bone == x.second.root; })),
+				.m_animations_available = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
+				.m_material_count = 0,
+				.m_mesh_count = 0,
+				.m_skeleton_count = 0,
+				.m_animation_count = 0,
+				.m_mesh_names = m_mesh_names,
+				.m_skel_names = m_skel_names,
+			};
+		}
 	};
 
 	// Read an fbx scene
@@ -962,9 +1000,9 @@ namespace pr::geometry::fbx
 
 		SceneData& m_scene;
 		FbxScene& m_fbxscene;
+		MeshNodeMap& m_meshes;
+		BoneNodeMap& m_bones;
 		ReadOptions const& m_opts;
-		MeshNodeMap m_meshes;
-		BoneNodeMap m_bones;
 		FbxAnimStack* m_animstack;
 		FbxAnimLayer* m_layer;
 		FbxTimeSpan m_time_span;
@@ -973,9 +1011,9 @@ namespace pr::geometry::fbx
 		Reader(SceneData& scene, ReadOptions const& opts)
 			: m_scene(scene)
 			, m_fbxscene(*scene.m_fbxscene)
+			, m_meshes(scene.m_mesh_node_map)
+			, m_bones(scene.m_bone_node_map)
 			, m_opts(opts)
-			, m_meshes()
-			, m_bones()
 			, m_animstack()
 			, m_layer()
 			, m_time_span()
@@ -990,8 +1028,6 @@ namespace pr::geometry::fbx
 		// Read the scene
 		void Do()
 		{
-			TraverseHierarchy(m_fbxscene, m_opts.m_parts, m_meshes, m_bones);
-
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				ReadMaterials();
 			if (AllSet(m_opts.m_parts, EParts::Meshes))
@@ -1076,6 +1112,9 @@ namespace pr::geometry::fbx
 
 				m_scene.m_materials[mat.GetUniqueID()] = material;
 			}
+
+			// Update the number of loaded materials
+			m_scene.m_props.m_material_count = isize(m_scene.m_materials);
 		}
 
 		// Read meshes from the FBX scene
@@ -1086,6 +1125,9 @@ namespace pr::geometry::fbx
 			// Process each mesh in a worker thread, because triangulation is really slow
 			for (auto const& [id, meshnode] : m_meshes)
 			{
+				if (!IncludeMesh(meshnode))
+					continue;
+
 				// Create thread-local manager and scene
 				ManagerPtr manager{ FbxManager::Create() };
 				ScenePtr scene{ FbxScene::Create(manager.get(), "IsolatedScene") };
@@ -1259,10 +1301,8 @@ namespace pr::geometry::fbx
 				}));
 			}
 
-			// There should be one mesh for each mesh node
-			m_scene.m_meshes.resize(m_meshes.size());
-
-			// Wait for each mesh.
+			// Wait for each mesh. Note that tasks are in the same depth-first
+			// order of meshes within the scene, so mesh-trees will be contiguous.
 			for (auto& task : tasks)
 			{
 				Progress(1 + &task - tasks.data(), ssize(tasks), "Reading models...");
@@ -1295,8 +1335,11 @@ namespace pr::geometry::fbx
 					mesh.m_skin = ReadSkin(meshnode);
 
 				// Output the mesh
-				m_scene.m_meshes[meshnode.index] = std::move(mesh);
+				m_scene.m_meshes.push_back(std::move(mesh));
 			}
+
+			// Update the number of loaded meshes
+			m_scene.m_props.m_mesh_count = isize(m_scene.m_meshes);
 		}
 
 		// Read the skin data for 'meshnode'
@@ -1379,27 +1422,32 @@ namespace pr::geometry::fbx
 			//  - To find the unique skeletons, scan all meshes in the scene and record
 			//    which roots each mesh-tree is associated with. Separate skeletons are those
 			//    that don't share mesh-trees.
+			//  - The reader has the option of only loading Skeleton data, so don't rely
+			//    on parsed meshes when determining skeletons.
+
 			struct SkeletonBuilder
 			{
-				FbxScene& m_fbxscene;
+				Reader& m_reader;
 				SceneData::SkeletonCont& m_skeletons;
 				BoneNodeMap const& m_bone_map;
 				std::unordered_set<FbxSkeleton const*> m_bone_set;
-				std::unordered_map<BoneNode const*, std::unordered_set<MeshData*>> m_roots;
+				std::unordered_map<BoneNode const*, std::unordered_set<MeshNode const*>> m_roots;
+				std::unordered_map<uint64_t, uint64_t> m_mesh_to_skel_map;
 
-				SkeletonBuilder(FbxScene& fbxscene, SceneData::SkeletonCont& skeletons, BoneNodeMap const& bone_map)
-					: m_fbxscene(fbxscene)
+				SkeletonBuilder(Reader& reader, SceneData::SkeletonCont& skeletons, BoneNodeMap const& bone_map)
+					: m_reader(reader)
 					, m_skeletons(skeletons)
 					, m_bone_map(bone_map)
 					, m_bone_set()
 					, m_roots()
+					, m_mesh_to_skel_map()
 				{}
-				void Collect(std::span<MeshData> meshtree, MeshNodeMap& mesh_map)
+				void Collect(std::span<MeshNode const> meshtree, MeshNodeMap& mesh_map)
 				{
 					// Find the skeleton roots for all bones referenced by this mesh-tree
 					for (auto const& mesh : meshtree)
 					{
-						auto& fbxmesh = *mesh_map[mesh.m_id].mesh;
+						auto& fbxmesh = *mesh_map[mesh.mesh->GetUniqueID()].mesh;
 						for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 						{
 							auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
@@ -1436,16 +1484,21 @@ namespace pr::geometry::fbx
 					// Create unique skeletons from roots that don't share mesh-trees
 					for (; !m_roots.empty(); )
 					{
-						auto& [_, set] = *m_roots.begin();
+						auto& [r, set] = *m_roots.begin();
+						if (!m_reader.IncludeBone(*r))
+						{
+							m_roots.erase(r);
+							continue;
+						}
 
 						// Build a list of the roots that are part of this skeleton
 						vector<BoneNode const*> roots;
-						for (auto& [r, s] : m_roots)
+						for (auto& [root, s] : m_roots)
 						{
 							// If any meshes in 's' are in 'set', then add 'r' to 'roots' and 's' to 'set'
-							if (std::ranges::any_of(s, [&set](MeshData* m) { return set.contains(m); }))
+							if (std::ranges::any_of(s, [&set](MeshNode const* m) { return set.contains(m); }))
 							{
-								roots.push_back(r);
+								roots.push_back(root);
 								set.insert(begin(s), end(s));
 							}
 						}
@@ -1454,7 +1507,7 @@ namespace pr::geometry::fbx
 						std::sort(roots.begin(), roots.end(), [](BoneNode const* lhs, BoneNode const* rhs) { return lhs->index < rhs->index; });
 
 						// Find the bind pose
-						auto* bind_pose = FindBindPose(m_fbxscene, roots);
+						auto* bind_pose = FindBindPose(m_reader.m_fbxscene, roots);
 
 						// Construct a skeleton
 						SkeletonData skeleton = { .m_id = FindCommonAncestor(roots)->GetUniqueID() };
@@ -1465,9 +1518,9 @@ namespace pr::geometry::fbx
 						for (auto root : roots)
 							Build(skeleton, bind_pose, *root, 0);
 
-						// Update the skeleton ID in each mesh
-						for (auto mesh : set)
-							mesh->m_skin.m_skel_id = skeleton.m_id;
+						// Record the association between mesh and skeleton
+						for (auto const* meshnode : set)
+							m_mesh_to_skel_map[meshnode->mesh->GetUniqueID()] = skeleton.m_id;
 
 						// Add the skeleton to the output
 						m_skeletons.push_back(std::move(skeleton));
@@ -1485,7 +1538,7 @@ namespace pr::geometry::fbx
 					int idx = -1;
 					if (!bind_pose || (idx = bind_pose->Find(&node)) == -1)
 					{
-						bind_pose = FindBindPose(m_fbxscene, bone_node);
+						bind_pose = FindBindPose(m_reader.m_fbxscene, bone_node);
 						idx = bind_pose ? bind_pose->Find(&node) : -1;
 					}
 
@@ -1557,29 +1610,40 @@ namespace pr::geometry::fbx
 			};
 
 			// Skeleton builder helper
-			SkeletonBuilder skelbuilder(m_fbxscene, m_scene.m_skeletons, m_bones);
+			SkeletonBuilder skelbuilder(*this, m_scene.m_skeletons, m_bones);
 
-			// Return the range of Mesh objects for a complete mesh tree.
-			auto NextMeshTree = [this](std::span<MeshData> const* prev = nullptr) -> std::span<MeshData>
+			// Filter the mesh nodes into a flat list, ordered in depth-first order
+			vector<MeshNode> meshtrees; meshtrees.reserve(m_meshes.size());
+			for (auto const& [id, meshnode] : m_meshes)
 			{
-				// Use for iteration: 'for (auto mesh = NextMeshTree(); !mesh.empty(); mesh = NextMeshTree(&mesh)) {}'
-				auto beg = prev ? s_cast<int>(prev->data() - m_scene.m_meshes.data() + prev->size()) : 0;
-				auto end = beg;
+				if (!IncludeMesh(meshnode)) continue;
+				meshtrees.push_back(meshnode);
+			}
+			std::sort(begin(meshtrees), end(meshtrees), [](MeshNode const& lhs, MeshNode const& rhs) { return lhs.index < rhs.index; });
 
-				auto scene_count = isize(m_scene.m_meshes);
-				for (; end != scene_count && (beg == end || m_scene.m_meshes[end].m_level > m_scene.m_meshes[beg].m_level); ++end) {}
-				return { m_scene.m_meshes.data() + beg, s_cast<size_t>(end - beg) };
-			};
-
-			// Find all bones from all the meshes in the scene
-			for (auto meshtree = NextMeshTree(); !meshtree.empty(); meshtree = NextMeshTree(&meshtree))
+			// Process each mesh-tree to determine unique skeletons
+			for (auto const* beg = meshtrees.data(), *end = beg + meshtrees.size(); beg != end;)
 			{
-				Progress(1 + meshtree.data() - m_scene.m_meshes.data(), ssize(m_scene.m_meshes), "Reading skeletons...");
-				skelbuilder.Collect(meshtree, m_meshes);
+				auto ptr = beg + 1;
+				for (; ptr != end && ptr->root == beg->root; ++ptr) {}
+			
+				Progress(1 + end - beg, ssize(meshtrees), "Reading skeletons...");
+				skelbuilder.Collect({ beg, static_cast<size_t>(ptr - beg) }, m_meshes);
+				beg = ptr;
 			}
 
 			// Compile the unique skeletons
 			skelbuilder.Build();
+
+			// Update the skeleton ID in each output mesh
+			for (auto& mesh : m_scene.m_meshes)
+			{
+				if (!skelbuilder.m_mesh_to_skel_map.contains(mesh.m_id)) continue;
+				mesh.m_skin.m_skel_id = skelbuilder.m_mesh_to_skel_map.at(mesh.m_id);
+			}
+
+			// Update the number of loaded skeletons
+			m_scene.m_props.m_skeleton_count = isize(m_scene.m_skeletons);
 		}
 
 		// Read the animation data from the scene
@@ -1769,6 +1833,9 @@ namespace pr::geometry::fbx
 						m_scene.m_animations.push_back(std::move(anim));
 				}
 			}
+
+			// Update the number of loaded animations
+			m_scene.m_props.m_animation_count = isize(m_scene.m_animations);
 		}
 
 		// Find the set of unique key frame times for 'node'
@@ -1824,6 +1891,18 @@ namespace pr::geometry::fbx
 			return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
 		}
 
+		// True if 'meshnode' should be included
+		bool IncludeMesh(MeshNode const& meshnode) const
+		{
+			return m_opts.m_mesh_names.empty() || contains(m_opts.m_mesh_names, meshnode.root->GetNode()->GetName());
+		}
+
+		// True if 'bonenode' should be included
+		bool IncludeBone(BoneNode const& bonenode) const
+		{
+			return m_opts.m_skel_names.empty() || contains(m_opts.m_skel_names, bonenode.root->GetNode()->GetName());
+		}
+
 		// Report progress
 		void Progress(int64_t step, int64_t total, char const* message, int nest = 0) const
 		{
@@ -1840,16 +1919,16 @@ namespace pr::geometry::fbx
 
 		std::ostream& m_out;
 		FbxScene& m_fbxscene;
-		DumpOptions const& m_opts;
 		MeshNodeMap m_meshes;
 		BoneNodeMap m_bones;
+		DumpOptions const& m_opts;
 
 		Dumper(FbxScene& fbxscene, DumpOptions const& opts, std::ostream& out)
 			: m_out(out)
 			, m_fbxscene(fbxscene)
-			, m_opts(opts)
 			, m_meshes()
 			, m_bones()
+			, m_opts(opts)
 		{
 			if (m_opts.m_convert_axis_system)
 			{
@@ -2424,15 +2503,7 @@ extern "C"
 			if (scene.m_fbxscene == nullptr)
 				throw std::runtime_error("Scene is null");
 
-			// Read properties from the scene
-			SceneProps props = {};
-			props.m_animation_stack_count = scene.m_fbxscene->GetSrcObjectCount<FbxAnimStack>();
-			props.m_frame_rate = FbxTime::GetFrameRate(scene.m_fbxscene->GetGlobalSettings().GetTimeMode());
-			props.m_mesh_count = pr::isize(scene.m_meshes);
-			props.m_material_count = pr::isize(scene.m_materials);
-			props.m_skeleton_count = pr::isize(scene.m_skeletons);
-			props.m_animation_count = pr::isize(scene.m_animations);
-			return props;
+			return scene.m_props;
 		}
 		catch (std::exception const& ex)
 		{
