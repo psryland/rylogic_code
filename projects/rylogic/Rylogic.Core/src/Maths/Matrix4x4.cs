@@ -111,9 +111,11 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>ToString()</summary>
-		public override string ToString() => $"{x} \n{y} \n{z} \n{w} \n";
-		public string ToString3x4() => $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n{w.ToString3()} \n";
-		public string ToString4x4() => $"{x.ToString4()} \n{y.ToString4()} \n{z.ToString4()} \n{w.ToString4()} \n";
+		public override string ToString() => ToString4x4();
+		public string ToString4x4() => $"{x} \n{y} \n{z} \n{w} \n";
+		public string ToString3x4() => $"{x.xyz} \n{y.xyz} \n{z.xyz} \n{w.xyz} \n";
+		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n{z.ToString(format)} \n{w.ToString(format)} \n";
+		public string ToCodeString() => $"{x}, {y}, {z}, {w}";
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()

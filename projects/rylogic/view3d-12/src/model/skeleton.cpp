@@ -7,8 +7,9 @@
 
 namespace pr::rdr12
 {
-	Skeleton::Skeleton(std::span<uint64_t const> ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy)
-		: m_ids(ids)
+	Skeleton::Skeleton(uint64_t id, std::span<uint64_t const> bone_ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy)
+		: m_id(id)
+		, m_bone_ids(bone_ids)
 		, m_names(names)
 		, m_o2bp(o2bp)
 		, m_hierarchy(hierarchy)
@@ -18,13 +19,13 @@ namespace pr::rdr12
 	// The ID of the root bone
 	uint64_t Skeleton::Id() const
 	{
-		return m_ids.empty() ? 0 : m_ids.front();
+		return m_id;
 	}
 
 	// The number of bones in this skeleton
 	int Skeleton::BoneCount() const
 	{
-		return isize(m_ids);
+		return isize(m_bone_ids);
 	}
 
 	// Ref-counting clean up function

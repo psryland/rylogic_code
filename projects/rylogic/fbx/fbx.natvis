@@ -46,6 +46,9 @@ old:
 	<Type Name="fbxsdk::FbxMesh">
 		<DisplayString>[Mesh] {mName.mInitialName.mData}</DisplayString>
 	</Type>
+	<Type Name="fbxsdk::FbxSkeleton">
+		<DisplayString>{mName.mInitialName.mData}</DisplayString>
+	</Type>
 	<Type Name="fbxsdk::FbxVectorTemplate4&lt;*&gt;">
 		<DisplayString>{mData[0],g}  {mData[1],g}  {mData[2],g}  {mData[3],g}</DisplayString>
 	</Type>

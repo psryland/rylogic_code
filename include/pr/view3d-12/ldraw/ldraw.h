@@ -4,15 +4,37 @@
 //********************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/model/animation.h"
-#include "pr/view3d-12/model/animator.h"
 
 namespace pr::rdr12::ldraw
 {
-	// Map the compile time hash function to this namespace
-	template <std::integral T = int> constexpr T HashI(char const* str)
+	using bytebuf = std::vector<std::byte>;
+	using textbuf = std::string;
+
+	// Compile time hash
+	inline constexpr int HashI(char const* str)
 	{
-		return static_cast<T>(hash::HashICT(str));
+		constexpr uint32_t FNV_offset_basis32 = 2166136261U;
+		constexpr uint32_t FNV_prime32 = 16777619U;
+
+		// Copied from pr/common/hash
+		constexpr auto Mul32 = [](uint32_t a, uint32_t b) -> uint32_t
+		{
+			return uint32_t((uint64_t(a) * uint64_t(b)) & ~0U);
+		};
+		constexpr auto Lower = [](char c) -> char
+		{
+			return (c >= 'A' && c <= 'Z') ? c + ('a' - 'A') : c;
+		};
+		constexpr auto Hash32CT = [](uint32_t ch, uint32_t h) -> uint32_t
+		{
+			return Mul32(h ^ ch, FNV_prime32);
+		};
+		constexpr auto HashI32CT = [](char const* str, uint32_t h) -> uint32_t
+		{
+			for (; *str != 0; ++str) h = Hash32CT(static_cast<uint32_t>(Lower(*str)), h);
+			return h;
+		};
+		return static_cast<int>(HashI32CT(str, FNV_offset_basis32));
 	}
 
 	// Keywords in ldraw script. This includes object types and field names because they need to have unique hashes

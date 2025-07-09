@@ -1,12 +1,12 @@
-//********************************
+﻿//********************************
 // Ldraw Script Text Serialiser
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
-#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -214,6 +214,11 @@ namespace pr::rdr12::ldraw
 		{
 			if (!s.m_solid) return;
 			Write(out, EKeyword::Solid);
+		}
+		template <typename TOut> static void Append(TOut& out, Smooth s)
+		{
+			if (!s.m_smooth) return;
+			Write(out, EKeyword::Smooth);
 		}
 		template <typename TOut> static void Append(TOut& out, Alpha a)
 		{

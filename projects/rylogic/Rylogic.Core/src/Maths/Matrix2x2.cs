@@ -83,10 +83,10 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			return $"{x} \n{y} \n";
-		}
+		public override string ToString() => ToString2x2();
+		public string ToString2x2() => $"{x} \n{y} \n";
+		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n";
+		public string ToCodeString() => $"{x}, {y}";
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()

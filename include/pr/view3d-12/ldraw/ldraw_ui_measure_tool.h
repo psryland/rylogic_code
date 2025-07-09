@@ -116,7 +116,7 @@ namespace pr::rdr12::ldraw
 				group.Line("distZ", 0xFF0000FF).line(p1, m_point1);
 				auto data = ldr.ToBinary();
 
-				mem_istream<char> src{data.span<char>()};
+				mem_istream<char> src{ data.data(), data.size() };
 				BinaryReader reader(src, {});
 				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())

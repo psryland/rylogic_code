@@ -32,7 +32,7 @@
 #include "pr/str/string_util.h"
 #include "pr/str/string_filter.h"
 #include "pr/str/extract.h"
-#include "pr/filesys/filesys.h"
+#include "pr/filesys/file_encoding.h"
 
 namespace pr::script
 {

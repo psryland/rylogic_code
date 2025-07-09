@@ -991,7 +991,7 @@ namespace pr::rdr12::ldraw
 
 				VCont out;
 				std::swap(out, verts);
-				Smooth(out, Spline::ETopo::Continuous3, [&](auto points, auto)
+				pr::Smooth(out, Spline::ETopo::Continuous3, [&](auto points, auto)
 				{
 					verts.insert(verts.end(), points.begin(), points.end());
 				});

@@ -313,8 +313,14 @@ namespace pr::rdr12
 	// The caller decides what is pushed to the stack at each level ('Parent').
 	// 'hierarchy' is the level of each element in depth first order.
 	// 'Func' is 'Parent Func(int idx, Parent const* parent) {... return current; }' (the current value is the parent for the next call).
-	template <typename Parent, std::integral Int, std::invocable<int, Parent const*> Func> requires std::same_as<std::invoke_result_t<Func, int, Parent const*>, Parent>
-	void WalkHierarchy(std::span<Int const> hierarchy, Func func)
+	template <typename Parent, typename IntRange, std::invocable<int, Parent const*> Func>
+	requires
+	(
+		std::same_as<std::invoke_result_t<Func, int, Parent const*>, Parent> &&
+		std::ranges::range<IntRange> &&
+		std::integral<std::ranges::range_value_t<IntRange>>
+	)
+	void WalkHierarchy(IntRange const& hierarchy, Func func)
 	{
 		// Tree example:
 		//        A
@@ -324,10 +330,11 @@ namespace pr::rdr12
 		//  D  E  F  G
 		//  Hierarchy = [A0 B1 D2 E2 F2 C1 G2]
 		//  Children are all nodes to the right with level > the current.
-		pr::vector<Parent> ancestors = {};
+		vector<Parent> ancestors = {};
 		for (int idx = 0, iend = isize(hierarchy); idx != iend; ++idx)
 		{
-			for (; !ancestors.empty() && hierarchy[idx] <= hierarchy[idx - 1];)
+			// Pop ancestors until we find the parent
+			for (; isize(ancestors) > hierarchy[idx];)
 				ancestors.pop_back();
 
 			auto const* parent = !ancestors.empty() ? &ancestors.back() : nullptr;

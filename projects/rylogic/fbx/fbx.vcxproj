@@ -53,9 +53,9 @@
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
         ;FBXSDK_DEFINE_NAMESPACE
         ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
-        ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Condition="'$(Configuration)'=='Debug'">

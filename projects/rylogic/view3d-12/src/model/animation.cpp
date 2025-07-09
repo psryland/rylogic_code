@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -77,13 +77,14 @@ namespace pr::rdr12
 	{}
 
 	// Returns the linearly interpolated key frames a 'time_s'
-	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(double time_s) const
+	void KeyFrameAnimation::EvaluateAtTime(double time_s, KeyFrameAnimation::Sample& out) const
 	{
+		out.resize(m_tracks.size());
+
 		// Sample each track at 'time_s'
-		Sample sample(m_tracks.size());
-		std::for_each(std::execution::par_unseq, std::begin(m_tracks), std::end(m_tracks), [&](Track const& track)
+		std::for_each(std::execution::par, std::begin(m_tracks), std::end(m_tracks), [&](Track const& track)
 		{
-			auto& sam = sample[&track - m_tracks.data()];
+			auto& sam = out[&track - m_tracks.data()];
 
 			// Degenerate tracks
 			if (track.empty())
@@ -160,6 +161,11 @@ namespace pr::rdr12
 			auto frac = Frac(lhs.m_time, time_s, rhs.m_time);
 			sam = Lerp(lhs, rhs, s_cast<float>(frac));
 		});
+	}
+	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(double time_s) const
+	{
+		KeyFrameAnimation::Sample sample;
+		EvaluateAtTime(time_s, sample);
 		return sample;
 	}
 

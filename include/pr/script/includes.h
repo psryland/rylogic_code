@@ -15,7 +15,7 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/flags_enum.h"
 #include "pr/maths/bit_fields.h"
-#include "pr/filesys/filesys.h"
+#include "pr/filesys/resolve_path.h"
 #include "pr/script/forward.h"
 #include "pr/script/fail_policy.h"
 #include "pr/script/location.h"

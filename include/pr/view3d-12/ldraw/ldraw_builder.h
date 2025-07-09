@@ -1,5 +1,5 @@
 ﻿//************************************
-// LineDrawer Helper
+// LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
 #pragma once
@@ -11,35 +11,41 @@
 
 namespace pr::rdr12::ldraw
 {
-	using TStr = std::string;
-	using TData = pr::byte_data<4>;
-	using Scope = pr::Scope<void>;
+	template <typename T> concept TString = requires(T t)
+	{
+		t.reserve(0);
+		t.push_back('c');
+		{ t.append(0, 'c') } -> std::convertible_to<T&>;
+	};
 
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf8, append);
+		std::ofstream file(filepath, append ? std::ios::app : std::ios::out);
+		file << ldr;
+		file.close();
 	}
 	inline void Write(std::wstring_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
+		std::wofstream file(filepath, append ? std::ios::app : std::ios::out);
+		file << ldr;
+		file.close();
 	}
 	inline void Write(std::span<std::byte const> ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		std::ofstream ofile(filepath, append ? std::ios::app : std::ios::out);
-		ofile.write(char_ptr(ldr.data()), ldr.size());
+		std::ofstream file(filepath, std::ios::binary | (append ? std::ios::app : std::ios::out));
+		file.write(reinterpret_cast<char const*>(ldr.data()), static_cast<std::streamsize>(ldr.size()));
+		file.close();
 	}
 
 	// Pretty format Ldraw script
-	template <typename TStr> TStr FormatScript(TStr const& str)
+	template <TString TStr>
+	TStr FormatScript(TStr const& str)
 	{
-		TStr out;
+		TStr out = {};
 		out.reserve(str.size());
 
 		int indent = 0;
@@ -80,6 +86,7 @@ namespace pr::rdr12::ldraw
 		struct LdrPoint;
 		struct LdrLine;
 		struct LdrLineD;
+		struct LdrArrow;
 		struct LdrTriangle;
 		struct LdrPlane;
 		struct LdrCircle;
@@ -112,6 +119,7 @@ namespace pr::rdr12::ldraw
 			LdrPoint& Point(Name name = {}, Colour colour = Colour());
 			LdrLine& Line(Name name = {}, Colour colour = Colour());
 			LdrLineD& LineD(Name name = {}, Colour colour = Colour());
+			LdrArrow& Arrow(Name name = {}, Colour colour = Colour());
 			LdrTriangle& Triangle(Name name = {}, Colour colour = Colour());
 			LdrPlane& Plane(Name name = {}, Colour colour = Colour());
 			LdrCircle& Circle(Name name = {}, Colour colour = Colour());
@@ -142,27 +150,27 @@ namespace pr::rdr12::ldraw
 			LdrObj& TextStream();
 
 			// Serialise the ldr script to a string
-			std::string ToString(bool pretty) const
+			textbuf ToString(bool pretty) const
 			{
-				std::string out;
+				textbuf out;
 				WriteTo(out);
 				if (pretty) out = FormatScript(out);
 				return out;
 			}
-			virtual void WriteTo(std::string& out) const
+			virtual void WriteTo(textbuf& out) const
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
 			}
 
 			// Serialise the ldr script to binary
-			byte_data<4> ToBinary() const
+			bytebuf ToBinary() const
 			{
-				byte_data<4> out;
+				bytebuf out;
 				WriteTo(out);
 				return out;
 			}
-			virtual void WriteTo(byte_data<4>& out) const
+			virtual void WriteTo(bytebuf& out) const
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
@@ -187,7 +195,7 @@ namespace pr::rdr12::ldraw
 			}
 			LdrObj& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
-				std::string out;
+				textbuf out;
 				WriteTo(out);
 				if (pretty) out = FormatScript(out);
 				ldraw::Write(out, filepath, append);
@@ -267,6 +275,10 @@ namespace pr::rdr12::ldraw
 			{
 				return ori(m3x4::Scale(sx, sy, sz));
 			}
+			Derived& scale(v4_cref scale)
+			{
+				return ori(m3x4::Scale(scale.x, scale.y, scale.z));
+			}
 			Derived& quat(pr::quat const& q)
 			{
 				return o2w(m4x4::Transform(q, v4::Origin()));
@@ -316,12 +328,12 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write nested objects to 'out'
-			void WriteTo(std::string& out) const override
+			void WriteTo(textbuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<TextWriter>(out);
 			}
-			void WriteTo(byte_data<4>& out) const override
+			void WriteTo(bytebuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<BinaryWriter>(out);
@@ -488,16 +500,25 @@ namespace pr::rdr12::ldraw
 		{
 			struct Line { v4 a, b; Colour col; };
 			pr::vector<Line> m_lines;
+			Smooth m_smooth;
 			Width m_width;
 			bool m_strip;
 			PerItemColour m_per_item_colour;
 
 			LdrLine()
 				:m_lines()
+				,m_smooth()
 				,m_width()
 				,m_strip()
 				,m_per_item_colour()
 			{}
+
+			// Smooth line
+			LdrLine& smooth(bool smooth = true)
+			{
+				m_smooth = smooth;
+				return *this;
+			}
 
 			// Line width
 			LdrLine& width(Width w)
@@ -566,9 +587,9 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Write(out, EKeyword::Line, m_name, m_colour, [&]
+				Writer::Write(out, m_strip ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
 				{
-					Writer::Append(out, m_width, m_per_item_colour);
+					Writer::Append(out, m_smooth, m_width, m_per_item_colour);
 					Writer::Write(out, EKeyword::Data, [&]
 					{
 						for (auto& line : m_lines)
@@ -630,6 +651,92 @@ namespace pr::rdr12::ldraw
 							Writer::Append(out, line.pt.xyz, line.dir.xyz);
 							if (m_per_item_colour)
 								Writer::Append(out, line.col);
+						}
+					});
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
+		struct LdrArrow :LdrBase<LdrArrow>
+		{
+			struct Pt { v4 p; Colour col; };
+			pr::vector<Pt> m_pts;
+			EArrowType m_style;
+			bool m_smooth;
+			Width m_width;
+			PerItemColour m_per_item_colour;
+
+			LdrArrow()
+				:m_pts()
+				,m_style(EArrowType::Fwd)
+				,m_smooth()
+				,m_width()
+				,m_per_item_colour()
+			{}
+
+			// Arrow style
+			LdrArrow& style(EArrowType style)
+			{
+				m_style = style;
+				return *this;
+			}
+
+			// Spline arrow
+			LdrArrow& smooth(bool smooth = true)
+			{
+				m_smooth = smooth;
+				return *this;
+			}
+
+			// Line width
+			LdrArrow& width(Width w)
+			{
+				m_width = w;
+				return *this;
+			}
+
+			// Line strip parts
+			LdrArrow& start(v4_cref p, Colour colour)
+			{
+				start(p);
+				m_pts.back().col = colour;
+				m_per_item_colour = true;
+				return *this;
+			}
+			LdrArrow& start(v4_cref p)
+			{
+				assert(m_pts.empty() && "Arrows can only have one start point");
+				m_pts.push_back({ p, {} });
+				return *this;
+			}
+			LdrArrow& line_to(v4_cref p, Colour colour)
+			{
+				line_to(p);
+				m_pts.back().col = colour;
+				m_per_item_colour = true;
+				return *this;
+			}
+			LdrArrow& line_to(v4_cref p)
+			{
+				assert(!m_pts.empty() && "Arrows require a start point first");
+				m_pts.push_back({ p, {} });
+				return *this;
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Arrow, m_name, m_colour, [&]
+				{
+					Writer::Append(out, m_style, m_width, m_per_item_colour);
+					Writer::Write(out, EKeyword::Data, [&]
+					{
+						for (auto& pt : m_pts)
+						{
+							Writer::Append(out, pt.p.xyz);
+							if (m_per_item_colour)
+								Writer::Append(out, pt.col);
 						}
 					});
 					LdrBase::WriteTo<Writer>(out);
@@ -1230,6 +1337,12 @@ namespace pr::rdr12::ldraw
 		inline LdrLineD& LdrObj::LineD(Name name, Colour colour)
 		{
 			auto ptr = new LdrLineD;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrArrow& LdrObj::Arrow(Name name, Colour colour)
+		{
+			auto ptr = new LdrArrow;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

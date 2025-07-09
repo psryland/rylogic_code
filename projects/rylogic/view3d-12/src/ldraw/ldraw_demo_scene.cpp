@@ -8,9 +8,9 @@
 namespace pr::rdr12::ldraw
 {
 	// Generate a scene that demos the supported object types and modifiers.
-	std::string CreateDemoSceneText()
+	textbuf CreateDemoSceneText()
 	{
-		std::string str;
+		textbuf str;
 		str.reserve(4096);
 		str.append(
 
@@ -1246,7 +1246,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Generate a binary scene that demos the supported object types and modifiers
-	pr::byte_data<> CreateDemoSceneBinary()
+	bytebuf CreateDemoSceneBinary()
 	{
 		ldraw::Builder ldr;
 

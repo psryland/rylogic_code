@@ -621,17 +621,18 @@ namespace pr::maths
 				auto frequencies = DiscreteFourierTransform(signal.data(), signal.size());
 
 				// Output the frequencies
-				#if 1
+				#if 0
 				{
-					std::string s_out;
+					std::ofstream out("\\dump\\frequencies1.csv");
 					for (auto i = 0, length = s_cast<int>(frequencies.size()); i != length/2; ++i)
 					{
 						auto x = FreqAt(1.0 * i, SampFreq, length);
 						auto y = frequencies[i];
-						s_out.append(pr::FmtS("%f, %f\n", x, y));
+						out << x << ", " << y << "\n";
 					}
-					pr::filesys::BufferToFile(s_out, "\\dump\\frequencies1.csv");
 				}
+				#else
+				(void)frequencies;
 				#endif
 			}
 
@@ -643,14 +644,13 @@ namespace pr::maths
 				impl::DFTNaive(signal.data(), imag.data(), outr.data(), outi.data(), length, false);
 
 				{// Output the frequency response
-					std::string s_out;
+					std::ofstream out("\\dump\\frequencies0.csv");
 					for (auto i = 0; i != s_cast<int>(length) / 2; ++i)
 					{
 						auto x = FreqAt(static_cast<double>(i), SampFreq, length);
 						auto y = Sqrt(norm(std::complex<double>(outr[i], outi[i]));
-						s_out.append(pr::FmtS("%f, %f\n", x, y));
+						out << x << ", " << y << "\n";
 					}
-					pr::BufferToFile(s_out, "\\dump\\frequencies0.csv");
 				}
 			}
 			#endif
@@ -663,11 +663,10 @@ namespace pr::maths
 					dft.Add(signal[i]);
 
 				{// Output the frequency response
-					std::string s_out;
+					std::ofstream out("\\dump\\frequencies2.csv");
 					auto freq_range = dft.FreqRange();
 					for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
-						s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
-					pr::filesys::BufferToFile(s_out, "\\dump\\frequencies2.csv");
+						out << x << ", " << dft.Power(x) << "\n";
 				}
 			}
 			#endif

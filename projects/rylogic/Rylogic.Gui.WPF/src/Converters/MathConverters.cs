@@ -66,11 +66,11 @@ namespace Rylogic.Gui.WPF.Converters
 			switch (value)
 			{
 			case v4 vec4:
-				return parameter != null ? vec4.ToString3() : vec4.ToString4();
+				return parameter != null ? vec4.xyz.ToString() : vec4.xyz.ToString();
 			case v3 vec3:
-				return vec3.ToString3();
+				return vec3.ToString();
 			case v2 vec2:
-				return vec2.ToString2();
+				return vec2.ToString();
 			}
 			return null;
 		}

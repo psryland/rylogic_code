@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -16,7 +16,6 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/flags_enum.h"
 #include "pr/maths/bit_fields.h"
-#include "pr/filesys/filesys.h"
 
 namespace pr::filesys
 {
@@ -49,6 +48,67 @@ namespace pr::filesys
 			All = ~None,
 			_flags_enum = 0,
 		};
+	}
+
+	// Attempt to resolve a partial filepath given a list of directories to search
+	template <typename PathCont = std::vector<std::filesystem::path>>
+	std::filesystem::path ResolvePath(std::filesystem::path const& partial_path, PathCont const& search_paths = PathCont(), std::filesystem::path const* current_dir = nullptr, bool check_working_dir = true, PathCont* searched_paths = nullptr)
+	{
+		using namespace std::filesystem;
+
+		// If the partial path is actually a full path
+		if (partial_path.is_absolute())
+		{
+			// Return an empty string for unresolved
+			return exists(partial_path) ? partial_path : path{};
+		}
+
+		// If a current directory is provided
+		if (current_dir != nullptr)
+		{
+			auto path = *current_dir / partial_path;
+			if (exists(path))
+				return path;
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Check the working directory
+		if (check_working_dir)
+		{
+			// Convert to an absolute path using the current working directory
+			auto path = absolute(partial_path);
+			if (exists(path))
+				return path;
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Search the search paths
+		for (auto& dir : search_paths)
+		{
+			auto path = (dir / partial_path).lexically_normal();
+			if (exists(path))
+				return path;
+
+			// If the search paths contain partial paths, resolve recursively
+			if (!path.is_absolute())
+			{
+				auto paths = search_paths;
+				paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return p == dir; }), end(paths));
+				path = ResolvePath(path, paths, current_dir, check_working_dir, searched_paths);
+				if (exists(path))
+					return path;
+			}
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Return an empty string for unresolved
+		return path{};
 	}
 
 	// A base class/interface for an implementation that can resolve paths to data
