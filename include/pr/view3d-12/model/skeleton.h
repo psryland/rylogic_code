@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/resource/descriptor.h"
+#include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
@@ -33,18 +34,11 @@ namespace pr::rdr12
 		// Walk the skeleton hierarchy calling 'func' for each bone.
 		// The caller decides what is pushed to the stack at each level (Ret).
 		// 'Func' is Ret Func(int bone_index, Ret const* parent) {...}
-		template <typename Ret, std::invocable<int, Ret const*> Func> requires std::same_as<std::invoke_result_t<Func, int, Ret const*>, Ret>
+		template <typename Ret, std::invocable<int, Ret const*> Func>
+		requires (std::same_as<std::invoke_result_t<Func, int, Ret const*>, Ret>)
 		void WalkHierarchy(Func func) const
 		{
-			pr::vector<Ret> ancestor = {};
-			for (int idx = 0, iend = isize(m_hierarchy); idx != iend; ++idx)
-			{
-				for (; !ancestor.empty() && m_hierarchy[idx] <= m_hierarchy[idx - 1];)
-					ancestor.pop_back();
-
-				auto const* parent = !ancestor.empty() ? &ancestor.back() : nullptr;
-				ancestor.push_back(func(idx, parent));
-			}
+			rdr12::WalkHierarchy<Ret, std::span<uint8_t const>, Func>(m_hierarchy, func);
 		}
 
 		// Ref-counting clean up function

@@ -60,6 +60,24 @@ namespace pr::geometry::fbx
 		static constexpr char const* FbxAscii = "FBX ascii (*.fbx)";
 	};
 
+	// Parts of an FBX Scene
+	enum class EParts
+	{
+		None           = 0,
+		GlobalSettings = 1 << 0,
+		NodeHierarchy  = 1 << 1,
+		Materials      = 1 << 2,
+		Meshes         = 1 << 3,
+		Skeletons      = 1 << 4,
+		Skinning       = 1 << 5 | Meshes | Skeletons,
+		Animation      = 1 << 6,
+
+		All       = Meshes | Materials | Skeletons | Skinning | Animation,
+		ModelOnly = Meshes | Materials,
+
+		_flags_enum = 0,
+	};
+
 	// Metadata in the scene
 	struct SceneProps
 	{
@@ -79,20 +97,6 @@ namespace pr::geometry::fbx
 	// Options for parsing FBXfiles
 	struct ReadOptions
 	{
-		enum class EParts
-		{
-			None = 0,
-			Meshes = 1 << 0,
-			Materials = 1 << 1,
-			Skeletons = 1 << 2,
-			Skinning = 1 << 3 | Meshes | Skeletons,
-			Animation = 1 << 4,
-
-			All = Meshes | Materials | Skeletons | Skinning | Animation,
-			ModelOnly = Meshes | Materials,
-			_flags_enum = 0,
-		};
-
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
 
@@ -104,19 +108,6 @@ namespace pr::geometry::fbx
 	// Options for outputting the FBX scene dump
 	struct DumpOptions
 	{
-		enum class EParts
-		{
-			None           = 0,
-			GlobalSettings = 1 << 0,
-			NodeHierarchy  = 1 << 1,
-			Materials      = 1 << 2,
-			Meshes         = 1 << 3,
-			Skeletons      = 1 << 4,
-			Skinning       = 1 << 5 | Meshes | Skeletons,
-			All            = ~0,
-			_flags_enum    = 0,
-		};
-
 		// Parts of the scene to dump
 		EParts m_parts = EParts::All;
 
@@ -157,8 +148,8 @@ namespace pr::geometry::fbx
 			Cubic = 2,
 		};
 
-		quat m_rotation;
 		v4 m_translation;
+		quat m_rotation;
 		v4 m_scale;
 		double m_time;
 		uint64_t m_flags; // [0,2) = EInterpolation flags

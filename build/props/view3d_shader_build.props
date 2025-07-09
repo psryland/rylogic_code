@@ -20,11 +20,11 @@
 		-->
 
 		<Exec Condition="$(Configuration) == 'Debug'"
-			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration) dbg"
+			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration) dbg --no-cache"
 			ContinueOnError="ErrorAndContinue"
 		/>
 		<Exec Condition="$(Configuration) != 'Debug'"
-			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration)"
+			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration) --no-cache"
 			ContinueOnError="ErrorAndContinue"
 		/>
 	</Target>

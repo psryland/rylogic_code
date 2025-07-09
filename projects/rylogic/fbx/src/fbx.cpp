@@ -349,7 +349,30 @@ namespace pr::geometry::fbx
 	static constexpr int NoIndex = -1;
 	static constexpr Vert NoVert = {};
 	static constexpr uint64_t NoUniqueId = 0;
+	struct MeshNode
+	{
+		FbxMesh* mesh;
+		FbxMesh const* root;
+		int level;
+		int index;
+	};
+	struct BoneNode
+	{
+		FbxSkeleton* bone;
+		FbxSkeleton const* root;
+		int level;
+		int index;
+	};
+	struct KeyTime
+	{
+		FbxTime time;
+		FbxAnimCurveDef::EInterpolationType interpolation;
+		bool operator == (KeyTime const& rhs) const { return time == rhs.time; }
+		bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
+	};
 	using ErrorList = std::vector<std::string>;
+	using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
+	using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
 
 	// Check that 'ptr' is not null. Throw if it is
 	template <typename T> inline T* Check(T* ptr, std::string_view message)
@@ -570,6 +593,70 @@ namespace pr::geometry::fbx
 		return nullptr;
 	}
 
+	// Find the bind pose for the given node(s)
+	static FbxPose const* FindBindPose(FbxScene& fbxscene, std::span<BoneNode const*> nodes)
+	{
+		// Find a bind pose that contains values for all nodes
+		// This isn't 100% reliable, but that's the best FBX offers
+		for (int i = 0, iend = fbxscene.GetPoseCount(); i != iend; ++i)
+		{
+			auto* pose = fbxscene.GetPose(i);
+			if (!pose || !pose->IsBindPose())
+				continue;
+
+			// If the bind pose contains values for all nodes, then that's close enough
+			if (all(nodes, [pose](BoneNode const* bone_node) { return pose->Find(bone_node->bone->GetNode()) != -1; }))
+				return pose;
+		}
+		return nullptr;
+	}
+	static FbxPose const* FindBindPose(FbxScene& fbxscene, BoneNode const& node)
+	{
+		auto* ptr = &node;
+		return FindBindPose(fbxscene, { &ptr, 1 });
+	}
+
+	// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
+	static void TraverseHierarchy(FbxScene& fbxscene, EParts parts, MeshNodeMap& meshes, BoneNodeMap& bones)
+	{
+		// Notes:
+		//  - Root nodes for meshes, skeletons can occur at any level.
+		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
+		//    node is the start of a new mesh/skeleton hierarchy.
+
+		struct NodeAndLevel { FbxNode* node; int level; };
+		vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
+		for (int mindex = 0, bindex = 0; !stack.empty(); )
+		{
+			auto [node, level] = stack.back();
+			stack.pop_back();
+
+			// Process all attributes of the node
+			for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
+			{
+				auto& attr = *node->GetNodeAttributeByIndex(i);
+
+				// Create a map from attribute unique id to node data
+				if (AllSet(parts, EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
+				{
+					auto* mesh = FbxCast<FbxMesh>(&attr);
+					auto* root = FindRoot<FbxMesh>(*node);
+					meshes[mesh->GetUniqueID()] = { mesh, root, level, mindex++ };
+				}
+				if (AllSet(parts, EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
+				{
+					auto* bone = FbxCast<FbxSkeleton>(&attr);
+					auto* root = FindRoot<FbxSkeleton>(*node);
+					bones[bone->GetUniqueID()] = { bone, root, level, bindex++ };
+				}
+			}
+
+			// Recurse in depth first order
+			for (int i = node->GetChildCount(); i-- != 0; )
+				stack.push_back({ node->GetChild(i), level + 1 });
+		}
+	}
+
 	// Get the hierarchy address of 'node'
 	static std::string Address(FbxNode const* node)
 	{
@@ -583,10 +670,7 @@ namespace pr::geometry::fbx
 	struct FbxArray : fbxsdk::FbxArray<T>
 	{
 		FbxArray() : fbxsdk::FbxArray<T>() {}
-		~FbxArray()
-		{
-			FbxArrayDelete<T>(*this);
-		}
+		~FbxArray() { FbxArrayDelete<T>(*this); }
 	};
 
 	// An RAII dll reference
@@ -874,33 +958,7 @@ namespace pr::geometry::fbx
 		// TODO:
 		//  - LOD Groups?
 
-		using VertexLookup = std::vector<int>;
-		using TimeCont = std::vector<FbxTime>;
-		using MeshNode = struct MeshNode
-		{
-			FbxMesh* mesh;
-			FbxMesh const* root;
-			int level;
-			int index;
-		};
-		using BoneNode = struct BoneNode
-		{
-			FbxSkeleton* bone;
-			FbxSkeleton const* root;
-			int level;
-			int index;
-		};
-		using KeyTime = struct KeyTime
-		{
-			FbxTime time;
-			FbxAnimCurveDef::EInterpolationType interpolation;
-			bool operator == (KeyTime const& rhs) const { return time == rhs.time; }
-			bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
-		};
-		
 		using KeyTimes = std::vector<KeyTime>;
-		using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
-		using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
 
 		SceneData& m_scene;
 		FbxScene& m_fbxscene;
@@ -932,54 +990,16 @@ namespace pr::geometry::fbx
 		// Read the scene
 		void Do()
 		{
-			TraverseHierarchy();
+			TraverseHierarchy(m_fbxscene, m_opts.m_parts, m_meshes, m_bones);
 
-			if (AllSet(m_opts.m_parts, ReadOptions::EParts::Materials))
+			if (AllSet(m_opts.m_parts, EParts::Materials))
 				ReadMaterials();
-			if (AllSet(m_opts.m_parts, ReadOptions::EParts::Meshes))
+			if (AllSet(m_opts.m_parts, EParts::Meshes))
 				ReadGeometry();
-			if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skeletons))
+			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				ReadSkeletons();
-			if (AllSet(m_opts.m_parts, ReadOptions::EParts::Animation))
+			if (AllSet(m_opts.m_parts, EParts::Animation))
 				ReadAnimation();
-		}
-
-		// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
-		void TraverseHierarchy()
-		{
-			// Root nodes for meshes, skeletons can occur at any level.
-			// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
-			struct NodeAndLevel { FbxNode* node; int level; };
-			vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
-			for (int mindex = 0, bindex = 0; !stack.empty(); )
-			{
-				auto [node, level] = stack.back();
-				stack.pop_back();
-
-				// Process all attributes of the node
-				for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
-				{
-					auto& attr = *node->GetNodeAttributeByIndex(i);
-
-					// Create a map from attribute unique id to node data
-					if (AllSet(m_opts.m_parts, ReadOptions::EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
-					{
-						auto* mesh = FbxCast<FbxMesh>(&attr);
-						auto* root = FindRoot<FbxMesh>(*node);
-						m_meshes[mesh->GetUniqueID()] = { mesh, root, level, mindex++ };
-					}
-					if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
-					{
-						auto* bone = FbxCast<FbxSkeleton>(&attr);
-						auto* root = FindRoot<FbxSkeleton>(*node);
-						m_bones[bone->GetUniqueID()] = { bone, root, level, bindex++ };
-					}
-				}
-
-				// Recurse in depth first order
-				for (int i = node->GetChildCount(); i-- != 0; )
-					stack.push_back({ node->GetChild(i), level + 1 });
-			}
 		}
 
 		// Read the materials
@@ -1110,7 +1130,7 @@ namespace pr::geometry::fbx
 						auto const* colours = layer0->GetVertexColors();
 						auto const* normals = layer0->GetNormals();
 						auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
-						VertexLookup vlookup;
+						vector<int> vlookup;
 
 						// Initialise buffers
 						out.m_vbuf.reserve(s_cast<size_t>(vcount) * 3 / 2);
@@ -1271,7 +1291,7 @@ namespace pr::geometry::fbx
 				#endif
 
 				// Read the skinning data for this mesh
-				if (AllSet(m_opts.m_parts, ReadOptions::EParts::Skinning))
+				if (AllSet(m_opts.m_parts, EParts::Skinning))
 					mesh.m_skin = ReadSkin(meshnode);
 
 				// Output the mesh
@@ -1434,7 +1454,7 @@ namespace pr::geometry::fbx
 						std::sort(roots.begin(), roots.end(), [](BoneNode const* lhs, BoneNode const* rhs) { return lhs->index < rhs->index; });
 
 						// Find the bind pose
-						auto* bind_pose = FindBindPose(roots);
+						auto* bind_pose = FindBindPose(m_fbxscene, roots);
 
 						// Construct a skeleton
 						SkeletonData skeleton = { .m_id = FindCommonAncestor(roots)->GetUniqueID() };
@@ -1465,17 +1485,17 @@ namespace pr::geometry::fbx
 					int idx = -1;
 					if (!bind_pose || (idx = bind_pose->Find(&node)) == -1)
 					{
-						bind_pose = FindBindPose(bone_node);
+						bind_pose = FindBindPose(m_fbxscene, bone_node);
 						idx = bind_pose ? bind_pose->Find(&node) : -1;
 					}
 
+					// Object space to bind pose.
 					// The bind pose is a snapshot of the global transforms of the bones
 					// at the time skinning was authored in the DCC tool.
-					m4x4 o2bp = {}; // Object space to bind pose
-					if (idx != -1)
-						o2bp = InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)));
-					else // Fall-back to time zero as the bind pose
-						o2bp = InvertFast(To<m4x4>(const_cast<FbxNode&>(node).EvaluateGlobalTransform(0)));
+					// Fall-back to time zero as the bind pose.
+					auto o2bp = idx != -1
+						? InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)))
+						: InvertFast(To<m4x4>(const_cast<FbxNode&>(node).EvaluateGlobalTransform(0)));
 
 					skeleton.m_bone_ids.push_back(bone.GetUniqueID());
 					skeleton.m_names.push_back(node.GetName());
@@ -1487,27 +1507,6 @@ namespace pr::geometry::fbx
 						auto const& child_node = m_bone_map.at(child.GetUniqueID());
 						Build(skeleton, bind_pose, child_node, level + 1);
 					}
-				}
-				FbxPose const* FindBindPose(BoneNode const& node) const
-				{
-					auto* ptr = &node;
-					return FindBindPose({ &ptr, 1 });
-				}
-				FbxPose const* FindBindPose(std::span<BoneNode const*> nodes) const
-				{
-					// Find a bind pose that contains values for all nodes
-					// This isn't 100% reliable, but that's the best FBX offers
-					for (int i = 0, iend = m_fbxscene.GetPoseCount(); i != iend; ++i)
-					{
-						auto* pose = m_fbxscene.GetPose(i);
-						if (!pose || !pose->IsBindPose())
-							continue;
-
-						// If the bind pose contains values for all nodes, then that's close enough
-						if (all(nodes, [pose](BoneNode const* bone_node) { return pose->Find(bone_node->bone->GetNode()) != -1; }))
-							return pose;
-					}
-					return nullptr;
 				}
 				FbxNode const* FindCommonAncestor(std::span<BoneNode const*> nodes)
 				{
@@ -1739,8 +1738,8 @@ namespace pr::geometry::fbx
 								auto b2p = InvertFast(p2w) * b2w;
 
 								BoneKey keyframe = {
-									quat(b2p.rot),
 									b2p.pos,
+									quat(b2p.rot),
 									b2p.rot.scale().trace(),
 									snapshot.m_time,
 									uint64_t(key.m_interpolation),
@@ -1838,16 +1837,12 @@ namespace pr::geometry::fbx
 	struct Dumper 
 	{
 		using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
-		using MeshNode = struct MeshNode { FbxMesh* mesh; int level; bool is_root; };
-		using BoneNode = struct BoneNode { FbxSkeleton* bone; int level; bool is_root; };
-		using MeshNodes = std::vector<MeshNode>; // Hierarchy flattened in depth-first order
-		using BoneNodes = std::vector<BoneNode>; // Same
 
 		std::ostream& m_out;
 		FbxScene& m_fbxscene;
 		DumpOptions const& m_opts;
-		MeshNodes m_meshes;
-		BoneNodes m_bones;
+		MeshNodeMap m_meshes;
+		BoneNodeMap m_bones;
 
 		Dumper(FbxScene& fbxscene, DumpOptions const& opts, std::ostream& out)
 			: m_out(out)
@@ -1870,55 +1865,20 @@ namespace pr::geometry::fbx
 		// Read the scene
 		void Do()
 		{
-			TraverseHierarchy();
-			if (AllSet(m_opts.m_parts, DumpOptions::EParts::GlobalSettings))
+			TraverseHierarchy(m_fbxscene, m_opts.m_parts, m_meshes, m_bones);
+
+			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
 				DumpGlobalSettings();
-			if (AllSet(m_opts.m_parts, DumpOptions::EParts::NodeHierarchy))
+			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
 				DumpHierarchy();
-			if (AllSet(m_opts.m_parts, DumpOptions::EParts::Materials))
+			if (AllSet(m_opts.m_parts, EParts::Materials))
 				DumpMaterials();
-			if (AllSet(m_opts.m_parts, DumpOptions::EParts::Meshes))
+			if (AllSet(m_opts.m_parts, EParts::Meshes))
 				DumpGeometry();
-			if (AllSet(m_opts.m_parts, DumpOptions::EParts::Skeletons))
+			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				DumpSkeletons();
-			//if (AllSet(m_opts.m_parts, EParts::Animation))
-			//	ReadAnimation();
-		}
-
-		// Traverse the scene hierarchy
-		void TraverseHierarchy()
-		{
-			// Root nodes for meshes, skeletons can occur at any level.
-			// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
-			vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
-			for (; !stack.empty(); )
-			{
-				auto [node, level] = stack.back();
-				stack.pop_back();
-
-				// Process all attributes of the node
-				for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
-				{
-					auto& attr = *node->GetNodeAttributeByIndex(i);
-
-					if (AllSet(m_opts.m_parts, DumpOptions::EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
-					{
-						auto* mesh = FbxCast<FbxMesh>(&attr);
-						auto is_root = FindRoot<FbxMesh>(*node) == mesh;
-						m_meshes.push_back({ mesh, level, is_root });
-					}
-					if (AllSet(m_opts.m_parts, DumpOptions::EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
-					{
-						auto* bone = FbxCast<FbxSkeleton>(&attr);
-						auto is_root = FindRoot<FbxSkeleton>(*node) == bone;
-						m_bones.push_back({ bone, level, is_root });
-					}
-				}
-
-				// Recurse in depth first order
-				for (int i = node->GetChildCount(); i-- != 0; )
-					stack.push_back({ node->GetChild(i), level + 1 });
-			}
+			if (AllSet(m_opts.m_parts, EParts::Animation))
+				DumpAnimations();
 		}
 
 		// Output the scene global settings
@@ -1980,7 +1940,7 @@ namespace pr::geometry::fbx
 			m_out << " MESHES ===================================================================================================\n";
 
 			// Process each mesh in a worker thread, because triangulation is really slow
-			for (auto const& meshnode : m_meshes)
+			for (auto const& [id, meshnode] : m_meshes)
 			{
 				if (m_opts.m_triangulate_meshes && !meshnode.mesh->IsTriangleMesh())
 				{
@@ -1993,7 +1953,7 @@ namespace pr::geometry::fbx
 				auto level = meshnode.level;
 
 				m_out << Indent(level) << "Mesh \"" << node.GetName() << "\" (" << mesh.GetUniqueID() << "):\n";
-				m_out << Indent(level + 1) << "IsRoot: " << (meshnode.is_root ? "ROOT" : "CHILD") << "\n";
+				m_out << Indent(level + 1) << "IsRoot: " << (meshnode.mesh == meshnode.root ? "ROOT" : "CHILD") << "\n";
 				m_out << Indent(level + 1) << "Polys: " << (mesh.IsTriangleMesh() ? "TRIANGLES" : "POLYGONS") << "\n";
 				m_out << Indent(level + 1) << "Mat #: " << mesh.GetElementMaterialCount() << "\n";
 
@@ -2056,7 +2016,7 @@ namespace pr::geometry::fbx
 				}
 
 				// Skinning info
-				if (AllSet(m_opts.m_parts, DumpOptions::EParts::Skinning))
+				if (AllSet(m_opts.m_parts, EParts::Skinning))
 					DumpSkinning(meshnode, level + 1);
 			}
 
@@ -2068,7 +2028,7 @@ namespace pr::geometry::fbx
 		{
 			m_out << " SKELETONS ===================================================================================================\n";
 
-			for (auto const& bonenode : m_bones)
+			for (auto const& [id, bonenode] : m_bones)
 			{
 				auto& bone = *bonenode.bone;
 				auto& node = *bone.GetNode();
@@ -2076,7 +2036,7 @@ namespace pr::geometry::fbx
 
 				m_out << Indent(level) << "Bone \"" << node.GetName() << "\":\n";
 				m_out << Indent(level + 1) << "ID: " << bone.GetUniqueID() << "\n";
-				m_out << Indent(level + 1) << "IsRoot: " << (bonenode.is_root ? "ROOT" : "CHILD") << "\n";
+				m_out << Indent(level + 1) << "IsRoot: " << (bonenode.bone == bonenode.root ? "ROOT" : "CHILD") << "\n";
 				m_out << Indent(level + 1) << "Type: " << To<std::string_view>(bone.GetSkeletonType()) << "\n";
 
 				// Bind pose
@@ -2095,6 +2055,12 @@ namespace pr::geometry::fbx
 #endif
 			}
 			m_out << "\n";
+		}
+
+		// Output the Animation definitions
+		void DumpAnimations()
+		{
+			// todo
 		}
 
 		// Output the skinning info for 'meshnode'
@@ -2626,2086 +2592,3 @@ extern "C"
 		#undef PR_FBX_API_CHECK
 	}
 }
-
-
-
-#if 0
-// Read skinning information from mesh nodes in 'node'
-void ReadSkinning()
-{
-	// Add skinning data to meshes we've already found
-	for (auto& mesh : m_scene.m_meshes)
-	{
-		// Find the corresponding FbxMesh
-		auto& meshnode = pr::get_if(m_meshes, [mesh_id = mesh.m_id](MeshNode const& m) { return m.mesh->GetUniqueID() == mesh_id; });
-		auto& fbxmesh = *meshnode.mesh;
-
-		// Find the skeleton associated with this skinned mesh
-		auto const* fbxskeleton = FindSkeleton(fbxmesh);
-		if (fbxskeleton == nullptr)
-			continue; // Mesh has no skeleton => not animated
-
-		auto const& skeleton = pr::get_if(m_scene.m_skeletons, [id = fbxskeleton->GetUniqueID()](Skeleton const& s) { return s.Id() == id; });
-
-		// Populate the skinning data
-		auto& skin = mesh.m_skin;
-		skin.m_skel_id = skeleton.Id();
-		skin.m_verts.resize(fbxmesh.GetControlPointsCount());
-
-		// Get the skinning data for this mesh
-		for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
-		{
-			auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
-			for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
-			{
-				auto& cluster = *fbxskin.GetCluster(b);
-				if (cluster.GetControlPointIndicesCount() == 0)
-					continue;
-
-				auto& bone = *Find(FbxNodeAttribute::eSkeleton, *cluster.GetLink());
-
-				auto link_mode = cluster.GetLinkMode();
-				if (link_mode != FbxCluster::ELinkMode::eNormalize)
-					throw std::runtime_error("Non-normalise link modes not implemented");
-
-				#if 0
-				// The associate model is optional. It is only relevant if the link mode is of type eAdditive.
-				// If set, the associate model is the node used as a reference to measure the relative displacement of the link node.
-				// Otherwise, the displacement of the link node is measured relative the node containing the control points.
-				// Typically, the associate model node is the parent of the bone a skin is attached to.
-				if (cluster.GetLinkMode() == FbxCluster::eAdditive && cluster.GetAssociateModel())
-				{
-					throw std::runtime_error("not implemented");
-				}
-				else
-				{
-					FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
-					FbxAMatrix geom_offset; mesh.GetNode();
-					ref_to_world *= geom_offset;
-
-
-					// Get the link initial global position and the link current global position.
-					pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
-					lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
-
-					// Compute the initial position of the link relative to the reference.
-					lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
-
-					// Compute the current position of the link relative to the reference.
-					lClusterRelativeCurrentPositionInverse = lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
-
-					// Compute the shift of the link relative to the reference.
-					pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
-				}
-				#endif
-
-				// Find the bone in the skeleton
-				auto bone_index = pr::index_of(skeleton.m_ids, bone.GetUniqueID());
-				if (bone_index >= isize(skeleton.m_o2bp))
-					throw std::runtime_error("Bone index out of range in skeleton");
-
-				// Get the span of vert indices and weights
-				auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-				auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-				for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
-				{
-					auto vidx = indices[w];
-					auto weight = weights[w];
-					skin.m_verts[vidx].m_bones.push_back(bone_index);
-					skin.m_verts[vidx].m_weights.push_back(static_cast<float>(weight));
-				}
-			}
-		}
-	}
-}
-
-struct Writer
-{
-	std::ostream& m_out;
-	Writer(std::ostream& out)
-		: m_out(out)
-	{}
-
-	// Indent helper
-	static std::string_view Indent(int amount)
-	{
-		constexpr static char const space[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-		constexpr static int len = (int)_countof(space);
-		return std::string_view(space, amount < len ? amount : len);
-	}
-
-	void Write(FbxScene const& scene, int indent = 0)
-	{
-		m_out << Indent(indent) << "Scene: " << scene.GetName() << "\n";
-		WriteMetaData(*const_cast<FbxScene&>(scene).GetSceneInfo(), indent + 1);
-		WriteGlobalSettings(scene.GetGlobalSettings(), indent + 1);
-		WriteHierarchy(*scene.GetRootNode(), indent + 1);
-		WriteContent(*scene.GetRootNode(), indent + 1);
-		WritePose(scene, indent + 1);
-		WriteAnimation(scene, indent + 1);
-		WriteGenericInfo(scene, indent + 1);
-	}
-	void WriteMetaData(FbxDocumentInfo const& scene_info, int indent)
-	{
-		m_out << Indent(indent) << "Meta-Data:\n";
-		++indent;
-
-		m_out << Indent(indent) << "Title: " << scene_info.mTitle.Buffer() << "\n";
-		m_out << Indent(indent) << "Subject: " << scene_info.mSubject.Buffer() << "\n";
-		m_out << Indent(indent) << "Author: " << scene_info.mAuthor.Buffer() << "\n";
-		m_out << Indent(indent) << "Keywords: " << scene_info.mKeywords.Buffer() << "\n";
-		m_out << Indent(indent) << "Revision: " << scene_info.mRevision.Buffer() << "\n";
-		m_out << Indent(indent) << "Comment: " << scene_info.mComment.Buffer() << "\n";
-
-		FbxThumbnail const* thumbnail = const_cast<FbxDocumentInfo&>(scene_info).GetSceneThumbnail();
-		if (thumbnail)
-		{
-			m_out << Indent(indent) << "Thumbnail:\n";
-			switch (thumbnail->GetDataFormat())
-			{
-				case FbxThumbnail::eRGB_24: m_out << Indent(indent) << "Format: RGB\n"; break;
-				case FbxThumbnail::eRGBA_32: m_out << Indent(indent) << "Format: RGBA\n"; break;
-				default: m_out << Indent(indent) << "Format: UNKNOWN\n"; break;
-			}
-			switch (thumbnail->GetSize())
-			{
-				case FbxThumbnail::eNotSet: m_out << Indent(indent) << "Size: no dimensions specified (" << thumbnail->GetSizeInBytes() << " bytes)\n"; break;
-				case FbxThumbnail::e64x64: m_out << Indent(indent) << "Size: 64 x 64 pixels (" << thumbnail->GetSizeInBytes() << " bytes)\n"; break;
-				case FbxThumbnail::e128x128: m_out << Indent(indent) << "Size: 128 x 128 pixels (" << thumbnail->GetSizeInBytes() << " bytes)\n"; break;
-				default: m_out << Indent(indent) << "Size: UNKNOWN\n"; break;
-			}
-		}
-	}
-	void WriteGlobalSettings(FbxGlobalSettings const& settings, int indent)
-	{
-		m_out << Indent(indent) << "Global Settings:\n";
-		++indent;
-
-		m_out << Indent(indent) << "Global Light Settings:\n";
-		m_out << Indent(indent) << "Ambient Color: " << settings.GetAmbientColor() << "\n";
-		m_out << Indent(indent) << "Global Camera Settings:\n";
-		m_out << Indent(indent) << "Default Camera: " << settings.GetDefaultCamera() << "\n";
-		m_out << Indent(indent) << "Global Time Settings:\n";
-		m_out << Indent(indent) << "Time Mode: " << (int)settings.GetTimeMode() << "\n";
-
-		FbxTimeSpan lTs; char time_string[256];
-		settings.GetTimelineDefaultTimeSpan(lTs);
-		m_out << Indent(indent) << "Time-line default timespan:\n";
-		m_out << Indent(indent) << "Start: " << lTs.GetStart().GetTimeString(&time_string[0], _countof(time_string)) << "\n";
-		m_out << Indent(indent) << "Stop: " << lTs.GetStop().GetTimeString(&time_string[0], _countof(time_string)) << "\n";
-	}
-	void WriteHierarchy(FbxNode const& node, int indent)
-	{
-		m_out << Indent(indent) << "Hierarchy:\n";
-
-		struct L
-		{
-			static void Do(std::ostream& out, FbxNode const& node, int indent)
-			{
-				out << Indent(indent) << node.GetName() << "\n";
-				for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-					Do(out, *node.GetChild(i), indent + 1);
-			}
-		};
-		L::Do(m_out, node, indent+1);
-	}
-	void WriteContent(FbxNode const& node, int indent)
-	{
-		auto attr = node.GetNodeAttribute();
-		auto attr_type = attr ? attr->GetAttributeType() : FbxNodeAttribute::EType::eUnknown;
-		m_out << Indent(indent) << "Node(" << attr_type << ") " << node.GetName() << "\n";
-
-		// Node properties
-		m_out << Indent(indent + 1) << "Properties:\n";
-		{
-			WriteUserProperties(node, indent + 2);
-			WriteTarget(node, indent + 2);
-			WritePivotsAndLimits(node, indent + 2);
-			WriteTransformPropagation(node, indent + 2);
-			WriteGeometricTransform(node, indent + 2);
-		}
-
-		// Node specific data
-		switch (attr_type)
-		{
-			case FbxNodeAttribute::eUnknown:
-			case FbxNodeAttribute::eNull:
-			{
-				break;
-			}
-			case FbxNodeAttribute::eMarker:
-			{
-				WriteMarker(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eSkeleton:
-			{
-				WriteSkeleton(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eMesh:
-			{
-				WriteMesh(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eNurbs:
-			{
-				WriteNurb(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::ePatch:
-			{
-				WritePatch(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eCamera:
-			{
-				WriteCamera(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eLight:
-			{
-				WriteLight(node, indent + 1);
-				break;
-			}
-			case FbxNodeAttribute::eLODGroup:
-			{
-				WriteLodGroup(node, indent + 1);
-				break;
-			}
-			default:
-			{
-				m_out << Indent(indent + 1) << "Not Implemented\n";
-				break;
-			}
-		}
-
-		// Recurse
-		for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-			WriteContent(*node.GetChild(i), indent + 1);
-	}
-	void WriteMarker(FbxNode const& node, int indent)
-	{
-		auto const& marker = *static_cast<FbxMarker const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Marker Name: " << node.GetName() << "\n";
-		WriteMetaDataConnections(marker, indent + 1);
-
-		// Type
-		m_out << Indent(indent) << "Marker Type: ";
-		switch (marker.GetType())
-		{
-			case FbxMarker::eStandard:   m_out << "Standard\n";    break;
-			case FbxMarker::eOptical:    m_out << "Optical\n";     break;
-			case FbxMarker::eEffectorIK: m_out << "IK Effector\n"; break;
-			case FbxMarker::eEffectorFK: m_out << "FK Effector\n"; break;
-		}
-
-		// Look
-		m_out << Indent(indent) << "Marker Look: ";
-		switch (marker.Look.Get())
-		{
-			default: break;
-			case FbxMarker::eCube:        m_out << "Cube\n";        break;
-			case FbxMarker::eHardCross:   m_out << "Hard Cross\n";  break;
-			case FbxMarker::eLightCross:  m_out << "Light Cross\n"; break;
-			case FbxMarker::eSphere:      m_out << "Sphere\n";      break;
-		}
-
-		// Size
-		m_out << Indent(indent) << "Size: " << marker.Size.Get() << "\n";
-
-		// Color
-		m_out << Indent(indent) << "Color: " << marker.Color.Get() << "\n";
-
-		// IKPivot
-		m_out << Indent(indent) << "IKPivot: " << marker.IKPivot.Get() << "\n";
-	}
-	void WriteSkeleton(FbxNode const& node, int indent)
-	{
-		auto const& skel = *static_cast<FbxSkeleton const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Skeleton Name: " << skel.GetName() << "\n";
-		WriteMetaDataConnections(skel, indent+1);
-
-		char const* skel_types[] = { "Root", "Limb", "Limb Node", "Effector" };
-		m_out << Indent(indent) << "Type: " << skel_types[skel.GetSkeletonType()] << "\n";
-
-		switch (skel.GetSkeletonType())
-		{
-			case FbxSkeleton::eRoot:
-			{
-				m_out << Indent(indent) << "Limb Root Size: " << FloatClamp(skel.Size.Get()) << "\n";
-				break;
-			}
-			case FbxSkeleton::eLimb:
-			{
-				m_out << Indent(indent) << "Limb Length: " << FloatClamp(skel.LimbLength.Get()) << "\n";
-				break;
-			}
-			case FbxSkeleton::eLimbNode:
-			{
-				m_out << Indent(indent) << "Limb Node Size: " << FloatClamp(skel.Size.Get()) << "\n";
-				break;
-			}
-			default:
-			{
-				m_out << Indent(indent) << "Unsupported\n";
-				break;
-			}
-		}
-
-		m_out << Indent(indent) << "Color: " << skel.GetLimbNodeColor() << "\n";
-	}
-	void WriteMesh(FbxNode const& node, int indent)
-	{
-		auto const& lMesh = *static_cast<FbxMesh const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Mesh Name: " << node.GetName() << "\n";
-		WriteMetaDataConnections(lMesh, indent+1);
-		WriteControlsPoints(lMesh, indent+1);
-		WritePolygons(lMesh, indent+1);
-		WriteMaterialMapping(lMesh, indent+1);
-		WriteMaterials(lMesh, indent+1);
-		WriteTexture(lMesh, indent+1);
-		WriteMaterialConnections(lMesh, indent+1);
-		WriteLink(lMesh, indent+1);
-		WriteShape(lMesh, indent+1);
-		WriteCache(lMesh, indent+1);
-	}
-	void WriteControlsPoints(FbxMesh const& mesh, int indent)
-	{
-		m_out << Indent(indent) << "Control Points:" << "\n";
-		++indent;
-
-		FbxVector4* lControlPoints = mesh.GetControlPoints();
-		for (int i = 0, iend = mesh.GetControlPointsCount(); i != iend; ++i)
-		{
-			m_out << Indent(indent) << "[" << i << "] " << lControlPoints[i];
-			for (int j = 0, jend = mesh.GetElementNormalCount(); j != jend; ++j)
-			{
-				FbxGeometryElementNormal const* leNormals = mesh.GetElementNormal(j);
-				if (leNormals->GetMappingMode() == FbxGeometryElement::eByControlPoint &&
-					leNormals->GetReferenceMode() == FbxGeometryElement::eDirect)
-				{
-					m_out << (j == 0 ? " Normals: " : ", ") << leNormals->GetDirectArray().GetAt(i);
-				}
-			}
-			m_out << "\n";
-		}
-	}
-	void WritePolygons(FbxMesh const& mesh, int indent)
-	{
-		m_out << Indent(indent) << "Polygons:\n";
-
-		int vertexId = 0;
-		for (int i = 0, iend = mesh.GetPolygonCount(); i != iend; ++i)
-		{
-			m_out << Indent(indent + 1) << "Polygon: " << i << "\n";
-			for (int j = 0, jend = mesh.GetPolygonSize(i); j != jend; ++j)
-			{
-				auto lControlPointIndex = mesh.GetPolygonVertex(i, j);
-				m_out << Indent(indent + 2) << "Index=" << lControlPointIndex;
-				for (int l = 0, lend = mesh.GetElementVertexColorCount(); l != lend; ++l)
-				{
-					l == 0 ? m_out << " Color=" : m_out;
-
-					FbxGeometryElementVertexColor const* leVtxc = mesh.GetElementVertexColor(l);
-					switch (leVtxc->GetMappingMode())
-					{
-						case FbxGeometryElement::eByControlPoint:
-						{
-							switch (leVtxc->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leVtxc->GetDirectArray().GetAt(lControlPointIndex);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leVtxc->GetIndexArray().GetAt(lControlPointIndex);
-									m_out << leVtxc->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						case FbxGeometryElement::eByPolygonVertex:
-						{
-							switch (leVtxc->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leVtxc->GetDirectArray().GetAt(vertexId);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leVtxc->GetIndexArray().GetAt(vertexId);
-									m_out << leVtxc->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						default:
-						{
-							m_out << "unsupported";
-							break;
-						}
-					}
-				}
-				for (int l = 0, lend = mesh.GetElementUVCount(); l != lend; ++l)
-				{
-					l == 0 ? m_out << " UV=" : m_out;
-
-					FbxGeometryElementUV const* leUV = mesh.GetElementUV(l);
-					switch (leUV->GetMappingMode())
-					{
-						case FbxGeometryElement::eByControlPoint:
-						{
-							switch (leUV->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leUV->GetDirectArray().GetAt(lControlPointIndex);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leUV->GetIndexArray().GetAt(lControlPointIndex);
-									m_out << leUV->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						case FbxGeometryElement::eByPolygonVertex:
-						{
-							switch (leUV->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									m_out << leUV->GetDirectArray().GetAt(const_cast<FbxMesh&>(mesh).GetTextureUVIndex(i, j));
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						default:
-						{
-							m_out << "unsupported";
-							break;
-						}
-					}
-				}
-				for (int l = 0, lend = mesh.GetElementNormalCount(); l != lend; ++l)
-				{
-					l == 0 ? m_out << " Normal=" : m_out;
-
-					FbxGeometryElementNormal const* leNormal = mesh.GetElementNormal(l);
-					switch (leNormal->GetMappingMode())
-					{
-						case FbxGeometryElement::eByPolygonVertex:
-						{
-							switch (leNormal->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leNormal->GetDirectArray().GetAt(vertexId);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leNormal->GetIndexArray().GetAt(vertexId);
-									m_out << leNormal->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						default:
-						{
-							m_out << "unsupported";
-							break;
-						}
-					}
-				}
-				for (int l = 0, lend = mesh.GetElementTangentCount(); l != lend; ++l)
-				{
-					l == 0 ? m_out << " Tangent=" : m_out;
-
-					FbxGeometryElementTangent const* leTangent = mesh.GetElementTangent(l);
-					switch (leTangent->GetMappingMode())
-					{
-						case FbxGeometryElement::eByPolygonVertex:
-						{
-							switch (leTangent->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leTangent->GetDirectArray().GetAt(vertexId);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leTangent->GetIndexArray().GetAt(vertexId);
-									m_out << leTangent->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						default:
-						{
-							m_out << "unsupported";
-							break;
-						}
-					}
-				}
-				for (int l = 0, lend = mesh.GetElementBinormalCount(); l != lend; ++l)
-				{
-					l == 0 ? m_out << " Binormal=" : m_out;
-
-					FbxGeometryElementBinormal const* leBinormal = mesh.GetElementBinormal(l);
-					switch (leBinormal->GetMappingMode())
-					{
-						case FbxGeometryElement::eByPolygonVertex:
-						{
-							switch (leBinormal->GetReferenceMode())
-							{
-								case FbxGeometryElement::eDirect:
-								{
-									m_out << leBinormal->GetDirectArray().GetAt(vertexId);
-									break;
-								}
-								case FbxGeometryElement::eIndexToDirect:
-								{
-									int id = leBinormal->GetIndexArray().GetAt(vertexId);
-									m_out << leBinormal->GetDirectArray().GetAt(id);
-									break;
-								}
-								default:
-								{
-									m_out << "unsupported";
-									break;
-								}
-							}
-							break;
-						}
-						default:
-						{
-							m_out << "unsupported";
-							break;
-						}
-					}
-				}
-				m_out << "\n";
-				vertexId++;
-			}
-			for (int l = 0, lend = mesh.GetElementPolygonGroupCount(); l != lend; ++l)
-			{
-				FbxGeometryElementPolygonGroup const* lePolgrp = mesh.GetElementPolygonGroup(l);
-				switch (lePolgrp->GetMappingMode())
-				{
-					case FbxGeometryElement::eByPolygon:
-					{
-						if (lePolgrp->GetReferenceMode() == FbxGeometryElement::eIndex)
-							m_out << Indent(indent + 2) << "Assigned to group: " << lePolgrp->GetIndexArray().GetAt(i) << "\n";
-						break;
-					}
-					default:
-					{
-						// any other mapping modes don't make sense
-						m_out << Indent(indent + 2) << "unsupported group assignment" << "\n";
-						break;
-					}
-				}
-			}
-		}
-
-		// Check visibility for the edges of the mesh
-		for (int l = 0, lend = mesh.GetElementVisibilityCount(); l != lend; ++l)
-		{
-			l == 0 ? m_out << Indent(indent + 1) << "Edge Visibility:\n" : m_out;
-
-			FbxGeometryElementVisibility const* leVisibility = mesh.GetElementVisibility(l);
-			switch (leVisibility->GetMappingMode())
-			{
-				case FbxGeometryElement::eByEdge:
-				{
-					//should be eDirect
-					for (int j = 0, jend = mesh.GetMeshEdgeCount(); j != jend; ++j)
-						m_out << Indent(indent + 2) << "[" << j << "] visibility: " << leVisibility->GetDirectArray().GetAt(j) << "\n";
-
-					break;
-				}
-				default:
-				{
-					m_out << Indent(indent + 2) << "unsupported mapping mode\n";
-					break;
-				}
-			}
-		}
-	}
-	void WriteMaterialMapping(FbxMesh const& mesh, int indent)
-	{
-		const char* lMappingTypes[] = { "None", "By Control Point", "By Polygon Vertex", "By Polygon", "By Edge", "All Same" };
-		const char* lReferenceMode[] = { "Direct", "Index", "Index to Direct" };
-
-		for (int l = 0, lend = mesh.GetElementMaterialCount(); l != lend; ++l)
-		{
-			FbxGeometryElementMaterial const* leMat = mesh.GetElementMaterial(l);
-			if (leMat)
-			{
-				m_out << Indent(indent) << "Material Element: " << l << "\n";
-				m_out << Indent(indent) << "Mapping: " << lMappingTypes[leMat->GetMappingMode()] << "\n";
-				m_out << Indent(indent) << "ReferenceMode: " << lReferenceMode[leMat->GetReferenceMode()] << "\n";
-
-				int lMaterialCount = 0;
-				if (leMat->GetReferenceMode() == FbxGeometryElement::eDirect ||
-					leMat->GetReferenceMode() == FbxGeometryElement::eIndexToDirect)
-				{
-					lMaterialCount = mesh.GetNode()->GetMaterialCount();
-				}
-
-				if (leMat->GetReferenceMode() == FbxGeometryElement::eIndex ||
-					leMat->GetReferenceMode() == FbxGeometryElement::eIndexToDirect)
-				{
-					m_out << Indent(indent) << "Indices: ";
-					for (int i = 0, iend = leMat->GetIndexArray().GetCount(); i != iend; ++i)
-						m_out << (i != 0 ? ", " : "") << leMat->GetIndexArray().GetAt(i);
-					m_out << "\n";
-				}
-			}
-		}
-	}
-	void WriteMaterials(FbxGeometry const& geometry, int indent)
-	{
-		m_out << Indent(indent) << "Materials:\n";
-		++indent;
-
-		auto LookForImplementation = [](FbxSurfaceMaterial const* pMaterial) -> FbxImplementation const*
-		{
-			const FbxImplementation* lImplementation = nullptr;
-			if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_CGFX);
-			if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_HLSL);
-			if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_SFX);
-			if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_OGS);
-			if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_SSSL);
-			return lImplementation;
-		};
-		auto WriteMaterial = [this, LookForImplementation](FbxSurfaceMaterial const& material, int indent)
-		{
-			m_out << Indent(indent) << "Name: \"" << material.GetName() << "\"\n";
-
-			//Get the implementation to see if it's a hardware shader.
-			const FbxImplementation* lImplementation = LookForImplementation(&material);
-			if (lImplementation)
-			{
-				// Now we have a hardware shader, let's read it
-				m_out << Indent(indent) << "Language: " << lImplementation->Language.Get().Buffer() << "\n";
-				m_out << Indent(indent) << "LanguageVersion: " << lImplementation->LanguageVersion.Get().Buffer() << "\n";
-				m_out << Indent(indent) << "RenderName: " << lImplementation->RenderName.Buffer() << "\n";
-				m_out << Indent(indent) << "RenderAPI: " << lImplementation->RenderAPI.Get().Buffer() << "\n";
-				m_out << Indent(indent) << "RenderAPIVersion: " << lImplementation->RenderAPIVersion.Get().Buffer() << "\n";
-
-				FbxBindingTable const* lRootTable = lImplementation->GetRootTable();
-				FbxString lFileName = lRootTable->DescAbsoluteURL.Get();
-				FbxString lTechniqueName = lRootTable->DescTAG.Get();
-
-				FbxBindingTable const* lTable = lImplementation->GetRootTable();
-				for (int i = 0, iend = (int)lTable->GetEntryCount(); i != iend; ++i)
-				{
-					FbxBindingTableEntry const& lEntry = lTable->GetEntry(i);
-					char const* lEntrySrcType = lEntry.GetEntryType(true);
-					FbxProperty lFbxProp;
-
-					FbxString lTest = lEntry.GetSource();
-					m_out << Indent(indent) << "Entry: " << lTest.Buffer() << "\n";
-					if (strcmp(FbxPropertyEntryView::sEntryType, lEntrySrcType) == 0)
-					{
-						lFbxProp = material.FindPropertyHierarchical(lEntry.GetSource());
-						if (!lFbxProp.IsValid())
-						{
-							lFbxProp = material.RootProperty.FindHierarchical(lEntry.GetSource());
-						}
-					}
-					else if (strcmp(FbxConstantEntryView::sEntryType, lEntrySrcType) == 0)
-					{
-						lFbxProp = lImplementation->GetConstants().FindHierarchical(lEntry.GetSource());
-					}
-					if (lFbxProp.IsValid())
-					{
-						if (lFbxProp.GetSrcObjectCount<FbxTexture>() > 0)
-						{
-							//do what you want with the textures
-							for (int j = 0; j < lFbxProp.GetSrcObjectCount<FbxFileTexture>(); ++j)
-							{
-								FbxFileTexture* lTex = lFbxProp.GetSrcObject<FbxFileTexture>(j);
-								m_out << Indent(indent) << "File Texture: " << lTex->GetFileName() << "\n";
-							}
-							for (int j = 0; j < lFbxProp.GetSrcObjectCount<FbxLayeredTexture>(); ++j)
-							{
-								FbxLayeredTexture* lTex = lFbxProp.GetSrcObject<FbxLayeredTexture>(j);
-								m_out << Indent(indent) << "Layered Texture: " << lTex->GetName() << "\n";
-							}
-							for (int j = 0; j < lFbxProp.GetSrcObjectCount<FbxProceduralTexture>(); ++j)
-							{
-								FbxProceduralTexture* lTex = lFbxProp.GetSrcObject<FbxProceduralTexture>(j);
-								m_out << Indent(indent) << "Procedural Texture: " << lTex->GetName() << "\n";
-							}
-						}
-						else
-						{
-							m_out << Indent(indent) << lFbxProp << "\n";
-						}
-					}
-				}
-			}
-			else if (material.GetClassId().Is(FbxSurfacePhong::ClassId))
-			{
-				// We found a Phong material.  Display its properties.
-				auto phong = static_cast<FbxSurfacePhong const*>(&material);
-				m_out << Indent(indent) << "Ambient: " << phong->Ambient << "\n";
-				m_out << Indent(indent) << "Diffuse: " << phong->Diffuse << "\n";
-				m_out << Indent(indent) << "Specular: " << phong->Specular << "\n";
-				m_out << Indent(indent) << "Emissive: " << phong->Emissive << "\n";
-				m_out << Indent(indent) << "Opacity: " << 1.0 - phong->TransparencyFactor.Get() << "\n";
-				m_out << Indent(indent) << "Shininess: " << phong->Shininess.Get() << "\n";
-				m_out << Indent(indent) << "Reflectivity: " << phong->ReflectionFactor.Get() << "\n";
-			}
-			else if (material.GetClassId().Is(FbxSurfaceLambert::ClassId))
-			{
-				// We found a Lambert material. Display its properties.
-				auto lambert = static_cast<FbxSurfaceLambert const*>(&material);
-				m_out << Indent(indent) << "Ambient: " << lambert->Ambient << "\n";
-				m_out << Indent(indent) << "Diffuse: " << lambert->Diffuse << "\n";
-				m_out << Indent(indent) << "Emissive: " << lambert->Emissive << "\n";
-				m_out << Indent(indent) << "Opacity: " << 1.0 - lambert->TransparencyFactor.Get() << "\n";
-			}
-			else
-			{
-				m_out << Indent(indent) << "Unknown type of Material" << "\n";
-			}
-
-			m_out << Indent(indent) << "Shading Model: " << material.ShadingModel.Get().Buffer() << "\n";
-		};
-
-		for (int lCount = 0, lend = geometry.GetNode()->GetMaterialCount(); lCount != lend; ++lCount)
-		{
-			m_out << Indent(indent) << "Material " << lCount << "\n";
-					
-			FbxSurfaceMaterial const* lMaterial = geometry.GetNode()->GetMaterial(lCount);
-			WriteMaterial(*lMaterial, indent + 1);
-		}
-	}
-	void WriteTexture(FbxGeometry const& geometry, int indent)
-	{
-		for (int lMaterialIndex = 0, lend = geometry.GetNode()->GetSrcObjectCount<FbxSurfaceMaterial>(); lMaterialIndex != lend; ++lMaterialIndex)
-		{
-			FbxSurfaceMaterial const* lMaterial = geometry.GetNode()->GetSrcObject<FbxSurfaceMaterial>(lMaterialIndex);
-			if (!lMaterial)
-				continue;
-
-			m_out << Indent(indent) << "Textures connected to Material " << lMaterialIndex << "\n";
-			for (int lTextureIndex = 0; lTextureIndex != FbxLayerElement::sTypeTextureCount; ++lTextureIndex)
-			{
-				auto lProperty = lMaterial->FindProperty(FbxLayerElement::sTextureChannelNames[lTextureIndex]);
-				if (!lProperty.IsValid())
-					continue;
-
-				for (int j = 0, jend = lProperty.GetSrcObjectCount<FbxTexture>(); j != jend; ++j)
-				{
-					// Here we have to check if it's layeredtextures, or just textures:
-					FbxLayeredTexture* lLayeredTexture = lProperty.GetSrcObject<FbxLayeredTexture>(j);
-					if (lLayeredTexture)
-					{
-						m_out << Indent(indent) << "Layered Texture: " << j << "\n";
-						for (int k = 0, kend = lLayeredTexture->GetSrcObjectCount<FbxTexture>(); k != kend; ++k)
-						{
-							FbxTexture* lTexture = lLayeredTexture->GetSrcObject<FbxTexture>(k);
-							if (!lTexture)
-								continue;
-
-							// NOTE the blend mode is ALWAYS on the LayeredTexture and NOT the one on the texture.
-							// Why is that?  because one texture can be shared on different layered textures and might
-							// have different blend modes.
-							FbxLayeredTexture::EBlendMode lBlendMode;
-							lLayeredTexture->GetTextureBlendMode(k, lBlendMode);
-							m_out << Indent(indent) << "Textures for " << lProperty.GetName() << "\n";
-							m_out << Indent(indent) << "Texture " << k << "\n";
-							WriteTextureInfo(*lTexture, (int)lBlendMode, indent+1);
-						}
-					}
-					else
-					{
-						//no layered texture simply get on the property
-						FbxTexture* lTexture = lProperty.GetSrcObject<FbxTexture>(j);
-						if (!lTexture)
-							continue;
-
-						m_out << Indent(indent) << "Textures for " << lProperty.GetName() << "\n";
-						m_out << Indent(indent) << "Texture " << j << "\n";
-						WriteTextureInfo(*lTexture, -1, indent+1);
-					}
-				}
-			}
-		}
-	}
-	void WriteTextureInfo(FbxTexture const& texture, int blend_mode, int indent)
-	{
-		m_out << Indent(indent) << "Name: \"" << texture.GetName() << "\"\n";
-		if (FbxFileTexture const* lFileTexture = FbxCast<FbxFileTexture>(&texture))
-		{
-			m_out << Indent(indent) << "Type: File Texture\n";
-			m_out << Indent(indent) << "File Name: \"" << lFileTexture->GetFileName() << "\"\n";
-		}
-		else if (FbxProceduralTexture const* lProceduralTexture = FbxCast<FbxProceduralTexture>(&texture))
-		{
-			m_out << Indent(indent) << "Type: Procedural Texture\n";
-		}
-		m_out << Indent(indent) << "Scale U: " << texture.GetScaleU() << "\n";
-		m_out << Indent(indent) << "Scale V: " << texture.GetScaleV() << "\n";
-		m_out << Indent(indent) << "Translation U: " << texture.GetTranslationU() << "\n";
-		m_out << Indent(indent) << "Translation V: " << texture.GetTranslationV() << "\n";
-		m_out << Indent(indent) << "Swap UV: " << texture.GetSwapUV() << "\n";
-		m_out << Indent(indent) << "Rotation U: " << texture.GetRotationU() << "\n";
-		m_out << Indent(indent) << "Rotation V: " << texture.GetRotationV() << "\n";
-		m_out << Indent(indent) << "Rotation W: " << texture.GetRotationW() << "\n";
-
-		char const* lAlphaSources[] = { "None", "RGB Intensity", "Black" };
-		m_out << Indent(indent) << "Alpha Source: " << lAlphaSources[texture.GetAlphaSource()] << "\n";
-		m_out << Indent(indent) << "Cropping Left: " << texture.GetCroppingLeft() << "\n";
-		m_out << Indent(indent) << "Cropping Top: " << texture.GetCroppingTop() << "\n";
-		m_out << Indent(indent) << "Cropping Right: " << texture.GetCroppingRight() << "\n";
-		m_out << Indent(indent) << "Cropping Bottom: " << texture.GetCroppingBottom() << "\n";
-
-		char const* lMappingTypes[] = { "Null", "Planar", "Spherical", "Cylindrical", "Box", "Face", "UV", "Environment" };
-		m_out << Indent(indent) << "Mapping Type: " << lMappingTypes[texture.GetMappingType()] << "\n";
-
-		if (texture.GetMappingType() == FbxTexture::ePlanar)
-		{
-			const char* lPlanarMappingNormals[] = { "X", "Y", "Z" };
-			m_out << Indent(indent) << "Planar Mapping Normal: " << lPlanarMappingNormals[texture.GetPlanarMappingNormal()] << "\n";
-		}
-
-		if (blend_mode >= 0)
-		{
-			char const* lBlendModes[] = {
-				"Translucent", "Additive", "Modulate", "Modulate2", "Over", "Normal", "Dissolve", "Darken", "ColorBurn", "LinearBurn",
-				"DarkerColor", "Lighten", "Screen", "ColorDodge", "LinearDodge", "LighterColor", "SoftLight", "HardLight", "VividLight",
-				"LinearLight", "PinLight", "HardMix", "Difference", "Exclusion", "Subtract", "Divide", "Hue", "Saturation", "Color",
-				"Luminosity", "Overlay"
-			};
-			m_out << Indent(indent) << "Blend Mode: " << lBlendModes[blend_mode] << "\n";
-		}
-			
-		m_out << Indent(indent) << "Alpha: " << texture.GetDefaultAlpha() << "\n";
-
-		if (FbxFileTexture const* lFileTexture = FbxCast<FbxFileTexture>(&texture))
-		{
-			const char* lMaterialUses[] = { "Model Material", "Default Material" };
-			m_out << Indent(indent) << "Material Use: " << lMaterialUses[lFileTexture->GetMaterialUse()] << "\n";
-		}
-
-		const char* pTextureUses[] = { "Standard", "Shadow Map", "Light Map", "Spherical Reflexion Map", "Sphere Reflexion Map", "Bump Normal Map" };
-		m_out << Indent(indent) << "Texture Use: " << pTextureUses[texture.GetTextureUse()] << "\n";
-	}
-	void WriteMaterialConnections(FbxMesh const& mesh, int indent)
-	{
-		m_out << Indent(indent) << "Material Connections:\n";
-		++indent;
-
-		// check whether the material maps with only one mesh
-		bool lIsAllSame = true;
-		for (int l = 0, lend = mesh.GetElementMaterialCount(); l != lend; ++l)
-		{
-			FbxGeometryElementMaterial const* lMaterialElement = mesh.GetElementMaterial(l);
-			lIsAllSame &= lMaterialElement->GetMappingMode() != FbxGeometryElement::eByPolygon;
-		}
-
-		auto WriteTextureNames = [this](FbxProperty const& property, int indent)
-		{
-			int lLayeredTextureCount = property.GetSrcObjectCount<FbxLayeredTexture>();
-			if (lLayeredTextureCount > 0)
-			{
-				m_out << Indent(indent) << " Texture ";
-				for (int j = 0; j != lLayeredTextureCount; ++j)
-				{
-					FbxLayeredTexture const* lLayeredTexture = property.GetSrcObject<FbxLayeredTexture>(j);
-					for (int k = 0, kend = lLayeredTexture->GetSrcObjectCount<FbxTexture>(); k != kend; ++k)
-						m_out << "\"" << lLayeredTexture->GetName() << "\" ";
-					m_out << "of " << property.GetName() << " on layer " << j;
-				}
-				m_out << "\n";
-			}
-			else
-			{
-				//no layered texture simply get on the property
-				m_out << Indent(indent) << " Texture ";
-				for (int j = 0, jend = property.GetSrcObjectCount<FbxTexture>(); j != jend; ++j)
-				{
-					FbxTexture* lTexture = property.GetSrcObject<FbxTexture>(j);
-					m_out << "\"" << (lTexture ? lTexture->GetName() : "unnamed") << "\" ";
-				}
-				m_out << "of " << property.GetName() << "\n";
-			}
-		};
-		auto WriteMaterialTextureConnections = [this, WriteTextureNames](FbxSurfaceMaterial const& material, int material_id, int indent)
-		{
-			//Show all the textures
-			m_out << Indent(indent) << "Material " << material_id << ":\n";
-			++indent;
-
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuse), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuseFactor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissive), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissiveFactor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbient), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbientFactor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecular), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecularFactor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sShininess), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sBump), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sNormalMap), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparentColor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparencyFactor), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflection), indent);
-			WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflectionFactor), indent);
-		};
-
-		// For eAllSame mapping type, just out the material and texture mapping info once
-		if (lIsAllSame)
-		{
-			for (int l = 0, lend = mesh.GetElementMaterialCount(); l != lend; ++l)
-			{
-				FbxGeometryElementMaterial const* lMaterialElement = mesh.GetElementMaterial(l);
-				if (lMaterialElement->GetMappingMode() == FbxGeometryElement::eAllSame)
-				{
-					FbxSurfaceMaterial const* lMaterial = mesh.GetNode()->GetMaterial(lMaterialElement->GetIndexArray().GetAt(0));
-					int lMatId = lMaterialElement->GetIndexArray().GetAt(0);
-					if (lMatId >= 0)
-					{
-						m_out << Indent(indent) << "all polygons share the same material in mesh " << l << "\n";
-						WriteMaterialTextureConnections(*lMaterial, lMatId, indent+1);
-					}
-				}
-			}
-
-			//no material
-			if (mesh.GetElementMaterialCount() == 0)
-				m_out << Indent(indent) << "no material applied\n";
-		}
-
-		//For eByPolygon mapping type, just out the material and texture mapping info once
-		else
-		{
-			for (int i = 0, iend = mesh.GetPolygonCount(); i != iend; ++i)
-			{
-				m_out << Indent(indent) << "Polygon " << i << "\n";
-				for (int l = 0, lend = mesh.GetElementMaterialCount(); l != lend ; ++l)
-				{
-					FbxGeometryElementMaterial const* lMaterialElement = mesh.GetElementMaterial(l);
-
-					FbxSurfaceMaterial* lMaterial = mesh.GetNode()->GetMaterial(lMaterialElement->GetIndexArray().GetAt(i));
-					int lMatId = lMaterialElement->GetIndexArray().GetAt(i);
-					if (lMatId >= 0)
-					{
-						WriteMaterialTextureConnections(*lMaterial, lMatId, indent+1);
-					}
-				}
-			}
-		}
-	}
-	void WriteLink(FbxGeometry const& geometry, int indent)
-	{
-		for (int i = 0, iend = geometry.GetDeformerCount(FbxDeformer::eSkin); i != iend; ++i)
-		{
-			auto skin = static_cast<FbxSkin const*>(geometry.GetDeformer(i, FbxDeformer::eSkin));
-			for (int j = 0, jend = skin->GetClusterCount(); j != jend; ++j)
-			{
-				auto lCluster = skin->GetCluster(j);
-				m_out << Indent(indent) << "Cluster " << i << "\n";
-
-				char const* lClusterModes[] = { "Normalize", "Additive", "Total1" };
-				m_out << Indent(indent) << "Mode: " << lClusterModes[lCluster->GetLinkMode()] << "\n";
-
-				if (lCluster->GetLink() != nullptr)
-					m_out << Indent(indent) << "Name: " << lCluster->GetLink()->GetName() << "\n";
-
-				int const* lIndices = lCluster->GetControlPointIndices();
-				m_out << Indent(indent) << "Link Indices: ";
-				for (int k = 0, kend = lCluster->GetControlPointIndicesCount(); k != kend; ++k)
-					m_out << (k == 0 ? "" : ", ") << lIndices[k];
-				m_out << "\n";
-
-				double* lWeights = lCluster->GetControlPointWeights();
-				m_out << Indent(indent) << "Weight Values: ";
-				for (int k = 0, kend = lCluster->GetControlPointIndicesCount(); k != kend; ++k)
-					m_out << (k == 0 ? "" : ", ") << lWeights[k];
-				m_out << "\n";
-
-				FbxAMatrix lMatrix;
-
-				lMatrix = lCluster->GetTransformMatrix(lMatrix);
-				m_out << Indent(indent) << "Transform Translation: " << lMatrix.GetT() << "\n";
-				m_out << Indent(indent) << "Transform Rotation: " << lMatrix.GetR() << "\n";
-				m_out << Indent(indent) << "Transform Scaling: " << lMatrix.GetS() << "\n";
-
-				lMatrix = lCluster->GetTransformLinkMatrix(lMatrix);
-				m_out << Indent(indent) << "Transform Link Translation: " << lMatrix.GetT() << "\n";
-				m_out << Indent(indent) << "Transform Link Rotation: " << lMatrix.GetR() << "\n";
-				m_out << Indent(indent) << "Transform Link Scaling: " << lMatrix.GetS() << "\n";
-
-				if (lCluster->GetAssociateModel() != nullptr)
-				{
-					lMatrix = lCluster->GetTransformAssociateModelMatrix(lMatrix);
-					m_out << Indent(indent) << "Associate Model: " << lCluster->GetAssociateModel()->GetName() << "\n";
-					m_out << Indent(indent) << "Associate Model Translation: " << lMatrix.GetT() << "\n";
-					m_out << Indent(indent) << "Associate Model Rotation: " << lMatrix.GetR() << "\n";
-					m_out << Indent(indent) << "Associate Model Scaling: " << lMatrix.GetS() << "\n";
-				}
-			}
-		}
-	}
-	void WriteShape(FbxGeometry const& geometry, int indent)
-	{
-		for (int lBlendShapeIndex = 0, lend = geometry.GetDeformerCount(FbxDeformer::eBlendShape); lBlendShapeIndex != lend; ++lBlendShapeIndex)
-		{
-			auto lBlendShape = static_cast<FbxBlendShape const*>(geometry.GetDeformer(lBlendShapeIndex, FbxDeformer::eBlendShape));
-			m_out << Indent(indent) << "BlendShape " << lBlendShape->GetName() << "\n";
-
-			for (int lBlendShapeChannelIndex = 0, bscend = lBlendShape->GetBlendShapeChannelCount(); lBlendShapeChannelIndex != bscend; ++lBlendShapeChannelIndex)
-			{
-				auto lBlendShapeChannel = lBlendShape->GetBlendShapeChannel(lBlendShapeChannelIndex);
-				m_out << Indent(indent) << "BlendShapeChannel " << lBlendShapeChannel->GetName() << "\n";
-				m_out << Indent(indent) << "Default Deform Value: " << lBlendShapeChannel->DeformPercent.Get() << "\n";
-
-				for (int lTargetShapeIndex = 0, tsend = lBlendShapeChannel->GetTargetShapeCount(); lTargetShapeIndex != tsend; ++lTargetShapeIndex)
-				{
-					auto lShape = lBlendShapeChannel->GetTargetShape(lTargetShapeIndex);
-					m_out << Indent(indent) << "TargetShape " << lShape->GetName() << "\n";
-
-					if (geometry.GetAttributeType() == FbxNodeAttribute::eMesh)
-					{
-						FbxMesh const* mesh = FbxCast<FbxMesh>(&geometry);
-						if (mesh && lShape->GetControlPointsCount() && mesh->GetControlPointsCount())
-						{
-							if (lShape->GetControlPointsCount() == mesh->GetControlPointsCount())
-							{
-								// Display control points that are different from the mesh
-								FbxVector4* lShapeControlPoint = lShape->GetControlPoints();
-								FbxVector4* lMeshControlPoint = mesh->GetControlPoints();
-								for (int j = 0; j < lShape->GetControlPointsCount(); j++)
-								{
-									FbxVector4 delta = lShapeControlPoint[j] - lMeshControlPoint[j];
-									if (!FbxEqual(delta, FbxZeroVector4))
-									{
-										m_out << Indent(indent) << "Control Point[" << j << "]: " << lShapeControlPoint[j] << "\n";
-									}
-								}
-							}
-
-							for (int i = 0, iend = lShape->GetLayerCount(); i != iend; ++i)
-							{
-								#if 0 //todo
-								const FbxLayer* pLayer = lShape->GetLayer(i);
-								DisplayLayerElement<FbxVector4>(FbxLayerElement::eNormal, pLayer, pMesh);
-								DisplayLayerElement<FbxColor>(FbxLayerElement::eVertexColor, pLayer, pMesh);
-								DisplayLayerElement<FbxVector4>(FbxLayerElement::eTangent, pLayer, pMesh);
-								DisplayLayerElement<FbxColor>(FbxLayerElement::eBiNormal, pLayer, pMesh);
-								DisplayLayerElement<FbxColor>(FbxLayerElement::eUV, pLayer, pMesh);
-								#endif
-							}
-						}
-					}
-					else
-					{
-						FbxLayerElementArrayTemplate<FbxVector4>* lNormals = nullptr;
-						bool has_normals = lShape->GetNormals(&lNormals);
-
-						for (int j = 0, jend = lShape->GetControlPointsCount(); j != jend; ++j)
-						{
-							m_out << Indent(indent) << "Control Point " << j << "\n";
-							m_out << Indent(indent) << "Coordinates: " << lShape->GetControlPoints()[j] << "\n";
-							if (has_normals && lNormals->GetCount() == jend)
-							{
-								m_out << Indent(indent) << "Normal Vector: " << lNormals->GetAt(j) << "\n";
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	void WriteCache(FbxGeometry const& geometry, int indent)
-	{
-		for (int i = 0, iend = geometry.GetDeformerCount(FbxDeformer::eVertexCache); i != iend; ++i)
-		{
-			auto lDeformer = static_cast<FbxVertexCacheDeformer const*>(geometry.GetDeformer(i, FbxDeformer::eVertexCache));
-			if (!lDeformer)
-				continue;
-
-			auto lCache = lDeformer->GetCache();
-			if (!lCache)
-				continue;
-
-			if (!lCache->OpenFileForRead())
-				continue;
-
-			m_out << Indent(indent) << "Vertex Cache:\n";
-			int lChannelIndex = lCache->GetChannelIndex(lDeformer->Channel.Get());
-
-			// skip normal channel
-			if (lChannelIndex < 0)
-				continue;
-
-			FbxString lChnlName;
-			lCache->GetChannelName(lChannelIndex, lChnlName);
-			m_out << Indent(indent) << "Channel Name: " << lChnlName.Buffer() << "\n";
-					
-			FbxCache::EMCDataType lChnlType;
-			lCache->GetChannelDataType(lChannelIndex, lChnlType);
-			m_out << Indent(indent) << "Channel Type: ";
-			switch (lChnlType)
-			{
-				case FbxCache::eUnknownData:       m_out << "Unknown Data"; break;
-				case FbxCache::eDouble:            m_out << "Double"; break;
-				case FbxCache::eDoubleArray:       m_out << "Double Array"; break;
-				case FbxCache::eDoubleVectorArray: m_out << "Double Vector Array"; break;
-				case FbxCache::eInt32Array:        m_out << "Int32 Array"; break;
-				case FbxCache::eFloatArray:        m_out << "Float Array"; break;
-				case FbxCache::eFloatVectorArray:  m_out << "Float Vector Array"; break;
-			}
-			m_out << "\n";
-
-			FbxString lChnlInterp;
-			lCache->GetChannelInterpretation(lChannelIndex, lChnlInterp);
-			m_out << Indent(indent) << "Channel Interpretation: " << lChnlInterp.Buffer() << "\n";
-
-			FbxCache::EMCSamplingType lChnlSampling;
-			lCache->GetChannelSamplingType(lChannelIndex, lChnlSampling);
-			m_out << Indent(indent) << "Channel Sampling Type: " << lChnlSampling << "\n";
-
-			FbxTime start, stop, rate;
-			unsigned int lChnlSampleCount;
-			lCache->GetAnimationRange(lChannelIndex, start, stop);
-			lCache->GetChannelSamplingRate(lChannelIndex, rate);
-			lCache->GetChannelSampleCount(lChannelIndex, lChnlSampleCount);
-			m_out << Indent(indent) << "Channel Sample Count: " << lChnlSampleCount << "\n";
-
-			// Only display cache data if the data type is float vector array
-			if (lChnlType != FbxCache::eFloatVectorArray)
-				continue;
-
-			m_out << Indent(indent) << (lChnlInterp == "normals" ? "Normal Cache Data" : "Points Cache Data") << "\n";
-
-			int lFrame = 0;
-			std::vector<float> buffer;
-			for (FbxTime t = start; t <= stop; t += rate, ++lFrame)
-			{
-				m_out << Indent(indent) << "Frame " << lFrame << "\n";
-
-				unsigned int lDataCount;
-				lCache->GetChannelPointCount(lChannelIndex, t, lDataCount);
-
-				buffer.resize(lDataCount);
-				lCache->Read(lChannelIndex, t, buffer.data(), lDataCount);
-
-				if (lChnlInterp == "normals")
-				{
-					// display normals cache data
-					// the normal data is per-polygon per-vertex. we can get the polygon vertex index
-					// from the index array of polygon vertex
-					auto& mesh = static_cast<FbxMesh const&>(geometry);
-
-					m_out << Indent(indent) << "Normal Count " << lDataCount << "\n";
-							
-					unsigned lNormalIndex = 0;
-					for (int pi = 0, piend = mesh.GetPolygonCount(); pi != piend && lNormalIndex + 2 < lDataCount * 3; ++pi)
-					{
-						m_out << Indent(indent) << "Polygon " << pi << "\n";
-						m_out << Indent(indent) << "Normals for Each Polygon Vertex: ";
-						for (int j = 0, jend = mesh.GetPolygonSize(pi); j != jend && lNormalIndex + 2 < lDataCount * 3; ++j)
-						{
-							FbxVector4 normal(buffer[lNormalIndex], buffer[lNormalIndex + 1], buffer[lNormalIndex + 2]);
-							m_out << Indent(indent) << "Normal Cache Data  " << normal << "\n";
-
-							lNormalIndex += 3;
-						}
-					}
-				}
-				else
-				{
-					m_out << Indent(indent) << "Points Count: " << lDataCount << "\n";
-					for (unsigned int j = 0; j < lDataCount * 3; j = j + 3)
-					{
-						FbxVector4 points(buffer[j], buffer[j + 1], buffer[j + 2]);
-						m_out << Indent(indent) << "Points Cache Data: " << points << "\n";
-					}
-				}
-			}
-
-			lCache->CloseFile();
-		}
-	}
-	void WriteNurb(FbxNode const& node, int indent)
-	{
-		auto const& nurbs = *static_cast<FbxNurbs const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Nurb Name: " << node.GetName() << "\n";
-		WriteMetaDataConnections(nurbs, indent+1);
-
-		const char* modes[] = { "Raw", "Low No Normals", "Low", "High No Normals", "High" };
-		m_out << Indent(indent) << "Surface Mode: " << modes[nurbs.GetSurfaceMode()] << "\n";
-
-		auto lControlPointsCount = nurbs.GetControlPointsCount();
-		auto lControlPoints = nurbs.GetControlPoints();
-
-		for (int i = 0; i != lControlPointsCount; ++i)
-		{
-			m_out << Indent(indent) << "Control Point " << i << "\n";
-			m_out << Indent(indent) << "Coordinates: " << lControlPoints[i] << "\n";
-			m_out << Indent(indent) << "Weight: " << lControlPoints[i][3] << "\n";
-		}
-
-		const char* nurb_types[] = { "Periodic", "Closed", "Open" };
-
-		m_out << Indent(indent) << "Nurb U Type: " << nurb_types[nurbs.GetNurbsUType()] << "\n";
-		m_out << Indent(indent) << "U Count: " << nurbs.GetUCount() << "\n";
-		m_out << Indent(indent) << "Nurb V Type: " << nurb_types[nurbs.GetNurbsVType()] << "\n";
-		m_out << Indent(indent) << "V Count: " << nurbs.GetVCount() << "\n";
-		m_out << Indent(indent) << "U Order: " << nurbs.GetUOrder() << "\n";
-		m_out << Indent(indent) << "V Order: " << nurbs.GetVOrder() << "\n";
-		m_out << Indent(indent) << "U Step: " << nurbs.GetUStep() << "\n";
-		m_out << Indent(indent) << "V Step: " << nurbs.GetVStep() << "\n";
-
-		FbxString lString;
-		double* lUKnotVector = nurbs.GetUKnotVector();
-		double* lVKnotVector = nurbs.GetVKnotVector();
-		int* lUMultiplicityVector = nurbs.GetUMultiplicityVector();
-		int* lVMultiplicityVector = nurbs.GetVMultiplicityVector();
-
-		m_out << Indent(indent) << "U Knot Vector: ";
-		for (int i = 0, lUKnotCount = nurbs.GetUKnotCount(); i != lUKnotCount; ++i)
-		{
-			if (i != 0) m_out << ", ";
-			m_out << (float)lUKnotVector[i];
-		}
-		m_out << "\n";
-		m_out << Indent(indent) << "V Knot Vector: ";
-		for (int i = 0, lVKnotCount = nurbs.GetVKnotCount(); i != lVKnotCount; ++i)
-		{
-			if (i != 0) m_out << ", ";
-			m_out << (float)lVKnotVector[i];
-		}
-		m_out << "\n";
-		m_out << Indent(indent) << "U Multiplicity Vector: ";
-		for (int i = 0, lUMultiplicityCount = nurbs.GetUCount(); i != lUMultiplicityCount; ++i)
-		{
-			if (i != 0) m_out << ", ";
-			m_out << lUMultiplicityVector[i];
-		}
-		m_out << "\n";
-		m_out << Indent(indent) << "V Multiplicity Vector: ";
-		for (int i = 0, lVMultiplicityCount = nurbs.GetVCount(); i != lVMultiplicityCount; ++i)
-		{
-			if (i != 0) m_out << ", ";
-			m_out << lVMultiplicityVector[i];
-		}
-		m_out << "\n";
-
-		WriteTexture(nurbs, indent+1);
-		WriteMaterials(nurbs, indent+1);
-		WriteLink(nurbs, indent+1);
-		WriteShape(nurbs, indent+1);
-		WriteCache(nurbs, indent+1);
-	}
-	void WritePatch(FbxNode const& node, int indent)
-	{
-		auto lPatch = static_cast<FbxPatch const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Patch Name: " << node.GetName() << "\n";
-		++indent;
-
-		WriteMetaDataConnections(*lPatch, indent + 1);
-
-		const char* lSurfaceModes[] = { "Raw", "Low No Normals", "Low", "High No Normals", "High" };
-		m_out << Indent(indent) << "Surface Mode: " << lSurfaceModes[lPatch->GetSurfaceMode()] << "\n";
-
-		FbxVector4* lControlPoints = lPatch->GetControlPoints();
-		for (int i = 0, iend = lPatch->GetControlPointsCount(); i != iend; ++i)
-		{
-			m_out << Indent(indent) << "Control Point " << i << "\n";
-			m_out << Indent(indent) << "Coordinates: " << lControlPoints[i] << "\n";
-			m_out << Indent(indent) << "Weight: " << lControlPoints[i][3] << "\n";
-		}
-
-		const char* lPatchTypes[] = { "Bezier", "Bezier Quadric", "Cardinal", "B-Spline", "Linear" };
-		m_out << Indent(indent) << "Patch U Type: "    << lPatchTypes[lPatch->GetPatchUType()] << "\n";
-		m_out << Indent(indent) << "U Count: "         << lPatch->GetUCount() << "\n";
-		m_out << Indent(indent) << "Patch V Type: "    << lPatchTypes[lPatch->GetPatchVType()] << "\n";
-		m_out << Indent(indent) << "V Count: "         << lPatch->GetVCount() << "\n";
-		m_out << Indent(indent) << "U Step: "          << lPatch->GetUStep() << "\n";
-		m_out << Indent(indent) << "V Step: "          << lPatch->GetVStep() << "\n";
-		m_out << Indent(indent) << "U Closed: "        << lPatch->GetUClosed() << "\n";
-		m_out << Indent(indent) << "V Closed: "        << lPatch->GetVClosed() << "\n";
-		m_out << Indent(indent) << "U Capped Top: "    << lPatch->GetUCappedTop() << "\n";
-		m_out << Indent(indent) << "U Capped Bottom: " << lPatch->GetUCappedBottom() << "\n";
-		m_out << Indent(indent) << "V Capped Top: "    << lPatch->GetVCappedTop() << "\n";
-		m_out << Indent(indent) << "V Capped Bottom: " << lPatch->GetVCappedBottom() << "\n";
-
-		WriteTexture(*lPatch, indent + 1);
-		WriteMaterials(*lPatch, indent + 1);
-		WriteLink(*lPatch, indent + 1);
-		WriteShape(*lPatch, indent + 1);
-	}
-	void WriteCamera(FbxNode const& node, int indent)
-	{
-		m_out << "Camera Name: " << node.GetName() << "\n";
-
-		auto pCamera = static_cast<FbxCamera const*>(node.GetNodeAttribute());
-		if (!pCamera)
-		{
-			m_out << Indent(indent) << "NOT FOUND" << "\n";
-			return;
-		}
-				
-		WriteMetaDataConnections(*pCamera, indent + 1);
-				
-		m_out << Indent(indent) << "Camera Position and Orientation" << "\n";
-		{
-			m_out << Indent(indent) << "Position: " << pCamera->Position.Get() << "\n";
-
-			if (FbxNode const* pTargetNode = node.GetTarget())
-				m_out << Indent(indent) << "Camera Interest: " << pTargetNode->GetName() << "\n";
-			else
-				m_out << Indent(indent) << "Default Camera Interest Position: " << pCamera->InterestPosition.Get() << "\n";
-
-			if (FbxNode const* pTargetUpNode = node.GetTargetUp())
-				m_out << Indent(indent) << "Camera Up Target: " << pTargetUpNode->GetName() << "\n";
-			else
-				m_out << Indent(indent) << "Up Vector: " << pCamera->UpVector.Get() << "\n";
-
-			m_out << Indent(indent) << "Roll: " << pCamera->Roll.Get() << "\n";
-
-			char const* lProjectionTypes[] = { "Perspective", "Orthogonal" };
-			m_out << Indent(indent) << "Projection Type: " << lProjectionTypes[pCamera->ProjectionType.Get()] << "\n";
-		}
-
-		m_out << Indent(indent) << "Viewing Area Controls:" << "\n";
-		{
-			char const* lCameraFormat[] = { "Custom", "D1 NTSC", "NTSC", "PAL", "D1 PAL", "HD", "640x480", "320x200", "320x240", "128x128", "Full Screen" };
-			m_out << Indent(indent) << "Format: " << lCameraFormat[pCamera->GetFormat()] << "\n";
-
-			const char* lAspectRatioModes[] = { "Window Size", "Fixed Ratio", "Fixed Resolution", "Fixed Width", "Fixed Height" };
-			m_out << Indent(indent) << "Aspect Ratio Mode: " << lAspectRatioModes[pCamera->GetAspectRatioMode()] << "\n";
-
-			// If the ratio mode is eWINDOW_SIZE, both width and height values aren't relevant.
-			m_out << Indent(indent) << "Aspect Width: " << pCamera->AspectWidth.Get() << "\n";
-			m_out << Indent(indent) << "Aspect Height: " << pCamera->AspectHeight.Get() << "\n";
-			m_out << Indent(indent) << "Pixel Ratio: " << pCamera->PixelAspectRatio.Get() << "\n";
-			m_out << Indent(indent) << "Near Plane: " << pCamera->NearPlane.Get() << "\n";
-			m_out << Indent(indent) << "Far Plane: " << pCamera->FarPlane.Get() << "\n";
-			m_out << Indent(indent) << "Mouse Lock: " << pCamera->LockMode.Get() << "\n";
-		}
-
-		// If camera projection type is set to FbxCamera::eOrthogonal, the aperture and film controls are not relevant.
-		if (pCamera->ProjectionType.Get() != FbxCamera::eOrthogonal)
-		{
-			m_out << Indent(indent) << "Aperture and Film Controls" << "\n";
-			{
-				const char* lCameraApertureFormats[] = { "Custom", "16mm Theatrical", "Super 16mm", "35mm Academy", "35mm TV Projection", "35mm Full Aperture", "35mm 1.85 Projection", "35mm Anamorphic", "70mm Projection", "VistaVision", "Dynavision", "Imax" };
-				m_out << Indent(indent) << "Aperture Format: " << lCameraApertureFormats[pCamera->GetApertureFormat()] << "\n";
-
-				const char* lCameraApertureModes[] = { "Horizontal and Vertical", "Horizontal", "Vertical", "Focal Length" };
-				m_out << Indent(indent) << "Aperture Mode: " << lCameraApertureModes[pCamera->GetApertureMode()] << "\n";
-				m_out << Indent(indent) << "Aperture Width: " << pCamera->GetApertureWidth() << " inches\n";
-				m_out << Indent(indent) << "Aperture Height: " << pCamera->GetApertureHeight() << " inches\n";
-				m_out << Indent(indent) << "Squeeze Ratio: " << pCamera->GetSqueezeRatio() << "\n";
-				m_out << Indent(indent) << "Focal Length: " << pCamera->FocalLength.Get() << "mm\n";
-				m_out << Indent(indent) << "Field of View: " << pCamera->FieldOfView.Get() << " degrees\n";
-			}
-		}
-
-		m_out << Indent(indent) << "Background Properties" << "\n";
-		{
-			m_out << Indent(indent) << "Background File Name: \"" << pCamera->GetBackgroundFileName() << "\"\n";
-
-			const char* lBackgroundDisplayModes[] = { "Disabled", "Always", "When Media" };
-			m_out << Indent(indent) << "Background Display Mode: " << lBackgroundDisplayModes[pCamera->ViewFrustumBackPlaneMode.Get()] << "\n";
-			m_out << Indent(indent) << "Foreground Matte Threshold Enable: " << pCamera->ShowFrontplate.Get() << "\n";
-
-			// This option is only relevant if background drawing mode is set to eFOREGROUND or eBACKGROUND_AND_FOREGROUND.
-			if (pCamera->ForegroundOpacity.Get())
-				m_out << Indent(indent) << "Foreground Matte Threshold: " << pCamera->BackgroundAlphaTreshold.Get() << "\n";
-
-			m_out << Indent(indent) << "Background Placement Options: ";
-			if (pCamera->GetBackPlateFitImage()) m_out << " Fit";
-			if (pCamera->GetBackPlateCenter()) m_out << " Center";
-			if (pCamera->GetBackPlateKeepRatio()) m_out << " Keep Ratio";
-			if (pCamera->GetBackPlateCrop()) m_out << " Crop";
-			m_out << "\n";
-
-			m_out << Indent(indent) << "Background Distance: " << pCamera->BackPlaneDistance.Get() << "\n";
-
-			const char* lCameraBackgroundDistanceModes[] = { "Relative to Interest", "Absolute from Camera" };
-			m_out << Indent(indent) << "Background Distance Mode: " << lCameraBackgroundDistanceModes[pCamera->BackPlaneDistanceMode.Get()] << "\n";
-		}
-
-		m_out << Indent(indent) << "Camera View Options:" << "\n";
-		{
-			m_out << Indent(indent) << "View Camera Interest: " << pCamera->ViewCameraToLookAt.Get() << "\n";
-			m_out << Indent(indent) << "View Near Far Planes: " << pCamera->ViewFrustumNearFarPlane.Get() << "\n";
-			m_out << Indent(indent) << "Show Grid: " << pCamera->ShowGrid.Get() << "\n";
-			m_out << Indent(indent) << "Show Axis: " << pCamera->ShowAzimut.Get() << "\n";
-			m_out << Indent(indent) << "Show Name: " << pCamera->ShowName.Get() << "\n";
-			m_out << Indent(indent) << "Show Info on Moving: " << pCamera->ShowInfoOnMoving.Get() << "\n";
-			m_out << Indent(indent) << "Show Time Code: " << pCamera->ShowTimeCode.Get() << "\n";
-			m_out << Indent(indent) << "Display Safe Area: " << pCamera->DisplaySafeArea.Get() << "\n";
-
-			const char* lSafeAreaStyles[] = { "Round", "Square" };
-			m_out << Indent(indent) << "Safe Area Style: " << lSafeAreaStyles[pCamera->SafeAreaDisplayStyle.Get()] << "\n";
-			m_out << Indent(indent) << "Show Audio: " << pCamera->ShowAudio.Get() << "\n";
-			m_out << Indent(indent) << "Background Color: " << pCamera->BackgroundColor.Get() << "\n";
-			m_out << Indent(indent) << "Audio Color: " << pCamera->AudioColor.Get() << "\n";
-			m_out << Indent(indent) << "Use Frame Color: " << pCamera->UseFrameColor.Get() << "\n";
-			m_out << Indent(indent) << "Frame Color: " << pCamera->FrameColor.Get() << "\n";
-		}
-
-		m_out << Indent(indent) << "Render Options:" << "\n";
-		{
-			const char* lCameraRenderOptionsUsageTimes[] = { "Interactive", "At Render" };
-			m_out << Indent(indent) << "Render Options Usage Time: " << lCameraRenderOptionsUsageTimes[pCamera->UseRealTimeDOFAndAA.Get()] << "\n";
-			m_out << Indent(indent) << "Use Antialiasing: " << pCamera->UseAntialiasing.Get() << "\n";
-			m_out << Indent(indent) << "Antialiasing Intensity: " << pCamera->AntialiasingIntensity.Get() << "\n";
-
-			const char* lCameraAntialiasingMethods[] = { "Oversampling Antialiasing", "Hardware Antialiasing" };
-			m_out << Indent(indent) << "Antialiasing Method: " << lCameraAntialiasingMethods[pCamera->AntialiasingMethod.Get()] << "\n";
-
-			// This option is only relevant if antialiasing method is set to eOVERSAMPLING_ANTIALIASING.
-			if (pCamera->AntialiasingMethod.Get() == FbxCamera::eAAOversampling)
-				m_out << Indent(indent) << "Number of Samples: " << pCamera->FrameSamplingCount.Get() << "\n";
-
-
-			const char* lCameraSamplingTypes[] = { "Uniform", "Stochastic" };
-			m_out << Indent(indent) << "Sampling Type: " << lCameraSamplingTypes[pCamera->FrameSamplingType.Get()] << "\n";
-			m_out << Indent(indent) << "Use Accumulation Buffer: " << pCamera->UseAccumulationBuffer.Get() << "\n";
-			m_out << Indent(indent) << "Use Depth of Field: " << pCamera->UseDepthOfField.Get() << "\n";
-
-			const char* lCameraFocusDistanceSources[] = { "Camera Interest", "Specific Distance" };
-			m_out << Indent(indent) << "Focus Distance Source: " << lCameraFocusDistanceSources[pCamera->FocusSource.Get()] << "\n";
-
-			// This parameter is only relevant if focus distance source is set to eSPECIFIC_DISTANCE.
-			if (pCamera->FocusSource.Get() == FbxCamera::eFocusSpecificDistance)
-				m_out << Indent(indent) << "Specific Distance: " << pCamera->FocusDistance.Get() << "\n";
-
-			m_out << Indent(indent) << "Focus Angle: " << pCamera->FocusAngle.Get() << " degrees\n";
-		}
-
-		m_out << Indent(indent) << "Default Animation Values:" << "\n";
-		{
-			m_out << Indent(indent) << "Default Field of View: " << pCamera->FieldOfView.Get() << "\n";
-			m_out << Indent(indent) << "Default Field of View X: " << pCamera->FieldOfViewX.Get() << "\n";
-			m_out << Indent(indent) << "Default Field of View Y: " << pCamera->FieldOfViewY.Get() << "\n";
-			m_out << Indent(indent) << "Default Optical Center X: " << pCamera->OpticalCenterX.Get() << "\n";
-			m_out << Indent(indent) << "Default Optical Center Y: " << pCamera->OpticalCenterY.Get() << "\n";
-			m_out << Indent(indent) << "Default Roll: " << pCamera->Roll.Get() << "\n";
-		}
-	}
-	void WriteLight(FbxNode const& node, int indent)
-	{
-		auto light = static_cast<FbxLight const*>(node.GetNodeAttribute());
-
-		m_out << Indent(indent) << "Light Name: " << node.GetName() << "\n";
-		WriteMetaDataConnections(*light, indent + 1);
-
-		const char* lLightTypes[] = { "Point", "Directional", "Spot", "Area", "Volume" };
-		m_out << Indent(indent) << "Type: " << lLightTypes[light->LightType.Get()] << "\n";
-		m_out << Indent(indent) << "Cast Light: " << light->CastLight.Get() << "\n";
-
-		if (!light->FileName.Get().IsEmpty())
-		{
-			m_out << Indent(indent) << "Gobo" << "\n";
-			m_out << Indent(indent) << "File Name: \"" << light->FileName.Get() << "\"\n";
-			m_out << Indent(indent) << "Ground Projection: " << light->DrawGroundProjection.Get() << "\n";
-			m_out << Indent(indent) << "Volumetric Projection: " << light->DrawVolumetricLight.Get() << "\n";
-			m_out << Indent(indent) << "Front Volumetric Projection: " << light->DrawFrontFacingVolumetricLight.Get() << "\n";
-		}
-
-		m_out << Indent(indent) << "Default Animation Values:\n";
-		{
-			m_out << Indent(indent) << "Default Color: " << light->Color.Get() << "\n";
-			m_out << Indent(indent) << "Default Intensity: " << light->Intensity.Get() << "\n";
-			m_out << Indent(indent) << "Default Outer Angle: " << light->OuterAngle.Get() << "\n";
-			m_out << Indent(indent) << "Default Fog: " << light->Fog.Get() << "\n";
-		}
-	}
-	void WriteLodGroup(FbxNode const& node, int indent)
-	{
-		char const* lDisplayLevels[] = { "UseLOD", "Show", "Hide" };
-
-		m_out << Indent(indent) << "LodGroup Name: " << node.GetName() << "\n";
-		++indent;
-
-		m_out << Indent(indent) << node.GetChildCount() << " Geometries" << "\n";
-		for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-			m_out << Indent(indent) << node.GetChild(i)->GetName() << "\n";
-
-		auto lLodGroupAttr = static_cast<FbxLODGroup const*>(node.GetNodeAttribute());
-		m_out << Indent(indent) << "MinMaxDistance Enabled: " << lLodGroupAttr->MinMaxDistance.Get() << "\n";
-		if (lLodGroupAttr->MinMaxDistance.Get())
-		{
-			m_out << Indent(indent) << "Min Distance: " << lLodGroupAttr->MinDistance.Get() << "\n";
-			m_out << Indent(indent) << "Max Distance: " << lLodGroupAttr->MaxDistance.Get() << "\n";
-		}
-		m_out << Indent(indent) << "Is World Space: " << lLodGroupAttr->WorldSpace.Get() << "\n";
-		m_out << Indent(indent) << "Thresholds used as Percentage: " << lLodGroupAttr->ThresholdsUsedAsPercentage.Get() << "\n";
-
-		m_out << Indent(indent) << "Thresholds:\n";
-		for (int i = 0, iend = lLodGroupAttr->GetNumThresholds(); i != iend; ++i)
-		{
-			FbxDistance lThreshVal;
-			bool res = lLodGroupAttr->GetThreshold(i, lThreshVal);
-			if (res || (!res && lLodGroupAttr->ThresholdsUsedAsPercentage.Get()))
-				// when thresholds are used as percentage, the GetThreshold returns false
-				// and we would need to make sure that the value is not bogus
-				m_out << Indent(indent+1) << lThreshVal.value() << "\n";
-		}
-
-		m_out << Indent(indent) << "DisplayLevels:\n";
-		for (int i = 0, iend = lLodGroupAttr->GetNumDisplayLevels(); i != iend; ++i)
-		{
-			FbxLODGroup::EDisplayLevel lLevel;
-			if (lLodGroupAttr->GetDisplayLevel(i, lLevel))
-				m_out << Indent(indent+1) << lDisplayLevels[lLevel] << "\n";
-		}
-	}
-	void WriteUserProperties(FbxObject const& node, int indent)
-	{
-		int i = 0; bool first = true;
-		for (FbxProperty prop = node.GetFirstProperty(); prop.IsValid(); prop = node.GetNextProperty(prop), ++i)
-		{
-			if (!prop.GetFlag(FbxPropertyFlags::eUserDefined))
-				continue;
-
-			first ? m_out << Indent(indent) << "User Properties:\n" : m_out;
-			WriteProperty(prop, i, indent + 1);
-			first = false;
-		}
-	}
-	void WriteTarget(FbxNode const& node, int indent)
-	{
-		if (node.GetTarget() != nullptr)
-		{
-			m_out << Indent(indent) << "Target Name: " << node.GetTarget()->GetName() << "\n";
-		}
-	}
-	void WritePivotsAndLimits(FbxNode const& node, int indent)
-	{
-		FbxNode::EPivotState pivot_state;
-		node.GetPivotState(FbxNode::eSourcePivot, pivot_state);
-		if (pivot_state == FbxNode::ePivotActive)
-		{
-			FbxVector4 vec;
-
-			m_out << Indent(indent) << "Pivot Information:\n";
-			if (!(vec = node.GetPreRotation(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Pre-Rotation: {} {} {}\n", vec[0], vec[1], vec[2]);
-			if (!(vec = node.GetPostRotation(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Post-Rotation: {} {} {}\n", vec[0], vec[1], vec[2]);
-			if (!(vec = node.GetRotationPivot(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Rotation Pivot: {} {} {}\n", vec[0], vec[1], vec[2]);
-			if (!(vec = node.GetRotationOffset(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Rotation Offset: {} {} {}\n", vec[0], vec[1], vec[2]);
-			if (!(vec = node.GetScalingPivot(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Scaling Pivot: {} {} {}\n", vec[0], vec[1], vec[2]);
-			if (!(vec = node.GetScalingOffset(FbxNode::eSourcePivot)).IsZero())
-				m_out << Indent(indent) << std::format("Scaling Offset: {} {} {}\n", vec[0], vec[1], vec[2]);
-		}
-
-		// Limits
-		if (static_cast<bool>(node.TranslationActive) ||
-			static_cast<bool>(node.RotationActive) ||
-			static_cast<bool>(node.ScalingActive))
-		{
-			m_out << Indent(indent) << "Limits Information:\n";
-			if (static_cast<bool>(node.TranslationActive))
-			{
-				FbxDouble3 min_values = node.TranslationMin;
-				FbxDouble3 max_values = node.TranslationMax;
-				if (!static_cast<bool>(node.TranslationMinX)) min_values[0] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.TranslationMinY)) min_values[1] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.TranslationMinZ)) min_values[2] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.TranslationMaxX)) max_values[0] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.TranslationMaxY)) max_values[1] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.TranslationMaxZ)) max_values[2] = +std::numeric_limits<double>::infinity();
-
-				m_out << Indent(indent) << "Translation limits:\n";
-				m_out << Indent(indent) << "X: [" << min_values[0] << ", " << max_values[0] << "]\n";
-				m_out << Indent(indent) << "Y: [" << min_values[1] << ", " << max_values[1] << "]\n";
-				m_out << Indent(indent) << "Z: [" << min_values[2] << ", " << max_values[2] << "]\n";
-			}
-			if (static_cast<bool>(node.RotationActive))
-			{
-				FbxDouble3 min_values = node.RotationMin;
-				FbxDouble3 max_values = node.RotationMax;
-				if (!static_cast<bool>(node.RotationMinX)) min_values[0] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.RotationMinY)) min_values[1] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.RotationMinZ)) min_values[2] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.RotationMaxX)) max_values[0] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.RotationMaxY)) max_values[1] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.RotationMaxZ)) max_values[2] = +std::numeric_limits<double>::infinity();
-
-				m_out << Indent(indent) << "Rotation limits:\n";
-				m_out << Indent(indent) << "X: [" << min_values[0] << ", " << max_values[0] << "]\n";
-				m_out << Indent(indent) << "Y: [" << min_values[1] << ", " << max_values[1] << "]\n";
-				m_out << Indent(indent) << "Z: [" << min_values[2] << ", " << max_values[2] << "]\n";
-			}
-			if (static_cast<bool>(node.ScalingActive))
-			{
-				FbxDouble3 min_values = node.ScalingMin;
-				FbxDouble3 max_values = node.ScalingMax;
-				if (!static_cast<bool>(node.ScalingMinX)) min_values[0] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.ScalingMinY)) min_values[1] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.ScalingMinZ)) min_values[2] = -std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.ScalingMaxX)) max_values[0] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.ScalingMaxY)) max_values[1] = +std::numeric_limits<double>::infinity();
-				if (!static_cast<bool>(node.ScalingMaxZ)) max_values[2] = +std::numeric_limits<double>::infinity();
-
-				m_out << Indent(indent) << "Scaling limits:\n";
-				m_out << Indent(indent) << "X: [" << min_values[0] << ", " << max_values[0] << "]\n";
-				m_out << Indent(indent) << "Y: [" << min_values[1] << ", " << max_values[1] << "]\n";
-				m_out << Indent(indent) << "Z: [" << min_values[2] << ", " << max_values[2] << "]\n";
-			}
-		}
-	}
-	void WriteTransformPropagation(FbxNode const& node, int indent)
-	{
-		m_out << Indent(indent) << "Transformation Propagation:\n";
-
-		// Rotation Space
-		FbxEuler::EOrder order;
-		node.GetRotationOrder(FbxNode::eSourcePivot, order);
-
-		m_out << Indent(indent) << "Rotation Space: ";
-		switch (order)
-		{
-			case FbxEuler::eOrderXYZ: m_out << "Euler XYZ\n"; break;
-			case FbxEuler::eOrderXZY: m_out << "Euler XZY\n"; break;
-			case FbxEuler::eOrderYZX: m_out << "Euler YZX\n"; break;
-			case FbxEuler::eOrderYXZ: m_out << "Euler YXZ\n"; break;
-			case FbxEuler::eOrderZXY: m_out << "Euler ZXY\n"; break;
-			case FbxEuler::eOrderZYX: m_out << "Euler ZYX\n"; break;
-			case FbxEuler::eOrderSphericXYZ: m_out << "Spheric XYZ\n"; break;
-			default: m_out << "UNKNOWN ORDER\n"; break;
-		}
-
-		// Use the Rotation space only for the limits
-		// (keep using eEulerXYZ for the rest)
-		m_out << Indent(indent) << std::format("Use the Rotation Space for Limit specification only: {}\n", node.GetUseRotationSpaceForLimitOnly(FbxNode::eSourcePivot) ? "Yes" : "No");
-
-		// Inherit Type
-		FbxTransform::EInheritType inherit_type;
-		node.GetTransformationInheritType(inherit_type);
-
-		m_out << Indent(indent) << "Transformation Inheritance: ";
-		switch (inherit_type)
-		{
-			case FbxTransform::eInheritRrSs: m_out << "RrSs\n"; break;
-			case FbxTransform::eInheritRSrs: m_out << "RSrs\n"; break;
-			case FbxTransform::eInheritRrs: m_out << "Rrs\n"; break;
-		}
-	}
-	void WriteGeometricTransform(FbxNode const& node, int indent)
-	{
-		m_out << Indent(indent) << "Geometric Transformations:\n";
-		{
-			auto xyz = node.GetGeometricTranslation(FbxNode::eSourcePivot);
-			auto rot = node.GetGeometricRotation(FbxNode::eSourcePivot);
-			auto scl = node.GetGeometricScaling(FbxNode::eSourcePivot);
-			m_out << Indent(indent+1) << std::format("Translation: {} {} {}\n", xyz[0], xyz[1], xyz[2]);
-			m_out << Indent(indent+1) << std::format("Rotation:    {} {} {}\n", rot[0], rot[1], rot[2]);
-			m_out << Indent(indent+1) << std::format("Scaling:     {} {} {}\n", scl[0], scl[1], scl[2]);
-		}
-	}
-	void WriteMetaDataConnections(FbxObject const& node, int indent)
-	{
-		for (int i = 0, iend = node.GetSrcObjectCount<FbxObjectMetaData>(); i != iend; ++i)
-		{
-			i == 0 ? m_out << Indent(indent) << "    MetaData connections:\n" : m_out;
-			m_out << Indent(indent) << "Name: " << node.GetSrcObject<FbxObjectMetaData>(i)->GetName() << "\n";
-		}
-	}
-	void WritePose(FbxScene const& scene, int indent)
-	{
-		for (int i = 0, iend = scene.GetPoseCount(); i != iend; ++i)
-		{
-			auto lPose = const_cast<FbxScene&>(scene).GetPose(i);
-
-			m_out << Indent(indent) << "Pose " << i << "\n";
-			m_out << Indent(indent+1) << "Pose Name: " << lPose->GetName() << "\n";
-			m_out << Indent(indent+1) << "Is a bind pose: " << lPose->IsBindPose() << "\n";
-			m_out << Indent(indent+1) << "Number of items in the pose: " << lPose->GetCount() << "\n";
-
-			for (int j = 0, jend = lPose->GetCount(); j != jend; ++j)
-			{
-				m_out << Indent(indent+1) << "Item name: " << lPose->GetNodeName(j).GetCurrentName() << "\n";
-				if (!lPose->IsBindPose())
-					m_out << Indent(indent+1) << "Is local space matrix: " << lPose->IsLocalMatrix(j) << "\n"; // Rest pose can have local matrix
-
-				m_out << Indent(indent+1) << "Matrix value: " << lPose->GetMatrix(j) << "\n";
-			}
-		}
-		for (int i = 0, iend = scene.GetCharacterPoseCount(); i != iend; ++i)
-		{
-			FbxCharacterPose* lPose = const_cast<FbxScene&>(scene).GetCharacterPose(i);
-			FbxCharacter* lCharacter = lPose->GetCharacter();
-			if (!lCharacter)
-				break;
-
-			m_out << Indent(indent+1) << "Character Pose Name: " << lCharacter->GetName() << "\n";
-
-			FbxCharacterLink lCharacterLink;
-			for (auto lNodeId = FbxCharacter::eHips; lCharacter->GetCharacterLink(lNodeId, &lCharacterLink); lNodeId = FbxCharacter::ENodeId(int(lNodeId) + 1))
-			{
-				m_out << Indent(indent+1) << "Matrix value: " << lCharacterLink.mNode->EvaluateGlobalTransform(FBXSDK_TIME_ZERO) << "\n";
-			}
-		}
-	}
-	void WriteAnimation(FbxScene const& scene, int indent)
-	{
-		m_out << Indent(indent) << "Animation:\n";
-		++indent;
-
-		for (int i = 0, iend = scene.GetSrcObjectCount<FbxAnimStack>(); i != iend; ++i)
-		{
-			FbxAnimStack const* lAnimStack = scene.GetSrcObject<FbxAnimStack>(i);
-			m_out << Indent(indent) << "Animation Stack Name: " << lAnimStack->GetName() << "\n";
-			WriteAnimationStack(*lAnimStack, *scene.GetRootNode(), false, indent + 1);
-		}
-	}
-	void WriteAnimationStack(FbxAnimStack const& anim_stack, FbxNode const& node, bool isSwitcher, int indent)
-	{
-		m_out << Indent(indent) << "contains ";
-		int nbAnimLayers = anim_stack.GetMemberCount<FbxAnimLayer>();
-		int nbAudioLayers = anim_stack.GetMemberCount<FbxAudioLayer>();
-		if (nbAnimLayers == 0 && nbAudioLayers == 0)
-			m_out << "no layers";
-		if (nbAnimLayers != 0)
-			m_out << nbAnimLayers << " Animation Layers";
-		if (nbAudioLayers != 0)
-			m_out << (nbAnimLayers != 0 ? " and " : "") << nbAudioLayers << " Audio Layers";
-		m_out << "\n";
-
-		for (int l = 0; l != nbAnimLayers; ++l)
-		{
-			FbxAnimLayer const* lAnimLayer = anim_stack.GetMember<FbxAnimLayer>(l);
-			m_out << Indent(indent) << "AnimLayer " << l << "\n";
-			WriteAnimationLayer(*lAnimLayer, node, isSwitcher, indent + 1);
-		}
-		for (int l = 0; l != nbAudioLayers; ++l)
-		{
-			FbxAudioLayer const* lAudioLayer = anim_stack.GetMember<FbxAudioLayer>(l);
-			m_out << Indent(indent) << "AudioLayer " << l << "\n";
-			WriteAudioLayer(*lAudioLayer, isSwitcher, indent + 1);
-		}
-	}
-	void WriteAnimationLayer(FbxAnimLayer const& anim_layer, FbxNode const& node, bool isSwitcher, int indent)
-	{
-		m_out << Indent(indent) << "Node Name: " << node.GetName() << "\n";
-		FbxAnimLayer* pAnimLayer = const_cast<FbxAnimLayer*>(&anim_layer);
-		FbxNode* pNode = const_cast<FbxNode*>(&node);
-
-		// Display general curves.
-		if (!isSwitcher)
-		{
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclTranslation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_X)) WriteCurveKeys(*lAnimCurve, "TX", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclTranslation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Y)) WriteCurveKeys(*lAnimCurve, "TY", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclTranslation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Z)) WriteCurveKeys(*lAnimCurve, "TZ", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclRotation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_X)) WriteCurveKeys(*lAnimCurve, "RX", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclRotation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Y)) WriteCurveKeys(*lAnimCurve, "RY", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclRotation.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Z)) WriteCurveKeys(*lAnimCurve, "RZ", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclScaling.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_X)) WriteCurveKeys(*lAnimCurve, "SX", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclScaling.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Y)) WriteCurveKeys(*lAnimCurve, "SY", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = pNode->LclScaling.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COMPONENT_Z)) WriteCurveKeys(*lAnimCurve, "SZ", indent + 1);
-		}
-
-		// Display curves specific to a light or marker.
-		if (FbxNodeAttribute* lNodeAttribute = pNode->GetNodeAttribute())
-		{
-			if (FbxAnimCurve const* lAnimCurve = lNodeAttribute->Color.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COLOR_RED)) WriteCurveKeys(*lAnimCurve, "Red", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = lNodeAttribute->Color.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COLOR_GREEN)) WriteCurveKeys(*lAnimCurve, "Green", indent + 1);
-			if (FbxAnimCurve const* lAnimCurve = lNodeAttribute->Color.GetCurve(pAnimLayer, FBXSDK_CURVENODE_COLOR_BLUE)) WriteCurveKeys(*lAnimCurve, "Blue", indent + 1);
-
-			// Display curves specific to a light.
-			if (FbxLight* light = pNode->GetLight())
-			{
-				if (FbxAnimCurve const* lAnimCurve = light->Intensity.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Intensity", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = light->OuterAngle.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Outer Angle", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = light->Fog.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Fog", indent + 1);
-			}
-
-			// Display curves specific to a camera.
-			if (FbxCamera* camera = pNode->GetCamera())
-			{
-				if (FbxAnimCurve const* lAnimCurve = camera->FieldOfView.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Field of View", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = camera->FieldOfViewX.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Field of View X", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = camera->FieldOfViewY.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Field of View Y", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = camera->OpticalCenterX.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Optical Center X", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = camera->OpticalCenterY.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Optical Center Y", indent + 1);
-				if (FbxAnimCurve const* lAnimCurve = camera->Roll.GetCurve(pAnimLayer)) WriteCurveKeys(*lAnimCurve, "Roll", indent + 1);
-			}
-
-			// Display curves specific to a geometry.
-			if (lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eMesh ||
-				lNodeAttribute->GetAttributeType() == FbxNodeAttribute::eNurbs ||
-				lNodeAttribute->GetAttributeType() == FbxNodeAttribute::ePatch)
-			{
-				FbxGeometry* lGeometry = (FbxGeometry*)lNodeAttribute;
-				for (int lBlendShapeIndex = 0, bsend = lGeometry->GetDeformerCount(FbxDeformer::eBlendShape); lBlendShapeIndex != bsend; ++lBlendShapeIndex)
-				{
-					FbxBlendShape* lBlendShape = (FbxBlendShape*)lGeometry->GetDeformer(lBlendShapeIndex, FbxDeformer::eBlendShape);
-
-					int lBlendShapeChannelCount = lBlendShape->GetBlendShapeChannelCount();
-					for (int lChannelIndex = 0; lChannelIndex < lBlendShapeChannelCount; ++lChannelIndex)
-					{
-						FbxBlendShapeChannel* lChannel = lBlendShape->GetBlendShapeChannel(lChannelIndex);
-						const char* lChannelName = lChannel->GetName();
-
-						if (FbxAnimCurve const* lAnimCurve = lGeometry->GetShapeChannel(lBlendShapeIndex, lChannelIndex, pAnimLayer, true))
-						{
-							m_out << Indent(indent) << "Shape" << lChannelName << "\n";
-							WriteCurveKeys(*lAnimCurve, "", indent + 1);
-						}
-					}
-				}
-			}
-		}
-
-		// Display curves specific to properties
-		for (FbxProperty lProperty = pNode->GetFirstProperty(); lProperty.IsValid(); lProperty = pNode->GetNextProperty(lProperty))
-		{
-			if (!lProperty.GetFlag(FbxPropertyFlags::eUserDefined))
-				continue;
-
-			FbxAnimCurveNode* lCurveNode = lProperty.GetCurveNode(pAnimLayer);
-			if (!lCurveNode)
-				continue;
-
-			FbxDataType lDataType = lProperty.GetPropertyDataType();
-			if (lDataType.GetType() == eFbxBool || lDataType.GetType() == eFbxDouble || lDataType.GetType() == eFbxFloat || lDataType.GetType() == eFbxInt)
-			{
-				m_out << Indent(indent) << "Property " << lProperty.GetName() << " (Label: " << lProperty.GetLabel() << ")\n";
-				for (int c = 0; c < lCurveNode->GetCurveCount(0U); c++)
-				{
-					if (FbxAnimCurve const* lAnimCurve = lCurveNode->GetCurve(0U, c))
-						WriteCurveKeys(*lAnimCurve, "", indent + 1);
-				}
-			}
-			else if (lDataType.GetType() == eFbxDouble3 || lDataType.GetType() == eFbxDouble4 || lDataType.Is(FbxColor3DT) || lDataType.Is(FbxColor4DT))
-			{
-				m_out << Indent(indent) << "Property " << lProperty.GetName() << " (Label: " << lProperty.GetLabel() << ")\n";
-				for (int c = 0; c < lCurveNode->GetCurveCount(0U); c++)
-				{
-					if (FbxAnimCurve const* lAnimCurve = lCurveNode->GetCurve(0U, c))
-						WriteCurveKeys(*lAnimCurve, "Component X", indent + 1);
-				}
-				for (int c = 0; c < lCurveNode->GetCurveCount(1U); c++)
-				{
-					if (FbxAnimCurve const* lAnimCurve = lCurveNode->GetCurve(1U, c))
-						WriteCurveKeys(*lAnimCurve, "Component Y", indent + 1);
-				}
-				for (int c = 0; c < lCurveNode->GetCurveCount(2U); c++)
-				{
-					if (FbxAnimCurve const* lAnimCurve = lCurveNode->GetCurve(2U, c))
-						WriteCurveKeys(*lAnimCurve, "Component Z", indent + 1);
-				}
-			}
-			else if (lDataType.GetType() == eFbxEnum)
-			{
-				m_out << Indent(indent) << "Property " << lProperty.GetName() << " (Label: " << lProperty.GetLabel() << ")\n";
-				for (int c = 0; c < lCurveNode->GetCurveCount(0U); c++)
-				{
-					if (FbxAnimCurve const* lAnimCurve = lCurveNode->GetCurve(0U, c))
-						WriteListCurveKeys(*lAnimCurve, lProperty, indent + 1);
-				}
-			}
-		}
-
-		for (int lModelCount = 0; lModelCount != pNode->GetChildCount(); ++lModelCount)
-			WriteAnimationLayer(anim_layer, *node.GetChild(lModelCount), isSwitcher, indent + 1);
-	}
-	void WriteCurveKeys(FbxAnimCurve const& pCurve, char const* label, int indent)
-	{
-		constexpr const char* interpolation[] = { "?", "constant", "linear", "cubic" };
-		constexpr auto InterpolationFlagToIndex = [](int flags) -> int
-		{
-			if ((flags & FbxAnimCurveDef::eInterpolationConstant) == FbxAnimCurveDef::eInterpolationConstant) return 1;
-			if ((flags & FbxAnimCurveDef::eInterpolationLinear) == FbxAnimCurveDef::eInterpolationLinear) return 2;
-			if ((flags & FbxAnimCurveDef::eInterpolationCubic) == FbxAnimCurveDef::eInterpolationCubic) return 3;
-			return 0;
-		};
-
-		constexpr const char* constantMode[] = { "?", "Standard", "Next" };
-		constexpr auto ConstantmodeFlagToIndex = [](int flags) -> int
-		{
-			if ((flags & FbxAnimCurveDef::eConstantStandard) == FbxAnimCurveDef::eConstantStandard) return 1;
-			if ((flags & FbxAnimCurveDef::eConstantNext) == FbxAnimCurveDef::eConstantNext) return 2;
-			return 0;
-		};
-
-		constexpr const char* cubicMode[] = { "?", "Auto", "Auto break", "Tcb", "User", "Break", "User break" };
-		constexpr auto TangentmodeFlagToIndex = [](int flags) -> int
-		{
-			if ((flags & FbxAnimCurveDef::eTangentAuto) == FbxAnimCurveDef::eTangentAuto) return 1;
-			if ((flags & FbxAnimCurveDef::eTangentAutoBreak) == FbxAnimCurveDef::eTangentAutoBreak) return 2;
-			if ((flags & FbxAnimCurveDef::eTangentTCB) == FbxAnimCurveDef::eTangentTCB) return 3;
-			if ((flags & FbxAnimCurveDef::eTangentUser) == FbxAnimCurveDef::eTangentUser) return 4;
-			if ((flags & FbxAnimCurveDef::eTangentGenericBreak) == FbxAnimCurveDef::eTangentGenericBreak) return 5;
-			if ((flags & FbxAnimCurveDef::eTangentBreak) == FbxAnimCurveDef::eTangentBreak) return 6;
-			return 0;
-		};
-
-		constexpr const char* tangentWVMode[] = { "?", "None", "Right", "Next left" };
-		constexpr auto TangentweightFlagToIndex = [](int flags) -> int
-		{
-			if ((flags & FbxAnimCurveDef::eWeightedNone) == FbxAnimCurveDef::eWeightedNone) return 1;
-			if ((flags & FbxAnimCurveDef::eWeightedRight) == FbxAnimCurveDef::eWeightedRight) return 2;
-			if ((flags & FbxAnimCurveDef::eWeightedNextLeft) == FbxAnimCurveDef::eWeightedNextLeft) return 3;
-			return 0;
-		};
-		constexpr auto TangentVelocityFlagToIndex = [](int flags) -> int
-		{
-			if ((flags & FbxAnimCurveDef::eVelocityNone) == FbxAnimCurveDef::eVelocityNone) return 1;
-			if ((flags & FbxAnimCurveDef::eVelocityRight) == FbxAnimCurveDef::eVelocityRight) return 2;
-			if ((flags & FbxAnimCurveDef::eVelocityNextLeft) == FbxAnimCurveDef::eVelocityNextLeft) return 3;
-			return 0;
-		};
-
-		m_out << Indent(indent) << label << ":\n";
-		for (int lCount = 0, lend = pCurve.KeyGetCount(); lCount != lend; lCount++)
-		{
-			auto lKeyValue = static_cast<float>(pCurve.KeyGetValue(lCount));
-			auto lKeyTime = pCurve.KeyGetTime(lCount);
-			char time_string[256];
-
-			m_out
-				<< Indent(indent + 1)
-				<< "Key Time: " << lKeyTime.GetTimeString(time_string, _countof(time_string))
-				<< ".... Key Value: " << lKeyValue << " [ "
-				<< interpolation[InterpolationFlagToIndex(pCurve.KeyGetInterpolation(lCount))];
-
-			if ((pCurve.KeyGetInterpolation(lCount) & FbxAnimCurveDef::eInterpolationConstant) == FbxAnimCurveDef::eInterpolationConstant)
-			{
-				m_out << " | " << constantMode[ConstantmodeFlagToIndex(pCurve.KeyGetConstantMode(lCount))];
-			}
-			else if ((pCurve.KeyGetInterpolation(lCount) & FbxAnimCurveDef::eInterpolationCubic) == FbxAnimCurveDef::eInterpolationCubic)
-			{
-				m_out
-					<< " | " << cubicMode[TangentmodeFlagToIndex(pCurve.KeyGetTangentMode(lCount))]
-					<< " | " << tangentWVMode[TangentweightFlagToIndex(pCurve.KeyGet(lCount).GetTangentWeightMode())]
-					<< " | " << tangentWVMode[TangentVelocityFlagToIndex(pCurve.KeyGet(lCount).GetTangentVelocityMode())];
-			}
-			m_out << " ]\n";
-		}
-	}
-	void WriteListCurveKeys(FbxAnimCurve const& pCurve, FbxProperty const& pProperty, int indent)
-	{
-		for (int lCount = 0, lend = pCurve.KeyGetCount(); lCount != lend; ++lCount)
-		{
-			auto lKeyValue = static_cast<int>(pCurve.KeyGetValue(lCount));
-			auto lKeyTime = pCurve.KeyGetTime(lCount);
-			char time_string[256];
-
-			m_out << Indent(indent)
-				<< "Key Time: " << lKeyTime.GetTimeString(time_string, _countof(time_string))
-				<< ".... Key Value: " << lKeyValue << " (" << pProperty.GetEnumValue(lKeyValue) << ")\n";
-		}
-	}
-	void WriteAudioLayer(FbxAudioLayer const& pAudioLayer, bool, int indent)
-	{
-		m_out << Indent(indent) << "Name: " << pAudioLayer.GetName() << "\n";
-		m_out << Indent(indent) << "Nb Audio Clips: " << pAudioLayer.GetMemberCount<FbxAudio>() << "\n";
-		for (int i = 0, iend = pAudioLayer.GetMemberCount<FbxAudio>(); i != iend; ++i)
-		{
-			FbxAudio const* lClip = pAudioLayer.GetMember<FbxAudio>(i);
-			m_out << Indent(indent) << "Clip[" << i << "]: " << lClip->GetName() << "\n";
-		}
-	}
-	void WriteGenericInfo(FbxScene const& scene, int indent)
-	{
-		m_out << Indent(indent) << "Generic Info:\n";
-
-		auto WriteProperties = [this](FbxObject const& pObject, int indent)
-		{
-			m_out << Indent(indent) << "Object: " << pObject.GetName() << "\n";
-			++indent;
-
-			// Display all the properties
-			int i = 0;
-			for (FbxProperty lProperty = pObject.GetFirstProperty(); lProperty.IsValid(); lProperty = pObject.GetNextProperty(lProperty), ++i)
-				WriteProperty(lProperty, i, indent);
-		};
-		std::function<void(FbxObject const&, int)> WriteInfo = [this, &WriteInfo, &WriteProperties](FbxObject const& obj, int indent)
-		{
-			WriteProperties(obj, indent);
-			if (FbxNode const* node = FbxCast<FbxNode>(&obj))
-			{
-				for (int i = 0, iend = node->GetChildCount(); i != iend; ++i)
-					WriteInfo(*node->GetChild(i), indent + 1);
-			}
-		};
-
-		// All objects directly connected onto the scene
-		for (int i = 0, iend = scene.GetSrcObjectCount(); i != iend; ++i)
-			WriteInfo(*scene.GetSrcObject(i), indent + 1);
-	}
-	void WriteProperty(FbxProperty const& prop, int index, int indent)
-	{
-		m_out << Indent(indent) << "Property: " << index << "\n";
-		++indent;
-
-		m_out << Indent(indent) << "Display Name: " << prop.GetLabel() << "\n";
-		m_out << Indent(indent) << "Internal Name: " << prop.GetName() << "\n";
-		m_out << Indent(indent) << "Type: " << prop.GetPropertyDataType().GetName() << "\n";
-		if (prop.HasMinLimit()) m_out << Indent(indent) << "Min Limit: " << prop.GetMinLimit() << "\n";
-		if (prop.HasMaxLimit()) m_out << Indent(indent) << "Max Limit: " << prop.GetMaxLimit() << "\n";
-		m_out << Indent(indent) << "Is Animatable: " << prop.GetFlag(FbxPropertyFlags::eAnimatable) << "\n";
-		m_out << Indent(indent) << "Default Value: " << prop << "\n";
-	}
-};
-#endif

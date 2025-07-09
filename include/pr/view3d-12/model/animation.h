@@ -66,8 +66,8 @@ namespace pr::rdr12
 	struct KeyFrame
 	{
 		// Should really compress this...
-		quat m_rotation;
 		v4 m_translation;
+		quat m_rotation;
 		v4 m_scale;
 		double m_time;
 		uint64_t m_flags;
@@ -92,9 +92,9 @@ namespace pr::rdr12
 		static KeyFrame Identity()
 		{
 			return KeyFrame {
-				.m_rotation = quat::Identity(),
 				.m_translation = v4::Origin(),
-				.m_scale = v4::Zero(),
+				.m_rotation = quat::Identity(),
+				.m_scale = v4::One(),
 				.m_time = 0.0,
 				.m_flags = 0,
 			};
@@ -111,8 +111,8 @@ namespace pr::rdr12
 				default: throw std::runtime_error("Unknown interpolation style");
 			}
 			return KeyFrame{
-				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
 				.m_translation = pr::Lerp(lhs.m_translation, rhs.m_translation, frac),
+				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
 				.m_scale = pr::Lerp(lhs.m_scale, rhs.m_scale, frac),
 				.m_time = pr::Lerp(lhs.m_time, rhs.m_time, frac),
 				.m_flags = 0
@@ -157,6 +157,7 @@ namespace pr::rdr12
 		KeyFrameAnimation(uint64_t skel_id, EAnimStyle style);
 
 		// Returns the linearly interpolated key frames a 'time_s'
+		void EvaluateAtTime(double time_s, Sample& out) const;
 		Sample EvaluateAtTime(double time_s) const;
 
 		// Ref-counting clean up function

@@ -82,10 +82,10 @@ int main()
 	fbx::Scene scene(ifile);
 	scene.Dump({
 		.m_parts =
-			fbx::DumpOptions::EParts::Meshes |
-			fbx::DumpOptions::EParts::Skeletons |
-			fbx::DumpOptions::EParts::Skinning |
-			fbx::DumpOptions::EParts::None,
+			fbx::EParts::Meshes |
+			fbx::EParts::Skeletons |
+			fbx::EParts::Skinning |
+			fbx::EParts::None,
 		.m_convert_axis_system = true,
 		.m_triangulate_meshes = true,
 	}, dfile);

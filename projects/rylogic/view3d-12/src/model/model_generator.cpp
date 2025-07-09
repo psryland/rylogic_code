@@ -1249,8 +1249,8 @@ namespace pr::rdr12
 		// Read the fbx scene
 		fbx::Scene scene(src);
 		scene.Read({
-			.m_parts = out.ReadAnimation ? fbx::ReadOptions::EParts::All : fbx::ReadOptions::EParts::ModelOnly,
-			.m_progress = IsDebuggerPresent() ? fbx::ReadOptions::ProgressCB{nullptr, OutputProgress} : fbx::ReadOptions::ProgressCB{nullptr, nullptr},
+			.m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly,
+			//.m_progress = IsDebuggerPresent() ? fbx::ReadOptions::ProgressCB{nullptr, OutputProgress} : fbx::ReadOptions::ProgressCB{nullptr, nullptr},
 		});
 
 		// Create the models
@@ -1392,8 +1392,8 @@ namespace pr::rdr12
 					for (auto const& key : track_in)
 					{
 						track_out.push_back(KeyFrame{
-							.m_rotation = key.m_rotation,
 							.m_translation = key.m_translation,
+							.m_rotation = key.m_rotation,
 							.m_scale = key.m_scale,
 							.m_time = key.m_time,
 						});

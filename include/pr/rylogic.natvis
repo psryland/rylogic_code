@@ -218,8 +218,9 @@ old:
 		-->
 	</Type>
 	<Type Name="pr::Mat4x4&lt;*,*&gt;">
-		<DisplayString>[{x}] &#10;[{y}] &#10;[{z}] &#10;[{w}]</DisplayString>
+		<DisplayString>[{x}]  [{y}]  [{z}]  [{w}]</DisplayString>
 		<!--
+		<DisplayString>[{x}] &#10;[{y}] &#10;[{z}] &#10;[{w}]</DisplayString>
 		<DisplayString>*o2w {{&#10;	{x.x} {x.y} {x.z} {x.w}&#10;	{y.x} {y.y} {y.z} {y.w}&#10;	{z.x} {z.y} {z.z} {z.w}&#10;	{w.x} {w.y} {w.z} {w.w}&#10;}}</DisplayString>
 		<DisplayString>new m4x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f),&#10;	new v4({w.x}f, {w.y}f, {w.z}f, {w.w}f)&#10;)</DisplayString>
 		<DisplayString LegacyAddin="P:\pr\obj\v142\prautoexp\x86\Debug\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
