@@ -494,6 +494,15 @@ namespace pr::geometry::fbx
 	template <> struct attribute<FbxMesh> { static constexpr FbxNodeAttribute::EType value = FbxNodeAttribute::eMesh; };
 	template <> struct attribute<FbxSkeleton> { static constexpr FbxNodeAttribute::EType value = FbxNodeAttribute::eSkeleton; };
 
+	// Recursively walk the graph from 'node'
+	template <typename Func> requires (std::invocable<Func, FbxNode&>)
+	static void Walk(FbxNode& node, Func func)
+	{
+		func(node);
+		for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
+			Walk(*node.GetChild(i), func);
+	}
+
 	// Find the next node attribute of the given type in 'node'
 	template <typename FbxNodeType, typename FbxNodeRef>
 	static FbxNodeType* Find(FbxNodeRef& node, int start = 0)
@@ -1019,10 +1028,16 @@ namespace pr::geometry::fbx
 			, m_time_span()
 			, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
 		{
-			auto basis0 = FbxAxisSystem{FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded};
-			auto basis1 = m_fbxscene.GetGlobalSettings().GetAxisSystem();
-			if (basis0 != basis1)
-				basis0.ConvertScene(&m_fbxscene);
+			// Bake transforms into the nodes
+			m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
+
+			// Store the original axis system before any modifications
+			auto original = m_fbxscene.GetGlobalSettings().GetAxisSystem();
+			auto target = FbxAxisSystem{FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded};
+			
+			// If we need axis system conversion, we need to be careful about order
+			if (original != target)
+				target.ConvertScene(&m_fbxscene);
 		}
 
 		// Read the scene
@@ -1322,13 +1337,6 @@ namespace pr::geometry::fbx
 
 				// Determine the object to parent transform.
 				mesh.m_o2p = To<m4x4>(node.EvaluateLocalTransform());
-
-				#if _DEBUG
-				auto o2w = To<m4x4>(node.EvaluateGlobalTransform());
-				auto p2w = To<m4x4>(node.GetParent()->EvaluateGlobalTransform());
-				auto o2p = InvertFast(p2w) * o2w;
-				assert(FEql(mesh.m_o2p, o2p)); // Could we actually use the local transform?
-				#endif
 
 				// Read the skinning data for this mesh
 				if (AllSet(m_opts.m_parts, EParts::Skinning))
@@ -1727,11 +1735,18 @@ namespace pr::geometry::fbx
 					}
 
 					std::vector<std::future<void>> tasks;
+					int64_t progress = 0;
 
 					// For each key frame time, start a worker that adds the key frame to each bone with that key
-					zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &animations, &tasks, &bone_id_lookup](KeyTime keytime, std::span<ZipSet const> indices)
+					zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &animations, &tasks, &bone_id_lookup, &progress](KeyTime keytime, std::span<ZipSet const> indices)
 					{
-						Progress(1 + (keytime.time - m_time_span.GetStart()).GetSecondCount(), m_time_span.GetDuration().GetSecondCount(), "Reading key frames...", 1);
+						auto fstep = (keytime.time - m_time_span.GetStart()).GetSecondDouble();
+						auto ftotal = m_time_span.GetDuration().GetSecondDouble();
+						if (auto pc = static_cast<int64_t>(fstep * 100 / ftotal); pc != progress)
+						{
+							progress = pc;
+							Progress(progress, 100, "Reading key frames...", 1);
+						}
 
 						// A snapshot of all bone transforms at a time
 						struct Snapshot
@@ -1743,27 +1758,19 @@ namespace pr::geometry::fbx
 							{
 								int m_bone_index; // The bone that has this key
 								int m_key_index; // The index of this key within the bone's keys
-								int m_parent_index; // The index of the parent bone
 								BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
 							};
 
 							std::vector<Key> m_keys;    // The keys at this snapshot
-							std::vector<m4x4> m_b2w;    // Bone to world for each bone at this time
+							std::vector<m4x4> m_b2p;    // Bone to parent for each bone at this time
 							double m_time;              // The time value in seconds at this snapshot time
 						};
 
 						// Capture a snapshot of the bone transforms at this time
 						Snapshot snapshot = {
 							.m_keys = {},
-							.m_b2w = {},
+							.m_b2p = {},
 							.m_time = keytime.time.GetSecondDouble(), 
-						};
-
-						// Find the parent bone index
-						auto ParentOf = [this, &bone_id_lookup](int bone_index)
-						{
-							auto* parent = FindParent<FbxSkeleton>(*m_bones[bone_id_lookup[bone_index]].bone->GetNode());
-							return parent ? m_bones[parent->GetUniqueID()].index : -1;
 						};
 
 						// Record the bones with a key frame at this time, and which key frame that is
@@ -1773,20 +1780,17 @@ namespace pr::geometry::fbx
 							snapshot.m_keys.push_back({
 								.m_bone_index = s_cast<int>(bone_idx),
 								.m_key_index = s_cast<int>(key_idx),
-								.m_parent_index = ParentOf(s_cast<int>(bone_idx)),
 								.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
 							});
 						}
 
 						// Buffer the transforms for each bone node. All bones are needed because we need the
 						// parent transforms to be correct, even if there isn't a key frame for the parent.
-						snapshot.m_b2w.reserve(m_bones.size());
+						snapshot.m_b2p.reserve(m_bones.size());
 						for (auto id : bone_id_lookup)
 						{
 							auto& node = *m_bones[id].bone->GetNode();
-							auto b2w = To<m4x4>(node.EvaluateGlobalTransform(keytime.time));
-							//auto b2w = To<m4x4>(node.EvaluateLocalTransform(keytime.time)); //todo test local. May not need parents
-							snapshot.m_b2w.push_back(b2w);
+							snapshot.m_b2p.push_back(To<m4x4>(node.EvaluateLocalTransform(keytime.time)));
 						}
 
 						// Start the worker to add key frames for each bone with a key at this time
@@ -1797,9 +1801,7 @@ namespace pr::geometry::fbx
 							{
 								// All bone nodes should be captured in the pose snapshot
 								auto const& bone_id = bone_id_lookup[key.m_bone_index];
-								auto const& b2w = snapshot.m_b2w[key.m_bone_index];
-								auto const& p2w = key.m_parent_index != -1 ? snapshot.m_b2w[key.m_parent_index] : m4x4::Identity();
-								auto b2p = InvertFast(p2w) * b2w;
+								auto const& b2p = snapshot.m_b2p[key.m_bone_index];
 
 								BoneKey keyframe = {
 									b2p.pos,

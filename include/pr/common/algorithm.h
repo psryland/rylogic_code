@@ -503,7 +503,7 @@ namespace pr
 		};
 
 		std::priority_queue<Elem> min_heap;
-		std::vector<ZipSet> set_items;
+		std::vector<ZipSet> set_items; set_items.reserve(srcs.size());
 		uint64_t set_mask = 0;
 
 		// Check the number of sources can be represented in the set mask

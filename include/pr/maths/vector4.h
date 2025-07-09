@@ -500,9 +500,9 @@ namespace pr
 		// abs(a - b) < tol
 		if constexpr (Vec4<S, T>::IntrinsicF)
 		{
-			auto d = _mm_sub_ps(a.vec, b.vec);                 // d = a - b;
-			auto abs_d = _mm_andnot_ps(_mm_set_ps1(-0.0f), d); // d = abs(a - b);
-			auto r = _mm_cmplt_ps(abs_d, _mm_set_ps1(tol));    // r = abs(d) < tol
+			auto d = _mm_sub_ps(a.vec, b.vec);                                        // d = a - b;
+			auto abs_d = _mm_and_ps(d, _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff))); // d = abs(a - b);
+			auto r = _mm_cmplt_ps(abs_d, _mm_set_ps1(tol));                           // r = abs(d) < tol
 			return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
 		}
 		else
