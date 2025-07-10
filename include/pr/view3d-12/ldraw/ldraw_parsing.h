@@ -105,11 +105,11 @@ namespace pr::rdr12::ldraw
 		ldraw::Location m_loc;
 
 		ParseErrorEventArgs()
-			:ParseErrorEventArgs({}, ldraw::EParseError::UnknownError, {})
+			: ParseErrorEventArgs({}, ldraw::EParseError::UnknownError, {})
 		{
 		}
 		ParseErrorEventArgs(std::string_view msg, ldraw::EParseError code, ldraw::Location const& loc)
-			:m_msg(msg)
+			: m_msg(msg)
 			, m_code(code)
 			, m_loc(loc)
 		{

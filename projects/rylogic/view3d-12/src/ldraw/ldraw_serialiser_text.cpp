@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Ldraw Script Text Serialiser
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
@@ -70,8 +70,10 @@ namespace pr::rdr12::ldraw
 		if (*pp != '{')
 		{
 			ReportError(EParseError::NotFound, Loc(), "section start expected");
+			str::AdvanceToDelim(pp, m_delim.c_str());
 			return;
 		}
+
 		++m_section_level;
 		++m_nest_level;
 		++pp;
@@ -85,8 +87,10 @@ namespace pr::rdr12::ldraw
 		if (*pp != '}')
 		{
 			ReportError(EParseError::NotFound, Loc(), "section end expected");
+			str::AdvanceToDelim(pp, m_delim.c_str());
 			return;
 		}
+
 		--m_section_level;
 		--m_nest_level;
 		++pp;
@@ -140,7 +144,11 @@ namespace pr::rdr12::ldraw
 		if (*pp != '{') tcount += str::ExtractToken(tokens[1], pp, m_delim.c_str()) ? 1 : 0;
 		script::EatDelimiters(pp, m_delim.c_str());
 		if (*pp != '{')
+		{
 			ReportError(EParseError::UnexpectedToken, Loc(), "expected '{'");
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		
 		// Insert pseudo tokens for name and colour
 		pp.Buffer(0, 1);
@@ -172,8 +180,11 @@ namespace pr::rdr12::ldraw
 
 		wstring32 str = {};
 		if (!str::ExtractIdentifier(str, pp, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "identifier expected");
-
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return Narrow(str);
 	}
 
@@ -186,8 +197,11 @@ namespace pr::rdr12::ldraw
 
 		wstring32 str = {};
 		if (!str::ExtractString(str, pp, wchar_t(escape_char), nullptr, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "string expected");
-		
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		str::ProcessIndentedNewlines(str);
 		return Narrow(str);
 	}
@@ -201,8 +215,11 @@ namespace pr::rdr12::ldraw
 
 		int64_t int_ = {};
 		if (!str::ExtractInt(int_, radix, pp, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "integer value expected");
-
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return int_;
 	}
 
@@ -215,8 +232,11 @@ namespace pr::rdr12::ldraw
 
 		double real_ = {};
 		if (!str::ExtractReal(real_, pp, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "real value expected");
-
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return real_;
 	}
 
@@ -229,8 +249,11 @@ namespace pr::rdr12::ldraw
 
 		string32 ident = {};
 		if (!str::ExtractIdentifier(ident, pp, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "enum identifier value expected");
-
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return parse(ident);
 	}
 
@@ -243,8 +266,11 @@ namespace pr::rdr12::ldraw
 
 		bool bool_ = {};
 		if (!str::ExtractBool(bool_, pp, m_delim.c_str()))
+		{
 			ReportError(EParseError::InvalidValue, Loc(), "boolean value expected");
-
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return bool_;
 	}
 }
