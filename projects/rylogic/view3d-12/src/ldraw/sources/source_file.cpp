@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -62,14 +62,14 @@ namespace pr::rdr12::ldraw
 					case EEncoding::utf16_be:
 					{
 						std::wifstream src(m_filepath);
-						TextReader reader(src, m_filepath, m_encoding, { OnReportError, this }, { OnProgress, this }, m_includes);
+						TextReader reader(src, m_filepath, m_encoding, { this, OnReportError }, { this, OnProgress }, m_includes);
 						return Parse(rdr, reader, m_context_id);
 					}
 					case EEncoding::ascii:
 					case EEncoding::utf8:
 					{
 						std::ifstream src(m_filepath);
-						TextReader reader(src, m_filepath, m_encoding, { OnReportError, this }, { OnProgress, this }, m_includes);
+						TextReader reader(src, m_filepath, m_encoding, { this, OnReportError }, { this, OnProgress }, m_includes);
 						return Parse(rdr, reader, m_context_id);
 					}
 					default:
@@ -87,7 +87,7 @@ namespace pr::rdr12::ldraw
 
 				// Parse the ldr script file
 				std::ifstream src(m_filepath, std::ios::binary);
-				ldraw::BinaryReader reader(src, m_filepath, { OnReportError, this }, { OnProgress, this }, m_includes);
+				ldraw::BinaryReader reader(src, m_filepath, { this, OnReportError }, { this, OnProgress }, m_includes);
 				return Parse(rdr, reader, m_context_id);
 			}
 
@@ -102,7 +102,7 @@ namespace pr::rdr12::ldraw
 				m_text_format = false;
 
 				mem_istream<char> src{ ldr_script, 0 };
-				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);
+				TextReader reader(src, {}, EEncoding::utf8, { this, OnReportError }, { this, OnProgress }, m_includes);
 				return Parse(rdr, reader, m_context_id);
 			}
 
@@ -113,7 +113,7 @@ namespace pr::rdr12::ldraw
 				m_text_format = true;
 
 				mem_istream<char> src{ ldr_script, 0 };
-				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);
+				TextReader reader(src, {}, EEncoding::utf8, { this, OnReportError }, { this, OnProgress }, m_includes);
 				return Parse(rdr, reader, m_context_id);
 			}
 

@@ -387,7 +387,7 @@ namespace Rylogic.Gui.WPF
 					// 'span_mag' is the order of magnitude of 'Span', e.g if Span is 7560, span_mag is 1000, so 'Span/span_mag'
 					// will be some values between [1, 10). 's' are common step sizes. Choose the step size that maximised the
 					// number of steps up to the limit 'max_ticks'.
-					double span_mag = Math.Pow(10.0, (int)Math.Log10(Span));
+					var span_mag = Math.Pow(10.0, (int)Math.Log10(Span));
 					var step_sizes = new[] { 0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1.0, 2.0, 2.5, 5.0, 10.0, 20.0, 50.0 };
 
 					// Aim for a step size that is 'span_mag * s' and for which 'Span / step' is just less than 'max_ticks'

@@ -18,7 +18,7 @@
 
 namespace pr::rdr12
 {
-	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB::FuncCB> global_error_cb)
+	Context::Context(HINSTANCE instance, view3d::ReportErrorCB global_error_cb)
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
 		, m_windows()
 		, m_sources(m_rdr, *this)
@@ -278,9 +278,10 @@ namespace pr::rdr12
 	}
 
 	// Modify an ldr object using a callback to populate the model data.
-	static void __stdcall EditModel(Model* model, void* ctx, Renderer&)
+	static void __stdcall EditModel(void* ctx, Model* model, Renderer&)
 	{
 		using namespace pr::rdr12;
+		auto& edit_cb = *static_cast<view3d::EditObjectCB*>(ctx);
 
 		// Thread local storage for editing dynamic models
 		thread_local static pr::vector<view3d::Vertex>         cache_vbuf;
@@ -331,12 +332,8 @@ namespace pr::rdr12
 #endif
 
 		// Get the user to generate/update the model
-		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
-		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(),
-			[](void* ctx, view3d::Nugget const& n)
-		{
-			static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n);
-		}, &nbuf);
+		auto add_nugget = view3d::AddNuggetCB{ &nbuf, [](void* ctx, view3d::Nugget const& n) { static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n); } };
+		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(), add_nugget);
 
 		// Sanity check results
 		if (new_vcount > isize(vbuf)) throw std::runtime_error("Dynamic model buffer overrun (v-buf)");
@@ -401,22 +398,22 @@ namespace pr::rdr12
 		if (ibuf.capacity() > 0x100000) ibuf.clear();
 		if (nbuf.capacity() > 0x100000) nbuf.clear();
 	}
-	ldraw::LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
+	ldraw::LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, view3d::EditObjectCB edit_cb, Guid const& context_id)
 	{
-		auto obj = ldraw::CreateEditCB(m_rdr, ldraw::ELdrObject::Custom, vcount, icount, ncount, EditModel, &edit_cb, context_id);
+		auto obj = ldraw::CreateEditCB(m_rdr, ldraw::ELdrObject::Custom, vcount, icount, ncount, { &edit_cb, EditModel }, context_id);
 		obj->m_name = name;
 		obj->m_base_colour = colour;
 		m_sources.Add(obj);
 		return obj.get();
 	}
-	void Context::ObjectEdit(ldraw::LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
+	void Context::ObjectEdit(ldraw::LdrObject* object, view3d::EditObjectCB edit_cb)
 	{
 		// Remove the object from any windows it might be in
 		for (auto& wnd : m_windows)
 			wnd->Remove(object);
 
 		// Callback to edit the geometry
-		Edit(m_rdr, object, EditModel, &edit_cb);
+		Edit(m_rdr, object, { &edit_cb, EditModel });
 	}
 
 	// Update the model in an existing object
@@ -458,18 +455,18 @@ namespace pr::rdr12
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(std::span<Guid const> include, std::span<Guid const> exclude)
+	void Context::DeleteAllObjectsById(view3d::GuidPredCB pred)
 	{
 		// Remove objects from any windows they might be assigned to
 		for (auto& wnd : m_windows)
-			wnd->Remove(include, exclude, false);
+			wnd->Remove(pred, false);
 
 		// Remove sources that match the given set of context ids to delete
-		m_sources.Remove(include, exclude);
+		m_sources.Remove(pred);
 	}
 
 	// Delete all objects not displayed in any windows
-	void Context::DeleteUnused(std::span<Guid const> include, std::span<Guid const> exclude)
+	void Context::DeleteUnused(view3d::GuidPredCB pred)
 	{
 		// Build a set of context ids, included in 'context_ids', and not used in any windows
 		GuidSet unused;
@@ -477,7 +474,7 @@ namespace pr::rdr12
 		// Initialise 'unused' with all context ids (filtered by 'context_ids')
 		for (auto& src : m_sources.Sources())
 		{
-			if (!IncludeFilter(src.first, include, exclude)) continue;
+			if (!pred(src.first)) continue;
 			unused.insert(src.first);
 		}
 
@@ -491,13 +488,12 @@ namespace pr::rdr12
 		// Remove unused sources
 		if (!unused.empty())
 		{
-			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
-			m_sources.Remove(ids, {});
+			m_sources.Remove({ &unused, [](void* ctx, Guid const& id) { return static_cast<GuidSet const*>(ctx)->contains(id); } });
 		}
 	}
 
 	// Enumerate all sources in the store
-	void Context::EnumSources(StaticCB<bool, GUID const&> enum_guids_cb)
+	void Context::EnumSources(view3d::EnumGuidsCB enum_guids_cb)
 	{
 		for (auto& pair : m_sources.Sources())
 		{
@@ -614,12 +610,6 @@ namespace pr::rdr12
 		args.m_cancel = cancel != 0;
 	}
 
-	//// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-	//void Context::OnReload()
-	//{
-	//	SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
-	//}
-
 	// Store change event. Called before and after a change to the collection of objects in the store.
 	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
 	{
@@ -638,11 +628,21 @@ namespace pr::rdr12
 				{
 					// When a source is about to be reloaded, remove it's objects from the windows, but keep the context ids so we know what to reload.
 					if (args.m_before)
-						wnd->Remove(args.m_context_ids, {}, true);
+					{
+						wnd->Remove({ &args.m_context_ids, ldraw::MatchContextIdInSpan }, true);
+					}
 
-					// After reload, re-add all objects from the context ids
+					// After reload, each window re-adds objects from the previous contexts
 					else
-						wnd->Add(m_sources.Sources(), args.m_context_ids, {});
+					{
+						struct Ids { std::span<Guid const> ctx_ids; GuidSet const& wnd_ids; } ids = { args.m_context_ids, wnd->m_guids };
+						constexpr auto ReAdd = [](void* ctx, Guid const& id)
+						{
+							auto& x = *static_cast<Ids*>(ctx);
+							return x.wnd_ids.contains(id) && std::ranges::find(x.ctx_ids, id) != end(x.ctx_ids);
+						};
+						wnd->Add(m_sources.Sources(), { &ids, ReAdd });
+					}
 
 					wnd->Invalidate();
 				}
@@ -655,7 +655,7 @@ namespace pr::rdr12
 				if (args.m_before)
 				{
 					for (auto& wnd : m_windows)
-						wnd->Remove(args.m_context_ids, {}, false);
+						wnd->Remove({ &args.m_context_ids, ldraw::MatchContextIdInSpan }, false);
 				}
 				reason = view3d::ESourcesChangedReason::Removal;
 				break;

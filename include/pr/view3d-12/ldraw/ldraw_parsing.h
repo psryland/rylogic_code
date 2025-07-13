@@ -358,7 +358,7 @@ namespace pr::rdr12::ldraw
 	// Callback function for editing a dynamic model
 	// This callback is intentionally low level, providing the whole model for editing.
 	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-	using EditObjectCB = void(__stdcall*)(Model* model, void* ctx, Renderer& rdr);
+	using EditObjectCB = StaticCB<void, Model*, Renderer&>;
 
 	// Create an ldr object using a callback to populate the model data.
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
@@ -369,11 +369,10 @@ namespace pr::rdr12::ldraw
 		int icount,                         // The number of indices to create the model with
 		int ncount,                         // The number of nuggets to create the model with
 		EditObjectCB edit_cb,               // The callback function, called after the model is created, to populate the model data
-		void* ctx,                          // Callback user context
 		Guid const& context_id = GuidZero); // The context id to assign to the object
 
 	// Modify the geometry of an LdrObject
-	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx);
+	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb);
 
 	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
 	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags);

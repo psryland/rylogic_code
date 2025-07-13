@@ -5270,7 +5270,7 @@ namespace pr::rdr12::ldraw
 
 	// Create an ldr object using a callback to populate the model data.
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
-	LdrObjectPtr CreateEditCB(Renderer& rdr, ELdrObject type, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
+	LdrObjectPtr CreateEditCB(Renderer& rdr, ELdrObject type, int vcount, int icount, int ncount, EditObjectCB edit_cb, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
@@ -5292,14 +5292,14 @@ namespace pr::rdr12::ldraw
 			obj->m_model->CreateNugget(factory, nug);
 
 		// Initialise it via the callback
-		edit_cb(obj->m_model.get(), ctx, rdr);
+		edit_cb(obj->m_model.get(), rdr);
 		return obj;
 	}
 
 	// Modify the geometry of an LdrObject
-	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
+	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb)
 	{
-		edit_cb(object->m_model.get(), ctx, rdr);
+		edit_cb(object->m_model.get(), rdr);
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update

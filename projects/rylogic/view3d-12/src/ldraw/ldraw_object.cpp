@@ -18,7 +18,9 @@ namespace pr::rdr12::ldraw
 	#define PR_LDR_CALLSTACKS 0
 	struct LeakedLdrObjects
 	{
+		struct RecentlyDeceased { string32 m_name; LdrObject const* ptr; };
 		std::unordered_set<LdrObject const*> m_ldr_objects;
+		std::deque<RecentlyDeceased> m_obituaries;
 		std::string m_call_stacks;
 		std::mutex m_mutex;
 			
@@ -61,6 +63,8 @@ namespace pr::rdr12::ldraw
 
 			std::lock_guard<std::mutex> lock(m_mutex);
 			m_ldr_objects.erase(ldr);
+			m_obituaries.push_front(RecentlyDeceased{ .m_name = ldr->m_name, .ptr = ldr });
+			for (; m_obituaries.size() > 20; m_obituaries.pop_back()) {}
 		}
 	} g_ldr_object_tracker;
 	#endif

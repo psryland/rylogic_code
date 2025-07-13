@@ -11,7 +11,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gfx
 {
-	public sealed class Measurement :IDisposable, INotifyPropertyChanged
+	public sealed class Measurement : IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This class provides the functionality for a measurement tool.
@@ -29,16 +29,14 @@ namespace Rylogic.Gfx
 		{
 			ReferenceFrame = EReferenceFrame.WorldSpace;
 			Flags = View3d.EHitTestFlags.Verts | View3d.EHitTestFlags.Edges | View3d.EHitTestFlags.Faces;
+			CtxId = Guid.NewGuid();
 			SnapDistance = 0.1;
 			BegSpotColour = Colour32.Aqua;
 			EndSpotColour = Colour32.Salmon;
-			ContextIds = new Guid[1] { Guid.NewGuid() };
-			IncludeCount = 0;
-			ExcludeCount = 1;
 			Results = new BindingDict<EQuantity, Result>(Enum<EQuantity>.Values.ToDictionary(x => x, x => new Result(x, "---")));
 			m_hit0 = new Hit();
 			m_hit1 = new Hit();
-			
+
 			Window = window;
 		}
 		public void Dispose()
@@ -123,29 +121,10 @@ namespace Rylogic.Gfx
 		private View3d.Window m_window = null!;
 
 		/// <summary>The context Id to use for the measurement graphics</summary>
-		public Guid CtxId
-		{
-			get => ContextIds[ContextIds.Length - 1];
-			set => ContextIds[ContextIds.Length - 1] = value;
-		}
+		public Guid CtxId { get; }
 
-		/// <summary>The include/exclude list of context ids</summary>
-		public Guid[] ContextIds { get; private set; }
-		private int IncludeCount;
-		private int ExcludeCount;
-
-		/// <summary>Set the context ids to include/exclude when hit testing</summary>
-		public void SetContextIds(Guid[] context_ids, int include_count, int exclude_count)
-		{
-			// Preserve the graphics context id
-			using (Scope.Create(() => CtxId, id => CtxId = id))
-			{
-				ContextIds = new Guid[context_ids.Length + 1];
-				Array.Copy(context_ids, ContextIds, context_ids.Length);
-				IncludeCount = include_count;
-				ExcludeCount = exclude_count + 1;
-			}
-		}
+		/// <summary>The context Id predicate to use</summary>
+		public Func<Guid, bool> ContextPredicate { get; set; } = x => true;
 
 		/// <summary>The colour of the starting hot spot</summary>
 		public Colour32 BegSpotColour
@@ -323,7 +302,7 @@ namespace Rylogic.Gfx
 
 			// Perform a hit test to update the position of the active hit
 			var ray = Window.Camera.RaySS(point_cs);
-			var result = Window.HitTest(ray, (float)SnapDistance, Flags, ContextIds, IncludeCount, ExcludeCount);
+			var result = Window.HitTest(ray, (float)SnapDistance, Flags, x => x != CtxId && ContextPredicate(x));
 
 			// Update the current hit point
 			ActiveHit.PointWS = result.m_ws_intercept;

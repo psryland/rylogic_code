@@ -41,23 +41,23 @@ namespace Rylogic.Gfx
 				void HandleError(IntPtr ctx, string msg, string filepath, int line, long pos) => Error?.Invoke(this, new ErrorEventArgs(msg, filepath, line, pos));
 
 				// Set up a callback for when settings are changed
-				View3D_WindowSettingsChangedCB(Handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
+				View3D_WindowSettingsChangedCB(Handle, m_settings_cb = new SettingsChangedCB { m_cb = HandleSettingsChanged }, true);
 				void HandleSettingsChanged(IntPtr ctx, HWindow wnd, ESettings setting) => OnSettingsChanged?.Invoke(this, new SettingChangeEventArgs(setting));
 
 				// Set up a callback for when the window is invalidated
-				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb = HandleInvalidated, IntPtr.Zero, true);
+				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb = new InvalidatedCB { m_cb = HandleInvalidated }, true);
 				void HandleInvalidated(IntPtr ctx, HWindow wnd) => OnInvalidated?.Invoke(this, EventArgs.Empty);
 
 				// Set up a callback for when a render is about to happen
-				View3D_WindowRenderingCB(Handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
+				View3D_WindowRenderingCB(Handle, m_render_cb = new RenderingCB { m_cb = HandleRendering }, true);
 				void HandleRendering(IntPtr ctx, HWindow wnd) => OnRendering?.Invoke(this, EventArgs.Empty);
 
 				// Set up a callback for when the object store for this window changes
-				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
+				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb = new SceneChangedCB { m_cb = HandleSceneChanged }, true);
 				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref SceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
 
 				// Set up a callback for animation events
-				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = HandleAnimationEvent, IntPtr.Zero, true);
+				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = new AnimationCB { m_cb = HandleAnimationEvent }, true);
 				void HandleAnimationEvent(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock) => OnAnimationEvent?.Invoke(this, new AnimationEventArgs(command, clock));
 
 				// Set up the light source
@@ -75,11 +75,11 @@ namespace Rylogic.Gfx
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HWindow.Zero) return;
 				View3D_WindowAnimControl(Handle, EAnimCommand.Stop, 0.0);
-				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, IntPtr.Zero, false);
-				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
-				View3D_WindowRenderingCB(Handle, m_render_cb, IntPtr.Zero, false);
-				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb, IntPtr.Zero, false);
-				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, IntPtr.Zero, false);
+				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, false);
+				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb, false);
+				View3D_WindowRenderingCB(Handle, m_render_cb, false);
+				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb, false);
+				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, false);
 				View3D_WindowDestroy(Handle);
 				Handle = HWindow.Zero;
 			}
@@ -266,18 +266,18 @@ namespace Rylogic.Gfx
 			/// <summary>Perform a hit test in the scene</summary>
 			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
 			{
-				return HitTest(ray, snap_distance, flags, [], 0, 0);
+				return HitTest(ray, snap_distance, flags, x => true);
 			}
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, Guid[] guids, int include_count, int exclude_count)
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, Func<Guid, bool> context_pred)
 			{
-				Debug.Assert(include_count + exclude_count == guids.Length);
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
 
 				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
-				using var guids_buf = Marshal_.Pin(guids, GCHandleType.Pinned);
-				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
+
+				bool CB(IntPtr ctx, ref Guid context_id) => context_pred(context_id);
+				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, new GuidPredCB { m_cb = CB });
 
 				return hits[0];
 			}
@@ -318,8 +318,8 @@ namespace Rylogic.Gfx
 			}
 			public void EnumGuids(Func<Guid, bool> cb)
 			{
-				bool CB(IntPtr ctx, ref Guid guid) => cb(guid);
-				View3D_WindowEnumGuids(Handle, CB, IntPtr.Zero);
+				bool CB(IntPtr ctx, ref Guid context_id) => cb(context_id);
+				View3D_WindowEnumGuids(Handle, new EnumGuidsCB { m_cb = CB });
 			}
 
 			/// <summary>Enumerate the objects associated with this window</summary>
@@ -329,26 +329,18 @@ namespace Rylogic.Gfx
 			}
 			public void EnumObjects(Func<Object, bool> cb)
 			{
-				View3D_WindowEnumObjects(Handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero);
+				bool CB(IntPtr ctx, IntPtr obj) => cb(new Object(obj));
+				View3D_WindowEnumObjects(Handle, new EnumObjectsCB { m_cb = CB });
 			}
-			public void EnumObjects(Action<Object> cb, Guid context_id, bool all_except = false)
+			public void EnumObjects(Action<Object> cb, Func<Guid, bool> context_pred)
 			{
-				EnumObjects(obj => { cb(obj); return true; }, context_id, all_except);
+				EnumObjects(obj => { cb(obj); return true; }, context_pred);
 			}
-			public void EnumObjects(Func<Object, bool> cb, Guid context_id, bool all_except = false)
+			public void EnumObjects(Func<Object, bool> cb, Func<Guid, bool> context_pred)
 			{
-				EnumObjects(cb, [context_id], all_except ? 0 : 1, all_except ? 1 : 0);
-			}
-			public void EnumObjects(Action<Object> cb, Guid[] context_ids, int include_count, int exclude_count)
-			{
-				EnumObjects(obj => { cb(obj); return true; }, context_ids, include_count, exclude_count);
-			}
-			public void EnumObjects(Func<Object, bool> cb, Guid[] context_ids, int include_count, int exclude_count)
-			{
-				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				bool enum_cb(nint c, nint obj) => cb(new Object(obj));
-				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-				View3D_WindowEnumObjectsById(Handle, (EnumObjectsCB)enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
+				bool ObjCB(IntPtr c, IntPtr obj) => cb(new Object(obj));
+				bool PredCB(IntPtr c, ref Guid guid) => context_pred(guid);
+				View3D_WindowEnumObjectsById(Handle, new EnumObjectsCB { m_cb = ObjCB }, new GuidPredCB { m_cb = PredCB });
 			}
 
 			/// <summary>Return the objects associated with this window</summary>
@@ -381,13 +373,12 @@ namespace Rylogic.Gfx
 			/// <summary>Add multiple objects, filtered by 'context_ids</summary>
 			public void AddObjects(Guid context_id)
 			{
-				AddObjects([context_id], 1, 0);
+				AddObjects(x => x == context_id);
 			}
-			public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
+			public void AddObjects(Func<Guid, bool> context_pred)
 			{
-				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-				View3D_WindowAddObjectsById(Handle, ids.Pointer, include_count, exclude_count);
+				bool PredCB(IntPtr c, ref Guid guid) => context_pred(guid);
+				View3D_WindowAddObjectsById(Handle, new GuidPredCB { m_cb = PredCB });
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
@@ -417,11 +408,10 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Remove multiple objects, filtered by 'context_ids'</summary>
-			public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
+			public void RemoveObjects(Func<Guid, bool> context_pred)
 			{
-				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-				View3D_WindowRemoveObjectsById(Handle, ids.Pointer, include_count, exclude_count);
+				bool PredCB(IntPtr c, ref Guid guid) => context_pred(guid);
+				View3D_WindowRemoveObjectsById(Handle, new GuidPredCB { m_cb = PredCB });
 			}
 
 			/// <summary>Remove all instances from the window</summary>

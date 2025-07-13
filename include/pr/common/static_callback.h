@@ -23,8 +23,8 @@ namespace pr
 		using args_t = std::tuple<Args...>;
 		using return_t = Ret;
 
-		func_t m_cb;
 		void* m_ctx;
+		func_t m_cb;
 
 		StaticCB()
 			: StaticCB(nullptr)
@@ -38,9 +38,9 @@ namespace pr
 			: StaticCB(cb, nullptr)
 		{
 		}
-		StaticCB(func_t cb, void* ctx)
-			: m_cb(cb)
-			, m_ctx(ctx)
+		StaticCB(void* ctx, func_t cb)
+			: m_ctx(ctx)
+			, m_cb(cb)
 		{
 		}
 		StaticCB(StaticCB& rhs) = default;
@@ -102,14 +102,6 @@ namespace pr
 	{
 		using StaticCB<Ret, Args...>::StaticCB;
 	};
-
-	// TODO: Shouldn't need this now, you can just use {func, ctx} to construct a StaticCB
-	// Create a wrapped static callback function instance
-	template <typename Ret, typename... Args>
-	[[deprecated("Using {} initialisation")]] constexpr StaticCB<Ret, Args...> StaticCallback(Ret(__stdcall* cb)(void*, Args...), void* ctx = nullptr)
-	{
-		return StaticCB<Ret, Args...>(cb, ctx);
-	}
 }
 
 #if PR_UNITTESTS
@@ -126,9 +118,9 @@ namespace pr::common
 			}
 		};
 
-		StaticCB<void> cb0 = { &L::Func, (void*)0 };
-		StaticCB<void> cb1 = { &L::Func, (void*)0 };
-		StaticCB<void> cb2 = { &L::Func, (void*)1 };
+		StaticCB<void> cb0 = {(void*)0, &L::Func };
+		StaticCB<void> cb1 = {(void*)0, &L::Func };
+		StaticCB<void> cb2 = {(void*)1, &L::Func };
 	
 		PR_CHECK(cb0 == cb1, true);
 		PR_CHECK(cb0 != cb2, true);

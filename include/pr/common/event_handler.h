@@ -597,7 +597,7 @@ namespace pr::common
 
 			// Tests classes providing handlers that can be attached to an event
 			// This method can be bound to 'Event1' using &Thing::Handler because the
-			// __thiscall 'this' parameter matches the Event Sender
+			// '__thiscall' 'this' parameter matches the Event Sender
 			void Handler(EmptyArgs const&)
 			{
 				++m_count;
@@ -666,13 +666,13 @@ namespace pr::common
 				struct L { static void __stdcall Handler(void* ctx, Thing&, EmptyArgs const&) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Event1 += StaticCB{&L::Handler, & count};
+				thg.Event1 += StaticCB{&count, &L::Handler};
 				thg.Call1();
 				PR_CHECK(count, 1);
-				thg.Event1 -= StaticCB{&L::Handler, & other}; // should not remove anything because ctx is different
+				thg.Event1 -= StaticCB{&other, &L::Handler}; // should not remove anything because ctx is different
 				thg.Call1();
 				PR_CHECK(count, 2);
-				thg.Event1 -= StaticCB{&L::Handler, & count}; // should remove the callback
+				thg.Event1 -= StaticCB{&count, &L::Handler}; // should remove the callback
 				thg.Call1();
 				PR_CHECK(count, 2);
 			}
@@ -778,13 +778,13 @@ namespace pr::common
 				struct L { static void __stdcall Handler(void* ctx, int*) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Action3 += StaticCB{ &L::Handler, &count };
+				thg.Action3 += StaticCB{ &count, &L::Handler};
 				thg.Call5();
 				PR_CHECK(count, 1);
-				thg.Action3 -= StaticCB{ &L::Handler, &other }; // should not remove anything because ctx is different
+				thg.Action3 -= StaticCB{ &other, &L::Handler }; // should not remove anything because ctx is different
 				thg.Call5();
 				PR_CHECK(count, 2);
-				thg.Action3 -= StaticCB{ &L::Handler, &count }; // should remove the callback
+				thg.Action3 -= StaticCB{ &count, &L::Handler}; // should remove the callback
 				thg.Call5();
 				PR_CHECK(count, 2);
 			}

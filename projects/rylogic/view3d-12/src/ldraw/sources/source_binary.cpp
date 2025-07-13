@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -26,7 +26,7 @@ namespace pr::rdr12::ldraw
 		m_filepaths.resize(0);
 
 		mem_istream<char> src{ m_script.data(), m_script.size() };
-		BinaryReader reader(src, {}, { OnReportError, this }, { OnProgress, this });
+		BinaryReader reader(src, {}, { this, OnReportError }, { this, OnProgress });
 		return Parse(rdr, reader, m_context_id);
 	}
 }

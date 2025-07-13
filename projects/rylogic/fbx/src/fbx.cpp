@@ -42,14 +42,14 @@ namespace fbxsdk
 	using ScenePtr = std::unique_ptr<FbxScene, FbxObjectCleanUp>;
 	using PosePtr = std::unique_ptr<FbxPose, FbxObjectCleanUp>;
 
-	inline double FloatClamp(double f)
+	inline static double FloatClamp(double f)
 	{
 		return
 			f >= +HUGE_VAL ? +std::numeric_limits<double>::infinity() :
 			f <= -HUGE_VAL ? -std::numeric_limits<double>::infinity() :
 			f;
 	}
-	std::ostream& operator << (std::ostream& out, FbxNodeAttribute::EType node_type)
+	inline static std::ostream& operator << (std::ostream& out, FbxNodeAttribute::EType node_type)
 	{
 		switch (node_type)
 		{
@@ -78,15 +78,15 @@ namespace fbxsdk
 			default: return out << "Unknown";
 		}
 	}
-	std::ostream& operator << (std::ostream& out, FbxVector2 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxVector2 const& vec)
 	{
 		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxVector4 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxVector4 const& vec)
 	{
 		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]) << ", " << FloatClamp(vec[3]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxAMatrix const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxAMatrix const& vec)
 	{
 		return out
 			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
@@ -94,19 +94,19 @@ namespace fbxsdk
 			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
 			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxDouble2 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxDouble2 const& vec)
 	{
 		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxDouble3 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxDouble3 const& vec)
 	{
 		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxDouble4 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxDouble4 const& vec)
 	{
 		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]) << ", " << FloatClamp(vec[3]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxDouble4x4 const& vec)
+	inline static std::ostream& operator << (std::ostream& out, FbxDouble4x4 const& vec)
 	{
 		return out
 			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
@@ -114,11 +114,11 @@ namespace fbxsdk
 			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
 			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
 	}
-	std::ostream& operator << (std::ostream& out, FbxColor const& col)
+	inline static std::ostream& operator << (std::ostream& out, FbxColor const& col)
 	{
 		return out << "R=" << (float)col.mRed << ", G=" << (float)col.mGreen << ", B=" << (float)col.mBlue << ", A=" << col.mAlpha;
 	}
-	std::ostream& operator << (std::ostream& out, FbxProperty prop)
+	inline static std::ostream& operator << (std::ostream& out, FbxProperty prop)
 	{
 		auto data_type = prop.GetPropertyDataType();
 		if (data_type == FbxBoolDT)
@@ -614,7 +614,7 @@ namespace pr::geometry::fbx
 				continue;
 
 			// If the bind pose contains values for all nodes, then that's close enough
-			if (all(nodes, [pose](BoneNode const* bone_node) { return pose->Find(bone_node->bone->GetNode()) != -1; }))
+			if (std::ranges::all_of(nodes, [pose](BoneNode const* bone_node) { return pose->Find(bone_node->bone->GetNode()) != -1; }))
 				return pose;
 		}
 		return nullptr;
@@ -633,36 +633,36 @@ namespace pr::geometry::fbx
 		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
 		//    node is the start of a new mesh/skeleton hierarchy.
 
-		struct NodeAndLevel { FbxNode* node; int level; };
-		vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
+		struct NodeAndLevel { FbxNode* ptr; int level; };
+		std::vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
 		for (int mindex = 0, bindex = 0; !stack.empty(); )
 		{
-			auto [node, level] = stack.back();
+			NodeAndLevel node = stack.back();
 			stack.pop_back();
 
 			// Process all attributes of the node
-			for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
+			for (int i = 0, iend = node.ptr->GetNodeAttributeCount(); i != iend; ++i)
 			{
-				auto& attr = *node->GetNodeAttributeByIndex(i);
+				auto& attr = *node.ptr->GetNodeAttributeByIndex(i);
 
 				// Create a map from attribute unique id to node data
 				if (AllSet(parts, EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
 				{
 					auto* mesh = FbxCast<FbxMesh>(&attr);
-					auto* root = FindRoot<FbxMesh>(*node);
-					meshes[mesh->GetUniqueID()] = { mesh, root, level, mindex++ };
+					auto* root = FindRoot<FbxMesh>(*node.ptr);
+					meshes[mesh->GetUniqueID()] = { mesh, root, node.level, mindex++ };
 				}
 				if (AllSet(parts, EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
 				{
 					auto* bone = FbxCast<FbxSkeleton>(&attr);
-					auto* root = FindRoot<FbxSkeleton>(*node);
-					bones[bone->GetUniqueID()] = { bone, root, level, bindex++ };
+					auto* root = FindRoot<FbxSkeleton>(*node.ptr);
+					bones[bone->GetUniqueID()] = { bone, root, node.level, bindex++ };
 				}
 			}
 
 			// Recurse in depth first order
-			for (int i = node->GetChildCount(); i-- != 0; )
-				stack.push_back({ node->GetChild(i), level + 1 });
+			for (int i = node.ptr->GetChildCount(); i-- != 0; )
+				stack.push_back({ node.ptr->GetChild(i), node.level + 1 });
 		}
 	}
 
@@ -680,6 +680,15 @@ namespace pr::geometry::fbx
 	{
 		FbxArray() : fbxsdk::FbxArray<T>() {}
 		~FbxArray() { FbxArrayDelete<T>(*this); }
+	};
+
+	// FbxAnimCurve wrapper
+	struct FbxCurve
+	{
+		FbxAnimCurve const* m_curve = nullptr;
+		FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
+		friend size_t size(FbxCurve const& c) { return s_cast<size_t>(c.m_curve->KeyGetCount()); }
+		friend bool empty(FbxCurve const& c) { return size(c) == 0; }
 	};
 
 	// An RAII dll reference
@@ -969,8 +978,8 @@ namespace pr::geometry::fbx
 				.m_animation_stack_count = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
 				.m_frame_rate = FbxTime::GetFrameRate(m_fbxscene->GetGlobalSettings().GetTimeMode()),
 				.m_material_available = m_fbxscene->GetMaterialCount(),
-				.m_meshes_available = s_cast<int>(count_if(m_mesh_node_map, [](auto const& x) { return x.second.mesh == x.second.root; })),
-				.m_skeletons_available = s_cast<int>(count_if(m_bone_node_map, [](auto const& x) { return x.second.bone == x.second.root; })),
+				.m_meshes_available = s_cast<int>(std::ranges::count_if(m_mesh_node_map, [](auto const& x) { return x.second.mesh == x.second.root; })),
+				.m_skeletons_available = s_cast<int>(std::ranges::count_if(m_bone_node_map, [](auto const& x) { return x.second.bone == x.second.root; })),
 				.m_animations_available = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
 				.m_material_count = 0,
 				.m_mesh_count = 0,
@@ -1063,7 +1072,7 @@ namespace pr::geometry::fbx
 			for (int m = 0, mend = m_fbxscene.GetMaterialCount(); m != mend; ++m)
 			{
 				MaterialData material = {};
-				Progress(1 + m, mend, "Reading materials...");
+				Progress(1LL + m, mend, "Reading materials...");
 
 				auto const& mat = *m_fbxscene.GetMaterial(m);
 				if (mat.GetClassId().Is(FbxSurfacePhong::ClassId))
@@ -1671,7 +1680,7 @@ namespace pr::geometry::fbx
 			auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
 			for (int i = 0; i != animation_count; ++i)
 			{
-				Progress(1 + i, animation_count, "Reading animation...");
+				Progress(1LL + i, animation_count, "Reading animation...");
 
 				m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
 				m_time_span = m_animstack->GetLocalTimeSpan();
@@ -1699,7 +1708,7 @@ namespace pr::geometry::fbx
 					for (auto const& skel : m_scene.m_skeletons)
 					{
 						// Is the skeleton moved by this animation?
-						if (pr::all(skel.m_bone_ids, [this, &times_per_bone](uint64_t id) { return times_per_bone[m_bones[id].index].empty(); }))
+						if (std::ranges::all_of(skel.m_bone_ids, [this, &times_per_bone](uint64_t id) { return times_per_bone[m_bones[id].index].empty(); }))
 							continue;
 
 						// Create an animation for 'skel'
@@ -1815,11 +1824,12 @@ namespace pr::geometry::fbx
 								for (auto& animation : animations)
 								{
 									// Find the index of 'bone_id' within the skeleton
-									auto idx = pr::index_of(animation.m_skel->m_bone_ids, bone_id);
-									if (idx == isize(animation.m_skel->m_bone_ids))
+									auto it = std::ranges::find(animation.m_skel->m_bone_ids, bone_id);
+									if (it == end(animation.m_skel->m_bone_ids))
 										continue;
 
 									// These transforms are the bone offset relative to the parent over time.
+									auto idx = s_cast<int>(std::distance(begin(animation.m_skel->m_bone_ids), it));
 									animation.track(idx)[key.m_key_index] = keyframe;
 								}
 							}
@@ -1844,12 +1854,6 @@ namespace pr::geometry::fbx
 		KeyTimes FindKeyFrameTimes(FbxNode& node) const
 		{
 			// Channels of a node's transform (x, y, z etc)
-			struct Curve
-			{
-				FbxAnimCurve const* m_curve = nullptr;
-				size_t size() const { return m_curve->KeyGetCount(); }
-				FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
-			};
 			auto channels = {
 				node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
 				node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
@@ -1862,7 +1866,7 @@ namespace pr::geometry::fbx
 				node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
 			};
 
-			vector<Curve, 9, true> curves;
+			vector<FbxCurve, 9, true> curves;
 			size_t max_keys = 0;
 
 			// Read the non-null, non-empty transform animation curves
@@ -1896,13 +1900,13 @@ namespace pr::geometry::fbx
 		// True if 'meshnode' should be included
 		bool IncludeMesh(MeshNode const& meshnode) const
 		{
-			return m_opts.m_mesh_names.empty() || contains(m_opts.m_mesh_names, meshnode.root->GetNode()->GetName());
+			return m_opts.m_mesh_names.empty() || std::ranges::find(m_opts.m_mesh_names, meshnode.root->GetNode()->GetName()) != end(m_opts.m_mesh_names);
 		}
 
 		// True if 'bonenode' should be included
 		bool IncludeBone(BoneNode const& bonenode) const
 		{
-			return m_opts.m_skel_names.empty() || contains(m_opts.m_skel_names, bonenode.root->GetNode()->GetName());
+			return m_opts.m_skel_names.empty() || std::ranges::find(m_opts.m_skel_names, bonenode.root->GetNode()->GetName()) != end(m_opts.m_skel_names);
 		}
 
 		// Report progress
@@ -2641,7 +2645,11 @@ extern "C"
 	{
 		try
 		{
-			auto& s = pr::get_if(scene.m_skeletons, [&skel_id](SkeletonData const& s) { return s.m_id == skel_id; });
+			auto it = std::ranges::find_if(scene.m_skeletons, [&skel_id](SkeletonData const& s) { return s.m_id == skel_id; });
+			if (it == end(scene.m_skeletons))
+				throw std::runtime_error(std::format("Skeleton {} not found", skel_id));
+
+			auto& s = *it;
 			return Skeleton{
 				.m_id = s.m_id,
 				.m_bone_ids = s.m_bone_ids,

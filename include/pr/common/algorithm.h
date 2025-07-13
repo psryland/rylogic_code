@@ -475,14 +475,21 @@ namespace pr
 
 	enum class EZip { All, Unique, SetsBitmask, SetsFull };
 	using ZipSet = struct { size_t src_index, elem_index; };
-	template<typename R, typename T> concept RangeOf = std::ranges::range<R> && std::same_as<std::ranges::range_value_t<R>, T>;
-	template <typename R, typename T> concept RangeOfRangefOf = std::ranges::range<R> && RangeOf<std::ranges::range_value_t<R>, T>;
+
+	template<typename R, typename T>
+	concept RangeOf = std::ranges::range<R> && std::same_as<std::ranges::range_value_t<R>, T>;
+
+	template <typename R, typename T>
+	concept RangeOfRangefOf = std::ranges::range<R> && RangeOf<std::ranges::range_value_t<R>, T>;
 
 	// Zip sorted collections into one ordered collection
-	template <EZip Dup, typename Type, typename TSources, typename TOut>
-	requires (requires (TSources srcs, TOut out)
+	template <EZip OutputItems, typename Type, typename TSources, typename TOut>
+	requires (requires (TSources& srcs, TOut out)
 	{
+		size(srcs);
 		srcs[0];
+		size(srcs[0]);
+		empty(srcs[0]);
 		srcs[0][0];
 		out(srcs[0][0], {});
 	})
@@ -503,20 +510,20 @@ namespace pr
 		};
 
 		std::priority_queue<Elem> min_heap;
-		std::vector<ZipSet> set_items; set_items.reserve(srcs.size());
+		std::vector<ZipSet> set_items; set_items.reserve(size(srcs));
 		uint64_t set_mask = 0;
 
 		// Check the number of sources can be represented in the set mask
-		if constexpr (Dup == EZip::SetsBitmask)
+		if constexpr (OutputItems == EZip::SetsBitmask)
 		{
-			if (srcs.size() > sizeof(set_mask) * 8)
+			if (size(srcs) > sizeof(set_mask) * 8)
 				throw std::runtime_error("SetsBitmask mode requires the number of sources to be <= mask bit count");
 		}
 
 		// Initialize heap with the first element from each source
-		for (size_t i = 0, src_count = srcs.size(); i != src_count; ++i)
+		for (size_t i = 0, src_count = size(srcs); i != src_count; ++i)
 		{
-			if (srcs[i].size() == 0) continue;
+			if (empty(srcs[i])) continue;
 			min_heap.emplace(srcs[i][0], i, 0);
 		}
 
@@ -527,11 +534,11 @@ namespace pr
 			auto [value, src_idx, elem_idx] = min_heap.top();
 			min_heap.pop();
 
-			if constexpr (Dup == EZip::All)
+			if constexpr (OutputItems == EZip::All)
 			{
 				out(value, src_idx);
 			}
-			if constexpr (Dup == EZip::Unique)
+			if constexpr (OutputItems == EZip::Unique)
 			{
 				if (!(value == last_value))
 				{
@@ -539,11 +546,11 @@ namespace pr
 					last_value = value;
 				}
 			}
-			if constexpr (Dup == EZip::SetsBitmask)
+			if constexpr (OutputItems == EZip::SetsBitmask)
 			{
 				if (!(value == last_value))
 				{
-					if (set_mask != 0)
+					if (set_mask != 0 && last_value)
 						out(*last_value, set_mask);
 					
 					set_mask = 0;
@@ -551,11 +558,11 @@ namespace pr
 				set_mask |= 1ULL << src_idx;
 				last_value = value;
 			}
-			if constexpr (Dup == EZip::SetsFull)
+			if constexpr (OutputItems == EZip::SetsFull)
 			{
 				if (!(value == last_value))
 				{
-					if (!set_items.empty())
+					if (!set_items.empty() && last_value)
 						out(*last_value, set_items);
 					
 					set_items.resize(0);
@@ -565,19 +572,19 @@ namespace pr
 			}
 
 			// Push next element from the same source
-			if (elem_idx + 1 < srcs[src_idx].size())
+			if (elem_idx + 1 < size(srcs[src_idx]))
 				min_heap.emplace(srcs[src_idx][elem_idx + 1], src_idx, elem_idx + 1);
 		}
 
 		// In sets mode, output the last set
-		if constexpr (Dup == EZip::SetsBitmask)
+		if constexpr (OutputItems == EZip::SetsBitmask)
 		{
-			if (set_mask != 0)
+			if (set_mask != 0 && last_value)
 				out(*last_value, set_mask);
 		}
-		if constexpr (Dup == EZip::SetsFull)
+		if constexpr (OutputItems == EZip::SetsFull)
 		{
-			if (!set_items.empty())
+			if (!set_items.empty() && last_value)
 				out(*last_value, set_items);
 		}
 	}
@@ -608,7 +615,7 @@ namespace pr
 
 	// Returns true if 'item' is in the "include" set implied by the ranges 'include' and 'exclude'
 	template <typename T>
-	bool IncludeFilter(T const& item, std::span<T const> include, std::span<T const> exclude)
+	bool IncludeFilter(T const& item, std::span<T const> include, std::span<T const> exclude, bool include_by_default)
 	{
 		auto idx_i = s_cast<size_t>(index_of(include, item));
 		auto idx_e = s_cast<size_t>(index_of(exclude, item));
@@ -631,7 +638,7 @@ namespace pr
 
 		// If no includes or excludes, assume included
 		if (include.empty() && exclude.empty())
-			return true;
+			return include_by_default;
 
 		// Includes and excludes have been given, but 'item' is not in either range.
 		// Filtering is ambiguous, the caller should ensure this case doesn't occur.

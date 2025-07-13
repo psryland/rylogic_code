@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -39,7 +39,7 @@ namespace pr::rdr12::ldraw
 		m_includes.LocalDir("");
 
 		mem_istream<Char> src{ m_script, 0 };
-		TextReader reader(src, {}, m_encoding, { OnReportError, this }, { OnProgress, this }, m_includes);
+		TextReader reader(src, {}, m_encoding, { this, OnReportError }, { this, OnProgress }, m_includes);
 		return Parse(rdr, reader, m_context_id);
 	}
 

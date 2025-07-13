@@ -47,9 +47,6 @@ namespace pr::rdr12::ldraw
 		// Parse error event.
 		virtual void OnError(ParseErrorEventArgs const&) = 0;
 
-		//// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-		//virtual void OnReload() = 0;
-
 		// An event raised during parsing. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
 		virtual void OnParsingProgress(ParsingProgressEventArgs&) = 0;
 
@@ -59,6 +56,17 @@ namespace pr::rdr12::ldraw
 		// Process any received commands in the source. All commands are expected to be processed
 		virtual void OnHandleCommands(SourceBase& source) = 0;
 	};
+
+	// Predicates for matching context ids
+	inline bool __stdcall MatchContextId(void* ctx, Guid const& id)
+	{
+		return *static_cast<Guid const*>(ctx) == id;
+	}
+	inline bool __stdcall MatchContextIdInSpan(void* ctx, Guid const& id)
+	{
+		auto ids = *static_cast<std::span<Guid const>*>(ctx);
+		return std::ranges::find(ids, id) != end(ids);
+	}
 
 	// A collection of LDraw script sources
 	struct ScriptSources :IFileChangedHandler
@@ -117,7 +125,7 @@ namespace pr::rdr12::ldraw
 		void Remove(LdrObject* object, EDataChangedReason reason = EDataChangedReason::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangedReason reason = EDataChangedReason::Removal);
+		void Remove(view3d::GuidPredCB pred, EDataChangedReason reason = EDataChangedReason::Removal);
 		void Remove(Guid const& context_id, EDataChangedReason reason = EDataChangedReason::Removal);
 
 		// Reload a range of sources

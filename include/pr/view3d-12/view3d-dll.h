@@ -16,6 +16,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
+#include <type_traits>
 #include <windows.h>
 #include <d3d12.h>
 
@@ -420,23 +421,34 @@ namespace pr
 		};
 		#pragma endregion
 
-		#pragma region Structures
-		struct ReportErrorCB
+		#pragma region Callbacks
+		template <typename FuncType>
+		struct Callback
 		{
-			using FuncCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
+			using FuncCB = FuncType;
+			using CtxPtr = union { void const* cp; void* p; };
 
-			FuncCB m_cb;
-			void* m_ctx;
+			CtxPtr m_ctx = {};
+			FuncCB m_cb = {};
 
-			void operator()(char const* msg, char const* filepath, int line, int64_t pos) const
+			template <typename... Args>
+			auto operator()(Args&&... args) const
 			{
-				m_cb(m_ctx, msg, filepath, line, pos);
+				return m_cb(m_ctx.p, std::forward<Args>(args)...);
 			}
 			explicit operator bool() const
 			{
 				return m_cb != nullptr;
 			}
+			friend bool operator == (Callback lhs, Callback rhs)
+			{
+				return lhs.m_cb == rhs.m_cb && lhs.m_ctx.cp == rhs.m_ctx.cp;
+			}
 		};
+		using ReportErrorCB = Callback<void(__stdcall*)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos)>;
+		#pragma endregion
+
+		#pragma region Structures
 		struct Vec2
 		{
 			float x, y;
@@ -695,24 +707,25 @@ namespace pr
 		#pragma endregion
 
 		// Callbacks
-		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using ParsingProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
-		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, GUID const* ids, int count, BOOL before);
-		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
-		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
-		using AddCompleteCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
-		using InvalidatedCB = void(__stdcall *)(void* ctx, Window window);
-		using RenderingCB = void(__stdcall *)(void* ctx, Window window);
-		using SceneChangedCB = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
-		using AnimationCB = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
-		using GizmoMovedCB = void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state);
-		using AddNuggetCB = void(__stdcall*)(void* ctx, Nugget const& nugget);
-		using EditObjectCB = VICount(__stdcall*)(void* ctx,
-			int vcount,                                        // The maximum size of 'verts'
-			int icount,                                        // The maximum size of 'indices'
-			Vertex* verts,                                     // The vert buffer to be filled
-			uint16_t* indices,                                 // The index buffer to be filled
-			AddNuggetCB out_nugget, void* out_nugget_ctx);     // Callback for adding a nugget
+		using GuidPredCB = Callback<bool(__stdcall*)(void* ctx, GUID const&)>;
+		using SettingsChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, ESettings setting)>;
+		using ParsingProgressCB = Callback<void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel)>;
+		using SourcesChangedCB = Callback<void(__stdcall *)(void* ctx, ESourcesChangedReason reason, GUID const* ids, int count, BOOL before)>;
+		using EnumGuidsCB = Callback<bool(__stdcall *)(void* ctx, GUID const& context_id)>;
+		using EnumObjectsCB = Callback<bool(__stdcall *)(void* ctx, Object object)>;
+		using AddCompleteCB = Callback<void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before)>;
+		using InvalidatedCB = Callback<void(__stdcall *)(void* ctx, Window window)>;
+		using RenderingCB = Callback<void(__stdcall *)(void* ctx, Window window)>;
+		using SceneChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, SceneChanged const&)>;
+		using AnimationCB = Callback<void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock)>;
+		using GizmoMovedCB = Callback<void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state)>;
+		using AddNuggetCB = Callback<void(__stdcall*)(void* ctx, Nugget const& nugget)>;
+		using EditObjectCB = Callback<VICount(__stdcall*)(void* ctx,
+			int vcount,               // The maximum size of 'verts'
+			int icount,               // The maximum size of 'indices'
+			Vertex* verts,            // The vert buffer to be filled
+			uint16_t* indices,        // The index buffer to be filled
+			AddNuggetCB out_nugget)>; // Callback for adding a nugget
 	}
 }
 
@@ -731,10 +744,10 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, BOOL add);
 
 	// Set the callback for progress events when script sources are loaded or updated
-	VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(pr::view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(pr::view3d::ParsingProgressCB progress_cb, BOOL add);
 	
 	// Set the callback that is called when the sources are reloaded
-	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, BOOL add);
 
 	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 	VIEW3D_API GUID __stdcall View3D_ContextIdFromFilepath(char const* filepath);
@@ -742,20 +755,11 @@ extern "C"
 	// Data Sources ***************************
 
 	// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
-
-	// Delete all objects and object sources
-	VIEW3D_API void __stdcall View3D_DeleteAllObjects();
-
-	// Delete all objects matching (or not matching) a context id
-	VIEW3D_API void __stdcall View3D_DeleteById(GUID const* context_ids, int include_count, int exclude_count);
-
-	// Delete all objects not displayed in any windows
-	VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb);
 
 	// Enumerate all sources in the store
-	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb, void* ctx);
+	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb);
 
 	// Reload objects from the source associated with 'context_id'
 	VIEW3D_API void __stdcall View3D_SourceReload(GUID const& context_id);
@@ -773,6 +777,15 @@ extern "C"
 
 	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 	VIEW3D_API void __stdcall View3D_ReloadScriptSources();
+
+	// Delete all objects and object sources
+	VIEW3D_API void __stdcall View3D_DeleteAllObjects();
+
+	// Delete all objects matching (or not matching) a context id
+	VIEW3D_API void __stdcall View3D_DeleteById(pr::view3d::GuidPredCB pred);
+
+	// Delete all objects not displayed in any windows
+	VIEW3D_API void __stdcall View3D_DeleteUnused(pr::view3d::GuidPredCB pred);
 
 	// Poll for changed script sources and reload any that have changed
 	VIEW3D_API void __stdcall View3D_CheckForChangedSources();
@@ -804,13 +817,13 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp);
 
 	// Set a notification handler for when a window setting changes
-	VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(pr::view3d::Window window, pr::view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(pr::view3d::Window window, pr::view3d::SettingsChangedCB settings_changed_cb, BOOL add);
 
 	// Add/Remove a callback that is called when the collection of objects associated with 'window' changes
-	VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(pr::view3d::Window window, pr::view3d::SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(pr::view3d::Window window, pr::view3d::SceneChangedCB scene_changed_cb, BOOL add);
 
 	// Add/Remove a callback that is called just prior to rendering the window
-	VIEW3D_API void __stdcall View3D_WindowRenderingCB(pr::view3d::Window window, pr::view3d::RenderingCB rendering_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_WindowRenderingCB(pr::view3d::Window window, pr::view3d::RenderingCB rendering_cb, BOOL add);
 
 	// Add/Remove an object to/from a window
 	VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::view3d::Object object);
@@ -821,18 +834,18 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowRemoveGizmo(pr::view3d::Window window, pr::view3d::Gizmo giz);
 
 	// Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
-	VIEW3D_API void __stdcall View3D_WindowAddObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
-	VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void __stdcall View3D_WindowAddObjectsById(pr::view3d::Window window, pr::view3d::GuidPredCB pred);
+	VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(pr::view3d::Window window, pr::view3d::GuidPredCB pred);
 
 	// Remove all objects 'window'
 	VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(pr::view3d::Window window);
 
 	// Enumerate the GUIDs associated with 'window'
-	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
+	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb);
 
 	// Enumerate the objects associated with 'window'
-	VIEW3D_API void __stdcall View3D_WindowEnumObjects(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx);
-	VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void __stdcall View3D_WindowEnumObjects(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb);
+	VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, pr::view3d::GuidPredCB pred);
 
 	// Return true if 'object' is among 'window's objects
 	VIEW3D_API BOOL __stdcall View3D_WindowHasObject(pr::view3d::Window window, pr::view3d::Object object, BOOL search_children);
@@ -860,7 +873,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowInvalidateRect(pr::view3d::Window window, RECT const& rect, BOOL erase);
 
 	// Register a callback for when the window is invalidated. This can be used to render in response to invalidation, rather than rendering on a polling cycle.
-	VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(pr::view3d::Window window, pr::view3d::InvalidatedCB invalidated_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(pr::view3d::Window window, pr::view3d::InvalidatedCB invalidated_cb, BOOL add);
 
 	// Clear the 'invalidated' state of the window.
 	VIEW3D_API void __stdcall View3D_WindowValidate(pr::view3d::Window window);
@@ -884,13 +897,13 @@ extern "C"
 	// Control animation
 	VIEW3D_API void __stdcall View3D_WindowAnimControl(pr::view3d::Window window, pr::view3d::EAnimCommand command, double time);
 
+	// Set the callback for animation events
+	VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(pr::view3d::Window window, pr::view3d::AnimationCB anim_cb, BOOL add);
+
 	// Get/Set the animation time
 	VIEW3D_API BOOL __stdcall View3D_WindowAnimating(pr::view3d::Window window);
 	VIEW3D_API double __stdcall View3D_WindowAnimTimeGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(pr::view3d::Window window, double time_s);
-
-	// Set the callback for animation events
-	VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(pr::view3d::Window window, pr::view3d::AnimationCB anim_cb, void* ctx, BOOL add);
 
 	// Return the DPI of the monitor that 'window' is displayed on
 	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_WindowDpiScale(pr::view3d::Window window);
@@ -904,7 +917,7 @@ extern "C"
 
 	// Cast a ray into the scene, returning information about what it hit.
 	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::Object const* objects, int object_count);
-	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::GuidPredCB pred);
 
 	// Camera *********************************
 
@@ -1027,8 +1040,8 @@ extern "C"
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* name, pr::view3d::Colour colour, size_t size, void const* p3d_data, GUID const* context_id);
 
 	// Create an ldr object using a callback to populate the model data.
-	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateWithCallback(char const* name, pr::view3d::Colour colour, int vcount, int icount, int ncount, pr::view3d::EditObjectCB edit_cb, void* ctx, GUID const& context_id);
-	VIEW3D_API void __stdcall View3D_ObjectEdit(pr::view3d::Object object, pr::view3d::EditObjectCB edit_cb, void* ctx);
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateWithCallback(char const* name, pr::view3d::Colour colour, int vcount, int icount, int ncount, pr::view3d::EditObjectCB edit_cb, GUID const& context_id);
+	VIEW3D_API void __stdcall View3D_ObjectEdit(pr::view3d::Object object, pr::view3d::EditObjectCB edit_cb);
 
 	// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
 	VIEW3D_API void __stdcall View3D_ObjectUpdate(pr::view3d::Object object, wchar_t const* ldr_script, pr::view3d::EUpdateObject flags);
@@ -1056,7 +1069,7 @@ extern "C"
 	VIEW3D_API int __stdcall View3D_ObjectChildCount (pr::view3d::Object object);
 
 	// Enumerate the child objects of 'object'. (Not recursive)
-	VIEW3D_API void __stdcall View3D_ObjectEnumChildren (pr::view3d::Object object, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx);
+	VIEW3D_API void __stdcall View3D_ObjectEnumChildren (pr::view3d::Object object, pr::view3d::EnumObjectsCB enum_objects_cb);
 
 	// Get/Set the name of 'object'
 	VIEW3D_API BSTR __stdcall View3D_ObjectNameGetBStr(pr::view3d::Object object);
@@ -1158,6 +1171,8 @@ extern "C"
 
 	// Read the properties of an existing texture
 	VIEW3D_API pr::view3d::ImageInfo __stdcall View3D_TextureGetInfo(pr::view3d::Texture tex);
+
+	// Read the properties of an image file
 	VIEW3D_API pr::view3d::EResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, pr::view3d::ImageInfo& info);
 
 	// Release a reference to a resources
@@ -1180,12 +1195,6 @@ extern "C"
 	// Resolve a MSAA texture into a non-MSAA texture
 	VIEW3D_API void __stdcall View3D_TextureResolveAA(pr::view3d::Texture dst, pr::view3d::Texture src);
 
-#if 0
-	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (pr::view3d::Texture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, pr::view3d::Colour colour_key);
-	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (pr::view3d::Texture tex, BOOL discard);
-	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (pr::view3d::Texture tex);
-#endif
-
 	// Gizmos *********************************
 
 	// Create the 3D manipulation gizmo
@@ -1195,7 +1204,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_GizmoDelete(pr::view3d::Gizmo gizmo);
 
 	// Attach/Detach callbacks that are called when the gizmo moves
-	VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(pr::view3d::Gizmo gizmo, pr::view3d::GizmoMovedCB cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(pr::view3d::Gizmo gizmo, pr::view3d::GizmoMovedCB moved_cb, BOOL add);
 
 	// Attach/Detach an object to the gizmo that will be moved as the gizmo moves
 	VIEW3D_API void __stdcall View3D_GizmoAttach(pr::view3d::Gizmo gizmo, pr::view3d::Object obj);
@@ -1295,10 +1304,6 @@ extern "C"
 
 	// Return the reference count of a COM interface
 	VIEW3D_API ULONG __stdcall View3D_RefCount(IUnknown* pointer);
-
-#if 0
-	VIEW3D_API void       __stdcall View3D_Flush                    ();
-#endif
 
 	// Tools **********************************
 

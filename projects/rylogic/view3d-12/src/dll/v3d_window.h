@@ -101,22 +101,22 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 
 		// Error event. Can be called in a worker thread context
-		MultiCast<StaticCB<view3d::ReportErrorCB::FuncCB>, true> ReportError;
+		MultiCast<view3d::ReportErrorCB, true> ReportError;
 
 		// Settings changed event
-		MultiCast<StaticCB<view3d::SettingsChangedCB>, true> OnSettingsChanged;
+		MultiCast<view3d::SettingsChangedCB, true> OnSettingsChanged;
 
 		// Window invalidated
-		MultiCast<StaticCB<view3d::InvalidatedCB>, true> OnInvalidated;
+		MultiCast<view3d::InvalidatedCB, true> OnInvalidated;
 
 		// Rendering event
-		MultiCast<StaticCB<view3d::RenderingCB>, true> OnRendering;
+		MultiCast<view3d::RenderingCB, true> OnRendering;
 
 		// Scene changed event
-		MultiCast<StaticCB<view3d::SceneChangedCB>, true> OnSceneChanged;
+		MultiCast<view3d::SceneChangedCB, true> OnSceneChanged;
 
 		// Animation event
-		MultiCast<StaticCB<view3d::AnimationCB>, true> OnAnimationEvent;
+		MultiCast<view3d::AnimationCB, true> OnAnimationEvent;
 
 		// Get/Set the settings
 		char const* Settings() const;
@@ -134,11 +134,11 @@ namespace pr::rdr12
 		void Viewport(view3d::Viewport const& vp);
 
 		// Enumerate the object collection GUIDs associated with this window
-		void EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb);
+		void EnumGuids(view3d::EnumGuidsCB enum_guids_cb);
 
 		// Enumerate the objects associated with this window
-		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
-		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude);
+		void EnumObjects(view3d::EnumObjectsCB enum_objects_cb);
+		void EnumObjects(view3d::EnumObjectsCB enum_objects_cb, view3d::GuidPredCB pred);
 
 		// Return true if 'object' is part of this scene
 		bool Has(ldraw::LdrObject const* object, bool search_children) const;
@@ -161,8 +161,8 @@ namespace pr::rdr12
 		void Remove(ldraw::LdrGizmo* gizmo);
 
 		// Add/Remove all objects to this window with the given context ids (or not with)
-		void Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude);
-		void Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids = false);
+		void Add(ldraw::SourceCont const& sources, view3d::GuidPredCB pred);
+		void Remove(view3d::GuidPredCB pred, bool keep_context_ids = false);
 
 		// Remove all objects from this scene
 		void RemoveAllObjects();
@@ -304,7 +304,7 @@ namespace pr::rdr12
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, view3d::GuidPredCB pred, int);
 	
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 		bool StockObjectVisible(view3d::EStockObject stock_objects) const;

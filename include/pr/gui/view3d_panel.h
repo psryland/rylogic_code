@@ -38,7 +38,7 @@ namespace pr::gui
 			}
 			this_type& error_cb(view3d::ReportErrorCB::FuncCB cb, void* ctx)
 			{
-				m_win_opts.error_cb({ cb, ctx });
+				m_win_opts.error_cb({ ctx,  cb });
 				return me();
 			}
 			this_type& gdi_compat(bool on = true)

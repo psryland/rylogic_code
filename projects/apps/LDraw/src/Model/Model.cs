@@ -78,7 +78,11 @@ namespace LDraw
 					if (e.After)
 					{
 						Dictionary<Guid, Source> sources = [];
-						m_view3d.EnumSources(src => sources.Add(src.ContextId, new Source(this, src)));
+						m_view3d.EnumSources(src =>
+						{
+							if (src.ContextId == ChartControl.CtxId) return;
+							sources.Add(src.ContextId, new Source(this, src));
+						});
 						Sources.SyncStable(sources.Values, (l, r) => l.ContextId == r.ContextId, (s, i) => s);
 						SourcesChanged?.Invoke(this, EventArgs.Empty);
 					}
@@ -296,40 +300,40 @@ namespace LDraw
 		/// <summary>Clear all instances from one or more scenes</summary>
 		public void Clear(IEnumerable<SceneUI> scenes)
 		{
-			Clear(scenes, [], 0, 0);
+			Clear(scenes, x => true);
 		}
 
 		/// <summary>Clear instances from one or more scenes</summary>
 		public void Clear(SceneUI scene) => Clear(new[] { scene });
-		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, [context_id], 1, 0);
-		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, [context_id], 1, 0);
-		public void Clear(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
+		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, x => x == context_id);
+		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, x => x == context_id);
+		public void Clear(IEnumerable<SceneUI> scenes, Func<Guid,bool> context_pred)
 		{
 			// Remove objects from the scenes
 			foreach (var scene in scenes)
 			{
 				var view = scene.SceneView;
-				view.Scene.RemoveObjects(context_ids, include_count, exclude_count);
+				view.Scene.RemoveObjects(context_pred);
 				view.Scene.Invalidate();
 			}
 
 			//// Delete unused objects
 			//if (context_ids.Length != 0)
 			//{
-			//	View3d.DeleteUnused(context_ids, include_count, exclude_count);
+			//	View3d.DeleteUnused(context_pred);
 			//}
 		}
 
 		// Add objects associated with 'id' to the scenes
-		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, [context_id], 1, 0);
-		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, [context_id], 1, 0);
-		public void AddObjects(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
+		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, context_id);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, x => x == context_id);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Func<Guid, bool> context_pred)
 		{
 			// Add the objects from 'id' this scene.
 			foreach (var scene in scenes)
 			{
 				var view = scene.SceneView;
-				view.Scene.AddObjects(context_ids, include_count, exclude_count);
+				view.Scene.AddObjects(context_pred);
 
 				// Auto range the view
 				if (Settings.ResetOnLoad)

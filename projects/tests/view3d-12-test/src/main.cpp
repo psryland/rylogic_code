@@ -49,7 +49,7 @@ struct Main :Form
 	static view3d::WindowOptions WndOptions(Main& main)
 	{
 		return view3d::WindowOptions()
-			.error_cb({ ReportError, &main })
+			.error_cb({ &main, ReportError })
 			.back_colour(0xFF908080)
 			.alt_enter()
 			.multisamp(8)
@@ -64,7 +64,7 @@ struct Main :Form
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
-		, m_view3d(View3D_Initialise({ ReportError, this }))
+		, m_view3d(View3D_Initialise({ this, ReportError }))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 		, m_obj0()
@@ -136,11 +136,11 @@ struct Main :Form
 
 		// EnvMap
 		//View3D_WindowEnvMapSet(m_win3d, m_envmap);
-		View3D_WindowEnumObjects(m_win3d, [](void*, view3d::Object obj)
+		View3D_WindowEnumObjects(m_win3d, { nullptr, [](void*, view3d::Object obj)
 			{
 				View3D_ObjectReflectivitySet(obj, 0.2f, "");
 				return true;
-			}, nullptr);
+			}});
 
 		// Streaming
 		View3D_StreamingEnable(true, 1976);

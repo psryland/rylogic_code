@@ -562,4 +562,10 @@ old:
 		<DisplayString Condition="value._Which==5">{key,s} : {*(pr::json::Object*)&amp;value._Head}</DisplayString>
 		<DisplayString>{key}: {value}</DisplayString>
 	</Type>
+
+	<!-- LDraw -->
+	<Type Name="pr::rdr12::ldraw::LdrObject">
+		<DisplayString>{m_name} {m_type} {m_colour}</DisplayString>
+	</Type>
+
 </AutoVisualizer>

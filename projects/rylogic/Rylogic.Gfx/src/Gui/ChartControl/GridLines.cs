@@ -124,7 +124,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Update the grid lines model</summary>
-			private View3d.VICount UpdateGfxCB(Span<View3d.Vertex> verts, Span<ushort> indices, View3d.AddNuggetCB out_nugget)
+			private View3d.VICount UpdateGfxCB(Span<View3d.Vertex> verts, Span<ushort> indices, View3d.Object.AddNuggetCB out_nugget)
 			{
 				// Create a model for the grid lines
 				// Need to allow for one step in either direction because we only create the grid lines

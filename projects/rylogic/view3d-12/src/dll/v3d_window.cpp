@@ -60,7 +60,7 @@ namespace pr::rdr12
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us.
-			ReportError += {opts.m_error_cb.m_cb, opts.m_error_cb.m_ctx};
+			ReportError += opts.m_error_cb;
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.BackBufferSize();
@@ -184,7 +184,7 @@ namespace pr::rdr12
 	}
 
 	// Enumerate the object collection GUIDs associated with this window
-	void V3dWindow::EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb)
+	void V3dWindow::EnumGuids(view3d::EnumGuidsCB enum_guids_cb)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& guid : m_guids)
@@ -195,7 +195,7 @@ namespace pr::rdr12
 	}
 
 	// Enumerate the objects associated with this window
-	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb)
+	void V3dWindow::EnumObjects(view3d::EnumObjectsCB enum_objects_cb)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& object : m_objects)
@@ -204,12 +204,12 @@ namespace pr::rdr12
 			break;
 		}
 	}
-	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude)
+	void V3dWindow::EnumObjects(view3d::EnumObjectsCB enum_objects_cb, view3d::GuidPredCB pred)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& object : m_objects)
 		{
-			if (!IncludeFilter(object->m_context_id, include, exclude)) continue;
+			if (!pred(object->m_context_id)) continue;
 			if (enum_objects_cb(object)) continue;
 			break;
 		}
@@ -364,7 +364,7 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
-	void V3dWindow::Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude)
+	void V3dWindow::Add(ldraw::SourceCont const& sources, view3d::GuidPredCB pred)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -373,7 +373,7 @@ namespace pr::rdr12
 		for (auto& srcs : sources)
 		{
 			auto& src = srcs.second;
-			if (!IncludeFilter(src->m_context_id, include, exclude))
+			if (!pred(src->m_context_id))
 				continue;
 
 			// Add objects from this source
@@ -439,7 +439,7 @@ namespace pr::rdr12
 			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids, nullptr);
 		}
 	}
-	void V3dWindow::Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids)
+	void V3dWindow::Remove(view3d::GuidPredCB pred, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -447,7 +447,7 @@ namespace pr::rdr12
 		GuidSet removed;
 		for (auto& id : m_guids)
 		{
-			if (!IncludeFilter(id, include, exclude)) continue;
+			if (!pred(id)) continue;
 			removed.insert(id);
 		}
 
@@ -1192,12 +1192,12 @@ namespace pr::rdr12
 						m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
 					}
 				});
-				m_wnd.m_rdr->AddPollCB({ AnimTick, this });
+				m_wnd.m_rdr->AddPollCB({ this, AnimTick });
 				break;
 			}
 			case view3d::EAnimCommand::Stop:
 			{
-				m_wnd.m_rdr->RemovePollCB({ AnimTick, this });
+				m_wnd.m_rdr->RemovePollCB({ this, AnimTick });
 				++m_anim_data.m_issue;
 				if (m_anim_data.m_thread.joinable())
 					m_anim_data.m_thread.join();
@@ -1302,14 +1302,14 @@ namespace pr::rdr12
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, view3d::GuidPredCB pred, int)
 	{
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !IncludeFilter(cast<ldraw::LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
+			for (; beg != end && !pred(cast<ldraw::LdrObject>(*beg)->m_context_id); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);

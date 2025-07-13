@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -31,8 +31,6 @@ namespace pr::rdr12::ldraw
 		Rotate,
 		Scale,
 	};
-
-	using GizmoMovedCB = StaticCB<void, LdrGizmo*, EGizmoState>;
 
 	// Graphics and functionality for a manipulator gizmo.
 	struct alignas(16) LdrGizmo :RefCounted<LdrGizmo>
@@ -92,7 +90,7 @@ namespace pr::rdr12::ldraw
 		Renderer& rdr() const;
 
 		// Raised whenever the gizmo is manipulated
-		MultiCast<GizmoMovedCB> Manipulated;
+		MultiCast<StaticCB<void, LdrGizmo*, EGizmoState>> Manipulated;
 
 		// Get/Set the mode the gizmo is in
 		bool Enabled() const;

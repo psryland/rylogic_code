@@ -1250,13 +1250,9 @@ namespace pr
 			return !(lhs == rhs);
 		}
 
-		// Customisation
-		friend ptrdiff_t ssize(vector const& v)
-		{
-			return std::ssize(v);
-		}
-
 		// ADL
+		friend size_t size(vector const& v) { return std::size(v); }
+		friend ptrdiff_t ssize(vector const& v) { return std::ssize(v); }
 		friend const_iterator begin(vector const& v) { return v.begin(); }
 		friend const_iterator end(vector const& v) { return v.end(); }
 		friend iterator begin(vector& v) { return v.begin(); }

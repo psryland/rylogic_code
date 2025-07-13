@@ -23,7 +23,7 @@ namespace Rylogic.Gfx
 			public enum EState { StartManip, Moving, Commit, Revert };
 
 			public HGizmo m_handle; // The handle to the gizmo
-			private Callback m_cb;
+			private GizmoMovedCB m_cb;
 			private bool m_owned;   // True if 'm_handle' was created with this class
 
 			private Gizmo(HGizmo handle, bool owned)
@@ -33,11 +33,11 @@ namespace Rylogic.Gfx
 
 				m_handle = handle;
 				m_owned = owned;
-				View3D_GizmoMovedCBSet(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero, true);
-				void HandleGizmoMoved(IntPtr ctx, HGizmo gizmo, EState state)
+				View3D_GizmoMovedCBSet(m_handle, m_cb = new GizmoMovedCB { m_cb = HandleGizmoMoved }, true);
+				void HandleGizmoMoved(IntPtr ctx, HGizmo gizmo, EGizmoState state)
 				{
 					if (gizmo != m_handle) throw new Exception("Gizmo move event from a different gizmo instance received");
-					Moved?.Invoke(this, new MovedEventArgs(state));
+					Moved?.Invoke(this, new MovedEventArgs((EState)state));
 				}
 			}
 			public Gizmo(HGizmo handle)
@@ -50,9 +50,9 @@ namespace Rylogic.Gfx
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HObject.Zero) return;
-				View3D_GizmoMovedCBSet(m_handle, m_cb, IntPtr.Zero, false);
+				View3D_GizmoMovedCBSet(m_handle, m_cb, false);
 				if (m_owned) View3D_GizmoDelete(m_handle);
-				m_cb = null!;
+				m_cb = new GizmoMovedCB();
 				m_handle = HObject.Zero;
 				GC.SuppressFinalize(this);
 			}
@@ -107,9 +107,6 @@ namespace Rylogic.Gfx
 			{
 				View3D_GizmoDetach(m_handle, obj.Handle);
 			}
-
-			/// <summary>Callback function type and data from the native gizmo object</summary>
-			internal delegate void Callback(IntPtr ctx, HGizmo gizmo, EState state);
 
 			#region Equals
 			public static bool operator ==(Gizmo? lhs, Gizmo? rhs)

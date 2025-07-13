@@ -18,6 +18,9 @@ namespace Rylogic.Gfx
 		[DebuggerDisplay("{Description}")]
 		public class Object :IDisposable, INotifyPropertyChanged
 		{
+			public delegate VICount EditObjectCB(Span<Vertex> verts, Span<ushort> indices, AddNuggetCB out_nugget);
+			public delegate void AddNuggetCB(ref Nugget nugget);
+
 			/// <summary>
 			/// Create objects given in an ldr string or file.
 			/// If multiple objects are created, the handle returned is to the first object only
@@ -82,7 +85,7 @@ namespace Rylogic.Gfx
 			{
 				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
-				Handle = View3D_ObjectCreateWithCallback(name, colour, vcount, icount, ncount, new EditCB(edit_cb), IntPtr.Zero, ref ctx);
+				Handle = View3D_ObjectCreateWithCallback(name, colour, vcount, icount, ncount, new EditCB(edit_cb), ref ctx);
 				if (Handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
 			}
 
@@ -101,7 +104,7 @@ namespace Rylogic.Gfx
 			}
 			protected virtual void Dispose(bool _)
 			{
-				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HObject.Zero) return;
 				if (Owned) View3D_ObjectDelete(Handle);
 				Handle = HObject.Zero;
@@ -219,7 +222,7 @@ namespace Rylogic.Gfx
 			/// <summary>Modify the model of this object</summary>
 			public void Edit(EditObjectCB edit_cb)
 			{
-				View3D_ObjectEdit(Handle, new EditCB(edit_cb), IntPtr.Zero);
+				View3D_ObjectEdit(Handle, new EditCB(edit_cb));
 			}
 
 			/// <summary>Get/Set the object to parent transform of the root object</summary>
@@ -277,7 +280,8 @@ namespace Rylogic.Gfx
 				{
 					if (Handle == HObject.Zero) return Array.Empty<Object>();
 					var objects = new List<Object>(capacity: ChildCount);
-					View3D_ObjectEnumChildren(Handle, (ctx, obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
+					bool CB(IntPtr ctx, IntPtr obj) { objects.Add(new Object(obj)); return true; }
+					View3D_ObjectEnumChildren(Handle, new EnumObjectsCB { m_cb = CB });
 					return objects.ToArray();
 				}
 			}
@@ -530,19 +534,19 @@ namespace Rylogic.Gfx
 				public EditCB(EditObjectCB edit_cb)
 				{
 					m_edit_cb = edit_cb;
-					m_callback = EditObjectCallback;
+					m_callback = new EditObjectCBInternal { m_cb = EditObjectCallback };
 				}
-
-				public static implicit operator EditObjectCBInternal(EditCB cb) => cb.m_callback;
 				
-				public VICount EditObjectCallback(IntPtr ctx, int vcount, int icount, IntPtr vptr, IntPtr iptr, AddNuggetCBInternal out_nugget, IntPtr out_nugget_ctx)
+				private VICount EditObjectCallback(IntPtr ctx, int vcount, int icount, IntPtr vptr, IntPtr iptr, AddNuggetCBInternal out_nugget)
 				{
 					// Convert IntPtr to a Span<Vertex> (direct memory access)
 					var verts = new Span<Vertex>((Vertex*)vptr, vcount);
 					var indices = new Span<ushort>((ushort*)iptr, icount);
-					void AddNugget(ref Nugget nug) => out_nugget(out_nugget_ctx, ref nug);
+					void AddNugget(ref Nugget nug) => out_nugget.m_cb(out_nugget.m_ctx, ref nug);
 					return m_edit_cb(verts, indices, AddNugget);
 				}
+
+				public static implicit operator EditObjectCBInternal(EditCB cb) => cb.m_callback;
 			}
 
 			#region Equals

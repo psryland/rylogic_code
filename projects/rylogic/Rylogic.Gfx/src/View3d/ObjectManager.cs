@@ -72,7 +72,7 @@ namespace Rylogic.Gfx
 			{
 				// Read the objects from the scene
 				var objects = new HashSet<Object>();
-				Window.EnumObjects(obj => objects.Add(obj), Exclude.ToArray(), 0, Exclude.Count);
+				Window.EnumObjects(objects.Add, Exclude.Contains);
 				Objects.Sync(objects);
 				NotifyPropertyChanged(nameof(Objects));
 			}

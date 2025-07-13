@@ -359,7 +359,8 @@ namespace pr::geometry::fbx
 		Scene& operator=(Scene const&) = delete;
 		~Scene()
 		{
-			Fbx::get().Release(m_ctx);
+			if (m_ctx)
+				Fbx::get().Release(m_ctx);
 		}
 
 		// Scene global properties

@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Audio
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
@@ -99,9 +99,9 @@ AUDIO_API void __stdcall Audio_GlobalErrorCBSet(Audio_ReportErrorCB error_cb, vo
 	try
 	{
 		if (add)
-			Dll().OnError += {error_cb, ctx};
+			Dll().OnError += {ctx, error_cb};
 		else
-			Dll().OnError -= {error_cb, ctx};
+			Dll().OnError -= {ctx, error_cb};
 	}
 	CatchAndReport(Audio_GlobalErrorCBSet,);
 }

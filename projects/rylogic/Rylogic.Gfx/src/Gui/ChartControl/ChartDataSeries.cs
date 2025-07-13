@@ -175,7 +175,7 @@ namespace Rylogic.Gui.WPF
 		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
 			// Remove all series data graphics
-			window.RemoveObjects(new[] { Id }, 1, 0);
+			window.RemoveObjects(x => x == Id);
 
 			// If there is no data, then there's no graphics
 			var range_x = RangeX;
@@ -202,7 +202,7 @@ namespace Rylogic.Gui.WPF
 			base.RemoveFromSceneCore(window);
 
 			// Remove all series data graphics
-			window.RemoveObjects([Id], 1, 0);
+			window.RemoveObjects(x => x == Id);
 		}
 
 		/// <summary>Generate a piece of the graphics for 'x'</summary>

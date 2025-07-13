@@ -25,7 +25,7 @@ namespace pr::rdr12
 		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;
 
-		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB::FuncCB> global_error_cb);
+		Context(HINSTANCE instance, view3d::ReportErrorCB global_error_cb);
 		Context(Context&&) = delete;
 		Context(Context const&) = delete;
 		Context& operator=(Context&) = delete;
@@ -44,13 +44,13 @@ namespace pr::rdr12
 		void WindowDestroy(V3dWindow* window);
 
 		// Global error callback. Can be called in a worker thread context
-		MultiCast<StaticCB<view3d::ReportErrorCB::FuncCB>, true> ReportError;
+		MultiCast<view3d::ReportErrorCB, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
-		MultiCast<StaticCB<view3d::ParsingProgressCB>, true> ParsingProgress;
+		MultiCast<view3d::ParsingProgressCB, true> ParsingProgress;
 
 		// Event raised when the script sources are updated
-		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> SourcesChanged;
+		MultiCast<view3d::SourcesChangedCB, true> SourcesChanged;
 
 		// Load/Add ldraw objects from a script file. Returns the Guid of the context that the objects were added to.
 		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete);
@@ -77,8 +77,8 @@ namespace pr::rdr12
 		ldraw::LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id);
 
 		// Modify an ldr object using a callback to populate the model data.
-		ldraw::LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id);
-		void ObjectEdit(ldraw::LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
+		ldraw::LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, view3d::EditObjectCB edit_cb, Guid const& context_id);
+		void ObjectEdit(ldraw::LdrObject* object, view3d::EditObjectCB edit_cb);
 
 		// Update the model in an existing object
 		template <typename Char>
@@ -91,13 +91,13 @@ namespace pr::rdr12
 		void DeleteAllObjects();
 
 		// Delete all objects with matching ids
-		void DeleteAllObjectsById(std::span<Guid const> include, std::span<Guid const> exclude);
+		void DeleteAllObjectsById(view3d::GuidPredCB pred);
 		
 		// Delete all objects not displayed in any windows
-		void DeleteUnused(std::span<Guid const> include, std::span<Guid const> exclude);
+		void DeleteUnused(view3d::GuidPredCB pred);
 
 		// Enumerate all sources in the store
-		void EnumSources(StaticCB<bool, Guid const&> enum_guids_cb);
+		void EnumSources(view3d::EnumGuidsCB enum_guids_cb);
 
 		// Return details about a source
 		view3d::SourceInfo SourceInfo(Guid const& context_id);

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -150,7 +150,7 @@ namespace pr::rdr12::ldraw
 		if (consume != 0)
 		{
 			mem_istream<char> strm(buffer.data(), consume);
-			BinaryReader reader(strm, m_name.c_str(), { OnReportError, this }, { OnProgress, this });
+			BinaryReader reader(strm, m_name.c_str(), { this, OnReportError }, { this, OnProgress });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{
@@ -219,7 +219,7 @@ namespace pr::rdr12::ldraw
 		if (consume != 0)
 		{
 			mem_istream<char> strm(buffer.data(), consume);
-			TextReader reader(strm, m_name.c_str(), EEncoding::utf8, { OnReportError, this }, { OnProgress, this });
+			TextReader reader(strm, m_name.c_str(), EEncoding::utf8, { this, OnReportError }, { this, OnProgress });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{

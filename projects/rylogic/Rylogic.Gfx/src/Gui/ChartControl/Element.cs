@@ -141,7 +141,7 @@ namespace Rylogic.Gui.WPF
 
 				// Remove any graphics from the previous chart
 				if (m_chart?.Scene != null)
-					m_chart.Scene.Window.RemoveObjects(new[] { Id }, 1, 0);
+					m_chart.Scene.Window.RemoveObjects(x => x == Id);
 
 				// Set the new chart
 				m_chart = chart;

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -32,6 +32,7 @@ namespace pr::rdr12::ldraw
 
 			// Only notify if there are attached handlers. This allows stack allocated Sources
 			// to be used (that won't work with shared_from_this()) if they don't attach to 'Notify'.
+			// Search for 'SourceNotifyHandler'
 			if (Notify)
 				Notify(shared_from_this(), { ENotifyReason::LoadComplete, trigger, add_complete_cb });
 		}

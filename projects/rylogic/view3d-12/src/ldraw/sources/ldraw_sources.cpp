@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -102,7 +102,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Remove all objects associated with 'context_ids'
-	void ScriptSources::Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangedReason reason)
+	void ScriptSources::Remove(view3d::GuidPredCB pred, EDataChangedReason reason)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -110,8 +110,10 @@ namespace pr::rdr12::ldraw
 		GuidCont removed;
 		for (auto& src : m_srcs)
 		{
-			auto id = src.second->m_context_id;
-			if (!IncludeFilter(id, include, exclude)) continue;
+			auto const& id = src.second->m_context_id;
+			if (!pred(id))
+				continue;
+
 			removed.push_back(id);
 		}
 
@@ -139,7 +141,7 @@ namespace pr::rdr12::ldraw
 	}
 	void ScriptSources::Remove(Guid const& context_id, EDataChangedReason reason)
 	{
-		Remove({ &context_id, 1 }, {}, reason);
+		Remove({ &context_id, MatchContextId }, reason);
 	}
 
 	// Reload a range of sources
@@ -154,7 +156,7 @@ namespace pr::rdr12::ldraw
 		m_events->OnStoreChange({ EDataChangedReason::Reload, ids, nullptr, true });
 
 		// Reload each source in a background thread
-		std::for_each(std::execution::par_unseq, std::begin(srcs), std::end(srcs), [this](auto* src)
+		std::for_each(std::execution::par, std::begin(srcs), std::end(srcs), [this](auto* src)
 		{
 			src->Load(rdr(), EDataChangedReason::Reload, nullptr);
 		});
@@ -313,7 +315,7 @@ namespace pr::rdr12::ldraw
 							if (network::SelectToRecv(listen_socket, 5000))
 							{
 								// Someone is trying to connect
-								sockaddr_in client_addr;
+								sockaddr_in client_addr = {};
 								auto client_addr_size = static_cast<int>(sizeof(client_addr));
 								auto client = Socket(::accept(listen_socket, (sockaddr*)&client_addr, &client_addr_size));
 								network::Check(client != INVALID_SOCKET, "Accepting connection failed");

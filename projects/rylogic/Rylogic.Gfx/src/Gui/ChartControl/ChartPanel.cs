@@ -77,9 +77,9 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			Window.AddObjects(context_id);
 		}
-		public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
+		public void AddObjects(Func<Guid, bool> context_pred)
 		{
-			Window.AddObjects(context_ids, include_count, exclude_count);
+			Window.AddObjects(context_pred);
 		}
 
 		/// <summary>Remove an object from the scene</summary>
@@ -91,9 +91,9 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			Window.RemoveObjects(objects);
 		}
-		public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
+		public void RemoveObjects(Func<Guid, bool> context_pred)
 		{
-			Window.RemoveObjects(context_ids, include_count, exclude_count);
+			Window.RemoveObjects(context_pred);
 		}
 		public void RemoveAllObjects()
 		{
