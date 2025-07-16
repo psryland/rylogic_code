@@ -99,6 +99,7 @@ namespace pr::rdr12::ldraw
 		x(Fov               , = HashI("Fov"                   ))\
 		x(FovX              , = HashI("FovX"                  ))\
 		x(FovY              , = HashI("FovY"                  ))\
+		x(FrameRange        , = HashI("FrameRange"            ))\
 		x(FrustumFA         , = HashI("FrustumFA"             ))\
 		x(FrustumWH         , = HashI("FrustumWH"             ))\
 		x(GenerateNormals   , = HashI("GenerateNormals"       ))\
@@ -136,6 +137,7 @@ namespace pr::rdr12::ldraw
 		x(Param             , = HashI("Param"                 ))\
 		x(Parametrics       , = HashI("Parametrics"           ))\
 		x(Part              , = HashI("Part"                  ))\
+		x(Parts             , = HashI("Parts"                 ))\
 		x(Period            , = HashI("Period"                ))\
 		x(PerItemColour     , = HashI("PerItemColour"         ))\
 		x(PerItemParametrics, = HashI("PerItemParametrics"    ))\
@@ -157,6 +159,7 @@ namespace pr::rdr12::ldraw
 		x(Reflectivity      , = HashI("Reflectivity"          ))\
 		x(Resolution        , = HashI("Resolution"            ))\
 		x(Ribbon            , = HashI("Ribbon"                ))\
+		x(RootAnimation     , = HashI("RootAnimation"         ))\
 		x(Round             , = HashI("Round"                 ))\
 		x(Scale             , = HashI("Scale"                 ))\
 		x(ScreenSpace       , = HashI("ScreenSpace"           ))\
@@ -347,6 +350,9 @@ namespace pr::rdr12::ldraw
 
 		// Doesn't cast a shadow
 		ShadowCastExclude = 1 << 12,
+
+		// True if the object has animation data
+		Animated = 1 << 13,
 
 		// Bitwise operators
 		_flags_enum = 0,

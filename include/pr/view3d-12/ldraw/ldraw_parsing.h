@@ -7,6 +7,7 @@
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
+#include "pr/view3d-12/utility/conversion.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -231,7 +232,8 @@ namespace pr::rdr12::ldraw
 			auto value = EnumImpl(sizeof(TEnum), parse);
 			return static_cast<TEnum>(value);
 		}
-		template <typename TEnum> requires (requires (TEnum t) { To<TEnum>(std::declval<std::string_view>()) -> TEnum; }) TEnum Enum()
+		template <typename TEnum> requires (!ReflectedEnum<TEnum> && requires (TEnum t) { { To<TEnum>(std::declval<std::string_view>()) } -> std::convertible_to<TEnum>; })
+		TEnum Enum()
 		{
 			static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::To<TEnum>(str)); };
 			auto value = EnumImpl(sizeof(TEnum), parse);

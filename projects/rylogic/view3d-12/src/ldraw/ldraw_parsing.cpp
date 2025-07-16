@@ -246,6 +246,19 @@ namespace pr::rdr12::ldraw
 		bool m_has_alpha = false;
 	};
 
+	// Information on a animation ldr object
+	struct AnimInfo
+	{
+		EAnimStyle m_style = EAnimStyle::NoAnimation;
+		std::filesystem::path m_filepath = {};
+		pr::Range<int> m_frames = { 0, std::numeric_limits<int>::max() };
+		double m_period = {}; // Seconds
+		v4 m_vel = {}; // Linear velocity of the animation in m/s
+		v4 m_acc = {}; // Linear velocity of the animation in m/s
+		v4 m_avel = {}; // Angular velocity of the animation in rad/s
+		v4 m_aacc = {}; // Angular velocity of the animation in rad/s
+	};
+
 	// Forward declare the recursive object parsing function
 	bool ParseLdrObject(ELdrObject type, IReader& reader, ParseParams& pp);
 
@@ -482,7 +495,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(IReader& reader, ParseParams& pp, rdr12::SimpleAnimation& anim)
+	void ParseAnimation(IReader& reader, ParseParams& pp, AnimInfo& anim_info)
 	{
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
@@ -491,48 +504,55 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Style:
 				{
-					auto style = reader.Identifier<string32>();
-					if (str::EqualI(style, "NoAnimation")) anim.m_style = EAnimStyle::NoAnimation;
-					else if (str::EqualI(style, "Once")) anim.m_style = EAnimStyle::Once;
-					else if (str::EqualI(style, "Repeat")) anim.m_style = EAnimStyle::Repeat;
-					else if (str::EqualI(style, "Continuous")) anim.m_style = EAnimStyle::Continuous;
-					else if (str::EqualI(style, "PingPong")) anim.m_style = EAnimStyle::PingPong;
+					anim_info.m_style = reader.Enum<EAnimStyle>();
+					break;
+				}
+				case EKeyword::FilePath:
+				{
+					anim_info.m_filepath = reader.String<std::filesystem::path>();
+					break;
+				}
+				case EKeyword::FrameRange:
+				{
+					auto beg = reader.Int<int>();
+					auto end = !reader.IsSectionEnd() ? reader.Int<int>() : beg + 1;
+					anim_info.m_frames = { beg, end };
 					break;
 				}
 				case EKeyword::Period:
 				{
-					anim.m_period = reader.Real<float>();
+					anim_info.m_period = reader.Real<float>();
 					break;
 				}
 				case EKeyword::Velocity:
 				{
-					anim.m_vel = reader.Vector3f().w0();
+					anim_info.m_vel = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::Accel:
 				{
-					anim.m_acc = reader.Vector3f().w0();
+					anim_info.m_acc = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::AngVelocity:
 				{
-					anim.m_avel = reader.Vector3f().w0();
+					anim_info.m_avel = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::AngAccel:
 				{
-					anim.m_aacc = reader.Vector3f().w0();
+					anim_info.m_aacc = reader.Vector3f().w0();
 					break;
 				}
 				default:
 				{
-					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Animation", EKeyword_::ToStringA(kw)));
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *RootAnimation", EKeyword_::ToStringA(kw)));
 					break;
 				}
 			}
 		}
 	}
-	
+
 	// Parse a texture description
 	void ParseTexture(IReader& reader, ParseParams& pp, TextureInfo& tex)
 	{
@@ -621,11 +641,18 @@ namespace pr::rdr12::ldraw
 				ParseFont(reader, pp, pp.m_font.back());
 				return true;
 			}
-			case EKeyword::Animation:
+			case EKeyword::RootAnimation:
 			{
-				SimpleAnimationPtr root_anim{ rdr12::New<SimpleAnimation>(), true };
-				ParseAnimation(reader, pp, *root_anim.get());
-				obj->m_root_anim.m_simple = root_anim;
+				AnimInfo anim_info = {};
+				ParseAnimation(reader, pp, anim_info);
+				obj->m_root_anim.m_simple = { rdr12::New<rdr12::RootAnimation>(), true };
+				obj->m_root_anim.m_simple->m_style = anim_info.m_style;
+				obj->m_root_anim.m_simple->m_vel = anim_info.m_vel;
+				obj->m_root_anim.m_simple->m_acc = anim_info.m_acc;
+				obj->m_root_anim.m_simple->m_avel = anim_info.m_avel;
+				obj->m_root_anim.m_simple->m_aacc = anim_info.m_aacc;
+				obj->m_root_anim.m_simple->m_period = anim_info.m_period;
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
 				return true;
 			}
 			case EKeyword::Hidden:
@@ -4058,17 +4085,25 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Model
 	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
+		geometry::ESceneParts m_parts;
 		std::filesystem::path m_filepath;
 		std::unique_ptr<std::istream> m_file_stream;
+		std::unordered_set<string32> m_model_parts;
+		std::unordered_set<string32> m_skel_parts;
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
+		AnimInfo m_anim_info;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_parts(geometry::ESceneParts::ModelOnly)
 			, m_filepath()
 			, m_file_stream()
 			, m_gen_norms()
 			, m_bake()
+			, m_model_parts()
+			, m_skel_parts()
+			, m_anim_info()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -4080,6 +4115,21 @@ namespace pr::rdr12::ldraw
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 					m_filepath = reader.String<std::filesystem::path>();
 					m_file_stream = reader.PathResolver.OpenStream(m_filepath, IPathResolver::EFlags::Binary);
+					return true;
+				}
+				case EKeyword::Parts:
+				{
+					auto section = reader.SectionScope();
+					for (;!reader.IsSectionEnd();)
+						m_model_parts.insert(reader.String<string32>());
+
+					return true;
+				}
+				case EKeyword::Animation:
+				{
+					m_anim_info.m_filepath = m_filepath;
+					ParseAnimation(reader, m_pp, m_anim_info);
+					m_parts |= geometry::ESceneParts::All;
 					return true;
 				}
 				default:
@@ -4098,7 +4148,9 @@ namespace pr::rdr12::ldraw
 
 			// Validate
 			if (m_filepath.empty())
+			{
 				return;
+			}
 			if (!m_file_stream)
 			{
 				m_pp.ReportError(EParseError::NotFound, loc, "Failed to open the model file");
@@ -4134,35 +4186,59 @@ namespace pr::rdr12::ldraw
 			{
 				LdrObject& m_obj;
 				ResourceFactory& m_factory;
+				ObjectCreator& m_this;
 
-				ModelOut(LdrObject& obj, ResourceFactory& factory)
+				ModelOut(LdrObject& obj, ResourceFactory& factory, ObjectCreator& this_)
 					: m_obj(obj)
 					, m_factory(factory)
+					, m_this(this_)
 				{
-					ReadAnimation = true;
 				}
-				EResult Model(std::span<ModelTreeNode const> tree) override
+				ESceneParts Parts() const override
+				{
+					return m_this.m_parts;
+				}
+				bool ModelFilter(std::string_view model_name) const override
+				{
+					return m_this.m_model_parts.empty() || m_this.m_model_parts.contains(model_name);
+				}
+				bool SkeletonFilter(std::string_view skeleton_name) const override
+				{
+					return m_this.m_skel_parts.empty() || m_this.m_skel_parts.contains(skeleton_name);
+				}
+				pr::Range<int> FrameRange() const override
+				{
+					// The frame range of animation data to return
+					return m_this.m_anim_info.m_frames;
+				}
+				EResult Model(ModelTree&& tree) override
 				{
 					ModelTreeToLdr(&m_obj, tree);
 					return EResult::Continue;
 				}
-				EResult Animation(std::span<SkeletonPtr const> skels, std::span<KeyFrameAnimationPtr const> anims) override
+				EResult Animation(vector<SkeletonPtr>&& skels, vector<KeyFrameAnimationPtr>&& anims) override
 				{
 					// Only use the first animation
 					auto const& animation = anims.front();
 					auto const& skeleton = pr::get_if(skels, [&](SkeletonPtr skel) { return skel->Id() == animation->m_skel_id; });
 
+					// Apply animation settings
+					animation->m_style = m_this.m_anim_info.m_style;
+
 					// Create an animator that uses the animation and a pose for it to animate
-					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anims.front()), true };
+					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(animation), true };
 					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator), true };
 					pose->AnimTime(0.0);
 
 					// Set the pose for each model in the hierarchy.
-					// Alternatively, I could add a PosePtr in the LdrInstance type.
 					m_obj.Apply([&](LdrObject* obj)
 					{
 						if (obj->m_model)
 							obj->m_model->m_pose = pose;
+						
+						if (m_this.m_anim_info.m_style != EAnimStyle::NoAnimation)
+							obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
+
 						return true;
 					}, "");
 
@@ -4171,7 +4247,7 @@ namespace pr::rdr12::ldraw
 			};
 
 			// Create the models
-			ModelOut model_out(*obj, m_pp.m_factory);
+			ModelOut model_out(*obj, m_pp.m_factory, *this);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
 		}
@@ -5216,7 +5292,7 @@ namespace pr::rdr12::ldraw
 		{
 			LdrObject* m_obj;
 			ModelOut(LdrObject* obj) :m_obj(obj) {}
-			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			virtual EResult Model(ModelTree&& tree) override
 			{
 				ModelTreeToLdr(m_obj, tree);
 				return EResult::Continue;
@@ -5237,7 +5313,7 @@ namespace pr::rdr12::ldraw
 		{
 			LdrObject* m_obj;
 			ModelOut(LdrObject* obj) :m_obj(obj) {}
-			virtual EResult Model(std::span<ModelTreeNode const> tree) override
+			virtual EResult Model(ModelTree&& tree) override
 			{
 				ModelTreeToLdr(m_obj, tree);
 				return EResult::Continue;

@@ -43,7 +43,8 @@ namespace Rylogic.Gui.WPF
 			ApplySavedView = Command.Create(this, ApplySavedViewInternal);
 			SaveCurrentView = Command.Create(this, SaveCurrentViewInternal);
 			RemoveSavedView = Command.Create(this, RemoveSavedViewInternal);
-			
+			ShowCameraUI = Command.Create(this, ShowCameraUIInternal);
+
 			// Renderering Menu
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
@@ -251,6 +252,20 @@ namespace Rylogic.Gui.WPF
 			if (SavedViews.CurrentItem is SavedView view)
 				SavedViewsList.Remove(view);
 		}
+
+		/// <inheritdoc/>
+		public ICommand ShowCameraUI { get; private set; } = null!;
+		private void ShowCameraUIInternal()
+		{
+			if (m_camera_ui == null)
+			{
+				m_camera_ui = new View3dCameraUI(System.Windows.Window.GetWindow(this), Window);
+				m_camera_ui.Closed += delegate { m_camera_ui = null; };
+				m_camera_ui.Show();
+			}
+			m_camera_ui.Focus();
+		}
+		private View3dCameraUI? m_camera_ui;
 
 		/// <summary>Background colour (as a media brush)</summary>
 		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();

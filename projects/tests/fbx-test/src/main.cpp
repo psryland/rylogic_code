@@ -84,7 +84,7 @@ int main()
 		.m_parts =
 			fbx::EParts::Meshes |
 			fbx::EParts::Skeletons |
-			fbx::EParts::Skinning |
+			fbx::EParts::Skins |
 			fbx::EParts::None,
 		.m_convert_axis_system = true,
 		.m_triangulate_meshes = true,

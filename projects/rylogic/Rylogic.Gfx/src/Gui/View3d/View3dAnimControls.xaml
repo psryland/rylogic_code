@@ -49,6 +49,17 @@
 					/>
 			</Button>
 
+			<!-- Step Back -->
+			<Button
+				Style="{StaticResource AnimBtnStyle}"
+				Command="{Binding StepBack}"
+				>
+				<Image
+					Source="{StaticResource media_step_bck}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+			
 			<!-- Play -->
 			<Button
 				Style="{StaticResource AnimBtnStyle}"
@@ -75,21 +86,10 @@
 					/>
 			</Button>
 
-			<!-- Step Back -->
-			<Button
-				Style="{StaticResource AnimBtnStyle}"
-				Command="{Binding StepBack}"
-				>
-				<Image
-					Source="{StaticResource media_step_bck}"
-					RenderOptions.BitmapScalingMode="HighQuality"
-					/>
-			</Button>
-
 			<!-- Step Forward -->
 			<Button
-			Style="{StaticResource AnimBtnStyle}"
-			Command="{Binding StepForward}"
+				Style="{StaticResource AnimBtnStyle}"
+				Command="{Binding StepForward}"
 			>
 			<Image
 				Source="{StaticResource media_step_fwd}"

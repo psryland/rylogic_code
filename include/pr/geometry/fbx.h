@@ -61,22 +61,7 @@ namespace pr::geometry::fbx
 	};
 
 	// Parts of an FBX Scene
-	enum class EParts
-	{
-		None           = 0,
-		GlobalSettings = 1 << 0,
-		NodeHierarchy  = 1 << 1,
-		Materials      = 1 << 2,
-		Meshes         = 1 << 3,
-		Skeletons      = 1 << 4,
-		Skinning       = 1 << 5 | Meshes | Skeletons,
-		Animation      = 1 << 6,
-
-		All       = Meshes | Materials | Skeletons | Skinning | Animation,
-		ModelOnly = Meshes | Materials,
-
-		_flags_enum = 0,
-	};
+	using EParts = ESceneParts;
 
 	// Metadata in the scene
 	struct SceneProps
@@ -113,14 +98,13 @@ namespace pr::geometry::fbx
 		EParts m_parts = EParts::All;
 
 		// The subset of meshes to load. Empty means load all.
-		std::span<std::string_view const> m_mesh_names;
+		std::function<bool(std::string_view)> m_mesh_filter = {};
 
 		// The subset of skeletons to load. Empty means load all.
-		std::span<std::string_view const> m_skel_names;
+		std::function<bool(std::string_view)> m_skel_filter = {};
 
 		// Progress callback
-		using ProgressCB = struct { void* ctx; bool (*cb)(void* ctx, int64_t step, int64_t total, char const* message, int nest); };
-		ProgressCB m_progress = { nullptr, nullptr };
+		std::function<bool(int64_t step, int64_t total, char const* message, int nest)> m_progress = {};
 	};
 
 	// Options for outputting the FBX scene dump
@@ -240,6 +224,7 @@ namespace pr::geometry::fbx
 		std::span<int const> m_offsets;    // Index offsets to the start of each bone track (one for each bone in the skeleton)
 		std::span<BoneKey const> m_tracks; // A bone track for each bone
 		TimeRange m_time_range;            // The time span of the animation
+		double m_frame_rate;               // The native frame rate of the animation
 		
 		// The number of tracks in this animation (one for each bone)
 		int track_count() const

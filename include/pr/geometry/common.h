@@ -62,6 +62,26 @@ namespace pr::geometry
 		Triangles,
 	};
 
+	// Parts of an model file scene
+	enum class ESceneParts
+	{
+		None           = 0,
+		GlobalSettings = 1 << 0,
+		NodeHierarchy  = 1 << 1,
+		Materials      = 1 << 2,
+		Meshes         = 1 << 3,
+		Skeletons      = 1 << 4,
+		Skins          = 1 << 5 | Meshes | Skeletons,
+		Animation      = 1 << 6,
+
+		All           = Meshes | Materials | Skeletons | Skins | Animation,
+		ModelOnly     = Meshes | Materials,
+		SkinnedModels = ModelOnly | Skins,
+		AnimationOnly = Skeletons | Animation,
+
+		_flags_enum = 0,
+	};
+
 	// Geometry properties
 	struct Props
 	{

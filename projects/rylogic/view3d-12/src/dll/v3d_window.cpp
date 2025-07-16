@@ -1154,8 +1154,7 @@ namespace pr::rdr12
 		auto const AnimTick = [](void* ctx)
 		{
 			auto& me = *reinterpret_cast<V3dWindow*>(ctx);
-			me.Invalidate();
-			me.OnAnimationEvent(&me, view3d::EAnimCommand::Step, me.m_anim_data.m_clock.load().count());
+			me.AnimationStep(view3d::EAnimCommand::Step, me.m_anim_data.m_clock.load());
 		};
 
 		switch (command)
@@ -1165,7 +1164,6 @@ namespace pr::rdr12
 				AnimControl(view3d::EAnimCommand::Stop);
 				assert(IsFinite(time.count()));
 				m_anim_data.m_clock.store(time);
-				Invalidate();
 				break;
 			}
 			case view3d::EAnimCommand::Play:
@@ -1208,7 +1206,6 @@ namespace pr::rdr12
 			{
 				AnimControl(view3d::EAnimCommand::Stop);
 				m_anim_data.m_clock = m_anim_data.m_clock.load() + time;
-				Invalidate();
 				break;
 			}
 			default:
@@ -1218,7 +1215,7 @@ namespace pr::rdr12
 		}
 
 		// Notify of the animation event
-		OnAnimationEvent(this, command, m_anim_data.m_clock.load().count());
+		AnimationStep(command, m_anim_data.m_clock.load());
 	}
 
 	// True if animation is currently active
@@ -1236,6 +1233,22 @@ namespace pr::rdr12
 	{
 		assert(IsFinite(clock.count()) && clock.count() >= 0);
 		m_anim_data.m_clock.store(clock);
+	}
+
+	// Called when the animation time has changed
+	void V3dWindow::AnimationStep(view3d::EAnimCommand command, seconds_t anim_time)
+	{
+		// Update all animated objects in this window
+		auto anim_time_s = static_cast<float>(anim_time.count());
+		for (auto& obj : m_objects)
+		{
+			// Only animate children if the parent is animated
+			if (AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Animated))
+				obj->AnimTime(anim_time_s, "");
+		}
+
+		Invalidate();
+		OnAnimationEvent(this, command, anim_time.count());
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray

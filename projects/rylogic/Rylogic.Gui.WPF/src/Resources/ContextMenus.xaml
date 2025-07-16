@@ -6,6 +6,7 @@
 	x:Class="Rylogic.Gui.WPF.ContextMenus"
 	>
 	<BitmapImage x:Key ="light_bulb" UriSource="/Rylogic.Gui.WPF;component/res/light_bulb.png"/>
+	<BitmapImage x:Key ="camera" UriSource="/Rylogic.Gui.WPF;component/res/camera.png"/>
 	<BitmapImage x:Key ="tape_measure" UriSource="/Rylogic.Gui.WPF;component/res/tape_measure_coloured.png"/>
 	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
 	<BitmapImage x:Key ="exchange" UriSource="/Rylogic.Gui.WPF;component/res/exchange.png"/>
@@ -82,7 +83,7 @@
 		Name="View3dMenuItem_Orthographic"
 		/>
 	<MenuItem x:Key="View3dMenuItem_AlignUp" x:Shared="False"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_AlignUp"
 		>
@@ -275,7 +276,7 @@
 		</MenuItem.Header>
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_FillMode"
 		>
@@ -298,7 +299,7 @@
 		</MenuItem.Header>
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_CullMode" x:Shared="False"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_CullMode"
 		>
@@ -359,7 +360,7 @@
 		Name="View3dMenuItem_ShowNormals"
 		/>
 	<MenuItem x:Key="View3dMenuItem_NormalsLength" x:Shared="False"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_NormalsLength"
 		>
@@ -462,6 +463,21 @@
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_CameraProperties" x:Shared="False"
+		Header="Camera Properties..."
+		StaysOpenOnClick="False"
+		Command="{Binding ShowCameraUI}"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_CameraProperties"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource camera}"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
 
 	<!-- Default View3d Context Menu -->
 	<ContextMenu x:Key="View3dCMenu" x:Name="View3dCMenu" x:Shared="False">
@@ -528,7 +544,7 @@
 		/>
 	<MenuItem x:Key="ChartMenuItem_ValueAtPointer" x:Shared="False"
 		Header="Show Value"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding ShowValueAtPointer, Mode=OneWay}"
 		Command="{Binding ToggleShowValueAtPointer}"
 		DataContext="{Binding ChartCMenuContext}"
@@ -536,14 +552,14 @@
 		/>
 	<MenuItem x:Key="ChartMenuItem_CrossHair" x:Shared="False"
 		Header="Show Cross Hair"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding ShowCrossHair, Mode=OneWay}"
 		Command="{Binding ToggleShowCrossHair}"
 		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_CrossHair"
 		/>
 	<MenuItem x:Key="ChartMenuItem_NavMode" x:Shared="False"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_NavMode"
 		>
@@ -573,14 +589,14 @@
 	</MenuItem>
 	<MenuItem x:Key="ChartMenuItem_Aspect11" x:Shared="False"
 		Header="Aspect 1:1"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		Command="{Binding DoAspect11}"
 		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_Aspect11"
 		/>
 	<MenuItem x:Key="ChartMenuItem_LockAspect" x:Shared="False"
 		Header="Lock Aspect"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding LockAspect, Mode=OneWay}"
 		Command="{Binding ToggleLockAspect}"
 		DataContext="{Binding ChartCMenuContext}"
@@ -588,7 +604,7 @@
 		/>
 	<MenuItem x:Key="ChartMenuItem_MouseCentredZoom" x:Shared="False"
 		Header="Mouse Centred Zoom"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding MouseCentredZoom}"
 		Command="{Binding ToggleMouseCentredZoom}"
 		DataContext="{Binding ChartCMenuContext}"
@@ -614,7 +630,7 @@
 	<!-- Chart Axis CMenu Items -->
 	<MenuItem x:Key="ChartAxisMenuItem_AllowScroll" x:Shared="False"
 		Header="Allow Scroll"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding AllowScroll, Mode=OneWay}"
 		Command="{Binding ToggleScrollLock}"
 		DataContext="{Binding ChartAxisCMenuContext}"
@@ -622,7 +638,7 @@
 		/>
 	<MenuItem x:Key="ChartAxisMenuItem_AllowZoom" x:Shared="False"
 		Header="Allow Zoom"
-		StaysOpenOnClick="False"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding AllowZoom, Mode=OneWay}"
 		Command="{Binding ToggleZoomLock}"
 		DataContext="{Binding ChartAxisCMenuContext}"

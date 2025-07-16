@@ -1,4 +1,4 @@
-﻿<?xml version="1.0"?>
+<?xml version="1.0"?>
 <SyntaxDefinition
 	name="Ldr"
 	extensions=".ldr"
@@ -125,6 +125,7 @@
 			<Word>*Fov</Word>
 			<Word>*FovX</Word>
 			<Word>*FovY</Word>
+			<Word>*FrameRange</Word>
 			<Word>*FrustumFA</Word>
 			<Word>*FrustumWH</Word>
 			<Word>*GenerateNormals</Word>
@@ -162,6 +163,7 @@
 			<Word>*Param</Word>
 			<Word>*Parametrics</Word>
 			<Word>*Part</Word>
+			<Word>*Parts</Word>
 			<Word>*Period</Word>
 			<Word>*PerItemColour</Word>
 			<Word>*PerItemParametrics</Word>
@@ -183,6 +185,7 @@
 			<Word>*Reflectivity</Word>
 			<Word>*Resolution</Word>
 			<Word>*Ribbon</Word>
+			<Word>*RootAnimation</Word>
 			<Word>*Round</Word>
 			<Word>*Scale</Word>
 			<Word>*ScreenSpace</Word>

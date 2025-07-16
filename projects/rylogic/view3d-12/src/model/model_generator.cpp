@@ -1007,7 +1007,7 @@ namespace pr::rdr12
 			{
 				ModelTree tree;
 				BuildModelTree(tree, mesh, 0, m4x4::Identity());
-				return m_out.Model(tree) == IModelOut::Stop;
+				return m_out.Model(std::move(tree)) == IModelOut::Stop;
 			}
 
 			// Recursive function for populating a model tree
@@ -1182,7 +1182,7 @@ namespace pr::rdr12
 			// 3DS models cannot nest, so each 'Model Tree' is one root node only
 			auto model = Create(factory, cache, opts);
 			auto tree = ModelTree{ {model, 0} };
-			return out.Model(tree);
+			return out.Model(std::move(tree));
 		});
 	}
 	void ModelGenerator::LoadSTLModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
@@ -1234,26 +1234,30 @@ namespace pr::rdr12
 				// STL models cannot nest, so each 'Model Tree' is one root node only
 				auto model = Create(factory, cache, opts);
 				auto tree = ModelTree{{model, 0}};
-				return out.Model(tree);
+				return out.Model(std::move(tree));
 			});
 	}
 	void ModelGenerator::LoadFBXModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
 	{
+		// Notes:
+		//  - The model generator handles loading models and animation, however, LDraw separates these
+		//    into two separate calls.
+
 		using namespace geometry;
-		auto OutputProgress = [](void*, int64_t step, int64_t total, char const* message, int nest)
-		{
-			OutputDebugStringA(std::format("{}{} ({} of {}){}", Indent(nest), message, step, total, nest == 0 ? '\n' : '\r').c_str());
-			return true;
+
+		fbx::ReadOptions read_opts = {
+			.m_parts = out.Parts(),
+			.m_mesh_filter = std::bind(&IModelOut::ModelFilter, &out, _1),
+			.m_skel_filter = std::bind(&IModelOut::SkeletonFilter, &out, _1),
+			.m_progress = std::bind(&IModelOut::Progress, &out, _1, _2, _3, _4),
 		};
 
 		// Read the fbx scene
 		fbx::Scene scene(src);
-		scene.Read({
-			.m_parts = out.ReadAnimation ? fbx::EParts::All : fbx::EParts::ModelOnly,
-			//.m_progress = IsDebuggerPresent() ? fbx::ReadOptions::ProgressCB{nullptr, OutputProgress} : fbx::ReadOptions::ProgressCB{nullptr, nullptr},
-		});
+		scene.Read(read_opts);
 
 		// Create the models
+		if (AllSet(out.Parts(), ESceneParts::Meshes))
 		{
 			ModelTree tree;
 			vector<m4x4> p2w = { m4x4::Identity() };
@@ -1319,7 +1323,7 @@ namespace pr::rdr12
 				tree.push_back({ model, mesh.m_level });
 
 				// Add skinning data if present and requested
-				if (fbx::Skin skin = mesh.m_skin; skin && out.ReadAnimation)
+				if (fbx::Skin skin = mesh.m_skin; skin && AllSet(out.Parts(), ESceneParts::Skins))
 				{
 					// Find the skeleton used by this mesh skin
 					auto skeleton = scene.skeleton(mesh.m_skin.m_skel_id);
@@ -1354,14 +1358,14 @@ namespace pr::rdr12
 			}
 
 			// Emit the model tree
-			out.Model(tree);
+			out.Model(std::move(tree));
 		}
 
 		// Read animation data
-		if (out.ReadAnimation)
+		if (AllSet(out.Parts(), ESceneParts::Animation))
 		{
 			// Skeletons
-			vector<SkeletonPtr, 2> skels;
+			vector<SkeletonPtr> skels;
 			for (auto const& fbxskel : scene.skeletons())
 			{
 				skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
@@ -1374,10 +1378,10 @@ namespace pr::rdr12
 			}
 
 			// Animations
-			vector<KeyFrameAnimationPtr, 2> anims;
+			vector<KeyFrameAnimationPtr> anims;
 			for (auto const& fbxanim : scene.animations())
 			{
-				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimStyle::Repeat), true);
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimStyle::Once, fbxanim.m_time_range, fbxanim.m_frame_rate), true);
 				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
 
 				// Read the key frame data
@@ -1404,7 +1408,7 @@ namespace pr::rdr12
 
 			// Emit the animation data
 			if (!anims.empty())
-				out.Animation(skels, anims);
+				out.Animation(std::move(skels), std::move(anims));
 		}
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts)

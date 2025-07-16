@@ -121,7 +121,7 @@ namespace pr::rdr12
 	};
 
 	// 2nd order polynomial animation
-	struct SimpleAnimation : RefCounted<SimpleAnimation>
+	struct RootAnimation : RefCounted<RootAnimation>
 	{
 		v4         m_vel;    // Linear velocity of the animation in m/s
 		v4         m_acc;    // Linear velocity of the animation in m/s
@@ -130,13 +130,13 @@ namespace pr::rdr12
 		double     m_period; // Seconds
 		EAnimStyle m_style;  // The animation style
 
-		SimpleAnimation();
+		RootAnimation();
 
 		// Return a transform representing the offset added by this object at time 'time_s'
 		m4x4 EvaluateAtTime(double time_s) const;
 
 		// Ref-counting clean up function
-		static void RefCountZero(RefCounted<SimpleAnimation>* doomed);
+		static void RefCountZero(RefCounted<RootAnimation>* doomed);
 	};
 
 	// Animation using key frame data
@@ -149,14 +149,17 @@ namespace pr::rdr12
 		using Sample = pr::vector<KeyFrame>;
 		using Track = pr::vector<KeyFrame>;
 		using Tracks = pr::vector<Track>;
+		using TimeRange = pr::Range<double>;
 
-		uint64_t m_skel_id; // The skeleton that this animation is intended for (mainly for debugging)
-		EAnimStyle m_style; // The animation style
-		Tracks m_tracks;    // A track for each skeleton bone
+		uint64_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
+		EAnimStyle m_style;     // The animation style
+		Tracks m_tracks;        // A track for each skeleton bone
+		TimeRange m_time_range; // The time range spanned by this animation
+		double m_frame_rate;    // The native frame rate of the anim, so we can convert from frames <-> seconds
 
-		KeyFrameAnimation(uint64_t skel_id, EAnimStyle style);
+		KeyFrameAnimation(uint64_t skel_id, EAnimStyle style, TimeRange time_range, double frame_rate);
 
-		// Returns the linearly interpolated key frames a 'time_s'
+		// Returns the interpolated key frames a 'time_s'
 		void EvaluateAtTime(double time_s, Sample& out) const;
 		Sample EvaluateAtTime(double time_s) const;
 

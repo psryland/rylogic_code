@@ -55,6 +55,7 @@ cbuffer CBufNugget :reg(b1,0)
 
 	// EnvMap
 	float m_env_reflectivity; // Reflectivity of the environment map
+	float3 pad;
 };
 
 // Constants used for radial fading.

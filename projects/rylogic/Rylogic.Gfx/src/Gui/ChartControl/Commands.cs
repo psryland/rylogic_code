@@ -550,6 +550,9 @@ namespace Rylogic.Gui.WPF
 		public ICommand RemoveSavedView => Scene.RemoveSavedView;
 
 		/// <inheritdoc/>
+		public ICommand ShowCameraUI => Scene.ShowCameraUI;
+
+		/// <inheritdoc/>
 		public View3d.EFillMode FillMode
 		{
 			get => Options.FillMode;

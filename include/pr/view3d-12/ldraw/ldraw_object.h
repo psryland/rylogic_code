@@ -58,7 +58,7 @@ namespace pr::rdr12::ldraw
 		//    It's a runtime instance of the simple animation data
 		//    Each LdrObject has one of these with it's own time value
 
-		SimpleAnimationPtr m_simple;
+		RootAnimationPtr m_simple;
 		double m_time_s;
 
 		// Set the animation time

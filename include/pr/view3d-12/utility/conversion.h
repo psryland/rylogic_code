@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr
@@ -212,6 +213,20 @@ namespace pr
 		static view3d::MultiSamp To_(rdr12::MultiSamp ms)
 		{
 			return { s_cast<int>(ms.Count), s_cast<int>(ms.Quality) };
+		}
+	};
+
+	// EAnimStyle
+	template <> struct Convert<rdr12::EAnimStyle, std::string_view>
+	{
+		static rdr12::EAnimStyle To_(std::string_view s)
+		{
+			if (str::EqualI(s, "NoAnimation")) return rdr12::EAnimStyle::NoAnimation;
+			if (str::EqualI(s, "Once")) return rdr12::EAnimStyle::Once;
+			if (str::EqualI(s, "Repeat")) return rdr12::EAnimStyle::Repeat;
+			if (str::EqualI(s, "Continuous")) return rdr12::EAnimStyle::Continuous;
+			if (str::EqualI(s, "PingPong")) return rdr12::EAnimStyle::PingPong;
+			throw std::runtime_error(std::format("Unknown AnimStyle value: {}", s));
 		}
 	};
 }

@@ -301,6 +301,9 @@ namespace pr::rdr12
 		seconds_t AnimTime() const;
 		void AnimTime(seconds_t clock);
 
+		// Called when the animation time has changed
+		void AnimationStep(view3d::EAnimCommand command, seconds_t anim_time);
+
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count);

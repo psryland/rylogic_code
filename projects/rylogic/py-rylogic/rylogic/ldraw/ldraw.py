@@ -186,6 +186,7 @@ class EKeyword(Enum):
 	Fov = 2968750556
 	FovX = 862039340
 	FovY = 878816959
+	FrameRange = 1562558803
 	FrustumFA = 3281884904
 	FrustumWH = 3334630522
 	GenerateNormals = 750341558
@@ -223,6 +224,7 @@ class EKeyword(Enum):
 	Param = 1309554226
 	Parametrics = 4148475404
 	Part = 2088252948
+	Parts = 1480434725
 	Period = 2580104964
 	PerItemColour = 1734234667
 	PerItemParametrics = 2079701142
@@ -244,6 +246,7 @@ class EKeyword(Enum):
 	Reflectivity = 3111471187
 	Resolution = 488725647
 	Ribbon = 1119144745
+	RootAnimation = 464566237
 	Round = 1326178875
 	Scale = 2190941297
 	ScreenSpace = 3267318065

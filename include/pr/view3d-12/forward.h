@@ -226,14 +226,14 @@ namespace pr::rdr12
 	struct BaseInstance;
 
 	// Animation
-	struct SimpleAnimation;
+	struct RootAnimation;
 	struct KeyFrameAnimation;
 	struct SkinInfluence;
 	struct Skeleton;
 	struct Pose;
 	struct Skin;
 	struct Animator;
-	using SimpleAnimationPtr = RefPtr<SimpleAnimation>;
+	using RootAnimationPtr = RefPtr<RootAnimation>;
 	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
 	using SkeletonPtr = RefPtr<Skeleton>;
 	using PosePtr = RefPtr<Pose>;

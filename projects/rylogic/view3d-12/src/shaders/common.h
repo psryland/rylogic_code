@@ -153,8 +153,8 @@ namespace pr::rdr12
 
 		// Orthonormalise the rotation part of the normal to world transform (allowing for scale matrices)
 		cb.m_n2w = cb.m_o2w;
-		cb.m_n2w.x = Normalise(cb.m_n2w.x, v4Zero);
-		cb.m_n2w.y = Normalise(Cross3(cb.m_n2w.z, cb.m_n2w.x), v4Zero);
+		cb.m_n2w.x = Normalise(cb.m_n2w.x, v4::Zero());
+		cb.m_n2w.y = Normalise(Cross3(cb.m_n2w.z, cb.m_n2w.x), v4::Zero());
 		cb.m_n2w.z = Cross3(cb.m_n2w.x, cb.m_n2w.y);
 	}
 

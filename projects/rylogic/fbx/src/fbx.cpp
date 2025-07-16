@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // FBX Model loader
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -711,66 +711,70 @@ namespace pr::geometry::fbx
 		{
 			m_manager->SetIOSettings(m_settings);
 
-			// Set the export states. By default, all options should be enabled
-			// m_settings->SetBoolProp(EXP_FBX_MATERIAL, true);
-			// m_settings->SetBoolProp(EXP_FBX_TEXTURE, true);
-			// m_settings->SetBoolProp(EXP_FBX_EMBEDDED, true);
-			// m_settings->SetBoolProp(EXP_FBX_SHAPE, true);
-			// m_settings->SetBoolProp(EXP_FBX_GOBO, true);
-			// m_settings->SetBoolProp(EXP_FBX_ANIMATION, true);
-			// m_settings->SetBoolProp(EXP_FBX_GLOBAL_SETTINGS, true);
+			#if 0
+			{
+				Set the export states.By default, all options should be enabled
+					m_settings->SetBoolProp(EXP_FBX_MATERIAL, true);
+				m_settings->SetBoolProp(EXP_FBX_TEXTURE, true);
+				m_settings->SetBoolProp(EXP_FBX_EMBEDDED, true);
+				m_settings->SetBoolProp(EXP_FBX_SHAPE, true);
+				m_settings->SetBoolProp(EXP_FBX_GOBO, true);
+				m_settings->SetBoolProp(EXP_FBX_ANIMATION, true);
+				m_settings->SetBoolProp(EXP_FBX_GLOBAL_SETTINGS, true);
 
-			// Set the import states. By default, all options should be enabled
-			//m_settings->SetBoolProp(IMP_SKINS, true);
-			//m_settings->SetBoolProp(IMP_DEFORMATION, true);
-			//m_settings->SetBoolProp(IMP_BONE, true);
-			//m_settings->SetBoolProp(IMP_TAKE, true);
-			//
-			//m_settings->SetBoolProp(IMP_FBX_MODEL_COUNT, true);
-			//m_settings->SetBoolProp(IMP_FBX_DEVICE_COUNT, true);
-			//m_settings->SetBoolProp(IMP_FBX_CHARACTER_COUNT, true);
-			//m_settings->SetBoolProp(IMP_FBX_ACTOR_COUNT, true);
-			//m_settings->SetBoolProp(IMP_FBX_CONSTRAINT_COUNT, true);
-			//m_settings->SetBoolProp(IMP_FBX_MEDIA_COUNT, true);
-			//
-			//m_settings->SetBoolProp(IMP_FBX_TEMPLATE, true);
-			//m_settings->SetBoolProp(IMP_FBX_PIVOT, true);
-			//m_settings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
-			//m_settings->SetBoolProp(IMP_FBX_CHARACTER, true);
-			//m_settings->SetBoolProp(IMP_FBX_CONSTRAINT, true);
-			//m_settings->SetBoolProp(IMP_FBX_MERGE_LAYER_AND_TIMEWARP, true);
-			//m_settings->SetBoolProp(IMP_FBX_GOBO, true);
-			//m_settings->SetBoolProp(IMP_FBX_SHAPE, true);
-			//m_settings->SetBoolProp(IMP_FBX_LINK, true);
+				Set the import states.By default, all options should be enabled
+					m_settings->SetBoolProp(IMP_SKINS, true);
+				m_settings->SetBoolProp(IMP_DEFORMATION, true);
+				m_settings->SetBoolProp(IMP_BONE, true);
+				m_settings->SetBoolProp(IMP_TAKE, true);
 
-			//m_settings->SetBoolProp(IMP_FBX_MATERIAL, true);
-			//m_settings->SetBoolProp(IMP_FBX_TEXTURE, true);
-			//m_settings->SetBoolProp(IMP_FBX_MODEL, true);
-			//m_settings->SetBoolProp(IMP_FBX_AUDIO, true);
-			//m_settings->SetBoolProp(IMP_FBX_ANIMATION, true);
-			//m_settings->SetBoolProp(IMP_FBX_PASSWORD, true);
-			//m_settings->SetBoolProp(IMP_FBX_PASSWORD_ENABLE, true);
-			//m_settings->SetBoolProp(IMP_FBX_CURRENT_TAKE_NAME, true);
-			//m_settings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, true);
-			//m_settings->SetBoolProp(IMP_FBX_CALCULATE_LEGACY_SHAPE_NORMAL, true);
+				m_settings->SetBoolProp(IMP_FBX_MODEL_COUNT, true);
+				m_settings->SetBoolProp(IMP_FBX_DEVICE_COUNT, true);
+				m_settings->SetBoolProp(IMP_FBX_CHARACTER_COUNT, true);
+				m_settings->SetBoolProp(IMP_FBX_ACTOR_COUNT, true);
+				m_settings->SetBoolProp(IMP_FBX_CONSTRAINT_COUNT, true);
+				m_settings->SetBoolProp(IMP_FBX_MEDIA_COUNT, true);
 
-			//m_settings->SetBoolProp(IMP_FBX_NORMAL, true);
-			//m_settings->SetBoolProp(IMP_FBX_BINORMAL, true);
-			//m_settings->SetBoolProp(IMP_FBX_TANGENT, true);
-			//m_settings->SetBoolProp(IMP_FBX_VERTEXCOLOR, true);
-			//m_settings->SetBoolProp(IMP_FBX_POLYGROUP, true);
-			//m_settings->SetBoolProp(IMP_FBX_SMOOTHING, true);
-			//m_settings->SetBoolProp(IMP_FBX_USERDATA, true);
-			//m_settings->SetBoolProp(IMP_FBX_VISIBILITY, true);
-			//m_settings->SetBoolProp(IMP_FBX_EDGECREASE, true);
-			//m_settings->SetBoolProp(IMP_FBX_VERTEXCREASE, true);
-			//m_settings->SetBoolProp(IMP_FBX_HOLE, true);
+				m_settings->SetBoolProp(IMP_FBX_TEMPLATE, true);
+				m_settings->SetBoolProp(IMP_FBX_PIVOT, true);
+				m_settings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
+				m_settings->SetBoolProp(IMP_FBX_CHARACTER, true);
+				m_settings->SetBoolProp(IMP_FBX_CONSTRAINT, true);
+				m_settings->SetBoolProp(IMP_FBX_MERGE_LAYER_AND_TIMEWARP, true);
+				m_settings->SetBoolProp(IMP_FBX_GOBO, true);
+				m_settings->SetBoolProp(IMP_FBX_SHAPE, true);
+				m_settings->SetBoolProp(IMP_FBX_LINK, true);
 
-			//#ifndef FBXSDK_ENV_WINSTORE
-			////Load plugins from the executable directory (optional)
-			//FbxString lPath = FbxGetApplicationDirectory();
-			//m_manager->LoadPluginsDirectory(lPath.Buffer());
-			//#endif
+				m_settings->SetBoolProp(IMP_FBX_MATERIAL, true);
+				m_settings->SetBoolProp(IMP_FBX_TEXTURE, true);
+				m_settings->SetBoolProp(IMP_FBX_MODEL, true);
+				m_settings->SetBoolProp(IMP_FBX_AUDIO, true);
+				m_settings->SetBoolProp(IMP_FBX_ANIMATION, true);
+				m_settings->SetBoolProp(IMP_FBX_PASSWORD, true);
+				m_settings->SetBoolProp(IMP_FBX_PASSWORD_ENABLE, true);
+				m_settings->SetBoolProp(IMP_FBX_CURRENT_TAKE_NAME, true);
+				m_settings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, true);
+				m_settings->SetBoolProp(IMP_FBX_CALCULATE_LEGACY_SHAPE_NORMAL, true);
+
+				m_settings->SetBoolProp(IMP_FBX_NORMAL, true);
+				m_settings->SetBoolProp(IMP_FBX_BINORMAL, true);
+				m_settings->SetBoolProp(IMP_FBX_TANGENT, true);
+				m_settings->SetBoolProp(IMP_FBX_VERTEXCOLOR, true);
+				m_settings->SetBoolProp(IMP_FBX_POLYGROUP, true);
+				m_settings->SetBoolProp(IMP_FBX_SMOOTHING, true);
+				m_settings->SetBoolProp(IMP_FBX_USERDATA, true);
+				m_settings->SetBoolProp(IMP_FBX_VISIBILITY, true);
+				m_settings->SetBoolProp(IMP_FBX_EDGECREASE, true);
+				m_settings->SetBoolProp(IMP_FBX_VERTEXCREASE, true);
+				m_settings->SetBoolProp(IMP_FBX_HOLE, true);
+
+#ifndef FBXSDK_ENV_WINSTORE
+				//Load plugins from the executable directory (optional)
+				FbxString lPath = FbxGetApplicationDirectory();
+				m_manager->LoadPluginsDirectory(lPath.Buffer());
+#endif
+			}
+			#endif
 		}
 		Context(Context&&) = delete;
 		Context(Context const&) = delete;
@@ -780,6 +784,7 @@ namespace pr::geometry::fbx
 		{
 			// Notes:
 			//  - FbxImporter must be destroyed before any FbxScenes it creates because of bugs in the 'fbxsdk' dll.
+			m_scenes.clear();
 
 			// Delete the FBX Manager. All the objects that have been allocated using the FBX Manager and that haven't been explicitly destroyed are also automatically destroyed.
 			if (m_manager != nullptr)
@@ -891,6 +896,7 @@ namespace pr::geometry::fbx
 		std::vector<int> m_offsets; // The offset to the start of each bone's track
 		std::vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
 		Animation::TimeRange m_time_range; // The time span of the animation
+		double m_frame_rate; // The native frame rate of the animation
 
 		// Return the track associated with the 'bone_index'th bone in the skeleton
 		std::span<BoneKey> track(int bone_index)
@@ -1348,7 +1354,7 @@ namespace pr::geometry::fbx
 				mesh.m_o2p = To<m4x4>(node.EvaluateLocalTransform());
 
 				// Read the skinning data for this mesh
-				if (AllSet(m_opts.m_parts, EParts::Skinning))
+				if (AllSet(m_opts.m_parts, EParts::Skins))
 					mesh.m_skin = ReadSkin(meshnode);
 
 				// Output the mesh
@@ -1716,7 +1722,8 @@ namespace pr::geometry::fbx
 							.m_skel = &skel,
 							.m_offsets = {},
 							.m_alltracks = {},
-							.m_time_range = Animation::TimeRange::Reset()
+							.m_time_range = Animation::TimeRange::Reset(),
+							.m_frame_rate = m_frame_rate,
 						};
 
 						// Preallocate the arrays in 'animation' so we can populate it in parallel
@@ -1900,20 +1907,24 @@ namespace pr::geometry::fbx
 		// True if 'meshnode' should be included
 		bool IncludeMesh(MeshNode const& meshnode) const
 		{
-			return m_opts.m_mesh_names.empty() || std::ranges::find(m_opts.m_mesh_names, meshnode.root->GetNode()->GetName()) != end(m_opts.m_mesh_names);
+			return
+				m_opts.m_mesh_filter == nullptr ||
+				m_opts.m_mesh_filter(meshnode.root->GetNode()->GetName());
 		}
 
 		// True if 'bonenode' should be included
 		bool IncludeBone(BoneNode const& bonenode) const
 		{
-			return m_opts.m_skel_names.empty() || std::ranges::find(m_opts.m_skel_names, bonenode.root->GetNode()->GetName()) != end(m_opts.m_skel_names);
+			return
+				m_opts.m_skel_filter == nullptr ||
+				m_opts.m_skel_filter(bonenode.root->GetNode()->GetName());
 		}
 
 		// Report progress
 		void Progress(int64_t step, int64_t total, char const* message, int nest = 0) const
 		{
-			if (m_opts.m_progress.cb == nullptr) return;
-			if (m_opts.m_progress.cb(m_opts.m_progress.ctx, step, total, message, nest)) return;
+			if (m_opts.m_progress == nullptr) return;
+			if (m_opts.m_progress(step, total, message, nest)) return;
 			throw std::runtime_error("user cancelled");
 		}
 	};
@@ -2101,7 +2112,7 @@ namespace pr::geometry::fbx
 				}
 
 				// Skinning info
-				if (AllSet(m_opts.m_parts, EParts::Skinning))
+				if (AllSet(m_opts.m_parts, EParts::Skins))
 					DumpSkinning(meshnode, level + 1);
 			}
 
@@ -2611,6 +2622,7 @@ extern "C"
 				.m_offsets = a.m_offsets,
 				.m_tracks = a.m_alltracks,
 				.m_time_range = a.m_time_range,
+				.m_frame_rate = a.m_frame_rate,
 			};
 		}
 		catch (std::exception const& ex)

@@ -219,11 +219,43 @@ namespace pr::rdr12
 		struct IModelOut
 		{
 			enum EResult { Continue, Stop };
-			bool ReadAnimation = false;
 
 			virtual ~IModelOut() = default;
-			virtual EResult Model(std::span<ModelTreeNode const>) { return EResult::Stop; }
-			virtual EResult Animation(std::span<SkeletonPtr const>, std::span<KeyFrameAnimationPtr const>) { return EResult::Stop; }
+			virtual geometry::ESceneParts Parts() const
+			{
+				return geometry::ESceneParts::All;
+			}
+			virtual bool ModelFilter(std::string_view model_name) const
+			{
+				(void)model_name;
+				return true; // True means include the model in the output
+			}
+			virtual bool SkeletonFilter(std::string_view skeleton_name) const
+			{
+				(void)skeleton_name;
+				return true; // True means include the skeleton in the output
+			}
+			virtual pr::Range<int> FrameRange() const
+			{
+				// The frame range of animation data to return
+				return { 0, std::numeric_limits<int>::max() };
+			}
+			virtual EResult Model(ModelTree&&)
+			{
+				// Output model receiver
+				return EResult::Stop; // Read more models or stop
+			}
+			virtual EResult Animation(vector<SkeletonPtr>&&, vector<KeyFrameAnimationPtr>&&)
+			{
+				// Output animation receiver
+				return EResult::Stop; // Read more animations or stop
+			}
+			virtual bool Progress(int64_t step, int64_t total, char const* message, int nest)
+			{
+				//OutputDebugStringA(std::format("{}{} ({} of {}){}", Indent(nest), message, step, total, nest == 0 ? '\n' : '\r').c_str());
+				(void)step, total, message, nest;
+				return true;
+			}
 		};
 		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);
 		static void Load3DSModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts = nullptr);

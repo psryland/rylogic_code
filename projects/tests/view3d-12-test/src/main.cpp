@@ -93,8 +93,8 @@ struct Main :Form
 			m_obj0 = View3D_ObjectCreateLdrA(
 				//"*Box nice_box FF00FF00 { *Data {1 2 3} }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
-				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
-				"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } }"
+				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } }"
 				, false, nullptr, nullptr);
 
 			m_obj1 = View3D_ObjectCreateLdrA(

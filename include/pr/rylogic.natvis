@@ -347,7 +347,10 @@ old:
 		<DisplayString>{m_nugget->m_model->m_name.m_ptr} key={m_sort_key.m_value}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr12::Model">
-		<DisplayString>{m_name.m_ptr}</DisplayString>
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Nugget">
+		<DisplayString>{*m_model}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr12::BaseInstance">
 		<DisplayString>Cpts={m_cpt_count}</DisplayString>

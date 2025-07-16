@@ -108,6 +108,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Remove the current saved view from the collection of saved views</summary>
 		ICommand RemoveSavedView { get; }
 
+		/// <summary>Show the camera properties</summary>
+		ICommand ShowCameraUI { get; }
+
 		/// <summary>The view background colour</summary>
 		Colour32 BackgroundColour { get; set; }
 		ICommand SetBackgroundColour { get; }

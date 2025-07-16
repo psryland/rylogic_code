@@ -1,0 +1,107 @@
+﻿<Window
+	x:Class="Rylogic.Gui.WPF.View3dCameraUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Camera Properties"
+	ResizeMode="CanResizeWithGrip"
+	WindowStartupLocation="CenterOwner"
+	Height="450"
+	Width="400"
+>
+	<Grid
+		Margin="8"
+	>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Position -->
+		<StackPanel
+			Grid.Row="0"
+			HorizontalAlignment="Stretch"
+			Margin="3"
+		>
+			<TextBlock
+				Text="Position: "
+			/>
+			<TextBox
+				Text="{Binding Position, Converter={conv:VecToString}, ConverterParameter=1}"
+				VerticalAlignment="Center"
+				Margin="16,0,0,0"
+				MinWidth="80"
+			/>
+		</StackPanel>
+
+		<!-- Focus point -->
+		<StackPanel
+			Grid.Row="1"
+			HorizontalAlignment="Stretch"
+			Margin="3"
+		>
+			<TextBlock
+				Text="Focus Point: "
+			/>
+			<TextBox
+				Text="{Binding FocusPoint, Converter={conv:VecToString}, ConverterParameter=1}"
+				VerticalAlignment="Center"
+				Margin="16,0,0,0"
+				MinWidth="80"
+			/>
+		</StackPanel>
+
+		<!-- Near/Far planes -->
+		<StackPanel
+			Grid.Row="2"
+			HorizontalAlignment="Stretch"
+		>
+			<TextBlock
+				Text="Clip Planes: "
+			/>
+			<StackPanel
+				Orientation="Horizontal"
+				Margin="16,0,0,0"
+			>
+				<TextBlock
+					Text="Near: "
+					Width="30"
+				/>
+				<TextBox
+					Text="{Binding NearPlane}"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Center"
+					MinWidth="80"
+				/>
+				<TextBlock
+					Text="Far: "
+					Width="30"
+					Margin="8,0,0,0"
+				/>
+				<TextBox
+					Text="{Binding FarPlane}"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Center"
+					MinWidth="80"
+				/>
+			</StackPanel>
+		</StackPanel>
+		
+		<!-- Ok Button -->
+		<Button
+			Grid.Row="10"
+			Content="OK"
+			Command="{Binding Accept}"
+			HorizontalAlignment="Right"
+			MinWidth="80"
+			Margin="12"
+			/>
+	</Grid>
+</Window>

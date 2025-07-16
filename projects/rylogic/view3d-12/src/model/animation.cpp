@@ -7,7 +7,7 @@
 
 namespace pr::rdr12
 {
-	SimpleAnimation::SimpleAnimation()
+	RootAnimation::RootAnimation()
 		: m_vel(v4::Zero())
 		, m_acc(v4::Zero())
 		, m_avel(v4::Zero())
@@ -18,7 +18,7 @@ namespace pr::rdr12
 	}
 
 	// Return a transform representing the offset added by this object at time 'time_s'
-	m4x4 SimpleAnimation::EvaluateAtTime(double time_s) const
+	m4x4 RootAnimation::EvaluateAtTime(double time_s) const
 	{
 		auto t = 0.0;
 		switch (m_style)
@@ -62,18 +62,20 @@ namespace pr::rdr12
 	}
 
 	// Ref-counting clean up function
-	void SimpleAnimation::RefCountZero(RefCounted<SimpleAnimation>* doomed)
+	void RootAnimation::RefCountZero(RefCounted<RootAnimation>* doomed)
 	{
-		auto anim = static_cast<SimpleAnimation*>(doomed);
+		auto anim = static_cast<RootAnimation*>(doomed);
 		rdr12::Delete(anim);
 	}
 
 	// --------------------------------------------------------------------------------------------
 
-	KeyFrameAnimation::KeyFrameAnimation(uint64_t skel_id, EAnimStyle style)
+	KeyFrameAnimation::KeyFrameAnimation(uint64_t skel_id, EAnimStyle style, TimeRange time_range, double frame_rate)
 		: m_skel_id(skel_id)
 		, m_style(style)
 		, m_tracks()
+		, m_time_range(time_range)
+		, m_frame_rate(frame_rate)
 	{}
 
 	// Returns the linearly interpolated key frames a 'time_s'
@@ -155,7 +157,7 @@ namespace pr::rdr12
 				return;
 			}
 
-			// Linear interpolation between key frames
+			// Interpolate between key frames
 			auto const& lhs = *(iter - 1);
 			auto const& rhs = *(iter - 0);
 			auto frac = Frac(lhs.m_time, time_s, rhs.m_time);
