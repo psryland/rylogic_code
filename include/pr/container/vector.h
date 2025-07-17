@@ -1251,6 +1251,7 @@ namespace pr
 		}
 
 		// ADL
+		friend bool empty(vector const& v) { return std::empty(v); }
 		friend size_t size(vector const& v) { return std::size(v); }
 		friend ptrdiff_t ssize(vector const& v) { return std::ssize(v); }
 		friend const_iterator begin(vector const& v) { return v.begin(); }

@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 
@@ -18,7 +17,7 @@ namespace Rylogic.Gui.WPF
 			Pause = Command.Create(this, PauseInternal);
 			StepBack = Command.Create(this, StepBackInternal);
 			StepForward = Command.Create(this, StepForwardInternal);
-			m_root.DataContext = this;
+			DataContext = this;
 		}
 
 		/// <summary>The window in which to control animations</summary>
@@ -45,6 +44,7 @@ namespace Rylogic.Gui.WPF
 				Util.BreakIf(!Util.IsMainThread);
 				NotifyPropertyChanged(nameof(Animating));
 				NotifyPropertyChanged(nameof(AnimClock));
+				NotifyPropertyChanged(nameof(Frame));
 			}
 		}
 		public static readonly DependencyProperty ViewWindowProperty = Gui_.DPRegister<View3dAnimControls>(nameof(ViewWindow), null, Gui_.EDPFlags.None);
@@ -57,7 +57,9 @@ namespace Rylogic.Gui.WPF
 			{
 				if (AnimClock == value || ViewWindow == null) return;
 				ViewWindow.AnimTime = value;
+				ViewWindow.AnimControl(View3d.EAnimCommand.Step);
 				NotifyPropertyChanged(nameof(AnimClock));
+				NotifyPropertyChanged(nameof(Frame));
 			}
 		}
 
@@ -75,8 +77,72 @@ namespace Rylogic.Gui.WPF
 		}
 		private double m_step_size;
 
+		/// <summary>The assumed frame rate of all animation</summary>
+		public double FrameRate
+		{
+			get => m_frame_rate;
+			set
+			{
+				if (FrameRate == value) return;
+				m_frame_rate = value;
+				NotifyPropertyChanged(nameof(FrameRate));
+				NotifyPropertyChanged(nameof(Frame));
+			}
+		}
+		private double m_frame_rate = 24.0;
+
 		/// <summary>True if the animation is running</summary>
 		public bool Animating => ViewWindow?.Animating ?? false;
+
+		/// <summary>If true, animations play relative to their start frame</summary>
+		public bool RelativeTime
+		{
+			get => m_relative_time;
+			set
+			{
+				if (RelativeTime == value) return;
+				m_relative_time = value;
+				NotifyPropertyChanged(nameof(RelativeTime));
+			}
+		}
+		private bool m_relative_time;
+
+		/// <summary>The start frame</summary>
+		public int Frame0
+		{
+			get => m_frame0;
+			set
+			{
+				if (Frame0 == value) return;
+				m_frame0 = value;
+				NotifyPropertyChanged(nameof(Frame0));
+			}
+		}
+		private int m_frame0 = 0;
+
+		/// <summary>The current frame</summary>
+		public int Frame
+		{
+			get => (int)Math.Floor(AnimClock * FrameRate);
+			set
+			{
+				if (Frame == value) return;
+				AnimClock = value / FrameRate;
+			}
+		}
+
+		/// <summary>The end frame</summary>
+		public int FrameN
+		{
+			get => m_frameN;
+			set
+			{
+				if (FrameN == value) return;
+				m_frameN = value;
+				NotifyPropertyChanged(nameof(FrameN));
+			}
+		}
+		private int m_frameN = 100;
 
 		/// <summary>Reset the anim clock to 0</summary>
 		public Command Reset { get; }
@@ -118,11 +184,8 @@ namespace Rylogic.Gui.WPF
 			ViewWindow.AnimControl(View3d.EAnimCommand.Step, +StepSize);
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }

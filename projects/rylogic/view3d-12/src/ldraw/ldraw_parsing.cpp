@@ -516,7 +516,7 @@ namespace pr::rdr12::ldraw
 				{
 					auto beg = reader.Int<int>();
 					auto end = !reader.IsSectionEnd() ? reader.Int<int>() : beg + 1;
-					anim_info.m_frames = { beg, end };
+					anim_info.m_frames = { beg, std::max(end, beg + 1) };
 					break;
 				}
 				case EKeyword::Period:

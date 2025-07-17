@@ -98,20 +98,20 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<!-- Tool bars -->
-		<gui:View3dAnimControls
-			Grid.Row="0"
-			Visibility="{Binding AnimationUI, Converter={conv:BoolToVisible}}"
-			ViewWindow = "{Binding SceneView.Scene.Window}"
-			/>
-
 		<!-- Main 3D View -->
 		<gui:ChartControl
-			Grid.Row="1"
+			Grid.Row="0"
 			Name="m_scene"
 			SceneCMenu="{StaticResource LDrawCMenu}"
 			XAxisCMenu="{StaticResource ChartAxisCMenu}"
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
+			/>
+
+		<!-- Tool bars -->
+		<gui:View3dAnimControls
+			Grid.Row="1"
+			Visibility="{Binding AnimationUI, Converter={conv:BoolToVisible}}"
+			ViewWindow = "{Binding SceneView.Scene.Window}"
 			/>
 	</Grid>
 </UserControl>

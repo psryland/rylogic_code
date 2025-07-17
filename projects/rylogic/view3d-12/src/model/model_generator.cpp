@@ -1247,6 +1247,7 @@ namespace pr::rdr12
 
 		fbx::ReadOptions read_opts = {
 			.m_parts = out.Parts(),
+			.m_frame_range = out.FrameRange(),
 			.m_mesh_filter = std::bind(&IModelOut::ModelFilter, &out, _1),
 			.m_skel_filter = std::bind(&IModelOut::SkeletonFilter, &out, _1),
 			.m_progress = std::bind(&IModelOut::Progress, &out, _1, _2, _3, _4),

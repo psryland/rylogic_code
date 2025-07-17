@@ -213,9 +213,9 @@ namespace pr
 	{
 		assert(lhs.size() >= 0 && "lhs range is invalid");
 		assert(rhs.size() >= 0 && "rhs range is invalid");
-		if (rhs.m_end <= lhs.m_beg) return Range<T>::make(lhs.m_beg, lhs.m_beg);
-		if (rhs.m_beg >= lhs.m_end) return Range<T>::make(lhs.m_end, lhs.m_end);
-		return Range<T>::make(std::max(lhs.m_beg, rhs.m_beg), std::min(lhs.m_end, rhs.m_end));
+		if (rhs.m_end <= lhs.m_beg) return Range<T>{lhs.m_beg, lhs.m_beg};
+		if (rhs.m_beg >= lhs.m_end) return Range<T>{lhs.m_end, lhs.m_end};
+		return Range<T>{std::max(lhs.m_beg, rhs.m_beg), std::min(lhs.m_end, rhs.m_end)};
 	}
 
 	// Expand 'range' if necessary to include 'rhs'

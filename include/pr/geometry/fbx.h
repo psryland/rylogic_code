@@ -97,6 +97,9 @@ namespace pr::geometry::fbx
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
 
+		// The animation frame range to read
+		pr::Range<int> m_frame_range = { 0, std::numeric_limits<int>::max() };
+
 		// The subset of meshes to load. Empty means load all.
 		std::function<bool(std::string_view)> m_mesh_filter = {};
 

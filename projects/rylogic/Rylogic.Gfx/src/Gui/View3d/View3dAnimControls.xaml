@@ -7,9 +7,15 @@
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
+	Margin="3"
 	>
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="Auto"/>
+	</Grid.RowDefinitions>
+	
 	<WrapPanel
-		x:Name="m_root"
+		Grid.Row="0"
 		IsEnabled="{Binding ViewWindow, Converter={conv:NotNull}}"
 		>
 		<TextBlock
@@ -21,7 +27,7 @@
 		<!-- Buttons -->
 		<StackPanel
 			Orientation="Horizontal"
-			MaxHeight="22"
+			MaxHeight="28"
 			>
 			<StackPanel.Resources>
 				<BitmapImage x:Key="media_reset" UriSource="/Rylogic.Gui.WPF;component/res/media_player_start.png" />
@@ -100,7 +106,7 @@
 	
 		<!-- Clock -->
 		<StackPanel
-			Orientation="Horizontal"
+			Orientation="Vertical"
 			VerticalAlignment="Center"
 			Margin="3"
 			>
@@ -118,7 +124,7 @@
 	
 		<!-- Step Size -->
 		<StackPanel
-			Orientation="Horizontal"
+			Orientation="Vertical"
 			VerticalAlignment="Center"
 			Margin="3"
 			>
@@ -126,23 +132,122 @@
 				Text="Step: "
 				VerticalAlignment="Center"
 				/>
-			<TextBox
-				Text="{Binding StepSize, StringFormat={}{0:N3}}"
-				ToolTip="Time increment per step. Set to zero for real-time."
-				HorizontalContentAlignment="Center"
-				VerticalAlignment="Center"
-				MinWidth="60"
+			<StackPanel
+				Orientation="Horizontal"
+				>
+				<TextBox
+					Text="{Binding StepSize, StringFormat={}{0:N3}}"
+					ToolTip="Time increment per step. Set to zero for real-time."
+					HorizontalContentAlignment="Center"
+					VerticalAlignment="Center"
+					MinWidth="60"
 				/>
-			<gui:SliderFunction
-				Minimum="0"
-				Maximum="3.162277660168379332"
-				FunctionExpr="sqr(x)"
-				InverseExpr="sqrt(x)"
-				ValueFn="{Binding StepSize}"
-				VerticalAlignment="Center"
-				MinWidth="60"
-				Margin="3,0,3,0"
+				<gui:SliderFunction
+					Minimum="0"
+					Maximum="3.162277660168379332"
+					FunctionExpr="sqr(x)"
+					InverseExpr="sqrt(x)"
+					ValueFn="{Binding StepSize}"
+					MinWidth="60"
+					Margin="3,0,3,0"
 				/>
+			</StackPanel>
 		</StackPanel>
+
+		<!-- Frame number -->
+		<StackPanel
+			Orientation="Vertical"
+			VerticalAlignment="Center"
+			Margin="3"
+		>
+			<TextBlock
+				Text="Frame: "
+				VerticalAlignment="Center"
+			/>
+			<StackPanel
+				Orientation="Horizontal"
+			>
+				<TextBox
+					Grid.Row="1"
+					Grid.Column="1"
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Text="{Binding Frame, StringFormat={}{0:N0}}"
+					MinWidth="40"
+					Margin="2"
+				/>
+
+				<!-- Frame Rate -->
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					Text="{Binding FrameRate, StringFormat={}{0:N1} fps}"
+					IsEditable="True"
+					SelectedIndex="0"
+					Background="#EEE"
+					Margin="1,1,20,1"
+					MinWidth="60"
+				>
+					<ComboBoxItem Content="24.0"/>
+					<ComboBoxItem Content="30.0"/>
+				</ComboBox>
+			</StackPanel>
+		</StackPanel>
+
+		
+		<!-- Relative / Absolute time
+		<CheckBox
+			Content="Relative Time"
+			IsChecked="{Binding RelativeTime}"
+			VerticalAlignment="Center"
+		/>
+		-->
 	</WrapPanel>
+	<Grid
+		Grid.Row="1"
+	>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Frame0 -->
+		<TextBox
+			Grid.Row="0"
+			Grid.Column="0"
+			Text="{Binding Frame0, StringFormat={}{0:N0}}"
+			HorizontalContentAlignment="Center"
+			HorizontalAlignment="Center"
+			VerticalAlignment="Center"
+			MinWidth="40"
+			Margin="3"
+		/>
+
+		<!-- Frame -->
+		<Slider
+			Grid.Row="0"
+			Grid.Column="1"
+			Value="{Binding Frame}"
+			Minimum="{Binding Frame0}"
+			Maximum="{Binding FrameN}"
+			Interval="1"
+			Margin="3"
+		/>
+
+		<!-- FrameN -->
+		<TextBox
+			Grid.Row="0"
+			Grid.Column="2"
+			Text="{Binding FrameN, StringFormat={}{0:N0}}"
+			HorizontalContentAlignment="Center"
+			HorizontalAlignment="Center"
+			VerticalAlignment="Center"
+			MinWidth="40"
+			Margin="3"
+		/>
+	</Grid>
 </Grid>

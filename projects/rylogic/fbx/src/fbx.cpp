@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // FBX Model loader
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <future>
+#include <cmath>
 #include <fbxsdk.h>
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
@@ -634,7 +635,7 @@ namespace pr::geometry::fbx
 		//    node is the start of a new mesh/skeleton hierarchy.
 
 		struct NodeAndLevel { FbxNode* ptr; int level; };
-		std::vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
+		vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
 		for (int mindex = 0, bindex = 0; !stack.empty(); )
 		{
 			NodeAndLevel node = stack.back();
@@ -694,7 +695,7 @@ namespace pr::geometry::fbx
 	// An RAII dll reference
 	struct Context
 	{
-		using SceneCont = std::vector<std::unique_ptr<SceneData>>;
+		using SceneCont = vector<std::unique_ptr<SceneData>>;
 
 		ErrorHandler m_error_cb;
 		FbxManager* m_manager;
@@ -787,8 +788,8 @@ namespace pr::geometry::fbx
 			m_scenes.clear();
 
 			// Delete the FBX Manager. All the objects that have been allocated using the FBX Manager and that haven't been explicitly destroyed are also automatically destroyed.
-			if (m_manager != nullptr)
-				m_manager->Destroy();
+//			if (m_manager != nullptr)
+//				m_manager->Destroy();
 		}
 
 		// Return the file format ID for the give format (use 'Formats')
@@ -893,8 +894,8 @@ namespace pr::geometry::fbx
 	struct AnimationData
 	{
 		SkeletonData const* m_skel; // The skeleton that these tracks should match
-		std::vector<int> m_offsets; // The offset to the start of each bone's track
-		std::vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
+		vector<int> m_offsets; // The offset to the start of each bone's track
+		vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
 		Animation::TimeRange m_time_range; // The time span of the animation
 		double m_frame_rate; // The native frame rate of the animation
 
@@ -915,9 +916,9 @@ namespace pr::geometry::fbx
 	struct MeshData
 	{
 		using Name = std::string;
-		using VBuffer = std::vector<Vert>;
-		using IBuffer = std::vector<int>;
-		using NBuffer = std::vector<Nugget>;
+		using VBuffer = vector<Vert>;
+		using IBuffer = vector<int>;
+		using NBuffer = vector<Nugget>;
 
 		uint64_t m_id = {};
 		Name m_name;
@@ -1020,7 +1021,7 @@ namespace pr::geometry::fbx
 		// TODO:
 		//  - LOD Groups?
 
-		using KeyTimes = std::vector<KeyTime>;
+		using KeyTimes = vector<KeyTime>;
 
 		SceneData& m_scene;
 		FbxScene& m_fbxscene;
@@ -1150,7 +1151,7 @@ namespace pr::geometry::fbx
 		// Read meshes from the FBX scene
 		void ReadGeometry()
 		{
-			std::vector<std::future<MeshData>> tasks;
+			vector<std::future<MeshData>> tasks;
 
 			// Process each mesh in a worker thread, because triangulation is really slow
 			for (auto const& [id, meshnode] : m_meshes)
@@ -1377,7 +1378,7 @@ namespace pr::geometry::fbx
 				vector<uint64_t, 8> m_bones;
 				vector<double, 8> m_weights;
 			};
-			std::vector<Influence> influences;
+			vector<Influence> influences;
 			influences.resize(fbxmesh.GetControlPointsCount());
 
 			// Get the skinning data for this mesh
@@ -1689,8 +1690,17 @@ namespace pr::geometry::fbx
 				Progress(1LL + i, animation_count, "Reading animation...");
 
 				m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
-				m_time_span = m_animstack->GetLocalTimeSpan();
 				m_fbxscene.SetCurrentAnimationStack(m_animstack);
+				m_time_span = m_animstack->GetLocalTimeSpan();
+
+				// Limit the time span based on the options
+				auto frame_span = Intersect(Range<int>{
+					static_cast<int>(std::floor(m_time_span.GetStart().GetSecondDouble() * m_frame_rate)),
+					static_cast<int>(std::ceil(m_time_span.GetStop().GetSecondDouble() * m_frame_rate)),
+				}, m_opts.m_frame_range);
+				FbxTime start; start.SetSecondDouble(frame_span.begin() / m_frame_rate);
+				FbxTime stop; stop.SetSecondDouble(frame_span.end() / m_frame_rate);
+				m_time_span.Set(start, stop);
 
 				// Only support one animation layer at the moment
 				auto layer_count = std::min(1, m_animstack->GetMemberCount<FbxAnimLayer>());
@@ -1699,15 +1709,15 @@ namespace pr::geometry::fbx
 					m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
 
 					// Read the key frame times for all bones
-					std::vector<uint64_t> bone_id_lookup(m_bones.size());
-					std::vector<KeyTimes> times_per_bone(m_bones.size());
+					vector<uint64_t> bone_id_lookup(m_bones.size());
+					vector<KeyTimes> times_per_bone(m_bones.size());
 					for (auto& [id, bonenode] : m_bones)
 					{
 						times_per_bone[bonenode.index] = FindKeyFrameTimes(*bonenode.bone->GetNode());
 						bone_id_lookup[bonenode.index] = id;
 					}
 
-					std::vector<AnimationData> animations;
+					vector<AnimationData> animations;
 
 					// Animations are associated with a skeleton. Create an animation for each
 					// skeleton that contains a bone that is moved by this animation.
@@ -1750,7 +1760,7 @@ namespace pr::geometry::fbx
 						animations.push_back(std::move(animation));
 					}
 
-					std::vector<std::future<void>> tasks;
+					vector<std::future<void>> tasks;
 					int64_t progress = 0;
 
 					// For each key frame time, start a worker that adds the key frame to each bone with that key
@@ -1777,8 +1787,8 @@ namespace pr::geometry::fbx
 								BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
 							};
 
-							std::vector<Key> m_keys;    // The keys at this snapshot
-							std::vector<m4x4> m_b2p;    // Bone to parent for each bone at this time
+							vector<Key> m_keys;    // The keys at this snapshot
+							vector<m4x4> m_b2p;    // Bone to parent for each bone at this time
 							double m_time;              // The time value in seconds at this snapshot time
 						};
 
@@ -1886,12 +1896,16 @@ namespace pr::geometry::fbx
 
 			// Find the set of unique key frame times for 'node'
 			KeyTimes keytimes; keytimes.reserve(max_keys); // could be more than this, but it's a reasonable inital guess
-			zip<EZip::Unique, FbxTime>(curves, [&keytimes, &curves](FbxTime time, size_t idx)
+			keytimes.push_back({ m_time_span.GetStart(), FbxAnimCurveDef::eInterpolationLinear });
+			zip<EZip::Unique, FbxTime>(curves, [this, &keytimes, &curves](FbxTime time, size_t idx)
 			{
 				// Assume the same interpolation for all transform channels
 				auto interp = curves[idx].m_curve->KeyGetInterpolation(0);
-				keytimes.push_back({ time, interp });
+				if (time > m_time_span.GetStart() && time < m_time_span.GetStop())
+					keytimes.push_back({ time, interp });
 			});
+			keytimes.push_back({ m_time_span.GetStop(), FbxAnimCurveDef::eInterpolationLinear });
+
 			return keytimes;
 		}
 
