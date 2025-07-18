@@ -107,11 +107,12 @@
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
 			/>
 
-		<!-- Tool bars -->
+		<!-- Tool bars
 		<gui:View3dAnimControls
 			Grid.Row="1"
 			Visibility="{Binding AnimationUI, Converter={conv:BoolToVisible}}"
 			ViewWindow = "{Binding SceneView.Scene.Window}"
 			/>
+		-->
 	</Grid>
 </UserControl>

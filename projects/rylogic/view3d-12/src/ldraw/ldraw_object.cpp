@@ -107,6 +107,7 @@ namespace pr::rdr12::ldraw
 		// Take a copy in case the 'OnAddToScene' event changes it.
 		// We want parenting to be unaffected by the event handlers.
 		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
+		if (m_model) i2w *= m_model->m_m2root;
 		m_i2w = i2w;
 
 		// Combine recursive flags
@@ -134,6 +135,7 @@ namespace pr::rdr12::ldraw
 	{
 		// Set the instance to world for this object
 		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
+		if (m_model) i2w *= m_model->m_m2root;
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
@@ -608,6 +610,7 @@ namespace pr::rdr12::ldraw
 	{
 		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
 		auto i2w = p2w * m_root_anim.RootToWorld();
+		if (m_model) i2w = i2w * m_model->m_m2root;
 
 		// Combine recursive flags
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
