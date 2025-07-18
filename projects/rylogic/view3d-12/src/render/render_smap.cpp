@@ -47,12 +47,14 @@ namespace pr::rdr12
 		// Create an instance of a quad to display in the lower left of the screen
 		void Create(Scene& scene, ShadowCaster& caster)
 		{
+			ResourceFactory factory(scene.rdr());
+
 			m_scene = &scene;
 			m_i2w = m4x4::Identity();
 			m_c2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -0.01f, 1000.0f, true);
-			m_model = scene.res().CreateModel(EStockModel::UnitQuad);
+			m_model = factory.CreateModel(EStockModel::UnitQuad);
 			m_tex_diffuse = caster.m_smap;
-			m_sam_diffuse = scene.res().GetSampler(EStockSampler::PointClamp);
+			m_sam_diffuse = factory.CreateSampler(EStockSampler::PointClamp);
 			m_flags = SetBits(m_flags, EInstFlag::ShadowCastExclude, true);
 		}
 
@@ -70,7 +72,7 @@ namespace pr::rdr12
 		{
 			// Scale the unit quad and position in the lower left
 			const float scale = 0.3f;
-			m_i2w = m_scene->m_cam.CameraToWorld() * m4x4::Scale(scale, v4{-0.495f + scale/2, -0.495f + scale/2, 0, 1});
+			m_i2w = m_scene->m_cam.CameraToWorld() * m4x4::Scale(scale, v4{-0.495f + scale/2, -0.395f + scale/2, 0, 1});
 			m_scene->FindRStep<RenderForward>()->AddInstance(*this);
 		}
 	} g_smap_quad;
@@ -240,7 +242,7 @@ namespace pr::rdr12
 		SortIfNeeded();
 
 		// Bind the descriptor heaps
-		auto des_heaps = {wnd().m_heap_view.get(), wnd().m_heap_samp.get()};
+		auto des_heaps = { wnd().m_heap_view.get(), wnd().m_heap_samp.get() };
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Render the shadow map for each shadow caster. TODO in parallel?
@@ -260,7 +262,7 @@ namespace pr::rdr12
 			m_cmd_list.OMSetRenderTargets({ &smap.m_rtv.m_cpu, 1 }, FALSE, nullptr);
 
 			// Clear the render target to the background colour
-			constexpr float reset[] = {0,0,0,0};
+			constexpr float reset[] = { 0,0,0,0 };
 			m_cmd_list.ClearRenderTargetView(smap.m_rtv.m_cpu, reset);
 
 			// Set the viewport and scissor rect.
@@ -279,6 +281,7 @@ namespace pr::rdr12
 			for (auto& dle : lock.drawlist())
 			{
 				auto const& nugget = *dle.m_nugget;
+				auto const& instance = *dle.m_instance;
 				auto desc = m_default_pipe_state;
 
 				// Set pipeline state
@@ -287,27 +290,41 @@ namespace pr::rdr12
 				m_cmd_list.IASetVertexBuffers(0U, { &nugget.m_model->m_vb_view, 1 });
 				m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
+				// Bind textures to the pipeline
+				if (Texture2DPtr tex = coalesce(FindDiffTexture(*dle.m_instance), nugget.m_tex_diffuse, m_default_tex))
+				{
+					auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTexture, srv_descriptor);
+				}
+
+				// Bind samplers to the pipeline (can't use static samplers because each mode may use different address modes)
+				if (SamplerPtr sam = coalesce(FindDiffTextureSampler(*dle.m_instance), nugget.m_sam_diffuse, m_default_sam))
+				{
+					auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTextureSampler, sam_descriptor);
+				}
+
+				// Add skinning data for skinned meshes
+				if (PosePtr pose = coalesce(FindPose(instance), nugget.m_model->m_pose); pose && nugget.m_model->m_skin)
+				{
+					pose->Update(m_cmd_list, m_upload_buffer);
+					auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);
+					auto srv_skin = wnd().m_heap_view.Add(nugget.m_model->m_skin.m_srv);
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::Pose, srv_pose);
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::Skin, srv_skin);
+				}
+
 				// Set shader constants for the nugget
 				m_shader.Setup(m_cmd_list.get(), m_upload_buffer, &dle, caster, scn().m_cam);
 
-				// Bind textures to the pipeline
-				auto tex = coalesce(FindDiffTexture(*dle.m_instance), nugget.m_tex_diffuse, m_default_tex);
-				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTexture, srv_descriptor);
-
-				// Bind samplers to the pipeline (can't use static samplers because each mode may use different address modes)
-				auto sam = coalesce(FindDiffTextureSampler(*dle.m_instance), nugget.m_sam_diffuse, m_default_sam);
-				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTextureSampler, sam_descriptor);
-
 				// Apply PSO overrides?
- 
+
 				// Draw the nugget
 				DrawNugget(nugget, desc);
 			}
 
 			// Transition the caster resource to a SRV
-			barriers.Transition(smap.m_res.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			barriers.Transition(smap.m_res.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			barriers.Commit();
 		}
 

@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -140,7 +140,7 @@ namespace pr::rdr12
 	{
 		// Reset the command list with a new allocator for this frame
 		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-		
+	
 		// Add the command lists we're using to the frame.
 		frame.m_main.push_back(m_cmd_list);
 
@@ -148,7 +148,7 @@ namespace pr::rdr12
 		SortIfNeeded();
 
 		// Bind the descriptor heaps
-		auto des_heaps = {wnd().m_heap_view.get(), wnd().m_heap_samp.get()};
+		auto des_heaps = { wnd().m_heap_view.get(), wnd().m_heap_samp.get() };
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Get the back buffer view handle and set the back buffer as the render target.
@@ -170,7 +170,7 @@ namespace pr::rdr12
 		{
 			// Todo: consider array-of-structs layout for casters
 			pr::vector<Descriptor, 8> descriptors;
-			for (auto & caster : smap_step->Casters())
+			for (auto& caster : smap_step->Casters())
 				descriptors.push_back(caster.m_smap->m_srv);
 
 			auto gpu = wnd().m_heap_view.Add(descriptors);
@@ -208,13 +208,13 @@ namespace pr::rdr12
 			{
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
-				#if PR_DBG_RDR
+#if PR_DBG_RDR
 				{
 					// Ensure the diffuse texture is in the correct state
 					auto state = m_cmd_list.ResState(tex->m_res.get()).Mip0State();
 					assert(AllSet(state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
 				}
-				#endif
+#endif
 			}
 
 			// Bind samplers to the pipeline

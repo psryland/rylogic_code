@@ -54,6 +54,7 @@
         ;PR_SUPPORT_D3D11_ERRORS=1
         ;PR_VIEW3D_12=1
         ;PR_DBG_RDR=1
+        ;PR_PIX_ENABLED=1
         ;USE_PIX
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>

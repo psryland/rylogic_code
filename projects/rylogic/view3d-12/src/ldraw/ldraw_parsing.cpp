@@ -45,10 +45,10 @@ namespace pr::rdr12::ldraw
 	using CCont = pr::vector<Colour32>;
 	using TCont = pr::vector<v2>;
 	using GCont = pr::vector<NuggetDesc>;
-	using ModelCont = ParseResult::ModelLookup;
 	using Font = ModelGenerator::Font;
 	using TextFormat = ModelGenerator::TextFormat;
 	using TextLayout = ModelGenerator::TextLayout;
+	using ObjectLookup = ParseResult::ObjectLookup;
 
 	enum class EFlags
 	{
@@ -151,7 +151,7 @@ namespace pr::rdr12::ldraw
 		Renderer&       m_rdr;
 		ParseResult&    m_result;
 		ObjectCont&     m_objects;
-		ModelCont&      m_models;
+		ObjectLookup&   m_lookup;
 		ResourceFactory m_factory;
 		ReportErrorCB   m_report_error;
 		Guid            m_context_id;
@@ -169,7 +169,7 @@ namespace pr::rdr12::ldraw
 			: m_rdr(rdr)
 			, m_result(result)
 			, m_objects(result.m_objects)
-			, m_models(result.m_models)
+			, m_lookup(result.m_lookup)
 			, m_factory(rdr)
 			, m_report_error(error_cb)
 			, m_context_id(context_id)
@@ -187,7 +187,7 @@ namespace pr::rdr12::ldraw
 			: m_rdr(pp.m_rdr)
 			, m_result(pp.m_result)
 			, m_objects(objects)
-			, m_models(pp.m_models)
+			, m_lookup(pp.m_lookup)
 			, m_factory(pp.m_rdr)
 			, m_report_error(pp.m_report_error)
 			, m_context_id(pp.m_context_id)
@@ -5091,18 +5091,30 @@ namespace pr::rdr12::ldraw
 	{
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-		{}
+		{
+		}
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
-			// Locate the model that this is an instance of
-			auto model_key = hash::Hash(obj->m_name.c_str());
-			auto mdl = m_pp.m_models.find(model_key);
-			if (mdl == m_pp.m_models.end())
+			// Locate the object to instance
+			auto key = hash::Hash(obj->m_name.c_str());
+			if (!m_pp.m_lookup.contains(key))
 			{
-				m_pp.ReportError(EParseError::NotFound, loc, "Model not found. Can't create an instance.");
+				m_pp.ReportError(EParseError::NotFound, loc, "Object not found. Can't create an instance.");
 				return;
 			}
-			obj->m_model = mdl->second;
+
+			// Create an LdrObject instance for each nested object
+			RecursiveCreate(obj, m_pp.m_lookup[key]);
+		}
+		void RecursiveCreate(LdrObject* obj, LdrObject const* source)
+		{
+			obj->m_model = source->m_model;
+			for (auto source_child : source->m_child)
+			{
+				LdrObjectPtr child(new LdrObject(source_child->m_type, obj, obj->m_context_id), true);
+				RecursiveCreate(child.get(), source_child.get());
+				obj->m_child.push_back(std::move(child));
+			}
 		}
 	};
 
@@ -5157,8 +5169,8 @@ namespace pr::rdr12::ldraw
 			// This is done after objects are parsed so that recursive properties can be applied
 			ApplyObjectState(obj.get());
 
-			// Add the model and instance to the containers
-			pp.m_models[hash::Hash(obj->m_name.c_str())] = obj->m_model;
+			// Add the instance to the containers
+			pp.m_lookup[hash::Hash(obj->m_name.c_str())] = obj.get();
 			pp.m_objects.push_back(obj);
 		}
 
@@ -5505,7 +5517,6 @@ namespace pr::rdr12::ldraw
 		// Single root models have 'root' as the root.
 		if (num_roots == 1)
 		{
-			root->m_name = tree[0].m_model->m_name;
 			root->m_model = tree[0].m_model;
 			ancestors.push_back({ root, 0 });
 			tree = tree.subspan<1>();
@@ -5514,7 +5525,6 @@ namespace pr::rdr12::ldraw
 		// Multi-root models have 'root' as dummy root (or Group)
 		else
 		{
-			root->m_name = "root";
 			root->m_model = nullptr;
 			ancestors.push_back({ root, -1 });
 		}
@@ -5696,7 +5706,7 @@ namespace pr::rdr12::ldraw
 
 	ParseResult::ParseResult()
 		: m_objects()
-		, m_models()
+		, m_lookup()
 		, m_cam()
 		, m_cam_fields()
 		, m_wireframe()
@@ -5705,7 +5715,7 @@ namespace pr::rdr12::ldraw
 	void ParseResult::reset()
 	{
 		m_objects.resize(0);
-		m_models.clear();
+		m_lookup.clear();
 		m_cam = {};
 		m_cam_fields = {};
 		m_wireframe = {};
@@ -5724,8 +5734,8 @@ namespace pr::rdr12::ldraw
 			std::move_iterator{ rhs.m_objects.begin() },
 			std::move_iterator{ rhs.m_objects.end() });
 			
-		for (auto& p : rhs.m_models)
-			m_models[p.first] = p.second;
+		for (auto& p : rhs.m_lookup)
+			m_lookup[p.first] = p.second;
 
 		m_commands.append(rhs.m_commands);
 
@@ -5737,6 +5747,6 @@ namespace pr::rdr12::ldraw
 	}
 	ParseResult::operator bool() const
 	{
-		return !m_objects.empty() || !m_models.empty() || !m_commands.empty();
+		return !m_objects.empty() || !m_lookup.empty() || !m_commands.empty();
 	}
 }

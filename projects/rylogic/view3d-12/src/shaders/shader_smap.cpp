@@ -19,6 +19,8 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto CBufNugget = ECBufReg::b1;
 		inline static constexpr auto DiffTexture = ESRVReg::t0;
 		inline static constexpr auto DiffTextureSampler = ESamReg::s0;
+		inline static constexpr auto Pose = ESRVReg::t4;
+		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 
 	ShadowMap::ShadowMap(ID3D12Device* device)
@@ -39,6 +41,8 @@ namespace pr::rdr12::shaders
 			.CBuf(EReg::CBufFrame)
 			.CBuf(EReg::CBufNugget)
 			.SRV(EReg::DiffTexture, 1)
+			.SRV(EReg::Pose, 1)
+			.SRV(EReg::Skin, 1)
 			.Samp(EReg::DiffTextureSampler, 1)
 			.Create(device, "ShadowMapSig");
 	}

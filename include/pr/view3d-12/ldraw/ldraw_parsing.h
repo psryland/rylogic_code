@@ -51,15 +51,15 @@ namespace pr::rdr12::ldraw
 	// The results of parsing ldr script
 	struct ParseResult
 	{
-		using ModelLookup = std::unordered_map<size_t, ModelPtr>;
+		using ObjectLookup = std::unordered_map<size_t, LdrObject*>;
 		using CommandBuf = pr::byte_data<16>;
 
-		ObjectCont  m_objects;    // Reference to the objects container to fill
-		ModelLookup m_models;     // A lookup map for models based on hashed object name
-		CommandBuf  m_commands;   // A buffer of Ldraw commands (todo: replace 'm_cam' with these)
-		Camera      m_cam;        // Camera description has been read
-		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
-		bool        m_wireframe;  // True if '*Wireframe' was read in the script
+		ObjectCont   m_objects;    // Reference to the objects container to fill
+		ObjectLookup m_lookup;     // A lookup map for objects by hashed object name
+		CommandBuf   m_commands;   // A buffer of Ldraw commands (todo: replace 'm_cam' with these)
+		Camera       m_cam;        // Camera description has been read
+		ECamField    m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
+		bool         m_wireframe;  // True if '*Wireframe' was read in the script
 
 		ParseResult();
 		void reset();

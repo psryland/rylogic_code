@@ -9,27 +9,40 @@
 Texture2D<float4> m_texture0 :reg(t0,0);
 SamplerState      m_sampler0 :reg(s0,0);
 
+// Skinned Meshes
+StructuredBuffer<Mat4x4> m_pose : reg(t4, 0);
+StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
+
+#include "../skinned/skinned.hlsli"
+
 struct PSIn_ShadowMap
 {
-	float4 ss_vert :SV_Position;
-	float4 ws_vert :Position1;
-	float4 diff :Color0;
-	float2 tex0 :TexCoord0;
+	float4 ss_vert :SV_POSITION;
+	float4 ws_vert :POSITION1;
+	float4 diff :COLOR0;
+	float2 tex0 :TEXCOORD0;
 };
 struct PSOut
 {
-	float shade :SV_Target0;
+	float shade :SV_TARGET;
 };
 
-// Vertex shader
-#ifdef PR_RDR_VSHADER_shadow_map
-PSIn_ShadowMap main(VSIn In)
+// Default SMAP VS
+PSIn_ShadowMap VSDefault(VSIn In)
 {
-	PSIn_ShadowMap Out;
+	PSIn_ShadowMap Out = (PSIn_ShadowMap)0;
+	
+	// Transform
+	float4 os_vert = mul(In.vert, m_m2o);
+	
+	if (IsSkinned)
+	{
+		os_vert = SkinVertex(m_pose, m_skin[In.idx0.x], os_vert);
+	}
 
-	float2 nf = ClipPlanes(m_l2s);
-	float4 ws_vert = mul(In.vert, m_o2w);
+	float4 ws_vert = mul(os_vert, m_o2w);
 	float4 ls_vert = mul(ws_vert, m_w2l);
+	float2 nf = ClipPlanes(m_l2s);
 
 	// Transform. Set ws_vert.w to normalised distance from light
 	Out.ws_vert = ws_vert;
@@ -43,18 +56,16 @@ PSIn_ShadowMap main(VSIn In)
 	Out.diff = In.diff * Out.diff;
 
 	// Texture2D (with transform)
-	Out.tex0 = mul(float4(In.tex0,0,1), m_tex2surf0).xy;
+	Out.tex0 = mul(float4(In.tex0, 0, 1), m_tex2surf0).xy;
 
 	return Out;
 }
-#endif
 
-// Pixel shader
-#ifdef PR_RDR_PSHADER_shadow_map
-PSOut main(PSIn_ShadowMap In)
+// Default SMAP PS
+PSOut PSDefault(PSIn_ShadowMap In)
 {
-	PSOut Out;
-
+	PSOut Out = (PSOut)0;
+	
 	float4 diff = In.diff;
 
 	// Texture2D (with transform)
@@ -66,6 +77,23 @@ PSOut main(PSIn_ShadowMap In)
 		clip(diff.a - 0.5);
 
 	Out.shade = In.ws_vert.w;
+	return Out;
+}
+
+// Vertex shader
+#ifdef PR_RDR_VSHADER_shadow_map
+PSIn_ShadowMap main(VSIn In)
+{
+	PSIn_ShadowMap Out = VSDefault(In);
+	return Out;
+}
+#endif
+
+// Pixel shader
+#ifdef PR_RDR_PSHADER_shadow_map
+PSOut main(PSIn_ShadowMap In)
+{
+	PSOut Out = PSDefault(In);
 	return Out;
 }
 #endif

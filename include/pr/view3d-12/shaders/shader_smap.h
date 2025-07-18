@@ -15,6 +15,8 @@ namespace pr::rdr12::shaders
 			CBufFrame = 0,
 			CBufNugget,
 			DiffTexture,
+			Pose,
+			Skin,
 			DiffTextureSampler,
 		};
 
