@@ -17,6 +17,7 @@ namespace pr::rdr12
 		SkeletonPtr m_skeleton;       // The skeleton (in rest-pose)
 		D3DPtr<ID3D12Resource> m_res; // The runtime bone buffer (i.e. m4x4[])
 		Descriptor m_srv;             // SRV of the bone buffer
+		TimeRange m_time_range;       // The time span from the animation to use
 		double m_time0;               // The animation time last applied
 		double m_time1;               // The animation time to display next
 

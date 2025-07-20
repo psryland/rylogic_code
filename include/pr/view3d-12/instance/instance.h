@@ -40,8 +40,8 @@ namespace pr::rdr12
 		PipeStates,          // pr::rdr::PipeStates
 		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
-		DiffTexture,         // An override of the main diffuse texture
-		DiffTextureSampler,  // An override of the main diffuse texture sampler
+		DiffTexture,         // Texture2DPtr. An override of the main diffuse texture
+		DiffTextureSampler,  // SamplerPtr. An override of the main diffuse texture sampler
 		PosePtr,             // A skeleton pose to skin to
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
@@ -74,6 +74,7 @@ namespace pr::rdr12
 		{
 			case EInstComp::None:                return 0;
 			case EInstComp::ModelPtr:            return sizeof(ModelPtr);
+			case EInstComp::PosePtr:             return sizeof(PosePtr);
 			case EInstComp::I2WTransform:        return sizeof(m4x4);
 			case EInstComp::I2WTransformPtr:     return sizeof(m4x4*);
 			case EInstComp::I2WTransformFuncPtr: return sizeof(m4x4 const& (*)(void* context));

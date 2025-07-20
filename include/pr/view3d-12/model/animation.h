@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -149,7 +149,6 @@ namespace pr::rdr12
 		using Sample = pr::vector<KeyFrame>;
 		using Track = pr::vector<KeyFrame>;
 		using Tracks = pr::vector<Track>;
-		using TimeRange = pr::Range<double>;
 
 		uint64_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
 		EAnimStyle m_style;     // The animation style
@@ -166,4 +165,24 @@ namespace pr::rdr12
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KeyFrameAnimation>* doomed);
 	};
+
+	// Convert a frame range to a time range based on the given frame rate
+	inline TimeRange ToTimeRange(FrameRange frames, double frame_rate)
+	{
+		assert(frame_rate > 0.0);
+		return TimeRange {
+			static_cast<double>(frames.m_beg / frame_rate),
+			static_cast<double>(frames.m_end / frame_rate),
+		};
+	}
+
+	// Convert a frame range to a time range based on the given frame rate
+	inline FrameRange ToFrameRange(TimeRange times, double frame_rate)
+	{
+		assert(frame_rate > 0.0);
+		return FrameRange {
+			static_cast<int>(times.m_beg * frame_rate),
+			static_cast<int>(times.m_end * frame_rate),
+		};
+	}
 }

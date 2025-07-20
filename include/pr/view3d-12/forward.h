@@ -136,6 +136,8 @@ namespace pr::rdr12
 	using RdrId = std::uintptr_t;
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<int64_t>;
+	using TimeRange = pr::Range<double>;
+	using FrameRange = pr::Range<int>;
 	using Handle = pr::win32::Handle;
 	using Winsock = pr::network::Winsock;
 	using HashValue32 = pr::hash::HashValue32;

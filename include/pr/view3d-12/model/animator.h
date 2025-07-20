@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -17,12 +17,15 @@ namespace pr::rdr12
 		//    bone transforms as needed.
 		//  - Animators should be state less because one Animator might be used my multiple
 		//    skinning instances.
-		
+
 		Animator();
 		virtual ~Animator() = default;
 
 		// Return the ID of the skeleton we're animating
 		virtual uint64_t SkelId() const = 0;
+
+		// Return the frame rate of the underlying animation
+		virtual double FrameRate() const = 0;
 
 		// Apply an animation to the given bones
 		virtual void Animate(std::span<m4x4> bones, double time_s) = 0;
@@ -42,6 +45,9 @@ namespace pr::rdr12
 
 		// Return the ID of the skeleton we're animating
 		uint64_t SkelId() const override;
+
+		// Return the frame rate of the underlying animation
+		double FrameRate() const override;
 
 		// Apply an animation to the given bones
 		void Animate(std::span<m4x4> bones, double time_s) override;

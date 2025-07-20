@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -31,6 +31,12 @@ namespace pr::rdr12
 	uint64_t Animator_SingleKeyFrameAnimation::SkelId() const
 	{
 		return m_anim->m_skel_id;
+	}
+
+	// Return the frame rate of the underlying animation
+	double Animator_SingleKeyFrameAnimation::FrameRate() const
+	{
+		return m_anim->m_frame_rate;
 	}
 
 	// Apply an animation to the given bones

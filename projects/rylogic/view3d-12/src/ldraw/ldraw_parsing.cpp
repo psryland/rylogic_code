@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -5089,9 +5089,30 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Instance
 	template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
 	{
+		std::optional<AnimInfo> m_anim_info;
+		std::unordered_map<Pose const*, PosePtr> m_pose_map;
+
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_pose_map()
 		{
+		}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
+		{
+			switch (kw)
+			{
+				case EKeyword::Animation:
+				{
+					m_anim_info = AnimInfo{};
+					ParseAnimation(reader, m_pp, *m_anim_info);
+					return true;
+				}
+				default:
+				{
+					return
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
@@ -5102,16 +5123,35 @@ namespace pr::rdr12::ldraw
 				m_pp.ReportError(EParseError::NotFound, loc, "Object not found. Can't create an instance.");
 				return;
 			}
+			auto source = m_pp.m_lookup[key];
 
 			// Create an LdrObject instance for each nested object
-			RecursiveCreate(obj, m_pp.m_lookup[key]);
+			RecursiveCreate(obj, source);
 		}
 		void RecursiveCreate(LdrObject* obj, LdrObject const* source)
 		{
+			obj->m_name = source->m_name;
 			obj->m_model = source->m_model;
+			obj->m_pose = nullptr;
+
+			// Clone the pose data if animation info is given
+			if (m_anim_info)
+			{
+				if (auto source_pose = coalesce(source->m_pose, source->m_model ? source->m_model->m_pose : nullptr))
+				{
+					// Create a new pose instance that is separate from the original
+					if (!m_pose_map.contains(source_pose.get()))
+						m_pose_map[source_pose.get()] = PosePtr{ rdr12::New<Pose>(m_pp.m_factory, source_pose->m_skeleton, source_pose->m_animator), true };
+
+					obj->m_pose = m_pose_map[source_pose.get()];
+					obj->m_pose->m_time_range = ToTimeRange(m_anim_info->m_frames, obj->m_pose->m_animator->FrameRate());
+					obj->m_pose->AnimTime(0.0);
+				}
+			}
+
 			for (auto source_child : source->m_child)
 			{
-				LdrObjectPtr child(new LdrObject(source_child->m_type, obj, obj->m_context_id), true);
+				LdrObjectPtr child(new LdrObject(ELdrObject::Instance, obj, obj->m_context_id), true);
 				RecursiveCreate(child.get(), source_child.get());
 				obj->m_child.push_back(std::move(child));
 			}
@@ -5169,8 +5209,11 @@ namespace pr::rdr12::ldraw
 			// This is done after objects are parsed so that recursive properties can be applied
 			ApplyObjectState(obj.get());
 
-			// Add the instance to the containers
-			pp.m_lookup[hash::Hash(obj->m_name.c_str())] = obj.get();
+			// Add to the lookup if not an instance
+			if (obj->m_type != ELdrObject::Instance)
+				pp.m_lookup[hash::Hash(obj->m_name.c_str())] = obj.get();
+
+			// Add the object to the container
 			pp.m_objects.push_back(obj);
 		}
 

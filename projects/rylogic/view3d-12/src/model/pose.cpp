@@ -17,6 +17,7 @@ namespace pr::rdr12
 		, m_skeleton(skeleton)
 		, m_res()
 		, m_srv()
+		, m_time_range(0.0, std::numeric_limits<double>::max())
 		, m_time0(-1.0)
 		, m_time1(-1.0)
 	{
@@ -85,9 +86,12 @@ namespace pr::rdr12
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
 		auto ptr = update.ptr<m4x4>();
 		{
+			// Make the time relative to 'm_time_range'
+			auto time = std::clamp(m_time1 + m_time_range.begin(), m_time_range.begin(), m_time_range.end());
+
 			// Read the deformed bone transforms into the buffer to start with.
 			// These are bone-to-parent transforms for each bone.
-			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, m_time1);
+			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, time);
 			m_time0 = m_time1;
 
 			// Convert the pose into object space transforms

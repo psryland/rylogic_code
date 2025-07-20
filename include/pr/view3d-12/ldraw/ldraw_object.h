@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -40,8 +40,9 @@ namespace pr::rdr12::ldraw
 		#define PR_RDR_INST(x) \
 		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
 		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
-	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
 		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes, align 8 */\
+		x(PosePtr    ,m_pose   ,EInstComp::PosePtr            )/* 4 or 8 bytes, align 8 */\
+	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
 		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes, align 4 */\
 		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes, align 4 */\
 		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes, align 4 */\
@@ -58,8 +59,8 @@ namespace pr::rdr12::ldraw
 		//    It's a runtime instance of the simple animation data
 		//    Each LdrObject has one of these with it's own time value
 
-		RootAnimationPtr m_simple;
-		double m_time_s;
+		RootAnimationPtr m_simple = {};
+		double m_time_s = {};
 
 		// Set the animation time
 		void AnimTime(double time_s)
