@@ -234,8 +234,9 @@ namespace pr::rdr12::ldraw
 			o->m_root_anim.AnimTime(time_s);
 
 			// Set the time for any skinned model animation
-			if (o->m_model && o->m_model->m_pose)
-				o->m_model->m_pose->AnimTime(time_s);
+			if (o->m_pose)
+				o->m_pose->AnimTime(time_s);
+
 			return true;
 		}, name);
 	}

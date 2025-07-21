@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -42,11 +42,6 @@ namespace pr::rdr12
 	// Apply an animation to the given bones
 	void Animator_SingleKeyFrameAnimation::Animate(std::span<m4x4> bones, double time_s)
 	{
-		auto sample = m_anim->EvaluateAtTime(time_s);
-		if (ssize(sample) != ssize(bones))
-			throw std::runtime_error("Mismatch between animation and bones array. Likely due to mismatched skeletons");
-
-		for (int i = 0, iend = isize(sample); i != iend; ++i)
-			bones[i] = sample[i];
+		m_anim->EvaluateAtTime(time_s, bones);
 	}
 }

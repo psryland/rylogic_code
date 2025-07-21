@@ -12,14 +12,16 @@
 
 namespace pr::rdr12
 {
-	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator)
+	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, TimeRange time_range, double stretch)
 		: m_animator(animator)
 		, m_skeleton(skeleton)
 		, m_res()
 		, m_srv()
-		, m_time_range(0.0, std::numeric_limits<double>::max())
+		, m_time_range(time_range)
 		, m_time0(-1.0)
-		, m_time1(-1.0)
+		, m_time1(0.0)
+		, m_stretch(stretch)
+		, m_style(style)
 	{
 		ResourceStore::Access store(factory.rdr());
 
@@ -87,7 +89,7 @@ namespace pr::rdr12
 		auto ptr = update.ptr<m4x4>();
 		{
 			// Make the time relative to 'm_time_range'
-			auto time = std::clamp(m_time1 + m_time_range.begin(), m_time_range.begin(), m_time_range.end());
+			auto time = AdjTime(m_time1 * m_stretch + m_time_range.begin(), m_time_range, m_style);
 
 			// Read the deformed bone transforms into the buffer to start with.
 			// These are bone-to-parent transforms for each bone.

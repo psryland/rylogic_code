@@ -125,6 +125,7 @@
 			<Word>*Fov</Word>
 			<Word>*FovX</Word>
 			<Word>*FovY</Word>
+			<Word>*Frame</Word>
 			<Word>*FrameRange</Word>
 			<Word>*FrustumFA</Word>
 			<Word>*FrustumWH</Word>
@@ -208,6 +209,7 @@
 			<Word>*TextLayout</Word>
 			<Word>*TextStream</Word>
 			<Word>*Texture</Word>
+			<Word>*TimeRange</Word>
 			<Word>*Transpose</Word>
 			<Word>*Triangle</Word>
 			<Word>*TriList</Word>

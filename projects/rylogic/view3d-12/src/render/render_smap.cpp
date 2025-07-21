@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -305,7 +305,7 @@ namespace pr::rdr12
 				}
 
 				// Add skinning data for skinned meshes
-				if (PosePtr pose = coalesce(FindPose(instance), nugget.m_model->m_pose); pose && nugget.m_model->m_skin)
+				if (PosePtr pose = FindPose(instance); pose && nugget.m_model->m_skin)
 				{
 					pose->Update(m_cmd_list, m_upload_buffer);
 					auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);

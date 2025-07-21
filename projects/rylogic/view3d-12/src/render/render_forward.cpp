@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -208,13 +208,12 @@ namespace pr::rdr12
 			{
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
-#if PR_DBG_RDR
+				if constexpr (PR_DBG_RDR)
 				{
 					// Ensure the diffuse texture is in the correct state
 					auto state = m_cmd_list.ResState(tex->m_res.get()).Mip0State();
 					assert(AllSet(state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
 				}
-#endif
 			}
 
 			// Bind samplers to the pipeline
@@ -225,7 +224,7 @@ namespace pr::rdr12
 			}
 
 			// Add skinning data for skinned meshes
-			if (PosePtr pose = coalesce(FindPose(instance), nugget.m_model->m_pose); pose && nugget.m_model->m_skin)
+			if (PosePtr pose = FindPose(instance); pose && nugget.m_model->m_skin)
 			{
 				pose->Update(m_cmd_list, m_upload_buffer);
 				auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);

@@ -1,9 +1,10 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/resource/descriptor.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 
@@ -20,8 +21,10 @@ namespace pr::rdr12
 		TimeRange m_time_range;       // The time span from the animation to use
 		double m_time0;               // The animation time last applied
 		double m_time1;               // The animation time to display next
+		double m_stretch;             // Playback speed multiplier
+		EAnimStyle m_style;           // The style of animation
 
-		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator = nullptr);
+		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, TimeRange time_range, double stretch);
 
 		// Set the animation time
 		void AnimTime(double time_s);

@@ -1,4 +1,4 @@
-//********************************************
+﻿//********************************************
 // LDraw Demo Scene
 //  Copyright (c) Rylogic Ltd 2002
 //********************************************
@@ -112,7 +112,7 @@
 	//*Hidden {}               // Object is created in an invisible state
 	//*Wireframe {}            // Object is created with wireframe fill mode
 	//*Font {...}              // A font to apply to this an all child objects. See Text example below
-	*Animation                 // Add simple animation to this object
+	*RootAnimation             // Add motion to this object
 	{
 		*Style {Continuous}    // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
 		*Period { 1.6 }        // The period of the animation in seconds
@@ -194,7 +194,7 @@
 	*Sphere bullet FF0000FF
 	{
 		*Data {0.7}
-		*Animation
+		*RootAnimation
 		{
 			*Style {Repeat}    // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
 			*Period {3}        // The period of the animation in seconds
@@ -221,6 +221,7 @@
 }
 *Instance instancing_example FFFF0000 // The name indicates which model to instance
 {
+	//*Animation {...}      // Animation data can be overridden
 	*o2w {*Pos {15 1 -10}}
 }
 *Instance instancing_example FF0000FF
@@ -1145,8 +1146,10 @@
 *Model model_from_file
 {
 	//*FilePath {"<model-filepath>"} // The file to create the model from
-	*GenerateNormals {30}          // Generate normals for the model (smoothing angle between faces)
-	*BakeTransform {*pos{0 0 0}}   // Optional. Bake a transform into the model (independent of *o2w)
+	*Parts {}                        // Only load named models from the file
+	*Animation {}                    // Load animation data from the model file
+	*GenerateNormals {30}            // Generate normals for the model (smoothing angle between faces)
+	*BakeTransform {*pos{0 0 0}}     // Optional. Bake a transform into the model (independent of *o2w)
 }
 
 

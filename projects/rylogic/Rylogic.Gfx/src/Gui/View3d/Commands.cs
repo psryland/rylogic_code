@@ -450,12 +450,13 @@ namespace Rylogic.Gui.WPF
 		{
 			if (m_animation_ui == null)
 			{
+				var owner = System.Windows.Window.GetWindow(this) ?? throw new System.Exception("No owner");
 				m_animation_ui = new Window
 				{
 					WindowStyle = WindowStyle.ToolWindow,
-					WindowStartupLocation = WindowStartupLocation.CenterOwner,
-					Owner = System.Windows.Window.GetWindow(this),
-					Icon = System.Windows.Window.GetWindow(this)?.Icon,
+					WindowStartupLocation = WindowStartupLocation.Manual,
+					Owner = owner,
+					Icon = owner.Icon,
 					Title = "Animation Controls",
 					SizeToContent = SizeToContent.WidthAndHeight,
 					ResizeMode = ResizeMode.CanResizeWithGrip,
@@ -464,6 +465,13 @@ namespace Rylogic.Gui.WPF
 				m_animation_ui.Content = new View3dAnimControls
 				{
 					ViewWindow = Window
+				};
+				m_animation_ui.Loaded += delegate
+				{
+					var bounds = m_animation_ui.Bounds();
+					var owner_bounds = m_animation_ui.Owner.Bounds();
+					m_animation_ui.Left = owner_bounds.Left + (owner_bounds.Width - bounds.Width) / 2;
+					m_animation_ui.Top = owner_bounds.Bottom - bounds.Height / 2;
 				};
 				m_animation_ui.Closed += delegate { m_animation_ui = null; };
 				m_animation_ui.Show();

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -247,16 +247,23 @@ namespace pr::rdr12::ldraw
 	};
 
 	// Information on a animation ldr object
-	struct AnimInfo
+	struct RootAnimInfo
 	{
-		EAnimStyle m_style = EAnimStyle::NoAnimation;
-		std::filesystem::path m_filepath = {};
-		pr::Range<int> m_frames = { 0, std::numeric_limits<int>::max() };
-		double m_period = {}; // Seconds
+		EAnimStyle m_style = EAnimStyle::Once;
+		double m_period = {1.0}; // Seconds
 		v4 m_vel = {}; // Linear velocity of the animation in m/s
 		v4 m_acc = {}; // Linear velocity of the animation in m/s
 		v4 m_avel = {}; // Angular velocity of the animation in rad/s
 		v4 m_aacc = {}; // Angular velocity of the animation in rad/s
+	};
+
+	// Information on a animation ldr object
+	struct KeyFrameAnimInfo
+	{
+		EAnimStyle m_style = EAnimStyle::Once;
+		FrameRange m_frame_range = { 0, std::numeric_limits<int>::max() };
+		TimeRange m_time_range = { 0, std::numeric_limits<double>::max() }; // Seconds
+		double m_stretch = { 1.0 }; // aka playback speed scale
 	};
 
 	// Forward declare the recursive object parsing function
@@ -494,8 +501,8 @@ namespace pr::rdr12::ldraw
 		}
 	}
 
-	// Parse a simple animation description
-	void ParseAnimation(IReader& reader, ParseParams& pp, AnimInfo& anim_info)
+	// Parse a root animation description
+	void ParseRootAnimation(IReader& reader, ParseParams& pp, RootAnimInfo& anim_info)
 	{
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
@@ -507,21 +514,9 @@ namespace pr::rdr12::ldraw
 					anim_info.m_style = reader.Enum<EAnimStyle>();
 					break;
 				}
-				case EKeyword::FilePath:
-				{
-					anim_info.m_filepath = reader.String<std::filesystem::path>();
-					break;
-				}
-				case EKeyword::FrameRange:
-				{
-					auto beg = reader.Int<int>();
-					auto end = !reader.IsSectionEnd() ? reader.Int<int>() : beg + 1;
-					anim_info.m_frames = { beg, std::max(end, beg + 1) };
-					break;
-				}
 				case EKeyword::Period:
 				{
-					anim_info.m_period = reader.Real<float>();
+					anim_info.m_period = reader.Real<double>();
 					break;
 				}
 				case EKeyword::Velocity:
@@ -542,6 +537,53 @@ namespace pr::rdr12::ldraw
 				case EKeyword::AngAccel:
 				{
 					anim_info.m_aacc = reader.Vector3f().w0();
+					break;
+				}
+				default:
+				{
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *RootAnimation", EKeyword_::ToStringA(kw)));
+					break;
+				}
+			}
+		}
+	}
+
+	// Parse a key frame animation description
+	void ParseKeyFrameAnimation(IReader& reader, ParseParams& pp, KeyFrameAnimInfo& anim_info)
+	{
+		auto section = reader.SectionScope();
+		for (EKeyword kw; reader.NextKeyword(kw);)
+		{
+			switch (kw)
+			{
+				case EKeyword::Style:
+				{
+					anim_info.m_style = reader.Enum<EAnimStyle>();
+					break;
+				}
+				case EKeyword::Frame:
+				{
+					auto frame = reader.Int<int>();
+					anim_info.m_frame_range = { frame, frame + 1 };
+					break;
+				}
+				case EKeyword::FrameRange:
+				{
+					auto beg = reader.Int<int>();
+					auto end = reader.Int<int>();
+					anim_info.m_frame_range = { beg, std::max(end, beg + 1) };
+					break;
+				}
+				case EKeyword::TimeRange:
+				{
+					auto t0 = reader.Real<float>();
+					auto t1 = reader.Real<float>();
+					anim_info.m_time_range = { t0, std::max(t1, t0) };
+					break;
+				}
+				case EKeyword::Stretch:
+				{
+					anim_info.m_stretch = reader.Real<double>();
 					break;
 				}
 				default:
@@ -643,15 +685,15 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::RootAnimation:
 			{
-				AnimInfo anim_info = {};
-				ParseAnimation(reader, pp, anim_info);
+				RootAnimInfo anim_info = {};
+				ParseRootAnimation(reader, pp, anim_info);
 				obj->m_root_anim.m_simple = { rdr12::New<rdr12::RootAnimation>(), true };
 				obj->m_root_anim.m_simple->m_style = anim_info.m_style;
+				obj->m_root_anim.m_simple->m_period = anim_info.m_period;
 				obj->m_root_anim.m_simple->m_vel = anim_info.m_vel;
 				obj->m_root_anim.m_simple->m_acc = anim_info.m_acc;
 				obj->m_root_anim.m_simple->m_avel = anim_info.m_avel;
 				obj->m_root_anim.m_simple->m_aacc = anim_info.m_aacc;
-				obj->m_root_anim.m_simple->m_period = anim_info.m_period;
 				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
 				return true;
 			}
@@ -4085,18 +4127,16 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Model
 	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
-		geometry::ESceneParts m_parts;
 		std::filesystem::path m_filepath;
 		std::unique_ptr<std::istream> m_file_stream;
 		std::unordered_set<string32> m_model_parts;
 		std::unordered_set<string32> m_skel_parts;
+		std::optional<KeyFrameAnimInfo> m_anim_info;
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
-		AnimInfo m_anim_info;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_parts(geometry::ESceneParts::ModelOnly)
 			, m_filepath()
 			, m_file_stream()
 			, m_gen_norms()
@@ -4127,9 +4167,8 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Animation:
 				{
-					m_anim_info.m_filepath = m_filepath;
-					ParseAnimation(reader, m_pp, m_anim_info);
-					m_parts |= geometry::ESceneParts::All;
+					m_anim_info = KeyFrameAnimInfo{};
+					ParseKeyFrameAnimation(reader, m_pp, *m_anim_info);
 					return true;
 				}
 				default:
@@ -4196,7 +4235,7 @@ namespace pr::rdr12::ldraw
 				}
 				ESceneParts Parts() const override
 				{
-					return m_this.m_parts;
+					return m_this.m_anim_info ? geometry::ESceneParts::All : geometry::ESceneParts::ModelOnly;
 				}
 				bool ModelFilter(std::string_view model_name) const override
 				{
@@ -4206,10 +4245,10 @@ namespace pr::rdr12::ldraw
 				{
 					return m_this.m_skel_parts.empty() || m_this.m_skel_parts.contains(skeleton_name);
 				}
-				pr::Range<int> FrameRange() const override
+				rdr12::FrameRange FrameRange() const override
 				{
 					// The frame range of animation data to return
-					return m_this.m_anim_info.m_frames;
+					return m_this.m_anim_info ? m_this.m_anim_info->m_frame_range : ModelGenerator::IModelOut::FrameRange();
 				}
 				EResult Model(ModelTree&& tree) override
 				{
@@ -4218,25 +4257,28 @@ namespace pr::rdr12::ldraw
 				}
 				EResult Animation(vector<SkeletonPtr>&& skels, vector<KeyFrameAnimationPtr>&& anims) override
 				{
+					if (!m_this.m_anim_info)
+						return EResult::Stop;
+
 					// Only use the first animation
 					auto const& animation = anims.front();
 					auto const& skeleton = pr::get_if(skels, [&](SkeletonPtr skel) { return skel->Id() == animation->m_skel_id; });
+					auto const& anim_info = *m_this.m_anim_info;
 
-					// Apply animation settings
-					animation->m_style = m_this.m_anim_info.m_style;
+					// Clamp the time range to the frame range
+					auto time_range = ToTimeRange(anim_info.m_frame_range, animation->m_frame_rate);
+					time_range = Intersect(time_range, animation->m_time_range);
+					time_range = Intersect(time_range, anim_info.m_time_range);
 
 					// Create an animator that uses the animation and a pose for it to animate
 					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(animation), true };
-					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator), true };
-					pose->AnimTime(0.0);
+					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
 
 					// Set the pose for each model in the hierarchy.
 					m_obj.Apply([&](LdrObject* obj)
 					{
-						if (obj->m_model)
-							obj->m_model->m_pose = pose;
-						
-						if (m_this.m_anim_info.m_style != EAnimStyle::NoAnimation)
+						obj->m_pose = pose;
+						if (anim_info.m_style != EAnimStyle::NoAnimation)
 							obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
 
 						return true;
@@ -5089,7 +5131,7 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Instance
 	template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
 	{
-		std::optional<AnimInfo> m_anim_info;
+		std::optional<KeyFrameAnimInfo> m_anim_info;
 		std::unordered_map<Pose const*, PosePtr> m_pose_map;
 
 		ObjectCreator(ParseParams& pp)
@@ -5103,8 +5145,8 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Animation:
 				{
-					m_anim_info = AnimInfo{};
-					ParseAnimation(reader, m_pp, *m_anim_info);
+					m_anim_info = KeyFrameAnimInfo{};
+					ParseKeyFrameAnimation(reader, m_pp, *m_anim_info);
 					return true;
 				}
 				default:
@@ -5127,27 +5169,34 @@ namespace pr::rdr12::ldraw
 
 			// Create an LdrObject instance for each nested object
 			RecursiveCreate(obj, source);
+
+			// Clone the pose if animation info is given
+			if (m_anim_info && source->m_pose != nullptr)
+			{
+				auto& anim_info = *m_anim_info;
+
+				// Clamp the time range to the frame range
+				auto time_range = ToTimeRange(anim_info.m_frame_range, source->m_pose->m_animator->FrameRate());
+				time_range = Intersect(time_range, source->m_pose->m_time_range);
+				time_range = Intersect(time_range, anim_info.m_time_range);
+
+				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, source->m_pose->m_animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
+
+				// Set the pose for each model in the hierarchy.
+				obj->Apply([&](LdrObject* obj)
+				{
+					obj->m_pose = pose;
+					if (m_anim_info->m_style != EAnimStyle::NoAnimation)
+						obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
+
+					return true;
+				}, "");
+			}
 		}
 		void RecursiveCreate(LdrObject* obj, LdrObject const* source)
 		{
 			obj->m_name = source->m_name;
 			obj->m_model = source->m_model;
-			obj->m_pose = nullptr;
-
-			// Clone the pose data if animation info is given
-			if (m_anim_info)
-			{
-				if (auto source_pose = coalesce(source->m_pose, source->m_model ? source->m_model->m_pose : nullptr))
-				{
-					// Create a new pose instance that is separate from the original
-					if (!m_pose_map.contains(source_pose.get()))
-						m_pose_map[source_pose.get()] = PosePtr{ rdr12::New<Pose>(m_pp.m_factory, source_pose->m_skeleton, source_pose->m_animator), true };
-
-					obj->m_pose = m_pose_map[source_pose.get()];
-					obj->m_pose->m_time_range = ToTimeRange(m_anim_info->m_frames, obj->m_pose->m_animator->FrameRate());
-					obj->m_pose->AnimTime(0.0);
-				}
-			}
 
 			for (auto source_child : source->m_child)
 			{

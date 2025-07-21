@@ -235,7 +235,7 @@ namespace pr::rdr12
 				(void)skeleton_name;
 				return true; // True means include the skeleton in the output
 			}
-			virtual pr::Range<int> FrameRange() const
+			virtual rdr12::FrameRange FrameRange() const
 			{
 				// The frame range of animation data to return
 				return { 0, std::numeric_limits<int>::max() };

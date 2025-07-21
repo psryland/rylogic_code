@@ -43,7 +43,6 @@ namespace pr::rdr12
 		, m_icount(icount)
 		, m_m2root(m2root)
 		, m_skin()
-		, m_pose()
 		, m_bbox(bbox)
 		, m_name(name)
 		, m_vstride(vstride)

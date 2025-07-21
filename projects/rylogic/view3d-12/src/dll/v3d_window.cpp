@@ -1173,8 +1173,9 @@ namespace pr::rdr12
 				auto issue = m_anim_data.m_issue.load();
 				m_anim_data.m_thread = std::thread([this, issue, rate]
 				{
-					// 'time' is the seconds/second step rate
-					auto start = system_clock::now();
+					// 'rate' is the seconds/second step rate
+					auto time0 = system_clock::now();
+					auto increment = tick_size_s * rate;
 					for (; ; std::this_thread::sleep_for(tick_size_s))
 					{
 						auto iss = m_anim_data.m_issue.load();
@@ -1182,12 +1183,11 @@ namespace pr::rdr12
 							break;
 
 						// Every loop is a tick, and the step size is 'time'. 
-						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed' 
-						auto increment = rate == 0.0 ? system_clock::now() - start : tick_size_s * rate;
-						start = system_clock::now();
-
-						// Update the animation clock
-						m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
+						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed'
+						if (rate == 0.0)
+							m_anim_data.m_clock.store(system_clock::now() - time0);
+						else
+							m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
 					}
 				});
 				m_wnd.m_rdr->AddPollCB({ this, AnimTick });

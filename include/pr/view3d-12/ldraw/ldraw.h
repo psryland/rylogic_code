@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // View3d
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -99,6 +99,7 @@ namespace pr::rdr12::ldraw
 		x(Fov               , = HashI("Fov"                   ))\
 		x(FovX              , = HashI("FovX"                  ))\
 		x(FovY              , = HashI("FovY"                  ))\
+		x(Frame             , = HashI("Frame"                 ))\
 		x(FrameRange        , = HashI("FrameRange"            ))\
 		x(FrustumFA         , = HashI("FrustumFA"             ))\
 		x(FrustumWH         , = HashI("FrustumWH"             ))\
@@ -182,6 +183,7 @@ namespace pr::rdr12::ldraw
 		x(TextLayout        , = HashI("TextLayout"            ))\
 		x(TextStream        , = HashI("TextStream"            ))\
 		x(Texture           , = HashI("Texture"               ))\
+		x(TimeRange         , = HashI("TimeRange"             ))\
 		x(Transpose         , = HashI("Transpose"             ))\
 		x(Triangle          , = HashI("Triangle"              ))\
 		x(TriList           , = HashI("TriList"               ))\

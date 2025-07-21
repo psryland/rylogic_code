@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -20,42 +20,7 @@ namespace pr::rdr12
 	// Return a transform representing the offset added by this object at time 'time_s'
 	m4x4 RootAnimation::EvaluateAtTime(double time_s) const
 	{
-		auto t = 0.0;
-		switch (m_style)
-		{
-			case EAnimStyle::NoAnimation:
-			{
-				t = 0.0;
-				break;
-			}
-			case EAnimStyle::Once:
-			{
-				t = Clamp(time_s, 0.0, m_period);
-				break;
-			}
-			case EAnimStyle::Repeat:
-			{
-				t = Wrap(time_s, 0.0, m_period);
-				break;
-			}
-			case EAnimStyle::Continuous:
-			{
-				t = time_s;
-				break;
-			}
-			case EAnimStyle::PingPong:
-			{
-				t = Wrap(time_s, 0.0, 2.0 * m_period);
-				t = t >= m_period ? 2.0 * m_period - t : t;
-				break;
-			}
-			default:
-			{
-				throw std::runtime_error("Unknown animation style");
-			}
-		}
-
-		auto time = static_cast<float>(t);
+		auto time = static_cast<float>(AdjTime(time_s, TimeRange{ 0.0, m_period }, m_style));
 		auto ang = 0.5f * m_aacc * Sqr(time) + m_avel * time;
 		auto lin = 0.5f * m_acc * Sqr(time) + m_vel * time + v4::Origin();
 		return m4x4::Transform(ang, lin);
@@ -70,23 +35,21 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KeyFrameAnimation::KeyFrameAnimation(uint64_t skel_id, EAnimStyle style, TimeRange time_range, double frame_rate)
+	KeyFrameAnimation::KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate)
 		: m_skel_id(skel_id)
-		, m_style(style)
 		, m_tracks()
 		, m_time_range(time_range)
 		, m_frame_rate(frame_rate)
 	{}
 
-	// Returns the linearly interpolated key frames a 'time_s'
-	void KeyFrameAnimation::EvaluateAtTime(double time_s, KeyFrameAnimation::Sample& out) const
+	// Sample each track at 'time_s'
+	template <typename Key> requires (std::is_assignable_v<Key, KeyFrame>)
+	static void EvaluateAtTime(double time_s, std::span<KeyFrameAnimation::Track const> tracks, std::span<Key> out)
 	{
-		out.resize(m_tracks.size());
-
-		// Sample each track at 'time_s'
-		std::for_each(std::execution::par, std::begin(m_tracks), std::end(m_tracks), [&](Track const& track)
+		assert(tracks.size() == out.size());
+		std::for_each(std::execution::par, std::begin(tracks), std::end(tracks), [&](KeyFrameAnimation::Track const& track)
 		{
-			auto& sam = out[&track - m_tracks.data()];
+			auto& sam = out[&track - tracks.data()];
 
 			// Degenerate tracks
 			if (track.empty())
@@ -96,53 +59,12 @@ namespace pr::rdr12
 			}
 
 			// The total length of the track
-			auto time0_s = track.front().m_time; // Don't assume front().m_time is 0.0
-			auto period_s = track.back().m_time - time0_s;
-			if (period_s <= maths::tinyd) // handles track.size() == 1 as well
+			auto time_range = TimeRange{ track.front().m_time, track.back().m_time };
+			if (time_range.size() <= maths::tinyd) // handles track.size() == 1 as well
 			{
 				sam = track.front();
 				return;
 			}
-
-			// Wrap time into the track's time range
-			auto rtime_s = time_s - time0_s; // Relative time
-			switch (m_style)
-			{
-				case EAnimStyle::NoAnimation:
-				{
-					rtime_s = 0.0;
-					break;
-				}
-				case EAnimStyle::Once:
-				{
-					rtime_s = Clamp(rtime_s, 0.0, period_s);
-					break;
-				}
-				case EAnimStyle::Repeat:
-				{
-					rtime_s = Wrap(rtime_s, 0.0, period_s);
-					break;
-				}
-				case EAnimStyle::Continuous:
-				{
-					// todo: root motion
-					rtime_s = Wrap(rtime_s, 0.0, period_s);
-					break;
-				}
-				case EAnimStyle::PingPong:
-				{
-					rtime_s = Wrap(rtime_s, 0.0, 2.0 * period_s);
-					rtime_s = rtime_s >= period_s ? 2.0 * period_s - rtime_s : rtime_s;
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown animation style");
-				}
-			}
-
-			// Convert the wrapped time back to absolute time
-			time_s = rtime_s + time0_s;
 
 			// Find the frames to interpolate between. Lower bound finds the first element with 'key.m_time >= time_s'
 			auto iter = std::lower_bound(std::begin(track), std::end(track), time_s, [](KeyFrame const& key, double time_s) { return key.m_time < time_s; });
@@ -164,10 +86,21 @@ namespace pr::rdr12
 			sam = Lerp(lhs, rhs, s_cast<float>(frac));
 		});
 	}
+
+	// Returns the linearly interpolated key frames a 'time_s'
+	void KeyFrameAnimation::EvaluateAtTime(double time_s, std::span<m4x4> out) const
+	{
+		rdr12::EvaluateAtTime(time_s, m_tracks, out);
+	}
+	void KeyFrameAnimation::EvaluateAtTime(double time_s, KeyFrameAnimation::Sample& out) const
+	{
+		out.resize(m_tracks.size());
+		rdr12::EvaluateAtTime(time_s, m_tracks, out.span());
+	}
 	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(double time_s) const
 	{
-		KeyFrameAnimation::Sample sample;
-		EvaluateAtTime(time_s, sample);
+		KeyFrameAnimation::Sample sample(m_tracks.size());
+		rdr12::EvaluateAtTime(time_s, m_tracks, sample.span());
 		return sample;
 	}
 
@@ -176,5 +109,49 @@ namespace pr::rdr12
 	{
 		auto anim = static_cast<KeyFrameAnimation*>(doomed);
 		rdr12::Delete(anim);
+	}
+
+	// --------------------------------------------------------------------------------------------
+
+	double AdjTime(double time_s, TimeRange time_range, EAnimStyle style)
+	{
+		// Wrap time into the track's time range
+		auto rtime_s = time_s - time_range.begin(); // Relative time
+		switch (style)
+		{
+			case EAnimStyle::NoAnimation:
+			{
+				rtime_s = 0.0;
+				break;
+			}
+			case EAnimStyle::Once:
+			{
+				rtime_s = Clamp(rtime_s, 0.0, time_range.size());
+				break;
+			}
+			case EAnimStyle::Repeat:
+			{
+				rtime_s = Wrap(rtime_s, 0.0, time_range.size());
+				break;
+			}
+			case EAnimStyle::Continuous:
+			{
+				rtime_s = rtime_s;
+				break;
+			}
+			case EAnimStyle::PingPong:
+			{
+				rtime_s = Wrap(rtime_s, 0.0, 2.0 * time_range.size());
+				rtime_s = rtime_s >= time_range.size() ? 2.0 * time_range.size() - rtime_s : rtime_s;
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown animation style");
+			}
+		}
+		
+		// Convert the wrapped time back to absolute time
+		time_s = rtime_s + time_range.begin();
 	}
 }

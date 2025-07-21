@@ -1382,7 +1382,7 @@ namespace pr::rdr12
 			vector<KeyFrameAnimationPtr> anims;
 			for (auto const& fbxanim : scene.animations())
 			{
-				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimStyle::Once, fbxanim.m_time_range, fbxanim.m_frame_rate), true);
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, fbxanim.m_time_range, fbxanim.m_frame_rate), true);
 				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
 
 				// Read the key frame data

@@ -318,7 +318,6 @@ namespace Rylogic.Common
 		//          var wnd = (Thing?)gc.Target ?? throw new Exception("'this' pointer must be provided in CreateWindowEx"));
 		//      }
 
-		//private readonly T m_managed_object;
 		private readonly GCHandleType m_type;
 		private readonly GCHandle m_handle;
 		private bool m_disposed;
@@ -326,7 +325,6 @@ namespace Rylogic.Common
 		public PinnedObject(T obj, GCHandleType type)
 		{
 			m_type = type;
-			//m_managed_object = obj;
 			m_handle = GCHandle.Alloc(obj, type);
 			Pointer = type switch
 			{

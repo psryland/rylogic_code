@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -127,7 +127,7 @@ namespace pr::rdr12
 		v4         m_acc;    // Linear velocity of the animation in m/s
 		v4         m_avel;   // Angular velocity of the animation in rad/s
 		v4         m_aacc;   // Angular velocity of the animation in rad/s
-		double     m_period; // Seconds
+		double     m_period; // Time range in seconds
 		EAnimStyle m_style;  // The animation style
 
 		RootAnimation();
@@ -151,20 +151,23 @@ namespace pr::rdr12
 		using Tracks = pr::vector<Track>;
 
 		uint64_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
-		EAnimStyle m_style;     // The animation style
 		Tracks m_tracks;        // A track for each skeleton bone
 		TimeRange m_time_range; // The time range spanned by this animation
-		double m_frame_rate;    // The native frame rate of the anim, so we can convert from frames <-> seconds
+		double m_frame_rate;    // The native frame rate of the animation, so we can convert from frames <-> seconds
 
-		KeyFrameAnimation(uint64_t skel_id, EAnimStyle style, TimeRange time_range, double frame_rate);
+		KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate);
 
 		// Returns the interpolated key frames a 'time_s'
+		void EvaluateAtTime(double time_s, std::span<m4x4> out) const;
 		void EvaluateAtTime(double time_s, Sample& out) const;
 		Sample EvaluateAtTime(double time_s) const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KeyFrameAnimation>* doomed);
 	};
+
+	// Use 'style' to adjust 'time_s' so that it is within the given time range
+	double AdjTime(double time_s, TimeRange time_range, EAnimStyle style);
 
 	// Convert a frame range to a time range based on the given frame rate
 	inline TimeRange ToTimeRange(FrameRange frames, double frame_rate)
