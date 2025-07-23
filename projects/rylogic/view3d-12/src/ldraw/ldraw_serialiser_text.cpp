@@ -101,7 +101,7 @@ namespace pr::rdr12::ldraw
 	{
 		auto& pp = as<script::Preprocessor>(m_pp);
 		script::EatDelimiters(pp, m_delim.c_str());
-		return *pp == '}';
+		return *pp == '}' || *pp == 0;
 	}
 
 	// True when the source is exhausted

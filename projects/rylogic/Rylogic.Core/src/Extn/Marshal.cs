@@ -352,7 +352,7 @@ namespace Rylogic.Common
 		public IntPtr Pointer { get; }
 
 		/// <summary>The managed object being pinned</summary>
-		public T ManangedObject
+		public T ManagedObject
 		{
 			get => (T?)m_handle.Target ?? throw new Exception("Pinned object is null");
 			set

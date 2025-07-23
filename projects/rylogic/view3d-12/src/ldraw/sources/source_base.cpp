@@ -60,6 +60,7 @@ namespace pr::rdr12::ldraw
 	void __stdcall SourceBase::OnReportError(void* ctx, EParseError err, Location const& loc, std::string_view msg)
 	{
 		auto this_ = static_cast<SourceBase*>(ctx);
+		if (this_->m_errors.size() >= 100) return;
 		this_->m_errors.push_back(ParseErrorEventArgs{ msg, err, loc });
 	}
 	bool __stdcall SourceBase::OnProgress(void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete)

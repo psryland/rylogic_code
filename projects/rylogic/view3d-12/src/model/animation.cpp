@@ -115,8 +115,10 @@ namespace pr::rdr12
 
 	double AdjTime(double time_s, TimeRange time_range, EAnimStyle style)
 	{
+		// Relative time
+		auto rtime_s = time_s - time_range.begin();
+
 		// Wrap time into the track's time range
-		auto rtime_s = time_s - time_range.begin(); // Relative time
 		switch (style)
 		{
 			case EAnimStyle::NoAnimation:
@@ -152,6 +154,6 @@ namespace pr::rdr12
 		}
 		
 		// Convert the wrapped time back to absolute time
-		time_s = rtime_s + time_range.begin();
+		return rtime_s + time_range.begin();
 	}
 }

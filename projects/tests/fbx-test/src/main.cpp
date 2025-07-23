@@ -58,8 +58,8 @@ __declspec(allocate(".CRT$XCT")) void (__cdecl* pInitDllDirectory)(void) = &Init
 int main()
 {
 	std::filesystem::path ifilepath{
-		//"E:\\Rylogic\\Code\\art\\models\\pendulum\\pendulum.fbx"
-		"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx"
+		"E:\\Rylogic\\Code\\art\\models\\pendulum\\pendulum.fbx"
+		//"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx"
 		//"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx"
 		//"E:\\Dump\\biplane.fbx"
 	};
@@ -67,10 +67,10 @@ int main()
 		"E:\\Dump\\model.p3d"
 	};
 	std::filesystem::path ofilepath{
-		"E:\\Dump\\Hyperpose\\fbx-round-trip.fbx"
+		"E:\\Dump\\LDraw\\fbx-round-trip.fbx"
 	};
 	std::filesystem::path dfilepath{
-		"E:\\Dump\\Hyperpose\\fbx-dump-animchar.txt"
+		"E:\\Dump\\LDraw\\fbx-dump-animchar.txt"
 	};
 
 	std::ifstream ifile(ifilepath, std::ios::binary);
@@ -82,11 +82,12 @@ int main()
 	fbx::Scene scene(ifile);
 	scene.Dump({
 		.m_parts =
+			fbx::EParts::NodeHierarchy |
 			fbx::EParts::Meshes |
 			fbx::EParts::Skeletons |
 			fbx::EParts::Skins |
 			fbx::EParts::None,
-		.m_convert_axis_system = true,
+		.m_coord_system = fbx::ECoordSystem::PosX_PosY_NegZ,
 		.m_triangulate_meshes = true,
 	}, dfile);
 

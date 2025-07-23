@@ -336,6 +336,29 @@ namespace pr
 		return S(0.5) * ACos(CosAngle2(a,b));
 	}
 
+	// Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation
+	template <Scalar S, typename A, typename B> inline Vec4<S, void> pr_vectorcall LogMap(Quat_cref<S,A,B> q)
+	{
+		auto angle = ACos(Clamp(q.w, -1.0f, +1.0f));
+		auto s = Sin(angle);
+		if (s < maths::tinyf)
+			return {};
+
+		angle /= s;
+		return { q.x * angle, q.y * angle, q.z * angle, 0.f };
+	}
+
+	// Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.
+	template <Scalar S> inline Quat<S, void, void> pr_vectorcall ExpMap(Vec4_cref<S,void> v)
+	{
+		auto theta = Length(v);
+		if (theta < maths::tinyf)
+			return { 0, 0, 0, 1 };
+
+		auto s = Sin(theta) / theta;
+		return { v.x * s, v.y * s, v.z * s, Cos(theta) };
+	}
+
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
 	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall Scale(Quat_cref<S,A,B> q, S frac)
 	{
@@ -508,6 +531,12 @@ namespace pr::maths
 
 			auto actual_mean = avr.Mean();
 			PR_CHECK(FEqlRelative(ideal_mean, actual_mean, S(0.01)), true);
+		}
+		{// LogMap <-> ExpMap
+			auto q0 = quat::Random(rng);
+			auto v = LogMap(q0);
+			auto q1 = ExpMap(v);
+			PR_EXPECT(FEql(q0, q1));
 		}
 	}
 

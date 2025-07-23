@@ -474,6 +474,7 @@ namespace Rylogic.Gui.WPF
 					m_animation_ui.Top = owner_bounds.Bottom - bounds.Height / 2;
 				};
 				m_animation_ui.Closed += delegate { m_animation_ui = null; };
+				new PinData(m_animation_ui, EPin.BottomCentre, true);
 				m_animation_ui.Show();
 			}
 			m_animation_ui.Focus();

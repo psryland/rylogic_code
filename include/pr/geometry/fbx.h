@@ -32,6 +32,28 @@ namespace pr::geometry::fbx
 	//  - Using *.fbx files requires the AutoDesk FBX SDK.
 	//  - *No* memory allocation expose across DLL boundary (i.e. no 'stl')
 	//    Uses the pimpl pattern
+	//
+	// Blender Export Settings:
+	//  - If exporting from blender use:
+	//    include:
+	//       Object Types: Mesh, Armature,
+	//    Transform:
+	//        Scale: 1.0
+	//        Apply Settings: All Local
+	//        Forward: -Z Forward
+	//        Up: Y Up
+	//        Apply Unit: Yes
+	//        Use Space Transform: Yes
+	//        Apply Transform: No
+	//    Geometry:
+	//        Whatever you like
+	//    Armature:
+	//        Primary: Y Axis
+	//        Secondary: X Axis
+	//        Armature FBXNode Type: Null
+	//        Only Deform Bones: No
+	//        Add Leaf Bones: No
+
 
 	struct Context;
 	struct SceneData;
@@ -62,6 +84,14 @@ namespace pr::geometry::fbx
 
 	// Parts of an FBX Scene
 	using EParts = ESceneParts;
+
+	// Axis systems the scene can be converted to
+	enum class ECoordSystem
+	{
+		// Right, Up, Forward
+		PosX_PosY_NegZ,
+		PosX_PosZ_PosY,
+	};
 
 	// Metadata in the scene
 	struct SceneProps
@@ -96,6 +126,9 @@ namespace pr::geometry::fbx
 	{
 		// Parts of the scene to read
 		EParts m_parts = EParts::All;
+	
+		// The coordinate system to convert the scene to
+		ECoordSystem m_coord_system = ECoordSystem::PosX_PosY_NegZ;
 
 		// The animation frame range to read
 		pr::Range<int> m_frame_range = { 0, std::numeric_limits<int>::max() };
@@ -116,11 +149,11 @@ namespace pr::geometry::fbx
 		// Parts of the scene to dump
 		EParts m_parts = EParts::All;
 
+		// The coordinate system to convert the scene to
+		ECoordSystem m_coord_system = ECoordSystem::PosX_PosY_NegZ;
+
 		// The number to cap output of arrays at
 		int m_summary_length = 10;
-
-		// Transform the scene to 'Y=up, -Z=forward"
-		bool m_convert_axis_system = true;
 
 		// Run triangulation on meshes before outputting them
 		bool m_triangulate_meshes = false;

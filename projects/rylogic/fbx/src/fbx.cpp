@@ -180,6 +180,22 @@ namespace fbxsdk
 		}
 		return out;
 	}
+	inline static FbxAxisSystem::EUpVector operator +(FbxAxisSystem::EUpVector v)
+	{
+		return static_cast<FbxAxisSystem::EUpVector>(+static_cast<int>(v));
+	}
+	inline static FbxAxisSystem::EUpVector operator -(FbxAxisSystem::EUpVector v)
+	{
+		return static_cast<FbxAxisSystem::EUpVector>(-static_cast<int>(v));
+	}
+	inline static FbxAxisSystem::EFrontVector operator +(FbxAxisSystem::EFrontVector v)
+	{
+		return static_cast<FbxAxisSystem::EFrontVector>(+static_cast<int>(v));
+	}
+	inline static FbxAxisSystem::EFrontVector operator -(FbxAxisSystem::EFrontVector v)
+	{
+		return static_cast<FbxAxisSystem::EFrontVector>(-static_cast<int>(v));
+	}
 }
 namespace pr
 {
@@ -366,8 +382,8 @@ namespace pr::geometry::fbx
 	};
 	struct KeyTime
 	{
-		FbxTime time;
-		FbxAnimCurveDef::EInterpolationType interpolation;
+		FbxTime time = {};
+		FbxAnimCurveDef::EInterpolationType interpolation = {};
 		bool operator == (KeyTime const& rhs) const { return time == rhs.time; }
 		bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
 	};
@@ -633,6 +649,8 @@ namespace pr::geometry::fbx
 		//  - Root nodes for meshes, skeletons can occur at any level.
 		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
 		//    node is the start of a new mesh/skeleton hierarchy.
+		meshes.clear();
+		bones.clear();
 
 		struct NodeAndLevel { FbxNode* ptr; int level; };
 		vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
@@ -674,6 +692,28 @@ namespace pr::geometry::fbx
 		std::string address = Address(node->GetParent());
 		return std::move(address.append(address.empty() ? "" : ".").append(node->GetName()));
 	}
+			
+	// Convert 'scene' to the requested coordinate system
+	static void ConvertScene(FbxScene& scene, ECoordSystem coord_system)
+	{
+		switch (coord_system)
+		{
+			case ECoordSystem::PosX_PosY_NegZ:
+			{
+				FbxAxisSystem(FbxAxisSystem::eYAxis, +FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded).ConvertScene(&scene);
+				break;
+			}
+			case ECoordSystem::PosX_PosZ_PosY:
+			{
+				FbxAxisSystem(FbxAxisSystem::eZAxis, +FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded).ConvertScene(&scene);
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown coordinate system");
+			}
+		}
+	}
 
 	// RAII fbx array wrapper
 	template <typename T>
@@ -698,7 +738,7 @@ namespace pr::geometry::fbx
 		using SceneCont = vector<std::unique_ptr<SceneData>>;
 
 		ErrorHandler m_error_cb;
-		FbxManager* m_manager;
+		ManagerPtr m_manager;
 		FbxIOSettings* m_settings;
 		char const* m_version;
 		SceneCont m_scenes;
@@ -706,7 +746,7 @@ namespace pr::geometry::fbx
 		Context(ErrorHandler error_cb)
 			: m_error_cb(error_cb)
 			, m_manager(Check(FbxManager::Create(), "Error: Unable to create FBX Manager"))
-			, m_settings(Check(FbxIOSettings::Create(m_manager, IOSROOT), "Error: Unable to create settings"))
+			, m_settings(Check(FbxIOSettings::Create(m_manager.get(), IOSROOT), "Error: Unable to create settings"))
 			, m_version(m_manager->GetVersion())
 			, m_scenes()
 		{
@@ -781,16 +821,6 @@ namespace pr::geometry::fbx
 		Context(Context const&) = delete;
 		Context& operator=(Context&&) = delete;
 		Context& operator=(Context const&) = delete;
-		~Context()
-		{
-			// Notes:
-			//  - FbxImporter must be destroyed before any FbxScenes it creates because of bugs in the 'fbxsdk' dll.
-			m_scenes.clear();
-
-			// Delete the FBX Manager. All the objects that have been allocated using the FBX Manager and that haven't been explicitly destroyed are also automatically destroyed.
-//			if (m_manager != nullptr)
-//				m_manager->Destroy();
-		}
 
 		// Return the file format ID for the give format (use 'Formats')
 		int FileFormatID(char const* format) const
@@ -846,11 +876,11 @@ namespace pr::geometry::fbx
 
 		FbxManager* operator ->() const
 		{
-			return m_manager;
+			return m_manager.get();
 		}
 		operator FbxManager* () const
 		{
-			return m_manager;
+			return m_manager.get();
 		}
 	};
 
@@ -894,8 +924,8 @@ namespace pr::geometry::fbx
 	struct AnimationData
 	{
 		SkeletonData const* m_skel; // The skeleton that these tracks should match
-		vector<int> m_offsets; // The offset to the start of each bone's track
-		vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
+		std::vector<int> m_offsets; // The offset to the start of each bone's track
+		std::vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
 		Animation::TimeRange m_time_range; // The time span of the animation
 		double m_frame_rate; // The native frame rate of the animation
 
@@ -1047,13 +1077,15 @@ namespace pr::geometry::fbx
 			// Bake transforms into the nodes
 			m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
 
-			// Store the original axis system before any modifications
-			auto original = m_fbxscene.GetGlobalSettings().GetAxisSystem();
-			auto target = FbxAxisSystem{FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded};
-			
-			// If we need axis system conversion, we need to be careful about order
-			if (original != target)
-				target.ConvertScene(&m_fbxscene);
+			// Convert the coordinate system
+			ConvertScene(m_fbxscene, m_opts.m_coord_system);
+
+			// Triangulate all the mesh nodes in the scene (this is faster than doing it per-mesh)
+			FbxGeometryConverter converter(m_fbxscene.GetFbxManager());
+			converter.Triangulate(&m_fbxscene, true);
+
+			// Update the hierarchy after replacing the meshes with triangulated meshes
+			TraverseHierarchy(m_fbxscene, EParts::All, m_meshes, m_bones);
 		}
 
 		// Read the scene
@@ -1162,10 +1194,11 @@ namespace pr::geometry::fbx
 				// Create thread-local manager and scene
 				ManagerPtr manager{ FbxManager::Create() };
 				ScenePtr scene{ FbxScene::Create(manager.get(), "IsolatedScene") };
+				ConvertScene(*scene, m_opts.m_coord_system);
 
 				// Clone the mesh
 				auto fbxmesh = FbxCast<FbxMesh>(meshnode.mesh->Clone(FbxObject::eDeepClone, scene.get()));
-				
+
 				// Start a task to convert the geometry
 				tasks.emplace_back(std::async(std::launch::async, [m = std::move(manager), s = std::move(scene), id, fbxmesh]
 				{
@@ -1174,6 +1207,8 @@ namespace pr::geometry::fbx
 
 					// Ensure the mesh is triangles
 					auto trimesh = fbxmesh;
+					assert(trimesh->IsTriangleMesh()); // Handled by scene triangulation
+#if 0
 					if (!trimesh->IsTriangleMesh())
 					{
 						// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
@@ -1191,7 +1226,7 @@ namespace pr::geometry::fbx
 						if (!trimesh->IsTriangleMesh()) // If triangulation failed, ignore the mesh
 							throw std::runtime_error(std::format("Failed to convert mesh '{}' to a triangle mesh", trimesh->GetName()));
 					}
-
+#endif
 					// "Inflate" the verts into a unique list of each required combination
 					{
 						auto vcount = trimesh->GetControlPointsCount();
@@ -1352,7 +1387,9 @@ namespace pr::geometry::fbx
 				mesh.m_level = meshnode.level - rootnode.level;
 
 				// Determine the object to parent transform.
-				mesh.m_o2p = To<m4x4>(node.EvaluateLocalTransform());
+				mesh.m_o2p = meshnode.root == meshnode.mesh
+					? To<m4x4>(node.EvaluateGlobalTransform())
+					: To<m4x4>(node.EvaluateLocalTransform());
 
 				// Read the skinning data for this mesh
 				if (AllSet(m_opts.m_parts, EParts::Skins))
@@ -1466,9 +1503,10 @@ namespace pr::geometry::fbx
 					, m_roots()
 					, m_mesh_to_skel_map()
 				{}
+
+				// Find the skeleton roots for all bones referenced by this mesh-tree
 				void Collect(std::span<MeshNode const> meshtree, MeshNodeMap& mesh_map)
 				{
-					// Find the skeleton roots for all bones referenced by this mesh-tree
 					for (auto const& mesh : meshtree)
 					{
 						auto& fbxmesh = *mesh_map[mesh.mesh->GetUniqueID()].mesh;
@@ -1493,12 +1531,16 @@ namespace pr::geometry::fbx
 						}
 					}
 				}
+
+				// Recursive function that finds all bones from a root and adds them to 'm_bone_set'
 				void CollectBones(FbxSkeleton const& bone)
 				{
 					m_bone_set.insert(&bone);
 					for (auto& child : Children<FbxSkeleton>(*bone.GetNode()))
 						CollectBones(child);
 				}
+
+				// Build the unique skeletons
 				void Build()
 				{
 					// For each root, add all connected bones (children) to the bone set
@@ -1516,7 +1558,7 @@ namespace pr::geometry::fbx
 						}
 
 						// Build a list of the roots that are part of this skeleton
-						vector<BoneNode const*> roots;
+						vector<BoneNode const*, 4> roots;
 						for (auto& [root, s] : m_roots)
 						{
 							// If any meshes in 's' are in 'set', then add 'r' to 'roots' and 's' to 'set'
@@ -1554,6 +1596,8 @@ namespace pr::geometry::fbx
 							m_roots.erase(root);
 					}
 				}
+
+				// Build a skeleton by recursively adding child bones
 				void Build(SkeletonData& skeleton, FbxPose const* bind_pose, BoneNode const& bone_node, int level)
 				{
 					auto const& bone = *bone_node.bone;
@@ -1709,15 +1753,15 @@ namespace pr::geometry::fbx
 					m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
 
 					// Read the key frame times for all bones
-					vector<uint64_t> bone_id_lookup(m_bones.size());
-					vector<KeyTimes> times_per_bone(m_bones.size());
+					vector<uint64_t, 1> bone_id_lookup(m_bones.size());
+					vector<KeyTimes, 1> times_per_bone(m_bones.size());
 					for (auto& [id, bonenode] : m_bones)
 					{
 						times_per_bone[bonenode.index] = FindKeyFrameTimes(*bonenode.bone->GetNode());
 						bone_id_lookup[bonenode.index] = id;
 					}
 
-					vector<AnimationData> animations;
+					vector<AnimationData, 1> animations;
 
 					// Animations are associated with a skeleton. Create an animation for each
 					// skeleton that contains a bone that is moved by this animation.
@@ -1953,6 +1997,7 @@ namespace pr::geometry::fbx
 		MeshNodeMap m_meshes;
 		BoneNodeMap m_bones;
 		DumpOptions const& m_opts;
+		double m_frame_rate;
 
 		Dumper(FbxScene& fbxscene, DumpOptions const& opts, std::ostream& out)
 			: m_out(out)
@@ -1960,15 +2005,11 @@ namespace pr::geometry::fbx
 			, m_meshes()
 			, m_bones()
 			, m_opts(opts)
+			, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
 		{
-			if (m_opts.m_convert_axis_system)
-			{
-				auto basis0 = FbxAxisSystem{ FbxAxisSystem::eYAxis, FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded };
-				auto basis1 = m_fbxscene.GetGlobalSettings().GetAxisSystem();
-				if (basis0 != basis1)
-					basis0.ConvertScene(&m_fbxscene);
-			}
-
+			// Bake transforms into the nodes
+			m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
+			ConvertScene(m_fbxscene, m_opts.m_coord_system);
 			out << std::showpos;
 		}
 
@@ -2007,17 +2048,17 @@ namespace pr::geometry::fbx
 			vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
 			for (; !stack.empty(); )
 			{
-				auto [node, level] = stack.back();
+				NodeAndLevel nl = stack.back();
 				stack.pop_back();
 
-				m_out << Indent(level) << "Node \"" << node->GetName() << "\":\n";
+				m_out << Indent(nl.level) << "Node \"" << nl.node->GetName() << "\":\n";
 
 				// Attributes
 				{
-					m_out << Indent(level + 1) << "Attributes: [" << node->GetNodeAttributeCount() << "] ";
-					for (int i = 0, iend = node->GetNodeAttributeCount(); i != iend; ++i)
+					m_out << Indent(nl.level + 1) << "Attributes: [" << nl.node->GetNodeAttributeCount() << "] ";
+					for (int i = 0, iend = nl.node->GetNodeAttributeCount(); i != iend; ++i)
 					{
-						auto& attr = *node->GetNodeAttributeByIndex(i);
+						auto& attr = *nl.node->GetNodeAttributeByIndex(i);
 						m_out << (i != 0 ? ", " : "") << To<std::string_view>(attr.GetAttributeType());
 					}
 					m_out << "\n";
@@ -2025,13 +2066,13 @@ namespace pr::geometry::fbx
 
 				// Node Transform
 				{
-					auto o2p = To<m4x4>(node->EvaluateLocalTransform());
-					DumpTransform(level + 1, o2p);
+					auto o2p = To<m4x4>(nl.node->EvaluateLocalTransform());
+					DumpTransform(nl.level + 1, o2p);
 				}
 
 				// Recurse in depth first order
-				for (int i = node->GetChildCount(); i-- != 0; )
-					stack.push_back({ node->GetChild(i), level + 1 });
+				for (int i = nl.node->GetChildCount(); i-- != 0; )
+					stack.push_back({ nl.node->GetChild(i), nl.level + 1 });
 			}
 
 			m_out << "\n";
