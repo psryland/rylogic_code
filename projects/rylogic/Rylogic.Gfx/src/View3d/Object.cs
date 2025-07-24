@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
@@ -286,6 +287,41 @@ namespace Rylogic.Gfx
 				}
 			}
 
+			/// <summary>Recursively apply some operation to an object and it's children</summary>
+			public bool Apply(Func<Object, bool> func, string? name = null, Object? obj = null)
+			{
+				if (obj == null)
+				{
+					obj = this;
+				}
+				if (name == null)
+				{
+					if (!func(obj))
+						return false;
+				}
+				else if (name == string.Empty)
+				{
+					if (!func(obj)) return false;
+					foreach (var child in obj.Children)
+						if (!Apply(func, name, child))
+							return false;
+				}
+				else
+				{
+					if ((name[0] == '#' && Regex.IsMatch(obj.Name, name.Substring(1))) || obj.Name == name)
+					{
+						if (!func(obj))
+							return false;
+					}
+					foreach (var child in obj.Children)
+					{
+						if (!Apply(func, name, child))
+							return false;
+					}
+				}
+				return true;
+			}
+
 			/// <summary>Create a new Object that shares the model (but not transform) of this object</summary>
 			public Object CreateInstance()
 			{
@@ -353,9 +389,13 @@ namespace Rylogic.Gfx
 			}
 			public void VisibleSet(bool vis, string? name = null)
 			{
+				var prev = Visible;
 				View3D_ObjectVisibilitySet(Handle, vis, name);
-				NotifyPropertyChanged(nameof(Visible));
-				NotifyPropertyChanged(nameof(Flags));
+				if (prev != Visible)
+				{
+					NotifyPropertyChanged(nameof(Visible));
+					NotifyPropertyChanged(nameof(Flags));
+				}
 			}
 
 			/// <summary>
@@ -370,9 +410,13 @@ namespace Rylogic.Gfx
 			}
 			public void WireframeSet(bool vis, string? name = null)
 			{
+				var prev = Wireframe;
 				View3D_ObjectWireframeSet(Handle, vis, name);
-				NotifyPropertyChanged(nameof(Wireframe));
-				NotifyPropertyChanged(nameof(Flags));
+				if (prev != Wireframe)
+				{
+					NotifyPropertyChanged(nameof(Wireframe));
+					NotifyPropertyChanged(nameof(Flags));
+				}
 			}
 
 			/// <summary>
@@ -387,9 +431,13 @@ namespace Rylogic.Gfx
 			}
 			public void ShowNormalsSet(bool vis, string? name = null)
 			{
+				var prev = ShowNormals;
 				View3D_ObjectNormalsSet(Handle, vis, name);
-				NotifyPropertyChanged(nameof(ShowNormals));
-				NotifyPropertyChanged(nameof(Flags));
+				if (prev != ShowNormals)
+				{
+					NotifyPropertyChanged(nameof(ShowNormals));
+					NotifyPropertyChanged(nameof(Flags));
+				}
 			}
 			/// <summary>
 			/// Get/Set the object flags
@@ -400,11 +448,15 @@ namespace Rylogic.Gfx
 			}
 			public void FlagsSet(ELdrFlags flags, bool state, string? name = null)
 			{
+				var prev = Flags;
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
-				NotifyPropertyChanged(nameof(Flags));
-				NotifyPropertyChanged(nameof(Wireframe));
-				NotifyPropertyChanged(nameof(ShowNormals));
-				NotifyPropertyChanged(nameof(Visible));
+				if (prev != Flags)
+				{
+					NotifyPropertyChanged(nameof(Flags));
+					NotifyPropertyChanged(nameof(Wireframe));
+					NotifyPropertyChanged(nameof(ShowNormals));
+					NotifyPropertyChanged(nameof(Visible));
+				}
 			}
 
 			/// <summary>
@@ -416,8 +468,12 @@ namespace Rylogic.Gfx
 			}
 			public void SortGroupSet(ESortGroup group, string? name = null)
 			{
+				var prev = SortGroup;
 				View3D_ObjectSortGroupSet(Handle, group, name);
-				NotifyPropertyChanged(nameof(SortGroup));
+				if (prev != SortGroup)
+				{
+					NotifyPropertyChanged(nameof(SortGroup));
+				}
 			}
 
 			/// <summary>
@@ -429,8 +485,12 @@ namespace Rylogic.Gfx
 			}
 			public void NuggetFlagsSet(ENuggetFlag flags, bool state, string? name = null, int index = 0)
 			{
+				var prev = NuggetFlags;
 				View3D_ObjectNuggetFlagsSet(Handle, flags, state, name, index);
-				NotifyPropertyChanged(nameof(NuggetFlags));
+				if (prev != NuggetFlags)
+				{
+					NotifyPropertyChanged(nameof(NuggetFlags));
+				}
 			}
 
 			/// <summary>
@@ -442,8 +502,12 @@ namespace Rylogic.Gfx
 			}
 			public void NuggetTintSet(Colour32 tint, string? name = null, int index = 0)
 			{
+				var prev = NuggetTint;
 				View3D_ObjectNuggetTintSet(Handle, tint, name, index);
-				NotifyPropertyChanged(nameof(NuggetTint));
+				if (prev != NuggetTint)
+				{
+					NotifyPropertyChanged(nameof(NuggetTint));
+				}
 			}
 
 			/// <summary>
@@ -459,8 +523,12 @@ namespace Rylogic.Gfx
 			}
 			public void ColourSet(Colour32 colour, uint mask, string? name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
+				var prev = Colour;
 				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
-				NotifyPropertyChanged(nameof(Colour));
+				if (prev != Colour)
+				{
+					NotifyPropertyChanged(nameof(Colour));
+				}
 			}
 			public void ColourSet(Colour32 colour, string? name = null)
 			{

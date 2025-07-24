@@ -11,18 +11,13 @@ namespace Rylogic.Gfx
 		public sealed class ObjectManager :IDisposable, INotifyPropertyChanged
 		{
 			// Notes:
-			//  - This class provides the functionality for the object manager
+			//  - This class is the View-Model for the object manager.
 			//  - UI frameworks need to provide binding wrappers
-
-			/// <summary>Context IDs of objects to always exclude</summary>
-			public static HashSet<Guid> ExcludeCtxIds { get; } = new HashSet<Guid>();
-
 			public ObjectManager(Window window, IEnumerable<Guid> excluded)
 			{
-				m_window = null!;
 				Window = window;
-				Exclude = new HashSet<Guid>(Enumerable.Concat(ExcludeCtxIds, excluded));
-				Objects = new List<Object>();
+				Exclude = [.. Enumerable.Concat(ExcludeCtxIds, excluded)];
+				Objects = [];
 
 				SyncObjectsWithScene();
 			}
@@ -30,6 +25,9 @@ namespace Rylogic.Gfx
 			{
 				Window = null!;
 			}
+
+			/// <summary>Context IDs of objects to always exclude</summary>
+			public static HashSet<Guid> ExcludeCtxIds { get; } = [];
 
 			/// <summary>The scene that this manager is associated with</summary>
 			public Window Window
@@ -59,7 +57,7 @@ namespace Rylogic.Gfx
 					}
 				}
 			}
-			private Window m_window;
+			private Window m_window = null!;
 
 			/// <summary>Context Ids of objects not to show in the object manager</summary>
 			public HashSet<Guid> Exclude { get; }
@@ -72,17 +70,14 @@ namespace Rylogic.Gfx
 			{
 				// Read the objects from the scene
 				var objects = new HashSet<Object>();
-				Window.EnumObjects(objects.Add, Exclude.Contains);
+				Window.EnumObjects(objects.Add, x => !Exclude.Contains(x));
 				Objects.Sync(objects);
 				NotifyPropertyChanged(nameof(Objects));
 			}
 
-			/// <summary></summary>
+			/// <inheritdoc/>
 			public event PropertyChangedEventHandler? PropertyChanged;
-			private void NotifyPropertyChanged(string prop_name)
-			{
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-			}
+			private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 	}
 }

@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // UnitTest Runner
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************
@@ -200,7 +200,7 @@ namespace Rylogic.UnitTests
 		{
 			get
 			{
-				var path = Path_.CombinePath(Path_.Directory(Util.__FILE__()), "..\\..\\..\\..\\tests\\unittests\\res");
+				var path = Path_.CombinePath(Util.ThisDirectory(), "..\\..\\..\\..\\tests\\unittests\\res");
 				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Resource path '{path}' is missing");
 				return path;
 			}
@@ -211,7 +211,7 @@ namespace Rylogic.UnitTests
 		{
 			get
 			{
-				var path = Path_.CombinePath(Path_.Directory(Util.__FILE__()), "..\\..\\..\\..\\..\\lib");
+				var path = Path_.CombinePath(Util.ThisDirectory(), "..\\..\\..\\..\\..\\lib");
 				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Library path '{path}' is missing");
 				return path;
 			}

@@ -230,13 +230,17 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>__FILE__</summary>
-		public static string __FILE__([CallerFilePath] string caller_filepath = "")
+		public static string ThisFile([CallerFilePath] string caller_filepath = "")
 		{
 			return caller_filepath;
 		}
+		public static string ThisDirectory([CallerFilePath] string caller_filepath = "")
+		{
+			return Path.GetDirectoryName(caller_filepath) ?? string.Empty;
+		}
 
 		/// <summary>__LINE__</summary>
-		public static int __LINE__([CallerLineNumber] int caller_line_number = 0)
+		public static int ThisLine([CallerLineNumber] int caller_line_number = 0)
 		{
 			return caller_line_number;
 		}

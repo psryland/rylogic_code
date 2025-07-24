@@ -269,6 +269,28 @@ namespace Rylogic.Maths
 			return new Quat(lhs.xyzw * rhs.xyzw);
 		}
 
+		#region Parse
+		public static Quat Parse(string s)
+		{
+			if (s == null) throw new ArgumentNullException(nameof(s), "Quat.Parse() string argument was null");
+			var values = s.Split([' ', ',', '\t'], 4);
+			if (values.Length != 4) throw new FormatException("Quat.Parse() string argument does not represent a 4 component quaternion");
+			return new Quat(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
+		}
+		public static bool TryParse(string s, out Quat quat)
+		{
+			quat = Identity;
+			if (s == null) return false;
+			var values = s.Split([' ', ',', '\t'], 4);
+			return values.Length == 4 && float.TryParse(values[0], out quat.x) && float.TryParse(values[1], out quat.y) && float.TryParse(values[2], out quat.z) && float.TryParse(values[3], out quat.w);
+		}
+		public static Quat? TryParse(string s)
+		{
+			Quat quat;
+			return TryParse(s, out quat) ? (Quat?)quat : null;
+		}
+		#endregion
+
 		#region Random
 
 		/// <summary>Construct a random quaternion rotation</summary>

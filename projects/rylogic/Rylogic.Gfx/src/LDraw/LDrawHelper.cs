@@ -31,83 +31,83 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Create child object</summary>
-		public LdrPoint Point(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrPoint Point(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrPoint();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrLine Line(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrLine Line(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrLine();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrLineD LineD(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrLineD LineD(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrLineD();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrTriangle Triangle(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrTriangle Triangle(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrTriangle();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrPlane Plane(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrPlane Plane(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrPlane();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrCircle Circle(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrCircle Circle(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCircle();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrSphere Sphere(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrSphere Sphere(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrSphere();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrBox Box(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrBox Box(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrBox();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrCylinder Cylinder(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrCylinder Cylinder(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCylinder();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrCone Cone(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrCone Cone(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCone();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrSpline Spline(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrSpline Spline(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrSpline();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrFrustum Frustum(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrFrustum Frustum(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrFrustum();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrGroup Group(Serialiser.Name name, Serialiser.Colour colour)
+		public LdrGroup Group(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrGroup();
 			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			return child.name(name ?? new()).colour(colour ?? new());
 		}
 		public LdrCommands Command()
 		{
@@ -162,6 +162,9 @@ namespace Rylogic.LDraw
 		/// <summary>Write to a file</summary>
 		public void Save(string filepath, bool text = true)
 		{
+			if (Path.GetExtension(filepath) == "")
+				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr"));
+
 			using var file = File.Create(filepath);
 			var mem = text ? ToText() : ToBinary();
 			mem.CopyTo(file);
@@ -217,6 +220,10 @@ namespace Rylogic.LDraw
 		{
 			return o2w(rot, v4.Origin);
 		}
+		public TDerived ori(Quat q)
+		{
+			return o2w(m4x4.Transform(q, v4.Origin));
+		}
 		public TDerived pos(float x, float y, float z)
 		{
 			return o2w(m4x4.Translation(x, y, z));
@@ -232,10 +239,6 @@ namespace Rylogic.LDraw
 		public TDerived scale(float sx, float sy, float sz)
 		{
 			return ori(m3x4.Scale(sx, sy, sz));
-		}
-		public TDerived quat(Quat q)
-		{
-			return o2w(m4x4.Transform(q, v4.Origin));
 		}
 		public TDerived euler(float pitch_deg, float yaw_deg, float roll_deg)
 		{
@@ -431,7 +434,7 @@ namespace Rylogic.LDraw
 		public LdrLine lines(Span<v4> verts, Span<int> indices)
 		{
 			Debug.Assert((indices.Length % 2) == 0);
-			for (int i = 0; i < indices.Length; i += 2)
+			for (var i = 0; i < indices.Length; i += 2)
 				line(verts[indices[i+0]], verts[indices[i+1]]);
 
 			return this;
@@ -535,7 +538,7 @@ namespace Rylogic.LDraw
 		public LdrTriangle tris(Span<v4> verts, Span<int> faces)
 		{
 			Debug.Assert((faces.Length % 3) == 0);
-			for (int i = 0; i < faces.Length; i += 3)
+			for (var i = 0; i < faces.Length; i += 3)
 				tri(verts[faces[i+0]], verts[faces[i+1]], verts[faces[i+2]]);
 
 			return this;

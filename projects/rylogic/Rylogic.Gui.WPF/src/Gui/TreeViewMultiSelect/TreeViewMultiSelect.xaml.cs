@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -18,6 +19,64 @@ namespace Rylogic.Gui.WPF
 			InitializeComponent();
 			ExpandAll = Command.Create(this, ExpandAllInternal);
 			CollapseAll = Command.Create(this, CollapseAllInternal);
+		}
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			base.OnPreviewKeyDown(e);
+			if (e.Handled)
+				return;
+
+			switch (e.Key)
+			{
+				case Key.Down:
+				case Key.Up:
+				{
+					NavigateBy(e.Key == Key.Down ? +1 : -1);
+					e.Handled = true;
+					break;
+				}
+				case Key.Home:
+				case Key.End:
+				{
+					NavigateBy(e.Key == Key.End ? +int.MaxValue : -int.MaxValue);
+					e.Handled = true;
+					break;
+				}
+				case Key.PageDown:
+				case Key.PageUp:
+				{
+					NavigateBy(e.Key == Key.PageDown ? +10 : -10);
+					e.Handled = true;
+					break;
+				}
+				case Key.Left:
+				{
+					if (IsCtrlPressed)
+					{
+						CollapseCurrentItem();
+						e.Handled = true;
+					}
+					break;
+				}
+				case Key.Right:
+				{
+					if (IsCtrlPressed)
+					{
+						ExpandCurrentItem();
+						e.Handled = true;
+					}
+					break;
+				}
+				case Key.A:
+				{
+					if (IsCtrlPressed)
+					{
+						SelectAll();
+						e.Handled = true;
+					}
+					break;
+				}
+			}
 		}
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
@@ -102,6 +161,136 @@ namespace Rylogic.Gui.WPF
 			RaiseEvent(args);
 		}
 		private TreeViewItem? m_last_selected;
+
+		/// <summary>Navigate to the next visible item in the tree</summary>
+		private void NavigateBy(int direction)
+		{
+			var all_visible_items = GetTreeViewItems(this, false); // Only visible items
+			if (all_visible_items.Count == 0)
+				return;
+
+			var currently_selected = all_visible_items.FirstOrDefault(GetIsItemSelected);
+			if (currently_selected == null)
+			{
+				if (direction > 0)
+					SelectSingleItem(all_visible_items.First());
+				else if (direction < 0)
+					SelectSingleItem(all_visible_items.Last());
+				return;
+			}
+
+			var current_index = all_visible_items.IndexOf(currently_selected);
+			var new_index = (int)Math_.Clamp((long)current_index + direction, 0, all_visible_items.Count - 1);
+			SelectSingleItem(all_visible_items[new_index]);
+		}
+
+		/// <summary>Select a single item, clearing other selections unless Ctrl is pressed</summary>
+		private void SelectSingleItem(TreeViewItem item)
+		{
+			ArrayList removed = [];
+			ArrayList added = [];
+
+			if (!IsCtrlPressed)
+			{
+				// Clear all previous selections
+				var all_items = GetTreeViewItems(this, true);
+				foreach (var tree_item in all_items)
+				{
+					SetIsItemSelected(tree_item, false);
+					removed.Add(tree_item.Header);
+				}
+			}
+
+			// Select the new item
+			SetIsItemSelected(item, true);
+			m_last_selected = item;
+			added.Add(item.Header);
+
+			// Ensure the item is visible
+			item.BringIntoView();
+
+			// Focus the item
+			item.Focus();
+
+			// Notify selection changed
+			RaiseEvent(new SelectionChangedEventArgs(SelectionChangedEvent, removed, added));
+		}
+
+		/// <summary>Select all visible items</summary>
+		private void SelectAll()
+		{
+			var all_items = GetTreeViewItems(this, false);
+
+			var added = new ArrayList();
+			var removed = new ArrayList();
+
+			// Select all visible items
+			foreach (var item in all_items)
+			{
+				if (!GetIsItemSelected(item))
+				{
+					SetIsItemSelected(item, true);
+					added.Add(item.Header);
+				}
+			}
+
+			// Update the last selected item to the last item in the list
+			if (all_items.Count > 0)
+				m_last_selected = all_items.Last();
+
+			// Notify selection changed if any items were added
+			if (added.Count > 0)
+			{
+				var args = new SelectionChangedEventArgs(SelectionChangedEvent, removed, added);
+				RaiseEvent(args);
+			}
+		}
+
+		/// <summary>Expand the currently selected item</summary>
+		private void ExpandCurrentItem()
+		{
+			var currently_selected = GetTreeViewItems(this, false).FirstOrDefault(GetIsItemSelected);
+			if (currently_selected != null && currently_selected.HasItems && !currently_selected.IsExpanded)
+			{
+				currently_selected.IsExpanded = true;
+			}
+		}
+
+		/// <summary>Collapse the currently selected item</summary>
+		private void CollapseCurrentItem()
+		{
+			var currently_selected = GetTreeViewItems(this, false).FirstOrDefault(GetIsItemSelected);
+			if (currently_selected == null)
+				return;
+
+			if (currently_selected.IsExpanded)
+			{
+				currently_selected.IsExpanded = false;
+				return;
+			}
+
+			if (GetParentTreeViewItem(currently_selected) is TreeViewItem parent)
+			{
+				// Collapse the parent if it's expanded
+				if (parent.IsExpanded)
+					parent.IsExpanded = false;
+
+				// Move selection to the parent
+				SelectSingleItem(parent);
+			}
+		}
+
+		/// <summary>Get the parent TreeViewItem of the 'item'</summary>
+		private TreeViewItem? GetParentTreeViewItem(TreeViewItem item)
+		{
+			// Walk up the visual tree to find the parent TreeViewItem
+			for (var parent = VisualTreeHelper.GetParent(item); parent != null; parent = VisualTreeHelper.GetParent(parent))
+			{
+				if (parent is TreeViewItem parent_item)
+					return parent_item;
+			}
+			return null;
+		}
 
 		/// <summary>Expand all nodes</summary>
 		public ICommand ExpandAll { get; }

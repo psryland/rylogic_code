@@ -1,4 +1,4 @@
-<Window
+﻿<Window
 	x:Class="Rylogic.Gui.WPF.View3dObjectManagerUI"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -97,45 +97,45 @@
 					>
 					<MenuItem
 						Header="Show All"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowAll}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.ShowAll}"
 						/>
 					<MenuItem
 						Header="Hide All"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideAll}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.HideAll}"
 						/>
 					<Separator/>
 					<MenuItem
 						Header="Show Others"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowOthers}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.ShowOthers}"
 						/>
 					<MenuItem
 						Header="Hide Others"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideOthers}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.HideOthers}"
 						/>
 					<MenuItem
 						Header="Toggle Others"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleOthers}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.ToggleOthers}"
 						/>
 					<Separator/>
 					<MenuItem
 						Header="Show Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.ShowSelected}"
 						/>
 					<MenuItem
 						Header="Hide Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.HideSelected}"
 						/>
 					<MenuItem
 						Header="Toggle Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
+						Command="{Binding SetVisibility}"
+						CommandParameter="{x:Static local:ESetVisibleCmd.ToggleSelected}"
 						/>
 				</MenuItem>
 				<MenuItem
@@ -152,7 +152,9 @@
 
 		</ResourceDictionary>
 	</Window.Resources>
-	
+	<Window.InputBindings>
+		<KeyBinding Key="F6" Command="{Binding FocusPatternFilter}"/>
+	</Window.InputBindings>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -210,6 +212,7 @@
 				Command="{Binding ApplyFilter}"
 				Height="24"
 				Margin="1"
+				x:Name="m_pattern_filter"
 				/>
 
 		</Grid>
@@ -227,16 +230,16 @@
 			<!-- Key Bindings -->
 			<gui:TreeViewMultiSelect.InputBindings>
 				<KeyBinding Key="Space"
-					Command="{Binding SetVisible}"
-					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
+					Command="{Binding SetVisibility}"
+					CommandParameter="{x:Static local:ESetVisibleCmd.ToggleSelected}"
 					/>
 				<KeyBinding Key="Space" Modifiers="Ctrl"
-					Command="{Binding SetVisible}"
-					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
+					Command="{Binding SetVisibility}"
+					CommandParameter="{x:Static local:ESetVisibleCmd.ShowSelected}"
 					/>
 				<KeyBinding Key="Space" Modifiers="Ctrl+Shift"
-					Command="{Binding SetVisible}"
-					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
+					Command="{Binding SetVisibility}"
+					CommandParameter="{x:Static local:ESetVisibleCmd.HideSelected}"
 					/>
 				<KeyBinding Key="W"
 					Command="{Binding SetWireframe}"
@@ -326,126 +329,7 @@
 				</HierarchicalDataTemplate>
 			</gui:TreeViewMultiSelect.ItemTemplate>
 		</gui:TreeViewMultiSelect>
-		
-		<!-- Tree and Grid -->
-		<Grid
-			Grid.Row="1"
-			Visibility="Collapsed"
-			>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="0.3*"/>
-				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="*"/>
-			</Grid.ColumnDefinitions>
 
-			<!-- Object Hierarchy -->
-			<TreeView
-				Grid.Column="0"
-				ItemsSource="{Binding ObjectsView}"
-				>
-				<TreeView.ItemTemplate>
-					<HierarchicalDataTemplate DataType="{x:Type gfx:View3d+Object}" ItemsSource="{Binding Children}">
-						<StackPanel>
-							<TextBlock Text="{Binding Name}"/>
-						</StackPanel>
-					</HierarchicalDataTemplate>
-				</TreeView.ItemTemplate>
-			</TreeView>
-			
-			<!-- Splitter -->
-			<GridSplitter
-				Grid.Column="1"
-				Width="4"
-				HorizontalAlignment="Center"
-				VerticalAlignment="Stretch"
-				ShowsPreview="False"
-				Background="{x:Static SystemColors.ControlBrush}"
-				/>
-
-			<!-- Object Properties -->
-			<DataGrid
-				Grid.Column="2"
-				AutoGenerateColumns="False"
-				GridLinesVisibility="None"
-				HeadersVisibility="Column"
-				ItemsSource="{Binding ObjectsView}"
-				ContextMenu="{StaticResource ObjectManagerListCMenu}"
-				gui:Control_.EventToCommand="SelectionChanged:UpdateSelected"
-				IsReadOnly="True"
-				>
-				<DataGrid.InputBindings>
-					<KeyBinding Key="Space" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"/>
-					<KeyBinding Key="Space" Modifiers="Ctrl" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"/>
-					<KeyBinding Key="Space" Modifiers="Ctrl+Shift" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"/>
-					<KeyBinding Key="W" Command="{Binding SetWireframe}" CommandParameter="0"/>
-					<KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding SetWireframe}" CommandParameter="+1"/>
-					<KeyBinding Key="W" Modifiers="Ctrl+Shift" Command="{Binding SetWireframe}" CommandParameter="-1"/>
-				</DataGrid.InputBindings>
-				<DataGrid.Resources>
-					<SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#000000"/>
-					<SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0E0E0"/>
-					<DrawingBrush x:Key="CheckerBrush" AlignmentX="Left" AlignmentY="Top" TileMode="Tile" Viewport="0,0,0.25,0.25" Stretch="None">
-						<DrawingBrush.Drawing>
-							<DrawingGroup>
-								<GeometryDrawing Brush="White">
-									<GeometryDrawing.Geometry>
-										<GeometryGroup>
-											<RectangleGeometry Rect="0,0,100,100" />
-											<RectangleGeometry Rect="100,100,100,100" />
-										</GeometryGroup>
-									</GeometryDrawing.Geometry>
-								</GeometryDrawing>
-								<GeometryDrawing Brush="Gray">
-									<GeometryDrawing.Geometry>
-										<GeometryGroup>
-											<RectangleGeometry Rect="100,0,100,100" />
-											<RectangleGeometry Rect="0,100,100,100" />
-										</GeometryGroup>
-									</GeometryDrawing.Geometry>
-								</GeometryDrawing>
-							</DrawingGroup>
-						</DrawingBrush.Drawing>
-					</DrawingBrush>
-					
-					<Style x:Key="ColourCellStyle" TargetType="{x:Type DataGridCell}">
-						<Setter Property="Background" Value="{StaticResource CheckerBrush}"/>
-					</Style>
-				</DataGrid.Resources>
-				<DataGrid.Columns>
-					<DataGridTextColumn
-						Header="Name"
-						Binding="{Binding Name}"
-						Width="2*"
-						/>
-					<DataGridTextColumn
-						Header="Type"
-						Binding="{Binding Type}"
-						MinWidth="56"
-						Width="1*"
-						/>
-					<DataGridTextColumn
-						Header="Colour"
-						Binding="{Binding Colour}"
-						MinWidth="56"
-						Width="0.6*"
-						>
-						<DataGridTextColumn.ElementStyle>
-							<Style TargetType="{x:Type TextBlock}">
-								<Setter Property="Background" Value="{Binding Colour, Converter={conv:ColourToBrush}}"/>
-								<Setter Property="Foreground" Value="{Binding Colour, Converter={conv:TextOverColourBrush}}"/>
-							</Style>
-						</DataGridTextColumn.ElementStyle>
-					</DataGridTextColumn>
-					<DataGridTextColumn
-						Header="Flags"
-						Binding="{Binding Flags}"
-						MinWidth="56"
-						MaxWidth="80"
-						/>
-				</DataGrid.Columns>
-			</DataGrid>
-		</Grid>
-		
 		<!-- Status -->
 		<StatusBar
 			Grid.Row="2"

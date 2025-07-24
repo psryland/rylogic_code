@@ -1,6 +1,10 @@
 {
 	"folders": [
 		{
+			"name": ".vscode",
+			"path": "./.vscode"
+		},
+		{
 			"name": "Rylogic",
 			"path": "."
 		},

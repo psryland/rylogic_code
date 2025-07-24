@@ -25,11 +25,12 @@ namespace Rylogic.Gui.WPF
 			ObjectsView = new ListCollectionView(ObjectManager.Objects);
 
 			ApplyFilter = Command.Create(this, ApplyFilterInternal);
-			SetVisible = Command.Create(this, SetVisibleInternal);
+			SetVisibility = Command.Create(this, SetVisibilityInternal);
 			SetWireframe = Command.Create(this, SetWireframeInternal);
 			UpdateSelected = Command.Create(this, UpdateSelectedInternal);
 			InvertSelection = Command.Create(this, InvertSelectionInternal);
-			ToggleShowNormals = Command.Create(this, InternalToggleShowNormals);
+			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
+			FocusPatternFilter = Command.Create(this, FocusPatternFilterInternal);
 
 			DataContext = this;
 		}
@@ -78,7 +79,7 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(View3d.ObjectManager.Objects):
+						case nameof(View3d.ObjectManager.Objects):
 						{
 							ObjectsView.Refresh();
 							break;
@@ -100,7 +101,7 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// If an object within this window has changed, refresh
-					if (obj.Visible && ObjectManager.Window.HasObject(obj, search_children: false))
+					if (ObjectManager.Window.HasObject(obj, search_children: false))
 						ObjectManager.Window.Invalidate();
 				}
 			}
@@ -108,8 +109,8 @@ namespace Rylogic.Gui.WPF
 		private View3d.ObjectManager m_object_manager = null!;
 
 		/// <summary>Access to the object container</summary>
-		public IList<View3d.Object> Objects => ObjectManager.Objects;
-		public IEnumerable<View3d.Object> SelectedObjects => Objects.Where(x => Bit.AllSet(x.Flags, View3d.ELdrFlags.Selected));
+		public IList<View3d.Object> RootObjects => ObjectManager.Objects;
+		public HashSet<View3d.Object> SelectedObjects { get; } = [];
 
 		/// <summary>True if one or more objects is selected</summary>
 		public View3d.Object? FirstSelected => SelectedObjects.FirstOrDefault();
@@ -131,31 +132,61 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Show/Hide objects</summary>
-		public Command SetVisible { get; }
-		private void SetVisibleInternal(object? parameter)
+		public Command SetVisibility { get; }
+		private void SetVisibilityInternal(object? parameter)
 		{
 			if (parameter is not ESetVisibleCmd vis)
 				throw new Exception($"SetVisible parameter '{parameter}' is invalid");
 
-			foreach (var x in Objects)
+			switch (vis)
 			{
-				var selected = x.Flags.HasFlag(View3d.ELdrFlags.Selected);
-				var visible = x.Flags.HasFlag(View3d.ELdrFlags.Hidden) == false;
-				var show = vis switch
+				case ESetVisibleCmd.ShowAll:
+				case ESetVisibleCmd.HideAll:
 				{
-					ESetVisibleCmd.ShowAll => true,
-					ESetVisibleCmd.HideAll => false,
-					ESetVisibleCmd.ShowSelected => selected ? true : visible,
-					ESetVisibleCmd.HideSelected => selected ? false : visible,
-					ESetVisibleCmd.ToggleSelected => selected ? !visible : visible,
-					ESetVisibleCmd.ShowOthers => selected ? visible : true,
-					ESetVisibleCmd.HideOthers => selected ? visible : false,
-					ESetVisibleCmd.ToggleOthers => selected ? visible : !visible,
-					_ => throw new Exception($"Unknown visibility command {vis}"),
-				};
-				x.FlagsSet(View3d.ELdrFlags.Hidden, !show, string.Empty);
-			}
+					foreach (var obj in RootObjects)
+						obj.FlagsSet(View3d.ELdrFlags.Hidden, vis == ESetVisibleCmd.HideAll, string.Empty);
+					break;
+				}
+				case ESetVisibleCmd.ShowSelected:
+				case ESetVisibleCmd.HideSelected:
+				case ESetVisibleCmd.ToggleSelected:
+				{
+					foreach (var obj in SelectedObjects)
+					{
+						var hidden =
+							vis == ESetVisibleCmd.ShowSelected ? false :
+							vis == ESetVisibleCmd.HideSelected ? true :
+							!obj.Flags.HasFlag(View3d.ELdrFlags.Hidden);
+						
+						obj.FlagsSet(View3d.ELdrFlags.Hidden, hidden, null);
+					}
+					break;
+				}
+				case ESetVisibleCmd.ShowOthers:
+				case ESetVisibleCmd.HideOthers:
+				case ESetVisibleCmd.ToggleOthers:
+				{
+					foreach (var obj in RootObjects)
+					{
+						obj.Apply(x =>
+						{
+							if (SelectedObjects.Contains(x)) return true;
+							var hidden = 
+								vis == ESetVisibleCmd.ShowOthers ? false :
+								vis == ESetVisibleCmd.HideOthers ? true :
+								!obj.Flags.HasFlag(View3d.ELdrFlags.Hidden);
 
+							x.FlagsSet(View3d.ELdrFlags.Hidden, hidden, null);
+							return true;
+						}, string.Empty);
+					}
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown visibility command {vis}");
+				}
+			}
 			Invalidate();
 		}
 
@@ -183,9 +214,15 @@ namespace Rylogic.Gui.WPF
 			if (parameter is SelectionChangedEventArgs args)
 			{
 				foreach (var x in args.RemovedItems.Cast<View3d.Object>())
+				{
 					x.Flags = Bit.SetBits(x.Flags, View3d.ELdrFlags.Selected, false);
+					SelectedObjects.Remove(x);
+				}
 				foreach (var x in args.AddedItems.Cast<View3d.Object>())
+				{
 					x.Flags = Bit.SetBits(x.Flags, View3d.ELdrFlags.Selected, true);
+					SelectedObjects.Add(x);
+				}
 
 				Invalidate();
 			}
@@ -195,13 +232,23 @@ namespace Rylogic.Gui.WPF
 		public Command InvertSelection { get; }
 		private void InvertSelectionInternal()
 		{
-			foreach (var obj in Objects)
-				obj.Flags = Bit.SetBits(obj.Flags, View3d.ELdrFlags.Selected, !obj.Flags.HasFlag(View3d.ELdrFlags.Selected));
+			HashSet<View3d.Object> inverted = [];
+			foreach (var obj in RootObjects)
+			{
+				obj.Apply(x =>
+				{
+					x.FlagsSet(View3d.ELdrFlags.Selected, !SelectedObjects.Contains(x), string.Empty);
+					if (!SelectedObjects.Contains(x)) inverted.Add(x);
+					return true;
+				}, string.Empty);
+			}
+			SelectedObjects.Clear();
+			SelectedObjects.UnionWith(inverted);
 		}
 
 		/// <summary>Toggle show normals mode on selected objects</summary>
 		public Command ToggleShowNormals { get; }
-		private void InternalToggleShowNormals()
+		private void ToggleShowNormalsInternal()
 		{
 			bool? show = null;
 			foreach (var obj in SelectedObjects)
@@ -213,24 +260,34 @@ namespace Rylogic.Gui.WPF
 			return;
 		}
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
+		/// <summary>Move input focus to the filter bar</summary>
+		public Command FocusPatternFilter { get; }
+		private void FocusPatternFilterInternal()
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			// Find the PatternFilter control by name and focus it
+			if (FindName("m_pattern_filter") is FrameworkElement pattern_filter &&
+				pattern_filter.FindName("PART_TextBox") is TextBox text_box)
+			{
+				text_box.Focus();
+				text_box.SelectAll();
+			}
 		}
 
-		/// <summary></summary>
-		public enum ESetVisibleCmd
-		{
-			ShowAll,
-			HideAll,
-			ShowSelected,
-			HideSelected,
-			ToggleSelected,
-			ShowOthers,
-			HideOthers,
-			ToggleOthers,
-		}
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+	}
+
+	/// <summary>Set visibility commands</summary>
+	public enum ESetVisibleCmd
+	{
+		ShowAll,
+		HideAll,
+		ShowSelected,
+		HideSelected,
+		ToggleSelected,
+		ShowOthers,
+		HideOthers,
+		ToggleOthers,
 	}
 }

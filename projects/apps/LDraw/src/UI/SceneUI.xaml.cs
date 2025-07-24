@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using LDraw.Dialogs;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -58,6 +59,27 @@ namespace LDraw.UI
 			SceneView = null!;
 			DockControl = null!;
 			m_scene.Dispose();
+		}
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			base.OnPreviewKeyDown(e);
+			if (e.Handled)
+				return;
+
+			switch (e.Key)
+			{
+				case Key.Space:
+				{
+					SceneView.ShowObjectManagerUI.Execute(null);
+					e.Handled = true;
+					break;
+				}
+				default:
+				{
+					// Let other keys fall through to the default Key handler
+					break;
+				}
+			}
 		}
 
 		/// <summary>Provides support for the DockContainer</summary>
