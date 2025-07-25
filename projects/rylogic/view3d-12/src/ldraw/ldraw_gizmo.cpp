@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -647,6 +647,13 @@ namespace pr::rdr12::ldraw
 		{"gizmo scale"      , icountof(ScaleGizmo    ::verts), icountof(ScaleGizmo    ::idxs), ScaleGizmo    ::verts, ScaleGizmo    ::idxs, &ScaleGizmo    ::bbox},
 	};
 	#pragma endregion
+
+	// Validate an ldr gizmo pointer
+	void Validate(LdrGizmo const* gizmo)
+	{
+		if (gizmo == nullptr)
+			throw std::runtime_error("gizmo pointer is null");
+	}
 
 	LdrGizmo::LdrGizmo(Renderer& rdr, EGizmoMode mode, m4x4 const& o2w)
 		:m_attached_ref()

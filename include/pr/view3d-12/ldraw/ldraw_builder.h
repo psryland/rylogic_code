@@ -92,6 +92,7 @@ namespace pr::rdr12::ldraw
 		struct LdrCircle;
 		struct LdrSphere;
 		struct LdrBox;
+		struct LdrBar;
 		struct LdrCylinder;
 		struct LdrCone;
 		struct LdrSpline;
@@ -125,6 +126,7 @@ namespace pr::rdr12::ldraw
 			LdrCircle& Circle(Name name = {}, Colour colour = Colour());
 			LdrSphere& Sphere(Name name = {}, Colour colour = Colour());
 			LdrBox& Box(Name name = {}, Colour colour = Colour());
+			LdrBar& Bar(Name name = {}, Colour colour = Colour());
 			LdrCylinder& Cylinder(Name name = {}, Colour colour = Colour());
 			LdrCone& Cone(Name name = {}, Colour colour = Colour());
 			LdrSpline& Spline(Name name = {}, Colour colour = Colour());
@@ -951,6 +953,45 @@ namespace pr::rdr12::ldraw
 				});
 			}
 		};
+		struct LdrBar :LdrBase<LdrBar>
+		{
+			v4 m_p0, m_p1;
+			v2 m_wh;
+
+			LdrBar()
+				:m_p0()
+				,m_p1()
+				,m_wh(1.f)
+			{}
+
+			// Box dimensions
+			LdrBar& bar(v4_cref p0, v4_cref p1)
+			{
+				m_p0 = p0;
+				m_p1 = p1;
+				return *this;
+			}
+			LdrBar& wh(v2 const& wh)
+			{
+				m_wh = wh;
+				return *this;
+			}
+			LdrBar& wh(float w, float h)
+			{
+				return wh({ w, h });
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Bar, m_name, m_colour, [&]
+				{
+					Writer::Write(out, EKeyword::Data, m_p0.xyz, m_p1.xyz, m_wh);
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
 		struct LdrCylinder :LdrBase<LdrCylinder>
 		{
 			v2 m_radius; // x = base, y = tip
@@ -1373,6 +1414,12 @@ namespace pr::rdr12::ldraw
 		inline LdrBox& LdrObj::Box(Name name, Colour colour)
 		{
 			auto ptr = new LdrBox;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrBar& LdrObj::Bar(Name name, Colour colour)
+		{
+			auto ptr = new LdrBar;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

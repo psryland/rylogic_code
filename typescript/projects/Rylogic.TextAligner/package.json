@@ -25,8 +25,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:rylogic-textaligner.Align",
-		"onCommand:rylogic-textaligner.Unalign"
+		"--onCommand:rylogic-textaligner.Align",
+		"--onCommand:rylogic-textaligner.Unalign"
 	],
 	"contributes": {
 		"commands": [

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -11,6 +11,13 @@
 
 namespace pr::rdr12
 {
+	// Validate a texture pointer
+	void Validate(TextureBase const* texture)
+	{
+		if (texture == nullptr)
+			throw std::runtime_error("Texture pointer is null");
+	}
+
 	// Get the shared handle from a shared resource
 	HANDLE SharedHandleFromSharedResource(IUnknown* shared_resource)
 	{

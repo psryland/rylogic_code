@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -95,4 +95,7 @@ namespace pr::rdr12
 		static void RefCountZero(RefCounted<TextureBase>* doomed);
 		protected: virtual void Delete();
 	};
+
+	// Validate a texture pointer
+	void Validate(TextureBase const* texture);
 }

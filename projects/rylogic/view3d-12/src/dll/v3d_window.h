@@ -371,4 +371,7 @@ namespace pr::rdr12
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockObjects();
 	};
+
+	// Validate a window pointer
+	void Validate(V3dWindow const* window);
 }

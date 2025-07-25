@@ -1397,8 +1397,8 @@ namespace pr::rdr12
 					for (auto const& key : track_in)
 					{
 						track_out.push_back(KeyFrame{
-							.m_translation = key.m_translation,
 							.m_rotation = key.m_rotation,
+							.m_translation = key.m_translation,
 							.m_scale = key.m_scale,
 							.m_time = key.m_time,
 						});

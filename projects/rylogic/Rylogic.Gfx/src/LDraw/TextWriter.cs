@@ -111,7 +111,7 @@ namespace Rylogic.LDraw
 		}
 		private void Append(m4x4 m)
 		{
-			Append(m.ToString());
+			Append(m.ToString4x4(delim:""));
 		}
 		private void Append(View3d.EAddrMode addr)
 		{

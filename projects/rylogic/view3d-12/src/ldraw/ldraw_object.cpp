@@ -66,8 +66,26 @@ namespace pr::rdr12::ldraw
 			m_obituaries.push_front(RecentlyDeceased{ .m_name = ldr->m_name, .ptr = ldr });
 			for (; m_obituaries.size() > 20; m_obituaries.pop_back()) {}
 		}
+		void check(LdrObject const* ldr)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			if (m_ldr_objects.contains(ldr)) return;
+			if (auto ded = std::ranges::find_if(m_obituaries, [=](RecentlyDeceased const& rd) { return rd.ptr == ldr; }); ded != end(m_obituaries))
+				throw std::runtime_error(std::format("Use of recently deleted object {}", ded->m_name));
+		}
 	} g_ldr_object_tracker;
 	#endif
+
+	// Validate an ldr object pointer
+	void Validate(LdrObject const* object)
+	{
+		if (object == nullptr)
+			throw std::runtime_error("object pointer is null");
+
+		#if PR_DBG
+		g_ldr_object_tracker.check(object);
+		#endif
+	}
 
 	LdrObject::LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id)
 		: RdrInstance()

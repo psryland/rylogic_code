@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -277,4 +277,7 @@ namespace pr::rdr12::ldraw
 		long AddRef() const;
 		long Release() const;
 	};
+
+	// Validate an ldr object pointer
+	void Validate(LdrObject const* object);
 }

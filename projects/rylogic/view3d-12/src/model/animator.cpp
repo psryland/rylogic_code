@@ -44,4 +44,32 @@ namespace pr::rdr12
 	{
 		m_anim->EvaluateAtTime(time_s, bones);
 	}
+
+	// -----------------------------------------------------------------------------------------------
+
+	Animator_InterpolatedAnimation::Animator_InterpolatedAnimation(KinematicKeyFrameAnimationPtr anim)
+		: Animator()
+		, m_anim(anim)
+	{
+	}
+
+	// Return the ID of the skeleton we're animating
+	uint64_t Animator_InterpolatedAnimation::SkelId() const
+	{
+		return m_anim->m_skel_id;
+	}
+
+	// Return the frame rate of the underlying animation
+	double Animator_InterpolatedAnimation::FrameRate() const
+	{
+		return m_anim->m_frame_rate;
+	}
+
+	// Apply an animation to the given bones
+	void Animator_InterpolatedAnimation::Animate(std::span<m4x4> bones, double time_s)
+	{
+		throw std::runtime_error("not implemented");
+		//m_anim->EvaluateAtTime(time_s, bones);
+	}
 }
+

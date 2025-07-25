@@ -52,4 +52,23 @@ namespace pr::rdr12
 		// Apply an animation to the given bones
 		void Animate(std::span<m4x4> bones, double time_s) override;
 	};
+
+	struct Animator_InterpolatedAnimation : Animator
+	{
+		// Notes:
+		//  - This animator reads from a single key frame animation
+
+		KinematicKeyFrameAnimationPtr m_anim; // The animation sequence to read from
+
+		Animator_InterpolatedAnimation(KinematicKeyFrameAnimationPtr anim);
+
+		// Return the ID of the skeleton we're animating
+		uint64_t SkelId() const override;
+
+		// Return the frame rate of the underlying animation
+		double FrameRate() const override;
+
+		// Apply an animation to the given bones
+		void Animate(std::span<m4x4> bones, double time_s) override;
+	};
 }

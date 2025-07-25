@@ -83,7 +83,7 @@ namespace pr::rdr12
 			auto const& lhs = *(iter - 1);
 			auto const& rhs = *(iter - 0);
 			auto frac = Frac(lhs.m_time, time_s, rhs.m_time);
-			sam = Lerp(lhs, rhs, s_cast<float>(frac));
+			sam = Interp(lhs, rhs, s_cast<float>(frac));
 		});
 	}
 
@@ -113,6 +113,20 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate)
+		: m_skel_id(skel_id)
+		, m_rotation()
+		, m_position()
+		, m_scale()
+		, m_velocity()
+		, m_ang_vel()
+		, m_accel()
+		, m_ang_accel()
+		, m_time_range(time_range)
+		, m_frame_rate(frame_rate)
+	{}
+
+	// --------------------------------------------------------------------------------------------
 	double AdjTime(double time_s, TimeRange time_range, EAnimStyle style)
 	{
 		// Relative time

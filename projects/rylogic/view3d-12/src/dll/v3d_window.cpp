@@ -24,6 +24,13 @@ namespace pr::rdr12
 			;
 	}
 
+	// Validate a window pointer
+	void Validate(V3dWindow const* window)
+	{
+		if (window == nullptr)
+			throw std::runtime_error("Window pointer is null");
+	}
+
 	// View3d Window ****************************
 	V3dWindow::V3dWindow(Renderer& rdr, HWND hwnd, view3d::WindowOptions const& opts)
 		: m_rdr(&rdr)

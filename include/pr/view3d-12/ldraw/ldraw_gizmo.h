@@ -149,4 +149,7 @@ namespace pr::rdr12::ldraw
 		void DoRotation(Camera& camera, v2 const& nss_point);
 		void DoScale(Camera& camera, v2 const& nss_point);
 	};
+
+	// Validate an ldr gizmo pointer
+	void Validate(LdrGizmo const* gizmo);
 }

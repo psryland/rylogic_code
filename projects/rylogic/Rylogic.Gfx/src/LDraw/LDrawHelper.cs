@@ -79,6 +79,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrBar Bar(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrBar();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrCylinder Cylinder(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCylinder();
@@ -135,6 +141,12 @@ namespace Rylogic.LDraw
 			WriteTo(res);
 			return res.ToString();
 		}
+		public string ToString(bool pretty)
+		{
+			var res = ToString();
+			if (pretty) FormatScript(res);
+			return res;
+		}
 
 		/// <summary>Serialise to ldraw text</summary>
 		public MemoryStream ToText()
@@ -160,14 +172,55 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Write to a file</summary>
-		public void Save(string filepath, bool text = true)
+		public void Save(string filepath, bool text = true, bool pretty = false)
 		{
 			if (Path.GetExtension(filepath) == "")
-				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr"));
+				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr")); 
 
 			using var file = File.Create(filepath);
 			var mem = text ? ToText() : ToBinary();
+			if (text && pretty) mem = FormatScript(mem);
 			mem.CopyTo(file);
+		}
+
+		// Pretty format Ldraw script
+		public static string FormatScript(string str)
+		{
+			var res = new StringBuilder(str.Length);
+			int indent = 0;
+			foreach (var c in str)
+			{
+				if (c == '{')
+				{
+					++indent;
+					res.Append(c);
+					res.Append('\n',1).Append('\t', indent);
+				}
+				else if (c == '}')
+				{
+					--indent;
+					res.Append('\n',1).Append('\t', indent);
+					res.Append(c);
+				}
+				else
+				{
+					res.Append(c);
+				}
+			}
+			return res.ToString();
+		}
+
+		// Pretty format Ldraw script from UTF8 MemoryStream
+		public static MemoryStream FormatScript(MemoryStream utf8)
+		{
+			utf8.Position = 0;
+			var result = new MemoryStream();
+			using var reader = new StreamReader(utf8, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
+			using var writer = new StreamWriter(result, Encoding.UTF8, bufferSize: 1024, leaveOpen: true);
+			writer.Write(FormatScript(reader.ReadToEnd()));
+			writer.Flush();
+			result.Position = 0;
+			return result;
 		}
 	}
 	public class LdrBase<TDerived> : LdrObj where TDerived : LdrBase<TDerived>
@@ -239,6 +292,10 @@ namespace Rylogic.LDraw
 		public TDerived scale(float sx, float sy, float sz)
 		{
 			return ori(m3x4.Scale(sx, sy, sz));
+		}
+		public TDerived scale(v4 s)
+		{
+			return ori(m3x4.Scale(s.x, s.y, s.z));
 		}
 		public TDerived euler(float pitch_deg, float yaw_deg, float roll_deg)
 		{
@@ -695,6 +752,39 @@ namespace Rylogic.LDraw
 			res.Write(EKeyword.Box, m_name, m_colour, () =>
 			{
 				res.Write(EKeyword.Data, m_dim.xyz);
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrBar : LdrBase<LdrBar>
+	{
+		private v4 m_p0 = new();
+		private v4 m_p1 = new();
+		private v2 m_wh = new(1f, 1f);
+
+		// Bar dimensions
+		public LdrBar bar(v4 p0, v4 p1)
+		{
+			m_p0 = p0;
+			m_p1 = p1;
+			return this;
+		}
+		public LdrBar wh(v2 wh)
+		{
+			m_wh = wh;
+			return this;
+		}
+		public LdrBar wh(float w, float h)
+		{
+			return wh(new v2(w, h));
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Bar, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_p0.xyz, m_p1.xyz, m_wh);
 				base.WriteTo(res);
 			});
 		}

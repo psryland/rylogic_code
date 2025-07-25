@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -230,6 +230,7 @@ namespace pr::rdr12
 	// Animation
 	struct RootAnimation;
 	struct KeyFrameAnimation;
+	struct KinematicKeyFrameAnimation;
 	struct SkinInfluence;
 	struct Skeleton;
 	struct Pose;
@@ -237,6 +238,7 @@ namespace pr::rdr12
 	struct Animator;
 	using RootAnimationPtr = RefPtr<RootAnimation>;
 	using KeyFrameAnimationPtr = RefPtr<KeyFrameAnimation>;
+	using KinematicKeyFrameAnimationPtr = RefPtr<KinematicKeyFrameAnimation>;
 	using SkeletonPtr = RefPtr<Skeleton>;
 	using PosePtr = RefPtr<Pose>;
 	using AnimatorPtr = RefPtr<Animator>;
