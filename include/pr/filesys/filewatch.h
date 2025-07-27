@@ -1,4 +1,4 @@
-//****************************************************************
+﻿//****************************************************************
 // FileWatch
 //  Copyright (c) Rylogic Ltd 2010
 //****************************************************************
@@ -90,9 +90,14 @@ namespace pr
 	public:
 
 		FileWatch()
-			:m_impl_files()
-			,m_mutex()
+			: m_impl_files()
+			, m_mutex()
+			, PollCB({this, [](void* ctx) { static_cast<FileWatch*>(ctx)->CheckForChangedFiles(); }})
+			, OnFilesChanged()
 		{}
+
+		// Callback Polling function
+		pr::StaticCB<void> PollCB;
 
 		// Raised when changed files are detected. Allows modification of file list
 		pr::EventHandler<FileWatch&, FileCont&> OnFilesChanged;

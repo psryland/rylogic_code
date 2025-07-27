@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -17,9 +17,6 @@ namespace pr::rdr12::ldraw
 		bool         m_text_format; // True if the file is a text based format
 
 		SourceFile(Guid const* context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes);
-
-		// Construct a new instance of the source (if possible)
-		std::shared_ptr<SourceBase> Clone() override;
 
 	protected:
 

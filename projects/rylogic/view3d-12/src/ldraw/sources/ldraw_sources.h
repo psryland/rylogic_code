@@ -18,8 +18,8 @@ namespace pr::rdr12::ldraw
 	// Store change event args
 	struct StoreChangeEventArgs
 	{
-		// The origin of the data change
-		EDataChangedReason m_reason;
+		// The event that triggered the data change
+		EDataChangeTrigger m_trigger;
 
 		// The context ids that changed
 		std::span<Guid const> m_context_ids;
@@ -30,8 +30,8 @@ namespace pr::rdr12::ldraw
 		// True if this event is just prior to the changes being made to the store
 		bool m_before;
 
-		StoreChangeEventArgs(EDataChangedReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
-			: m_reason(why)
+		StoreChangeEventArgs(EDataChangeTrigger trigger, std::span<Guid const> context_ids, ParseResult const* result, bool before)
+			: m_trigger(trigger)
 			, m_context_ids(context_ids)
 			, m_result(result)
 			, m_before(before)
@@ -122,11 +122,11 @@ namespace pr::rdr12::ldraw
 		void ClearAll();
 
 		// Remove a single object from the object container
-		void Remove(LdrObject* object, EDataChangedReason reason = EDataChangedReason::Removal);
+		void Remove(LdrObject* object, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(view3d::GuidPredCB pred, EDataChangedReason reason = EDataChangedReason::Removal);
-		void Remove(Guid const& context_id, EDataChangedReason reason = EDataChangedReason::Removal);
+		void Remove(view3d::GuidPredCB pred, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
+		void Remove(Guid const& context_id, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
 
 		// Reload a range of sources
 		void Reload(std::span<Guid const> ids);

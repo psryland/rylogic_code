@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -16,9 +16,6 @@ namespace pr::rdr12::ldraw
 		EEncoding m_encoding;             // The text encoding of the string
 
 		SourceString(Guid const* context_id, std::basic_string_view<Char> script, EEncoding enc, PathResolver const& includes);
-
-		// Construct a new instance of the source
-		std::shared_ptr<SourceBase> Clone() override;
 
 	protected:
 

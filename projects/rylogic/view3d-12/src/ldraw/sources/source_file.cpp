@@ -27,12 +27,6 @@ namespace pr::rdr12::ldraw
 		};
 	}
 
-	// Construct a new instance of the source (if possible)
-	std::shared_ptr<SourceBase> SourceFile::Clone()
-	{
-		return std::shared_ptr<SourceFile>(new SourceFile{ &m_context_id, m_filepath, m_encoding, m_includes });
-	}
-
 	// Regenerate the output from the source
 	ParseResult SourceFile::ReadSource(Renderer& rdr)
 	{

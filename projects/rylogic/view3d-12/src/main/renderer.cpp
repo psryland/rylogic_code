@@ -428,17 +428,17 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove a callback function that will be polled as fast as the windows message queue will allow
-	void Renderer::AddPollCB(pr::StaticCB<void> cb)
+	void Renderer::AddPollCB(StaticCB<void> cb, seconds_t period_ms)
 	{
 		AssertMainThread();
-		m_poll_callbacks.push_back(cb);
+		m_poll_callbacks.push_back({ cb, period_ms, {} });
 		if (m_poll_callbacks.size() == 1)
 			Poll(); // Start the timer 
 	}
 	void Renderer::RemovePollCB(pr::StaticCB<void> cb)
 	{
 		AssertMainThread();
-		erase_stable(m_poll_callbacks, cb);
+		erase_if(m_poll_callbacks, [cb](auto& x) { return x.m_cb == cb; });
 	}
 	
 	// Call all registered poll event callbacks

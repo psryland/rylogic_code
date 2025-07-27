@@ -5820,12 +5820,13 @@ namespace pr::rdr12::ldraw
 	{
 		return m_objects[index];
 	}
-	ParseResult& ParseResult::operator += (ParseResult&& rhs)
+	ParseResult& ParseResult::operator += (ParseResult const& rhs)
 	{
-		m_objects.insert(m_objects.end(),
-			std::move_iterator{ rhs.m_objects.begin() },
-			std::move_iterator{ rhs.m_objects.end() });
-			
+		m_objects.insert(end(m_objects), begin(rhs.m_objects), end(rhs.m_objects));
+
+		// The lookup maps names to objects, duplicate names will replace
+		// earlier objects with the same name. It's up to the script writer
+		// to prevent that if they need to refer to objects by name.
 		for (auto& p : rhs.m_lookup)
 			m_lookup[p.first] = p.second;
 

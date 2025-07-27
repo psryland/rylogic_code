@@ -231,14 +231,12 @@ namespace pr::rdr12
 		if (file)
 		{
 			ldraw::SourceFile src{ &id, ldr_script, enc, include_handler };
-			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
-			output = std::move(src.m_output);
+			output = src.Load(rdr());
 		}
 		else
 		{
 			ldraw::SourceString<Char> src{ &id, ldr_script, enc, include_handler };
-			src.Load(rdr(), ldraw::EDataChangedReason::NewData, nullptr);
-			output = std::move(src.m_output);
+			output = src.Load(rdr());
 		}
 		if (output.m_objects.empty())
 			return nullptr;
@@ -614,15 +612,15 @@ namespace pr::rdr12
 	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
 	{
 		view3d::ESourcesChangedReason reason = {};
-		switch (args.m_reason)
+		switch (args.m_trigger)
 		{
-			case ldraw::EDataChangedReason::NewData:
+			case ldraw::EDataChangeTrigger::NewData:
 			{
 				// On NewData, do nothing. Callers will add objects to windows as they see fit.
 				reason = view3d::ESourcesChangedReason::NewData;
 				break;
 			}
-			case ldraw::EDataChangedReason::Reload:
+			case ldraw::EDataChangeTrigger::Reload:
 			{
 				for (auto& wnd : m_windows)
 				{
@@ -649,7 +647,7 @@ namespace pr::rdr12
 				reason = view3d::ESourcesChangedReason::Reload;
 				break;
 			}
-			case ldraw::EDataChangedReason::Removal:
+			case ldraw::EDataChangeTrigger::Removal:
 			{
 				// When a source is about to be removed, remove it's objects from the windows.
 				if (args.m_before)

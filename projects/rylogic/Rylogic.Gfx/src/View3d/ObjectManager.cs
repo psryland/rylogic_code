@@ -12,12 +12,14 @@ namespace Rylogic.Gfx
 		{
 			// Notes:
 			//  - This class is the View-Model for the object manager.
-			//  - UI frameworks need to provide binding wrappers
+			//  - The purpose of this class is to manage the collection of objects and handle deleted objects.
+			//  - UI frameworks need to provide binding wrappers.
 			public ObjectManager(Window window, IEnumerable<Guid> excluded)
 			{
 				Window = window;
 				Exclude = [.. Enumerable.Concat(ExcludeCtxIds, excluded)];
 				Objects = [];
+				SelectedObjects = [];
 
 				SyncObjectsWithScene();
 			}
@@ -47,7 +49,7 @@ namespace Rylogic.Gfx
 					}
 
 					// Handlers
-					void HandleSceneChanged(object? sender, View3d.SceneChangedEventArgs args)
+					void HandleSceneChanged(object? sender, SceneChangedEventArgs args)
 					{
 						// Ignore if only excluded context ids have changed
 						if (args.ContextIds.All(x => Exclude.Contains(x)))
@@ -65,6 +67,9 @@ namespace Rylogic.Gfx
 			/// <summary>The collection of objects in this scene (top level tree nodes)</summary>
 			public List<Object> Objects { get; }
 
+			/// <summary>Selected objects</summary>
+			public HashSet<Object> SelectedObjects { get; }
+
 			/// <summary>Update the 'Objects' collection to match the objects in the scene</summary>
 			private void SyncObjectsWithScene()
 			{
@@ -72,6 +77,7 @@ namespace Rylogic.Gfx
 				var objects = new HashSet<Object>();
 				Window.EnumObjects(objects.Add, x => !Exclude.Contains(x));
 				Objects.Sync(objects);
+				SelectedObjects.RemoveWhere(x => !objects.Contains(x));
 				NotifyPropertyChanged(nameof(Objects));
 			}
 

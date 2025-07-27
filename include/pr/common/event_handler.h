@@ -235,7 +235,7 @@ namespace pr
 				handlers = m_handlers;
 			}
 			for (auto& h : handlers)
-				h.m_delegate(s, a);
+				h.m_delegate(s, a); // Can't std::forward rvalues in a loop.
 		}
 		void operator()(Sender s) const
 		{

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -14,9 +14,6 @@ namespace pr::rdr12::ldraw
 		byte_data<> m_script;
 
 		SourceBinary(Guid const* context_id, std::span<std::byte const> data);
-
-		// Construct a new instance of the source (if possible)
-		std::shared_ptr<SourceBase> Clone() override;
 
 	protected:
 

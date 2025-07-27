@@ -23,32 +23,6 @@ namespace pr::rdr12
 		// Notes:
 		//  - Combines a renderer Window with a collection of LdrObjects
 
-		using AnimData = struct AnimData
-		{
-			std::thread m_thread;
-			std::atomic_int m_issue;
-			std::atomic<seconds_t> m_clock;
-			AnimData() :m_thread() ,m_issue() ,m_clock() {}
-			explicit operator bool() const { return m_thread.joinable(); }
-		};
-		using LightingUIPtr = std::unique_ptr<LightingUI>;
-		using LdrObjectManagerUIPtr = std::unique_ptr<ldraw::ObjectManagerUI>;
-		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
-		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
-		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
-
-		// Renderer window/scene
-		Renderer* m_rdr; // The main renderer
-		HWND m_hwnd;     // The associated Win32 window handle
-		Window m_wnd;    // The renderer window
-		Scene m_scene;   // Use one scene for the window
-
-		// Objects
-		ObjectSet m_objects; // References to objects to draw (note: objects are owned by the context, not the window)
-		GizmoSet m_gizmos;   // References to gizmos to draw (note: objects are owned by the context, not the window)
-		GuidSet m_guids;     // The context ids added to this window
-
-		// Stock objects
 		struct Instance
 		{
 			#define PR_RDR_INST(x)\
@@ -69,6 +43,33 @@ namespace pr::rdr12
 			PR_RDR12_INSTANCE_MEMBERS(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
 			#undef PR_RDR_INST
 		};
+		struct AnimData
+		{
+			std::jthread m_thread;
+			std::atomic_int m_issue;
+			std::atomic<seconds_t> m_clock;
+			AnimData() :m_thread() ,m_issue() ,m_clock() {}
+			explicit operator bool() const { return m_thread.joinable(); }
+		};
+
+		using LightingUIPtr = std::unique_ptr<LightingUI>;
+		using LdrObjectManagerUIPtr = std::unique_ptr<ldraw::ObjectManagerUI>;
+		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
+		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
+		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
+
+		// Renderer window/scene
+		Renderer* m_rdr; // The main renderer
+		HWND m_hwnd;     // The associated Win32 window handle
+		Window m_wnd;    // The renderer window
+		Scene m_scene;   // Use one scene for the window
+
+		// Objects
+		ObjectSet m_objects; // References to objects to draw (note: objects are owned by the context, not the window)
+		GizmoSet m_gizmos;   // References to gizmos to draw (note: objects are owned by the context, not the window)
+		GuidSet m_guids;     // The context ids added to this window
+
+		// Stock objects
 		PointInstance m_focus_point;     // Focus point graphics
 		PointInstance m_origin_point;    // Origin point graphics
 		Instance      m_bbox_model;      // Bounding box graphics
@@ -278,9 +279,6 @@ namespace pr::rdr12
 		bool DepthBufferEnabled() const;
 		void DepthBufferEnabled(bool enabled);
 
-		// Called when objects are added/removed from this window
-		void ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object);
-
 		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
 		void SetSelectionBox(BBox const& bbox, m3x4 const& ori = m3x4::Identity());
 
@@ -367,6 +365,9 @@ namespace pr::rdr12
 		bool TranslateKey(EKeyCodes key);
 
 	private:
+
+		// Called when objects are added/removed from this window
+		void ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object);
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockObjects();

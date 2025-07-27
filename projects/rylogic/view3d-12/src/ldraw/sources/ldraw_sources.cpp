@@ -31,17 +31,11 @@ namespace pr::rdr12::ldraw
 		, m_main_thread_id(std::this_thread::get_id())
 		, m_listen_port()
 	{
-		// Handle notification of changed files from the watcher.
-		// 'OnFilesChanged' is raised before any of the 'FileWatch_OnFileChanged'
-		// callbacks are made. So this notifies of the reload before anything starts changing.
-		m_watcher.OnFilesChanged += [this](FileWatch&, FileWatch::FileCont&) mutable
-		{
-			// needed now?
-			//m_events->OnReload();
-		};
+		m_rdr->AddPollCB(m_watcher.PollCB, seconds_t(1.0));
 	}
 	ScriptSources::~ScriptSources()
 	{
+		m_rdr->RemovePollCB(m_watcher.PollCB);
 		StopConnections();
 	}
 
@@ -78,11 +72,11 @@ namespace pr::rdr12::ldraw
 		m_watcher.RemoveAll();
 
 		// Notify of the object container change
-		m_events->OnStoreChange({EDataChangedReason::Removal, guids, nullptr, false});
+		m_events->OnStoreChange({EDataChangeTrigger::Removal, guids, nullptr, false});
 	}
 
 	// Remove a single object from the store
-	void ScriptSources::Remove(LdrObject* object, EDataChangedReason reason)
+	void ScriptSources::Remove(LdrObject* object, EDataChangeTrigger trigger)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto id = object->m_context_id;
@@ -94,7 +88,7 @@ namespace pr::rdr12::ldraw
 
 		// Notify of the object container change
 		if (src->m_output.m_objects.size() != count)
-			m_events->OnStoreChange({ reason, {&id, 1}, nullptr, false });
+			m_events->OnStoreChange({ trigger, {&id, 1}, nullptr, false });
 
 		// If that was the last object for the source, remove the source too
 		if (src->m_output.m_objects.empty())
@@ -102,7 +96,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Remove all objects associated with 'context_ids'
-	void ScriptSources::Remove(view3d::GuidPredCB pred, EDataChangedReason reason)
+	void ScriptSources::Remove(view3d::GuidPredCB pred, EDataChangeTrigger trigger)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -120,7 +114,7 @@ namespace pr::rdr12::ldraw
 		// Notify of the object container about to change
 		if (!removed.empty())
 		{
-			m_events->OnStoreChange({ reason, removed, nullptr, true });
+			m_events->OnStoreChange({ trigger, removed, nullptr, true });
 		}
 
 		// Remove the sources
@@ -136,32 +130,36 @@ namespace pr::rdr12::ldraw
 		// Notify of the object container change
 		if (!removed.empty())
 		{
-			m_events->OnStoreChange({ reason, removed, nullptr, false });
+			m_events->OnStoreChange({ trigger, removed, nullptr, false });
 		}
 	}
-	void ScriptSources::Remove(Guid const& context_id, EDataChangedReason reason)
+	void ScriptSources::Remove(Guid const& context_id, EDataChangeTrigger trigger)
 	{
-		Remove({ &context_id, MatchContextId }, reason);
+		Remove({ &context_id, MatchContextId }, trigger);
 	}
 
 	// Reload a range of sources
-	void ScriptSources::Reload(std::span<Guid const> ids)
+	void ScriptSources::Reload(std::span<Guid const> ids_)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
+		pr::vector<Guid> ids = ids_;
 
-		pr::vector<SourceBase*> srcs;
-		for (auto& id : ids)
-			srcs.push_back(m_srcs[id].get());
-
-		m_events->OnStoreChange({ EDataChangedReason::Reload, ids, nullptr, true });
+		// Notify of a reload about to start
+		m_events->OnStoreChange({ EDataChangeTrigger::Reload, ids, nullptr, true });
 
 		// Reload each source in a background thread
-		std::for_each(std::execution::par, std::begin(srcs), std::end(srcs), [this](auto* src)
+		std::for_each(std::execution::par, std::begin(ids), std::end(ids), [this](Guid const& id)
 		{
-			src->Load(rdr(), EDataChangedReason::Reload, nullptr);
+			auto& src = m_srcs[id];
+			auto output = src->Load(rdr());
+			src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::Reload, nullptr });
 		});
 
-		m_events->OnStoreChange({ EDataChangedReason::Reload, ids, nullptr, false });
+		// Queue a notify load complete after all reloads have been queued
+		rdr().RunOnMainThread([this, ids = std::move(ids)]() mutable noexcept
+		{
+			m_events->OnStoreChange({ EDataChangeTrigger::Reload, ids, nullptr, false });
+		});
 	}
 
 	// Reload all sources
@@ -181,12 +179,16 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Add an object created externally
-	Guid ScriptSources::Add(LdrObjectPtr object)
+	Guid ScriptSources::Add(LdrObjectPtr object) // worker thread context
 	{
+		// Create a source wrapper for this object
 		auto src = std::shared_ptr<SourceBase>(new SourceBase{ &object->m_context_id });
-		src->m_output.m_objects.push_back(object);
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-		src->Load(rdr(), EDataChangedReason::NewData, nullptr);
+		src->m_output.m_objects.push_back(object);
+		
+		// Parse the script
+		auto output = src->Load(rdr());
+		src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, nullptr });
 		return src->m_context_id;
 	}
 
@@ -201,7 +203,10 @@ namespace pr::rdr12::ldraw
 		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceString<Char>>(new SourceString<Char>(context_id, script, enc, includes));
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
+				
+		// Start a task to 'parse' it
+		auto output = src->Load(rdr());
+		src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, add_complete });
 		return src->m_context_id;
 	}
 	template Guid ScriptSources::AddString<wchar_t>(std::wstring_view script, EEncoding enc, Guid const* context_id, PathResolver const& includes, AddCompleteCB add_complete);
@@ -217,7 +222,10 @@ namespace pr::rdr12::ldraw
 		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceFile>(new SourceFile{ context_id, filepath, enc, includes });
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
+
+		// Start a task to 'parse' it
+		auto output = src->Load(rdr());
+		src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, add_complete });
 		return src->m_context_id;
 	}
 
@@ -231,7 +239,10 @@ namespace pr::rdr12::ldraw
 		// The 'add_complete' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceBinary>(new SourceBinary{ context_id, data });
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
+
+		// Start a task to 'parse' it
+		auto output = src->Load(rdr());
+		src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, add_complete });
 		return src->m_context_id;
 	}
 
@@ -320,10 +331,11 @@ namespace pr::rdr12::ldraw
 								auto client = Socket(::accept(listen_socket, (sockaddr*)&client_addr, &client_addr_size));
 								network::Check(client != INVALID_SOCKET, "Accepting connection failed");
 
-								// Add this connection as a new source
+								// Add this connection as a new source. SourceStream streams start their own thread internally.
+								// We just need to call 'SourceNotifyHandler' to register it as a source.
 								auto src = std::shared_ptr<SourceStream>(new SourceStream{ nullptr, &rdr(), std::move(client), client_addr });
 								src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-								src->Load(rdr(), EDataChangedReason::NewData, nullptr);
+								src->Notify(src, NotifyEventArgs{ {}, ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, nullptr });
 							}
 							break;
 						}
@@ -404,36 +416,45 @@ namespace pr::rdr12::ldraw
 
 		m_loading.insert(context_id);
 
-		// Make a copy of the source (if clone-able)
-		auto clone = iter->second->Clone();
-		if (clone == nullptr)
-			return;
-
 		// Reload that file group (asynchronously)
-		std::jthread([this, clone = std::move(clone), context_id]() mutable
+		std::jthread([this, src = iter->second, context_id]() mutable
 		{
 			// Note: if loading a file fails, don't use 'MarkAsChanged' to trigger another load
 			// attempt. Doing so results in an infinite loop trying to load a broken file.
-			clone->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
-			clone->Load(rdr(), EDataChangedReason::Reload, nullptr);
+			auto output = src->Load(rdr());
+			src->Notify(src, NotifyEventArgs{ std::move(output), ENotifyReason::LoadComplete, EDataChangeTrigger::Reload, nullptr });
 		}).detach();
 	}
 
 	// Handler for when new data is received from a source
-	void ScriptSources::SourceNotifyHandler(std::shared_ptr<SourceBase> source, NotifyEventArgs const& args)
+	void ScriptSources::SourceNotifyHandler(std::shared_ptr<SourceBase> src, NotifyEventArgs const& args)
 	{
+		// Notes:
+		//  - Sources have a Load function that generates a ParseResult (new instance)
+		//  - Load should be threadsafe so it can be called in parallel on all sources.
+		//  - Once the new parse result is ready, 'Notify' on the source is called to tell
+		//    this function to add the new (or reloaded) data.
+		//  - This function merges or replaces the data for 'src'. Note that the old data
+		//    remains in scope until after the last StoreChanged event so that callers can
+		//    still reference the old data if needed.
+		//  - V3dWindows watch for the store changed event and manage their lists of objects.
+		//  - In C#, References to 'Object' need to be kept in sync with the native code by
+		//    watching for the SceneChanged events
+
 		// Marshal to the main thread
 		if (std::this_thread::get_id() != m_main_thread_id)
 		{
-			return rdr().RunOnMainThread([this, source, args = args]() mutable noexcept
+			// Make a copy of the 'args' cause the caller is going out of scope.
+			// Copying 'ParseResult' isn't too back, because the vectors are just pointers to objects.
+			return rdr().RunOnMainThread([this, src, args = NotifyEventArgs(args)]() mutable noexcept
 			{
-				SourceNotifyHandler(source, args);
+				SourceNotifyHandler(src, args);
 			});
 		}
 
 		// Should be on the main thread now
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		auto context_id = source->m_context_id;
+		auto context_id = src->m_context_id;
 
 		switch (args.m_reason)
 		{
@@ -445,38 +466,45 @@ namespace pr::rdr12::ldraw
 				m_loading.erase(context_id);
 
 				// Notify of the store about to change
-				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &source->m_output, true });
+				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &args.m_output, true });
 				if (args.m_add_complete) args.m_add_complete(context_id, true);
 
 				// Add any dependent files to the file watcher
-				for (auto& fp : source->m_filepaths)
+				for (auto& fp : src->m_filepaths)
 					m_watcher.Add(fp.c_str(), this, context_id);
 
 				// Notify of any errors that occurred
-				for (auto& err : source->m_errors)
+				for (auto& err : src->m_errors)
 					m_events->OnError(err);
 
 				// Update the store
-				auto& src = m_srcs[context_id];
-				if (src == nullptr)
-					src = source;
-				else if (src != source)
-					src->m_output += std::move(source->m_output);
+				auto& existing = m_srcs[context_id];
+				if (existing == nullptr)
+					existing = src;
+
+				// Remove existing data if this is a reload but keep it alive until the final StoreChange event is finished.
+				ParseResult previous_data;
+				if (args.m_trigger == EDataChangeTrigger::Reload)
+					std::swap(previous_data, existing->m_output);
+
+				// Merged the output with the existing output.
+				// This is a merge, rather than a replace, because stream sources add data incrementally
+				existing->m_output += args.m_output;
 
 				// Notify of the store change
-				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &src->m_output, false });
+				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &existing->m_output, false });
 				if (args.m_add_complete) args.m_add_complete(context_id, false);
 
 				// Process any commands
-				if (!src->m_output.m_commands.empty())
-					m_events->OnHandleCommands(*src);
+				if (!existing->m_output.m_commands.empty())
+					m_events->OnHandleCommands(*existing);
 
 				break;
 			}
 			case ENotifyReason::Disconnected:
 			{
 				// 'source' has disconnected.
-				Remove(source->m_context_id);
+				Remove(src->m_context_id);
 				break;
 			}
 			default:

@@ -110,7 +110,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Access to the object container</summary>
 		public IList<View3d.Object> RootObjects => ObjectManager.Objects;
-		public HashSet<View3d.Object> SelectedObjects { get; } = [];
+		public HashSet<View3d.Object> SelectedObjects => ObjectManager.SelectedObjects;
 
 		/// <summary>True if one or more objects is selected</summary>
 		public View3d.Object? FirstSelected => SelectedObjects.FirstOrDefault();

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -12,8 +12,8 @@ namespace pr::rdr12::ldraw
 	// Callback after data has been added to the store
 	using AddCompleteCB = std::function<void(Guid const&, bool)>;
 
-	// Reasons that data in the store has changed
-	enum class EDataChangedReason
+	// The event that triggered the data change in the store
+	enum class EDataChangeTrigger
 	{
 		None,
 
@@ -40,11 +40,14 @@ namespace pr::rdr12::ldraw
 	// Event args for the SourceBase Notify event
 	struct NotifyEventArgs
 	{
+		// The load results
+		ParseResult m_output;
+
 		// The initiating reason for this event
 		ENotifyReason m_reason;
 
 		// The trigger that initiated a Load call
-		EDataChangedReason m_trigger;
+		EDataChangeTrigger m_trigger;
 
 		// Called after data has been added to the store
 		AddCompleteCB m_add_complete;
@@ -78,14 +81,13 @@ namespace pr::rdr12::ldraw
 		// An event raised during parsing.
 		EventHandler<SourceBase&, ParsingProgressEventArgs&, true> ParsingProgress;
 
+		// Parse the contents of the script from this source.
+		ParseResult Load(Renderer& rdr);
+
 		// An event raised when something happens with this source (e.g, has new data, disconnected, etc)
+		// This is called from outside the class because the 'Load' method cannot both return and move the result
+		// into the notify. Not all callers want to handle notify.
 		EventHandler<std::shared_ptr<SourceBase>, NotifyEventArgs const&, true> Notify;
-
-		// Construct a new instance of the source (if possible)
-		virtual std::shared_ptr<SourceBase> Clone();
-
-		// Parse the contents of the script from this source
-		void Load(Renderer& rdr, EDataChangedReason trigger, AddCompleteCB add_complete_cb);
 
 	protected:
 
@@ -100,4 +102,3 @@ namespace pr::rdr12::ldraw
 	// Create a stable Guid from a filepath
 	Guid ContextIdFromFilepath(std::filesystem::path const& filepath);
 }
-

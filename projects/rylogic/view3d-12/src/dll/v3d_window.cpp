@@ -1079,26 +1079,6 @@ namespace pr::rdr12
 		m_scene.m_pso.Set<EPipeState::DepthEnable>(enabled ? TRUE : FALSE);
 	}
 
-	// Called when objects are added/removed from this window
-	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object)
-	{
-		// Reset the draw lists so that removed objects are no longer in the draw list
-		if (change_type == view3d::ESceneChanged::ObjectsRemoved)
-		{
-			// Objects are being removed, make sure they're not in the drawlist
-			// for this window and that the graphics card is not still using them.
-			m_scene.ClearDrawlists();
-			m_wnd.m_gsync.Wait();
-		}
-
-		// Invalidate cached members
-		m_bbox_scene = BBox::Reset();
-
-		// Notify scene changed
-		view3d::SceneChanged args = {change_type, context_ids.data(), s_cast<int>(context_ids.size()), object};
-		OnSceneChanged(this, args);
-	}
-
 	// Set the position and size of the selection box. If 'bbox' is 'BBox::Reset()' the selection box is not shown
 	void V3dWindow::SetSelectionBox(BBox const& bbox, m3x4 const& ori)
 	{
@@ -1178,7 +1158,7 @@ namespace pr::rdr12
 				AnimControl(view3d::EAnimCommand::Stop);
 				auto rate = time.count();
 				auto issue = m_anim_data.m_issue.load();
-				m_anim_data.m_thread = std::thread([this, issue, rate]
+				m_anim_data.m_thread = std::jthread([this, issue, rate]
 				{
 					// 'rate' is the seconds/second step rate
 					auto time0 = system_clock::now();
@@ -1197,7 +1177,7 @@ namespace pr::rdr12
 							m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
 					}
 				});
-				m_wnd.m_rdr->AddPollCB({ this, AnimTick });
+				m_wnd.m_rdr->AddPollCB({ this, AnimTick }, seconds_t(0));
 				break;
 			}
 			case view3d::EAnimCommand::Stop:
@@ -1651,6 +1631,26 @@ namespace pr::rdr12
 			}
 		}
 		return false;
+	}
+	
+	// Called when objects are added/removed from this window
+	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object)
+	{
+		// Reset the draw lists so that removed objects are no longer in the draw list
+		if (change_type == view3d::ESceneChanged::ObjectsRemoved)
+		{
+			// Objects are being removed, make sure they're not in the drawlist
+			// for this window and that the graphics card is not still using them.
+			m_scene.ClearDrawlists();
+			m_wnd.m_gsync.Wait();
+		}
+
+		// Invalidate cached members
+		m_bbox_scene = BBox::Reset();
+
+		// Notify scene changed
+		view3d::SceneChanged args = {change_type, context_ids.data(), s_cast<int>(context_ids.size()), object};
+		OnSceneChanged(this, args);
 	}
 
 	// Create stock models such as the focus point, origin, etc

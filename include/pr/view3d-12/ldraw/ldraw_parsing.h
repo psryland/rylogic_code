@@ -65,7 +65,7 @@ namespace pr::rdr12::ldraw
 		void reset();
 		size_t count() const;
 		LdrObjectPtr operator[](size_t index) const;
-		ParseResult& operator += (ParseResult&& rhs);
+		ParseResult& operator += (ParseResult const& rhs);
 		explicit operator bool() const;
 	};
 

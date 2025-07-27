@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -17,29 +17,22 @@ namespace pr::rdr12::ldraw
 		m_name = To<string32>(m_context_id);
 	}
 
-	// Construct a new instance of the source (if possible)
-	std::shared_ptr<SourceBase> SourceBase::Clone()
-	{
-		return nullptr;
-	}
-
 	// Parse the contents of the script
-	void SourceBase::Load(Renderer& rdr, EDataChangedReason trigger, AddCompleteCB add_complete_cb)
+	ParseResult SourceBase::Load(Renderer& rdr) // worker thread context
 	{
+		// This function may be called synchronously or in a worker thread (it's the caller's choice).
+		// This function simply returns a new ParseResults instance, it's up to the caller to manage
+		// how the result is stored because they know when it's safe to delete the previous result.
 		try
 		{
-			m_output = ReadSource(rdr);
-
-			// Only notify if there are attached handlers. This allows stack allocated Sources
-			// to be used (that won't work with shared_from_this()) if they don't attach to 'Notify'.
-			// Search for 'SourceNotifyHandler'
-			if (Notify)
-				Notify(shared_from_this(), { ENotifyReason::LoadComplete, trigger, add_complete_cb });
+			// Parse the script
+			return ReadSource(rdr);
 		}
 		catch (std::exception const& ex)
 		{
 			ParseErrorEventArgs err{ ex.what(), ldraw::EParseError::UnknownError, {} };
 			m_errors.push_back(err);
+			return {};
 		}
 	}
 

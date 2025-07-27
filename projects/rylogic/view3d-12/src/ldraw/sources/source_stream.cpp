@@ -75,7 +75,7 @@ namespace pr::rdr12::ldraw
 			m_socket = nullptr;
 
 			// Signal that the connection was lost
-			Notify(shared_from_this(), { ENotifyReason::Disconnected, {}, nullptr });
+			Notify(shared_from_this(), { {}, ENotifyReason::Disconnected, {}, nullptr });
 		});
 	}
 	SourceStream::SourceStream(SourceStream&& rhs) noexcept
@@ -154,10 +154,10 @@ namespace pr::rdr12::ldraw
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{
-				m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+				auto src = shared_from_this();
+				m_rdr->RunOnMainThread([src, out = std::move(out)]() mutable noexcept
 				{
-					m_output += std::move(out);
-					Notify(shared_from_this(), { ENotifyReason::LoadComplete, EDataChangedReason::NewData, nullptr });
+					src->Notify(src, { std::move(out), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, nullptr });
 				});
 			}
 		}
@@ -223,10 +223,10 @@ namespace pr::rdr12::ldraw
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{
-				m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+				auto src = shared_from_this();
+				m_rdr->RunOnMainThread([src, out = std::move(out)]() mutable noexcept
 				{
-					m_output += std::move(out);
-					Notify(shared_from_this(), { ENotifyReason::LoadComplete, EDataChangedReason::NewData, nullptr });
+					src->Notify(src, { std::move(out), ENotifyReason::LoadComplete, EDataChangeTrigger::NewData, nullptr });
 				});
 			}
 		}

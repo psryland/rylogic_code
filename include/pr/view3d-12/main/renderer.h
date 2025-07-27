@@ -20,8 +20,27 @@ namespace pr::rdr12
 	{
 	private:
 
+		struct PollCallback
+		{
+			StaticCB<void> m_cb; // The callback
+			seconds_t m_period; // The period to call the callback
+			time_point_t m_last; // The time when the callback last completed
+			void operator()()
+			{
+				if (!m_cb) return;
+				auto now = std::chrono::system_clock::now();
+				if (now - m_last >= m_period)
+				{
+					m_cb();
+					m_last += std::chrono::duration_cast<decltype(m_last)::duration>(m_period);
+					if (now - m_last > m_period)
+						m_last = now;
+				}
+			}
+		};
+
 		using TaskQueue = std::vector<std::future<void>>;
-		using PollCBList = std::vector<pr::StaticCB<void>>;
+		using PollCBList = std::vector<PollCallback>;
 		using AllocationsTracker = AllocationsTracker<void>;
 
 		// Renderer state
@@ -249,8 +268,8 @@ namespace pr::rdr12
 		void LastTask();
 
 		// Add/Remove a callback function that will be polled as fast as the windows message queue will allow
-		void AddPollCB(pr::StaticCB<void> cb);
-		void RemovePollCB(pr::StaticCB<void> cb);
+		void AddPollCB(StaticCB<void> cb, seconds_t period_ms);
+		void RemovePollCB(StaticCB<void> cb);
 
 		// Call all registered poll event callbacks
 		void Poll();
