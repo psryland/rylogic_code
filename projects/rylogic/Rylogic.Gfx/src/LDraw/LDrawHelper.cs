@@ -49,6 +49,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrArrow Arrow(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrArrow();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrTriangle Triangle(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrTriangle();
@@ -574,6 +580,87 @@ namespace Rylogic.LDraw
 						res.Append(line.pt.xyz, line.dir.xyz);
 						if (m_per_item_colour)
 							res.Append(line.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrArrow: LdrBase<LdrArrow>
+	{
+		private struct Pt { public v4 pt; public Colour32 col; };
+		private readonly List<Pt> m_pts = [];
+		private EArrowType m_style = EArrowType.Fwd;
+		private Serialiser.PerItemColour m_per_item_colour = new();
+		private Serialiser.Width m_width = new();
+		private bool m_smooth = false;
+
+		// Arrow style
+		public LdrArrow style(EArrowType style)
+		{
+			m_style = style;
+			return this;
+		}
+
+		// Spline arrow
+		public LdrArrow smooth(bool smooth = true)
+		{
+			m_smooth = smooth;
+			return this;
+		}
+
+		// Line width
+		public LdrArrow width(Serialiser.Width w)
+		{
+			m_width = w;
+			return this;
+		}
+
+		// Line strip parts
+		public LdrArrow start(v4 p, Colour32 colour)
+		{
+			start(p);
+			var last = m_pts.Last();
+			last.col = colour;
+			m_pts[m_pts.Count - 1] = last;
+			m_per_item_colour = true;
+			return this;
+		}
+		public LdrArrow start(v4 p)
+		{
+			Debug.Assert(m_pts.Count == 0, "Arrows can only have one start point");
+			m_pts.Add(new Pt{ pt = p, col = 0xFFFFFFFF });
+			return this;
+		}
+		public LdrArrow line_to(v4 p, Colour32 colour)
+		{
+			line_to(p);
+			var last = m_pts.Back();
+			last.col = colour;
+			m_pts[m_pts.Count - 1] = last;
+			m_per_item_colour = true;
+			return this;
+		}
+		public LdrArrow line_to(v4 p)
+		{
+			Debug.Assert(m_pts.Count != 0, "Arrows require a start point first");
+			m_pts.Add(new Pt{ pt = p, col = 0xFFFFFFFF });
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Arrow, m_name, m_colour, () =>
+			{
+				res.Append(m_width, m_per_item_colour);
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var pt in m_pts)
+					{
+						res.Append(pt.pt.xyz);
+						if (m_per_item_colour)
+							res.Append(pt.col);
 					}
 				});
 				base.WriteTo(res);

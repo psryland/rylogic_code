@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -57,8 +57,8 @@ namespace pr::rdr12
 		{
 			if (m_adapter.ptr != nullptr) Check(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
 			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
-			m_options = SetBits(m_options, ERdrOptions::DeviceGPUDebug, gpu_debug);
-			m_options = SetBits(m_options, ERdrOptions::BreakOnErrors, break_on_errors);
+			m_options = SetBits(m_options, ERdrOptions::DeviceGPUDebug, enable && gpu_debug);
+			m_options = SetBits(m_options, ERdrOptions::BreakOnErrors, enable && break_on_errors);
 			return *this;
 		}
 
