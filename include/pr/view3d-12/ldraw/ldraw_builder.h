@@ -1,4 +1,4 @@
-﻿//************************************
+//************************************
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -74,14 +74,9 @@ namespace pr::rdr12::ldraw
 	// Ldr object fluent helper
 	namespace fluent
 	{
-		template <typename T> concept WriterType = requires
-		{
-			//T::Write;
-			//T::Append;
-			true;
-		};
-		static_assert(WriterType<TextWriter>);
+		template <typename T> concept WriterType = requires { true; }; // todo
 		static_assert(WriterType<BinaryWriter>);
+		static_assert(WriterType<TextWriter>);
 
 		struct LdrPoint;
 		struct LdrLine;
@@ -102,19 +97,31 @@ namespace pr::rdr12::ldraw
 		struct LdrBinaryStream;
 		struct LdrTextStream;
 
-		struct LdrObj
+		struct LdrBuilder
 		{
-			using ObjPtr = std::unique_ptr<LdrObj>;
+			using ObjPtr = std::unique_ptr<LdrBuilder>;
 			using ObjCont = std::vector<ObjPtr>;
 
 			ObjCont m_objects;
 
-			LdrObj() = default;
-			LdrObj(LdrObj&&) = default;
-			LdrObj(LdrObj const&) = delete;
-			LdrObj& operator=(LdrObj&&) = default;
-			LdrObj& operator=(LdrObj const&) = delete;
-			virtual ~LdrObj() = default;
+			LdrBuilder() = default;
+			LdrBuilder(LdrBuilder&&) = default;
+			LdrBuilder(LdrBuilder const&) = delete;
+			LdrBuilder& operator=(LdrBuilder&&) = default;
+			LdrBuilder& operator=(LdrBuilder const&) = delete;
+			virtual ~LdrBuilder() = default;
+
+			// Reset the builder
+			LdrBuilder& Clear(int count = -1)
+			{
+				auto size = static_cast<int>(m_objects.size());
+				if (count >= 0 && count < size)
+					m_objects.resize(size - count);
+				else
+					m_objects.clear();
+
+				return *this;
+			}
 
 			// Object types
 			LdrPoint& Point(Name name = {}, Colour colour = Colour());
@@ -134,9 +141,12 @@ namespace pr::rdr12::ldraw
 			LdrGroup& Group(Name name = {}, Colour colour = Colour());
 			LdrCommands& Command(Name name = {}, Colour colour = Colour());
 
-			// Extension objects
-			// Use: `builder._<LdrCustom>("name", 0xFFFFFFFF)`
-			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
+			// Switch data stream modes
+			LdrBuilder& BinaryStream();
+			LdrBuilder& TextStream();
+
+			// Extension objects. Use: `builder._<LdrCustom>("name", 0xFFFFFFFF)`
+			template <typename LdrCustom> requires std::is_base_of_v<LdrBuilder, LdrCustom>
 			LdrCustom& _(std::string_view name = "", Colour colour = Colour())
 			{
 				auto ptr = new LdrCustom;
@@ -145,24 +155,15 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Wrap all objects into a group
-			LdrObj& WrapAsGroup(Name name = {}, Colour colour = Colour());
-
-			// Switch data stream modes
-			LdrObj& BinaryStream();
-			LdrObj& TextStream();
+			LdrBuilder& WrapAsGroup(Name name = {}, Colour colour = Colour());
 
 			// Serialise the ldr script to a string
-			textbuf ToString(bool pretty) const
+			textbuf ToText(bool pretty) const
 			{
 				textbuf out;
 				WriteTo(out);
 				if (pretty) out = FormatScript(out);
 				return out;
-			}
-			virtual void WriteTo(textbuf& out) const
-			{
-				for (auto& obj : m_objects)
-					obj->WriteTo(out);
 			}
 
 			// Serialise the ldr script to binary
@@ -172,18 +173,18 @@ namespace pr::rdr12::ldraw
 				WriteTo(out);
 				return out;
 			}
+
+			// Serialise to 'out'
+			virtual void WriteTo(textbuf& out) const
+			{
+				for (auto& obj : m_objects)
+					obj->WriteTo(out);
+			}
 			virtual void WriteTo(bytebuf& out) const
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
 			}
-
-			// Reset the builder
-			LdrObj& Clear(int count = -1)
-			{
-				auto size = static_cast<int>(m_objects.size());
-				if (count >= 0 && count < size)
-					m_objects.resize(size - count);
 				else
 					m_objects.clear();
 
@@ -191,11 +192,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write the script to a file
-			LdrObj& Write(std::filesystem::path const& filepath)
+			LdrBuilder& Write(std::filesystem::path const& filepath)
 			{
 				return Write(filepath, false, false);
 			}
-			LdrObj& Write(std::filesystem::path const& filepath, bool pretty, bool append)
+			LdrBuilder& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
 				textbuf out;
 				WriteTo(out);
@@ -204,8 +205,9 @@ namespace pr::rdr12::ldraw
 				return *this;
 			}
 		};
+
 		template <typename Derived>
-		struct LdrBase :LdrObj
+		struct LdrBase :LdrBuilder
 		{
 			LdrBase()
 				: m_name()
@@ -330,12 +332,12 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write nested objects to 'out'
-			void WriteTo(textbuf& out) const override
+			virtual void WriteTo(textbuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<TextWriter>(out);
 			}
-			void WriteTo(bytebuf& out) const override
+			virtual void WriteTo(bytebuf& out) const override 
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<BinaryWriter>(out);
@@ -346,7 +348,7 @@ namespace pr::rdr12::ldraw
 			void WriteTo(TOut& out) const
 			{
 				Writer::Append(out, m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
-				LdrObj::WriteTo(out);
+				LdrBuilder::WriteTo(out);
 			}
 		};
 
@@ -1362,104 +1364,104 @@ namespace pr::rdr12::ldraw
 			}
 		};
 
-		#pragma region LdrObj::Implementation
-		inline LdrPoint& LdrObj::Point(Name name, Colour colour)
+		#pragma region LdrBuilder::Implementation
+		inline LdrPoint& LdrBuilder::Point(Name name, Colour colour)
 		{
 			auto ptr = new LdrPoint;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrLine& LdrObj::Line(Name name, Colour colour)
+		inline LdrLine& LdrBuilder::Line(Name name, Colour colour)
 		{
 			auto ptr = new LdrLine;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrLineD& LdrObj::LineD(Name name, Colour colour)
+		inline LdrLineD& LdrBuilder::LineD(Name name, Colour colour)
 		{
 			auto ptr = new LdrLineD;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrArrow& LdrObj::Arrow(Name name, Colour colour)
+		inline LdrArrow& LdrBuilder::Arrow(Name name, Colour colour)
 		{
 			auto ptr = new LdrArrow;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrTriangle& LdrObj::Triangle(Name name, Colour colour)
+		inline LdrTriangle& LdrBuilder::Triangle(Name name, Colour colour)
 		{
 			auto ptr = new LdrTriangle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrPlane& LdrObj::Plane(Name name, Colour colour)
+		inline LdrPlane& LdrBuilder::Plane(Name name, Colour colour)
 		{
 			auto ptr = new LdrPlane;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCircle& LdrObj::Circle(Name name, Colour colour)
+		inline LdrCircle& LdrBuilder::Circle(Name name, Colour colour)
 		{
 			auto ptr = new LdrCircle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrSphere& LdrObj::Sphere(Name name, Colour colour)
+		inline LdrSphere& LdrBuilder::Sphere(Name name, Colour colour)
 		{
 			auto ptr = new LdrSphere;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrBox& LdrObj::Box(Name name, Colour colour)
+		inline LdrBox& LdrBuilder::Box(Name name, Colour colour)
 		{
 			auto ptr = new LdrBox;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrBar& LdrObj::Bar(Name name, Colour colour)
+		inline LdrBar& LdrBuilder::Bar(Name name, Colour colour)
 		{
 			auto ptr = new LdrBar;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCylinder& LdrObj::Cylinder(Name name, Colour colour)
+		inline LdrCylinder& LdrBuilder::Cylinder(Name name, Colour colour)
 		{
 			auto ptr = new LdrCylinder;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCone& LdrObj::Cone(Name name, Colour colour)
+		inline LdrCone& LdrBuilder::Cone(Name name, Colour colour)
 		{
 			auto ptr = new LdrCone;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrSpline& LdrObj::Spline(Name name, Colour colour)
+		inline LdrSpline& LdrBuilder::Spline(Name name, Colour colour)
 		{
 			auto ptr = new LdrSpline;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrFrustum& LdrObj::Frustum(Name name, Colour colour)
+		inline LdrFrustum& LdrBuilder::Frustum(Name name, Colour colour)
 		{
 			auto ptr = new LdrFrustum;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrGroup& LdrObj::Group(Name name, Colour colour)
+		inline LdrGroup& LdrBuilder::Group(Name name, Colour colour)
 		{
 			auto ptr = new LdrGroup;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCommands& LdrObj::Command(Name name, Colour colour)
+		inline LdrCommands& LdrBuilder::Command(Name name, Colour colour)
 		{
 			auto ptr = new LdrCommands;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrObj& LdrObj::WrapAsGroup(Name name, Colour colour)
+		inline LdrBuilder& LdrBuilder::WrapAsGroup(Name name, Colour colour)
 		{
 			auto ptr = new LdrGroup;
 			swap(m_objects, ptr->m_objects);
@@ -1467,13 +1469,13 @@ namespace pr::rdr12::ldraw
 			(*ptr).name(name).colour(colour);
 			return *this;
 		}
-		inline LdrObj& LdrObj::BinaryStream()
+		inline LdrBuilder& LdrBuilder::BinaryStream()
 		{
 			auto ptr = new LdrBinaryStream;
 			m_objects.emplace_back(ptr);
 			return *this;
 		}
-		inline LdrObj& LdrObj::TextStream()
+		inline LdrBuilder& LdrBuilder::TextStream()
 		{
 			auto ptr = new LdrTextStream;
 			m_objects.emplace_back(ptr);
@@ -1483,7 +1485,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Fluent Ldraw script builder
-	using Builder = fluent::LdrObj;
+	using Builder = fluent::LdrBuilder;
 }
 
 #if PR_UNITTESTS
@@ -1495,19 +1497,19 @@ namespace pr::rdr12::ldraw
 		{
 			Builder L;
 			L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
-			auto str = L.ToString(false);
+			auto str = L.ToText(false);
 			PR_EXPECT(str::Equal(str, "*Box b FF00FF00 {*Data {1 1 1}}"));
 		}
 		{
 			Builder L;
 			L.Triangle().name("tri").colour(0xFFFF0000).tri(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }, v4{ 0, 1, 0, 1 });
-			auto str = L.ToString(false);
+			auto str = L.ToText(false);
 			PR_EXPECT(str::Equal(str, "*Triangle tri FFFF0000 {*Data {0 0 0 1 0 0 0 1 0}}"));
 		}
 		{
 			Builder L;
 			L.LineD().name("lined").colour(0xFF00FF00).line(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }).line(v4{ 0, 0, 0, 1 }, v4{ 0, 0, 1, 1 });
-			auto str = L.ToString(true);
+			auto str = L.ToText(true);
 			PR_EXPECT(str::Equal(str, "*LineD lined FF00FF00 {\n\t*Data {\n\t\t0 0 0 1 0 0 0 0 0 0 0 1\n\t}\n}"));
 		}
 	}

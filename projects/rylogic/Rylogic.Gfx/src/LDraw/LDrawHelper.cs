@@ -20,14 +20,19 @@ using Rylogic.Utility;
 
 namespace Rylogic.LDraw
 {
-	public class LdrObj
+	public class Builder
 	{
-		private List<LdrObj> m_objects = [];
+		private List<Builder> m_objects = [];
 
-		/// <summary>Clear</summary>
-		public void Reset()
+		/// <summary>Reset the builder</summary>
+		public Builder Clear(int count = -1)
 		{
-			m_objects.Clear();
+			if (count >= 0 && count < m_objects.Count)
+				m_objects.RemoveRange(count, m_objects.Count - count);
+			else
+				m_objects.Clear();
+	
+			return this;
 		}
 
 		/// <summary>Create child object</summary>
@@ -127,6 +132,8 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child;
 		}
+
+		/// <summary>Switch data stream modes</summary>
 		public LdrBinaryStream BinaryStream()
 		{
 			var child = new LdrBinaryStream();
@@ -229,7 +236,7 @@ namespace Rylogic.LDraw
 			return result;
 		}
 	}
-	public class LdrBase<TDerived> : LdrObj where TDerived : LdrBase<TDerived>
+	public class LdrBase<TDerived> : Builder where TDerived : LdrBase<TDerived>
 	{
 		protected Serialiser.Name m_name = new();
 		protected Serialiser.Colour m_colour = new();
@@ -1184,11 +1191,6 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.TextStream);
 		}
-	}
-
-	// Ldraw object fluent helper
-	public class Builder : LdrObj
-	{
 	}
 
 	// DEPRECATED 

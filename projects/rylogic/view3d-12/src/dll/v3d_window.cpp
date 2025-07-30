@@ -477,6 +477,9 @@ namespace pr::rdr12
 				pr::vector<Guid> guids(std::begin(removed), std::end(removed));
 				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids, nullptr);
 			}
+
+			// Refresh the window
+			Invalidate();
 		}
 	}
 

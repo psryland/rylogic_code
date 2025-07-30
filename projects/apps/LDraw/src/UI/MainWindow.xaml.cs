@@ -96,11 +96,13 @@ namespace LDraw
 				{
 					m_model.FileOpening -= HandleFileOpened;
 					m_model.ParsingProgressChanged -= HandleParsingProgressChanged;
+					m_model.SourcesChanged -= HandleSourcesChanged;
 					Util.Dispose(ref m_model!);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.SourcesChanged += HandleSourcesChanged;
 					m_model.ParsingProgressChanged += HandleParsingProgressChanged;
 					m_model.FileOpening += HandleFileOpened;
 				}
@@ -114,6 +116,10 @@ namespace LDraw
 				void HandleParsingProgressChanged(object? sender, EventArgs args)
 				{
 					NotifyPropertyChanged(nameof(ParsingProgress));
+				}
+				void HandleSourcesChanged(object? sender, EventArgs e)
+				{
+					NotifyPropertyChanged(nameof(StreamingState));
 				}
 			}
 		}

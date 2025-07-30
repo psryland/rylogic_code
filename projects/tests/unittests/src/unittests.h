@@ -345,7 +345,6 @@
 #include "pr\view3d-12\ldraw\ldraw.h"
 #include "pr\view3d-12\ldraw\ldraw_builder.h"
 #include "pr\view3d-12\ldraw\ldraw_commands.h"
-#include "pr\view3d-12\ldraw\ldraw_connection.h"
 #include "pr\view3d-12\ldraw\ldraw_conversion.h"
 #include "pr\view3d-12\ldraw\ldraw_gizmo.h"
 #include "pr\view3d-12\ldraw\ldraw_object.h"
