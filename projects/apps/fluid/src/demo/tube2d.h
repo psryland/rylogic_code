@@ -114,7 +114,7 @@ namespace pr::fluid
 		// Return the visualisation scene
 		std::string LdrScene() const override
 		{
-			return m_ldr.ToString(true);
+			return m_ldr.ToText(true);
 		}
 
 		// Returns initialisation data for the particle positions.

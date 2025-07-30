@@ -7,9 +7,6 @@
 
 namespace pr::rdr12::ldraw
 {
-	using bytebuf = std::vector<std::byte>;
-	using textbuf = std::string;
-
 	// Compile time hash
 	inline constexpr int HashI(char const* str)
 	{
@@ -369,4 +366,42 @@ namespace pr::rdr12::ldraw
 		Multiply,
 		Lerp,
 	};
+
+	// Hard types for ldraw::Builder output
+	struct textbuf :std::string
+	{
+		template <typename... Args> textbuf& append(Args... args)
+		{
+			std::string::append(std::forward<Args>(args)...);
+			return *this;
+		}
+		template <typename T> friend std::basic_ostream<T>& operator << (std::basic_ostream<T>& out, textbuf const& ldr)
+		{
+			out.write(type_ptr<T>(ldr.data()), ldr.size());
+			return out;
+		}
+		friend std::ptrdiff_t ssize(textbuf const& buf)
+		{
+			return std::ssize(buf);
+		}
+	};
+	struct bytebuf :std::vector<std::byte>
+	{
+		template <typename T> friend std::basic_ostream<T>& operator << (std::basic_ostream<T>& out, bytebuf const& ldr)
+		{
+			out.write(type_ptr<T>(ldr.data()), ldr.size());
+			return out;
+		}
+		friend std::ptrdiff_t ssize(bytebuf const& buf)
+		{
+			return std::ssize(buf);
+		}
+	};
+}
+namespace pr
+{
+	template <> struct is_string<rdr12::ldraw::textbuf> : std::true_type {};
+	template <> struct string_traits<rdr12::ldraw::textbuf const> : string_traits<std::basic_string<char> const> {};
+	template <> struct string_traits<rdr12::ldraw::textbuf> : string_traits<std::basic_string<char>> {};
+	static_assert(pr::is_string_v<rdr12::ldraw::textbuf>);
 }

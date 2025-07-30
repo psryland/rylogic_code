@@ -27,7 +27,7 @@ struct Body :physics::RigidBody
 					static std::default_random_engine rng;
 					Builder builder;
 					builder._<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f)).rigid_body(*this);
-					m_gfx = View3D_ObjectCreateLdrA(builder.ToString(false).c_str(), false, nullptr, nullptr); // TODO use binary
+					m_gfx = View3D_ObjectCreateLdrA(builder.ToText(false).c_str(), false, nullptr, nullptr); // TODO use binary
 				}
 				UpdateGfx();
 			}

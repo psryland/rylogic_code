@@ -93,7 +93,7 @@ namespace pr::rdr12
 
 			// Read the deformed bone transforms into the buffer to start with.
 			// These are bone-to-parent transforms for each bone.
-			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, time);
+			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, static_cast<float>(time));
 			m_time0 = m_time1;
 
 			// Convert the pose into object space transforms

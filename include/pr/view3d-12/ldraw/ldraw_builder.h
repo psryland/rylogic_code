@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -11,13 +11,6 @@
 
 namespace pr::rdr12::ldraw
 {
-	template <typename T> concept TString = requires(T t)
-	{
-		t.reserve(0);
-		t.push_back('c');
-		{ t.append(0, 'c') } -> std::convertible_to<T&>;
-	};
-
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
@@ -42,7 +35,12 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Pretty format Ldraw script
-	template <TString TStr>
+	template <typename TStr> requires(requires(TStr t)
+	{
+		t.reserve(0);
+		t.push_back('c');
+		{ t.append(0, 'c') } -> std::convertible_to<TStr&>;
+	})
 	TStr FormatScript(TStr const& str)
 	{
 		TStr out = {};
@@ -99,6 +97,15 @@ namespace pr::rdr12::ldraw
 
 		struct LdrBuilder
 		{
+			// Notes:
+			//  - You can write ldraw data to a stream using:
+			//      stream << builder.ToText() << std::flush; or
+			//      stream << builder.ToBinary() << std::flush;
+			//  - Use a socket_stream for streaming to LDraw:
+			//      pr::network::Winsock winsock;
+			//      pr::network::socket_stream ldr("localhost", 1976);
+			//      ldr << builder.ToText(false) << std::flush;
+
 			using ObjPtr = std::unique_ptr<LdrBuilder>;
 			using ObjCont = std::vector<ObjPtr>;
 
@@ -184,11 +191,6 @@ namespace pr::rdr12::ldraw
 			{
 				for (auto& obj : m_objects)
 					obj->WriteTo(out);
-			}
-				else
-					m_objects.clear();
-
-				return *this;
 			}
 
 			// Write the script to a file
@@ -1511,6 +1513,14 @@ namespace pr::rdr12::ldraw
 			L.LineD().name("lined").colour(0xFF00FF00).line(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }).line(v4{ 0, 0, 0, 1 }, v4{ 0, 0, 1, 1 });
 			auto str = L.ToText(true);
 			PR_EXPECT(str::Equal(str, "*LineD lined FF00FF00 {\n\t*Data {\n\t\t0 0 0 1 0 0 0 0 0 0 0 1\n\t}\n}"));
+		}
+		{
+			Builder L;
+			L.Box("box", 0xFF00FF00).dim(1, 2, 3);
+			
+			std::stringstream ss;
+			ss << L.ToText(false) << std::flush;
+			PR_EXPECT(str::Equal(ss.str(), "*Box box FF00FF00 {*Data {1 2 3}}"));
 		}
 	}
 	PRUnitTest(LdrHelperBinaryTests)
