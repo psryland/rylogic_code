@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Globals
+    -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>Application</ConfigurationType>
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{73479052-e286-405d-a4b6-6775373d6646}</ProjectGuid>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <RootNamespace>test_cpp</RootNamespace>
+    <ProjectName>test-cpp</ProjectName>
+  </PropertyGroup>
+  <!--
+    Configurations
+    -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!--
+    Property Sheets
+    -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)app.props" />
+  <!--
+    Build options
+    -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <PreprocessorDefinitions>
+        ;PR_MATHS_USE_INTRINSICS=1
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(RylogicRoot)include
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>
+        ;%(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+        ;view3d-12.imp
+				;%(AdditionalDependencies)
+      </AdditionalDependencies>
+      <DelayLoadDLLs>
+        ;view3d-12.dll
+      </DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+    Files
+    -->
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\tests\test_ldraw.cpp" />
+  </ItemGroup>
+  <!--
+    Dependencies
+    -->
+  <!--
+    Targets
+    -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
+</Project>
