@@ -246,6 +246,15 @@ namespace pr::rdr12::ldraw
 		return src->m_context_id;
 	}
 
+	// The state of the streaming connection
+	EStreamingState ScriptSources::StreamingState() const
+	{
+		return
+			!m_listen_thread.joinable() ? EStreamingState::Disconnected :
+			std::ranges::any_of(m_srcs, [](auto& src) { return dynamic_cast<SourceStream const*>(src.second.get()) != nullptr; }) ? EStreamingState::Connected :
+			EStreamingState::Listening;
+	}
+
 	// Allow connections on 'port'
 	void ScriptSources::AllowConnections(uint16_t listen_port)
 	{

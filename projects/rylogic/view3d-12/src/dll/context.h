@@ -63,7 +63,8 @@ namespace pr::rdr12
 		Guid LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ldraw::AddCompleteCB add_complete);
 
 		// Enable/Disable streaming script sources.
-		void StreamingEnable(bool enabled, uint16_t port);
+		ldraw::EStreamingState StreamingState() const;
+		void Streaming(bool enabled, uint16_t port);
 
 		// Create an object from geometry
 		ldraw::LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);

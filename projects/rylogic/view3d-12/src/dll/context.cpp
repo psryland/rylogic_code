@@ -115,7 +115,11 @@ namespace pr::rdr12
 	}
 
 	// Enable/Disable streaming script sources.
-	void Context::StreamingEnable(bool enabled, uint16_t port)
+	ldraw::EStreamingState Context::StreamingState() const
+	{
+		return m_sources.StreamingState();
+	}
+	void Context::Streaming(bool enabled, uint16_t port)
 	{
 		if (enabled)
 			m_sources.AllowConnections(port);

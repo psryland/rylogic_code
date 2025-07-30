@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -10,6 +10,7 @@ using LDraw.UI;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -177,39 +178,7 @@ namespace LDraw
 		private string? m_status_message;
 
 		/// <summary>The text description of the streaming state</summary>
-		public EStreamingState StreamingState
-		{
-			get => m_streaming_state;
-			set
-			{
-				if (StreamingState == value) return;
-				switch (value)
-				{
-					case EStreamingState.Disconnected:
-					{
-						// TODO: Disconnect
-						break;
-					}
-					case EStreamingState.Listening:
-					{
-						// TODO: Start listening
-						break;
-					}
-					case EStreamingState.Connected:
-					{
-						// TODO: nothing...
-						break;
-					}
-					default:
-					{
-						throw new Exception($"Unknown streaming state: {value}");
-					}
-				}
-				m_streaming_state = value;
-				NotifyPropertyChanged(nameof(StreamingState));
-			}
-		}
-		private EStreamingState m_streaming_state;
+		public View3d.EStreamingState StreamingState => Model.View3d.StreamingState;
 
 		/// <summary>Non-null while script parsing is in progress</summary>
 		public ParsingProgressData? ParsingProgress => Model.ParsingProgress;
@@ -379,7 +348,9 @@ namespace LDraw
 		public Command ToggleStreaming { get; }
 		private void ToggleStreamingInternal()
 		{
-			StreamingState = StreamingState == EStreamingState.Disconnected ? EStreamingState.Listening : EStreamingState.Disconnected;
+			var currently_active = StreamingState != View3d.EStreamingState.Disconnected;
+			Model.View3d.Streaming(!currently_active, Model.Settings.StreamingPort);
+			NotifyPropertyChanged(nameof(StreamingState));
 		}
 
 		/// <summary>Show application preferences</summary>

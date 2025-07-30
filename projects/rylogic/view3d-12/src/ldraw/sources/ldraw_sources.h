@@ -15,6 +15,14 @@ namespace pr::rdr12::ldraw
 	// the file watcher contains a pointer into the 'Source' objects.
 	using SourceCont = std::unordered_map<Guid, std::shared_ptr<SourceBase>>;
 
+	// Socket listening state
+	enum class EStreamingState
+	{
+		Disconnected,
+		Listening,
+		Connected,
+	};
+
 	// Store change event args
 	struct StoreChangeEventArgs
 	{
@@ -155,6 +163,9 @@ namespace pr::rdr12::ldraw
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		Guid AddBinary(std::span<std::byte const> data, Guid const* context_id, AddCompleteCB add_complete);
+
+		// The state of the streaming connection
+		EStreamingState StreamingState() const;
 
 		// Allow connections on 'port'
 		void AllowConnections(uint16_t listen_port);

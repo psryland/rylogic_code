@@ -370,6 +370,12 @@ namespace pr
 			Edge,
 			Face,
 		};
+		enum class EStreamingState :int
+		{
+			Disconnected,
+			Listening,
+			Connected,
+		};
 		enum class ESettings :int
 		{
 			// Upper 2-bytes = category
@@ -791,6 +797,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_CheckForChangedSources();
 
 	// Enable/Disable streaming script sources.
+	VIEW3D_API pr::view3d::EStreamingState __stdcall View3D_StreamingState();
 	VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port);
 
 	// Windows ********************************

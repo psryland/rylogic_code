@@ -331,6 +331,12 @@ namespace Rylogic.Gfx
 			EdgeCentre,
 			FaceCentre,
 		}
+		public enum EStreamingState : int
+		{
+			Disconnected,
+			Listening,
+			Connected,
+		}
 		[Flags] public enum ESettings : int
 		{
 			// Upper 2-bytes = category
@@ -1399,6 +1405,13 @@ namespace Rylogic.Gfx
 			View3D_CheckForChangedSources();
 		}
 
+		/// <summary>Get/Enable/Disable streaming sources.</summary>
+		public EStreamingState StreamingState => View3D_StreamingState();
+		public void Streaming(bool enable, int port)
+		{
+			View3D_StreamingEnable(enable, port);
+		}
+
 		/// <summary>
 		/// Delete all objects
 		/// *WARNING* Careful with this function, make sure all C# references to View3D objects have been set to null
@@ -1533,6 +1546,10 @@ namespace Rylogic.Gfx
 
 		// Poll for changed script sources and reload any that have changed
 		[DllImport(Dll)] private static extern void View3D_CheckForChangedSources();
+		
+		// Enable/Disable streaming script sources.
+		[DllImport(Dll)] private static extern EStreamingState View3D_StreamingState();
+		[DllImport(Dll)] private static extern void View3D_StreamingEnable(bool enable, int port);
 
 		// Windows ********************************
 

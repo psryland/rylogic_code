@@ -342,6 +342,21 @@ VIEW3D_API void __stdcall View3D_CheckForChangedSources()
 }
 
 // Enable/Disable streaming script sources.
+VIEW3D_API EStreamingState __stdcall View3D_StreamingState()
+{
+	try
+	{
+		DllLockGuard;
+		switch (Dll().StreamingState())
+		{
+			case ldraw::EStreamingState::Disconnected: return view3d::EStreamingState::Disconnected;
+			case ldraw::EStreamingState::Listening: return view3d::EStreamingState::Listening;
+			case ldraw::EStreamingState::Connected: return view3d::EStreamingState::Connected;
+			default: throw std::runtime_error("Unknown streaming state");
+		}
+	}
+	CatchAndReport(View3D_StreamingState,,view3d::EStreamingState::Disconnected);
+}
 VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port)
 {
 	try
@@ -351,7 +366,7 @@ VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port)
 		if ((port & 0xFFFF) != port)
 			throw std::runtime_error("Invalid port for ldraw streaming");
 
-		return Dll().StreamingEnable(enable != 0, s_cast<uint16_t>(port));
+		return Dll().Streaming(enable != 0, s_cast<uint16_t>(port));
 	}
 	CatchAndReport(View3D_StreamingEnable,,);
 }
