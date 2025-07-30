@@ -1149,7 +1149,7 @@ namespace pr
 	}
 
 	// Linearly interpolate from 'lhs' to 'rhs'
-	template <Scalar S> inline S Lerp(S lhs, S rhs, double frac)
+	template <Scalar S, std::floating_point F> inline S Lerp(S lhs, S rhs, F frac)
 	{
 		return s_cast<S>(lhs + frac * (rhs - lhs));
 	}

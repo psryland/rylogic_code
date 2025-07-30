@@ -1365,16 +1365,21 @@ namespace pr::rdr12
 		// Read animation data
 		if (AllSet(out.Parts(), ESceneParts::Animation))
 		{
+			// Type conversion from fbx to rdr12
+			constexpr auto ToU8 = [](int x) -> uint8_t { return s_cast<uint8_t>(x); };
+			constexpr auto ToString32 = [](std::string const& x) -> string32 { return static_cast<string32>(x); };
+			constexpr auto ToTimeKey = [](fbx::TimeKey tk) -> TimeKey { return TimeKey(s_cast<float>(tk.m_time), static_cast<EAnimInterpolation>(tk.m_interp)); };
+
 			// Skeletons
-			vector<SkeletonPtr> skels;
+			vector<SkeletonPtr,2> skels;
 			for (auto const& fbxskel : scene.skeletons())
 			{
 				skels.push_back(SkeletonPtr(rdr12::New<Skeleton>(
 					fbxskel.m_id,
 					fbxskel.m_bone_ids,
-					transform<Skeleton::Names>(fbxskel.m_names, [](auto& x) { return static_cast<string32>(x); }),
+					transform<Skeleton::Names>(fbxskel.m_names, ToString32),
 					fbxskel.m_o2bp,
-					transform<Skeleton::Hierarchy>(fbxskel.m_hierarchy, [](auto x) { return s_cast<uint8_t>(x); })
+					transform<Skeleton::Hierarchy>(fbxskel.m_hierarchy, ToU8)
 				), true));
 			}
 
@@ -1382,28 +1387,17 @@ namespace pr::rdr12
 			vector<KeyFrameAnimationPtr> anims;
 			for (auto const& fbxanim : scene.animations())
 			{
-				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, fbxanim.m_time_range, fbxanim.m_frame_rate), true);
-				auto const& skel = pr::get_if(skels, [skel_id = fbxanim.m_skel_id](SkeletonPtr skel) { return skel->Id() == skel_id; });
+				// Create an animation for 'fbxanim'
+				auto anim = KeyFrameAnimationPtr(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, fbxanim.m_time_range, fbxanim.m_frame_rate, fbxanim.m_bone_count), true);
 
 				// Read the key frame data
-				anim->m_tracks.resize(skel->BoneCount());
+				anim->m_offsets = fbxanim.m_offsets;
+				anim->m_times = transform<vector<TimeKey, 0>>(fbxanim.m_times, ToTimeKey);
+				anim->m_rotation = fbxanim.m_rotation;
+				anim->m_position = fbxanim.m_position;
+				anim->m_scale = fbxanim.m_scale;
 
-				// Copy the key data to the track
-				for (int bone_index = 0, bone_count = skel->BoneCount(); bone_index != bone_count; ++bone_index)
-				{
-					auto const& track_in = fbxanim.track(bone_index);
-					auto& track_out = anim->m_tracks[bone_index];
-					track_out.reserve(track_in.size());
-					for (auto const& key : track_in)
-					{
-						track_out.push_back(KeyFrame{
-							.m_rotation = key.m_rotation,
-							.m_translation = key.m_translation,
-							.m_scale = key.m_scale,
-							.m_time = key.m_time,
-						});
-					}
-				}
+				// Save the animation
 				anims.push_back(anim);
 			}
 

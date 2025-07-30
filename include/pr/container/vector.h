@@ -1189,13 +1189,17 @@ namespace pr
 		}
 
 		// Explicit conversion to span
-		std::span<Type const> span() const
+		std::span<Type const> span(size_t ofs = 0, size_t count = std::dynamic_extent) const
 		{
-			return std::span<Type const>(data(), size());
+			assert(ofs <= size());
+			assert(count == std::dynamic_extent || count <= size() - ofs);
+			return std::span<Type const>(data() + ofs, std::min(size() - ofs, count));
 		}
-		std::span<Type> span()
+		std::span<Type> span(size_t ofs = 0, size_t count = std::dynamic_extent)
 		{
-			return std::span<Type>(data(), size());
+			assert(ofs <= size());
+			assert(count == std::dynamic_extent || count <= size() - ofs);
+			return std::span<Type>(data() + ofs, std::min(size() - ofs, count));
 		}
 		std::span<Type const> cspan()
 		{

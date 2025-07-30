@@ -9,7 +9,8 @@ namespace pr::rdr12
 {
 	// Notes:
 	//  - Animation has these parts:
-	//    - KeyFrameAnimation = a buffer of Tracks (one per bone), each containing KeyFrames at specific times.
+	//    - KeyFrameAnimation = a buffer of KeyFrames where each KeyFrame contains transforms for each bone in a skeleton.
+	//        KeyFrames can be sparse.
 	//        The transform at each key frame is the *local transform* of that bone — that is: the transform from
 	//        the parent bone’s space to this bone’s space at that time. Therefore, in the rest pose (i.e., bind pose),
 	//        these transforms match the skeleton's local bone transforms.
@@ -24,6 +25,11 @@ namespace pr::rdr12
 	//        bone indices and weights.
 	//    - Animator = The class that determines the pose at a given time. Animator is intended to be a base class that
 	//        might one day support blend spaces or other things. For now, it just interpolates KeyFrameAnimation instances.
+	//
+	//  - Terms:
+	//    - An animation with frame rate 'FPS' has 'time_length / FPS' frames.
+	//    - Only some frames are 'KeyFrames' (aka Keys). An animation can have N KeyFrames != FrameCount.
+	//    - For looped animations, the last KeyFrame should match the first KeyFrame
 	//
 	//  - Graphics Models contain a skin because the skin is 1:1 with the model and doesn't change.
 	//  - Instances contain a pose because poses change with time and can use the same model but at different animation times.
@@ -57,68 +63,81 @@ namespace pr::rdr12
 	// Different methods for interpolating between key-frames
 	enum class EAnimInterpolation
 	{
-		Constant,
-		Linear,
-		Cubic,
+		Constant = 0,
+		Linear = 1,
+		Cubic = 2,
 	};
 
-	// A single key frame
-	struct KeyFrame
+	// Data at a KeyFrame time
+	struct TimeKey
 	{
-		// Should really compress this...
-		// TODO: Sort a array of components
-		quat m_rotation;
-		v4 m_translation;
+		float m_time;         // In seconds
+		EAnimInterpolation m_interp;
+
+		TimeKey() = default;
+		TimeKey(float time_s, EAnimInterpolation interp)
+			: m_time(time_s)
+			, m_interp(interp)
+		{}
+		TimeKey(int frame_index, double frame_rate, EAnimInterpolation interp = EAnimInterpolation::Linear)
+			: m_time(s_cast<float>(frame_index / frame_rate))
+			, m_interp(interp)
+		{}
+		friend std::partial_ordering operator <=>(TimeKey lhs, TimeKey rhs)
+		{
+			return lhs.m_time <=> rhs.m_time;
+		}
+	};
+
+	// Transient type for a bone transform
+	struct BoneKey
+	{
+		quat m_rot;
+		v4 m_pos;
 		v4 m_scale;
-		double m_time;
-		uint64_t m_flags;
+		TimeKey m_timekey;
+		int m_kf_index;
 
 		// Convert to an affine transform
 		operator m4x4() const
 		{
-			return m4x4(m3x4(m_rotation) * m3x4::Scale(m_scale.x, m_scale.y, m_scale.z), m_translation);
-		}
-
-		// Get/Set the interpolation style of this key frame
-		EAnimInterpolation Interpolation() const
-		{
-			return static_cast<EAnimInterpolation>(GrabBits<int, uint64_t>(m_flags, 2, 0));
-		}
-		void Interpolation(EAnimInterpolation interp)
-		{
-			m_flags = PackBits<int>(m_flags, static_cast<int>(interp), 2, 0);
-		}
-
-		// Identity key frame
-		static KeyFrame Identity()
-		{
-			return KeyFrame {
-				.m_rotation = quat::Identity(),
-				.m_translation = v4::Origin(),
-				.m_scale = v4::One(),
-				.m_time = 0.0,
-				.m_flags = 0,
-			};
+			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scale.x, m_scale.y, m_scale.z), m_pos);
 		}
 
 		// Interpolate between two key frames
-		friend KeyFrame Interp(KeyFrame const& lhs, KeyFrame const& rhs, float frac)
+		friend BoneKey Interp(BoneKey const& lhs, BoneKey const& rhs, float frac, EAnimInterpolation interp)
 		{
-			switch (lhs.Interpolation())
+			switch (interp)
 			{
 				case EAnimInterpolation::Constant: frac = 0; break;
 				case EAnimInterpolation::Linear: frac = frac; break;
 				case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
 				default: throw std::runtime_error("Unknown interpolation style");
 			}
-			return KeyFrame{
-				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
-				.m_translation = Lerp(lhs.m_translation, rhs.m_translation, frac),
+			return BoneKey{
+				.m_rot = Slerp(lhs.m_rot, rhs.m_rot, frac),
+				.m_pos = Lerp(lhs.m_pos, rhs.m_pos, frac),
 				.m_scale = Lerp(lhs.m_scale, rhs.m_scale, frac),
-				.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
-				.m_flags = 0
+				.m_timekey = TimeKey(Lerp(lhs.m_timekey.m_time, rhs.m_timekey.m_time, frac), EAnimInterpolation::Linear)
 			};
 		}
+	};
+
+	// The animation data for a bone
+	struct BoneTrack
+	{
+		std::span<TimeKey const> m_times;
+		std::span<quat const> m_rotation;
+		std::span<v3 const> m_position;
+		std::span<v3 const> m_scale;
+		double m_frame_rate; // Only used if m_times.empty()
+		int m_bone_index;
+
+		// Get the bone key (transform) at the given frame index
+		BoneKey operator[](int frame_index) const;
+
+		// Get the latest bone key (transform) <= 'time_s'
+		BoneKey operator[](double time_s) const;
 	};
 
 	// A single key frame that includes kinematic data
@@ -213,24 +232,42 @@ namespace pr::rdr12
 	struct KeyFrameAnimation : RefCounted<KeyFrameAnimation>
 	{
 		// Notes:
-		//  - Sample is a vertical slice of the tracks for each key at a time.
-		//  - Track is the keys as a function of time.
+		//  - Bone transform data are stored concatenated for each bone, e.g.,
+		//       m_rotation: [(bone0,,,)(bone1,,,)(bone2,,)...]
+		//       m_position: [(bone0,,,)(bone1,,,)(bone2,,)...]
+		//       m_scale:    [(bone0,,,)(bone1,,,)(bone2,,)...]
+		//  - Each (boneN...) is a "track", not all tracks are the same length. However, the length of a bone's track is the same in each array.
+		//  - Some arrays can be empty if unused. Track lengths only apply to non-empty arrays
+		//  - '[m_offsets[bone_index], m_offsets[bone_index+1])' is the index range into the arrays for a bone.
 
-		using Sample = pr::vector<KeyFrame>;
-		using Track = pr::vector<KeyFrame>;
-		using Tracks = pr::vector<Track>;
+		//  - 'Sample' is a key frame for each bone at some time, t.
+		//  - Frame spacing is not necessarily fixed.
+		//  - Tracks store contiguous frames, where each frame is an array of length 'm_bone_count'.
+		//  - This arrangement is easier to move/copy, less fragmented, and allows for some tracks being empty.
+		//  - Any of the tracks can be empty. The lengths will be either equal or zero.
+		using Sample = vector<BoneKey, 0>;
 
-		uint64_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
-		Tracks m_tracks;        // A track for each skeleton bone
-		TimeRange m_time_range; // The time range spanned by this animation
-		double m_frame_rate;    // The native frame rate of the animation, so we can convert from frames <-> seconds
+		uint64_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
+		TimeRange m_time_range;     // The time range spanned by this animation
+		double m_frame_rate;        // The native frame rate of the animation, so we can convert from frames <-> seconds
+		int m_bone_count;           // The number of bones per key frame
 
-		KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate);
+		// Tracks
+		vector<int, 0> m_offsets;   // Index offsets to the start of each bone track (one for each bone in the skeleton)
+		vector<TimeKey, 0> m_times; // The key frame time for each entry. If empty, assume a key every 1/fps.
+		vector<quat, 0> m_rotation;
+		vector<v3, 0> m_position;
+		vector<v3, 0> m_scale;
+
+		KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate, int bone_count);
+
+		// Return the animation data for a single bone
+		BoneTrack Track(int bone_index) const;
 
 		// Returns the interpolated key frames a 'time_s'
-		void EvaluateAtTime(double time_s, std::span<m4x4> out) const;
-		void EvaluateAtTime(double time_s, Sample& out) const;
-		Sample EvaluateAtTime(double time_s) const;
+		void EvaluateAtTime(float time_s, std::span<m4x4> out) const;
+		void EvaluateAtTime(float time_s, Sample& out) const;
+		Sample EvaluateAtTime(float time_s) const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KeyFrameAnimation>* doomed);

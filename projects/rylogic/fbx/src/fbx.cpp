@@ -283,11 +283,11 @@ namespace pr
 	};
 
 	// Bone type
-	template <> struct Convert<geometry::fbx::BoneKey::EInterpolation, FbxAnimCurveDef::EInterpolationType>
+	template <> struct Convert<geometry::fbx::EInterpolation, FbxAnimCurveDef::EInterpolationType>
 	{
-		static geometry::fbx::BoneKey::EInterpolation To_(FbxAnimCurveDef::EInterpolationType ty)
+		static geometry::fbx::EInterpolation To_(FbxAnimCurveDef::EInterpolationType ty)
 		{
-			using EType = geometry::fbx::BoneKey::EInterpolation;
+			using EType = geometry::fbx::EInterpolation;
 			switch (ty)
 			{
 				case FbxAnimCurveDef::EInterpolationType::eInterpolationConstant: return EType::Constant;
@@ -924,17 +924,28 @@ namespace pr::geometry::fbx
 	struct AnimationData
 	{
 		SkeletonData const* m_skel; // The skeleton that these tracks should match
-		std::vector<int> m_offsets; // The offset to the start of each bone's track
-		std::vector<BoneKey> m_alltracks; // A track for each bone (concatenated)
-		Animation::TimeRange m_time_range; // The time span of the animation
-		double m_frame_rate; // The native frame rate of the animation
-
-		// Return the track associated with the 'bone_index'th bone in the skeleton
-		std::span<BoneKey> track(int bone_index)
+		TimeRange m_time_range;     // The time span of the animation
+		double m_frame_rate;        // The native frame rate of the animation
+		int m_bone_count;           // The number of bones per key frame
+		vector<int, 0> m_offsets;   // The offset to the start of each bone's track
+		vector<TimeKey, 0> m_times; // The key frame time for each entry
+		vector<quat, 0> m_rotation;
+		vector<v3, 0> m_position;
+		vector<v3, 0> m_scale;
+		
+		// The number of tracks in this animation (one for each bone)
+		int track_count() const
 		{
-			auto ofs = m_offsets[s_cast<size_t>(bone_index) + 0];
-			auto len = m_offsets[s_cast<size_t>(bone_index) + 1] - ofs;
-			return std::span{ m_alltracks.data() + ofs, s_cast<size_t>(len) };
+			return isize(m_offsets) - 1;
+		}
+
+		// Return the index range for a bone in the data arrays
+		std::tuple<int64_t, int64_t> index_range(int bone_index) const
+		{
+			assert(bone_index >= 0 && bone_index < track_count());
+			auto i0 = m_offsets[bone_index + 0];
+			auto i1 = m_offsets[bone_index + 1];
+			return { i0 , i1 - i0 };
 		}
 
 		// True for non-empty animations
@@ -1752,16 +1763,19 @@ namespace pr::geometry::fbx
 				{
 					m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
 
-					// Read the key frame times for all bones
-					vector<uint64_t, 1> bone_id_lookup(m_bones.size());
-					vector<KeyTimes, 1> times_per_bone(m_bones.size());
+					// Read the key frame times for all bones and determine the used channels
+					auto channels = EAnimChannel::None;
+					vector<uint64_t, 0> bone_id_lookup(m_bones.size());
+					vector<KeyTimes, 0> times_per_bone(m_bones.size());
 					for (auto& [id, bonenode] : m_bones)
 					{
-						times_per_bone[bonenode.index] = FindKeyFrameTimes(*bonenode.bone->GetNode());
+						auto [times, chan] = FindKeyFrameTimes(*bonenode.bone->GetNode());
+						times_per_bone[bonenode.index] = times;
 						bone_id_lookup[bonenode.index] = id;
+						channels |= chan;
 					}
 
-					vector<AnimationData, 1> animations;
+					vector<AnimationData, 0> animations;
 
 					// Animations are associated with a skeleton. Create an animation for each
 					// skeleton that contains a bone that is moved by this animation.
@@ -1774,23 +1788,23 @@ namespace pr::geometry::fbx
 						// Create an animation for 'skel'
 						AnimationData animation = {
 							.m_skel = &skel,
-							.m_offsets = {},
-							.m_alltracks = {},
-							.m_time_range = Animation::TimeRange::Reset(),
+							.m_time_range = TimeRange::Reset(),
 							.m_frame_rate = m_frame_rate,
+							.m_bone_count = skel.size(),
+							.m_offsets = {},
+							.m_times = {},
+							.m_rotation = {},
+							.m_position = {},
+							.m_scale = {},
 						};
 
-						// Preallocate the arrays in 'animation' so we can populate it in parallel
+						// Preallocate the arrays in 'animation'
 						animation.m_offsets.reserve(skel.m_bone_ids.size() + 1);
 
-						// Record an entry for every bone in the skeleton, even if they're empty (it makes bone lookup easier)
-						int key_count = 0;
+						// Find the time range of the animation
 						for (auto id : skel.m_bone_ids)
 						{
 							auto const& times = times_per_bone[m_bones[id].index];
-							animation.m_offsets.push_back(key_count);
-							key_count += isize(times);
-
 							if (!times.empty())
 							{
 								animation.m_time_range.grow(times.front().time.GetSecondDouble());
@@ -1798,9 +1812,26 @@ namespace pr::geometry::fbx
 							}
 						}
 
+						// Generate the offset indices per bone.
+						int key_count = 0;
+						for (auto id : skel.m_bone_ids)
+						{
+							// Record an entry for every bone in the skeleton, even if they're empty, it makes bone lookup easier.
+							auto const& times = times_per_bone[m_bones[id].index];
+							animation.m_offsets.push_back(key_count);
+							key_count += isize(times);
+						}
+
 						// The last offset is the total number of keys
 						animation.m_offsets.push_back(key_count);
-						animation.m_alltracks.resize(key_count);
+
+						// Allocate buffers
+						animation.m_times.resize(key_count);
+						animation.m_rotation.resize(AllSet(channels, EAnimChannel::Rotation) ? key_count : 0);
+						animation.m_position.resize(AllSet(channels, EAnimChannel::Position) ? key_count : 0);
+						animation.m_scale.resize(AllSet(channels, EAnimChannel::Scale) ? key_count : 0);
+
+						// Save this animation
 						animations.push_back(std::move(animation));
 					}
 
@@ -1810,6 +1841,7 @@ namespace pr::geometry::fbx
 					// For each key frame time, start a worker that adds the key frame to each bone with that key
 					zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &animations, &tasks, &bone_id_lookup, &progress](KeyTime keytime, std::span<ZipSet const> indices)
 					{
+						// Progress
 						auto fstep = (keytime.time - m_time_span.GetStart()).GetSecondDouble();
 						auto ftotal = m_time_span.GetDuration().GetSecondDouble();
 						if (auto pc = static_cast<int64_t>(fstep * 100 / ftotal); pc != progress)
@@ -1827,44 +1859,45 @@ namespace pr::geometry::fbx
 							struct Key
 							{
 								int m_bone_index; // The bone that has this key
-								int m_key_index; // The index of this key within the bone's keys
-								BoneKey::EInterpolation m_interpolation; // How the key frame interpolates
+								int m_key_index;  // The index of this key within the bone's keys
+								EInterpolation m_interpolation; // How the key frame interpolates
 							};
 
-							vector<Key> m_keys;    // The keys at this snapshot
-							vector<m4x4> m_b2p;    // Bone to parent for each bone at this time
-							double m_time;              // The time value in seconds at this snapshot time
+							vector<Key> m_keys = {};    // The keys at this snapshot
+							vector<m4x4> m_b2p = {};    // Bone to parent for each bone at this time
+							double m_time = {};         // The time value in seconds at this snapshot time
+						
+							// Capture a snapshot of the bone transforms at 'time'
+							static Snapshot Capture(KeyTime keytime, std::span<ZipSet const> indices, BoneNodeMap& bones, std::span<uint64_t const> bone_id_lookup)
+							{
+								Snapshot ss = { .m_time = keytime.time.GetSecondDouble() };
+
+								// Record the bones with a key frame at this time, and which key frame that is
+								ss.m_keys.reserve(indices.size());
+								for (auto& [bone_idx, key_idx] : indices)
+								{
+									ss.m_keys.push_back(Key{
+										.m_bone_index = s_cast<int>(bone_idx),
+										.m_key_index = s_cast<int>(key_idx),
+										.m_interpolation = To<EInterpolation>(keytime.interpolation),
+									});
+								}
+
+								// Buffer the transforms for each bone node. All bones are needed because we need the
+								// parent transforms to be correct, even if there isn't a key frame for the parent.
+								ss.m_b2p.reserve(bones.size());
+								for (auto id : bone_id_lookup)
+								{
+									auto& node = *bones[id].bone->GetNode();
+									ss.m_b2p.push_back(To<m4x4>(node.EvaluateLocalTransform(keytime.time)));
+								}
+
+								return ss;
+							}
 						};
-
-						// Capture a snapshot of the bone transforms at this time
-						Snapshot snapshot = {
-							.m_keys = {},
-							.m_b2p = {},
-							.m_time = keytime.time.GetSecondDouble(), 
-						};
-
-						// Record the bones with a key frame at this time, and which key frame that is
-						snapshot.m_keys.reserve(indices.size());
-						for (auto& [bone_idx, key_idx] : indices)
-						{
-							snapshot.m_keys.push_back({
-								.m_bone_index = s_cast<int>(bone_idx),
-								.m_key_index = s_cast<int>(key_idx),
-								.m_interpolation = To<BoneKey::EInterpolation>(keytime.interpolation),
-							});
-						}
-
-						// Buffer the transforms for each bone node. All bones are needed because we need the
-						// parent transforms to be correct, even if there isn't a key frame for the parent.
-						snapshot.m_b2p.reserve(m_bones.size());
-						for (auto id : bone_id_lookup)
-						{
-							auto& node = *m_bones[id].bone->GetNode();
-							snapshot.m_b2p.push_back(To<m4x4>(node.EvaluateLocalTransform(keytime.time)));
-						}
 
 						// Start the worker to add key frames for each bone with a key at this time
-						tasks.emplace_back(std::async(std::launch::async, [&animations, &bone_id_lookup, snapshot = std::move(snapshot)]
+						tasks.emplace_back(std::async(std::launch::async, [&animations, &bone_id_lookup, snapshot = Snapshot::Capture(keytime, indices, m_bones, bone_id_lookup)]
 						{
 							// Loop over the keys in this snapshot
 							for (auto const& key : snapshot.m_keys)
@@ -1873,25 +1906,25 @@ namespace pr::geometry::fbx
 								auto const& bone_id = bone_id_lookup[key.m_bone_index];
 								auto const& b2p = snapshot.m_b2p[key.m_bone_index];
 
-								BoneKey keyframe = {
-									b2p.pos,
-									quat(b2p.rot),
-									b2p.rot.scale().trace(),
-									snapshot.m_time,
-									uint64_t(key.m_interpolation),
-								};
-
-								// Add this key frame to the appropriate track of each animation that contains this bone.
+								// In each animation that contains 'bone_id', add a key frame to the bone track for 'bone_id'
 								for (auto& animation : animations)
 								{
 									// Find the index of 'bone_id' within the skeleton
-									auto it = std::ranges::find(animation.m_skel->m_bone_ids, bone_id);
-									if (it == end(animation.m_skel->m_bone_ids))
-										continue;
+									auto const& bone_ids = animation.m_skel->m_bone_ids;
+									auto it = std::ranges::find(bone_ids, bone_id);
+									if (it == end(bone_ids)) continue;
+									auto bone_index = s_cast<int>(std::distance(begin(bone_ids), it));
 
 									// These transforms are the bone offset relative to the parent over time.
-									auto idx = s_cast<int>(std::distance(begin(animation.m_skel->m_bone_ids), it));
-									animation.track(idx)[key.m_key_index] = keyframe;
+									auto [ofs, _] = animation.index_range(bone_index);
+									if (!animation.m_times.empty())
+										animation.m_times[ofs + key.m_key_index] = TimeKey{ .m_time = snapshot.m_time, .m_interp = key.m_interpolation };
+									if (!animation.m_rotation.empty())
+										animation.m_rotation[ofs + key.m_key_index] = quat(b2p.rot);
+									if (!animation.m_position.empty())
+										animation.m_position[ofs + key.m_key_index] = b2p.pos.xyz;
+									if (!animation.m_scale.empty())
+										animation.m_scale[ofs + key.m_key_index] = b2p.rot.scale().trace().xyz;
 								}
 							}
 						}));
@@ -1912,30 +1945,35 @@ namespace pr::geometry::fbx
 		}
 
 		// Find the set of unique key frame times for 'node'
-		KeyTimes FindKeyFrameTimes(FbxNode& node) const
+		std::tuple<KeyTimes, EAnimChannel> FindKeyFrameTimes(FbxNode& node) const
 		{
 			// Channels of a node's transform (x, y, z etc)
+			struct C { FbxAnimCurve* curve; EAnimChannel type; };
 			auto channels = {
-				node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-				node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-				node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-				node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-				node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-				node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
-				node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X),
-				node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y),
-				node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Rotation },
+				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Rotation },
+				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Rotation },
+				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Position },
+				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Position },
+				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Position },
+				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Scale },
+				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Scale },
+				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Scale },
 			};
 
+			auto max_keys = 0ULL;
+			auto type = EAnimChannel::None;
 			vector<FbxCurve, 9, true> curves;
-			size_t max_keys = 0;
 
 			// Read the non-null, non-empty transform animation curves
-			for (auto curve : channels)
+			for (auto channel : channels)
 			{
-				if (curve == nullptr || curve->KeyGetCount() == 0) continue;
-				max_keys = std::max(max_keys, s_cast<size_t>(curve->KeyGetCount()));
-				curves.push_back({ curve });
+				if (channel.curve == nullptr || channel.curve->KeyGetCount() == 0)
+					continue;
+
+				max_keys = std::max(max_keys, s_cast<size_t>(channel.curve->KeyGetCount()));
+				curves.push_back({ channel.curve });
+				type |= channel.type;
 			}
 
 			// Find the set of unique key frame times for 'node'
@@ -1950,7 +1988,7 @@ namespace pr::geometry::fbx
 			});
 			keytimes.push_back({ m_time_span.GetStop(), FbxAnimCurveDef::eInterpolationLinear });
 
-			return keytimes;
+			return { keytimes, type };
 		}
 
 		// Get the mesh bounding box
@@ -2674,10 +2712,14 @@ extern "C"
 			auto const& a = scene.m_animations[i];
 			return Animation{
 				.m_skel_id = a.m_skel->m_id,
-				.m_offsets = a.m_offsets,
-				.m_tracks = a.m_alltracks,
 				.m_time_range = a.m_time_range,
 				.m_frame_rate = a.m_frame_rate,
+				.m_bone_count = a.m_bone_count,
+				.m_offsets = a.m_offsets,
+				.m_times = a.m_times,
+				.m_rotation = a.m_rotation,
+				.m_position = a.m_position,
+				.m_scale = a.m_scale,
 			};
 		}
 		catch (std::exception const& ex)

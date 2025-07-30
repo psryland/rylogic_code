@@ -93,6 +93,24 @@ namespace pr::geometry::fbx
 		PosX_PosZ_PosY,
 	};
 
+	// Animation channels
+	enum class EAnimChannel
+	{
+		None = 0,
+		Rotation = 1 << 0,
+		Position = 1 << 1,
+		Scale = 1 << 2,
+		_flags_enum = 0,
+	};
+
+	// Interpolation modes
+	enum class EInterpolation
+	{
+		Constant = 0,
+		Linear = 1,
+		Cubic = 2,
+	};
+
 	// Metadata in the scene
 	struct SceneProps
 	{
@@ -173,25 +191,13 @@ namespace pr::geometry::fbx
 			return std::memcmp(&lhs, &rhs, sizeof(Vert)) == 0;
 		}
 	};
-	struct BoneKey
+	struct TimeKey
 	{
-		// Notes:
-		//  - Keys are just the stored snapshot points in the animation
-		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
-
-		enum class EInterpolation
-		{
-			Constant = 0,
-			Linear = 1,
-			Cubic = 2,
-		};
-
-		v4 m_translation;
-		quat m_rotation;
-		v4 m_scale;
 		double m_time;
-		uint64_t m_flags; // [0,2) = EInterpolation flags
+		EInterpolation m_interp;
 	};
+	struct TimeRange : Range<double>
+	{};
 	struct Nugget
 	{
 		uint64_t m_mat_id = 0;
@@ -254,13 +260,23 @@ namespace pr::geometry::fbx
 	};
 	struct Animation
 	{
-		using TimeRange = Range<double>;
+		// Notes:
+		//  - Bone transform data are stored concatenated for each bone, e.g.,
+		//    m_rotation: [(bone0,,,)(bone1,,,)(bone2,,)...]
+		//    m_position: [(bone0,,,)(bone1,,,)(bone2,,)...]
+		//  - Each (boneN...) is a "track", not all tracks are the same length.
+		//    However the length of a bone's track is the same in each array
+		//  - 'm_offsets[bone_index]' is the index offset into the arrays for a bone.
 
-		uint64_t m_skel_id;                // The skeleton that these tracks should match
-		std::span<int const> m_offsets;    // Index offsets to the start of each bone track (one for each bone in the skeleton)
-		std::span<BoneKey const> m_tracks; // A bone track for each bone
-		TimeRange m_time_range;            // The time span of the animation
-		double m_frame_rate;               // The native frame rate of the animation
+		uint64_t m_skel_id;               // The skeleton that these tracks should match
+		TimeRange m_time_range;           // The time span of the animation
+		double m_frame_rate;              // The native frame rate of the animation
+		int m_bone_count;                 // The number of bones per key frame
+		std::span<int const> m_offsets;   // Index offsets to the start of each bone track (one for each bone in the skeleton)
+		std::span<TimeKey const> m_times; // The key frame time for each entry
+		std::span<quat const> m_rotation;
+		std::span<v3 const> m_position;
+		std::span<v3 const> m_scale;
 		
 		// The number of tracks in this animation (one for each bone)
 		int track_count() const
@@ -268,14 +284,44 @@ namespace pr::geometry::fbx
 			return isize(m_offsets) - 1;
 		}
 
-		// Return the 'track_index'th track (corresponding to the 'track_index'th bone in the skeleton)
-		std::span<BoneKey const> track(int track_index) const
+		// Return the index range for a bone in the data arrays
+		std::tuple<int64_t, size_t> index_range(int bone_index) const
 		{
-			assert(track_index >= 0 && track_index < track_count());
-			auto ofs = m_offsets[track_index + 0];
-			auto len = m_offsets[track_index + 1] - ofs;
-			return std::span{ m_tracks.data() + ofs, s_cast<size_t>(len) };
+			assert(bone_index >= 0 && bone_index < track_count());
+			auto i0 = m_offsets[bone_index + 0];
+			auto i1 = m_offsets[bone_index + 1];
+			return { i0 , static_cast<size_t>(i1 - i0) };
 		}
+
+		// Return the key frame times for a bone
+		std::span<TimeKey const> times(int bone_index) const
+		{
+			auto [ofs, len] = index_range(bone_index);
+			return std::span{ m_times.data() + ofs, len };
+		}
+
+		// Return the rotation data for a bone
+		std::span<quat const> rotation(int bone_index) const
+		{
+			auto [ofs, len] = index_range(bone_index);
+			return !m_rotation.empty() ? m_rotation.subspan(ofs, len) : m_rotation;
+		}
+
+		// Return the position data for a bone
+		std::span<v3 const> position(int bone_index) const
+		{
+			auto [ofs, len] = index_range(bone_index);
+			return !m_position.empty() ? m_position.subspan(ofs, len) : m_position;
+		}
+
+		// Return the scale data for a bone
+		std::span<v3 const> scale(int bone_index) const
+		{
+			auto [ofs, len] = index_range(bone_index);
+			return !m_scale.empty() ? m_scale.subspan(ofs, len) : m_scale;
+		}
+
+		// True if the animation has data
 		explicit operator bool() const
 		{
 			return !m_offsets.empty() && m_offsets.back() != 0;
