@@ -930,6 +930,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\event_handler.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\socket_stream.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\gfx\onebit.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>

@@ -316,6 +316,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\network\sockets.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\network\socket_stream.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\network\tcpip.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\network\web_get.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\network\winsock.h" />
