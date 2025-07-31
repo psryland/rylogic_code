@@ -80,6 +80,7 @@ namespace pr::rdr12::ldraw
 		struct LdrLine;
 		struct LdrLineD;
 		struct LdrArrow;
+		struct LdrCoordFrame;
 		struct LdrTriangle;
 		struct LdrPlane;
 		struct LdrCircle;
@@ -134,6 +135,7 @@ namespace pr::rdr12::ldraw
 			LdrLine& Line(Name name = {}, Colour colour = Colour());
 			LdrLineD& LineD(Name name = {}, Colour colour = Colour());
 			LdrArrow& Arrow(Name name = {}, Colour colour = Colour());
+			LdrCoordFrame& CoordFrame(Name name = {}, Colour colour = Colour());
 			LdrTriangle& Triangle(Name name = {}, Colour colour = Colour());
 			LdrPlane& Plane(Name name = {}, Colour colour = Colour());
 			LdrCircle& Circle(Name name = {}, Colour colour = Colour());
@@ -215,7 +217,7 @@ namespace pr::rdr12::ldraw
 				, m_colour()
 				, m_o2w(m4x4::Identity())
 				, m_wire()
-				, m_axis_id(AxisId::None)
+				, m_axis_id(pr::AxisId::None)
 				, m_solid()
 			{}
 
@@ -256,7 +258,7 @@ namespace pr::rdr12::ldraw
 				m_o2w.m_mat = m4x4{ rot, pos } * m_o2w.m_mat;
 				return static_cast<Derived&>(*this);
 			}
-			Derived& ori(v4 const& dir, AxisId axis = AxisId::PosZ)
+			Derived& ori(v4 const& dir, pr::AxisId axis = pr::AxisId::PosZ)
 			{
 				return ori(m3x4::Rotation(axis.vec(), dir));
 			}
@@ -306,7 +308,7 @@ namespace pr::rdr12::ldraw
 			Wireframe m_wire;
 
 			// Axis id
-			Derived& axis(AxisId axis_id)
+			Derived& axis(pr::AxisId axis_id)
 			{
 				m_axis_id = axis_id;
 				return static_cast<Derived&>(*this);
@@ -748,6 +750,36 @@ namespace pr::rdr12::ldraw
 				});
 			}
 		};
+		struct LdrCoordFrame :LdrBase<LdrCoordFrame>
+		{
+			Scale m_scale = {};
+			LeftHanded m_lh = {};
+
+			// Scale size
+			LdrCoordFrame& scale(float s)
+			{
+				m_scale = s;
+				return *this;
+			}
+
+			// Left handed axis
+			LdrCoordFrame& left_handed(bool lh = true)
+			{
+				m_lh = lh;
+				return *this;
+			}
+
+			// Write to 'outp
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::CoordFrame, m_name, m_colour, [&]
+				{
+					Writer::Append(out, m_scale, m_lh);
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
 		struct LdrTriangle :LdrBase<LdrTriangle>
 		{
 			struct Tri { v4 a, b, c; Colour32 col; };
@@ -812,7 +844,7 @@ namespace pr::rdr12::ldraw
 			LdrPlane& plane(v4_cref p)
 			{
 				pos((p.xyz * -p.w).w1());
-				ori(Normalise(p.xyz.w0()), AxisId::PosZ);
+				ori(Normalise(p.xyz.w0()), pr::AxisId::PosZ);
 				return *this;
 			}
 			LdrPlane& wh(float width, float height)
@@ -1387,6 +1419,12 @@ namespace pr::rdr12::ldraw
 		inline LdrArrow& LdrBuilder::Arrow(Name name, Colour colour)
 		{
 			auto ptr = new LdrArrow;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrCoordFrame& LdrBuilder::CoordFrame(Name name, Colour colour)
+		{
+			auto ptr = new LdrCoordFrame;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

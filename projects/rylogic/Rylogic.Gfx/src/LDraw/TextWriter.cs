@@ -249,6 +249,12 @@ namespace Rylogic.LDraw
 				return;
 			Write(EKeyword.Width, w.m_width);
 		}
+		private void Append(Serialiser.Scale s)
+		{
+			if (s.m_scale == 1f)
+				return;
+			Write(EKeyword.Scale, s.m_scale);
+		}
 		private void Append(Serialiser.Scale2 s)
 		{
 			if (s.m_scale == v2.One)
@@ -285,6 +291,18 @@ namespace Rylogic.LDraw
 				return;
 			Write(EKeyword.Solid);
 		}
+		private void Append(Serialiser.Smooth s)
+		{
+			if (!s.m_smooth)
+				return;
+			Write(EKeyword.Smooth);
+		}
+		private void Append(Serialiser.LeftHanded lh)
+		{
+			if (!lh.m_lh)
+				return;
+			Write(EKeyword.LeftHanded);
+		}
 		private void Append(Serialiser.Alpha a)
 		{
 			if (!a.m_has_alpha)
@@ -296,6 +314,10 @@ namespace Rylogic.LDraw
 			if (a.m_axis == EAxisId.None)
 				return;
 			Write(EKeyword.AxisId, (int)a.m_axis.Id);
+		}
+		private void Append(Serialiser.ArrowType a)
+		{
+			Write(EKeyword.Style, a.m_type.ToString());
 		}
 		private void Append(Serialiser.Pos p)
 		{

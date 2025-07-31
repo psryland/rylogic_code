@@ -8,25 +8,12 @@
 
 namespace pr::rdr12::ldraw
 {
-	struct Str
-	{
-		std::string m_str;
-		Str(std::string const& str) :m_str(str) {}
-		Str(std::wstring const& str) :m_str(Narrow(str)) {}
-	};
-	struct Pos
-	{
-		v4 m_pos;
-		Pos(v4 const& pos) :m_pos(pos) {}
-		Pos(m4x4 const& mat) :m_pos(mat.pos) {}
-	};
-	struct O2W
-	{
-		m4x4 m_mat;
-		O2W() :m_mat(m4x4::Identity()) {}
-		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
-		O2W(m4x4 const& mat) :m_mat(mat) {}
-	};
+	//struct Str
+	//{
+	//	std::string m_str;
+	//	Str(std::string const& str) :m_str(str) {}
+	//	Str(std::wstring const& str) :m_str(Narrow(str)) {}
+	//};
 	struct Name
 	{
 		std::string m_name;
@@ -66,6 +53,12 @@ namespace pr::rdr12::ldraw
 		Width() :m_width(0) {}
 		Width(float w) :m_width(w) {}
 		Width(int w) :m_width(float(w)) {}
+	};
+	struct Scale
+	{
+		float m_scale;
+		Scale() : m_scale(1.0f) {}
+		Scale(float scale) : m_scale(scale) {}
 	};
 	struct Scale2
 	{
@@ -115,6 +108,35 @@ namespace pr::rdr12::ldraw
 		bool m_smooth;
 		Smooth() :m_smooth(false) {}
 		Smooth(bool s) : m_smooth(s) {}
+	};
+	struct LeftHanded
+	{
+		bool m_lh;
+		LeftHanded() :m_lh(false) {}
+		LeftHanded(bool lh) : m_lh(lh) {}
+	};
+	struct AxisId
+	{
+		pr::AxisId m_axis = pr::AxisId::None;
+		AxisId(pr::AxisId axis) :m_axis(axis) {}
+	};
+	struct ArrowType
+	{
+		EArrowType m_type = EArrowType::Fwd;
+		ArrowType(EArrowType type) :m_type(type) {}
+	};
+	struct Pos
+	{
+		v4 m_pos;
+		Pos(v4 const& pos) :m_pos(pos) {}
+		Pos(m4x4 const& mat) :m_pos(mat.pos) {}
+	};
+	struct O2W
+	{
+		m4x4 m_mat;
+		O2W() :m_mat(m4x4::Identity()) {}
+		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
+		O2W(m4x4 const& mat) :m_mat(mat) {}
 	};
 	struct VariableInt
 	{

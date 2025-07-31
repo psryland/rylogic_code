@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -1263,7 +1263,7 @@ namespace pr::rdr12::ldraw
 		{
 			ldr.Box("transforms_example", 0xFF00FF00)
 				.dim(1, 2, 1)
-				.ori(v4::YAxis(), AxisId::PosZ)
+				.ori(v4::YAxis(), pr::AxisId::PosZ)
 				.euler(55.0f, 30.0f, 60.0f)
 				.pos(-2.5f, 4.0f, -0.8f)
 				;
@@ -1273,7 +1273,7 @@ namespace pr::rdr12::ldraw
 		{
 			ldr.Cone("modifiers_example", 0x80FFFFFF)
 				.angle(55.0f).height(2)
-				.axis(AxisId::PosX)
+				.axis(pr::AxisId::PosX)
 				.colour(0xFFFF00FF)
 				.colour_mask(0xFF000000)
 				.euler(0, 0, 90)
@@ -1294,7 +1294,7 @@ namespace pr::rdr12::ldraw
 		{
 			ldr.Plane("ground", 0xFFFFE8A0)
 				.wh(40, 40)
-				.axis(AxisId::PosY)
+				.axis(pr::AxisId::PosY)
 				.texture()
 					.path("#checker3")
 					.addr(EAddrMode::Wrap, EAddrMode::Wrap)

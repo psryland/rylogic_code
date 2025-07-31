@@ -854,7 +854,7 @@ namespace pr::rdr12::ldraw
 			AxisId m_main_axis; // The natural main axis of the object
 			AxisId m_align;     // The axis we want the main axis to be aligned to
 
-			MainAxis(AxisId main_axis = AxisId::PosZ, AxisId align = AxisId::PosZ)
+			MainAxis(pr::AxisId main_axis = pr::AxisId::PosZ, pr::AxisId align = pr::AxisId::PosZ)
 				:m_o2w(m4x4::Identity())
 				,m_main_axis(main_axis)
 				,m_align(align)
@@ -865,15 +865,16 @@ namespace pr::rdr12::ldraw
 				{
 					case EKeyword::AxisId:
 					{
-						m_align.value = reader.Int<int>(10);
-						if (AxisId::IsValid(m_align))
+						auto align = pr::AxisId(reader.Int<int>(10));
+						if (!pr::AxisId::IsValid(align))
 						{
-							m_o2w = m4x4::Transform(m_main_axis, m_align, v4::Origin());
-							return true;
+							pp.ReportError(EParseError::InvalidValue, reader.Loc(), "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
+							return false;
 						}
 
-						pp.ReportError(EParseError::InvalidValue, reader.Loc(), "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
-						return false;
+						m_align = align;
+						m_o2w = m4x4::Transform(m_main_axis.m_axis, align, v4::Origin());
+						return true;
 					}
 					default:
 					{
@@ -885,7 +886,7 @@ namespace pr::rdr12::ldraw
 			// True if the main axis is not equal to the desired align axis
 			bool RotationNeeded() const
 			{
-				return m_main_axis != m_align;
+				return m_main_axis.m_axis != m_align.m_axis;
 			}
 
 			// Returns the rotation from 'main_axis' to 'axis'
@@ -903,7 +904,7 @@ namespace pr::rdr12::ldraw
 			// Apply main axis transform
 			void Apply(std::span<v4> verts)
 			{
-				if (m_main_axis == m_align)
+				if (m_main_axis.m_axis == m_align.m_axis)
 					return;
 
 				for (auto& v : verts)
@@ -2268,7 +2269,7 @@ namespace pr::rdr12::ldraw
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_thick()
-			, m_scale()
+			, m_scale(1.0f)
 			, m_rh(true)
 		{
 			m_verts = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
@@ -3190,7 +3191,7 @@ namespace pr::rdr12::ldraw
 			// Smooth the points
 			m_smooth.Apply(m_verts);
 
-			v4 normal = m_axis.m_align;
+			v4 normal = m_axis.m_align.m_axis;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
 			obj->m_model = ModelGenerator::QuadStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
@@ -3285,7 +3286,7 @@ namespace pr::rdr12::ldraw
 		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
-			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
+			auto b2w = OriFromDir(m_pt1 - m_pt0, pr::AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(b2w).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
 			obj->m_model = ModelGenerator::Box(m_pp.m_factory, dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
@@ -4861,7 +4862,7 @@ namespace pr::rdr12::ldraw
 			, m_type(EType::Full3D)
 			, m_fmt()
 			, m_layout()
-			, m_axis(AxisId::PosZ)
+			, m_axis(pr::AxisId::PosZ)
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -4970,7 +4971,7 @@ namespace pr::rdr12::ldraw
 		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator::Text(m_pp.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
+			obj->m_model = ModelGenerator::Text(m_pp.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align.m_axis);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Create the model
@@ -5681,10 +5682,10 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Align:
 				{
-					auto axis_id = Int<int>(10);
+					auto axis_id = pr::AxisId(Int<int>(10));
 					auto direction = Vector3f().w0();
 
-					v4 axis = AxisId(axis_id);
+					v4 axis = axis_id;
 					if (axis == v4::Zero())
 					{
 						ReportError(EParseError::InvalidValue, Loc(), "axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");

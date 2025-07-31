@@ -45,6 +45,11 @@ namespace Rylogic.LDraw.Serialiser
 		public float m_width = width ?? 0f;
 		public static implicit operator Width(float? width) => new(width);
 	}
+	public class Scale(float? scale = null)
+	{
+		public float m_scale = scale ?? 1f;
+		public static implicit operator Scale(float? scale) => new(scale);
+	}
 	public class Scale2(v2? scale = null)
 	{
 		public v2 m_scale = scale ?? v2.One;
@@ -84,11 +89,28 @@ namespace Rylogic.LDraw.Serialiser
 		public bool m_solid = solid ?? false;
 		public static implicit operator Solid(bool? solid) => new(solid);
 		public static implicit operator bool(Solid s) => s.m_solid;
+	}	
+	public class Smooth(bool? smooth = null)
+	{
+		public bool m_smooth = smooth ?? false;
+		public static implicit operator Smooth(bool? smooth) => new(smooth);
+		public static implicit operator bool(Smooth s) => s.m_smooth;
+	}
+	public class LeftHanded(bool? lh = null)
+	{
+		public bool m_lh = lh ?? false;
+		public static implicit operator LeftHanded(bool? lh) => new(lh);
+		public static implicit operator bool(LeftHanded x) => x.m_lh;
 	}
 	public class AxisId(Maths.AxisId? axis = null)
 	{
 		public Maths.AxisId m_axis = axis ?? EAxisId.None;
 		public static implicit operator AxisId(Maths.AxisId? axis) => new(axis);
+	}
+	public class ArrowType(EArrowType? type = null)
+	{
+		public EArrowType m_type = type ?? EArrowType.Fwd;
+		public static implicit operator ArrowType(EArrowType? type) => new(type);
 	}
 	public class Pos(v4? pos = null)
 	{

@@ -60,6 +60,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrCoordFrame CoordFrame(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrCoordFrame();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrTriangle Triangle(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrTriangle();
@@ -600,7 +606,7 @@ namespace Rylogic.LDraw
 		private EArrowType m_style = EArrowType.Fwd;
 		private Serialiser.PerItemColour m_per_item_colour = new();
 		private Serialiser.Width m_width = new();
-		private bool m_smooth = false;
+		private Serialiser.Smooth m_smooth = new();
 
 		// Arrow style
 		public LdrArrow style(EArrowType style)
@@ -660,7 +666,7 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Arrow, m_name, m_colour, () =>
 			{
-				res.Append(m_width, m_per_item_colour);
+				res.Append(m_width, m_smooth, m_per_item_colour);
 				res.Write(EKeyword.Data, () =>
 				{
 					foreach (var pt in m_pts)
@@ -670,6 +676,35 @@ namespace Rylogic.LDraw
 							res.Append(pt.col);
 					}
 				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrCoordFrame : LdrBase<LdrCoordFrame>
+	{
+		private Serialiser.Scale m_scale = new();
+		private Serialiser.LeftHanded m_lh = new();
+
+		// Scale size
+		public new LdrCoordFrame scale(float s)
+		{
+			m_scale = s;
+			return this;
+		}
+
+		// Left handed axis
+		public LdrCoordFrame left_handed(bool lh = true)
+		{
+			m_lh = lh;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.CoordFrame, m_name, m_colour, () =>
+			{
+				res.Append(m_scale, m_lh);
 				base.WriteTo(res);
 			});
 		}

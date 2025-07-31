@@ -185,6 +185,11 @@ namespace pr::rdr12::ldraw
 			if (w.m_width == 0) return;
 			Write(out, EKeyword::Width, w.m_width);
 		}
+		template <typename TOut> static void Append(TOut& out, Scale s)
+		{
+			if (s.m_scale == 1.0f) return;
+			Write(out, EKeyword::Scale, s.m_scale);
+		}
 		template <typename TOut> static void Append(TOut& out, Scale2 s)
 		{
 			if (s.m_scale == v2::One()) return;
@@ -220,15 +225,25 @@ namespace pr::rdr12::ldraw
 			if (!s.m_smooth) return;
 			Write(out, EKeyword::Smooth);
 		}
+		template <typename TOut> static void Append(TOut& out, LeftHanded lh)
+		{
+			if (!lh.m_lh) return;
+			Write(out, EKeyword::LeftHanded);
+		}
 		template <typename TOut> static void Append(TOut& out, Alpha a)
 		{
 			if (!a.m_has_alpha) return;
 			Write(out, EKeyword::Alpha);
 		}
-		template <typename TOut> static void Append(TOut& out, AxisId id)
+		template <typename TOut> static void Append(TOut& out, AxisId a)
 		{
-			if (id.value == AxisId::None) return;
-			Write(out, EKeyword::AxisId, id.value);
+			if (a.m_axis.value == pr::AxisId::None) return;
+			Write(out, EKeyword::AxisId, a.m_axis.value);
+		}
+		template <typename TOut> static void Append(TOut& out, ArrowType a)
+		{
+			if (a.m_type == EArrowType::Fwd) return;
+			Write(out, EKeyword::Style, a.m_type);
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{
