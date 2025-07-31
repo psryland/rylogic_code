@@ -171,7 +171,13 @@ namespace pr::rdr12
 		WndSettings& Size(HWND hwnd)
 		{
 			RECT rect;
+
+			#if _WIN32_WINNT >= _WIN32_WINNT_WIN10
 			auto dpi = GetDpiForWindow(hwnd);
+			#else
+			auto dpi = 96;
+			#endif
+
 			Check(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
 			return Size(iv2(
 				(rect.right - rect.left) * dpi / 96,

@@ -168,7 +168,7 @@ namespace pr::rdr12::ldraw
 			textbuf ToText(bool pretty) const
 			{
 				textbuf out;
-				WriteTo(out);
+				Write(out);
 				if (pretty) out = FormatScript(out);
 				return out;
 			}
@@ -177,20 +177,20 @@ namespace pr::rdr12::ldraw
 			bytebuf ToBinary() const
 			{
 				bytebuf out;
-				WriteTo(out);
+				Write(out);
 				return out;
 			}
 
 			// Serialise to 'out'
-			virtual void WriteTo(textbuf& out) const
+			virtual void Write(textbuf& out) const
 			{
 				for (auto& obj : m_objects)
-					obj->WriteTo(out);
+					obj->Write(out);
 			}
-			virtual void WriteTo(bytebuf& out) const
+			virtual void Write(bytebuf& out) const
 			{
 				for (auto& obj : m_objects)
-					obj->WriteTo(out);
+					obj->Write(out);
 			}
 
 			// Write the script to a file
@@ -201,7 +201,7 @@ namespace pr::rdr12::ldraw
 			LdrBuilder& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
 				textbuf out;
-				WriteTo(out);
+				Write(out);
 				if (pretty) out = FormatScript(out);
 				ldraw::Write(out, filepath, append);
 				return *this;
@@ -334,12 +334,12 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write nested objects to 'out'
-			virtual void WriteTo(textbuf& out) const override
+			virtual void Write(textbuf& out) const override
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<TextWriter>(out);
 			}
-			virtual void WriteTo(bytebuf& out) const override 
+			virtual void Write(bytebuf& out) const override 
 			{
 				auto const& derived = *static_cast<Derived const*>(this);
 				derived.Derived::WriteTo<BinaryWriter>(out);
@@ -350,7 +350,7 @@ namespace pr::rdr12::ldraw
 			void WriteTo(TOut& out) const
 			{
 				Writer::Append(out, m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
-				LdrBuilder::WriteTo(out);
+				LdrBuilder::Write(out);
 			}
 		};
 

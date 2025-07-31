@@ -11,8 +11,10 @@ namespace tests
 		builder.Group("g", 0xFFFF0000).Box("b", 0xFF00FF00).dim(1, 2, 3);
 
 		pr::network::Winsock winsock;
-		pr::network::socket_stream ldr("localhost", 1976);
-		ldr << builder.ToText(false) << std::flush;
+		pr::network::socket_stream ldr;
+		
+		if (ldr.connect("localhost", 1976).good())
+			ldr << builder.ToText(false) << std::flush;
 
 		//std::cout << builder.ToString(true);
 		//ldr << "*Box bb FF00FF00 { *Data {1 2 3} }";

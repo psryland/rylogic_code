@@ -346,15 +346,42 @@ namespace pr::network
 	{
 		socket_streambuf m_buf;
 
+		socket_stream()
+			: std::basic_iostream<std::byte>(&m_buf)
+			, m_buf(INVALID_SOCKET, setstate_fn(this), 0, 0)
+		{
+		}
 		socket_stream(char const* host, int port, IPPROTO proto = IPPROTO_TCP, size_t ibuf_size = 4096, size_t obuf_size = 4096)
 			: std::basic_iostream<std::byte>(&m_buf)
-			, m_buf(host, port, proto, [this](std::ios::iostate state) { setstate(state); }, ibuf_size, obuf_size)
+			, m_buf(host, port, proto, setstate_fn(this), ibuf_size, obuf_size)
 		{
 		}
 		socket_stream(SOCKET s, size_t ibuf_size = 4096, size_t obuf_size = 4096)
 			: std::basic_iostream<std::byte>(&m_buf)
-			, m_buf(s, [this](std::ios::iostate state) { setstate(state); }, ibuf_size, obuf_size)
+			, m_buf(s, setstate_fn(this), ibuf_size, obuf_size)
 		{
+		}
+
+		// Try to connect to a host. Use `if (stream.connect("host",port).good()) stream << data;`
+		socket_stream& connect(char const* host, int port, IPPROTO proto = IPPROTO_TCP, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+		{
+			// Already connected
+			if (is_open())
+				return *this;
+
+			try
+			{
+				// Try to connect
+				m_buf = socket_streambuf(host, port, proto, setstate_fn(this), ibuf_size, obuf_size);
+				clear(); // Clear any error flags on successful connection
+			}
+			catch (std::exception const&)
+			{
+				// Set 'failbit' instead of 'badbit' to allow recovery.
+				// This allows the stream to be used again and makes good() return false
+				setstate(std::ios::failbit);
+			}
+			return *this;
 		}
 
 		// Close the socket
@@ -387,6 +414,13 @@ namespace pr::network
 		void set_non_blocking(bool non_blocking = true)
 		{
 			m_buf.set_non_blocking(non_blocking);
+		}
+
+	private:
+
+		static socket_streambuf::setstate_fn setstate_fn(socket_stream* self)
+		{
+			return [self](std::ios::iostate state) { self->setstate(state); };
 		}
 	};
 }

@@ -374,9 +374,12 @@ namespace pr::geometry::fbx
 		Fbx()
 			: m_module(win32::LoadDll<struct FbxDll>("fbx.dll"))
 		{
-			#define PR_FBX_GET_PROC_ADDRESS(prefix, name, function_type) prefix##name = ((prefix##name##Fn)GetProcAddress(m_module, "Fbx_"#prefix###name));
+			#pragma warning(push)
+			#pragma warning(disable: 4191) // 'reinterpret_cast': unsafe conversion from 'FARPROC' to function pointer
+			#define PR_FBX_GET_PROC_ADDRESS(prefix, name, function_type) prefix##name = reinterpret_cast<prefix##name##Fn>(GetProcAddress(m_module, "Fbx_" #prefix #name));
 			PR_FBX_API(PR_FBX_GET_PROC_ADDRESS)
 			#undef PR_FBX_GET_PROC_ADDRESS
+			#pragma warning(pop)
 		}
 
 		// Singleton Instance
