@@ -34,7 +34,7 @@ namespace LDraw
 			AutoSaveOnChanges = true;
 		}
 
-		/// <summary>The font to use in scripts</summary>
+		/// <summary>The font to use in scripts UIs</summary>
 		public string FontName
 		{
 			get => get<string>(nameof(FontName));

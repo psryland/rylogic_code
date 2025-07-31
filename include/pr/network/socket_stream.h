@@ -1,4 +1,4 @@
-﻿//*****************************************
+//*****************************************
 // Sockets
 //	Copyright (c) Rylogic 2019
 //*****************************************
@@ -197,7 +197,7 @@ namespace pr::network
 			if (timeout.count() == 0)
 				return true;
 
-			fd_set readfds;
+			fd_set readfds = {};
 			FD_ZERO(&readfds);
 			FD_SET(m_socket, &readfds);
 
@@ -218,7 +218,7 @@ namespace pr::network
 			if (timeout.count() == 0)
 				return true;
 
-			fd_set writefds;
+			fd_set writefds = {};
 			FD_ZERO(&writefds);
 			FD_SET(m_socket, &writefds);
 

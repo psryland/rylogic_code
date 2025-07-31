@@ -42,7 +42,7 @@
 						Margin="8"
 						>
 						<TextBlock
-							Text="Font: "
+							Text="Script UI Font: "
 							VerticalAlignment="Center"
 							Margin="3"
 							/>
@@ -151,7 +151,6 @@
 					<!-- Reset/Reload -->
 					<GroupBox
 						Grid.Row="0"
-						Grid.Column="1"
 						Header="Refresh / Reload"
 						Padding="3"
 						>
@@ -192,29 +191,34 @@
 
 			<!-- Streaming -->
 			<TabItem
-				Header="STreaming"
+				Header="Streaming"
 			>
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
 
-					<!-- Streaming Port -->
-					<StackPanel
+					<GroupBox
 						Grid.Row="0"
-						Orientation="Horizontal"
-						Margin="30,3,3,3"
+						Header="Connections"
+						Padding="3"
 					>
-						<TextBlock
-							Text="Streaming Port: "
-							VerticalAlignment="Center"
-						/>
-						<TextBox
-							Text="{Binding Settings.StreamingPort}"
-							VerticalAlignment="Center"
-							MinWidth="50"
-						/>
-					</StackPanel>
+						<!-- Streaming Port -->
+						<StackPanel
+							Orientation="Horizontal"
+							Margin="8"
+						>
+							<TextBlock
+								Text="Streaming Port: "
+								VerticalAlignment="Center"
+							/>
+							<TextBox
+								Text="{Binding Settings.StreamingPort}"
+								VerticalAlignment="Center"
+								MinWidth="50"
+							/>
+						</StackPanel>
+					</GroupBox>
 				</Grid>
 			</TabItem>
 		</TabControl>
