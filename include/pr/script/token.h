@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -13,13 +13,13 @@ namespace pr::script
 	// An indivisible source element
 	struct Token
 	{
-		EToken    m_type;
-		EKeyword  m_keyword;
-		ESymbol   m_symbol;
-		EConstant m_constant;
-		string_t  m_svalue;
-		int64_t   m_ivalue;
-		double    m_fvalue;
+		EToken    m_type = {};
+		EKeyword  m_keyword = {};
+		ESymbol   m_symbol = {};
+		EConstant m_constant = {};
+		string_t  m_svalue = {};
+		int64_t   m_ivalue = {};
+		double    m_fvalue = {};
 
 		Token()
 			:m_type(EToken::Invalid)

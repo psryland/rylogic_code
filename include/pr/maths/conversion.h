@@ -42,7 +42,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, &e);
 			auto y = To<S>(e, &e);
 			if (end) *end = e;
@@ -55,7 +55,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 			
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, radix, &e);
 			auto y = To<S>(e, radix, &e);
 			if (end) *end = e;
@@ -129,7 +129,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, &e);
 			auto y = To<S>(e, &e);
 			auto z = To<S>(e, &e);
@@ -141,7 +141,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, radix, &e);
 			auto y = To<S>(e, radix, &e);
 			auto z = To<S>(e, radix, &e);
@@ -178,7 +178,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, &e);
 			auto y = To<S>(e, &e);
 			auto z = To<S>(e, &e);
@@ -191,7 +191,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, &e);
 			auto y = To<S>(e, &e);
 			auto z = To<S>(e, &e);
@@ -203,7 +203,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, radix, &e);
 			auto y = To<S>(e, radix, &e);
 			auto z = To<S>(e, radix, &e);
@@ -216,7 +216,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<S>(s, radix, &e);
 			auto y = To<S>(e, radix, &e);
 			auto z = To<S>(e, radix, &e);
@@ -253,7 +253,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto ang_x = To<S>(s, &e);
 			auto ang_y = To<S>(e, &e);
 			auto ang_z = To<S>(e, &e);
@@ -272,7 +272,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto ang_x = To<S>(s, radix, &e);
 			auto ang_y = To<S>(e, radix, &e);
 			auto ang_z = To<S>(e, radix, &e);
@@ -317,7 +317,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<Vec2<S, void>>(s, &e);
 			auto y = To<Vec2<S, void>>(e, &e);
 			if (end) *end = e;
@@ -356,7 +356,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<Vec3<S, void>>(s, &e);
 			auto y = To<Vec3<S, void>>(e, &e);
 			auto z = To<Vec3<S, void>>(e, &e);
@@ -398,7 +398,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<Vec4<S, void>>(s, &e);
 			auto y = To<Vec4<S, void>>(e, &e);
 			auto z = To<Vec4<S, void>>(e, &e);
@@ -443,7 +443,7 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			Char const* e;
+			Char const* e = {};
 			auto x = To<Vec8<S, void>>(s, &e);
 			auto y = To<Vec8<S, void>>(e, &e);
 			auto z = To<Vec8<S, void>>(e, &e);
@@ -570,7 +570,7 @@ namespace pr
 	inline Str ToBinary(Int n)
 	{
 		int const bits = sizeof(Int) * 8;
-		Str str;
+		Str str = {};
 		string_traits<Str>::resize(str, bits);
 		for (int i = 0, j = bits; i != bits;)
 			str[i++] = (n & Bit64(--j)) ? '1' : '0';

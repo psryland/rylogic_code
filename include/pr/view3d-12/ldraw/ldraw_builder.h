@@ -66,7 +66,7 @@ namespace pr::rdr12::ldraw
 				out.push_back(c);
 			}
 		}
-		return std::move(out);
+		return out;
 	}
 
 	// Ldr object fluent helper
@@ -121,9 +121,8 @@ namespace pr::rdr12::ldraw
 			// Reset the builder
 			LdrBuilder& Clear(int count = -1)
 			{
-				auto size = static_cast<int>(m_objects.size());
-				if (count >= 0 && count < size)
-					m_objects.resize(size - count);
+				if (count >= 0 && count < m_objects.size())
+					m_objects.resize(m_objects.size() - count);
 				else
 					m_objects.clear();
 
@@ -559,7 +558,7 @@ namespace pr::rdr12::ldraw
 			template <std::invocable<void(int, v4&, v4&)> EnumLines>
 			LdrLine& lines(EnumLines lines)
 			{
-				v4 a, b;
+				v4 a = {}, b = {};
 				for (int i = 0; lines(i++, a, b);)
 					line(a, b);
 
@@ -568,7 +567,7 @@ namespace pr::rdr12::ldraw
 			template <std::invocable<void(int, v4&, v4&, Colour&)> EnumLines>
 			LdrLine& lines(EnumLines lines)
 			{
-				v4 a, b; Colour c;
+				v4 a = {}, b = {}; Colour c = {};
 				for (int i = 0; lines(i++, a, b, c);)
 					line(a, b, c);
 

@@ -1,4 +1,4 @@
-# Remove the line below if you want to inherit .editorconfig settings from higher directories
+﻿# Remove the line below if you want to inherit .editorconfig settings from higher directories
 root = true
 
 [*.{cs,c++,cc,cpp,cppm,cxx,h,h++,hh,hpp,hxx,inl,ipp,ixx,tlh,tli}]
@@ -22,7 +22,7 @@ cpp_indent_case_labels = true
 cpp_indent_case_contents_when_block = false
 cpp_indent_lambda_braces_when_parameter = false
 cpp_indent_goto_labels = one_left
-cpp_indent_preprocessor = leftmost_column
+cpp_indent_preprocessor = afterhash
 cpp_indent_access_specifiers = false
 cpp_indent_namespace_contents = true
 cpp_indent_preserve_comments = false
@@ -106,7 +106,7 @@ dotnet_style_prefer_inferred_tuple_names = true:suggestion
 dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
 dotnet_style_prefer_compound_assignment = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
-dotnet_style_namespace_match_folder = false:silent
+dotnet_style_namespace_match_folder = false:suggestion
 dotnet_style_prefer_collection_expression = when_types_exactly_match:suggestion
 dotnet_style_readonly_field = true:suggestion
 dotnet_style_predefined_type_for_locals_parameters_members = true:silent

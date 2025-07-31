@@ -2778,7 +2778,7 @@ extern "C"
 	void Fbx::StaticChecks()
 	{
 		#define PR_FBX_API_CHECK(prefix, name, function_type) static_assert(std::is_same_v<Fbx::prefix##name##Fn, decltype(&Fbx_##prefix##name)>, "Function signature mismatch for Fbx_"#prefix#name);
-		PR_FBX_API(PR_FBX_API_CHECK)
+		PR_FBX_API(PR_FBX_API_CHECK);
 		#undef PR_FBX_API_CHECK
 	}
 }

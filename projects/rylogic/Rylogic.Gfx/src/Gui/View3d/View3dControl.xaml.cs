@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -86,23 +86,21 @@ namespace Rylogic.Gui.WPF
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
 			base.OnRenderSizeChanged(size_info);
-			m_resized = true;
+			m_resized =
+				Math.Abs(size_info.NewSize.Width - D3DImage.Width) > 1 ||
+				Math.Abs(size_info.NewSize.Height - D3DImage.Height) > 1;
+
 			Invalidate();
 		}
 		protected override Size MeasureOverride(Size constraint)
 		{
-			// Set the desired size to be an exact multiple of pixels (accounting for DPI)
-			var win = PresentationSource.FromVisual(this)?.CompositionTarget as HwndTarget;
-			var dpi_scaleX = win?.TransformToDevice.M11 ?? 1.0;
-			var dpi_scaleY = win?.TransformToDevice.M22 ?? 1.0;
+			var sz = base.MeasureOverride(constraint);
 
 			// Scale up to pixels, round, then scale back to DIP
-			var sz = base.MeasureOverride(constraint);
-			sz = new Size(
-				Math.Floor(sz.Width * dpi_scaleX) / dpi_scaleX,
-				Math.Floor(sz.Height * dpi_scaleY) / dpi_scaleY);
-
-			return sz;
+			var device_sz = sz.TransformToDevice(this);
+			device_sz.Width  = Math.Round(device_sz.Width);
+			device_sz.Height = Math.Round(device_sz.Height);
+			return device_sz.TransformFromDevice(this);
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
@@ -397,7 +395,7 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(DesiredPixelAspect));
 			}
 		}
-		private double m_desired_pixel_aspect;
+		private double m_desired_pixel_aspect = 1.0;
 
 		/// <summary>The current pixel aspect ratio</summary>
 		public double ActualPixelAspect

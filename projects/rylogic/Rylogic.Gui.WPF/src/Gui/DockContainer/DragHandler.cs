@@ -77,13 +77,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			base.OnSourceInitialized(e);
 
+			// Convert (x,y) to device units in screen space
+			Point ScreenPoint(double x, double y) => DockContainer.PointToScreen(new Point(x, y)).TransformFromDevice(DockContainer);
+
 			// Set the positions of the edge docking indicators
 			var distance_from_edge = 15;
 			var loc_ghost = Point.Add(m_ss_start_pt, DraggeeOfs);
-			var loc_top = DockContainer.PointToScreen(new Point((DockContainer.Width - DimensionsFor(EIndicator.dock_site_top).Width) / 2, distance_from_edge));
-			var loc_left = DockContainer.PointToScreen(new Point(distance_from_edge, (DockContainer.Height - DimensionsFor(EIndicator.dock_site_left).Height) / 2));
-			var loc_right = DockContainer.PointToScreen(new Point(DockContainer.Width - distance_from_edge - DimensionsFor(EIndicator.dock_site_right).Width, (DockContainer.Height - DimensionsFor(EIndicator.dock_site_right).Height) / 2));
-			var loc_bottom = DockContainer.PointToScreen(new Point((DockContainer.Width - DimensionsFor(EIndicator.dock_site_bottom).Width) / 2, DockContainer.Height - distance_from_edge - DimensionsFor(EIndicator.dock_site_bottom).Height));
+			var loc_top = ScreenPoint((DockContainer.ActualWidth - DimensionsFor(EIndicator.dock_site_top).Width) / 2, distance_from_edge);
+			var loc_left = ScreenPoint(distance_from_edge, (DockContainer.ActualHeight - DimensionsFor(EIndicator.dock_site_left).Height) / 2);
+			var loc_right = ScreenPoint(DockContainer.ActualWidth - distance_from_edge - DimensionsFor(EIndicator.dock_site_right).Width, (DockContainer.ActualHeight - DimensionsFor(EIndicator.dock_site_right).Height) / 2);
+			var loc_bottom = ScreenPoint((DockContainer.ActualWidth - DimensionsFor(EIndicator.dock_site_bottom).Width) / 2, DockContainer.ActualHeight - distance_from_edge - DimensionsFor(EIndicator.dock_site_bottom).Height);
 
 			// Create the semi-transparent non-modal window for the dragged item
 			Ghost = new GhostPane(this, loc_ghost) { Visibility = Visibility.Visible };

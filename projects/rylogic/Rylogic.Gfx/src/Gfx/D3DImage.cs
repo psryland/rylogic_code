@@ -37,11 +37,10 @@ namespace Rylogic.Gfx
 		//          var win = System.Windows.Window.GetWindow(this);
 		//          d3d_image.WindowOwner = new WindowInteropHelper(win).Handle;
 		//  When the Image changes size, use:
-		//     var win = PresentationSource.FromVisual(image)?.CompositionTarget as HwndTarget;
-		//     var dpi_scale = win?.TransformToDevice.M11 ?? 1.0;
-		//     var width  = Math.Max(1, (int)Math.Ceiling(image.Width * dpi_scale));
-		//     var height = Math.Max(1, (int)Math.Ceiling(image.Height * dpi_scale));
-		//     d3d_image.SetRenderTargetSize(width, height);
+		//     var size = new Size(img.DesiredSize.Width, img.DesiredSize.Height).TransformToDevice(img);
+		//     var width  = (int)Math.Max(1, Math.Round(size.Width));
+		//     var height = (int)Math.Max(1, Math.Round(size.Height));
+		//     d3d_image.SetRenderTargetSize(new(width, height));
 		private const View3d.EFormat RenderTargetFormat = View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
 		private Size m_dim_pixels;
 
@@ -155,7 +154,7 @@ namespace Rylogic.Gfx
 		public Size RequiredBackBufferSize => new(PixelWidth, PixelHeight);
 
 		/// <summary>Set the dimensions of the render target</summary>
-		public void SetRenderTargetSize(Size dim_pixels, PointF dpi_scale)
+		public void SetRenderTargetSize(Size dim_pixels)
 		{
 			// If the render target size has changed, recreate it
 			if (FrontBuffer == null || PixelWidth != dim_pixels.Width || PixelHeight != dim_pixels.Height)

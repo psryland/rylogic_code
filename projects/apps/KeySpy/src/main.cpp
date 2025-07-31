@@ -1,4 +1,4 @@
-#include "src/forward.h"
+﻿#include "src/forward.h"
 #include "src/controls_ui.h"
 
 using namespace pr;
@@ -131,8 +131,8 @@ namespace keyspy
 		// Read information about the system we're collecting from 
 		void CollectSourceInfo(std::string& src_info)
 		{
-			std::array<char, 1024> buf;
-			DWORD len;
+			std::array<char, 1024> buf = {};
+			DWORD len = {};
 
 			// Read the user name
 			len = GetEnvironmentVariableA("USERNAME", buf.data(), DWORD(buf.size()));
