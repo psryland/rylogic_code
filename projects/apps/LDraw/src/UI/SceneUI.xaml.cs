@@ -33,7 +33,7 @@ namespace LDraw.UI
 			Model = model;
 			SceneView = m_scene;
 			SceneName = name;
-			SceneState = Settings.SceneState.get(name);
+			SceneState = Model.Profile.SceneState.get(name);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
@@ -150,9 +150,6 @@ namespace LDraw.UI
 			}
 		}
 		private Model m_model = null!;
-
-		/// <summary>Add settings</summary>
-		public SettingsData Settings => Model.Settings;
 		
 		/// <summary>Scene state settings</summary>
 		public SceneStateData SceneState

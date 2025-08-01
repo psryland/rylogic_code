@@ -36,6 +36,9 @@ namespace LDraw
 			ShowAbout = Command.Create(this, ShowAboutInternal);
 			Exit = Command.Create(this, ExitInternal);
 
+			m_profiles.Import(string.Join(",", Model.Settings.Profiles.Select(x => x.Name)));
+			m_profiles.RecentFileSelected = fp => LoadProfile(fp);
+
 			m_recent_files.Import(Model.Settings.RecentFiles);
 			m_recent_files.RecentFileSelected = fp => AddFileSource(fp);
 
@@ -208,7 +211,7 @@ namespace LDraw
 			m_dc.Add(scene, EDockSite.Centre);
 
 			// Restore the layout
-			m_dc.LoadLayout(Model.Settings.UILayout, (name, type, udat) =>
+			m_dc.LoadLayout(Model.Profile.UILayout, (name, type, udat) =>
 			{
 				// Create scenes that are saved in the layout
 				if (type == typeof(SceneUI).FullName)
@@ -227,10 +230,32 @@ namespace LDraw
 			m_menu.Items.Insert(m_menu.Items.Count - 1, m_dc.WindowsMenu());
 		}
 
+		/// <summary>Load a profile</summary>
+		private void LoadProfile(string profile_name)
+		{
+			try
+			{
+				Model.LoadProfile(profile_name);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Loading profile failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Loading profile failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
+		}
+
 		/// <summary>Persist the current layout to settings</summary>
 		private void SaveLayout(object? sender = null, EventArgs? args = null)
 		{
-			Model.Settings.UILayout = m_dc.SaveLayout();
+			try
+			{
+				Model.Profile.UILayout = m_dc.SaveLayout();
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Saving the UI layout failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Saving the UI layout failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
 		}
 
 		/// <summary>Open 'source' in a script editor</summary>
@@ -355,7 +380,7 @@ namespace LDraw
 		private void ToggleStreamingInternal()
 		{
 			var currently_active = StreamingState != View3d.EStreamingState.Disconnected;
-			Model.View3d.Streaming(!currently_active, Model.Settings.StreamingPort);
+			Model.View3d.Streaming(!currently_active, Model.Profile.StreamingPort);
 			NotifyPropertyChanged(nameof(StreamingState));
 		}
 
@@ -365,7 +390,7 @@ namespace LDraw
 		{
 			if (m_settings_ui == null)
 			{
-				m_settings_ui = new SettingsUI(this, Model.Settings);
+				m_settings_ui = new SettingsUI(this, Model);
 				m_settings_ui.Closed += delegate { m_settings_ui = null; };
 				m_settings_ui.Show();
 			}
@@ -377,15 +402,25 @@ namespace LDraw
 		public Command ShowExampleScript { get; }
 		private void ShowExampleScriptInternal()
 		{
-			if (m_example_script_ui == null)
+			try
 			{
-				m_example_script_ui = new ExampleScriptUI { Icon = Icon };
-				m_example_script_ui.Closed += delegate { m_example_script_ui = null; };
-				m_example_script_ui.Show();
+				// Create a new script file
+				var filepath = Model.CreateNewScriptFile("ExampleScript");
+				File.WriteAllText(filepath, View3d.ExampleScript);
+				var src = AddFileSource(filepath) ?? throw new Exception("Failed to an empty script file");
+
+				// Open it in an editor
+				var ui = Model.OpenInEditor(src) ?? throw new Exception("Failed to open the editor for the new script file");
+
+				// Display the editor
+				m_dc.Add(ui, EDockSite.Left).IsFloating = true;
 			}
-			m_example_script_ui.Focus();
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Create example script failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Create example script failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
 		}
-		private ExampleScriptUI? m_example_script_ui;
 
 		/// <summary>Show the about box</summary>
 		public Command ShowAbout { get; }

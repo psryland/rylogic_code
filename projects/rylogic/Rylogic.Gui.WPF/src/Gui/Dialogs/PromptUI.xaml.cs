@@ -164,11 +164,21 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_show_wrap_checkbox;
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
+		/// <summary>Show/Hide the cancel button</summary>
+		public bool ShowCancel
 		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			get => m_show_cancel && !ReadOnly;
+			set
+			{
+				if (m_show_cancel == value) return;
+				m_show_cancel = value;
+				NotifyPropertyChanged(nameof(ShowCancel));
+			}
 		}
+		private bool m_show_cancel = true;
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }

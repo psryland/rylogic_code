@@ -18,12 +18,12 @@ namespace LDraw
 {
 	public sealed class Model :IDisposable
 	{
-		public Model(StartupOptions options)
+		public Model(StartupOptions options, SettingsData settings)
 		{
 			StartupOptions = options;
 			Sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context available");
 			View3d = View3d.Create();
-			Settings = new SettingsData(StartupOptions.SettingsPath);
+			Settings = settings;
 			FileWatchTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
 			Sources = [];
 			Scenes = [];
@@ -140,24 +140,52 @@ namespace LDraw
 				if (m_settings != null)
 				{
 					m_settings.SettingChange += HandleSettingChange;
+
+					// Ensure there is a default profile
+					if (!m_settings.Profiles.Any(x => x.Name == SettingsProfile.DefaultProfileName))
+						m_settings.Profiles.Insert(0, new SettingsProfile { Name = SettingsProfile.DefaultProfileName });
+
+					// Start with the default profile at startup
+					Profile = m_settings.Profiles.First(x => x.Name == SettingsProfile.DefaultProfileName);
 				}
 
 				// Handlers
 				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
-					switch (e.Key)
+					if (e.SettingSet == Profile)
 					{
-						case nameof(SettingsData.CheckForChangesPollPeriodS):
+						switch (e.Key)
 						{
-							FileWatchTimer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
-							break;
+							case nameof(SettingsProfile.CheckForChangesPollPeriodS):
+							{
+								FileWatchTimer.Interval = TimeSpan.FromSeconds(Profile.CheckForChangesPollPeriodS);
+								break;
+							}
 						}
 					}
 				}
 			}
 		}
 		private SettingsData m_settings = null!;
+
+		/// <summary>The active profile</summary>
+		public SettingsProfile Profile
+		{
+			get => m_profile;
+			set
+			{
+				if (Profile == value) return;
+				if (m_profile != null)
+				{
+				}
+				m_profile = value;
+				if (m_profile != null)
+				{
+				}
+			}
+		}
+		private SettingsProfile m_profile = null!;
 
 		/// <summary>The collection of current Ldraw object sources</summary>
 		public List<Source> Sources { get; }
@@ -202,7 +230,7 @@ namespace LDraw
 				m_file_watch_timer = value;
 				if (m_file_watch_timer != null)
 				{
-					m_file_watch_timer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
+					m_file_watch_timer.Interval = TimeSpan.FromSeconds(Profile.CheckForChangesPollPeriodS);
 					m_file_watch_timer.Tick += HandleCheckForChangedFiles;
 					m_file_watch_timer.Start();
 				}
@@ -227,12 +255,28 @@ namespace LDraw
 			}
 		}
 		private DispatcherTimer m_file_watch_timer = null!;
+		
+		/// <summary>Load a profile</summary>
+		public void LoadProfile(string profile_name)
+		{
+			if (Settings.Profiles.FirstOrDefault(x => x.Name == profile_name) is SettingsProfile profile)
+				Profile = profile;
+			else
+				throw new Exception($"Profile '{profile_name}' not found");
+		}
 
 		/// <summary>Add a file ldraw source</summary>
 		public Source AddFileSource(string filepath)
 		{
 			NotifyFileOpening(filepath);
 			var src = View3d.LoadScriptFromFile(filepath);
+			return Sources.Add2(new Source(this, src));
+		}
+
+		/// <summary>Add a string ldraw source</summary>
+		public Source AddStringSource(string text)
+		{
+			var src = View3d.LoadScriptFromString(text);
 			return Sources.Add2(new Source(this, src));
 		}
 
@@ -261,9 +305,9 @@ namespace LDraw
 		private int m_script_number;
 
 		/// <summary>Create an empty script and return its filepath</summary>
-		public string CreateNewScriptFile()
+		public string CreateNewScriptFile(string? script_name = null)
 		{
-			var script_name = GenerateScriptName();
+			script_name ??= GenerateScriptName();
 			var filepath = Path_.CombinePath(TempScriptDirectory, $"{script_name}.ldr");
 			File.AppendText(filepath).Dispose();
 			return filepath;
@@ -316,12 +360,6 @@ namespace LDraw
 				view.Scene.RemoveObjects(context_pred);
 				view.Scene.Invalidate();
 			}
-
-			//// Delete unused objects
-			//if (context_ids.Length != 0)
-			//{
-			//	View3d.DeleteUnused(context_pred);
-			//}
 		}
 
 		// Add objects associated with 'id' to the scenes
@@ -336,7 +374,7 @@ namespace LDraw
 				view.Scene.AddObjects(context_pred);
 
 				// Auto range the view
-				if (Settings.ResetOnLoad)
+				if (Profile.ResetOnLoad)
 					view.AutoRange();
 				else
 					view.Invalidate();

@@ -17,12 +17,63 @@
 		Margin="8,0,8,8"
 		>
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
-		
-		<TabControl
+
+		<!-- Profile -->
+		<StackPanel
 			Grid.Row="0"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			Margin="16,16,16,0"
+			>
+			<TextBlock
+				Text="Profile: "
+				VerticalAlignment="Center"
+				Margin="3"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Profiles}"
+				SelectedItem="{Binding Profiles/, Mode=TwoWay}"
+				DisplayMemberPath="Name"
+				VerticalAlignment="Center"
+				MinWidth="180"
+				Margin="3"
+				/>
+			<Button
+				Command="{Binding SaveProfile}"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				BorderThickness="0"
+				MaxHeight="28"
+				Margin="6,0,0,0"
+				>
+				<Image
+					Source="{StaticResource save}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+			<Button
+				Command="{Binding DeleteProfile}"
+				IsEnabled="{Binding DeleteProfile.Available}"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				BorderThickness="0"
+				MaxHeight="32"
+				Margin="6,0,0,0"
+				>
+				<Image
+					Source="{StaticResource bin}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+		</StackPanel>
+		
+		<!-- Profile settings -->
+		<TabControl
+			Grid.Row="1"
 			Margin="8,8,8,8"
 			>
 			
@@ -49,7 +100,7 @@
 						<ComboBox
 							MinWidth="100"
 							ItemsSource="{Binding AvailableFonts}"
-							Text="{Binding Settings.FontName}"
+							Text="{Binding Profile.FontName}"
 							Margin="3"
 							/>
 						<TextBlock
@@ -58,7 +109,7 @@
 							Margin="3"
 							/>
 						<TextBox
-							Text="{Binding Settings.FontSize}"
+							Text="{Binding Profile.FontSize}"
 							VerticalAlignment="Center"
 							HorizontalContentAlignment="Center"
 							MinWidth="30"
@@ -81,6 +132,7 @@
 								<Button
 									Command="{Binding MoveIncludePathUp}"
 									CommandParameter="{Binding SelectedIndex, ElementName=m_lb_include_paths}"
+									IsEnabled="{Binding MoveIncludePathUp.Available}"
 									Background="Transparent"
 									BorderThickness="0"
 									Margin="2"
@@ -93,6 +145,7 @@
 								<Button
 									Command="{Binding MoveIncludePathDown}"
 									CommandParameter="{Binding SelectedIndex, ElementName=m_lb_include_paths}"
+									IsEnabled="{Binding MoveIncludePathDown.Available}"
 									Background="Transparent"
 									BorderThickness="0"
 									Margin="2"
@@ -105,6 +158,7 @@
 								<Button
 									Command="{Binding RemoveIncludePath}"
 									CommandParameter="{Binding SelectedValue, ElementName=m_lb_include_paths}"
+									IsEnabled="{Binding RemoveIncludePath.Available}"
 									Background="Transparent"
 									BorderThickness="0"
 									Margin="2"
@@ -116,6 +170,7 @@
 								</Button>
 								<Button
 									Command="{Binding AddIncludePath}"
+									IsEnabled="{Binding AddIncludePath.Available}"
 									Background="Transparent"
 									BorderThickness="0"
 									Margin="2"
@@ -129,7 +184,7 @@
 
 							<!-- Paths List -->
 							<ListBox
-								ItemsSource="{Binding Settings.IncludePaths}"
+								ItemsSource="{Binding Profile.IncludePaths}"
 								MinHeight="100"
 								Name="m_lb_include_paths"
 								/>
@@ -157,17 +212,17 @@
 						<StackPanel>
 							<CheckBox
 								Content="Clear the Log window on reload"
-								IsChecked="{Binding Settings.ClearErrorLogOnReload}"
+								IsChecked="{Binding Profile.ClearErrorLogOnReload}"
 								Margin="3"
 								/>
 							<CheckBox
 								Content="Reset the camera position on reload"
-								IsChecked="{Binding Settings.ResetOnLoad}"
+								IsChecked="{Binding Profile.ResetOnLoad}"
 								Margin="3"
 								/>
 							<CheckBox
 								Content="Automatically reload files when changes are detected"
-								IsChecked="{Binding Settings.AutoRefresh}"
+								IsChecked="{Binding Profile.AutoRefresh}"
 								Margin="3"
 								/>
 							<StackPanel
@@ -179,7 +234,7 @@
 									VerticalAlignment="Center"
 									/>
 								<TextBox
-									Text="{Binding Settings.CheckForChangesPollPeriodS, StringFormat={}{0:N2}}"
+									Text="{Binding Profile.CheckForChangesPollPeriodS, StringFormat={}{0:N2}}"
 									VerticalAlignment="Center"
 									MinWidth="50"
 									/>
@@ -213,7 +268,7 @@
 								VerticalAlignment="Center"
 							/>
 							<TextBox
-								Text="{Binding Settings.StreamingPort}"
+								Text="{Binding Profile.StreamingPort}"
 								VerticalAlignment="Center"
 								MinWidth="50"
 							/>
@@ -224,23 +279,32 @@
 		</TabControl>
 
 		<!-- Buttons -->
-		<DockPanel
-			Grid.Row="1"
+		<Grid
+			Grid.Row="2"
+			MinHeight="28"
 			Margin="8"
 			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			
 			<Button
-				DockPanel.Dock="Left"
+				Grid.Column="0"
 				Command="{Binding ResetToDefaults}"
 				Content="Reset to Defaults"
 				MinWidth="120"
+				Margin="3"
 				/>
 			<Button
-				DockPanel.Dock="Right"
+				Grid.Column="3"
 				Command="{Binding Accept}"
 				Content="OK"
 				MinWidth="80"
+				Margin="3"
 				/>
-			<StackPanel/>
-		</DockPanel>
+		</Grid>
 	</Grid>
 </Window>

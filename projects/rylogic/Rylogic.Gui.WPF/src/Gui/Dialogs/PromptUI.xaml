@@ -61,7 +61,7 @@
 					/>
 				<Button
 					Content="{Binding Source={StaticResource Str_Cancel}, Path=Value}"
-					Visibility="{Binding ReadOnly, Converter={conv:BoolToCollapsed}}"
+					Visibility="{Binding ShowCancel, Converter={conv:BoolToVisible}}"
 					IsCancel="True"
 					MinWidth="80"
 					MinHeight="22"

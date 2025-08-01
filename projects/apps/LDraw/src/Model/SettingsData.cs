@@ -9,31 +9,70 @@ using Rylogic.Gui.WPF;
 
 namespace LDraw
 {
-	public class SettingsData :SettingsBase<SettingsData>
+	public class SettingsData : SettingsBase<SettingsData>
 	{
 		public SettingsData()
 		{
-			FontName = "consolas";
+			RecentFiles = string.Empty;
+			Profiles = [new SettingsProfile { Name = SettingsProfile.DefaultProfileName }];
+			AutoSaveOnChanges = true;
+		}
+		public SettingsData(string filepath)
+			: base(filepath, ESettingsLoadFlags.ThrowOnError)
+		{
+			AutoSaveOnChanges = true;
+		}
+
+		/// <inheritdoc/>
+		public override string Version => "v2.0";
+
+		/// <summary>Recently loaded files</summary>
+		public string RecentFiles
+		{
+			get => get<string>(nameof(RecentFiles));
+			set => set(nameof(RecentFiles), value);
+		}
+
+		/// <summary>Saved configurations</summary>
+		public List<SettingsProfile> Profiles
+		{
+			get => get<List<SettingsProfile>>(nameof(Profiles));
+			private set => set(nameof(Profiles), value);
+		}
+	}
+
+	/// <summary>Per Scene settings</summary>
+	public class SettingsProfile :SettingsSet<SettingsProfile>
+	{
+		public SettingsProfile()
+		{
+			Name = "Profile";
+			FontName = "Consolas";
 			FontSize = 10.0;
 			AutoRefresh = false;
 			ResetOnLoad = true;
 			ReloadChangedScripts = null;
 			ClearErrorLogOnReload = true;
 			CheckForChangesPollPeriodS = 1.0;
-			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
 			StreamingPort = 1976;
 			SceneState = new List<SceneStateData>();
 			UILayout = null;
-
-			AutoSaveOnChanges = true;
 		}
-		public SettingsData(string filepath)
-			: base(filepath, ESettingsLoadFlags.None)
+		public SettingsProfile(SettingsProfile rhs)
+			:base(rhs)
+		{}
+
+		/// <summary>Name of the default profile</summary>
+		public static string DefaultProfileName => "Default Profile";
+
+		/// <summary>The name of this profile</summary>
+		public string Name
 		{
-			AutoSaveOnChanges = true;
+			get => get<string>(nameof(Name));
+			set => set(nameof(Name), value);
 		}
-
+		
 		/// <summary>The font to use in scripts UIs</summary>
 		public string FontName
 		{
@@ -83,13 +122,6 @@ namespace LDraw
 			set => set(nameof(CheckForChangesPollPeriodS), value);
 		}
 
-		/// <summary>Recently loaded files</summary>
-		public string RecentFiles
-		{
-			get => get<string>(nameof(RecentFiles));
-			set => set(nameof(RecentFiles), value);
-		}
-
 		/// <summary>Includes paths to use when resolving includes in script files</summary>
 		public string[] IncludePaths
 		{
@@ -124,6 +156,7 @@ namespace LDraw
 	{
 		public SceneStateData()
 		{
+			Name = string.Empty;
 			ViewPreset = EViewPreset.Current;
 			AlignDirection = EAlignDirection.None;
 			Chart = new ChartControl.OptionsData
@@ -166,6 +199,8 @@ namespace LDraw
 			set => set(nameof(Chart), value);
 		}
 	}
+
+	/// <summary>Extensions</summary>
 	public static class SettingsData_
 	{
 		/// <summary>Access the scene state data for a scene by name</summary>
