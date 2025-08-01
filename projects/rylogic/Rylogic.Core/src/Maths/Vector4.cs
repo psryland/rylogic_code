@@ -212,44 +212,71 @@ namespace Rylogic.Maths
 		}
 
 		#region Parse
-		public static v4 Parse3(string s, float w)
+		public static v4 Parse(string s, float w)
 		{
-			if (s == null) throw new ArgumentNullException("s", "v4.Parse3() string argument was null");
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
-			if (values.Length != 3) throw new FormatException("v4.Parse3() string argument does not represent a 3 component vector");
-			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), w);
+			if (s == null)
+				throw new ArgumentNullException(nameof(s), "v4.Parse() string argument was null");
+
+			var values = s.Split([' ', ',', '\t'], 3);
+			if (values.Length != 3)
+				throw new FormatException("v4.Parse() string argument does not represent a 3 component vector");
+
+			return new v4(
+				float.Parse(values[0]),
+				float.Parse(values[1]),
+				float.Parse(values[2]),
+				w);
 		}
-		public static v4 Parse4(string s)
+		public static v4 Parse(string s)
 		{
-			if (s == null) throw new ArgumentNullException("s", "v4.Parse4() string argument was null");
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 4);
-			if (values.Length != 4) throw new FormatException("v4.Parse4() string argument does not represent a 4 component vector");
-			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
+			if (s == null)
+				throw new ArgumentNullException(nameof(s), "v4.Parse() string argument was null");
+
+			var values = s.Split([' ', ',', '\t'], 4);
+			if (values.Length != 4)
+				throw new FormatException("v4.Parse() string argument does not represent a 4 component vector");
+
+			return new v4(
+				float.Parse(values[0]),
+				float.Parse(values[1]),
+				float.Parse(values[2]),
+				float.Parse(values[3]));
 		}
-		public static bool TryParse3(string s, out v4 vec, float w)
+		public static bool TryParse(string s, out v4 vec, float w)
 		{
 			vec = Zero;
-			if (s == null) return false;
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
+			if (s == null)
+				return false;
+			
 			vec.w = w;
-			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
+			var values = s.Split([' ', ',', '\t'], 3);
+			return
+				values.Length == 3 &&
+				float.TryParse(values[0], out vec.x) &&
+				float.TryParse(values[1], out vec.y) &&
+				float.TryParse(values[2], out vec.z);
 		}
 		public static v4? TryParse3(string s, float w)
 		{
-			v4 vec;
-			return TryParse3(s, out vec, w) ? (v4?)vec : null;
+			return TryParse(s, out var vec, w) ? vec : null;
 		}
-		public static bool TryParse4(string s, out v4 vec)
+		public static bool TryParse(string s, out v4 vec)
 		{
 			vec = Zero;
-			if (s == null) return false;
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 4);
-			return values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
+			if (s == null)
+				return false;
+
+			var values = s.Split([' ', ',', '\t'], 4);
+			return
+				values.Length == 4 &&
+				float.TryParse(values[0], out vec.x) &&
+				float.TryParse(values[1], out vec.y) &&
+				float.TryParse(values[2], out vec.z) &&
+				float.TryParse(values[3], out vec.w);
 		}
-		public static v4? TryParse4(string s)
+		public static v4? TryParse(string s)
 		{
-			v4 vec;
-			return TryParse4(s, out vec) ? (v4?)vec : null;
+			return TryParse(s, out var vec) ? vec : null;
 		}
 		#endregion
 
@@ -402,7 +429,7 @@ namespace Rylogic.Maths
 		#endregion
 
 		/// <summary></summary>
-		public string Description => $"{x}  {y}  {z}  {w}  //Len3({xyz.Length}),Len4({Length})";
+		public string Description => $"{x}  {y}  {z}  {w}  //Len3({xyz.Length}) Len4({Length})";
 	}
 
 	public static partial class Math_

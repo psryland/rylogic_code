@@ -649,53 +649,53 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Set the hotspot locations
 			switch (indy)
 			{
-			default:
+				default:
 				{
 					throw new Exception("Unknown indicator type");
 				}
-			case EIndicator.dock_site_cross_lg:
+				case EIndicator.dock_site_cross_lg:
 				{
 					double a = 32, b = 50, c = 77, d = 95, cx = c - b;
-					return new Hotspot[]
-					{
-								new Hotspot(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
-								new Hotspot(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
-								new Hotspot(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
-								new Hotspot(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
-								new Hotspot(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
-								new Hotspot(new RectangleGeometry(new Rect(0,a,32,64)), EDropSite.BranchLeft),
-								new Hotspot(new RectangleGeometry(new Rect(d,a,32,64)), EDropSite.BranchRight),
-								new Hotspot(new RectangleGeometry(new Rect(a,0,64,32)), EDropSite.BranchTop),
-								new Hotspot(new RectangleGeometry(new Rect(a,d,64,32)), EDropSite.BranchBottom),
-					};
+					return
+					[
+						new(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
+						new(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
+						new(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
+						new(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
+						new(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
+						new(new RectangleGeometry(new Rect(0,a,32,64)), EDropSite.BranchLeft),
+						new(new RectangleGeometry(new Rect(d,a,32,64)), EDropSite.BranchRight),
+						new(new RectangleGeometry(new Rect(a,0,64,32)), EDropSite.BranchTop),
+						new(new RectangleGeometry(new Rect(a,d,64,32)), EDropSite.BranchBottom),
+					];
 				}
-			case EIndicator.dock_site_cross_sm:
+				case EIndicator.dock_site_cross_sm:
 				{
 					double a = 0, b = 18, c = 45, d = 63, cx = c - b;
-					return new Hotspot[]
-					{
-								new Hotspot(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
-								new Hotspot(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
-								new Hotspot(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
-								new Hotspot(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
-								new Hotspot(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
-					};
+					return
+					[
+						new(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
+						new(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
+						new(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
+						new(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
+						new(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
+					];
 				}
-			case EIndicator.dock_site_left:
+				case EIndicator.dock_site_left:
 				{
-					return new Hotspot[] { new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootLeft) };
+					return [new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootLeft)];
 				}
-			case EIndicator.dock_site_top:
+				case EIndicator.dock_site_top:
 				{
-					return new Hotspot[] { new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootTop) };
+					return [new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootTop)];
 				}
-			case EIndicator.dock_site_right:
+				case EIndicator.dock_site_right:
 				{
-					return new Hotspot[] { new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootRight) };
+					return [new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootRight)];
 				}
-			case EIndicator.dock_site_bottom:
+				case EIndicator.dock_site_bottom:
 				{
-					return new Hotspot[] { new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootBottom) };
+					return [new Hotspot(new RectangleGeometry(new Rect(0, 0, 25, 25)), EDropSite.RootBottom)];
 				}
 			}
 		}

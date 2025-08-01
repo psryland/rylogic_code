@@ -354,6 +354,39 @@ namespace Rylogic.Maths
 			return mat;
 		}
 
+		#region Parse
+		public static m3x4 Parse(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse)}:string argument was null");
+			return TryParse(s, out var result) ? result : throw new FormatException($"{nameof(Parse)}: string argument does not represent a 4x4 matrix");
+		}
+		public static bool TryParse(string s, out m3x4 mat, bool row_major = true)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split([' ', ',', '\t', '\n'], 16, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 12)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = row_major
+				? new m3x4(
+					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
+					new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
+					new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])))
+				: new m3x4(
+					new v4(float.Parse(values[0]), float.Parse(values[3]), float.Parse(values[6]), float.Parse(values[9])),
+					new v4(float.Parse(values[1]), float.Parse(values[4]), float.Parse(values[7]), float.Parse(values[10])),
+					new v4(float.Parse(values[2]), float.Parse(values[5]), float.Parse(values[8]), float.Parse(values[11])));
+			return true;
+		}
+		#endregion
 		#region Random
 
 		/// <summary>Create a random 3x4 matrix</summary>

@@ -184,6 +184,11 @@ namespace pr::rdr12::ldraw
 			if (d.m_depth == false) return;
 			Write(out, EKeyword::Depth);
 		}
+		template <typename TOut> static void Append(TOut& out, Hidden h)
+		{
+			if (!h.m_hide) return;
+			Write(out, EKeyword::Hidden);
+		}
 		template <typename TOut> static void Append(TOut& out, Wireframe w)
 		{
 			if (!w.m_wire) return;

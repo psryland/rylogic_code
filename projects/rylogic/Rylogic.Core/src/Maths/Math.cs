@@ -16,7 +16,7 @@ namespace Rylogic.Maths
 			};
 			Xml_.AsMap[typeof(v2)] = (elem, type, instance) =>
 			{
-				return v2.Parse2(elem.Value);
+				return v2.Parse(elem.Value);
 			};
 
 			Xml_.ToMap[typeof(v3)] = (obj, node) =>
@@ -27,7 +27,7 @@ namespace Rylogic.Maths
 			};
 			Xml_.AsMap[typeof(v3)] = (elem, type, instance) =>
 			{
-				return v3.Parse3(elem.Value);
+				return v3.Parse(elem.Value);
 			};
 
 			Xml_.ToMap[typeof(v4)] = (obj, node) =>
@@ -38,7 +38,7 @@ namespace Rylogic.Maths
 			};
 			Xml_.AsMap[typeof(v4)] = (elem, type, instance) =>
 			{
-				return v4.Parse4(elem.Value);
+				return v4.Parse(elem.Value);
 			};
 
 			Xml_.ToMap[typeof(m4x4)] = (obj, node) =>

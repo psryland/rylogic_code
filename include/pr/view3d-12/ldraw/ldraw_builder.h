@@ -15,6 +15,7 @@ namespace pr::rdr12::ldraw
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
+		std::filesystem::create_directories(filepath.parent_path());
 		std::ofstream file(filepath, append ? std::ios::app : std::ios::out);
 		file << ldr;
 		file.close();
@@ -22,6 +23,7 @@ namespace pr::rdr12::ldraw
 	inline void Write(std::wstring_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
+		std::filesystem::create_directories(filepath.parent_path());
 		std::wofstream file(filepath, append ? std::ios::app : std::ios::out);
 		file << ldr;
 		file.close();
@@ -29,6 +31,7 @@ namespace pr::rdr12::ldraw
 	inline void Write(std::span<std::byte const> ldr, std::filesystem::path const& filepath, bool append = false)
 	{
 		if (ldr.empty()) return;
+		std::filesystem::create_directories(filepath.parent_path());
 		std::ofstream file(filepath, std::ios::binary | (append ? std::ios::app : std::ios::out));
 		file.write(reinterpret_cast<char const*>(ldr.data()), static_cast<std::streamsize>(ldr.size()));
 		file.close();
@@ -91,6 +94,7 @@ namespace pr::rdr12::ldraw
 		struct LdrCone;
 		struct LdrSpline;
 		struct LdrFrustum;
+		struct LdrInstance;
 		struct LdrGroup;
 		struct LdrCommands;
 		struct LdrBinaryStream;
@@ -146,6 +150,7 @@ namespace pr::rdr12::ldraw
 			LdrCone& Cone(Name name = {}, Colour colour = Colour());
 			LdrSpline& Spline(Name name = {}, Colour colour = Colour());
 			LdrFrustum& Frustum(Name name = {}, Colour colour = Colour());
+			LdrInstance& Instance(Name name = {}, Colour colour = Colour());
 			LdrGroup& Group(Name name = {}, Colour colour = Colour());
 			LdrCommands& Command(Name name = {}, Colour colour = Colour());
 
@@ -220,12 +225,16 @@ namespace pr::rdr12::ldraw
 				, m_axis_id(pr::AxisId::None)
 				, m_solid()
 			{}
+			Derived* me()
+			{
+				return reinterpret_cast<Derived*>(this);
+			}
 
 			// Object name
 			Derived& name(Name n)
 			{
 				m_name = n;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Name m_name;
 
@@ -234,7 +243,7 @@ namespace pr::rdr12::ldraw
 			{
 				m_colour = c;
 				m_colour.m_kw = EKeyword::Colour;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Colour m_colour;
 
@@ -243,7 +252,7 @@ namespace pr::rdr12::ldraw
 			{
 				m_colour_mask = c;
 				m_colour_mask.m_kw = EKeyword::ColourMask;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Colour m_colour_mask;
 
@@ -251,12 +260,12 @@ namespace pr::rdr12::ldraw
 			Derived& o2w(m4x4 const& o2w)
 			{
 				m_o2w.m_mat = o2w * m_o2w.m_mat;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Derived& o2w(m3x4 const& rot, v4 const& pos)
 			{
 				m_o2w.m_mat = m4x4{ rot, pos } * m_o2w.m_mat;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Derived& ori(v4 const& dir, pr::AxisId axis = pr::AxisId::PosZ)
 			{
@@ -299,11 +308,19 @@ namespace pr::rdr12::ldraw
 			}
 			O2W m_o2w;
 
+			// Hidden
+			Derived& hide(bool hidden = true)
+			{
+				m_hide.m_hide = hidden;
+				return *me();
+			}
+			Hidden m_hide;
+
 			// Wire frame
 			Derived& wireframe(bool w = true)
 			{
 				m_wire.m_wire = w;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Wireframe m_wire;
 
@@ -311,7 +328,7 @@ namespace pr::rdr12::ldraw
 			Derived& axis(pr::AxisId axis_id)
 			{
 				m_axis_id = axis_id;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			AxisId m_axis_id;
 
@@ -319,7 +336,7 @@ namespace pr::rdr12::ldraw
 			Derived& solid(bool s = true)
 			{
 				m_solid.m_solid = s;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 			Solid m_solid;
 
@@ -331,18 +348,18 @@ namespace pr::rdr12::ldraw
 				m_o2w = rhs.m_o2w;
 				m_wire = rhs.m_wire;
 				m_axis_id = rhs.m_axis_id;
-				return static_cast<Derived&>(*this);
+				return *me();
 			}
 
 			// Write nested objects to 'out'
 			virtual void Write(textbuf& out) const override
 			{
-				auto const& derived = *static_cast<Derived const*>(this);
+				auto const& derived = *reinterpret_cast<Derived const*>(this);
 				derived.Derived::WriteTo<TextWriter>(out);
 			}
 			virtual void Write(bytebuf& out) const override 
 			{
-				auto const& derived = *static_cast<Derived const*>(this);
+				auto const& derived = *reinterpret_cast<Derived const*>(this);
 				derived.Derived::WriteTo<BinaryWriter>(out);
 			}
 
@@ -1295,6 +1312,18 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		};
+		struct LdrInstance :LdrBase<LdrInstance>
+		{
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Instance, m_name, m_colour, [&]
+				{
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
 		struct LdrGroup :LdrBase<LdrGroup>
 		{
 			// Write to 'out'
@@ -1485,6 +1514,12 @@ namespace pr::rdr12::ldraw
 		inline LdrFrustum& LdrBuilder::Frustum(Name name, Colour colour)
 		{
 			auto ptr = new LdrFrustum;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrInstance& LdrBuilder::Instance(Name name, Colour colour)
+		{
+			auto ptr = new LdrInstance;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

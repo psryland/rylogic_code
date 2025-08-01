@@ -170,24 +170,36 @@ namespace Rylogic.Maths
 		}
 
 		#region Parse
-		public static v3 Parse3(string s)
+		public static v3 Parse(string s)
 		{
-			if (s == null) throw new ArgumentNullException("s", "v3.Parse3() string argument was null");
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
-			if (values.Length != 3) throw new FormatException("v3.Parse3() string argument does not represent a 3 component vector");
-			return new v3(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]));
+			if (s == null)
+				throw new ArgumentNullException(nameof(s), "v3.Parse() string argument was null");
+
+			var values = s.Split([' ', ',', '\t'], 3);
+			if (values.Length != 3)
+				throw new FormatException("v3.Parse() string argument does not represent a 3 component vector");
+
+			return new v3(
+				float.Parse(values[0]),
+				float.Parse(values[1]),
+				float.Parse(values[2]));
 		}
-		public static bool TryParse3(string s, out v3 vec)
+		public static bool TryParse(string s, out v3 vec)
 		{
 			vec = Zero;
-			if (s == null) return false;
-			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
-			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
+			if (s == null)
+				return false;
+
+			var values = s.Split([' ', ',', '\t'], 3);
+			return
+				values.Length == 3 &&
+				float.TryParse(values[0], out vec.x) &&
+				float.TryParse(values[1], out vec.y) &&
+				float.TryParse(values[2], out vec.z);
 		}
-		public static v3? TryParse3(string s)
+		public static v3? TryParse(string s)
 		{
-			v3 vec;
-			return TryParse3(s, out vec) ? (v3?)vec : null;
+			return TryParse(s, out var vec) ? vec : null;
 		}
 		#endregion
 

@@ -81,25 +81,25 @@ namespace Rylogic.Gui.WPF.Converters
 
 			if (targetType.Equals(typeof(v4)))
 			{
-				if (v4.TryParse4(str, out var vec4))
+				if (v4.TryParse(str, out var vec4))
 					return vec4;
 
 				var w = parameter != null ? Util.ConvertTo<float>(parameter) : 0f;
-				if (v4.TryParse3(str, out vec4, w))
+				if (v4.TryParse(str, out vec4, w))
 					return vec4;
 
 				return null;
 			}
 			if (targetType.Equals(typeof(v3)))
 			{
-				if (v3.TryParse3(str, out var vec3))
+				if (v3.TryParse(str, out var vec3))
 					return vec3;
 
 				return null;
 			}
 			if (targetType.Equals(typeof(v2)))
 			{
-				if (v2.TryParse2(str, out var vec2))
+				if (v2.TryParse(str, out var vec2))
 					return vec2;
 
 				return null;

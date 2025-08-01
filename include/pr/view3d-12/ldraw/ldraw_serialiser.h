@@ -85,6 +85,12 @@ namespace pr::rdr12::ldraw
 		Depth() :m_depth(false) {}
 		Depth(bool d) : m_depth(d) {}
 	};
+	struct Hidden
+	{
+		bool m_hide;
+		Hidden() :m_hide(false) {}
+		Hidden(bool h) :m_hide(h) {}
+	};
 	struct Wireframe
 	{
 		bool m_wire;

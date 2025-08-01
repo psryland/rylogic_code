@@ -279,6 +279,12 @@ namespace Rylogic.LDraw
 				return;
 			Write(EKeyword.Depth);
 		}
+		private void Append(Serialiser.Hidden h)
+		{
+			if (!h.m_hide)
+				return;
+			Write(EKeyword.Hidden);
+		}
 		private void Append(Serialiser.Wireframe w)
 		{
 			if (!w.m_wire)

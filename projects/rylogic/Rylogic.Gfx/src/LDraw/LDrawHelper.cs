@@ -126,6 +126,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrInstance Instance(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrInstance();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrGroup Group(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrGroup();
@@ -194,8 +200,11 @@ namespace Rylogic.LDraw
 		public void Save(string filepath, bool text = true, bool pretty = false)
 		{
 			if (Path.GetExtension(filepath) == "")
-				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr")); 
+				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr"));
 
+			if (Path.GetDirectoryName(filepath) is string directory)
+				Directory.CreateDirectory(directory);
+			
 			using var file = File.Create(filepath);
 			var mem = text ? ToText() : ToBinary();
 			if (text && pretty) mem = FormatScript(mem);
@@ -251,6 +260,7 @@ namespace Rylogic.LDraw
 		protected Serialiser.Wireframe m_wire = new();
 		protected Serialiser.AxisId m_axis_id = new();
 		protected Serialiser.Solid m_solid = new();
+		protected Serialiser.Hidden m_hidden = new();
 
 		/// <summary>Object name</summary>
 		public TDerived name(Serialiser.Name name)
@@ -339,16 +349,23 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Solid</summary>
-		public TDerived solid(bool solid)
+		public TDerived solid(bool solid = true)
 		{
 			m_solid = solid;
+			return (TDerived)this;
+		}
+
+		/// <summary>Solid</summary>
+		public TDerived hide(bool hidden = true)
+		{
+			m_hidden = hidden;
 			return (TDerived)this;
 		}
 
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter writer)
 		{
-			writer.Append(m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
+			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_colour_mask, m_o2w);
 			base.WriteTo(writer);
 		}
 	}
@@ -1150,6 +1167,17 @@ namespace Rylogic.LDraw
 			}
 		}
 
+	}
+	public class LdrInstance : LdrBase<LdrInstance>
+	{
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Instance, m_name, m_colour, () =>
+			{
+				base.WriteTo(res);
+			});
+		}
 	}
 	public class LdrGroup : LdrBase<LdrGroup>
 	{

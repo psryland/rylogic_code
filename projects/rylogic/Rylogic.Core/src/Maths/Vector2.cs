@@ -223,24 +223,34 @@ namespace Rylogic.Maths
 		#endregion
 
 		#region Parse
-		public static v2 Parse2(string s)
+		public static v2 Parse(string s)
 		{
-			if (s == null) throw new ArgumentNullException("s", "v2.Parse3() string argument was null");
-			var values = s.Split(new char[]{' ',',','\t'},2);
-			if (values.Length != 2) throw new FormatException("v2.Parse3() string argument does not represent a 2 component vector");
-			return new v2(float.Parse(values[0]), float.Parse(values[1]));
+			if (s == null)
+				throw new ArgumentNullException("s", "v2.Parse3() string argument was null");
+
+			var values = s.Split([' ', ',', '\t'], 2);
+			if (values.Length != 2)
+				throw new FormatException("v2.Parse() string argument does not represent a 2 component vector");
+
+			return new v2(
+				float.Parse(values[0]),
+				float.Parse(values[1]));
 		}
-		public static bool TryParse2(string s, out v2 vec)
+		public static bool TryParse(string s, out v2 vec)
 		{
 			vec = Zero;
-			if (s == null) return false;
-			var values = s.Split(new char[]{' ',',','\t'},2);
-			return values.Length == 2 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y);
+			if (s == null)
+				return false;
+
+			var values = s.Split([' ', ',', '\t'], 2);
+			return
+				values.Length == 2 &&
+				float.TryParse(values[0], out vec.x) &&
+				float.TryParse(values[1], out vec.y);
 		}
-		public static v2? TryParse2(string s)
+		public static v2? TryParse(string s)
 		{
-			v2 vec;
-			return TryParse2(s, out vec) ? (v2?)vec : null;
+			return TryParse(s, out var vec) ? vec : null;
 		}
 		#endregion
 

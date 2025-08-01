@@ -113,7 +113,7 @@ namespace Rylogic.Maths
 		/// <summary>ToString()</summary>
 		public override string ToString() => ToString4x4();
 		public string ToString4x4(string delim = "\n") => $"{x} {delim}{y} {delim}{z} {delim}{w} {delim}";
-		public string ToString3x4(string delim = "\n") => $"{x.xyz} {delim}{y.xyz} {delim}{z.xyz} {delim}{w.xyz} {delim}";
+		public string ToString3x4(string delim = "\n") => $"{x} {delim}{y} {delim}{z} {delim}";
 		public string ToString(string format, string delim = "\n") => $"{x.ToString(format)} {delim}{y.ToString(format)} {delim}{z.ToString(format)} {delim}{w.ToString(format)} {delim}";
 		public string ToCodeString() => $"{x}, {y}, {z}, {w}";
 
@@ -175,18 +175,13 @@ namespace Rylogic.Maths
 				new v4(Math_.Dot(lhs.x, rhs.w), Math_.Dot(lhs.y, rhs.w), Math_.Dot(lhs.z, rhs.w), Math_.Dot(lhs.w, rhs.w)));
 		}
 
-		// Parse
-		public static m4x4 Parse4x4(string s)
+		#region Parse
+		public static m4x4 Parse(string s)
 		{
-			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse4x4)}:string argument was null");
-			return TryParse4x4(s, out m4x4 result) ? result : throw new FormatException($"{nameof(Parse4x4)}: string argument does not represent a 4x4 matrix");
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse)}:string argument was null");
+			return TryParse(s, out var result) ? result : throw new FormatException($"{nameof(Parse)}: string argument does not represent a 4x4 matrix");
 		}
-		public static m4x4 Parse3x4(string s)
-		{
-			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse3x4)}:string argument was null");
-			return TryParse3x4(s, out m4x4 result) ? result : throw new FormatException($"{nameof(Parse3x4)}: string argument does not represent a 3x4 matrix");
-		}
-		public static bool TryParse4x4(string s, out m4x4 mat, bool row_major = true)
+		public static bool TryParse(string s, out m4x4 mat, bool row_major = true)
 		{
 			if (s == null)
 			{
@@ -194,7 +189,7 @@ namespace Rylogic.Maths
 				return false;
 			}
 
-			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 16, StringSplitOptions.RemoveEmptyEntries);
+			var values = s.Split([' ', ',', '\t', '\n'], 16, StringSplitOptions.RemoveEmptyEntries);
 			if (values.Length != 16)
 			{
 				mat = default;
@@ -214,28 +209,7 @@ namespace Rylogic.Maths
 					new v4(float.Parse(values[3]), float.Parse(values[7]), float.Parse(values[11]), float.Parse(values[15])));
 			return true;
 		}
-		public static bool TryParse3x4(string s, out m4x4 mat)
-		{
-			if (s == null)
-			{
-				mat = default;
-				return false;
-			}
-
-			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 12, StringSplitOptions.RemoveEmptyEntries);
-			if (values.Length != 12)
-			{
-				mat = default;
-				return false;
-			}
-
-			mat = new m4x4(
-				new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), 0),
-				new v4(float.Parse(values[3]), float.Parse(values[4]), float.Parse(values[5]), 0),
-				new v4(float.Parse(values[6]), float.Parse(values[7]), float.Parse(values[8]), 0),
-				new v4(float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11]), 1));
-			return true;
-		}
+		#endregion
 
 		/// <summary>Create a translation matrix</summary>
 		public static m4x4 Translation(float dx, float dy, float dz)
@@ -834,7 +808,7 @@ namespace Rylogic.UnitTests
 					new v4(4, 3, 2, 1),
 					new v4(4, 4, 4, 4),
 					new v4(5, 5, 5, 5));
-				var MAT = m4x4.Parse4x4(mat.ToString4x4());
+				var MAT = m4x4.Parse(mat.ToString4x4());
 				Assert.Equals(mat, MAT);
 			}
 			{
@@ -843,8 +817,8 @@ namespace Rylogic.UnitTests
 					new v4(4, 3, 2, 0),
 					new v4(4, 4, 4, 0),
 					new v4(5, 5, 5, 1));
-				var MAT = m4x4.Parse3x4(mat.ToString3x4());
-				Assert.Equals(mat, MAT);
+				var MAT = m3x4.Parse(mat.ToString3x4());
+				Assert.Equals(mat.rot, MAT);
 			}
 		}
 	}

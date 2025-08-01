@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<!-- Use WinExe for running unit tests-->
 		<OutputType>Library</OutputType>
 		<RootNamespace>Rylogic</RootNamespace>
 	</PropertyGroup>

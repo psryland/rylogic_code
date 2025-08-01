@@ -72,6 +72,12 @@ namespace Rylogic.LDraw.Serialiser
 		public static implicit operator Depth(bool? depth) => new(depth);
 		public static implicit operator bool(Depth d) => d.m_depth;
 	}
+	public class Hidden(bool? hide = null)
+	{
+		public bool m_hide = hide ?? false;
+		public static implicit operator Hidden(bool? hide) => new(hide);
+		public static implicit operator bool(Hidden h) => h.m_hide;
+	}
 	public class Wireframe(bool? wire = null)
 	{
 		public bool m_wire = wire ?? false;
