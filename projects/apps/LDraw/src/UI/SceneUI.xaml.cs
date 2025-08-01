@@ -55,8 +55,10 @@ namespace LDraw.UI
 		}
 		public void Dispose()
 		{
-			Model = null!;
+			OtherScenes.Clear();
+			SceneState = null!;
 			SceneView = null!;
+			Model = null!;
 			DockControl = null!;
 			m_scene.Dispose();
 		}
@@ -127,6 +129,7 @@ namespace LDraw.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.PropertyChanged -= HandlePropertyChanged;
 					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
 					m_model.Scenes.Remove(this);
 				}
@@ -135,6 +138,7 @@ namespace LDraw.UI
 				{
 					// Don't add to m_model.Scenes, that's the caller's choice
 					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
+					m_model.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -146,6 +150,17 @@ namespace LDraw.UI
 
 					// Enable/Disable the Link Cameras option in the scene context menu
 					SceneView.CanLinkCamera = OtherScenes.Count > 1;
+				}
+				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+						case nameof(Model.Profile):
+						{
+							// Nothing to do, the scenes will be deleted and recreated
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -176,20 +191,22 @@ namespace LDraw.UI
 				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					// Handle notification that a SceneState value has changed
-					if (e.Before) return;
+					if (e.Before)
+						return;
+
 					switch (e.Key)
 					{
-					case nameof(SceneStateData.Chart):
+						case nameof(SceneStateData.Chart):
 						{
 							SceneView.Options = SceneState.Chart;
 							break;
 						}
-					case nameof(SceneStateData.AlignDirection):
+						case nameof(SceneStateData.AlignDirection):
 						{
 							SceneView.Scene.AlignDirection = SceneState.AlignDirection;
 							break;
 						}
-					case nameof(SceneStateData.ViewPreset):
+						case nameof(SceneStateData.ViewPreset):
 						{
 							SceneView.Scene.ViewPreset = SceneState.ViewPreset;
 							break;
@@ -224,7 +241,7 @@ namespace LDraw.UI
 		public ChartControl SceneView
 		{
 			get => m_scene_view;
-			set
+			private set
 			{
 				if (m_scene_view == value) return;
 				if (m_scene_view != null)

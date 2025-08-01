@@ -37,6 +37,7 @@
 			<ComboBox
 				ItemsSource="{Binding Profiles}"
 				SelectedItem="{Binding Profiles/, Mode=TwoWay}"
+				IsSynchronizedWithCurrentItem="True"
 				DisplayMemberPath="Name"
 				VerticalAlignment="Center"
 				MinWidth="180"

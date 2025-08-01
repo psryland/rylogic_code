@@ -13,80 +13,122 @@
 	Height="768"
 	Width="1024"
 	>
-	<DockPanel>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
 		
 		<!-- Main menu -->
-		<Menu
-			DockPanel.Dock="Top"
-			Name="m_menu"
+		<Grid
+			Grid.Row="0"
 			>
-			<MenuItem Header="_File">
-				<MenuItem Header="_New Scene"
-					Command="{Binding NewScene}"
-					ToolTip="Create a new empty 3D scene"
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Main Menu -->
+			<Menu
+				Grid.Column="0"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				Name="m_menu"
+				>
+				<MenuItem Header="_File">
+					<MenuItem Header="_New Scene"
+						Command="{Binding NewScene}"
+						ToolTip="Create a new empty 3D scene"
+						/>
+					<MenuItem Header="_New Script"
+						Command="{Binding NewScript}"
+						ToolTip="Create a new empty script window"
+						/>
+					<Separator/>
+					<MenuItem Header="_Open File"
+						Command="{Binding OpenFile}"
+						ToolTip="View 3D objects from a file in a scene"
+						/>
+					<MenuItem Header="_Save File"
+						Command="{Binding SaveFile}"
+						IsEnabled="{Binding ScriptHasFocusAndNeedsSave}"
+						ToolTip="Save the current script"
+						/>
+					<MenuItem Header="_Save File As"
+						Command="{Binding SaveFileAs}"
+						IsEnabled="{Binding ScriptHasFocus}"
+						ToolTip="Save the current script to a new location"
+						/>
+					<Separator/>
+					<gui:RecentFilesMenuItem
+						Header= "_Recent Files"
+						Name="m_recent_files"
+						/>
+					<Separator/>
+					<MenuItem
+						Header="_Preferences..."
+						Command="{Binding ShowPreferences}"
+						/>
+					<Separator/>
+					<MenuItem
+						Header="_Exit"
+						Command="{Binding Exit}"
+						/>
+				</MenuItem>
+				<MenuItem Header="_Help">
+					<MenuItem
+						Header="_Example Script..."
+						Command="{Binding ShowExampleScript}"
+						/>
+					<Separator/>
+					<MenuItem
+						Header="_About"
+						Command="{Binding ShowAbout}"
+						/>
+				</MenuItem>
+			</Menu>
+
+			<!-- Profile -->
+			<StackPanel
+				Grid.Column="1"
+				Orientation="Horizontal"
+				>
+				<TextBlock
+					Text="Profile: "
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
 					/>
-				<MenuItem Header="_New Script"
-					Command="{Binding NewScript}"
-					ToolTip="Create a new empty script window"
-					/>
-				<Separator/>
-				<MenuItem Header="_Open File"
-					Command="{Binding OpenFile}"
-					ToolTip="View 3D objects from a file in a scene"
-					/>
-				<MenuItem Header="_Save File"
-					Command="{Binding SaveFile}"
-					IsEnabled="{Binding ScriptHasFocusAndNeedsSave}"
-					ToolTip="Save the current script"
-					/>
-				<MenuItem Header="_Save File As"
-					Command="{Binding SaveFileAs}"
-					IsEnabled="{Binding ScriptHasFocus}"
-					ToolTip="Save the current script to a new location"
-					/>
-				<Separator/>
-				<gui:RecentFilesMenuItem
-					Header="_Profiles"
-					Name="m_profiles"
-					/>
-				<Separator/>
-				<gui:RecentFilesMenuItem
-					Header= "_Recent Files"
-					Name="m_recent_files"
-					/>
-				<Separator/>
-				<MenuItem
-					Header="_Preferences..."
-					Command="{Binding ShowPreferences}"
-					/>
-				<Separator/>
-				<MenuItem
-					Header="_Exit"
-					Command="{Binding Exit}"
-					/>
-			</MenuItem>
-			<MenuItem Header="_Help">
-				<MenuItem
-					Header="_Example Script..."
-					Command="{Binding ShowExampleScript}"
-					/>
-				<Separator/>
-				<MenuItem
-					Header="_About"
-					Command="{Binding ShowAbout}"
-					/>
-			</MenuItem>
-		</Menu>
-		
+				<ComboBox
+					ItemsSource="{Binding Profiles}"
+					SelectedItem="{Binding Profiles/, Mode=TwoWay}"
+					IsSynchronizedWithCurrentItem="True"
+					DisplayMemberPath="Name"
+					VerticalAlignment="Center"
+					BorderThickness="0"
+					Height="20"
+					MinWidth="100"
+					Margin="3"
+				/>
+			</StackPanel>
+		</Grid>
+
 		<!-- Tool bar -->
 		<ToolBarTray
-			DockPanel.Dock="Top"
+			Grid.Row="1"
 			>
 		</ToolBarTray>
-		
+
+		<!-- Dock container -->
+		<gui:DockContainer
+			Grid.Row="2"
+			x:Name="m_dc"
+			/>
+
 		<!-- Status bar -->
 		<StatusBar
-			DockPanel.Dock="Bottom"
+			Grid.Row="3"
 			Padding="0,0,12,0"
 			MinHeight="24"
 			>
@@ -118,7 +160,7 @@
 					/>
 				</Grid>
 			</StatusBarItem>
-			
+
 			<!-- Progress bar -->
 			<StatusBarItem
 				Visibility="{Binding ParsingProgress, Converter={conv:NullToHidden}}"
@@ -210,10 +252,5 @@
 			</StatusBarItem>
 		</StatusBar>
 
-		<!-- Dock container -->
-		<gui:DockContainer
-			x:Name="m_dc"
-			/>
-
-	</DockPanel>
+	</Grid>
 </Window>

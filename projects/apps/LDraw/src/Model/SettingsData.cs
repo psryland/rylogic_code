@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Common;
@@ -42,6 +43,7 @@ namespace LDraw
 	}
 
 	/// <summary>Per Scene settings</summary>
+	[DebuggerDisplay("{Name,nq}")]
 	public class SettingsProfile :SettingsSet<SettingsProfile>
 	{
 		public SettingsProfile()

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -16,18 +17,18 @@ using Rylogic.Utility;
 
 namespace LDraw
 {
-	public sealed class Model :IDisposable
+	public sealed class Model :IDisposable, INotifyPropertyChanged
 	{
 		public Model(StartupOptions options, SettingsData settings)
 		{
 			StartupOptions = options;
 			Sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context available");
-			View3d = View3d.Create();
-			Settings = settings;
 			FileWatchTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
+			View3d = View3d.Create();
 			Sources = [];
 			Scenes = [];
 			Scripts = [];
+			Settings = settings;
 
 			// Ensure the temporary script directory exists
 			Path_.CreateDirs(TempScriptDirectory);
@@ -142,26 +143,28 @@ namespace LDraw
 					m_settings.SettingChange += HandleSettingChange;
 
 					// Ensure there is a default profile
-					if (!m_settings.Profiles.Any(x => x.Name == SettingsProfile.DefaultProfileName))
-						m_settings.Profiles.Insert(0, new SettingsProfile { Name = SettingsProfile.DefaultProfileName });
+					if (m_settings.Profiles.Count == 0)
+						m_settings.Profiles.Add(new SettingsProfile { Name = SettingsProfile.DefaultProfileName });
 
-					// Start with the default profile at startup
-					Profile = m_settings.Profiles.First(x => x.Name == SettingsProfile.DefaultProfileName);
+					// Start with the first profile at startup
+					Profile = m_settings.Profiles[0];
 				}
 
 				// Handlers
 				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
-					if (e.SettingSet == Profile)
+					switch (e.Key)
 					{
-						switch (e.Key)
+						case nameof(SettingsData.Profiles):
 						{
-							case nameof(SettingsProfile.CheckForChangesPollPeriodS):
-							{
-								FileWatchTimer.Interval = TimeSpan.FromSeconds(Profile.CheckForChangesPollPeriodS);
-								break;
-							}
+							NotifyPropertyChanged(nameof(Settings.Profiles));
+							break;
+						}
+						case nameof(SettingsProfile.CheckForChangesPollPeriodS) when e.SettingSet == Profile:
+						{
+							FileWatchTimer.Interval = TimeSpan.FromSeconds(Profile.CheckForChangesPollPeriodS);
+							break;
 						}
 					}
 				}
@@ -178,11 +181,26 @@ namespace LDraw
 				if (Profile == value) return;
 				if (m_profile != null)
 				{
+					Settings.Save();
 				}
 				m_profile = value;
 				if (m_profile != null)
 				{
+					// When the profile changes, delete and recreate the scenes
+					Util.DisposeRange(Scenes);
+					Scenes.Clear();
+
+					// Create scenes
+					foreach (var ss in m_profile.SceneState)
+					{
+						Scenes.Add(new SceneUI(this, ss.Name));
+					}
+					if (Scenes.Count == 0)
+					{
+						Scenes.Add(new SceneUI(this, GenerateSceneName()));
+					}
 				}
+				NotifyPropertyChanged(nameof(Profile));
 			}
 		}
 		private SettingsProfile m_profile = null!;
@@ -230,7 +248,6 @@ namespace LDraw
 				m_file_watch_timer = value;
 				if (m_file_watch_timer != null)
 				{
-					m_file_watch_timer.Interval = TimeSpan.FromSeconds(Profile.CheckForChangesPollPeriodS);
 					m_file_watch_timer.Tick += HandleCheckForChangedFiles;
 					m_file_watch_timer.Start();
 				}
@@ -255,15 +272,6 @@ namespace LDraw
 			}
 		}
 		private DispatcherTimer m_file_watch_timer = null!;
-		
-		/// <summary>Load a profile</summary>
-		public void LoadProfile(string profile_name)
-		{
-			if (Settings.Profiles.FirstOrDefault(x => x.Name == profile_name) is SettingsProfile profile)
-				Profile = profile;
-			else
-				throw new Exception($"Profile '{profile_name}' not found");
-		}
 
 		/// <summary>Add a file ldraw source</summary>
 		public Source AddFileSource(string filepath)
@@ -423,6 +431,10 @@ namespace LDraw
 
 			return dlg.SelectedItems.Cast<SceneUI>().ToArray();
 		}
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>The directory to contain temporary scripts in</summary>
 		private string TempScriptDirectory => Path_.CombinePath(StartupOptions.UserDataDir, "Temporary Scripts");

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using LDraw.Dialogs;
 using LDraw.UI;
@@ -24,6 +25,9 @@ namespace LDraw
 			Model = model;
 			StatusMessage = "Idle";
 
+			Profiles = CollectionViewSource.GetDefaultView(Model.Settings.Profiles);
+			Profiles.MoveCurrentTo(Model.Profile);
+
 			// Commands
 			NewScript = Command.Create(this, NewScriptInternal);
 			NewScene = Command.Create(this, NewSceneInternal);
@@ -36,13 +40,11 @@ namespace LDraw
 			ShowAbout = Command.Create(this, ShowAboutInternal);
 			Exit = Command.Create(this, ExitInternal);
 
-			m_profiles.Import(string.Join(",", Model.Settings.Profiles.Select(x => x.Name)));
-			m_profiles.RecentFileSelected = fp => LoadProfile(fp);
-
 			m_recent_files.Import(Model.Settings.RecentFiles);
 			m_recent_files.RecentFileSelected = fp => AddFileSource(fp);
 
 			InitDockContainer();
+			LoadProfile();
 
 			DataContext = this;
 		}
@@ -100,17 +102,36 @@ namespace LDraw
 					m_model.FileOpening -= HandleFileOpened;
 					m_model.ParsingProgressChanged -= HandleParsingProgressChanged;
 					m_model.SourcesChanged -= HandleSourcesChanged;
+					m_model.PropertyChanged -= HandlePropertyChanged;
 					Util.Dispose(ref m_model!);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.PropertyChanged += HandlePropertyChanged;
 					m_model.SourcesChanged += HandleSourcesChanged;
 					m_model.ParsingProgressChanged += HandleParsingProgressChanged;
 					m_model.FileOpening += HandleFileOpened;
 				}
 
 				// Handlers
+				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+						case nameof(Model.Profile):
+						{
+							Profiles.MoveCurrentTo(Model.Profile);
+							LoadProfile();
+							break;
+						}
+						case nameof(SettingsData.Profiles):
+						{
+							Profiles.Refresh();
+							break;
+						}
+					}
+				}
 				void HandleFileOpened(object? sender, ValueEventArgs<string> e)
 				{
 					m_recent_files.Add(e.Value);
@@ -192,6 +213,35 @@ namespace LDraw
 		/// <summary>Non-null while script parsing is in progress</summary>
 		public ParsingProgressData? ParsingProgress => Model.ParsingProgress;
 
+		/// <summary>The available profiles</summary>
+		public ICollectionView Profiles
+		{
+			get => m_profiles;
+			set
+			{
+				if (m_profiles == value) return;
+				if (m_profiles != null)
+				{
+					m_profiles.CurrentChanged -= HandleCurrentChanged;
+				}
+				m_profiles = value;
+				if (m_profiles != null)
+				{
+					m_profiles.CurrentChanged += HandleCurrentChanged;
+				}
+
+				// Handlers
+				void HandleCurrentChanged(object? sender, EventArgs e)
+				{
+					if (Profiles.CurrentItem is SettingsProfile profile)
+					{
+						Model.Profile = profile;
+					}
+				}
+			}
+		}
+		private ICollectionView m_profiles = null!;
+
 		/// <summary>Set the initial state of the dock container</summary>
 		private void InitDockContainer()
 		{
@@ -206,42 +256,27 @@ namespace LDraw
 			var sources = new SourcesListUI(Model);
 			m_dc.Add(sources, EDockSite.Left).IsAutoHide = true;
 
-			// Add a main scene window
-			var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
-			m_dc.Add(scene, EDockSite.Centre);
-
-			// Restore the layout
-			m_dc.LoadLayout(Model.Profile.UILayout, (name, type, udat) =>
-			{
-				// Create scenes that are saved in the layout
-				if (type == typeof(SceneUI).FullName)
-					return Model.Scenes.Add2(new SceneUI(Model, name)).DockControl;
-
-				// Ignore scripts that are in the settings
-				return null;
-			});
-
 			// Update our reference to the active content whenever it changes in the dock container
 			m_dc.ActiveContentChanged += delegate { ActiveContent = m_dc.ActiveDockable; };
 			m_dc.LayoutChanged += SaveLayout;
-			scene.DockControl.IsActiveContent = true;
 
 			// Add the menu for dock container windows
-			m_menu.Items.Insert(m_menu.Items.Count - 1, m_dc.WindowsMenu());
+			m_menu.Items.Insert(1, m_dc.WindowsMenu());
 		}
 
-		/// <summary>Load a profile</summary>
-		private void LoadProfile(string profile_name)
+		/// <summary>Update the UI layout to match the current profile</summary>
+		private void LoadProfile()
 		{
-			try
-			{
-				Model.LoadProfile(profile_name);
-			}
-			catch (Exception ex)
-			{
-				Log.Write(ELogLevel.Error, ex, "Loading profile failed.", string.Empty, 0);
-				MsgBox.Show(this, $"Loading profile failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
-			}
+			// Add all scenes to the dock container
+			foreach (var scene in Model.Scenes)
+				m_dc.Add(scene, EDockSite.Centre);
+
+			// Restore the layout
+			m_dc.LoadLayout(Model.Profile.UILayout);
+
+			// Make the first scene the active content
+			if (Model.Scenes.Count != 0)
+				Model.Scenes[0].DockControl.IsActiveContent = true;
 		}
 
 		/// <summary>Persist the current layout to settings</summary>
@@ -436,11 +471,8 @@ namespace LDraw
 			Close();
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }

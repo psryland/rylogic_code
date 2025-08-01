@@ -44,10 +44,33 @@ namespace LDraw.Dialogs
 			{
 				if (Model == value) return;
 				if (m_model != null)
-				{ }
+				{
+					m_model.PropertyChanged -= HandlePropertyChanged;
+				}
 				m_model = value;
 				if (m_model != null)
-				{ }
+				{
+					m_model.PropertyChanged += HandlePropertyChanged;
+				}
+
+				// Handlers
+				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+						case nameof(Model.Profile):
+						{
+							Profiles.MoveCurrentTo(Model.Profile);
+							break;
+						}
+						case nameof(SettingsData.Profiles):
+						{
+							Profiles.Refresh();
+							DeleteProfile.NotifyCanExecuteChanged();
+							break;
+						}
+					}
+				}
 			}
 		}
 		private Model m_model = null!;
@@ -56,7 +79,7 @@ namespace LDraw.Dialogs
 		public SettingsData Settings => Model.Settings;
 
 		/// <summary>The currently selected profile</summary>
-		public SettingsProfile? Profile => Profiles.CurrentItem as SettingsProfile;
+		public SettingsProfile Profile => Model.Profile;
 
 		/// <summary>Available fonts</summary>
 		public ICollectionView AvailableFonts { get; }
@@ -82,8 +105,10 @@ namespace LDraw.Dialogs
 				// Handlers
 				void HandleCurrentProfileChanged(object? sender, EventArgs e)
 				{
-					NotifyPropertyChanged(nameof(Profile));
-					NotifyPropertyChanged(string.Empty);
+					if (Profiles.CurrentItem is SettingsProfile profile)
+					{
+						Model.Profile = profile;
+					}
 				}
 			}
 		}
@@ -120,6 +145,9 @@ namespace LDraw.Dialogs
 			// Add or replace
 			Settings.Profiles.RemoveAll(x => x.Name == dlg.Value);
 			Settings.Profiles.Add(profile);
+			Settings.NotifySettingChanged(nameof(Settings.Profiles));
+
+			// Select the newly created profile
 			Profiles.MoveCurrentTo(profile);
 		}
 
@@ -133,6 +161,7 @@ namespace LDraw.Dialogs
 			// Remove any profile matching the name
 			var doomed = Profile.Name;
 			Settings.Profiles.RemoveAll(x => x.Name == doomed);
+			Settings.NotifySettingChanged(nameof(Settings.Profiles));
 
 			// Ensure at least one profile
 			if (Settings.Profiles.Count == 0)
@@ -220,7 +249,11 @@ namespace LDraw.Dialogs
 			if (Profile is null)
 				return;
 
+			// Reset the profile to the default settings. Preserve the name though
+			var name = Profile.Name;
 			Profile.Reset();
+			Profile.Name = name;
+
 			Settings.Save();
 		}
 		private bool ResetToDefaultsAvailable()
