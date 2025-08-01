@@ -221,7 +221,7 @@
 }
 *Instance instancing_example FFFF0000 // The name indicates which model to instance
 {
-	//*Animation {...}      // Animation data can be overridden
+	//*Animation {...}      // Model animation data can be overridden
 	*o2w {*Pos {15 1 -10}}
 }
 *Instance instancing_example FF0000FF
@@ -569,7 +569,7 @@
 	*AxisId {+3}    // Optional, normal direction. axis_id: \xc2\xb1""1 = \xc2\xb1""x, \xc2\xb1""2 = \xc2\xb1""y, \xc2\xb1""3 = \xc2\xb1""z 
 	*Solid {}       // Optional, if omitted then the circle is an outline only
 	*RandColour {}  // Object colour is the outline colour
-	*Animation
+	*RootAnimation
 	{
 		*Style {Continuous}
 		*Period {1.6}
@@ -583,7 +583,7 @@
 	*AxisId {+1}      // Optional, normal direction. axis_id: \xc2\xb1""1 = \xc2\xb1""x, \xc2\xb1""2 = \xc2\xb1""y, \xc2\xb1""3 = \xc2\xb1""z
 	*Solid {}         // Optional, if omitted then the circle is an outline only
 	*RandColour {}    // Object colour is the outline colour
-	*Animation
+	*RootAnimation
 	{
 		*Style {Continuous}
 		*Period {1.6}
@@ -600,7 +600,7 @@
 	*Scale {1.0 1.0}        // Optional, X,Y scale factors
 	*Solid {}               // Optional, if omitted then the shape is an outline only
 	*RandColour {}          // Object colour is the outline colour
-	*Animation
+	*RootAnimation
 	{
 		*Style {Continuous}
 		*Period {1.6}
@@ -757,7 +757,7 @@
 	*Data {2 2 0 1.5} // {width, height, near plane, far plane}.
 	*AxisId {2}       // Optional. Main axis direction of the frustum: \xc2\xb1""1 = \xc2\xb1""x, \xc2\xb1""2 = \xc2\xb1""y, \xc2\xb1""3 = \xc2\xb1""z
 	*ViewPlaneZ {2}   // Optional. The distance at which the frustum has dimensions {width,height}
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 1 0}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 1 0}}
 	*RandColour {}
 	*o2w{*pos{-10 4 8}}
 }
@@ -767,7 +767,7 @@
 {
 	*Data {90 1 0.4 1.5} // {fovY, aspect, near plane, far plane}. axis_id: \xc2\xb1""1 = \xc2\xb1""x, \xc2\xb1""2 = \xc2\xb1""y, \xc2\xb1""3 = \xc2\xb1""z
 	*AxisId {-2}         // Optional. Main axis direction of the frustum: \xc2\xb1""1 = \xc2\xb1""x, \xc2\xb1""2 = \xc2\xb1""y, \xc2\xb1""3 = \xc2\xb1""z
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 -1 0}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 -1 0}}
 	*RandColour {}
 	*o2w{*pos{-10 3.6 8}}
 }
@@ -783,7 +783,7 @@
 		*Addr {Wrap Wrap}
 		*o2w {*scale{10 10 1}}
 	}
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 0 +1}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 0 +1}}
 	*RandColour {}
 	*o2w{*euler{90 0 0} *pos{-10 1.25 8}}
 }
@@ -798,7 +798,7 @@
 		*RandColour {}
 		*o2w{*euler{45 0 0}}
 	}
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
 	*o2w{*pos{-10 6.2 8}}
 }
 
@@ -811,7 +811,7 @@
 	*Scale {1 1}                       // Optional. X,Y scale factors for creating ovoid cylinders
 	*Texture {*FilePath {"#checker3"}} // Optional texture
 	*RandColour {}
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
 	*o2w{*euler{20 0 0} *pos{-14 1.1 10}}
 }
 *Cylinder cone
@@ -822,7 +822,7 @@
 	*Scale {0.9 1.1}                   // Optional. X,Y scale factors for creating ovoid cylinders
 	*Texture {*FilePath {"#checker3"}} // Optional texture
 	*RandColour {}
-	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
+	*RootAnimation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}
 	*o2w{*euler{-20 0 0} *pos{-14 3.3 10}}
 }
 

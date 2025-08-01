@@ -352,7 +352,7 @@
         ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h 
         ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h 
       </AdditionalInputs>
-      <MarkerOutputFile>$(OutDir)auto_gen.py.pyscript</MarkerOutputFile>
+      <Outputs>;$(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Outputs>
     </CSharpScript>
   </ItemGroup>
   <!--
