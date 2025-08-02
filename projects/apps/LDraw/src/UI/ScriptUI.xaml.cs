@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -33,6 +34,7 @@ using Rylogic.Utility;
 
 namespace LDraw.UI
 {
+	[DebuggerDisplay("{FilePath,nq}")]
 	public sealed partial class ScriptUI :UserControl, IDockable, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:

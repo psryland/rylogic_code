@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,6 +18,7 @@ using Rylogic.Utility;
 
 namespace LDraw.UI
 {
+	[DebuggerDisplay("{SceneName,nq}")]
 	public sealed partial class SceneUI :UserControl, IDockable, IDisposable, INotifyPropertyChanged, IView3dCMenuContext, IChartCMenuContext
 	{
 		public SceneUI(Model model, string name)

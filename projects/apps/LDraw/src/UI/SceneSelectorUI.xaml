@@ -9,52 +9,43 @@
 	d:DesignHeight="32"
 	d:DesignWidth="200"
 >
-	<!-- Combo of available scenes -->
-	<Grid
+	<ComboBox
+		x:Name="m_scenes_combo"
 		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SceneSelectorUI}}"
 		d:DataContext="{d:DesignInstance Type=local:SceneSelectorUI, IsDesignTimeCreatable=True}"
+		Text="{Binding SelectedScenesDescription, Mode=OneWay}"
+		ItemsSource="{Binding AvailableScenes}"
+		VerticalAlignment="Center"
+		HorizontalAlignment="Stretch"
+		StaysOpenOnEdit="True"
+		IsEditable="True"
+		IsReadOnly="True"
+		Background="#DFFF"
+		MinWidth="80"
+		Margin="3,0,10,0"
 	>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*"/>
-			<ColumnDefinition Width="Auto"/>
-		</Grid.ColumnDefinitions>
+		<!-- Custom template for dropdown items -->
+		<ComboBox.ItemTemplate>
+			<DataTemplate>
+				<CheckBox
+					Content="{Binding Name}"
+					IsChecked="{Binding Selected, Mode=TwoWay}"
+					VerticalContentAlignment="Center"
+					VerticalAlignment="Center"
+					MinHeight="24"
+					Margin="2"
+					Click="CheckBox_Click"
+					/>
+			</DataTemplate>
+		</ComboBox.ItemTemplate>
 
-		<ComboBox
-			x:Name="m_scenes_combo"
-			Text="{Binding SelectedScenesDescription, Mode=OneWay}"
-			ItemsSource="{Binding SelectableScenesView}"
-			VerticalAlignment="Center"
-			HorizontalAlignment="Stretch"
-			StaysOpenOnEdit="True"
-			IsEditable="True"
-			IsReadOnly="True"
-			Background="#DFFF"
-			MinWidth="80"
-			Margin="3,0,10,0"
-		>
-			<!-- Custom template for dropdown items -->
-			<ComboBox.ItemTemplate>
-				<DataTemplate>
-					<CheckBox
-						Content="{Binding Name}"
-						IsChecked="{Binding Selected, Mode=TwoWay}"
-						VerticalContentAlignment="Center"
-						VerticalAlignment="Center"
-						MinHeight="24"
-						Margin="2"
-						Click="CheckBox_Click"
-						/>
-				</DataTemplate>
-			</ComboBox.ItemTemplate>
-
-			<!-- Custom item container style to prevent selection -->
-			<ComboBox.ItemContainerStyle>
-				<Style TargetType="ComboBoxItem">
-					<Setter Property="Padding" Value="0"/>
-					<Setter Property="Margin" Value="0"/>
-					<EventSetter Event="PreviewMouseLeftButtonDown" Handler="ComboBoxItem_PreviewMouseDown"/>
-				</Style>
-			</ComboBox.ItemContainerStyle>
-		</ComboBox>
-	</Grid>
+		<!-- Custom item container style to prevent selection -->
+		<ComboBox.ItemContainerStyle>
+			<Style TargetType="ComboBoxItem">
+				<Setter Property="Padding" Value="0"/>
+				<Setter Property="Margin" Value="0"/>
+				<EventSetter Event="PreviewMouseLeftButtonDown" Handler="ComboBoxItem_PreviewMouseDown"/>
+			</Style>
+		</ComboBox.ItemContainerStyle>
+	</ComboBox>
 </UserControl>

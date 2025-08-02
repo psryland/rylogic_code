@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
 	x:Class="LDraw.UI.ScriptUI"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -90,8 +90,7 @@
 
 				<!-- Combo of available scenes -->
 				<local:SceneSelectorUI
-					AvailableScenes="{Binding Source.AvailableScenes}"
-					SelectedScenes="{Binding Source.SelectedScenes}"
+					Source="{Binding Source}"
 				/>
 
 				<Separator/>

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
 using LDraw.UI;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -9,6 +12,7 @@ using Rylogic.Utility;
 
 namespace LDraw
 {
+	[DebuggerDisplay("{Name,nq}")]
 	public class Source : IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
@@ -19,12 +23,12 @@ namespace LDraw
 		{
 			Model = model;
 			View3dSource = source;
-			SelectedScenes = model.Scenes.Count != 0 ? [model.Scenes[0]] : [];
 		}
 		public void Dispose()
 		{
 			// Remove objects from all scenes
-		//	SelectedScenes = Array.Empty<SceneUI>();
+			m_selected_scene_names.Clear();
+			PopulateScenes();
 
 			Model = null!;
 			View3dSource = null!;
@@ -41,13 +45,27 @@ namespace LDraw
 				if (m_model != null)
 				{
 					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
+					m_model.PropertyChanged -= HandlePropertyChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.PropertyChanged += HandlePropertyChanged;
 					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
 				}
 
+				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+						case nameof(Model.Profile):
+						{
+							PopulateScenes();
+							NotifyPropertyChanged(nameof(AvailableScenes));
+							break;
+						}
+					}
+				}
 				void HandleScenesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 				{
 					NotifyPropertyChanged(nameof(AvailableScenes));
@@ -100,83 +118,47 @@ namespace LDraw
 		public int ObjectCount => View3dSource?.Info.ObjectCount ?? 0;
 
 		/// <summary>True if there is a scene to render to</summary>
-		public bool CanRender => SelectedScenes.Count != 0;
+		public bool CanRender => SelectedScenes.Any();
 
 		/// <summary>True if this source has a file that can be edited</summary>
 		public bool CanEdit => View3dSource?.Info is View3d.SourceInfo info && Path_.FileExists(info.FilePath) && info.TextFormat;
 
-		/// <summary>The scenes to render this source in</summary>
-		public ObservableCollection<SceneUI> SelectedScenes
+		/// <summary>The names of the scenes to add this source to</summary>
+		public void ShowInScenes(IEnumerable<SceneUI> scenes, bool show)
 		{
-			get => m_selected_scenes;
-			set
+			// Notes:
+			//  - The selected scene names may contain names for scenes that don't exist if the profile has changed.
+			//    This is deliberate because I want switching back to the original profile to re-add to those scenes.
+			foreach (var scene in scenes)
 			{
-				if (m_selected_scenes == value) return;
-				if (m_selected_scenes != null)
-				{
-					m_selected_scenes.CollectionChanged -= HandleCollectionChanged;
+				if (show)
+					m_selected_scene_names.Add(scene.SceneName);
+				else
+					m_selected_scene_names.Remove(scene.SceneName);
+			}
 
-					foreach (var scene in m_selected_scenes)
-						Model.Clear(scene, ContextId);
-				}
-				m_selected_scenes = value;
-				if (m_selected_scenes != null)
-				{
-					foreach (var scene in m_selected_scenes)
-						Model.AddObjects(scene, ContextId);
+			PopulateScenes();
+			NotifyPropertyChanged(nameof(SelectedScenes));
+		}
+		private HashSet<string> m_selected_scene_names = [];
 
-					m_selected_scenes.CollectionChanged += HandleCollectionChanged;
-				}
-
-				// Handlers
-				void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-				{
-					switch (e.Action)
-					{
-						case NotifyCollectionChangedAction.Add:
-						{
-							foreach (var scene in e.NewItems ?? Array.Empty<object>())
-								Model.AddObjects((SceneUI)scene, ContextId);
-
-							break;
-						}
-						case NotifyCollectionChangedAction.Remove:
-						{
-							foreach (var scene in e.OldItems ?? Array.Empty<object>())
-								Model.Clear((SceneUI)scene, ContextId);
-							break;
-						}
-						case NotifyCollectionChangedAction.Reset:
-						{
-							foreach (var scene in Model.Scenes)
-								Model.Clear(scene, ContextId);
-							break;
-						}
-						case NotifyCollectionChangedAction.Replace:
-						{
-							foreach (var scene in e.OldItems ?? Array.Empty<object>())
-								Model.Clear((SceneUI)scene, ContextId);
-							foreach (var scene in e.NewItems ?? Array.Empty<object>())
-								Model.AddObjects((SceneUI)scene, ContextId);
-							break;
-						}
-						case NotifyCollectionChangedAction.Move:
-						{
-							// Nothing to do here
-							break;
-						}
-						default:
-						{
-							throw new ArgumentOutOfRangeException(nameof(e.Action), e.Action, null);
-						}
-					}
-				}
+		/// <summary>Add objects from this source to all selected scenes</summary>
+		private void PopulateScenes()
+		{
+			foreach (var scene in AvailableScenes)
+			{
+				if (m_selected_scene_names.Contains(scene.SceneName))
+					Model.AddObjects(scene, ContextId);
+				else
+					Model.Clear(scene, ContextId);
 			}
 		}
-		private ObservableCollection<SceneUI> m_selected_scenes = null!;
+
+		/// <summary>The scenes to draw this source in</summary>
+		public IEnumerable<SceneUI> SelectedScenes => Model.Scenes.Where(x => m_selected_scene_names.Contains(x.SceneName));
 
 		/// <summary>The available scenes to render this source in</summary>
-		public ObservableCollection<SceneUI> AvailableScenes => Model.Scenes;
+		public IEnumerable<SceneUI> AvailableScenes => Model.Scenes;
 
 		/// <summary>Remove this source</summary>
 		public void Remove()

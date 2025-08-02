@@ -78,13 +78,35 @@ namespace LDraw
 					// Refresh the collection of sources
 					if (e.After)
 					{
-						Dictionary<Guid, Source> sources = [];
+						// Assume all sources will be removed to start with
+						var old = Sources.ToDictionary(x => x.ContextId, x => x);
+
+						// Get the native code to tell us what sources exist
+						Dictionary<Guid, Source> nue = [];
 						m_view3d.EnumSources(src =>
 						{
-							if (src.ContextId == ChartControl.CtxId) return;
-							sources.Add(src.ContextId, new Source(this, src));
+							// Ignore special objects used by the ChartControl
+							if (src.ContextId == ChartControl.CtxId)
+								return;
+
+							// Remove 'src.ContextId' from the old list if it's still in use
+							if (old.ContainsKey(src.ContextId))
+							{
+								old.Remove(src.ContextId);
+								return;
+							}
+
+							// Add the new source
+							nue.Add(src.ContextId, new Source(this, src));
 						});
-						Sources.SyncStable(sources.Values, (l, r) => l.ContextId == r.ContextId, (s, i) => s);
+
+						// Update the 'Sources' list
+						Sources.RemoveAll(x => old.ContainsKey(x.ContextId));
+						Sources.AddRange(nue.Values);
+
+						// Disposing any old sources
+						Util.DisposeRange(old.Values);
+
 						SourcesChanged?.Invoke(this, EventArgs.Empty);
 					}
 					// This implements auto range on load... but sources can change for reasons that don't require
@@ -274,18 +296,22 @@ namespace LDraw
 		private DispatcherTimer m_file_watch_timer = null!;
 
 		/// <summary>Add a file ldraw source</summary>
-		public Source AddFileSource(string filepath)
+		public Source AddFileSource(string filepath, IEnumerable<SceneUI> scenes)
 		{
 			NotifyFileOpening(filepath);
-			var src = View3d.LoadScriptFromFile(filepath);
-			return Sources.Add2(new Source(this, src));
+			var ctx_id = View3d.LoadScriptFromFile(filepath).ContextId;
+			var src = Sources.First(x => x.ContextId == ctx_id);
+			src.ShowInScenes(scenes, true);
+			return src;
 		}
 
 		/// <summary>Add a string ldraw source</summary>
-		public Source AddStringSource(string text)
+		public Source AddStringSource(string text, IEnumerable<SceneUI> scenes)
 		{
-			var src = View3d.LoadScriptFromString(text);
-			return Sources.Add2(new Source(this, src));
+			var ctx_id = View3d.LoadScriptFromString(text).ContextId;
+			var src = Sources.First(x => x.ContextId == ctx_id);
+			src.ShowInScenes(scenes, true);
+			return src;
 		}
 
 		/// <summary>Return a generated name for a new scene UI</summary>

@@ -331,9 +331,7 @@ namespace LDraw
 					throw new FileNotFoundException($"File '{filepath}' does not exist");
 
 				// Add the file as a new source
-				var src = Model.AddFileSource(filepath);
-				src.SelectedScenes.AddRange(scenes ?? []);
-				return src;
+				return Model.AddFileSource(filepath, scenes ?? Model.Scenes.Take(1));
 			}
 			catch (Exception ex)
 			{

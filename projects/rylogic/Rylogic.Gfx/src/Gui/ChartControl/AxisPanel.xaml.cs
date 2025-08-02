@@ -213,7 +213,13 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			if (m_update_graphics_pending) return;
 			m_update_graphics_pending = true;
-			Dispatcher.BeginInvoke(new Action(UpdateGraphics));
+
+			var weakthis = new WeakReference(this);
+			Dispatcher.BeginInvoke(() =>
+			{
+				if (weakthis.Target is AxisPanel ap)
+					ap.UpdateGraphics();
+			});
 		}
 		private void UpdateGraphics()
 		{
