@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 
@@ -24,7 +25,12 @@ namespace LDraw.UI
 		/// <summary>The selected scenes (as a single string)</summary>
 		public string SelectedScenesDescription
 		{
-			get => SelectedScenes?.Any() ?? false ? string.Join(",", SelectedScenes.Select(x => x.SceneName)) : "None";
+			get => (SelectedScenes ?? []).Count switch
+			{
+				0 => "None",
+				1 => SelectedScenes![0].SceneName,
+				_ => $"{SelectedScenes!.Count} Scenes",
+			};
 		}
 
 		/// <summary>The selected scenes binding view</summary>
@@ -33,7 +39,9 @@ namespace LDraw.UI
 			get => m_selectable_scenes_view;
 			private set
 			{
-				if (m_selectable_scenes_view == value) return;
+				if (m_selectable_scenes_view == value)
+					return;
+
 				m_selectable_scenes_view = value;
 				NotifyPropertyChanged(nameof(SelectableScenesView));
 			}
@@ -92,7 +100,50 @@ namespace LDraw.UI
 			}
 		}
 		public static readonly DependencyProperty AvailableScenesProperty = Gui_.DPRegister<SceneSelectorUI>(nameof(AvailableScenes), null, Gui_.EDPFlags.None);
-		
+
+		/// <summary>Handle checkbox clicks to prevent ComboBox from closing</summary>
+		private void CheckBox_Click(object sender, RoutedEventArgs e)
+		{
+			// Keep the dropdown open
+			m_scenes_combo.IsDropDownOpen = true;
+
+			// Prevent the ComboBox from closing when clicking checkboxes
+			e.Handled = true;
+		}
+
+		/// <summary>Handle mouse down on ComboBox items to prevent selection</summary>
+		private void ComboBoxItem_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+		{
+			// Prevent the item from being "selected" in the traditional sense
+			e.Handled = true;
+
+			// Find the checkbox within this item and toggle it
+			if (sender is ComboBoxItem item &&
+				FindVisualChild<CheckBox>(item) is CheckBox checkBox)
+			{
+				checkBox.IsChecked = !checkBox.IsChecked;
+			}
+
+			// Keep the dropdown open
+			m_scenes_combo.IsDropDownOpen = true;
+		}
+
+		/// <summary>Helper method to find child controls</summary>
+		private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+		{
+			for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+			{
+				var child = VisualTreeHelper.GetChild(parent, i);
+				if (child is T found)
+					return found;
+
+				var childOfChild = FindVisualChild<T>(child);
+				if (childOfChild != null)
+					return childOfChild;
+			}
+			return null;
+		}
+
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
@@ -116,7 +167,7 @@ namespace LDraw.UI
 						m_me.SelectedScenes.AddIfUnique(m_scene);
 					else
 						m_me.SelectedScenes.Remove(m_scene);
-					
+
 					NotifyPropertyChanged(nameof(Selected));
 					m_me.NotifyPropertyChanged(nameof(m_me.SelectedScenesDescription));
 				}

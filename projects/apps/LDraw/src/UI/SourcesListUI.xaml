@@ -37,6 +37,16 @@
 		ScrollViewer.VerticalScrollBarVisibility="Disabled"
 		HorizontalContentAlignment="Stretch"
 		SelectionMode="Single"
-		BorderThickness="2"
-	/>
+	>
+		<ListView.ItemContainerStyle>
+			<Style TargetType="ListViewItem">
+				<Setter Property="Margin" Value="0"/>
+				<Setter Property="Padding" Value="0"/>
+				<Setter Property="BorderThickness" Value="1"/>
+				<Setter Property="BorderBrush" Value="#8000"/>
+				<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+				<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+			</Style>
+		</ListView.ItemContainerStyle>
+	</ListView>
 </UserControl>

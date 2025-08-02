@@ -21,6 +21,10 @@ namespace Rylogic.Gui.WPF
 {
 	public static partial class Gui_
 	{
+		// Notes:
+		//  - The Logical Tree is just the tree hierarchy given in the xaml
+		//  - The Visual Tree is the actual hierarchy of rendered components, e.g. borders, etc.
+
 		[Flags]
 		public enum EDPFlags
 		{
@@ -393,7 +397,7 @@ namespace Rylogic.Gui.WPF
 		{
 			if (item == null)
 				return null;
-			if (!(item is Visual) && !(item is Visual3D))
+			if (item is not Visual && item is not Visual3D)
 				return null;
 			if (ReferenceEquals(item, root))
 				return item as T;
@@ -410,6 +414,42 @@ namespace Rylogic.Gui.WPF
 		public static DependencyObject? FindVisualParent(this DependencyObject item, Func<DependencyObject, bool>? pred = null, DependencyObject? root = null)
 		{
 			return FindVisualParent<DependencyObject>(item, pred, root);
+		}
+
+		/// <summary>
+		/// Finds a parent in the logical tree matching the specified type.
+		/// If 'pred' is a filter, typically used to find parents by name.
+		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
+		public static T? FindLogicalParent<T>(this DependencyObject item, Func<T, bool>? pred = null, DependencyObject? root = null)
+			where T : DependencyObject
+		{
+			if (item == null)
+				return null;
+			if (ReferenceEquals(item, root))
+				return item as T;
+
+			for (DependencyObject parent; (parent = LogicalTreeHelper.GetParent(item)) != null; item = parent)
+			{
+				if (parent is T tparent && (pred == null || pred(tparent)))
+					return tparent;
+				if (ReferenceEquals(parent, root))
+					break;
+			}
+			return null;
+		}
+		public static DependencyObject? FindLogicalParent(this DependencyObject item, Func<DependencyObject, bool>? pred = null, DependencyObject? root = null)
+		{
+			return FindLogicalParent<DependencyObject>(item, pred, root);
+		}
+
+		/// <summary>Find the item at the root of the visual tree</summary>
+		public static DependencyObject? FindVisualRoot(this DependencyObject item)
+		{
+			if (item == null)
+				return null;
+
+			for (DependencyObject parent; (parent = VisualTreeHelper.GetParent(item)) != null; item = parent) {}
+			return item;
 		}
 
 		/// <summary>Returns true if 'child' is a descendant of this object in the visual tree</summary>

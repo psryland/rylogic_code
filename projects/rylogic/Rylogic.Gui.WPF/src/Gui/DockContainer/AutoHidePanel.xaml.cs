@@ -130,9 +130,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				void HandlePreviewMouseDown(object sender, MouseButtonEventArgs e)
 				{
 					if (!PoppedOut) return;
-					if (!(e.OriginalSource is DependencyObject dp)) return;
-					PoppedOut = Gui_.FindVisualParent<DependencyObject>(dp, WithinThisAHP, root:m_dc) != null;
+					if (e.OriginalSource is not DependencyObject dp) return;
 					bool WithinThisAHP(DependencyObject ob) => ob == this || ob == TabStrip;
+
+					// Check if the click is within this auto-hide panel or its tab strip
+					var within_panel = Gui_.FindVisualParent<DependencyObject>(dp, WithinThisAHP, root: m_dc) != null;
+
+					// If not directly within the panel, check if it's within a popup owned by a control in the panel
+					if (!within_panel)
+					{
+						// Find any popup that contains the clicked element
+						var root = Gui_.FindVisualRoot(dp);
+						if (root is FrameworkElement froot && froot.Parent is not null)
+							within_panel = Gui_.FindVisualParent<DependencyObject>(froot.Parent, WithinThisAHP, root: m_dc) != null;
+					}
+
+					PoppedOut = within_panel;
 				}
 			}
 		}

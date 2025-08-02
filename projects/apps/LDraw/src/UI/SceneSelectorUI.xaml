@@ -10,57 +10,51 @@
 	d:DesignWidth="200"
 >
 	<!-- Combo of available scenes -->
-	<DockPanel
+	<Grid
 		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SceneSelectorUI}}"
 		d:DataContext="{d:DesignInstance Type=local:SceneSelectorUI, IsDesignTimeCreatable=True}"
-		ToolBar.OverflowMode="Never"
 	>
-		<ToggleButton
-			x:Name="m_btn_toggle_scene_select"
-			DockPanel.Dock="Right"
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+
+		<ComboBox
+			x:Name="m_scenes_combo"
+			Text="{Binding SelectedScenesDescription, Mode=OneWay}"
+			ItemsSource="{Binding SelectableScenesView}"
 			VerticalAlignment="Center"
-			BorderThickness="0"
-			Background="Transparent"
-			Foreground="Gray"
-			MinWidth="16"
-			Content="▼"
-		/>
-		<TextBlock
-			x:Name="m_tb_selected_scenes"
-			Text="{Binding SelectedScenesDescription}"
-			VerticalAlignment="Center"
-			Background="White"
-			MinWidth="60"
-			MaxWidth="100"
-			Margin="3"
-		/>
-		<Popup
-			x:Name="m_popup_scene_list"
-			Placement="Bottom"
-			PlacementTarget="{Binding ElementName=m_tb_selected_scenes}"
-			IsOpen="{Binding IsChecked, ElementName=m_btn_toggle_scene_select}"
-			StaysOpen="False"
-			PopupAnimation="Fade"
+			HorizontalAlignment="Stretch"
+			StaysOpenOnEdit="True"
+			IsEditable="True"
+			IsReadOnly="True"
+			Background="#DFFF"
+			MinWidth="80"
+			Margin="3,0,10,0"
 		>
-			<ListView
-				ItemsSource="{Binding SelectableScenesView}"
-				SelectedItem="{Binding SelectableScenesView/, Mode=TwoWay}"
-				ItemContainerStyle="{StaticResource NoPaddingListViewItem}"
-			>
-				<ListView.ItemTemplate>
-					<DataTemplate>
-						<CheckBox
-							Content="{Binding Name}"
-							IsChecked="{Binding Selected}"
-							VerticalContentAlignment="Center"
-							VerticalAlignment="Center"
-							Background="White"
-							MinWidth="100"
-							MinHeight="24"
+			<!-- Custom template for dropdown items -->
+			<ComboBox.ItemTemplate>
+				<DataTemplate>
+					<CheckBox
+						Content="{Binding Name}"
+						IsChecked="{Binding Selected, Mode=TwoWay}"
+						VerticalContentAlignment="Center"
+						VerticalAlignment="Center"
+						MinHeight="24"
+						Margin="2"
+						Click="CheckBox_Click"
 						/>
-					</DataTemplate>
-				</ListView.ItemTemplate>
-			</ListView>
-		</Popup>
-	</DockPanel>
+				</DataTemplate>
+			</ComboBox.ItemTemplate>
+
+			<!-- Custom item container style to prevent selection -->
+			<ComboBox.ItemContainerStyle>
+				<Style TargetType="ComboBoxItem">
+					<Setter Property="Padding" Value="0"/>
+					<Setter Property="Margin" Value="0"/>
+					<EventSetter Event="PreviewMouseLeftButtonDown" Handler="ComboBoxItem_PreviewMouseDown"/>
+				</Style>
+			</ComboBox.ItemContainerStyle>
+		</ComboBox>
+	</Grid>
 </UserControl>
