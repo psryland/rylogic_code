@@ -42,6 +42,9 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     synth.cpp
 )
 
+# Add this line, adjusting the path as necessary
+include_directories(include)
+
 # Import the native libraries from the jniLibs directory
 set(libs_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 add_library(fluidsynth SHARED IMPORTED)

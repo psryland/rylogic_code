@@ -7,14 +7,14 @@ Push-Location
 # Change the current directory to the directory of this file
 Set-Location -Path $script_path
 
-$fluidsynth_zip = "fluidsynth-2.3.5-android24.zip"
+$fluidsynth_zip = "fluidsynth-2.4.7-android24.zip"
 $fluidsynth_dir = "fluidsynth"
 
 # If the sdk directory doesn't exist, download
 if (!(Test-Path -Path $fluidsynth_dir)) {
 	if (!(Test-Path -Path $fluidsynth_zip)) {
 		Invoke-WebRequest `
-			-Uri "https://github.com/FluidSynth/fluidsynth/releases/download/v2.3.5/$fluidsynth_zip" `
+			-Uri "https://github.com/FluidSynth/fluidsynth/releases/download/v2.4.7/$fluidsynth_zip" `
 			-OutFile $fluidsynth_zip
 	}
 	Expand-Archive -Path $fluidsynth_zip -DestinationPath $fluidsynth_dir
