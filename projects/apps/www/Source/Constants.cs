@@ -12,6 +12,6 @@ public class Paths
 
 public class Versions
 {
-	public const string SiteVersion = "v1.2";
+	public const string SiteVersion = "v1.3";
 }
 
