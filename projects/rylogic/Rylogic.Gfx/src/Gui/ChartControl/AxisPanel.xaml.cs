@@ -28,7 +28,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			base.OnRenderSizeChanged(sizeInfo);
 			Axis?.Gfx.Invalidate();
-			UpdateGraphics();
 		}
 		public void Dispose()
 		{

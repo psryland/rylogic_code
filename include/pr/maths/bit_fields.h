@@ -18,6 +18,14 @@ namespace pr
 			{ t &= t };
 		};
 
+	// Unsigned int of the given size
+	template <size_t N>
+	using uintN_t = 
+		std::conditional_t<N == 1, uint8_t,
+		std::conditional_t<N == 2, uint16_t,
+		std::conditional_t<N == 4, uint32_t,
+		uint64_t>>>;
+
 	// Convert to/from uint64 to uint32[2]
 	constexpr uint64_t MakeLL(uint32_t hi, uint32_t lo)
 	{
@@ -442,6 +450,25 @@ namespace pr
 		bits = PackBits(bits, exponent, 31, 23);
 		bits = PackBits(bits, mantissa, 23, 0);
 		return reinterpret_cast<float const&>(bits);
+	}
+
+	// A little bit of evil to preserve the sign in a float at the cost of precision
+	template <std::floating_point T> inline T StoreSignInLSB(T x, T sign)
+	{
+		union Bits { T f; uintN_t<sizeof(T)> u; };
+
+		// Set the LSB of the float's mantissa to 1 for positive or 0 for negative
+		Bits bits = { .f = x };
+		bits.u = (bits.u & ~1u) | (sign >= 0 ? 1u : 0u);
+		return bits.f;
+	}
+	template <std::floating_point T> inline T ReadSignFromLSB(T x)
+	{
+		union Bits { T f; uintN_t<sizeof(T)> u; };
+
+		// Set the LSB of the float's mantissa to 1 for positive or 0 for negative
+		Bits bits = { .f = x };
+		return (bits.u & 1u) != 0 ? +1.0f : -1.0f;
 	}
 }
 
