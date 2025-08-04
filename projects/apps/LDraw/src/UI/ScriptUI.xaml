@@ -126,7 +126,7 @@
 			Grid.Row="2"
 			ShowLineNumbers="True"
 			SyntaxHighlighting="Ldr"
-			FontFamily="{Binding Settings.FontName, FallbackValue=Consolas}"
+			FontFamily="{Binding Model.Profile.FontName, FallbackValue=Consolas}"
 			IsModified="{Binding SaveNeeded, Mode=TwoWay}"
 			ContextMenu="{StaticResource ScriptCMenu}"
 			Name="m_editor"

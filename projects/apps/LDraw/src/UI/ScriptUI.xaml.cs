@@ -23,8 +23,6 @@ using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Indentation;
 using ICSharpCode.AvalonEdit.Search;
-using Microsoft.Win32;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -39,6 +37,7 @@ namespace LDraw.UI
 	{
 		// Notes:
 		//  - A script editor is used to edit existing script files.
+		private CancellationTokenSource m_cancel_load = new();
 
 		static ScriptUI()
 		{
@@ -72,7 +71,20 @@ namespace LDraw.UI
 			UncommentSelection = Command.Create(this, UncommentSelectionInternal);
 
 			DataContext = this;
-			Editor.Text = File.ReadAllText(FilePath);
+			Loaded += async delegate
+			{
+				Editor.Text = $"Loading '{FilePath}'...";
+
+				try
+				{
+					Editor.Text = await File.ReadAllTextAsync(FilePath, m_cancel_load.Token);
+				}
+				catch (OperationCanceledException) { }
+				catch (Exception ex)
+				{
+					Editor.Text = $"Error loading file: {ex.Message}";
+				}
+			};
 		}
 		protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
@@ -81,6 +93,8 @@ namespace LDraw.UI
 		}
 		public void Dispose()
 		{
+			m_cancel_load.Cancel();
+
 			// Remove this script UI from the model
 			Model.Scripts.Remove(this);
 
@@ -141,7 +155,7 @@ namespace LDraw.UI
 					Log.EntriesChanged -= HandleLogEntriesChanged;
 					m_source.PropertyChanged -= HandlePropertyChanged;
 					m_source.SourceChanged -= HandleSourceChanged;
-					Util.Dispose(ref m_source!);
+					// Don't dispose Source, we don't own it.
 				}
 				m_source = value;
 				if (m_source != null)
@@ -182,10 +196,7 @@ namespace LDraw.UI
 		private View3d.AutoComplete LdrAutoComplete { get; }
 
 		/// <summary>App logic</summary>
-		private Model Model => Source.Model;
-
-		/// <summary>The name assigned to this script UI</summary>
-		public SettingsData Settings => Source.Model.Settings;
+		public Model Model => Source.Model;
 
 		/// <summary>The name assigned to this script UI</summary>
 		public string ScriptName => Source.Name;

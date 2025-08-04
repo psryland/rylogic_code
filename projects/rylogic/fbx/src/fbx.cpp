@@ -1625,9 +1625,12 @@ namespace pr::geometry::fbx
 					// The bind pose is a snapshot of the global transforms of the bones
 					// at the time skinning was authored in the DCC tool.
 					// Fall-back to time zero as the bind pose.
-					auto o2bp = idx != -1
-						? InvertFast(To<m4x4>(bind_pose->GetMatrix(idx)))
-						: InvertFast(To<m4x4>(const_cast<FbxNode&>(node).EvaluateGlobalTransform(0)));
+					auto bp2o = idx != -1
+						? To<m4x4>(bind_pose->GetMatrix(idx))
+						: To<m4x4>(const_cast<FbxNode&>(node).EvaluateGlobalTransform(0));
+					auto o2bp = IsOrthonormal(bp2o)
+						? InvertFast(bp2o)
+						: Invert(bp2o);
 
 					skeleton.m_bone_ids.push_back(bone.GetUniqueID());
 					skeleton.m_names.push_back(node.GetName());

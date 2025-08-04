@@ -91,8 +91,9 @@ namespace pr::rdr12::ldraw
 			case HashI(".p3d"):
 			case HashI(".stl"):
 			case HashI(".3ds"):
+			case HashI(".fbx"):
 			{
-				auto ldr_script = std::format("*Model {{ *FilePath {{\"{}\"}} }}", m_filepath.string());
+				auto ldr_script = std::format("*Model {{ *FilePath {{\"{}\"}} *Animation{{}} }}", m_filepath.string());
 				m_text_format = false;
 
 				mem_istream<char> src{ ldr_script, 0 };

@@ -104,10 +104,11 @@ namespace LDraw
 						Sources.RemoveAll(x => old.ContainsKey(x.ContextId));
 						Sources.AddRange(nue.Values);
 
-						// Disposing any old sources
-						Util.DisposeRange(old.Values);
-
+						// Notify of sources changed/deleted
 						SourcesChanged?.Invoke(this, EventArgs.Empty);
+
+						// Disposing any old sources (after notifying so they remain valid in event handlers)
+						Util.DisposeRange(old.Values);
 					}
 					// This implements auto range on load... but sources can change for reasons that don't require
 					// an auto range (e.g. measure tool graphics).
