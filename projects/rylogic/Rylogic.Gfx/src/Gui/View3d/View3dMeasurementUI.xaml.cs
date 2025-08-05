@@ -41,7 +41,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The View3d Control that contains the 3d scene</summary>
 		public View3dControl View3dCtrl
 		{
-			get { return m_view3d_ctrl; }
+			get => m_view3d_ctrl;
 			private set
 			{
 				if (m_view3d_ctrl == value) return;
@@ -63,7 +63,7 @@ namespace Rylogic.Gui.WPF
 					if (e.ChangedButton == MouseButton.Left && e.LeftButton == MouseButtonState.Pressed)
 						Measurement.MouseDown(e.GetPosition(m_view3d_ctrl).ToV2());
 				}
-				void HandleMouseMove(object sender ,MouseEventArgs e)
+				void HandleMouseMove(object sender, MouseEventArgs e)
 				{
 					Measurement.MouseMove(e.GetPosition(m_view3d_ctrl).ToV2());
 				}
@@ -161,37 +161,37 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Snap to distance</summary>
 		public double SnapDistance
 		{
-			get { return Measurement.SnapDistance; }
-			set { Measurement.SnapDistance = value; }
+			get => Measurement.SnapDistance;
+			set => Measurement.SnapDistance = value;
 		}
 
 		/// <summary>Snap bindings</summary>
 		public bool SnapToVerts
 		{
-			get { return Measurement.Flags.HasFlag(View3d.EHitTestFlags.Verts); }
-			set { Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Verts, value); }
+			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Verts);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Verts, value);
 		}
 		public bool SnapToEdges
 		{
-			get { return Measurement.Flags.HasFlag(View3d.EHitTestFlags.Edges); }
-			set { Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Edges, value); }
+			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Edges);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Edges, value);
 		}
 		public bool SnapToFaces
 		{
-			get { return Measurement.Flags.HasFlag(View3d.EHitTestFlags.Faces); }
-			set { Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Faces, value); }
+			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Faces);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Faces, value);
 		}
 
 		/// <summary>Binding for which set point to use</summary>
 		public bool StartActive
 		{
-			get { return Measurement.ActiveHit == Measurement.Hit0; }
-			set { Measurement.ActiveHit = value ? Measurement.Hit0 : null; }
+			get => Measurement.ActiveHit == Measurement.Hit0;
+			set => Measurement.ActiveHit = value ? Measurement.Hit0 : null;
 		}
 		public bool EndActive
 		{
-			get { return Measurement.ActiveHit == Measurement.Hit1; }
-			set { Measurement.ActiveHit = value ? Measurement.Hit1 : null; }
+			get => Measurement.ActiveHit == Measurement.Hit1;
+			set => Measurement.ActiveHit = value ? Measurement.Hit1 : null;
 		}
 
 		/// <summary>The start and end points</summary>
@@ -217,27 +217,6 @@ namespace Rylogic.Gui.WPF
 		public string EndPointDetails =>
 			$"Object: {Measurement.Hit1.Obj?.Name ?? "---"}\n" +
 			$"Snap: {Measurement.Hit1.SnapType}";
-
-		/// <summary>Change the spot colour for the start or end point</summary>
-		public ICommand SetSpotColour { get; } = null!;
-		private void SetSpotColourInternal(object? x)
-		{
-			if (!(x is string spot))
-				return;
-
-			if (spot == "beg")
-			{
-				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.BegSpotColour };
-				if (dlg.ShowDialog() == true)
-					Measurement.BegSpotColour = dlg.Colour;
-			}
-			if (spot == "end")
-			{
-				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.EndSpotColour };
-				if (dlg.ShowDialog() == true)
-					Measurement.EndSpotColour = dlg.Colour;
-			}
-		}
 
 		/// <summary>The available measurement reference frames</summary>
 		public ICollectionView ReferenceFrames
@@ -269,24 +248,46 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The measurement results</summary>
 		public IBindingList Results => Measurement.Results;
 
-		/// <summary>Display the colour picker</summary>
-		private void HandleEditSpotColour(object? sender, RoutedEventArgs e)
-		{
-			MessageBox.Show("Not Done Yet");
-		}
+		///// <summary>Display the colour picker</summary>
+		//private void HandleEditSpotColour(object? sender, RoutedEventArgs e)
+		//{
+		//	MessageBox.Show("Not Done Yet");
+		//}
 
-		/// <summary>Event handler that updates the bound source when enter is pressed</summary>
-		private void UpdateBindingOnEnterPressed(object? sender, KeyEventArgs e)
+		///// <summary>Event handler that updates the bound source when enter is pressed</summary>
+		//private void UpdateBindingOnEnterPressed(object? sender, KeyEventArgs e)
+		//{
+		//	if (e.Key != Key.Enter || !(sender is TextBox tb))
+		//		return;
+
+		//	var binding = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
+		//	if (binding != null)
+		//		binding.UpdateSource();
+		//}
+
+		/// <summary>Change the spot colour for the start or end point</summary>
+		public ICommand SetSpotColour { get; } = null!;
+		private void SetSpotColourInternal(object? x)
 		{
-			if (e.Key != Key.Enter || !(sender is TextBox tb))
+			if (x is not string spot)
 				return;
 
-			var binding = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
-			if (binding != null)
-				binding.UpdateSource();
+			if (spot == "beg")
+			{
+				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.BegSpotColour };
+				if (dlg.ShowDialog() == true)
+					Measurement.BegSpotColour = dlg.Colour;
+			}
+			if (spot == "end")
+			{
+				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.EndSpotColour };
+				if (dlg.ShowDialog() == true)
+					Measurement.EndSpotColour = dlg.Colour;
+			}
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }

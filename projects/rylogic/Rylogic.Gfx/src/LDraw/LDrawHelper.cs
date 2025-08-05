@@ -215,6 +215,7 @@ namespace Rylogic.LDraw
 		public static string FormatScript(string str)
 		{
 			var res = new StringBuilder(str.Length);
+			char last = '\0';
 			int indent = 0;
 			foreach (var c in str)
 			{
@@ -232,8 +233,12 @@ namespace Rylogic.LDraw
 				}
 				else
 				{
+					if (last == '}')
+						res.Append('\n',1).Append('\t', indent);
+
 					res.Append(c);
 				}
+				last = c;
 			}
 			return res.ToString();
 		}

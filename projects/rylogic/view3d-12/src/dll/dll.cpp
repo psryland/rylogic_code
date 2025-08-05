@@ -1628,23 +1628,12 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreate(char const* name, view3d
 	CatchAndReport(View3D_ObjectCreate, , nullptr);
 }
 
-// Create objects given in an ldr string or file.
+// Create objects given in an ldraw string or file.
 // If multiple objects are created, the handle returned is to the first object only.
 // 'ldr_script' - an ldr string, or filepath to a file containing ldr script
 // 'file' - TRUE if 'ldr_script' is a filepath, FALSE if 'ldr_script' is a string containing ldr script
 // 'context_id' - the context id to create the LdrObjects with
 // 'includes' - information used to resolve include directives in 'ldr_script'
-VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, view3d::Includes const* includes)
-{
-	try
-	{
-		DllLockGuard;
-		auto is_file = file != 0;
-		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf16_le;
-		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, context_id, includes);
-	}
-	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
-}
 VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_script, BOOL file, GUID const* context_id, view3d::Includes const* includes)
 {
 	try
@@ -1653,6 +1642,17 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 		auto is_file = file != 0;
 		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf8;
 		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
+	}
+	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
+}
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, view3d::Includes const* includes)
+{
+	try
+	{
+		DllLockGuard;
+		auto is_file = file != 0;
+		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf16_le;
+		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }

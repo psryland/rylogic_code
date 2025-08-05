@@ -277,20 +277,28 @@ namespace pr::script
 					}
 					case EEncoding::utf16_le:
 					{
-						int lo, hi;
-						if ((lo = Read()) == EOS) break;
-						if ((hi = Read()) == EOS) break;
-						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
+						// The stream source reads 16bit characters. (At least it does for 'mem_istream<Char>' in 'ldraw::SourceString')
+						int c = {};
+						if ((c = Read()) != EOS) ch = c; else break;
 						if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
+						//int lo, hi;
+						//if ((lo = Read()) == EOS) break;
+						//if ((hi = Read()) == EOS) break;
+						//ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
+						//if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
 					case EEncoding::utf16_be:
 					{
-						int lo, hi;
-						if ((hi = Read()) == EOS) break;
-						if ((lo = Read()) == EOS) break;
-						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
-						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
+						// The stream source reads 16bit characters. (At least it does for 'mem_istream<Char>' in 'ldraw::SourceString')
+						int c = {};
+						if ((c = Read()) != EOS) ch = c; else break;
+						if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
+						//int lo, hi;
+						//if ((hi = Read()) == EOS) break;
+						//if ((lo = Read()) == EOS) break;
+						//ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
+						//if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
 					default:

@@ -4,6 +4,7 @@
 		<!-- Use WinExe for running unit tests-->
 		<OutputType>Library</OutputType>
 		<RootNamespace>Rylogic</RootNamespace>
+		<TargetFrameworks>$(TargetFrameworks);net9.0</TargetFrameworks>
 	</PropertyGroup>
 
 	<!-- Assembly properties -->

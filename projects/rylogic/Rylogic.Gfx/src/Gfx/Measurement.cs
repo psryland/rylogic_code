@@ -355,7 +355,7 @@ namespace Rylogic.Gfx
 			{
 				if (m_gfx_hotspot0 == null)
 				{
-					var ldr = "*Point hotspot0 FF00FFFF { 0 0 0 *Size{20} *Style{Circle} *NoZTest *NoZWrite }";
+					var ldr = "*Point hotspot0 FF00FFFF { *Data{0 0 0} *Size{20} *Style{Circle} *NoZTest{} *NoZWrite{} }";
 					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_hotspot0;

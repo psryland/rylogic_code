@@ -1786,9 +1786,9 @@ namespace Rylogic.Gfx
 		// Create an object from provided buffers
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 
-		// Create an graphics object from ldr script, either a string or a file 
-		[DllImport(Dll, CharSet = CharSet.Unicode)] private static extern HObject View3D_ObjectCreateLdrW([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref Includes includes);
+		// Create an graphics object from ldraw script, either a string or a file 
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateLdrA([MarshalAs(UnmanagedType.LPStr)] string ldr_script, bool file, ref Guid context_id, ref Includes includes);
+		[DllImport(Dll, CharSet = CharSet.Unicode)] private static extern HObject View3D_ObjectCreateLdrW([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref Includes includes);
 
 		// Load a p3d model file as a view3d object
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateP3DFile([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, [MarshalAs(UnmanagedType.LPStr)] string p3d_filepath, ref Guid context_id);

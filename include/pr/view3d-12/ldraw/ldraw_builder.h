@@ -66,6 +66,9 @@ namespace pr::rdr12::ldraw
 			}
 			else
 			{
+				if (!out.empty() && out.back() == '}')
+					out.append(1,'\n').append(indent, '\t');
+
 				out.push_back(c);
 			}
 		}

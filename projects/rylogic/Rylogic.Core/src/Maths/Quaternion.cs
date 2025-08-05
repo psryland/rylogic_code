@@ -168,6 +168,7 @@ namespace Rylogic.Maths
 		/// <summary>Length</summary>
 		public float LengthSq => x * x + y * y + z * z + w * w;
 		public float Length => (float)Math.Sqrt(LengthSq);
+		public bool IsNormalised => Math_.FEql(LengthSq, 1.0f);
 
 		/// <summary>Get the axis component of the quaternion (normalised)</summary>
 		public v4 Axis => Math_.Normalise(xyzw.w0);
@@ -180,7 +181,7 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
+				Debug.Assert(IsNormalised, "quaternion isn't normalised");
 
 				// Trig:
 				//' cos^2(x) = 0.5 * (1 + cos(2x))
@@ -196,7 +197,7 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
+				Debug.Assert(IsNormalised, "quaternion isn't normalised");
 
 				// Trig:
 				//' sin^2(x) + cos^2(x) == 1
@@ -347,7 +348,9 @@ namespace Rylogic.Maths
 		#endregion
 
 		/// <summary></summary>
-		public string Description => $"{x}  {y}  {z}  {w}  //Len({Length}) Axis({Axis}) Ang({Angle})";
+		public string Description => IsNormalised
+			? $"{x}  {y}  {z}  {w}  //Len({Length}) Axis({Axis.xyz}) Ang({Angle})"
+			: $"{x}  {y}  {z}  {w}  //Len({Length}) <unnormalised>";
 	}
 
 	public static partial class Math_
@@ -404,6 +407,29 @@ namespace Rylogic.Maths
 			return 0.5f * (float)Math.Acos(CosAngle2(a, b));
 		}
 
+		/// <summary>Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation</summary>
+		public static v4 LogMap(Quat q)
+		{
+			var angle = Math.Acos(Clamp(q.w, -1.0f, +1.0f));
+			var s = Math.Sin(angle);
+			if (Math.Abs(s) < Math_.TinyF)
+				return q.xyzw.w0;
+
+			var scale = (float)(angle / s);
+			return new(q.x * scale, q.y * scale, q.z * scale, 0f);
+		}
+
+		/// <summary>Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.</summary>
+		public static Quat ExpMap(v4 v)
+		{
+			var angle = v.Length;
+			if (Math.Abs(angle) < Math_.TinyF)
+				return Quat.Identity;
+
+			var s = (float)(Math.Sin(angle) / angle);
+			return new(v.x * s, v.y * s, v.z * s, (float)Math.Cos(angle));
+		}
+
 		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
 		public static Quat Scale(Quat q, float frac)
 		{
@@ -427,13 +453,15 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the axis and angle from a quaternion</summary>
-		public static void AxisAngle(Quat quat, out v4 axis, out float angle)
+		public static (v4, float) AxisAngle(Quat quat)
 		{
-			angle = (float)(2.0 * Math.Acos(quat.w));
+			var angle = (float)(2.0 * Math.Acos(quat.w));
 			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
-			axis = FEql(s, 0.0f)
+			var axis = FEql(s, 0.0f)
 				? Normalise(new v4(quat.x, quat.y, quat.z, 0.0f))
 				: new v4(quat.x / s, quat.y / s, quat.z / s, 0.0f);
+
+			return (axis, angle);
 		}
 
 		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
