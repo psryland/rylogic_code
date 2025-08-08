@@ -394,9 +394,9 @@ namespace pr
 		auto w = Clamp(q.w, S(-1.0), S(+1.0));
 		auto s = Sqrt(S(+1.0) - Sqr(w));
 		angle = S(2.0) * ACos(w);
-		axis = !FEql(s, S(0))
+		axis = Abs(s) > maths::tinyf
 			? Vec4<S,void>(q.x/s, q.y/s, q.z/s, S(0))
-			: Vec4<S,void>{S(0), S(0), S(1), S(0)}; // axis arbitrary for angle = 0
+			: Vec4<S,void>{S(0), S(0), S(0), S(0)}; // axis is (0,0,0) when angle == 1
 	}
 
 	// Return possible Euler angles for the quaternion 'q'

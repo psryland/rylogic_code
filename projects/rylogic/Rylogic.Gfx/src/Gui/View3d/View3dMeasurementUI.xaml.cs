@@ -248,22 +248,22 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The measurement results</summary>
 		public IBindingList Results => Measurement.Results;
 
-		///// <summary>Display the colour picker</summary>
-		//private void HandleEditSpotColour(object? sender, RoutedEventArgs e)
-		//{
-		//	MessageBox.Show("Not Done Yet");
-		//}
+		/// <summary>Display the colour picker</summary>
+		private void HandleEditSpotColour(object? sender, RoutedEventArgs e)
+		{
+			MessageBox.Show("Not Done Yet");
+		}
 
-		///// <summary>Event handler that updates the bound source when enter is pressed</summary>
-		//private void UpdateBindingOnEnterPressed(object? sender, KeyEventArgs e)
-		//{
-		//	if (e.Key != Key.Enter || !(sender is TextBox tb))
-		//		return;
+		/// <summary>Event handler that updates the bound source when enter is pressed</summary>
+		private void UpdateBindingOnEnterPressed(object? sender, KeyEventArgs e)
+		{
+			if (e.Key != Key.Enter || !(sender is TextBox tb))
+				return;
 
-		//	var binding = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
-		//	if (binding != null)
-		//		binding.UpdateSource();
-		//}
+			var binding = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
+			if (binding != null)
+				binding.UpdateSource();
+		}
 
 		/// <summary>Change the spot colour for the start or end point</summary>
 		public ICommand SetSpotColour { get; } = null!;

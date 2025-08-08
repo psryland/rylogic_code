@@ -43,12 +43,19 @@ namespace pr::unittests
 #include <Windows.h>
 
 // Optionally use Microsoft's C++ unit test framework
+// To use the Microsoft.VisualStudio.TestTools.CppUnitTestFramework framework,
+//  - The test project needs to be a DLL,
+//  - AdditionalLibraryDirectories include ';$(VCInstallDir)Auxiliary\VS\UnitTest\include'
+//  - AdditionalIncludeDirectories includes ';$(VCInstallDir)Auxiliary\VS\UnitTest\lib'
+//  - *But*, don't link to Microsoft.VisualStudio.TestTools.CppUnitTestFramework.lib, it's done by #pragma comment
+//  - Make sure all necessary dependent dlls are available or the test runner will crash.
 #define USE_MS_UNITTESTS 0 // Set this to 0 when compiling as an executable
 #if USE_MS_UNITTESTS
 	//#pragma message ("Using MS Unit Test Framework")
 	#include <SDKDDKVer.h>
 	#include "CppUnitTest.h"
 	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+	// Create tests with; TEST_CLASS(MyTest) { public: TEST_METHOD(MyTestMethod){ ... } };
 #else
 	//#pragma message ("Using Rylogic Unit Test Framework")
 	#define TEST_CLASS(testname) class testname

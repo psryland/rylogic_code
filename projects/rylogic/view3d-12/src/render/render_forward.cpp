@@ -126,6 +126,7 @@ namespace pr::rdr12
 					.m_instance = &inst,
 				};
 				drawlist.push_back(dle);
+				m_sort_needed = true;
 				break;
 			}
 
@@ -140,7 +141,7 @@ namespace pr::rdr12
 	{
 		// Reset the command list with a new allocator for this frame
 		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-	
+
 		// Add the command lists we're using to the frame.
 		frame.m_main.push_back(m_cmd_list);
 
@@ -163,7 +164,7 @@ namespace pr::rdr12
 		m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 		// Set shader constants for the frame
-		m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), nullptr);
+		m_shader.SetupFrame(m_cmd_list.get(), m_upload_buffer, scn());
 
 		// Add the shadow map textures
 		if (auto* smap_step = scn().FindRStep<RenderSmap>())
@@ -234,7 +235,7 @@ namespace pr::rdr12
 			}
 
 			// Set shader constants for the nugget
-			m_shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
+			m_shader.SetupElement(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 			// Apply scene pipe state overrides
 			{
@@ -253,9 +254,7 @@ namespace pr::rdr12
 				if (shdr.m_rdr_step != m_step_id)
 					continue;
 
-				// Set constants for the shader
 				auto& shader = *shdr.m_shader.get();
-				shader.Setup(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 
 				// Update the pipe state with the shader byte code
 				if (shader.m_signature) desc.Apply(PSO<EPipeState::RootSignature>(shader.m_signature.get()));
@@ -264,6 +263,9 @@ namespace pr::rdr12
 				if (shader.m_code.DS) desc.Apply(PSO<EPipeState::DS>(shader.m_code.DS));
 				if (shader.m_code.HS) desc.Apply(PSO<EPipeState::HS>(shader.m_code.HS));
 				if (shader.m_code.GS) desc.Apply(PSO<EPipeState::GS>(shader.m_code.GS));
+
+				// Set constants for the shader
+				shader.SetupOverride(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 			}
 
 			// Draw the nugget **** 

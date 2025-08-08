@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -30,9 +30,7 @@ namespace pr::rdr12::shaders
 		explicit ShadowMap(ID3D12Device* device);
 
 		// Config the shader.
-		// This method may be called with:
-		//  'dle == null' => Setup constants for the frame
-		//  'dle != null' => Setup constants per nugget
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, DrawListElement const* dle, ShadowCaster const& caster, SceneCamera const& cam);
+		void SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, ShadowCaster const& caster);
+		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, DrawListElement const* dle, SceneCamera const& cam);
 	};
 }

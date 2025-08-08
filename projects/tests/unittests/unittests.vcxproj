@@ -2,42 +2,24 @@
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Properties -->
   <PropertyGroup Label="Globals">
+    <ConfigurationType>Application</ConfigurationType>
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <RootNamespace>unittests</RootNamespace>
-    <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
-  <!-- Configuration -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(PropsPath)app.props" />
   <!-- Build Options -->
   <ItemDefinitionGroup>
     <ClCompile>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>
 				;PR_UNITTESTS=1
 				;PR_MATHS_USE_DIRECTMATH=1
 				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
@@ -52,8 +34,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>
-				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration);
-				$(VCInstallDir)Auxiliary\VS\UnitTest\lib
+				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+        ;$(VCInstallDir)Auxiliary\VS\UnitTest\lib
 				;%(AdditionalLibraryDirectories)
 			</AdditionalLibraryDirectories>
       <AdditionalDependencies>

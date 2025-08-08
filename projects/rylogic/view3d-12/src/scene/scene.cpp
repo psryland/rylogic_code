@@ -12,12 +12,6 @@
 #include "view3d-12/src/render/render_smap.h"
 #include "view3d-12/src/render/render_raycast.h"
 
-//#include "view3d-12/src/render/state_stack.h"
-//#include "pr/view3d/instances/instance.h"
-//#include "pr/view3d/steps/gbuffer.h"
-//#include "pr/view3d/steps/dslighting.h"
-//#include "pr/view3d/steps/ray_cast.h"
-
 namespace pr::rdr12
 {
 	// Make a scene
@@ -27,7 +21,7 @@ namespace pr::rdr12
 		, m_viewport(wnd.BackBufferSize())
 		, m_instances()
 		, m_render_steps()
-		, m_ht_immediate()
+		, m_raycast_immed()
 		, m_global_light()
 		, m_global_envmap()
 		, m_eh_resize()
@@ -155,26 +149,25 @@ namespace pr::rdr12
 	}
 
 	// Perform an immediate hit test
-	void Scene::HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& results)
+	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& out)
 	{
-		if (rays.empty())
-			return;
+		// Notes:
+		//  - The immediate ray cast should be completely separate from the continuous ray cast. It should be
+		//    possible to have both used within a single frame.
 
-		// Lazy create the ray cast step
-		// Note: I've noticed that with runtime shaders enabled, reusing the same RenderRayCast
-		// doesn't seem to work, I never figured out why though. I had to create a new RenderRayCast
-		// for each hit test.
-		if (m_ht_immediate == nullptr)
-			m_ht_immediate.reset(new RenderRayCast(*this, false));
+		if (rays.empty())
+			return {};
+
+		// Lazy create the ray cast render step
+		if (m_raycast_immed == nullptr)
+			m_raycast_immed.reset(new RenderRayCast(*this, false));
 			
-		auto& rs = *m_ht_immediate.get();
+		auto& rs = *m_raycast_immed.get();
 
 		// Set the rays to cast
 		rs.SetRays(rays, snap_distance, flags, [=](auto) { return true; });
 
-		// Create a ray cast render step and populate its draw list.
-		// Note: don't look for and reuse an existing RayCastStep because callers may want
-		// to invoke immediate ray casts without interfering with existing continuous ray casts.
+		// Populate the draw list.
 		if (instances != nullptr)
 		{
 			for (BaseInstance const* inst; (inst = instances()) != nullptr;)
@@ -186,18 +179,12 @@ namespace pr::rdr12
 				rs.AddInstance(*inst);
 		}
 
-#if 0 // todo
-		// Render just this step
-		Renderer::Lock lock(m_wnd->rdr());
-		StateStack ss(lock.ImmediateDC(), *this);
-		rs.Execute(ss);
-#endif
-
-		// Read (blocking) the hit test results
-		rs.ReadOutput(results);
+		auto result = m_raycast_immed->ExecuteImmediate(out);
 
 		// Reset ready for next time
 		rs.ClearDrawlist();
+
+		return result;
 	}
 
 	// Set the collection of rays to cast into the scene for continuous hit testing.
@@ -228,14 +215,17 @@ namespace pr::rdr12
 	}
 
 	// Read the hit test results from the continuous ray cast render step
-	void Scene::HitTestGetResults(RayCastResultsOut const& results)
+	void Scene::HitTestGetResults(RayCastResultsOut const& out)
 	{
 		auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
 		if (rs == nullptr)
 			return;
 
+		(void)out;
+		#if 0
 		// Read the hit test results
 		rs->ReadOutput(results);
+		#endif
 	}
 
 	// Render the scene, recording the command lists in 'frame'

@@ -73,19 +73,19 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 
 	TestPoint points[] =
 	{
-		{v0, SNAP_TYPE_VERT},
-		{v1, SNAP_TYPE_VERT},
-		{v2, SNAP_TYPE_VERT},
-		{(v0 + v1) / 2, SNAP_TYPE_EDGEMIDDLE},
-		{(v1 + v2) / 2, SNAP_TYPE_EDGEMIDDLE},
-		{(v2 + v0) / 2, SNAP_TYPE_EDGEMIDDLE},
-		{(v0 + v1 + v2) / 3, SNAP_TYPE_FACECENTRE},
+		{v0, SnapType_Vert},
+		{v1, SnapType_Vert},
+		{v2, SnapType_Vert},
+		{(v0 + v1) / 2, SnapType_EdgeMiddle},
+		{(v1 + v2) / 2, SnapType_EdgeMiddle},
+		{(v2 + v0) / 2, SnapType_EdgeMiddle},
+		{(v0 + v1 + v2) / 3, SnapType_FaceCentre},
 	};
 	TestEdge edges[] =
 	{
-		{v0, v1 - v0, SNAP_TYPE_EDGE},
-		{v1, v2 - v1, SNAP_TYPE_EDGE},
-		{v2, v0 - v2, SNAP_TYPE_EDGE},
+		{v0, v1 - v0, SnapType_Edge},
+		{v1, v2 - v1, SnapType_Edge},
+		{v2, v0 - v2, SnapType_Edge},
 	};
 
 	for (int i = 0; i != m_ray_count; ++i)
@@ -106,12 +106,12 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 
 		// Variables for finding the nearest snap-to point
 		float4 intercept = float4(0,0,0,0);
-		int snap_type = SNAP_TYPE_NONE;
+		int snap_type = SnapType_None;
 		float dist = m_snap_dist;
 		int j,jend;
 		
 		// Snap to points/edges within 'snap_dist'
-		jend = SelectInt(HAS_VERT_SNAP, 7, 0);
+		jend = SelectInt(HasSnapVert, 7, 0);
 		for (j = 0; j != jend; ++j)
 		{
 			float4 p = points[j].vert;
@@ -125,7 +125,7 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 		}
 		
 		// Only test edges if there are no vert snaps
-		jend = SelectInt(HAS_EDGE_SNAP && dist == m_snap_dist, 3, 0);
+		jend = SelectInt(HasSnapEdge && dist == m_snap_dist, 3, 0);
 		for (j = 0; j != jend; ++j)
 		{
 			float  t = ClosestPoint_PointVsRay(pt, edges[j].vert, edges[j].edge);
@@ -141,14 +141,14 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 
 		// Only test faces if there are no edge or vert snaps
 		{
-			bool snap = HAS_FACE_SNAP && dist == m_snap_dist && AllZeroOrPositive(para);
+			bool snap = HasSnapFace && dist == m_snap_dist && AllZeroOrPositive(para);
 
-			snap_type = SelectInt(snap, SNAP_TYPE_FACE, snap_type);
+			snap_type = SelectInt(snap, SnapType_Face, snap_type);
 			intercept = SelectFloat4(snap, pt, intercept);
 		}
 
 		// No intercept? try the next ray
-		if (snap_type == SNAP_TYPE_NONE)
+		if (snap_type == SnapType_None)
 			continue;
 
 		// Output an intercept
@@ -173,9 +173,9 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 	TestPoint points[] =
 	{
-		{v0, SNAP_TYPE_VERT},
-		{v1, SNAP_TYPE_VERT},
-		{(v0 + v1) / 2, SNAP_TYPE_EDGEMIDDLE},
+		{v0, SnapType_Vert},
+		{v1, SnapType_Vert},
+		{(v0 + v1) / 2, SnapType_EdgeMiddle},
 	};
 
 	for (int i = 0; i != m_ray_count; ++i)
@@ -194,12 +194,12 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Variables for finding the nearest snap-to point
 		float4 intercept = float4(0,0,0,0);
-		int snap_type    = SNAP_TYPE_NONE;
+		int snap_type    = SnapType_None;
 		float dist       = m_snap_dist;
 		int j,jend;
 
 		// Snap to points/edges within 'snap_dist'
-		jend = SelectInt(HAS_VERT_SNAP, 3, 0);
+		jend = SelectInt(HasSnapVert, 3, 0);
 		for (j = 0; j != jend; ++j)
 		{
 			float4 p = points[j].vert;
@@ -216,14 +216,14 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 		{
 			float4 p = v0 + para.x * edge;
 			float  d = distance(pt, p);
-			bool snap = HAS_EDGE_SNAP && dist == m_snap_dist && d < dist;
+			bool snap = HasSnapEdge && dist == m_snap_dist && d < dist;
 
-			snap_type = SelectInt(snap, SNAP_TYPE_EDGE, snap_type);
+			snap_type = SelectInt(snap, SnapType_Edge, snap_type);
 			intercept = SelectFloat4(snap, p, intercept);
 		}
 
 		// No intercept? try the next ray
-		if (snap_type == SNAP_TYPE_NONE)
+		if (snap_type == SnapType_None)
 			continue;
 
 		// Output an intercept
@@ -258,14 +258,14 @@ void main(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Find the nearest point on the ray
 		float d = distance(pt, v0);
-		bool snap = HAS_VERT_SNAP && d < m_snap_dist;
+		bool snap = HasSnapVert && d < m_snap_dist;
 
 		// Variables for finding the nearest snap-to point
 		float4 intercept = SelectFloat4(snap, v0, float4(0,0,0,0));
-		int snap_type    = SelectInt(snap, SNAP_TYPE_VERT, SNAP_TYPE_NONE);
+		int snap_type    = SelectInt(snap, SnapType_Vert, SnapType_None);
 
 		// No intercept? try the next ray
-		if (snap_type == SNAP_TYPE_NONE)
+		if (snap_type == SnapType_None)
 			continue;
 
 		// Output an intercept

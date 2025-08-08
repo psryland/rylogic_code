@@ -70,34 +70,31 @@ namespace pr::rdr12::shaders
 	}
 
 	// Config the shader
-	void Forward::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle)
+	void Forward::SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene)
 	{
 		// Set the frame constants
-		if (dle == nullptr)
-		{
-			CBufFrame cb0 = {};
-			SetViewConstants(cb0.m_cam, scene.m_cam);
-			SetLightingConstants(cb0.m_global_light, scene.m_global_light, scene.m_cam);
-			SetShadowMapConstants(cb0.m_shadow, scene.FindRStep<RenderSmap>());
-			SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
-			auto gpu_address = cbuf.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
-		}
+		CBufFrame cb0 = {};
+		SetViewConstants(cb0.m_cam, scene.m_cam);
+		SetLightingConstants(cb0.m_global_light, scene.m_global_light, scene.m_cam);
+		SetShadowMapConstants(cb0.m_shadow, scene.FindRStep<RenderSmap>());
+		SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
+		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
+	}
+	void Forward::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle)
+	{
 		// Set the per-element constants
-		else
-		{
-			auto& inst = *dle->m_instance;
-			auto& nug = *dle->m_nugget;
+		auto& inst = *dle->m_instance;
+		auto& nug = *dle->m_nugget;
 
-			CBufNugget cb1 = {};
-			SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
-			SetTxfm(cb1, inst, nug.m_model, scene.m_cam);
-			SetTint(cb1, inst, nug);
-			SetTex2Surf(cb1, inst, nug);
-			SetReflectivity(cb1, inst, nug);
-			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
-		}
+		CBufNugget cb1 = {};
+		SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
+		SetTxfm(cb1, inst, nug.m_model, scene.m_cam);
+		SetTint(cb1, inst, nug);
+		SetTex2Surf(cb1, inst, nug);
+		SetReflectivity(cb1, inst, nug);
+		auto gpu_address = upload.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 	}
 }
 

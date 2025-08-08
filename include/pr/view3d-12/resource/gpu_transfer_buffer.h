@@ -1,31 +1,18 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/resource/gpu_transfer_allocation.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer_page.h"
 #include "pr/view3d-12/utility/lookup.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 
 namespace pr::rdr12
 {
-	// An allocation in a GpuTransferBuffer
-	struct GpuTransferAllocation
-	{
-		// Notes:
-		//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
-		ID3D12Resource* m_res; // The upload resource that contains this allocation.
-		uint8_t* m_mem;        // The system memory address, mapped to m_res->GetGPUAddress().
-		int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
-		int64_t m_size;        // The size of the allocation (in bytes).
-
-		template <typename T> T const* ptr() const { return reinterpret_cast<T*>(m_mem + m_ofs); }
-		template <typename T> T const* end() const { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
-		template <typename T> T* ptr() { return reinterpret_cast<T*>(m_mem + m_ofs); }
-		template <typename T> T* end() { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
-	};
-
+	// A buffer of GPU memory transfer resources
 	template <D3D12_HEAP_TYPE HeapType>
 	struct GpuTransferBuffer :RefCounted<GpuTransferBuffer<HeapType>>
 	{
@@ -39,55 +26,7 @@ namespace pr::rdr12
 		//  - The 'block_size' parameter only controls the default size of each block. Larger blocks are created as needed.
 
 		// A 'page' in the upload buffer
-		struct Block
-		{
-			D3DPtr<ID3D12Resource> m_res; // The upload buffer resource
-			uint8_t* m_mem;               // The mapped CPU memory
-			int64_t m_capacity;           // The sizeof the resource buffer
-			int64_t m_size;               // The consumed space in this block
-			uint64_t m_sync_point;        // The highest sync point recorded while this was the head block
-
-			Block()
-				: m_res()
-				, m_mem()
-				, m_capacity()
-				, m_size()
-				, m_sync_point()
-			{}
-			Block(ID3D12Device* device, int64_t size, int alignment, int64_t sync_point)
-				: m_res()
-				, m_mem()
-				, m_capacity(size)
-				, m_size(0)
-				, m_sync_point(sync_point)
-			{
-				HeapProps heap_props(HeapType);
-				ResDesc desc = ResDesc::Buf(size, 1, {}, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
-				assert(desc.Check());
-				Check(device->CreateCommittedResource(
-					&heap_props, D3D12_HEAP_FLAG_NONE,
-					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-					__uuidof(ID3D12Resource), (void**)m_res.address_of()));
-				Check(m_res->SetName(L"GpuTransferBuffer:Block"));
-
-				// Upload buffers can live mapped
-				Check(m_res->Map(0U, nullptr, (void**)&m_mem));
-			}
-			Block(Block&&) = default;
-			Block(Block const&) = delete;
-			Block& operator=(Block&&) = default;
-			Block& operator=(Block const&) = delete;
-			~Block()
-			{
-				if (m_res != nullptr)
-					m_res->Unmap(0U, nullptr);
-			}
-			int64_t free() const
-			{
-				return m_capacity - m_size;
-			}
-		};
-
+		using Block = GpuTransferBufferPage;
 		using Lookup = Lookup<int, D3D12_GPU_VIRTUAL_ADDRESS>;
 		using SyncPoint = struct { Block const* m_block; int64_t m_offset; };
 		using SyncPoints = pr::deque<SyncPoint, 4>;
@@ -119,7 +58,7 @@ namespace pr::rdr12
 				if (m_used.empty()) return;
 				m_used.back().m_sync_point = m_gsync->LastAddedSyncPoint();
 				m_lookup.clear();
-				PurgeCompleted();
+				PurgeCompleted(false);
 			};
 		}
 		GpuTransferBuffer(GpuTransferBuffer&& rhs) noexcept
@@ -155,7 +94,7 @@ namespace pr::rdr12
 			{
 				auto& used = m_used.front();
 				m_gsync->Wait(used.m_sync_point);
-				PurgeCompleted(false);
+				PurgeCompleted(true);
 			}
 		}
 
@@ -170,12 +109,7 @@ namespace pr::rdr12
 			auto& block = m_used.back();
 
 			// Allocate space
-			Allocation alex = {
-				.m_res = block.m_res.get(),
-				.m_mem = block.m_mem,
-				.m_ofs = PadTo(block.m_size, alignment),
-				.m_size = size,
-			};
+			Allocation alex(&block, block.m_res.get(), block.m_mem, PadTo(block.m_size, alignment), size);
 
 			// Consume from the block
 			block.m_size = PadTo(block.m_size, alignment) + size;
@@ -220,7 +154,15 @@ namespace pr::rdr12
 		}
 
 		// Recycle blocks that the GPU has finished with
-		void PurgeCompleted(bool keep_one = true)
+		void PurgeCompleted()
+		{
+			PurgeCompleted(false);
+		}
+
+	private:
+
+		// Recycle blocks that the GPU has finished with
+		void PurgeCompleted(bool shutdown)
 		{
 			auto completed = m_gsync->CompletedSyncPoint();
 
@@ -228,8 +170,15 @@ namespace pr::rdr12
 			for (; !m_used.empty() && m_used.front().m_sync_point <= completed; )
 			{
 				// To reduce allocations, keep the last used block active (unless destructing)
-				if (keep_one && m_used.size() == 1)
+				if (!shutdown && m_used.size() == 1)
 					break;
+
+				// The front block still has external references
+				if (!shutdown && m_used.front().m_ref_count != 0)
+					break;
+
+				if (m_used.front().m_ref_count != 0)
+					throw std::runtime_error("Allocation still in use at shutdown");
 
 				// Remove from the used list
 				auto block = std::move(m_used.front());
@@ -241,8 +190,6 @@ namespace pr::rdr12
 				m_free.push_back(std::move(block));
 			}
 		}
-
-	private:
 
 		// D3D device
 		ID3D12Device* device() const
@@ -273,8 +220,12 @@ namespace pr::rdr12
 
 			// Create a new block
 			auto blk_size = PadTo(std::max(size, m_blk_size), m_blk_align);
-			Block block(device(), blk_size, m_blk_align, m_gsync->LastAddedSyncPoint());
+			Block block(device(), HeapType, blk_size, m_blk_align, m_gsync->LastAddedSyncPoint());
 			m_used.push_back(std::move(block));
+
+			// Sanity check for unchecked growth
+			if (m_used.size() > 1000)
+				throw std::runtime_error("GPU transfer buffer memory growing. There is probably a reference count leak");
 		}
 
 		// Ref-counting clean up function

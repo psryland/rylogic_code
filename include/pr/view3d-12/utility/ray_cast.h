@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -16,7 +16,17 @@ namespace pr::rdr12
 		_flags_enum = 0,
 	};
 
-	// Snap types (in priority order) (Keep in sync with SNAP_TYPE_ in 'ray_cast_cbuf.hlsli')
+	// Snap flags (Keep in sync with 'SnapMode_' in 'ray_cast_cbuf.hlsli')
+	enum class ESnapMode :int
+	{
+		NoSnap = 0,
+		Vert = 1 << 0,
+		Edge = 1 << 1,
+		Face = 1 << 2,
+		_flags_enum = 0,
+	};
+
+	// Snap types (in priority order) (Keep in sync with 'SnapType_' in 'ray_cast_cbuf.hlsli')
 	enum class ESnapType :int
 	{
 		NoSnap = 0,
@@ -46,6 +56,9 @@ namespace pr::rdr12
 		int                 m_ray_index;     // The index of the input ray
 		ESnapType           m_snap_type;     // How the point was snapped (if at all)
 	};
+
+	// A buffer of hit test results
+	using HitTestResults = vector<HitTestResult, 0>;
 
 	// Coroutine callback function that supplies instances to hit test against
 	using RayCastInstancesCB = std::function<BaseInstance const*()>;

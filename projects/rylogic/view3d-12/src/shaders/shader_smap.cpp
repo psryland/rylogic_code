@@ -48,30 +48,27 @@ namespace pr::rdr12::shaders
 	}
 
 	// Config the shader
-	void ShadowMap::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, DrawListElement const* dle, ShadowCaster const& caster, SceneCamera const& cam)
+	void ShadowMap::SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, ShadowCaster const& caster)
 	{
 		// Set the frame constants
-		if (dle == nullptr)
-		{
-			CBufFrame cb0 = {};
-			cb0.m_w2l = caster.m_params.m_w2ls;
-			cb0.m_l2s = caster.m_params.m_ls2s;
-			auto gpu_address = cbuf.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
-		}
+		CBufFrame cb0 = {};
+		cb0.m_w2l = caster.m_params.m_w2ls;
+		cb0.m_l2s = caster.m_params.m_ls2s;
+		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
+	}
+	void ShadowMap::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, DrawListElement const* dle, SceneCamera const& cam)
+	{
 		// Set the per-element constants
-		else
-		{
-			auto& inst = *dle->m_instance;
-			auto& nug = *dle->m_nugget;
+		auto& inst = *dle->m_instance;
+		auto& nug = *dle->m_nugget;
 
-			CBufNugget cb1 = {};
-			SetFlags(cb1, inst, nug, false);
-			SetTxfm(cb1, inst, nug.m_model, cam); // todo frame constant?
-			SetTint(cb1, inst, nug);
-			SetTex2Surf(cb1, inst, nug);
-			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
-		}
+		CBufNugget cb1 = {};
+		SetFlags(cb1, inst, nug, false);
+		SetTxfm(cb1, inst, nug.m_model, cam); // todo frame constant?
+		SetTint(cb1, inst, nug);
+		SetTex2Surf(cb1, inst, nug);
+		auto gpu_address = upload.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 	}
 }

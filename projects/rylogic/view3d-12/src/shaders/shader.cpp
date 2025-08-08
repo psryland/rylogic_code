@@ -22,14 +22,6 @@ namespace pr::rdr12
 		return SortKeyId(pr::hash::HashBytes32(&m_code, &m_code + 1) % SortKey::MaxShaderId);
 	}
 
-	// Config the shader.
-	void Shader::Setup(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*)
-	{
-		// This method may be called with:
-		//  'dle == null' => Setup constants for the frame
-		//  'dle != null' => Setup constants per nugget
-	}
-
 	// Ref counting clean up function
 	void Shader::RefCountZero(RefCounted<Shader>* doomed)
 	{

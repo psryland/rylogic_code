@@ -78,6 +78,12 @@ namespace pr::rdr12
 			static_assert((sizeof(CBufFrame) % 16) == 0);
 			static_assert((sizeof(CBufNugget) % 16) == 0);
 		}
+		namespace ray_cast
+		{
+			#include "view3d-12/src/shaders/hlsl/utility/ray_cast_cbuf.hlsli"
+			static_assert((sizeof(CBufFrame) % 16) == 0);
+			static_assert((sizeof(CBufNugget) % 16) == 0);
+		}
 	}
 	
 	// Return the padded size of a constants buffer of type 'T'

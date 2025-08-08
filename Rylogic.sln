@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_SolutionItems", "_Solution
 		packages.config = packages.config
 		readme.md = readme.md
 		requirements.txt = requirements.txt
+		include\pr\rylogic.natstepfilter = include\pr\rylogic.natstepfilter
 		include\pr\rylogic.natvis = include\pr\rylogic.natvis
 		Rylogic.nuspec = Rylogic.nuspec
 	EndProjectSection

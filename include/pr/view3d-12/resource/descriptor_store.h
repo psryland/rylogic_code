@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -30,8 +30,8 @@ namespace pr::rdr12
 		//  Lets say your shader uses a table with 2 CBVs and 2 SRVs, they have to be contiguous, so you will allocate from your GPU heap,
 		//  an array of 4, you get a heap offset, copy the needed descriptors to that location, and then bind them with SetGraphicsRootDescriptorTable.
 		//  One thing you will have to be careful with is the lifetimes of the descriptors in your GPU heap, as you cannot overwrite them until
-		//  the GPU is done processing the commands using them.
-		//  And last, if many shaders share some common tables, from similar root signature, you can save on processing by factorizing the updates.
+		//  the GPU is done processing the commands using them. And last, if many shaders share some common tables, from similar root signature,
+		//  you can save on processing by factorizing the updates."
 
 		// Each block of descriptors is 64 long, so that I can use a u64 mask to tell which slots are used.
 		// The block index = 'index >> 6' and the index within the block = 'index & 0x3F'

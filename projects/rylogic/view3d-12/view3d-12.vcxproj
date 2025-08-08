@@ -13,30 +13,10 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <!--
-  Configurations
-  -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
-  <!--
   Property Sheets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(PropsPath)fxc_build_rule.props" />
   <Import Project="$(PropsPath)view3d_shader_build.props" />
@@ -121,6 +101,7 @@
     <ClCompile Include="src\shaders\shader_arrow_head.cpp" />
     <ClCompile Include="src\shaders\shader_forward.cpp" />
     <ClCompile Include="src\shaders\shader_point_sprites.cpp" />
+    <ClCompile Include="src\shaders\shader_ray_cast.cpp" />
     <ClCompile Include="src\shaders\shader_show_normals.cpp" />
     <ClCompile Include="src\shaders\shader_smap.cpp" />
     <ClCompile Include="src\shaders\shader_thick_line.cpp" />
@@ -226,6 +207,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor_store.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_allocation.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer_page.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\image.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\mipmap_generator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_factory.h" />
@@ -243,6 +226,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_include_handler.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_point_sprites.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_ray_cast.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_registers.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_show_normals.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_smap.h" />

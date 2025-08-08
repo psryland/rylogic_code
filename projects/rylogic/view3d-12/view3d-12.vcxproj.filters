@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="pr">
       <UniqueIdentifier>{a82d68ab-e221-4aa7-b517-3cf2a55b6cbd}</UniqueIdentifier>
@@ -290,6 +290,9 @@
     </ClCompile>
     <ClCompile Include="src\model\pose.cpp">
       <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_ray_cast.cpp">
+      <Filter>src\shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -653,6 +656,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_include_handler.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_ray_cast.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision_builder.h">
       <Filter>src\compute\particle_collision</Filter>
     </ClInclude>
@@ -736,6 +742,12 @@
     </ClInclude>
     <ClInclude Include="src\ldraw\sources\source_binary.h">
       <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_allocation.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer_page.h">
+      <Filter>src\resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -399,6 +399,7 @@
 #include "pr\view3d-12\shaders\shader_forward.h"
 #include "pr\view3d-12\shaders\shader_include_handler.h"
 #include "pr\view3d-12\shaders\shader_point_sprites.h"
+#include "pr\view3d-12\shaders\shader_ray_cast.h"
 #include "pr\view3d-12\shaders\shader_registers.h"
 #include "pr\view3d-12\shaders\shader_show_normals.h"
 #include "pr\view3d-12\shaders\shader_smap.h"

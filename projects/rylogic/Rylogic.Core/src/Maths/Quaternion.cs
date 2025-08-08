@@ -455,11 +455,12 @@ namespace Rylogic.Maths
 		/// <summary>Return the axis and angle from a quaternion</summary>
 		public static (v4, float) AxisAngle(Quat quat)
 		{
-			var angle = (float)(2.0 * Math.Acos(quat.w));
-			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
-			var axis = FEql(s, 0.0f)
-				? Normalise(new v4(quat.x, quat.y, quat.z, 0.0f))
-				: new v4(quat.x / s, quat.y / s, quat.z / s, 0.0f);
+			var w = (float)Clamp(quat.w, -1.0, 1.0);
+			var s = (float)Math.Sqrt(1.0f - w * w);
+			var angle = (float)(2.0 * Math.Acos(w));
+			var axis = Math.Abs(s) > Math_.TinyF
+				? new v4(quat.x / s, quat.y / s, quat.z / s, 0.0f)
+				: v4.Zero; // axis is (0,0,0) when angle == 1
 
 			return (axis, angle);
 		}

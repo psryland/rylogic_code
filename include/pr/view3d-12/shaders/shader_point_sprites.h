@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -8,12 +8,12 @@
 
 namespace pr::rdr12::shaders
 {
-	struct PointSpriteGS :Shader
+	struct PointSpriteGS :ShaderOverride
 	{
 		v2 m_size;
 		bool m_depth;
 
 		PointSpriteGS(v2 size, bool depth);
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle) override;
+		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

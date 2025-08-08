@@ -4,6 +4,9 @@
 //************************************************************************
 #pragma once
 #include <limits>
+#include <concepts>
+#include <type_traits>
+#include <algorithm>
 #include <cassert>
 
 namespace pr
@@ -14,7 +17,7 @@ namespace pr
 		{ x < x || x > x || x <= x || x >= x || x == x || x != x };
 	};
 
-	// A range representation  (intended for numeric types only, might partially work for iterators)
+	// A range representation (intended for numeric types only, might partially work for iterators)
 	// Assume integral by default (so that iterators etc work)
 	template <Rangeable T = int>
 	struct Range
@@ -249,7 +252,7 @@ namespace pr
 	// Clamp 'value' to within 'range'
 	template <Rangeable T, Rangeable U> [[nodiscard]] inline T Clamp(T value, Range<U> const& range)
 	{
-		return pr::Clamp<T>(value, range.m_beg, range.m_end - Range<U>::integral_one);
+		return std::clamp<T>(value, range.m_beg, range.m_end - Range<U>::integral_one);
 	}
 
 	// Move the range

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -8,17 +8,17 @@
 
 namespace pr::rdr12::shaders
 {
-	struct ThickLineStripGS :Shader
+	struct ThickLineStripGS :ShaderOverride
 	{
 		float m_width;
 		explicit ThickLineStripGS(float width);
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle) override;
+		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 
-	struct ThickLineListGS :Shader
+	struct ThickLineListGS :ShaderOverride
 	{
 		float m_width;
 		explicit ThickLineListGS(float width);
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle) override;
+		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

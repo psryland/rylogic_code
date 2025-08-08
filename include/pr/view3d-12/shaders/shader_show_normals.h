@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -8,9 +8,9 @@
 
 namespace pr::rdr12::shaders
 {
-	struct ShowNormalsGS :Shader
+	struct ShowNormalsGS :ShaderOverride
 	{
 		ShowNormalsGS();
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle) override;
+		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

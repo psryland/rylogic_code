@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -43,7 +43,7 @@ namespace pr::rdr12
 		Viewport         m_viewport;      // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
 		InstCont         m_instances;     // Instances added to this scene for rendering.
 		RenderStepCont   m_render_steps;  // The stages of rendering the scene
-		RenderRayCastPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
+		RenderRayCastPtr m_raycast_immed; // A ray cast render step for performing immediate hit tests
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
 		PipeStates       m_pso;           // Scene-wide pipe state overrides
@@ -104,7 +104,7 @@ namespace pr::rdr12
 
 		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
-		void HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& results);
+		std::future<void> HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& out);
 
 		// Set the collection of rays to cast into the scene for continuous hit testing.
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.

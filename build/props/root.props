@@ -1,115 +1,116 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ImportGroup Label="PropertySheets" />
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ImportGroup Label="PropertySheets" />
 
-  <!-- Properties -->
-  <PropertyGroup Label="Globals">
-    <TargetPlatform>$(Platform)</TargetPlatform>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == '' ">
-    <Configuration>Debug</Configuration>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Platform)' == '' ">
-    <Platform>x64</Platform>
-  </PropertyGroup>
+	<!-- Properties -->
+	<PropertyGroup Condition=" '$(Platform)' == '' ">
+		<Platform>x64</Platform>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == '' ">
+		<Configuration>Debug</Configuration>
+	</PropertyGroup>
+	<PropertyGroup Label="Globals">
+		<TargetPlatform>$(Platform)</TargetPlatform>
+	</PropertyGroup>
 
-  <!-- Compiler flags -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>
-        ;_CRT_SECURE_NO_WARNINGS
-        ;_SCL_SECURE_NO_WARNINGS
-        ;_ENABLE_EXTENDED_ALIGNED_STORAGE
-        ;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-        ;_SILENCE_CXX20_CODECVT_CHAR8_T_FACETS_DEPRECATION_WARNING
-        ;_WIN32_WINNT=_WIN32_WINNT_WIN10
-        ;NOMINMAX
-        ;WIN32_LEAN_AND_MEAN
-        ;GDIPVER=0x0110
-      </PreprocessorDefinitions>
-      <DisableSpecificWarnings>4351;4355;5105</DisableSpecificWarnings>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm200 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
-      <WarningLevel>Level4</WarningLevel>
-      <StringPooling>true</StringPooling>
-      <OpenMPSupport>true</OpenMPSupport>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <ConformanceMode>true</ConformanceMode>
-      <MinimalRebuild>false</MinimalRebuild>
-      <BuildStlModules>false</BuildStlModules>
-      <SDLCheck>true</SDLCheck>
-    </ClCompile>
-    <ClCompile Condition="'$(Configuration)'=='Debug'">
-      <PreprocessorDefinitions>
-        ;%(PreprocessorDefinitions)
-        ;_ITERATOR_DEBUG_LEVEL=1
-        ;_MSVC_STL_HARDENING=1
-        ;_DEBUG
-      </PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <Optimization>Disabled</Optimization>
-      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <OmitFramePointers>false</OmitFramePointers>
-    </ClCompile>
-    <ClCompile Condition="'$(Configuration)'!='Debug'">
-      <PreprocessorDefinitions>
-        ;%(PreprocessorDefinitions)
-        ;NDEBUG
-      </PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <Optimization>Full</Optimization>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
-    </ClCompile>
-    <Link>
-      <EnableCOMDATFolding>false</EnableCOMDATFolding>
-      <OptimizeReferences>false</OptimizeReferences>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ImportLibrary>$(OutDir)$(TargetName).imp</ImportLibrary>
-    </Link>
-    <Link Condition="'$(Configuration)'=='Debug'">
-      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
-    </Link>
-    <Link Condition="'$(Configuration)'!='Debug'">
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-    </Link>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </ResourceCompile>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
-    <Lib Condition="'$(Platform)'=='Win32'">
-      <TargetMachine>MachineX86</TargetMachine>
-    </Lib>
-    <Lib Condition="'$(Platform)'=='x64'">
-      <TargetMachine>MachineX64</TargetMachine>
-    </Lib>
-  </ItemDefinitionGroup>
+	<!-- Build options -->
+	<ItemDefinitionGroup>
+		<!-- Compiler options -->
+		<ClCompile>
+			<AdditionalOptions>/Zm200 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+			<BuildStlModules>false</BuildStlModules>
+			<ConformanceMode>true</ConformanceMode>
+			<DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+			<DisableSpecificWarnings>4351;4355;5105;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+			<EnableModules>false</EnableModules>
+			<EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+			<FunctionLevelLinking>true</FunctionLevelLinking>
+			<IntrinsicFunctions>true</IntrinsicFunctions>
+			<LanguageStandard>stdcpplatest</LanguageStandard>
+			<MinimalRebuild>false</MinimalRebuild>
+			<MultiProcessorCompilation>true</MultiProcessorCompilation>
+			<OpenMPSupport>true</OpenMPSupport>
+			<SDLCheck>true</SDLCheck>
+			<StringPooling>true</StringPooling>
+			<WarningLevel>Level4</WarningLevel>
+			<PreprocessorDefinitions>
+				;_CRT_SECURE_NO_WARNINGS
+				;_SCL_SECURE_NO_WARNINGS
+				;_ENABLE_EXTENDED_ALIGNED_STORAGE
+				;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+				;_SILENCE_CXX20_CODECVT_CHAR8_T_FACETS_DEPRECATION_WARNING
+				;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+				;_WIN32_WINNT=_WIN32_WINNT_WIN10
+				;NOMINMAX
+				;WIN32_LEAN_AND_MEAN
+				;GDIPVER=0x0110
+			</PreprocessorDefinitions>
+		</ClCompile>
+		<ClCompile Condition="'$(Configuration)'=='Debug'">
+			<BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+			<InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+			<OmitFramePointers>false</OmitFramePointers>
+			<Optimization>Disabled</Optimization>
+			<RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+			<PreprocessorDefinitions>
+				;%(PreprocessorDefinitions)
+				;_DEBUG
+				;_ITERATOR_DEBUG_LEVEL=1
+				;_MSVC_STL_HARDENING=1
+			</PreprocessorDefinitions>
+		</ClCompile>
+		<ClCompile Condition="'$(Configuration)'!='Debug'">
+			<BasicRuntimeChecks>Default</BasicRuntimeChecks>
+			<EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+			<FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+			<InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+			<OmitFramePointers>true</OmitFramePointers>
+			<Optimization>Full</Optimization>
+			<RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+			<WholeProgramOptimization>true</WholeProgramOptimization>
+			<PreprocessorDefinitions>
+				;%(PreprocessorDefinitions)
+				;NDEBUG
+			</PreprocessorDefinitions>
+		</ClCompile>
+		
+		<!-- Linker options -->
+		<Link>
+			<GenerateDebugInformation>true</GenerateDebugInformation>
+			<ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+			<ImportLibrary>$(OutDir)$(TargetName).imp</ImportLibrary>
+		</Link>
+		<Link Condition="'$(Configuration)'=='Debug'">
+			<EnableCOMDATFolding>false</EnableCOMDATFolding>
+			<LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+			<OptimizeReferences>false</OptimizeReferences>
+		</Link>
+		<Link Condition="'$(Configuration)'!='Debug'">
+			<EnableCOMDATFolding>true</EnableCOMDATFolding>
+			<LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+			<OptimizeReferences>true</OptimizeReferences>
+		</Link>
 
-  <!-- -->
-  <ItemGroup>
-    <BuildMacro Include="TargetPlatform">
-      <Value>$(TargetPlatform)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
-  </ItemGroup>
+		<!-- Project defaults -->
+		<ProjectReference>
+			<LinkLibraryDependencies>false</LinkLibraryDependencies>
+		</ProjectReference>
+		<Lib Condition="'$(Platform)'=='Win32'">
+			<TargetMachine>MachineX86</TargetMachine>
+		</Lib>
+		<Lib Condition="'$(Platform)'=='x64'">
+			<TargetMachine>MachineX64</TargetMachine>
+		</Lib>
+	</ItemDefinitionGroup>
 
-   <Import Project="$(PropsPath)dependency_link.props" />
+	<!-- -->
+	<ItemGroup>
+		<BuildMacro Include="TargetPlatform">
+			<Value>$(TargetPlatform)</Value>
+			<EnvironmentVariable>true</EnvironmentVariable>
+		</BuildMacro>
+	</ItemGroup>
+
+	 <Import Project="$(PropsPath)dependency_link.props" />
 
 </Project>

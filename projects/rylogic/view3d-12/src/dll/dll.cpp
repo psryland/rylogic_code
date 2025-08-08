@@ -1040,9 +1040,6 @@ VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, vie
 	{
 		Validate(window);
 
-		// todo: add the non-immediate version of this function
-		// to allow continuous hit-testing during constant rendering.
-
 		DllLockGuard;
 		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, objects, object_count);
 	}
@@ -1064,9 +1061,6 @@ VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3
 	try
 	{
 		Validate(window);
-
-		// todo: add the non-immediate version of this function
-		// to allow continuous hit-testing during constant rendering.
 
 		DllLockGuard;
 		auto ray_span = std::span<view3d::HitTestRay const>{ rays, s_cast<size_t>(ray_count) };

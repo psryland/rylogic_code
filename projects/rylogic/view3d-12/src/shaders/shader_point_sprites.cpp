@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -12,10 +12,8 @@
 
 namespace pr::rdr12::shaders
 {
-	using namespace fwd;
-
 	PointSpriteGS::PointSpriteGS(v2 size, bool depth)
-		:Shader()
+		: ShaderOverride()
 		, m_size(size)
 		, m_depth(depth)
 	{
@@ -29,14 +27,14 @@ namespace pr::rdr12::shaders
 			.CS = shader_code::none,
 		};
 	}
-	void PointSpriteGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle)
+	void PointSpriteGS::SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle)
 	{
 		if (dle != nullptr)
 		{
-			CBufScreenSpace cb = {};
+			fwd::CBufScreenSpace cb = {};
 			SetScreenSpace(cb, *dle->m_instance, scene, m_size, m_depth);
-			auto gpu_address = cbuf.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufScreenSpace, gpu_address);
+			auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+			cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);
 		}
 	}
 }

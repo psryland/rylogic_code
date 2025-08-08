@@ -13,7 +13,7 @@
     <Message>Embedding ldraw_demo_scene.ldr</Message>
   </CSharpScript>
 -->
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Add CSharpScript as a Build Action -->
 	<ItemGroup>

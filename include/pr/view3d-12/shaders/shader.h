@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -39,16 +39,10 @@ namespace pr::rdr12
 		D3DPtr<ID3D12RootSignature> m_signature; // Signature for shader, null if an overlay
 		
 		Shader();
-		virtual ~Shader() {}
+		virtual ~Shader() = default;
 
 		// Sort id for the shader
 		SortKeyId SortId() const;
-
-		// Config the shader.
-		// This method may be called with:
-		//  'dle == null' => Setup constants for the frame
-		//  'dle != null' => Setup constants per nugget
-		virtual void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle);
 
 		// Create a shader
 		template <typename TShader, typename... Args> requires (std::is_base_of_v<Shader, TShader>)
@@ -61,6 +55,13 @@ namespace pr::rdr12
 		// Ref counting clean up
 		static void RefCountZero(RefCounted<Shader>* doomed);
 		protected: virtual void Delete();
+	};
+
+	// Interface for shaders that are used as overrides
+	struct ShaderOverride : Shader
+	{
+		// Config the shader.
+		virtual void SetupOverride(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*) {}
 	};
 
 	// Compiler options helper

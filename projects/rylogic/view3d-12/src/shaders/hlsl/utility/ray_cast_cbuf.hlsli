@@ -1,6 +1,6 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
-//  Copyright � Rylogic Ltd 2010
+//  Copyright © Rylogic Ltd 2010
 //***********************************************
 #ifndef PR_RDR_SHADER_RAY_CAST_CBUF_HLSL
 #define PR_RDR_SHADER_RAY_CAST_CBUF_HLSL
@@ -9,6 +9,23 @@
 // The maximum number of rays in a single pass
 static const int MaxRays = 16;
 static const int MaxIntercepts = 256;
+
+// Keep in sync with ESnapType in 'ray_cast.h'
+static const int SnapType_None = 0;
+static const int SnapType_Vert = 1;
+static const int SnapType_EdgeMiddle = 2;
+static const int SnapType_FaceCentre = 3;
+static const int SnapType_Edge = 4;
+static const int SnapType_Face = 5;
+
+// Keep in sync with ESnapMode in 'ray_cast.h'
+static const int SnapMode_Vert = 1 << 0;
+static const int SnapMode_Edge = 1 << 1;
+static const int SnapMode_Face = 1 << 2;
+
+#define HasSnapFace (m_snap_mode & SnapMode_Vert)
+#define HasSnapEdge (m_snap_mode & SnapMode_Edge)
+#define HasSnapVert (m_snap_mode & SnapMode_Face)
 
 // A single ray to cast
 struct Ray
@@ -34,9 +51,7 @@ cbuffer CBufFrame :reg(b0, 0)
 	// The number of rays to cast
 	int m_ray_count;
 
-	// 1 << 0 = snap to faces
-	// 1 << 1 = snap to edges
-	// 1 << 2 = snap to verts
+	// Combination of 'SnapFlags_'
 	int m_snap_mode;
 
 	// The snap distance
@@ -53,21 +68,5 @@ cbuffer CBufNugget :reg(b1, 0)
 	// Instance pointer
 	voidp m_inst_ptr;
 };
-
-#ifdef SHADER_BUILD
-
-	#define HAS_FACE_SNAP  ((m_snap_mode & (1 << 0)) != 0)
-	#define HAS_EDGE_SNAP  ((m_snap_mode & (1 << 1)) != 0)
-	#define HAS_VERT_SNAP  ((m_snap_mode & (1 << 2)) != 0)
-
-	// Keep in sync with ESnapType in 'ray_cast.h'
-	#define SNAP_TYPE_NONE 0
-	#define SNAP_TYPE_VERT 1
-	#define SNAP_TYPE_EDGEMIDDLE 2
-	#define SNAP_TYPE_FACECENTRE 3
-	#define SNAP_TYPE_EDGE 4
-	#define SNAP_TYPE_FACE 5
-
-#endif
 
 #endif

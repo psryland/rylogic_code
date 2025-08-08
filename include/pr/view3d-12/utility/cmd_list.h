@@ -182,7 +182,7 @@ namespace pr::rdr12
 		{
 			m_list->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
 		}
-		void CopyBufferRegion(GpuTransferAllocation DstBuffer, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset = 0)
+		void CopyBufferRegion(GpuTransferAllocation& DstBuffer, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset = 0)
 		{
 			CopyBufferRegion(DstBuffer.m_res, DstBuffer.m_ofs, pSrcBuffer, SrcOffset, DstBuffer.m_size);
 		}
@@ -253,10 +253,28 @@ namespace pr::rdr12
 			m_list->ClearDepthStencilView(DepthStencilView, ClearFlags, Depth, s_cast<UINT8>(Stencil), s_cast<UINT>(rects.size()), rects.data());
 		}
 
+		// Reset an unordered access view to a single value
+		void ClearUnorderedAccessViewUint(D3D12_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE ViewCPUHandle, ID3D12Resource* pResource, UINT const (&clear_value)[4], std::span<D3D12_RECT const> rects = {})
+		{
+			m_list->ClearUnorderedAccessViewUint(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, clear_value, s_cast<UINT>(rects.size()), rects.data());
+		}
+
+		// Reset an unordered access view to a single value
+		void ClearUnorderedAccessViewFloat(D3D12_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE ViewCPUHandle, ID3D12Resource* pResource, float const (&clear_value)[4], std::span<D3D12_RECT const> rects = {})
+		{
+			m_list->ClearUnorderedAccessViewFloat(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, clear_value, s_cast<UINT>(rects.size()), rects.data());
+		}
+
 		// Bind the render target and depth buffer to the command list
 		void OMSetRenderTargets(std::span<D3D12_CPU_DESCRIPTOR_HANDLE const> RenderTargetDescriptors, bool RTsSingleHandleToDescriptorRange, D3D12_CPU_DESCRIPTOR_HANDLE const* pDepthStencilDescriptor)
 		{
 			m_list->OMSetRenderTargets(s_cast<UINT>(RenderTargetDescriptors.size()), RenderTargetDescriptors.data(), RTsSingleHandleToDescriptorRange, pDepthStencilDescriptor);
+		}
+
+		// Set the Stream Output view
+		void SOSetTargets(int start, std::span<D3D12_STREAM_OUTPUT_BUFFER_VIEW const> views)
+		{
+			m_list->SOSetTargets(s_cast<UINT>(start), s_cast<UINT>(views.size()), views.data());
 		}
 
 		// Set the viewports

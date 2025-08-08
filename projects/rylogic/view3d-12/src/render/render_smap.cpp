@@ -274,7 +274,7 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 			// Set shader constants for the frame
-			m_shader.Setup(m_cmd_list.get(), m_upload_buffer, nullptr, caster, scn().m_cam);
+			m_shader.SetupFrame(m_cmd_list.get(), m_upload_buffer, caster);
 
 			// Draw each element in the draw list
 			Lock lock(*this);
@@ -315,7 +315,7 @@ namespace pr::rdr12
 				}
 
 				// Set shader constants for the nugget
-				m_shader.Setup(m_cmd_list.get(), m_upload_buffer, &dle, caster, scn().m_cam);
+				m_shader.SetupElement(m_cmd_list.get(), m_upload_buffer, &dle, scn().m_cam);
 
 				// Apply PSO overrides?
 
