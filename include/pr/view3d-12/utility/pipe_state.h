@@ -236,8 +236,15 @@ namespace pr::rdr12
 	// Pipe state object description
 	struct PipeStateDesc
 	{
+	private:
+
+		// Note:
+		//  - Don't set members of 'm_desc' directly otherwise
+		//    the hash won't be updated and pooling won't work.
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_desc;
 		int m_hash;
+
+	public:
 
 		PipeStateDesc()
 			:m_desc()
@@ -247,6 +254,12 @@ namespace pr::rdr12
 			:m_desc(rhs)
 			,m_hash(hash::HashBytes32(&m_desc, &m_desc + 1))
 		{}
+
+		// The current hash value for this pipe state description
+		int hash() const
+		{
+			return m_hash;
+		}
 
 		// Apply changes to the pipeline state description
 		void Apply(PipeState const& ps)

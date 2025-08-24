@@ -582,7 +582,32 @@ namespace pr::str
 		int radix = 10;
 		pr::string<Char, 256> str = {};
 		BufferNumber(str, src, radix, ENumType::FP, delim);
-		if (str.empty()) return false;
+		if (str.empty())
+		{
+			// Convert a char to a lower case 'wchar_t'
+			auto lwr = [](Char ch){ return char_traits<wchar_t>::lwr(wchar_t(ch)); };
+
+			// Check for 'nan'
+			if (lwr(*src) == 'n' && lwr(*++src) == 'a' && lwr(*++src) == 'n')
+			{
+				real = std::numeric_limits<Real>::quiet_NaN();
+				return true;
+			}
+
+			auto sign =
+				*src == '-' ? (++src, -1) :
+				*src == '+' ? (++src, +1) :
+				+1;
+
+			// Check for '(+/-)inf'
+			if (lwr(*src) == 'i' && lwr(*++src) == 'n' && lwr(*++src) == 'f')
+			{
+				real = sign * std::numeric_limits<Real>::infinity();
+				return true;
+			}
+
+			return false;
+		}
 
 		errno = 0;
 		Char const* end;

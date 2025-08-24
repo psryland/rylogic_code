@@ -275,7 +275,7 @@ namespace pr::common
 			//line1.line_to(v4(To<v2>(pt), 0, 1));
 			line1.line_to(To<v4>(pt));
 		}
-		builder.Write("E:\\dump\\space_filling.ldr");
+		builder.Save("E:\\dump\\space_filling.ldr");
 		//*/
 
 		// Round-trip tests

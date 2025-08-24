@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -86,16 +86,17 @@ namespace pr
 		}
 
 		// Basic constants
-		static constexpr Vec3 Zero()    { return Vec3(S(0), S(0), S(0)); }
-		static constexpr Vec3 XAxis()   { return Vec3(S(1), S(0), S(0)); }
-		static constexpr Vec3 YAxis()   { return Vec3(S(0), S(1), S(0)); }
-		static constexpr Vec3 ZAxis()   { return Vec3(S(0), S(0), S(1)); }
-		static constexpr Vec3 One()     { return Vec3(S(1), S(1), S(1)); }
-		static constexpr Vec3 TinyF()   { return Vec3(maths::tiny<S>, maths::tiny<S>, maths::tiny<S>); }
-		static constexpr Vec3 Min()     { return Vec3(limits<S>::min(), limits<S>::min(), limits<S>::min()); }
-		static constexpr Vec3 Max()     { return Vec3(limits<S>::max(), limits<S>::max(), limits<S>::max()); }
-		static constexpr Vec3 Lowest()  { return Vec3(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest()); }
-		static constexpr Vec3 Epsilon() { return Vec3(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon()); }
+		static constexpr Vec3 Zero()     { return Vec3(S(0), S(0), S(0)); }
+		static constexpr Vec3 XAxis()    { return Vec3(S(1), S(0), S(0)); }
+		static constexpr Vec3 YAxis()    { return Vec3(S(0), S(1), S(0)); }
+		static constexpr Vec3 ZAxis()    { return Vec3(S(0), S(0), S(1)); }
+		static constexpr Vec3 One()      { return Vec3(S(1), S(1), S(1)); }
+		static constexpr Vec3 TinyF()    { return Vec3(maths::tiny<S>, maths::tiny<S>, maths::tiny<S>); }
+		static constexpr Vec3 Min()      { return Vec3(limits<S>::min(), limits<S>::min(), limits<S>::min()); }
+		static constexpr Vec3 Max()      { return Vec3(limits<S>::max(), limits<S>::max(), limits<S>::max()); }
+		static constexpr Vec3 Lowest()   { return Vec3(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest()); }
+		static constexpr Vec3 Epsilon()  { return Vec3(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon()); }
+		static constexpr Vec3 Infinity() { return Vec3(limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity()); }
 
 		// Construct normalised
 		static Vec3 Normal(S x, S y, S z) requires std::is_floating_point_v<S>

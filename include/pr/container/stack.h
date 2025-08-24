@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // A very simple stack class
 //  Copyright (c) Rylogic Ltd 2007
 //******************************************
@@ -39,12 +39,24 @@ namespace pr
 		struct BitProxy
 		{
 			BitStack<Word>* m_bitstack;
-			BitProxy(BitStack<Word>* bitstack) :m_bitstack(bitstack) {}
-			void operator = (bool flag)  { m_bitstack->pop(); m_bitstack->push(flag); }
-			operator bool() const        { return const_cast<BitStack const*>(m_bitstack)->top(); }
+
+			BitProxy(BitStack<Word>* bitstack)
+				:m_bitstack(bitstack)
+			{}
+			void operator = (bool flag)
+			{
+				m_bitstack->pop(); m_bitstack->push(flag);
+			}
+			operator bool() const
+			{
+				return const_cast<BitStack const*>(m_bitstack)->top();
+			}
 		};
 		
-		BitStack() :m_size(0) ,m_bits(0) {}
+		BitStack()
+			:m_bits(0)
+			,m_size(0)
+		{}
 		bool        empty() const        { return m_size == 0; }
 		bool        full() const         { return m_size == capacity(); }
 		std::size_t size() const         { return m_size; }

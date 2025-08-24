@@ -13,6 +13,13 @@
 	Height="450"
 	Width="400"
 >
+	<Window.Resources>
+		<Style x:Key="LimitButtonStyle" TargetType="{x:Type Button}">
+			<Setter Property="Background" Value="#8CCC"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Margin" Value="1"/>
+		</Style>
+	</Window.Resources>
 	<Grid
 		Margin="8"
 	>
@@ -93,7 +100,112 @@
 				/>
 			</StackPanel>
 		</StackPanel>
-		
+
+		<!-- Constrain Focus -->
+		<StackPanel
+			Grid.Row="3"
+			Orientation="Vertical"
+			HorizontalAlignment="Stretch"
+		>
+			<TextBlock
+				Text="Constrain Focus: "
+			/>
+			<StackPanel
+				Orientation="Horizontal"
+				Margin="16,0,0,0"
+				>
+				<!-- Centre -->
+				<TextBlock
+					Text="Centre: "
+					VerticalAlignment="Center"
+					Margin="8,0,0,0"
+				/>
+				<TextBox
+					Text="{Binding FocusBoundsCentre, UpdateSourceTrigger=LostFocus}"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Center"
+					MinWidth="80"
+				/>
+				
+				<!-- Radius Bound -->
+				<TextBlock
+					Text="Radius: "
+					VerticalAlignment="Center"
+					Margin="8,0,0,0"
+				/>
+				<TextBox
+					Text="{Binding FocusBoundsRadius, UpdateSourceTrigger=LostFocus}"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Center"
+					MinWidth="80"
+				/>
+
+				<!-- X Buttons -->
+				<StackPanel
+					Orientation="Vertical"
+					Margin="3"
+					>
+					<Button
+						Content="0"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="0X"
+						MinWidth="16"
+						/>
+					<Button
+						Content="∞"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="+X"
+						MinWidth="16"
+						/>
+				</StackPanel>
+
+				<!-- Y Buttons -->
+				<StackPanel
+					Orientation="Vertical"
+					Margin="3"
+					>
+					<Button
+						Content="0"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="0Y"
+						MinWidth="16"
+						/>
+					<Button
+						Content="∞"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="+Y"
+						MinWidth="16"
+						/>
+				</StackPanel>
+
+				<!-- Z Buttons -->
+				<StackPanel
+					Orientation="Vertical"
+					Margin="3"
+					>
+					<Button
+						Content="0"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="0Z"
+						MinWidth="16"
+						/>
+					<Button
+						Content="∞"
+						Style="{StaticResource ResourceKey=LimitButtonStyle}"
+						Command="{Binding ConstrainFocus}"
+						CommandParameter="+Z"
+						MinWidth="16"
+						/>
+				</StackPanel>
+			</StackPanel>
+
+		</StackPanel>
+
 		<!-- Ok Button -->
 		<Button
 			Grid.Row="10"

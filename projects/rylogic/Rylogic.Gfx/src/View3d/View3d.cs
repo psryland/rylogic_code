@@ -277,7 +277,7 @@ namespace Rylogic.Gfx
 			Transform    = 1 << 2,
 			Children     = 1 << 3,
 			Colour       = 1 << 4,
-			ColourMask   = 1 << 5,
+			GroupColour  = 1 << 5,
 			Reflectivity = 1 << 6,
 			Flags        = 1 << 7,
 			Animation    = 1 << 8,
@@ -1703,6 +1703,10 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern v4 View3D_CameraFocusPointGet(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_CameraFocusPointSet(HWindow window, v4 position);
 
+		// Get/Set bounds on the camera focus point position
+		[DllImport(Dll)] private static extern BBox View3D_CameraFocusBoundsGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraFocusBoundsSet(HWindow window, BBox bounds);
+
 		// Get/Set the aspect ratio for the camera field of view
 		[DllImport(Dll)] private static extern float View3D_CameraAspectGet(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_CameraAspectSet(HWindow window, float aspect);
@@ -1837,7 +1841,7 @@ namespace Rylogic.Gfx
 
 		// Get/Set the current or base colour of an object(the first object to match 'name') (See LdrObject::Apply)
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectColourSet(HObject obj, uint colour, uint mask, [MarshalAs(UnmanagedType.LPStr)] string? name, EColourOp op, float op_value);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectColourSet(HObject obj, bool base_colour, uint colour, [MarshalAs(UnmanagedType.LPStr)] string? name, EColourOp op, float op_value);
 
 		// Reset the object colour back to its default
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectResetColour(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);

@@ -233,6 +233,10 @@ namespace pr::rdr12
 		v4 FocusPoint() const;
 		void FocusPoint(v4_cref position);
 
+		// Get/Set the camera focus point bounds
+		BBox FocusBounds() const;
+		void FocusBounds(BBox_cref bounds);
+
 		// Get/Set the aspect ratio for the camera field of view
 		float Aspect() const;
 		void Aspect(float aspect);

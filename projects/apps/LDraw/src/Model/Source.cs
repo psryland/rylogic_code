@@ -107,7 +107,7 @@ namespace LDraw
 		/// <summary>The name of the source</summary>
 		public string Name
 		{
-			get => View3dSource.Name;
+			get => View3dSource?.Name ?? string.Empty;
 			set => View3dSource.Name = value;
 		}
 

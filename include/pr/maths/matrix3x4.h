@@ -271,6 +271,14 @@ namespace pr
 			mat.z.z = sz;
 			return mat;
 		}
+		static Mat3x4 Scale(Vec4_cref<S, void> scale)
+		{
+			Mat3x4 mat = {};
+			mat.x.x = scale.x;
+			mat.y.y = scale.y;
+			mat.z.z = scale.z;
+			return mat;
+		}
 
 		// Create a shear matrix
 		static Mat3x4 Shear(S sxy, S sxz, S syx, S syz, S szx, S szy)

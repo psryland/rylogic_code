@@ -312,7 +312,7 @@ namespace pr
 			Transform    = 1 << 2,
 			Children     = 1 << 3,
 			Colour       = 1 << 4,
-			ColourMask   = 1 << 5,
+			GroupColour  = 1 << 5,
 			Reflectivity = 1 << 6,
 			Flags        = 1 << 7,
 			Animation    = 1 << 8,
@@ -953,6 +953,10 @@ extern "C"
 	VIEW3D_API pr::view3d::Vec4 __stdcall View3D_CameraFocusPointGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_CameraFocusPointSet(pr::view3d::Window window, pr::view3d::Vec4 position);
 
+	// Get/Set bounds on the camera focus point position
+	VIEW3D_API pr::view3d::BBox __stdcall View3D_CameraFocusBoundsGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_CameraFocusBoundsSet(pr::view3d::Window window, pr::view3d::BBox bounds);
+
 	// Get/Set the aspect ratio for the camera field of view
 	VIEW3D_API float __stdcall View3D_CameraAspectGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_CameraAspectSet(pr::view3d::Window window, float aspect);
@@ -1089,7 +1093,7 @@ extern "C"
 
 	// Get/Set the current or base colour of an object(the first object to match 'name') (See LdrObject::Apply)
 	VIEW3D_API pr::view3d::Colour __stdcall View3D_ObjectColourGet(pr::view3d::Object object, BOOL base_colour, char const* name);
-	VIEW3D_API void __stdcall View3D_ObjectColourSet(pr::view3d::Object object, pr::view3d::Colour colour, UINT32 mask, char const* name, pr::view3d::EColourOp op, float op_value);
+	VIEW3D_API void __stdcall View3D_ObjectColourSet(pr::view3d::Object object, BOOL base_colour, pr::view3d::Colour colour, char const* name, pr::view3d::EColourOp op, float op_value);
 	
 	// Reset the object colour back to its default
 	VIEW3D_API void __stdcall View3D_ObjectResetColour(pr::view3d::Object object, char const* name);

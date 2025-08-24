@@ -361,17 +361,17 @@ namespace pr::rdr12::compute::spatial_partition
 				{
 					auto buf = job.m_readback.Alloc(cb_params.NumPositions * sizeof(uint32_t), alignof(uint32_t));
 					job.m_cmd_list.CopyBufferRegion(buf, m_spatial.get());
-					Output.m_lookup = buf;
+					Output.m_lookup = std::move(buf);
 				}
 				{
 					auto buf = job.m_readback.Alloc(cb_params.CellCount * sizeof(uint32_t), alignof(uint32_t));
 					job.m_cmd_list.CopyBufferRegion(buf, m_idx_start.get());
-					Output.m_idx_start = buf;
+					Output.m_idx_start = std::move(buf);
 				}
 				{
 					auto buf = job.m_readback.Alloc(cb_params.CellCount * sizeof(uint32_t), alignof(uint32_t));
 					job.m_cmd_list.CopyBufferRegion(buf, m_idx_count.get());
-					Output.m_idx_count = buf;
+					Output.m_idx_count = std::move(buf);
 				}
 			}
 

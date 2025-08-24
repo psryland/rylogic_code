@@ -25,7 +25,6 @@ namespace pr::rdr12
 		, m_descriptor_store(rdr.D3DDevice())
 		, m_stock_textures(EStockTexture_::NumberOf)
 		, m_stock_samplers(EStockSampler_::NumberOf)
-		, m_gdiplus()
 	{
 		ResourceFactory factory(rdr);
 

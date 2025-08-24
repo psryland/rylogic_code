@@ -667,8 +667,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert a chart space bounding box to a client scene space rectangle. BBox's are chart/camera space aligned, so in scene space the bbox becomes a rectangle</summary>
 		public Rect ChartToScene(BBox chart_bbox)
 		{
-			var chart_pt0 = chart_bbox.Lower(); chart_pt0.z = 0;
-			var chart_pt1 = chart_bbox.Upper(); chart_pt1.z = 0;
+			var chart_pt0 = chart_bbox.Min; chart_pt0.z = 0;
+			var chart_pt1 = chart_bbox.Max; chart_pt1.z = 0;
 
 			var scene_pt0 = ChartToScene(chart_pt0);
 			var scene_pt1 = ChartToScene(chart_pt1);
@@ -681,8 +681,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert a world space bounding box to a client scene space rectangle. Chart space and world space are not necessarily aligned, so the returned Rect may be inflated</summary>
 		public Rect WorldToScene(BBox world_bbox)
 		{
-			var world_pt0 = world_bbox.Lower();
-			var world_pt1 = world_bbox.Upper();
+			var world_pt0 = world_bbox.Min;
+			var world_pt1 = world_bbox.Max;
 
 			var scene_pt0 = WorldToScene(world_pt0);
 			var scene_pt1 = WorldToScene(world_pt1);

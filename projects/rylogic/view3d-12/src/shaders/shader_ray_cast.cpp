@@ -27,45 +27,6 @@ namespace pr::rdr12::shaders
 			.CBuf(EReg::CBufNugget)
 			.Create(device, "RayCastVertSig");
 	}
-	RayCastVert::RayCastVert(ID3D12Device* device)
-		:RayCast(device)
-	{
-		m_code = ShaderCode
-		{
-			.VS = shader_code::ray_cast_vs,
-			.PS = shader_code::ray_cast_vert_gs,
-			.DS = shader_code::none,
-			.HS = shader_code::none,
-			.GS = shader_code::none,
-			.CS = shader_code::none,
-		};
-	}
-	RayCastEdge::RayCastEdge(ID3D12Device* device)
-		:RayCast(device)
-	{
-		m_code = ShaderCode
-		{
-			.VS = shader_code::ray_cast_vs,
-			.PS = shader_code::ray_cast_edge_gs,
-			.DS = shader_code::none,
-			.HS = shader_code::none,
-			.GS = shader_code::none,
-			.CS = shader_code::none,
-		};
-	}		
-	RayCastFace::RayCastFace(ID3D12Device* device)
-		:RayCast(device)
-	{
-		m_code = ShaderCode
-		{
-			.VS = shader_code::ray_cast_vs,
-			.PS = shader_code::ray_cast_face_gs,
-			.DS = shader_code::none,
-			.HS = shader_code::none,
-			.GS = shader_code::none,
-			.CS = shader_code::none,
-		};
-	}
 
 	// Config the shader
 	void RayCast::SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance)

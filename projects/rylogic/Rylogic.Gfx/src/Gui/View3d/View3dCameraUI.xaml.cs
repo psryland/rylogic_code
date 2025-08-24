@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -19,6 +20,7 @@ namespace Rylogic.Gui.WPF
 			m_window.OnRendering += RefreshCamera;
 			PinState = new PinData(this, EPin.Centre, pinned: false);
 
+			ConstrainFocus = Command.Create(this, ConstrainFocusInternal);
 			Accept = Command.Create(this, AcceptInternal);
 
 			DataContext = this;
@@ -87,6 +89,65 @@ namespace Rylogic.Gui.WPF
 				if (FarPlane == value) return;
 				Camera.FarPlane = value;
 				NotifyPropertyChanged(nameof(FarPlane));
+			}
+		}
+
+		/// <summary>The bounding box that limits the focus position</summary>
+		public string FocusBoundsCentre
+		{
+			get => Camera.FocusBounds.Centre.xyz.ToString();
+			set
+			{
+				if (FocusBoundsCentre == value) return;
+				if (v3.TryParse(value) is v3 centre)
+				{
+					var bounds = Camera.FocusBounds;
+					bounds.Centre = centre.w1;
+					Camera.FocusBounds = bounds;
+					NotifyPropertyChanged(nameof(FocusBoundsCentre));
+				}
+			}
+		}
+		public string FocusBoundsRadius
+		{
+			get => Camera.FocusBounds.Radius.xyz.ToString();
+			set
+			{
+				if (FocusBoundsRadius == value) return;
+				if (v3.TryParse(value) is v3 radius)
+				{
+					var bounds = Camera.FocusBounds;
+					bounds.Radius = radius.w0;
+					Camera.FocusBounds = bounds;
+					NotifyPropertyChanged(nameof(FocusBoundsRadius));
+				}
+			}
+		}
+
+		/// <summary>Constrain the focus point</summary>
+		public Command ConstrainFocus { get; }
+		private void ConstrainFocusInternal(object? parameter)
+		{
+			if (parameter is not string code)
+				return;
+
+			try
+			{
+				var bounds = Camera.FocusBounds;
+				var radius = code[0] == '0' ? 0 : float.PositiveInfinity;
+				switch (code[1])
+				{
+					case 'X': bounds.Radius.x = radius; break;
+					case 'Y': bounds.Radius.y = radius; break;
+					case 'Z': bounds.Radius.z = radius; break;
+					default: throw new Exception("Unknown focus constraint axis");
+				}
+				Camera.FocusBounds = bounds;
+				NotifyPropertyChanged(nameof(FocusBoundsRadius));
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(Owner, $"Failed to constrain focus point.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
 

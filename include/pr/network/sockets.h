@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Sockets
 //	Copyright (c) Rylogic 2019
 //*****************************************
@@ -198,7 +198,7 @@ namespace pr::network
 		ServerSocket(ServerSocket const&) = delete;
 		ServerSocket& operator =(ServerSocket&&) = delete;
 		ServerSocket& operator =(ServerSocket const&) = delete;
-		~ServerSocket()
+		virtual ~ServerSocket()
 		{
 			StopConnections();
 		}

@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Sockets
 //	Copyright (c) Rylogic 2019
 //*****************************************
@@ -21,11 +21,12 @@ namespace pr::network
 	// stream buffer for network stream
 	struct socket_streambuf : std::basic_streambuf<std::byte>
 	{
+		using base_t = std::basic_streambuf<std::byte>;
 		using traits_type = typename socket_streambuf::traits_type;
-		using char_type   = typename socket_streambuf::char_type;
-		using int_type    = typename socket_streambuf::int_type;
-		using pos_type    = typename socket_streambuf::pos_type;
-		using off_type    = typename socket_streambuf::off_type;
+		using char_type = typename socket_streambuf::char_type;
+		using int_type = typename socket_streambuf::int_type;
+		using pos_type = typename socket_streambuf::pos_type;
+		using off_type = typename socket_streambuf::off_type;
 		using setstate_fn = std::function<void(std::ios_base::iostate)>;
 
 	private:
@@ -34,15 +35,16 @@ namespace pr::network
 		setstate_fn m_setstate;
 		std::vector<std::byte> m_ibuf;
 		std::vector<std::byte> m_obuf;
-		std::chrono::milliseconds m_recv_timeout{0};
-		std::chrono::milliseconds m_send_timeout{0};
+		std::chrono::milliseconds m_recv_timeout{ 0 };
+		std::chrono::milliseconds m_send_timeout{ 0 };
 		bool m_non_blocking = false;
 		bool m_owns_socket = false;
+		bool m_connecting = false;
 
 	public:
 
-		socket_streambuf(SOCKET s, setstate_fn setstate, size_t ibuf_size = 4096, size_t obuf_size = 4096)
-			: std::basic_streambuf<std::byte>()
+		socket_streambuf(SOCKET s, setstate_fn setstate, bool non_blocking = false, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+			: base_t()
 			, m_socket(s)
 			, m_setstate(setstate)
 			, m_ibuf(ibuf_size)
@@ -50,14 +52,16 @@ namespace pr::network
 		{
 			setg(m_ibuf.data(), m_ibuf.data(), m_ibuf.data());
 			setp(m_obuf.data(), m_obuf.data() + m_obuf.size());
+			set_non_blocking(non_blocking);
 		}
-		socket_streambuf(char const* host, int port, IPPROTO proto, setstate_fn setstate, size_t ibuf_size = 4096, size_t obuf_size = 4096)
-			: socket_streambuf(create_socket(host, port, proto), setstate, ibuf_size, obuf_size)
+		socket_streambuf(char const* host, int port, IPPROTO proto, setstate_fn setstate, bool non_blocking = false, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+			: socket_streambuf(INVALID_SOCKET, setstate, non_blocking, ibuf_size, obuf_size)
 		{
 			m_owns_socket = true;
+			connect(host, port, proto);
 		}
 		socket_streambuf(socket_streambuf&& other) noexcept
-			: std::basic_streambuf<std::byte>(std::move(other))
+			: base_t(std::move(other))
 			, m_socket(std::exchange(other.m_socket, INVALID_SOCKET))
 			, m_setstate(std::move(other.m_setstate))
 			, m_ibuf(std::move(other.m_ibuf))
@@ -66,12 +70,14 @@ namespace pr::network
 			, m_send_timeout(std::move(other.m_send_timeout))
 			, m_non_blocking(std::move(other.m_non_blocking))
 			, m_owns_socket(std::exchange(other.m_owns_socket, false))
-		{}
+			, m_connecting(std::exchange(other.m_connecting, false))
+		{
+		}
 		socket_streambuf(socket_streambuf const&) = delete;
 		socket_streambuf& operator=(socket_streambuf&& other) noexcept
 		{
 			if (this == &other) return *this;
-			std::basic_streambuf<std::byte>::operator=(std::move(other));
+			base_t::operator=(std::move(other));
 			m_socket = std::exchange(other.m_socket, INVALID_SOCKET);
 			m_setstate = std::move(other.m_setstate);
 			m_ibuf = std::move(other.m_ibuf);
@@ -80,6 +86,7 @@ namespace pr::network
 			m_send_timeout = std::move(other.m_send_timeout);
 			m_non_blocking = std::move(other.m_non_blocking);
 			m_owns_socket = std::exchange(other.m_owns_socket, false);
+			m_connecting = std::exchange(other.m_connecting, false);
 			return *this;
 		}
 		socket_streambuf& operator=(socket_streambuf const&) = delete;
@@ -87,6 +94,39 @@ namespace pr::network
 		{
 			if (m_owns_socket)
 				close();
+		}
+
+		// Connect to the socket
+		void connect(char const* host, int port, IPPROTO proto)
+		{
+			// Non-blocking connection in progress?
+			if (m_socket != INVALID_SOCKET)
+			{
+				if (m_connecting && check_status(false))
+					m_connecting = false;
+
+				return;
+			}
+
+			// Reset the bits on a connection attempt
+			m_setstate(0);
+			m_connecting = false;
+
+			try
+			{
+				// Create socket only returns INVALID_SOCKET for non-blocking connections that return WOULD_BLOCK
+				m_socket = create_socket(host, port, proto, m_non_blocking);
+				m_connecting = m_non_blocking;
+
+				// Check for connection errors
+				if (check_status(!m_non_blocking))
+					m_connecting = false;
+			}
+			catch (...)
+			{
+				m_connecting = false;
+				throw;
+			}
 		}
 
 		// Close the socket
@@ -97,12 +137,21 @@ namespace pr::network
 				::closesocket(m_socket);
 				m_socket = INVALID_SOCKET;
 			}
+
+			m_connecting = false;
+			m_setstate(std::ios::eofbit);
 		}
 
 		// Access the socket
 		SOCKET socket() const
 		{
 			return m_socket;
+		}
+
+		// True if the socket is connected
+		bool is_open() const
+		{
+			return m_socket != INVALID_SOCKET && !m_connecting;
 		}
 
 		// Read/Write timeouts
@@ -119,14 +168,33 @@ namespace pr::network
 		void set_non_blocking(bool non_blocking = true)
 		{
 			m_non_blocking = non_blocking;
-			u_long mode = non_blocking ? 1 : 0;
-			::ioctlsocket(m_socket, FIONBIO, &mode);
+			if (is_open())
+			{
+				u_long mode = non_blocking ? 1 : 0;
+				::ioctlsocket(m_socket, FIONBIO, &mode);
+			}
 		}
 
 	protected:
 
-		// Create the socket
-		static SOCKET create_socket(char const* host, int port, IPPROTO proto = IPPROTO_TCP)
+		// Convert a WSA error code to string
+		static std::string wsa_error_string(int error_code)
+		{
+			// Measure the required string length
+			std::string error_msg(1024, '\0');
+			DWORD result = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error_code,
+				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), error_msg.data(), static_cast<DWORD>(error_msg.size()), nullptr);
+
+			if (!result)
+				error_msg = std::format("Unknown WSA error {}", error_code);
+
+			for (; !error_msg.empty() && (error_msg.back() == '\n' || error_msg.back() == '\r'); error_msg.pop_back()) {}
+			return error_msg;
+		}
+
+		// Create the socket. Returns a socket or throws an exception.
+		// For non-blocking connection, the returned socket may not be connected yet. Test with 'wait_for_write'.
+		static SOCKET create_socket(char const* host, int port, IPPROTO proto, bool non_blocking)
 		{
 			// Convert port to string
 			auto port_str = std::format("{}", port);
@@ -169,10 +237,24 @@ namespace pr::network
 					::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
 				}
 
+				// Apply non-blocking mode if set
+				if (non_blocking)
+				{
+					u_long mode = non_blocking ? 1 : 0;
+					::ioctlsocket(sock, FIONBIO, &mode);
+				}
+
 				// Connect to server
 				ret = ::connect(sock, ptr->ai_addr, static_cast<int>(ptr->ai_addrlen));
 				if (ret == SOCKET_ERROR)
 				{
+					auto error = WSAGetLastError();
+
+					// Would block is expected?
+					if (error == WSAEWOULDBLOCK && non_blocking)
+						return sock;
+
+					// Try the next address
 					::closesocket(sock);
 					sock = INVALID_SOCKET;
 					continue;
@@ -185,10 +267,45 @@ namespace pr::network
 			if (sock == INVALID_SOCKET)
 			{
 				auto error = WSAGetLastError();
-				throw std::runtime_error(std::format("Failed to connect to {}:{} - WSA error: {}", host, port, error));
+				throw std::runtime_error(std::format("Failed to connect to {}:{} - WSA error: {} {}", host, port, error, wsa_error_string(error)));
 			}
 
 			return sock;
+		}
+
+		// Test if 'm_socket' is still in a good state
+		bool check_status(bool throw_on_error) const
+		{
+			if (m_socket == INVALID_SOCKET)
+				return false;
+
+			int err, len = sizeof(err);
+			auto result = ::getsockopt(m_socket, SOL_SOCKET, SO_ERROR, (char*)&err, &len);
+			if (result == SOCKET_ERROR)
+			{
+				// Still connecting?
+				auto error = WSAGetLastError();
+				if (m_non_blocking && error == WSAEWOULDBLOCK)
+					return false;
+
+				// Socket is in an error state
+				m_setstate(std::ios::failbit);
+				if (throw_on_error) throw std::runtime_error(std::format("Socket is in an error state - WSA error: {} {}", error, wsa_error_string(error)));
+				return false;
+			}
+			if (err != 0)
+			{
+				// Still connecting?
+				if (m_non_blocking && err == WSAEWOULDBLOCK)
+					return false;
+
+				m_setstate(std::ios::failbit);
+				if (throw_on_error) throw std::runtime_error(std::format("Socket is in an error state - WSA error: {} {}", err, wsa_error_string(err)));
+				return false;
+			}
+
+			m_setstate(0);
+			return true;
 		}
 
 		// Block for data
@@ -229,6 +346,10 @@ namespace pr::network
 			auto result = ::select(0, nullptr, &writefds, nullptr, &tv);
 			if (result == SOCKET_ERROR)
 			{
+				auto error = WSAGetLastError();
+				if (m_non_blocking && error == WSAEWOULDBLOCK)
+					return false;
+
 				m_setstate(std::ios::badbit);
 				return false;
 			}
@@ -290,17 +411,12 @@ namespace pr::network
 					{
 						// Check for WSAEWOULDBLOCK in non-blocking mode
 						auto error = WSAGetLastError();
-						if (error == WSAEWOULDBLOCK)
-						{
-							// Expected if non-blocking
-							if (m_non_blocking) break;
 
-							// For blocking sockets, this shouldn't happen after wait_for_write
-							m_setstate(std::ios::badbit);
-							return traits_type::eof();
-						}
+						// Expected if non-blocking
+						if (error == WSAEWOULDBLOCK && m_non_blocking)
+							break;
 
-						// Other errors are always bad
+						// For blocking sockets, this shouldn't happen after wait_for_write
 						m_setstate(std::ios::badbit);
 						return traits_type::eof();
 					}
@@ -344,26 +460,26 @@ namespace pr::network
 	// Network stream
 	struct socket_stream : std::basic_iostream<std::byte>
 	{
+		using base_t = std::basic_iostream<std::byte>;
 		socket_streambuf m_buf;
 
 		socket_stream()
-			: std::basic_iostream<std::byte>(&m_buf)
-			, m_buf(INVALID_SOCKET, setstate_fn(this), 0, 0)
+			: socket_stream(INVALID_SOCKET)
 		{
 		}
-		socket_stream(char const* host, int port, IPPROTO proto = IPPROTO_TCP, size_t ibuf_size = 4096, size_t obuf_size = 4096)
-			: std::basic_iostream<std::byte>(&m_buf)
-			, m_buf(host, port, proto, setstate_fn(this), ibuf_size, obuf_size)
+		socket_stream(SOCKET s, bool non_blocking = false, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+			: base_t(&m_buf)
+			, m_buf(s, setstate_fn(this), non_blocking, ibuf_size, obuf_size)
 		{
 		}
-		socket_stream(SOCKET s, size_t ibuf_size = 4096, size_t obuf_size = 4096)
-			: std::basic_iostream<std::byte>(&m_buf)
-			, m_buf(s, setstate_fn(this), ibuf_size, obuf_size)
+		socket_stream(char const* host, int port, IPPROTO proto = IPPROTO_TCP, bool non_blocking = false, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+			: socket_stream(INVALID_SOCKET, non_blocking, ibuf_size, obuf_size)
 		{
+			connect(host, port, proto);
 		}
 
-		// Try to connect to a host. Use `if (stream.connect("host",port).good()) stream << data;`
-		socket_stream& connect(char const* host, int port, IPPROTO proto = IPPROTO_TCP, size_t ibuf_size = 4096, size_t obuf_size = 4096)
+		// Try to connect to a host. Use `if (stream.connect("host",port).good()) stream << data;`. Remember you can use 'non-blocking'.
+		socket_stream& connect(char const* host, int port, IPPROTO proto = IPPROTO_TCP)
 		{
 			// Already connected
 			if (is_open())
@@ -372,8 +488,7 @@ namespace pr::network
 			try
 			{
 				// Try to connect
-				m_buf = socket_streambuf(host, port, proto, setstate_fn(this), ibuf_size, obuf_size);
-				clear(); // Clear any error flags on successful connection
+				m_buf.connect(host, port, proto);
 			}
 			catch (std::exception const&)
 			{
@@ -399,7 +514,7 @@ namespace pr::network
 		// Add method to check if socket is valid
 		bool is_open() const
 		{
-			return m_buf.socket() != INVALID_SOCKET;
+			return m_buf.is_open();
 		}
 
 		// Network parameters
@@ -420,6 +535,7 @@ namespace pr::network
 
 		static socket_streambuf::setstate_fn setstate_fn(socket_stream* self)
 		{
+			// Passing 0 is the same as calling clear()
 			return [self](std::ios::iostate state) { self->setstate(state); };
 		}
 	};

@@ -96,7 +96,7 @@ namespace pr::rdr12::ldraw
 		, m_name()
 		, m_context_id(context_id)
 		, m_base_colour(Colour32White)
-		, m_colour_mask()
+		, m_grp_colour()
 		, m_root_anim()
 		, m_bbox_instance()
 		, m_screen_space()
@@ -502,7 +502,7 @@ namespace pr::rdr12::ldraw
 
 	// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 	// For 'Get', the colour of the first object to match 'name' is returned
-	// For 'Set', the object base colour is not changed, only the tint colour = tint
+	// For 'Set', the object base colour is not changed, only the tint colour
 	Colour32 LdrObject::Colour(bool base_colour, char const* name) const
 	{
 		Colour32 col;
@@ -513,36 +513,43 @@ namespace pr::rdr12::ldraw
 		}, name);
 		return col;
 	}
-	void LdrObject::Colour(Colour32 colour, uint32_t mask, char const* name, EColourOp op, float op_value)
+	void LdrObject::Colour(bool base_colour, Colour32 colour, char const* name, EColourOp op, float op_value)
 	{
 		Apply([=](LdrObject* o)
 			{
+				auto& obj_colour = base_colour ? o->m_base_colour : o->m_colour;
 				switch (op)
 				{
 					case EColourOp::Overwrite:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
+						obj_colour = colour;
 						break;
 					case EColourOp::Add:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
+						obj_colour = o->m_base_colour + colour;
 						break;
 					case EColourOp::Subtract:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour - colour).argb);
+						obj_colour = o->m_base_colour - colour;
 						break;
 					case EColourOp::Multiply:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour * colour).argb);
+						obj_colour = o->m_base_colour * colour;
 						break;
 					case EColourOp::Lerp:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, Lerp(o->m_base_colour, colour, op_value).argb);
+						obj_colour = Lerp(o->m_base_colour, colour, op_value);
 						break;
 				}
-				if (o->m_model == nullptr)
-					return true;
 
-				auto tint_has_alpha = HasAlpha(o->m_colour);
-				for (auto& nug : o->m_model->m_nuggets)
+				// If the base colour was updated, update the instance colour as well
+				if (base_colour)
+					o->m_colour = o->m_base_colour;
+
+				// Update the nugget alpha states
+				if (o->m_model != nullptr)
 				{
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-					nug.UpdateAlphaStates();
+					auto tint_has_alpha = HasAlpha(o->m_colour);
+					for (auto& nug : o->m_model->m_nuggets)
+					{
+						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
+						nug.UpdateAlphaStates();
+					}
 				}
 
 				return true;

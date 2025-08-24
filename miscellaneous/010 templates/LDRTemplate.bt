@@ -51,7 +51,6 @@ enum <uint> EKeyword
 	Circle = 673280137,
 	Closed = 3958264005,
 	Colour = 33939709,
-	ColourMask = 1664250849,
 	Colours = 3175120778,
 	Commands = 3062934995,
 	Cone = 3711978346,
@@ -89,6 +88,7 @@ enum <uint> EKeyword
 	GenerateNormals = 750341558,
 	Grid = 2944866961,
 	Group = 1605967500,
+	GroupColour = 2738848320,
 	Hidden = 4128829753,
 	Instance = 193386898,
 	Inverse = 2986472067,
@@ -339,7 +339,6 @@ void Sections(uint end, EKeyword parent)
 			case CastShadow:
 			case Closed:
 			case Colour:
-			case ColourMask:
 			case Colours:
 			case CornerRadius:
 			case CrossSection:
@@ -363,7 +362,8 @@ void Sections(uint end, EKeyword parent)
 			case FovX:
 			case FovY:
 			case GenerateNormals:
-			case Hidden:
+			case GroupColour:
+            case Hidden:
 			case Inverse:
 			case Layers:
 			case LeftHanded:

@@ -339,24 +339,23 @@ namespace pr
 	// Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation
 	template <Scalar S, typename A, typename B> inline Vec4<S, void> pr_vectorcall LogMap(Quat_cref<S,A,B> q)
 	{
-		auto angle = ACos(Clamp(q.w, -1.0f, +1.0f));
-		auto s = Sin(angle);
-		if (s < maths::tinyf)
-			return {};
-
-		angle /= s;
-		return { q.x * angle, q.y * angle, q.z * angle, 0.f };
+		// Quat = [u.Sin(A/2), Cos(A/2)]
+		auto cos_half_ang = Clamp<double>(q.w, -1.0, +1.0); // [0, tau]
+		auto sin_half_ang = Length(q.xyz); // Don't use 'sqrt(1 - w*w)', it's not float noise accurate enough when w ~= +/-1
+		auto ang_by_2 = ACos(cos_half_ang);
+		auto s = Abs(sin_half_ang) > maths::tinyd ? static_cast<float>(2.0 * ang_by_2 / sin_half_ang) : 2.0f;
+		return q.xyzw.w0() * s;
 	}
 
 	// Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.
 	template <Scalar S> inline Quat<S, void, void> pr_vectorcall ExpMap(Vec4_cref<S,void> v)
 	{
-		auto theta = Length(v);
-		if (theta < maths::tinyf)
-			return { 0, 0, 0, 1 };
-
-		auto s = Sin(theta) / theta;
-		return { v.x * s, v.y * s, v.z * s, Cos(theta) };
+		// Vec = (+/-)A * (-/+)u.
+		auto ang_by_2 = 0.5 * Length(v);
+		auto cos_half_ang = (float)Cos(ang_by_2);
+		auto sin_half_ang = (float)Sqrt(1 - cos_half_ang * cos_half_ang);
+		auto s = ang_by_2 > maths::tinyd ? static_cast<float>(0.5 * sin_half_ang / ang_by_2) : 0.5f;
+		return { v.x * s, v.y * s, v.z * s, cos_half_ang };
 	}
 
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
@@ -533,10 +532,22 @@ namespace pr::maths
 			PR_CHECK(FEqlRelative(ideal_mean, actual_mean, S(0.01)), true);
 		}
 		{// LogMap <-> ExpMap
-			auto q0 = quat::Random(rng);
-			auto v = LogMap(q0);
-			auto q1 = ExpMap(v);
-			PR_EXPECT(FEql(q0, q1));
+			{
+				auto q0 = quat::Random(rng);
+				auto v0 = LogMap(q0);
+				auto q1 = ExpMap(v0);
+				PR_EXPECT(FEql(q0, q1));
+			}
+			// Edge cases
+			{
+				auto q0 = quat{ -2.09713704e-08f, -0.00148352725f, -6.48572168e-11f, -0.999998927f };
+				q0 = Normalise(q0);
+
+				auto v0 = LogMap(q0);
+				auto q1 = ExpMap(v0);
+				auto angular_error = Angle(q0, q1);
+				PR_EXPECT(Abs(angular_error) < 0.001f);
+			}
 		}
 	}
 

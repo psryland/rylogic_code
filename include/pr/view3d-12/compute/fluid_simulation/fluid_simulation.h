@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -352,7 +352,7 @@ namespace pr::rdr12::compute::fluid
 				// Allocate read back buffer space and read from the particle buffer
 				auto buf = job.m_readback.Alloc(count * sizeof(Particle), alignof(Particle));
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_particles.get(), start * sizeof(Particle));
-				*particles = buf;
+				*particles = std::move(buf);
 
 				job.m_barriers.Transition(m_r_particles.get(), previous_state.Mip0State());
 				job.m_barriers.Commit();
@@ -367,7 +367,7 @@ namespace pr::rdr12::compute::fluid
 				// Allocate read back buffer space and read from the dynamics buffer
 				auto buf = job.m_readback.Alloc(count * sizeof(Dynamics), alignof(Dynamics));
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_dynamics.get(), start * sizeof(Dynamics));
-				*dynamics = buf;
+				*dynamics = std::move(buf);
 
 				job.m_barriers.Transition(m_r_dynamics.get(), previous_state.Mip0State());
 				job.m_barriers.Commit();
@@ -817,7 +817,7 @@ namespace pr::rdr12::compute::fluid
 			{
 				auto buf = job.m_readback.Alloc<OutputData>(1);
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_output.get(), 0);
-				Output.m_cull_results = buf;
+				Output.m_cull_results = std::move(buf);
 			}
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -905,7 +905,7 @@ namespace pr::rdr12::compute::fluid
 			{
 				auto buf = job.m_readback.Alloc<OutputData>(1);
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_output.get(), 0);
-				Output.m_debug_results = buf;
+				Output.m_debug_results = std::move(buf);
 			}
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 

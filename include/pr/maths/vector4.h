@@ -161,6 +161,7 @@ namespace pr
 		static constexpr Vec4 Max() { return Vec4(limits<S>::max(), limits<S>::max(), limits<S>::max(), limits<S>::max()); }
 		static constexpr Vec4 Lowest() { return Vec4(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest()); }
 		static constexpr Vec4 Epsilon() { return Vec4(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon()); }
+		static constexpr Vec4 Infinity() { return Vec4(limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity()); }
 
 		// Construct normalised
 		static Vec4 Normal(S x, S y, S z, S w) requires std::is_floating_point_v<S>

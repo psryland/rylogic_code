@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Bounding Box
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -101,10 +101,10 @@ namespace Rylogic.Maths
 		public float MaxZ => Centre.z + Radius.z;
 
 		/// <summary>Returns the lower corner of the bounding box</summary>
-		public v4 Lower() => Centre - Radius;
+		public v4 Min => Centre - Radius;
 
 		/// <summary>Returns the upper corner of the bounding box</summary>
-		public v4 Upper() => Centre + Radius;
+		public v4 Max => Centre + Radius;
 
 		/// <summary>Returns the lower dimension for an axis of the bounding box</summary>
 		public float Lower(int axis) => Centre[axis] - Radius[axis];

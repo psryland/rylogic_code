@@ -10,17 +10,26 @@
     "Programming Languages"
   ],
   "contributes": {
-    "languages": [{
-      "id": "ldr",
-      "aliases": ["LDraw Script", "ldr"],
-      "extensions": [".ldr"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "ldr",
-      "scopeName": "source.ldr",
-      "path": "./syntaxes/ldr.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "ldr",
+        "aliases": [
+          "LDraw Script",
+          "ldr"
+        ],
+        "extensions": [
+          ".ldr"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ldr",
+        "scopeName": "source.ldr",
+        "path": "./syntaxes/ldr.tmLanguage.json"
+      }
+    ]
   },
   "repository": {
     "type": "git",
@@ -33,5 +42,8 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE.md"
-  ]
+  ],
+  "dependencies": {
+    "npm": "^11.5.2"
+  }
 }

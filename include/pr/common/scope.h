@@ -1,4 +1,4 @@
-//**************************************************************
+﻿//**************************************************************
 // Lambda based RAII object
 //  Copyright (C) Rylogic Ltd 2014
 //**************************************************************
@@ -43,7 +43,8 @@ namespace pr
 		~Scope()
 		{
 			if (m_dont) return;
-			m_undo(m_state);
+			try { m_undo(m_state); }
+			catch (...) {}
 		}
 		Scope(Scope&& rhs) noexcept
 			:m_state(std::move(rhs.m_state))
@@ -86,7 +87,8 @@ namespace pr
 		~Scope()
 		{
 			if (m_dont) return;
-			m_undo();
+			try { m_undo(); }
+			catch (...) {}
 		}
 		Scope(Scope&& rhs) noexcept
 			:m_undo(std::move(rhs.m_undo))

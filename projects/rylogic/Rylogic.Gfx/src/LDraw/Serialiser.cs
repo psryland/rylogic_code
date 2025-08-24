@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************
 
+using System.Text;
 using Rylogic.Maths;
 
 namespace Rylogic.LDraw
@@ -21,8 +22,14 @@ namespace Rylogic.LDraw.Serialiser
 {
 	public class Name(string? name = null)
 	{
-		public string m_name = name ?? string.Empty;
+		public string m_name = Sanitise(name ?? string.Empty);
 		public static implicit operator Name(string? name) => new(name);
+		public static string Sanitise(string name)
+		{
+			var sb = new StringBuilder();
+			foreach (var ch in name) sb.Append(char.IsLetter(ch) || (sb.Length != 0 && char.IsDigit(ch)) ? ch : '_');
+			return sb.ToString();
+		}
 	}
 	public class Colour(uint? colour = null, EKeyword? kw = null)
 	{

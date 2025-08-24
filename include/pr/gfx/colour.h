@@ -198,6 +198,15 @@ namespace pr
 
 	#pragma region Colour32
 
+	inline uint8_t Saturate8(std::integral auto x)
+	{
+		return Clamp<uint8_t>(static_cast<uint8_t>(x), 0, 255);
+	}
+	inline uint8_t Saturate8(std::floating_point auto x)
+	{
+		return Clamp<uint8_t>(static_cast<uint8_t>(std::round(x)), 0, 255);
+	}
+
 	// Equivalent to D3DCOLOR
 	struct Colour32
 	{
@@ -323,56 +332,56 @@ namespace pr
 		friend constexpr Colour32 operator + (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
-				lhs.r + rhs.r,
-				lhs.g + rhs.g,
-				lhs.b + rhs.b,
-				lhs.a + rhs.a);
+				Saturate8(lhs.r + rhs.r),
+				Saturate8(lhs.g + rhs.g),
+				Saturate8(lhs.b + rhs.b),
+				Saturate8(lhs.a + rhs.a));
 		}
 		friend constexpr Colour32 operator - (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
-				lhs.r - rhs.r,
-				lhs.g - rhs.g,
-				lhs.b - rhs.b,
-				lhs.a - rhs.a);
+				Saturate8(lhs.r - rhs.r),
+				Saturate8(lhs.g - rhs.g),
+				Saturate8(lhs.b - rhs.b),
+				Saturate8(lhs.a - rhs.a));
 		}
-		friend constexpr Colour32 operator * (Colour32 lhs, float s)
+		friend constexpr Colour32 operator * (Colour32 lhs, double s)
 		{
 			return Colour32(
-				lhs.r * s,
-				lhs.g * s,
-				lhs.b * s,
-				lhs.a * s);
+				Saturate8(lhs.r * s),
+				Saturate8(lhs.g * s),
+				Saturate8(lhs.b * s),
+				Saturate8(lhs.a * s));
 		}
-		friend constexpr Colour32 operator * (float s, Colour32 rhs)
+		friend constexpr Colour32 operator * (double s, Colour32 rhs)
 		{
 			return rhs * s;
 		}
 		friend constexpr Colour32 operator * (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
-				lhs.r * rhs.r / 255,
-				lhs.g * rhs.g / 255,
-				lhs.b * rhs.b / 255,
-				lhs.a * rhs.a / 255);
+				Saturate8(lhs.r * rhs.r / 255.0),
+				Saturate8(lhs.g * rhs.g / 255.0),
+				Saturate8(lhs.b * rhs.b / 255.0),
+				Saturate8(lhs.a * rhs.a / 255.0));
 		}
-		friend constexpr Colour32 operator / (Colour32 lhs, float s)
+		friend constexpr Colour32 operator / (Colour32 lhs, double s)
 		{
 			assert("divide by zero" && s != 0);
 			return Colour32(
-				lhs.r / s,
-				lhs.g / s,
-				lhs.b / s,
-				lhs.a / s);
+				Saturate8(lhs.r / s),
+				Saturate8(lhs.g / s),
+				Saturate8(lhs.b / s),
+				Saturate8(lhs.a / s));
 		}
 		friend constexpr Colour32 operator % (Colour32 lhs, int s)
 		{
 			assert("divide by zero" && s != 0);
 			return Colour32(
-				lhs.r % s,
-				lhs.g % s,
-				lhs.b % s,
-				lhs.a % s);
+				Saturate8(lhs.r % s),
+				Saturate8(lhs.g % s),
+				Saturate8(lhs.b % s),
+				Saturate8(lhs.a % s));
 		}
 		friend constexpr Colour32& operator += (Colour32& lhs, Colour32 rhs)
 		{

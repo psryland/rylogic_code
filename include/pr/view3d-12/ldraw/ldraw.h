@@ -65,7 +65,6 @@ namespace pr::rdr12::ldraw
 		x(Circle            , = HashI("Circle"                ))\
 		x(Closed            , = HashI("Closed"                ))\
 		x(Colour            , = HashI("Colour"                ))\
-		x(ColourMask        , = HashI("ColourMask"            ))\
 		x(Colours           , = HashI("Colours"               ))\
 		x(Commands          , = HashI("Commands"              ))\
 		x(Cone              , = HashI("Cone"                  ))\
@@ -103,6 +102,7 @@ namespace pr::rdr12::ldraw
 		x(GenerateNormals   , = HashI("GenerateNormals"       ))\
 		x(Grid              , = HashI("Grid"                  ))\
 		x(Group             , = HashI("Group"                 ))\
+		x(GroupColour       , = HashI("GroupColour"           ))\
 		x(Hidden            , = HashI("Hidden"                ))\
 		x(Instance          , = HashI("Instance"              ))\
 		x(Inverse           , = HashI("Inverse"               ))\
@@ -304,7 +304,7 @@ namespace pr::rdr12::ldraw
 		Transform = 1 << 2,
 		Children = 1 << 3,
 		Colour = 1 << 4,
-		ColourMask = 1 << 5,
+		GroupColour = 1 << 5,
 		Reflectivity = 1 << 6,
 		Flags = 1 << 7,
 		Animation = 1 << 8,

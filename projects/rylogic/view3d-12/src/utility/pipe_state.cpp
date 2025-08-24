@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -19,7 +19,7 @@ namespace pr::rdr12
 		auto frame_number = m_wnd->FrameNumber();
 
 		// See if a pipeline state object already exists
-		auto iter = pr::find_if(m_pool, [=](auto& pso) { return pso.m_hash == desc.m_hash; });
+		auto iter = pr::find_if(m_pool, [=](auto& pso) { return pso.m_hash == desc.hash(); });
 		if (iter == m_pool.end())
 		{
 			// If it doesn't exists, create it now
@@ -42,7 +42,7 @@ namespace pr::rdr12
 			// Create the pipeline state instance
 			D3DPtr<ID3D12PipelineState> pso;
 			Check(device->CreateGraphicsPipelineState(desc, __uuidof(ID3D12PipelineState), (void**)pso.address_of()));
-			iter = m_pool.insert(iter, PipeStateObject(pso, frame_number, desc.m_hash));
+			iter = m_pool.insert(iter, PipeStateObject(pso, frame_number, desc.hash()));
 		}
 
 		auto& pso = *iter;

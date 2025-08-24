@@ -1,7 +1,10 @@
 ﻿#if 1
+#include <thread>
 #include "pr/common/min_max_fix.h"
 #include "pr/network/socket_stream.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
+
+using namespace pr;
 
 namespace tests
 {
@@ -12,9 +15,17 @@ namespace tests
 
 		pr::network::Winsock winsock;
 		pr::network::socket_stream ldr;
+		ldr.set_non_blocking();
 		
-		if (ldr.connect("localhost", 1976).good())
-			ldr << builder.ToText(false) << std::flush;
+		for (auto t = 0.f;; t += 0.01f, std::this_thread::sleep_for(std::chrono::milliseconds(10)))
+		{
+			builder.Clear();
+			builder.BinaryStream();
+			builder.Command().object_transform("g", m4x4::Transform(0, t, 0, v4::Origin()));
+
+			if (ldr.connect("localhost", 1976).good())
+				ldr << builder.ToBinary() << std::flush;
+		}
 
 		//std::cout << builder.ToString(true);
 		//ldr << "*Box bb FF00FF00 { *Data {1 2 3} }";

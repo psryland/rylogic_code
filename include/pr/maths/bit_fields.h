@@ -76,14 +76,18 @@ namespace pr
 	template <BitField T, BitField U>
 	[[nodiscard]] constexpr bool AnySet(T value, U mask)
 	{
-		return (static_cast<uint64_t>(value) & static_cast<uint64_t>(mask)) != 0;
+		auto value64 = static_cast<uint64_t>(value);
+		auto mask64 = static_cast<uint64_t>(mask);
+		return (value64 & mask64) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
 	template <BitField T, BitField U>
 	[[nodiscard]] constexpr bool AllSet(T value, U mask)
 	{
-		return (static_cast<uint64_t>(value) & static_cast<uint64_t>(mask)) == static_cast<uint64_t>(mask);
+		auto value64 = static_cast<uint64_t>(value);
+		auto mask64 = static_cast<uint64_t>(mask);
+		return (value64 & mask64) == mask64;
 	}
 
 	// Reverse the order of bits in 'v'

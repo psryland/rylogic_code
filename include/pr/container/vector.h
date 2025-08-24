@@ -829,18 +829,14 @@ namespace pr
 		// assign right
 		template <int Len> vector& operator = (Type const (&right)[Len])
 		{
-			insert(end(), &right[0], &right[0] + Len);
+			assign(&right[0], &right[0] + Len);
 			return *this;
 		}
 
 		// assign right
 		template <typename tarr> vector& operator = (tarr const& right)
 		{
-			#if _MSC_VER >= 1600
-			insert(end(), std::begin(right), std::end(right));
-			#else
-			insert(end(), right.begin(), right.end());
-			#endif
+			assign(std::begin(right), std::end(right));
 			return *this;
 		}
 

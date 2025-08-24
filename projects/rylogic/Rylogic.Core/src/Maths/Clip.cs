@@ -1,10 +1,9 @@
-//***************************************************
+﻿//***************************************************
 // Bounding Box
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
 
 using System;
-using System.Diagnostics;
 
 namespace Rylogic.Maths
 {
@@ -17,8 +16,8 @@ namespace Rylogic.Maths
 		public static bool Clip(BBox bbox, v4 point_, v4 direction_, ref float t0, ref float t1)
 		{
 			// Convert v4's to float arrays for efficient indexing
-			var lower = (float[])bbox.Lower();
-			var upper = (float[])bbox.Upper();
+			var lower = (float[])bbox.Min;
+			var upper = (float[])bbox.Max;
 			var point = (float[])point_;
 			var direction = (float[])direction_;
 

@@ -100,17 +100,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Convert to a 4x4 matrix with zero translation</summary>
-		public m4x4 m4x4
-		{
-			get { return new m4x4(this, v4.Origin); }
-		}
-
-		/// <summary>ToString</summary>
-		public override string ToString() => ToString3x3();
-		public string ToString4x3() => $"{x} \n{y} \n{z} \n";
-		public string ToString3x3() => $"{x.xyz} \n{y.xyz} \n{z.xyz} \n";
-		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n{z.ToString(format)} \n";
-		public string ToCodeString() => $"{x}, {y}, {z}";
+		public m4x4 m4x4 => new(this, v4.Origin);
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
@@ -123,107 +113,6 @@ namespace Rylogic.Maths
 			};
 		}
 
-		// Static m3x4 types
-		public static readonly m3x4 Zero = new(v4.Zero, v4.Zero, v4.Zero);
-		public static readonly m3x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis);
-
-		// Operators
-		public override bool Equals(object? o)              { return o is m3x4 m && m == this; }
-		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode(); } }
-		public static m3x4 operator + (m3x4 rhs)            { return rhs; }
-		public static m3x4 operator - (m3x4 rhs)            { return new m3x4(-rhs.x, -rhs.y, -rhs.z); }
-		public static m3x4 operator + (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
-		public static m3x4 operator - (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
-		public static m3x4 operator * (m3x4 lhs, float rhs) { return new m3x4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs); }
-		public static m3x4 operator * (float lhs, m3x4 rhs) { return new m3x4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z); }
-		public static m3x4 operator / (m3x4 lhs, float rhs) { return new m3x4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs); }
-		public static bool operator ==(m3x4 lhs, m3x4 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z; }
-		public static bool operator !=(m3x4 lhs, m3x4 rhs)  { return !(lhs == rhs); }
-		public static v3 operator * (m3x4 lhs, v3 rhs)
-		{
-			Math_.Transpose(ref lhs);
-			return new v3(
-				Math_.Dot(lhs.x.xyz, rhs),
-				Math_.Dot(lhs.y.xyz, rhs),
-				Math_.Dot(lhs.z.xyz, rhs));
-		}
-		public static v4 operator * (m3x4 lhs, v4 rhs)
-		{
-			Math_.Transpose(ref lhs);
-			return new v4(
-				Math_.Dot(lhs.x, rhs),
-				Math_.Dot(lhs.y, rhs),
-				Math_.Dot(lhs.z, rhs),
-				rhs.w);
-		}
-		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
-		{
-			Math_.Transpose(ref lhs);
-			return new m3x4(
-				new v4(Math_.Dot(lhs.x.xyz, rhs.x.xyz), Math_.Dot(lhs.y.xyz, rhs.x.xyz), Math_.Dot(lhs.z.xyz, rhs.x.xyz), 0f),
-				new v4(Math_.Dot(lhs.x.xyz, rhs.y.xyz), Math_.Dot(lhs.y.xyz, rhs.y.xyz), Math_.Dot(lhs.z.xyz, rhs.y.xyz), 0f),
-				new v4(Math_.Dot(lhs.x.xyz, rhs.z.xyz), Math_.Dot(lhs.y.xyz, rhs.z.xyz), Math_.Dot(lhs.z.xyz, rhs.z.xyz), 0f));
-		}
-
-		// Parse
-		public static m3x4 Parse3x3(string s)
-		{
-			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse3x3)}:string argument was null");
-			return TryParse3x3(s, out m3x4 result) ? result : throw new FormatException($"{nameof(Parse3x3)}: string argument does not represent a 3x3 matrix");
-		}
-		public static m3x4 Parse4x3(string s)
-		{
-			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse4x3)}:string argument was null");
-			return TryParse4x3(s, out m3x4 result) ? result : throw new FormatException($"{nameof(Parse4x3)}: string argument does not represent a 3x4 matrix");
-		}
-		public static bool TryParse3x3(string s, out m3x4 mat, bool row_major = true)
-		{
-			if (s == null)
-			{
-				mat = default;
-				return false;
-			}
-
-			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 9, StringSplitOptions.RemoveEmptyEntries);
-			if (values.Length != 9)
-			{
-				mat = default;
-				return false;
-			}
-
-			mat = row_major
-				? new m3x4(
-					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), 0),
-					new v4(float.Parse(values[3]), float.Parse(values[4]), float.Parse(values[5]), 0),
-					new v4(float.Parse(values[6]), float.Parse(values[7]), float.Parse(values[8]), 0))
-				: new m3x4(
-					new v4(float.Parse(values[0]), float.Parse(values[3]), float.Parse(values[6]), 0),
-					new v4(float.Parse(values[1]), float.Parse(values[4]), float.Parse(values[7]), 0),
-					new v4(float.Parse(values[2]), float.Parse(values[5]), float.Parse(values[8]), 0));
-			return true;
-		}
-		public static bool TryParse4x3(string s, out m3x4 mat)
-		{
-			if (s == null)
-			{
-				mat = default;
-				return false;
-			}
-
-			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 12, StringSplitOptions.RemoveEmptyEntries);
-			if (values.Length != 12)
-			{
-				mat = default;
-				return false;
-			}
-
-			mat = new m3x4(
-				new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
-				new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
-				new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])));
-			return true;
-		}
-
 		/// <summary>
 		/// Create from an pitch, yaw, and roll (in radians).
 		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up. (And to match DirectX)</summary>
@@ -232,7 +121,7 @@ namespace Rylogic.Maths
 			float cos_p = (float)Math.Cos(pitch), sin_p = (float)Math.Sin(pitch);
 			float cos_y = (float)Math.Cos(yaw  ), sin_y = (float)Math.Sin(yaw  );
 			float cos_r = (float)Math.Cos(roll ), sin_r = (float)Math.Sin(roll );
-			return new m3x4(
+			return new(
 				new v4( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
 				new v4(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
 				new v4( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f));
@@ -337,28 +226,138 @@ namespace Rylogic.Maths
 		/// <summary>Create a scale matrix</summary>
 		public static m3x4 Scale(float s)
 		{
-			return new m3x4(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis);
+			return new(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis);
 		}
 		public static m3x4 Scale(float sx, float sy, float sz)
 		{
-			return new m3x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
+			return new(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
 		}
 
 		/// <summary>Create a shear matrix</summary>
 		public static m3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
 		{
-			var mat = new m3x4{};
-			mat.x = new v4(1.0f, sxy, sxz, 0.0f);
-			mat.y = new v4(syx, 1.0f, syz, 0.0f);
-			mat.z = new v4(szx, szy, 1.0f, 0.0f);
-			return mat;
+			return new(
+				new(1.0f, sxy, sxz, 0.0f),
+				new(syx, 1.0f, syz, 0.0f),
+				new(szx, szy, 1.0f, 0.0f)
+			);
 		}
+
+		#region Statics
+		public static readonly m3x4 Zero = new(v4.Zero, v4.Zero, v4.Zero);
+		public static readonly m3x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis);
+		#endregion
+
+		#region Operators
+		public static m3x4 operator +(m3x4 rhs)
+		{
+			return rhs;
+		}
+		public static m3x4 operator -(m3x4 rhs)
+		{
+			return new(-rhs.x, -rhs.y, -rhs.z);
+		}
+		public static m3x4 operator +(m3x4 lhs, m3x4 rhs)
+		{
+			return new(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
+		}
+		public static m3x4 operator -(m3x4 lhs, m3x4 rhs)
+		{
+			return new(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+		}
+		public static m3x4 operator *(m3x4 lhs, float rhs)
+		{
+			return new(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
+		}
+		public static m3x4 operator *(float lhs, m3x4 rhs)
+		{
+			return new(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
+		}
+		public static m3x4 operator /(m3x4 lhs, float rhs)
+		{
+			return new(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
+		}
+		public static m3x4 operator %(m3x4 lhs, float rhs)
+		{
+			return new(lhs.x % rhs, lhs.y % rhs, lhs.z % rhs);
+		}
+		public static m3x4 operator %(m3x4 lhs, double rhs)
+		{
+			return lhs % (float)rhs;
+		}
+		public static m3x4 operator %(m3x4 lhs, m3x4 rhs)
+		{
+			return new(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z);
+		}
+		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
+		{
+			Math_.Transpose(ref lhs);
+			return new(
+				new v4(Math_.Dot(lhs.x.xyz, rhs.x.xyz), Math_.Dot(lhs.y.xyz, rhs.x.xyz), Math_.Dot(lhs.z.xyz, rhs.x.xyz), 0f),
+				new v4(Math_.Dot(lhs.x.xyz, rhs.y.xyz), Math_.Dot(lhs.y.xyz, rhs.y.xyz), Math_.Dot(lhs.z.xyz, rhs.y.xyz), 0f),
+				new v4(Math_.Dot(lhs.x.xyz, rhs.z.xyz), Math_.Dot(lhs.y.xyz, rhs.z.xyz), Math_.Dot(lhs.z.xyz, rhs.z.xyz), 0f));
+		}
+		public static v3 operator * (m3x4 lhs, v3 rhs)
+		{
+			Math_.Transpose(ref lhs);
+			return new v3(
+				Math_.Dot(lhs.x.xyz, rhs),
+				Math_.Dot(lhs.y.xyz, rhs),
+				Math_.Dot(lhs.z.xyz, rhs));
+		}
+		public static v4 operator * (m3x4 lhs, v4 rhs)
+		{
+			Math_.Transpose(ref lhs);
+			return new v4(
+				Math_.Dot(lhs.x, rhs),
+				Math_.Dot(lhs.y, rhs),
+				Math_.Dot(lhs.z, rhs),
+				rhs.w);
+		}
+		#endregion
+
+		#region Equals
+		public static bool operator == (m3x4 lhs, m3x4 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+		}
+		public static bool operator != (m3x4 lhs, m3x4 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object? o)
+		{
+			return o is m3x4 m && m == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y, z }.GetHashCode();
+		}
+		#endregion
+
+		#region ToString
+		public override string ToString() => ToString3x3();
+		public string ToString4x3() => $"{x} \n{y} \n{z} \n";
+		public string ToString3x3() => $"{x.xyz} \n{y.xyz} \n{z.xyz} \n";
+		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n{z.ToString(format)} \n";
+		public string ToCodeString() => $"new m4x4(\nnew v4({x.ToCodeString()}),\n new v4({y.ToCodeString()}),\n new v4({z.ToCodeString()})\n)";
+		#endregion
 
 		#region Parse
 		public static m3x4 Parse(string s)
 		{
 			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse)}:string argument was null");
 			return TryParse(s, out var result) ? result : throw new FormatException($"{nameof(Parse)}: string argument does not represent a 4x4 matrix");
+		}
+		public static m3x4 Parse3x3(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse3x3)}:string argument was null");
+			return TryParse3x3(s, out var result) ? result : throw new FormatException($"{nameof(Parse3x3)}: string argument does not represent a 3x3 matrix");
+		}
+		public static m3x4 Parse4x3(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse4x3)}:string argument was null");
+			return TryParse4x3(s, out var result) ? result : throw new FormatException($"{nameof(Parse4x3)}: string argument does not represent a 3x4 matrix");
 		}
 		public static bool TryParse(string s, out m3x4 mat, bool row_major = true)
 		{
@@ -376,30 +375,78 @@ namespace Rylogic.Maths
 			}
 
 			mat = row_major
-				? new m3x4(
+				? new(
 					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
 					new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
 					new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])))
-				: new m3x4(
+				: new(
 					new v4(float.Parse(values[0]), float.Parse(values[3]), float.Parse(values[6]), float.Parse(values[9])),
 					new v4(float.Parse(values[1]), float.Parse(values[4]), float.Parse(values[7]), float.Parse(values[10])),
 					new v4(float.Parse(values[2]), float.Parse(values[5]), float.Parse(values[8]), float.Parse(values[11])));
 			return true;
 		}
+		public static bool TryParse3x3(string s, out m3x4 mat, bool row_major = true)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 9, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 9)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = row_major
+				? new(
+					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), 0),
+					new v4(float.Parse(values[3]), float.Parse(values[4]), float.Parse(values[5]), 0),
+					new v4(float.Parse(values[6]), float.Parse(values[7]), float.Parse(values[8]), 0))
+				: new(
+					new v4(float.Parse(values[0]), float.Parse(values[3]), float.Parse(values[6]), 0),
+					new v4(float.Parse(values[1]), float.Parse(values[4]), float.Parse(values[7]), 0),
+					new v4(float.Parse(values[2]), float.Parse(values[5]), float.Parse(values[8]), 0));
+			return true;
+		}
+		public static bool TryParse4x3(string s, out m3x4 mat)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 12, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 12)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = new(
+				new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
+				new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
+				new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])));
+			return true;
+		}
 		#endregion
+
 		#region Random
 
 		/// <summary>Create a random 3x4 matrix</summary>
 		public static m3x4 Random(float min_value, float max_value, Random r)
 		{
-			return new m3x4(
+			return new(
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)));
 		}
 		public static m3x4 Random(float min_value, float max_value, float w, Random r)
 		{
-			return new m3x4(
+			return new(
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w));
@@ -449,7 +496,7 @@ namespace Rylogic.Maths
 		/// <summary>Absolute value of 'x'</summary>
 		public static m3x4 Abs(m3x4 x)
 		{
-			return new m3x4(
+			return new(
 				Abs(x.x),
 				Abs(x.y),
 				Abs(x.z));
@@ -600,8 +647,8 @@ namespace Rylogic.Maths
 			switch (n % 3)
 			{
 			default: return mat;
-			case 1: return new m3x4(mat.z, mat.x, mat.y);
-			case 2: return new m3x4(mat.y, mat.z, mat.x);
+			case 1: return new(mat.z, mat.x, mat.y);
+			case 2: return new(mat.y, mat.z, mat.x);
 			}
 		}
 
@@ -632,19 +679,19 @@ namespace Rylogic.Maths
 		/// <summary>Spherically interpolate between two rotations</summary>
 		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, double frac)
 		{
-			return new m3x4(Slerp(new Quat(lhs), new Quat(rhs), frac));
+			return new(Slerp(new Quat(lhs), new Quat(rhs), frac));
 		}
 
 		/// <summary>Return the average of a collection of rotations transforms</summary>
 		public static m3x4 Average(IEnumerable<m3x4> a2b)
 		{
-			return new m3x4(Average(a2b.Select(x => new Quat(x))));
+			return new(Average(a2b.Select(x => new Quat(x))));
 		}
 
 		/// <summary>Return the cross product matrix for 'vec'</summary>
 		public static m3x4 CPM(v4 vec)
 		{
-			return new m3x4(
+			return new(
 				new v4(    0f, +vec.z, -vec.y, 0f),
 				new v4(-vec.z,     0f, +vec.x, 0f),
 				new v4(+vec.y, -vec.x,     0f, 0f));

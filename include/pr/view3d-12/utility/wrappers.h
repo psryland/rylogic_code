@@ -1003,6 +1003,8 @@ namespace pr::rdr12
 
 		StreamOutputDesc()
 			:D3D12_STREAM_OUTPUT_DESC()
+			,m_entries()
+			,m_strides()
 		{
 			pSODeclaration = nullptr;
 			NumEntries = 0U;
@@ -1010,18 +1012,15 @@ namespace pr::rdr12
 			NumStrides = 0U;
 			RasterizedStream = 0;
 		}
+
 		StreamOutputDesc& add_entry(D3D12_SO_DECLARATION_ENTRY const& entry)
 		{
 			m_entries.push_back(entry);
-			pSODeclaration = m_entries.data();
-			NumEntries = s_cast<UINT>(m_entries.size());
 			return *this;
 		}
 		StreamOutputDesc& add_buffer(size_t stride)
 		{
 			m_strides.push_back(s_cast<UINT>(stride));
-			pBufferStrides = m_strides.data();
-			NumStrides = s_cast<UINT>(m_strides.size());
 			return *this;
 		}
 		StreamOutputDesc& raster(int stream_index)
@@ -1032,6 +1031,14 @@ namespace pr::rdr12
 		StreamOutputDesc& no_raster()
 		{
 			return raster(D3D12_SO_NO_RASTERIZED_STREAM);
+		}
+		D3D12_STREAM_OUTPUT_DESC const& create()
+		{
+			pSODeclaration = m_entries.data();
+			NumEntries = s_cast<UINT>(m_entries.size());
+			pBufferStrides = m_strides.data();
+			NumStrides = s_cast<UINT>(m_strides.size());
+			return *this;
 		}
 	};
 

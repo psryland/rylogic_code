@@ -237,6 +237,18 @@ namespace pr::rdr12::ldraw
 			str::AdvanceToDelim(pp, m_delim.c_str());
 			return {};
 		}
+		if (std::isnan(real_))
+		{
+			ReportError(EParseError::InvalidValue, Loc(), "real value is Not-a-Number");
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
+		if (!std::isfinite(real_))
+		{
+			ReportError(EParseError::InvalidValue, Loc(), "real value is not finite");
+			str::AdvanceToDelim(pp, m_delim.c_str());
+			return {};
+		}
 		return real_;
 	}
 

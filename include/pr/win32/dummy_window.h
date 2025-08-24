@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // Dummy window
 //  Copyright (c) Rylogic Ltd 2020
 //**********************************************
@@ -96,7 +96,7 @@ namespace pr
 		DummyWindow(DummyWindow const&) = delete;
 		DummyWindow& operator =(DummyWindow&&) = delete;
 		DummyWindow& operator =(DummyWindow const&) = delete;
-		~DummyWindow()
+		virtual ~DummyWindow()
 		{
 			if (m_hwnd != nullptr)
 			{
@@ -131,7 +131,7 @@ namespace pr
 		}
 
 		// Window message received
-		pr::EventHandler<DummyWindow&, WindowEventArgs&> Message;
+		EventHandler<DummyWindow&, WindowEventArgs&> Message;
 	};
 
 	// Dummy window with support for tasks
@@ -158,7 +158,7 @@ namespace pr
 		SyncContext(SyncContext const&) = delete;
 		SyncContext& operator =(SyncContext&&) = delete;
 		SyncContext& operator =(SyncContext const&) = delete;
-		~SyncContext()
+		virtual ~SyncContext()
 		{
 			LastTask();
 		}

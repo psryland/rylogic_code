@@ -521,10 +521,10 @@ namespace Rylogic.Gfx
 			{
 				return View3D_ObjectColourGet(Handle, base_colour, name);
 			}
-			public void ColourSet(Colour32 colour, uint mask, string? name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
+			public void ColourSet(bool base_colour, Colour32 colour, string? name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
 				var prev = Colour;
-				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
+				View3D_ObjectColourSet(Handle, base_colour, colour, name, op, op_value);
 				if (prev != Colour)
 				{
 					NotifyPropertyChanged(nameof(Colour));
@@ -532,7 +532,7 @@ namespace Rylogic.Gfx
 			}
 			public void ColourSet(Colour32 colour, string? name = null)
 			{
-				ColourSet(colour, 0xFFFFFFFF, name);
+				ColourSet(false, colour, name);
 			}
 
 			/// <summary>

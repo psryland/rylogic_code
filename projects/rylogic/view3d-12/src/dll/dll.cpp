@@ -1207,6 +1207,30 @@ VIEW3D_API void __stdcall View3D_CameraFocusPointSet(view3d::Window window, view
 	CatchAndReport(View3D_CameraFocusPointSet, window,);
 }
 
+// Get/Set bounds on the camera focus point position
+VIEW3D_API view3d::BBox __stdcall View3D_CameraFocusBoundsGet(view3d::Window window)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		return To<view3d::BBox>(window->FocusBounds());
+	}
+	CatchAndReport(View3D_CameraFocusBoundsGet, window, To<view3d::BBox>(pr::BBox::Infinity()));
+}
+VIEW3D_API void __stdcall View3D_CameraFocusBoundsSet(view3d::Window window, view3d::BBox bounds)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		window->FocusBounds(To<pr::BBox>(bounds));
+	}
+	CatchAndReport(View3D_CameraFocusBoundsSet, window,);
+}
+
 // Get/Set the aspect ratio for the camera field of view
 VIEW3D_API float __stdcall View3D_CameraAspectGet(view3d::Window window)
 {
@@ -1634,7 +1658,7 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf8;
+		auto enc = is_file ? EEncoding::auto_detect : EEncoding::already_decoded;
 		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
@@ -1645,7 +1669,7 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_s
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf16_le;
+		auto enc = is_file ? EEncoding::auto_detect : EEncoding::already_decoded;
 		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
@@ -1905,14 +1929,14 @@ VIEW3D_API view3d::Colour __stdcall View3D_ObjectColourGet(view3d::Object object
 	}
 	CatchAndReport(View3D_ObjectColourGet, ,view3d::Colour(0xFFFFFFFF));
 }
-VIEW3D_API void __stdcall View3D_ObjectColourSet(view3d::Object object, view3d::Colour colour, UINT32 mask, char const* name, view3d::EColourOp op, float op_value)
+VIEW3D_API void __stdcall View3D_ObjectColourSet(view3d::Object object, BOOL base_colour, view3d::Colour colour, char const* name, view3d::EColourOp op, float op_value)
 {
 	try
 	{
 		Validate(object);
 
 		DllLockGuard;
-		object->Colour(Colour32(colour), mask, name, static_cast<rdr12::ldraw::EColourOp>(op), op_value);
+		object->Colour(base_colour != 0, Colour32(colour), name, static_cast<rdr12::ldraw::EColourOp>(op), op_value);
 	}
 	CatchAndReport(View3D_ObjectColourSet, ,);
 }

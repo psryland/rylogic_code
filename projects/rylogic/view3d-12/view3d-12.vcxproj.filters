@@ -124,6 +124,9 @@
     <Filter Include="src\shaders\hlsl\skinned">
       <UniqueIdentifier>{66d55b59-61d8-4e4f-a183-2cc8f5c78247}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\shaders\hlsl\ray_cast">
+      <UniqueIdentifier>{a7708a09-abc9-45ea-806a-7a8c50b47eed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\renderer.cpp">
@@ -766,9 +769,6 @@
     <View3dShaderBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </View3dShaderBuild>
-    <View3dShaderBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl">
-      <Filter>src\shaders\hlsl\utility</Filter>
-    </View3dShaderBuild>
     <View3dShaderBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </View3dShaderBuild>
@@ -804,9 +804,6 @@
     </None>
     <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli">
       <Filter>src\shaders\hlsl\lighting</Filter>
-    </None>
-    <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
-      <Filter>src\shaders\hlsl\utility</Filter>
     </None>
     <None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli">
       <Filter>src\shaders\hlsl\shadow</Filter>
@@ -847,6 +844,9 @@
     <None Include="src\shaders\hlsl\utility\tri_table.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
+    <None Include="src\shaders\hlsl\ray_cast\ray_cast_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\ray_cast</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
@@ -860,6 +860,9 @@
     </FxCompile>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <Filter>src\compute\fluid_simulation</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\hlsl\ray_cast\ray_cast.hlsl">
+      <Filter>src\shaders\hlsl\ray_cast</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

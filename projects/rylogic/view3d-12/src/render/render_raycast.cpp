@@ -24,7 +24,7 @@ namespace pr::rdr12
 
 		namespace ray_cast
 		{
-			#include "view3d-12/src/shaders/hlsl/utility/ray_cast_cbuf.hlsli"
+			#include "view3d-12/src/shaders/hlsl/ray_cast/ray_cast_cbuf.hlsli"
 			static_assert((sizeof(CBufFrame) % 16) == 0);
 			static_assert((sizeof(CBufNugget) % 16) == 0);
 		}
@@ -33,15 +33,7 @@ namespace pr::rdr12
 	using Intercept = shaders::ray_cast::Intercept;
 	constexpr int MaxRays = shaders::ray_cast::MaxRays;
 	constexpr int MaxIntercepts = shaders::ray_cast::MaxIntercepts;
-
-	// Stream output stage buffer format
-	static const StreamOutputDesc so_desc = StreamOutputDesc{}
-		.add_buffer(sizeof(Intercept))
-		.add_entry({ 0, "WSIntercept", 0, 0, 4, 0 })
-		.add_entry({ 0, "SnapType", 0, 0, 1, 0 })
-		.add_entry({ 0, "RayIndex", 0, 0, 1, 0 })
-		.add_entry({ 0, "InstPtr", 0, 0, 2, 0 })
-		.no_raster();
+	constexpr int SOBufferCount = MaxRays * MaxIntercepts + 1; // +1 for space to store the buffer size counter
 
 	RenderRayCast::RenderRayCast(Scene& scene, bool continuous)
 		: RenderStep(Id, scene)
@@ -51,26 +43,32 @@ namespace pr::rdr12
 		, m_flags(EHitTestFlags::Verts | EHitTestFlags::Edges | EHitTestFlags::Faces)
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
-		, m_gsync()
-		, m_shader_vert(scene.d3d())
-		, m_shader_edge(scene.d3d())
-		, m_shader_face(scene.d3d())
-		, m_shader(&m_shader_vert)
-		, m_results()
-		, m_results_uav()
-		, m_readback(m_gsync, MaxRays * MaxIntercepts * sizeof(Intercept)) // Todo: checkme
+		, m_gsync(scene.d3d())
+		, m_shader(scene.d3d())
+		, m_zero()
+		, m_out()
+		, m_readback(m_gsync, SOBufferCount * sizeof(Intercept))
 		, m_output()
 		, m_continuous(continuous)
 	{
+		// Stream output stage buffer format
+		static StreamOutputDesc so_desc = StreamOutputDesc{}
+			.add_buffer(sizeof(Intercept))
+			.add_entry({ 0, "WSIntercept", 0, 0, 4, 0 })
+			.add_entry({ 0, "SnapType", 0, 0, 1, 0 })
+			.add_entry({ 0, "RayIndex", 0, 0, 1, 0 })
+			.add_entry({ 0, "InstPtr", 0, 0, 2, 0 })
+			.no_raster();
+
 		// Create a default PSO description
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC{
-			.pRootSignature = m_shader_vert.m_signature.get(),
-			.VS = m_shader->m_code.VS,
+			.pRootSignature = m_shader.m_signature.get(),
+			.VS = {},
 			.PS = {}, // No pixel shader when using stream output
-			.DS = m_shader->m_code.DS,
-			.HS = m_shader->m_code.HS,
-			.GS = m_shader->m_code.GS,
-			.StreamOutput = so_desc,
+			.DS = {},
+			.HS = {},
+			.GS = {},
+			.StreamOutput = so_desc.create(),
 			.BlendState = BlendStateDesc{},
 			.SampleMask = UINT_MAX,
 			.RasterizerState = RasterStateDesc{},
@@ -89,23 +87,17 @@ namespace pr::rdr12
 
 		// Set up the output buffers
 		ResourceFactory factory(rdr());
-		ResDesc rdesc = ResDesc::Buf<Intercept>(MaxIntercepts, {}).usage(EUsage::UnorderedAccess).def_state(D3D12_RESOURCE_STATE_STREAM_OUT);
-		m_results = factory.CreateResource(rdesc, "RayCastIntercepts");
-
-		// Create a descriptor for the result buffer
 		ResourceStore::Access store(rdr());
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {
-			.Format = DXGI_FORMAT_R32_TYPELESS,
-			.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_BUFFER,
-			.Buffer = D3D12_BUFFER_UAV{
-				.FirstElement = 0,
-				.NumElements = s_cast<UINT>(MaxIntercepts),
-				.StructureByteStride = sizeof(Intercept),
-				.CounterOffsetInBytes = 0,
-				.Flags = D3D12_BUFFER_UAV_FLAGS::D3D12_BUFFER_UAV_FLAG_NONE,
-			},
-		};
-		m_results_uav = store.Descriptors().Create(m_results.get(), uav_desc);
+		{
+			// Initialise a static zero buffer for resetting the output count
+			auto zeros = Intercept{};
+			ResDesc rdesc = ResDesc::Buf<Intercept>(1, {&zeros, 1}).def_state(D3D12_RESOURCE_STATE_COPY_SOURCE);
+			m_zero = factory.CreateResource(rdesc, "RayCast-ZeroCount");
+		}
+		{
+			ResDesc rdesc = ResDesc::Buf<Intercept>(SOBufferCount, {}).usage(EUsage::UnorderedAccess).def_state(D3D12_RESOURCE_STATE_STREAM_OUT);
+			m_out = factory.CreateResource(rdesc, "RayCast-Intercepts");
+		}
 	}
 
 	// Set the rays to cast.
@@ -172,9 +164,8 @@ namespace pr::rdr12
 			m_gsync.Wait(sync_point);
 
 			// Read the values out of the buffer
-			// Look for the sentinel to indicate the length
-			auto intercepts = output.span<Intercept>();
-			intercepts = intercepts.subspan(0, index_if(intercepts, [](auto& i) { return i.inst_ptr == nullptr; }));
+			auto count = *type_ptr<uint64_t>(output.ptr<std::byte>((SOBufferCount - 1LL) * sizeof(Intercept)));
+			auto intercepts = output.span<Intercept>(0, count);
 
 			// Returns the squared distance from the ray
 			auto DistSqFromRay = [](HitTestRay const& ray, Intercept const& intercept)
@@ -241,7 +232,7 @@ namespace pr::rdr12
 			// Forward each unique intercept to the callback
 			for (int i = 0, iend = isize(intercepts); i != iend; )
 			{
-				auto& intercept = intercepts[i];
+				auto const& intercept = intercepts[i];
 
 				// Forward the hits to the callback
 				HitTestResult result = {
@@ -290,31 +281,40 @@ namespace pr::rdr12
 		// Sort the draw list if needed
 		SortIfNeeded();
 
+		// Bind the descriptor heaps
+		auto des_heaps = { wnd().m_heap_view.get(), wnd().m_heap_samp.get() };
+		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
+
 		// Set stream output targets
+		constexpr size_t intercept_data_size = MaxRays * MaxIntercepts * sizeof(Intercept);
 		D3D12_STREAM_OUTPUT_BUFFER_VIEW so_view = {
-			.BufferLocation = m_results->GetGPUVirtualAddress(),
-			.SizeInBytes = MaxIntercepts * sizeof(Intercept),
-			.BufferFilledSizeLocation = 0, // For tracking how much was written
+			.BufferLocation = m_out->GetGPUVirtualAddress(),
+			.SizeInBytes = intercept_data_size,
+			.BufferFilledSizeLocation = m_out->GetGPUVirtualAddress() + intercept_data_size, // GPU accessible memory that the GPU updates with how much data it's written.
 		};
 		m_cmd_list.SOSetTargets(0, { &so_view, 1 });
 
+		// Set the viewport and scissor rect.
+		auto const& vp = scn().m_viewport;
+		m_cmd_list.RSSetViewports({ &vp, 1 });
+		m_cmd_list.RSSetScissorRects(vp.m_clip);
+
 		// Set the signature for the shader used for this nugget
-		m_cmd_list.SetGraphicsRootSignature(m_shader->m_signature.get());
+		m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 		// Configure the shader constants
-		m_shader->SetupFrame(m_cmd_list.get(), m_upload_buffer, m_rays, m_snap_mode, m_snap_distance);
+		m_shader.SetupFrame(m_cmd_list.get(), m_upload_buffer, m_rays, m_snap_mode, m_snap_distance);
 
 		BarrierBatch barriers(m_cmd_list);
 
 		// Zero the results buffer
 		{
-			barriers.Transition(m_results.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			barriers.Transition(m_out.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 			barriers.Commit();
 
-			auto gpu = wnd().m_heap_view.Add(m_results_uav);
-			m_cmd_list.ClearUnorderedAccessViewFloat(gpu, m_results_uav.m_cpu, m_results.get(), v4::Zero().arr);
+			m_cmd_list.CopyBufferRegion(m_out.get(), (SOBufferCount - 1ULL) * sizeof(Intercept), m_zero.get(), 0, sizeof(Intercept));
 
-			barriers.Transition(m_results.get(), D3D12_RESOURCE_STATE_STREAM_OUT);
+			barriers.Transition(m_out.get(), D3D12_RESOURCE_STATE_STREAM_OUT);
 			barriers.Commit();
 		}
 
@@ -324,11 +324,58 @@ namespace pr::rdr12
 		{
 			auto const& nugget = *dle.m_nugget;
 			auto const& instance = *dle.m_instance;
-			auto desc = m_default_pipe_state;
 			(void)instance; // todo: Skinned instances?
 
+			// Set the PSO
+			auto desc = m_default_pipe_state;
+			switch (nugget.m_topo)
+			{
+				case ETopo::PointList:
+				{
+					desc.Apply(PSO<EPipeState::VS>(shader_code::ray_cast_vs));
+					desc.Apply(PSO<EPipeState::GS>(shader_code::ray_cast_vert_gs));
+					break;
+				}
+				case ETopo::LineList:
+				case ETopo::LineListAdj:
+				case ETopo::LineStrip:
+				case ETopo::LineStripAdj:
+				{
+					desc.Apply(PSO<EPipeState::VS>(shader_code::ray_cast_vs));
+					desc.Apply(PSO<EPipeState::GS>(shader_code::ray_cast_edge_gs));
+					break;
+				}
+				case ETopo::TriList:
+				case ETopo::TriStrip:
+				{
+					desc.Apply(PSO<EPipeState::VS>(shader_code::ray_cast_vs));
+					desc.Apply(PSO<EPipeState::GS>(shader_code::ray_cast_face_gs));
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unsupported primitive type");
+				}
+			}
+
+			// Set pipeline state
+			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(nugget.m_topo)));
+			m_cmd_list.IASetPrimitiveTopology(nugget.m_topo);
+			m_cmd_list.IASetVertexBuffers(0U, { &nugget.m_model->m_vb_view, 1 });
+			m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
+
 			// Configure the shader for this element
-			m_shader->SetupElement(m_cmd_list.get(), m_upload_buffer, &dle);
+			m_shader.SetupElement(m_cmd_list.get(), m_upload_buffer, &dle);
+
+			// Apply scene pipe state overrides
+			{
+				for (auto& ps : scn().m_pso)
+					desc.Apply(ps);
+				for (auto& ps : nugget.m_pso)
+					desc.Apply(ps);
+				for (auto& ps : GetPipeStates(instance))
+					desc.Apply(ps);
+			}
 
 			// Draw the nugget **** 
 			DrawNugget(nugget, desc);
@@ -336,13 +383,13 @@ namespace pr::rdr12
 
 		// Copy results back to the CPU
 		{
-			barriers.Transition(m_results.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			barriers.Transition(m_out.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 			barriers.Commit();
 
-			output = m_readback.Alloc<Intercept>(MaxIntercepts);
-			m_cmd_list.CopyBufferRegion(output, m_results.get(), 0);
+			output = m_readback.Alloc<Intercept>(SOBufferCount);
+			m_cmd_list.CopyBufferRegion(output, m_out.get(), 0);
 
-			barriers.Transition(m_results.get(), D3D12_RESOURCE_STATE_STREAM_OUT);
+			barriers.Transition(m_out.get(), D3D12_RESOURCE_STATE_STREAM_OUT);
 			barriers.Commit();
 		}
 
@@ -409,33 +456,4 @@ namespace pr::rdr12
 				s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
 		}
 	}
-
-
-#if 0 // todo
-	// Update the provided shader set appropriate for this render step
-	void RenderRayCast::ConfigShaders(ShaderSet1& ss, ETopo topo) const
-	{
-		ss = ShaderSet1{};
-		ss.m_vs = m_vs.get();
-		switch (topo)
-		{
-		case ETopo::PointList:
-			ss.m_gs = m_gs_vert.get();
-			break;
-		case ETopo::LineList:
-		case ETopo::LineListAdj:
-		case ETopo::LineStrip:
-		case ETopo::LineStripAdj:
-			ss.m_gs = m_gs_edge.get();
-			break;
-		case ETopo::TriList:
-		case ETopo::TriStrip:
-			ss.m_gs = m_gs_face.get();
-			break;
-		default:
-			throw std::runtime_error("Unsupported primitive type");
-		}
-	}
-
-#endif
 }

@@ -97,7 +97,7 @@ namespace pr::rdr12::ldraw
 		string32        m_name;          // A name for the object
 		GUID            m_context_id;    // The id of the context this instance was created in
 		Colour32        m_base_colour;   // The original colour of this object
-		uint32_t        m_colour_mask;   // A bit mask for applying the base colour to child objects
+		Colour32        m_grp_colour;    // A Colour multiplier that is applied to all child objects
 		RootAnimation   m_root_anim;     // Animation of the model root position
 		BBoxInstance    m_bbox_instance; // Used for rendering the bounding box for this instance
 		Sub             m_screen_space;  // True if this object should be rendered in screen space
@@ -224,9 +224,9 @@ namespace pr::rdr12::ldraw
 
 		// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 		// For 'Get', the colour of the first object to match 'name' is returned
-		// For 'Set', the object base colour is not changed, only the tint colour = tint
+		// For 'Set', the object base colour is not changed, only the instance colour
 		Colour32 Colour(bool base_colour, char const* name = nullptr) const;
-		void Colour(Colour32 colour, uint32_t mask, char const* name = nullptr, EColourOp op = EColourOp::Overwrite, float op_value = 0.0f);
+		void Colour(bool base_colour, Colour32 colour, char const* name = nullptr, EColourOp op = EColourOp::Overwrite, float op_value = 0.0f);
 
 		// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
 		void ResetColour(char const* name = nullptr);

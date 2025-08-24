@@ -1,4 +1,4 @@
-//************************************************************************
+﻿//************************************************************************
 // Ref counting base class
 //  Copyright (c) Rylogic Ltd 2011
 //************************************************************************
@@ -15,7 +15,8 @@
 //   }
 //
 #pragma once
-#include <windows.h>
+#include <atomic>
+#include <cassert>
 
 namespace pr
 {
@@ -42,54 +43,57 @@ namespace pr
 	template <typename Deleter, bool Shared = true>
 	struct RefCount :IRefCounted
 	{
-		mutable volatile long m_ref_count;
+		using count_t = std::conditional_t<Shared, std::atomic<long>, long>;
+		mutable count_t m_ref_count;
 
 		RefCount()
 			:m_ref_count(0)
 		{}
-		RefCount(RefCount&& rhs)
-			:m_ref_count(rhs.m_ref_count)
-		{
-			rhs.m_ref_count = 0;
-		}
-		RefCount& operator = (RefCount&& rhs)
+		RefCount(RefCount&& rhs) noexcept
+			:m_ref_count(std::exchange(rhs.m_ref_count, 0))
+		{}
+		RefCount(RefCount const& rhs) = delete;
+		RefCount& operator = (RefCount&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
-			::InterlockedExchange(m_ref_count, rhs.m_ref_count);
+			if constexpr (Shared)
+				m_ref_count.exchange(rhs.m_ref_count.exchange(0));
+			else
+				m_ref_count = std::exchange(rhs.m_ref_count, 0);
+
 			return *this;
 		}
+		RefCount& operator = (RefCount const& rhs) = delete;
 
 		long AddRef() const override
 		{
-			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
+			long ref_count;
+			if constexpr (Shared)
+				ref_count = m_ref_count.fetch_add(1) + 1;
+			else
+				ref_count = ++m_ref_count;
+
+			return ref_count;
 		}
 		long Release() const override
 		{
 			assert(m_ref_count > 0);
-			long ref_count = Shared ? ::InterlockedDecrement(&m_ref_count) : --m_ref_count;
-			if (!ref_count) { Deleter::RefCountZero(const_cast<RefCount<Deleter,Shared>*>(this)); }
+
+			long ref_count;
+			if constexpr (Shared)
+				ref_count = m_ref_count.fetch_sub(1) - 1;
+			else
+				ref_count = --m_ref_count;
+
+			if (!ref_count)
+				Deleter::RefCountZero(const_cast<RefCount<Deleter,Shared>*>(this));
+
 			return ref_count;
 		}
 
 		static void RefCountZero(RefCount* doomed)
 		{
 			delete doomed;
-		}
-
-	private:
-
-		RefCount(RefCount const&) // Ref counted objects should not be copyable
-			:m_ref_count(0)
-		{
-			// This object has just been constructed, therefore AddRef() has
-			// never been called meaning there are no references to it,
-			// even tho the object we're copying may have references.
-		}
-		RefCount& operator = (RefCount const& rhs)
-		{
-			// See notes in copy constructor
-			if (&rhs != this) m_ref_count = 0;
-			return *this;
 		}
 	};
 }

@@ -880,10 +880,25 @@ namespace pr::rdr12
 	}
 	void V3dWindow::FocusPoint(v4_cref position)
 	{
-		if (FocusPoint() != position)
+		if (FocusPoint() == position)
 			return;
 
 		m_scene.m_cam.FocusPoint(position);
+		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
+		Invalidate();
+	}
+
+	// Get/Set the camera focus point bounds
+	BBox V3dWindow::FocusBounds() const
+	{
+		return m_scene.m_cam.FocusBounds();
+	}
+	void V3dWindow::FocusBounds(BBox_cref bounds)
+	{
+		if (FocusBounds() == bounds)
+			return;
+
+		m_scene.m_cam.FocusBounds(bounds);
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
 		Invalidate();
 	}
@@ -1290,7 +1305,7 @@ namespace pr::rdr12
 			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
 			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
 			return false;
-		});
+		}).wait();
 	}
 	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count)
 	{

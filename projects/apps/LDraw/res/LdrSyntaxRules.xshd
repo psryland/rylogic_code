@@ -94,7 +94,6 @@
 			<Word>*Circle</Word>
 			<Word>*Closed</Word>
 			<Word>*Colour</Word>
-			<Word>*ColourMask</Word>
 			<Word>*Colours</Word>
 			<Word>*Commands</Word>
 			<Word>*Cone</Word>
@@ -132,6 +131,7 @@
 			<Word>*GenerateNormals</Word>
 			<Word>*Grid</Word>
 			<Word>*Group</Word>
+			<Word>*GroupColour</Word>
 			<Word>*Hidden</Word>
 			<Word>*Instance</Word>
 			<Word>*Inverse</Word>

@@ -20,6 +20,14 @@ using Rylogic.Utility;
 
 namespace Rylogic.LDraw
 {
+	[Flags] public enum ESaveFlags
+	{
+		None = 0,
+		Binary = 1 << 0,
+		Pretty = 1 << 1,
+		Append = 1 << 2,
+	}
+
 	public class Builder
 	{
 		private List<Builder> m_objects = [];
@@ -197,17 +205,21 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Write to a file</summary>
-		public void Save(string filepath, bool text = true, bool pretty = false)
+		public void Save(string filepath, ESaveFlags flags = ESaveFlags.None)
 		{
+			var binary = flags.HasFlag(ESaveFlags.Binary);
+			var append = flags.HasFlag(ESaveFlags.Append);
+			var pretty = flags.HasFlag(ESaveFlags.Pretty);
+
 			if (Path.GetExtension(filepath) == "")
-				filepath = Path.ChangeExtension(filepath, (text ? ".ldr" : ".bdr"));
+				filepath = Path.ChangeExtension(filepath, binary ? ".bdr" : ".ldr");
 
 			if (Path.GetDirectoryName(filepath) is string directory)
 				Directory.CreateDirectory(directory);
 			
-			using var file = File.Create(filepath);
-			var mem = text ? ToText() : ToBinary();
-			if (text && pretty) mem = FormatScript(mem);
+			using var file = File.Open(filepath, append ? FileMode.Append : FileMode.Create);
+			var mem = binary ? ToBinary() : ToText();
+			if (!binary && pretty) mem = FormatScript(mem);
 			mem.CopyTo(file);
 		}
 
@@ -215,8 +227,8 @@ namespace Rylogic.LDraw
 		public static string FormatScript(string str)
 		{
 			var res = new StringBuilder(str.Length);
-			char last = '\0';
-			int indent = 0;
+			var last = '\0';
+			var indent = 0;
 			foreach (var c in str)
 			{
 				if (c == '{')
@@ -260,7 +272,7 @@ namespace Rylogic.LDraw
 	{
 		protected Serialiser.Name m_name = new();
 		protected Serialiser.Colour m_colour = new();
-		protected Serialiser.Colour m_colour_mask = new();
+		protected Serialiser.Colour m_group_colour = new();
 		protected Serialiser.O2W m_o2w = new();
 		protected Serialiser.Wireframe m_wire = new();
 		protected Serialiser.AxisId m_axis_id = new();
@@ -282,10 +294,10 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Object colour mask</summary>
-		public TDerived colour_mask(Serialiser.Colour colour)
+		public TDerived group_colour(Serialiser.Colour colour)
 		{
-			m_colour_mask = colour;
-			m_colour_mask.m_kw = EKeyword.ColourMask;
+			m_group_colour = colour;
+			m_group_colour.m_kw = EKeyword.GroupColour;
 			return (TDerived)this;
 		}
 
@@ -370,7 +382,7 @@ namespace Rylogic.LDraw
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter writer)
 		{
-			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_colour_mask, m_o2w);
+			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_group_colour, m_o2w);
 			base.WriteTo(writer);
 		}
 	}
@@ -472,7 +484,7 @@ namespace Rylogic.LDraw
 		}
 
 		// Points have depth
-		public LdrPoint depth(bool d)
+		public LdrPoint depth(bool d = true)
 		{
 			m_depth = d;
 			return this;
@@ -507,13 +519,22 @@ namespace Rylogic.LDraw
 	}
 	public class LdrLine : LdrBase<LdrLine>
 	{
+		private class Pt { public v4 a; public Colour32 col; };
 		private class Ln { public v4 a, b; public Colour32 col; };
 		private readonly List<Ln> m_lines = [];
+		private readonly List<Pt> m_strip = [];
+		private Serialiser.Smooth m_smooth = new();
 		private Serialiser.Width m_width = new();
-		private bool m_strip = false;
 		private Serialiser.PerItemColour m_per_item_colour = new();
 
 		public delegate bool EnumLines(int i, out v4 a, out v4 b, out Colour32? c);
+
+		// Smooth line
+		public LdrLine smooth(bool smooth = true)
+		{
+			m_smooth = smooth;
+			return this;
+		}
 
 		// Line width
 		public LdrLine width(Serialiser.Width w)
@@ -527,6 +548,7 @@ namespace Rylogic.LDraw
 		{
 			m_lines.Add(new Ln{ a = a, b = b, col = colour ?? Colour32.White });
 			m_per_item_colour |= colour != null;
+			m_strip.Clear();
 			return this;
 		}
 		public LdrLine lines(Span<v4> verts, Span<int> indices)
@@ -548,25 +570,26 @@ namespace Rylogic.LDraw
 		}
 
 		// Line strip
-		public LdrLine strip(v4 start)
+		public LdrLine strip(v4 start, Colour32? colour = null)
 		{
-			line(start, start);
-			m_strip = true;
+			m_strip.Add(new Pt { a = start, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
+			m_lines.Clear();
 			return this;
 		}
-		public LdrLine line_to(v4 pt)
+		public LdrLine line_to(v4 pt, Colour32? colour = null)
 		{
-			Debug.Assert(m_strip);
-			line(pt, pt);
+			if (m_strip.Count == 0) strip(v4.Origin, colour);
+			strip(pt, colour);
 			return this;
 		}
 
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
-			res.Write(EKeyword.Line, m_name, m_colour, () =>
+			res.Write(m_lines.Count == 0 ? EKeyword.LineStrip : EKeyword.Line, m_name, m_colour, () =>
 			{
-				res.Append(m_width, m_per_item_colour);
+				res.Append(m_smooth, m_width, m_per_item_colour);
 				res.Write(EKeyword.Data, () =>
 				{
 					foreach (var line in m_lines)
@@ -574,6 +597,12 @@ namespace Rylogic.LDraw
 						res.Append(line.a.xyz, line.b.xyz);
 						if (m_per_item_colour)
 							res.Append(line.col);
+					}
+					foreach (var pt in m_strip)
+					{
+						res.Append(pt.a.xyz);
+						if (m_per_item_colour)
+							res.Append(pt.col);
 					}
 				});
 				base.WriteTo(res);
@@ -625,7 +654,7 @@ namespace Rylogic.LDraw
 	{
 		private struct Pt { public v4 pt; public Colour32 col; };
 		private readonly List<Pt> m_pts = [];
-		private EArrowType m_style = EArrowType.Fwd;
+		private Serialiser.ArrowType m_style = EArrowType.Fwd;
 		private Serialiser.PerItemColour m_per_item_colour = new();
 		private Serialiser.Width m_width = new();
 		private Serialiser.Smooth m_smooth = new();
@@ -688,7 +717,7 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Arrow, m_name, m_colour, () =>
 			{
-				res.Append(m_width, m_smooth, m_per_item_colour);
+				res.Append(m_style, m_width, m_smooth, m_per_item_colour);
 				res.Write(EKeyword.Data, () =>
 				{
 					foreach (var pt in m_pts)
@@ -1998,6 +2027,15 @@ namespace Rylogic.UnitTests
 			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
 			var mem = builder.ToBinary().ToArray();
 			Assert.Equal(mem.Length, 49);
+		}
+
+		[Test]
+		public void TestArrow()
+		{
+			var builder = new LDraw.Builder();
+			builder.Arrow("a", 0xFF00FF00).start(v4.Origin).line_to(v4.ZAxis.w1);
+			builder.Save("E://Dump//arrow.bdr", LDraw.ESaveFlags.Binary);
+			//var mem = builder.ToBinary().ToArray();
 		}
 
 		[Test]

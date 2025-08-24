@@ -76,15 +76,10 @@ namespace Rylogic.Maths
 		public float LengthSq => x * x + y * y;
 		public float Length => (float)Math.Sqrt(LengthSq);
 
-		/// <summary>ToString</summary>
-		public override string ToString() => $"{x} {y}";
-		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)}";
-		public string ToCodeString() => $"{x}f, {y}f";
-
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v2 to an object type. e.g. v2? x = v2.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v2(float[] a)
 		{
-			return new v2(a[0], a[1]);
+			return new(a[0], a[1]);
 		}
 		public static explicit operator float[] (v2 p)
 		{
@@ -92,14 +87,14 @@ namespace Rylogic.Maths
 		}
 		public static explicit operator v2(double[] a)
 		{
-			return new v2((float)a[0], (float)a[1]);
+			return new((float)a[0], (float)a[1]);
 		}
 		public static explicit operator double[] (v2 p)
 		{
 			return new double[] { p.x, p.y };
 		}
 
-		// Static v2 types
+		#region Statics
 		public readonly static v2 Zero     = new(0f, 0f);
 		public readonly static v2 XAxis    = new(1f, 0f);
 		public readonly static v2 YAxis    = new(0f, 1f);
@@ -107,27 +102,28 @@ namespace Rylogic.Maths
 		public readonly static v2 NaN      = new(float.NaN, float.NaN);
 		public readonly static v2 MinValue = new(float.MinValue, float.MinValue);
 		public readonly static v2 MaxValue = new(float.MaxValue, float.MaxValue);
+		#endregion
 
-		/// <summary>Operators</summary>
+		#region Operators
 		public static v2 operator + (v2 vec)
 		{
 			return vec;
 		}
 		public static v2 operator - (v2 vec)
 		{
-			return new v2(-vec.x, -vec.y);
+			return new(-vec.x, -vec.y);
 		}
 		public static v2 operator + (v2 lhs, v2 rhs)
 		{
-			return new v2(lhs.x + rhs.x, lhs.y + rhs.y);
+			return new(lhs.x + rhs.x, lhs.y + rhs.y);
 		}
 		public static v2 operator - (v2 lhs, v2 rhs)
 		{
-			return new v2(lhs.x - rhs.x, lhs.y - rhs.y);
+			return new(lhs.x - rhs.x, lhs.y - rhs.y);
 		}
 		public static v2 operator * (v2 lhs, float rhs)
 		{
-			return new v2(lhs.x * rhs, lhs.y * rhs);
+			return new(lhs.x * rhs, lhs.y * rhs);
 		}
 		public static v2 operator *(v2 lhs, double rhs)
 		{
@@ -135,7 +131,7 @@ namespace Rylogic.Maths
 		}
 		public static v2 operator * (float lhs, v2 rhs)
 		{
-			return new v2(lhs * rhs.x, lhs * rhs.y);
+			return new(lhs * rhs.x, lhs * rhs.y);
 		}
 		public static v2 operator *(double lhs, v2 rhs)
 		{
@@ -143,11 +139,11 @@ namespace Rylogic.Maths
 		}
 		public static v2 operator * (v2 lhs, v2 rhs)
 		{
-			return new v2(lhs.x * rhs.x, lhs.y * rhs.y);
+			return new(lhs.x * rhs.x, lhs.y * rhs.y);
 		}
 		public static v2 operator / (v2 lhs, float rhs)
 		{
-			return new v2(lhs.x / rhs, lhs.y / rhs);
+			return new(lhs.x / rhs, lhs.y / rhs);
 		}
 		public static v2 operator /(v2 lhs, double rhs)
 		{
@@ -155,26 +151,127 @@ namespace Rylogic.Maths
 		}
 		public static v2 operator / (v2 lhs, v2 rhs)
 		{
-			return new v2(lhs.x / rhs.x, lhs.y / rhs.y);
+			return new(lhs.x / rhs.x, lhs.y / rhs.y);
+		}
+		public static v2 operator %(v2 lhs, float rhs)
+		{
+			return new(lhs.x % rhs, lhs.y % rhs);
+		}
+		public static v2 operator %(v2 lhs, double rhs)
+		{
+			return lhs % (float)rhs;
+		}
+		public static v2 operator %(v2 lhs, v2 rhs)
+		{
+			return new(lhs.x % rhs.x, lhs.y % rhs.y);
+		}
+		#endregion
+
+		#region Equals
+		public static bool operator == (v2 lhs, v2 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y;
+		}
+		public static bool operator != (v2 lhs, v2 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object? o)
+		{
+			return o is v2 v && v == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y }.GetHashCode();
+		}
+		#endregion
+
+		#region ToString
+		public override string ToString() => $"{x} {y}";
+		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)}";
+		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f";
+		#endregion
+
+		#region Parse
+		public static v2 Parse(string s)
+		{
+			if (s == null)
+				throw new ArgumentNullException("s", "v2.Parse3() string argument was null");
+
+			var values = s.Split([' ', ',', '\t'], 2);
+			if (values.Length != 2)
+				throw new FormatException("v2.Parse() string argument does not represent a 2 component vector");
+
+			return new(
+				float.Parse(values[0]),
+				float.Parse(values[1]));
+		}
+		public static bool TryParse(string s, out v2 vec)
+		{
+			vec = Zero;
+			if (s == null)
+				return false;
+
+			var values = s.Split([' ', ',', '\t'], 2);
+			return
+				values.Length == 2 &&
+				float.TryParse(values[0], out vec.x) &&
+				float.TryParse(values[1], out vec.y);
+		}
+		public static v2? TryParse(string s)
+		{
+			return TryParse(s, out var vec) ? vec : null;
+		}
+		#endregion
+
+		#region Random
+
+		/// <summary>Return a random vector with components within the interval [min,max]</summary>
+		public static v2 Random2(float min, float max, Random r)
+		{
+			return new(r.Float(min, max), r.Float(min, max));
 		}
 
-		#region System.Drawing conversion
+		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
+		public static v2 Random2(v2 min, v2 max, Random r)
+		{
+			return new(r.Float(min.x, max.x), r.Float(min.y, max.y));
+		}
+
+		/// <summary>Return a random vector on the unit 2D sphere</summary>
+		public static v2 Random2(float rad, Random r)
+		{
+			var rad_sq = rad*rad;
+			v2 v; for (; (v = Random2(-rad, rad, r)).LengthSq > rad_sq;) { }
+			return v;
+		}
+
+		/// <summary>Return a random vector on the unit 2D sphere</summary>
+		public static v2 Random2N(Random r)
+		{
+			v2 v; for (; Math_.FEql(v = Random2(1, r), Zero);) { }
+			return Math_.Normalise(v);
+		}
+
+		#endregion
+
+		#region Conversion
 		/// <summary>Create from Drawing type</summary>
 		public static v2 From(Point point)
 		{
-			return new v2(point.X, point.Y);
+			return new(point.X, point.Y);
 		}
 		public static v2 From(PointF point)
 		{
-			return new v2(point.X, point.Y);
+			return new(point.X, point.Y);
 		}
 		public static v2 From(Size size)
 		{
-			return new v2(size.Width, size.Height);
+			return new(size.Width, size.Height);
 		}
 		public static v2 From(SizeF size)
 		{
-			return new v2(size.Width, size.Height);
+			return new(size.Width, size.Height);
 		}
 
 		/// <summary>Convert to Drawing type</summary>
@@ -222,88 +319,6 @@ namespace Rylogic.Maths
 		}
 		#endregion
 
-		#region Parse
-		public static v2 Parse(string s)
-		{
-			if (s == null)
-				throw new ArgumentNullException("s", "v2.Parse3() string argument was null");
-
-			var values = s.Split([' ', ',', '\t'], 2);
-			if (values.Length != 2)
-				throw new FormatException("v2.Parse() string argument does not represent a 2 component vector");
-
-			return new v2(
-				float.Parse(values[0]),
-				float.Parse(values[1]));
-		}
-		public static bool TryParse(string s, out v2 vec)
-		{
-			vec = Zero;
-			if (s == null)
-				return false;
-
-			var values = s.Split([' ', ',', '\t'], 2);
-			return
-				values.Length == 2 &&
-				float.TryParse(values[0], out vec.x) &&
-				float.TryParse(values[1], out vec.y);
-		}
-		public static v2? TryParse(string s)
-		{
-			return TryParse(s, out var vec) ? vec : null;
-		}
-		#endregion
-
-		#region Random
-
-		/// <summary>Return a random vector with components within the interval [min,max]</summary>
-		public static v2 Random2(float min, float max, Random r)
-		{
-			return new v2(r.Float(min, max), r.Float(min, max));
-		}
-
-		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
-		public static v2 Random2(v2 min, v2 max, Random r)
-		{
-			return new v2(r.Float(min.x, max.x), r.Float(min.y, max.y));
-		}
-
-		/// <summary>Return a random vector on the unit 2D sphere</summary>
-		public static v2 Random2(float rad, Random r)
-		{
-			var rad_sq = rad*rad;
-			v2 v; for (; (v = Random2(-rad, rad, r)).LengthSq > rad_sq;) { }
-			return v;
-		}
-
-		/// <summary>Return a random vector on the unit 2D sphere</summary>
-		public static v2 Random2N(Random r)
-		{
-			v2 v; for (; Math_.FEql(v = Random2(1, r), Zero);) { }
-			return Math_.Normalise(v);
-		}
-
-		#endregion
-
-		#region Equals
-		public static bool operator == (v2 lhs, v2 rhs)
-		{
-			return lhs.x == rhs.x && lhs.y == rhs.y;
-		}
-		public static bool operator != (v2 lhs, v2 rhs)
-		{
-			return !(lhs == rhs);
-		}
-		public override bool Equals(object? o)
-		{
-			return o is v2 v && v == this;
-		}
-		public override int GetHashCode()
-		{
-			return new { x, y }.GetHashCode();
-		}
-		#endregion
-
 		/// <summary></summary>
 		public string Description => $"{x}  {y}  //Len({Length})";
 	}
@@ -334,7 +349,7 @@ namespace Rylogic.Maths
 		/// <summary>Component absolute value</summary>
 		public static v2 Abs(v2 vec)
 		{
-			return new v2(
+			return new(
 				Math.Abs(vec.x),
 				Math.Abs(vec.y));
 		}
@@ -360,7 +375,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a vector containing the minimum components</summary>
 		public static v2 Min(v2 lhs, v2 rhs)
 		{
-			 return new v2(
+			 return new(
 				 Math.Min(lhs.x, rhs.x),
 				 Math.Min(lhs.y, rhs.y));
 		}
@@ -374,7 +389,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a vector containing the maximum components</summary>
 		public static v2 Max(v2 lhs, v2 rhs)
 		{
-			 return new v2(
+			 return new(
 				 Math.Max(lhs.x, rhs.x),
 				 Math.Max(lhs.y, rhs.y));
 		}
@@ -388,7 +403,7 @@ namespace Rylogic.Maths
 		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
 		public static v2 Clamp(v2 vec, v2 min, v2 max)
 		{
-			return new v2(
+			return new(
 				Clamp(vec.x, min.x, max.x),
 				Clamp(vec.y, min.y, max.y));
 		}
@@ -463,7 +478,7 @@ namespace Rylogic.Maths
 		public static v2 CreateNotParallelTo(v2 vec)
 		{
 			bool x_aligned = Abs(vec.x) > Abs(vec.y);
-			return new v2(SignF(!x_aligned), SignF(x_aligned));
+			return new(SignF(!x_aligned), SignF(x_aligned));
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
@@ -509,19 +524,19 @@ namespace Rylogic.Maths
 		/// <summary>Rotate 'vec' counter clockwise</summary>
 		public static v2 RotateCCW(v2 vec)
 		{
-			return new v2(-vec.y, vec.x);
+			return new(-vec.y, vec.x);
 		}
 
 		/// <summary>Rotate 'vec' clockwise</summary>
 		public static v2 RotateCW(v2 vec)
 		{
-			return new v2(vec.y, -vec.x);
+			return new(vec.y, -vec.x);
 		}
 
 		/// <summary>Return a point on the unit circle at 'ang' (radians) from the X axis</summary>
 		public static v2 UnitCircle(float ang)
 		{
-			return new v2((float)Math.Cos(ang), (float)Math.Sin(ang));
+			return new((float)Math.Cos(ang), (float)Math.Sin(ang));
 		}
 	}
 }

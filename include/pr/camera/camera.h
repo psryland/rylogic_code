@@ -179,6 +179,7 @@ namespace pr
 		m4x4           m_c2w;               // Camera to world transform
 		NavState       m_nav;               // Navigation initial state data
 		v4             m_align;             // The direction to align 'up' to, or v4Zero
+		BBox           m_bounds;            // Limits on where the focus point can be
 		double         m_default_fovY;      // The default field of view
 		double         m_fovY;              // Field of view in the Y direction
 		double         m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
@@ -206,21 +207,22 @@ namespace pr
 			LookAt(eye, pt, up, true);
 		}
 		Camera(m4x4 const& c2w, double fovY, double aspect, double focus_dist, bool orthographic, double near_, double far_)
-			:m_c2w(c2w)
-			,m_nav()
-			,m_align(v4Zero)
-			,m_default_fovY(fovY)
-			,m_fovY(m_default_fovY)
-			,m_focus_dist(focus_dist)
-			,m_aspect(aspect)
-			,m_near(near_)
-			,m_far(far_)
-			,m_accuracy_scale(0.1)
-			,m_accuracy_mode()
-			,m_lock_mask()
-			,m_key()
-			,m_orthographic(orthographic)
-			,m_moved(false)
+			: m_c2w(c2w)
+			, m_nav()
+			, m_align(v4::Zero())
+			, m_bounds(BBox::Infinity())
+			, m_default_fovY(fovY)
+			, m_fovY(m_default_fovY)
+			, m_focus_dist(focus_dist)
+			, m_aspect(aspect)
+			, m_near(near_)
+			, m_far(far_)
+			, m_accuracy_scale(0.1)
+			, m_accuracy_mode()
+			, m_lock_mask()
+			, m_key()
+			, m_orthographic(orthographic)
+			, m_moved(false)
 		{
 			PR_ASSERT(PR_DBG, IsFinite(m_c2w), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, IsFinite(m_fovY), "invalid scene view parameters");
@@ -578,6 +580,7 @@ namespace pr
 		void FocusPoint(v4 const& position)
 		{
 			m_c2w.pos += position - FocusPoint();
+			EnforceBounds();
 			m_moved = true;
 		}
 
@@ -595,6 +598,7 @@ namespace pr
 			if (!IsFinite(dist) || dist < maths::tinyd)
 				throw std::runtime_error("'dist' should not be negative");
 
+			EnforceBounds();
 			m_moved |= dist != m_focus_dist;
 			m_focus_dist = dist;
 		}
@@ -621,6 +625,17 @@ namespace pr
 			assert(m_near < m_far);
 			constexpr double real_min = limits<double>::min();
 			return real_min / Min(Abs(m_near - m_far), 1.0);
+		}
+
+		// Get/Set the world space position of the focus point, maintaining the current camera orientation
+		BBox FocusBounds() const
+		{
+			return m_bounds;
+		}
+		void FocusBounds(BBox const& bounds)
+		{
+			m_bounds = bounds;
+			EnforceBounds();
 		}
 
 		// Modify the camera position based on mouse movement.
@@ -675,6 +690,7 @@ namespace pr
 				else
 					Rotate(0.0f, 0.0f, ATan2(m_nav.m_Rref.y, m_nav.m_Rref.x) - ATan2(point.y, point.x), false);
 			}
+			EnforceBounds();
 			return m_moved;
 		}
 
@@ -737,6 +753,7 @@ namespace pr
 			if (commit)
 				Commit();
 
+			EnforceBounds();
 			m_moved = true;
 			return m_moved;
 		}
@@ -788,6 +805,7 @@ namespace pr
 			if (commit)
 				Commit();
 
+			EnforceBounds();
 			m_moved = true;
 			return m_moved;
 		}
@@ -835,6 +853,7 @@ namespace pr
 			if (commit)
 				Commit();
 
+			EnforceBounds();
 			m_moved = true;
 			return m_moved;
 		}
@@ -861,6 +880,7 @@ namespace pr
 			if (commit)
 				Commit();
 
+			EnforceBounds();
 			m_moved = true;
 			return m_moved;
 		}
@@ -889,6 +909,23 @@ namespace pr
 		void Revert()
 		{
 			m_nav.Revert(*this);
+		}
+
+		// Ensure the focus point never leaves the bounds
+		void EnforceBounds()
+		{
+			auto pt = FocusPoint();
+			if (!IsWithin(m_bounds, pt))
+			{
+				pt -= m_bounds.m_centre;
+				if (pt.x < -m_bounds.m_radius.x) { m_c2w.pos.x += -m_bounds.m_radius.x - pt.x; }
+				if (pt.y < -m_bounds.m_radius.y) { m_c2w.pos.y += -m_bounds.m_radius.y - pt.y; }
+				if (pt.z < -m_bounds.m_radius.z) { m_c2w.pos.z += -m_bounds.m_radius.z - pt.z; }
+				if (pt.x > +m_bounds.m_radius.x) { m_c2w.pos.x -= pt.x - m_bounds.m_radius.x; }
+				if (pt.y > +m_bounds.m_radius.y) { m_c2w.pos.y -= pt.y - m_bounds.m_radius.y; }
+				if (pt.z > +m_bounds.m_radius.z) { m_c2w.pos.z -= pt.z - m_bounds.m_radius.z; }
+				m_moved = true;
+			}
 		}
 
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
@@ -1008,6 +1045,7 @@ namespace pr
 			m_c2w     = m_c2w * m4x4::Transform(axis, angle_rad, v4Origin);
 			m_c2w.pos = old_focus + s_cast<float>(m_focus_dist) * m_c2w.z;
 			m_c2w     = Orthonorm(m_c2w);
+			EnforceBounds();
 
 			// Set the base values
 			if (commit)

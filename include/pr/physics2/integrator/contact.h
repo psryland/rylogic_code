@@ -79,6 +79,6 @@ namespace pr::physics
 		ldr::Arrow(str, "Normal", 0xFFFFFFFF, ldr::EArrowType::Fwd, c.m_point_at_t, c.m_axis * 0.1f, 5);
 		#endif
 		builder.Box("Contact", 0xFFFFFF00).dim(0.005f).pos(c.m_point_at_t.w1());
-		builder.Write(L"\\dump\\collision.ldr");
+		builder.Save(L"\\dump\\collision.ldr");
 	}
 }

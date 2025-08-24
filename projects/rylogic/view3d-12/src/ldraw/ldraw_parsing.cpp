@@ -663,9 +663,9 @@ namespace pr::rdr12::ldraw
 				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
 				return true;
 			}
-			case EKeyword::ColourMask:
+			case EKeyword::GroupColour:
 			{
-				obj->m_colour_mask = reader.Int<uint32_t>(16);
+				obj->m_grp_colour = reader.Int<uint32_t>(16);
 				return true;
 			}
 			case EKeyword::Reflectivity:
@@ -734,12 +734,11 @@ namespace pr::rdr12::ldraw
 	void ApplyObjectState(LdrObject* obj)
 	{
 		// Set colour on 'obj' (so that render states are set correctly)
-		// Note that the colour is 'blended' with 'm_base_colour' so m_base_colour * White = m_base_colour.
-		obj->Colour(obj->m_base_colour, 0xFFFFFFFF);
+		obj->Colour(true, obj->m_base_colour);
 
-		// Apply the colour of 'obj' to all children using a mask
-		if (obj->m_colour_mask != 0)
-			obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
+		// Apply the group colour of 'obj' to all children
+		if (obj->m_grp_colour != 0)
+			obj->Colour(false, obj->m_grp_colour, "", EColourOp::Multiply);
 
 		// If flagged as hidden, hide
 		if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden))
@@ -5169,7 +5168,7 @@ namespace pr::rdr12::ldraw
 			auto source = m_pp.m_lookup[key];
 
 			// Create an LdrObject instance for each nested object
-			RecursiveCreate(obj, source);
+			RecursiveCreate(obj, source, false);
 
 			// Clone the pose if animation info is given
 			if (m_anim_info && source->m_pose != nullptr)
@@ -5194,15 +5193,24 @@ namespace pr::rdr12::ldraw
 				}, "");
 			}
 		}
-		void RecursiveCreate(LdrObject* obj, LdrObject const* source)
+		void RecursiveCreate(LdrObject* obj, LdrObject const* source, bool copy_props)
 		{
 			obj->m_name = source->m_name;
 			obj->m_model = source->m_model;
+			if (copy_props)
+			{
+				obj->m_o2p = source->m_o2p;
+				obj->m_base_colour = source->m_base_colour;
+				obj->m_grp_colour = source->m_grp_colour;
+				obj->m_root_anim = source->m_root_anim;
+				obj->m_screen_space = source->m_screen_space;
+				obj->m_ldr_flags = source->m_ldr_flags;
+			}
 
 			for (auto source_child : source->m_child)
 			{
 				LdrObjectPtr child(new LdrObject(ELdrObject::Instance, obj, obj->m_context_id), true);
-				RecursiveCreate(child.get(), source_child.get());
+				RecursiveCreate(child.get(), source_child.get(), true);
 				obj->m_child.push_back(std::move(child));
 			}
 		}
@@ -5528,8 +5536,8 @@ namespace pr::rdr12::ldraw
 				std::swap(object->m_ldr_flags, rhs->m_ldr_flags);
 			if (AllSet(flags, EUpdateObject::Animation))
 				std::swap(object->m_root_anim, rhs->m_root_anim);
-			if (AllSet(flags, EUpdateObject::ColourMask))
-				std::swap(object->m_colour_mask, rhs->m_colour_mask);
+			if (AllSet(flags, EUpdateObject::GroupColour))
+				std::swap(object->m_grp_colour, rhs->m_grp_colour);
 			if (AllSet(flags, EUpdateObject::Reflectivity))
 				std::swap(object->m_env, rhs->m_env);
 			if (AllSet(flags, EUpdateObject::Colour))
@@ -5660,9 +5668,14 @@ namespace pr::rdr12::ldraw
 				case EKeyword::M4x4:
 				{
 					auto m = Matrix4x4();
-					if (affine && m.w.w != 1)
+					if (m.w.w == 0 && m == m4x4::Zero())
 					{
-						ReportError(EParseError::InvalidValue, Loc(), "Specify 'NonAffine' if M4x4 is intentionally non-affine.");
+						ReportError(EParseError::InvalidValue, Loc(), "Invalid transform.");
+						m = m4x4::Identity();
+					}
+					if (m.w.w != 1 && affine)
+					{
+						ReportError(EParseError::InvalidValue, Loc(), "Invalid transform. Specify 'NonAffine' if M4x4 is intentionally non-affine.");
 						m = m4x4::Identity();
 					}
 					p2w = m * p2w;

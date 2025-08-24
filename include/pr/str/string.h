@@ -124,9 +124,9 @@ namespace pr
 		template <typename tstr> struct is_pr_str
 		{
 			static tstr* str() { return nullptr; }
-			template <int L, bool F, typename A> static std::true_type  check(string<Type, L, F, A>*);
-			template <int = 0>                   static std::false_type check(...);
-			using type = decltype(check(str()));
+			template <int L, bool F, typename A> static std::true_type  IsStringType(string<Type, L, F, A>*);
+			template <int = 0>                   static std::false_type IsStringType(...);
+			using type = decltype(IsStringType(str()));
 			static bool const value = type::value;
 		};
 		static_assert( is_pr_str<string<Type, 1, true>>::value);

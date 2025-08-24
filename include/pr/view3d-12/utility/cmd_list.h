@@ -186,7 +186,7 @@ namespace pr::rdr12
 		{
 			CopyBufferRegion(DstBuffer.m_res, DstBuffer.m_ofs, pSrcBuffer, SrcOffset, DstBuffer.m_size);
 		}
-		void CopyBufferRegion(ID3D12Resource *DstBuffer, UINT64 DstOffset, GpuTransferAllocation pSrcBuffer)
+		void CopyBufferRegion(ID3D12Resource *DstBuffer, UINT64 DstOffset, GpuTransferAllocation const& pSrcBuffer)
 		{
 			CopyBufferRegion(DstBuffer, DstOffset, pSrcBuffer.m_res, pSrcBuffer.m_ofs, pSrcBuffer.m_size);
 		}

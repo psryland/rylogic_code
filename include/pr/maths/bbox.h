@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -278,11 +278,15 @@ namespace pr
 		// Constants
 		static constexpr BBox Unit()
 		{
-			return { v4{0, 0, 0, 1}, v4{0.5f, 0.5f, 0.5f, 0} };
+			return { v4::Origin(), 0.5f * v4::One().w0() };
 		}
 		static constexpr BBox Reset()
 		{
-			return { v4{0, 0, 0, 1}, v4{-1, -1, -1, 0} };
+			return { v4::Origin(), -v4::One().w0() };
+		}
+		static constexpr BBox Infinity()
+		{
+			return { v4::Origin(), v4::Infinity().w0() };
 		}
 
 		// Create a bounding box from lower/upper corners

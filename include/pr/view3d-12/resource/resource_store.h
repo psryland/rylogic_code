@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -18,6 +18,7 @@ namespace pr::rdr12
 		// - The resource store is unique and owned by the renderer instance.
 		// - The resource factory is an instance-able object that is used to create resources.
 		//   It interacts with the resource store to store and retrieve resources.
+		// - If using GDI Plus features, make sure a 'GdiPlus' object is in scope.
 
 	private:
 
@@ -37,7 +38,6 @@ namespace pr::rdr12
 		DescriptorStore m_descriptor_store; // Manager of resource descriptors
 		TextureCont     m_stock_textures;   // Stock textures
 		SamplerCont     m_stock_samplers;   // Stock samplers
-		GdiPlus         m_gdiplus;          // Context scope for GDI
 
 	public:
 

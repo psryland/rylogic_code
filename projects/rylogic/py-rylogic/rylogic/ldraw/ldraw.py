@@ -155,7 +155,6 @@ class EKeyword(Enum):
 	Circle = 673280137
 	Closed = 3958264005
 	Colour = 33939709
-	ColourMask = 1664250849
 	Colours = 3175120778
 	Commands = 3062934995
 	Cone = 3711978346
@@ -193,6 +192,7 @@ class EKeyword(Enum):
 	GenerateNormals = 750341558
 	Grid = 2944866961
 	Group = 1605967500
+	GroupColour = 2738848320
 	Hidden = 4128829753
 	Instance = 193386898
 	Inverse = 2986472067

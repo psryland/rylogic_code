@@ -182,104 +182,87 @@ namespace Rylogic.LDraw
 		}
 		private void Append(Serialiser.Name n)
 		{
-			if (n.m_name.Length == 0)
-				return;
+			if (n.m_name.Length == 0) return;
 			Write(EKeyword.Name, n.m_name);
 		}
 		private void Append(Serialiser.Colour c)
 		{
-			if (c.m_colour == 0xFFFFFFFF)
-				return;
+			if (c.m_colour == 0xFFFFFFFF) return;
 			Write(c.m_kw, c.m_colour);
 		}
 		private void Append(Serialiser.Size s)
 		{
-			if (s.m_size == 0)
-				return;
+			if (s.m_size == 0) return;
 			Write(EKeyword.Size, s.m_size);
 		}
 		private void Append(Serialiser.Size2 s)
 		{
-			if (s.m_size == v2.Zero)
-				return;
+			if (s.m_size == v2.Zero) return;
 			Write(EKeyword.Size, s.m_size);
 		}
 		private void Append(Serialiser.Width w)
 		{
-			if (w.m_width == 0)
-				return;
+			if (w.m_width == 0) return;
 			Write(EKeyword.Width, w.m_width);
 		}
 		private void Append(Serialiser.Scale s)
 		{
-			if (s.m_scale == 1f)
-				return;
+			if (s.m_scale == 1f) return;
 			Write(EKeyword.Scale, s.m_scale);
 		}
 		private void Append(Serialiser.Scale2 s)
 		{
-			if (s.m_scale == v2.One)
-				return;
+			if (s.m_scale == v2.One) return;
 			Write(EKeyword.Scale, s.m_scale);
 		}
 		private void Append(Serialiser.Scale3 s)
 		{
-			if (s.m_scale == v3.One)
-				return;
+			if (s.m_scale == v3.One) return;
 			Write(EKeyword.Scale, s.m_scale);
 		}
 		private void Append(Serialiser.PerItemColour c)
 		{
-			if (!c.m_per_item_colour)
-				return;
+			if (!c.m_per_item_colour) return;
 			Write(EKeyword.PerItemColour);
 		}
 		private void Append(Serialiser.Depth d)
 		{
-			if (d.m_depth == false)
-				return;
+			if (d.m_depth == false) return;
 			Write(EKeyword.Depth);
 		}
 		private void Append(Serialiser.Hidden h)
 		{
-			if (!h.m_hide)
-				return;
+			if (!h.m_hide) return;
 			Write(EKeyword.Hidden);
 		}
 		private void Append(Serialiser.Wireframe w)
 		{
-			if (!w.m_wire)
-				return;
+			if (!w.m_wire) return;
 			Write(EKeyword.Wireframe);
 		}
 		private void Append(Serialiser.Solid s)
 		{
-			if (!s.m_solid)
-				return;
+			if (!s.m_solid) return;
 			Write(EKeyword.Solid);
 		}
 		private void Append(Serialiser.Smooth s)
 		{
-			if (!s.m_smooth)
-				return;
+			if (!s.m_smooth) return;
 			Write(EKeyword.Smooth);
 		}
 		private void Append(Serialiser.LeftHanded lh)
 		{
-			if (!lh.m_lh)
-				return;
+			if (!lh.m_lh) return;
 			Write(EKeyword.LeftHanded);
 		}
 		private void Append(Serialiser.Alpha a)
 		{
-			if (!a.m_has_alpha)
-				return;
+			if (!a.m_has_alpha) return;
 			Write(EKeyword.Alpha);
 		}
 		private void Append(Serialiser.AxisId a)
 		{
-			if (a.m_axis == EAxisId.None)
-				return;
+			if (a.m_axis == EAxisId.None) return;
 			Write(EKeyword.AxisId, (int)a.m_axis.Id);
 		}
 		private void Append(Serialiser.ArrowType a)
@@ -288,8 +271,7 @@ namespace Rylogic.LDraw
 		}
 		private void Append(Serialiser.Pos p)
 		{
-			if (p.m_pos == v4.Origin)
-				return;
+			if (p.m_pos == v4.Origin) return;
 			Write(EKeyword.O2W, () =>
 			{
 				Write(EKeyword.Pos, p.m_pos.xyz);

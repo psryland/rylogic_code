@@ -312,7 +312,7 @@ namespace pr::rdr12::ldraw
 		using SectionStack = pr::vector<SectionSpan>;
 		using istream_t = std::basic_istream<char>; // 'char' to support ifstream
 
-		istream_t& m_src;         // The input byte stream
+		istream_t& m_src;            // The input byte stream
 		int64_t m_pos;               // The number of bytes read from the stream so far, or the index of the next byte to read (same thing)
 		SectionStack m_section;      // A stack of section headers. back() == top == current section.
 		mutable Location m_location; // Source location description
@@ -382,6 +382,8 @@ namespace pr::rdr12::ldraw
 			// Seek to the end of the current section.
 			m_src.seekg(last.m_end - m_pos, std::ios::cur).peek(); // Peek to test for EOF
 			m_pos = last.m_end;
+			if (m_pos < 0)
+				throw std::runtime_error("Corrupt ldraw data");
 
 			// If this is the end of the parent section then there are no more sections at this level.
 			if (m_pos == parent.m_end || m_src.eof())
@@ -462,6 +464,9 @@ namespace pr::rdr12::ldraw
 		// Read 'size' bytes into 'buf'
 		void Read(void* buf, int64_t size)
 		{
+			if (size < 0)
+				throw std::runtime_error("Invalid read size");
+
 			if (!m_src.read(char_ptr(buf), s_cast<size_t>(size)).good())
 			{
 				ReportError(EParseError::DataMissing, Loc(), "Read failed");

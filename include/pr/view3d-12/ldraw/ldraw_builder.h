@@ -2,6 +2,16 @@
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
+// Notes:
+//  - You can write ldraw data to a stream using:
+//      stream << builder.ToText() << std::flush; or
+//      stream << builder.ToBinary() << std::flush;
+//  - Use a socket_stream for streaming to LDraw:
+//      #include "pr/network/winsock.h"
+//      #include "pr/network/socket_stream.h"
+//      pr::network::Winsock winsock;
+//      pr::network::socket_stream ldr("localhost", 1976);
+//      ldr << builder.ToText(false) << std::flush;
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
@@ -11,6 +21,15 @@
 
 namespace pr::rdr12::ldraw
 {
+	enum class ESaveFlags
+	{
+		None = 0,
+		Binary = 1 << 0,
+		Pretty = 1 << 1,
+		Append = 1 << 2,
+		_flags_enum = 0,
+	};
+
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
 	{
@@ -105,15 +124,6 @@ namespace pr::rdr12::ldraw
 
 		struct LdrBuilder
 		{
-			// Notes:
-			//  - You can write ldraw data to a stream using:
-			//      stream << builder.ToText() << std::flush; or
-			//      stream << builder.ToBinary() << std::flush;
-			//  - Use a socket_stream for streaming to LDraw:
-			//      pr::network::Winsock winsock;
-			//      pr::network::socket_stream ldr("localhost", 1976);
-			//      ldr << builder.ToText(false) << std::flush;
-
 			using ObjPtr = std::unique_ptr<LdrBuilder>;
 			using ObjCont = std::vector<ObjPtr>;
 
@@ -203,16 +213,33 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Write the script to a file
-			LdrBuilder& Write(std::filesystem::path const& filepath)
+			LdrBuilder& Save(std::filesystem::path const& filepath, ESaveFlags flags = ESaveFlags::None)
 			{
-				return Write(filepath, false, false);
-			}
-			LdrBuilder& Write(std::filesystem::path const& filepath, bool pretty, bool append)
-			{
-				textbuf out;
-				Write(out);
-				if (pretty) out = FormatScript(out);
-				ldraw::Write(out, filepath, append);
+				auto fpath = filepath;
+				auto binary = AllSet(flags, ESaveFlags::Binary);
+				auto append = AllSet(flags, ESaveFlags::Append);
+				auto pretty = AllSet(flags, ESaveFlags::Pretty);
+
+				if (!fpath.has_extension())
+					fpath.replace_extension(binary ? ".bdr" : ".ldr");
+
+				if (!std::filesystem::exists(fpath.parent_path()))
+					std::filesystem::create_directories(fpath.parent_path());
+
+				if (binary)
+				{
+					bytebuf out;
+					Write(out);
+					ldraw::Write(out, fpath, append);
+				}
+				else
+				{
+					textbuf out;
+					Write(out);
+					if (pretty)
+						out = FormatScript(out);
+					ldraw::Write(out, fpath, append);
+				}
 				return *this;
 			}
 		};
@@ -251,13 +278,13 @@ namespace pr::rdr12::ldraw
 			Colour m_colour;
 
 			// Object colour mask
-			Derived& colour_mask(Colour c)
+			Derived& group_colour(Colour c)
 			{
-				m_colour_mask = c;
-				m_colour_mask.m_kw = EKeyword::ColourMask;
+				m_group_colour = c;
+				m_group_colour.m_kw = EKeyword::GroupColour;
 				return *me();
 			}
-			Colour m_colour_mask;
+			Colour m_group_colour;
 
 			// Object to world transform
 			Derived& o2w(m4x4 const& o2w)
@@ -278,6 +305,10 @@ namespace pr::rdr12::ldraw
 			{
 				return o2w(rot, v4::Origin());
 			}
+			Derived& ori(quat const& q)
+			{
+				return o2w(m4x4::Transform(q, v4::Origin()));
+			}
 			Derived& pos(float x, float y, float z)
 			{
 				return o2w(m4x4::Translation(x, y, z));
@@ -297,10 +328,6 @@ namespace pr::rdr12::ldraw
 			Derived& scale(v4_cref scale)
 			{
 				return ori(m3x4::Scale(scale.x, scale.y, scale.z));
-			}
-			Derived& quat(pr::quat const& q)
-			{
-				return o2w(m4x4::Transform(q, v4::Origin()));
 			}
 			Derived& euler(float pitch_deg, float yaw_deg, float roll_deg)
 			{
@@ -370,7 +397,7 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Append(out, m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
+				Writer::Append(out, m_axis_id, m_wire, m_solid, m_group_colour, m_o2w);
 				LdrBuilder::Write(out);
 			}
 		};
@@ -388,8 +415,8 @@ namespace pr::rdr12::ldraw
 				: m_filepath()
 				, m_addr()
 				, m_filter(EFilter::Linear)
-				, m_t2s()
 				, m_has_alpha()
+				, m_t2s()
 			{
 			}
 
@@ -489,7 +516,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Points have depth
-			LdrPoint& depth(bool d)
+			LdrPoint& depth(bool d = true)
 			{
 				m_depth = d;
 				return *this;
@@ -525,18 +552,19 @@ namespace pr::rdr12::ldraw
 		};
 		struct LdrLine :LdrBase<LdrLine>
 		{
-			struct Line { v4 a, b; Colour col; };
-			pr::vector<Line> m_lines;
+			struct Ln { v4 a, b; Colour32 col; };
+			struct Pt { v4 a; Colour32 col; };
+			pr::vector<Ln> m_lines;
+			pr::vector<Pt> m_strip;
 			Smooth m_smooth;
 			Width m_width;
-			bool m_strip;
 			PerItemColour m_per_item_colour;
 
 			LdrLine()
 				:m_lines()
+				,m_strip()
 				,m_smooth()
 				,m_width()
-				,m_strip()
 				,m_per_item_colour()
 			{}
 
@@ -555,16 +583,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Lines
-			LdrLine& line(v4_cref a, v4_cref b, Colour colour)
+			LdrLine& line(v4_cref a, v4_cref b, std::optional<Colour32> colour = {})
 			{
-				line(a, b);
-				m_lines.back().col = colour;
-				m_per_item_colour = true;
-				return *this;
-			}
-			LdrLine& line(v4_cref a, v4_cref b)
-			{
-				m_lines.push_back({ a, b, {} });
+				m_lines.push_back({ a, b, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour || colour;
+				m_strip.clear();
 				return *this;
 			}
 			LdrLine& lines(std::span<v4 const> verts, std::span<int const> indices)
@@ -597,16 +620,17 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Line strip
-			LdrLine& strip(v4_cref start)
+			LdrLine& strip(v4_cref start, std::optional<Colour32> colour = {})
 			{
-				line(start, start);
-				m_strip = true;
+				m_strip.push_back({ start, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour || colour;
+				m_lines.clear();
 				return *this;
 			}
-			LdrLine& line_to(v4_cref pt)
+			LdrLine& line_to(v4_cref pt, std::optional<Colour32> colour = {})
 			{
-				assert(m_strip);
-				line(pt, pt);
+				if (m_strip.empty()) strip(v4::Origin(), colour);
+				strip(pt, colour);
 				return *this;
 			}
 
@@ -614,16 +638,22 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Write(out, m_strip ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
+				Writer::Write(out, m_lines.empty() ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
 				{
 					Writer::Append(out, m_smooth, m_width, m_per_item_colour);
 					Writer::Write(out, EKeyword::Data, [&]
 					{
-						for (auto& line : m_lines)
+						for (auto& ln : m_lines)
 						{
-							Writer::Append(out, line.a.xyz, line.b.xyz);
+							Writer::Append(out, ln.a.xyz, ln.b.xyz);
 							if (m_per_item_colour)
-								Writer::Append(out, line.col);
+								Writer::Append(out, ln.col);
+						}
+						for (auto& pt : m_strip)
+						{
+							Writer::Append(out, pt.a.xyz);
+							if (m_per_item_colour)
+								Writer::Append(out, pt.col);
 						}
 					});
 					LdrBase::WriteTo<Writer>(out);
@@ -688,7 +718,7 @@ namespace pr::rdr12::ldraw
 		{
 			struct Pt { v4 p; Colour col; };
 			pr::vector<Pt> m_pts;
-			EArrowType m_style;
+			ArrowType m_style;
 			bool m_smooth;
 			Width m_width;
 			PerItemColour m_per_item_colour;
@@ -1207,11 +1237,11 @@ namespace pr::rdr12::ldraw
 			bool m_ortho;
 
 			LdrFrustum()
-				: m_ortho()
+				: m_wh()
 				, m_nf()
-				, m_wh()
 				, m_fovY()
 				, m_aspect()
+				, m_ortho()
 			{}
 
 			// Orthographic

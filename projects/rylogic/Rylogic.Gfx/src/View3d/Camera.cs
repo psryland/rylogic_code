@@ -139,6 +139,13 @@ namespace Rylogic.Gfx
 				set => View3D_CameraFocusDistanceSet(m_window.Handle, value >= 0 ? value : throw new Exception("Focus distance cannot be negative"));
 			}
 
+			/// <summary>The bounding box that limits the focus position</summary>
+			public BBox FocusBounds
+			{
+				get => View3D_CameraFocusBoundsGet(m_window.Handle);
+				set => View3D_CameraFocusBoundsSet(m_window.Handle, value);
+			}
+
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
 			public m4x4 O2W
 			{

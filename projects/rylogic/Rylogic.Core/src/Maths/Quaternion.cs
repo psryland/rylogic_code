@@ -132,7 +132,7 @@ namespace Rylogic.Maths
 		/// <summary>Reinterpret a vector as a quaternion</summary>
 		public static Quat From(v4 vec)
 		{
-			return new Quat(vec.x, vec.y, vec.z, vec.w);
+			return new(vec.x, vec.y, vec.z, vec.w);
 		}
 
 		/// <summary>Get/Set components by index</summary>
@@ -207,38 +207,54 @@ namespace Rylogic.Maths
 			}
 		}
 
-		/// <summary>ToString</summary>
-		public override string ToString() => $"{x} {y} {z} {w}";
-		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
-		public string ToCodeString() => $"{x}f, {y}f, {z}f, {w}f";
-
 		/// <summary>ToArray()</summary>
 		public float[] ToArray()
 		{
-			return new float[4]{ x, y, z, w };
+			return [x, y, z, w];
 		}
 
-		// Static types
-		public static Quat Zero { get; } = new Quat(0, 0, 0, 0);
-		public static Quat Identity { get; } = new Quat(0, 0, 0, 1);
+		/// <summary>Component add</summary>
+		public static Quat CompAdd(Quat lhs, Quat rhs)
+		{
+			return new(lhs.xyzw + rhs.xyzw);
+		}
 
-		/// <summary>Operators</summary>
+		/// <summary>Component multiply</summary>
+		public Quat CompMul(Quat lhs, float rhs)
+		{
+			return new(lhs.xyzw * rhs);
+		}
+		public Quat CompMul(Quat lhs, double rhs)
+		{
+			return CompMul(lhs, (float)rhs);
+		}
+		public Quat CompMul(Quat lhs, Quat rhs)
+		{
+			return new(lhs.xyzw * rhs.xyzw);
+		}
+
+		#region Statics
+		public readonly static Quat Zero = new(0, 0, 0, 0);
+		public readonly static Quat Identity = new(0, 0, 0, 1);
+		#endregion
+
+		#region Operators
 		public static Quat operator + (Quat q)
 		{
 			return q;
 		}
 		public static Quat operator - (Quat q)
 		{
-			return new Quat(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
+			return new(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
 		}
 		public static Quat operator ~ (Quat q)
 		{
-			return new Quat(-q.x, -q.y, -q.z, q.w);
+			return new(-q.x, -q.y, -q.z, q.w);
 		}
 		public static Quat operator * (Quat lhs, Quat rhs)
 		{
 			// Quaternion multiply. Same semantics at matrix multiply
-			return new Quat(
+			return new(
 				lhs.w*rhs.x + lhs.x*rhs.w + lhs.y*rhs.z - lhs.z*rhs.y,
 				lhs.w*rhs.y - lhs.x*rhs.z + lhs.y*rhs.w + lhs.z*rhs.x,
 				lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w,
@@ -249,26 +265,32 @@ namespace Rylogic.Maths
 			// Quaternion rotate. Same semantics at matrix multiply
 			return Math_.Rotate(lhs, rhs);
 		}
+		#endregion
 
-		/// <summary>Component add</summary>
-		public static Quat CompAdd(Quat lhs, Quat rhs)
+		#region Equals
+		public static bool operator == (Quat lhs, Quat rhs)
 		{
-			return new Quat(lhs.xyzw + rhs.xyzw);
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
 		}
+		public static bool operator != (Quat lhs, Quat rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object? o)
+		{
+			return o is Quat q && q == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y, z, w }.GetHashCode();
+		}
+		#endregion
 
-		/// <summary>Component multiply</summary>
-		public Quat CompMul(Quat lhs, float rhs)
-		{
-			return new Quat(lhs.xyzw * rhs);
-		}
-		public Quat CompMul(Quat lhs, double rhs)
-		{
-			return CompMul(lhs, (float)rhs);
-		}
-		public Quat CompMul(Quat lhs, Quat rhs)
-		{
-			return new Quat(lhs.xyzw * rhs.xyzw);
-		}
+		#region ToString
+		public override string ToString() => $"{x} {y} {z} {w}";
+		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
+		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f";
+		#endregion
 
 		#region Parse
 		public static Quat Parse(string s)
@@ -280,7 +302,7 @@ namespace Rylogic.Maths
 			if (values.Length != 4)
 				throw new FormatException("Quat.Parse() string argument does not represent a 4 component quaternion");
 
-			return new Quat(
+			return new(
 				float.Parse(values[0]),
 				float.Parse(values[1]),
 				float.Parse(values[2]),
@@ -311,40 +333,21 @@ namespace Rylogic.Maths
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static Quat Random(v4 axis, float min_angle, float max_angle, Random r)
 		{
-			return new Quat(axis, r.Float(min_angle, max_angle));
+			return new(axis, r.Float(min_angle, max_angle));
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static Quat Random(float min_angle, float max_angle, Random r)
 		{
-			return new Quat(v4.Random3N(0f, r), r.Float(min_angle, max_angle));
+			return new(v4.Random3N(0f, r), r.Float(min_angle, max_angle));
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static Quat Random(Random r)
 		{
-			return new Quat(v4.Random3N(0f, r), r.Float(0f, (float)Math_.Tau));
+			return new(v4.Random3N(0f, r), r.Float(0f, (float)Math_.Tau));
 		}
 
-		#endregion
-
-		#region Equals
-		public static bool operator == (Quat lhs, Quat rhs)
-		{
-			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
-		}
-		public static bool operator != (Quat lhs, Quat rhs)
-		{
-			return !(lhs == rhs);
-		}
-		public override bool Equals(object? o)
-		{
-			return o is Quat q && q == this;
-		}
-		public override int GetHashCode()
-		{
-			return new { x, y, z, w }.GetHashCode();
-		}
 		#endregion
 
 		/// <summary></summary>
@@ -382,11 +385,11 @@ namespace Rylogic.Maths
 		/// <summary>Normalise a quaternion to unit length</summary>
 		public static Quat Normalise(Quat q)
 		{
-			return new Quat(Normalise(q.xyzw));
+			return new(Normalise(q.xyzw));
 		}
 		public static Quat Normalise(Quat q, Quat def)
 		{
-			return new Quat(Normalise(q.xyzw, def.xyzw));
+			return new(Normalise(q.xyzw, def.xyzw));
 		}
 
 		/// <summary>Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)</summary>
@@ -410,24 +413,25 @@ namespace Rylogic.Maths
 		/// <summary>Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation</summary>
 		public static v4 LogMap(Quat q)
 		{
-			var angle = Math.Acos(Clamp(q.w, -1.0f, +1.0f));
-			var s = Math.Sin(angle);
-			if (Math.Abs(s) < Math_.TinyF)
-				return q.xyzw.w0;
-
-			var scale = (float)(angle / s);
-			return new(q.x * scale, q.y * scale, q.z * scale, 0f);
+			// Quat = [u.Sin(A/2), Cos(A/2)]
+			var cos_half_ang = Math_.Clamp(q.w, -1.0f, +1.0f); // [0, tau]
+			var sin_half_ang = q.xyzw.w0.Length; // Don't use 'sqrt(1 - w*w)', it's not float noise accurate enough when w ~= +/-1
+			var ang_by_2 = Math.Acos(cos_half_ang);
+			return Math.Abs(sin_half_ang) > Math_.TinyD
+				? 2.0f * q.xyzw.w0 * (float)(ang_by_2 / sin_half_ang)
+				: 2.0f * q.xyzw.w0;
 		}
 
 		/// <summary>Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.</summary>
 		public static Quat ExpMap(v4 v)
 		{
-			var angle = v.Length;
-			if (Math.Abs(angle) < Math_.TinyF)
-				return Quat.Identity;
-
-			var s = (float)(Math.Sin(angle) / angle);
-			return new(v.x * s, v.y * s, v.z * s, (float)Math.Cos(angle));
+			// Vec = (+/-)A * (-/+)u.
+			var ang_by_2 = 0.5 * v.Length;
+			var cos_half_ang = (float)Math.Cos(ang_by_2);
+			var sin_half_ang = (float)Math.Sqrt(1 - cos_half_ang * cos_half_ang);
+			return ang_by_2 > Math_.TinyD
+				? new Quat { xyzw = v * (sin_half_ang / (2 * ang_by_2)), w = cos_half_ang }
+				: new Quat { xyzw = v, w = cos_half_ang };
 		}
 
 		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
@@ -445,7 +449,7 @@ namespace Rylogic.Maths
 			var a = frac * (float)Math.Acos(w);    // = scaled half angle
 			var sin_ha = (float)Math.Sin(a);
 			var cos_ha = (float)Math.Cos(a);
-			return new Quat(
+			return new(
 				q.x * sin_ha / s,
 				q.y * sin_ha / s,
 				q.z * sin_ha / s,
@@ -453,13 +457,13 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the axis and angle from a quaternion</summary>
-		public static (v4, float) AxisAngle(Quat quat)
+		public static (v4 axis, float angle) AxisAngle(Quat quat)
 		{
 			var w = (float)Clamp(quat.w, -1.0, 1.0);
 			var s = (float)Math.Sqrt(1.0f - w * w);
 			var angle = (float)(2.0 * Math.Acos(w));
 			var axis = Math.Abs(s) > Math_.TinyF
-				? new v4(quat.x / s, quat.y / s, quat.z / s, 0.0f)
+				? new(quat.x / s, quat.y / s, quat.z / s, 0.0f)
 				: v4.Zero; // axis is (0,0,0) when angle == 1
 
 			return (axis, angle);
@@ -470,7 +474,7 @@ namespace Rylogic.Maths
 		{
 			// From Wikipedia
 			double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
-			return new v4(
+			return new(
 				(float)Math.Atan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2)),
 				(float)Math.Asin(2.0 * (q0 * q2 - q3 * q1)),
 				(float)Math.Atan2(2.0 * (q0 * q3 + q1 * q2), 1.0 - 2.0 * (q2 * q2 + q3 * q3)),
@@ -491,7 +495,7 @@ namespace Rylogic.Maths
 				var scale0 = Math.Sin((1 - frac) * angle);
 				var scale1 = Math.Sin((frac) * angle);
 				var sin_angle = Math.Sin(angle);
-				return new Quat((a.xyzw * (float)scale0 + b_.xyzw * (float)scale1) / (float)sin_angle);
+				return new((a.xyzw * (float)scale0 + b_.xyzw * (float)scale1) / (float)sin_angle);
 			}
 			// "a" and "b" quaternions are very close, use linear interpolation
 			else
@@ -507,8 +511,8 @@ namespace Rylogic.Maths
 			float yy = lhs.y * lhs.y, yz = lhs.y * lhs.z, yw = lhs.y * lhs.w;
 			float zz = lhs.z * lhs.z, zw = lhs.z * lhs.w;
 			float ww = lhs.w * lhs.w;
-			return new v4(
-				  ww * rhs.x + 2 * yw * rhs.z - 2 * zw * rhs.y + xx * rhs.x + 2 * xy * rhs.y + 2 * xz * rhs.z - zz * rhs.x - yy * rhs.x,
+			return new(
+				ww * rhs.x + 2 * yw * rhs.z - 2 * zw * rhs.y + xx * rhs.x + 2 * xy * rhs.y + 2 * xz * rhs.z - zz * rhs.x - yy * rhs.x,
 				2 * xy * rhs.x + yy * rhs.y + 2 * yz * rhs.z + 2 * zw * rhs.x - zz * rhs.y + ww * rhs.y - 2 * xw * rhs.z - xx * rhs.y,
 				2 * xz * rhs.x + 2 * yz * rhs.y + zz * rhs.z - 2 * yw * rhs.x - yy * rhs.z + 2 * xw * rhs.y - xx * rhs.z + ww * rhs.z,
 				rhs.w);
@@ -598,6 +602,16 @@ namespace Rylogic.UnitTests
 				return rng.Bool() ? q : -q;
 			}));
 			Assert.True(Math_.FEqlRelative(ideal_mean, actual_mean, 0.01f));
+		}
+		[Test] public void LogMapExpMap()
+		{
+			var q0 = new Quat(-2.09713704e-08f, -0.00148352725f, -6.48572168e-11f, -0.999998927f);
+			q0 = Math_.Normalise(q0);
+
+			var v0 = Math_.LogMap(q0);
+			var q1 = Math_.ExpMap(v0);
+			var angular_error = Math_.Angle(q0, q1);
+			Assert.True(Math.Abs(angular_error) < 0.001f);
 		}
 	}
 }

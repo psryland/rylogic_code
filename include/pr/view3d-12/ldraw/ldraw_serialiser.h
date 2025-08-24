@@ -18,11 +18,20 @@ namespace pr::rdr12::ldraw
 	{
 		std::string m_name;
 		Name() :m_name() {}
-		Name(std::string_view str) :m_name(str) {}
-		Name(std::wstring_view str) :m_name(Narrow(str)) {}
-		template <int N> Name(char const (&str)[N]) :m_name(str) {}
-		template <int N> Name(wchar_t const (&str)[N]) :m_name(Narrow(str)) {}
-		Name(string32 const& str) :m_name(str.begin(), str.end()) {}
+		Name(std::string_view str) :m_name(Sanitise(str)) {}
+		Name(std::wstring_view str) :m_name(Sanitise(Narrow(str))) {}
+		Name(std::string const& str) :m_name(Sanitise(str)) {}
+		Name(std::wstring const& str) :m_name(Sanitise(Narrow(str))) {}
+		template <int N> Name(char const (&str)[N]) :m_name(Sanitise(str)) {}
+		template <int N> Name(wchar_t const (&str)[N]) :m_name(Sanitise(Narrow(str))) {}
+		Name(string32 const& str) :m_name(Sanitise(std::string(str.begin(), str.end()))) {}
+		static std::string Sanitise(std::string_view name)
+		{
+			std::string result(name);
+			for (auto& ch : result) ch = std::isalnum(ch) ? ch : '_';
+			if (!result.empty() && !std::isalpha(result[0])) result.insert(0, 1, '_');
+			return result;
+		}
 	};
 	struct Colour
 	{

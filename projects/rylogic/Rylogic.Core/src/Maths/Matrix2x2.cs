@@ -15,14 +15,14 @@ namespace Rylogic.Maths
 		public v2 x;
 		public v2 y;
 
+		public m2x2(float x)
+			:this(new v2(x), new v2(x))
+		{}
 		public m2x2(v2 x, v2 y) :this()
 		{
 			this.x = x;
 			this.y = y;
 		}
-		//public m2x2(v2 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }
-		//public m2x2(v2 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
-		//public m2x2(v2 from, v4 to) :this()                                    { set(from, to); }
 
 		/// <summary>Get/Set columns by index</summary>
 		public v2 this[int c]
@@ -71,22 +71,6 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		[Obsolete]
-		public float get(int r, int c)
-		{
-			return this[r, c];
-		}
-		[Obsolete]
-		public void set(int r, int c, float value)
-		{
-			this[r, c] = value;
-		}
-
-		/// <summary>ToString</summary>
-		public override string ToString() => ToString2x2();
-		public string ToString2x2() => $"{x} \n{y} \n";
-		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n";
-		public string ToCodeString() => $"{x}, {y}";
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
@@ -98,31 +82,39 @@ namespace Rylogic.Maths
 			};
 		}
 
-		// Static m2x2 types
-		private readonly static m2x2 m_zero     = new(v2.Zero , v2.Zero );
-		private readonly static m2x2 m_identity = new(v2.XAxis, v2.YAxis);
-		public static m2x2 Zero     { get { return m_zero; } }
-		public static m2x2 Identity { get { return m_identity; } }
+		#region Statics
+		public readonly static m2x2 Zero     = new(v2.Zero , v2.Zero);
+		public readonly static m2x2 Identity = new(v2.XAxis, v2.YAxis);
+		#endregion
 
-		// Functions
-		public override bool Equals(object? o)              { return o is m2x2 m && m == this; }
-		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode(); } }
-		public static m2x2 operator + (m2x2 rhs)            { return rhs; }
-		public static m2x2 operator - (m2x2 rhs)            { return new m2x2(-rhs.x, -rhs.y); }
-		public static m2x2 operator * (m2x2 lhs, float rhs) { return new m2x2(lhs.x * rhs   , lhs.y * rhs   ); }
-		public static m2x2 operator + (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x + rhs.x , lhs.y + rhs.y ); }
-		public static m2x2 operator - (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x - rhs.x , lhs.y - rhs.y ); }
-		public static m2x2 operator * (float lhs, m2x2 rhs) { return new m2x2(lhs * rhs.x   , lhs * rhs.y   ); }
-		public static m2x2 operator / (m2x2 lhs, float rhs) { return new m2x2(lhs.x / rhs   , lhs.y / rhs   ); }
-		public static bool operator ==(m2x2 lhs, m2x2 rhs)  { return lhs.x == rhs.x && lhs.y == rhs.y; }
-		public static bool operator !=(m2x2 lhs, m2x2 rhs)  { return !(lhs == rhs); }
-		public static v2 operator * (m2x2 lhs, v2 rhs)
+		#region Operators
+		public static m2x2 operator +(m2x2 rhs)
 		{
-			v2 ans;
-			Math_.Transpose(ref lhs);
-			ans.x = Math_.Dot(lhs.x, rhs);
-			ans.y = Math_.Dot(lhs.y, rhs);
-			return ans;
+			return rhs;
+		}
+		public static m2x2 operator -(m2x2 rhs)
+		{
+			return new(-rhs.x, -rhs.y);
+		}
+		public static m2x2 operator *(m2x2 lhs, float rhs)
+		{
+			return new(lhs.x * rhs, lhs.y * rhs);
+		}
+		public static m2x2 operator +(m2x2 lhs, m2x2 rhs)
+		{
+			return new(lhs.x + rhs.x, lhs.y + rhs.y);
+		}
+		public static m2x2 operator -(m2x2 lhs, m2x2 rhs)
+		{
+			return new(lhs.x - rhs.x, lhs.y - rhs.y);
+		}
+		public static m2x2 operator *(float lhs, m2x2 rhs)
+		{
+			return new(lhs * rhs.x, lhs * rhs.y);
+		}
+		public static m2x2 operator /(m2x2 lhs, float rhs)
+		{
+			return new(lhs.x / rhs, lhs.y / rhs);
 		}
 		public static m2x2 operator * (m2x2 lhs, m2x2 rhs)
 		{
@@ -134,31 +126,80 @@ namespace Rylogic.Maths
 			ans.y.y = Math_.Dot(lhs.y, rhs.y);
 			return ans;
 		}
+		public static v2 operator * (m2x2 lhs, v2 rhs)
+		{
+			v2 ans;
+			Math_.Transpose(ref lhs);
+			ans.x = Math_.Dot(lhs.x, rhs);
+			ans.y = Math_.Dot(lhs.y, rhs);
+			return ans;
+		}
+		#endregion
 
-		//// Create a rotation from an axis and angle
-		//public static m3x4 Rotation(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
-		//{
-		//	return new m3x4(axis_norm, axis_sine_angle, cos_angle);
-		//}
+		#region Equals
+		public static bool operator ==(m2x2 lhs, m2x2 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y;
+		}
+		public static bool operator !=(m2x2 lhs, m2x2 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object? o)
+		{
+			return o is m2x2 v && v == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y }.GetHashCode();
+		}
+		#endregion
 
-		//// Create from an axis and angle. 'axis' should be normalised
-		//public static m3x4 Rotation(v4 axis_norm, float angle)
-		//{
-		//	return new m3x4(axis_norm, angle);
-		//}
+		#region ToString
+		public override string ToString() => ToString2x2();
+		public string ToString2x2() => $"{x} \n{y} \n";
+		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n";
+		public string ToCodeString() => $"new m4x4(\nnew v4({x.ToCodeString()}),\n new v4({y.ToCodeString()})\n)";
+		#endregion
 
-		//// Create a rotation from 'from' to 'to'
-		//public static m3x4 Rotation(v4 from, v4 to)
-		//{
-		//	return new m3x4(from, to);
-		//}
+		#region Parse
+		public static m2x2 Parse(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse)}:string argument was null");
+			return TryParse(s, out var result) ? result : throw new FormatException($"{nameof(Parse)}: string argument does not represent a 2x2 matrix");
+		}
+		public static bool TryParse(string s, out m2x2 mat, bool row_major = true)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split([' ', ',', '\t', '\n'], 16, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 16)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = row_major
+				? new(
+					new(float.Parse(values[0]), float.Parse(values[1])),
+					new(float.Parse(values[2]), float.Parse(values[3])))
+				: new(
+					new(float.Parse(values[0]), float.Parse(values[2])),
+					new(float.Parse(values[1]), float.Parse(values[3])));
+			return true;
+		}
+		#endregion
 
 		#region Random
 
 		/// <summary>Create a random 3x4 matrix</summary>
 		public static m2x2 Random(Random r, float min_value, float max_value)
 		{
-			return new m2x2(
+			return new(
 				new v2(r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v2(r.Float(min_value, max_value), r.Float(min_value, max_value)));
 		}
@@ -204,7 +245,7 @@ namespace Rylogic.Maths
 		/// <summary>Absolute value of 'x'</summary>
 		public static m2x2 Abs(m2x2 x)
 		{
-			return new m2x2(
+			return new(
 				Abs(x.x),
 				Abs(x.y));
 		}
@@ -321,7 +362,7 @@ namespace Rylogic.Maths
 			switch (n % 2)
 			{
 			default: return mat;
-			case 1: return new m2x2(mat.y, mat.x);
+			case 1: return new(mat.y, mat.x);
 			}
 		}
 

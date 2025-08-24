@@ -248,7 +248,7 @@ namespace pr::container
 			});
 		}
 
-		builder.Write("E:/Dump/dimension_index.ldr");
+		builder.Save("E:/Dump/dimension_index.ldr");
 	}
 }
 

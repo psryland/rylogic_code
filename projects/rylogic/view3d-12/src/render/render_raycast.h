@@ -22,12 +22,9 @@ namespace pr::rdr12
 		RayCastFilter          m_include;       // A filter for instances to include for hit testing
 		GfxCmdList             m_cmd_list;      // Command buffer
 		GpuSync                m_gsync;         //
-		shaders::RayCastVert   m_shader_vert;   // The vertex snapping ray cast
-		shaders::RayCastEdge   m_shader_edge;   // The edge snapping ray cast
-		shaders::RayCastFace   m_shader_face;   // The face snapping ray cast
-		shaders::RayCast*      m_shader;        // The shader currently in use
-		D3DPtr<ID3D12Resource> m_results;       // A buffer that will receive the intercepts (used in the shader)
-		Descriptor             m_results_uav;   // UAV of the result buffer
+		shaders::RayCast       m_shader;        // The ray cast shader
+		D3DPtr<ID3D12Resource> m_zero;          // A buffer of zeros used to reset the output counter
+		D3DPtr<ID3D12Resource> m_out;           // An unstructured buffer for the number of intercepts and the intercept data
 		GpuReadbackBuffer      m_readback;      // A read back buffer for reading intercept data
 		GpuTransferAllocation  m_output;        // The CPU copy of the results from the last ray cast
 		bool                   m_continuous;    // Whether this step is used as a one-shot or for every frame render

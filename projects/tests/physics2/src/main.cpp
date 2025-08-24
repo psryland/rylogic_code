@@ -200,7 +200,7 @@ struct MainUI :Form
 		Builder builder;
 		builder._<LdrRigidBody>("body0", 0x8000FF00).rigid_body(m_body[0]).flags(flags);
 		builder._<LdrRigidBody>("body1", 0x10FF0000).rigid_body(m_body[1]).flags(flags);
-		builder.Write(L"\\dump\\physics_dump.ldr");
+		builder.Save(L"\\dump\\physics_dump.ldr");
 	}
 
 	// Handle errors reported within view3d

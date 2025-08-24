@@ -83,15 +83,10 @@ namespace Rylogic.Maths
 		public float LengthSq => x * x + y * y + z * z;
 		public float Length => (float)Math.Sqrt(LengthSq);
 
-		/// <summary>ToString</summary>
-		public override string ToString() => $"{x} {y} {z}";
-		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)}";
-		public string ToCodeString() => $"{x}f, {y}f, {z}f";
-
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v3 to an object type. e.g. v3? x = v3.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v3(float[] a)
 		{
-			return new v3(a[0], a[1], a[2]);
+			return new(a[0], a[1], a[2]);
 		}
 		public static explicit operator float[](v3 p)
 		{
@@ -99,7 +94,7 @@ namespace Rylogic.Maths
 		}
 		public static explicit operator v3(double[] a)
 		{
-			return new v3((float)a[0], (float)a[1], (float)a[2]);
+			return new((float)a[0], (float)a[1], (float)a[2]);
 		}
 		public static explicit operator double[](v3 p)
 		{
@@ -109,7 +104,7 @@ namespace Rylogic.Maths
 		public v4 w0 => new(x, y, z, 0);
 		public v4 w1 => new(x, y, z, 1);
 
-		// Static v3 types
+		#region Statics
 		public readonly static v3 Zero = new(0f, 0f, 0f);
 		public readonly static v3 Xaxis = new(1f, 0f, 0f);
 		public readonly static v3 Yaxis = new(0f, 1f, 0f);
@@ -118,27 +113,28 @@ namespace Rylogic.Maths
 		public readonly static v3 NaN = new(float.NaN, float.NaN, float.NaN);
 		public readonly static v3 MinValue = new(float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v3 MaxValue = new(float.MaxValue, float.MaxValue, float.MaxValue);
+		#endregion
 
-		/// <summary>Operators</summary>
+		#region Operators
 		public static v3 operator +(v3 vec)
 		{
 			return vec;
 		}
 		public static v3 operator -(v3 vec)
 		{
-			return new v3(-vec.x, -vec.y, -vec.z);
+			return new(-vec.x, -vec.y, -vec.z);
 		}
 		public static v3 operator +(v3 lhs, v3 rhs)
 		{
-			return new v3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
+			return new(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 		}
 		public static v3 operator -(v3 lhs, v3 rhs)
 		{
-			return new v3(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+			return new(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
 		}
 		public static v3 operator *(v3 lhs, float rhs)
 		{
-			return new v3(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
+			return new(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
 		}
 		public static v3 operator *(v3 lhs, double rhs)
 		{
@@ -146,7 +142,7 @@ namespace Rylogic.Maths
 		}
 		public static v3 operator *(float lhs, v3 rhs)
 		{
-			return new v3(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
+			return new(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
 		}
 		public static v3 operator *(double lhs, v3 rhs)
 		{
@@ -154,11 +150,11 @@ namespace Rylogic.Maths
 		}
 		public static v3 operator *(v3 lhs, v3 rhs)
 		{
-			return new v3(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
+			return new(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
 		}
 		public static v3 operator /(v3 lhs, float rhs)
 		{
-			return new v3(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
+			return new(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
 		}
 		public static v3 operator /(v3 lhs, double rhs)
 		{
@@ -166,8 +162,46 @@ namespace Rylogic.Maths
 		}
 		public static v3 operator /(v3 lhs, v3 rhs)
 		{
-			return new v3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
+			return new(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 		}
+		public static v3 operator %(v3 lhs, float rhs)
+		{
+			return new(lhs.x % rhs, lhs.y % rhs, lhs.z % rhs);
+		}
+		public static v3 operator %(v3 lhs, double rhs)
+		{
+			return lhs % (float)rhs;
+		}
+		public static v3 operator %(v3 lhs, v3 rhs)
+		{
+			return new(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z);
+		}
+		#endregion
+
+		#region Equals
+		public static bool operator ==(v3 lhs, v3 rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+		}
+		public static bool operator !=(v3 lhs, v3 rhs)
+		{
+			return !(lhs == rhs);
+		}
+		public override bool Equals(object? o)
+		{
+			return o is v3 v && v == this;
+		}
+		public override int GetHashCode()
+		{
+			return new { x, y, z }.GetHashCode();
+		}
+		#endregion
+
+		#region ToString
+		public override string ToString() => $"{x} {y} {z}";
+		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)}";
+		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f";
+		#endregion
 
 		#region Parse
 		public static v3 Parse(string s)
@@ -179,7 +213,7 @@ namespace Rylogic.Maths
 			if (values.Length != 3)
 				throw new FormatException("v3.Parse() string argument does not represent a 3 component vector");
 
-			return new v3(
+			return new(
 				float.Parse(values[0]),
 				float.Parse(values[1]),
 				float.Parse(values[2]));
@@ -208,7 +242,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
 		public static v3 Random3(float min, float max, Random r)
 		{
-			return new v3(r.Float(min, max), r.Float(min, max), r.Float(min, max));
+			return new(r.Float(min, max), r.Float(min, max), r.Float(min, max));
 		}
 
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
@@ -222,7 +256,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v3 Random3(v3 min, v3 max, Random r)
 		{
-			return new v3(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z));
+			return new(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z));
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
@@ -241,13 +275,13 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
 		public static v3 Random2(float min, float max, float z, Random r)
 		{
-			return new v3(r.Float(min, max), r.Float(min, max), z);
+			return new(r.Float(min, max), r.Float(min, max), z);
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v3 Random2(v3 min, v3 max, float z, Random r)
 		{
-			return new v3(r.Float(min.x, max.x), r.Float(min.y, max.y), z);
+			return new(r.Float(min.x, max.x), r.Float(min.y, max.y), z);
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
@@ -268,25 +302,6 @@ namespace Rylogic.Maths
 			return v;
 		}
 
-		#endregion
-
-		#region Equals
-		public static bool operator ==(v3 lhs, v3 rhs)
-		{
-			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
-		}
-		public static bool operator !=(v3 lhs, v3 rhs)
-		{
-			return !(lhs == rhs);
-		}
-		public override bool Equals(object? o)
-		{
-			return o is v3 v && v == this;
-		}
-		public override int GetHashCode()
-		{
-			return new { x, y, z }.GetHashCode();
-		}
 		#endregion
 
 		/// <summary></summary>
@@ -320,7 +335,7 @@ namespace Rylogic.Maths
 		/// <summary>Component absolute value</summary>
 		public static v3 Abs(v3 vec)
 		{
-			return new v3(
+			return new(
 				Math.Abs(vec.x),
 				Math.Abs(vec.y),
 				Math.Abs(vec.z));
@@ -347,7 +362,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a vector containing the minimum components</summary>
 		public static v3 Min(v3 lhs, v3 rhs)
 		{
-			return new v3(
+			return new(
 				Math.Min(lhs.x, rhs.x),
 				Math.Min(lhs.y, rhs.y),
 				Math.Min(lhs.z, rhs.z));
@@ -362,7 +377,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a vector containing the maximum components</summary>
 		public static v3 Max(v3 lhs, v3 rhs)
 		{
-			return new v3(
+			return new(
 				Math.Max(lhs.x, rhs.x),
 				Math.Max(lhs.y, rhs.y),
 				Math.Max(lhs.z, rhs.z));
@@ -377,7 +392,7 @@ namespace Rylogic.Maths
 		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
 		public static v3 Clamp(v3 vec, v3 min, v3 max)
 		{
-			return new v3(
+			return new(
 				Clamp(vec.x, min.x, max.x),
 				Clamp(vec.y, min.y, max.y),
 				Clamp(vec.z, min.z, max.z));
@@ -438,7 +453,7 @@ namespace Rylogic.Maths
 		/// <summary>Cross product of XYZ components</summary>
 		public static v3 Cross(v3 lhs, v3 rhs)
 		{
-			return new v3(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x);
+			return new(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x);
 		}
 
 		/// <summary>Triple product of XYZ components</summary>
@@ -463,7 +478,7 @@ namespace Rylogic.Maths
 		public static v3 CreateNotParallelTo(v3 vec)
 		{
 			bool x_aligned = Abs(vec.x) > Abs(vec.y) && Abs(vec.x) > Abs(vec.z);
-			return new v3(SignF(!x_aligned), 0, SignF(x_aligned));
+			return new(SignF(!x_aligned), 0, SignF(x_aligned));
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
