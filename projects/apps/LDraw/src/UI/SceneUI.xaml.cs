@@ -187,6 +187,7 @@ namespace LDraw.UI
 					SceneView.Options = m_scene_state.Chart;
 					m_scene_state.SettingChange += HandleSettingChange;
 					SceneView.Scene.Window.OnSettingsChanged += HandleSceneSettingChanged;
+					m_scene_state.NotifyAllSettingsChanged();
 				}
 
 				// Handlers
