@@ -23,6 +23,7 @@ namespace Rylogic.Maths
 		[FieldOffset( 8)] public float z;
 		[FieldOffset(12)] public float w;
 		[FieldOffset( 0)] public v4 xyzw; // (same name as the C++ version)
+		[FieldOffset( 0)] public v3 xyz;  // (same name as the C++ version)
 
 		public Quat(float x) 
 			:this()
@@ -45,6 +46,9 @@ namespace Rylogic.Maths
 		{
 			this.xyzw = vec;
 		}
+		public Quat(v3 vec)
+			:this(vec.w0)
+		{}
 
 		/// <summary>Create a quaternion from an axis and an angle</summary>
 		public Quat(v4 axis, float angle)
@@ -181,14 +185,14 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				Debug.Assert(IsNormalised, "quaternion isn't normalised");
+				//Debug.Assert(IsNormalised, "quaternion isn't normalised");
 
 				// Trig:
 				//' cos^2(x) = 0.5 * (1 + cos(2x))
 				//' w == cos(x/2)
 				//' w^2 == cos^2(x/2) == 0.5 * (1 + cos(x))
 				//' 2w^2 - 1 == cos(x)
-				return Math_.Clamp(2f * Math_.Sqr(w) - 1f, -1f, +1f);
+				return Math_.Clamp(2f * Math_.Sqr(w) - LengthSq, -1f, +1f);
 			}
 		}
 
@@ -197,13 +201,13 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				Debug.Assert(IsNormalised, "quaternion isn't normalised");
+				//Debug.Assert(IsNormalised, "quaternion isn't normalised");
 
 				// Trig:
 				//' sin^2(x) + cos^2(x) == 1
 				//' sin^2(x) == 1 - cos^2(x)
 				//' sin(x) == sqrt(1 - cos^2(x))
-				return (float)Math.Sqrt(1f - Math_.Sqr(CosAngle));
+				return (float)Math.Sqrt(LengthSq - Math_.Sqr(CosAngle));
 			}
 		}
 
@@ -239,19 +243,39 @@ namespace Rylogic.Maths
 		#endregion
 
 		#region Operators
-		public static Quat operator + (Quat q)
+		public static Quat operator +(Quat q)
 		{
 			return q;
 		}
-		public static Quat operator - (Quat q)
+		public static Quat operator -(Quat q)
 		{
 			return new(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
 		}
-		public static Quat operator ~ (Quat q)
+		public static Quat operator ~(Quat q)
 		{
 			return new(-q.x, -q.y, -q.z, q.w);
 		}
-		public static Quat operator * (Quat lhs, Quat rhs)
+		public static Quat operator +(Quat lhs, Quat rhs)
+		{
+			return new(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+		}
+		public static Quat operator -(Quat lhs, Quat rhs)
+		{
+			return new(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+		}
+		public static Quat operator *(Quat lhs, float rhs)
+		{
+			return new(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
+		}
+		public static Quat operator *(float lhs, Quat rhs)
+		{
+			return rhs * lhs;
+		}
+		public static Quat operator /(Quat lhs, float rhs)
+		{
+			return new(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
+		}
+		public static Quat operator *(Quat lhs, Quat rhs)
 		{
 			// Quaternion multiply. Same semantics at matrix multiply
 			return new(
@@ -260,7 +284,7 @@ namespace Rylogic.Maths
 				lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w,
 				lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z);
 		}
-		public static v4 operator * (Quat lhs, v4 rhs)
+		public static v4 operator *(Quat lhs, v4 rhs)
 		{
 			// Quaternion rotate. Same semantics at matrix multiply
 			return Math_.Rotate(lhs, rhs);
@@ -507,6 +531,12 @@ namespace Rylogic.Maths
 		/// <summary>Rotate a vector by a quaternion. This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'</summary>
 		public static v4 Rotate(Quat lhs, v4 rhs)
 		{
+			var res = Rotate(lhs, rhs.xyz).w0;
+			res.w = rhs.w;
+			return res;
+		}
+		public static v3 Rotate(Quat lhs, v3 rhs)
+		{
 			float xx = lhs.x * lhs.x, xy = lhs.x * lhs.y, xz = lhs.x * lhs.z, xw = lhs.x * lhs.w;
 			float yy = lhs.y * lhs.y, yz = lhs.y * lhs.z, yw = lhs.y * lhs.w;
 			float zz = lhs.z * lhs.z, zw = lhs.z * lhs.w;
@@ -514,8 +544,8 @@ namespace Rylogic.Maths
 			return new(
 				ww * rhs.x + 2 * yw * rhs.z - 2 * zw * rhs.y + xx * rhs.x + 2 * xy * rhs.y + 2 * xz * rhs.z - zz * rhs.x - yy * rhs.x,
 				2 * xy * rhs.x + yy * rhs.y + 2 * yz * rhs.z + 2 * zw * rhs.x - zz * rhs.y + ww * rhs.y - 2 * xw * rhs.z - xx * rhs.y,
-				2 * xz * rhs.x + 2 * yz * rhs.y + zz * rhs.z - 2 * yw * rhs.x - yy * rhs.z + 2 * xw * rhs.y - xx * rhs.z + ww * rhs.z,
-				rhs.w);
+				2 * xz * rhs.x + 2 * yz * rhs.y + zz * rhs.z - 2 * yw * rhs.x - yy * rhs.z + 2 * xw * rhs.y - xx * rhs.z + ww * rhs.z
+			);
 		}
 
 		/// <summary>

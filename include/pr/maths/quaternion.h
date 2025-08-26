@@ -109,20 +109,6 @@ namespace pr
 			return arr[i];
 		}
 
-		// Operators
-		Quat operator +() const
-		{
-			return *this;
-		}
-		Quat operator -() const
-		{
-			return Quat(-x, -y, -z, -w); // Note: Not conjugate
-		}
-		Quat operator ~() const
-		{
-			return Quat(-x, -y, -z, w);
-		}
-
 		// Create a quaternion from an axis and an angle
 		Quat(Vec4_cref<S, void> axis, S angle)
 		{
@@ -236,6 +222,38 @@ namespace pr
 		}
 
 		#pragma region Operators
+		friend constexpr Quat pr_vectorcall operator +(Quat_cref<S, A, B> q)
+		{
+			return q;
+		}
+		friend constexpr Quat  pr_vectorcall operator -(Quat_cref<S, A, B> q)
+		{
+			return { -q.x, -q.y, -q.z, -q.w }; // Note: Not conjugate
+		}
+		friend Quat pr_vectorcall operator ~(Quat_cref<S, A, B> q)
+		{
+			return { -q.x, -q.y, -q.z, q.w }; // This is conjugate
+		}
+		friend Quat pr_vectorcall operator + (Quat_cref<S, A, B> lhs, Quat_cref<S, A, B> rhs)
+		{
+			return Quat{ .xyzw = lhs.xyzw + rhs.xyzw };
+		}
+		friend Quat pr_vectorcall operator - (Quat_cref<S, A, B> lhs, Quat_cref<S, A, B> rhs)
+		{
+			return Quat{ .xyzw = lhs.xyzw - rhs.xyzw };
+		}
+		friend Quat pr_vectorcall operator *(Quat_cref<S, A, B> lhs, float rhs)
+		{
+			return Quat{ .xyzw = lhs.xyzw * rhs };
+		}
+		friend Quat pr_vectorcall operator *(float lhs, Quat_cref<S, A, B> rhs)
+		{
+			return Quat{ .xyzw = lhs * rhs.xyzw };
+		}
+		friend Quat pr_vectorcall operator /(Quat_cref<S, A, B> lhs, float rhs)
+		{
+			return Quat{ .xyzw = lhs.xyzw / rhs };
+		}
 
 		// Quaternion multiply
 		// Note about 'quat multiply' vs. 'r = q*v*conj(q)':

@@ -317,6 +317,10 @@ namespace pr::rdr12::ldraw
 			{
 				return o2w(m4x4::Translation(pos));
 			}
+			Derived& pos(v3_cref pos)
+			{
+				return this->pos(pos.w1());
+			}
 			Derived& scale(float s)
 			{
 				return scale(s, s, s);
@@ -590,6 +594,10 @@ namespace pr::rdr12::ldraw
 				m_strip.clear();
 				return *this;
 			}
+			LdrLine& line(v3_cref a, v3_cref b, std::optional<Colour32> colour = {})
+			{
+				return line(a.w1(), b.w1(), colour);
+			}
 			LdrLine& lines(std::span<v4 const> verts, std::span<int const> indices)
 			{
 				assert((isize(indices) % 2) == 0);
@@ -627,11 +635,19 @@ namespace pr::rdr12::ldraw
 				m_lines.clear();
 				return *this;
 			}
+			LdrLine& strip(v3_cref start, std::optional<Colour32> colour = {})
+			{
+				return strip(start.w1(), colour);
+			}
 			LdrLine& line_to(v4_cref pt, std::optional<Colour32> colour = {})
 			{
 				if (m_strip.empty()) strip(v4::Origin(), colour);
 				strip(pt, colour);
 				return *this;
+			}
+			LdrLine& line_to(v3_cref pt, std::optional<Colour32> colour = {})
+			{
+				return line_to(pt.w1(), colour);
 			}
 
 			// Write to 'out'
@@ -681,17 +697,15 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Line points
-			LdrLineD& line(v4_cref pt, v4_cref dir, Colour32 colour)
-			{
-				line(pt, dir);
-				m_lines.back().col = colour;
-				m_per_item_colour = true;
-				return *this;
-			}
-			LdrLineD& line(v4_cref pt, v4_cref dir)
+			LdrLineD& line(v4_cref pt, v4_cref dir, std::optional<Colour32> colour = {})
 			{
 				m_lines.push_back({ pt, dir });
+				m_per_item_colour = m_per_item_colour || colour;
 				return *this;
+			}
+			LdrLineD& line(v3_cref pt, v3_cref dir, std::optional<Colour32> colour = {})
+			{
+				return line(pt.w1(), dir.w0(), colour);
 			}
 
 			// Write to 'out'
@@ -716,7 +730,7 @@ namespace pr::rdr12::ldraw
 		};
 		struct LdrArrow :LdrBase<LdrArrow>
 		{
-			struct Pt { v4 p; Colour col; };
+			struct Pt { v4 p; Colour32 col; };
 			pr::vector<Pt> m_pts;
 			ArrowType m_style;
 			bool m_smooth;
@@ -753,31 +767,26 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Line strip parts
-			LdrArrow& start(v4_cref p, Colour colour)
+			LdrArrow& start(v4_cref p, std::optional<Colour32> colour = {})
 			{
-				start(p);
-				m_pts.back().col = colour;
-				m_per_item_colour = true;
+				m_pts.push_back({ p, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour || colour;
 				return *this;
 			}
-			LdrArrow& start(v4_cref p)
+			LdrArrow& start(v3_cref p, std::optional<Colour32> colour = {})
 			{
-				assert(m_pts.empty() && "Arrows can only have one start point");
-				m_pts.push_back({ p, {} });
+				return start(p.w1(), colour);
+			}
+			LdrArrow& line_to(v4_cref p, std::optional<Colour32> colour = {})
+			{
+				if (m_pts.empty()) start(v4::Origin(), colour);
+				m_pts.push_back({ p, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour || colour;
 				return *this;
 			}
-			LdrArrow& line_to(v4_cref p, Colour colour)
+			LdrArrow& line_to(v3_cref p, std::optional<Colour32> colour = {})
 			{
-				line_to(p);
-				m_pts.back().col = colour;
-				m_per_item_colour = true;
-				return *this;
-			}
-			LdrArrow& line_to(v4_cref p)
-			{
-				assert(!m_pts.empty() && "Arrows require a start point first");
-				m_pts.push_back({ p, {} });
-				return *this;
+				return line_to(p.w1(), colour);
 			}
 
 			// Write to 'out'

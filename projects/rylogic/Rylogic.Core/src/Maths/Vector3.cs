@@ -106,9 +106,9 @@ namespace Rylogic.Maths
 
 		#region Statics
 		public readonly static v3 Zero = new(0f, 0f, 0f);
-		public readonly static v3 Xaxis = new(1f, 0f, 0f);
-		public readonly static v3 Yaxis = new(0f, 1f, 0f);
-		public readonly static v3 Zaxis = new(0f, 0f, 1f);
+		public readonly static v3 XAxis = new(1f, 0f, 0f);
+		public readonly static v3 YAxis = new(0f, 1f, 0f);
+		public readonly static v3 ZAxis = new(0f, 0f, 1f);
 		public readonly static v3 One = new(1f, 1f, 1f);
 		public readonly static v3 NaN = new(float.NaN, float.NaN, float.NaN);
 		public readonly static v3 MinValue = new(float.MinValue, float.MinValue, float.MinValue);
@@ -325,7 +325,7 @@ namespace Rylogic.Maths
 			if (max_b == 0) return max_a < tol;
 			if (max_a == 0) return max_b < tol;
 			var abs_max_element = Max(max_a, max_b);
-			return FEqlRelative(a, b, tol * abs_max_element);
+			return FEqlAbsolute(a, b, tol * abs_max_element);
 		}
 		public static bool FEql(v3 a, v3 b)
 		{

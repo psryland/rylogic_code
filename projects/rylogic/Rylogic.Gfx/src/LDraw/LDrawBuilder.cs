@@ -331,6 +331,10 @@ namespace Rylogic.LDraw
 		{
 			return o2w(m4x4.Translation(pos));
 		}
+		public TDerived pos(v3 pos)
+		{
+			return this.pos(pos.w1);
+		}
 		public TDerived scale(float s)
 		{
 			return scale(s, s, s);
@@ -551,6 +555,10 @@ namespace Rylogic.LDraw
 			m_strip.Clear();
 			return this;
 		}
+		public LdrLine line(v3 a, v3 b, Colour32? colour = null)
+		{
+			return line(a.w1, b.w1, colour);
+		}
 		public LdrLine lines(Span<v4> verts, Span<int> indices)
 		{
 			Debug.Assert((indices.Length % 2) == 0);
@@ -582,6 +590,10 @@ namespace Rylogic.LDraw
 			if (m_strip.Count == 0) strip(v4.Origin, colour);
 			strip(pt, colour);
 			return this;
+		}
+		public LdrLine line_to(v3 pt, Colour32? colour = null)
+		{
+			return line_to(pt.w1, colour);
 		}
 
 		/// <inheritdoc/>
@@ -629,6 +641,10 @@ namespace Rylogic.LDraw
 			m_lines.Add(new Ln{ pt = pt, dir = dir, col = colour ?? Colour32.White });
 			m_per_item_colour |= colour != null;
 			return this;
+		}
+		public LdrLineD line(v3 pt, v3 dir, Colour32? colour = null)
+		{
+			return line(pt.w1, dir.w0, colour);
 		}
 
 		/// <inheritdoc/>
@@ -681,35 +697,26 @@ namespace Rylogic.LDraw
 		}
 
 		// Line strip parts
-		public LdrArrow start(v4 p, Colour32 colour)
+		public LdrArrow start(v4 p, Colour32? colour = null)
 		{
-			start(p);
-			var last = m_pts.Last();
-			last.col = colour;
-			m_pts[m_pts.Count - 1] = last;
-			m_per_item_colour = true;
+			m_pts.Add(new Pt { pt = v4.Origin, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
 			return this;
 		}
-		public LdrArrow start(v4 p)
+		public LdrArrow start(v3 p, Colour32? colour = null)
 		{
-			Debug.Assert(m_pts.Count == 0, "Arrows can only have one start point");
-			m_pts.Add(new Pt{ pt = p, col = 0xFFFFFFFF });
+			return start(p.w1, colour);
+		}
+		public LdrArrow line_to(v4 p, Colour32? colour = null)
+		{
+			if (m_pts.Count == 0) start(v4.Origin, colour);
+			m_pts.Add(new Pt { pt = p, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
 			return this;
 		}
-		public LdrArrow line_to(v4 p, Colour32 colour)
+		public LdrArrow line_to(v3 p, Colour32? colour = null)
 		{
-			line_to(p);
-			var last = m_pts.Back();
-			last.col = colour;
-			m_pts[m_pts.Count - 1] = last;
-			m_per_item_colour = true;
-			return this;
-		}
-		public LdrArrow line_to(v4 p)
-		{
-			Debug.Assert(m_pts.Count != 0, "Arrows require a start point first");
-			m_pts.Add(new Pt{ pt = p, col = 0xFFFFFFFF });
-			return this;
+			return line_to(p.w1, colour);
 		}
 
 		/// <inheritdoc/>
