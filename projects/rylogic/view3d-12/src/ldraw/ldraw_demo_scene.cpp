@@ -1321,9 +1321,9 @@ namespace pr::rdr12::ldraw
 				.pt({ +0.14113660f, +0.45059928f, +0.13722318f, 1 }, 0xFFCED899)
 				.pt({ +0.18176337f, -0.24681160f, -0.12977648f, 1 }, 0xFFA7D8AE)
 				.pt({ +0.38887858f, +0.24615003f, +0.06563436f, 1 }, 0xFFB9BA96)
-				//.pos({ 16, 6, 6, 1 })
-				//.texture()
-				//	.path("#whitespot")
+				.pos({ 16, 6, 6, 1 })
+				.texture()
+					.path("#whitespot")
 				;
 		}
 

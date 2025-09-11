@@ -3,23 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2025
 //**********************************
 
-uint HashI(const char str[])
-{
-	#define FNV_offset_basis32 2166136261U
-	#define FNV_prime32 16777619U
-	local uint ch, h = FNV_offset_basis32;
-	local int i, iend = Strlen(str);
-	for (i = 0; i != iend; ++i)
-	{
-		ch = (uint)ToLower(str[i]);
-		h = (h ^ ch) * FNV_prime32;
-	}
-	return h;
-}
-
-struct float2 { float x, y; };
-struct float3 { float x, y, z; };
-struct float4 { float x, y, z, w; };
+typedef struct { float x, y; } float2 <read=Str("%g  %g", this.x, this.y)>;
+typedef struct { float x, y, z; } float3 <read=Str("%g  %g  %g", this.x, this.y, this.z)>;
+typedef struct { float x, y, z, w; } float4 <read=Str("%g  %g  %g  %g", this.x, this.y, this.z, this.w)>;
+typedef struct { float4 x, y, z, w; } float4x4;
+typedef struct { float3 pt; uint col <format=hex>; } PtColour <read=Str("%g  %g  %g  0x%8.8x", this.pt.x, this.pt.y, this.pt.z, this.col)>;
 
 enum <uint> EKeyword
 {
@@ -203,67 +191,185 @@ enum <uint> ECommandId
 	// AUTO-GENERATED-COMMANDS-END
 };
 
-void Sections(uint end, EKeyword parent);
-
-// Sections that contain nested sections
-struct Section_Nested
+uint HashI(const char str[])
 {
-	local int64 fpos = FTell();
-	EKeyword m_keyword; // The hash of the keyword (4-bytes)
-	int m_size;	        // The length of the section in bytes (excluding the header size)
-	Sections(fpos + 8 + m_size, m_keyword);
-	FSeek(fpos + 8 + m_size);
-};
-
-// Sections that contain data only
-struct Section_Data
-{
-	local int64 fpos = FTell();
-	EKeyword m_keyword; // The hash of the keyword (4-bytes)
-	int m_size;	        // The length of the section in bytes (excluding the header size)
-
-	// The payload of this section
-    switch (m_keyword)
-    {
-        case Name:
-        {
-            char m_name[m_size];
-            break;
-        }
-        case Colour:
-        {
-            uint32 m_colour <format=hex>;
-            break;
-        }
-        //case Data:
-        //{
-        //    if (parent == Commands)
-        //        ECommandId m_command_id;
-        //    else
-        //        byte m_data[m_size];
-        //    break;
-        //}
-        default:
-    	{
-            byte m_data[m_size];
-            break;
-        }
-    }
-
-	FSeek(fpos + 8 + m_size);
-};
-
-
-// Section nested function
-void SectionNested(EKeyword keyword, EKeyword parent)
-{
-    Section_Nested object <name=EnumToString(this.m_keyword)>;
+	#define FNV_offset_basis32 2166136261U
+	#define FNV_prime32 16777619U
+	local uint ch, h = FNV_offset_basis32;
+	local int i, iend = Strlen(str);
+	for (i = 0; i != iend; ++i)
+	{
+		ch = (uint)ToLower(str[i]);
+		h = (h ^ ch) * FNV_prime32;
+	}
+	return h;
 }
 
-// Section Data function
-void SectionData(EKeyword keyword, EKeyword parent)
+struct SectionHeader
 {
-	Section_Data data <name=EnumToString(this.m_keyword)>;
+	EKeyword m_keyword;
+	int m_section_size;
+};
+
+void Sections(uint end, EKeyword parent);
+
+void NestingObject(EKeyword parent)
+{
+	struct L
+	{
+		local int64 fpos = FTell();
+		local byte per_item_colour = 0;
+
+		SectionHeader header <name="Header">;
+		Sections(fpos + 8 + header.m_section_size, header.m_keyword);
+		FSeek(fpos + 8 + header.m_section_size);
+	} object <name=EnumToString(this.header.m_keyword)>;
+}
+void DataPayload(EKeyword parent, uint payload_size)
+{
+	switch (parent)
+	{
+		case Box:
+		{
+			float3 dim;
+			break;
+		}
+		case Cone:
+		{
+			float angle;
+			float to_tip;
+			float to_base;
+			break;
+		}
+		case Commands:
+		{
+			ECommandId command_id;
+			break;
+		}
+		case Plane:
+		{
+			float width;
+			float height;
+			break;
+		}
+		case Point:
+		{
+			if (parentof(this).per_item_colour == 0)
+				float3 pt[payload_size/sizeof(float3)] <name="pts">;
+			else
+				PtColour pts[payload_size/sizeof(PtColour)] <name="pts">;
+		}
+		case Sphere:
+		{
+			float radius;
+			break;
+		}
+		default:
+		{
+			byte data[payload_size];
+			break;
+		}
+	}
+}
+void DataSection(EKeyword parent)
+{
+	struct D (EKeyword parent)
+	{
+		local int64 fpos = FTell();
+
+		SectionHeader header <name="Header">;
+
+		// The payload of this section
+		switch (header.m_keyword)
+		{
+			case Addr:
+			{
+				if (header.m_section_size > 0*sizeof(int))
+					int addrU;
+				if (header.m_section_size > 1*sizeof(int))
+					int addrV;
+				if (header.m_section_size > 2*sizeof(int))
+					int addrV;
+				break;
+			}
+			case AxisId:
+			{
+				int axis_id;
+				break;
+			}
+			case Colour:
+			{
+				uint32 colour <format=hex>;
+				break;
+			}
+			case Data:
+			{
+				DataPayload(parent, header.m_section_size);
+				break;
+			}
+			case FilePath:
+			{
+				char path[header.m_section_size];
+				break;
+			}
+			case Filter:
+			{
+				int filter;
+				break;
+			}
+			case GroupColour:
+			{
+				uint32 colour <format=hex>;
+				break;
+			}
+			case M4x4:
+			{
+				float4x4 o2w;
+				break;
+			}
+			case Name:
+			{
+				char name[header.m_section_size];
+				break;
+			}
+			case PerItemColour:
+			{
+				parentof(this).per_item_colour = 1;
+				break;
+			}
+			case Pos:
+			{
+				float3 pos;
+				break;
+			}
+			case Size:
+			{
+				float2 dim;
+				break;
+			}
+			case Style:
+			{
+				if (parent == Point)
+					byte style;
+				else
+					byte data[header.m_section_size];
+				break;
+			}
+			case O2W:
+			case Texture:
+			{
+				Sections(fpos + 8 + header.m_section_size, header.m_keyword);
+				break;
+			}
+			default:
+			{
+				byte data[header.m_section_size];
+				break;
+			}
+		}
+
+		FSeek(fpos + 8 + header.m_section_size);
+	} data(parent) <name=EnumToString(this.header.m_keyword)>;
 }
 
 // Recursive Sections function
@@ -316,128 +422,12 @@ void Sections(uint end, EKeyword parent)
 			case Tube:
 			case Unknown:
 			{
-				SectionNested(kw, parent);
+				NestingObject(parent);
 				break;
 			}
-	
-			// Field Names
-			case Accel:
-			case Addr:
-			case Align:
-			case Alpha:
-			case Anchor:
-			case AngAccel:
-			case AngVelocity:
-			case Animation:
-			case Aspect:
-			case Axis:
-			case AxisId:
-			case BackColour:
-			case BakeTransform:
-			case Billboard:
-			case Billboard3D:
-			case Camera:
-			case CastShadow:
-			case Closed:
-			case Colour:
-			case Colours:
-			case CornerRadius:
-			case CrossSection:
-			case CString:
-			case Dashed:
-			case Data:
-			case Depth:
-			case Dim:
-			case Direction:
-			case Divisions:
-			case Euler:
-			case Faces:
-			case Facets:
-			case Far:
-			case FilePath:
-			case Filter:
-			case Font:
-			case ForeColour:
-			case Format:
-			case Fov:
-			case FovX:
-			case FovY:
-			case GenerateNormals:
-			case GroupColour:
-            case Hidden:
-			case Inverse:
-			case Layers:
-			case LeftHanded:
-			case LineList:
-			case Lines:
-			case LookAt:
-			case M3x3:
-			case M4x4:
-			case Name:
-			case Near:
-			case NewLine:
-			case NonAffine:
-			case Normalise:
-			case Normals:
-			case NoZTest:
-			case NoZWrite:
-			case O2W:
-			case Orthographic:
-			case Orthonormalise:
-			case Padding:
-			case Param:
-			case Part:
-			case Period:
-			case PerItemColour:
-			case Pos:
-			case Position:
-			case Quat:
-			case QuatPos:
-			case Rand4x4:
-			case RandColour:
-			case RandOri:
-			case RandPos:
-			case Range:
-			case Reflectivity:
-			case Resolution:
-			case Round:
-			case Scale:
-			case ScreenSpace:
-			case Size:
-			case Smooth:
-			case Solid:
-			case Source:
-			case Specular:
-			case Square:
-			case Step:
-			case Stretch:
-			case Strikeout:
-			case Style:
-			case Tetra:
-			case TexCoords:
-			case TextLayout:
-			case Texture:
-			case Transpose:
-			case TriList:
-			case TriStrip:
-			case Txfm:
-			case Underline:
-			case Up:
-			case Velocity:
-			case Verts:
-			case Video:
-			case ViewPlaneZ:
-			case Wedges:
-			case Weight:
-			case Width:
-			case Wireframe:
-			case XAxis:
-			case XColumn:
-			case YAxis:
-			case ZAxis:
 			default:
 			{
-                SectionData(kw, parent);
+				DataSection(parent);
 				break;
 			}
 		}

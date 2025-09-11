@@ -409,20 +409,11 @@ namespace pr::rdr12::ldraw
 		// Modifiers
 		struct LdrTexture
 		{
-			std::filesystem::path m_filepath;
-			EAddrMode m_addr[2];
-			EFilter m_filter;
-			Alpha m_has_alpha;
-			O2W m_t2s;
-
-			LdrTexture()
-				: m_filepath()
-				, m_addr()
-				, m_filter(EFilter::Linear)
-				, m_has_alpha()
-				, m_t2s()
-			{
-			}
+			std::filesystem::path m_filepath = {};
+			EAddrMode m_addr[2] = {EAddrMode::Wrap, EAddrMode::Wrap};
+			EFilter m_filter = EFilter::Linear;
+			Alpha m_has_alpha = {};
+			O2W m_t2s = {};
 
 			// Texture filepath
 			LdrTexture& path(std::filesystem::path filepath)
@@ -552,7 +543,7 @@ namespace pr::rdr12::ldraw
 						{
 							Writer::Append(out, point.pt.xyz);
 							if (m_per_item_colour)
-								Writer::Append(out, point.col);
+								Writer::Append(out, point.col.m_colour);
 						}
 					});
 					m_tex.WriteTo<Writer>(out);
