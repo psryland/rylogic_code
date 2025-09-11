@@ -71,7 +71,7 @@ namespace LDraw
 				// Handlers
 				void ReportError(object? sender, View3d.ErrorEventArgs e)
 				{
-					Log.Write(ELogLevel.Error, e.Message, e.Filepath, e.FileLine);
+					Log.Write(ELogLevel.Error, e.Message, e.Filepath, e.FileLine, e.FileOffset);
 				}
 				void HandleSourcesChanged(object? sender, View3d.SourcesChangedEventArgs e)
 				{
@@ -289,7 +289,7 @@ namespace LDraw
 					}
 					catch (Exception ex)
 					{
-						Log.Write(ELogLevel.Error, ex, "Error during CheckForChangedFiles", string.Empty, 0);
+						Log.Write(ELogLevel.Error, ex, "Error during CheckForChangedFiles");
 					}
 				}
 			}

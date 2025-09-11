@@ -37,6 +37,7 @@ struct Main :Form
 	view3d::CubeMap m_envmap;
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
+	GUID m_file_ctx;
 	EStepMode m_step_mode;
 	int m_pending_steps;
 	double m_time = 0.0;
@@ -69,6 +70,7 @@ struct Main :Form
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 		, m_obj0()
 		, m_obj1()
+		, m_file_ctx()
 		, m_step_mode(EStepMode::Single)
 		, m_pending_steps()
 	{
@@ -120,16 +122,14 @@ struct Main :Form
 			//spline.pos(v4{ 0, 10, 0, 1 });
 
 			// Load script
-			//auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
-			//auto s = "*Box {*Data{1 2 3}} *Commands {*Data {AddToScene 0}}";
-			//auto ctx0 = View3D_LoadScriptFromString(s, nullptr, nullptr, nullptr, nullptr);
+			//m_file_ctx = View3D_LoadScriptFromFile("E:/Dump/Splines.Scene.bdr", nullptr, nullptr, {});
 		}
 
 		// Add objects to the scene
 		{
 			//View3D_WindowAddObject(m_win3d, m_obj0);
 			//View3D_WindowAddObject(m_win3d, m_obj1);
-			//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
+			//View3D_WindowAddObjectsById(m_win3d, { &m_file_ctx, [](void* ctx, GUID const& id) { return *type_ptr<GUID>(ctx) == id; } });
 			//View3D_DemoSceneCreateText(m_win3d);
 			View3D_DemoSceneCreateBinary(m_win3d);
 		}

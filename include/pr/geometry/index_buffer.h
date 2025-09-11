@@ -384,10 +384,8 @@ namespace pr::geometry
 			, m_stride(sizeof(int))
 		{
 		}
-		explicit IdxBuf(std::initializer_list<int const> indices)
-			: IdxBuf(std::span<int const>{ indices.begin(), indices.size() })
-		{
-		}
+		// Don't provide this. It's ambiguous with `IdxBuf(stride)`
+		// explicit IdxBuf(std::initializer_list<int const> indices) {}
 		IdxBuf(IdxBuf&& rhs) noexcept
 			: m_buf(std::move(rhs.m_buf))
 			, m_stride(rhs.m_stride)
@@ -714,7 +712,8 @@ namespace pr::geometry::unittests
 		PR_EXPECT(ibuf0.stride() == sizeof(T));
 		PR_EXPECT(ibuf0.max_value() == std::numeric_limits<std::make_unsigned_t<T>>::max());
 
-		IdxBuf ibuf1({0, 1, 2, 3, 4, 5, 6});
+		IdxBuf ibuf1(sizeof(int));
+		ibuf1 = { 0, 1, 2, 3, 4, 5, 6 };
 		PR_EXPECT(!ibuf1.empty());
 		PR_EXPECT(ibuf1.size() == 7);
 		PR_EXPECT(ibuf1.stride() == sizeof(int));

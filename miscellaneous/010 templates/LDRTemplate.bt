@@ -229,6 +229,14 @@ void DataPayload(EKeyword parent, uint payload_size)
 {
 	switch (parent)
 	{
+		case Arrow:
+		{
+			if (parentof(this).per_item_colour == 0)
+				float3 pt[payload_size/sizeof(float3)] <name="pts">;
+			else
+				PtColour pts[payload_size/sizeof(PtColour)] <name="pts">;
+			break;
+		}
 		case Box:
 		{
 			float3 dim;
@@ -258,6 +266,7 @@ void DataPayload(EKeyword parent, uint payload_size)
 				float3 pt[payload_size/sizeof(float3)] <name="pts">;
 			else
 				PtColour pts[payload_size/sizeof(PtColour)] <name="pts">;
+			break;
 		}
 		case Sphere:
 		{
@@ -355,6 +364,16 @@ void DataSection(EKeyword parent)
 					byte data[header.m_section_size];
 				break;
 			}
+			case Width:
+			{
+				if (parent == LineStrip)
+					float width;
+				else
+					byte data[header.m_section_size];
+				break;
+			}
+
+			// Nested sections
 			case O2W:
 			case Texture:
 			{

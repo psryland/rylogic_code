@@ -776,7 +776,7 @@ namespace LDraw.UI
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Saving script file failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Saving script file failed.");
 				MsgBox.Show(Window.GetWindow(this), $"Saving script file failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}

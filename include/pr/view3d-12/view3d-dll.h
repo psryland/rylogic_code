@@ -440,6 +440,7 @@ namespace pr
 		template <typename FuncType>
 		struct Callback
 		{
+			// Usage: { &thing, [](void* ctx, args...){ return type_ptr<Thing>(ctx)->Do(args); } }
 			using FuncCB = FuncType;
 			using CtxPtr = union { void const* cp; void* p; };
 

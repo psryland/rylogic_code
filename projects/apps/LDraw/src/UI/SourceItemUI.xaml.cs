@@ -35,7 +35,7 @@ namespace LDraw.UI
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Error removing source", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Error removing source");
 				MsgBox.Show(Window.GetWindow(this), $"Error removing source.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}

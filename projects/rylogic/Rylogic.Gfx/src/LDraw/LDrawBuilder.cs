@@ -722,7 +722,7 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Arrow, m_name, m_colour, () =>
 			{
-				res.Append(m_style, m_width, m_smooth, m_per_item_colour);
+				res.Append(m_style, m_smooth, m_width, m_per_item_colour);
 				res.Write(EKeyword.Data, () =>
 				{
 					foreach (var pt in m_pts)
@@ -1077,6 +1077,10 @@ namespace Rylogic.LDraw
 			m_splines.Add(new Bezier{ pt0 = pt0, pt1 = pt1, pt2 = pt2, pt3 = pt3, col = colour ?? Colour32.White });
 			m_per_item_colour |= colour != null;
 			return this;
+		}
+		public LdrSpline spline(v3 pt0, v3 pt1, v3 pt2, v3 pt3, Colour32? colour = null)
+		{
+			return spline(pt0.w1, pt1.w1, pt2.w1, pt3.w1, colour);
 		}
 
 		/// <inheritdoc/>

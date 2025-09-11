@@ -31,7 +31,6 @@ namespace Rylogic.Gui.WPF
 		//   panel for displaying log messages, the second is as a view of a
 		//   log file.
 		//   1)
-		//    - Add an instance of the control
 		//    - Call AddMessage()
 		//   2)
 		//    - Add an instance of the control
@@ -840,10 +839,13 @@ namespace Rylogic.Gui.WPF
 			public string File => Read(nameof(File), x => x) ?? string.Empty;
 
 			/// <summary>The line in the file that was the source of the log entry</summary>
-			public int Line => Read(nameof(Line), x => int.Parse(x));
+			public int Line => Read(nameof(Line), int.Parse);
+
+			/// <summary>The byte offset into the file that was the source of the log entry</summary>
+			public int Offset => Read(nameof(Offset), int.Parse);
 
 			/// <summary>The number of repeat log entries of the same type</summary>
-			public int Occurrences => Read(nameof(Occurrences), x => int.Parse(x));
+			public int Occurrences => Read(nameof(Occurrences), int.Parse);
 
 			/// <summary>Lazy regex pattern match</summary>
 			private T Read<T>(string grp, Func<string, T> parse)
@@ -941,6 +943,7 @@ namespace Rylogic.Gui.WPF
 			public const string Message     = nameof(LogEntry.Message);
 			public const string File        = nameof(LogEntry.File);
 			public const string Line        = nameof(LogEntry.Line);
+			public const string Offset      = nameof(LogEntry.Offset);
 			public const string Occurrences = nameof(LogEntry.Occurrences);
 			public const string Text        = nameof(LogEntry.Text);
 		}

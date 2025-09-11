@@ -288,7 +288,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Error, ex, "Saving the UI layout failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Error, ex, "Saving the UI layout failed.");
 				MsgBox.Show(this, $"Saving the UI layout failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
@@ -306,7 +306,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Opening source in editor failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Opening source in editor failed.");
 				MsgBox.Show(this, $"Opening source in editor failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
@@ -335,7 +335,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Add file source failed.", filepath ?? string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Add file source failed.", filepath ?? string.Empty, 0, 0);
 				MsgBox.Show(Owner, $"Add file source failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 				return null;
 			}
@@ -359,7 +359,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Create new script failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Create new script failed.");
 				MsgBox.Show(this, $"Create new script failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
@@ -375,7 +375,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Create new scene failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Create new scene failed.");
 				MsgBox.Show(this, $"Create new scene failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
@@ -450,7 +450,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Create example script failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Create example script failed.");
 				MsgBox.Show(this, $"Create example script failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}

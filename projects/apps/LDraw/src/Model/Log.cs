@@ -95,27 +95,31 @@ namespace LDraw
 		/// <summary>Add an output message</summary>
 		public static void Write(string message)
 		{
-			Write(ELogLevel.Info, message, string.Empty, 0);
+			Write(ELogLevel.Info, message, string.Empty, 0, 0);
 		}
 		public static void Write(ELogLevel lvl, string message)
 		{
-			Write(lvl, message, string.Empty, 0);
+			Write(lvl, message, string.Empty, 0, 0);
 		}
-		public static void Write(ELogLevel lvl, string message, string filepath, int line)
+		public static void Write(ELogLevel lvl, Exception ex, string message)
 		{
-			var msg = $"{lvl}|{filepath}({line})|{Elapsed:c}|{message}";
+			Write(lvl, $"{message} - {ex.Message}", string.Empty, 0, 0);
+		}
+		public static void Write(ELogLevel lvl, Exception ex, string message, string filepath, int line, long offset)
+		{
+			Write(lvl, $"{message} - {ex.Message}", filepath, line, offset);
+		}
+		public static void Write(ELogLevel lvl, string message, string filepath, int line, long offset)
+		{
+			var msg = $"{lvl}|{filepath}({line}:{offset})|{Elapsed:c}|{message}";
 			var entry = new LogControl.LogEntry(new Provider(), ++m_index, msg, false);
 			System.Diagnostics.Debug.Assert(PatternRegex.IsMatch(entry.Text));
 			Entries.Add(entry);
 		}
-		public static void Write(ELogLevel lvl, Exception ex, string message, string filepath, int line)
-		{
-			Write(lvl, $"{message} - {ex.Message}", filepath, line);
-		}
 
 		/// <summary>Output text pattern</summary>
 		public static readonly Regex PatternRegex = new(
-			@"^(?<Level>.*?)\|(?<File>.*?)\((?<Line>.*)\)\|(?<Elapsed>.*?)\|(?<Message>.*)",
+			@"^(?<Level>.*?)\|(?<File>.*?)\((?<Line>.*):(?<Offset>.*)\)\|(?<Elapsed>.*?)\|(?<Message>.*)",
 			//@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Elapsed>.*?)\|(?<Message>.*)",
 			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 

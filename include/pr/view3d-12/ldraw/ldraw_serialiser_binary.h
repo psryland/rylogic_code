@@ -387,8 +387,7 @@ namespace pr::rdr12::ldraw
 			return m_src.eof();
 		}
 
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
+		// Get the next keyword within the current section. Returns false if at the end of the section
 		virtual bool NextKeywordImpl(int& kw) override
 		{
 			// Out of data

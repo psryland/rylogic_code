@@ -1303,9 +1303,9 @@ namespace pr::rdr12::ldraw
 
 		// Points
 		{
-			ldr.Point("points", 0xFF00FF00)
+			ldr.Point("points")
 				.size(40.f)
-				.style(EPointStyle::Square)
+				.style(EPointStyle::Star)
 				.pt({ -0.32182515f, -0.11282351f, -0.33979280f, 1 }, 0xFF8DFD8F)
 				.pt({ -0.09884672f, +0.20496936f, -0.11294128f, 1 }, 0xFF84BDF2)
 				.pt({ +0.32952994f, +0.12638773f, -0.16279069f, 1 }, 0xFFA1B6C5)
@@ -1325,6 +1325,21 @@ namespace pr::rdr12::ldraw
 				.texture()
 					.path("#whitespot")
 				;
+		}
+
+		
+		// A line with pointy ends
+		{
+			ldr.Arrow("arrow")
+				.style(EArrowType::Fwd)
+				.start({ -0.8f, +0.2f,  0.0f }, 0xFF00FF00)
+				.line_to({ -0.8f, +0.2f,  0.0f }, 0xFF00FF00)
+				.line_to({ +0.3f,  0.7f,  0.2f }, 0xFFFF0000)
+				.line_to({ -0.3f,  1.2f, -0.2f }, 0xFFFF0000)
+				.line_to({ +1.0f, +1.7f,  0.0f }, 0xFFFFFF00)
+				.smooth()
+				.width(10.f)
+				.pos({ -15, 1, 0 });
 		}
 
 		return ldr.ToBinary();

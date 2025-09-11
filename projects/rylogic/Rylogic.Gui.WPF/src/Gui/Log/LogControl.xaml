@@ -25,6 +25,7 @@
 			<gui:LocaleString x:Key="Str_Message" Key="Log_Message" Fallback="Message"/>
 			<gui:LocaleString x:Key="Str_Filepath" Key="Log_Filepath" Fallback="File"/>
 			<gui:LocaleString x:Key="Str_LineNumber" Key="Log_LineNumber" Fallback="Line"/>
+			<gui:LocaleString x:Key="Str_Offset" Key="Log_Offset" Fallback="Offset"/>
 			<gui:LocaleString x:Key="Str_Occurrences" Key="Log_Occurrences" Fallback="Occurrences"/>
 			<gui:LocaleString x:Key="Str_Text" Key="Log_Text" Fallback="Text"/>
 			<gui:LocaleString x:Key="Str_CopyLogEntries" Key="Log_CopyLogEntries" Fallback="Copy Log Entries"/>
@@ -299,6 +300,13 @@
 					gui:DataGrid_.ColumnName ="Line"
 					Header="{Binding Source={StaticResource Str_LineNumber}, Path=Value}"
 					Binding="{Binding Line}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="0.5*"
+					/>
+				<DataGridTextColumn
+					gui:DataGrid_.ColumnName ="Offset"
+					Header="{Binding Source={StaticResource Str_Offset}, Path=Value}"
+					Binding="{Binding Offset}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="0.5*"
 					/>

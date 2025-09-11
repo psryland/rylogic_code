@@ -49,7 +49,7 @@ namespace LDraw
 			catch (Exception ex)
 			{
 				if (Debugger.IsAttached) throw;
-				Log.Write(ELogLevel.Fatal, ex, Util.AppProductName, string.Empty, 0);
+				Log.Write(ELogLevel.Fatal, ex, Util.AppProductName);
 				MsgBox.Show(null, $"Application startup failure: {ex.MessageFull()}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Error);
 				Shutdown();
 			}
@@ -64,7 +64,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Warn, ex, "Failed to load application settings. Defaults used", string.Empty, 0);
+				Log.Write(ELogLevel.Warn, ex, "Failed to load application settings. Defaults used");
 				var dlg = new MsgBox(null, $"Failed to load application settings.\n{ex.MessageFull()}.", Util.AppProductName, MsgBox.EButtons.OKCancel, MsgBox.EIcon.Information);
 				dlg.ShowInTaskbar = true;
 				dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;

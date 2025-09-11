@@ -131,7 +131,7 @@ namespace LDraw.UI
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Open-in-editor for this file source failed.", string.Empty, 0);
+				Log.Write(ELogLevel.Info, ex, "Open-in-editor for this file source failed.");
 				MsgBox.Show(Window.GetWindow(this), $"Open-in-editor for this file source failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}

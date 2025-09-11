@@ -470,7 +470,7 @@ namespace pr::rdr12::ldraw
 		// Object types
 		struct LdrPoint :LdrBase<LdrPoint>
 		{
-			struct Point { v4 pt; Colour col; };
+			struct Point { v4 pt; Colour32 col; };
 			std::vector<Point> m_points;
 			Size2 m_size;
 			Depth m_depth;
@@ -543,7 +543,7 @@ namespace pr::rdr12::ldraw
 						{
 							Writer::Append(out, point.pt.xyz);
 							if (m_per_item_colour)
-								Writer::Append(out, point.col.m_colour);
+								Writer::Append(out, point.col);
 						}
 					});
 					m_tex.WriteTo<Writer>(out);
@@ -614,10 +614,10 @@ namespace pr::rdr12::ldraw
 
 				return *this;
 			}
-			template <std::invocable<void(int, v4&, v4&, Colour&)> EnumLines>
+			template <std::invocable<void(int, v4&, v4&, Colour32&)> EnumLines>
 			LdrLine& lines(EnumLines lines)
 			{
-				v4 a = {}, b = {}; Colour c = {};
+				v4 a = {}, b = {}; Colour32 c = {};
 				for (int i = 0; lines(i++, a, b, c);)
 					line(a, b, c);
 
@@ -730,7 +730,7 @@ namespace pr::rdr12::ldraw
 			struct Pt { v4 p; Colour32 col; };
 			pr::vector<Pt> m_pts;
 			ArrowType m_style;
-			bool m_smooth;
+			Smooth m_smooth;
 			Width m_width;
 			PerItemColour m_per_item_colour;
 
@@ -792,7 +792,7 @@ namespace pr::rdr12::ldraw
 			{
 				Writer::Write(out, EKeyword::Arrow, m_name, m_colour, [&]
 				{
-					Writer::Append(out, m_style, m_width, m_per_item_colour);
+					Writer::Append(out, m_style, m_smooth, m_width, m_per_item_colour);
 					Writer::Write(out, EKeyword::Data, [&]
 					{
 						for (auto& pt : m_pts)
@@ -1179,7 +1179,7 @@ namespace pr::rdr12::ldraw
 			struct Bezier
 			{
 				v4 pt0, pt1, pt2, pt3;
-				Colour col;
+				Colour32 col;
 			};
 
 			pr::vector<Bezier> m_splines;
@@ -1200,18 +1200,16 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Add a spline piece
-			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Colour colour)
-			{
-				spline(pt0, pt1, pt2, pt3);
-				m_splines.back().col = colour;
-				m_per_item_colour = true;
-				return *this;
-			}
-			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3)
+			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, std::optional<Colour32> colour = {})
 			{
 				assert(pt0.w == 1 && pt1.w == 1 && pt2.w == 1 && pt3.w == 1);
-				m_splines.push_back(Bezier{ pt0, pt1, pt2, pt3, {} });
+				m_splines.push_back(Bezier{ pt0, pt1, pt2, pt3, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour  || colour;
 				return *this;
+			}
+			LdrSpline& spline(v3_cref pt0, v3_cref pt1, v3_cref pt2, v3_cref pt3, std::optional<Colour32> colour = {})
+			{
+				return spline(pt0.w1(), pt1.w1(), pt2.w1(), pt3.w1(), colour);
 			}
 
 			// Write to 'out'
