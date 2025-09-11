@@ -199,6 +199,7 @@ class EKeyword(Enum):
 	Layers = 2411172191
 	LeftHanded = 1992685208
 	LightSource = 2597226090
+	LineNew = 2239024967
 	Line = 400234023
 	LineBox = 3297263992
 	LineD = 3504606073

@@ -82,6 +82,13 @@ namespace pr::geometry
 		_flags_enum = 0,
 	};
 
+	// Generator function signatures
+	template <typename T> concept VertOutputFn = std::invocable<T, v4 const&, Colour32, v4 const&, v2 const&>;
+	template <typename T> concept IndexOutputFn = std::is_invocable_v<T, int>;
+	template <typename T> concept GetVertFn = std::is_invocable_r_v<v4 const&, T, int>;
+	template <typename T> concept GetNormFn = std::is_invocable_r_v<v4 const&, T, int>;
+	template <typename T> concept SetNormFn = std::is_invocable_v<T, int, v4 const&>;
+
 	// Geometry properties
 	struct Props
 	{

@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -34,7 +34,7 @@ namespace pr::geometry
 	// 'path_count' - the number of matrices in the extrusion path
 	// 'num_colours - the number of colours pointed to by 'colours', can be equal to 0, 1, or path_count
 	// 'colours' - the array of colours of length 'num_colours'
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Extrude(
 		std::span<v2 const> cs,
 		std::function<m4x4(int p, int pcount)> path,

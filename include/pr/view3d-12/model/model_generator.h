@@ -16,19 +16,21 @@ namespace pr::rdr12
 	struct MeshCreationData
 	{
 		std::span<v4 const> m_verts;           // The vertex data for the model
-		std::span<uint16_t const> m_indices;   // The index data for the model
+		geometry::index_cspan m_idxbuf;       // The index data for the model
 		std::span<NuggetDesc const> m_nuggets; // The nugget data for the model
 		std::span<Colour32 const> m_colours;   // The colour data for the model. Typically 0, 1, or 'vcount' colours. Not a requirement though because of interpolation.
 		std::span<v4 const> m_normals;         // The normal data for the model. Typically 0, 1, or 'vcount' normals. Not a requirement though because of interpolation.
 		std::span<v2 const> m_tex_coords;      // The texture coordinates data for the model. 0, or 'vcount' texture coords
+		int m_idx_stride;
 
 		MeshCreationData()
-			:m_verts()
-			,m_indices()
-			,m_nuggets()
-			,m_colours()
-			,m_normals()
-			,m_tex_coords()
+			: m_verts()
+			, m_idxbuf()
+			, m_nuggets()
+			, m_colours()
+			, m_normals()
+			, m_tex_coords()
+			, m_idx_stride()
 		{}
 		MeshCreationData& verts(std::span<v4 const> vbuf)
 		{
@@ -36,9 +38,9 @@ namespace pr::rdr12
 			m_verts = vbuf;
 			return *this;
 		}
-		MeshCreationData& indices(std::span<uint16_t const> ibuf)
+		MeshCreationData& indices(geometry::index_cspan ibuf)
 		{
-			m_indices = ibuf;
+			m_idxbuf = ibuf;
 			return *this;
 		}
 		MeshCreationData& nuggets(std::span<NuggetDesc const> gbuf)
@@ -378,18 +380,18 @@ namespace pr::rdr12
 			// The cached buffers
 			struct alignas(16) Buffers
 			{
-				string32 m_name;                      // Model name
-				VCont    m_vcont;                     // Model verts
-				ICont    m_icont;                     // Model faces/lines/points/etc
-				NCont    m_ncont;                     // Model nuggets
+				string32 m_name = {};                 // Model name
+				VCont    m_vcont = {};                // Model verts
+				ICont    m_icont = {};                // Model faces/lines/points/etc
+				NCont    m_ncont = {};                // Model nuggets
 				BBox     m_bbox = BBox::Reset();      // Model bounding box
 				m4x4     m_m2root = m4x4::Identity(); // Model to root transform
 			};
 			static Buffers& this_thread_instance()
 			{
 				// A static instance for this thread
-				thread_local static Buffers* buffers;
-				if (!buffers) buffers = new Buffers();
+				thread_local static std::unique_ptr<Buffers> buffers;
+				if (!buffers) buffers.reset(new Buffers);
 				return *buffers;
 			}
 			static bool& this_thread_cache_in_use()
@@ -423,9 +425,8 @@ namespace pr::rdr12
 			{
 				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
 				m_vcont.resize(vcount, {});
-				m_icont.resize(size_t(icount) * idx_stride, {});
+				m_icont.resize(icount, idx_stride);
 				m_ncont.resize(ncount, {});
-				m_icont.m_stride = idx_stride;
 				m_in_use = true;
 			}
 			~Cache()
@@ -443,7 +444,7 @@ namespace pr::rdr12
 			{
 				m_name.resize(0);
 				m_vcont.resize(0);
-				m_icont.resize(0);
+				m_icont.resize(0, 1);
 				m_ncont.resize(0);
 				m_bbox = BBox::Reset();
 				m_m2root = m4x4::Identity();
@@ -451,7 +452,7 @@ namespace pr::rdr12
 
 			// Container item counts
 			int64_t VCount() const { return isize(m_vcont); }
-			int64_t ICount() const { return s_cast<int64_t>(m_icont.count()); }
+			int64_t ICount() const { return isize(m_icont); }
 			int64_t NCount() const { return isize(m_ncont); }
 
 			// Return the buffer format associated with the index stride

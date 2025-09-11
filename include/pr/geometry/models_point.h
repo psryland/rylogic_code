@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -24,7 +24,7 @@ namespace pr::geometry
 	// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 	// 'out_verts' is an output iterator to receive the [vert,colour] data
 	// 'out_indices' is an output iterator to receive the index data
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Points(std::span<v4 const> points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
@@ -40,7 +40,7 @@ namespace pr::geometry
 		auto v_in = points.data(); int index = 0;
 		for (int i = 0; i != isize(points); ++i)
 		{
-			vout(bb(*v_in++), cc(*col++));
+			vout(bb(*v_in++), cc(*col++), v4::Zero(), v2::Zero());
 			iout(index++);
 		}
 

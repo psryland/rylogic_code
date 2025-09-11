@@ -14,6 +14,286 @@
 
 namespace pr
 {
+	// Notes:
+	//  - A spline is a collection of curves.
+	enum class ECurveType
+	{
+		Bezier,
+		Hermite,
+		Cardinal,
+		CatmullRom,
+		BSpline,
+		Trajectory,
+	};
+
+	// How to interpret arrays of points for splines
+	enum class ECurveTopology
+	{
+		// Notes:
+		//  - Some of these are not compatible with some spline types. It's up to the caller
+		//    to choice logical combinations of topology and curve type.
+
+		// 3 points per curve. Sliding window of 3 points per curve
+		Continuous3,
+
+		// 4 points per curve. Last point is the first point of the next curve
+		Continuous4,
+
+		// 3 points per curve. Each set of 3 points is a separate curve
+		Disjoint3,
+
+		// 4 points per curve. Each set of 4 points is a separate curve
+		Disjoint4,
+	};
+
+	// Curve coefficients
+	struct CurveType
+	{
+		// Notes:
+		//  - A general cubic curve is given by a parametric matrix equation:
+		//                           [x x x x] [P0]
+		//       P(t) =  [1 t t² t³] [x x x x] [P1]
+		//                           [x x x x] [P2]
+		//                           [x x x x] [P3]
+		//       P'(t) = [0 1 2t 3t²] <same as above>
+		//       P''(t) = [0 0 2 6t] <same as above>
+		//       P'''(t) = [0 0 0 6] <same as above>
+		//     where t is the parametric time, PX are control points,
+		//     and M is a 4x4 matrix of cooefficients.
+		//
+		//  - Different spline types come from different matrix values
+		//    e.g.
+		//                    [+1 +0 +0 +0] [P0]            [+1 +0 +0 +0] [P0]
+		//     Cubic Bezier = [-3 +3 +0 +0] [P1]  Hermite = [+0 +1 +0 +0] [V0]
+		//                    [+3 -6 +3 +0] [P2]            [-3 -2 +3 -1] [P1]
+		//                    [-1 +3 -3 +1] [P3]            [+2 +1 -2 +1] [V1]
+		//
+		//                    [ +0  +1   +0 +0] [P0]                     [+0 +2 +0 +0] [P0]
+		//  Cardinal Spline = [ -s  +0   +s +0] [P1]   Catmull-Rom = 0.5*[-1 +0 +1 +0] [P1]
+		//    (s = scale)     [ 2s s-3 3-2s -s] [P2]   (Cardinal w\)     [+2 -5 +4 -1] [P2]
+		//                    [ -s 2-s  s-2 +s] [P3]   (scale = 0.5)     [-1 +3 -3 +1] [P3]
+		//
+		//                    [ +1 +4 +1 +0] [P0]                        [1/0!   +0  +0   +0] [P0] (position     = x(t))
+		//         B-Spline = [ -3 +0 +3 +0] [P1]   Physics Trajectory = [  +0 1/1!  +0   +0] [V0] (velocity     = x'(t))
+		//                    [ +3 -6 +3 +0] [P2]                        [  +0   +0 1/2!  +0] [A0] (acceleration = x''(t))
+		//                    [ -1 +3 -3 +1] [P3]                        [  +0   +0  -0 1/3!] [J0] (jolt         = x'''(t))
+		//
+		//      Name      | Deg | Continuity | Tangents | Interpolates |         Use Cases
+		//  --------------+-----+------------+----------+--------------+----------------------------------
+		//    Bezier      |  3  |   C0/C1    |  manual  | some points	 | Shapes, fonts, vector graphics
+		//    Hermite     |  3  |   C0/C1    | explicit |  all points	 | animation, physics sim, interpolation
+		//    Catmull-Rom |  3  |    C1      |  auto    |  all points	 | animation, path smoothing
+		//    B-Spline    |  3  |    C2      |  auto    |   no points	 | curvature-sensitive shapes (e.g. reflective), animations, camera paths
+		//    Linear      |  1  |    C0      |  auto    |  all points  | 
+		//  
+		//        Time Continuity: C(N) => C(N-1) (derivatives: position <= velocity <= acceleration <= jolt)
+		//   Geometric Continuity: G(N) => G(N-1) (tangents: position <= tangent <= curvature <= torsion)
+		//
+		//  - A hermite curve can be expressed as a Bezier curve using:
+		//     [p0, p1, p2, p3] <=> [x0, x0 + v0/3, x1 - v1/3, x1]
+		//    For rotations that's:
+		//     [q0, q1, q2, q3] <=> [q0, q0*exp(w0/3), q1*~exp(w1/3), q1]
+		//
+		//  - Excellent summary video: https://www.youtube.com/watch?v=jvPPXbo87ds (Freya Holmer - The Continuity of Splines)
+
+
+		inline static constexpr m4x4 Bezier = {
+			{+1, +0, +0, +0},
+			{-3, +3, +0, +0},
+			{+3, -6, +3, +0},
+			{-1, +3, -3, +1},
+		};
+		inline static constexpr m4x4 Hermite = {
+			{+1, +0, +0, +0},
+			{+0, +1, +0, +0},
+			{-3, -2, +3, -1},
+			{+2, +1, -2, +1},
+		};
+		inline static constexpr m4x4 CatmullRom = {
+			{+0.0f, +1.0f, +0.0f, +0.0f},
+			{-0.5f, +0.0f, +0.5f, +0.0f},
+			{+1.0f, -2.5f, +2.0f, -0.5f},
+			{-0.5f, +1.5f, -1.5f, +0.5f},
+		};
+		inline static constexpr m4x4 BSpline = {
+			{ +1, +4, +1, +0},
+			{ -3, +0, +3, +0},
+			{ +3, -6, +3, +0},
+			{ -1, +3, -3, +1},
+		};
+		inline static constexpr m4x4 Trajectory = {
+			{+1, +0, +0, +0      },
+			{+0, +1, +0, +0      },
+			{+0, +0, +1 / 2.f, +0},
+			{+0, +0, +0, +1 / 6.f},
+		};
+		inline static constexpr m4x4 Cardinal(float s)
+		{
+			return {
+				{    +0,    +1,        +0, +0},
+				{    -s,    +0,        +s, +0},
+				{ 2 * s, s - 3, 3 - 2 * s, -s},
+				{    -s, 2 - s,     s - 2, +s},
+			};
+		}
+		template <ECurveType Type>
+		inline static constexpr m4x4 Coeff()
+		{
+			if constexpr (Type == ECurveType::Bezier) return Bezier;
+			if constexpr (Type == ECurveType::Hermite) return Hermite;
+			if constexpr (Type == ECurveType::CatmullRom) return CatmullRom;
+			if constexpr (Type == ECurveType::BSpline) return BSpline;
+			if constexpr (Type == ECurveType::Trajectory) return Trajectory;
+			static_assert(std::is_same_v<Type, void>, "Unknown curve type");
+		}
+	};
+
+	// A curve is a segment within a spline
+	struct CubicCurve3
+	{
+		m4x4 m_coeff;
+
+		// Interpretation of these control points depends on the spline type
+		//  Bezier, etc: p0, p1, p2, p3
+		//  Hermite:     p0, v0, p1, v1
+		//  Trajector:   p0, v0, a0, j0
+		CubicCurve3(v4_cref p0, v4_cref p1, v4_cref p2, v4_cref p3, m4x4 const& coeff)
+			: m_coeff(coeff * m4x4{ p0, p1, p2, p3 })
+		{
+		}
+		v4 Eval(float t) const
+		{
+			t = Clamp<float>(t, 0, 1);
+			return m_coeff * v4{ 1, t, t * t, t * t * t };
+		}
+		v4 EvalDerivative(float t) const
+		{
+			t = Clamp<float>(t, 0, 1);
+			return m_coeff * v4{ 0, 1, 2 * t, 3 * t * t };
+		}
+		v4 EvalDerivative2(float t) const
+		{
+			t = Clamp<float>(t, 0, 1);
+			return m_coeff * v4{ 0, 0, 2, 6 * t };
+		}
+		v4 EvalDerivative3() const
+		{
+			return m_coeff * v4{ 0, 0, 0, 6 };
+		}
+	};
+
+	// A Spline made from a continuous collection of CubicCurves
+	struct CubicSpline
+	{
+		using CurvePoints = std::span<v4 const>;
+		vector<CubicCurve3, 1> m_curves;
+
+		CubicSpline() = default;
+		CubicSpline(v4_cref p0, v4_cref p1, v4_cref p2, v4_cref p3, m4x4 const& coeff)
+			: m_curves()
+		{
+			m_curves.push_back(CubicCurve3{ p0, p1, p2, p3, coeff });
+		}
+
+		// Interpolated position on the spline at time 't'
+		v4 Position(float time) const
+		{
+			auto const& curve = m_curves[static_cast<int>(time)];
+			return curve.Eval(time - static_cast<int>(time));
+		}
+
+		// Interpolated tangent on the spline at time 't'
+		v4 Tangent(float time) const
+		{
+			auto const& curve = m_curves[static_cast<int>(time)];
+			return curve.EvalDerivative(time - static_cast<int>(time));
+		}
+
+		// Interpolated curvature of the spline at time 't'
+		v4 Curvature(float time) const
+		{
+			auto const& curve = m_curves[static_cast<int>(time)];
+			return curve.EvalDerivative2(time - static_cast<int>(time));
+		}
+
+		// Construct a spline from a collection of points
+		static CubicSpline pr_vectorcall FromPoints(std::span<v4 const> p, ECurveTopology topo, m4x4 const& coeff)
+		{
+			CubicSpline spline;
+
+			switch (topo)
+			{
+				// 3 points per curve. Sliding window of 3 points per curve
+				case ECurveTopology::Continuous3:
+				{
+					for (int i = 0, iend = isize(p) - 2; i < iend; ++i)
+					{
+						spline.m_curves.push_back(CubicCurve3(
+							p[i + 0],
+							0.5f * (p[i + 0] + p[i + 1]),
+							0.5f * (p[i + 1] + p[i + 2]),
+							p[i + 2],
+							coeff
+						));
+					}
+					break;
+				}
+
+				// 4 points per curve. Last point is the first point of the next curve
+				case ECurveTopology::Continuous4:
+				{
+					for (int i = 0, iend = isize(p) - 3; i < iend; i += 3)
+					{
+						spline.m_curves.push_back(CubicCurve3(
+							p[i + 0],
+							p[i + 1],
+							p[i + 2],
+							p[i + 3],
+							coeff
+						));
+					}
+					break;
+				}
+
+				// 3 points per curve. Each set of 3 points is a separate curve
+				case ECurveTopology::Disjoint3:
+				{
+					for (int i = 0, iend = isize(p) - 2; i < iend; i += 3)
+					{
+						spline.m_curves.push_back(CubicCurve3(
+							p[i + 0],
+							0.5f * (p[i + 0] + p[i + 1]),
+							0.5f * (p[i + 1] + p[i + 2]),
+							p[i + 2],
+							coeff
+						));
+					}
+					break;
+				}
+
+				// 4 points per curve. Each set of 4 points is a separate curve
+				case ECurveTopology::Disjoint4:
+				{
+					for (int i = 0, iend = isize(p) - 3; i < iend; i += 4)
+					{
+						spline.m_curves.push_back(CubicCurve3(
+							p[i + 0],
+							p[i + 1],
+							p[i + 2],
+							p[i + 3],
+							coeff
+						));
+					}
+					break;
+				}
+			}
+		
+			return spline;
+		}
+	};
+
+	// Previous implementation
+
 	struct Spline :m4x4
 	{
 		// Notes:
@@ -25,8 +305,6 @@ namespace pr
 		//  A Cubic Bezier Curve is defined by four points: two endpoints P0, P3, and two control points P1, P2
 		//  In parametric form:
 		//     P(t) = (1-t)^3.P0 + 3(1-t)^2.t.P1 + 3(1-t)t^2.P2 + t^3.P3, where t is in [0,1]
-
-
 		enum { Start, SCtrl, ECtrl, End };
 		enum class ETopo
 		{
@@ -521,3 +799,14 @@ namespace pr
 		}
 	};
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::maths
+{
+	PRUnitTest(SplineTests)
+	{
+		
+	}
+}
+#endif

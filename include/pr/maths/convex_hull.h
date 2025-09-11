@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // ConvexHull
 //  Copyright (c)  Paul Ryland 2008
 //**********************************************
@@ -112,6 +112,7 @@ namespace pr
 			bool InitHull()
 			{
 				PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput ldr_extm("P:\\dump\\hull_extremeverts.ldr", true); ldr_extm.clear());
+				using std::swap;
 
 				// A minimum of 4 verts are needed for a hull with volume
 				if (m_vend - m_vbeg < 4)
@@ -146,9 +147,9 @@ namespace pr
 
 				// Move these vert indices to the convex hull end of the range.
 				// Ensure vmin is less than vmax, this prevents problems with swapping.
-				if (vmax < vmin) { std::swap(*vmin, *vmax); std::swap(vmin, vmax); }
-				std::swap(*vmin, *m_vhull_last++);
-				std::swap(*vmax, *m_vhull_last++);
+				if (vmax < vmin) { swap(*vmin, *vmax); swap(vmin, vmax); }
+				swap(*vmin, *m_vhull_last++);
+				swap(*vmax, *m_vhull_last++);
 
 				auto const& zmin = m_vcont[*m_vbeg];
 				auto zaxis_lensq = LengthSq(zaxis);
@@ -174,7 +175,7 @@ namespace pr
 				auto axis = Cross3(zaxis, m_vcont[*vmax] - zmin);
 
 				// Move 'vmax' to the convex hull end of the range.
-				std::swap(*vmax, *m_vhull_last++);
+				swap(*vmax, *m_vhull_last++);
 
 				bool flip = false;
 
@@ -195,7 +196,7 @@ namespace pr
 				}
 
 				// Move 'vmax' to the convex hull end of the range.
-				std::swap(*vmax, *m_vhull_last++);
+				swap(*vmax, *m_vhull_last++);
 
 				// Generate the starting shape from the four hull verts we've found.
 				if (flip)
@@ -222,6 +223,8 @@ namespace pr
 			// see this max vert.
 			VertIter PartitionVerts()
 			{
+				using std::swap;
+
 				m_vis_face_count = 0;
 				auto max_dist = 0.0f;
 				auto max_vert = m_vnon_hull;
@@ -247,7 +250,7 @@ namespace pr
 					// If this vert is within all half spaces then it's not a hull vert
 					if (dist == 0.0f)
 					{
-						std::swap(*v, *(--m_vnon_hull));
+						swap(*v, *(--m_vnon_hull));
 						continue;
 					}
 
@@ -268,8 +271,10 @@ namespace pr
 			// Expand the convex hull to include 'v'.
 			void GrowHull(VertIter v)
 			{
+				using std::swap;
+
 				// Move 'v' into the convex hull
-				std::swap(*v, *m_vhull_last);
+				swap(*v, *m_vhull_last);
 				auto v_idx = static_cast<VIndex>(m_vhull_last - m_vbeg);
 				auto const& vert = m_vcont[*m_vhull_last];
 				++m_vhull_last;
@@ -299,8 +304,8 @@ namespace pr
 						perimeter.AddEdge(c, a);
 
 						// Erase 'face'
-						std::swap(*face, *(--m_flast));
-						std::swap(*plane, *(--m_hs_last));
+						swap(*face, *(--m_flast));
+						swap(*plane, *(--m_hs_last));
 						PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
 					}
 				}
@@ -327,8 +332,8 @@ namespace pr
 						perimeter.AddEdge(c, a);
 
 						// Erase 'face'
-						std::swap(*face, *(--m_flast));
-						std::swap(*plane, *(--m_hs_last));
+						swap(*face, *(--m_flast));
+						swap(*plane, *(--m_hs_last));
 						PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
 					}
 				}

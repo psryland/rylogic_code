@@ -104,7 +104,7 @@ namespace pr::geometry
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 	// 'out_verts' is an output iterator to receive the [vert,norm,colour,tex] data
 	// 'out_indices' is an output iterator to receive the index data
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(int num_quads, TVertCIter verts, std::span<Colour32 const> colours, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		Props props;
@@ -155,12 +155,12 @@ namespace pr::geometry
 		}
 		return props;
 	}
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(int num_quads, TVertCIter verts, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		return Quad(num_quads, verts, colours, m4x4::Identity(), vout, iout);
 	}
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(int num_quads, TVertCIter verts, VOut vout, IOut iout)
 	{
 		return Quad(num_quads, verts, {}, m4x4::Identity(), vout, iout);
@@ -173,7 +173,7 @@ namespace pr::geometry
 	// 'divisions' is the number of times to divide the width/height of the quad. Note: num_verts_across = divisions.x + 2
 	// 'colour' is a colour for the whole quad
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		// Set the start point so that the model origin matches 'anchor'
@@ -230,7 +230,7 @@ namespace pr::geometry
 	// 'divisions' is the number of times to divide the width/height of the quad. Note: num_verts_across = divisions.x + 2
 	// 'colour' is a colour for the whole quad
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		// X => Y = width, Z = Height
@@ -253,7 +253,7 @@ namespace pr::geometry
 	// 'forward' is the normal direction of the quad (not necessarily normalised)
 	// 'top' is the up direction of the quad. Can be zero (defaults to -ZAxis, then -XAxis), doesn't need to be orthogonal to 'forward'
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		auto fwd = forward != v4Zero ? forward : v4YAxis;
@@ -276,7 +276,7 @@ namespace pr::geometry
 	// 'num_colours' should be either 0, 1, num_quads+1 representing; no colour, 1 colour for all, 1 colour per vertex pair
 	// 'v_out' is an output iterator to receive the [vert,colour,norm,tex] data
 	// 'i_out' is an output iterator to receive the index data
-	template <typename TVertCIter, typename TNormCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, typename TNormCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props QuadStrip(int num_quads, TVertCIter verts, float width, int num_normals, TNormCIter normals, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
@@ -387,7 +387,7 @@ namespace pr::geometry
 
 	// Generate a XxY patch using triangle strips.
 	// The returned patch maps to a unit quad. Callers can then scale/deform as needed.
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props QuadPatch(int dimx, int dimy, VOut vout, IOut iout)
 	{
 		// e.g. 5x3 quad:
@@ -433,7 +433,7 @@ namespace pr::geometry
 
 	// Generate a hex patch using triangle strips.
 	// The radius of the patch is 1.0 with the centre at (0,0,0). Callers can then scale/deform as needed.
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props HexPatch(int rings, VOut vout, IOut iout)
 	{
 		// e.g. 3 rings                TriStrip Faces:

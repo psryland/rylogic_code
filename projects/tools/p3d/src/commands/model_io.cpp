@@ -150,24 +150,11 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 		nug.m_mat = "default";
 
 		// Generate the indices
-		if (vcount < 0x10000)
-		{
-			// Use 16bit indices
-			nug.m_vidx.resize<uint16_t>(vcount);
-			nug.m_vidx.m_stride = sizeof(uint16_t);
-			auto ibuf = nug.m_vidx.data<uint16_t>();
-			for (uint16_t i = 0; vcount-- != 0;)
-				*ibuf++ = i++;
-		}
-		else
-		{
-			// Use 32bit indices
-			nug.m_vidx.resize<uint32_t>(vcount);
-			nug.m_vidx.m_stride = sizeof(uint32_t);
-			auto ibuf = nug.m_vidx.data<uint32_t>();
-			for (uint32_t i = 0; vcount-- != 0;)
-				*ibuf++ = i++;
-		}
+		nug.m_vidx.resize(vcount, vcount > 0xFFFF ? sizeof(uint32_t) : sizeof(uint16_t));
+		auto ibuf = nug.m_vidx.begin<int>();
+		for (int i = 0; vcount-- != 0;)
+			*ibuf++ = i++;
+
 		mesh.m_nugget.emplace_back(std::move(nug));
 
 		// Generate a material

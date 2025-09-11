@@ -266,6 +266,9 @@ namespace pr
 		};
 		enum class ELdrFlags :int // sync with 'ELdrFlags'
 		{
+			// Notes:
+			//  - Flags are for a single object only. Don't set the recursively.
+			//    Instead use the
 			None = 0,
 
 			// The object is hidden
@@ -286,10 +289,10 @@ namespace pr
 			// The object to world transform is not an affine transform
 			NonAffine = 1 << 5,
 
-			// Set when an object is selected. The meaning of 'selected' is up to the application
+			// Set when an instance is "selected". The meaning of 'selected' is up to the application
 			Selected = 1 << 8,
 
-			// Doesn't contribute to the bounding box on an object.
+			// Doesn't contribute to the bounding box
 			BBoxExclude = 1 << 9,
 
 			// Should not be included when determining the bounds of a scene.
@@ -301,7 +304,13 @@ namespace pr
 			// Doesn't cast a shadow
 			ShadowCastExclude = 1 << 12,
 
-			// Bitwise operators supported
+			// True if the object has animation data.
+			Animated = 1 << 13,
+
+			// Indicates invalidated flags that need to be refreshed
+			Invalidated = 1 << 31,
+
+			// Bitwise operators
 			_flags_enum = 0,
 		};
 		enum class EUpdateObject :int // Flags for partial update of a model

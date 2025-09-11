@@ -462,17 +462,15 @@ namespace Rylogic.LDraw
 		private Serialiser.PerItemColour m_per_item_colour = new();
 
 		// Points
-		public LdrPoint pt(v4 point, Colour32 colour)
+		public LdrPoint pt(v4 point, Colour32? colour = null)
 		{
-			pt(point);
-			m_points.Last().col = colour;
-			m_per_item_colour = true;
+			m_points.Add(new Pt { pt = point, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
 			return this;
 		}
-		public LdrPoint pt(v4 point)
+		public LdrPoint pt(v3 point, Colour32? colour = null)
 		{
-			m_points.Add(new Pt { pt = point, col = Colour32.White });
-			return this;
+			return pt(point.w1, colour);
 		}
 
 		// Point size (in pixels if depth == false, in world space if depth == true)
@@ -699,7 +697,7 @@ namespace Rylogic.LDraw
 		// Line strip parts
 		public LdrArrow start(v4 p, Colour32? colour = null)
 		{
-			m_pts.Add(new Pt { pt = v4.Origin, col = colour ?? Colour32.White });
+			m_pts.Add(new Pt { pt = p, col = colour ?? Colour32.White });
 			m_per_item_colour |= colour != null;
 			return this;
 		}
@@ -2041,8 +2039,8 @@ namespace Rylogic.UnitTests
 		{
 			var builder = new LDraw.Builder();
 			builder.Arrow("a", 0xFF00FF00).start(v4.Origin).line_to(v4.ZAxis.w1);
-			builder.Save("E://Dump//arrow.bdr", LDraw.ESaveFlags.Binary);
-			//var mem = builder.ToBinary().ToArray();
+			//builder.Save("E://Dump//arrow.bdr", LDraw.ESaveFlags.Binary);
+			var mem = builder.ToBinary().ToArray();
 		}
 
 		[Test]

@@ -1,9 +1,8 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-
 #include "pr/geometry/common.h"
 
 namespace pr::geometry
@@ -34,7 +33,7 @@ namespace pr::geometry
 	// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 	// 'out_verts' is an output iterator to receive the [vert,colour] data
 	// 'out_indices' is an output iterator to receive the index data
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Lines(int num_lines, std::span<v4 const> points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
@@ -51,8 +50,8 @@ namespace pr::geometry
 		auto pt = points.data();
 		for (int i = 0; i != num_lines; ++i)
 		{
-			vout(bb(*pt++), cc(*col++));
-			vout(bb(*pt++), cc(*col++));
+			vout(bb(*pt++), cc(*col++), v4::Zero(), v2::Zero());
+			vout(bb(*pt++), cc(*col++), v4::Zero(), v2::Zero());
 			iout(index++);
 			iout(index++);
 		}
@@ -61,8 +60,8 @@ namespace pr::geometry
 	}
 
 	// Create lines using collections of points and directions
-	template <typename TVertCIter, typename VOut, typename IOut>
-	inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
+	Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
@@ -77,8 +76,8 @@ namespace pr::geometry
 		int index = 0;
 		for (int i = 0; i != num_lines; ++i, ++points, ++directions, ++col)
 		{
-			vout(bb(*points), cc(*col));
-			vout(bb(*points + *directions), cc(*col));
+			vout(bb(*points), cc(*col), v4::Zero(), v2::Zero());
+			vout(bb(*points + *directions), cc(*col), v4::Zero(), v2::Zero());
 			iout(index++);
 			iout(index++);
 		}
@@ -87,8 +86,8 @@ namespace pr::geometry
 	}
 
 	// Create a line strip
-	template <typename TVertCIter, typename VOut, typename IOut>
-	inline Props LinesStrip(int num_lines, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
+	Props LinesStrip(int num_lines, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
@@ -103,7 +102,7 @@ namespace pr::geometry
 		auto index = 0;
 		for (int i = 0; i != num_lines + 1; ++i, ++points, ++col)
 		{
-			vout(bb(*points), cc(*col));
+			vout(bb(*points), cc(*col), v4::Zero(), v2::Zero());
 			iout(index++);
 		}
 

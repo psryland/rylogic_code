@@ -18,15 +18,15 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Description,nq}")]
 	public struct Quat
 	{
-		[FieldOffset( 0)] public float x;
-		[FieldOffset( 4)] public float y;
-		[FieldOffset( 8)] public float z;
+		[FieldOffset(0)] public float x;
+		[FieldOffset(4)] public float y;
+		[FieldOffset(8)] public float z;
 		[FieldOffset(12)] public float w;
-		[FieldOffset( 0)] public v4 xyzw; // (same name as the C++ version)
-		[FieldOffset( 0)] public v3 xyz;  // (same name as the C++ version)
+		[FieldOffset(0)] public v4 xyzw; // (same name as the C++ version)
+		[FieldOffset(0)] public v3 xyz;  // (same name as the C++ version)
 
-		public Quat(float x) 
-			:this()
+		public Quat(float x)
+			: this()
 		{
 			this.x = x;
 			this.y = x;
@@ -34,7 +34,7 @@ namespace Rylogic.Maths
 			this.w = x;
 		}
 		public Quat(float x, float y, float z, float w)
-			:this()
+			: this()
 		{
 			this.x = x;
 			this.y = y;
@@ -42,17 +42,17 @@ namespace Rylogic.Maths
 			this.w = w;
 		}
 		public Quat(v4 vec)
-			:this()
+			: this()
 		{
 			this.xyzw = vec;
 		}
 		public Quat(v3 vec)
-			:this(vec.w0)
-		{}
+			: this(vec.w0)
+		{ }
 
 		/// <summary>Create a quaternion from an axis and an angle</summary>
 		public Quat(v4 axis, float angle)
-			:this()
+			: this()
 		{
 			var s = (float)Math.Sin(0.5 * angle);
 			x = s * axis.x;
@@ -63,12 +63,12 @@ namespace Rylogic.Maths
 
 		/// <summary>Create a quaternion from Euler angles. Order is: roll, pitch, yaw (to match DirectX)</summary>
 		public Quat(float pitch, float yaw, float roll)
-			:this()
+			: this()
 		{
 			// nicked from 'XMQuaternionRotationRollPitchYaw'
 			float cos_p = (float)Math.Cos(pitch * 0.5), sin_p = (float)Math.Sin(pitch * 0.5);
-			float cos_y = (float)Math.Cos(yaw   * 0.5), sin_y = (float)Math.Sin(yaw   * 0.5);
-			float cos_r = (float)Math.Cos(roll  * 0.5), sin_r = (float)Math.Sin(roll  * 0.5);
+			float cos_y = (float)Math.Cos(yaw * 0.5), sin_y = (float)Math.Sin(yaw * 0.5);
+			float cos_r = (float)Math.Cos(roll * 0.5), sin_r = (float)Math.Sin(roll * 0.5);
 			x = sin_p * cos_y * cos_r + cos_p * sin_y * sin_r;
 			y = cos_p * sin_y * cos_r - sin_p * cos_y * sin_r;
 			z = cos_p * cos_y * sin_r - sin_p * sin_y * cos_r;
@@ -77,7 +77,7 @@ namespace Rylogic.Maths
 
 		/// <summary>Create a quaternion from a rotation matrix</summary>
 		public Quat(m3x4 m)
-			:this()
+			: this()
 		{
 			Debug.Assert(Math_.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
 			var trace = m.x.x + m.y.y + m.z.z;
@@ -114,20 +114,23 @@ namespace Rylogic.Maths
 				w = (m.x.y - m.y.x) * s;
 			}
 		}
-	
+
 		/// <summary>Construct a quaternion representing a rotation from 'from' to 'to'</summary>
 		public Quat(v4 from, v4 to)
-			:this()
+			: this()
 		{
-			var d = Math_.Dot(from.xyz, to.xyz); 
+			var d = Math_.Dot(from.xyz, to.xyz);
 			var s = (float)Math.Sqrt(from.xyz.LengthSq * to.xyz.LengthSq) + d;
 			var axis = Math_.Cross(from, to);
 
-			// vectors are 180 degrees apart
+			// Vectors are aligned, 180 degrees apart, or one is zero
 			if (Math_.FEql(s, 0))
 			{
-				axis = Math_.Perpendicular(to);
 				s = 0.0f;
+				axis =
+					from.xyz.LengthSq > Math_.TinyF ? Math_.Perpendicular(from) :
+					to.xyz.LengthSq > Math_.TinyF ? Math_.Perpendicular(to) :
+					v4.ZAxis;
 			}
 
 			xyzw = Math_.Normalise(new v4(axis.x, axis.y, axis.z, s));
@@ -142,40 +145,42 @@ namespace Rylogic.Maths
 		/// <summary>Get/Set components by index</summary>
 		public float this[int i]
 		{
-			get
+			readonly get
 			{
-				switch (i) {
-				case 0: return x;
-				case 1: return y;
-				case 2: return z;
-				case 3: return w;
+				switch (i)
+				{
+					case 0: return x;
+					case 1: return y;
+					case 2: return z;
+					case 3: return w;
 				}
 				throw new ArgumentException("index out of range", "i");
 			}
 			set
 			{
-				switch (i) {
-				case 0: x = value; return;
-				case 1: y = value; return;
-				case 2: z = value; return;
-				case 3: w = value; return;
+				switch (i)
+				{
+					case 0: x = value; return;
+					case 1: y = value; return;
+					case 2: z = value; return;
+					case 3: w = value; return;
 				}
 				throw new ArgumentException("index out of range", "i");
 			}
 		}
 		public float this[uint i]
 		{
-			get => this[(int)i];
+			readonly get => this[(int)i];
 			set => this[(int)i] = value;
 		}
 
 		/// <summary>Length</summary>
-		public float LengthSq => x * x + y * y + z * z + w * w;
-		public float Length => (float)Math.Sqrt(LengthSq);
+		public readonly float LengthSq => x * x + y * y + z * z + w * w;
+		public readonly float Length => (float)Math.Sqrt(LengthSq);
 		public bool IsNormalised => Math_.FEql(LengthSq, 1.0f);
 
 		/// <summary>Get the axis component of the quaternion (normalised)</summary>
-		public v4 Axis => Math_.Normalise(xyzw.w0);
+		public v4 Axis => Math_.Normalise(xyzw.w0, v4.Zero);
 
 		// Return the angle of rotation about 'Axis()'
 		public float Angle => (float)Math.Acos(CosAngle);
@@ -185,13 +190,13 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				//Debug.Assert(IsNormalised, "quaternion isn't normalised");
-
 				// Trig:
-				//' cos^2(x) = 0.5 * (1 + cos(2x))
-				//' w == cos(x/2)
-				//' w^2 == cos^2(x/2) == 0.5 * (1 + cos(x))
-				//' 2w^2 - 1 == cos(x)
+				//' w == cos(θ/2)
+				//' cos²(θ/2) = 0.5 * (1 + cos(θ))
+				//' w² == cos²(θ/2) == 0.5 * (1 + cos(θ))
+				//' cos(θ) = 2w² - 1
+
+				// This is always the smallest arc
 				return Math_.Clamp(2f * Math_.Sqr(w) - LengthSq, -1f, +1f);
 			}
 		}
@@ -201,13 +206,13 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				//Debug.Assert(IsNormalised, "quaternion isn't normalised");
-
 				// Trig:
-				//' sin^2(x) + cos^2(x) == 1
-				//' sin^2(x) == 1 - cos^2(x)
-				//' sin(x) == sqrt(1 - cos^2(x))
-				return (float)Math.Sqrt(LengthSq - Math_.Sqr(CosAngle));
+				//'  w == cos(θ/2)
+				//'  sin(θ) = 2 * sin(θ/2) * cos(θ/2)
+
+				// The sign is determined by the sign of w (which represents cos(θ/2))
+				var sin_half_angle = xyz.Length;
+				return 2f * sin_half_angle * w;
 			}
 		}
 
@@ -279,10 +284,10 @@ namespace Rylogic.Maths
 		{
 			// Quaternion multiply. Same semantics at matrix multiply
 			return new(
-				lhs.w*rhs.x + lhs.x*rhs.w + lhs.y*rhs.z - lhs.z*rhs.y,
-				lhs.w*rhs.y - lhs.x*rhs.z + lhs.y*rhs.w + lhs.z*rhs.x,
-				lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w,
-				lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z);
+				lhs.w * rhs.x + lhs.x * rhs.w + lhs.y * rhs.z - lhs.z * rhs.y,
+				lhs.w * rhs.y - lhs.x * rhs.z + lhs.y * rhs.w + lhs.z * rhs.x,
+				lhs.w * rhs.z + lhs.x * rhs.y - lhs.y * rhs.x + lhs.z * rhs.w,
+				lhs.w * rhs.w - lhs.x * rhs.x - lhs.y * rhs.y - lhs.z * rhs.z);
 		}
 		public static v4 operator *(Quat lhs, v4 rhs)
 		{
@@ -292,11 +297,11 @@ namespace Rylogic.Maths
 		#endregion
 
 		#region Equals
-		public static bool operator == (Quat lhs, Quat rhs)
+		public static bool operator ==(Quat lhs, Quat rhs)
 		{
 			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
 		}
-		public static bool operator != (Quat lhs, Quat rhs)
+		public static bool operator !=(Quat lhs, Quat rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -359,13 +364,13 @@ namespace Rylogic.Maths
 		{
 			return new(axis, r.Float(min_angle, max_angle));
 		}
-		
+
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static Quat Random(float min_angle, float max_angle, Random r)
 		{
 			return new(v4.Random3N(0f, r), r.Float(min_angle, max_angle));
 		}
-		
+
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static Quat Random(Random r)
 		{
@@ -416,8 +421,8 @@ namespace Rylogic.Maths
 			return new(Normalise(q.xyzw, def.xyzw));
 		}
 
-		/// <summary>Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)</summary>
-		public static float CosAngle2(Quat a, Quat b)
+		/// <summary>Returns the value of 'cos(theta / 2)', where 'theta' is the angle between 'a' and 'b'</summary>
+		public static float CosHalfAngle(Quat a, Quat b)
 		{
 			// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
 			// where operator * is a quaternion multiply. The 'w' component of a quaternion
@@ -427,11 +432,18 @@ namespace Rylogic.Maths
 			return Dot(a.xyzw, b.xyzw);
 		}
 
-		/// <summary>Return the angle between two quaternions (in radians)</summary>
+		/// <summary>Returns the smallest angle between two quaternions (in radians, [0, tau/2])</summary>
 		public static float Angle(Quat a, Quat b)
 		{
 			// q.w = Cos(theta/2)
-			return 0.5f * (float)Math.Acos(CosAngle2(a, b));
+			// Note: cos(A) = 2 * cos²(A/2) - 1
+			//  and: acos(A) = 0.5 * acos(2A² - 1), for A in [0, tau/2]
+			// Using the 'acos(2A² - 1)' form always returns the smallest angle
+			var cos_half_ang = CosHalfAngle(a, b);
+			return
+				cos_half_ang > 1.0f - Math_.TinyF ? 0f :
+				cos_half_ang > 0 ? 2 * (float)Math.Acos(Clamp(cos_half_ang, -1, +1)) : // better precision
+				(float)Math.Acos(Clamp(2 * Sqr(cos_half_ang) - 1, -1, +1));
 		}
 
 		/// <summary>Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation</summary>
@@ -440,22 +452,58 @@ namespace Rylogic.Maths
 			// Quat = [u.Sin(A/2), Cos(A/2)]
 			var cos_half_ang = Math_.Clamp(q.w, -1.0f, +1.0f); // [0, tau]
 			var sin_half_ang = q.xyzw.w0.Length; // Don't use 'sqrt(1 - w*w)', it's not float noise accurate enough when w ~= +/-1
-			var ang_by_2 = Math.Acos(cos_half_ang);
+			var ang_by_2 = Math.Acos(cos_half_ang); // By convention, log space uses Length = A/2
 			return Math.Abs(sin_half_ang) > Math_.TinyD
-				? 2.0f * q.xyzw.w0 * (float)(ang_by_2 / sin_half_ang)
-				: 2.0f * q.xyzw.w0;
+				? q.xyzw.w0 * (float)(ang_by_2 / sin_half_ang)
+				: q.xyzw.w0;
 		}
 
 		/// <summary>Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.</summary>
-		public static Quat ExpMap(v4 v)
+		public static Quat ExpMap(v3 v)
 		{
 			// Vec = (+/-)A * (-/+)u.
-			var ang_by_2 = 0.5 * v.Length;
-			var cos_half_ang = (float)Math.Cos(ang_by_2);
-			var sin_half_ang = (float)Math.Sqrt(1 - cos_half_ang * cos_half_ang);
-			return ang_by_2 > Math_.TinyD
-				? new Quat { xyzw = v * (sin_half_ang / (2 * ang_by_2)), w = cos_half_ang }
-				: new Quat { xyzw = v, w = cos_half_ang };
+			var ang_by_2 = v.Length; // By convention, log space uses Length = A/2
+			var cos_half_ang = Math.Cos(ang_by_2);
+			var sin_half_ang = Math.Sin(ang_by_2); // != Sqrt(1 - cos_half_ang * cos_half_ang) when ang_by_2 > tau/2
+			var s = ang_by_2 > Math_.TinyD ? (float)(sin_half_ang / ang_by_2) : 1f;
+			return new Quat { xyz = v * s, w = (float)cos_half_ang };
+		}
+		public static Quat ExpMap(v4 v)
+		{
+			return ExpMap(v.xyz);
+		}
+
+		/// <summary>Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration</summary>
+		public static Quat RotationAt(float time, Quat ori, v4 avel, v4 aacc)
+		{
+			// Orientation can be computed analytically if angular velocity
+			// and angular acceleration are parallel or angular acceleration is zero.
+			if (Cross(avel, aacc).LengthSq < Math_.TinyF)
+			{
+				var w = avel + aacc * time;
+				return ExpMap(0.5f * w * time) * ori;
+			}
+			else
+			{
+				// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
+
+				// 3-point Gauss-Legendre nodes for 6th order accuracy
+				const float root15f = 3.87298334620741688518f;
+				const float c1 = 0.5f - root15f / 10.0f;
+				const float c2 = 0.5f;
+				const float c3 = 0.5f + root15f / 10.0f;
+
+				// Evaluate instantaneous angular velocity at nodes
+				var w0 = avel + aacc * c1 * time;
+				var w1 = avel + aacc * c2 * time;
+				var w2 = avel + aacc * c3 * time;
+
+				var u0 = ExpMap(0.5f * w0 * time / 3.0f);
+				var u1 = ExpMap(0.5f * w1 * time / 3.0f);
+				var u2 = ExpMap(0.5f * w2 * time / 3.0f);
+
+				return u2 * u1 * u0 * ori;
+			}
 		}
 
 		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
@@ -509,13 +557,13 @@ namespace Rylogic.Maths
 		public static Quat Slerp(Quat a, Quat b, double frac)
 		{
 			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
-			var cos_angle2 = CosAngle2(a, b);
-			var b_ = cos_angle2 >= 0 ? b : -b;
-			cos_angle2 = Math.Abs(cos_angle2);
+			var cos_half_angle = CosHalfAngle(a, b);
+			var b_ = cos_half_angle >= 0 ? b : -b;
+			cos_half_angle = Math.Abs(cos_half_angle);
 
-			if (cos_angle2 < 0.95f)
+			if (cos_half_angle < 0.95f)
 			{
-				var angle = 0.5 * Math.Acos(cos_angle2);
+				var angle = 0.5 * Math.Acos(cos_half_angle);
 				var scale0 = Math.Sin((1 - frac) * angle);
 				var scale1 = Math.Sin((frac) * angle);
 				var sin_angle = Math.Sin(angle);
@@ -573,14 +621,17 @@ namespace Rylogic.UnitTests
 	using Extn;
 	using Maths;
 
-	[TestFixture] public class UnitTestQuat
+	[TestFixture]
+	public class UnitTestQuat
 	{
-		[Test] public void General()
+		[Test]
+		public void General()
 		{
 		}
-		[Test] public void EulerAngles()
+		[Test]
+		public void EulerAngles()
 		{
-			#if false
+#if false
 			Action<float,float,float> Check = (p_,y_,r_) =>
 			{
 				var p = Math_.DegreesToRadians(p_);
@@ -618,12 +669,49 @@ namespace Rylogic.UnitTests
 				foreach (var y in angles)
 					foreach (var r in angles)
 						Check(p, y, r);
-			#endif
+#endif
 		}
-		[Test] public void Average()
+		[Test]
+		public void Angles()
+		{
+			List<float> angles = [
+				-Math_.TauBy2F,
+				-Math_.TauBy3F,
+				-Math_.TauBy4F,
+				-Math_.TauBy5F,
+				-Math_.TauBy6F,
+				-Math_.TauBy7F,
+				0f,
+				+Math_.TauBy7F,
+				+Math_.TauBy6F,
+				+Math_.TauBy5F,
+				+Math_.TauBy4F,
+				+Math_.TauBy3F,
+				+Math_.TauBy2F,
+			];
+
+			var axis = Math_.Normalise(new v4(1, 1, 1, 0));
+			foreach (var ANG0 in angles)
+			{
+				foreach (var ANG1 in angles)
+				{
+					var q0 = new Quat(axis, ANG0);
+					var q1 = new Quat(axis, ANG1);
+					var expected = Math_.Min(Math_.Abs(ANG1 - ANG0), Math_.Abs(Math_.TauF - Math_.Abs(ANG1 - ANG0)));
+
+					var ang0 = Math_.Angle(q0, q1);
+					var ang1 = Math_.Angle(q1, q0);
+					const float angular_tolerance = 1e-3f;
+					Assert.True(Math_.FEqlAbsolute(ang0, expected, angular_tolerance));
+					Assert.True(Math_.FEqlAbsolute(ang1, expected, angular_tolerance));
+				}
+			}
+		}
+		[Test]
+		public void Average()
 		{
 			var rng = new Random(1);
-			var ideal_mean = new Quat(Math_.Normalise(new v4(1,1,1,0)), 0.5f);
+			var ideal_mean = new Quat(Math_.Normalise(new v4(1, 1, 1, 0)), 0.5f);
 			var actual_mean = Math_.Average(int_.Range(0, 1000).Select(i =>
 			{
 				var axis = Math_.Normalise(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
@@ -633,15 +721,75 @@ namespace Rylogic.UnitTests
 			}));
 			Assert.True(Math_.FEqlRelative(ideal_mean, actual_mean, 0.01f));
 		}
-		[Test] public void LogMapExpMap()
+		[Test]
+		public void QuatMatrixRoundTrip()
 		{
-			var q0 = new Quat(-2.09713704e-08f, -0.00148352725f, -6.48572168e-11f, -0.999998927f);
-			q0 = Math_.Normalise(q0);
+			var ori0 = Quat.Random(new Random(1));
+			var m0 = new m3x4(ori0);
+			var ori1 = new Quat(m0);
+			Assert.True(Math_.FEql(ori0, ori1));
+		}
+		[Test]
+		public void LogMapExpMap()
+		{
+			// Round trip test
+			var rng = new Random(1);
+			var max_angular_error = 0f;
+			for (var i = 0; i != 100; ++i)
+			{
+				var q0 = Quat.Random(rng);
+				var v0 = Math_.LogMap(q0);
+				var q1 = Math_.ExpMap(v0);
+				var angular_error = Math_.Angle(q0, q1);
+				
+				max_angular_error = Math.Max(max_angular_error, angular_error);
+				Assert.True(Math.Abs(angular_error) < 0.001f);
+			}
+			Assert.True(max_angular_error < 0.001f);
 
-			var v0 = Math_.LogMap(q0);
-			var q1 = Math_.ExpMap(v0);
-			var angular_error = Math_.Angle(q0, q1);
-			Assert.True(Math.Abs(angular_error) < 0.001f);
+			// Special cases
+			{
+				var q0 = new Quat(-2.09713704e-08f, -0.00148352725f, -6.48572168e-11f, -0.999998927f);
+				q0 = Math_.Normalise(q0);
+				var v0 = Math_.LogMap(q0);
+				var q1 = Math_.ExpMap(v0);
+				var angular_error = Math_.Angle(q0, q1);
+				Assert.True(Math.Abs(angular_error) < 0.001f);
+			}
+		}
+		[Test]
+		public void RotationAt()
+		{
+			{// Analytic solution case
+				var ori = Quat.Random(new Random(1));
+				var avl = new v4(0.6f, 0, 0.6f, 0);
+				var aac = new v4(0, 0, 0, 0);
+
+				var rot = new m3x4(ori);
+				for (float t = 0; t < 5.0f; t += 0.1f)
+				{
+					var ORI = Math_.RotationAt(t, ori, avl, aac);
+					var ROT = Math_.RotationAt(t, rot, avl, aac);
+					var ROT2 = new m3x4(ORI);
+
+					Assert.True(Math_.FEql(ROT, ROT2));
+				}
+			}
+			{// Non-analytic solution case
+				var ori = Quat.Random(new Random(1));
+				var avl = new v4(1.2f, 0, 0, 0);
+				var aac = new v4(0, 0, 0.1f, 0);
+
+				var rot = new m3x4(ori);
+				for (float t = 0; t < 5.0f; t += 0.1f)
+				{
+					var ORI = Math_.RotationAt(t, ori, avl, aac);
+					var ROT = Math_.RotationAt(t, rot, avl, aac);
+					var ROT2 = new m3x4(ORI);
+
+					Assert.True(Math_.FEql(ROT, ROT2));
+				}
+			}
 		}
 	}
 }

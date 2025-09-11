@@ -456,17 +456,17 @@ namespace pr::geometry::p3d
 
 		// Constructor
 		Nugget() = default;
-		Nugget(ETopo topo, EGeom geom, std::string_view mat_id = {}, int stride = sizeof(uint32_t))
+		Nugget(ETopo topo, EGeom geom, std::string_view mat_id = {}, int idx_stride = sizeof(uint32_t))
 			:m_topo(topo)
 			,m_geom(geom)
 			,m_mat(mat_id)
-			,m_vidx(stride)
+			,m_vidx(idx_stride)
 		{}
 
 		// The number of indices in the nugget
 		size_t icount() const
 		{
-			return m_vidx.count();
+			return m_vidx.size();
 		}
 
 		// The stride of the contained indices
@@ -478,27 +478,19 @@ namespace pr::geometry::p3d
 		// Vertex/Index range
 		Range<int> vrange() const
 		{
-			auto get = [](auto* ptr, int count)
-			{
-				auto r = Range<int>::Reset();
-				for (; count-- != 0;) r.grow(s_cast<int>(*ptr++));
-				return r;
-			};
-			switch (m_vidx.stride())
-			{
-			case 4: return get(m_vidx.data<uint32_t>(), s_cast<int>(m_vidx.count()));
-			case 2: return get(m_vidx.data<uint16_t>(), s_cast<int>(m_vidx.count()));
-			case 1: return get(m_vidx.data<uint8_t >(), s_cast<int>(m_vidx.count()));
-			default: throw std::runtime_error("Unsupported index format");
-			}
+			Range<int> r = Range<int>::Reset();
+			for (auto idx : m_vidx.casting_span<int>())
+				r.grow(idx);
+
+			return r;
 		}
 		Range<int> irange() const
 		{
-			return Range<int>{0, s_cast<int>(m_vidx.count())};
+			return Range<int>{0, isize(m_vidx)};
 		}
 
 		// Iteration access to the nugget indices
-		template <typename TOut = uint32_t> IdxBuf::casting_span_t<TOut> indices() const
+		template <typename TOut = uint32_t> auto indices() const
 		{
 			return m_vidx.casting_span<TOut>();
 		}
@@ -1491,7 +1483,7 @@ namespace pr::geometry::p3d
 			throw std::runtime_error("Unsupported index stride");
 
 		// Count
-		hdr.m_length += Write(out, s_cast<uint32_t>(idx.size<Idx>()));
+		hdr.m_length += Write(out, s_cast<uint32_t>(idx.size()));
 
 		// Format
 		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
@@ -1499,45 +1491,45 @@ namespace pr::geometry::p3d
 		// Index data
 		switch (fmt)
 		{
-		case EIndexFormat::Idx32Bit:
+			case EIndexFormat::Idx32Bit:
 			{
 				// Stride (of written indices. Possibly different to idx.m_stride)
 				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
 
 				// Convert from 'Idx' to uint32_t
-				hdr.m_length += WriteCast<uint32_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				hdr.m_length += WriteCast<uint32_t>(out, idx.data<Idx>(), idx.size());
 				break;
 			}
-		case EIndexFormat::Idx16Bit:
+			case EIndexFormat::Idx16Bit:
 			{
 				// Stride (of written indices. Possibly different to idx.m_stride)
 				hdr.m_length += Write<uint16_t>(out, sizeof(uint16_t));
 
 				// Convert from 'Idx' to uint16_t
-				hdr.m_length += WriteCast<uint16_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				hdr.m_length += WriteCast<uint16_t>(out, idx.data<Idx>(), idx.size());
 				break;
 			}
-		case EIndexFormat::Idx8Bit:
+			case EIndexFormat::Idx8Bit:
 			{
 				// Stride (of written indices. Possibly different to idx.m_stride)
 				hdr.m_length += Write<uint16_t>(out, sizeof(uint8_t));
 
 				// Convert from 'Idx' to uint8_t
-				hdr.m_length += WriteCast<uint8_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				hdr.m_length += WriteCast<uint8_t>(out, idx.data<Idx>(), idx.size());
 				break;
 			}
-		case EIndexFormat::IdxNBit:
+			case EIndexFormat::IdxNBit:
 			{
 				// Stride (of written indices *after decompression* == idx.m_stride)
 				hdr.m_length += Write<uint16_t>(out, sizeof(Idx));
 
 				// Use ZigZag encoded variable length integers (like protobuf)
 				byte_data<> buf;
-				buf.reserve(idx.size<Idx>() * 3 / 2);
+				buf.reserve(idx.size() * 3 / 2);
 
 				// Fill 'buf' with variable length indices
 				int64_t prev = 0;
-				for (auto i : idx.span<Idx>())
+				for (auto i : idx.casting_span<Idx>())
 				{
 					// Get the delta from the previous index
 					auto delta = i - prev;
@@ -1558,7 +1550,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write(out, buf.data(), buf.size());
 				break;
 			}
-		default:
+			default:
 			{
 				throw std::runtime_error("Unknown texture coordinates storage flag");
 			}
@@ -1573,12 +1565,12 @@ namespace pr::geometry::p3d
 	template <typename TOut> inline uint32_t WriteIndices(TOut& out, IdxBuf const& idx, EFlags flags)
 	{
 		// Convert from runtime 'stride' to compile time index type
-		switch (idx.m_stride)
+		switch (idx.stride())
 		{
-		case 4: return WriteIndices<TOut, uint32_t>(out, idx, flags); break;
-		case 2: return WriteIndices<TOut, uint16_t>(out, idx, flags); break;
-		case 1: return WriteIndices<TOut, uint8_t>(out, idx, flags); break;
-		default: throw std::runtime_error(FmtS("Unsupported index stride: %d", idx.m_stride));
+			case 4: return WriteIndices<TOut, uint32_t>(out, idx, flags); break;
+			case 2: return WriteIndices<TOut, uint16_t>(out, idx, flags); break;
+			case 1: return WriteIndices<TOut, uint8_t>(out, idx, flags); break;
+			default: throw std::runtime_error(FmtS("Unsupported index stride: %d", idx.stride()));
 		}
 	}
 
@@ -2044,48 +2036,44 @@ namespace pr::geometry::p3d
 		if (count * stride > len && fmt != EIndexFormat::IdxNBit)
 			throw std::runtime_error(Fmt("Indices buffer count is invalid. Count is %d, data available for %d.", count, len / stride));
 
-		cont.m_stride = stride;
-
 		// Read the index data into memory
 		switch (fmt)
 		{
-		case EIndexFormat::Idx32Bit:
+			case EIndexFormat::Idx32Bit:
 			{
-				cont.resize<uint32_t>(count);
-				Read(src, cont.data<uint32_t>(), cont.size<uint32_t>());
-				cont.m_stride = sizeof(uint32_t);
+				cont.resize(count, stride);
+				Read(src, cont.data<uint32_t>(), cont.size());
 				break;
 			}
-		case EIndexFormat::Idx16Bit:
+			case EIndexFormat::Idx16Bit:
 			{
-				cont.resize<uint16_t>(count);
-				Read(src, cont.data<uint16_t>(), cont.size<uint16_t>());
-				cont.m_stride = sizeof(uint16_t);
+				cont.resize(count, stride);
+				Read(src, cont.data<uint16_t>(), cont.size());
 				break;
 			}
-		case EIndexFormat::Idx8Bit:
+			case EIndexFormat::Idx8Bit:
 			{
-				cont.resize<uint8_t>(count);
-				Read(src, cont.data<uint8_t>(), cont.size<uint8_t>());
-				cont.m_stride = sizeof(uint8_t);
+				cont.resize(count, stride);
+				Read(src, cont.data<uint8_t>(), cont.size());
 				break;
 			}
-		case EIndexFormat::IdxNBit:
+			case EIndexFormat::IdxNBit:
 			{
 				// For IdxNBit, the stride value is the size of each decompressed index,
 				// *not* the per-element size of the data in 'src' (like it is for other chunks).
-				cont.reserve(count * stride);
+				cont.reserve(count, stride);
+				cont.resize(0, stride);
 
 				// Read compressed indices into a local buffer
 				byte_data<> buf(len);
-				Read(src, buf.data<uint8_t>(), buf.size<uint8_t>());
+				Read(src, buf.data(), buf.size());
 
 				// Decompress from 'buf' into 'cont'
 				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
 				int64_t prev = 0;
 				auto const* p = buf.data<uint8_t>();
-				auto const* pend = p + buf.size();
-				for (; p != pend && cont.count() != count; ++p)
+				auto const* pend = p + buf.size<uint8_t>();
+				for (int i = 0; i != s_cast<int>(count) && p != pend; ++i, ++p)
 				{
 					int s = 0;
 					uint64_t zz = 0;
@@ -2099,18 +2087,18 @@ namespace pr::geometry::p3d
 
 					// Get the index value from the delta (only works for little endian!)
 					auto idx = prev + delta;
-					cont.push_back({ byte_ptr(&idx), stride });
+					cont.push_back(idx);
 
 					prev += delta;
 				}
 
 				// Integrity check
-				if (cont.size() != count * stride)
+				if (cont.size() != count)
 					throw std::runtime_error(Fmt("Index buffer count is invalid. Count is %d, %d indices provided.", count, static_cast<uint32_t>(cont.size() / stride)));
 
 				break;
 			}
-		default:
+			default:
 			{
 				throw std::runtime_error("Unsupported index buffer format");
 			}
@@ -2390,7 +2378,7 @@ namespace pr::geometry::p3d
 				out << ind << "// nugget " << (&nug - mesh.m_nugget.data()) << "\n";
 
 				auto i = 0;
-				for (auto idx : nug.m_vidx.casting_span())
+				for (auto idx : nug.m_vidx.casting_span<int>())
 				{
 					out << (i == 0 ? ind : "");
 					out << idx << ", ";
@@ -2538,7 +2526,7 @@ namespace pr::geometry::p3d
 
 				// Indices
 				auto i = 0U;
-				for (auto const& vi : nug.m_vidx.casting_span())
+				for (auto const& vi : nug.m_vidx.casting_span<int>())
 				{
 					out << (i == 0 ? ind : "");
 					out << vi;
@@ -2704,7 +2692,7 @@ namespace pr::geometry
 					PR_CHECK(n0.m_geom == n1.m_geom, true);
 					PR_CHECK(n0.m_mat == n1.m_mat, true);
 					PR_CHECK(n0.m_vidx.size() == n1.m_vidx.size(), true);
-					PR_CHECK(n0.m_vidx.m_stride == n1.m_vidx.m_stride, true);
+					PR_CHECK(n0.m_vidx.stride() == n1.m_vidx.stride(), true);
 					for (int k = 0, kend = s_cast<int>(n1.icount()); k != kend; ++k)
 					{
 						auto i0 = n0.m_vidx[k];
@@ -2736,8 +2724,8 @@ namespace pr::geometry
 			vidx.append<uint16_t>({0, 1, 2, 3});
 			
 			int i = 0;
-			for (auto f : vidx.casting_span<float>())
-				PR_CHECK(f, (float)i++);
+			for (auto j : vidx.casting_span<short>())
+				PR_EXPECT(j == (short)i++);
 		}
 
 		// Fat vertex iteration

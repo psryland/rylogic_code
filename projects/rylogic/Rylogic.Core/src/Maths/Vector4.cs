@@ -73,6 +73,12 @@ namespace Rylogic.Maths
 			w = w_;
 		}
 
+		// Construct a normalised vector
+		public static v4 Normal(float x_, float y_, float z_, float w_)
+		{
+			return Math_.Normalise(new v4(x_, y_, z_, w_));
+		}
+
 		/// <summary>Get/Set components by index</summary>
 		public float this[int i]
 		{

@@ -100,7 +100,8 @@ namespace pr::rdr12::ldraw
 		, m_root_anim()
 		, m_bbox_instance()
 		, m_screen_space()
-		, m_ldr_flags(ELdrFlags::None)
+		, m_flags_local(ELdrFlags::None)
+		, m_flags_recursive(ELdrFlags::Invalidated)
 		, m_user_data()
 	{
 		m_i2w = m4x4::Identity();
@@ -129,7 +130,7 @@ namespace pr::rdr12::ldraw
 		m_i2w = i2w;
 
 		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
 		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Allow the object to change it's transform just before rendering
@@ -156,7 +157,7 @@ namespace pr::rdr12::ldraw
 		if (m_model) i2w *= m_model->m_m2root;
 
 		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
 		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Add the bbox instance to the scene draw list
@@ -263,7 +264,7 @@ namespace pr::rdr12::ldraw
 	bool LdrObject::Visible(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? !AllSet(obj->m_ldr_flags, ELdrFlags::Hidden) : false;
+		return obj ? !AllSet(obj->Flags(), ELdrFlags::Hidden) : false;
 	}
 	void LdrObject::Visible(bool visible, char const* name)
 	{
@@ -274,7 +275,7 @@ namespace pr::rdr12::ldraw
 	bool LdrObject::Wireframe(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Wireframe) : false;
+		return obj ? AllSet(obj->Flags(), ELdrFlags::Wireframe) : false;
 	}
 	void LdrObject::Wireframe(bool wireframe, char const* name)
 	{
@@ -285,7 +286,7 @@ namespace pr::rdr12::ldraw
 	bool LdrObject::Normals(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Normals) : false;
+		return obj ? AllSet(obj->Flags(), ELdrFlags::Normals) : false;
 	}
 	void LdrObject::Normals(bool show, char const* name)
 	{
@@ -308,7 +309,7 @@ namespace pr::rdr12::ldraw
 
 				// Do not include in scene bounds calculations because we're scaling
 				// this model at a point that the bounding box calculation can't see.
-				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, true);
+				o->Flags(ELdrFlags::SceneBoundsExclude, true);
 
 				// Update the rendering 'i2w' transform on add-to-scene.
 				o->m_screen_space = o->OnAddToScene += [](LdrObject& ob, Scene const& scene)
@@ -341,7 +342,7 @@ namespace pr::rdr12::ldraw
 			else
 			{
 				o->m_c2s = m4x4Zero;
-				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, false);
+				o->Flags(ELdrFlags::SceneBoundsExclude, false);
 				o->OnAddToScene -= o->m_screen_space;
 			}
 			return true;
@@ -354,14 +355,14 @@ namespace pr::rdr12::ldraw
 		// Mainly used to allow non-user objects to be added to a scene
 		// and not affect the bounding box of the scene
 		auto obj = Child(name);
-		return obj ? obj->m_ldr_flags : ELdrFlags::None;
+		return obj ? obj->m_flags_local : ELdrFlags::None;
 	}
 	void LdrObject::Flags(ELdrFlags flags, bool state, char const* name)
 	{
 		Apply([=](LdrObject* o)
 		{
 			// Apply flag changes
-			o->m_ldr_flags = SetBits(o->m_ldr_flags, flags, state);
+			o->m_flags_local = SetBits(o->m_flags_local, flags, state);
 
 			// Hidden
 			if (o->m_model != nullptr)
@@ -371,7 +372,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Wireframe
-			if (AllSet(o->m_ldr_flags, ELdrFlags::Wireframe))
+			if (AllSet(o->Flags(), ELdrFlags::Wireframe))
 			{
 				o->m_pso.Set<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME);
 			}
@@ -381,7 +382,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// No Z Test
-			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZTest))
+			if (AllSet(o->Flags(), ELdrFlags::NoZTest))
 			{
 				// Don't test against Z, and draw above all objects
 				o->m_pso.Set<EPipeState::DepthEnable>(FALSE);
@@ -394,7 +395,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// If NoZWrite
-			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZWrite))
+			if (AllSet(o->Flags(), ELdrFlags::NoZWrite))
 			{
 				// Don't write to Z and draw behind all objects
 				o->m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
@@ -409,24 +410,55 @@ namespace pr::rdr12::ldraw
 			// Normals
 			if (o->m_model != nullptr)
 			{
-				auto show_normals = AllSet(o->m_ldr_flags, ELdrFlags::Normals);
+				auto show_normals = AllSet(o->Flags(), ELdrFlags::Normals);
 				ShowNormals(o->m_model.get(), show_normals);
 			}
 
 			// Shadow cast
 			{
-				auto vampire = AllSet(o->m_ldr_flags, ELdrFlags::ShadowCastExclude);
+				auto vampire = AllSet(o->Flags(), ELdrFlags::ShadowCastExclude);
 				o->m_iflags = SetBits(o->m_iflags, EInstFlag::ShadowCastExclude, vampire);
 			}
 
 			// Non-Affine
 			{
-				auto non_affine = AllSet(o->m_ldr_flags, ELdrFlags::NonAffine);
+				auto non_affine = AllSet(o->Flags(), ELdrFlags::NonAffine);
 				o->m_iflags = SetBits(o->m_iflags, EInstFlag::NonAffine, non_affine);
 			}
 
+			// Animated
+			if (AllSet(o->Flags(), ELdrFlags::Animated))
+			{
+				InvalidateRecursiveFlags();
+			}
 			return true;
 		}, name);
+	}
+
+	// Flags that propagate to the parent (i.e., if the child has it, then I have it)
+	ELdrFlags LdrObject::RecursiveFlags() const
+	{
+		// Lazy update recursive flags
+		if (AllSet(m_flags_recursive, ELdrFlags::Invalidated))
+		{
+			// Read flags from children
+			m_flags_recursive = ELdrFlags::None;
+			for (auto const& child : m_child)
+				m_flags_recursive = SetBits(m_flags_recursive, child->RecursiveFlags(), true);
+
+			// Apply flags that propagate to the parent
+			if (AllSet(Flags(), ELdrFlags::Animated))
+			{
+				m_flags_recursive = SetBits(m_flags_recursive, ELdrFlags::Animated, true);
+			}
+		}
+		return m_flags_recursive;
+	}
+	void LdrObject::InvalidateRecursiveFlags()
+	{
+		// Invalidate all parent recursive flags
+		for (auto p = this; p != nullptr; p = p->m_parent)
+			p->m_flags_recursive = SetBits(p->m_flags_recursive, ELdrFlags::Invalidated, true);
 	}
 
 	// Get/Set the render group for this object or child objects matching 'name' (see Apply)
@@ -639,7 +671,7 @@ namespace pr::rdr12::ldraw
 		if (m_model) i2w = i2w * m_model->m_m2root;
 
 		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
+		auto flags = Flags() | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
 
 		// Start with the bbox for this object
 		auto bbox = BBox::Reset();

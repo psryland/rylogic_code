@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -24,8 +24,11 @@ namespace pr
 		static constexpr double tau = 6.283185307179586476925286766559; // circle constant
 		static constexpr double inv_tau = 1.0 / tau;
 		static constexpr double tau_by_2 = tau / 2.0;
+		static constexpr double tau_by_3 = tau / 3.0;
 		static constexpr double tau_by_4 = tau / 4.0;
+		static constexpr double tau_by_5 = tau / 5.0;
 		static constexpr double tau_by_6 = tau / 6.0;
+		static constexpr double tau_by_7 = tau / 7.0;
 		static constexpr double tau_by_8 = tau / 8.0;
 		static constexpr double tau_by_360 = tau / 360.0;
 		static constexpr double E60_by_tau = 360.0 / tau;
@@ -58,8 +61,11 @@ namespace pr
 		static constexpr float tau = 6.283185307179586476925286766559f;    // circle constant
 		static constexpr float inv_tau = 1.0f / tau;
 		static constexpr float tau_by_2 = tau / 2.0f;
+		static constexpr float tau_by_3 = tau / 3.0f;
 		static constexpr float tau_by_4 = tau / 4.0f;
+		static constexpr float tau_by_5 = tau / 5.0f;
 		static constexpr float tau_by_6 = tau / 6.0f;
+		static constexpr float tau_by_7 = tau / 7.0f;
 		static constexpr float tau_by_8 = tau / 8.0f;
 		static constexpr float tau_by_360 = tau / 360.0f;
 		static constexpr float E60_by_tau = 360.0f / tau;
@@ -124,8 +130,11 @@ namespace pr::maths
 	inline constexpr float tauf          = constants<float>::tau;
 	inline constexpr float inv_tauf      = constants<float>::inv_tau;
 	inline constexpr float tau_by_2f     = constants<float>::tau_by_2;
+	inline constexpr float tau_by_3f     = constants<float>::tau_by_3;
 	inline constexpr float tau_by_4f     = constants<float>::tau_by_4;
+	inline constexpr float tau_by_5f     = constants<float>::tau_by_5;
 	inline constexpr float tau_by_6f     = constants<float>::tau_by_6;
+	inline constexpr float tau_by_7f     = constants<float>::tau_by_7;
 	inline constexpr float tau_by_8f     = constants<float>::tau_by_8;
 	inline constexpr float tau_by_360f   = constants<float>::tau_by_360;
 	inline constexpr float E60_by_tauf   = constants<float>::E60_by_tau;

@@ -165,7 +165,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create from an angular displacement vector. length = angle(rad), direction = axis</summary>
-		public static m3x4 Rotation(v4 angular_displacement)
+		public static m3x4 Rotation(v4 angular_displacement) // This is ExpMap
 		{
 			Debug.Assert(angular_displacement.w == 0, "'angular_displacement' should be a scaled direction vector");
 			var len = angular_displacement.Length;
@@ -691,10 +691,64 @@ namespace Rylogic.Maths
 		/// <summary>Return the cross product matrix for 'vec'</summary>
 		public static m3x4 CPM(v4 vec)
 		{
+			// This matrix can be used to calculate the cross product with
+			// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
 			return new(
 				new v4(    0f, +vec.z, -vec.y, 0f),
 				new v4(-vec.z,     0f, +vec.x, 0f),
 				new v4(+vec.y, -vec.x,     0f, 0f));
+		}
+
+		/// <summary>Return 'exp(omega)' (Rodriges' formula)</summary>
+		public static m3x4 ExpMap3x3(v4 omega)
+		{
+			return m3x4.Rotation(omega);
+		}
+
+		// Returns the Axis*Angle vector representation of a rotation matrix (Inverse of ExpMap)
+		public static v4 LogMap(m3x4 rot)
+		{
+			var cos_angle = Clamp((Trace(rot) - 1.0f) / 2.0f, -1.0f, +1.0f);
+			var theta = Math.Acos(cos_angle);
+			if (Abs(theta) < Math_.TinyF)
+				return v4.Zero;
+
+			var s = 1.0f / (2.0f * (float)Math.Sin(theta));
+			var axis = s * new v4(rot.y.z - rot.z.y, rot.z.x - rot.x.z, rot.x.y - rot.y.x, 0);
+			return theta * axis;
+		}
+		
+		/// <summary>Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration</summary>
+		public static m3x4 RotationAt(float time, m3x4 ori, v4 avel, v4 aacc)
+		{
+			// Orientation can be computed analytically if angular velocity
+			// and angular acceleration are parallel or angular acceleration is zero.
+			if (Cross(avel, aacc).LengthSq < Math_.TinyF)
+			{
+				var w = avel + aacc * time;
+				return ExpMap3x3(w * time) * ori;
+			}
+			else
+			{
+				// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
+
+				// 3-point Gauss-Legendre nodes for 6th order accuracy
+				const float root15f = 3.87298334620741688518f;
+				const float c1 = 0.5f - root15f / 10.0f;
+				const float c2 = 0.5f;
+				const float c3 = 0.5f + root15f / 10.0f;
+
+				// Evaluate instantaneous angular velocity at nodes
+				var w0 = avel + aacc * c1 * time;
+				var w1 = avel + aacc * c2 * time;
+				var w2 = avel + aacc * c3 * time;
+
+				var u0 = ExpMap3x3(w0 * time / 3.0f);
+				var u1 = ExpMap3x3(w1 * time / 3.0f);
+				var u2 = ExpMap3x3(w2 * time / 3.0f);
+
+				return u2 * u1 * u0 * ori;
+			}
 		}
 	}
 }
@@ -792,6 +846,23 @@ namespace Rylogic.UnitTests
 				var MAT = m3x4.Parse3x3(mat.ToString3x3());
 				Assert.Equals(mat, MAT);
 			}
+		}
+
+		[Test]
+		public void LogExpMap()
+		{
+			var w = new v4(2, -1, 4, 0);
+
+			// Wrap into [0, tau/2]
+			var w_len = w.Length;
+			w *= (w_len % Math_.TauBy2F) / w_len;
+
+			var rot1 = m3x4.Rotation(w);
+			var rot2 = Math_.ExpMap3x3(w);
+			var W = Math_.LogMap(rot2);
+
+			Assert.True(Math_.FEql(rot1, rot2));
+			Assert.True(Math_.FEql(w, W));
 		}
 	}
 }

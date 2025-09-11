@@ -688,7 +688,7 @@ namespace pr
 				if (Length(m_nav.m_Rref) < 0.80f)
 					Rotate((point.y - m_nav.m_Rref.y) * maths::tau_by_4f, (m_nav.m_Rref.x - point.x) * maths::tau_by_4f, 0.0f, false);
 				else
-					Rotate(0.0f, 0.0f, ATan2(m_nav.m_Rref.y, m_nav.m_Rref.x) - ATan2(point.y, point.x), false);
+					Rotate(0.0f, 0.0f, Atan2(m_nav.m_Rref.y, m_nav.m_Rref.x) - Atan2(point.y, point.x), false);
 			}
 			EnforceBounds();
 			return m_moved;

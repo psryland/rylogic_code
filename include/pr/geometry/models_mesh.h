@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -18,51 +18,49 @@ namespace pr::geometry
 	}
 
 	// Generate a model from mesh data
-	// 'num_verts' - the number of verts available through the iterator 'verts'
-	// 'num_indices' - the number of indices available through the iterator 'indices'
 	// 'verts' and 'indices' are the basic model data
-	// 'num_colours' - the number of colours pointed to by 'colours', can be equal to 0, 1, or num_verts
-	// 'colours' - the array of colours of length 'num_colours'
-	// 'num_normals' - the number of normals pointed to by 'normals', can be equal to 0, 1, or num_verts
-	// 'normals' - the array of normals of length 'num_normals'
-	// 'tex_coords' - must be null or an array of length 'num_verts'
+	// 'colours' - the array of colours. Length can be 0, 1, or verts.size()
+	// 'normals' - the array of normals. Length can be 0, 1, or verts.size()
+	// 'tex_coords' - the array of texture coords. Length must be 0 or verts.size()
 	// Remember you can call "GenerateNormals()" to generate normals.
-	template <typename TVertCIter, typename TIdxCIter, typename TNormCIter, typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Mesh(
-		int num_verts,
-		int num_indices,
-		TVertCIter verts,
-		TIdxCIter  indices,
-		int num_colours,
-		Colour32 const* colours,
-		int num_normals,
-		TNormCIter normals,
-		v2 const* tex_coords,
+		std::span<v4 const> verts,
+		index_cspan indices,
+		std::span<Colour32 const> colours,
+		std::span<v4 const> normals,
+		std::span<v2 const> tex_coords,
 		VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | (normals ? EGeom::Norm : EGeom::None) | (tex_coords ? EGeom::Tex0 : EGeom::None);
+		props.m_geom =
+			EGeom::Vert |
+			(!colours.empty() ? EGeom::Colr : EGeom::None) |
+			(!normals.empty() ? EGeom::Norm : EGeom::None) |
+			(!tex_coords.empty() ? EGeom::Tex0 : EGeom::None);
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours, num_colours, num_verts, Colour32White);
-		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+		auto col = CreateRepeater(colours.data(), isize(colours), isize(verts), Colour32White);
+		auto cc = [&props](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Normal iterator wrapper
-		auto norm = CreateRepeater(normals, num_normals, num_verts, v4Zero);
+		auto norm = CreateRepeater(normals.data(), isize(normals), isize(verts), v4::Zero());
 
 		// UV iterator wrapper
-		auto uv = CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, v2Zero);
+		auto uv = CreateRepeater(tex_coords.data(), isize(tex_coords), isize(verts), v2::Zero());
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
+		auto bb = [&props](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Verts
-		for (auto v = 0; v != num_verts; ++v)
-			vout(bb(*verts++), cc(*col++), *norm++, *uv++);
+		auto vptr = verts.data();
+		for (auto v = 0, vend = isize(verts); v != vend; ++v)
+			vout(bb(*vptr++), cc(*col++), *norm++, *uv++);
 
 		// Faces or edges or whatever
-		for (auto i = 0; i != num_indices; ++i)
-			iout(*indices++);
+		auto iptr = indices.begin<int>();
+		for (auto i = 0, iend = isize(indices); i != iend; ++i)
+			iout(*iptr++);
 
 		return props;
 	}

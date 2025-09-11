@@ -276,14 +276,28 @@ namespace Rylogic.Maths
 			var range = mx - mn;
 			return mn + (((x - mn) % range) + range) % range;
 		}
-		//public static T Wrap<T>(T x, T min, T max) where T : IComparable<T>
-		//{
-		//	// Given the range [mn, mx) and 'x' somewhere on the number line
-		//	// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
-		//	Debug.Assert(min.CompareTo(max) <= 0);
-		//	return (x.CompareTo(min) < 0 ? max : min) + Operators<T>.Mod(
-		//		Operators<T>.Sub(x, min), Operators<T>.Sub(max, min));
-		//}
+		public static float Wrap(float x, float mn, float mx)
+		{
+			// Given the range [mn, mx) and 'x' somewhere on the number line
+			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+			var range = mx - mn;
+			return mn + (((x - mn) % range) + range) % range;
+		}
+		public static double Wrap(double x, double mn, double mx)
+		{
+			// Given the range [mn, mx) and 'x' somewhere on the number line
+			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+			var range = mx - mn;
+			return mn + (((x - mn) % range) + range) % range;
+		}
+		public static T Wrap<T>(T x, T mn, T mx) where T : IComparable<T>
+		{
+			// Given the range [mn, mx) and 'x' somewhere on the number line
+			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+			Debug.Assert(mn.CompareTo(mx) <= 0);
+			var range = Operators<T>.Sub(mx, mn);
+			return Operators<T>.Add(mn, Operators<T>.Mod(Operators<T>.Add(Operators<T>.Mod(Operators<T>.Sub(x, mn), range), range), range));
+		}
 
 		/// <summary>Map 'x' to a value that 'ping pongs' between [0, N) (0 and N aren't repeated)</summary>
 		public static long PingPong(long x, long N)
@@ -809,6 +823,13 @@ namespace Rylogic.UnitTests
 			Assert.Equal(-1, Math_.Wrap(+0, -1, 0));
 			Assert.Equal(-1, Math_.Wrap(+1, -1, 0));
 			Assert.Equal(-1, Math_.Wrap(+2, -1, 0));
+
+			// Floating point wrap
+			for (var f = -1.05; f <= 1.05; f += 0.1)
+			{
+				var x = Math_.Wrap(f, -0.2, 1.3);
+				Assert.True(x >= -0.2 && x < 1.3);
+			}
 		}
 		[Test]
 		public void TestAverage()

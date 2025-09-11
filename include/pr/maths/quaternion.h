@@ -144,14 +144,19 @@ namespace pr
 		{
 			assert(from.w == 0 && to.w == 0);
 			auto d = Dot(from, to);
-			auto axis = Cross3(from, to);
 			auto s = Sqrt(LengthSq(from) * LengthSq(to)) + d;
+			auto axis = Cross3(from, to);
+
+			// Vectors are aligned, 180 degrees apart, or one is zero
 			if (FEql(s, S(0)))
 			{
-				// vectors are 180 degrees apart
-				axis = Perpendicular(to);
 				s = S(0);
+				axis =
+					LengthSq(from) > maths::tinyf ? Perpendicular(from) :
+					LengthSq(to) > maths::tinyf ? Perpendicular(to) :
+					v4::ZAxis();
 			}
+
 			xyzw = Normalise(Vec4<S, void>{axis.x, axis.y, axis.z, s});
 		}
 
@@ -165,30 +170,34 @@ namespace pr
 		// Return the angle of rotation about 'Axis()'
 		S Angle() const
 		{
-			return ACos(CosAngle());
+			return Acos(CosAngle());
 		}
 
 		// Return the cosine of the angle of rotation about 'Axis()'
 		S CosAngle() const
 		{
-			assert("quaternion isn't normalised" && IsNormal(*this));
+			//assert("quaternion isn't normalised" && IsNormal(*this));
 
 			// Trig:
-			//' cos^2(x) = 0.5 * (1 + cos(2x))
-			//' w == cos(x/2)
-			//' w^2 == cos^2(x/2) == 0.5 * (1 + cos(x))
-			//' 2w^2 - 1 == cos(x)
-			return Clamp(S(2.0) * Sqr(w) - S(1.0), S(-1.0), S(+1.0));
+			//' w == cos(θ/2)
+			//' cos²(θ/2) = 0.5 * (1 + cos(θ))
+			//' w² == cos²(θ/2) == 0.5 * (1 + cos(θ))
+			//' cos(θ) = 2w² - 1
+
+			// This is always the smallest arc
+			return Clamp(S(2) * Sqr(w) - LengthSq(xyzw), -S(1), +S(1));
 		}
 
 		// Return the sine of the angle of rotation about 'Axis()'
 		S SinAngle() const
 		{
 			// Trig:
-			//' sin^2(x) + cos^2(x) == 1
-			//' sin^2(x) == 1 - cos^2(x)
-			//' sin(x) == sqrt(1 - cos^2(x))
-			return Sqrt(S(1.0) - Sqr(CosAngle()));
+			//'  w == cos(θ/2)
+			//'  sin(θ) = 2 * sin(θ/2) * cos(θ/2)
+
+			// The sign is determined by the sign of w (which represents cos(θ/2))
+			auto sin_half_angle = Length(xyz);
+			return S(2) * sin_half_angle * w;
 		}
 		
 		// Basic constants
@@ -337,8 +346,8 @@ namespace pr
 		return Quat<S,A,B>{Normalise(q.xyzw, def.xyzw)};
 	}
 
-	// Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)
-	template <Scalar S, typename A, typename B> inline S pr_vectorcall CosAngle2(Quat_cref<S,A,B> a, Quat_cref<S,A,B> b)
+	// Returns the value of 'cos(theta / 2)', where 'theta' is the angle between 'a' and 'b'
+	template <Scalar S, typename A, typename B> inline S pr_vectorcall CosHalfAngle(Quat_cref<S,A,B> a, Quat_cref<S,A,B> b)
 	{
 		// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
 		// where operator * is a quaternion multiply. The 'w' component of a quaternion
@@ -348,32 +357,41 @@ namespace pr
 		return Dot4(a.xyzw, b.xyzw);
 	}
 
-	// Return the angle between two quaternions (in radians)
+	// Returns the smallest angle between two quaternions (in radians, [0, tau/2])
 	template <Scalar S, typename A, typename B> inline S pr_vectorcall Angle(Quat_cref<S,A,B> a, Quat_cref<S,A,B> b)
 	{
-		return S(0.5) * ACos(CosAngle2(a,b));
+		// q.w = Cos(theta/2)
+		// Note: cos(A) = 2 * cos²(A/2) - 1
+		//  and: acos(A) = 0.5 * acos(2A² - 1), for A in [0, tau/2]
+		// Using the 'acos(2A² - 1)' form always returns the smallest angle
+		auto cos_half_ang = CosHalfAngle(a, b);
+		return 
+			cos_half_ang > 1.0f - maths::tinyf ? S(0) :
+			cos_half_ang > 0 ? S(2) * Acos(Clamp(cos_half_ang, -S(1), +S(1))) : // better precision
+			Acos(Clamp(S(2) * Sqr(cos_half_ang) - S(1), -S(1), +S(1)));
 	}
 
 	// Logarithm map of quaternion to tangent space at identity. Converts a quaternion into a length-scaled direction, where length is the angle of rotation
 	template <Scalar S, typename A, typename B> inline Vec4<S, void> pr_vectorcall LogMap(Quat_cref<S,A,B> q)
 	{
 		// Quat = [u.Sin(A/2), Cos(A/2)]
-		auto cos_half_ang = Clamp<double>(q.w, -1.0, +1.0); // [0, tau]
+		auto cos_half_ang = Clamp<S>(q.w, -S(1), +S(1)); // [0, tau]
 		auto sin_half_ang = Length(q.xyz); // Don't use 'sqrt(1 - w*w)', it's not float noise accurate enough when w ~= +/-1
-		auto ang_by_2 = ACos(cos_half_ang);
-		auto s = Abs(sin_half_ang) > maths::tinyd ? static_cast<float>(2.0 * ang_by_2 / sin_half_ang) : 2.0f;
-		return q.xyzw.w0() * s;
+		auto ang_by_2 = Acos(cos_half_ang); // By convention, log space uses Length = A/2
+		return Abs(sin_half_ang) > maths::tinyd
+			? q.xyzw.w0() * static_cast<S>(ang_by_2 / sin_half_ang)
+			: q.xyzw.w0();
 	}
 
 	// Exponential map of tangent space at identity to quaternion. Converts a length-scaled direction to a quaternion.
 	template <Scalar S> inline Quat<S, void, void> pr_vectorcall ExpMap(Vec4_cref<S,void> v)
 	{
 		// Vec = (+/-)A * (-/+)u.
-		auto ang_by_2 = 0.5 * Length(v);
-		auto cos_half_ang = (float)Cos(ang_by_2);
-		auto sin_half_ang = (float)Sqrt(1 - cos_half_ang * cos_half_ang);
-		auto s = ang_by_2 > maths::tinyd ? static_cast<float>(0.5 * sin_half_ang / ang_by_2) : 0.5f;
-		return { v.x * s, v.y * s, v.z * s, cos_half_ang };
+		auto ang_by_2 = Length(v); // By convention, log space uses Length = A/2
+		auto cos_half_ang = Cos(ang_by_2);
+		auto sin_half_ang = Sin(ang_by_2); // != Sqrt(1 - cos_half_ang * cos_half_ang) when ang_by_2 > tau/2
+		auto s = ang_by_2 > maths::tinyd ? static_cast<S>(sin_half_ang / ang_by_2) : S(1);
+		return { v.x * s, v.y * s, v.z * s, static_cast<S>(cos_half_ang) };
 	}
 
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
@@ -388,7 +406,7 @@ namespace pr
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, S(-1.0), S(+1.0)); // = cos(x/2)
 		auto s = Sqrt(S(+1.0) - Sqr(w));       // = sin(x/2)
-		auto a = frac * ACos(w);               // = scaled half angle
+		auto a = frac * Acos(w);               // = scaled half angle
 		auto sin_ha = Sin(a);
 		auto cos_ha = Cos(a);
 		return Quat<S,A,B>{
@@ -410,7 +428,7 @@ namespace pr
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, S(-1.0), S(+1.0));
 		auto s = Sqrt(S(+1.0) - Sqr(w));
-		angle = S(2.0) * ACos(w);
+		angle = S(2.0) * Acos(w);
 		axis = Abs(s) > maths::tinyf
 			? Vec4<S,void>(q.x/s, q.y/s, q.z/s, S(0))
 			: Vec4<S,void>{S(0), S(0), S(0), S(0)}; // axis is (0,0,0) when angle == 1
@@ -442,7 +460,7 @@ namespace pr
 		// Calculate coefficients
 		if (cos_angle < S(0.95))
 		{
-			auto angle     = ACos(cos_angle);
+			auto angle     = Acos(cos_angle);
 			auto scale0    = Sin((S(1) - frac) * angle);
 			auto scale1    = Sin((frac       ) * angle);
 			auto sin_angle = Sin(angle);
@@ -469,6 +487,39 @@ namespace pr
 		r.z = 2*xz*rhs.x + 2*yz*rhs.y +   zz*rhs.z - 2*yw*rhs.x -   yy*rhs.z + 2*xw*rhs.y -   xx*rhs.z + ww*rhs.z;
 		r.w = rhs.w;
 		return r;
+	}
+
+	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
+	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall RotationAt(float time, Quat_cref<S,A,B> ori, Vec4_cref<S,A> avel, Vec4_cref<S,A> aacc)
+	{
+		// Orientation can be computed analytically if angular velocity
+		// and angular acceleration are parallel or angular acceleration is zero.
+		if (LengthSq(Cross(avel, aacc)) < maths::tiny<S>)
+		{
+			auto w = avel + aacc * time;
+			return ExpMap(S(0.5) * w * time) * ori;
+		}
+		else
+		{
+			// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
+
+			// 3-point Gauss-Legendre nodes for 6th order accuracy
+			constexpr S root15f = S(3.87298334620741688518);
+			constexpr S c1 = S(0.5) - root15f / S(10);
+			constexpr S c2 = S(0.5);
+			constexpr S c3 = S(0.5) + root15f / S(10);
+
+			// Evaluate instantaneous angular velocity at nodes
+			auto w0 = avel + aacc * c1 * time;
+			auto w1 = avel + aacc * c2 * time;
+			auto w2 = avel + aacc * c3 * time;
+
+			auto u0 = ExpMap(S(0.5) * w0 * time / S(3));
+			auto u1 = ExpMap(S(0.5) * w1 * time / S(3));
+			auto u2 = ExpMap(S(0.5) * w2 * time / S(3));
+
+			return u2 * u1 * u0 * ori; // needs testing
+		}
 	}
 
 	namespace maths
@@ -531,6 +582,40 @@ namespace pr::maths
 				PR_CHECK(FEql(r0, r1), true);
 			}
 		}
+		{
+			float const angles[] = {
+				-maths::tau_by_2f,
+				-maths::tau_by_3f,
+				-maths::tau_by_4f,
+				-maths::tau_by_5f,
+				-maths::tau_by_6f,
+				-maths::tau_by_7f,
+				0.0f,
+				+maths::tau_by_7f,
+				+maths::tau_by_6f,
+				+maths::tau_by_5f,
+				+maths::tau_by_4f,
+				+maths::tau_by_3f,
+				+maths::tau_by_2f,
+			};
+
+			auto axis = v4::Normal(1, 1, 1, 0);
+			for (auto ANG0 : angles)
+			{
+				for (auto ANG1 : angles)
+				{
+					auto q0 = quat{ axis, ANG0 };
+					auto q1 = quat{ axis, ANG1 };
+					auto expected = Min(Abs(ANG1 - ANG0), Abs(maths::tauf - Abs(ANG1 - ANG0)));
+
+					auto ang0 = Angle(q0, q1);
+					auto ang1 = Angle(q1, q0);
+					constexpr float angular_tolerance = 1e-3f;
+					PR_EXPECT(FEqlAbsolute(ang0, expected, angular_tolerance));
+					PR_EXPECT(FEqlAbsolute(ang1, expected, angular_tolerance));
+				}
+			}
+		}
 		{ // Average
 			auto ideal_mean = quat_t(Normalise(Vec4<S,void>(1, 1, 1, 0)), S(0.5));
 
@@ -550,21 +635,81 @@ namespace pr::maths
 			PR_CHECK(FEqlRelative(ideal_mean, actual_mean, S(0.01)), true);
 		}
 		{// LogMap <-> ExpMap
+
+			// Degenerate cases
+			{
+				auto q0 = quat::Random(rng);
+				auto angular_error = Angle(q0, q0);
+				PR_EXPECT(angular_error == 0.0f);
+			}
+
+			// Round trip test
+			auto max_angular_error = 0.0f;
+			for (auto i = 0; i != 100; ++i)
 			{
 				auto q0 = quat::Random(rng);
 				auto v0 = LogMap(q0);
 				auto q1 = ExpMap(v0);
-				PR_EXPECT(FEql(q0, q1));
+				auto angular_error = Angle(q0, q1);
+				
+				max_angular_error = Max(max_angular_error, angular_error);
+				PR_EXPECT(Abs(angular_error) < 0.001f);
 			}
+			PR_EXPECT(max_angular_error < 0.001f);
+
 			// Edge cases
 			{
 				auto q0 = quat{ -2.09713704e-08f, -0.00148352725f, -6.48572168e-11f, -0.999998927f };
 				q0 = Normalise(q0);
-
 				auto v0 = LogMap(q0);
 				auto q1 = ExpMap(v0);
 				auto angular_error = Angle(q0, q1);
 				PR_EXPECT(Abs(angular_error) < 0.001f);
+			}
+			{
+				auto q0 = quat{0.546808f, -0.448332f, 0.448332f, -0.546808f};
+				auto v0 = LogMap(q0);
+				auto q1 = ExpMap(v0);
+				auto angular_error = Angle(q0, q1);
+				PR_EXPECT(Abs(angular_error) < 0.001f);
+			}
+		}
+		{// RotationAt
+			{// Analytic solution case
+				auto ori = quat::Random(rng);
+				auto avl = v4{ 0.6f, 0, 0.6f, 0 };
+				auto aac = v4{ 0, 0, 0, 0 };
+
+				auto rot = m3x4{ ori };
+				for (float t = 0; t < 5.0f; t += 0.1f)
+				{
+					auto ORI = RotationAt(t, ori, avl, aac);
+					auto ROT = RotationAt(t, rot, avl, aac);
+					auto ROT2 = m3x4{ ORI };
+					PR_EXPECT(FEql(ROT, ROT2));
+				}
+			}
+			{// Non-analytic solution case
+				auto ori = quat::Random(rng);
+				auto avl = v4{ 1.2f, 0, 0, 0 };
+				auto aac = v4{ 0, 0, 0.1f, 0 };
+
+				auto rot = m3x4{ ori };
+				for (float t = 0; t < 5.0f; t += 0.1f)
+				{
+					auto ORI = RotationAt(t, ori, avl, aac);
+					auto ROT = RotationAt(t, rot, avl, aac);
+					auto ROT2 = m3x4{ ORI };
+					PR_EXPECT(FEql(ROT, ROT2));
+				}
+			}
+			{// Wrapping
+				for (int i = 0; i != 5; ++i)
+				{
+					auto time = 1.0f * i;
+					auto avl = 2.4f * v4::ZAxis(); // radians
+					auto q = RotationAt(time, quat::Identity(), avl, v4::Zero());
+				}
 			}
 		}
 	}

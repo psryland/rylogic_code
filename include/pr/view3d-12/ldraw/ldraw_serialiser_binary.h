@@ -48,13 +48,37 @@ namespace pr::rdr12::ldraw
 			uint8_t bool_ = b ? 1 : 0;
 			traits<TOut>::write(out, { byte_ptr(&bool_), sizeof(bool_) });
 		}
-		template <typename TOut> static void Append(TOut& out, int i)
+		template <typename TOut> static void Append(TOut& out, int8_t i)
 		{
 			traits<TOut>::write(out, { byte_ptr(&i), sizeof(i) });
 		}
-		template <typename TOut> static void Append(TOut& out, long l)
+		template <typename TOut> static void Append(TOut& out, int16_t i)
 		{
-			traits<TOut>::write(out, { byte_ptr(&l), sizeof(l) });
+			traits<TOut>::write(out, { byte_ptr(&i), sizeof(i) });
+		}
+		template <typename TOut> static void Append(TOut& out, int32_t i)
+		{
+			traits<TOut>::write(out, { byte_ptr(&i), sizeof(i) });
+		}
+		template <typename TOut> static void Append(TOut& out, int64_t i)
+		{
+			traits<TOut>::write(out, { byte_ptr(&i), sizeof(i) });
+		}
+		template <typename TOut> static void Append(TOut& out, uint8_t u)
+		{
+			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
+		}
+		template <typename TOut> static void Append(TOut& out, uint16_t u)
+		{
+			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
+		}
+		template <typename TOut> static void Append(TOut& out, uint32_t u)
+		{
+			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
+		}
+		template <typename TOut> static void Append(TOut& out, uint64_t u)
+		{
+			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
 		}
 		template <typename TOut> static void Append(TOut& out, float f)
 		{
@@ -63,10 +87,6 @@ namespace pr::rdr12::ldraw
 		template <typename TOut> static void Append(TOut& out, double f)
 		{
 			traits<TOut>::write(out, { byte_ptr(&f), sizeof(f) });
-		}
-		template <typename TOut> static void Append(TOut& out, uint32_t u)
-		{
-			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
 		}
 		template <typename TOut> static void Append(TOut& out, Colour32 c)
 		{
@@ -118,7 +138,8 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, EPointStyle style)
 		{
-			Append(out, s_cast<int>(style));
+			using ut = std::underlying_type_t<EPointStyle>;
+			Append(out, s_cast<ut>(style));
 		}
 		template <typename TOut> static void Append(TOut& out, VariableInt var_int)
 		{

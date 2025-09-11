@@ -21,24 +21,30 @@ namespace pr::geometry
 		return GeosphereSize(divisions);
 	}
 
-	// Creates a geosphere.
-	template <typename VOut, typename IOut>
-	Props SkyboxGeosphere(float radius, int divisions, Colour32 colour, VOut vout, IOut iout)
-	{
-		// Remember to use front face culling
-		return Geosphere(radius, divisions, colour, vout, iout);
-	}
-
 	// Returns the number of verts and number of indices needed to hold geometry for a five sided cubic dome.
 	constexpr BufSizes SkyboxFiveSidedCubicDomeSize()
 	{
 		return {12, 30};
 	}
 
+	// Returns the number of verts and number of indices needed to hold geometry for a six sided cube.
+	constexpr BufSizes SkyboxSixSidedCubeSize()
+	{
+		return {24, 36};
+	}
+
+	// Creates a geosphere.
+	template <VertOutputFn VOut, IndexOutputFn IOut>
+	Props SkyboxGeosphere(float radius, int divisions, Colour32 colour, VOut vout, IOut iout)
+	{
+		// Remember to use front face culling
+		return Geosphere(radius, divisions, colour, vout, iout);
+	}
+
 	// Creates a five sided cube (bottom face removed).
 	// The texture coordinates expect a 't' shaped texture where the centre half
 	// of the texture is the top (+y), and the l,t,r,b quarters are the walls.
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props SkyboxFiveSidedCubicDome(float radius, Colour32 colour, VOut vout, IOut iout)
 	{
 		// The texture should be like:
@@ -87,16 +93,10 @@ namespace pr::geometry
 		return props;
 	}
 
-	// Returns the number of verts and number of indices needed to hold geometry for a six sided cube.
-	constexpr BufSizes SkyboxSixSidedCubeSize()
-	{
-		return {24, 36};
-	}
-
 	// Creates a cube.
 	// The texture coordinates expect one texture per face.
 	// Face order is: +x, -x, +y, -y, +z, -z (same order as cube map textures)
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props SkyboxSixSidedCube(float radius, Colour32 colour, VOut vout, IOut iout)
 	{
 		// The texture should be like:

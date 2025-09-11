@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // byte_data
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
@@ -220,7 +220,7 @@ namespace pr
 		}
 		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& push_back(Type const& type)
 		{
-			// No 'std::span<Type const>' overload because it's ambiguous with this method
+			// No 'std::span<Type const>' overload because it's ambiguous with this method. Use insert or append
 			return push_back({ byte_ptr(&type), sizeof(Type) });
 		}
 		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& push_back()
@@ -286,6 +286,10 @@ namespace pr
 				memcpy(ins, data.data(), data.size());
 			}
 			m_size += data.size();
+		}
+		template <typename Type> requires std::is_trivially_copyable_v<Type> void insert(ptrdiff_t ofs, std::span<Type const> data)
+		{
+			insert(ofs * sizeof(Type), { byte_ptr(data.data()), data.size() * sizeof(Type) });
 		}
 
 		// Overwrite bytes at 'ofs'

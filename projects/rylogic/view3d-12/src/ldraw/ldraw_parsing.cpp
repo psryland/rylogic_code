@@ -28,6 +28,7 @@
 #include "pr/str/extract.h"
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
+#include "pr/geometry/index_buffer.h"
 #include "pr/container/byte_data.h"
 #include "pr/script/forward.h"
 #include "pr/storage/csv.h"
@@ -41,7 +42,7 @@ namespace pr::rdr12::ldraw
 	using Guid = pr::Guid;
 	using VCont = pr::vector<v4>;
 	using NCont = pr::vector<v4>;
-	using ICont = pr::vector<uint16_t>;
+	using ICont = pr::geometry::IdxBuf;
 	using CCont = pr::vector<Colour32>;
 	using TCont = pr::vector<v2>;
 	using GCont = pr::vector<NuggetDesc>;
@@ -62,78 +63,86 @@ namespace pr::rdr12::ldraw
 	struct IObjectCreator;
 	template <ELdrObject ObjType> struct ObjectCreator;
 
-	// Buffers
+	// Cached geometry buffers
 	#pragma region Buffer Pool / Cache
 	struct alignas(16) Buffers
 	{
-		VCont m_point;
-		NCont m_norms;
+		VCont m_verts;
 		ICont m_index;
+		NCont m_norms;
 		CCont m_color;
 		TCont m_texts;
 		GCont m_nugts;
-	};
-	using BuffersPtr = std::unique_ptr<Buffers>;
-
-	// Global buffers
-	std::vector<BuffersPtr> g_buffer_pool;
-	std::mutex g_buffer_pool_mutex;
-	BuffersPtr GetFromPool()
-	{
-		std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
-		if (!g_buffer_pool.empty())
-		{
-			auto ptr = std::move(g_buffer_pool.back());
-			g_buffer_pool.pop_back();
-			return ptr;
-		}
-		return BuffersPtr(new Buffers()); // using make_unique causes a crash in x64 release here
-	}
-	void ReturnToPool(BuffersPtr&& bptr)
-	{
-		std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
-		g_buffer_pool.push_back(std::move(bptr));
-	}
-
-	// Cached buffers for geometry
-	struct Cache
-	{
-		BuffersPtr m_bptr;
-		VCont& m_point;
-		NCont& m_norms;
-		ICont& m_index;
-		CCont& m_color;
-		TCont& m_texts;
-		GCont& m_nugts;
-			
-		Cache()
-			:m_bptr(GetFromPool())
-			,m_point(m_bptr->m_point)
-			,m_norms(m_bptr->m_norms)
-			,m_index(m_bptr->m_index)
-			,m_color(m_bptr->m_color)
-			,m_texts(m_bptr->m_texts)
-			,m_nugts(m_bptr->m_nugts)
-		{}
-		~Cache()
-		{
-			Reset();
-			ReturnToPool(std::move(m_bptr));
-		}
-		Cache(Cache&& rhs) = delete;
-		Cache(Cache const& rhs) = delete;
-		Cache operator =(Cache&& rhs) = delete;
-		Cache operator =(Cache const& rhs) = delete;
-	
+		
 		// Resize all buffers to zero
 		void Reset()
 		{
-			m_point.resize(0);
+			m_verts.resize(0);
 			m_norms.resize(0);
-			m_index.resize(0);
+			m_index.resize(0, sizeof(uint16_t));
 			m_color.resize(0);
 			m_texts.resize(0);
 			m_nugts.resize(0);
+		}
+	};
+	struct Cache
+	{
+		using BuffersPtr = std::unique_ptr<Buffers>;
+
+		BuffersPtr m_bptr;
+		VCont& m_verts;
+		ICont& m_index;
+		NCont& m_norms;
+		CCont& m_color;
+		TCont& m_texts;
+		GCont& m_nugts;
+
+		Cache()
+			: m_bptr(GetFromPool())
+			, m_verts(m_bptr->m_verts)
+			, m_index(m_bptr->m_index)
+			, m_norms(m_bptr->m_norms)
+			, m_color(m_bptr->m_color)
+			, m_texts(m_bptr->m_texts)
+			, m_nugts(m_bptr->m_nugts)
+		{
+		}
+		~Cache()
+		{
+			m_bptr->Reset();
+			ReturnToPool(std::move(m_bptr));
+		}
+		Cache(Cache&&) = delete;
+		Cache(Cache const&) = delete;
+		Cache operator =(Cache&&) = delete;
+		Cache operator =(Cache const&) = delete;
+
+		void Reset()
+		{
+			m_bptr->Reset();
+		}
+
+	private:
+
+		// Global buffers
+		inline static std::vector<BuffersPtr> g_buffer_pool;
+		inline static std::mutex g_buffer_pool_mutex;
+
+		static BuffersPtr GetFromPool()
+		{
+			std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
+			if (!g_buffer_pool.empty())
+			{
+				auto ptr = std::move(g_buffer_pool.back());
+				g_buffer_pool.pop_back();
+				return ptr;
+			}
+			return BuffersPtr(new Buffers()); // using make_unique causes a crash in x64 release here
+		}
+		static void ReturnToPool(BuffersPtr&& bptr)
+		{
+			std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
+			g_buffer_pool.push_back(std::move(bptr));
 		}
 	};
 	#pragma endregion
@@ -660,7 +669,7 @@ namespace pr::rdr12::ldraw
 			case EKeyword::Txfm:
 			{
 				reader.Transform(obj->m_o2p);
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
+				obj->Flags(ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
 				return true;
 			}
 			case EKeyword::GroupColour:
@@ -694,27 +703,27 @@ namespace pr::rdr12::ldraw
 				obj->m_root_anim.m_simple->m_acc = anim_info.m_acc;
 				obj->m_root_anim.m_simple->m_avel = anim_info.m_avel;
 				obj->m_root_anim.m_simple->m_aacc = anim_info.m_aacc;
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
+				obj->Flags(ELdrFlags::Animated, true);
 				return true;
 			}
 			case EKeyword::Hidden:
 			{
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Hidden, true);
+				obj->Flags(ELdrFlags::Hidden, true);
 				return true;
 			}
 			case EKeyword::Wireframe:
 			{
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Wireframe, true);
+				obj->Flags(ELdrFlags::Wireframe, true);
 				return true;
 			}
 			case EKeyword::NoZTest:
 			{
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NoZTest, true);
+				obj->Flags(ELdrFlags::NoZTest, true);
 				return true;
 			}
 			case EKeyword::NoZWrite:
 			{
-				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NoZWrite, true);
+				obj->Flags(ELdrFlags::NoZWrite, true);
 				return true;
 			}
 			case EKeyword::ScreenSpace:
@@ -741,15 +750,15 @@ namespace pr::rdr12::ldraw
 			obj->Colour(false, obj->m_grp_colour, "", EColourOp::Multiply);
 
 		// If flagged as hidden, hide
-		if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden))
+		if (AllSet(obj->Flags(), ELdrFlags::Hidden))
 			obj->Visible(false);
 
 		// If flagged as wireframe, set wireframe
-		if (AllSet(obj->m_ldr_flags, ELdrFlags::Wireframe))
+		if (AllSet(obj->Flags(), ELdrFlags::Wireframe))
 			obj->Wireframe(true);
 
 		// If NoZTest
-		if (AllSet(obj->m_ldr_flags, ELdrFlags::NoZTest))
+		if (AllSet(obj->Flags(), ELdrFlags::NoZTest))
 		{
 			// Don't test against Z, and draw above all objects
 			obj->m_pso.Set<EPipeState::DepthEnable>(FALSE);
@@ -757,7 +766,7 @@ namespace pr::rdr12::ldraw
 		}
 
 		// If NoZWrite
-		if (AllSet(obj->m_ldr_flags, ELdrFlags::NoZWrite))
+		if (AllSet(obj->Flags(), ELdrFlags::NoZWrite))
 		{
 			// Don't write to Z and draw behind all objects
 			obj->m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
@@ -973,13 +982,13 @@ namespace pr::rdr12::ldraw
 				if (m_smoothing_angle < 0.0f)
 					return;
 
-				auto& verts = pp.m_cache.m_point;
-				auto& indices = pp.m_cache.m_index;
+				auto& verts = pp.m_cache.m_verts;
+				auto& index = pp.m_cache.m_index;
 				auto& normals = pp.m_cache.m_norms;
 				auto& nuggets = pp.m_cache.m_nugts;
 
 				// Can't generate normals per nugget because nuggets may share vertices.
-				// Generate normals for all vertices (verts used by lines only with have zero-normals)
+				// Generate normals for all vertices (verts used by lines only will have zero-normals)
 				normals.resize(verts.size());
 
 				// Generate normals for the nuggets containing faces
@@ -989,36 +998,39 @@ namespace pr::rdr12::ldraw
 					if (nug.m_topo != ETopo::TriList)
 						continue;
 
+					// If the nugget doesn't have an 'irange' then assume one index per vert
+					auto icount = isize(index);
+					auto iptr = index.begin<int>();
+
 					// The number of indices in this nugget
-					auto iptr = indices.data();
-					auto icount = isize(indices);
 					if (nug.m_irange != Range::Reset())
 					{
-						iptr += nug.m_irange.begin();
 						icount = isize(nug.m_irange);
+						iptr += nug.m_irange.begin();
 					}
 
 					// Not sure if this works... needs testing
-					pr::geometry::GenerateNormals(icount, iptr, m_smoothing_angle, 0,
-						[&](uint16_t i)
-					{
-						return verts[i];
-					},
-						[&](uint16_t new_idx, uint16_t orig_idx, v4 const& norm)
-					{
-						if (new_idx >= verts.size())
+					geometry::GenerateNormals(icount, iptr, m_smoothing_angle, 0,
+						[&](int i)
 						{
-							verts.resize(new_idx + 1, verts[orig_idx]);
-							normals.resize(new_idx + 1, normals[orig_idx]);
+							return verts[i];
+						},
+						[&](int new_idx, int orig_idx, v4 const& norm)
+						{
+							if (new_idx >= verts.size())
+							{
+								verts.resize(new_idx + 1, verts[orig_idx]);
+								normals.resize(new_idx + 1, normals[orig_idx]);
+							}
+							normals[new_idx] = norm;
+						},
+						[&](int i0, int i1, int i2)
+						{
+							*iptr++ = i0;
+							*iptr++ = i1;
+							*iptr++ = i2;
 						}
-						normals[new_idx] = norm;
-					},
-						[&](uint16_t i0, uint16_t i1, uint16_t i2)
-					{
-						*iptr++ = i0;
-						*iptr++ = i1;
-						*iptr++ = i2;
-					});
+					);
 
 					// Geometry has normals now
 					nug.m_geom |= EGeom::Norm;
@@ -1118,7 +1130,7 @@ namespace pr::rdr12::ldraw
 				, m_style(EPointStyle::Square)
 				, m_depth(false)
 			{}
-			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
 			{
 				switch (kw)
 				{
@@ -1129,16 +1141,7 @@ namespace pr::rdr12::ldraw
 					}
 					case EKeyword::Style:
 					{
-						auto ident = reader.Identifier<string32>();
-						switch (HashI(ident.c_str()))
-						{
-							case HashI("Square"):   m_style = EPointStyle::Square; break;
-							case HashI("Circle"):   m_style = EPointStyle::Circle; break;
-							case HashI("Triangle"): m_style = EPointStyle::Triangle; break;
-							case HashI("Star"):     m_style = EPointStyle::Star; break;
-							case HashI("Annulus"):  m_style = EPointStyle::Annulus; break;
-							default: pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("'{}' is not a valid point sprite style", ident)); break;
-						}
+						m_style = reader.Enum<EPointStyle>();
 						return true;
 					}
 					case EKeyword::Depth:
@@ -1472,7 +1475,7 @@ namespace pr::rdr12::ldraw
 
 		IObjectCreator(ParseParams& pp)
 			: m_pp(pp)
-			, m_verts  (pp.m_cache.m_point)
+			, m_verts  (pp.m_cache.m_verts)
 			, m_indices(pp.m_cache.m_index)
 			, m_normals(pp.m_cache.m_norms)
 			, m_colours(pp.m_cache.m_color)
@@ -1596,6 +1599,238 @@ namespace pr::rdr12::ldraw
 	#pragma region Line Objects
 
 	// ELdrObject::Line
+	template <> struct ObjectCreator<ELdrObject::LineNew> :IObjectCreator
+	{
+		// Notes:
+		//  - Segments are used for strip-cuts or disjoint splines.
+		//  - All segments must be the same line style because they are turned into one model
+		//  - Arrow type applies to each segment
+		//  - Smooth and Splines are orthogonal, Splines are how the data points are given, smooth is used to sub-sample lines.
+		//  - One colour per line element
+		struct Segment { int m_count = 0; }; // The number of elements in this segment
+		vector<Segment, 1> m_segments;
+		ELineStyle m_style;
+		EArrowType m_arrow;
+		creation::Parametrics m_parametric;
+		creation::DashedLines m_dashed;
+		creation::ThickLine m_thick;
+		bool m_per_item_colour;
+
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_segments()
+			, m_style(ELineStyle::LineSegment)
+			, m_arrow(EArrowType::Line)
+			, m_parametric()
+			, m_dashed()
+			, m_thick()
+			, m_per_item_colour()
+		{}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
+		{
+			switch (kw)
+			{
+				case EKeyword::Style:
+				{
+					m_style = reader.Enum<ELineStyle>();
+					return true;
+				}
+				case EKeyword::Arrow:
+				{
+					m_arrow = reader.Enum<EArrowType>();
+					return true;
+				}
+				case EKeyword::Data:
+				{
+					ReadSegment(reader);
+					return true;
+				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
+				default:
+				{
+					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
+						m_parametric.ParseKeyword(reader, m_pp, kw) ||
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
+		}
+		void ReadSegment(IReader& reader)
+		{
+			switch (m_style)
+			{
+				// Read pairs of points, each pair is a line segment
+				case ELineStyle::LineSegment:
+				{
+					Segment segment = {};
+					for (; !reader.IsSectionEnd();)
+					{
+						auto p0 = reader.Vector3f().w1();
+						auto p1 = reader.Vector3f().w1();
+						m_verts.push_back(p0);
+						m_verts.push_back(p1);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts)/2, para);
+						}
+						++segment.m_count;
+					}
+					m_segments.push_back(segment);
+					break;
+				}
+
+				// Read single points, each point is a continuation of a line strip. Use separate *Data sections to create strip cuts.
+				case ELineStyle::LineStrip:
+				{
+					Segment segment = {};
+					for (; !reader.IsSectionEnd();)
+					{
+						auto pt = reader.Vector3f().w1();
+						m_verts.push_back(pt);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts) / 2 - 1, para);
+						}
+						++segment.m_count;
+					}
+					m_segments.push_back(segment);
+					break;
+				}
+
+				// Read pairs of points, each pair is a (pt, pt + dir) line segment
+				case ELineStyle::Direction:
+				{
+					Segment segment = {};
+					for (; !reader.IsSectionEnd();)
+					{
+						auto p = reader.Vector3f().w1();
+						auto d = reader.Vector3f().w0();
+						m_verts.push_back(p);
+						m_verts.push_back(p + d);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts) / 2, para);
+						}
+						++segment.m_count;
+					}
+					m_segments.push_back(segment);
+					break;
+				}
+
+				// Read control points in sets of 4
+				case ELineStyle::BezierSpline:
+				{
+					Segment segment = {};
+					for (; !reader.IsSectionEnd();)
+					{
+						auto p0 = reader.Vector3f().w1();
+						auto p1 = reader.Vector3f().w1();
+						auto p2 = reader.Vector3f().w1();
+						auto p3 = reader.Vector3f().w1();
+						m_verts.push_back(p0);
+						m_verts.push_back(p1);
+						m_verts.push_back(p2);
+						m_verts.push_back(p3);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts) / 2 - 1, para);
+						}
+						++segment.m_count;
+					}
+					m_segments.push_back(segment);
+					break;
+				}
+
+				case ELineStyle::HermiteSpline:
+				{
+					break;
+				}
+				case ELineStyle::BSplineSpline:
+				{
+					break;
+				}
+				case ELineStyle::CatmullRom:
+				{
+					break;
+				}
+				default:
+				{
+					m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), "Unknown line style");
+					break;
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj, Location const& loc) override
+		{
+			// No points = no model
+			if (m_verts.size() < 2)
+				return;
+
+			bool is_line_list = true;
+			(void)loc;
+
+			//// Clip lines to parametric values
+			//m_parametric.Apply(false, m_verts, m_pp, loc);
+
+			//// Smooth the points
+			//m_smooth.Apply(m_verts);
+
+			//// Convert lines to dashed lines
+			//auto is_line_list = false;
+			//m_dashed.Apply(m_verts, is_line_list);
+
+			//// The thick line strip shader uses LineAdj which requires an extra first and last vert
+			//if (!is_line_list && m_thick.m_width != 0.0f)
+			//{
+			//	m_verts.insert(std::begin(m_verts), m_verts.front());
+			//	m_verts.insert(std::end(m_verts), m_verts.back());
+			//}
+
+			//// Create the model
+			//auto opts = ModelGenerator::CreateOptions().colours(m_colours);
+			//obj->m_model = is_line_list
+			//	? ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts)
+			//	: ModelGenerator::LineStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, &opts);
+			//obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			m_thick.Apply(obj, is_line_list);
+		}
+	};
+
+	// ELdrObject::Line
 	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreator
 	{
 		creation::Parametrics m_parametric;
@@ -1657,11 +1892,12 @@ namespace pr::rdr12::ldraw
 			if (m_verts.size() < 2)
 				return;
 
+			bool is_line_list = true;
+
 			// Clip lines to parametric values
-			m_parametric.Apply(true, m_verts, m_pp, loc);
+			m_parametric.Apply(is_line_list, m_verts, m_pp, loc);
 
 			// Convert lines to dashed lines
-			bool is_line_list = true;
 			m_dashed.Apply(m_verts, is_line_list);
 
 			// Create the model
@@ -1870,8 +2106,9 @@ namespace pr::rdr12::ldraw
 					m_verts.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
 					m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
 
-					uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-					m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
+					uint16_t const idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+					m_indices.resize(0, sizeof(uint16_t));
+					m_indices.append<uint16_t>(idx);
 					return true;
 				}
 				default:
@@ -1981,15 +2218,15 @@ namespace pr::rdr12::ldraw
 	template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreator
 	{
 		pr::vector<Spline> m_splines;
-		CCont m_spline_colours;
 		creation::ThickLine m_thick;
+		CCont m_spline_colours;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_splines()
-			, m_spline_colours()
 			, m_thick()
+			, m_spline_colours()
 			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
@@ -2027,15 +2264,22 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_splines.empty())
 				return;
 
-			// Generate a line strip for all spline segments (separated using strip-cut indices)
 			auto seg = -1;
 			auto thick = m_thick.m_width != 0.0f;
+			auto icount_estimate = isize(m_splines) * (30 + (thick ? 2 : 0) + 1);
+			auto idx_stride = icount_estimate > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
+
+			m_indices.resize(0, idx_stride);
+			m_verts.reserve(isize(m_splines) * 30);
+			m_indices.reserve(icount_estimate, idx_stride);
+
+			// Generate a line strip for all spline segments (separated using strip-cut indices)
 			pr::vector<v4, 30, true> raster;
 			for (auto& spline : m_splines)
 			{
@@ -2045,33 +2289,26 @@ namespace pr::rdr12::ldraw
 				raster.resize(0);
 				Raster(spline, raster, 30);
 
-				// Check for 16-bit index overflow
-				if (m_verts.size() + raster.size() >= 0xFFFF)
-				{
-					m_pp.ReportError(EParseError::TooLarge, loc, std::format("Spline object '{}' is too large (index count >= 0xffff)", obj->TypeAndName()));
-					return;
-				}
-
 				// Add the line strip to the geometry buffers
-				auto vert = uint16_t(m_verts.size());
+				auto vert = isize(m_verts);
 				m_verts.insert(std::end(m_verts), std::begin(raster), std::end(raster));
 
-				{// Indices
+				// Add the indices
+				{
 					auto ibeg = m_indices.size();
-					m_indices.reserve(m_indices.size() + raster.size() + (thick ? 2 : 0) + 1);
 
 					// The thick line strip shader uses LineAdj which requires an extra first and last vert
 					if (thick)
-						m_indices.push_back_fast(vert);
+						m_indices.push_back(vert);
 
 					auto iend = ibeg + raster.size();
 					for (auto i = ibeg; i != iend; ++i)
-						m_indices.push_back_fast(vert++);
+						m_indices.push_back(vert++);
 
 					if (thick)
-						m_indices.push_back_fast(vert - 1);
+						m_indices.push_back(vert - 1);
 
-					m_indices.push_back_fast(uint16_t(-1)); // strip-cut
+					m_indices.push_back_strip_cut();
 				}
 
 				// Colours
@@ -2161,6 +2398,7 @@ namespace pr::rdr12::ldraw
 
 			// Geometry properties
 			geometry::Props props;
+			auto idx_stride = isize(m_verts) > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
 
 			// Colour interpolation iterator
 			auto col = pr::CreateLerpRepeater(m_colours.data(), isize(m_colours), isize(m_verts), Colour32White);
@@ -2171,40 +2409,40 @@ namespace pr::rdr12::ldraw
 
 			// Generate the model
 			// 'm_verts' should contain line strip data
-			ModelGenerator::Cache<> cache(isize(m_verts) + 2, isize(m_verts) + 2, 0, 2);
+			ModelGenerator::Cache<> cache{ isize(m_verts) + 2, isize(m_verts) + 2, 0, idx_stride };
 
-			auto v_in  = m_verts.data();
-			auto v_out = cache.m_vcont.data();
-			auto i_out = cache.m_icont.data<uint16_t>();
+			auto v_in = m_verts.data();
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.begin<int>();
 			Colour32 c = Colour32White;
-			uint16_t index = 0;
+			int index = 0;
 
 			// Add the back arrow head geometry (a point)
 			if (AllSet(m_type, EArrowType::Back))
 			{
-				SetPCN(*v_out++, *v_in, pr::Colour(*col), pr::Normalise(*v_in - *(v_in+1)));
-				*i_out++ = index++;
+				SetPCN(*vptr++, *v_in, pr::Colour(*col), Normalise(*v_in - *(v_in+1)));
+				*iptr++ = index++;
 			}
 
 			// Add the line strip
 			for (std::size_t i = 0, iend = m_verts.size(); i != iend; ++i)
 			{
-				SetPC(*v_out++, bb(*v_in++), pr::Colour(c = cc(*col++)));
-				*i_out++ = index++;
+				SetPC(*vptr++, bb(*v_in++), pr::Colour(c = cc(*col++)));
+				*iptr++ = index++;
 			}
 			
 			// Add the forward arrow head geometry (a point)
 			if (AllSet(m_type, EArrowType::Fwd))
 			{
 				--v_in;
-				SetPCN(*v_out++, *v_in, pr::Colour(c), pr::Normalise(*v_in - *(v_in-1)));
-				*i_out++ = index++;
+				SetPCN(*vptr++, *v_in, pr::Colour(c), pr::Normalise(*v_in - *(v_in-1)));
+				*iptr++ = index++;
 			}
 
 			// Create the model
 			ModelDesc mdesc = ModelDesc()
-				.vbuf(cache.m_vcont.cspan())
-				.ibuf(cache.m_icont.span<uint16_t const>())
+				.vbuf(cache.m_vcont)
+				.ibuf(cache.m_icont)
 				.bbox(props.m_bbox)
 				.name(obj->TypeAndName());
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
@@ -2465,29 +2703,53 @@ namespace pr::rdr12::ldraw
 	{
 		struct DataIter
 		{
+			enum class EType
+			{
+				None = 0,
+				Row         = 1 << 0,
+				Column      = 1 << 1,
+				Index       = 1 << 2,
+				Value       = 1 << 3,
+				IndexRow    = Row | Index,
+				DataRow     = Row | Value,
+				IndexColumn = Column | Index,
+				DataColumn  = Column | Value,
+				_flags_enum = 0,
+			};
+
 			eval::IdentHash m_arghash; // The hash of the argument name
+			EType m_type;              // Iterator type
 			iv2 m_idx0;                // The virtual coordinate of the iterator position
 			iv2 m_step;                // The amount to advance 'idx' by with each iteration
 			iv2 m_max;                 // Where iteration stops.
 
-			DataIter(std::string const& name, iv2 max)
+			DataIter(std::string_view name, iv2 max)
+				: m_arghash(eval::hashname(name))
+				, m_type(EType::None)
+				, m_idx0(0, 0)
+				, m_step(0, 0)
+				, m_max(max)
 			{
 				// Convert a name like "C32" or "R21" into an iterator into 'm_data'
+				// Format is '(C|R)(#|<number>)'. E.g. C#, R#, C0, C23, R23, R2
 				if (name.size() < 2)
-					throw std::runtime_error(Fmt("Invalid series data references: '%s'", name.c_str()));
-			
-				bool is_column = name[0] == 'c' || name[0] == 'C';
-				if (name[0] != 'c' && name[0] != 'C' && name[0] != 'r' && name[0] != 'R')
-					throw std::runtime_error(Fmt("Series data reference should start with 'C' or 'R': '%s'", name.c_str()));
-			
-				int idx = 0;
-				if (!str::ExtractIntC(idx, 10, name.c_str() + 1))
-					throw std::runtime_error(Fmt("Series data references should contain an index: '%s'", name.c_str()));
+					throw std::runtime_error("Data iterator name is empty");
 
-				m_arghash = eval::hashname(name);
-				m_idx0 = is_column ? iv2{idx, 0} : iv2{0, idx};
-				m_step = is_column ? iv2{0, 1} : iv2{1, 0};
-				m_max = max; //todo
+				switch (std::toupper(name[0]))
+				{
+					case 'C': m_type |= EType::Column; break;
+					case 'R': m_type |= EType::Row; break;
+					default: throw std::runtime_error("Data iterator must start with 'C' or 'R'");
+				}
+
+				m_type |= std::toupper(name[1]) == 'I' ? EType::Index : EType::Value;
+
+				int idx = 0;
+				if (AllSet(m_type, EType::Value) && !str::ExtractIntC(idx, 10, script::StringSrc(name.substr(1))))
+					throw std::runtime_error(std::format("Series data references should contain an index: '{}'", name));
+
+				m_idx0 = AllSet(m_type, EType::Column) ? iv2{ idx, 0 } : iv2{ 0, idx };
+				m_step = AllSet(m_type, EType::Column) ? iv2{ 0, 1 } : iv2{ 1, 0 };
 			}
 		};
 
@@ -2587,7 +2849,7 @@ namespace pr::rdr12::ldraw
 			if (!AllSet(m_pp.m_flags, EFlags::ExplicitColour))
 				obj->m_base_colour = colours[child_index % _countof(colours)];
 
-			auto& verts = m_pp.m_cache.m_point;
+			auto& verts = m_pp.m_cache.m_verts;
 			verts.clear();
 
 			// Merge the args from both expressions
@@ -2649,13 +2911,33 @@ namespace pr::rdr12::ldraw
 			// 'iter' still points to valid data
 			in_range |= true;
 
-			// Not jagged
-			if (m_chart->m_index.empty())
-				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
+			// If the iterator is just the row or column index
+			switch (iter.m_type)
+			{
+				case DataIter::EType::IndexColumn:
+				{
+					return idx.y;
+				}
+				case DataIter::EType::IndexRow:
+				{
+					return idx.x;
+				}
+				case DataIter::EType::DataColumn:
+				case DataIter::EType::DataRow:
+				{
+					// Not jagged
+					if (m_chart->m_index.empty())
+						return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
 
-			// If 'm_data' is a jagged array, get the number of values on the current row
-			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
-			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
+					// If 'm_data' is a jagged array, get the number of values on the current row
+					auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
+					return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown iterator type");
+				}
+			}
 		}
 	};
 
@@ -4029,12 +4311,14 @@ namespace pr::rdr12::ldraw
 					return;
 				}
 
-				// Set the nugget 'has_alpha' value now we know the indices are valid
+				// Set the nugget's 'has_alpha' value now we know the indices are valid
 				if (!m_colours.empty())
 				{
-					for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
+					for (auto i : nug.m_irange.enumerate())
 					{
-						if (!HasAlpha(m_colours[m_indices[s_cast<size_t>(i)]])) continue;
+						if (!HasAlpha(m_colours[m_indices[i]]))
+							continue;
+
 						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, true);
 						break;
 					}
@@ -4096,14 +4380,27 @@ namespace pr::rdr12::ldraw
 			if (m_verts.size() < 2)
 				return;
 
+			auto vcount = isize(m_verts);
+			auto icount = 6 * (isize(m_verts) - 2);
+			auto idx_stride = vcount > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
+
 			// Allocate space for the face indices
-			m_indices.resize(6 * (m_verts.size() - 2));
+			m_indices.resize(icount, idx_stride);
 
 			// Find the convex hull
 			size_t num_verts = 0, num_faces = 0;
-			pr::ConvexHull(m_verts, m_verts.size(), &m_indices[0], &m_indices[0] + m_indices.size(), num_verts, num_faces);
+			if (idx_stride == sizeof(uint32_t))
+			{
+				auto iptr = m_indices.data<uint32_t>();
+				ConvexHull(m_verts, m_verts.size(), iptr, iptr + isize(m_indices), num_verts, num_faces);
+			}
+			else
+			{
+				auto iptr = m_indices.data<uint16_t>();
+				ConvexHull(m_verts, m_verts.size(), iptr, iptr + isize(m_indices), num_verts, num_faces);
+			}
 			m_verts.resize(num_verts);
-			m_indices.resize(3 * num_faces);
+			m_indices.resize(3 * num_faces, idx_stride);
 
 			// Create a nugget for the hull
 			m_nuggets.push_back(NuggetDesc(ETopo::TriList, EGeom::Vert).tex_diffuse(m_tex.m_texture).sam_diffuse(m_tex.m_sampler));
@@ -4279,7 +4576,7 @@ namespace pr::rdr12::ldraw
 					{
 						obj->m_pose = pose;
 						if (anim_info.m_style != EAnimStyle::NoAnimation)
-							obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
+							obj->Flags(ELdrFlags::Animated, true);
 
 						return true;
 					}, "");
@@ -5187,7 +5484,7 @@ namespace pr::rdr12::ldraw
 				{
 					obj->m_pose = pose;
 					if (m_anim_info->m_style != EAnimStyle::NoAnimation)
-						obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Animated, true);
+						obj->Flags(ELdrFlags::Animated, true);
 
 					return true;
 				}, "");
@@ -5204,7 +5501,8 @@ namespace pr::rdr12::ldraw
 				obj->m_grp_colour = source->m_grp_colour;
 				obj->m_root_anim = source->m_root_anim;
 				obj->m_screen_space = source->m_screen_space;
-				obj->m_ldr_flags = source->m_ldr_flags;
+				obj->m_flags_local = source->m_flags_local;
+				obj->m_flags_recursive = source->m_flags_recursive;
 			}
 
 			for (auto source_child : source->m_child)
@@ -5533,7 +5831,9 @@ namespace pr::rdr12::ldraw
 			if (AllSet(flags, EUpdateObject::Transform))
 				std::swap(object->m_o2p, rhs->m_o2p);
 			if (AllSet(flags, EUpdateObject::Flags))
-				std::swap(object->m_ldr_flags, rhs->m_ldr_flags);
+				std::swap(object->m_flags_local, rhs->m_flags_local);
+			if (AllSet(flags, EUpdateObject::Flags))
+				std::swap(object->m_flags_recursive, rhs->m_flags_recursive);
 			if (AllSet(flags, EUpdateObject::Animation))
 				std::swap(object->m_root_anim, rhs->m_root_anim);
 			if (AllSet(flags, EUpdateObject::GroupColour))

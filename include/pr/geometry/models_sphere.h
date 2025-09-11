@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -7,6 +7,18 @@
 
 namespace pr::geometry
 {
+	// Returns the number of verts and number of indices needed to hold geometry for a sphere
+	constexpr BufSizes SphereSize(int wedges, int layers)
+	{
+		if (wedges < 3) wedges = 3;
+		if (layers < 2) layers = 2;
+		return
+		{
+			(wedges + 1) * (layers + 1),
+			3 * wedges * (2 * layers - 2),
+		};
+	}
+
 	// Returns the number of verts and number of indices needed to hold geometry for a geosphere
 	constexpr BufSizes GeosphereSize(int divisions)
 	{
@@ -17,7 +29,7 @@ namespace pr::geometry
 		};
 	}
 
-	namespace impl::geosphere
+	namespace geosphere
 	{
 		using VIndex = int;
 		struct GeosphereVert
@@ -37,24 +49,26 @@ namespace pr::geometry
 			VIndex m_child;    // The vertex between the associated vertex and 'm_adjacent' in the recursion level below 'm_adjacent'
 			Adjacent()
 				:m_adjacent()
-				,m_child()
-			{}
+				, m_child()
+			{
+			}
 			Adjacent(VIndex adj, VIndex child)
 				:m_adjacent(adj)
-				,m_child(child)
-			{}
+				, m_child(child)
+			{
+			}
 		};
-		using TVertCont         = pr::vector<GeosphereVert, 1024>;
-		using TFaceCont         = pr::vector<GeosphereFace, 1024>;
-		using TAdjacent         = pr::vector<Adjacent>;  // A collection of adjacent vertices
+		using TVertCont = pr::vector<GeosphereVert, 1024>;
+		using TFaceCont = pr::vector<GeosphereFace, 1024>;
+		using TAdjacent = pr::vector<Adjacent>;  // A collection of adjacent vertices
 		using TVertexLookupCont = pr::vector<TAdjacent>; // A map from vertex -> adjacent vertices
 
 		// A struct to hold all of the generation data
 		struct CreateGeosphereData
 		{
 			TVertexLookupCont m_adjacent;
-			TVertCont*        m_vcont = {};
-			TFaceCont*        m_fcont = {};
+			TVertCont* m_vcont = {};
+			TFaceCont* m_fcont = {};
 			v4                m_radius = {};
 			int               m_divisions = {};
 		};
@@ -69,7 +83,7 @@ namespace pr::geometry
 			GeosphereVert vertex;
 			vertex.m_vert = (data.m_radius * norm).w1();
 			vertex.m_norm = norm;
-			vertex.m_ang  = ang;
+			vertex.m_ang = ang;
 			vertex.m_pole = pole;
 			data.m_vcont->push_back(vertex);
 
@@ -140,13 +154,13 @@ namespace pr::geometry
 		// Create an Icosahedron and recursively subdivide the triangles
 		inline void CreateIcosahedron(CreateGeosphereData& data)
 		{
-			constexpr float A    = 2.0f / (1.0f + Sqr(maths::golden_ratiof));
-			constexpr float H1   =  1.0f - A;
-			constexpr float H2   = -1.0f + A;
-			constexpr float R    = float(SqrtCT(1.0 - H1 * H1));
+			constexpr float A = 2.0f / (1.0f + Sqr(maths::golden_ratiof));
+			constexpr float H1 = 1.0f - A;
+			constexpr float H2 = -1.0f + A;
+			constexpr float R = float(SqrtCT(1.0 - H1 * H1));
 			constexpr float dAng = float(maths::tau / 5.0);
-			static float const ua[] = {0.0f,0.2f,0.4f,0.6f,0.8f,1.0f,1.2f};
-			static float const ub[] = {0.1f,0.3f,0.5f,0.7f,0.9f,1.1f,1.3f};
+			static float const ua[] = { 0.0f,0.2f,0.4f,0.6f,0.8f,1.0f,1.2f };
+			static float const ub[] = { 0.1f,0.3f,0.5f,0.7f,0.9f,1.1f,1.3f };
 
 			// Add the vertices
 			float ang1 = 0.0f, ang2 = dAng * 0.5f;
@@ -172,7 +186,7 @@ namespace pr::geometry
 	}
 
 	// Generate an ellipsoid geosphere
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Geosphere(v4 const& radius, int divisions, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
@@ -182,19 +196,19 @@ namespace pr::geometry
 
 		// Preallocate buffers to compile the geosphere into
 		auto [vcount, icount] = GeosphereSize(divisions);
-		impl::geosphere::TVertCont verts; verts.reserve(vcount);
-		impl::geosphere::TFaceCont faces; faces.reserve(icount / 3);
+		geosphere::TVertCont verts; verts.reserve(vcount);
+		geosphere::TFaceCont faces; faces.reserve(icount / 3);
 
-		impl::geosphere::CreateGeosphereData data;
-		data.m_vcont     = &verts;
-		data.m_fcont     = &faces;
-		data.m_radius    = radius;
+		geosphere::CreateGeosphereData data;
+		data.m_vcont = &verts;
+		data.m_fcont = &faces;
+		data.m_radius = radius;
 		data.m_divisions = divisions;
 		data.m_adjacent.reserve(vcount);
-		impl::geosphere::CreateIcosahedron(data);
+		geosphere::CreateIcosahedron(data);
 
 		PR_ASSERT(PR_DBG, static_cast<int>(verts.size()) == vcount, "Number of verts in geosphere calculated incorrectly");
-		PR_ASSERT(PR_DBG, static_cast<int>(faces.size()) == icount/3, "Number of faces in geosphere calculated incorrectly");
+		PR_ASSERT(PR_DBG, static_cast<int>(faces.size()) == icount / 3, "Number of faces in geosphere calculated incorrectly");
 
 		// Output the verts and indices
 		for (auto i = std::begin(verts), iend = std::end(verts); i != iend; ++i)
@@ -212,26 +226,14 @@ namespace pr::geometry
 	}
 
 	// Generate a spherical geosphere
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Geosphere(float radius, int divisions, Colour32 colour, VOut vout, IOut iout)
 	{
 		return Geosphere(v4(radius, radius, radius, 0.0f), divisions, colour, vout, iout);
 	}
 
-	// Returns the number of verts and number of indices needed to hold geometry for a sphere
-	constexpr BufSizes SphereSize(int wedges, int layers)
-	{
-		if (wedges < 3) wedges = 3;
-		if (layers < 2) layers = 2;
-		return
-		{
-			(wedges + 1) * (layers + 1),
-			3 * wedges * (2 * layers - 2),
-		};
-	}
-
 	// Generate a standard sphere
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Sphere(v4 const& radius, int wedges, int layers, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
@@ -245,7 +247,7 @@ namespace pr::geometry
 		for (int w = 0; w <= wedges; ++w)
 		{
 			auto norm = v4ZAxis;
-			auto uv   = v2(float(w + 0.5f) / wedges, 0.0f);
+			auto uv = v2(float(w + 0.5f) / wedges, 0.0f);
 			vout((radius * norm).w1(), colour, norm, uv);
 
 			for (int l = 1; l < layers; ++l)
@@ -253,17 +255,17 @@ namespace pr::geometry
 				auto a = float(maths::tauf * w / wedges);
 				auto b = float(maths::tau_by_2f * l / layers);
 				norm = v4(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
-				uv   = v2(float(w) / wedges, (1.0f - norm.z) * 0.5f);
+				uv = v2(float(w) / wedges, (1.0f - norm.z) * 0.5f);
 				vout((radius * norm).w1(), colour, norm, uv);
 			}
 
 			norm = -v4ZAxis;
-			uv   = v2(float(w + 0.5f) / wedges, 1.0f);
+			uv = v2(float(w + 0.5f) / wedges, 1.0f);
 			vout((radius * norm).w1(), colour, norm, uv);
 		}
 
 		// Faces
-		std::size_t ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
+		int ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
 		for (int w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
 		{
 			iout(ilayer + 0);
@@ -281,8 +283,8 @@ namespace pr::geometry
 				++ilayer;
 			}
 			iout(ilayer + 0 + verts_per_wedge);
-			iout(ilayer + 0 );
-			iout(ilayer + 1 );
+			iout(ilayer + 0);
+			iout(ilayer + 1);
 		}
 
 		return props;

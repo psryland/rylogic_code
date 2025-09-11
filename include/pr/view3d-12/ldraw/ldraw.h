@@ -109,6 +109,7 @@ namespace pr::rdr12::ldraw
 		x(Layers            , = HashI("Layers"                ))\
 		x(LeftHanded        , = HashI("LeftHanded"            ))\
 		x(LightSource       , = HashI("LightSource"           ))\
+		x(LineNew           , = HashI("LineNew"               ))\
 		x(Line              , = HashI("Line"                  ))\
 		x(LineBox           , = HashI("LineBox"               ))\
 		x(LineD             , = HashI("LineD"                 ))\
@@ -228,6 +229,7 @@ namespace pr::rdr12::ldraw
 		x(Group      ,= EKeyword::Group      )\
 		x(Instance   ,= EKeyword::Instance   )\
 		x(LightSource,= EKeyword::LightSource)\
+		x(LineNew    ,= EKeyword::LineNew    )\
 		x(Line       ,= EKeyword::Line       )\
 		x(LineBox    ,= EKeyword::LineBox    )\
 		x(LineD      ,= EKeyword::LineD      )\
@@ -280,6 +282,22 @@ namespace pr::rdr12::ldraw
 	PR_ENUM_REFLECTION1(EPointStyle, PR_ENUM);
 	#undef PR_ENUM
 
+	// Line styles
+	enum class ELineStyle : uint8_t
+	{
+		#define PR_ENUM(x)\
+		x(LineSegment)\
+		x(LineStrip)\
+		x(Direction)\
+		x(BezierSpline)\
+		x(HermiteSpline)\
+		x(BSplineSpline)\
+		x(CatmullRom)
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(ELineStyle, PR_ENUM);
+	#undef PR_ENUM
+
 	// Camera fields
 	enum class ECamField
 	{
@@ -313,8 +331,11 @@ namespace pr::rdr12::ldraw
 	};
 
 	// Flags for extra behaviour of an object
-	enum class ELdrFlags
+	enum class ELdrFlags// sync with 'view3d-dll.h'
 	{
+		// Notes:
+		//  - Flags are for a single object only. Don't set the recursively.
+		//    Instead use the
 		None = 0,
 
 		// The object is hidden
@@ -350,8 +371,11 @@ namespace pr::rdr12::ldraw
 		// Doesn't cast a shadow
 		ShadowCastExclude = 1 << 12,
 
-		// True if the object has animation data
+		// True if the object has animation data.
 		Animated = 1 << 13,
+
+		// Indicates invalidated flags that need to be refreshed
+		Invalidated = 1 << 31,
 
 		// Bitwise operators
 		_flags_enum = 0,

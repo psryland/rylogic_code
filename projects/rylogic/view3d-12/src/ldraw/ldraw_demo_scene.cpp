@@ -1150,8 +1150,8 @@ namespace pr::rdr12::ldraw
 			"	}\n"
 			"	*Series plot2 FFA000E0 // Colour is auto assigned if not given\n"
 			"	{\n"
-			"		*XAxis {\"C1\"}\n"
-			"		*YAxis {\"sin(C2) + 0.1*C0)\"}\n"
+			"		*XAxis {\"CI\"}            // Use CI or RI for the virtual index column or index row\n"
+			"		*YAxis {\"sin(C2) + 0.1*C0\"}\n"
 			"		*Width {5}\n"
 			"		*Smooth {} // Optional. Smooth the line\n"
 			"	}\n"
@@ -1301,7 +1301,31 @@ namespace pr::rdr12::ldraw
 					.t2s(m4x4::Scale(10, 10, 1, v4::Origin()));
 		}
 
-
+		// Points
+		{
+			ldr.Point("points", 0xFF00FF00)
+				.size(40.f)
+				.style(EPointStyle::Square)
+				.pt({ -0.32182515f, -0.11282351f, -0.33979280f, 1 }, 0xFF8DFD8F)
+				.pt({ -0.09884672f, +0.20496936f, -0.11294128f, 1 }, 0xFF84BDF2)
+				.pt({ +0.32952994f, +0.12638773f, -0.16279069f, 1 }, 0xFFA1B6C5)
+				.pt({ -0.28267866f, +0.12046398f, +0.37289724f, 1 }, 0xFFB3DFE2)
+				.pt({ +0.07734887f, -0.30069580f, +0.15674202f, 1 }, 0xFFFCE3E9)
+				.pt({ +0.14382900f, +0.27675366f, -0.35658675f, 1 }, 0xFFE09789)
+				.pt({ +0.29473856f, -0.11315139f, +0.27820430f, 1 }, 0xFF90D0C8)
+				.pt({ -0.04522936f, -0.41357175f, +0.00881479f, 1 }, 0xFFC283AF)
+				.pt({ +0.28132004f, +0.22615014f, +0.31323278f, 1 }, 0xFFCAA0EA)
+				.pt({ -0.09371998f, +0.09980434f, +0.18248796f, 1 }, 0xFFE7AF98)
+				.pt({ -0.02596593f, +0.18868162f, -0.19324471f, 1 }, 0xFFD7D8DB)
+				.pt({ +0.36394337f, -0.21930681f, -0.05467778f, 1 }, 0xFFF4B2AC)
+				.pt({ +0.14113660f, +0.45059928f, +0.13722318f, 1 }, 0xFFCED899)
+				.pt({ +0.18176337f, -0.24681160f, -0.12977648f, 1 }, 0xFFA7D8AE)
+				.pt({ +0.38887858f, +0.24615003f, +0.06563436f, 1 }, 0xFFB9BA96)
+				//.pos({ 16, 6, 6, 1 })
+				//.texture()
+				//	.path("#whitespot")
+				;
+		}
 
 		return ldr.ToBinary();
 	}

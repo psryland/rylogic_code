@@ -12,6 +12,9 @@
 
 namespace pr
 {
+	// Debug helper for displaying types in error messages
+	template<typename T> struct show_type;
+
 	// Helper for non-const member function overloads. Use 'const_call(member_func());'
 	#define const_call(fn) const_cast<std::remove_const_t<decltype(fn)>>(std::as_const(*this).fn)
 
@@ -127,6 +130,20 @@ namespace pr
 	template <typename T> inline std::span<std::byte> byte_span(std::span<T> x)
 	{
 		return std::span<std::byte>(reinterpret_cast<std::byte const*>(x.data()), x.size_bytes());
+	}
+
+	// Convert a span of bytes into a span of 'T'
+	template <typename T> inline std::span<T const> type_span(std::span<std::byte const> x)
+	{
+		assert(x.size_bytes() % sizeof(T) == 0 && "byte span is not a multiple of 'T'");
+		assert(uintptr_t(x.data()) % alignof(T) == 0 && "byte span alignment is not valid for 'T'");
+		return std::span<T const>(reinterpret_cast<T const*>(x.data()), x.size_bytes() / sizeof(T));
+	}
+	template <typename T> inline std::span<T> type_span(std::span<std::byte> x)
+	{
+		assert(x.size_bytes() % sizeof(T) == 0 && "byte span is not a multiple of 'T'");
+		assert(uintptr_t(x.data()) % alignof(T) == 0 && "byte span alignment is not valid for 'T'");
+		return std::span<T>(reinterpret_cast<T*>(x.data()), x.size_bytes() / sizeof(T));
 	}
 }
 

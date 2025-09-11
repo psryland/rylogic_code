@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -38,7 +38,7 @@ namespace pr::geometry
 	// The normals are outward facing
 	// The texture coordinates set on the box have the 'walls' with Y as up.
 	// On top (-x,+y,-z) is the top left corner, on the bottom (-x,-y,+z) is the top left corner
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props Boxes(int num_boxes, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		int const vidx[] =
@@ -123,7 +123,7 @@ namespace pr::geometry
 	}
 
 	// Create a transformed box
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props Boxes(int num_boxes, TVertCIter points, m4x4 const& o2w, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		if (o2w == m4x4::Identity())
@@ -136,7 +136,7 @@ namespace pr::geometry
 	}
 
 	// Create a box with side half lengths = rad.x,rad.y,rad.z
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Box(v4 const& rad, m4x4 const& o2w, Colour32 colour, VOut vout, IOut iout)
 	{
 		v4 const pt[8] =
@@ -155,7 +155,7 @@ namespace pr::geometry
 	}
 
 	// Create boxes at each point in 'positions' with side half lengths = rad.x,rad.y,rad.z
-	template <typename TVertCIter, typename VOut, typename IOut>
+	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
 	Props BoxList(int num_boxes, TVertCIter positions, v4 const& rad, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		auto pos = positions;

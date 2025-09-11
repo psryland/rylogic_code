@@ -186,6 +186,28 @@ namespace Rylogic.Utility
 				}
 			}
 			#endregion
+			#region Modulus
+			{
+				if (IsFloatingPoint)
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(T), "b");
+					var mod = typeof(Math).GetMethod(nameof(Math.IEEERemainder), [typeof(double),typeof(double)]) ?? throw new NullReferenceException();
+					
+					var body = Expression.ConvertChecked(
+						Expression.Call(mod, [
+							Expression.ConvertChecked(paramA, typeof(double)),
+							Expression.ConvertChecked(paramB, typeof(double))
+							]), typeof(T));
+
+					m_mod = Expression.Lambda<Func<T, T, T>>(body, [paramA, paramB]).Compile();
+				}
+				else
+				{
+					m_mod = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Sqrt operator"); };
+				}
+			}
+			#endregion
 			#region Sqrt
 			{
 				if (typeof(T).IsPrimitive || typeof(T) == typeof(decimal))
@@ -333,6 +355,17 @@ namespace Rylogic.Utility
 			#endregion
 		}
 
+		static bool IsIntegral =>
+			typeof(T) == typeof(int) ||
+			typeof(T) == typeof(long) ||
+			typeof(T) == typeof(uint) ||
+			typeof(T) == typeof(ulong);
+
+		static bool IsFloatingPoint =>
+			typeof(T) == typeof(float) ||
+			typeof(T) == typeof(double) ||
+			typeof(T) == typeof(decimal);
+
 		/// <summary>Return the maximum value</summary>
 		public static T MaxValue => m_max_value();
 		private static Func<T> m_max_value;
@@ -371,6 +404,10 @@ namespace Rylogic.Utility
 		/// <summary>a / b</summary>
 		public static T Div(T a, T b) => m_div(a, b);
 		private static Func<T,T,T> m_div;
+
+		/// <summary>a % b</summary>
+		public static T Mod(T a, T b) => m_mod(a, b);
+		private static Func<T,T,T> m_mod;
 
 		/// <summary>pow(a, b)</summary>
 		public static T Pow(T a, T b) => Operators<T,T>.Pow(a, b);
@@ -553,6 +590,7 @@ namespace Rylogic.UnitTests
 			Assert.Equal(Operators<decimal>.Sub(0.5m, 0.8m) , 0.5m - 0.8m );
 			Assert.Equal(Operators<int    >.Mul(3, 7)       , 3 * 7       );
 			Assert.Equal(Operators<float  >.Div(1.2f, 3.4f) , 1.2f / 3.4f );
+			Assert.Equal(Operators<double >.Mod(1.2, 0.8)   , 1.2 % 0.8   );
 			Assert.Equal(Operators<decimal>.Sqrt(1.5625m)   , 1.25m       );
 
 			Assert.Equal(Operators<float  >.Eql(1.23f, 1.24f)        , 1.23f == 1.24f );

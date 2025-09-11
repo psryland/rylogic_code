@@ -38,6 +38,7 @@
 			<Word>*Group</Word>
 			<Word>*Instance</Word>
 			<Word>*LightSource</Word>
+			<Word>*LineNew</Word>
 			<Word>*Line</Word>
 			<Word>*LineBox</Word>
 			<Word>*LineD</Word>
@@ -138,6 +139,7 @@
 			<Word>*Layers</Word>
 			<Word>*LeftHanded</Word>
 			<Word>*LightSource</Word>
+			<Word>*LineNew</Word>
 			<Word>*Line</Word>
 			<Word>*LineBox</Word>
 			<Word>*LineD</Word>

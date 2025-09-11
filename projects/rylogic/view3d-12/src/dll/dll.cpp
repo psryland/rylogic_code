@@ -1658,7 +1658,7 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto enc = is_file ? EEncoding::auto_detect : EEncoding::already_decoded;
+		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf8;
 		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
@@ -3107,10 +3107,10 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(view3d::Window window)
 
 		// Get the string of all ldr objects
 		auto scene = rdr12::ldraw::CreateDemoSceneBinary();
-		#if 0
+		#if PR_DBG && 1
 		{
 			std::ofstream file("E:/Dump/ldraw/demo_scene_binary.bdr", std::ios::binary);
-			file.write(scene.data<char>(), scene.size<char>());
+			file.write(char_ptr(scene.data()), scene.size());
 		}
 		#endif
 

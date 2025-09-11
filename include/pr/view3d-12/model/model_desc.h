@@ -50,6 +50,16 @@ namespace pr::rdr12
 			m_ib = ib;
 			return *this;
 		}
+		ModelDesc& vbuf(std::span<Vert const> data = {})
+		{
+			m_vb = ResDesc::VBuf<Vert>(data.size(), data);
+			return *this;
+		}
+		ModelDesc& ibuf(geometry::index_cspan ib)
+		{
+			m_ib = ResDesc::IBuf(ib.size(), ib.stride(), ib);
+			return *this;
+		}
 		template <typename TVert> ModelDesc& vbuf(std::span<TVert const> data = {})
 		{
 			m_vb = ResDesc::VBuf<TVert>(data.size(), data);

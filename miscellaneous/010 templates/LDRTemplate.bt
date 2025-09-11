@@ -8,7 +8,7 @@ uint HashI(const char str[])
 	#define FNV_offset_basis32 2166136261U
 	#define FNV_prime32 16777619U
 	local uint ch, h = FNV_offset_basis32;
-    local int i, iend = Strlen(str);
+	local int i, iend = Strlen(str);
 	for (i = 0; i != iend; ++i)
 	{
 		ch = (uint)ToLower(str[i]);
@@ -95,6 +95,7 @@ enum <uint> EKeyword
 	Layers = 2411172191,
 	LeftHanded = 1992685208,
 	LightSource = 2597226090,
+	LineNew = 2239024967,
 	Line = 400234023,
 	LineBox = 3297263992,
 	LineD = 3504606073,
@@ -188,7 +189,7 @@ enum <uint> EKeyword
 	XColumn = 3953029077,
 	YAxis = 1077811589,
 	ZAxis = 3837765916,
-    // AUTO-GENERATED-KEYWORDS-END
+	// AUTO-GENERATED-KEYWORDS-END
 };
 enum <uint> ECommandId
 {
@@ -199,7 +200,7 @@ enum <uint> ECommandId
 	CameraPosition = 109155401,
 	ObjectToWorld = 1059927965,
 	Render = 4009327117,
-    // AUTO-GENERATED-COMMANDS-END
+	// AUTO-GENERATED-COMMANDS-END
 };
 
 void Sections(uint end, EKeyword parent);

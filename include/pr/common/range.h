@@ -98,8 +98,7 @@ namespace pr
 			m_end = m_beg + size;
 		}
 
-		// These are ambiguous, do they return a copy or modify themselves?
-		// use the global functions
+		// These are ambiguous, do they return a copy or modify themselves? Use the global functions
 		//// Move the range
 		//template <typename U> constexpr Range shift(U offset)
 		//{
@@ -180,6 +179,25 @@ namespace pr
 		operator Range<U>()
 		{
 			return Range<U>(m_beg, m_end);
+		}
+
+		// Ranged for helper
+		auto enumerate() const
+		{
+			struct Iter
+			{
+				T value;
+				T operator*() const { return value; }
+				Iter& operator++() { ++value; return *this; }
+				bool operator == (Iter const& rhs) const { return value == rhs.value; }
+			};
+			struct R
+			{
+				Range const* m_this;
+				Iter begin() const { return Iter{ m_this->m_beg }; }
+				Iter end() const { return Iter{ m_this->m_end }; }
+			};
+			return R{ this };
 		}
 	};
 

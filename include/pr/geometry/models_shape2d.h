@@ -1,4 +1,4 @@
-//******************************************************************
+﻿//******************************************************************
 // Shape2d
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************
@@ -24,7 +24,7 @@ namespace pr::geometry
 
 	// Generate an ellipse shape
 	// 'solid' - true = tristrip model, false = linestrip model
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Ellipse(float dimx, float dimy, bool solid, int facets, Colour32 colour, VOut vout, IOut iout)
 	{
 		facets = std::max(facets, 3);
@@ -83,7 +83,7 @@ namespace pr::geometry
 	// 'ang0','ang1' = start/end angle in radians
 	// 'solid' - true = tristrip model, false = linestrip model
 	// 'facets' - the number of facets for a complete ring, scaled to the actual ang0->ang1 range
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Pie(float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, Colour32 colour, VOut vout, IOut iout)
 	{
 		auto scale = abs(ang1 - ang0) / maths::tau;
@@ -147,7 +147,7 @@ namespace pr::geometry
 
 	// Generate a Rectangle shape with rounded corners
 	//' 'solid' - true = tristrip model, false = linestrip model
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props RoundedRectangle(float dimx, float dimy, bool solid, float corner_radius, int facets, Colour32 colour, VOut vout, IOut iout)
 	{
 		if (dimx < 0) { assert(!"Rectangle model dimension X is less than zero"); dimx = 0; }
@@ -246,7 +246,7 @@ namespace pr::geometry
 	// 'solid' - if true, creates a TriList model. If false, creates a line strip model
 	// 'num_colours' - The number of colours in the 'colours' array. Can be 0, 1, or num_points.
 	// 'colours' - A array of colour values for the polygon
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Polygon(std::span<v2 const> points, bool solid, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;

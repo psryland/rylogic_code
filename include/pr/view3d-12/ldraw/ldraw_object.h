@@ -90,19 +90,20 @@ namespace pr::rdr12::ldraw
 		//  - Try not to use the RdrInstance members for things other than rendering
 		//    they can temporarily have different models/transforms/etc during rendering of
 		//    object bounding boxes etc.
-		m4x4            m_o2p;           // Object to parent transform (or object to world if this is a top level object)
-		ELdrObject      m_type;          // Object type
-		LdrObject*      m_parent;        // The parent of this object, nullptr for top level instances.
-		ObjectCont      m_child;         // A container of pointers to child instances
-		string32        m_name;          // A name for the object
-		GUID            m_context_id;    // The id of the context this instance was created in
-		Colour32        m_base_colour;   // The original colour of this object
-		Colour32        m_grp_colour;    // A Colour multiplier that is applied to all child objects
-		RootAnimation   m_root_anim;     // Animation of the model root position
-		BBoxInstance    m_bbox_instance; // Used for rendering the bounding box for this instance
-		Sub             m_screen_space;  // True if this object should be rendered in screen space
-		ELdrFlags       m_ldr_flags;     // Property flags controlling meta behaviour of the object
-		UserData        m_user_data;     // User data
+		m4x4              m_o2p;             // Object to parent transform (or object to world if this is a top level object)
+		ELdrObject        m_type;            // Object type
+		LdrObject*        m_parent;          // The parent of this object, nullptr for top level instances.
+		ObjectCont        m_child;           // A container of pointers to child instances
+		string32          m_name;            // A name for the object
+		GUID              m_context_id;      // The id of the context this instance was created in
+		Colour32          m_base_colour;     // The original colour of this object
+		Colour32          m_grp_colour;      // A Colour multiplier that is applied to all child objects
+		RootAnimation     m_root_anim;       // Animation of the model root position
+		BBoxInstance      m_bbox_instance;   // Used for rendering the bounding box for this instance
+		Sub               m_screen_space;    // True if this object should be rendered in screen space
+		ELdrFlags         m_flags_local;     // Property flags controlling meta behaviour of this object only. DON'T USE DIRECTLY, use Flags()
+		mutable ELdrFlags m_flags_recursive; // Recursive property flags of this object and all children. DON'T USE DIRECTLY, use RecursiveFlags()
+		UserData          m_user_data;       // User data
 
 		LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id);
 		~LdrObject();
@@ -209,6 +210,10 @@ namespace pr::rdr12::ldraw
 		// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
 		ELdrFlags Flags(char const* name = nullptr) const;
 		void Flags(ELdrFlags flags, bool state, char const* name = nullptr);
+
+		// Flags that propagate to the parent (i.e., if the child has it, then I have it)
+		ELdrFlags RecursiveFlags() const;
+		void InvalidateRecursiveFlags();
 
 		// Get/Set the render group for this object or child objects matching 'name' (see Apply)
 		ESortGroup SortGroup(char const* name = nullptr) const;

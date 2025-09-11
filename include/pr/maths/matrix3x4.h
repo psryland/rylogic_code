@@ -201,13 +201,14 @@ namespace pr
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat3x4 pr_vectorcall Rotation(Vec4_cref<S,void> angular_displacement)
+		static Mat3x4 pr_vectorcall Rotation(Vec4_cref<S,void> angular_displacement) // This is ExpMap3x3.
 		{
+			// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta²) * omega²
 			assert("'angular_displacement' should be a scaled direction vector" && angular_displacement.w == S(0));
 			auto len = Length(angular_displacement);
 			return len > maths::tiny<S>
 				? Mat3x4::Rotation(angular_displacement / len, len)
-				: Mat3x4(Vec4<S,void>::XAxis(), Vec4<S,void>::YAxis(), Vec4<S,void>::ZAxis());
+				: Mat3x4::Identity();
 		}
 
 		// Create a transform representing the rotation from one vector to another. (Vectors do not need to be normalised)
@@ -513,17 +514,6 @@ namespace pr
 		return Vec4<S,void>{mat.x.x, mat.y.y, mat.z.z, S(0)};
 	}
 
-	// Create a cross product matrix for 'vec'.
-	template <Scalar S, typename A> inline Mat3x4<S,A,A> pr_vectorcall CPM(Vec4_cref<S,A> vec)
-	{
-		// This matrix can be used to calculate the cross product with
-		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
-		return Mat3x4<S,A,A>{
-			Vec4<S,void>(  S(0),  vec.z, -vec.y, S(0)),
-			Vec4<S,void>(-vec.z,   S(0),  vec.x, S(0)),
-			Vec4<S,void>( vec.y, -vec.x,   S(0), S(0))};
-	}
-
 	// Return the transpose of 'mat'
 	template <Scalar S, typename A, typename B> inline Mat3x4<S,A,B> pr_vectorcall Transpose(Mat3x4_cref<S,A,B> mat)
 	{
@@ -810,6 +800,78 @@ namespace pr
 		if (frac == S(1)) return rhs;
 		return Mat3x4<S,A,B>{Slerp(Quat<S,A,B>(lhs), Quat<S,A,B>(rhs), frac)};
 	}
+
+	// Create a cross product matrix for 'vec'.
+	template <Scalar S, typename A> inline Mat3x4<S,A,A> pr_vectorcall CPM(Vec4_cref<S,A> vec)
+	{
+		// This matrix can be used to calculate the cross product with
+		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
+		return Mat3x4<S,A,A>{
+			Vec4<S,void>(  S(0),  vec.z, -vec.y, S(0)),
+			Vec4<S,void>(-vec.z,   S(0),  vec.x, S(0)),
+			Vec4<S,void>( vec.y, -vec.x,   S(0), S(0))};
+	}
+
+	// Return 'exp(omega)' (Rodriges' formula)
+	template <Scalar S, typename A> inline Mat3x4<S, A, A> pr_vectorcall ExpMap3x3(Vec4_cref<S, A> omega)
+	{
+		// Converts an angular velocity into a finite rotation that stays within SO(3).
+		// If you have an angular velocity, w, that is constant over a time step,
+		// then:
+		//   R(t + dt) = R(t) * ExpMap(w * dt)
+		//   (no need to orthonormalise)
+		//
+		// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta²) * omega²
+		// If you want the shortest rotation from R0 to R1:
+		//   R(t) = R0 * ExpMap(t * LogMap(Transpose(R0) * ​R1​))
+		return Mat3x4<S, A, A>::Rotation(omega);
+	}
+
+	// Returns the Axis*Angle vector representation of a rotation matrix (Inverse of ExpMap)
+	template <Scalar S, typename A, typename B> inline Vec4<S, A> pr_vectorcall LogMap(Mat3x4_cref<S, A, B> rot)
+	{
+		auto cos_angle = Clamp<S>((Trace(rot) - S(1)) / S(2), -S(1), +S(1));
+		auto theta = Acos(cos_angle);
+		if (Abs(theta) < maths::tiny<S>)
+			return Vec4<S, A>::Zero();
+
+		auto s = S(1) / (S(2) * Sin(theta));
+		auto axis = s * Vec4<S, A>{rot.y.z - rot.z.y, rot.z.x - rot.x.z, rot.x.y - rot.y.x, S(0)};
+		return theta * axis;
+	}
+
+	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
+	template <Scalar S, typename A, typename B> inline Mat3x4<S, A, B> pr_vectorcall RotationAt(float time, Mat3x4_cref<S, A, B> ori, v4_cref avel, v4_cref aacc)
+	{
+		// Orientation can be computed analytically if angular velocity
+		// and angular acceleration are parallel or angular acceleration is zero.
+		if (LengthSq(Cross(avel, aacc)) < maths::tinyf)
+		{
+			auto w = avel + aacc * time;
+			return ExpMap3x3(w * time) * ori;
+		}
+		else
+		{
+			// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
+
+			// 3-point Gauss-Legendre nodes for 6th order accuracy
+			constexpr float root15f = 3.87298334620741688518f;
+			constexpr float c1 = 0.5f - root15f / 10.0f;
+			constexpr float c2 = 0.5f;
+			constexpr float c3 = 0.5f + root15f / 10.0f;
+
+			// Evaluate instantaneous angular velocity at nodes
+			auto w0 = avel + aacc * c1 * time;
+			auto w1 = avel + aacc * c2 * time;
+			auto w2 = avel + aacc * c3 * time;
+
+			auto u0 = ExpMap3x3(w0 * time / 3.0f);
+			auto u1 = ExpMap3x3(w1 * time / 3.0f);
+			auto u2 = ExpMap3x3(w2 * time / 3.0f);
+
+			return u2 * u1 * u0 * ori;
+		}
+	}
 }
 
 #if PR_UNITTESTS
@@ -918,6 +980,23 @@ namespace pr::maths
 				auto A0 = m * a0;
 				auto A1 = Cross(v, a0);
 				PR_CHECK(FEql(A0, A1), true);
+			}
+		}
+		{// LogMap/ExpMap
+			if constexpr (std::floating_point<S>)
+			{
+				auto w = vec4_t(S(2), S(-1), S(4), S(0));
+
+				// Wrap into [0, tau/2]
+				auto w_len = Length(w);
+				w *= fmod(w_len, maths::tau_by_2f) / w_len;
+
+				auto rot1 = mat3_t::Rotation(w);
+				auto rot2 = ExpMap3x3(w);
+				auto W = LogMap(rot2);
+
+				PR_EXPECT(FEql(rot1, rot2));
+				PR_EXPECT(FEql(w, W));
 			}
 		}
 	}

@@ -75,7 +75,7 @@ struct Main :Form
 		// Set up the scene
 		//View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 		//View3D_CameraPositionSet(m_win3d, {200, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 0});
-		View3D_CameraPositionSet(m_win3d, {0, 0, 200, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		View3D_CameraPositionSet(m_win3d, {0, 0, 10, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	
 		// Cast shadows
 		auto light = View3D_LightPropertiesGet(m_win3d);
@@ -91,9 +91,9 @@ struct Main :Form
 			std::uniform_real_distribution dist(-10.0f, 10.0f);
 
 			m_obj0 = View3D_ObjectCreateLdrA(
-				//"*Box nice_box FF00FF00 { *Data {1 2 3} }"
+				"*Box nice_box FF00FF00 { *Data {1 2 3} }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } *Animation{*Style{PingPong}} }"
-				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } *Animation{*Style{PingPong}} }"
+				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } *Animation{*Style{PingPong}} }"
 				, false, nullptr, nullptr);
 
@@ -127,11 +127,11 @@ struct Main :Form
 
 		// Add objects to the scene
 		{
-			View3D_WindowAddObject(m_win3d, m_obj0);
-			View3D_WindowAddObject(m_win3d, m_obj1);
+			//View3D_WindowAddObject(m_win3d, m_obj0);
+			//View3D_WindowAddObject(m_win3d, m_obj1);
 			//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
 			//View3D_DemoSceneCreateText(m_win3d);
-			//View3D_DemoSceneCreateBinary(m_win3d);
+			View3D_DemoSceneCreateBinary(m_win3d);
 		}
 
 		// EnvMap
@@ -224,6 +224,14 @@ struct Main :Form
 	void OnMouseButton(MouseEventArgs& args) override
 	{
 		Form::OnMouseButton(args);
+		if (AllSet(args.m_key_state, VK_SHIFT) && AllSet(args.m_button, EMouseKey::Left))
+		{
+			HitTestRay rays[2] = {};
+			HitTestResult results[2] = {};
+
+			//View3D_WindowHitTestByCtx(m_win3d, &rays[0], &results[0], _countof(rays), 0.001f, EHitTestFlags::Faces, {});
+			args.m_handled = true;
+		}
 		if (!args.m_handled)
 		{
 			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};

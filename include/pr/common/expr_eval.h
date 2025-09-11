@@ -1,4 +1,4 @@
-//*************************************************************
+﻿//*************************************************************
 // Expression Evaluator
 //  Copyright (c) Rylogic Ltd 2008
 //*************************************************************
@@ -1179,10 +1179,10 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-							case Val::EType::Intg: stack.push_back(ASin(x.db())); break;
-							case Val::EType::Real: stack.push_back(ASin(x.db())); break;
-							case Val::EType::Intg4: stack.push_back(ASin(x.v4())); break;
-							case Val::EType::Real4: stack.push_back(ASin(x.v4())); break;
+							case Val::EType::Intg: stack.push_back(Asin(x.db())); break;
+							case Val::EType::Real: stack.push_back(Asin(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Asin(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Asin(x.v4())); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -1193,10 +1193,10 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-							case Val::EType::Intg: stack.push_back(ACos(x.db())); break;
-							case Val::EType::Real: stack.push_back(ACos(x.db())); break;
-							case Val::EType::Intg4: stack.push_back(ACos(x.v4())); break;
-							case Val::EType::Real4: stack.push_back(ACos(x.v4())); break;
+							case Val::EType::Intg: stack.push_back(Acos(x.db())); break;
+							case Val::EType::Real: stack.push_back(Acos(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Acos(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Acos(x.v4())); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -1207,10 +1207,10 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-							case Val::EType::Intg: stack.push_back(ATan(x.db())); break;
-							case Val::EType::Real: stack.push_back(ATan(x.db())); break;
-							case Val::EType::Intg4: stack.push_back(ATan(x.v4())); break;
-							case Val::EType::Real4: stack.push_back(ATan(x.v4())); break;
+							case Val::EType::Intg: stack.push_back(Atan(x.db())); break;
+							case Val::EType::Real: stack.push_back(Atan(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Atan(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Atan(x.v4())); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -1222,10 +1222,10 @@ namespace pr::eval
 						auto y = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-							case Val::EType::Intg: stack.push_back(ATan2(y.db(), x.db())); break;
-							case Val::EType::Real: stack.push_back(ATan2(y.db(), x.db())); break;
-							case Val::EType::Intg4: stack.push_back(ATan2(y.v4(), x.v4())); break;
-							case Val::EType::Real4: stack.push_back(ATan2(y.v4(), x.v4())); break;
+							case Val::EType::Intg: stack.push_back(Atan2(y.db(), x.db())); break;
+							case Val::EType::Real: stack.push_back(Atan2(y.db(), x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Atan2(y.v4(), x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Atan2(y.v4(), x.v4())); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -2387,23 +2387,23 @@ namespace pr::common
 			}
 			{ // asin
 				auto expr = Compile("asin(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), ASin(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(ASin(-0.2f), ASin(0.4f), ASin(-0.6f), ASin(0.8f))), true);
+				PR_CHECK(FEql(expr(-0.8).db(), Asin(-0.8)), true);
+				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Asin(-0.2f), Asin(0.4f), Asin(-0.6f), Asin(0.8f))), true);
 			}
 			{ // acos
 				auto expr = Compile("acos(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), ACos(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(ACos(-0.2f), ACos(0.4f), ACos(-0.6f), ACos(0.8f))), true);
+				PR_CHECK(FEql(expr(-0.8).db(), Acos(-0.8)), true);
+				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Acos(-0.2f), Acos(0.4f), Acos(-0.6f), Acos(0.8f))), true);
 			}
 			{ // atan
 				auto expr = Compile("atan(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), ATan(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(ATan(-0.2f), ATan(0.4f), ATan(-0.6f), ATan(0.8f))), true);
+				PR_CHECK(FEql(expr(-0.8).db(), Atan(-0.8)), true);
+				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Atan(-0.2f), Atan(0.4f), Atan(-0.6f), Atan(0.8f))), true);
 			}
 			{ // atan2
 				auto expr = Compile("atan2(y,x)");
-				PR_CHECK(FEql(expr(2.3, -3.9).db(), ATan2(2.3, -3.9)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(ATan2(-0.2f, 0.1f), ATan2(0.4f, -0.3f), ATan2(-0.6f, 0.5f), ATan2(0.8f, -0.7f))), true);
+				PR_CHECK(FEql(expr(2.3, -3.9).db(), Atan2(2.3, -3.9)), true);
+				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(Atan2(-0.2f, 0.1f), Atan2(0.4f, -0.3f), Atan2(-0.6f, 0.5f), Atan2(0.8f, -0.7f))), true);
 			}
 			{ // sinh
 				auto expr = Compile("sinh(x)");

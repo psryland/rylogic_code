@@ -82,6 +82,7 @@ namespace Rylogic.LDraw
 		Layers = unchecked((int)2411172191),
 		LeftHanded = unchecked((int)1992685208),
 		LightSource = unchecked((int)2597226090),
+		LineNew = unchecked((int)2239024967),
 		Line = unchecked((int)400234023),
 		LineBox = unchecked((int)3297263992),
 		LineD = unchecked((int)3504606073),

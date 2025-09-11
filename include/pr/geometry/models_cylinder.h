@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -30,7 +30,7 @@ namespace pr::geometry
 	// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 	// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
 	// on the ends of the cylinder since this is the most likely way it would be textured
-	template <typename VOut, typename IOut>
+	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		if (wedges < 3) wedges = 3;

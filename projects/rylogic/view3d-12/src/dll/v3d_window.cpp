@@ -269,7 +269,10 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		std::span<GUID const> except_arr(except, except_count);
-		auto pred = [](ldraw::LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](ldraw::LdrObject const& ob)
+		{
+			return !AllSet(ob.Flags(), ldraw::ELdrFlags::SceneBoundsExclude);
+		};
 
 		BBox bbox;
 		switch (bounds)
@@ -297,7 +300,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (!AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Selected)) continue;
+					if (!AllSet(obj->Flags(), ldraw::ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -309,7 +312,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Hidden)) continue;
+					if (AllSet(obj->Flags(), ldraw::ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -607,7 +610,7 @@ namespace pr::rdr12
 			// Apply the fill mode and cull mode to user models
 			obj->Apply([=](LdrObject* obj)
 			{
-				if (obj->m_model == nullptr || AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude)) return true;
+				if (obj->m_model == nullptr || AllSet(obj->Flags(), ELdrFlags::SceneBoundsExclude)) return true;
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
 					nug.FillMode(m_fill_mode);
@@ -621,7 +624,7 @@ namespace pr::rdr12
 			obj->AddToScene(m_scene);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
-			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
+			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->Flags(), ldraw::ELdrFlags::SceneBoundsExclude))
 				obj->AddBBoxToScene(m_scene);
 		}
 
@@ -1122,7 +1125,7 @@ namespace pr::rdr12
 		{
 			obj->Apply([&](ldraw::LdrObject const* c)
 			{
-				if (!AllSet(c->m_ldr_flags, ldraw::ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
+				if (!AllSet(c->Flags(), ldraw::ELdrFlags::Selected) || AllSet(c->Flags(), ldraw::ELdrFlags::SceneBoundsExclude))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -1248,7 +1251,7 @@ namespace pr::rdr12
 		for (auto& obj : m_objects)
 		{
 			// Only animate children if the parent is animated
-			if (AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Animated))
+			if (AllSet(obj->RecursiveFlags(), ldraw::ELdrFlags::Animated))
 				obj->AnimTime(anim_time_s, "");
 		}
 

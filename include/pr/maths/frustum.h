@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -167,7 +167,7 @@ namespace pr
 			// The FovX is the angle between the left/right plane normals: Cos(ang) = dot(l,r)
 			auto l = v4(m_Tplanes.x.x, m_Tplanes.y.x, m_Tplanes.z.x, 0);
 			auto r = v4(m_Tplanes.x.y, m_Tplanes.y.y, m_Tplanes.z.y, 0);
-			auto fov = ACos(Clamp(Dot(l, -r), -1.0f, 1.0f));
+			auto fov = Acos(Clamp(Dot(l, -r), -1.0f, 1.0f));
 			return fov;
 		}
 
@@ -177,7 +177,7 @@ namespace pr
 			// The FovY is the angle between the bottom/top plane normals: Cos(ang) = dot(b,t)
 			auto b = v4(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, 0);
 			auto t = v4(m_Tplanes.x.w, m_Tplanes.y.w, m_Tplanes.z.w, 0);
-			auto fov = ACos(Clamp(Dot(b, -t), -1.0f, 1.0f));
+			auto fov = Acos(Clamp(Dot(b, -t), -1.0f, 1.0f));
 			return fov;
 		}
 
@@ -684,7 +684,7 @@ namespace pr::maths
 
 			// FOV
 			PR_CHECK(FEql(f.fovY(), maths::tau_by_8f), true);
-			PR_CHECK(FEql(f.fovX(), 2 * ATan(f.aspect() * Tan(f.fovY()/2))), true);
+			PR_CHECK(FEql(f.fovX(), 2 * Atan(f.aspect() * Tan(f.fovY()/2))), true);
 
 			// width/height
 			auto wh = f.area(1.0f);
@@ -727,8 +727,8 @@ namespace pr::maths
 			PR_CHECK(FEql(f.aspect(), 16.0f/9.0f), true);
 
 			// FOV
-			PR_CHECK(FEql(f.fovX(), 2 * ATan(8.0f / 10.0f)), true);
-			PR_CHECK(FEql(f.fovY(), 2 * ATan(4.5f / 10.0f)), true);
+			PR_CHECK(FEql(f.fovX(), 2 * Atan(8.0f / 10.0f)), true);
+			PR_CHECK(FEql(f.fovY(), 2 * Atan(4.5f / 10.0f)), true);
 
 			// width/height
 			auto wh = f.area(1.0f);

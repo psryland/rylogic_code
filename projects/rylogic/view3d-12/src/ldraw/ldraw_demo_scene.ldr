@@ -1133,8 +1133,8 @@
 	}
 	*Series plot2 FFA000E0 // Colour is auto assigned if not given
 	{
-		*XAxis {"C1"}
-		*YAxis {"sin(C2) + 0.1*C0)"}
+		*XAxis {"CI"}            // Use CI or RI for the virtual index column or index row
+		*YAxis {"sin(C2) + 0.1*C0"}
 		*Width {5}
 		*Smooth {} // Optional. Smooth the line
 	}

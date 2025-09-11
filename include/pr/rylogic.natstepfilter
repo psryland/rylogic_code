@@ -1,6 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
-
+	<!--
+    <Function>
+        <Name>Regular expression for the function name, must match from beginning to end of function name</Name>
+        <Module>Regular expression for the module name</Module>
+        <Action>NoStepInto|StepInto</Action>
+    </Function>
+	-->
+	
 	<!-- Common -->
 	<Function>
 		<Name>pr::Array.*</Name>

@@ -5,124 +5,121 @@
 #pragma once
 #include "pr/common/interpolate.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/spline.h"
 
 namespace pr
 {
-	// Third order, vector valued, polynomial
-	template <typename S>
-	struct Polynomial3
+	struct InterpolateVector
 	{
-		using Vec4 = Vec4<S, void>;
-		Vec4 m_a, m_b, m_c, m_d;
-		double m_interval;
+		CubicCurve3 m_p;
+		v4 m_x1;
+		float m_interval;
 
-		Polynomial3()
-			: m_a()
-			, m_b()
-			, m_c()
-			, m_d()
-			, m_interval()
-		{}
-		Polynomial3(Vec4 const& x0, Vec4 const& v0, Vec4 const& x1, Vec4 const& v1, S interval)
+		InterpolateVector(v4_cref x0, v4_cref v0, v4_cref x1, v4_cref v1, float interval)
+			: m_p(x0 - x1, v0 * interval, v4::Zero(), v1 * interval, CurveType::Hermite)
+			, m_x1(x1)
+			, m_interval(interval)
 		{
-			assert(interval > maths::tinyf);
-			m_interval = interval;
-
-			// These are the normal coefficients, but dividing by T3 can create large floats so instead, defer the divides to evaluation
-			//'   A = -2 * (x1 - x0) / T³ + (v0 + v1) / T²;
-			//'   B = +3 * (x1 - x0) / T² - (2 * v0 + v1) / T;
-			//'   C = v0;
-			//'   D = x0;
-			m_a = S(-2) * (x1 - x0) / interval + (v0 + v1);        //' Let A := A * interval²
-			m_b = S(+3) * (x1 - x0) / interval - (S(2) * v0 + v1); //' Let B := B * interval
-			m_c = v0;
-			m_d = x0;
 		}
-		Vec4 Eval(S t) const
+		v4 Eval(float t) const
 		{
-			auto t1 = std::clamp<S>(t, S(0), S(m_interval));
-			auto f1 = t1 / S(m_interval);
-			auto f2 = f1 * f1;
-			
-			// This is the normal polynomial evaluation, but we've deferred the divides
-			//  P(t) = A * T³ + B * T² + C * T + D;
-			
-			// From above, A includes a factor of 'interval²', so A*T³ => A*T³/interval² => A * T * F²
-			// Similarly, B includes a factor of 'interval', so B*T² => B*T²/interval => B * T * F
-			auto p = m_a * t1 * f2 + m_b * t1 * f1 + m_c * t1 + m_d;
-			return p;
+			return m_x1 + m_p.Eval(t / m_interval);
 		}
-		Vec4 dEval(S T) const
+		v4 EvalDerivative(float t) const
 		{
-			auto t1 = std::clamp<S>(T, S(0), S(m_interval));
-			auto f1 = t1 / S(m_interval);
-			auto f2 = f1 * f1;
-			
-			// This is the normal first derivative evaluation, but we've deferred the divides
-			//  dP(t)/dt = 3 * A * T² + 2 * B * T + C;
-
-			// From above, A includes a factor of 'interval²', so A*T² => A*T²/Interval² => A * F²
-			// Similarly, B includes a factor of 'interval', so B*T => B*T/Interval => B * F
-			auto dp = S(3) * m_a * f2 + S(2) * m_b * f1 + m_c;
-			return dp;
+			return m_p.EvalDerivative(t / m_interval) / m_interval;
+		}
+		v4 EvalDerivative2(float t) const
+		{
+			return m_p.EvalDerivative2(t / m_interval) / m_interval;
 		}
 	};
 
-	// Position interpolator
-	struct InertializeV
+	struct InterpolateRotation
 	{
 		// Notes:
-		//  - Interpolates position for an object between 'pos0,vel0' at T = 0 and 'pos1,vel1' at T = Interval
-		Polynomial3<float> p;
-		InertializeV()
-			: p()
-		{}
-		InertializeV(v4_cref pos0, v4_cref vel0, v4_cref pos1, v4_cref vel1, float interval)
-			: p(pos0, vel0, pos1, vel1, interval)
-		{}
-		v4 Eval(float T) const
+		// - This is C1-continuous interpolation using a Hermite cubic. I.e, orientation changes smoothly
+		//   through key frmes, and angular velocity has no step changes (but does have corners, angular acceleration
+		//   isn't continuous)
+		CubicCurve3 m_p;
+		quat m_q1;
+		float m_interval;
+		
+		InterpolateRotation(quat_cref q0, v4_cref w0, quat_cref q1, v4_cref w1, float interval)
+			: m_p(LogMap(~q1 * q0), Tangent(~q1 * q0, Rotate(~q1, w0)) * interval, v4::Zero(), Tangent(quat::Identity(), Rotate(~q1, w1)) * interval, CurveType::Hermite)
+			, m_q1(q1)
+			, m_interval(interval)
 		{
-			return p.Eval(T);
 		}
-		v4 dEval(float T) const
+		quat Eval(float t) const
 		{
-			return p.dEval(T);
+			return m_q1 * ExpMap(m_p.Eval(t / m_interval));
 		}
-	};
-
-	// Rotation interpolator
-	struct InertializeQ
-	{
-		// Notes:
-		//  - Interpolates orientation for an object between 'Q0,W0' at T = 0 and 'Q1,W1' at T = Interval
-		Polynomial3<float> p;
-
-		InertializeQ()
-			: p()
-		{}
-		InertializeQ(quat_cref q0, v4_cref w0, quat_cref q1, v4_cref w1, float interval)
-			: p(LogMap(q0), w0, LogMap(q1), w1, interval)
+		v4 EvalDerivative(float t) const
 		{
-			assert(IsNormal(q0) && "q0 is not normalised");
-			assert(IsNormal(q1) && "q1 is not normalised");
-			assert(Dot(q0, q1) >= 0 && "q0 -> q1 should be the shortest arc");
+			// To calculate 'W' from log_q and log_q`:
+			// Say:
+			//   u = log(q), r = |u| = angle / 2
+			//   q = [qv, qw] = [(u/r) * sin(r), cos(r)] = [u*f(r), cos(r)]
+			//     where f(r) = sin(r) / r
+			// Also:
+			//   u  == m_p.Eval(t)
+			//   u` == m_p.EvalDerivative(t)
+			//   r` == Dot(u`, u) / r  (where r > 0) (i.e. tangent amount in direction of u)
+			//
+			// Differentiating:
+			//   f`(r) = (r*cos(r) - sin(r)) / r² (product rule)
+			//   q` = [qv`, qw`] = [u`*qv + u*qv`*r`, -sin(r)*r`]
+			// Also:
+			//   q` = 0.5 x [w,0] x q  (quaternion derivative)
+			//    => [w,0] = 2*(q` x ~q) = 2*(qw*qv` - qw`*qv - Cross(qv`, qv)) (expanded quaternion multiply)
+			//
+			// For small 'r' can use expansion for sin:
+			//   f(r) = sin(r)/r ~= 1 - r²/6 +...
+			//   f`(r) = -r/3 + ...
+			// For really small 'r' use:
+			//   W ~= 2 * u`  (comes from: if q = [u, 1] => q` ~= [u`, 0]
+			constexpr float TinyAngle = 1e-8f;
+			constexpr float SmallAngle = 1e-5f;
+
+			auto u = m_p.Eval(t / m_interval);
+			auto u_dot = m_p.EvalDerivative(t / m_interval) / m_interval;
+			auto r = Length(u);
+
+			auto omega = 2 * u_dot;
+			if (r > TinyAngle)
+			{
+				// Derivative of angle
+				auto r_dot = Dot(u, u_dot) / r;
+				auto sin_r = Sin(r);
+				auto cos_r = Cos(r);
+
+				// Derivative of axis
+				auto f = r > SmallAngle ? (sin_r / r) : (1.f - r * r / 6);
+				auto f_dot = r > SmallAngle ? (r * cos_r - sin_r) / (r * r) : (-r / 3);
+
+				// q
+				auto qv = u * f; // vector part
+				auto qw = cos_r; // scalar part
+
+				// q`
+				auto qw_dot = -sin_r * r_dot;
+				auto qv_dot = u_dot * f + u * (f_dot * r_dot);
+
+				// Vector part of (q` * ~q): vw = qw*qv` - qw`*qv - qv` x qv
+				omega = 2.0f * (qw * qv_dot - qw_dot * qv - Cross(qv_dot, qv));
+			}
+
+			return Rotate(m_q1, omega);
 		}
-		quat Eval(float T) const
-		{
-			auto log_q = p.Eval(T);
 
-			// Wrap to [-PI, +PI] range
-			//if (auto len = Length(log_q); len > maths::tau_by_2f)
-			//{
-			//	auto wrapped_length = fmodf(len + maths::tau_by_2f, maths::tau) - maths::tau_by_2f;
-			//	log_q *= Abs(wrapped_length) > maths::tinyf ? wrapped_length / len : 0.0f;
-			//}
-
-			return ExpMap(log_q);
-		}
-		v4 dEval(float T) const
+		// Returns the tangent vector in SO(3)
+		static v4 Tangent(quat_cref q, v4_cref w)
 		{
-			return p.dEval(T);
+			auto q_p1 = ExpMap(-0.5f * w) * q;
+			auto q_n1 = ExpMap(+0.5f * w) * q;
+			auto tangent = (LogMap(q_n1) - LogMap(q_p1)) / 2;
+			return tangent;
 		}
 	};
 

@@ -61,8 +61,8 @@ namespace pr::geometry
 			auto bc = Dot3(b,c); auto d1 = bsq * csq;
 			auto ca = Dot3(c,a); auto d2 = csq * asq;
 
-			angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.x = 0.5f * Acos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.y = 0.5f * Acos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.z = maths::tau_by_2f - angles.x - angles.y;
 		}
 		else if (asq > bsq && asq > csq)
@@ -70,8 +70,8 @@ namespace pr::geometry
 			auto ab = Dot3(a,b); auto d0 = asq * bsq;
 			auto ca = Dot3(c,a); auto d2 = csq * asq;
 
-			angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.y = 0.5f * Acos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.z = 0.5f * Acos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.x = maths::tau_by_2f - angles.y - angles.z;
 		}
 		else
@@ -79,8 +79,8 @@ namespace pr::geometry
 			auto ab = Dot3(a,b); auto d0 = asq * bsq;
 			auto bc = Dot3(b,c); auto d1 = bsq * csq;
 			
-			angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.x = 0.5f * Acos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.z = 0.5f * Acos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.y = maths::tau_by_2f - angles.x - angles.z;
 		}
 		angles.w = 0.0f;

@@ -453,21 +453,35 @@ namespace pr
 	}
 
 	// Linearly interpolate between colours
-	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, double frac)
+	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, double t)
 	{
-		assert(frac >= 0.0f && frac <= 1.0f);
+		auto t0 = Clamp(1.0 - t, 0.0, 1.0);
+		auto t1 = Clamp(0.0 + t, 0.0, 1.0);
 		return Colour32(
-			int(lhs.r * (1.0 - frac) + rhs.r * frac),
-			int(lhs.g * (1.0 - frac) + rhs.g * frac),
-			int(lhs.b * (1.0 - frac) + rhs.b * frac),
-			int(lhs.a * (1.0 - frac) + rhs.a * frac));
+			int(lhs.r * t0 + rhs.r * t1),
+			int(lhs.g * t0 + rhs.g * t1),
+			int(lhs.b * t0 + rhs.b * t1),
+			int(lhs.a * t0 + rhs.a * t1)
+		);
+	}
+
+	// Linearly interpolate the RGB between colours. (Takes lhs.A for alpha)
+	inline Colour32 LerpRGB(Colour32 lhs, Colour32 rhs, double t)
+	{
+		auto t0 = Clamp(1.0 - t, 0.0, 1.0);
+		auto t1 = Clamp(0.0 + t, 0.0, 1.0);
+		return Colour32(
+			int(lhs.r * t0 + rhs.r * t1),
+			int(lhs.g * t0 + rhs.g * t1),
+			int(lhs.b * t0 + rhs.b * t1),
+			int(lhs.a)
+		);
 	}
 
 	inline Colour32 Lerp(std::span<Colour32 const> colours, double frac)
 	{
-		assert(!colours.empty());
-		assert(frac >= 0.0f && frac <= 1.0f);
-
+		if (colours.empty())
+			return Colour32White;
 		if (colours.size() == 1)
 			return colours[0];
 

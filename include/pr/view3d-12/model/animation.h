@@ -209,7 +209,7 @@ namespace pr::rdr12
 		}
 	};
 
-	// 2nd order polynomial animation
+	// Simple root motion polynomial animation
 	struct RootAnimation : RefCounted<RootAnimation>
 	{
 		v4         m_vel;    // Linear velocity of the animation in m/s

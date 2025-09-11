@@ -900,23 +900,23 @@ namespace pr
 	{
 		return std::tan(x);
 	}
-	template <Scalar S> inline S ASin(S x)
+	template <Scalar S> inline S Asin(S x)
 	{
 		return std::asin(x);
 	}
-	template <Scalar S> inline S ACos(S x)
+	template <Scalar S> inline S Acos(S x)
 	{
 		return std::acos(x);
 	}
-	template <Scalar S> inline S ATan(S x)
+	template <Scalar S> inline S Atan(S x)
 	{
 		return std::atan(x);
 	}
-	template <Scalar S> inline S ATan2(S y, S x)
+	template <Scalar S> inline S Atan2(S y, S x)
 	{
 		return std::atan2(y, x);
 	}
-	template <Scalar S> inline S ATan2Positive(S y, S x)
+	template <Scalar S> inline S Atan2Positive(S y, S x)
 	{
 		auto a = std::atan2(y, x);
 		if (a < S(0)) a += constants<S>::tau;
@@ -946,25 +946,25 @@ namespace pr
 	{
 		return CompOp(v, [](auto x) { return Tan(x); });
 	}
-	template <maths::VectorX T> inline T ASin(T const& v)
+	template <maths::VectorX T> inline T Asin(T const& v)
 	{
-		return CompOp(v, [](auto x) { return ASin(x); });
+		return CompOp(v, [](auto x) { return Asin(x); });
 	}
-	template <maths::VectorX T> inline T ACos(T const& v)
+	template <maths::VectorX T> inline T Acos(T const& v)
 	{
-		return CompOp(v, [](auto x) { return ACos(x); });
+		return CompOp(v, [](auto x) { return Acos(x); });
 	}
-	template <maths::VectorX T> inline T ATan(T const& v)
+	template <maths::VectorX T> inline T Atan(T const& v)
 	{
-		return CompOp(v, [](auto x) { return ATan(x); });
+		return CompOp(v, [](auto x) { return Atan(x); });
 	}
-	template <maths::VectorX T> inline T ATan2(T const& y, T const& x)
+	template <maths::VectorX T> inline T Atan2(T const& y, T const& x)
 	{
-		return CompOp(y, x, [](auto y, auto x) { return ATan2(y, x); });
+		return CompOp(y, x, [](auto y, auto x) { return Atan2(y, x); });
 	}
-	template <maths::VectorX T> inline T ATan2Positive(T const& y, T const& x)
+	template <maths::VectorX T> inline T Atan2Positive(T const& y, T const& x)
 	{
-		return CompOp(y, x, [](auto y, auto x) { return ATan2Positive(y, x); });
+		return CompOp(y, x, [](auto y, auto x) { return Atan2Positive(y, x); });
 	}
 	template <maths::VectorX T> inline T Sinh(T const& v)
 	{
@@ -1206,13 +1206,13 @@ namespace pr
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
 	template <std::floating_point T> inline T Angle(T adj0, T adj1, T opp)
 	{
-		return ACos(CosAngle(adj0, adj1, opp));
+		return Acos(CosAngle(adj0, adj1, opp));
 	}
 
 	// Return the angle between two vectors
 	template <maths::VectorX T> inline maths::vec_comp_t<T> Angle(T const& lhs, T const& rhs)
 	{
-		return ACos(CosAngle(lhs, rhs));
+		return Acos(CosAngle(lhs, rhs));
 	}
 
 	// Return the length of a triangle side given by two adjacent side lengths and an angle between them

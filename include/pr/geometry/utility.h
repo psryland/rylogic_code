@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -22,16 +22,14 @@ namespace pr::geometry
 	}
 
 	// Generate normals implementation
-	namespace impl
+	namespace generate_normals
 	{
-		template <typename TIdxCIter, typename TGetV> requires
-		(
-			std::is_invocable_r_v<v4 const&, TGetV, int>
-		)
-		struct GenNormals
-		{
-			using VIdx = typename std::iterator_traits<TIdxCIter>::value_type;
+		template <typename T> concept VertOutFn = std::invocable<T, int, int, v4 const&>;
+		template <typename T> concept IdxOutFn = std::invocable<T, int, int, int>;
 
+		template <typename TIdxCIter, GetVertFn TGetV>
+		struct Impl
+		{
 			struct Face
 			{
 				v4     m_norm;
@@ -87,7 +85,7 @@ namespace pr::geometry
 			pr::deque<Vert> m_verts;
 			pr::deque<Edge> m_edge_alloc;
 
-			GenNormals(size_t num_indices, TIdxCIter indices, float smoothing_angle, size_t new_vidx, TGetV getv)
+			Impl(size_t num_indices, TIdxCIter indices, float smoothing_angle, size_t new_vidx, TGetV getv)
 				:m_faces()
 				,m_verts()
 				,m_edge_alloc()
@@ -101,6 +99,8 @@ namespace pr::geometry
 			// Creates the adjacency data
 			void BuildAdjacencyData(size_t num_indices, TIdxCIter indices, TGetV getv)
 			{
+				using VIdx = typename std::iterator_traits<TIdxCIter>::value_type;
+
 				size_t max_index = 0;
 				int sg = 0;
 
@@ -312,26 +312,20 @@ namespace pr::geometry
 	//         *iptr++ = i1;
 	//         *iptr++ = i2;
 	//      }
-	template <typename TIdxCIter, typename TGetV, typename TVertOut, typename TIdxOut> requires
-	(
-		std::is_invocable_r_v<v4 const&, TGetV, int> &&
-		std::is_invocable_v<TVertOut, int, int, v4 const&> &&
-		std::is_invocable_v<TIdxOut, int, int, int>
-	)
+	template <typename TIdxCIter, GetVertFn TGetV, generate_normals::VertOutFn TVertOut, generate_normals::IdxOutFn TIdxOut>
 	void GenerateNormals(int num_indices, TIdxCIter indices, float smoothing_angle, int new_vidx, TGetV getv, TVertOut vout, TIdxOut iout)
 	{
 		// Notes:
-		// - Can't weld verts because that would destroy distinct texture
-		//  verts or colours. If verts are distinct it's likely they represent
-		//  a discontinuous edge in the model and are therefore not edges that
-		//  should be smoothed anyway.
+		//  - Can't weld verts because that would destroy distinct texture verts or colours.
+		//    If verts are distinct it's likely they represent a discontinuous edge in the model
+		//    and are therefore not edges that should be smoothed anyway.
 		using VIdx = typename std::iterator_traits<TIdxCIter>::value_type;
 
-		if ((num_indices % 3) != 0)
+		if (num_indices % 3 != 0)
 			throw std::runtime_error("GenerateNormals expects triangle list data");
 
 		// Generate the normals
-		impl::GenNormals gen(num_indices, indices, smoothing_angle, new_vidx, getv);
+		generate_normals::Impl gen(num_indices, indices, smoothing_angle, new_vidx, getv);
 
 		// Output the new verts
 		for (auto& vert : gen.m_verts)
@@ -371,12 +365,7 @@ namespace pr::geometry
 	// 'SetN' is a function object with signature void (*SetN)(size_t i, v4 const& n) used to set the value of the normal at index position 'i'
 	// Only reads/writes to the normals for vertices adjoining the provided faces
 	// Note: This is the simple version without vertex weights or edge detection
-	template <typename TIdxCIter, typename TGetV, typename TGetN, typename TSetN> requires
-	(
-		std::is_invocable_r_v<v4 const&, TGetV, int> &&
-		std::is_invocable_r_v<v4 const&, TGetN, int> &&
-		std::is_invocable_v<TSetN, int, v4 const&>
-	)
+	template <typename TIdxCIter, GetVertFn TGetV, GetNormFn TGetN, SetNormFn TSetN>
 	void GenerateNormalsSpherical(size_t num_indices, TIdxCIter indices, TGetV GetV, TGetN GetN, TSetN SetN)
 	{
 		// Initialise all of the vertex normals to zero

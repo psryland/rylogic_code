@@ -485,6 +485,7 @@ namespace pr::rdr12::ldraw
 			Depth m_depth;
 			EPointStyle m_style;
 			PerItemColour m_per_item_colour;
+			LdrTexture m_tex;
 
 			LdrPoint()
 				: m_points()
@@ -494,17 +495,15 @@ namespace pr::rdr12::ldraw
 			{}
 
 			// Points
-			LdrPoint& pt(v4_cref point, Colour colour)
+			LdrPoint& pt(v4_cref point, std::optional<Colour32> colour = {})
 			{
-				pt(point);
-				m_points.back().col = colour;
-				m_per_item_colour = true;
+				m_points.push_back({ point, colour ? *colour : Colour32White });
+				m_per_item_colour = m_per_item_colour || colour;
 				return *this;
 			}
-			LdrPoint& pt(v4_cref point)
+			LdrPoint& pt(v3_cref point, std::optional<Colour32> colour = {})
 			{
-				m_points.push_back({ point, {} });
-				return *this;
+				return pt(point.w1(), colour);
 			}
 
 			// Point size (in pixels if depth == false, in world space if depth == true)
@@ -533,6 +532,12 @@ namespace pr::rdr12::ldraw
 				return *this;
 			}
 
+			// Texture for point sprites
+			LdrTexture& texture()
+			{
+				return m_tex;
+			}
+
 			// Write to 'out'
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
@@ -550,6 +555,7 @@ namespace pr::rdr12::ldraw
 								Writer::Append(out, point.col);
 						}
 					});
+					m_tex.WriteTo<Writer>(out);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}

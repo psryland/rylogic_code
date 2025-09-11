@@ -35,6 +35,24 @@ old:
   following registry value:
   [HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger]
   "EnableNatvisDiagnostics"=dword:00000001
+  
+  Modifiers:
+    | Specifier | Meaning                                                                                       |
+    | ========= | ============================================================================================= |
+    | `na`      | **No address**. Suppress showing the memory address of the item.                              |
+    | `nq`      | **No quotes**. Suppress quotes around string values.                                          |
+    | `sb`      | **Show as bool**. Interpret numeric value as `true/false`.                                    |
+    | `h`       | **Hexadecimal**. Display number in hex.                                                       |
+    | `d`       | **Decimal**. Force decimal display (even if hex is default).                                  |
+    | `o`       | **Octal**. Display number in octal.                                                           |
+    | `b`       | **Binary**. Display value in binary.                                                          |
+    | `g`       | **General number format**. Nicely formatted number (adds thousands separators etc).           |
+    | `s`       | **String**. Treat value as a pointer to a null-terminated string (wide/narrow auto-detected). |
+    | `su`      | **Unicode string**. Force value to be shown as UTF-16 string.                                 |
+    | `sbstr`   | **Substring**. Shows only part of a string (rare).                                            |
+    | `x`       | **Hex dump**. Show raw bytes of a pointer/array.                                              |
+    | `ymd`     | **Date**. Interpret as year-month-day.                                                        |
+    | `ymdhms`  | **DateTime**. Interpret as year-month-day hour\:minute\:second.                               |
 -->
 <AutoVisualizer
 	xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"
@@ -102,9 +120,9 @@ old:
 			</ArrayItems>
 		</Expand>
 	</Type>
-	<Type Name="pr::ByteData&lt;*&gt;">
+	<Type Name="pr::byte_data&lt;*&gt;">
 		<DisplayString Condition="m_size == 0">empty</DisplayString>
-		<DisplayString>[{m_size}] {m_ptr}</DisplayString>
+		<DisplayString>[{m_size}] {m_ptr,na}</DisplayString>
 		<Expand>
 			<Item Name="[count]">m_size</Item>
 			<Item Name="[capacity]">m_capacity</Item>
@@ -177,6 +195,13 @@ old:
 		<DisplayString>new v4({x,g}f,  {y,g}f,  {z,g}f,  {w,g}f)</DisplayString>
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v4"></DisplayString>
 		-->
+		<Expand>
+			<Item Name="x">x</Item>
+			<Item Name="y">y</Item>
+			<Item Name="z">z</Item>
+			<Item Name="w">w</Item>
+			<Item Name="||V||&#xB2;">x*x + y*y + z*z + w*w</Item>
+		</Expand>
 	</Type>
 	<Type Name="pr::Vec8&lt;*&gt;">
 		<DisplayString>{ang}  {lin}</DisplayString>
@@ -210,10 +235,10 @@ old:
 		-->
 	</Type>
 	<Type Name="pr::Mat3x4&lt;*,*&gt;">
-		<DisplayString>[{x.xyz}]  [{y.xyz}]  [{z.xyz}]</DisplayString>
+		<DisplayString>new m3x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f)&#10;);</DisplayString>
 		<!--
+		<DisplayString>[{x.xyz}]  [{y.xyz}]  [{z.xyz}]</DisplayString>
 		<DisplayString>*rot {{&#10;	{x.x} {x.y} {x.z}&#10;	{y.x} {y.y} {y.z}&#10;	{z.x} {z.y} {z.z}&#10;}}</DisplayString>
-		<DisplayString>new m3x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f),&#10;&#10;)</DisplayString>
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m3x4"></DisplayString>
 		-->
 	</Type>
@@ -306,6 +331,22 @@ old:
 	</Type>
 
 	<!-- Geometry -->
+	<Type Name="pr::geometry::IdxBuf">
+		<DisplayString Condition="m_buf.m_size == 0">size=0 stride={m_stride}</DisplayString>
+		<DisplayString Condition="m_stride == 1">size={m_buf.m_size/m_stride} stride={m_stride} {m_buf.m_u8,na}</DisplayString>
+		<DisplayString Condition="m_stride == 2">size={m_buf.m_size/m_stride} stride={m_stride} {m_buf.m_u16,na}</DisplayString>
+		<DisplayString Condition="m_stride == 4">size={m_buf.m_size/m_stride} stride={m_stride} {m_buf.m_u32,na}</DisplayString>
+		<DisplayString Condition="m_stride == 8">size={m_buf.m_size/m_stride} stride={m_stride} {m_buf.m_u64,na}</DisplayString>
+		<DisplayString>size={0} stride={m_stride} {m_buf}</DisplayString>
+	</Type>
+	<Type Name="pr::geometry::index_buffer::index_span&lt;*&gt;">
+		<DisplayString Condition="m_span._Mysize == 0">size=0 stride={m_stride}</DisplayString>
+		<DisplayString Condition="m_stride == 1">size={m_span._Mysize/m_stride} stride={m_stride} {m_span}</DisplayString>
+		<DisplayString Condition="m_stride == 2">size={m_span._Mysize/m_stride} stride={m_stride} {m_span}</DisplayString>
+		<DisplayString Condition="m_stride == 4">size={m_span._Mysize/m_stride} stride={m_stride} {m_span}</DisplayString>
+		<DisplayString Condition="m_stride == 8">size={m_span._Mysize/m_stride} stride={m_stride} {m_span}</DisplayString>
+		<DisplayString>size={0} stride={m_stride} {m_span}</DisplayString>
+	</Type>
 	<Type Name="pr::geometry::p3d::ChunkHeader">
 		<DisplayString>[{m_id}] Len={m_length}</DisplayString>
 	</Type>

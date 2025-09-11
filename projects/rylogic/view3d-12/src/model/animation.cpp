@@ -21,9 +21,9 @@ namespace pr::rdr12
 	m4x4 RootAnimation::EvaluateAtTime(double time_s) const
 	{
 		auto time = static_cast<float>(AdjTime(time_s, TimeRange{ 0.0, m_period }, m_style));
-		auto ang = 0.5f * m_aacc * Sqr(time) + m_avel * time;
 		auto lin = 0.5f * m_acc * Sqr(time) + m_vel * time + v4::Origin();
-		return m4x4::Transform(ang, lin);
+		auto ang = RotationAt(time, m3x4::Identity(), m_avel, m_aacc);
+		return m4x4{ ang, lin };
 	}
 
 	// Ref-counting clean up function

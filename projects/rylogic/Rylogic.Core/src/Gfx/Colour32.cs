@@ -88,19 +88,22 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Linearly interpolate two colours (with alpha)</summary>
-		public Colour32 LerpA(Colour32 rhs, double t)
+		public Colour32 Lerp(Colour32 rhs, double t)
 		{
-			return LerpA(this, rhs, t);
+			return Lerp(this, rhs, t);
 		}
-		public static Colour32 LerpA(Colour32 lhs, Colour32 rhs, double t)
+		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, double t)
 		{
+			var t0 = Math_.Clamp(1.0 - t, 0.0, 1.0);
+			var t1 = Math_.Clamp(0.0 + t, 0.0, 1.0);
 			return new Colour32(
-				(byte)(lhs.A * (1f - t) + rhs.A * t),
-				(byte)(lhs.R * (1f - t) + rhs.R * t),
-				(byte)(lhs.G * (1f - t) + rhs.G * t),
-				(byte)(lhs.B * (1f - t) + rhs.B * t));
+				(byte)Math_.Clamp(lhs.A * t0 + rhs.A * t1, 0, 0xff),
+				(byte)Math_.Clamp(lhs.R * t0 + rhs.R * t1, 0, 0xff),
+				(byte)Math_.Clamp(lhs.G * t0 + rhs.G * t1, 0, 0xff),
+				(byte)Math_.Clamp(lhs.B * t0 + rhs.B * t1, 0, 0xff)
+			);
 		}
-		public static Colour32 LerpA(double t, params (Colour32, double)[] p)
+		public static Colour32 Lerp(double t, params (Colour32, double)[] p)
 		{
 			// e.g. Colour32.Lerp(i/9.0, new[] { (Colour32.White, 0.2), (Colour32.Yellow, 0.5), (Colour32.Red, 1.0) });
 			if (p.Length == 0)
@@ -108,9 +111,14 @@ namespace Rylogic.Gfx
 
 			var idx = 0;
 			for (; idx != p.Length && t > p[idx].Item2; ++idx) { }
-			if (idx == 0) return p[0].Item1;
-			if (idx == p.Length) return p[p.Length - 1].Item1;
-			return LerpA(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
+
+			if (idx == 0)
+				return p[0].Item1;
+			if (idx == p.Length)
+				return p[p.Length - 1].Item1;
+
+			var tt = Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2);
+			return Lerp(p[idx - 1].Item1, p[idx].Item1, tt);
 		}
 
 		/// <summary>Linearly interpolate the non-alpha channels of two colours (lhs.A is used)</summary>
@@ -120,11 +128,13 @@ namespace Rylogic.Gfx
 		}
 		public static Colour32 LerpRGB(Colour32 lhs, Colour32 rhs, double t)
 		{
+			var t0 = Math_.Clamp(1.0 - t, 0.0, 1.0);
+			var t1 = Math_.Clamp(0.0 + t, 0.0, 1.0);
 			return new Colour32(
 				lhs.A,
-				(byte)(lhs.R*(1f - t) + rhs.R*t),
-				(byte)(lhs.G*(1f - t) + rhs.G*t),
-				(byte)(lhs.B*(1f - t) + rhs.B*t));
+				(byte)Math_.Clamp(lhs.R * t0 + rhs.R * t1, 0, 0xff),
+				(byte)Math_.Clamp(lhs.G * t0 + rhs.G * t1, 0, 0xff),
+				(byte)Math_.Clamp(lhs.B * t0 + rhs.B * t1, 0, 0xff));
 		}
 		public static Colour32 LerpRGB(double t, params (Colour32, double)[] p)
 		{
@@ -142,13 +152,13 @@ namespace Rylogic.Gfx
 		/// <summary>Lerp this colour toward black by 't'</summary>
 		public Colour32 Darken(double t, bool alpha_too = false)
 		{
-			return alpha_too ? LerpA(Black, t) : LerpRGB(Black, t);
+			return alpha_too ? Lerp(Black, t) : LerpRGB(Black, t);
 		}
 
 		/// <summary>Lerp this colour toward white by 't'</summary>
 		public Colour32 Lighten(double t, bool alpha_too = false)
 		{
-			return alpha_too ? LerpA(White, t) : LerpRGB(White, t);
+			return alpha_too ? Lerp(White, t) : LerpRGB(White, t);
 		}
 
 		/// <summary>Invert the colour e.g. White -> Black</summary>
