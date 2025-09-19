@@ -1083,7 +1083,7 @@ namespace pr::rdr12::ldraw
 		auto a  = Normalise(m_ref_pt - p0.xy, v2Zero);
 		auto b  = Rotate90CCW(a);
 		auto c  = nss_point - p0.xy;
-		auto t  = s * ATan2(Dot(c,b), Dot(c,a));
+		auto t  = s * Atan2(Dot(c,b), Dot(c,a));
 
 		m_offset = m4x4::Translation(p) * m4x4::Transform(axis, t, v4Origin) * m4x4::Translation((-p).w1()); // World space rotation about 'axis'
 
