@@ -5,6 +5,8 @@
 #ifndef PR_RDR_FUNCTIONS_HLSLI
 #define PR_RDR_FUNCTIONS_HLSLI
 
+// TODO: #include "compute/common/utility.hlsli"
+
 // Conditional helper function
 int SelectInt(bool condition, int true_case, int false_case)
 {

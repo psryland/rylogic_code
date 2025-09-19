@@ -96,7 +96,6 @@ namespace pr
 		//
 		//  - Excellent summary video: https://www.youtube.com/watch?v=jvPPXbo87ds (Freya Holmer - The Continuity of Splines)
 
-
 		inline static constexpr m4x4 Bezier = {
 			{+1, +0, +0, +0},
 			{-3, +3, +0, +0},
@@ -148,7 +147,7 @@ namespace pr
 		}
 	};
 
-	// A curve is a segment within a spline
+	// A cubic curve in R3
 	struct CubicCurve3
 	{
 		m4x4 m_coeff;

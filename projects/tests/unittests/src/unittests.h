@@ -4,6 +4,7 @@
 #include <winsock2.h> // Include winsock2.h before windows.h
 
 // Headers to unit test
+#include "pr\algorithm\astar_search.h"
 #include "pr\audio\audio.h"
 #include "pr\audio\forward.h"
 #include "pr\audio\audio\audio_manager.h"

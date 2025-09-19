@@ -52,7 +52,7 @@
   <!-- Files -->
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
-    <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
@@ -158,6 +158,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h" />
+    <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\monocypher.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\rijndael.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\sha1.h" />

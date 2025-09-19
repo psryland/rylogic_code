@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -129,7 +129,7 @@ inline float length_sq(float4 a)
 	return dot(a, a);
 }
 
-// Some the components of a float4
+// Sum the components of a float4
 inline float sum(float1 v)
 {
 	return dot(v, float1(1));

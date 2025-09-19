@@ -254,6 +254,14 @@ void DataPayload(EKeyword parent, uint payload_size)
 			ECommandId command_id;
 			break;
 		}
+		case LineStrip:
+		{
+			if (parentof(this).per_item_colour == 0)
+				float3 pt[payload_size/sizeof(float3)] <name="pts">;
+			else
+				PtColour pts[payload_size/sizeof(PtColour)] <name="pts">;
+			break;
+		}
 		case Plane:
 		{
 			float width;

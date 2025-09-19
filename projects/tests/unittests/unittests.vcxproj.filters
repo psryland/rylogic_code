@@ -113,6 +113,9 @@
     <Filter Include="pr\view3d-12">
       <UniqueIdentifier>{3a9cadb5-54de-4e6d-ad89-a66d5b97dff0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\algorithm">
+      <UniqueIdentifier>{016d8fe3-fd0d-4d63-8697-53c4932cbe43}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
@@ -1072,6 +1075,9 @@
       <Filter>pr\view3d-12</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\astar_search.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="run_tests.py" />

@@ -1290,6 +1290,25 @@ namespace pr::rdr12::ldraw
 				.Sphere("nested5", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 });
 		}
 
+		// Groups
+		{
+			auto& grp = ldr.Group("group").pos(-10, 1.5f, -5);
+			grp.Cylinder("barrel", 0xFFE0A060).axis(pr::AxisId::PosZ).cylinder(3, 1);
+			grp.Sphere("bullet", 0xFF0000FF).radius(0.7f);
+			//{
+			//	*RootAnimation
+			//	{
+			//		*Style {Repeat}    // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
+			//		*Period {3}        // The period of the animation in seconds
+			//		*Velocity {0 10 0} // Linear velocity vector in m/s
+			//		*Accel {0 -3 0}
+			//	}
+			//	*o2w{*pos{0 0 0}}
+			//}
+			grp.Box("box", 0xFF00FF00).dim(1, 1, 3).pos(0, -1, 0);
+			grp.Box("box", 0xFF00FF00).dim(3, 1, 1).pos(0, -1, 0);
+		}
+
 		// An "infinite" plane.
 		{
 			ldr.Plane("ground", 0xFFFFE8A0)
