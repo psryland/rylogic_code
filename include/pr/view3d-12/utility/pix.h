@@ -16,6 +16,9 @@
 
 namespace pr::rdr12::pix
 {
+	// Return the PIX dll module handle if it can be loaded
+	HMODULE LoadDll();
+
 	inline bool IsAttachedForGpuCapture()
 	{
 		#if PR_PIX_ENABLED

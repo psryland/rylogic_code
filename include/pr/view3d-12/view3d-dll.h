@@ -1031,6 +1031,10 @@ extern "C"
 	// The z component should be the world space distance from the camera
 	VIEW3D_API void __stdcall View3D_NSSPointToWSRay(pr::view3d::Window window, pr::view3d::Vec4 screen, pr::view3d::Vec4& ws_point, pr::view3d::Vec4& ws_direction);
 
+	// Return a point and direction in world space corresponding to a 'window' screen space point.
+	// 'screen' should be in pixels
+	VIEW3D_API void __stdcall View3D_SSPointToWSRay(pr::view3d::Window window, pr::view3d::Vec2 screen, pr::view3d::Vec4& ws_point, pr::view3d::Vec4& ws_direction);
+
 	// Lights *********************************
 
 	// Get/Set the properties of the global light

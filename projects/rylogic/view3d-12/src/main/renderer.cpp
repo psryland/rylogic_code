@@ -79,6 +79,9 @@ namespace pr::rdr12
 			#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
 			#endif
 
+			// Load PIX
+			PR_INFO_IF(PR_PIX_ENABLED, pix::LoadDll() != 0, "PIX Dll loaded"); // Load before creating the D3D device
+
 			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::DeviceDebug), "DeviceDebug is enabled");
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::BGRASupport), "BGRASupport is enabled");

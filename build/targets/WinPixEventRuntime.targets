@@ -32,7 +32,7 @@
 			</AdditionalLibraryDirectories>
 			<!--
 			<AdditionalDependencies>
-				;WinPixEventRuntime.lib - Don't use the import library, dynamically load PIX instead
+				;WinPixEventRuntime.lib - Don't use the import library, dynamically load PIX instead using rdr12::pix::LoadDll()
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
 			-->

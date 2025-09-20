@@ -5,17 +5,30 @@
 // Dynamically load the WinPixEventRuntime.dll and call its functions
 // This is so that if PIX is enabled, but the WinPixEventRuntime.dll is missing, the application will still run
 
+#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/utility/pix.h"
 
 #if PR_PIX_ENABLED
 
 using namespace pr::rdr12::pix;
 
-// Return the PIX dll module handle if it can be loaded
-inline HMODULE Dll()
+namespace pr::rdr12::pix
 {
-	static HMODULE s_module = ::LoadLibraryA("WinPixEventRuntime");
-	return s_module;
+	// Return the PIX dll module handle if it can be loaded
+	inline HMODULE Dll()
+	{
+		static HMODULE s_module = ::LoadLibraryA("WinPixEventRuntime");
+		return s_module;
+	}
+
+	// Return the PIX dll module handle if it can be loaded
+	HMODULE LoadDll()
+	{
+		auto handle = Dll();
+		if (PIXLoadLatestWinPixGpuCapturerLibrary() == 0) PR_INFO(PR_PIX_ENABLED, "WinPixGpuCapturerLibrary not found");
+		if (PIXLoadLatestWinPixTimingCapturerLibrary() == 0) PR_INFO(PR_PIX_ENABLED, "WinPixTimingCapturerLibrary not found");
+		return handle;
+	}
 }
 
 extern "C" PIXEventsThreadInfo* WINAPI PIXGetThreadInfo() noexcept

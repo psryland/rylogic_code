@@ -1330,7 +1330,7 @@ namespace pr::rdr12
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !pred(cast<ldraw::LdrObject>(*beg)->m_context_id); ++beg) {}
+			for (; beg != end && pred && !pred(cast<ldraw::LdrObject>(*beg)->m_context_id); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);

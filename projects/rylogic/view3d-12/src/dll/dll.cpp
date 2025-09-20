@@ -1557,6 +1557,24 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(view3d::Window window, view3d::
 	CatchAndReport(View3D_NSSPointToWSRay, window,);
 }
 
+// Return a point and direction in world space corresponding to a 'window' screen space point.
+// 'screen' should be in pixels
+VIEW3D_API void __stdcall View3D_SSPointToWSRay(view3d::Window window, view3d::Vec2 screen, view3d::Vec4& ws_point, view3d::Vec4& ws_direction)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		auto nss_pt = window->m_scene.m_viewport.SSPointToNSSPoint(To<v2>(screen));
+		auto z = static_cast<float>(window->m_scene.m_cam.FocusDist());
+		auto [pt, dir] = window->m_scene.m_cam.NSSPointToWSRay(v4{ nss_pt, z, 1 });
+		ws_point = To<view3d::Vec4>(pt);
+		ws_direction = To<view3d::Vec4>(dir);
+	}
+	CatchAndReport(View3D_SSPointToWSRay, window,);
+}
+
 // Lights *********************************
 
 // Get/Set the properties of the global light
