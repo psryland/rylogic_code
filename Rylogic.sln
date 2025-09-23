@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_SolutionItems", "_Solution
 		include\pr\rylogic.natstepfilter = include\pr\rylogic.natstepfilter
 		include\pr\rylogic.natvis = include\pr\rylogic.natvis
 		Rylogic.nuspec = Rylogic.nuspec
+		shadertoolsconfig.json = shadertoolsconfig.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Rylogic", "Rylogic", "{F3863465-2D47-4787-8EEA-8A2BAEF62936}"

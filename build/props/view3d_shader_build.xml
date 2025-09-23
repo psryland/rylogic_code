@@ -4,13 +4,12 @@
 	<Rule
 		Name="View3dShaderBuild"
 		PageTemplate="tool"
-		DisplayName="View3d Shader"
+		DisplayName="View3d Shaders"
 		SwitchPrefix=""
 		Order="300"
 	>
 		<Rule.Categories>
 			<Category Name="General" DisplayName="General" />
-			<Category Name="Include" DisplayName="Include Directories" />
 		</Rule.Categories>
 
 		<Rule.DataSource>
@@ -22,10 +21,10 @@
 			Name="AdditionalIncludeDirectories" 
 			DisplayName="Additional Include Directories" 
 			Description="Specifies one or more directories to add to the include path for HLSL compilation."
-			Category="Include"
+			Category="General"
 			Separator=";"
 			Switch="I" />
-
+		<!--
 		<StringProperty 
 			Name="ShaderModel" 
 			DisplayName="Shader Model" 
@@ -47,6 +46,7 @@
 			<EnumValue Name="Domain" DisplayName="Domain Shader" />
 			<EnumValue Name="Compute" DisplayName="Compute Shader" />
 		</EnumProperty>
+		-->
 	</Rule>
 
 	<ItemType

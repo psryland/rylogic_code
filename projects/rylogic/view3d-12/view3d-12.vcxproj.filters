@@ -109,9 +109,6 @@
     <Filter Include="src\compute\radix_sort">
       <UniqueIdentifier>{aabdb3b0-f4c1-4521-a660-578985c964fc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\compute\common">
-      <UniqueIdentifier>{6297f250-a5a9-4cbc-af95-591843cdd807}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\compute\fluid_simulation">
       <UniqueIdentifier>{177ba44e-8001-4c51-a5bc-0cc299bbec5f}</UniqueIdentifier>
     </Filter>
@@ -813,11 +810,18 @@
     </View3dShaderBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli">
-      <Filter>src\compute\common</Filter>
+    <None Include="cpp.hint" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
+      <Filter>pr\hlsl</Filter>
     </None>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli">
-      <Filter>src\compute\common</Filter>
+    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
+      <Filter>pr\hlsl</Filter>
     </None>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli">
       <Filter>src\compute\spatial_partition</Filter>
@@ -834,21 +838,11 @@
     <None Include="src\shaders\hlsl\skinned\skinned.hlsli">
       <Filter>src\shaders\hlsl\skinned</Filter>
     </None>
-    <None Include="cpp.hint" />
     <None Include="src\shaders\hlsl\utility\tri_table.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
     <None Include="src\shaders\hlsl\ray_cast\ray_cast_cbuf.hlsli">
       <Filter>src\shaders\hlsl\ray_cast</Filter>
-    </None>
-    <None Include="..\..\..\include\pr\hlsl\core.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <None Include="..\..\..\include\pr\hlsl\geometry.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <None Include="..\..\..\include\pr\hlsl\vector.hlsli">
-      <Filter>pr\hlsl</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -866,11 +860,11 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc">
-      <Filter>src\compute</Filter>
-    </ResourceCompile>
+    <CSharpScript Include="auto_gen.csx" />
   </ItemGroup>
   <ItemGroup>
-    <CSharpScript Include="auto_gen.csx" />
+    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_shaders.rc">
+      <Filter>src\compute</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

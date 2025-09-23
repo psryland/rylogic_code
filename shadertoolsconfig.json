@@ -1,0 +1,6 @@
+{
+	"hlsl.additionalIncludeDirectories": [
+		"E:/Rylogic/Code/include",
+		"E:/Rylogic/Code/projects/rylogic"
+	]
+}

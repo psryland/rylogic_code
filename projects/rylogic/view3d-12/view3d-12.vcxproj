@@ -282,8 +282,8 @@
       <ShaderModel>6.6</ShaderModel>
       <AdditionalIncludeDirectories>
         ;$(ProjectDir)
-        ;$(RylogicRoot)include
-        ;$(RylogicRoot)projects\rylogic
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </View3dShaderBuild>
@@ -293,13 +293,13 @@
       <ShaderModel>6.6</ShaderModel>
       <AdditionalIncludeDirectories>
         ;$(ProjectDir)
-        ;$(RylogicRoot)include
-        ;$(RylogicRoot)projects\rylogic
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </FxCompile>
     
-    <!-- HLSL Compiler settings for IntelliSense -->
+    <!-- HLSL Compiler settings for IntelliSense
     <HLSLCompiler>
       <ShaderModel>6.6</ShaderModel>
       <AdditionalIncludeDirectories>
@@ -310,6 +310,7 @@
       </AdditionalIncludeDirectories>
       <EnableDebuggingInformation>true</EnableDebuggingInformation>
     </HLSLCompiler>
+    -->
 
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -342,8 +343,6 @@
     <View3dShaderBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli" />
-    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli" />
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
