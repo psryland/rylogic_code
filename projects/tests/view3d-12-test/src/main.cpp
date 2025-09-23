@@ -93,7 +93,8 @@ struct Main :Form
 			std::uniform_real_distribution dist(-10.0f, 10.0f);
 
 			m_obj0 = View3D_ObjectCreateLdrA(
-				"*Box nice_box FF00FF00 { *Data {1 2 3} }"
+				"*Triangle nice_tri FF00FF00 { *Data { -1 -1 0  +1 -1 0  0 +1 0} }"
+				//"*Box nice_box FF00FF00 { *Data {1 2 3} }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } *Animation{*Style{PingPong}} }"
@@ -123,15 +124,17 @@ struct Main :Form
 
 			// Load script
 			//m_file_ctx = View3D_LoadScriptFromFile("E:/Dump/Splines.Scene.bdr", nullptr, nullptr, {});
+
+			View3D_ObjectFlagsSet(m_obj1, view3d::ELdrFlags::HitTestExclude, true, nullptr);
 		}
 
 		// Add objects to the scene
 		{
-			//View3D_WindowAddObject(m_win3d, m_obj0);
-			//View3D_WindowAddObject(m_win3d, m_obj1);
+			View3D_WindowAddObject(m_win3d, m_obj0);
+			View3D_WindowAddObject(m_win3d, m_obj1);
 			//View3D_WindowAddObjectsById(m_win3d, { &m_file_ctx, [](void* ctx, GUID const& id) { return *type_ptr<GUID>(ctx) == id; } });
 			//View3D_DemoSceneCreateText(m_win3d);
-			View3D_DemoSceneCreateBinary(m_win3d);
+			//View3D_DemoSceneCreateBinary(m_win3d);
 		}
 
 		// EnvMap
@@ -226,16 +229,7 @@ struct Main :Form
 		Form::OnMouseButton(args);
 		if (AllSet(args.m_key_state, EMouseKey::Shift) && AllSet(args.m_button, EMouseKey::Left))
 		{
-			auto screen_px = args.point_px();
-			auto screen = view3d::Vec2{ static_cast<float>(screen_px.x), static_cast<float>(screen_px.y) };
-			auto c2w = View3D_CameraToWorldGet(m_win3d);
-			view3d::Vec4 ws_pos, ws_dir; View3D_SSPointToWSRay(m_win3d, screen, ws_pos, ws_dir);
-			view3d::HitTestRay rays[2] = {
-				{ws_pos, ws_dir},
-				{c2w.w, c2w.z},
-			};
-			view3d::HitTestResult results[2] = {};
-			View3D_WindowHitTestByCtx(m_win3d, &rays[0], &results[0], _countof(rays), 0.001f, view3d::EHitTestFlags::Faces, {});
+			HitTest(args.point_px());
 			args.m_handled = true;
 		}
 		if (!args.m_handled)
@@ -313,7 +307,25 @@ struct Main :Form
 			}
 		}
 	}
+	void HitTest(gui::Point screen_px)
+	{
+		auto screen = view3d::Vec2{ static_cast<float>(screen_px.x), static_cast<float>(screen_px.y) };
+		auto c2w = View3D_CameraToWorldGet(m_win3d);
+		view3d::Vec4 ws_pos, ws_dir; View3D_SSPointToWSRay(m_win3d, screen, ws_pos, ws_dir);
+		view3d::HitTestRay rays[1] = {
+			{ws_pos, ws_dir},
+		//	{c2w.w, {-c2w.z.x, -c2w.z.y, -c2w.z.z, 0}},
+		};
+		view3d::HitTestResult results[2] = {};
+		View3D_WindowHitTestByCtx(m_win3d, &rays[0], &results[0], _countof(rays), view3d::ESnapMode::Faces, 0.001f, {});
 
+		for (auto const& hit : results)
+		{
+			if (!hit.m_is_hit) continue;
+			auto o2w = m4x4::Translation(To<v4>(hit.m_ws_intercept));
+			View3D_ObjectO2WSet(m_obj1, To<view3d::Mat4x4>(o2w), nullptr);
+		}
+	}
 };
 
 // Entry point

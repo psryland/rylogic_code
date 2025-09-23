@@ -1,10 +1,11 @@
 ﻿//***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#ifndef PR_RDR_SHADER_SKINNED_HLSLI
-#define PR_RDR_SHADER_SKINNED_HLSLI
-#include "../types.hlsli"
+#ifndef PR_VIEW3D_SHADER_SKINNED_HLSLI
+#define PR_VIEW3D_SHADER_SKINNED_HLSLI
+
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Skin 'vert'. 'vert' is a vertex in model space when in the rest pose
 float4 SkinVertex(in uniform StructuredBuffer<Mat4x4> pose, in uniform Skinfluence influence, in float4 os_vert)

@@ -1,14 +1,13 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#include "../types.hlsli"
-#include "../forward/forward_cbuf.hlsli"
+
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 
 // Converts point geometry into billboard quads
-#ifdef PR_RDR_GSHADER_point_sprites
-[maxvertexcount(4)]
-void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
+void GSPointSprites(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 {
 	PSIn Out;
 
@@ -27,28 +26,28 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (-radx - rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
-		Out.tex0.xy = float2(0,0);
+		Out.tex0.xy = float2(0, 0);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (+radx - rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
-		Out.tex0.xy = float2(1,0);
+		Out.tex0.xy = float2(1, 0);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (-radx + rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
-		Out.tex0.xy = float2(0,1);
+		Out.tex0.xy = float2(0, 1);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (+radx + rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
-		Out.tex0.xy = float2(1,1);
+		Out.tex0.xy = float2(1, 1);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 	}
@@ -60,28 +59,35 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 
 		Out = In[0];
 		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx - rady) * In[0].ss_vert.w;
-		Out.tex0.xy = float2(0,0);
+		Out.tex0.xy = float2(0, 0);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 
 		Out = In[0];
 		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx - rady) * In[0].ss_vert.w;
-		Out.tex0.xy = float2(1,0);
+		Out.tex0.xy = float2(1, 0);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 
 		Out = In[0];
 		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx + rady) * In[0].ss_vert.w;
-		Out.tex0.xy = float2(0,1);
+		Out.tex0.xy = float2(0, 1);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 
 		Out = In[0];
 		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx + rady) * In[0].ss_vert.w;
-		Out.tex0.xy = float2(1,1);
+		Out.tex0.xy = float2(1, 1);
 		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 	}
 	OutStream.RestartStrip();
+}
+
+#ifdef PR_RDR_GSHADER_point_sprites
+[maxvertexcount(4)]
+void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
+{
+	GSPointSprites(In, OutStream);
 }
 #endif

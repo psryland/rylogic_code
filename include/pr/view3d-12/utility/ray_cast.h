@@ -7,16 +7,12 @@
 
 namespace pr::rdr12
 {
-	// Flags controlling the behaviour of hit testing
-	enum class EHitTestFlags :int
-	{
-		Faces = 1 << 0,
-		Edges = 1 << 1,
-		Verts = 1 << 2,
-		_flags_enum = 0,
-	};
+	// Notes:
+	//  - The geometry shader used for hit testing (face, edge, or vert) depends on the model topology.
+	//  - ESnapMode controls what sort of snapping is allowed.
+	//  - ESnapType is an output value that indicates how a hit result was snapped.
 
-	// Snap flags (Keep in sync with 'SnapMode_' in 'ray_cast_cbuf.hlsli')
+	// Point snapping mode. How rays should snap to nearby features (Keep in sync with 'SnapMode_' in 'ray_cast_cbuf.hlsli')
 	enum class ESnapMode :int
 	{
 		NoSnap = 0,
@@ -27,9 +23,9 @@ namespace pr::rdr12
 	};
 
 	// Snap types (in priority order) (Keep in sync with 'SnapType_' in 'ray_cast_cbuf.hlsli')
-	enum class ESnapType :int
+	enum class ESnapType :short
 	{
-		NoSnap = 0,
+		None = 0,
 		Vert = 1,
 		EdgeMiddle = 2,
 		FaceCentre = 3,
@@ -55,6 +51,7 @@ namespace pr::rdr12
 		float               m_distance;      // The distance from the ray origin to the intercept
 		int                 m_ray_index;     // The index of the input ray
 		ESnapType           m_snap_type;     // How the point was snapped (if at all)
+		short               m_is_hit;        // True if this was a hit
 	};
 
 	// A buffer of hit test results

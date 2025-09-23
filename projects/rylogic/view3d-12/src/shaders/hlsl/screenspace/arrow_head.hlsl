@@ -2,14 +2,12 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#include "../types.hlsli"
-#include "../forward/forward_cbuf.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 
 // Converts point geometry into arrow heads
 // Uses ss_vert for centre position, and ws_norm as the arrow forward direction
-#ifdef PR_RDR_GSHADER_arrow_head
-[maxvertexcount(3)]
-void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
+void GSArrowHead(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 {
 	PSIn Out;
 
@@ -23,10 +21,20 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 	float2 perp = float2(-dir.y, dir.x) / m_screen_dim.xy;
 
 	Out = In[0];
-	Out.ws_norm = float4(0,0,0,0); // null out the normal
-	Out.ss_vert.xy = In[0].ss_vert.xy + ( 1.0f * tang              ) * width * In[0].ss_vert.w;   OutStream.Append(Out);
-	Out.ss_vert.xy = In[0].ss_vert.xy + (-0.6f * tang + 0.8f * perp) * width * In[0].ss_vert.w;   OutStream.Append(Out);
-	Out.ss_vert.xy = In[0].ss_vert.xy + (-0.6f * tang - 0.8f * perp) * width * In[0].ss_vert.w;   OutStream.Append(Out);
+	Out.ws_norm = float4(0, 0, 0, 0); // null out the normal
+	Out.ss_vert.xy = In[0].ss_vert.xy + (1.0f * tang) * width * In[0].ss_vert.w;
+	OutStream.Append(Out);
+	Out.ss_vert.xy = In[0].ss_vert.xy + (-0.6f * tang + 0.8f * perp) * width * In[0].ss_vert.w;
+	OutStream.Append(Out);
+	Out.ss_vert.xy = In[0].ss_vert.xy + (-0.6f * tang - 0.8f * perp) * width * In[0].ss_vert.w;
+	OutStream.Append(Out);
 	OutStream.RestartStrip();
+}
+
+#ifdef PR_RDR_GSHADER_arrow_head
+[maxvertexcount(3)]
+void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
+{
+	GSArrowHead(In, OutStream);
 }
 #endif

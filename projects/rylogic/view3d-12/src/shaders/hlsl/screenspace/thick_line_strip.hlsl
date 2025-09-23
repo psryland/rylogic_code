@@ -1,15 +1,14 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#include "../types.hlsli"
-#include "../common/vector.hlsli"
-#include "../forward/forward_cbuf.hlsli"
+
+#include "pr/hlsl/vector.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 
 // Converts line geometry into tristrip
-#ifdef PR_RDR_GSHADER_thick_line_strip
-[maxvertexcount(16)]
-void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
+void GSThickLineStrip(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
 {
 	// Notes:
 	//  - To use the thick linestrip shader, you need to add an extra vert/index to the start
@@ -30,12 +29,12 @@ void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
 	if (p1.z < 0.0f)
 	{
 		float t = -p1.z / (p2.z - p1.z);
-		In[1].ss_vert = p1 = lerp(p1,p2,t);
+		In[1].ss_vert = p1 = lerp(p1, p2, t);
 	}
 	if (p2.z < 0.0f)
 	{
 		float t = -p2.z / (p1.z - p2.z);
-		In[2].ss_vert = p2 = lerp(p2,p1,t);
+		In[2].ss_vert = p2 = lerp(p2, p1, t);
 	}
 
 	// Normalise the screen space points
@@ -68,8 +67,8 @@ void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
 	line_end = line_end || bi_lensq2 < 0.05f;
 
 	// {0, cos(tau/16), cos(tau*2/16), cos(tau*3/16)};
-	const float X[5] = {1, 0.92387953251, 0.70710678118, 0.38268343236, 0};
-	const float Y[5] = {0, 0.38268343236, 0.70710678118, 0.92387953251, 1};
+	const float X[5] = { 1, 0.92387953251, 0.70710678118, 0.38268343236, 0 };
+	const float Y[5] = { 0, 0.38268343236, 0.70710678118, 0.92387953251, 1 };
 
 	// The start of the line
 	Out = In[1];
@@ -88,31 +87,44 @@ void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
 	}
 	else
 	{
-		float2 a = bisector1 / bi_scale1;       // The concave vertex
-		float2 b = perp1;                       // The line end vertex
+		float2 a = bisector1 / bi_scale1; // The concave vertex
+		float2 b = perp1; // The line end vertex
 		float2 c = bisector1 / sqrt(bi_lensq1); // The convex vectex
 		float2 d = normalize(b + c);
 
-		if (dot(dir0,dir1) > 0.9f) // straight
+		if (dot(dir0, dir1) > 0.9f) // straight
 		{
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * c * In[1].ss_vert.w;  OutStream.Append(Out); OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * c * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;
+			OutStream.Append(Out);
 		}
 		else if (dot(dir0, perp1) < 0) // turning left
 		{
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * c * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * d * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * b * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * c * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * d * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * b * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * a * In[1].ss_vert.w;
+			OutStream.Append(Out);
 		}
 		else // turning right
 		{
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * c * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * a * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * d * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy - width * a * In[1].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[1].ss_vert.xy + width * b * In[1].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * c * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * a * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * d * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy - width * a * In[1].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[1].ss_vert.xy + width * b * In[1].ss_vert.w;
+			OutStream.Append(Out);
 		}
 	}
 
@@ -133,34 +145,53 @@ void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
 	}
 	else
 	{
-		float2 a = bisector2 / bi_scale2;       // The concave vertex
-		float2 b = perp1;                       // The line end vertex
+		float2 a = bisector2 / bi_scale2; // The concave vertex
+		float2 b = perp1; // The line end vertex
 		float2 c = bisector2 / sqrt(bi_lensq2); // The convex vectex
 		float2 d = normalize(b + c);
 
-		if (dot(dir1,dir2) > 0.9f) // straight
+		if (dot(dir1, dir2) > 0.9f) // straight
 		{
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * c * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * c * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;
+			OutStream.Append(Out);
 		}
 		else if (dot(dir2, perp1) > 0) // turning left
 		{
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * b * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * d * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * c * In[2].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * b * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * d * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * a * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * c * In[2].ss_vert.w;
+			OutStream.Append(Out);
 		}
 		else // turning right
 		{
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * a * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * b * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy - width * a * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * d * In[2].ss_vert.w;  OutStream.Append(Out);
-			Out.ss_vert.xy = In[2].ss_vert.xy + width * c * In[2].ss_vert.w;  OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * a * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * b * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy - width * a * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * d * In[2].ss_vert.w;
+			OutStream.Append(Out);
+			Out.ss_vert.xy = In[2].ss_vert.xy + width * c * In[2].ss_vert.w;
+			OutStream.Append(Out);
 		}
 	}
 
 	OutStream.RestartStrip();
+}
+
+#ifdef PR_RDR_GSHADER_thick_line_strip
+[maxvertexcount(16)]
+void main(lineadj PSIn In[4], inout TriangleStream<PSIn> OutStream)
+{
+	GSThickLineStrip(In, OutStream);
 }
 #endif

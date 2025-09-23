@@ -2,11 +2,11 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "../common/geometry.hlsli"
-#include "../common/utility.hlsli"
-#include "../particle_collision/particle.hlsli"
-#include "../particle_collision/collision.hlsli"
-#include "../spatial_partition/spatial_partition.hlsli"
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/geometry.hlsli"
+#include "pr/view3d-12/compute/particle_collision/particle.hlsli"
+#include "pr/view3d-12/compute/particle_collision/collision.hlsli"
+#include "pr/view3d-12/compute/spatial_partition/spatial_partition.hlsli"
 
 #ifndef THREAD_GROUP_SIZE
 #define THREAD_GROUP_SIZE 32

@@ -1,14 +1,13 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
+#ifndef PR_VIEW3D_SHADER_SHADOW_CAST_HLSL
+#define PR_VIEW3D_SHADER_SHADOW_CAST_HLSL
 
-// Helper methods for casting shadows
-#ifndef PR_RDR_SHADER_SHADOW_CAST_HLSL
-#define PR_RDR_SHADER_SHADOW_CAST_HLSL
-
-#include "../types.hlsli"
-#include "../common/functions.hlsli"
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/camera.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Returns a value between [0,1] where 0 means fully in shadow, 1 means not in shadow
 float LightVisibility(uniform Shadow shadow, float4 ws_pos)

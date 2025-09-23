@@ -1,7 +1,8 @@
 // Spatial partition
-#ifndef SPATIAL_PARTITION_HLSLI
-#define SPATIAL_PARTITION_HLSLI
-#include "../common/utility.hlsli"
+#ifndef PR_COMPUTE_SPATIAL_PARTITION_HLSLI
+#define PR_COMPUTE_SPATIAL_PARTITION_HLSLI
+
+#include "pr/hlsl/core.hlsli"
 
 // Convert a floating point position into a grid cell coordinate
 inline int3 GridCell(float4 position, uniform float grid_scale)

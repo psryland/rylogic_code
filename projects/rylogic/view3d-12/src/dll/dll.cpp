@@ -1034,14 +1034,14 @@ VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(view3d::Window window, BO
 // 'flags' - what can be hit.
 // 'objects' - An array of objects to hit test
 // 'object_count' - The length of the 'objects' array.
-VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, float snap_distance, view3d::EHitTestFlags flags, view3d::Object const* objects, int object_count)
+VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::ESnapMode snap_mode, float snap_distance, view3d::Object const* objects, int object_count)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, objects, object_count);
+		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_mode, snap_distance, objects, object_count);
 	}
 	CatchAndReport(View3D_WindowHitTestObjects, window, );
 }
@@ -1056,7 +1056,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, vie
 // 'include_count' - the number of context ids that should be included
 // 'exclude_count' - the number of context ids that should be excluded
 // 'include_count+exclude_count' = the length of the 'context_ids' array. If 0, then all context ids are included for hit testing
-VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, float snap_distance, view3d::EHitTestFlags flags, view3d::GuidPredCB pred)
+VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred)
 {
 	try
 	{
@@ -1065,7 +1065,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3
 		DllLockGuard;
 		auto ray_span = std::span<view3d::HitTestRay const>{ rays, s_cast<size_t>(ray_count) };
 		auto hit_results = std::span<view3d::HitTestResult>{ hits, s_cast<size_t>(ray_count) };
-		window->HitTest(ray_span, hit_results, snap_distance, flags, pred, 0);
+		window->HitTest(ray_span, hit_results, snap_mode, snap_distance, pred, 0);
 	}
 	CatchAndReport(View3D_WindowHitTestByCtx, window, );
 }

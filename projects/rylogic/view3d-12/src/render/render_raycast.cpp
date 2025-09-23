@@ -14,7 +14,13 @@
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/utility/pix.h"
 #include "view3d-12/src/shaders/common.h"
+
+#define PR_RDR12_DEBUG_RAYCAST 0
+#if PR_RDR12_DEBUG_RAYCAST
+#pragma message(PR_LINK "warning : **************************************************** PR_RDR12_DEBUG_RAYCAST defined")
+#endif
 
 namespace pr::rdr12
 {
@@ -34,13 +40,13 @@ namespace pr::rdr12
 	constexpr int MaxRays = shaders::ray_cast::MaxRays;
 	constexpr int MaxIntercepts = shaders::ray_cast::MaxIntercepts;
 	constexpr int SOBufferCount = MaxRays * MaxIntercepts + 1; // +1 for space to store the buffer size counter
+	static_assert(sizeof(Intercept) >= sizeof(uint64_t));
 
 	RenderRayCast::RenderRayCast(Scene& scene, bool continuous)
 		: RenderStep(Id, scene)
 		, m_rays()
 		, m_snap_distance(1.0f)
-		, m_snap_mode(ESnapMode::NoSnap)
-		, m_flags(EHitTestFlags::Verts | EHitTestFlags::Edges | EHitTestFlags::Faces)
+		, m_snap_mode(ESnapMode::Vert | ESnapMode::Edge | ESnapMode::Face)
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
 		, m_gsync(scene.d3d())
@@ -55,6 +61,7 @@ namespace pr::rdr12
 		static StreamOutputDesc so_desc = StreamOutputDesc{}
 			.add_buffer(sizeof(Intercept))
 			.add_entry({ 0, "WSIntercept", 0, 0, 4, 0 })
+			.add_entry({ 0, "WSNormal", 0, 0, 4, 0 })
 			.add_entry({ 0, "SnapType", 0, 0, 1, 0 })
 			.add_entry({ 0, "RayIndex", 0, 0, 1, 0 })
 			.add_entry({ 0, "InstPtr", 0, 0, 2, 0 })
@@ -101,12 +108,12 @@ namespace pr::rdr12
 	}
 
 	// Set the rays to cast.
-	void RenderRayCast::SetRays(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter include)
+	void RenderRayCast::SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include)
 	{
 		// Save the rays so we can match ray indices to the actual ray.
 		m_rays = rays.subspan(0, std::min<size_t>(rays.size(), MaxRays));
+		m_snap_mode = snap_mode;
 		m_snap_distance = snap_distance;
-		m_flags = flags;
 		m_include = include;
 	}
 
@@ -142,6 +149,10 @@ namespace pr::rdr12
 	// Perform the ray cast and read the results
 	std::future<void> RenderRayCast::ExecuteImmediate(RayCastResultsOut cb)
 	{
+		#if PR_RDR12_DEBUG_RAYCAST
+		pix::BeginCapture(L"E:/Dump/LDraw/HitTest.wpix");
+		#endif
+
 		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
 		auto output = ExecuteCore();
 		m_cmd_list.Close();
@@ -164,7 +175,8 @@ namespace pr::rdr12
 			m_gsync.Wait(sync_point);
 
 			// Read the values out of the buffer
-			auto count = *type_ptr<uint64_t>(output.ptr<std::byte>((SOBufferCount - 1LL) * sizeof(Intercept)));
+			auto* buffer_write_size = output.ptr<std::byte>((SOBufferCount - 1LL) * sizeof(Intercept));
+			auto count = *type_ptr<uint64_t>(buffer_write_size) / sizeof(Intercept);
 			auto intercepts = output.span<Intercept>(0, count);
 
 			// Returns the squared distance from the ray
@@ -243,15 +255,20 @@ namespace pr::rdr12
 					.m_distance = intercept.ws_intercept.w,
 					.m_ray_index = intercept.ray_index,
 					.m_snap_type = static_cast<ESnapType>(intercept.snap_type),
+					.m_is_hit = true,
 				};
 				if (!cb(result))
 				{
-					return;
+					break;
 				}
 
 				// Skip duplicates
 				for (++i; i != iend && Eql(intercepts[i], intercept); ++i) {}
 			}
+
+			#if PR_RDR12_DEBUG_RAYCAST
+			pix::EndCapture();
+			#endif
 		});
 	}
 
@@ -263,6 +280,7 @@ namespace pr::rdr12
 		// Add the command lists we're using to the frame.
 		frame.m_main.push_back(m_cmd_list);
 
+		// Run the ray cast commands
 		m_output = ExecuteCore();
 
 		// Commands complete
@@ -286,11 +304,10 @@ namespace pr::rdr12
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Set stream output targets
-		constexpr size_t intercept_data_size = MaxRays * MaxIntercepts * sizeof(Intercept);
 		D3D12_STREAM_OUTPUT_BUFFER_VIEW so_view = {
 			.BufferLocation = m_out->GetGPUVirtualAddress(),
-			.SizeInBytes = intercept_data_size,
-			.BufferFilledSizeLocation = m_out->GetGPUVirtualAddress() + intercept_data_size, // GPU accessible memory that the GPU updates with how much data it's written.
+			.SizeInBytes = (SOBufferCount - 1ULL) * sizeof(Intercept),
+			.BufferFilledSizeLocation = m_out->GetGPUVirtualAddress() + (SOBufferCount - 1ULL) * sizeof(Intercept), // GPU accessible memory that the GPU updates with how much data it's written.
 		};
 		m_cmd_list.SOSetTargets(0, { &so_view, 1 });
 

@@ -191,7 +191,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				return null;
 
 			var ray = cam.RaySS(scene_point);
-			var results = Chart.Scene.Window.HitTest(ray, 0f, View3d.EHitTestFlags.Faces, new[] { Gfx });
+			var results = Chart.Scene.Window.HitTest(ray, 0f, View3d.ESnapMode.Faces, new[] { Gfx });
 			if (!results.IsHit)
 				return null;
 

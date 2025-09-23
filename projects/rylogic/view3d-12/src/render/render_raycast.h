@@ -18,7 +18,6 @@ namespace pr::rdr12
 		pr::vector<HitTestRay> m_rays;          // Rays to cast
 		float                  m_snap_distance; // Snap distance (in world space units)
 		ESnapMode              m_snap_mode;     // Snap behaviour
-		EHitTestFlags          m_flags;         // Types of primitives to hit
 		RayCastFilter          m_include;       // A filter for instances to include for hit testing
 		GfxCmdList             m_cmd_list;      // Command buffer
 		GpuSync                m_gsync;         //
@@ -40,7 +39,7 @@ namespace pr::rdr12
 		// 'snap_distance' is the distance (in world space) for point snapping.
 		// 'flags' controls what primitives snapping applies to.
 		// 'filter' filters instances added to the render step (i.e. decides what's hit-able)
-		void SetRays(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter include);
+		void SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include);
 
 		// Perform the ray cast and read the results
 		std::future<void> ExecuteImmediate(RayCastResultsOut out);

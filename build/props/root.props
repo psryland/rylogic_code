@@ -91,6 +91,16 @@
 			<OptimizeReferences>true</OptimizeReferences>
 		</Link>
 
+		<!-- Resource compiler defaults -->
+		<ResourceCompile>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;$(RylogicRoot)projects\rylogic
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ResourceCompile>
+
 		<!-- Project defaults -->
 		<ProjectReference>
 			<LinkLibraryDependencies>false</LinkLibraryDependencies>

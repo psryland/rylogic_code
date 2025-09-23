@@ -3,10 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 // Shader for forward rendering
-#include "../types.hlsli"
-
-// Constant buffers
-#include "forward_cbuf.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 
 // Texture2D /w sampler
 Texture2D<float4> m_texture0 :reg(t0, 0);
@@ -28,10 +26,10 @@ SamplerState      m_proj_sampler[MaxProjectedTextures] :reg(s3, 0);
 StructuredBuffer<Mat4x4> m_pose : reg(t4, 0);
 StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
 
-#include "../lighting/phong_lighting.hlsli"
-#include "../shadow/shadow_cast.hlsli"
-#include "../skinned/skinned.hlsli"
-#include "../utility/env_map.hlsli"
+#include "view3d-12/src/shaders/hlsl/lighting/phong_lighting.hlsli"
+#include "view3d-12/src/shaders/hlsl/shadow/shadow_cast.hlsli"
+#include "view3d-12/src/shaders/hlsl/skinned/skinned.hlsli"
+#include "view3d-12/src/shaders/hlsl/utility/env_map.hlsli"
 
 // PS output format
 struct PSOut
@@ -130,34 +128,14 @@ PSOut PSDefault(PSIn In)
 	return Out;
 }
 
-// Main vertex shader
-#ifdef PR_RDR_VSHADER_forward
-PSIn main(VSIn In)
-{
-	PSIn Out = VSDefault(In);
-	return Out;
-}
-#endif
-
-// Main pixel shader
-#ifdef PR_RDR_PSHADER_forward
-PSOut main(PSIn In)
-{
-	PSOut Out = PSDefault(In);
-	return Out;
-}
-#endif
-
-// Main pixel shader
-#ifdef PR_RDR_PSHADER_forward_radial_fade
-PSOut main(PSIn In)
+PSOut PSRadialFade(PSIn In)
 {
 	PSOut Out = PSDefault(In);
 
 	// Fade pixels radially from 'centre'
-	float4 centre = select(m_fade_centre != float4(0,0,0,0), m_fade_centre, m_cam.m_c2w[3]);
+	float4 centre = select(m_fade_centre != float4(0, 0, 0, 0), m_fade_centre, m_cam.m_c2w[3]);
 	float4 radial = In.ws_vert - centre;
-	float radius = 
+	float radius =
 		m_fade_type == 0 ? length(radial) : // Spherical
 		m_fade_type == 1 ? length(radial - dot(radial, m_cam.m_c2w[1]) * m_cam.m_c2w[1]) : // Cylindrical
 		0;
@@ -166,5 +144,28 @@ PSOut main(PSIn In)
 	float frac = smoothstep(m_fade_radius[0], m_fade_radius[1], radius);
 	Out.diff.a = lerp(Out.diff.a, 0, frac);
 	return Out;
+}
+
+// Main vertex shader
+#ifdef PR_RDR_VSHADER_forward
+PSIn main(VSIn In)
+{
+	return VSDefault(In);
+}
+#endif
+
+// Main pixel shader
+#ifdef PR_RDR_PSHADER_forward
+PSOut main(PSIn In)
+{
+	return PSDefault(In);
+}
+#endif
+
+// Main pixel shader
+#ifdef PR_RDR_PSHADER_forward_radial_fade
+PSOut main(PSIn In)
+{
+	return PSRadialFade(In);
 }
 #endif

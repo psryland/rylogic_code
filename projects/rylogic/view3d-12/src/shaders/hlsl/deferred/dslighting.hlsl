@@ -1,11 +1,11 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 
-#include "gbuffer_cbuf.hlsli"
-#include "gbuffer.hlsli"
-#include "..\lighting\phong_lighting.hlsli"
+#include "view3d-12/src/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
+#include "view3d-12/src/shaders/hlsl/deferred/gbuffer.hlsli"
+#include "view3d-12/src/shaders/hlsl/lighting/phong_lighting.hlsli"
 
 // PS input format
 struct PSIn_DSLighting
@@ -21,21 +21,16 @@ struct PSOut
 	float4 diff :SV_Target0;
 };
 
-// Vertex shader
-#ifdef PR_RDR_VSHADER_dslighting
-PSIn_DSLighting main(VSIn In)
+PSIn_DSLighting VSDefault(VSIn In)
 {
 	PSIn_DSLighting Out;
-	Out.cs_vdir = m_frustum[(int)In.vert.x];
+	Out.cs_vdir = m_frustum[(int) In.vert.x];
 	Out.ss_vert = mul(Out.cs_vdir, m_cam.m_c2s);
 	Out.tex0 = In.tex0;
 	return Out;
 }
-#endif
 
-// Pixel shader
-#ifdef PR_RDR_PSHADER_dslighting
-PSOut main(PSIn_DSLighting In)
+PSOut PSDefault(PSIn_DSLighting In)
 {
 	PSOut Out;
 
@@ -62,5 +57,20 @@ PSOut main(PSIn_DSLighting In)
 	//Out.diff = float4(m_tex_normals.Sample(m_point_sampler, In.tex0), 0, 1);
 	
 	return Out;
+}
+
+// Vertex shader
+#ifdef PR_RDR_VSHADER_dslighting
+PSIn_DSLighting main(VSIn In)
+{
+	return VSDefault(In);
+}
+#endif
+
+// Pixel shader
+#ifdef PR_RDR_PSHADER_dslighting
+PSOut main(PSIn_DSLighting In)
+{
+	return PSDefault(In);
 }
 #endif

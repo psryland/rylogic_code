@@ -10,11 +10,43 @@
 	>
 		<Rule.Categories>
 			<Category Name="General" DisplayName="General" />
+			<Category Name="Include" DisplayName="Include Directories" />
 		</Rule.Categories>
 
 		<Rule.DataSource>
 			<DataSource Persistence="ProjectFile" ItemType="View3dShaderBuild" Label="" HasConfigurationCondition="true" />
 		</Rule.DataSource>
+
+		<!-- Include Directory Properties -->
+		<StringListProperty 
+			Name="AdditionalIncludeDirectories" 
+			DisplayName="Additional Include Directories" 
+			Description="Specifies one or more directories to add to the include path for HLSL compilation."
+			Category="Include"
+			Separator=";"
+			Switch="I" />
+
+		<StringProperty 
+			Name="ShaderModel" 
+			DisplayName="Shader Model" 
+			Description="Specifies the shader model version (e.g., 6.6)"
+			Category="General"
+			Default="6.6" />
+
+		<EnumProperty 
+			Name="ShaderType" 
+			DisplayName="Shader Type" 
+			Description="Specifies the type of shader being compiled"
+			Category="General"
+			Default="Effect">
+			<EnumValue Name="Effect" DisplayName="Effect" />
+			<EnumValue Name="Vertex" DisplayName="Vertex Shader" />
+			<EnumValue Name="Pixel" DisplayName="Pixel Shader" />
+			<EnumValue Name="Geometry" DisplayName="Geometry Shader" />
+			<EnumValue Name="Hull" DisplayName="Hull Shader" />
+			<EnumValue Name="Domain" DisplayName="Domain Shader" />
+			<EnumValue Name="Compute" DisplayName="Compute Shader" />
+		</EnumProperty>
 	</Rule>
 
 	<ItemType

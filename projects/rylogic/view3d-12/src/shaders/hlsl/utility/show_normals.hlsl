@@ -1,18 +1,16 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#include "../types.hlsli"
-#include "../forward/forward_cbuf.hlsli"
 
-// Converts point geometry into normal vectors
-#ifdef PR_RDR_GSHADER_show_normals
-[maxvertexcount(2)]
-void main(point PSIn In[1], inout LineStream<PSIn> OutStream)
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
+
+void GSShowNormals(point PSIn In[1], inout LineStream<PSIn> OutStream)
 {
 	PSIn Out = In[0];
 	Out.diff = m_colour;
-	Out.ws_norm = float4(0,0,0,0);
+	Out.ws_norm = float4(0, 0, 0, 0);
 	
 	Out.ws_vert = In[0].ws_vert;
 	Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
@@ -23,5 +21,13 @@ void main(point PSIn In[1], inout LineStream<PSIn> OutStream)
 	OutStream.Append(Out);
 
 	OutStream.RestartStrip();
+}
+
+// Converts point geometry into normal vectors
+#ifdef PR_RDR_GSHADER_show_normals
+[maxvertexcount(2)]
+void main(point PSIn In[1], inout LineStream<PSIn> OutStream)
+{
+	GSShowNormals(In, OutStream);
 }
 #endif

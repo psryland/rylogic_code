@@ -37,9 +37,6 @@
     <Filter Include="src\shaders\hlsl\screenspace">
       <UniqueIdentifier>{b63d2c91-23d9-4279-ab1c-62966ca20e96}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\shaders\hlsl\common">
-      <UniqueIdentifier>{ee439197-4375-44fc-8e75-7de00570a104}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\shaders\hlsl\compiled">
       <UniqueIdentifier>{dfb1ad4f-6d3a-4e7b-8f39-4813f3b507b6}</UniqueIdentifier>
     </Filter>
@@ -126,6 +123,9 @@
     </Filter>
     <Filter Include="src\shaders\hlsl\ray_cast">
       <UniqueIdentifier>{a7708a09-abc9-45ea-806a-7a8c50b47eed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\hlsl">
+      <UniqueIdentifier>{fada8f19-6cf4-4ca8-ab30-064bd7ddc4f6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -790,17 +790,11 @@
     <None Include="src\shaders\hlsl\forward\forward_cbuf.hlsli">
       <Filter>src\shaders\hlsl\forward</Filter>
     </None>
-    <None Include="src\shaders\hlsl\common\functions.hlsli">
-      <Filter>src\shaders\hlsl\common</Filter>
-    </None>
     <None Include="src\shaders\hlsl\deferred\gbuffer.hlsli">
       <Filter>src\shaders\hlsl\deferred</Filter>
     </None>
     <None Include="src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
       <Filter>src\shaders\hlsl\deferred</Filter>
-    </None>
-    <None Include="src\shaders\hlsl\common\geometry.hlsli">
-      <Filter>src\shaders\hlsl\common</Filter>
     </None>
     <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli">
       <Filter>src\shaders\hlsl\lighting</Filter>
@@ -814,9 +808,9 @@
     <None Include="src\shaders\hlsl\types.hlsli">
       <Filter>src\shaders\hlsl</Filter>
     </None>
-    <None Include="src\shaders\hlsl\common\vector.hlsli">
-      <Filter>src\shaders\hlsl\common</Filter>
-    </None>
+    <View3dShaderBuild Include="src\shaders\hlsl\ray_cast\ray_cast.hlsl">
+      <Filter>src\shaders\hlsl\ray_cast</Filter>
+    </View3dShaderBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli">
@@ -847,6 +841,15 @@
     <None Include="src\shaders\hlsl\ray_cast\ray_cast_cbuf.hlsli">
       <Filter>src\shaders\hlsl\ray_cast</Filter>
     </None>
+    <None Include="..\..\..\include\pr\hlsl\core.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\geometry.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\vector.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
@@ -860,9 +863,6 @@
     </FxCompile>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <Filter>src\compute\fluid_simulation</Filter>
-    </FxCompile>
-    <FxCompile Include="src\shaders\hlsl\ray_cast\ray_cast.hlsl">
-      <Filter>src\shaders\hlsl\ray_cast</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

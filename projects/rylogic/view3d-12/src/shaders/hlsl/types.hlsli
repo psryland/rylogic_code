@@ -1,9 +1,9 @@
 ﻿//***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
-#ifndef PR_RDR_SHADER_TYPES_HLSLI
-#define PR_RDR_SHADER_TYPES_HLSLI
+#ifndef PR_VIEW3D_SHADER_TYPES_HLSLI
+#define PR_VIEW3D_SHADER_TYPES_HLSLI
 
 static const float TINY = 0.0001f;
 static const int MaxShadowMaps = 1;

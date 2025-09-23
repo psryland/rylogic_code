@@ -149,7 +149,7 @@ namespace pr::rdr12
 	}
 
 	// Perform an immediate hit test
-	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& out)
+	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances, RayCastResultsOut const& out)
 	{
 		// Notes:
 		//  - The immediate ray cast should be completely separate from the continuous ray cast. It should be
@@ -165,7 +165,7 @@ namespace pr::rdr12
 		auto& rs = *m_raycast_immed.get();
 
 		// Set the rays to cast
-		rs.SetRays(rays, snap_distance, flags, [=](auto) { return true; });
+		rs.SetRays(rays, snap_mode, snap_distance, [=](auto) { return true; });
 
 		// Populate the draw list.
 		if (instances != nullptr)
@@ -188,7 +188,7 @@ namespace pr::rdr12
 	}
 
 	// Set the collection of rays to cast into the scene for continuous hit testing.
-	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter const& include)
+	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter const& include)
 	{
 		// Look for an existing RayCast render step
 		if (rays.empty())
@@ -205,7 +205,7 @@ namespace pr::rdr12
 
 			// Set the rays to cast.
 			// Results will be available in 'm_ht_results' after Render() has been called a few times (due to multi-buffering)
-			rs->SetRays(rays, snap_distance, flags, include);
+			rs->SetRays(rays, snap_mode, snap_distance, include);
 		}
 		else
 		{

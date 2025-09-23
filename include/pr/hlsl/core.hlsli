@@ -1,9 +1,9 @@
 ﻿//*********************************************
-// View 3d
+// HLSL
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#ifndef UTILITY_HLSLI
-#define UTILITY_HLSLI
+#ifndef PR_HLSL_CORE_HLSLI
+#define PR_HLSL_CORE_HLSLI
 
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
@@ -206,6 +206,36 @@ inline int max_component_index(float4 v)
 	int xy = (int)step(v.x, v.y) + 0; // x < y ? 1 : 0
 	int zw = (int)step(v.z, v.w) + 2; // z < w ? 3 : 2
 	return select(v[xy] > v[zw], xy, zw);
+}
+
+// Return the parametric position of 'x' on the range [mn, mx]
+float Frac(float mn, float x, float mx)
+{
+	return (x - mn) / (mx - mn);
+}
+float4 Frac(float4 mn, float4 x, float4 mx)
+{
+	return (x - mn) / (mx - mn);
+}
+
+// Integer square root
+int64_t ISqrt(int64_t x)
+{
+	// Compile time version of the square root.
+	//  - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
+	//  - This method always converges or oscillates about the answer with a difference of 1.
+	//  - returns 0 for x < 0
+	if (x < 0)
+		return 0;
+	
+	int64_t curr = x, prev = 0, pprev = 0;
+	for (; curr != prev && curr != pprev; )
+	{
+		pprev = prev;
+		prev = curr;
+		curr = (curr + x / curr) >> 1;
+	}
+	return abs(x - curr * curr) < abs(x - prev * prev) ? curr : prev;
 }
 
 // Accumulative hash function

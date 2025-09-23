@@ -1,11 +1,11 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
-#ifndef PR_RDR_SHADER_GBUFFER_HLSLI
-#define PR_RDR_SHADER_GBUFFER_HLSLI
+#ifndef PR_VIEW3D_SHADER_GBUFFER_HLSLI
+#define PR_VIEW3D_SHADER_GBUFFER_HLSLI
 
-#include "gbuffer_cbuf.hlsli"
+#include "view3d-12/src/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
 
 // Sampler and gbuffer textures
 SamplerState      m_point_sampler :register(s0);

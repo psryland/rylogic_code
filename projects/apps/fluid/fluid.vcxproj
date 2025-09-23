@@ -41,6 +41,7 @@
 			<AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
+				;$(RylogicRoot)projects\rylogic
 				;%(AdditionalIncludeDirectories)
 			</AdditionalIncludeDirectories>
 		</ResourceCompile>
@@ -48,6 +49,7 @@
 			<AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
+				;$(RylogicRoot)projects\rylogic
 				;%(AdditionalIncludeDirectories)
 			</AdditionalIncludeDirectories>
 			<ShaderModel>6.6</ShaderModel>

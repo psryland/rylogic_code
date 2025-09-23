@@ -1,12 +1,11 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
+#ifndef PR_VIEW3D_SHADER_ENV_MAP_HLSLI
+#define PR_VIEW3D_SHADER_ENV_MAP_HLSLI
 
-#ifndef PR_RDR_SHADER_ENV_MAP_HLSLI
-#define PR_RDR_SHADER_ENV_MAP_HLSLI
-
-#include "../types.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Return the colour due to lighting. Returns unlit_diff if ws_norm is zero
 float4 EnvironmentMap(in uniform EnvMap envmap, float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 initial_diff)

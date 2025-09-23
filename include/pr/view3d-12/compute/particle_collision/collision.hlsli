@@ -2,10 +2,11 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#ifndef COLLISION_HLSLI
-#define COLLISION_HLSLI
-#include "../common/utility.hlsli"
-#include "../common/geometry.hlsli"
+#ifndef PR_COMPUTE_COLLISION_HLSLI
+#define PR_COMPUTE_COLLISION_HLSLI
+
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/geometry.hlsli"
 
 // Notes:
 //  - All calculations are all performed in primitive space because it makes

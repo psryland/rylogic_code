@@ -307,9 +307,9 @@ namespace pr::rdr12
 		void AnimationStep(view3d::EAnimCommand command, seconds_t anim_time);
 
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, view3d::GuidPredCB pred, int);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, ldraw::LdrObject const* const* objects, int object_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred, int);
 	
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 		bool StockObjectVisible(view3d::EStockObject stock_objects) const;

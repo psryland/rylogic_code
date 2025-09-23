@@ -363,14 +363,15 @@ namespace pr
 			GizmoAdded,
 			GizmoRemoved,
 		};
-		enum class EHitTestFlags :int
+		enum class ESnapMode :int
 		{
-			Faces = 1 << 0,
+			NoSnap = 0,
+			Verts = 1 << 0,
 			Edges = 1 << 1,
-			Verts = 1 << 2,
+			Faces = 1 << 2,
 			_flags_enum = 0,
 		};
-		enum class ESnapType :int
+		enum class ESnapType :short
 		{
 			NoSnap,
 			Vert,
@@ -639,6 +640,9 @@ namespace pr
 			// The intercept point (in world space)
 			Vec4 m_ws_intercept;
 
+			// The normal at the intercept point (in world space) (if it intersects a surface)
+			Vec4 m_ws_normal;
+
 			// The object that was hit (or null)
 			Object m_obj;
 
@@ -647,6 +651,9 @@ namespace pr
 
 			// How the hit point was snapped (if at all)
 			ESnapType m_snap_type;
+
+			// != 0 if this is a hit
+			short m_is_hit;
 		};
 		struct Viewport
 		{
@@ -933,8 +940,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(pr::view3d::Window window, BOOL enabled);
 
 	// Cast a ray into the scene, returning information about what it hit.
-	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::Object const* objects, int object_count);
-	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::GuidPredCB pred);
+	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::ESnapMode snap_mode, float snap_distance, pr::view3d::Object const* objects, int object_count);
+	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::ESnapMode snap_mode, float snap_distance, pr::view3d::GuidPredCB pred);
 
 	// Camera *********************************
 

@@ -1,10 +1,9 @@
-﻿//***********************************************
-// Renderer
-//  Copyright (c) Rylogic Ltd 2010
-//***********************************************
-
-#ifndef PR_RDR_VECTOR_HLSLI
-#define PR_RDR_VECTOR_HLSLI
+﻿//*********************************************
+// HLSL
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
+#ifndef PR_HLSL_VECTOR_HLSLI
+#define PR_HLSL_VECTOR_HLSLI
 
 // Returns true if all vector elements are 0
 bool AllZero(float4 a)

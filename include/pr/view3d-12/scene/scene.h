@@ -104,11 +104,11 @@ namespace pr::rdr12
 
 		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
-		std::future<void> HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& out);
+		std::future<void> HitTest(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances, RayCastResultsOut const& out);
 
 		// Set the collection of rays to cast into the scene for continuous hit testing.
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
-		void HitTestContinuous(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter const& include);
+		void HitTestContinuous(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter const& include);
 			
 		// Read the hit test results from the continuous ray cast render step.
 		void HitTestGetResults(RayCastResultsOut const& results);

@@ -4,9 +4,10 @@
 //*********************************************
 // Constant buffer definitions for forward shaders.
 // This file is included from C++ source as well
-#ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
-#define PR_RDR_SHADER_FORWARD_CBUF_HLSL
-#include "../types.hlsli"
+#ifndef PR_VIEW3D_SHADER_FORWARD_CBUF_HLSL
+#define PR_VIEW3D_SHADER_FORWARD_CBUF_HLSL
+
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Constants per frame.
 cbuffer CBufFrame :reg(b0,0)
@@ -34,6 +35,7 @@ cbuffer CBufNugget :reg(b1,0)
 	//   forward_cbuf.hlsli
 	//   shadow_map_cbuf.hlsli
 	//   gbuffer_cbuf.hlsli
+	//   ray_cast.hlsli
 
 	// x = Model flags - See types.hlsli
 	// y = Texture flags

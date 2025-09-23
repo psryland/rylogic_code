@@ -1260,7 +1260,7 @@ namespace pr::rdr12
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances)
 	{
 		if (rays.size() != hits.size())
 			throw std::runtime_error("There should be a hit object for each ray");
@@ -1281,7 +1281,7 @@ namespace pr::rdr12
 			r = invalid;
 
 		// Do the ray casts into the scene and save the results
-		m_scene.HitTest(ray_casts, snap_distance, static_cast<EHitTestFlags>(flags), instances, [=](HitTestResult const& hit)
+		m_scene.HitTest(ray_casts, static_cast<ESnapMode>(snap_mode), snap_distance, instances, [=](HitTestResult const& hit)
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
@@ -1307,10 +1307,11 @@ namespace pr::rdr12
 			result.m_distance         = hit.m_distance;
 			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
 			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
+			result.m_is_hit           = hit.m_is_hit;
 			return false;
 		}).wait();
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, ldraw::LdrObject const* const* objects, int object_count)
 	{
 		// Create an instances function based on the given list of objects
 		auto beg = &objects[0];
@@ -1321,9 +1322,9 @@ namespace pr::rdr12
 			auto* inst = *beg++;
 			return &inst->m_base;
 		};
-		HitTest(rays, hits, snap_distance, flags, instances);
+		HitTest(rays, hits, snap_mode, snap_distance, instances);
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, view3d::GuidPredCB pred, int)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred, int)
 	{
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
@@ -1333,7 +1334,7 @@ namespace pr::rdr12
 			for (; beg != end && pred && !pred(cast<ldraw::LdrObject>(*beg)->m_context_id); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
-		HitTest(rays, hits, snap_distance, flags, instances);
+		HitTest(rays, hits, snap_mode, snap_distance, instances);
 	}
 
 	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)

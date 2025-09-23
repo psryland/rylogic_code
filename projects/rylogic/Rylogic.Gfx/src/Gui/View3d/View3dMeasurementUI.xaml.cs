@@ -168,18 +168,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Snap bindings</summary>
 		public bool SnapToVerts
 		{
-			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Verts);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Verts, value);
+			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Verts);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Verts, value);
 		}
 		public bool SnapToEdges
 		{
-			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Edges);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Edges, value);
+			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Edges);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Edges, value);
 		}
 		public bool SnapToFaces
 		{
-			get => Measurement.Flags.HasFlag(View3d.EHitTestFlags.Faces);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.EHitTestFlags.Faces, value);
+			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Faces);
+			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Faces, value);
 		}
 
 		/// <summary>Binding for which set point to use</summary>

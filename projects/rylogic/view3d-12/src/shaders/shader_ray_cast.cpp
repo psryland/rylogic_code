@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/shaders/shader_ray_cast.h"
-//#include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/render/drawlist_element.h"
 #include "pr/view3d-12/utility/root_signature.h"
 #include "view3d-12/src/shaders/common.h"
@@ -16,6 +15,9 @@ namespace pr::rdr12::shaders
 	{
 		inline static constexpr auto CBufFrame = ECBufReg::b0;
 		inline static constexpr auto CBufNugget = ECBufReg::b1;
+
+		inline static constexpr auto Pose = ESRVReg::t4;
+		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 	
 	RayCast::RayCast(ID3D12Device* device)
@@ -25,6 +27,8 @@ namespace pr::rdr12::shaders
 		m_signature = RootSig(ERootSigFlags::VertGeomPixelOnly)
 			.CBuf(EReg::CBufFrame)
 			.CBuf(EReg::CBufNugget)
+			.SRV(EReg::Pose, 1)
+			.SRV(EReg::Skin, 1)
 			.Create(device, "RayCastVertSig");
 	}
 
@@ -51,12 +55,11 @@ namespace pr::rdr12::shaders
 	{
 		auto& inst = *dle->m_instance;
 		auto& nug = *dle->m_nugget;
-		auto* model = nug.m_model;
 
 		CBufNugget cb1 = {};
-		m4x4 o2w = GetO2W(inst);
-		m4x4 m2o = model ? model->m_m2root : m4x4::Identity();
-		cb1.m_o2w = o2w * m2o;
+		SetFlags(cb1, inst, nug, false);
+		SetTxfm(cb1, inst, nug.m_model);
+
 		cb1.m_inst_ptr = &inst;
 		auto gpu_address = upload.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);

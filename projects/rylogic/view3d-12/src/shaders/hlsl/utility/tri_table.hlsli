@@ -1,9 +1,9 @@
 ﻿//***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#ifndef PR_RDR_TRI_TABLE_HLSLI
-#define PR_RDR_TRI_TABLE_HLSLI
+#ifndef PR_VIEW3D_TRI_TABLE_HLSLI
+#define PR_VIEW3D_TRI_TABLE_HLSLI
 
 // Careful, HLSL < SM6.6 doesn't support int64 or double
 

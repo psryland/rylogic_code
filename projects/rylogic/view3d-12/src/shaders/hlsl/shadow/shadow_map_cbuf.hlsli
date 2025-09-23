@@ -1,12 +1,13 @@
 ﻿//***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 // Constant buffer definitions for shadow map shader
 // This file is included from C++ source as well
-#ifndef PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
-#define PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
-#include "../types.hlsli"
+#ifndef PR_VIEW3D_SHADER_SHADOW_MAP_CBUF_HLSL
+#define PR_VIEW3D_SHADER_SHADOW_MAP_CBUF_HLSL
+
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Camera to world transform and view frustum
 cbuffer CBufFrame :reg(b0,0)

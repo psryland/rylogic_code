@@ -264,11 +264,11 @@ namespace Rylogic.Gfx
 			public event EventHandler<MouseNavigateEventArgs>? MouseNavigating;
 
 			/// <summary>Perform a hit test in the scene</summary>
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags)
 			{
 				return HitTest(ray, snap_distance, flags, x => true);
 			}
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, Func<Guid, bool> context_pred)
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags, Func<Guid, bool> context_pred)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
@@ -281,7 +281,7 @@ namespace Rylogic.Gfx
 
 				return hits[0];
 			}
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, IEnumerable<Object> objects)
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags, IEnumerable<Object> objects)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];

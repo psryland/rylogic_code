@@ -1,11 +1,11 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-#ifndef PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
-#define PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
+#ifndef PR_VIEW3D_SHADER_PHONG_LIGHTING_HLSLI
+#define PR_VIEW3D_SHADER_PHONG_LIGHTING_HLSLI
 
-#include "../types.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Returns the intensity of reflected directional light on a surface with normal 'ws_norm' and transparency 'alpha'
 float LightDirectional(in uniform float4 ws_light_direction, in float4 ws_norm, in float alpha)

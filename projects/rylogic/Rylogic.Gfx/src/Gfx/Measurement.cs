@@ -28,7 +28,7 @@ namespace Rylogic.Gfx
 		public Measurement(View3d.Window window)
 		{
 			ReferenceFrame = EReferenceFrame.WorldSpace;
-			Flags = View3d.EHitTestFlags.Verts | View3d.EHitTestFlags.Edges | View3d.EHitTestFlags.Faces;
+			Flags = View3d.ESnapMode.Verts | View3d.ESnapMode.Edges | View3d.ESnapMode.Faces;
 			CtxId = Guid.NewGuid();
 			SnapDistance = 0.1;
 			BegSpotColour = Colour32.Aqua;
@@ -169,7 +169,7 @@ namespace Rylogic.Gfx
 		private double m_snap_distance;
 
 		/// <summary>The snap-to flags</summary>
-		public View3d.EHitTestFlags Flags
+		public View3d.ESnapMode Flags
 		{
 			get => m_flags;
 			set
@@ -180,7 +180,7 @@ namespace Rylogic.Gfx
 				NotifyPropertyChanged(nameof(Flags));
 			}
 		}
-		private View3d.EHitTestFlags m_flags;
+		private View3d.ESnapMode m_flags;
 
 		/// <summary>The reference frame to display the measurements in</summary>
 		public EReferenceFrame ReferenceFrame

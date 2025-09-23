@@ -9,6 +9,7 @@
 #include "pr/view3d-12/utility/pix.h"
 
 #if PR_PIX_ENABLED
+#pragma message (PR_LINK "warning : ************************************************* PIX Enabled")
 
 using namespace pr::rdr12::pix;
 

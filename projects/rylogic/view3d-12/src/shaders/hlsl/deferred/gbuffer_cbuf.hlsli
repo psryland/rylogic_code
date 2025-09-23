@@ -1,13 +1,13 @@
 ﻿//***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 // Constant buffer definitions for gbuffer shader
 // This file is included from C++ source as well
-#ifndef PR_RDR_SHADER_GBUFFER_CBUF_HLSL
-#define PR_RDR_SHADER_GBUFFER_CBUF_HLSL
+#ifndef PR_VIEW3D_SHADER_GBUFFER_CBUF_HLSL
+#define PR_VIEW3D_SHADER_GBUFFER_CBUF_HLSL
 
-#include "../types.hlsli"
+#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
 // Camera to world transform
 cbuffer CBufCamera :reg(b0,0)

@@ -162,7 +162,11 @@ public class ShaderBuilder
 		if (m_obj) args.Add($"/Fo{filepath_cso}");
 
 		// Set include paths
-		//var includes = (List<String>)[]; // "/I" + srcdir + "\\.."]
+		var includes = (List<string>)[
+			$"/I{UserVars.Path([UserVars.Root, "include"])}",
+			$"/I{UserVars.Path([UserVars.Root, "projects/rylogic"])}",
+		];
+		args.AddRange(includes);
 
 		// Set defines
 		var selected = $"PR_RDR_{shdr.ShaderCode[0..1].ToUpper()}SHADER_{shdr.Name[..^3]}";
@@ -243,7 +247,7 @@ public class ShaderBuilder
 		else
 		{
 			var src_hash = CalculateFileHash(src);
-			var dst_hash = CalculateFileHash(src);
+			var dst_hash = CalculateFileHash(dst);
 			if (src_hash == dst_hash)
 				return;
 		}
@@ -297,8 +301,9 @@ public class ShaderBuilder
 	}
 }
 
-var args = Args.ToArray();
-//var args = (string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl", "x64", "debug", "obj", "dbg", "trace"];
+var args =
+	Args.ToArray();
+	//(string[])[@"E:\Rylogic\Code\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl", "x64", "debug", "obj", "dbg", "trace"];
 if (args.Length < 3)
 {
 	Console.WriteLine("Usage: BuildShader <fullpath> <platform> <config> [pp] [obj] [dbg] [trace]");

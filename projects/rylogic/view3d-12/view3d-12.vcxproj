@@ -29,7 +29,7 @@
     <ClCompile>
       <PreprocessorDefinitions>
         ;%(PreprocessorDefinitions)
-        ;PR_RDR_RUNTIME_SHADERS=1
+        ;PR_RDR_RUNTIME_SHADERS=0
         ;PR_LOGGING=1
         ;PR_SUPPORT_D3D11_ERRORS=1
         ;PR_VIEW3D_12=1
@@ -276,17 +276,49 @@
   Shaders
   -->
   <ItemDefinitionGroup>
+
+    <View3dShaderBuild>
+      <ShaderType>Effect</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </View3dShaderBuild>
+
     <FxCompile>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </FxCompile>
+    
+    <!-- HLSL Compiler settings for IntelliSense -->
+    <HLSLCompiler>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
+    </HLSLCompiler>
+
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli" />
     <None Include="src\shaders\hlsl\types.hlsli" />
-    <None Include="src\shaders\hlsl\common\functions.hlsli" />
-    <None Include="src\shaders\hlsl\common\geometry.hlsli" />
-    <None Include="src\shaders\hlsl\common\vector.hlsli" />
     <None Include="src\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\forward\forward_cbuf.hlsli" />
@@ -321,7 +353,7 @@
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl" EntryPointName="BuildLookup" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />
+    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_shaders.rc" />
   </ItemGroup>
   <!--
   AutoGen

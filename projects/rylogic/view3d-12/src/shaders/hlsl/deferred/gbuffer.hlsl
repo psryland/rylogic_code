@@ -1,10 +1,10 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 
-#include "gbuffer_cbuf.hlsli"
-#include "gbuffer.hlsli"
+#include "view3d-12/src/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
+#include "view3d-12/src/shaders/hlsl/deferred/gbuffer.hlsli"
 
 // Diffuse texture0 /w sampler
 SamplerState      m_sampler0 :register(s0);

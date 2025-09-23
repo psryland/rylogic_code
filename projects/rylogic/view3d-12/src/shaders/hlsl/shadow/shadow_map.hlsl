@@ -1,9 +1,11 @@
 //***********************************************
-// Renderer
+// View 3d
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
-#include "shadow_map_cbuf.hlsli"
-#include "../common/functions.hlsli"
+
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/camera.hlsli"
+#include "view3d-12/src/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
 
 // Texture2D /w sampler
 Texture2D<float4> m_texture0 :reg(t0,0);
@@ -13,7 +15,7 @@ SamplerState      m_sampler0 :reg(s0,0);
 StructuredBuffer<Mat4x4> m_pose : reg(t4, 0);
 StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
 
-#include "../skinned/skinned.hlsli"
+#include "view3d-12/src/shaders/hlsl/skinned/skinned.hlsli"
 
 struct PSIn_ShadowMap
 {
