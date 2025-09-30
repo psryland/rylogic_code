@@ -241,7 +241,8 @@ namespace pr::script
 						// Already decoded streams should output characters and then 0s.
 						// EOS occurs for invalid character encodings only.
 						ch = Read();
-						if (ch == EOS) throw std::runtime_error("Read() should not return EOS for 'already_decoded' streams.");
+						if (ch == EOS)
+							throw std::runtime_error("Read() should not return EOS for 'already_decoded' streams.");
 						break;
 					}
 					case EEncoding::ascii:
@@ -706,7 +707,7 @@ namespace pr::script
 		int Read() override
 		{
 			auto ch = m_stream.get();
-			return m_stream.good() ? ch : EOS;
+			return m_stream.good() ? ch : m_enc == EEncoding::already_decoded ? 0 : EOS;
 		}
 
 	public:

@@ -99,7 +99,7 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-						case nameof(Measurement.Flags):
+						case nameof(Measurement.SnapMode):
 						{
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapToVerts)));
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapToEdges)));
@@ -168,18 +168,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Snap bindings</summary>
 		public bool SnapToVerts
 		{
-			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Verts);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Verts, value);
+			get => Measurement.SnapMode.HasFlag(View3d.ESnapMode.Verts);
+			set => Measurement.SnapMode = Bit.SetBits(Measurement.SnapMode, View3d.ESnapMode.Verts, value);
 		}
 		public bool SnapToEdges
 		{
-			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Edges);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Edges, value);
+			get => Measurement.SnapMode.HasFlag(View3d.ESnapMode.Edges);
+			set => Measurement.SnapMode = Bit.SetBits(Measurement.SnapMode, View3d.ESnapMode.Edges, value);
 		}
 		public bool SnapToFaces
 		{
-			get => Measurement.Flags.HasFlag(View3d.ESnapMode.Faces);
-			set => Measurement.Flags = Bit.SetBits(Measurement.Flags, View3d.ESnapMode.Faces, value);
+			get => Measurement.SnapMode.HasFlag(View3d.ESnapMode.Faces);
+			set => Measurement.SnapMode = Bit.SetBits(Measurement.SnapMode, View3d.ESnapMode.Faces, value);
 		}
 
 		/// <summary>Binding for which set point to use</summary>

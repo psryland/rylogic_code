@@ -23,7 +23,7 @@ namespace pr::rdr12
 	};
 
 	// Snap types (in priority order) (Keep in sync with 'SnapType_' in 'ray_cast_cbuf.hlsli')
-	enum class ESnapType :short
+	enum class ESnapType :int
 	{
 		None = 0,
 		Vert = 1,
@@ -51,7 +51,7 @@ namespace pr::rdr12
 		float               m_distance;      // The distance from the ray origin to the intercept
 		int                 m_ray_index;     // The index of the input ray
 		ESnapType           m_snap_type;     // How the point was snapped (if at all)
-		short               m_is_hit;        // True if this was a hit
+		bool IsHit() const { return m_instance != nullptr; } // True if this was a hit
 	};
 
 	// A buffer of hit test results

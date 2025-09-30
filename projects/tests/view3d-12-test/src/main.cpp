@@ -321,7 +321,7 @@ struct Main :Form
 
 		for (auto const& hit : results)
 		{
-			if (!hit.m_is_hit) continue;
+			if (!hit.IsHit()) continue;
 			auto o2w = m4x4::Translation(To<v4>(hit.m_ws_intercept));
 			View3D_ObjectO2WSet(m_obj1, To<view3d::Mat4x4>(o2w), nullptr);
 		}

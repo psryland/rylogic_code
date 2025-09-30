@@ -28,7 +28,7 @@ namespace Rylogic.Gfx
 		public Measurement(View3d.Window window)
 		{
 			ReferenceFrame = EReferenceFrame.WorldSpace;
-			Flags = View3d.ESnapMode.Verts | View3d.ESnapMode.Edges | View3d.ESnapMode.Faces;
+			SnapMode = View3d.ESnapMode.Verts | View3d.ESnapMode.Edges | View3d.ESnapMode.Faces;
 			CtxId = Guid.NewGuid();
 			SnapDistance = 0.1;
 			BegSpotColour = Colour32.Aqua;
@@ -169,15 +169,15 @@ namespace Rylogic.Gfx
 		private double m_snap_distance;
 
 		/// <summary>The snap-to flags</summary>
-		public View3d.ESnapMode Flags
+		public View3d.ESnapMode SnapMode
 		{
 			get => m_flags;
 			set
 			{
-				if (Flags == value) return;
+				if (SnapMode == value) return;
 				m_flags = value;
 				Window?.Invalidate();
-				NotifyPropertyChanged(nameof(Flags));
+				NotifyPropertyChanged(nameof(SnapMode));
 			}
 		}
 		private View3d.ESnapMode m_flags;
@@ -302,7 +302,7 @@ namespace Rylogic.Gfx
 
 			// Perform a hit test to update the position of the active hit
 			var ray = Window.Camera.RaySS(point_cs);
-			var result = Window.HitTest(ray, (float)SnapDistance, Flags, x => x != CtxId && ContextPredicate(x));
+			var result = Window.HitTest(ray, SnapMode, (float)SnapDistance, x => x != CtxId && ContextPredicate(x));
 
 			// Update the current hit point
 			ActiveHit.PointWS = result.m_ws_intercept;

@@ -255,7 +255,6 @@ namespace pr::rdr12
 					.m_distance = intercept.ws_intercept.w,
 					.m_ray_index = intercept.ray_index,
 					.m_snap_type = static_cast<ESnapType>(intercept.snap_type),
-					.m_is_hit = true,
 				};
 				if (!cb(result))
 				{

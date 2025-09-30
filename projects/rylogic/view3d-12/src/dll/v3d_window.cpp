@@ -1307,7 +1307,6 @@ namespace pr::rdr12
 			result.m_distance         = hit.m_distance;
 			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
 			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
-			result.m_is_hit           = hit.m_is_hit;
 			return false;
 		}).wait();
 	}

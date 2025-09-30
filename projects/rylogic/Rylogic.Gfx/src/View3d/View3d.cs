@@ -323,14 +323,14 @@ namespace Rylogic.Gfx
 			Edges = 1 << 1,
 			Faces = 1 << 2,
 		}
-		public enum ESnapType : short
+		public enum ESnapType : int
 		{
 			NoSnap,
 			Vert,
+			EdgeMiddle,
+			FaceCentre,
 			Edge,
 			Face,
-			EdgeCentre,
-			FaceCentre,
 		}
 		public enum EStreamingState : int
 		{
@@ -1016,8 +1016,9 @@ namespace Rylogic.Gfx
 			public v4 m_ws_ray_origin;
 			public v4 m_ws_ray_direction;
 
-			// The intercept point (in world space)
+			// The intercept point and surface normal (in world space)
 			public v4 m_ws_intercept;
+			public v4 m_ws_normal;
 
 			// The object that was hit (or null)
 			public readonly Object? HitObject => IsHit ? new Object(m_obj) : null;

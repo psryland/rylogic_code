@@ -371,7 +371,7 @@ namespace pr
 			Faces = 1 << 2,
 			_flags_enum = 0,
 		};
-		enum class ESnapType :short
+		enum class ESnapType :int
 		{
 			NoSnap,
 			Vert,
@@ -637,10 +637,8 @@ namespace pr
 			Vec4 m_ws_ray_origin;
 			Vec4 m_ws_ray_direction;
 
-			// The intercept point (in world space)
+			// The intercept point and surface normal (in world space)
 			Vec4 m_ws_intercept;
-
-			// The normal at the intercept point (in world space) (if it intersects a surface)
 			Vec4 m_ws_normal;
 
 			// The object that was hit (or null)
@@ -653,7 +651,7 @@ namespace pr
 			ESnapType m_snap_type;
 
 			// != 0 if this is a hit
-			short m_is_hit;
+			bool IsHit() const { return m_obj != nullptr; }
 		};
 		struct Viewport
 		{

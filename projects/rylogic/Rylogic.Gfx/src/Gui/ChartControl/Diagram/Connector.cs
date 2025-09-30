@@ -323,7 +323,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 			// Hit test the element
 			var ray = cam.RaySS(scene_point);
-			var results = chart.Scene.Window.HitTest(ray, snap, View3d.ESnapMode.Edges, new[] { Gfx });
+			var results = chart.Scene.Window.HitTest(ray, View3d.ESnapMode.Edges, snap, new[] { Gfx });
 			if (!results.IsHit)
 				return null;
 

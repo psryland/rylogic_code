@@ -264,11 +264,11 @@ namespace Rylogic.Gfx
 			public event EventHandler<MouseNavigateEventArgs>? MouseNavigating;
 
 			/// <summary>Perform a hit test in the scene</summary>
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags)
+			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance)
 			{
-				return HitTest(ray, snap_distance, flags, x => true);
+				return HitTest(ray, snap_mode, snap_distance, x => true);
 			}
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags, Func<Guid, bool> context_pred)
+			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance, Func<Guid, bool> context_pred)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
@@ -277,11 +277,11 @@ namespace Rylogic.Gfx
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
 
 				bool CB(IntPtr ctx, ref Guid context_id) => context_pred(context_id);
-				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, new GuidPredCB { m_cb = CB });
+				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_mode, snap_distance, new GuidPredCB { m_cb = CB });
 
 				return hits[0];
 			}
-			public HitTestResult HitTest(HitTestRay ray, float snap_distance, ESnapMode flags, IEnumerable<Object> objects)
+			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance, IEnumerable<Object> objects)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
@@ -290,7 +290,7 @@ namespace Rylogic.Gfx
 				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
 				using var insts_buf = Marshal_.Pin(insts, GCHandleType.Pinned);
-				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, insts, insts.Length);
+				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_mode, snap_distance, insts, insts.Length);
 
 				return hits[0];
 			}
