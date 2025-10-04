@@ -1056,6 +1056,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\arena_allocator.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\cancel_token.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -1075,9 +1078,7 @@
       <Filter>pr\view3d-12</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
-    <ClInclude Include="..\..\..\include\pr\algorithm\astar_search.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="run_tests.py" />

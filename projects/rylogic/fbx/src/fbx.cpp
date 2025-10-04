@@ -20,6 +20,7 @@
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
 #include "pr/common/algorithm.h"
+#include "pr/common/arena_allocator.h"
 #include "pr/container/vector.h"
 #include "pr/geometry/fbx.h"
 
@@ -732,12 +733,73 @@ namespace pr::geometry::fbx
 		friend bool empty(FbxCurve const& c) { return size(c) == 0; }
 	};
 
+	// Arena allocator for faster FBX loading
+	struct FbxCustomAllocator
+	{
+		// Notes:
+		//  - There is no way to tell which FbxManager is calling the allocation functions
+		//    so it's not possible to create an arena per manager. That means all managers
+		//    that exist at the same time have to share a memory arena.
+		//  - Release the arena when all instances of the fbx manager are destroyed.
+		using Arena = ArenaAllocator<10 * 1024 * 1024, FBXSDK_MEMORY_ALIGNMENT, 4>;
+
+		FbxCustomAllocator()
+		{
+			ref_count(+1);
+
+			FbxSetMallocHandler(Malloc);
+			FbxSetCallocHandler(Calloc);
+			FbxSetReallocHandler(Realloc);
+			FbxSetFreeHandler(Free);
+		}
+		~FbxCustomAllocator()
+		{
+			ref_count(-1);
+		}
+		static void* Malloc(size_t n)
+		{
+			return arena().Malloc(n);
+		}
+		static void* Calloc(size_t n, size_t sz)
+		{
+			return arena().Calloc(n, sz);
+		}
+		static void* Realloc(void* p, size_t n)
+		{
+			return arena().Realloc(p, n);
+		}
+		static void Free(void* p)
+		{
+			return arena().Free(p);
+		}
+
+	private:
+
+		// Access the static arena allocator
+		static Arena& arena()
+		{
+			static thread_local Arena s_arena;
+			return s_arena;
+		}
+
+		// Access the static arena allocator
+		static void ref_count(int ref = 0)
+		{
+			static thread_local int s_references;
+
+			s_references += ref;
+			if (s_references == 0)
+				arena().Clear();
+		}
+	};
+
 	// An RAII dll reference
 	struct Context
 	{
 		using SceneCont = vector<std::unique_ptr<SceneData>>;
 
 		ErrorHandler m_error_cb;
+		FbxCustomAllocator m_alloc;
 		ManagerPtr m_manager;
 		FbxIOSettings* m_settings;
 		char const* m_version;
@@ -745,6 +807,7 @@ namespace pr::geometry::fbx
 
 		Context(ErrorHandler error_cb)
 			: m_error_cb(error_cb)
+			, m_alloc()
 			, m_manager(Check(FbxManager::Create(), "Error: Unable to create FBX Manager"))
 			, m_settings(Check(FbxIOSettings::Create(m_manager.get(), IOSROOT), "Error: Unable to create settings"))
 			, m_version(m_manager->GetVersion())

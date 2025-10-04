@@ -54,7 +54,6 @@ namespace pr::geometry::fbx
 	//        Only Deform Bones: No
 	//        Add Leaf Bones: No
 
-
 	struct Context;
 	struct SceneData;
 	struct MeshData;
