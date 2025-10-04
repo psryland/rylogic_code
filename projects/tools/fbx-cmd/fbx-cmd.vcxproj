@@ -7,8 +7,8 @@
     <ConfigurationType>Application</ConfigurationType>
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}</ProjectGuid>
-    <RootNamespace>pr::fbx</RootNamespace>
-    <ProjectName>fbx-test</ProjectName>
+    <RootNamespace>fbx_cmd</RootNamespace>
+    <ProjectName>fbx-cmd</ProjectName>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -16,7 +16,7 @@
   Property Sheets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(PropsPath)app.props" />
   <!--
@@ -38,6 +38,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <!-- <SubSystem>Windows</SubSystem> -->
       <AdditionalLibraryDirectories>
           ;$(RylogicRoot)lib\$(Platform)\$(Configuration)
           ;%(AdditionalLibraryDirectories)
@@ -55,16 +56,20 @@
   Files
   -->
   <ItemGroup>
+    <ClCompile Include="src\commands\cmd_test.cpp" />
     <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
+    <ClInclude Include="src\commands\cmd_dump.h" />
+    <ClInclude Include="src\forward.h" />
+    <ClInclude Include="src\icommand.h" />
   </ItemGroup>
   <ItemGroup>
     <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\fbx.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(RylogicRoot)projects\rylogic\fbx\fbx.vcxproj"/>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\fbx\fbx.vcxproj" />
   </ItemGroup>
   <!--
   Targets

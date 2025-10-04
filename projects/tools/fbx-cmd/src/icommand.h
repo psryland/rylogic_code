@@ -1,33 +1,21 @@
-//**********************************************
-// Command line extensions
-//  Copyright (c) Rylogic Ltd 2004
-//**********************************************
 #pragma once
-#include <iostream>
-#include <string>
-#include "pr/common/command_line.h"
-//#include "pr/str/prstring.h"
+#include "src/forward.h"
 
-namespace cex
+namespace fbx_cmd
 {
-	// Base class for ICex commands
-	struct ICex :pr::cmdline::IOptionReceiver<>
+	// Base class for fbx-cmd
+	struct ICommand :pr::cmdline::IOptionReceiver<>
 	{
-		bool m_console_allocated;
-
-		ICex()
-			:m_console_allocated(false)
-		{}
-		virtual ~ICex() = default;
+		~ICommand() = default;
 
 		// A title banner for cex.exe
 		static char const* Title()
 		{
 			return "\n"
 				"-------------------------------------------------------------\n"
-				"  Command Line Extensions \n" 
-				"   Copyright (c) Rylogic 2004 \n"
-				"   Version: v1.2\n"
+				"  FBX Tools\n" 
+				"   Copyright (c) Rylogic 2025 \n"
+				"   Version: v1.0\n"
 				"-------------------------------------------------------------\n"
 				"\n";
 		}
@@ -67,8 +55,6 @@ namespace cex
 			// Attach to the current console
 			if (AttachConsole((DWORD)-1) || AllocConsole())
 			{
-				m_console_allocated = true;
-
 				// Redirect the CRT standard input, output, and error handles to the console
 				freopen("CONIN$", "r", stdin);
 				freopen("CONOUT$", "w", stdout);
@@ -85,30 +71,6 @@ namespace cex
 				std::cerr.clear();
 				std::wcin.clear();
 				std::cin.clear();
-
-				//FILE *fp;
-				//int h;
-
-				//// redirect unbuffered STDOUT to the console
-				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
-				//fp = _fdopen(h, "w");
-				//*stdout = *fp;
-				//setvbuf(stdout, NULL, _IONBF, 0);
-
-				//// redirect unbuffered STDIN to the console
-				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
-				//fp = _fdopen(h, "r");
-				//*stdin = *fp;
-				//setvbuf(stdin, NULL, _IONBF, 0);
-
-				//// redirect unbuffered STDERR to the console
-				//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
-				//fp = _fdopen(h, "w");
-				//*stderr = *fp;
-				//setvbuf(stderr, NULL, _IONBF, 0);
-
-				//// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog point to console as well
-				//std::ios::sync_with_stdio();
 			}
 		}
 

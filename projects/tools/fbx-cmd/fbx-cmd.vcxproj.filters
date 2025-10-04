@@ -13,10 +13,16 @@
     <Filter Include="pr\geometry">
       <UniqueIdentifier>{0c07a33d-982d-47ff-b648-2e17fda1140a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands">
+      <UniqueIdentifier>{8aa465d9-62a8-4df0-b5f9-9d69dc074595}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\cmd_test.cpp">
+      <Filter>src\commands</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -27,6 +33,15 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="src\commands\cmd_dump.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\icommand.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

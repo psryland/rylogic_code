@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <locale>
 #include <cstdlib>
+#include <cstdarg>
 #include <cassert>
 #include "pr/str/char8.h"
 #include "pr/str/encoding.h"
