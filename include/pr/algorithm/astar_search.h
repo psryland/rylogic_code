@@ -299,6 +299,8 @@ namespace pr::algorithm::astar
 						// Technically, we can known in advance if 'next.node' is in the pending list
 						// but the lookup and update on each SearchData is probably more expensive than
 						// this rarer case of trying to erase a node that isn't in the list.
+						next.huristic_cost = prev.heuristic_cost; // keep the old heuristic cost
+						next.is_goal = prev.is_goal; // keep the old goal state
 						pending.erase(next.node);
 						AddToPending(next, false);
 					}
