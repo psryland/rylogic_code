@@ -1,6 +1,7 @@
 ﻿#include "src/forward.h"
 #include "src/icommand.h"
 #include "src/commands/cmd_dump.h"
+#include "src/commands/cmd_triangulate.h"
 
 using namespace pr;
 using namespace pr::geometry;
@@ -27,6 +28,7 @@ namespace fbx_cmd
 			//NEW_COMMAND - Test the new command
 			//if (!args.empty()) printf("warning: debugging overriding arguments");
 			//args = R("-dump E:\Rylogic\Code\art\models\AnimCharacter\AnimatedCharacter.fbx")";
+			//args = R("-dump E:/Dump/Hyperpose/fbx/hyperpose_sample.fbx");
 
 			// Parse the command line, show help if invalid
 			try
@@ -51,10 +53,20 @@ namespace fbx_cmd
 				return -1;
 			}
 
-			// Run the command
-			// It's the commands decision whether to display the console or not
+			// Run the command. It's the commands decision whether to display the console or not
 			if (m_command)
-				return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
+			{
+				try
+				{
+					return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
+				}
+				catch (std::exception const& ex)
+				{
+					ShowConsole();
+					std::cerr << "Unhandled error" << std::endl << ex.what() << std::endl;
+					return -1;
+				}
+			}
 
 			// Assume error messages have been displayed already
 			return 0;
@@ -80,6 +92,7 @@ namespace fbx_cmd
 			{
 				if (m_command) break;
 				if (pr::str::EqualI(option, "-dump")) { m_command = CmdPtr{ new DumpFbx }; break; }
+				if (pr::str::EqualI(option, "-triangulate")) { m_command = CmdPtr{ new Triangulate }; break; }
 				// NEW_COMMAND - handle the command
 				return ICommand::CmdLineOption(option, arg, arg_end);
 			}

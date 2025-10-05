@@ -73,6 +73,7 @@ namespace pr::geometry
 		Skeletons      = 1 << 4,
 		Skins          = 1 << 5 | Meshes | Skeletons,
 		Animation      = 1 << 6,
+		MainObjects    = 1 << 7,
 
 		All           = Meshes | Materials | Skeletons | Skins | Animation,
 		ModelOnly     = Meshes | Materials,

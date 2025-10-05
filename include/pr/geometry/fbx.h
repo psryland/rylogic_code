@@ -75,10 +75,10 @@ namespace pr::geometry::fbx
 	};
 
 	// Fbx File Formats
-	struct Formats
+	enum class EFormat
 	{
-		static constexpr char const* FbxBinary = "FBX (*.fbx)";
-		static constexpr char const* FbxAscii = "FBX ascii (*.fbx)";
+		Binary,
+		Ascii,
 	};
 
 	// Parts of an FBX Scene
@@ -356,7 +356,7 @@ namespace pr::geometry::fbx
 		x(         , Release, void (__stdcall*)(Context* ctx))\
 		\
 		x(Scene_   , Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src))\
-		x(Scene_   , Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, char const* format))\
+		x(Scene_   , Save, void (__stdcall *)(Context& ctx, SceneData const& scene, std::ostream& out, EFormat format))\
 		x(Scene_   , ReadProps, SceneProps (__stdcall *)(Context& ctx, SceneData const& scene))\
 		x(Scene_   , Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options))\
 		x(Scene_   , Dump, void (__stdcall *)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))\
@@ -563,6 +563,12 @@ namespace pr::geometry::fbx
 			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
 			Fbx::get().Scene_Read(*m_ctx, *m_scene, options);
 			m_props = Fbx::get().Scene_ReadProps(*m_ctx, *m_scene);
+		}
+
+		// Write the full scene to a stream
+		void Write(std::ostream& out, EFormat format)
+		{
+			Fbx::get().Scene_Save(*m_ctx, *m_scene, out, format);
 		}
 
 		// Read the full scene into memory

@@ -11,8 +11,10 @@ namespace fbx_cmd
 		// Notes:
 		//  - Test command lines:
 		//   fbx-cmd -dump E:\Rylogic\Code\art\models\AnimCharacter\AnimatedCharacter.fbx
+		//   fbx-cmd -dump E:/Dump/Hyperpose/fbx/hyperpose_sample.fbx
 
 		std::filesystem::path m_filepath;
+		ESceneParts m_parts = ESceneParts::MainObjects;
 
 		void ShowHelp() const override
 		{
@@ -25,6 +27,11 @@ namespace fbx_cmd
 		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
 			if (pr::str::EqualI(option, "-dump")) { return true; }
+			//fbx::EParts::NodeHierarchy |
+			//fbx::EParts::Meshes |
+			//fbx::EParts::Skeletons |
+			//fbx::EParts::Skins |
+			//fbx::EParts::None,
 			return ICommand::CmdLineOption(option, arg, arg_end);
 		}
 
@@ -42,12 +49,7 @@ namespace fbx_cmd
 			std::ifstream ifile(m_filepath, std::ios::binary);
 			pr::geometry::fbx::Scene scene(ifile);
 			scene.Dump({
-				.m_parts =
-					fbx::EParts::NodeHierarchy |
-					//fbx::EParts::Meshes |
-					//fbx::EParts::Skeletons |
-					//fbx::EParts::Skins |
-					fbx::EParts::None,
+				.m_parts = m_parts,
 				.m_coord_system = fbx::ECoordSystem::PosX_PosY_NegZ,
 				.m_triangulate_meshes = true,
 			}, std::cout);

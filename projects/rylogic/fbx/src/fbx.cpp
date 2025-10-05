@@ -389,6 +389,7 @@ namespace pr::geometry::fbx
 		bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
 	};
 	using ErrorList = std::vector<std::string>;
+	using SceneDataPtr = std::unique_ptr<SceneData>;
 	using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
 	using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
 
@@ -666,13 +667,13 @@ namespace pr::geometry::fbx
 				auto& attr = *node.ptr->GetNodeAttributeByIndex(i);
 
 				// Create a map from attribute unique id to node data
-				if (AllSet(parts, EParts::Meshes) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
+				if (AnySet(parts, EParts::Meshes|EParts::MainObjects) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
 				{
 					auto* mesh = FbxCast<FbxMesh>(&attr);
 					auto* root = FindRoot<FbxMesh>(*node.ptr);
 					meshes[mesh->GetUniqueID()] = { mesh, root, node.level, mindex++ };
 				}
-				if (AllSet(parts, EParts::Skeletons) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
+				if (AnySet(parts, EParts::Skeletons|EParts::MainObjects) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
 				{
 					auto* bone = FbxCast<FbxSkeleton>(&attr);
 					auto* root = FindRoot<FbxSkeleton>(*node.ptr);
@@ -796,7 +797,7 @@ namespace pr::geometry::fbx
 	// An RAII dll reference
 	struct Context
 	{
-		using SceneCont = vector<std::unique_ptr<SceneData>>;
+		using SceneCont = vector<SceneDataPtr>;
 
 		ErrorHandler m_error_cb;
 		FbxCustomAllocator m_alloc;
@@ -886,9 +887,14 @@ namespace pr::geometry::fbx
 		Context& operator=(Context const&) = delete;
 
 		// Return the file format ID for the give format (use 'Formats')
-		int FileFormatID(char const* format) const
+		int FileFormatID(EFormat format) const
 		{
-			auto file_format = m_manager->GetIOPluginRegistry()->FindReaderIDByDescription(format);
+			auto fmt =
+				format == EFormat::Binary ? "FBX (*.fbx)" :
+				format == EFormat::Ascii ? "FBX ascii (*.fbx)" :
+				throw std::runtime_error("Unknown format");
+
+			auto file_format = m_manager->GetIOPluginRegistry()->FindReaderIDByDescription(fmt);
 			return file_format;
 		}
 
@@ -2092,7 +2098,7 @@ namespace pr::geometry::fbx
 	};
 
 	// Dump an fbx scene to 'std::ostream'
-	struct Dumper 
+	struct Dumper
 	{
 		using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
 
@@ -2122,6 +2128,8 @@ namespace pr::geometry::fbx
 		{
 			TraverseHierarchy(m_fbxscene, m_opts.m_parts, m_meshes, m_bones);
 
+			if (AllSet(m_opts.m_parts, EParts::MainObjects))
+				DumpMainObjects();
 			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
 				DumpGlobalSettings();
 			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
@@ -2134,6 +2142,28 @@ namespace pr::geometry::fbx
 				DumpSkeletons();
 			if (AllSet(m_opts.m_parts, EParts::Animation))
 				DumpAnimations();
+		}
+
+		// Output the named top-level objects (meshes etc)
+		void DumpMainObjects()
+		{
+			m_out << " MAIN OBJECTS =====================================================================================================\n";
+
+			for (auto const& [id, meshnode] : m_meshes)
+			{
+				auto& mesh = *meshnode.mesh;
+				auto& node = *mesh.GetNode();
+				auto level = meshnode.level;
+				m_out << Indent(level) << "Mesh \"" << node.GetName() << "\" (" << mesh.GetUniqueID() << "):\n";
+			}
+
+			for (auto const& [id, bonenode] : m_bones)
+			{
+				auto& bone = *bonenode.bone;
+				auto& node = *bone.GetNode();
+				auto level = bonenode.level;
+				m_out << Indent(level) << "Bone \"" << node.GetName() << "\":\n";
+			}
 		}
 
 		// Output the scene global settings
@@ -2522,7 +2552,7 @@ namespace pr::geometry::fbx
 	};
 
 	// Write an FBX scene to disk
-	static void Export(Context& manager, std::ostream& out, FbxScene& scene, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
+	static void Export(Context& manager, std::ostream& out, FbxScene& scene, EFormat format = EFormat::Binary, ErrorList* errors = nullptr)
 	{
 		ExporterPtr exporter(Check(FbxExporter::Create(manager, ""), "Failed to create Exporter"));
 
@@ -2551,7 +2581,7 @@ namespace pr::geometry::fbx
 	}
 
 	// Parse and FBX Scene from 'src'
-	static FbxScene* Import(Context& manager, std::istream& src, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
+	static FbxScene* Import(Context& manager, std::istream& src, EFormat format = EFormat::Binary, ErrorList* errors = nullptr)
 	{
 		auto* scene = Check(FbxScene::Create(manager, ""), "Error: Unable to create FBX scene");
 
@@ -2648,7 +2678,7 @@ extern "C"
 		try
 		{
 			auto fbxscene = Import(ctx, src);
-			ctx.m_scenes.emplace_back(new SceneData(fbxscene));
+			ctx.m_scenes.push_back(SceneDataPtr{ new SceneData(fbxscene) });
 			return ctx.m_scenes.back().get();
 		}
 		catch (std::exception const& ex)
@@ -2659,7 +2689,7 @@ extern "C"
 	}
 
 	// Save an fbx scene
-	__declspec(dllexport) void __stdcall Fbx_Scene_Save(Context& ctx, SceneData const& scene, std::ostream& out, char const* format)
+	__declspec(dllexport) void __stdcall Fbx_Scene_Save(Context& ctx, SceneData const& scene, std::ostream& out, EFormat format)
 	{
 		try
 		{
