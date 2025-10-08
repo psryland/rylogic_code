@@ -539,6 +539,11 @@ namespace pr
 		return out << vec.ang << " " << vec.lin;
 	}
 	template <typename Char, Scalar S, typename A, typename B>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Quat<S, A, B> const& quat)
+	{
+		return out << quat.xyzw;
+	}
+	template <typename Char, Scalar S, typename A, typename B>
 	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat2x2<S,A,B> const& mat)
 	{
 		return out << mat.x << " " << mat.y;
