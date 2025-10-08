@@ -15,7 +15,26 @@
 
 namespace pr::rdr12
 {
-	struct Window
+	struct WindowBase
+	{
+		// Notes:
+		//  - This class is used to ensure types in 'Window' are destructed before types in here
+		//    This allows reference counting to check that there are no outstanding references without
+		//    having to early release everything.
+		Renderer*                    m_rdr;              // The owning renderer
+		HWND                         m_hwnd;             // The window handle this window is bound to
+		DummyWindow                  m_hwnd_dummy;       // A dummy window handle for debug and message queues
+		DXGI_SWAP_CHAIN_FLAG         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
+		D3DPtr<IDXGISwapChain>       m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
+		D3DPtr<IDXGISwapChain3>      m_swap_chain;       // The swap chain bound to the window handle
+		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the swap-chain
+		D3DPtr<ID3D12DescriptorHeap> m_dsv_heap;         // Depth stencil view descriptor for the swap-chain
+		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
+
+		WindowBase(Renderer& rdr, WndSettings const& settings);
+		~WindowBase();
+	};
+	struct Window : WindowBase
 	{
 		// Notes:
 		//  - A window wraps an HWND and contains a SwapChain.
@@ -32,15 +51,6 @@ namespace pr::rdr12
 		using GpuViewHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
 		using GpuSampHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>;
 
-		Renderer*                    m_rdr;              // The owning renderer
-		HWND                         m_hwnd;             // The window handle this window is bound to
-		DummyWindow                  m_hwnd_dummy;       // A dummy window handle for debug and message queues
-		DXGI_SWAP_CHAIN_FLAG         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
-		D3DPtr<IDXGISwapChain>       m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
-		D3DPtr<IDXGISwapChain3>      m_swap_chain;       // The swap chain bound to the window handle
-		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the swap-chain
-		D3DPtr<ID3D12DescriptorHeap> m_dsv_heap;         // Depth stencil view descriptor for the swap-chain
-		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
 		GpuSync                      m_gsync;            // GPU fence for frames
 		BackBuffers                  m_swap_bb;          // Back buffer render targets from the swap chain.
 		BackBuffer                   m_msaa_bb;          // The MSAA back buffer render target
@@ -60,7 +70,6 @@ namespace pr::rdr12
 		string32                     m_name;             // A debugging name for the window
 
 		Window(Renderer& rdr, WndSettings const& settings);
-		~Window();
 
 		// Access the renderer manager classes
 		ID3D12Device4* d3d() const;

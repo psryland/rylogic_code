@@ -53,64 +53,64 @@ namespace pr::rdr12
 	};
 	static_assert(std::is_trivially_copyable_v<Vert> && std::is_trivially_default_constructible_v<Vert>);
 
-	inline v4 const& GetP(Vert const& vert)
+	constexpr v4 const& GetP(Vert const& vert)
 	{
 		return vert.m_vert;
 	}
-	inline Colour const& GetC(Vert const& vert)
+	constexpr Colour const& GetC(Vert const& vert)
 	{
 		return vert.m_diff;
 	}
-	inline v4 const& GetN(Vert const& vert)
+	constexpr v4 const& GetN(Vert const& vert)
 	{
 		return vert.m_norm;
 	}
-	inline v2 const& GetT(Vert const& vert)
+	constexpr v2 const& GetT(Vert const& vert)
 	{
 		return vert.m_tex0;
 	}
 
 	// Don't set values that aren't given, allows these functions to be composed
-	inline void SetP(Vert& vert, v4 const& pos)
+	constexpr void SetP(Vert& vert, v4 const& pos)
 	{
 		vert.m_vert = pos;
 	}
-	inline void SetC(Vert& vert, Colour const& col)
+	constexpr void SetC(Vert& vert, Colour const& col)
 	{
 		vert.m_diff = col;
 	}
-	inline void SetN(Vert& vert, v4 const& norm)
+	constexpr void SetN(Vert& vert, v4 const& norm)
 	{
 		vert.m_norm = norm;
 	}
-	inline void SetT(Vert& vert, v2 const& uv)
+	constexpr void SetT(Vert& vert, v2 const& uv)
 	{
 		vert.m_tex0 = uv;
 	}
-	inline void SetPC(Vert& vert, v4 const& pos, Colour const& col)
+	constexpr void SetPC(Vert& vert, v4 const& pos, Colour const& col)
 	{
 		vert.m_vert = pos;
 		vert.m_diff = col;
 	}
-	inline void SetPT(Vert& vert, v4 const& pos, v2 const& uv)
+	constexpr void SetPT(Vert& vert, v4 const& pos, v2 const& uv)
 	{
 		vert.m_vert = pos;
 		vert.m_tex0 = uv;
 	}
-	inline void SetPCN(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm)
-	{
-		vert.m_vert = pos;
-		vert.m_diff = col;
-		vert.m_norm = norm;
-	}
-	inline void SetPCNT(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv)
+	constexpr void SetPCN(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm)
 	{
 		vert.m_vert = pos;
 		vert.m_diff = col;
 		vert.m_norm = norm;
+	}
+	constexpr void SetPCNT(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv)
+	{
+		vert.m_vert = pos;
+		vert.m_diff = col;
+		vert.m_norm = norm;
 		vert.m_tex0 = uv;
 	}
-	inline void SetPCNTI(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv, iv2 const& idx)
+	constexpr void SetPCNTI(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv, iv2 const& idx)
 	{
 		vert.m_vert = pos;
 		vert.m_diff = col;

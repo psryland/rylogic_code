@@ -479,7 +479,7 @@ namespace pr::geometry::p3d
 		Range<int> vrange() const
 		{
 			Range<int> r = Range<int>::Reset();
-			for (auto idx : m_vidx.casting_span<int>())
+			for (auto idx : m_vidx.span_as<int>())
 				r.grow(idx);
 
 			return r;
@@ -492,7 +492,7 @@ namespace pr::geometry::p3d
 		// Iteration access to the nugget indices
 		template <typename TOut = uint32_t> auto indices() const
 		{
-			return m_vidx.casting_span<TOut>();
+			return m_vidx.span_as<TOut>();
 		}
 	};
 	struct Mesh
@@ -1529,7 +1529,7 @@ namespace pr::geometry::p3d
 
 				// Fill 'buf' with variable length indices
 				int64_t prev = 0;
-				for (auto i : idx.casting_span<Idx>())
+				for (auto i : idx.span_as<Idx>())
 				{
 					// Get the delta from the previous index
 					auto delta = i - prev;
@@ -2378,7 +2378,7 @@ namespace pr::geometry::p3d
 				out << ind << "// nugget " << (&nug - mesh.m_nugget.data()) << "\n";
 
 				auto i = 0;
-				for (auto idx : nug.m_vidx.casting_span<int>())
+				for (auto idx : nug.m_vidx.span_as<int>())
 				{
 					out << (i == 0 ? ind : "");
 					out << idx << ", ";
@@ -2526,7 +2526,7 @@ namespace pr::geometry::p3d
 
 				// Indices
 				auto i = 0U;
-				for (auto const& vi : nug.m_vidx.casting_span<int>())
+				for (auto const& vi : nug.m_vidx.span_as<int>())
 				{
 					out << (i == 0 ? ind : "");
 					out << vi;
@@ -2724,7 +2724,7 @@ namespace pr::geometry
 			vidx.append<uint16_t>({0, 1, 2, 3});
 			
 			int i = 0;
-			for (auto j : vidx.casting_span<short>())
+			for (auto j : vidx.span_as<short>())
 				PR_EXPECT(j == (short)i++);
 		}
 

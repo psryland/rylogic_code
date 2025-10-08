@@ -11,65 +11,44 @@ namespace fbx_cmd
 	struct Main :ICommand
 	{
 		using CmdPtr = std::unique_ptr<ICommand>;
-		CmdPtr m_command;
-
-		Main()
-			:m_command()
-		{
-		}
-		int Run() override
-		{
-			return -1;
-		}
+		CmdPtr m_command = {};
 
 		// Main program run
 		int Run(std::wstring args)
 		{
-			//NEW_COMMAND - Test the new command
-			//if (!args.empty()) printf("warning: debugging overriding arguments");
-			//args = R("-dump E:\Rylogic\Code\art\models\AnimCharacter\AnimatedCharacter.fbx")";
-			//args = R("-dump E:/Dump/Hyperpose/fbx/hyperpose_sample.fbx");
-
-			// Parse the command line, show help if invalid
 			try
 			{
+				//NEW_COMMAND - Test the new command
+				//if (!args.empty()) printf("warning: debugging overriding arguments");
+				//args = L"-dump E:\Rylogic\Code\art\models\AnimCharacter\AnimatedCharacter.fbx";
+				args = L"-dump E:/Dump/Hyperpose/fbx/hyperpose_sample.fbx";
+
+				// Parse the command line, show help if invalid
 				if (!EnumCommandLine(Narrow(args).c_str(), *this))
 				{
 					ShowConsole();
-
 					if (m_command)
 						return m_command->ShowHelp(), -1;
 
 					ShowHelp();
 					return -1;
 				}
+
+				// Run the command. It's the commands decision whether to display the console or not
 				if (m_command)
+				{
 					m_command->ValidateInput();
+					return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
+				}
+
+				return 0;
 			}
 			catch (std::exception const& ex)
 			{
 				ShowConsole();
-				std::cerr << "Command line error" << std::endl << ex.what() << std::endl;
+				std::cerr << "Unhandled error" << std::endl << ex.what() << std::endl;
 				return -1;
 			}
-
-			// Run the command. It's the commands decision whether to display the console or not
-			if (m_command)
-			{
-				try
-				{
-					return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
-				}
-				catch (std::exception const& ex)
-				{
-					ShowConsole();
-					std::cerr << "Unhandled error" << std::endl << ex.what() << std::endl;
-					return -1;
-				}
-			}
-
-			// Assume error messages have been displayed already
-			return 0;
 		}
 
 		// Show the main help
@@ -79,6 +58,7 @@ namespace fbx_cmd
 				ICommand::Title() <<
 				"  Syntax: fbx-cmd -command [parameters]\n"
 				"    -dump : Dump the structure of an FBX file\n"
+				"    -triangulate : \n"
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type fbx-cmd -command -help for help on a particular command\n"
@@ -131,7 +111,6 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 		return -1;
 	}
 }
-
 int __cdecl wmain(int argc, wchar_t* argv[])
 {
 	fbx_cmd::Main m;

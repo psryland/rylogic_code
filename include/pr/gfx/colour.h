@@ -4,6 +4,7 @@
 //*******************************************************************************************
 #pragma once
 #include <string>
+#include <concepts>
 #include <type_traits>
 #include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
@@ -30,8 +31,12 @@ namespace pr
 	{
 		using elem_type = float;
 	};
-	template <typename T> constexpr bool is_colour_v = is_colour<T>::value;
-	template <typename T> using enable_if_col = typename std::enable_if_t<is_colour_v<T>>;
+
+	template <typename T>
+	constexpr bool is_colour_v = is_colour<T>::value;
+
+	template <typename T>
+	concept ColourType = is_colour_v<T>;
 
 	namespace maths
 	{
@@ -249,8 +254,7 @@ namespace pr
 			uint8_t(Clamp(b_ * 255.0f + 0.5f, 0.0f, 255.0f)),
 			uint8_t(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)))
 		{}
-		template <typename T, typename = enable_if_col<T>>
-		constexpr Colour32(T const& c)
+		template <ColourType T> constexpr Colour32(T c)
 			:Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c))
 		{}
 
@@ -265,8 +269,7 @@ namespace pr
 			argb = i;
 			return *this;
 		}
-		template <typename T, typename = enable_if_col<T>>
-		constexpr Colour32& operator = (T const& c)
+		template <ColourType T> constexpr Colour32& operator = (T const& c)
 		{
 			return *this = Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
 		}
@@ -412,10 +415,10 @@ namespace pr
 	static_assert(is_colour_v<Colour32>, "");
 
 	// Define component accessors
-	constexpr float r_cp(Colour32 v) { return v.r / 255.0f; }
-	constexpr float g_cp(Colour32 v) { return v.g / 255.0f; }
-	constexpr float b_cp(Colour32 v) { return v.b / 255.0f; }
-	constexpr float a_cp(Colour32 v) { return v.a / 255.0f; }
+	constexpr float r_cp(Colour32 v) { return ((v.argb >> 16) & 0xFF) / 255.0f; } //constexpr requires using the first union member
+	constexpr float g_cp(Colour32 v) { return ((v.argb >>  8) & 0xFF) / 255.0f; }
+	constexpr float b_cp(Colour32 v) { return ((v.argb >>  0) & 0xFF) / 255.0f; }
+	constexpr float a_cp(Colour32 v) { return ((v.argb >> 24) & 0xFF) / 255.0f; }
 	constexpr float x_cp(Colour32 v) { return r_cp(v); }
 	constexpr float y_cp(Colour32 v) { return g_cp(v); }
 	constexpr float z_cp(Colour32 v) { return b_cp(v); }
@@ -533,6 +536,10 @@ namespace pr
 	struct alignas(16) Colour
 	{
 		using float4_t = float[4];
+		using intrinsic_t =
+			std::conditional_t<PR_MATHS_USE_INTRINSICS != 0, __m128,
+			std::byte[4 * sizeof(float)]
+			>;
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct/union
@@ -542,40 +549,33 @@ namespace pr
 			struct { v4 rgba; };
 			struct { v3 rgb; };
 			struct { float4_t arr; };
-			#if PR_MATHS_USE_INTRINSICS
-			__m128 vec;
-			#endif
+			intrinsic_t vec;
 		};
 		#pragma warning(pop)
 
 		Colour() = default;
-		Colour(float r_, float g_, float b_, float a_)
-			#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps(a_, b_, g_, r_))
-			#else
+		constexpr Colour(float r_, float g_, float b_, float a_)
 			: r(r_)
 			, g(g_)
 			, b(b_)
 			, a(a_)
-			#endif
-		{
-			// Note: Do not clamp values, use 'Clamp' if that's what you want
-			assert(maths::is_aligned(this));
-		}
-		Colour(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+		{}
+		constexpr Colour(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
 			:Colour(r_ / 255.0f, g_ / 255.0f, b_ / 255.0f, a_ / 255.0f)
 		{}
-		explicit Colour(Colour32 c32)
-			:Colour(c32.r, c32.g, c32.b, c32.a)
+		constexpr explicit Colour(Colour32 c32)
+			:Colour(r_cp(c32), g_cp(c32), b_cp(c32), a_cp(c32))
 		{}
-		explicit Colour(Colour32 c32, float alpha)
-			:Colour(c32.r / 255.0f, c32.g / 255.0f, c32.b / 255.0f, alpha)
+		constexpr explicit Colour(Colour32 c32, float alpha)
+			:Colour(r_cp(c32), g_cp(c32), b_cp(c32), alpha)
 		{}
-		explicit Colour(float4_t const& f4)
+		constexpr explicit Colour(uint32_t argb)
+			:Colour(Colour32(argb))
+		{}
+		constexpr explicit Colour(float4_t const& f4)
 			:Colour(f4[0], f4[1], f4[2], f4[3])
 		{}
-		template <typename T, typename = enable_if_col<T>>
-		explicit Colour(T const& v)
+		template <ColourType T> explicit Colour(T const& v)
 			: Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
@@ -585,14 +585,6 @@ namespace pr
 			assert(maths::is_aligned(this));
 		}
 		#endif
-		explicit constexpr Colour(uint32_t argb)
-			:Colour()
-		{
-			a = ((argb >> 24) & 0xFF) / 255.0f;
-			r = ((argb >> 16) & 0xFF) / 255.0f;
-			g = ((argb >> 8) & 0xFF) / 255.0f;
-			b = ((argb >> 0) & 0xFF) / 255.0f;
-		}
 
 		// Array access
 		float const& operator [] (int i) const
@@ -615,7 +607,7 @@ namespace pr
 		{
 			return *this = Colour(f4);
 		}
-		template <typename T, typename = enable_if_col<T>> Colour& operator = (T const& c)
+		template <ColourType T> Colour& operator = (T const& c)
 		{
 			return *this = Colour(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
 		}
@@ -744,15 +736,15 @@ namespace pr
 	#endif
 
 	// Define component accessors
-	inline float pr_vectorcall r_cp(Colour_cref v) { return v.r; }
-	inline float pr_vectorcall g_cp(Colour_cref v) { return v.g; }
-	inline float pr_vectorcall b_cp(Colour_cref v) { return v.b; }
-	inline float pr_vectorcall a_cp(Colour_cref v) { return v.a; }
+	constexpr float pr_vectorcall r_cp(Colour_cref v) { return v.r; }
+	constexpr float pr_vectorcall g_cp(Colour_cref v) { return v.g; }
+	constexpr float pr_vectorcall b_cp(Colour_cref v) { return v.b; }
+	constexpr float pr_vectorcall a_cp(Colour_cref v) { return v.a; }
 
-	inline float pr_vectorcall x_cp(Colour_cref v) { return r_cp(v); }
-	inline float pr_vectorcall y_cp(Colour_cref v) { return g_cp(v); }
-	inline float pr_vectorcall z_cp(Colour_cref v) { return b_cp(v); }
-	inline float pr_vectorcall w_cp(Colour_cref v) { return a_cp(v); }
+	constexpr float pr_vectorcall x_cp(Colour_cref v) { return r_cp(v); }
+	constexpr float pr_vectorcall y_cp(Colour_cref v) { return g_cp(v); }
+	constexpr float pr_vectorcall z_cp(Colour_cref v) { return b_cp(v); }
+	constexpr float pr_vectorcall w_cp(Colour_cref v) { return a_cp(v); }
 
 	#pragma region Constants
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -843,10 +835,10 @@ namespace pr
 
 	#pragma region COLORREF
 	#if defined(_WINGDI_) && !defined(NOGDI)
-	inline float r_cp(COLORREF v) { return GetRValue(v) / 255.0f; }
-	inline float g_cp(COLORREF v) { return GetGValue(v) / 255.0f; }
-	inline float b_cp(COLORREF v) { return GetBValue(v) / 255.0f; }
-	inline float a_cp(COLORREF)   { return 1.0f; }
+	constexpr float r_cp(COLORREF v) { return GetRValue(v) / 255.0f; }
+	constexpr float g_cp(COLORREF v) { return GetGValue(v) / 255.0f; }
+	constexpr float b_cp(COLORREF v) { return GetBValue(v) / 255.0f; }
+	constexpr float a_cp(COLORREF)   { return 1.0f; }
 
 	// Treat COLORREF as a colour type
 	template <> struct is_colour<COLORREF> :std::true_type
@@ -965,7 +957,7 @@ namespace pr
 		auto str = To<std::basic_string<Char>>(col);
 		return out << str.c_str();
 	}
-	template <typename Char, typename TColour, typename = enable_if_col<TColour>>
+	template <typename Char, ColourType TColour>
 	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, TColour const& col)
 	{
 		auto str = To<std::basic_string<Char>>(Colour32(col));
@@ -1004,8 +996,18 @@ namespace pr::gfx
 {
 	PRUnitTest(ColourTests)
 	{
-		Colour32 c0(0xFF, 0xFF, 0xFF, 0xFF);
-		PR_CHECK(c0.argb, 0xFFFFFFFFU);
+		{
+			Colour32 c0(0xFF, 0xFF, 0xFF, 0xFF);
+			PR_EXPECT(c0.argb == 0xFFFFFFFFU);
+		}
+		{
+			Colour32 c0(0xAA, 0xBB, 0xCC, 0xDD);
+			Colour c1(c0);
+			Colour32 c2(c1);
+			PR_EXPECT(c2 == c0);
+		}
+
+		
 	}
 }
 #endif

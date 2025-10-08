@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -16,7 +16,7 @@ namespace pr::rdr12
 		//    called automatically by the Timer on the dummy window in the Renderer. This relies
 		//    on the GpuSync object registering it's Poll function with the Renderer.
 
-		using Ref = struct
+		struct Ref
 		{
 			D3DPtr<ID3D12Object> ptr;
 			D3DPtr<IRefCounted> ptr2;
@@ -38,29 +38,17 @@ namespace pr::rdr12
 		KeepAlive* this_ptr() { return this; }
 
 		// Add an object to be kept alive until 'sync_point' is reached
-		template <RefCountedType T> void Add(D3DPtr<T> obj, uint64_t sync_point)
+		template <RefCountedType T> void Add(D3DPtr<T> obj, std::optional<uint64_t> sync_point = {})
 		{
-			m_objects.push_back(Ref{
-				.ptr = nullptr,
-				.ptr2 = obj,
-				.sync_point = sync_point,
-				});
+			Ref ref = {};
+			if constexpr (std::is_base_of_v<ID3D12Object, T>) ref.ptr = obj;
+			if constexpr (std::is_base_of_v<IRefCounted, T>) ref.ptr2 = obj;
+			ref.sync_point = sync_point ? *sync_point : m_gsync.NextSyncPoint();
+			m_objects.push_back(ref);
 		}
-		template <RefCountedType T> void Add(D3DPtr<T> obj)
+		template <RefCountedType T> void Add(T* obj, std::optional<uint64_t> sync_point = {})
 		{
-			Add(obj, m_gsync.NextSyncPoint());
-		}
-		void Add(ID3D12Object* obj, uint64_t sync_point)
-		{
-			m_objects.push_back(Ref{
-				.ptr = D3DPtr<ID3D12Object>(obj, true),
-				.ptr2 = nullptr,
-				.sync_point = sync_point,
-				});
-		}
-		void Add(ID3D12Object* obj)
-		{
-			Add(obj, m_gsync.NextSyncPoint());
+			Add(D3DPtr<T>(obj, true), sync_point);
 		}
 
 	private:

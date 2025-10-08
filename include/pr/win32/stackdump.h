@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 //  Stack Dump
 //***********************************************************************
 // Note: This implementation is based on an unreleased Boost library,
@@ -463,7 +463,7 @@ namespace pr
 		for (size_t i = 0; i != count; ++i)
 		{
 			CallSource src = impl::StackDumpImpl<>::GetCallSource(frames[i]);
-			out(src.m_sym_name, src.m_filepath, src.m_line);
+			out(src.m_sym_name, src.m_filepath.string(), src.m_line);
 		}
 	}
 
