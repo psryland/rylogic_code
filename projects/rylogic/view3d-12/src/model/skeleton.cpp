@@ -7,7 +7,7 @@
 
 namespace pr::rdr12
 {
-	Skeleton::Skeleton(uint64_t id, std::span<uint64_t const> bone_ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy)
+	Skeleton::Skeleton(uint32_t id, std::span<uint32_t const> bone_ids, std::span<string32 const> names, std::span<m4x4 const> o2bp, std::span<uint8_t const> hierarchy)
 		: m_id(id)
 		, m_bone_ids(bone_ids)
 		, m_names(names)
@@ -17,7 +17,7 @@ namespace pr::rdr12
 	}
 
 	// The ID of the root bone
-	uint64_t Skeleton::Id() const
+	uint32_t Skeleton::Id() const
 	{
 		return m_id;
 	}

@@ -35,58 +35,68 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	// Get the bone at the given frame index
-	BoneKey BoneTrack::operator[](int frame_index) const
-	{
-		return BoneKey{
-			.m_rot = m_rotation.empty() ? quat::Identity() : m_rotation[std::clamp(frame_index, 0, isize(m_rotation) - 1)],
-			.m_pos = m_position.empty() ? v4::Origin() : m_position[std::clamp(frame_index, 0, isize(m_position) - 1)].w1(),
-			.m_scale = m_scale.empty() ? v4::One() : m_scale[std::clamp(frame_index, 0, isize(m_scale) - 1)].w0(),
-			.m_timekey = m_times.empty()
-				? TimeKey(frame_index, m_frame_rate) // If the times channel is empty, assume one frame per 1/fps
-				: m_times[std::clamp(frame_index, 0, isize(m_times) - 1)],
-			.m_kf_index = frame_index,
-		};
-	}
-
-	// Get the bone key at a given time
-	BoneKey BoneTrack::operator[](double time_s) const
-	{
-		auto kf = m_times.empty()
-			? s_cast<int>(std::floor(time_s * m_frame_rate)) // If the times channel is empty, assume one frame per 1/fps
-			: s_cast<int>(std::distance(begin(m_times), std::ranges::lower_bound(m_times, time_s, {}, [](TimeKey const& tk) { return static_cast<double>(tk.m_time); })));
-
-		return (*this)[kf];
-	}
-
-	// --------------------------------------------------------------------------------------------
-
-	KeyFrameAnimation::KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate, int bone_count)
+	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_time_range(time_range)
-		, m_frame_rate(frame_rate)
-		, m_bone_count(bone_count)
-		, m_offsets()
-		, m_times()
+		, m_duration(duration)
+		, m_native_frame_rate(native_frame_rate)
+		, m_bone_map()
 		, m_rotation()
 		, m_position()
 		, m_scale()
 	{}
-
-	// Return the animation data for a single bone
-	BoneTrack KeyFrameAnimation::Track(int bone_index) const
+	
+	// Number of bone tracks in this animation
+	int KeyFrameAnimation::bone_count() const
 	{
-		assert(bone_index >= 0 && bone_index < isize(m_offsets) - 1);
-		auto i0 = s_cast<size_t>(m_offsets[bone_index + 0]);
-		auto i1 = s_cast<size_t>(m_offsets[bone_index + 1]);
-		return BoneTrack{
-			.m_times = m_times.empty() ? m_times.span() : m_times.span(i0 , i1 - i0),
-			.m_rotation = m_rotation.empty() ? m_rotation.span() : m_rotation.span(i0 , i1 - i0),
-			.m_position = m_position.empty() ? m_position.span() : m_position.span(i0 , i1 - i0),
-			.m_scale = m_scale.empty() ? m_scale.span() : m_scale.span(i0 , i1 - i0),
-			.m_frame_rate = m_frame_rate,
-			.m_bone_index = bone_index,
+		return isize(m_bone_map);
+	}
+
+	// Number of keys in this animation
+	int KeyFrameAnimation::key_count() const
+	{
+		auto count = s_cast<int>(
+			!m_rotation.empty() ? m_rotation.size() :
+			!m_position.empty() ? m_position.size() :
+			!m_scale   .empty() ? m_scale   .size() :
+			bone_count());
+
+		assert(count % bone_count() == 0 && "Expect track length to be a multiple of the bone count");
+		return count / bone_count();
+	}
+
+	// The effective frame rate implied by the duration and number of keys
+	double KeyFrameAnimation::frame_rate() const
+	{
+		return (key_count() - 1) / m_duration;
+	}
+	
+	// Get the keys on either side of 'time_s' (to interpolate between)
+	std::tuple<BoneKey, BoneKey> KeyFrameAnimation::Key(float time_s, int bone_index) const
+	{
+		auto bcount = bone_count();
+		auto kcount = key_count();
+		auto period = s_cast<float>(1.0 / frame_rate());
+
+		// Convert the time into a frame number.
+		// Note, by scaling 'm_duration' or 'time_s' the playback rate of the animation can be changed.
+		auto kidx0 = Lerp(0, kcount, Frac<double>(0.0, time_s, m_duration));
+		auto kidx1 = kidx0 + 1; // Note: +1 before clamping
+		kidx0 = Clamp(kidx0, 0, kcount);
+		kidx1 = Clamp(kidx1, 0, kcount);
+
+		BoneKey key0 = {
+			.m_rot = !m_rotation.empty() ? m_rotation[kidx0 * bcount + bone_index] : quat::Identity(),
+			.m_pos = !m_position.empty() ? m_position[kidx0 * bcount + bone_index] : v3::Zero(),
+			.m_scl = !m_scale.empty() ? m_scale[kidx0 * bcount + bone_index] : v3::One(),
+			.m_time = std::floor(time_s / period) * period,
 		};
+		BoneKey key1 = {
+			.m_rot = !m_rotation.empty() ? m_rotation[kidx1 * bcount + bone_index] : quat::Identity(),
+			.m_pos = !m_position.empty() ? m_position[kidx1 * bcount + bone_index] : v3::Zero(),
+			.m_scl = !m_scale.empty() ? m_scale[kidx1 * bcount + bone_index] : v3::One(),
+			.m_time = key0.m_time + period,
+		};
+		return { key0, key1 };
 	}
 
 	// Sample each track at 'time_s'
@@ -94,25 +104,20 @@ namespace pr::rdr12
 	static void EvaluateAtTime(float time_s, KeyFrameAnimation const& anim, std::span<Key> out)
 	{
 		// For each bone...
-		assert(anim.m_bone_count == out.size());
+		assert(anim.bone_count() == out.size());
 		std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), [&](Key& key)
 		{
-			auto bone_index = s_cast<int>(&key - out.data());
-
-			// Read the track for this bone
-			auto track = anim.Track(bone_index);
-
 			// Get the keys to interpolate between
-			auto bonekey0 = track[time_s];
-			auto bonekey1 = track[bonekey0.m_kf_index + 1];
+			auto bone_index = s_cast<int>(&key - out.data());
+			auto [key0, key1] = anim.Key(time_s, bone_index);
 
 			// Interpolate between key frames
 			auto frac =
-				time_s <= bonekey0.m_timekey.m_time ? 0.0f :
-				time_s >= bonekey1.m_timekey.m_time ? 1.0f :
-				Frac(bonekey0.m_timekey.m_time, time_s, bonekey1.m_timekey.m_time);
+				time_s <= key0.m_time ? 0.0f :
+				time_s >= key1.m_time ? 1.0f :
+				Frac(key0.m_time, time_s, key1.m_time);
 
-			key = Interp(bonekey0, bonekey1, frac, bonekey0.m_timekey.m_interp);
+			key = Interp(key0, key1, frac, key0.m_interp);
 		});
 	}
 
@@ -123,12 +128,12 @@ namespace pr::rdr12
 	}
 	void KeyFrameAnimation::EvaluateAtTime(float time_s, KeyFrameAnimation::Sample& out) const
 	{
-		out.resize(m_bone_count);
+		out.resize(bone_count());
 		rdr12::EvaluateAtTime(time_s, *this, out.span());
 	}
 	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(float time_s) const
 	{
-		Sample sample(m_bone_count);
+		Sample sample(bone_count());
 		rdr12::EvaluateAtTime(time_s, *this, sample.span());
 		return sample;
 	}

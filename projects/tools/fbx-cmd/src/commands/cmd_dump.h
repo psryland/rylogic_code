@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "src/forward.h"
 #include "src/icommand.h"
 
@@ -14,7 +14,7 @@ namespace fbx_cmd
 		//   fbx-cmd -dump E:/Dump/Hyperpose/fbx/hyperpose_sample.fbx
 
 		std::filesystem::path m_filepath;
-		ESceneParts m_parts = ESceneParts::MainObjects;
+		ESceneParts m_parts = ESceneParts::All;
 
 		void ShowHelp() const override
 		{
@@ -47,7 +47,14 @@ namespace fbx_cmd
 				throw std::runtime_error("No input file specified");
 
 			std::ifstream ifile(m_filepath, std::ios::binary);
-			pr::geometry::fbx::Scene scene(ifile);
+			fbx::Scene scene(ifile, fbx::LoadOptions{
+				.target_axes = {
+					.right = fbx::ECoordAxis::PosX,
+					.up = fbx::ECoordAxis::PosY,
+					.front = fbx::ECoordAxis::NegZ,
+				},
+			});
+
 			scene.Dump({
 				.m_parts = m_parts,
 				.m_coord_system = fbx::ECoordSystem::PosX_PosY_NegZ,

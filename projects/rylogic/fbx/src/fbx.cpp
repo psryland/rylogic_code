@@ -2,954 +2,451 @@
 // FBX Model loader
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
-// FBX files come in two variants; binary and text.
-// The format is closed source however, so we need to use the AutoDesk FBX SDK.
+#include <concepts>
+#include <memory>
 #include <string>
 #include <vector>
-#include <format>
-#include <ranges>
-#include <iostream>
+#include <unordered_map>
+#include <string_view>
 #include <functional>
-#include <filesystem>
-#include <unordered_set>
-#include <algorithm>
-#include <stdexcept>
-#include <future>
-#include <cmath>
-#include <fbxsdk.h>
+#include <execution>
+#include <atomic>
+#include <mutex>
+
+#include <Windows.h>
+
+#include "ufbx/ufbx.h"
+#include "ufbx/extra/ufbx_os.h"
+
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
-#include "pr/common/algorithm.h"
-#include "pr/common/arena_allocator.h"
-#include "pr/container/vector.h"
 #include "pr/geometry/fbx.h"
+#include "pr/container/vector.h"
 
-using namespace fbxsdk;
+using namespace pr;
+using namespace pr::geometry::fbx;
 
-// Extensions
-namespace fbxsdk
-{
-	struct FbxVersion { int Major = 0; int Minor = 0; int Revs = 0; };
-
-	using FbxObjectCleanUp = struct FbxObjectDeleter
-	{
-		void operator()(FbxManager* man) { man->Destroy(); }
-		void operator()(FbxObject* imp) { imp->Destroy(); }
-		void operator()(FbxScene* scene) { scene->Destroy(); }
-		void operator()(FbxPose* pose) { pose->Destroy(); }
-	};
-	using ManagerPtr = std::unique_ptr<FbxManager, FbxObjectCleanUp>;
-	using ImporterPtr = std::unique_ptr<FbxImporter, FbxObjectCleanUp>;
-	using ExporterPtr = std::unique_ptr<FbxExporter, FbxObjectCleanUp>;
-	using ScenePtr = std::unique_ptr<FbxScene, FbxObjectCleanUp>;
-	using PosePtr = std::unique_ptr<FbxPose, FbxObjectCleanUp>;
-
-	inline static double FloatClamp(double f)
-	{
-		return
-			f >= +HUGE_VAL ? +std::numeric_limits<double>::infinity() :
-			f <= -HUGE_VAL ? -std::numeric_limits<double>::infinity() :
-			f;
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxNodeAttribute::EType node_type)
-	{
-		switch (node_type)
-		{
-			case FbxNodeAttribute::EType::eUnknown: return out << "Unknown";
-			case FbxNodeAttribute::EType::eNull: return out << "Null";
-			case FbxNodeAttribute::EType::eMarker: return out << "Marker";
-			case FbxNodeAttribute::EType::eSkeleton: return out << "Skeleton";
-			case FbxNodeAttribute::EType::eMesh: return out << "Mesh";
-			case FbxNodeAttribute::EType::eNurbs: return out << "Nurbs";
-			case FbxNodeAttribute::EType::ePatch: return out << "Patch";
-			case FbxNodeAttribute::EType::eCamera: return out << "Camera";
-			case FbxNodeAttribute::EType::eCameraStereo: return out << "CameraStereo";
-			case FbxNodeAttribute::EType::eCameraSwitcher: return out << "CameraSwitcher";
-			case FbxNodeAttribute::EType::eLight: return out << "Light";
-			case FbxNodeAttribute::EType::eOpticalReference: return out << "OpticalReference";
-			case FbxNodeAttribute::EType::eOpticalMarker: return out << "OpticalMarker";
-			case FbxNodeAttribute::EType::eNurbsCurve: return out << "NurbsCurve";
-			case FbxNodeAttribute::EType::eTrimNurbsSurface: return out << "TrimNurbsSurface";
-			case FbxNodeAttribute::EType::eBoundary: return out << "Boundary";
-			case FbxNodeAttribute::EType::eNurbsSurface: return out << "NurbsSurface";
-			case FbxNodeAttribute::EType::eShape: return out << "Shape";
-			case FbxNodeAttribute::EType::eLODGroup: return out << "LODGroup";
-			case FbxNodeAttribute::EType::eSubDiv: return out << "SubDiv";
-			case FbxNodeAttribute::EType::eCachedEffect: return out << "CachedEffect";
-			case FbxNodeAttribute::EType::eLine: return out << "Lin";
-			default: return out << "Unknown";
-		}
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxVector2 const& vec)
-	{
-		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxVector4 const& vec)
-	{
-		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]) << ", " << FloatClamp(vec[3]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxAMatrix const& vec)
-	{
-		return out
-			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
-			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3]) << ", "
-			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
-			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxDouble2 const& vec)
-	{
-		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxDouble3 const& vec)
-	{
-		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxDouble4 const& vec)
-	{
-		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]) << ", " << FloatClamp(vec[3]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxDouble4x4 const& vec)
-	{
-		return out
-			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
-			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3]) << ", "
-			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
-			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxColor const& col)
-	{
-		return out << "R=" << (float)col.mRed << ", G=" << (float)col.mGreen << ", B=" << (float)col.mBlue << ", A=" << col.mAlpha;
-	}
-	inline static std::ostream& operator << (std::ostream& out, FbxProperty prop)
-	{
-		auto data_type = prop.GetPropertyDataType();
-		if (data_type == FbxBoolDT)
-		{
-			out << "  Bool: " << prop.Get<FbxBool>();
-		}
-		else if (data_type == FbxIntDT)
-		{
-			out << "   Int: " << prop.Get<FbxInt>();
-		}
-		else if (data_type == FbxEnumDT)
-		{
-			out << "  Enum: " << prop.Get<FbxInt>();
-		}
-		else if (data_type == FbxFloatDT)
-		{
-			out << " Float: " << prop.Get<FbxFloat>();
-		}
-		else if (data_type == FbxDoubleDT)
-		{
-			out << "Double: " << prop.Get<FbxDouble>();
-		}
-		else if (data_type == FbxStringDT)
-		{
-			out << "String: " << prop.Get<FbxString>().Buffer();
-		}
-		else if (data_type == FbxUrlDT)
-		{
-			out << "   URL: " << prop.Get<FbxString>().Buffer();
-		}
-		else if (data_type == FbxXRefUrlDT)
-		{
-			out << "RefURL: " << prop.Get<FbxString>().Buffer();
-		}
-		else if (data_type == FbxDouble2DT)
-		{
-			out << " Vec2D: " << prop.Get<FbxDouble2>();
-		}
-		else if (data_type == FbxDouble3DT)
-		{
-			out << " Vec3D: " << prop.Get<FbxDouble3>();
-		}
-		else if (data_type == FbxDouble4DT)
-		{
-			out << " Vec4D: " << prop.Get<FbxDouble4>();
-		}
-		else if (data_type == FbxColor3DT)
-		{
-			out << "Color3: " << prop.Get<FbxDouble3>();
-		}
-		else if (data_type == FbxColor4DT)
-		{
-			out << " Vec4D: " << prop.Get<FbxDouble4>();
-		}
-		else if (data_type == FbxDouble4x4DT)
-		{
-			out << "Mat4x4: " << prop.Get<FbxDouble4x4>();
-		}
-		return out;
-	}
-	inline static FbxAxisSystem::EUpVector operator +(FbxAxisSystem::EUpVector v)
-	{
-		return static_cast<FbxAxisSystem::EUpVector>(+static_cast<int>(v));
-	}
-	inline static FbxAxisSystem::EUpVector operator -(FbxAxisSystem::EUpVector v)
-	{
-		return static_cast<FbxAxisSystem::EUpVector>(-static_cast<int>(v));
-	}
-	inline static FbxAxisSystem::EFrontVector operator +(FbxAxisSystem::EFrontVector v)
-	{
-		return static_cast<FbxAxisSystem::EFrontVector>(+static_cast<int>(v));
-	}
-	inline static FbxAxisSystem::EFrontVector operator -(FbxAxisSystem::EFrontVector v)
-	{
-		return static_cast<FbxAxisSystem::EFrontVector>(-static_cast<int>(v));
-	}
-}
 namespace pr
 {
-	// Colour
-	template <> struct Convert<Colour, FbxColor>
+	template <typename T> requires (requires (T t) { t == nullptr; })
+	static constexpr T NullCheck(T ptr, std::string_view msg)
 	{
-		static Colour To_(FbxColor const& c)
-		{
-			return Colour(s_cast<float>(c.mRed), s_cast<float>(c.mGreen), s_cast<float>(c.mBlue), s_cast<float>(c.mAlpha));
-		}
-	};
-	template <> struct Convert<Colour, FbxDouble3>
-	{
-		static Colour To_(FbxDouble3 const& c)
-		{
-			return Colour(s_cast<float>(c[0]), s_cast<float>(c[1]), s_cast<float>(c[2]), 1.0f);
-		}
-	};
+		if (!(ptr == nullptr)) return ptr;
+		throw std::runtime_error(std::string(msg));
+	}
 
-	// Vec2
-	template <Scalar S> struct Convert<Vec2<S, void>, FbxVector2>
+	// Convert to ufbx
+	template <> struct Convert<ufbx_vec2, v2>
 	{
-		static Vec2<S, void> To_(FbxVector2 const& v)
+		constexpr static ufbx_vec2 To_(v2_cref v)
 		{
-			return Vec2<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]));
+			ufbx_vec2 r = {};
+			r.x = s_cast<ufbx_real>(v.x);
+			r.y = s_cast<ufbx_real>(v.y);
+			return r;
 		}
 	};
-
-	// Vec4
-	template <Scalar S> struct Convert<Vec4<S, void>, FbxDouble3>
+	template <> struct Convert<ufbx_vec3, v3>
 	{
-		static Vec4<S, void> To_(FbxDouble3 const& v)
+		constexpr static ufbx_vec3 To_(v3_cref v)
 		{
-			return Vec4<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]), s_cast<S>(v[2]), s_cast<S>(0));
+			ufbx_vec3 r = {};
+			r.x = s_cast<ufbx_real>(v.x);
+			r.y = s_cast<ufbx_real>(v.y);
+			r.z = s_cast<ufbx_real>(v.z);
+			return r;
 		}
 	};
-
-	// Vec4
-	template <Scalar S> struct Convert<Vec4<S, void>, FbxDouble4>
+	template <> struct Convert<ufbx_vec3, v4>
 	{
-		static Vec4<S, void> To_(FbxDouble4 const& v)
+		constexpr static ufbx_vec3 To_(v4_cref v)
 		{
-			return Vec4<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]), s_cast<S>(v[2]), s_cast<S>(v[3]));
+			ufbx_vec3 r = {};
+			r.x = s_cast<ufbx_real>(v.x);
+			r.y = s_cast<ufbx_real>(v.y);
+			r.z = s_cast<ufbx_real>(v.z);
+			return r;
 		}
 	};
-	template <Scalar S> struct Convert<Vec4<S, void>, FbxVector4>
+	template <> struct Convert<ufbx_quat, quat>
 	{
-		static Vec4<S, void> To_(FbxVector4 const& v)
+		constexpr static ufbx_quat To_(quat_cref v)
 		{
-			return Vec4<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]), s_cast<S>(v[2]), s_cast<S>(v[3]));
+			ufbx_quat r = {};
+			r.x = s_cast<ufbx_real>(v.x);
+			r.y = s_cast<ufbx_real>(v.y);
+			r.z = s_cast<ufbx_real>(v.z);
+			r.w = s_cast<ufbx_real>(v.w);
+			return r;
 		}
 	};
-
-	// Quaternion
-	template <Scalar S> struct Convert<Quat<S, void, void>, FbxQuaternion>
+	template <> struct Convert<ufbx_matrix, m4x4>
 	{
-		static Quat<S, void, void> To_(FbxQuaternion const& q)
+		constexpr static ufbx_matrix To_(m4x4 const& v)
 		{
-			return Quat<S, void, void>(s_cast<S>(q[0]), s_cast<S>(q[1]), s_cast<S>(q[2]), s_cast<S>(q[3]));
+			ufbx_matrix r = {};
+			r.cols[0] = To<ufbx_vec3>(v.x);
+			r.cols[1] = To<ufbx_vec3>(v.y);
+			r.cols[2] = To<ufbx_vec3>(v.z);
+			r.cols[3] = To<ufbx_vec3>(v.w);
+			return r;
 		}
 	};
-
-	// Mat4x4
-	template <Scalar S> struct Convert<Mat4x4<S, void, void>, FbxAMatrix>
+	template <> struct Convert<ufbx_transform, Transform>
 	{
-		static Mat4x4<S, void, void> To_(FbxAMatrix const& m)
+		constexpr static ufbx_transform To_(Transform const& x)
 		{
-			return Mat4x4<S, void, void>(
-				Vec4<S, void>(s_cast<S>(m[0][0]), s_cast<S>(m[0][1]), s_cast<S>(m[0][2]), s_cast<S>(m[0][3])),
-				Vec4<S, void>(s_cast<S>(m[1][0]), s_cast<S>(m[1][1]), s_cast<S>(m[1][2]), s_cast<S>(m[1][3])),
-				Vec4<S, void>(s_cast<S>(m[2][0]), s_cast<S>(m[2][1]), s_cast<S>(m[2][2]), s_cast<S>(m[2][3])),
-				Vec4<S, void>(s_cast<S>(m[3][0]), s_cast<S>(m[3][1]), s_cast<S>(m[3][2]), s_cast<S>(m[3][3])));
+			return ufbx_transform{
+				.translation = To<ufbx_vec3>(x.translation),
+				.rotation = To<ufbx_quat>(x.rotation),
+				.scale = To<ufbx_vec3>(x.scale),
+			};
 		}
 	};
-	template <Scalar S> struct Convert<Mat4x4<S, void, void>, FbxMatrix>
+	template <> struct Convert<ufbx_string, std::string_view>
 	{
-		static Mat4x4<S, void, void> To_(FbxMatrix const& m)
+		constexpr static ufbx_string To_(std::string_view sv)
 		{
-			return Mat4x4<S, void, void>(
-				Vec4<S, void>(s_cast<S>(m[0][0]), s_cast<S>(m[0][1]), s_cast<S>(m[0][2]), s_cast<S>(m[0][3])),
-				Vec4<S, void>(s_cast<S>(m[1][0]), s_cast<S>(m[1][1]), s_cast<S>(m[1][2]), s_cast<S>(m[1][3])),
-				Vec4<S, void>(s_cast<S>(m[2][0]), s_cast<S>(m[2][1]), s_cast<S>(m[2][2]), s_cast<S>(m[2][3])),
-				Vec4<S, void>(s_cast<S>(m[3][0]), s_cast<S>(m[3][1]), s_cast<S>(m[3][2]), s_cast<S>(m[3][3])));
+			return ufbx_string{ .data = sv.data(), .length = sv.size() };
 		}
 	};
-
-	// Bone type
-	template <> struct Convert<geometry::fbx::EInterpolation, FbxAnimCurveDef::EInterpolationType>
+	template <> struct Convert<ufbx_coordinate_axis, ECoordAxis>
 	{
-		static geometry::fbx::EInterpolation To_(FbxAnimCurveDef::EInterpolationType ty)
+		constexpr static ufbx_coordinate_axis To_(ECoordAxis x)
 		{
-			using EType = geometry::fbx::EInterpolation;
-			switch (ty)
+			switch (x)
 			{
-				case FbxAnimCurveDef::EInterpolationType::eInterpolationConstant: return EType::Constant;
-				case FbxAnimCurveDef::EInterpolationType::eInterpolationLinear: return EType::Linear;
-				case FbxAnimCurveDef::EInterpolationType::eInterpolationCubic: return EType::Cubic;
-				default: throw std::runtime_error(std::format("Unknown bone type: {}", int(ty)));
+				case ECoordAxis::PosX: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_POSITIVE_X;
+				case ECoordAxis::NegX: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_NEGATIVE_X;
+				case ECoordAxis::PosY: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_POSITIVE_Y;
+				case ECoordAxis::NegY: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_NEGATIVE_Y;
+				case ECoordAxis::PosZ: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_POSITIVE_Z;
+				case ECoordAxis::NegZ: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_NEGATIVE_Z;
+				case ECoordAxis::Unknown: return ufbx_coordinate_axis::UFBX_COORDINATE_AXIS_UNKNOWN;
+				default: throw std::runtime_error("Unknown enum value");
 			}
 		}
 	};
+	template <> struct Convert<ufbx_space_conversion, ESpaceConversion>
+	{
+		constexpr static ufbx_space_conversion To_(ESpaceConversion x)
+		{
+			switch (x)
+			{
+				case ESpaceConversion::TransformRoot: return ufbx_space_conversion::UFBX_SPACE_CONVERSION_TRANSFORM_ROOT;
+				case ESpaceConversion::AdjustTransforms: return ufbx_space_conversion::UFBX_SPACE_CONVERSION_ADJUST_TRANSFORMS;
+				case ESpaceConversion::ModifyGeometry: return ufbx_space_conversion::UFBX_SPACE_CONVERSION_MODIFY_GEOMETRY;
+				default: throw std::runtime_error("Unknown enum value");
+			}
+		}
+	};
+	template <> struct Convert<ufbx_pivot_handling, EPivotHandling>
+	{
+		constexpr static ufbx_pivot_handling To_(EPivotHandling x)
+		{
+			switch (x)
+			{
+				case EPivotHandling::Retain: return ufbx_pivot_handling::UFBX_PIVOT_HANDLING_RETAIN;
+				case EPivotHandling::AdjustToPivot: return ufbx_pivot_handling::UFBX_PIVOT_HANDLING_ADJUST_TO_PIVOT;
+				case EPivotHandling::AdjustToRotationPivot: return ufbx_pivot_handling::UFBX_PIVOT_HANDLING_ADJUST_TO_ROTATION_PIVOT;
+				default: throw std::runtime_error("Unknown enum value");
+			}
+		}
+	};
+	template <> struct Convert<ufbx_mirror_axis, EMirrorAxis>
+	{
+		constexpr static ufbx_mirror_axis To_(EMirrorAxis x)
+		{
+			switch (x)
+			{
+				case EMirrorAxis::None: return ufbx_mirror_axis::UFBX_MIRROR_AXIS_NONE;
+				case EMirrorAxis::X: return ufbx_mirror_axis::UFBX_MIRROR_AXIS_X;
+				case EMirrorAxis::Y: return ufbx_mirror_axis::UFBX_MIRROR_AXIS_Y;
+				case EMirrorAxis::Z: return ufbx_mirror_axis::UFBX_MIRROR_AXIS_Z;
+				default: throw std::runtime_error("Unknown enum value");
+			}
+		}
+	};
+	template <> struct Convert<ufbx_coordinate_axes, CoordAxes>
+	{
+		constexpr static ufbx_coordinate_axes To_(CoordAxes x)
+		{
+			return ufbx_coordinate_axes{
+				.right = To<ufbx_coordinate_axis>(x.right),
+				.up = To<ufbx_coordinate_axis>(x.up),
+				.front = To<ufbx_coordinate_axis>(x.front),
+			};
+		}
+	};
+	template <> struct Convert<ufbx_load_opts, LoadOptions>
+	{
+		static ufbx_load_opts To_(LoadOptions const& x)
+		{
+			return ufbx_load_opts {
+				._begin_zero = 0,
 
-	// String conversion
-	template <> struct Convert<std::string_view, FbxNodeAttribute::EType>
-	{
-		static std::string_view To_(FbxNodeAttribute::EType ty)
-		{
-			switch (ty)
-			{
-				case FbxNodeAttribute::EType::eUnknown: return "eUnknown";
-				case FbxNodeAttribute::EType::eNull: return "eNull";
-				case FbxNodeAttribute::EType::eMarker: return "eMarker";
-				case FbxNodeAttribute::EType::eSkeleton: return "eSkeleton";
-				case FbxNodeAttribute::EType::eMesh: return "eMesh";
-				case FbxNodeAttribute::EType::eNurbs: return "eNurbs";
-				case FbxNodeAttribute::EType::ePatch: return "ePatch";
-				case FbxNodeAttribute::EType::eCamera: return "eCamera";
-				case FbxNodeAttribute::EType::eCameraStereo: return "eCameraStereo";
-				case FbxNodeAttribute::EType::eCameraSwitcher: return "eCameraSwitcher";
-				case FbxNodeAttribute::EType::eLight: return "eLight";
-				case FbxNodeAttribute::EType::eOpticalReference: return "eOpticalReference";
-				case FbxNodeAttribute::EType::eOpticalMarker: return "eOpticalMarker";
-				case FbxNodeAttribute::EType::eNurbsCurve: return "eNurbsCurve";
-				case FbxNodeAttribute::EType::eTrimNurbsSurface: return "eTrimNurbsSurface";
-				case FbxNodeAttribute::EType::eBoundary: return "eBoundary";
-				case FbxNodeAttribute::EType::eNurbsSurface: return "eNurbsSurface";
-				case FbxNodeAttribute::EType::eShape: return "eShape";
-				case FbxNodeAttribute::EType::eLODGroup: return "eLODGroup";
-				case FbxNodeAttribute::EType::eSubDiv: return "eSubDiv";
-				case FbxNodeAttribute::EType::eCachedEffect: return "eCachedEffect";
-				case FbxNodeAttribute::EType::eLine: return "eLine";
-				default: return "<unknown attribute type>";
-			}
+				// Preferences
+				.ignore_geometry = x.ignore_geometry,
+				.ignore_animation = x.ignore_animation,
+				.ignore_embedded = x.ignore_embedded,
+				.ignore_all_content = x.ignore_all_content,
+
+				.evaluate_skinning = x.evaluate_skinning,
+				.evaluate_caches = x.evaluate_caches,
+
+				.load_external_files = x.load_external_files,
+				.ignore_missing_external_files = x.ignore_missing_external_files,
+				.skip_skin_vertices = x.skip_skin_vertices,
+				.skip_mesh_parts = x.skip_mesh_parts,
+				.clean_skin_weights = x.clean_skin_weights,
+				.use_blender_pbr_material = x.use_blender_pbr_material,
+				.disable_quirks = x.disable_quirks,
+				.strict = x.strict,
+				.force_single_thread_ascii_parsing = x.force_single_thread_ascii_parsing,
+
+				.connect_broken_elements = x.connect_broken_elements,
+				.allow_nodes_out_of_root = x.allow_nodes_out_of_root,
+				.allow_missing_vertex_position = x.allow_missing_vertex_position,
+				.allow_empty_faces = x.allow_empty_faces,
+				.generate_missing_normals = x.generate_missing_normals,
+				.open_main_file_with_default = x.open_main_file_with_default,
+				.path_separator = x.path_separator,
+
+				.node_depth_limit = x.node_depth_limit,
+				.file_size_estimate = x.file_size_estimate,
+				.read_buffer_size = x.read_buffer_size,
+
+				.filename = To<ufbx_string>(x.filename),
+
+				.space_conversion = To<ufbx_space_conversion>(x.space_conversion),
+				.pivot_handling = To<ufbx_pivot_handling>(x.pivot_handling),
+				.pivot_handling_retain_empties = x.pivot_handling_retain_empties,
+				.handedness_conversion_axis = To<ufbx_mirror_axis>(x.handedness_conversion_axis),
+				.handedness_conversion_retain_winding = x.handedness_conversion_retain_winding,
+				.reverse_winding = x.reverse_winding,
+				.target_axes = To<ufbx_coordinate_axes>(x.target_axes),
+				.target_unit_meters = s_cast<ufbx_real>(x.target_unit_meters),
+				.target_camera_axes = To<ufbx_coordinate_axes>(x.target_camera_axes),
+				.target_light_axes = To<ufbx_coordinate_axes>(x.target_light_axes),
+
+				.normalize_normals = x.normalize_normals,
+				.normalize_tangents = x.normalize_tangents,
+				.use_root_transform = x.use_root_transform,
+				.root_transform = To<ufbx_transform>(x.root_transform),
+
+				.key_clamp_threshold = x.key_clamp_threshold,
+				._end_zero = 0,
+			};
 		}
 	};
-	template <> struct Convert<std::string_view, FbxSkeleton::EType>
+	template <> struct Convert<std::string, ufbx_error>
 	{
-		static std::string_view To_(FbxSkeleton::EType ty)
+		static std::string To_(ufbx_error const& error)
 		{
-			switch (ty)
-			{
-				case FbxSkeleton::EType::eRoot: return "eRoot";
-				case FbxSkeleton::EType::eLimb: return "eLimb";
-				case FbxSkeleton::EType::eLimbNode: return "eLimbNode";
-				case FbxSkeleton::EType::eEffector: return "eEffector";
-				default: return "<unknown skeleton type>";
-			}
+			std::string err(UFBX_ERROR_INFO_LENGTH, '\0');
+			err.resize(ufbx_format_error(err.data(), err.size(), &error));
+			return err;
+		}
+		static std::string To_(ufbx_error const& error, std::string_view msg)
+		{
+			std::string err;
+			err.reserve(msg.size() + 1 + UFBX_ERROR_INFO_LENGTH);
+			err.append(msg).append(" ");
+			
+			auto ofs = err.size();
+			err.append(UFBX_ERROR_INFO_LENGTH, '\0');
+			err.resize(ofs + ufbx_format_error(err.data() + ofs, err.size() - ofs, &error));
+			return err;
 		}
 	};
-	template <> struct Convert<std::string_view, FbxCluster::ELinkMode>
+
+	// Convert from ufbx
+	template <> struct Convert<v2, ufbx_vec2>
 	{
-		static std::string_view To_(FbxCluster::ELinkMode ty)
+		constexpr static v2 To_(ufbx_vec2 const& v)
 		{
-			switch (ty)
-			{
-				case FbxCluster::ELinkMode::eNormalize: return "eNormalize";
-				case FbxCluster::ELinkMode::eAdditive: return "eAdditive";
-				case FbxCluster::ELinkMode::eTotalOne: return "eTotalOne";
-				default: return "<unknown cluster link mode type>";
-			}
+			return v2{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+			};
+		}
+	};
+	template <> struct Convert<v3, ufbx_vec3>
+	{
+		constexpr static v3 To_(ufbx_vec3 const& v)
+		{
+			return v3{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+				s_cast<float>(v.z),
+			};
+		}
+	};
+	template <> struct Convert<v4, ufbx_vec3>
+	{
+		constexpr static v4 To_(ufbx_vec3 const& v, float w)
+		{
+			return v4{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+				s_cast<float>(v.z),
+				w,
+			};
+		}
+	};
+	template <> struct Convert<v4, ufbx_vec4>
+	{
+		constexpr static v4 To_(ufbx_vec4 const& v)
+		{
+			return v4{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+				s_cast<float>(v.z),
+				s_cast<float>(v.w),
+			};
+		}
+	};
+	template <> struct Convert<quat, ufbx_quat>
+	{
+		constexpr static quat To_(ufbx_quat const& v)
+		{
+			return quat{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+				s_cast<float>(v.z),
+				s_cast<float>(v.w),
+			};
+		}
+	};
+	template <> struct Convert<m4x4, ufbx_matrix>
+	{
+		constexpr static m4x4 To_(ufbx_matrix const& v)
+		{
+			return m4x4{
+				To<v4>(v.cols[0], 0.f),
+				To<v4>(v.cols[1], 0.f),
+				To<v4>(v.cols[2], 0.f),
+				To<v4>(v.cols[3], 1.f),
+			};
+		}
+	};
+	template <> struct Convert<std::string_view, ufbx_string>
+	{
+		constexpr static std::string_view To_(ufbx_string sv)
+		{
+			return std::string_view(sv.data, sv.length);
+		}
+	};
+	template <> struct Convert<Colour, ufbx_vec4>
+	{
+		constexpr static Colour To_(ufbx_vec4 const& v)
+		{
+			return Colour{
+				s_cast<float>(v.x),
+				s_cast<float>(v.y),
+				s_cast<float>(v.z),
+				s_cast<float>(v.w),
+			};
 		}
 	};
 }
+namespace ufbx
+{
+	// Initialize ufbx thread pool from OS thread pool
+	struct thread_pool
+	{
+		ufbx_os_thread_pool_opts m_opts;
+		std::shared_ptr<ufbx_os_thread_pool> m_os_pool;
+		ufbx_thread_pool m_pool;
 
-// FBX support
+		thread_pool(int max_threads = 0) // 0 means auto detect
+			: m_opts({ 0, static_cast<size_t>(max_threads), 0 })
+			, m_os_pool(NullCheck(ufbx_os_create_thread_pool(&m_opts), "Failed to create thread pool"), ufbx_os_free_thread_pool)
+			, m_pool()
+		{
+			ufbx_os_init_ufbx_thread_pool(&m_pool, m_os_pool.get());
+		}
+		operator ufbx_thread_pool() const
+		{
+			return m_pool;
+		}
+	};
+}
 namespace pr::geometry::fbx
 {
-	static constexpr int NoIndex = -1;
-	static constexpr Vert NoVert = {};
-	static constexpr uint64_t NoUniqueId = 0;
+	// Notes:
+	//  - 'element_id' in ufbx is the index of the element in the list of all elements of all types.
+	//  - 'typed_id' in ufbx is the index of the element in the list of elements of that type
+
 	struct MeshNode
 	{
-		FbxMesh* mesh;
-		FbxMesh const* root;
+		ufbx_mesh* mesh;
+		ufbx_mesh const* root;
 		int level;
 		int index;
 	};
 	struct BoneNode
 	{
-		FbxSkeleton* bone;
-		FbxSkeleton const* root;
+		ufbx_bone* bone;
+		ufbx_bone const* root;
 		int level;
 		int index;
 	};
-	struct KeyTime
-	{
-		FbxTime time = {};
-		FbxAnimCurveDef::EInterpolationType interpolation = {};
-		bool operator == (KeyTime const& rhs) const { return time == rhs.time; }
-		bool operator < (KeyTime const& rhs) const { return time < rhs.time; }
-	};
-	using ErrorList = std::vector<std::string>;
+	static constexpr int NoIndex = -1;
+	static constexpr Vert NoVert = { .m_idx0 = {NoIndex, 0} };
 	using SceneDataPtr = std::unique_ptr<SceneData>;
 	using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
 	using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
 
-	// Check that 'ptr' is not null. Throw if it is
-	template <typename T> inline T* Check(T* ptr, std::string_view message)
+	// FBX file input stream
+	struct IStream : ufbx_stream
 	{
-		if (ptr) return ptr;
-		throw std::runtime_error(std::string(message));
-	}
+		std::istream& m_src;
 
-	// Get a value from a layer element
-	template <typename T>
-	static T GetLayerElement(FbxLayerElementTemplate<T> const* layer_elements, int fidx, int iidx, int vidx)
-	{
-		// 'f' (for face) = the polygon index
-		// 'i' (for ibuf index) = the polygon * verts_per_poly index. e.g, if the polys are all triangles, then poly_idx = 'polygon * 3 + i'
-		// 'v' (for vertex) = the control point (vertex) index
-		auto ref_mode = layer_elements->GetReferenceMode();
-		switch (ref_mode)
+		IStream(std::istream& src)
+			: m_src(src)
 		{
-			case FbxLayerElement::eIndex: // legacy
-			case FbxLayerElement::eIndexToDirect:
-			{
-				auto mapping_mode = layer_elements->GetMappingMode();
-				switch (mapping_mode)
-				{
-					case FbxLayerElement::eByControlPoint:
-					{
-						if (vidx < 0 || vidx >= layer_elements->GetDirectArray().GetCount())
-							throw std::runtime_error(std::format("Invalid vertex index {} for layer element with {} control points", vidx, layer_elements->GetDirectArray().GetCount()));
+			if (!src.good())
+				throw std::runtime_error("FBX input stream is unhealthy");
 
-						auto idx = layer_elements->GetIndexArray().GetAt(vidx);
-						if (idx < 0 || idx >= layer_elements->GetDirectArray().GetCount())
-							throw std::runtime_error(std::format("Invalid index {} for layer element with {} direct elements", idx, layer_elements->GetDirectArray().GetCount()));
-
-						return layer_elements->GetDirectArray().GetAt(idx);
-					}
-					case FbxLayerElement::eByPolygonVertex:
-					{
-						if (iidx < 0 || iidx >= layer_elements->GetIndexArray().GetCount())
-							throw std::runtime_error(std::format("Invalid index {} for layer element with {} indices", iidx, layer_elements->GetIndexArray().GetCount()));
-
-						auto idx = layer_elements->GetIndexArray().GetAt(iidx);
-						if (idx < 0 || idx >= layer_elements->GetDirectArray().GetCount())
-							throw std::runtime_error(std::format("Invalid index {} for layer element with {} direct elements", idx, layer_elements->GetDirectArray().GetCount()));
-
-						return layer_elements->GetDirectArray().GetAt(idx);
-					}
-					case FbxLayerElement::eByPolygon:
-					{
-						if (fidx < 0 || fidx >= layer_elements->GetIndexArray().GetCount())
-							throw std::runtime_error(std::format("Invalid face index {} for layer element with {} indices", fidx, layer_elements->GetIndexArray().GetCount()));
-
-						auto idx = layer_elements->GetIndexArray().GetAt(fidx);
-						if (idx < 0 || idx >= layer_elements->GetDirectArray().GetCount())
-							throw std::runtime_error(std::format("Invalid index {} for layer element with {} direct elements", idx, layer_elements->GetDirectArray().GetCount()));
-
-						return layer_elements->GetDirectArray().GetAt(idx);
-					}
-					case FbxLayerElement::eByEdge:
-					{
-						throw std::runtime_error("ByEdge mapping not implemented");
-					}
-					case FbxLayerElement::eAllSame:
-					{
-						if (layer_elements->GetDirectArray().GetCount() == 0)
-							throw std::runtime_error("Layer element has no direct elements");
-
-						auto idx = layer_elements->GetIndexArray().GetAt(0);
-						if (idx < 0 || idx >= layer_elements->GetDirectArray().GetCount())
-							throw std::runtime_error(std::format("Invalid index {} for layer element with {} direct elements", idx, layer_elements->GetDirectArray().GetCount()));
-
-						return layer_elements->GetDirectArray().GetAt(idx);
-					}
-					default:
-					{
-						throw std::runtime_error("Unsupported mapping mode");
-					}
-				}
-			}
-			case FbxLayerElement::eDirect:
-			{
-				auto mapping_mode = layer_elements->GetMappingMode();
-				switch (mapping_mode)
-				{
-					case FbxLayerElement::eByControlPoint:
-					{
-						return layer_elements->GetDirectArray().GetAt(vidx);
-					}
-					case FbxLayerElement::eByPolygonVertex:
-					{
-						return layer_elements->GetDirectArray().GetAt(iidx);
-					}
-					case FbxLayerElement::eByPolygon:
-					{
-						return layer_elements->GetDirectArray().GetAt(fidx);
-					}
-					case FbxLayerElement::eByEdge:
-					{
-						throw std::runtime_error("ByEdge mapping not implemented");
-					}
-					case FbxLayerElement::eAllSame:
-					{
-						return layer_elements->GetDirectArray().GetAt(0);
-					}
-					default:
-					{
-						throw std::runtime_error("Unsupported mapping mode");
-					}
-				}
-			}
-			default:
-			{
-				throw std::runtime_error(std::format("Reference mode {} not implemented", int(layer_elements->GetReferenceMode())));
-			}
+			user = this;
+			read_fn = &Read;
+			skip_fn = &Skip;
+			size_fn = &Size;
+			close_fn = &Close;
 		}
-	}
+		IStream(IStream&&) = delete;
+		IStream(IStream const&) = delete;
+		IStream& operator =(IStream&&) = delete;
+		IStream& operator =(IStream const&) = delete;
 
-	// FbxAttribute to FbxNodeAttribute::EType
-	template <typename FbxNodeType> struct attribute;
-	template <> struct attribute<FbxMesh> { static constexpr FbxNodeAttribute::EType value = FbxNodeAttribute::eMesh; };
-	template <> struct attribute<FbxSkeleton> { static constexpr FbxNodeAttribute::EType value = FbxNodeAttribute::eSkeleton; };
-
-	// Recursively walk the graph from 'node'
-	template <typename Func> requires (std::invocable<Func, FbxNode&>)
-	static void Walk(FbxNode& node, Func func)
-	{
-		func(node);
-		for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-			Walk(*node.GetChild(i), func);
-	}
-
-	// Find the next node attribute of the given type in 'node'
-	template <typename FbxNodeType, typename FbxNodeRef>
-	static FbxNodeType* Find(FbxNodeRef& node, int start = 0)
-	{
-		for (int i = start, iend = node.GetNodeAttributeCount(); i < iend; ++i)
+		// Try to read up to `size` bytes to `data`, return the amount of read bytes. Return `SIZE_MAX` to indicate an IO error.
+		static size_t Read(void* ctx, void* data, size_t size)
 		{
-			auto& attr = *node.GetNodeAttributeByIndex(i);
-			if (attr.GetAttributeType() == attribute<std::remove_const_t<FbxNodeType>>::value)
-				return FbxCast<FbxNodeType>(&attr);
-		}
-		return nullptr;
-	}
-
-	// Enumerate the self + parents of 'node' of type 'FbxNodeType' up to the root
-	template <typename FbxNodeType, typename FbxNodeRef>
-	static auto Parents(FbxNodeRef& node)
-	{
-		struct Iterator
-		{
-			FbxNodeType* node;
-			void operator ++()
-			{
-				auto* parent = node ? node->GetNode()->GetParent() : nullptr;
-				node = parent ? Find<FbxNodeType>(*parent) : nullptr;
-			}
-			FbxNodeType& operator*() const
-			{
-				return *node;
-			}
-			bool operator !=(Iterator const& rhs) const
-			{
-				return node != rhs.node;
-			}
-		};
-		struct Range
-		{
-			FbxNodeType* node;
-			Iterator begin() const { return { node }; }
-			Iterator end() const { return { nullptr }; }
-		};
-		return Range{ Find<FbxNodeType>(node) };
-	}
-
-	// Enumerate the children of 'node' of type 'FbxNodeType'
-	template <typename FbxNodeType, typename FbxNodeRef>
-	static auto Children(FbxNodeRef& node)
-	{
-		struct Iterator
-		{
-			std::remove_reference_t<FbxNodeRef>* node; int i;
-			void operator ++() { for (++i; i != node->GetChildCount() && Find<FbxNodeType>(*node->GetChild(i)) == nullptr; ++i) {} }
-			FbxNodeType& operator*() const { return *Find<FbxNodeType>(*node->GetChild(i)); }
-			bool operator !=(Iterator const& rhs) const { return i != rhs.i; }
-		};
-		struct Range
-		{
-			std::remove_reference_t<FbxNodeRef>* node;
-			Iterator begin() const { return { node, 0 }; }
-			Iterator end() const { return { node, node->GetChildCount() }; }
-		};
-		return Range{ &node };
-	}
-
-	// Find the top-most node with the given attribute
-	template <typename FbxNodeType, typename FbxNodeRef>
-	static FbxNodeType* FindRoot(FbxNodeRef& node)
-	{
-		FbxNodeType* root = nullptr;
-		for (auto& parent : Parents<FbxNodeType>(node))
-			root = &parent;
-
-		return root;
-	}
-
-	// Return the parent node with the given attribute
-	template <typename FbxNodeType, typename FbxNodeRef>
-	static FbxNodeType* FindParent(FbxNodeRef& node)
-	{
-		auto* parent = node.GetParent();
-		return parent ? Find<FbxNodeType>(*parent) : nullptr;
-	}
-
-	// Find the skeleton associated with 'mesh'
-	static FbxSkeleton const* FindSkeleton(FbxMesh const& mesh)
-	{
-		if (int dcount = mesh.GetDeformerCount(FbxDeformer::eSkin); dcount != 0)
-		{
-			auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(0, FbxDeformer::eSkin));
-			if (int ccount = skin.GetClusterCount(); ccount != 0)
-			{
-				// Find the bone with no parent and assume that is the root
-				auto& cluster = *skin.GetCluster(0);
-				auto const& bone = *cluster.GetLink();
-				return FindRoot<FbxSkeleton const>(bone);
-			}
-		}
-		return nullptr;
-	}
-
-	// Find the bind pose for the given node(s)
-	static FbxPose const* FindBindPose(FbxScene& fbxscene, std::span<BoneNode const*> nodes)
-	{
-		// Find a bind pose that contains values for all nodes
-		// This isn't 100% reliable, but that's the best FBX offers
-		for (int i = 0, iend = fbxscene.GetPoseCount(); i != iend; ++i)
-		{
-			auto* pose = fbxscene.GetPose(i);
-			if (!pose || !pose->IsBindPose())
-				continue;
-
-			// If the bind pose contains values for all nodes, then that's close enough
-			if (std::ranges::all_of(nodes, [pose](BoneNode const* bone_node) { return pose->Find(bone_node->bone->GetNode()) != -1; }))
-				return pose;
-		}
-		return nullptr;
-	}
-	static FbxPose const* FindBindPose(FbxScene& fbxscene, BoneNode const& node)
-	{
-		auto* ptr = &node;
-		return FindBindPose(fbxscene, { &ptr, 1 });
-	}
-
-	// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
-	static void TraverseHierarchy(FbxScene& fbxscene, EParts parts, MeshNodeMap& meshes, BoneNodeMap& bones)
-	{
-		// Notes:
-		//  - Root nodes for meshes, skeletons can occur at any level.
-		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
-		//    node is the start of a new mesh/skeleton hierarchy.
-		meshes.clear();
-		bones.clear();
-
-		struct NodeAndLevel { FbxNode* ptr; int level; };
-		vector<NodeAndLevel> stack = { {fbxscene.GetRootNode(), 0} };
-		for (int mindex = 0, bindex = 0; !stack.empty(); )
-		{
-			NodeAndLevel node = stack.back();
-			stack.pop_back();
-
-			// Process all attributes of the node
-			for (int i = 0, iend = node.ptr->GetNodeAttributeCount(); i != iend; ++i)
-			{
-				auto& attr = *node.ptr->GetNodeAttributeByIndex(i);
-
-				// Create a map from attribute unique id to node data
-				if (AnySet(parts, EParts::Meshes|EParts::MainObjects) && attr.GetAttributeType() == FbxNodeAttribute::eMesh)
-				{
-					auto* mesh = FbxCast<FbxMesh>(&attr);
-					auto* root = FindRoot<FbxMesh>(*node.ptr);
-					meshes[mesh->GetUniqueID()] = { mesh, root, node.level, mindex++ };
-				}
-				if (AnySet(parts, EParts::Skeletons|EParts::MainObjects) && attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
-				{
-					auto* bone = FbxCast<FbxSkeleton>(&attr);
-					auto* root = FindRoot<FbxSkeleton>(*node.ptr);
-					bones[bone->GetUniqueID()] = { bone, root, node.level, bindex++ };
-				}
-			}
-
-			// Recurse in depth first order
-			for (int i = node.ptr->GetChildCount(); i-- != 0; )
-				stack.push_back({ node.ptr->GetChild(i), node.level + 1 });
-		}
-	}
-
-	// Get the hierarchy address of 'node'
-	static std::string Address(FbxNode const* node)
-	{
-		if (node == nullptr) return "";
-		std::string address = Address(node->GetParent());
-		return std::move(address.append(address.empty() ? "" : ".").append(node->GetName()));
-	}
-			
-	// Convert 'scene' to the requested coordinate system
-	static void ConvertScene(FbxScene& scene, ECoordSystem coord_system)
-	{
-		switch (coord_system)
-		{
-			case ECoordSystem::PosX_PosY_NegZ:
-			{
-				FbxAxisSystem(FbxAxisSystem::eYAxis, +FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded).ConvertScene(&scene);
-				break;
-			}
-			case ECoordSystem::PosX_PosZ_PosY:
-			{
-				FbxAxisSystem(FbxAxisSystem::eZAxis, +FbxAxisSystem::eParityOdd, FbxAxisSystem::eRightHanded).ConvertScene(&scene);
-				break;
-			}
-			default:
-			{
-				throw std::runtime_error("Unknown coordinate system");
-			}
-		}
-	}
-
-	// RAII fbx array wrapper
-	template <typename T>
-	struct FbxArray : fbxsdk::FbxArray<T>
-	{
-		FbxArray() : fbxsdk::FbxArray<T>() {}
-		~FbxArray() { FbxArrayDelete<T>(*this); }
-	};
-
-	// FbxAnimCurve wrapper
-	struct FbxCurve
-	{
-		FbxAnimCurve const* m_curve = nullptr;
-		FbxTime operator[](size_t i) const { return m_curve->KeyGetTime(int(i)); }
-		friend size_t size(FbxCurve const& c) { return s_cast<size_t>(c.m_curve->KeyGetCount()); }
-		friend bool empty(FbxCurve const& c) { return size(c) == 0; }
-	};
-
-	// Arena allocator for faster FBX loading
-	struct FbxCustomAllocator
-	{
-		// Notes:
-		//  - There is no way to tell which FbxManager is calling the allocation functions
-		//    so it's not possible to create an arena per manager. That means all managers
-		//    that exist at the same time have to share a memory arena.
-		//  - Release the arena when all instances of the fbx manager are destroyed.
-		using Arena = ArenaAllocator<10 * 1024 * 1024, FBXSDK_MEMORY_ALIGNMENT, 4>;
-
-		FbxCustomAllocator()
-		{
-			ref_count(+1);
-
-			FbxSetMallocHandler(Malloc);
-			FbxSetCallocHandler(Calloc);
-			FbxSetReallocHandler(Realloc);
-			FbxSetFreeHandler(Free);
-		}
-		~FbxCustomAllocator()
-		{
-			ref_count(-1);
-		}
-		static void* Malloc(size_t n)
-		{
-			return arena().Malloc(n);
-		}
-		static void* Calloc(size_t n, size_t sz)
-		{
-			return arena().Calloc(n, sz);
-		}
-		static void* Realloc(void* p, size_t n)
-		{
-			return arena().Realloc(p, n);
-		}
-		static void Free(void* p)
-		{
-			return arena().Free(p);
+			auto& src = static_cast<IStream*>(ctx)->m_src;
+			auto bytes_read = src.read(char_ptr(data), size).gcount();
+			return src.bad() ? SIZE_MAX : bytes_read;
 		}
 
-	private:
-
-		// Access the static arena allocator
-		static Arena& arena()
+		// Skip `size` bytes in the file.
+		static bool Skip(void* ctx, size_t size)
 		{
-			static thread_local Arena s_arena;
-			return s_arena;
+			auto& src = static_cast<IStream*>(ctx)->m_src;
+			src.seekg(size, std::ios::cur);
+			return src.good();
 		}
 
-		// Access the static arena allocator
-		static void ref_count(int ref = 0)
+		// Get the size of the file. Return `0` if unknown, `UINT64_MAX` if error.
+		static uint64_t Size(void* ctx)
 		{
-			static thread_local int s_references;
-
-			s_references += ref;
-			if (s_references == 0)
-				arena().Clear();
-		}
-	};
-
-	// An RAII dll reference
-	struct Context
-	{
-		using SceneCont = vector<SceneDataPtr>;
-
-		ErrorHandler m_error_cb;
-		FbxCustomAllocator m_alloc;
-		ManagerPtr m_manager;
-		FbxIOSettings* m_settings;
-		char const* m_version;
-		SceneCont m_scenes;
-
-		Context(ErrorHandler error_cb)
-			: m_error_cb(error_cb)
-			, m_alloc()
-			, m_manager(Check(FbxManager::Create(), "Error: Unable to create FBX Manager"))
-			, m_settings(Check(FbxIOSettings::Create(m_manager.get(), IOSROOT), "Error: Unable to create settings"))
-			, m_version(m_manager->GetVersion())
-			, m_scenes()
-		{
-			m_manager->SetIOSettings(m_settings);
-
-			#if 0
-			{
-				Set the export states.By default, all options should be enabled
-					m_settings->SetBoolProp(EXP_FBX_MATERIAL, true);
-				m_settings->SetBoolProp(EXP_FBX_TEXTURE, true);
-				m_settings->SetBoolProp(EXP_FBX_EMBEDDED, true);
-				m_settings->SetBoolProp(EXP_FBX_SHAPE, true);
-				m_settings->SetBoolProp(EXP_FBX_GOBO, true);
-				m_settings->SetBoolProp(EXP_FBX_ANIMATION, true);
-				m_settings->SetBoolProp(EXP_FBX_GLOBAL_SETTINGS, true);
-
-				Set the import states.By default, all options should be enabled
-					m_settings->SetBoolProp(IMP_SKINS, true);
-				m_settings->SetBoolProp(IMP_DEFORMATION, true);
-				m_settings->SetBoolProp(IMP_BONE, true);
-				m_settings->SetBoolProp(IMP_TAKE, true);
-
-				m_settings->SetBoolProp(IMP_FBX_MODEL_COUNT, true);
-				m_settings->SetBoolProp(IMP_FBX_DEVICE_COUNT, true);
-				m_settings->SetBoolProp(IMP_FBX_CHARACTER_COUNT, true);
-				m_settings->SetBoolProp(IMP_FBX_ACTOR_COUNT, true);
-				m_settings->SetBoolProp(IMP_FBX_CONSTRAINT_COUNT, true);
-				m_settings->SetBoolProp(IMP_FBX_MEDIA_COUNT, true);
-
-				m_settings->SetBoolProp(IMP_FBX_TEMPLATE, true);
-				m_settings->SetBoolProp(IMP_FBX_PIVOT, true);
-				m_settings->SetBoolProp(IMP_FBX_GLOBAL_SETTINGS, true);
-				m_settings->SetBoolProp(IMP_FBX_CHARACTER, true);
-				m_settings->SetBoolProp(IMP_FBX_CONSTRAINT, true);
-				m_settings->SetBoolProp(IMP_FBX_MERGE_LAYER_AND_TIMEWARP, true);
-				m_settings->SetBoolProp(IMP_FBX_GOBO, true);
-				m_settings->SetBoolProp(IMP_FBX_SHAPE, true);
-				m_settings->SetBoolProp(IMP_FBX_LINK, true);
-
-				m_settings->SetBoolProp(IMP_FBX_MATERIAL, true);
-				m_settings->SetBoolProp(IMP_FBX_TEXTURE, true);
-				m_settings->SetBoolProp(IMP_FBX_MODEL, true);
-				m_settings->SetBoolProp(IMP_FBX_AUDIO, true);
-				m_settings->SetBoolProp(IMP_FBX_ANIMATION, true);
-				m_settings->SetBoolProp(IMP_FBX_PASSWORD, true);
-				m_settings->SetBoolProp(IMP_FBX_PASSWORD_ENABLE, true);
-				m_settings->SetBoolProp(IMP_FBX_CURRENT_TAKE_NAME, true);
-				m_settings->SetBoolProp(IMP_FBX_EXTRACT_EMBEDDED_DATA, true);
-				m_settings->SetBoolProp(IMP_FBX_CALCULATE_LEGACY_SHAPE_NORMAL, true);
-
-				m_settings->SetBoolProp(IMP_FBX_NORMAL, true);
-				m_settings->SetBoolProp(IMP_FBX_BINORMAL, true);
-				m_settings->SetBoolProp(IMP_FBX_TANGENT, true);
-				m_settings->SetBoolProp(IMP_FBX_VERTEXCOLOR, true);
-				m_settings->SetBoolProp(IMP_FBX_POLYGROUP, true);
-				m_settings->SetBoolProp(IMP_FBX_SMOOTHING, true);
-				m_settings->SetBoolProp(IMP_FBX_USERDATA, true);
-				m_settings->SetBoolProp(IMP_FBX_VISIBILITY, true);
-				m_settings->SetBoolProp(IMP_FBX_EDGECREASE, true);
-				m_settings->SetBoolProp(IMP_FBX_VERTEXCREASE, true);
-				m_settings->SetBoolProp(IMP_FBX_HOLE, true);
-
-#ifndef FBXSDK_ENV_WINSTORE
-				//Load plugins from the executable directory (optional)
-				FbxString lPath = FbxGetApplicationDirectory();
-				m_manager->LoadPluginsDirectory(lPath.Buffer());
-#endif
-			}
-			#endif
-		}
-		Context(Context&&) = delete;
-		Context(Context const&) = delete;
-		Context& operator=(Context&&) = delete;
-		Context& operator=(Context const&) = delete;
-
-		// Return the file format ID for the give format (use 'Formats')
-		int FileFormatID(EFormat format) const
-		{
-			auto fmt =
-				format == EFormat::Binary ? "FBX (*.fbx)" :
-				format == EFormat::Ascii ? "FBX ascii (*.fbx)" :
-				throw std::runtime_error("Unknown format");
-
-			auto file_format = m_manager->GetIOPluginRegistry()->FindReaderIDByDescription(fmt);
-			return file_format;
+			// 'src' might be a network stream
+			auto& src = static_cast<IStream*>(ctx)->m_src;
+			return src.good() ? 0 : UINT64_MAX;
 		}
 
-		// Get/Set properties. Use the 'EXP_FBX_'/'IMP_FBX_...' flags
-		template <typename T> T Prop(char const* prop_name, T default_value = {}) const
+		// Close the file
+		static void Close(void*)
 		{
-			if constexpr (std::is_same_v<T, bool>)
-			{
-				return m_settings->GetBoolProp(prop_name, default_value);
-			}
-			else if constexpr (std::is_same_v<T, std::string>)
-			{
-				FbxString pw = m_settings->GetStringProp(prop_name, "");
-				return pw.Buffer();
-			}
-			else
-			{
-				static_assert(pr::dependent_false<T>, "Unknown property type");
-			}
-		}
-		template <typename T> void Prop(char const* prop_name, T value)
-		{
-			if constexpr (std::is_same_v<T, bool>)
-			{
-				m_settings->SetBoolProp(prop_name, value);
-			}
-			else if constexpr (std::is_same_v<T, std::string>)
-			{
-				FbxString val(value.data(), value.size());
-				m_settings->SetStringProp(prop_name, val);
-			}
-			else
-			{
-				static_assert(pr::dependent_false<T>, "Unknown property type");
-			}
-		}
-
-		// Get/set the password
-		std::string Password() const
-		{
-			return Prop<std::string>(IMP_FBX_PASSWORD);
-		}
-		void Password(std::string_view password)
-		{
-			Prop<std::string>(IMP_FBX_PASSWORD, std::string{ password });
-			Prop<bool>(IMP_FBX_PASSWORD_ENABLE, !password.empty());
-		}
-
-		FbxManager* operator ->() const
-		{
-			return m_manager.get();
-		}
-		operator FbxManager* () const
-		{
-			return m_manager.get();
 		}
 	};
 
@@ -961,121 +458,150 @@ namespace pr::geometry::fbx
 		Colour m_specular = ColourZero;
 		std::string m_tex_diff;
 	};
+	struct SkinData
+	{
+		uint32_t m_skel_id = NoId;
+		vector<int> m_offsets;    // Index offset to the first bone for each vertex
+		vector<uint32_t> m_bones; // The Ids of the bones that influence a vertex
+		vector<float> m_weights;  // The influence weights
+
+		void Reset()
+		{
+			m_skel_id = NoId;
+			m_offsets.resize(0);
+			m_bones.resize(0);
+			m_weights.resize(0);
+		}
+		operator Skin() const
+		{
+			return Skin{
+				.m_skel_id = m_skel_id,
+				.m_offsets = m_offsets,
+				.m_bones = m_bones,
+				.m_weights = m_weights,
+			};
+		}
+	};
 	struct SkeletonData
 	{
 		// Notes:
 		//  - Skeletons can have multiple root bones. Check for a 'm_hierarchy[i] == 0' values
-		uint64_t m_id = 0ULL;        // Unique skeleton Id
-		vector<uint64_t> m_bone_ids; // Bone unique ids
+		uint32_t m_skel_id = NoId;   // Skeleton Id (= the node id that contains the root bone, because skeletons can instance bones)
+		vector<uint32_t> m_bone_ids; // Bone unique ids
 		vector<std::string> m_names; // Bone names
 		vector<m4x4> m_o2bp;         // Inverse of the bind-pose to root-object-space transform for each bone
 		vector<int> m_hierarchy;     // Hierarchy levels. level == 0 are root bones.
 
-		// The number of bones in this skeleton
-		int size() const
+		void Reset()
 		{
-			assert(isize(m_bone_ids) == isize(m_names) && isize(m_names) == isize(m_o2bp) && isize(m_o2bp) == isize(m_hierarchy));
-			return isize(m_bone_ids);
+			m_skel_id = NoId;
+			m_bone_ids.resize(0);
+			m_names.resize(0);
+			m_o2bp.resize(0);
+			m_hierarchy.resize(0);
 		}
-	};
-	struct SkinData
-	{
-		uint64_t m_skel_id = ~0ULL;
-		vector<int> m_offsets;    // Index offset to the first bone for each vertex
-		vector<uint64_t> m_bones; // The Ids of the bones that influence a vertex
-		vector<double> m_weights; // The influence weights
-
-		explicit operator bool() const
+		operator Skeleton() const
 		{
-			return !m_offsets.empty() && m_offsets.back() != 0;
+			assert(
+				isize(m_bone_ids) == isize(m_names) &&
+				isize(m_names) == isize(m_o2bp) &&
+				isize(m_o2bp) == isize(m_hierarchy)
+			);
+
+			return Skeleton{
+				.m_skel_id = m_skel_id,
+				.m_bone_ids = m_bone_ids,
+				.m_names = m_names,
+				.m_o2bp = m_o2bp,
+				.m_hierarchy = m_hierarchy,
+			};
 		}
 	};
 	struct AnimationData
 	{
-		SkeletonData const* m_skel; // The skeleton that these tracks should match
-		TimeRange m_time_range;     // The time span of the animation
-		double m_frame_rate;        // The native frame rate of the animation
-		int m_bone_count;           // The number of bones per key frame
-		vector<int, 0> m_offsets;   // The offset to the start of each bone's track
-		vector<TimeKey, 0> m_times; // The key frame time for each entry
-		vector<quat, 0> m_rotation;
-		vector<v3, 0> m_position;
-		vector<v3, 0> m_scale;
-		
-		// The number of tracks in this animation (one for each bone)
-		int track_count() const
-		{
-			return isize(m_offsets) - 1;
-		}
+		uint32_t m_skel_id = NoId;      // The skeleton that this animation should be used with
+		double m_duration = 0;          // The length (in seconds) of the animation
+		double m_frame_rate = 24.0;     // The native frame rate of the animation
+		vector<uint32_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
+		vector<quat, 0> m_rotation;     // Frames of bone rotations
+		vector<v3, 0> m_position;       // Frames of bone positions
+		vector<v3, 0> m_scale;          // Frames of bone scales
 
-		// Return the index range for a bone in the data arrays
-		std::tuple<int64_t, int64_t> index_range(int bone_index) const
+		void Reset()
 		{
-			assert(bone_index >= 0 && bone_index < track_count());
-			auto i0 = m_offsets[bone_index + 0];
-			auto i1 = m_offsets[bone_index + 1];
-			return { i0 , i1 - i0 };
+			m_skel_id = NoId;
+			m_duration = 0.0;
+			m_frame_rate = 24.0;
+			m_bone_map.resize(0);
+			m_rotation.resize(0);
+			m_position.resize(0);
+			m_scale.resize(0);
 		}
-
-		// True for non-empty animations
-		explicit operator bool() const
+		operator Animation() const
 		{
-			return !m_offsets.empty() && m_offsets.back() != 0;
+			return Animation{
+				.m_skel_id = m_skel_id,
+				.m_duration = m_duration,
+				.m_frame_rate = m_frame_rate,
+				.m_bone_map = m_bone_map,
+				.m_rotation = m_rotation,
+				.m_position = m_position,
+				.m_scale = m_scale,
+			};
 		}
 	};
 	struct MeshData
 	{
-		using Name = std::string;
-		using VBuffer = vector<Vert>;
-		using IBuffer = vector<int>;
-		using NBuffer = vector<Nugget>;
-
-		uint64_t m_id = {};
-		Name m_name;
-		VBuffer m_vbuf;
-		IBuffer m_ibuf;
-		NBuffer m_nbuf;
-		SkinData m_skin;
+		uint32_t m_mesh_id = NoId;
+		std::string m_name;
+		vector<Vert> m_vbuf;
+		vector<int> m_ibuf;
+		vector<Nugget> m_nbuf;
+		SkinData m_skin = {};
 		BBox m_bbox = {};
-		m4x4 m_o2p = {};
-		int m_level = {};
+
+		void Reset()
+		{
+			m_mesh_id = NoId;
+			m_name.resize(0);
+			m_vbuf.resize(0);
+			m_ibuf.resize(0);
+			m_nbuf.resize(0);
+			m_skin.Reset();
+			m_bbox = BBox::Reset();
+		}
+		operator Mesh() const
+		{
+			return Mesh{
+				.m_mesh_id = m_mesh_id,
+				.m_name = m_name,
+				.m_vbuf = m_vbuf,
+				.m_ibuf = m_ibuf,
+				.m_nbuf = m_nbuf,
+				.m_skin = Skin{
+					.m_skel_id = m_skin.m_skel_id,
+					.m_offsets = m_skin.m_offsets,
+					.m_bones = m_skin.m_bones,
+					.m_weights = m_skin.m_weights,
+				},
+				.m_bbox = m_bbox,
+			};
+		}
 	};
 
 	// Loaded scene data
 	struct SceneData
 	{
-		using NameCont = std::vector<std::string>;
-		using MeshCont = std::vector<MeshData>;
-		using MaterialCont = std::unordered_map<uint64_t, MaterialData>;
-		using SkeletonCont = std::vector<SkeletonData>;
-		using AnimationCont = std::vector<AnimationData>;
-
-		FbxScene* m_fbxscene;
-		MeshNodeMap m_mesh_node_map;
-		BoneNodeMap m_bone_node_map;
-		NameCont m_mesh_names;
-		NameCont m_skel_names;
-		SceneProps m_props;
-
-		// One or more model hierarchies.
-		// Meshes with 'm_level == 0' are the roots of a model tree
-		// Meshes are in depth-first order.
-		MeshCont m_meshes;
-
-		// Material definitions
-		MaterialCont m_materials;
-
-		// One or more skeleton hierarchies.
-		SkeletonCont m_skeletons;
-
-		// Animation data
-		AnimationCont m_animations;
-
-		SceneData(FbxScene* fbxscene)
-			:m_fbxscene(fbxscene)
+		// Notes:
+		//  - Root nodes for meshes, skeletons can occur at any level.
+		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
+		//    node is the start of a new mesh/skeleton hierarchy.
+		std::shared_ptr<ufbx_scene> m_fbxscene;
+		SceneData(ufbx_scene* scene)
+			: m_fbxscene(scene, ufbx_free_scene)
 		{
-			TraverseHierarchy(*m_fbxscene, EParts::All, m_mesh_node_map, m_bone_node_map);
-			
+			//TraverseHierarchy(*m_fbxscene, EParts::All, m_mesh_node_map, m_bone_node_map);
+			/*
 			// Create a list of the root mesh names
 			for (auto const& [id, meshnode] : m_mesh_node_map)
 			{
@@ -1105,67 +631,46 @@ namespace pr::geometry::fbx
 				.m_mesh_names = m_mesh_names,
 				.m_skel_names = m_skel_names,
 			};
+			*/
 		}
 	};
 
-	// Read an fbx scene
+	// Read data from a scene and output it to the caller
 	struct Reader
 	{
-		// Notes:
-		//  - The FbxSDK library is very slow, single threaded, poorly documented.
-		//  - The FBX file contains collections of attributes (meshes, materials, skeletons, animations, etc.)
-		//    and a hierarchical node tree (scene graph) where each node may reference one or more attributes.
-		//  - There are two main ways to read data:
-		//    - Iterate all objects of a specific type (e.g., GetSrcObject<FbxMesh>), but not all these objects
-		//      are necessarily in the scene.
-		//    - Recursively traverse the node hierarchy from GetRootNode() and iterate over attributes.
-		//  - Animation data is stored in FbxAnimStacks (takes), each containing one or more FbxAnimLayers.
-		//    - Curves are attached to animate-able properties and can be retrieved per layer.
-		//  - Relationships like materials and textures are represented via FBX connections, not ownership.
-		//  - Units, axis orientation, and coordinate systems should be checked via GlobalSettings.
-		//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
-		//  - The root nodes of Meshes or Skeletons can begin at any level, e.g. Nodes might be a Group which then
-		//    contain meshes or skeletons starting below the group.
-		//  - Mesh hierarchies can reference multiple disconnected skeletons.
-		//  - Nodes can only have one attribute of each type.
-		// TODO:
-		//  - LOD Groups?
-
-		using KeyTimes = vector<KeyTime>;
-
-		SceneData& m_scene;
-		FbxScene& m_fbxscene;
-		MeshNodeMap& m_meshes;
-		BoneNodeMap& m_bones;
-		ReadOptions const& m_opts;
-		FbxAnimStack* m_animstack;
-		FbxAnimLayer* m_layer;
-		FbxTimeSpan m_time_span;
-		double m_frame_rate;
-
-		Reader(SceneData& scene, ReadOptions const& opts)
-			: m_scene(scene)
-			, m_fbxscene(*scene.m_fbxscene)
-			, m_meshes(scene.m_mesh_node_map)
-			, m_bones(scene.m_bone_node_map)
-			, m_opts(opts)
-			, m_animstack()
-			, m_layer()
-			, m_time_span()
-			, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
+		struct Influence
 		{
-			// Bake transforms into the nodes
-			m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
+			vector<uint32_t, 8> m_bones; // Ids
+			vector<float, 8> m_weights;
+		};
+		using Materials = vector<Material, 2>;
+		using Skeletons = vector<SkeletonData, 1>;
 
-			// Convert the coordinate system
-			ConvertScene(m_fbxscene, m_opts.m_coord_system);
+		ufbx_scene const& m_fbxscene;
+		ReadOptions const& m_opts;
+		IReadOutput& m_out;
 
-			// Triangulate all the mesh nodes in the scene (this is faster than doing it per-mesh)
-			FbxGeometryConverter converter(m_fbxscene.GetFbxManager());
-			converter.Triangulate(&m_fbxscene, true);
+		// Cache
+		MeshData m_mesh;
+		Materials m_materials;
+		Skeletons m_skeletons;
+		vector<int> m_vlookup;
+		vector<uint32_t> m_tri_indices;
+		vector<Influence> m_influences;
 
-			// Update the hierarchy after replacing the meshes with triangulated meshes
-			TraverseHierarchy(m_fbxscene, EParts::All, m_meshes, m_bones);
+		Reader(SceneData const& scene, ReadOptions const& opts, IReadOutput& out)
+			: m_fbxscene(*scene.m_fbxscene)
+			, m_opts(opts)
+			, m_out(out)
+			, m_mesh()
+			, m_materials()
+			, m_skeletons()
+			, m_vlookup()
+			, m_tri_indices()
+			, m_influences()
+		{
+			// Add a default material
+			m_materials.push_back({});
 		}
 
 		// Read the scene
@@ -1173,10 +678,10 @@ namespace pr::geometry::fbx
 		{
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				ReadMaterials();
-			if (AllSet(m_opts.m_parts, EParts::Meshes))
-				ReadGeometry();
 			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				ReadSkeletons();
+			if (AllSet(m_opts.m_parts, EParts::Meshes))
+				ReadGeometry();
 			if (AllSet(m_opts.m_parts, EParts::Animation))
 				ReadAnimation();
 		}
@@ -1184,908 +689,602 @@ namespace pr::geometry::fbx
 		// Read the materials
 		void ReadMaterials()
 		{
-			// Add a default material for unknown materials
-			m_scene.m_materials[0] = {};
-
-			// Output each material in the scene
-			for (int m = 0, mend = m_fbxscene.GetMaterialCount(); m != mend; ++m)
+			// If the scene doesn't contain materials, just add a default one
+			if (m_fbxscene.materials.count == 0)
 			{
-				MaterialData material = {};
-				Progress(1LL + m, mend, "Reading materials...");
-
-				auto const& mat = *m_fbxscene.GetMaterial(m);
-				if (mat.GetClassId().Is(FbxSurfacePhong::ClassId))
-				{
-					auto const& phong = static_cast<FbxSurfacePhong const&>(mat);
-					material.m_ambient = To<Colour>(phong.Ambient.Get());
-					material.m_diffuse = To<Colour>(phong.Diffuse.Get());
-					material.m_specular = To<Colour>(phong.Specular.Get());
-					#if 0
-					phong.AmbientFactor;
-					phong.Bump;
-					phong.BumpFactor;
-					phong.DiffuseFactor;
-					phong.SpecularFactor;
-					phong.Emissive;
-					phong.EmissiveFactor;
-					phong.DisplacementColor;
-					phong.DisplacementFactor;
-					phong.Reflection;
-					phong.ReflectionFactor;
-					phong.NormalMap;
-					phong.Shininess;
-					phong.TransparentColor;
-					phong.TransparencyFactor;
-					phong.MultiLayer;
-					phong.VectorDisplacementColor;
-					phong.VectorDisplacementFactor;
-					#endif
-				}
-				else if (mat.GetClassId().Is(FbxSurfaceLambert::ClassId))
-				{
-					auto const& lambert = static_cast<FbxSurfaceLambert const&>(mat);
-					material.m_ambient = To<Colour>(lambert.Ambient.Get());
-					material.m_diffuse = To<Colour>(lambert.Diffuse.Get());
-					//material.m_specular = To<Colour>(lambert.Specular.Get());
-				}
-				else
-				{
-					if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sAmbient); prop.IsValid())
-						material.m_ambient = To<Colour>(prop.Get<FbxDouble3>());
-					if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sDiffuse); prop.IsValid())
-						material.m_diffuse = To<Colour>(prop.Get<FbxDouble3>());
-					if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sSpecular); prop.IsValid())
-						material.m_specular = To<Colour>(prop.Get<FbxDouble3>());
-				}
-
-				// Look for a diffuse texture
-				if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sDiffuse); prop.IsValid())
-				{
-					for (int t = 0, tend = prop.GetSrcObjectCount<FbxTexture>(); t != tend; ++t)
-					{
-						if (auto const* texture = prop.GetSrcObject<FbxTexture>(t))
-						{
-							if (auto const* file_texture = FbxCast<FbxFileTexture>(texture))
-							{
-								material.m_tex_diff = file_texture->GetFileName();
-							}
-						}
-					}
-				}
-
-				m_scene.m_materials[mat.GetUniqueID()] = material;
+				m_materials.resize(1, {});
+				return;
 			}
 
-			// Update the number of loaded materials
-			m_scene.m_props.m_material_count = isize(m_scene.m_materials);
+			// Materials require a lot more work. For now, just use diffuse colour.
+			// Textures have wrapping modes and transforms etc...
+
+			// Parse the scene materials
+			m_materials.resize(0);
+			m_materials.reserve(m_fbxscene.materials.count);
+			for (auto const& m : m_fbxscene.materials)
+			{
+				Progress(1LL + (&m - m_fbxscene.materials.begin()), m_fbxscene.materials.count, "Reading materials...");
+
+				Material mat = {};
+				switch (m->shader_type)
+				{
+					// Unknown shading model
+					case ufbx_shader_type::UFBX_SHADER_UNKNOWN:
+					{
+						break;
+					}
+					// FBX builtin diffuse material
+					case ufbx_shader_type::UFBX_SHADER_FBX_LAMBERT:
+					{
+						mat.m_ambient = To<Colour>(m->fbx.ambient_color.value_vec4);
+						mat.m_diffuse = To<Colour>(m->fbx.diffuse_color.value_vec4);
+						mat.m_specular = To<Colour>(m->fbx.specular_color.value_vec4);
+						break;
+					}
+					// FBX builtin diffuse+specular material
+					case ufbx_shader_type::UFBX_SHADER_FBX_PHONG:
+					{
+						mat.m_ambient = To<Colour>(m->fbx.ambient_color.value_vec4);
+						mat.m_diffuse = To<Colour>(m->fbx.diffuse_color.value_vec4);
+						mat.m_specular = To<Colour>(m->fbx.specular_color.value_vec4);
+						break;
+					}
+					// Open Shading Language standard surface
+					// https://github.com/Autodesk/standard-surface
+					case ufbx_shader_type::UFBX_SHADER_OSL_STANDARD_SURFACE:
+					{
+						break;
+					}
+					// Arnold standard surface
+					// https://docs.arnoldrenderer.com/display/A5AFMUG/Standard+Surface
+					case ufbx_shader_type::UFBX_SHADER_ARNOLD_STANDARD_SURFACE:
+					{
+						break;
+					}
+					// 3ds Max Physical Material
+					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2022/ENU/3DSMax-Lighting-Shading/files/GUID-C1328905-7783-4917-AB86-FC3CC19E8972-htm.html
+					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PHYSICAL_MATERIAL:
+					{
+						break;
+					}
+					// 3ds Max PBR (Metal/Rough) material
+					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2021/ENU/3DSMax-Lighting-Shading/files/GUID-A16234A5-6500-4662-8B20-A5EC9FE1B255-htm.html
+					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PBR_METAL_ROUGH:
+					{
+						break;
+					}
+					// 3ds Max PBR (Spec/Gloss) material
+					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2021/ENU/3DSMax-Lighting-Shading/files/GUID-18087194-B2A6-43EF-9B80-8FD1736FAE52-htm.html
+					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PBR_SPEC_GLOSS:
+					{
+						break;
+					}
+					// 3ds glTF Material
+					// https://help.autodesk.com/view/3DSMAX/2023/ENU/?guid=GUID-7ABFB805-1D9F-417E-9C22-704BFDF160FA
+					case ufbx_shader_type::UFBX_SHADER_GLTF_MATERIAL:
+					{
+						break;
+					}
+					// 3ds OpenPBR Material
+					// https://help.autodesk.com/view/3DSMAX/2025/ENU/?guid=GUID-CD90329C-1E2B-4BBA-9285-3BB46253B9C2
+					case ufbx_shader_type::UFBX_SHADER_OPENPBR_MATERIAL:
+					{
+						break;
+					}
+					// Stingray ShaderFX shader graph.
+					// Contains a serialized `"ShaderGraph"` in `ufbx_props`.
+					case ufbx_shader_type::UFBX_SHADER_SHADERFX_GRAPH:
+					{
+						break;
+					}
+					// Variation of the FBX phong shader that can recover PBR properties like
+					// `metalness` or `roughness` from the FBX non-physical values.
+					// NOTE: Enable `ufbx_load_opts.use_blender_pbr_material`.
+					case ufbx_shader_type::UFBX_SHADER_BLENDER_PHONG:
+					{
+						break;
+					}
+					// Wavefront .mtl format shader (used by .obj files)
+					case ufbx_shader_type::UFBX_SHADER_WAVEFRONT_MTL:
+					{
+						break;
+					}
+					default:
+					{
+						break;
+					}
+				}
+				m_materials.push_back(mat);
+			}
 		}
 
 		// Read meshes from the FBX scene
 		void ReadGeometry()
 		{
-			vector<std::future<MeshData>> tasks;
+			size_t mesh_nodes = 0;
 
-			// Process each mesh in a worker thread, because triangulation is really slow
-			for (auto const& [id, meshnode] : m_meshes)
+			// Meshes are in a separate list in the fbx scene. The nodes contain instances of the meshes.
+			// Output each mesh to the caller, then output a tree with references to the meshes plus a transform.
+			for (auto const* fbxmesh : m_fbxscene.meshes)
 			{
-				if (!IncludeMesh(meshnode))
-					continue;
+				ReadMesh(*fbxmesh);
+				m_out.CreateMesh(m_mesh, m_materials);
+				mesh_nodes += fbxmesh->instances.count;
+			}
 
-				// Create thread-local manager and scene
-				ManagerPtr manager{ FbxManager::Create() };
-				ScenePtr scene{ FbxScene::Create(manager.get(), "IsolatedScene") };
-				ConvertScene(*scene, m_opts.m_coord_system);
+			vector<MeshTree> mesh_tree;
+			mesh_tree.reserve(mesh_nodes);
 
-				// Clone the mesh
-				auto fbxmesh = FbxCast<FbxMesh>(meshnode.mesh->Clone(FbxObject::eDeepClone, scene.get()));
+			// Build a mesh tree for each mesh root
+			auto roots = FindRoots(m_fbxscene.meshes, IsMeshRoot);
+			for (auto const*& root : roots)
+			{
+				Progress(1 + (&root - roots.data()), ssize(roots), "Reading models...");
 
-				// Start a task to convert the geometry
-				tasks.emplace_back(std::async(std::launch::async, [m = std::move(manager), s = std::move(scene), id, fbxmesh]
+				// Walk the node hierarchy and build the mesh tree
+				WalkHierarchy(root, [&mesh_tree](ufbx_node const* node) -> bool
 				{
-					MeshData out;
-					out.m_id = id;
+					if (node->mesh == nullptr)
+						return false;
 
-					// Ensure the mesh is triangles
-					auto trimesh = fbxmesh;
-					assert(trimesh->IsTriangleMesh()); // Handled by scene triangulation
-#if 0
-					if (!trimesh->IsTriangleMesh())
-					{
-						// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
-						// Edge hardnees triangulation give wrong edge hardness so we convert them to a smooth group during the triangulation.
-						FbxGeometryConverter converter(m.get());
-						for (int j = 0, jend = trimesh->GetLayerCount(FbxLayerElement::eSmoothing); j != jend; ++j)
-						{
-							auto* smoothing = fbxmesh->GetLayer(j)->GetSmoothing();
-							if (smoothing && smoothing->GetMappingMode() != FbxLayerElement::eByPolygon)
-								converter.ComputePolygonSmoothingFromEdgeSmoothing(trimesh, j);
-						}
-
-						// Convert polygons to triangles
-						trimesh = FbxCast<FbxMesh>(converter.Triangulate(trimesh, true));
-						if (!trimesh->IsTriangleMesh()) // If triangulation failed, ignore the mesh
-							throw std::runtime_error(std::format("Failed to convert mesh '{}' to a triangle mesh", trimesh->GetName()));
-					}
-#endif
-					// "Inflate" the verts into a unique list of each required combination
-					{
-						auto vcount = trimesh->GetControlPointsCount();
-						auto fcount = trimesh->GetPolygonCount();
-						auto ncount = trimesh->GetElementMaterialCount();
-						auto const* verts = trimesh->GetControlPoints();
-						auto const* layer0 = trimesh->GetLayer(0);
-						auto const* materials = layer0->GetMaterials();
-						auto const* colours = layer0->GetVertexColors();
-						auto const* normals = layer0->GetNormals();
-						auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
-						vector<int> vlookup;
-
-						// Initialise buffers
-						out.m_vbuf.reserve(s_cast<size_t>(vcount) * 3 / 2);
-						out.m_ibuf.reserve(s_cast<size_t>(fcount) * 3);
-						out.m_nbuf.reserve(s_cast<size_t>(ncount));
-						vlookup.reserve(s_cast<size_t>(vcount) * 3 / 2);
-
-						// Add a vertex to 'm_vbuf' and return its index
-						auto AddVert = [&out, &vlookup](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
-						{
-							Vert v = {
-								.m_vert = pos,
-								.m_colr = col,
-								.m_norm = norm,
-								.m_tex0 = uv,
-								.m_idx0 = {src_vidx, 0},
-							};
-
-							// 'Vlookup' is a linked list of vertices that are permutations of 'src_idx'
-							for (int vidx = src_vidx;;)
-							{
-								// If 'vidx' is outside the buffer, add it
-								auto vbuf_count = isize(out.m_vbuf);
-								if (vidx >= vbuf_count)
-								{
-									out.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
-									vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
-									out.m_vbuf[vidx] = v;
-									vlookup[vidx] = NoIndex;
-									return vidx;
-								}
-
-								// If 'v' is already in the buffer, use it's index
-								if (out.m_vbuf[vidx] == v)
-								{
-									return vidx;
-								}
-
-								// If the position 'vidx' is an unused slot, use it
-								if (out.m_vbuf[vidx] == NoVert)
-								{
-									out.m_vbuf[vidx] = v;
-									return vidx;
-								}
-
-								// If there is no "next", prepare to insert it at the end
-								if (vlookup[vidx] == NoIndex)
-								{
-									vlookup[vidx] = vbuf_count;
-								}
-
-								// Go to the next vertex to check
-								vidx = vlookup[vidx];
-							}
-						};
-
-						// Get or add a nugget
-						auto GetOrAddNugget = [&out](uint64_t mat_id) -> Nugget&
-						{
-							for (auto& n : out.m_nbuf)
-							{
-								if (n.m_mat_id != mat_id) continue;
-								return n;
-							}
-							out.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
-							return out.m_nbuf.back();
-						};
-
-						// Read the faces of 'mesh' adding them to a nugget based on their material
-						for (int f = 0, fend = trimesh->GetPolygonCount(); f != fend; ++f)
-						{
-							if (trimesh->GetPolygonSize(f) != 3)
-								throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", trimesh->GetName(), trimesh->GetPolygonSize(f)));
-
-							// Get the material used on this face
-							uint64_t mat_id = 0;
-							if (materials != nullptr)
-							{
-								auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
-								mat_id = mat ? mat->GetUniqueID() : 0;
-							}
-
-							// Add the triangle to the nugget associated with the material
-							auto& nugget = GetOrAddNugget(mat_id);
-							for (int j = 0, jend = 3; j != jend; ++j)
-							{
-								auto iidx = f * 3 + j;
-								auto vidx = trimesh->GetPolygonVertex(f, j);
-								v4 pos = To<v4>(verts[vidx]).w1();
-
-								// Get the vertex colour
-								Colour col = ColourWhite;
-								if (colours != nullptr)
-								{
-									nugget.m_geom |= EGeom::Colr;
-									col = To<Colour>(GetLayerElement<FbxColor>(colours, f, iidx, vidx));
-								}
-
-								// Get the vertex normal
-								v4 norm = {};
-								if (normals != nullptr)
-								{
-									nugget.m_geom |= EGeom::Norm;
-									norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, iidx, vidx)).w0();
-								}
-
-								// Get the vertex UV
-								v2 uv = {};
-								if (uvs != nullptr)
-								{
-									nugget.m_geom |= EGeom::Tex0;
-									uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, iidx, vidx));
-								}
-
-								// Add the vertex to the vertex buffer and it's index to the index buffer
-								vidx = AddVert(vidx, pos, col, norm, uv);
-								out.m_ibuf.push_back(vidx);
-
-								nugget.m_vrange.grow(vidx);
-								nugget.m_irange.grow(isize(out.m_ibuf) - 1);
-							}
-						}
-					}
-
-					return out;
-				}));
+					auto level = s_cast<int>(node->node_depth - MeshRoot(node)->node_depth);
+					mesh_tree.push_back(MeshTree{
+						.m_o2p = level == 0 ? To<m4x4>(node->node_to_world) : To<m4x4>(node->node_to_parent),
+						.m_name = To<std::string_view>(node->name),
+						.m_mesh_id = node->mesh->typed_id,
+						.m_level = level,
+					});
+					return true;
+				});
 			}
 
-			// Wait for each mesh. Note that tasks are in the same depth-first
-			// order of meshes within the scene, so mesh-trees will be contiguous.
-			for (auto& task : tasks)
-			{
-				Progress(1 + &task - tasks.data(), ssize(tasks), "Reading models...");
-
-				task.wait();
-				auto mesh = task.get();
-
-				// Find the associated FbxMesh and the hierarchy root
-				auto& meshnode = m_meshes[mesh.m_id];
-				auto& rootnode = m_meshes[meshnode.root->GetUniqueID()];
-				auto& node = *meshnode.mesh->GetNode();
-
-				// Populate the other mesh data from the 'meshnode'
-				mesh.m_name = node.GetName();
-				mesh.m_bbox = BoundingBox(*meshnode.mesh);
-				mesh.m_level = meshnode.level - rootnode.level;
-
-				// Determine the object to parent transform.
-				mesh.m_o2p = meshnode.root == meshnode.mesh
-					? To<m4x4>(node.EvaluateGlobalTransform())
-					: To<m4x4>(node.EvaluateLocalTransform());
-
-				// Read the skinning data for this mesh
-				if (AllSet(m_opts.m_parts, EParts::Skins))
-					mesh.m_skin = ReadSkin(meshnode);
-
-				// Output the mesh
-				m_scene.m_meshes.push_back(std::move(mesh));
-			}
-
-			// Update the number of loaded meshes
-			m_scene.m_props.m_mesh_count = isize(m_scene.m_meshes);
+			// Output the full model hierarchy
+			m_out.CreateModel(mesh_tree);
 		}
 
-		// Read the skin data for 'meshnode'
-		SkinData ReadSkin(MeshNode const& meshnode)
+		// Read ufbx mesh data
+		void ReadMesh(ufbx_mesh const& fbxmesh)
 		{
-			// Find the corresponding FbxMesh
-			auto& fbxmesh = *meshnode.mesh;
+			// Notes:
+			//  - "ufbx_part" ~= Nugget
+			auto& mesh = m_mesh;
+			auto& vlookup = m_vlookup;
+			auto& tri_indices = m_tri_indices;
 
-			// Gather the bones and weights per vertex
-			struct Influence
+			// Count the size of the buffers needed
+			size_t icount = 0;
+			size_t ncount = 0;
+			for (size_t pi = 0; pi != fbxmesh.material_parts.count; ++pi)
 			{
-				vector<uint64_t, 8> m_bones;
-				vector<double, 8> m_weights;
+				ufbx_mesh_part const& mesh_part = fbxmesh.material_parts[pi];
+				if (mesh_part.num_triangles == 0)
+					continue;
+
+				ncount += 1;
+				icount += mesh_part.num_triangles * 3;
+			}
+
+			// Reserve space in the mesh data
+			mesh.Reset();
+			mesh.m_mesh_id = fbxmesh.typed_id;
+			mesh.m_name = To<std::string_view>(fbxmesh.name);
+			mesh.m_vbuf.reserve(icount / 2); // Just a guess
+			mesh.m_ibuf.reserve(icount);
+			mesh.m_nbuf.reserve(ncount);
+			vlookup.resize(0);
+			vlookup.reserve(icount);
+			tri_indices.resize(fbxmesh.max_face_triangles * 3);
+
+			// Add a vertex to 'm_vbuf' and return its index.
+			auto AddVert = [&mesh, &vlookup](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+			{
+				Vert v = {
+					.m_vert = pos,
+					.m_colr = col,
+					.m_norm = norm,
+					.m_tex0 = uv,
+					.m_idx0 = {src_vidx, 0},
+				};
+
+				// 'vlookup' is a linked list (within an array) of vertices that are permutations of 'src_idx'
+				for (int vidx = src_vidx;;)
+				{
+					// If 'vidx' is outside the buffer, add it
+					auto vbuf_count = isize(mesh.m_vbuf);
+					if (vidx >= vbuf_count)
+					{
+						// Note: This can leave "dead" verts in the buffer, but typically
+						// there shouldn't be many of these, and no indices should reference them.
+						mesh.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
+						vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
+						mesh.m_vbuf[vidx] = v;
+						vlookup[vidx] = NoIndex;
+						return vidx;
+					}
+
+					// If 'v' is already in the buffer, use it's index
+					if (mesh.m_vbuf[vidx] == v)
+					{
+						return vidx;
+					}
+
+					// If the position 'vidx' is an unused slot, use it
+					if (mesh.m_vbuf[vidx] == NoVert)
+					{
+						mesh.m_vbuf[vidx] = v;
+						return vidx;
+					}
+
+					// If there is no "next", prepare to insert it at the end
+					if (vlookup[vidx] == NoIndex)
+					{
+						vlookup[vidx] = vbuf_count;
+					}
+
+					// Go to the next vertex to check
+					vidx = vlookup[vidx];
+				}
 			};
-			vector<Influence> influences;
-			influences.resize(fbxmesh.GetControlPointsCount());
+
+			// Get or add a nugget
+			auto GetOrAddNugget = [&mesh](uint32_t mat_id) -> Nugget&
+			{
+				for (auto& n : mesh.m_nbuf)
+				{
+					if (n.m_mat_id != mat_id) continue;
+					return n;
+				}
+				mesh.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
+				return mesh.m_nbuf.back();
+			};
+
+			// Create a nugget per material.
+			for (size_t pi = 0; pi != fbxmesh.material_parts.count; ++pi)
+			{
+				// `ufbx_mesh_part` contains a handy compact list of faces that use the material which we use here.
+				ufbx_mesh_part const& mesh_part = fbxmesh.material_parts[pi];
+				if (mesh_part.num_triangles == 0)
+					continue;
+
+				assert(m_materials.size() != 0 && "There should be a default material if no materials have been loaded");
+				auto mat_id = Clamp<uint32_t>(mesh_part.index, 0, s_cast<uint32_t>(m_materials.size() - 1));
+
+				Nugget nugget = {};
+				nugget.m_mat_id = mat_id;
+				nugget.m_topo = ETopo::TriList;
+				nugget.m_geom = EGeom::Vert |
+					(fbxmesh.vertex_color.exists ? EGeom::Colr : EGeom::None) |
+					(fbxmesh.vertex_normal.exists ? EGeom::Norm : EGeom::None) |
+					(fbxmesh.vertex_uv.exists ? EGeom::Tex0 : EGeom::None);
+
+				// "Inflate" the verts into a unique list of each required combination
+				for (size_t fi = 0; fi < mesh_part.num_faces; fi++)
+				{
+					ufbx_face const& face = fbxmesh.faces[mesh_part.face_indices[fi]];
+					auto num_tris = ufbx_triangulate_face(tri_indices.data(), tri_indices.size(), &fbxmesh, face);
+
+					// Iterate through every vertex of every triangle in the triangulated result
+					for (size_t vi = 0; vi != num_tris * 3; ++vi)
+					{
+						auto ix = tri_indices[vi];
+						auto vidx = fbxmesh.vertex_indices[ix];
+						auto vert = To<v4>(ufbx_get_vertex_vec3(&fbxmesh.vertex_position, ix), 1.0f);
+						auto colr = fbxmesh.vertex_color.exists ? To<Colour>(ufbx_get_vertex_vec4(&fbxmesh.vertex_color, ix)) : ColourWhite;
+						auto norm = fbxmesh.vertex_normal.exists ? To<v4>(ufbx_get_vertex_vec3(&fbxmesh.vertex_normal, ix), 0.0f) : v4::Zero();
+						auto tex0 = fbxmesh.vertex_uv.exists ? To<v2>(ufbx_get_vertex_vec2(&fbxmesh.vertex_uv, ix)) : v2::Zero();
+						auto idx0 = iv2{ s_cast<int>(vidx), 0 };
+
+						vidx = AddVert(vidx, vert, colr, norm, tex0);
+						mesh.m_ibuf.push_back(vidx);
+
+						nugget.m_vrange.grow(vidx);
+						nugget.m_irange.grow(isize(mesh.m_ibuf) - 1);
+					}
+				}
+
+				// Add the nugget
+				mesh.m_nbuf.push_back(nugget);
+			}
+
+			// Compute the bounding box
+			for (auto const& v : mesh.m_vbuf)
+			{
+				if (v == NoVert) continue;
+				mesh.m_bbox.Grow(v.m_vert);
+			}
+
+			// Read the skinning data for this mesh
+			if (AllSet(m_opts.m_parts, EParts::Skins))
+				ReadSkin(fbxmesh);
+		}
+
+		// Read the skin data for 'fbxmesh'
+		void ReadSkin(ufbx_mesh const& fbxmesh)
+		{
+			auto& skin = m_mesh.m_skin;
+			auto& influences = m_influences;
+			influences.resize(fbxmesh.num_vertices);
+			skin.Reset();
+
+			ufbx_node const* root = nullptr;
 
 			// Get the skinning data for this mesh
-			for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+			for (size_t  d = 0; d != fbxmesh.skin_deformers.count; ++d)
 			{
-				auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
-				for (int c = 0, cend = fbxskin.GetClusterCount(); c != cend; ++c)
+				auto const& fbxskin = *fbxmesh.skin_deformers[d];
+				for (size_t c = 0; c != fbxskin.clusters.count; ++c)
 				{
-					auto& cluster = *fbxskin.GetCluster(c);
-					if (cluster.GetControlPointIndicesCount() == 0)
+					auto const& cluster = *fbxskin.clusters[c];
+					if (cluster.num_weights == 0)
 						continue;
 
-					// Check for supported features
-					auto link_mode = cluster.GetLinkMode();
-					if (link_mode != FbxCluster::ELinkMode::eNormalize)
-						throw std::runtime_error("Non-normalise link modes not implemented");
-
 					// Get the bone that influences this cluster
-					auto& bone = *Find<FbxSkeleton>(*cluster.GetLink());
+					auto const* fbxbone = cluster.bone_node;
+					root = root ? root : BoneRoot(fbxbone);
 
 					// Get the span of vert indices and weights
-					auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-					auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-					for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
+					for (int w = 0; w != cluster.num_weights; ++w)
 					{
-						auto vidx = indices[w];
-						auto weight = weights[w];
+						auto vidx = cluster.vertices[w];
+						auto weight = s_cast<float>(cluster.weights[w]);
 
-						influences[vidx].m_bones.push_back(bone.GetUniqueID());
+						influences[vidx].m_bones.push_back(fbxbone->typed_id);
 						influences[vidx].m_weights.push_back(weight);
 					}
 				}
 			}
 
 			// Populate the skinning data
-			SkinData skin;
-			skin.m_offsets.reserve(s_cast<size_t>(fbxmesh.GetControlPointsCount()) + 1);
+			skin.m_skel_id = root ? root->typed_id : NoId; // The skeleton id is the id of the node containing the root bone (see ReadSkeleton)
+			skin.m_offsets.reserve(fbxmesh.num_vertices + 1);
 			skin.m_bones.reserve(skin.m_offsets.capacity() * 8);
 			skin.m_weights.reserve(skin.m_bones.capacity());
 
 			int count = 0;
 			for (auto const& influence : influences)
 			{
+				// Record the offset to this influence
 				skin.m_offsets.push_back(count);
-				auto influence_count = isize(influence.m_bones);
-				count += influence_count;
+				count += isize(influence.m_bones);
 
-				for (int i = 0; i != influence_count; ++i)
+				// Append the weights
+				for (int i = 0, iend = isize(influence.m_bones); i != iend; ++i)
 				{
 					skin.m_bones.push_back(influence.m_bones[i]);
 					skin.m_weights.push_back(influence.m_weights[i]);
 				}
 			}
 			skin.m_offsets.push_back(count);
-
-			return skin;
 		}
 
 		// Read skeletons from the FBX scene
 		void ReadSkeletons()
 		{
 			// Notes:
-			//  - Mesh hierarchies (trees) can reference multiple disconnected skeletons,
-			//    but also, single skeletons can influence multiple meshes.
+			//  - Fbx doesn't really have skeletons. Define a skeleton as a hierarchically connected tree of bones.
+			//  - Bones are in a separate list in the fbx scene. Nodes contain instances of the bones
+			//    where the node transform describes the relationship between bone instances.
+			//  - Mesh hierarchies can reference multiple disconnected skeletons, but also,
+			//    single skeletons (bone hierarchies) can influence multiple disconnected mesh hierarchies.
 			//  - To find the unique skeletons, scan all meshes in the scene and record
 			//    which roots each mesh-tree is associated with. Separate skeletons are those
 			//    that don't share mesh-trees.
 			//  - The reader has the option of only loading Skeleton data, so don't rely
 			//    on parsed meshes when determining skeletons.
+			//
+			// All of above is true, but it's too complicated. Just create skeletons from connected bone hierarchies.
 
-			struct SkeletonBuilder
+			SkeletonData skel;
+			skel.m_bone_ids.reserve(m_fbxscene.bones.count);
+			skel.m_names.reserve(m_fbxscene.bones.count);
+			skel.m_o2bp.reserve(m_fbxscene.bones.count);
+			skel.m_hierarchy.reserve(m_fbxscene.bones.count);
+
+			std::unordered_map<ufbx_node const*, ufbx_bone_pose const*> bind_pose;
+			bind_pose.reserve(m_fbxscene.bones.count);
+
+			// Build a skeleton from each root bone
+			auto roots = FindRoots(m_fbxscene.bones, IsBoneRoot);
+			for (auto const*& root : roots)
 			{
-				Reader& m_reader;
-				SceneData::SkeletonCont& m_skeletons;
-				BoneNodeMap const& m_bone_map;
-				std::unordered_set<FbxSkeleton const*> m_bone_set;
-				std::unordered_map<BoneNode const*, std::unordered_set<MeshNode const*>> m_roots;
-				std::unordered_map<uint64_t, uint64_t> m_mesh_to_skel_map;
-
-				SkeletonBuilder(Reader& reader, SceneData::SkeletonCont& skeletons, BoneNodeMap const& bone_map)
-					: m_reader(reader)
-					, m_skeletons(skeletons)
-					, m_bone_map(bone_map)
-					, m_bone_set()
-					, m_roots()
-					, m_mesh_to_skel_map()
-				{}
-
-				// Find the skeleton roots for all bones referenced by this mesh-tree
-				void Collect(std::span<MeshNode const> meshtree, MeshNodeMap& mesh_map)
+				Progress(1 + (&root - roots.data()), ssize(roots), "Reading skeletons...");
+				
+				// Skeleton Id is the id of the node that contains the root bone,
+				// because the same bone could be instanced in multiple nodes/skeletons.
+				skel.m_skel_id = root->typed_id;
+				
+				// Create a lookup for bone node to pose data
+				// The bind pose is a snapshot of the global transforms of the bones
+				// at the time skinning was authored in the DCC tool.
+				bind_pose.clear();
+				if (root->bind_pose != nullptr && root->bind_pose->is_bind_pose)
 				{
-					for (auto const& mesh : meshtree)
-					{
-						auto& fbxmesh = *mesh_map[mesh.mesh->GetUniqueID()].mesh;
-						for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
-						{
-							auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
-							for (int c = 0, cend = fbxskin.GetClusterCount(); c != cend; ++c)
-							{
-								auto& cluster = *fbxskin.GetCluster(c);
-								if (cluster.GetControlPointIndicesCount() == 0)
-									continue;
-
-								if (cluster.GetLinkMode() != FbxCluster::eNormalize)
-									throw std::runtime_error("Unsupported link mode");
-
-								// Record the root and which mesh-tree is associated with it
-								auto& node = *cluster.GetLink();
-								auto& root = *FindRoot<FbxSkeleton const>(node);
-								auto const& root_node = m_bone_map.at(root.GetUniqueID());
-								m_roots[&root_node].insert(&meshtree.front());
-							}
-						}
-					}
+					for (auto const& pose : root->bind_pose->bone_poses)
+						bind_pose[pose.bone_node] = &pose;
 				}
 
-				// Recursive function that finds all bones from a root and adds them to 'm_bone_set'
-				void CollectBones(FbxSkeleton const& bone)
+				// Walk the bone hierarchy creating the skeleton
+				WalkHierarchy(root, [&skel, &bind_pose](ufbx_node const* node)
 				{
-					m_bone_set.insert(&bone);
-					for (auto& child : Children<FbxSkeleton>(*bone.GetNode()))
-						CollectBones(child);
-				}
+					if (node->bone == nullptr)
+						return false;
 
-				// Build the unique skeletons
-				void Build()
-				{
-					// For each root, add all connected bones (children) to the bone set
-					for (auto const& [root, _] : m_roots)
-						CollectBones(*root->bone);
-
-					// Create unique skeletons from roots that don't share mesh-trees
-					for (; !m_roots.empty(); )
-					{
-						auto& [r, set] = *m_roots.begin();
-						if (!m_reader.IncludeBone(*r))
-						{
-							m_roots.erase(r);
-							continue;
-						}
-
-						// Build a list of the roots that are part of this skeleton
-						vector<BoneNode const*, 4> roots;
-						for (auto& [root, s] : m_roots)
-						{
-							// If any meshes in 's' are in 'set', then add 'r' to 'roots' and 's' to 'set'
-							if (std::ranges::any_of(s, [&set](MeshNode const* m) { return set.contains(m); }))
-							{
-								roots.push_back(root);
-								set.insert(begin(s), end(s));
-							}
-						}
-
-						// Ensure a stable root order
-						std::sort(roots.begin(), roots.end(), [](BoneNode const* lhs, BoneNode const* rhs) { return lhs->index < rhs->index; });
-
-						// Find the bind pose
-						auto* bind_pose = FindBindPose(m_reader.m_fbxscene, roots);
-
-						// Construct a skeleton
-						SkeletonData skeleton = { .m_id = FindCommonAncestor(roots)->GetUniqueID() };
-						skeleton.m_bone_ids.reserve(m_bone_set.size());
-						skeleton.m_names.reserve(m_bone_set.size());
-						skeleton.m_o2bp.reserve(m_bone_set.size());
-						skeleton.m_hierarchy.reserve(m_bone_set.size());
-						for (auto root : roots)
-							Build(skeleton, bind_pose, *root, 0);
-
-						// Record the association between mesh and skeleton
-						for (auto const* meshnode : set)
-							m_mesh_to_skel_map[meshnode->mesh->GetUniqueID()] = skeleton.m_id;
-
-						// Add the skeleton to the output
-						m_skeletons.push_back(std::move(skeleton));
-
-						// Remove 'roots' from 'm_roots'
-						for (auto root : roots)
-							m_roots.erase(root);
-					}
-				}
-
-				// Build a skeleton by recursively adding child bones
-				void Build(SkeletonData& skeleton, FbxPose const* bind_pose, BoneNode const& bone_node, int level)
-				{
-					auto const& bone = *bone_node.bone;
-					auto const& node = *bone.GetNode();
-
-					int idx = -1;
-					if (!bind_pose || (idx = bind_pose->Find(&node)) == -1)
-					{
-						bind_pose = FindBindPose(m_reader.m_fbxscene, bone_node);
-						idx = bind_pose ? bind_pose->Find(&node) : -1;
-					}
+					auto const& bone = *node->bone;
 
 					// Object space to bind pose.
-					// The bind pose is a snapshot of the global transforms of the bones
-					// at the time skinning was authored in the DCC tool.
-					// Fall-back to time zero as the bind pose.
-					auto bp2o = idx != -1
-						? To<m4x4>(bind_pose->GetMatrix(idx))
-						: To<m4x4>(const_cast<FbxNode&>(node).EvaluateGlobalTransform(0));
+					auto bp2o = bind_pose.contains(node)
+						? To<m4x4>(bind_pose[node]->bone_to_world)
+						: To<m4x4>(node->node_to_world);
 					auto o2bp = IsOrthonormal(bp2o)
 						? InvertFast(bp2o)
 						: Invert(bp2o);
+					auto level = s_cast<int>(node->node_depth - BoneRoot(node)->node_depth);
+					
+					skel.m_bone_ids.push_back(bone.typed_id);
+					skel.m_names.push_back(std::string(To<std::string_view>(node->name)));
+					skel.m_o2bp.push_back(o2bp);
+					skel.m_hierarchy.push_back(level);
+					return true;
+				});
 
-					skeleton.m_bone_ids.push_back(bone.GetUniqueID());
-					skeleton.m_names.push_back(node.GetName());
-					skeleton.m_o2bp.push_back(o2bp);
-					skeleton.m_hierarchy.push_back(level);
-
-					for (auto& child : Children<FbxSkeleton const>(node))
-					{
-						auto const& child_node = m_bone_map.at(child.GetUniqueID());
-						Build(skeleton, bind_pose, child_node, level + 1);
-					}
-				}
-				FbxNode const* FindCommonAncestor(std::span<BoneNode const*> nodes)
-				{
-					if (nodes.empty())
-						return nullptr;
-					if (nodes.size() == 1)
-						return nodes.front()->bone->GetNode();
-
-					// Get all the root nodes and their levels
-					struct NodeAndLevel { FbxNode const* node; int level; };
-					vector<NodeAndLevel> ancestors; ancestors.reserve(nodes.size());
-					for (auto const& node : nodes)
-						ancestors.push_back(NodeAndLevel{ node->bone->GetNode(), node->level });
-
-					// Find the shallowest node
-					auto shallowest = std::numeric_limits<int>::max();
-					for (auto const& ancestor : ancestors)
-						shallowest = std::min(shallowest, ancestor.level);
-
-					// Equalize depths
-					for (auto& ancestor : ancestors)
-					{
-						for (; ancestor.node && ancestor.level > shallowest;)
-						{
-							ancestor.node = ancestor.node->GetParent();
-							--ancestor.level;
-						}
-					}
-
-					// Walk up until all nodes are the same
-					for (;;)
-					{
-						auto all_same = true;
-						auto const& first = ancestors.front();
-						for (auto const& ancestor : ancestors)
-							all_same &= ancestor.node == first.node;
-
-						if (all_same)
-							return first.node;
-
-						for (auto& ancestor : ancestors)
-						{
-							ancestor.node = ancestor.node->GetParent();
-							--ancestor.level;
-						}
-					}
-				}
-			};
-
-			// Skeleton builder helper
-			SkeletonBuilder skelbuilder(*this, m_scene.m_skeletons, m_bones);
-
-			// Filter the mesh nodes into a flat list, ordered in depth-first order
-			vector<MeshNode> meshtrees; meshtrees.reserve(m_meshes.size());
-			for (auto const& [id, meshnode] : m_meshes)
-			{
-				if (!IncludeMesh(meshnode)) continue;
-				meshtrees.push_back(meshnode);
+				m_out.CreateSkeleton(skel);
+				skel.Reset();
 			}
-			std::sort(begin(meshtrees), end(meshtrees), [](MeshNode const& lhs, MeshNode const& rhs) { return lhs.index < rhs.index; });
-
-			// Process each mesh-tree to determine unique skeletons
-			for (auto const* beg = meshtrees.data(), *end = beg + meshtrees.size(); beg != end;)
-			{
-				auto ptr = beg + 1;
-				for (; ptr != end && ptr->root == beg->root; ++ptr) {}
-			
-				Progress(1 + end - beg, ssize(meshtrees), "Reading skeletons...");
-				skelbuilder.Collect({ beg, static_cast<size_t>(ptr - beg) }, m_meshes);
-				beg = ptr;
-			}
-
-			// Compile the unique skeletons
-			skelbuilder.Build();
-
-			// Update the skeleton ID in each output mesh
-			for (auto& mesh : m_scene.m_meshes)
-			{
-				if (!skelbuilder.m_mesh_to_skel_map.contains(mesh.m_id)) continue;
-				mesh.m_skin.m_skel_id = skelbuilder.m_mesh_to_skel_map.at(mesh.m_id);
-			}
-
-			// Update the number of loaded skeletons
-			m_scene.m_props.m_skeleton_count = isize(m_scene.m_skeletons);
 		}
 
 		// Read the animation data from the scene
 		void ReadAnimation()
 		{
 			// Notes:
-			//  - FbxAnimStack can affect any node in the scene so it's possible for one animation to affect multiple skeletons.
-			//  - By far the slowest part of this is calling 'EvaluateXXXXTransform', so we only want to loop over time once.
-			//    This means collecting animation key frames for all skeletons at the same time.
-			//  - In order to parallelize reading the animation data, we have to cache the transforms in a snapshot
-			//    of the node transforms for every bone in the skeleton at a key frame time.
-			//  - Each thread worker needs to add a transform to 'animation' for each bone that has a key frame at the
-			//    given time.
-			//  - Fbx curve keys have an interpolation type, they are either constant, linear, or cubic.
+			//  - The anim stack can affect any node in the scene so it's possible for one animation to affect multiple skeletons.
+			//  - Fbx files store complex curves with different types of interpolation. Every sane bit of software deals with fixed
+			//    frame rates and numbers of frames. Use ufbx to resample the animation into a fixed frame rate.
+			AnimationData anim;
 
 			// Set the animation to use
-			auto animation_count = m_fbxscene.GetSrcObjectCount<FbxAnimStack>();
-			for (int i = 0; i != animation_count; ++i)
+			for (int i = 0; i != m_fbxscene.anim_stacks.count; ++i)
 			{
-				Progress(1LL + i, animation_count, "Reading animation...");
+				Progress(1LL + i, m_fbxscene.anim_stacks.count, "Reading animation...");
 
-				m_animstack = Check(m_fbxscene.GetSrcObject<FbxAnimStack>(i), "Requested animation stack does not exist");
-				m_fbxscene.SetCurrentAnimationStack(m_animstack);
-				m_time_span = m_animstack->GetLocalTimeSpan();
-
-				// Limit the time span based on the options
-				auto frame_span = Intersect(Range<int>{
-					static_cast<int>(std::floor(m_time_span.GetStart().GetSecondDouble() * m_frame_rate)),
-					static_cast<int>(std::ceil(m_time_span.GetStop().GetSecondDouble() * m_frame_rate)),
-				}, m_opts.m_frame_range);
-				FbxTime start; start.SetSecondDouble(frame_span.begin() / m_frame_rate);
-				FbxTime stop; stop.SetSecondDouble(frame_span.end() / m_frame_rate);
-				m_time_span.Set(start, stop);
-
-				// Only support one animation layer at the moment
-				auto layer_count = std::min(1, m_animstack->GetMemberCount<FbxAnimLayer>());
-				for (int j = 0; j != layer_count; ++j)
-				{
-					m_layer = m_animstack->GetMember<FbxAnimLayer>(j);
-
-					// Read the key frame times for all bones and determine the used channels
-					auto channels = EAnimChannel::None;
-					vector<uint64_t, 0> bone_id_lookup(m_bones.size());
-					vector<KeyTimes, 0> times_per_bone(m_bones.size());
-					for (auto& [id, bonenode] : m_bones)
-					{
-						auto [times, chan] = FindKeyFrameTimes(*bonenode.bone->GetNode());
-						times_per_bone[bonenode.index] = times;
-						bone_id_lookup[bonenode.index] = id;
-						channels |= chan;
-					}
-
-					vector<AnimationData, 0> animations;
-
-					// Animations are associated with a skeleton. Create an animation for each
-					// skeleton that contains a bone that is moved by this animation.
-					for (auto const& skel : m_scene.m_skeletons)
-					{
-						// Is the skeleton moved by this animation?
-						if (std::ranges::all_of(skel.m_bone_ids, [this, &times_per_bone](uint64_t id) { return times_per_bone[m_bones[id].index].empty(); }))
-							continue;
-
-						// Create an animation for 'skel'
-						AnimationData animation = {
-							.m_skel = &skel,
-							.m_time_range = TimeRange::Reset(),
-							.m_frame_rate = m_frame_rate,
-							.m_bone_count = skel.size(),
-							.m_offsets = {},
-							.m_times = {},
-							.m_rotation = {},
-							.m_position = {},
-							.m_scale = {},
-						};
-
-						// Preallocate the arrays in 'animation'
-						animation.m_offsets.reserve(skel.m_bone_ids.size() + 1);
-
-						// Find the time range of the animation
-						for (auto id : skel.m_bone_ids)
-						{
-							auto const& times = times_per_bone[m_bones[id].index];
-							if (!times.empty())
-							{
-								animation.m_time_range.grow(times.front().time.GetSecondDouble());
-								animation.m_time_range.grow(times.back().time.GetSecondDouble());
-							}
-						}
-
-						// Generate the offset indices per bone.
-						int key_count = 0;
-						for (auto id : skel.m_bone_ids)
-						{
-							// Record an entry for every bone in the skeleton, even if they're empty, it makes bone lookup easier.
-							auto const& times = times_per_bone[m_bones[id].index];
-							animation.m_offsets.push_back(key_count);
-							key_count += isize(times);
-						}
-
-						// The last offset is the total number of keys
-						animation.m_offsets.push_back(key_count);
-
-						// Allocate buffers
-						animation.m_times.resize(key_count);
-						animation.m_rotation.resize(AllSet(channels, EAnimChannel::Rotation) ? key_count : 0);
-						animation.m_position.resize(AllSet(channels, EAnimChannel::Position) ? key_count : 0);
-						animation.m_scale.resize(AllSet(channels, EAnimChannel::Scale) ? key_count : 0);
-
-						// Save this animation
-						animations.push_back(std::move(animation));
-					}
-
-					vector<std::future<void>> tasks;
-					int64_t progress = 0;
-
-					// For each key frame time, start a worker that adds the key frame to each bone with that key
-					zip<EZip::SetsFull, KeyTime>(times_per_bone, [this, &animations, &tasks, &bone_id_lookup, &progress](KeyTime keytime, std::span<ZipSet const> indices)
-					{
-						// Progress
-						auto fstep = (keytime.time - m_time_span.GetStart()).GetSecondDouble();
-						auto ftotal = m_time_span.GetDuration().GetSecondDouble();
-						if (auto pc = static_cast<int64_t>(fstep * 100 / ftotal); pc != progress)
-						{
-							progress = pc;
-							Progress(progress, 100, "Reading key frames...", 1);
-						}
-
-						// A snapshot of all bone transforms at a time
-						struct Snapshot
-						{
-							// At a given time (the snapshot time) one or more bones may have a 'Key'.
-							// Each bone has a different number of keys, so this key has a different
-							// index within each bone (m_key_index).
-							struct Key
-							{
-								int m_bone_index; // The bone that has this key
-								int m_key_index;  // The index of this key within the bone's keys
-								EInterpolation m_interpolation; // How the key frame interpolates
-							};
-
-							vector<Key> m_keys = {};    // The keys at this snapshot
-							vector<m4x4> m_b2p = {};    // Bone to parent for each bone at this time
-							double m_time = {};         // The time value in seconds at this snapshot time
-						
-							// Capture a snapshot of the bone transforms at 'time'
-							static Snapshot Capture(KeyTime keytime, std::span<ZipSet const> indices, BoneNodeMap& bones, std::span<uint64_t const> bone_id_lookup)
-							{
-								Snapshot ss = { .m_time = keytime.time.GetSecondDouble() };
-
-								// Record the bones with a key frame at this time, and which key frame that is
-								ss.m_keys.reserve(indices.size());
-								for (auto& [bone_idx, key_idx] : indices)
-								{
-									ss.m_keys.push_back(Key{
-										.m_bone_index = s_cast<int>(bone_idx),
-										.m_key_index = s_cast<int>(key_idx),
-										.m_interpolation = To<EInterpolation>(keytime.interpolation),
-									});
-								}
-
-								// Buffer the transforms for each bone node. All bones are needed because we need the
-								// parent transforms to be correct, even if there isn't a key frame for the parent.
-								ss.m_b2p.reserve(bones.size());
-								for (auto id : bone_id_lookup)
-								{
-									auto& node = *bones[id].bone->GetNode();
-									ss.m_b2p.push_back(To<m4x4>(node.EvaluateLocalTransform(keytime.time)));
-								}
-
-								return ss;
-							}
-						};
-
-						// Start the worker to add key frames for each bone with a key at this time
-						tasks.emplace_back(std::async(std::launch::async, [&animations, &bone_id_lookup, snapshot = Snapshot::Capture(keytime, indices, m_bones, bone_id_lookup)]
-						{
-							// Loop over the keys in this snapshot
-							for (auto const& key : snapshot.m_keys)
-							{
-								// All bone nodes should be captured in the pose snapshot
-								auto const& bone_id = bone_id_lookup[key.m_bone_index];
-								auto const& b2p = snapshot.m_b2p[key.m_bone_index];
-
-								// In each animation that contains 'bone_id', add a key frame to the bone track for 'bone_id'
-								for (auto& animation : animations)
-								{
-									// Find the index of 'bone_id' within the skeleton
-									auto const& bone_ids = animation.m_skel->m_bone_ids;
-									auto it = std::ranges::find(bone_ids, bone_id);
-									if (it == end(bone_ids)) continue;
-									auto bone_index = s_cast<int>(std::distance(begin(bone_ids), it));
-
-									// These transforms are the bone offset relative to the parent over time.
-									auto [ofs, _] = animation.index_range(bone_index);
-									if (!animation.m_times.empty())
-										animation.m_times[ofs + key.m_key_index] = TimeKey{ .m_time = snapshot.m_time, .m_interp = key.m_interpolation };
-									if (!animation.m_rotation.empty())
-										animation.m_rotation[ofs + key.m_key_index] = quat(b2p.rot);
-									if (!animation.m_position.empty())
-										animation.m_position[ofs + key.m_key_index] = b2p.pos.xyz;
-									if (!animation.m_scale.empty())
-										animation.m_scale[ofs + key.m_key_index] = b2p.rot.scale().trace().xyz;
-								}
-							}
-						}));
-					});
-
-					// Wait for all tasks
-					for (auto& task : tasks)
-						task.wait();
-
-					// Output the animations
-					for (auto& anim : animations)
-						m_scene.m_animations.push_back(std::move(anim));
-				}
-			}
-
-			// Update the number of loaded animations
-			m_scene.m_props.m_animation_count = isize(m_scene.m_animations);
-		}
-
-		// Find the set of unique key frame times for 'node'
-		std::tuple<KeyTimes, EAnimChannel> FindKeyFrameTimes(FbxNode& node) const
-		{
-			// Channels of a node's transform (x, y, z etc)
-			struct C { FbxAnimCurve* curve; EAnimChannel type; };
-			auto channels = {
-				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Rotation },
-				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Rotation },
-				C{ node.LclRotation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Rotation },
-				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Position },
-				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Position },
-				C{ node.LclTranslation.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Position },
-				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_X), EAnimChannel::Scale },
-				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Y), EAnimChannel::Scale },
-				C{ node.LclScaling.GetCurve(m_layer, FBXSDK_CURVENODE_COMPONENT_Z), EAnimChannel::Scale },
-			};
-
-			auto max_keys = 0ULL;
-			auto type = EAnimChannel::None;
-			vector<FbxCurve, 9, true> curves;
-
-			// Read the non-null, non-empty transform animation curves
-			for (auto channel : channels)
-			{
-				if (channel.curve == nullptr || channel.curve->KeyGetCount() == 0)
+				auto const& fbxstack = *m_fbxscene.anim_stacks[i];
+				auto const& fbxanim = *fbxstack.anim;
+				if (fbxanim.layers.count == 0 || fbxanim.time_begin == fbxanim.time_end || m_fbxscene.settings.frames_per_second == 0)
 					continue;
 
-				max_keys = std::max(max_keys, s_cast<size_t>(channel.curve->KeyGetCount()));
-				curves.push_back({ channel.curve });
-				type |= channel.type;
+				// Native frame rate
+				anim.m_frame_rate = m_fbxscene.settings.frames_per_second;
+
+				// Limit the time span based on the options. Round to whole multiples of frames
+				auto frame_range = Intersect(m_opts.m_frame_range, Range<int>(
+					static_cast<int>(std::ceil(fbxanim.time_begin * anim.m_frame_rate)),
+					static_cast<int>(std::floor(fbxanim.time_end * anim.m_frame_rate))
+				));
+				auto num_keys = frame_range.size() + 1;
+				if (num_keys <= 1)
+					continue;
+
+				// Set the duration of the animation
+				anim.m_duration = (num_keys - 1) / anim.m_frame_rate;
+				auto time_offset = frame_range.begin() / anim.m_frame_rate;
+				assert(FEql((num_keys - 1) / anim.m_duration, anim.m_frame_rate));
+
+				// Evaluate the animation for each skeleton
+				auto roots = FindRoots(m_fbxscene.bones, IsBoneRoot);
+				for (auto const*& skel : roots)
+				{
+					// Skeleton Id that this animation is for
+					anim.m_skel_id = skel->typed_id;
+
+					// Build the bone map for 'skel'
+					anim.m_bone_map.reserve(m_fbxscene.bones.count);
+					WalkHierarchy(skel, [&anim](ufbx_node const* node)
+					{
+						if (node->bone == nullptr)
+							return false;
+
+						// Store the 'node_id' in the bone map initially.
+						// This is replaced later with the actual bone id.
+						anim.m_bone_map.push_back(node->typed_id);
+						return true;
+					});
+
+					// Pre-allocate space for M bones x N frames
+					auto num = anim.m_bone_map.size() * num_keys;
+					anim.m_rotation.resize(num);
+					anim.m_position.resize(num);
+					anim.m_scale.resize(num);
+
+					// Watch for inactive channels
+					std::atomic_bool active[3] = { false, false, false };
+
+					// For each bone in the skeleton, sample the transforms
+					auto idx = std::views::iota(0, isize(anim.m_bone_map));
+					std::for_each(std::execution::par, idx.begin(), idx.end(), [this, &fbxanim, &anim, num_keys, time_offset, &active](int bone_idx)
+					{
+						// Note, the bone map contains node ids initially.
+						auto node_id = anim.m_bone_map[bone_idx];
+						auto const* node = m_fbxscene.nodes[node_id];
+						auto bone_count = ssize(anim.m_bone_map);
+
+						// Replace the node id with the actual bone id
+						anim.m_bone_map[bone_idx] = node->bone->typed_id;
+
+						quat prev = quat::Identity();
+						bool actv[3] = { false, false, false };
+
+						// Sample data for each frame
+						for (int k = 0; k != num_keys; ++k)
+						{
+							auto time = time_offset + k / anim.m_frame_rate;
+
+							ufbx_transform transform = ufbx_evaluate_transform(&fbxanim, node, time);
+							auto rot = To<quat>(transform.rotation);
+							auto pos = To<v3>(transform.translation);
+							auto scl = To<v3>(transform.scale);
+
+							// Ensure shortest path between adjacent quaternions
+							if (k != 0 && Dot(rot, prev) < 0)
+								rot = -rot;
+
+							auto idx = k * bone_count + bone_idx;
+							anim.m_rotation[idx] = rot;
+							anim.m_position[idx] = pos;
+							anim.m_scale[idx] = scl;
+
+							prev = rot;
+							actv[0] |= !FEql(rot, quat::Identity());
+							actv[1] |= !FEql(pos, v3::Zero());
+							actv[2] |= !FEql(scl, v3::One());
+						}
+
+						// Track default channels
+						for (int i = 0; i != 3; ++i)
+						{
+							if (!actv[i]) continue;
+							active[i] = true;
+						}
+					});
+
+					// Any tracks that are all default can be resized to empty
+					if (!active[0]) anim.m_rotation.resize(0);
+					if (!active[1]) anim.m_position.resize(0);
+					if (!active[2]) anim.m_scale.resize(0);
+
+					// Output the animation for this skeleton
+					if (!m_out.CreateAnimation(anim))
+						return;
+
+					anim.m_bone_map.resize(0);
+					anim.m_rotation.resize(0);
+					anim.m_position.resize(0);
+					anim.m_scale.resize(0);
+				}
+
+				anim.Reset();
 			}
+		}
 
-			// Find the set of unique key frame times for 'node'
-			KeyTimes keytimes; keytimes.reserve(max_keys); // could be more than this, but it's a reasonable inital guess
-			keytimes.push_back({ m_time_span.GetStart(), FbxAnimCurveDef::eInterpolationLinear });
-			zip<EZip::Unique, FbxTime>(curves, [this, &keytimes, &curves](FbxTime time, size_t idx)
+		// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
+		template <std::invocable<ufbx_node const*> Callback> requires std::convertible_to<std::invoke_result_t<Callback, ufbx_node const*>, bool>
+		static void WalkHierarchy(ufbx_node const* root, Callback cb)
+		{
+			vector<ufbx_node const*> stack; stack.reserve(64);
+			stack.push_back(root);
+
+			for (; !stack.empty(); )
 			{
-				// Assume the same interpolation for all transform channels
-				auto interp = curves[idx].m_curve->KeyGetInterpolation(0);
-				if (time > m_time_span.GetStart() && time < m_time_span.GetStop())
-					keytimes.push_back({ time, interp });
-			});
-			keytimes.push_back({ m_time_span.GetStop(), FbxAnimCurveDef::eInterpolationLinear });
+				auto* node = stack.back();
+				stack.pop_back();
 
-			return { keytimes, type };
-		}
+				// Return true to recurse into the node. n.b. 'node->node_depth'
+				if (!cb(node))
+					continue;
 
-		// Get the mesh bounding box
-		BBox BoundingBox(FbxMesh& mesh) const
-		{
-			mesh.ComputeBBox();
-			auto min = To<v4>(mesh.BBoxMin.Get());
-			auto max = To<v4>(mesh.BBoxMax.Get());
-			return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
-		}
-
-		// True if 'meshnode' should be included
-		bool IncludeMesh(MeshNode const& meshnode) const
-		{
-			return
-				m_opts.m_mesh_filter == nullptr ||
-				m_opts.m_mesh_filter(meshnode.root->GetNode()->GetName());
-		}
-
-		// True if 'bonenode' should be included
-		bool IncludeBone(BoneNode const& bonenode) const
-		{
-			return
-				m_opts.m_skel_filter == nullptr ||
-				m_opts.m_skel_filter(bonenode.root->GetNode()->GetName());
+				// Recurse in depth first order
+				for (auto i = node->children.count; i-- != 0; )
+					stack.push_back(node->children[i]);
+			}
 		}
 
 		// Report progress
@@ -2095,39 +1294,80 @@ namespace pr::geometry::fbx
 			if (m_opts.m_progress(step, total, message, nest)) return;
 			throw std::runtime_error("user cancelled");
 		}
+
+		// Find the root nodes in the list of elements
+		template <typename Elements, typename IsRootFn>
+		static auto FindRoots(Elements const& elements, IsRootFn is_root)
+		{
+			vector<ufbx_node const*, 4> roots;
+			for (auto const* element : elements)
+			{
+				for (auto const* node : element->instances)
+				{
+					if (!is_root(node)) continue;
+					roots.push_back(node);
+				}
+			}
+			roots.resize(std::unique(begin(roots), end(roots)) - std::begin(roots));
+			return roots;
+		}
+
+		// True if 'node' is a mesh root node
+		static bool IsMeshRoot(ufbx_node const* node)
+		{
+			return node->mesh != nullptr && (node->parent == nullptr || node->parent->mesh == nullptr);
+		}
+
+		// True if 'node' is a bone root node
+		static bool IsBoneRoot(ufbx_node const* node)
+		{
+			return node->bone != nullptr && (node->parent == nullptr || node->parent->bone == nullptr);
+		}
+
+		// Return the ancestor of 'node' that is not a mesh node
+		static ufbx_node const* MeshRoot(ufbx_node const* node)
+		{
+			for (; !IsMeshRoot(node); node = node->parent) {}
+			return node;
+		}
+
+		// Return the ancestor of 'node' that is not a bone node
+		static ufbx_node const* BoneRoot(ufbx_node const* node)
+		{
+			for (; !IsBoneRoot(node); node = node->parent) {}
+			return node;
+		}
 	};
 
-	// Dump an fbx scene to 'std::ostream'
+	// Dump the structure of an FBX file to a stream
 	struct Dumper
 	{
-		using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
+		//using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
 
 		std::ostream& m_out;
-		FbxScene& m_fbxscene;
-		MeshNodeMap m_meshes;
-		BoneNodeMap m_bones;
+		ufbx_scene& m_fbxscene;
+		//MeshNodeMap m_meshes;
+		//BoneNodeMap m_bones;
 		DumpOptions const& m_opts;
-		double m_frame_rate;
+		//double m_frame_rate;
 
-		Dumper(FbxScene& fbxscene, DumpOptions const& opts, std::ostream& out)
+		Dumper(ufbx_scene& fbxscene, DumpOptions const& opts, std::ostream& out)
 			: m_out(out)
 			, m_fbxscene(fbxscene)
-			, m_meshes()
-			, m_bones()
+			//, m_meshes()
+			//, m_bones()
 			, m_opts(opts)
-			, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
+			//, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
 		{
 			// Bake transforms into the nodes
-			m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
-			ConvertScene(m_fbxscene, m_opts.m_coord_system);
+			//m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
+			//ConvertScene(m_fbxscene, m_opts.m_coord_system);
 			out << std::showpos;
 		}
 
-		// Read the scene
-		void Do()
+		void Do() const
 		{
-			TraverseHierarchy(m_fbxscene, m_opts.m_parts, m_meshes, m_bones);
-
+			/*
 			if (AllSet(m_opts.m_parts, EParts::MainObjects))
 				DumpMainObjects();
 			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
@@ -2136,300 +1376,48 @@ namespace pr::geometry::fbx
 				DumpHierarchy();
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				DumpMaterials();
+			*/
 			if (AllSet(m_opts.m_parts, EParts::Meshes))
 				DumpGeometry();
+			/*
 			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				DumpSkeletons();
 			if (AllSet(m_opts.m_parts, EParts::Animation))
 				DumpAnimations();
+			*/
 		}
-
-		// Output the named top-level objects (meshes etc)
-		void DumpMainObjects()
+		void DumpGeometry() const
 		{
-			m_out << " MAIN OBJECTS =====================================================================================================\n";
+			m_out << " GEOMETRY =====================================================================================================\n";
 
-			for (auto const& [id, meshnode] : m_meshes)
+			for (auto const* fbxmesh : m_fbxscene.meshes)
 			{
-				auto& mesh = *meshnode.mesh;
-				auto& node = *mesh.GetNode();
-				auto level = meshnode.level;
-				m_out << Indent(level) << "Mesh \"" << node.GetName() << "\" (" << mesh.GetUniqueID() << "):\n";
-			}
-
-			for (auto const& [id, bonenode] : m_bones)
-			{
-				auto& bone = *bonenode.bone;
-				auto& node = *bone.GetNode();
-				auto level = bonenode.level;
-				m_out << Indent(level) << "Bone \"" << node.GetName() << "\":\n";
-			}
-		}
-
-		// Output the scene global settings
-		void DumpGlobalSettings()
-		{
-			//auto basis = m_fbxscene.GetGlobalSettings().GetAxisSystem();
-		}
-
-		// Output the scene node hierarchy
-		void DumpHierarchy()
-		{
-			m_out << " NODE HIERARCHY ===================================================================================================\n";
-
-			// Root nodes for meshes, skeletons can occur at any level.
-			// Any mesh/skeleton node whose parent is not a mesh/skeleton node is the start of a new mesh/skeleton hierarchy
-			vector<NodeAndLevel> stack = { {m_fbxscene.GetRootNode(), 0} };
-			for (; !stack.empty(); )
-			{
-				NodeAndLevel nl = stack.back();
-				stack.pop_back();
-
-				m_out << Indent(nl.level) << "Node \"" << nl.node->GetName() << "\":\n";
-
-				// Attributes
+				//auto& mesh = *meshnode.mesh;
+				//auto& node = *mesh.GetNode();
+				auto level = 0;
+				m_out << Indent(level) << "Mesh (ID: " << fbxmesh->element_id << "):\n";
 				{
-					m_out << Indent(nl.level + 1) << "Attributes: [" << nl.node->GetNodeAttributeCount() << "] ";
-					for (int i = 0, iend = nl.node->GetNodeAttributeCount(); i != iend; ++i)
+					++level;
+					m_out << Indent(level) << "Name: " << To<std::string_view>(fbxmesh->name) << "\n";
+					m_out << Indent(level) << "Instances:\n";
+					for (auto const* inst : fbxmesh->instances)
 					{
-						auto& attr = *nl.node->GetNodeAttributeByIndex(i);
-						m_out << (i != 0 ? ", " : "") << To<std::string_view>(attr.GetAttributeType());
+						++level;
+						m_out << Indent(level) << "Name: " << To<std::string_view>(inst->name) << "\n";
+						--level;
 					}
-					m_out << "\n";
-				}
-
-				// Node Transform
-				{
-					auto o2p = To<m4x4>(nl.node->EvaluateLocalTransform());
-					DumpTransform(nl.level + 1, o2p);
-				}
-
-				// Recurse in depth first order
-				for (int i = nl.node->GetChildCount(); i-- != 0; )
-					stack.push_back({ nl.node->GetChild(i), nl.level + 1 });
-			}
-
-			m_out << "\n";
-		}
-
-		// Output the material definitions
-		void DumpMaterials()
-		{
-			m_out << " MATERIALS ===================================================================================================\n";
-			m_out << "\n";
-		}
-
-		// Output the Mesh definitions
-		void DumpGeometry()
-		{
-			m_out << " MESHES ===================================================================================================\n";
-
-			// Process each mesh in a worker thread, because triangulation is really slow
-			for (auto const& [id, meshnode] : m_meshes)
-			{
-				if (m_opts.m_triangulate_meshes && !meshnode.mesh->IsTriangleMesh())
-				{
-					FbxGeometryConverter converter(m_fbxscene.GetFbxManager());
-					const_cast<MeshNode&>(meshnode).mesh = FbxCast<FbxMesh>(converter.Triangulate(meshnode.mesh, true));
-				}
-
-				auto& mesh = *meshnode.mesh;
-				auto& node = *mesh.GetNode();
-				auto level = meshnode.level;
-
-				m_out << Indent(level) << "Mesh \"" << node.GetName() << "\" (" << mesh.GetUniqueID() << "):\n";
-				m_out << Indent(level + 1) << "IsRoot: " << (meshnode.mesh == meshnode.root ? "ROOT" : "CHILD") << "\n";
-				m_out << Indent(level + 1) << "Polys: " << (mesh.IsTriangleMesh() ? "TRIANGLES" : "POLYGONS") << "\n";
-				m_out << Indent(level + 1) << "Mat #: " << mesh.GetElementMaterialCount() << "\n";
-
-				// Verts
-				{
-					auto const* verts = mesh.GetControlPoints();
-
-					m_out << Indent(level + 1) << "Verts: [" << mesh.GetControlPointsCount() << "]\n";
-					for (int i = 0, iend = std::min(m_opts.m_summary_length, mesh.GetControlPointsCount()); i != iend; ++i)
-					{
-						m_out << Indent(level + 2) << Round(To<v4>(verts[i]).xyz) << "\n";
-					}
-					DumpSummary(level + 2, mesh.GetControlPointsCount());
-				}
-
-				// Faces
-				{
-					auto const* layer0 = mesh.GetLayer(0);
-					auto const* materials = layer0->GetMaterials();
-
-					//auto const* faces = mesh.GetPolygonCount
-					m_out << Indent(level + 1) << "Faces: [" << mesh.GetPolygonCount() << "]\n";
-					for (int f = 0, fend = std::min(m_opts.m_summary_length, mesh.GetPolygonCount()); f != fend; ++f)
-					{
-						// Polygons
-						m_out << Indent(level + 2) << "[" << mesh.GetPolygonSize(f) << "] ";
-						for (int p = 0, pend = mesh.GetPolygonSize(f); p != pend; ++p)
-						{
-							m_out << (p != 0 ? ", " : "") << mesh.GetPolygonVertex(f, p);
-						}
-
-						// Get the material used on this face
-						if (materials != nullptr)
-						{
-							auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
-							uint64_t mat_id = mat ? mat->GetUniqueID() : 0;
-							m_out << "  MatID=" << mat_id;
-						}
-
-						m_out << "\n";
-					}
-					DumpSummary(level + 2, mesh.GetPolygonCount());
-				}
-
-				// Bounding Box
-				{
-					mesh.ComputeBBox();
-					auto min = To<v4>(mesh.BBoxMin.Get());
-					auto max = To<v4>(mesh.BBoxMax.Get());
-					BBox bb{ (max + min) * 0.5f, (max - min) * 0.5f };
-					m_out << Indent(level + 1) << "BBox: c=(" << Round(bb.Centre().xyz) << "), r=(" << Round(bb.Radius().xyz) << ")\n";
-				}
-
-				// Node Transform
-				{
-					m_out << Indent(level + 1) << "Mesh-to-Object:\n";
-					DumpTransform(level + 2, To<m4x4>(node.EvaluateGlobalTransform()));
-					m_out << Indent(level + 1) << "Mesh-to-Parent:\n";
-					DumpTransform(level + 2, To<m4x4>(node.EvaluateLocalTransform()));
-				}
-
-				// Skinning info
-				if (AllSet(m_opts.m_parts, EParts::Skins))
-					DumpSkinning(meshnode, level + 1);
-			}
-
-			m_out << "\n";
-		}
-
-		// Output the Skeleton definitions
-		void DumpSkeletons()
-		{
-			m_out << " SKELETONS ===================================================================================================\n";
-
-			for (auto const& [id, bonenode] : m_bones)
-			{
-				auto& bone = *bonenode.bone;
-				auto& node = *bone.GetNode();
-				auto level = bonenode.level;
-
-				m_out << Indent(level) << "Bone \"" << node.GetName() << "\":\n";
-				m_out << Indent(level + 1) << "ID: " << bone.GetUniqueID() << "\n";
-				m_out << Indent(level + 1) << "IsRoot: " << (bonenode.bone == bonenode.root ? "ROOT" : "CHILD") << "\n";
-				m_out << Indent(level + 1) << "Type: " << To<std::string_view>(bone.GetSkeletonType()) << "\n";
-
-				// Bind pose
-#if 0 //todo
-				{
-					m4x4 bp2o;
-					auto bind_pose = FindBindPose(node);
-					if (int idx = bind_pose ? bind_pose->Find(&node) : -1; idx != -1)
-						bp2o = To<m4x4>(bind_pose->GetMatrix(idx));
-					else // Fall-back to time zero as the bind pose
-						bp2o = To<m4x4>(node.EvaluateGlobalTransform(0));
-
-					m_out << Indent(level + 1) << "BindPose-to-Object:\n";
-					DumpTransform(level + 2, bp2o);
-				}
-#endif
-			}
-			m_out << "\n";
-		}
-
-		// Output the Animation definitions
-		void DumpAnimations()
-		{
-			// todo
-		}
-
-		// Output the skinning info for 'meshnode'
-		void DumpSkinning(MeshNode const& meshnode, int level)
-		{
-			auto& fbxmesh = *meshnode.mesh;
-
-			auto const* fbxskeleton = FindSkeleton(fbxmesh);
-			if (fbxskeleton == nullptr)
-				return; // Mesh has no skeleton => not animated
-
-			m_out << Indent(level) << "Skin:\n";
-			m_out << Indent(level + 1) << "Skeleton: \"" << fbxskeleton->GetNode()->GetName() << "\" (" << fbxskeleton->GetUniqueID() << ")\n";
-
-			// Get the skinning data for this mesh
-			m_out << Indent(level + 1) << "Deformers: [" << fbxmesh.GetDeformerCount(FbxDeformer::eSkin) << "]\n";
-			for (int d = 0, dend = fbxmesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
-			{
-				auto& fbxskin = *FbxCast<FbxSkin>(fbxmesh.GetDeformer(d, FbxDeformer::eSkin));
-
-				m_out << Indent(level + 2) << "Clusters: [" << fbxskin.GetClusterCount() << "]\n";
-				for (int b = 0, bend = fbxskin.GetClusterCount(); b != bend; ++b)
-				{
-					auto& cluster = *fbxskin.GetCluster(b);
-					if (cluster.GetControlPointIndicesCount() == 0)
-						continue;
-
-					auto& bone = *Find<FbxSkeleton>(*cluster.GetLink());
-					m_out << Indent(level + 3) << "Cluster: \"" << cluster.GetName() << "\" (" << b << "):\n";
-					m_out << Indent(level + 4) << "Link: " << *cluster.GetLink()->GetName() << "\n";
-					m_out << Indent(level + 4) << "Bone: " << bone.GetName() << "(" << bone.GetUniqueID() << ")\n";
-					m_out << Indent(level + 4) << "LinkMode: " << To<std::string_view>(cluster.GetLinkMode()) << "\n";
-
-					// Get the span of vert indices and weights
-					auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-					auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
-					m_out << Indent(level + 4) << "Bone Weights:\n";
-					for (int w = 0, wend = std::min(cluster.GetControlPointIndicesCount(), m_opts.m_summary_length); w != wend; ++w)
-					{
-						m_out << Indent(level + 5) << "VIdx=(" << indices[w] << "), Weight=(" << weights[w] << ")\n";
-					}
-					DumpSummary(level + 5, cluster.GetControlPointIndicesCount());
-
-					FbxAMatrix ref_to_world; cluster.GetTransformMatrix(ref_to_world);
-					FbxAMatrix link_to_world; cluster.GetTransformLinkMatrix(link_to_world);
-					m_out << Indent(level + 4) << "Cluster Xform:\n";
-					DumpTransform(level + 5, To<m4x4>(ref_to_world));
-					m_out << Indent(level + 4) << "Link Xform:\n";
-					DumpTransform(level + 5, To<m4x4>(link_to_world));
+					m_out << Indent(level) << "Vert Count: " << fbxmesh->num_vertices << "\n";
+					m_out << Indent(level) << "Index Count: " << fbxmesh->num_indices << "\n";
+					m_out << Indent(level) << "Face Count: " << fbxmesh->num_faces << "\n";
+					m_out << Indent(level) << "Tri Count: " << fbxmesh->num_triangles << "\n";
+					m_out << Indent(level) << "Edge Count: " << fbxmesh->num_edges << "\n";
+					m_out << Indent(level) << "Max Face Tri Count: " << fbxmesh->max_face_triangles << "\n";
+					m_out << Indent(level) << "Empty Face Count: " << fbxmesh->num_empty_faces << "\n";
+					m_out << Indent(level) << "Point Face Count: " << fbxmesh->num_point_faces << "\n";
+					m_out << Indent(level) << "Line Face Count: " << fbxmesh->num_line_faces << "\n";
+					--level;
 				}
 			}
-		}
-
-		// Dump transform helper
-		void DumpTransform(int level, m4x4 const& a2b) const
-		{
-			m_out << Indent(level) << "Position: " << Round(a2b.pos.xyz) << "\n";
-			m_out << Indent(level) << "Rotation: " << Round(RadiansToDegrees(EulerAngles(quat(a2b.rot)).xyz)) << "\n";
-			m_out << Indent(level) << "Scale   : " << Round(a2b.rot.scale().trace().xyz) << "\n";
-		}
-
-		// Output the 'and so on' indicator if 'count' is greater than the summary length
-		void DumpSummary(int level, int count)
-		{
-			if (count > m_opts.m_summary_length)
-				m_out << Indent(level) << "...\n";
-		}
-
-		// Rounding helpers
-		static float Round(float v)
-		{
-			return Quantise(v, 1 << 15);
-		}
-		static v3 Round(v3 const& v)
-		{
-			return CompOp(v, [](float x) { return Round(x); });
-		}
-		static v4 Round(v4 const& v)
-		{
-			return CompOp(v, [](float x) { return Round(x); });
-		}
-		static m4x4 Round(m4x4 const& m)
-		{
-			CompOp(m, [](v4 const& v) { return Round(v); });
 		}
 
 		// Indent helper
@@ -2441,186 +1429,56 @@ namespace pr::geometry::fbx
 		}
 	};
 
-	// Adapter from FbxStream to std::ostream
-	struct OStream :FbxStream
+	// An RAII dll reference
+	struct Context
 	{
-		std::ostream& m_out;
-		int m_format;
+	private:
+		using SceneCont = std::vector<SceneDataPtr>;
 
-		OStream(std::ostream& out, int format)
-			: m_out(out)
-			, m_format(format)
+		ErrorHandler m_error_cb;
+		mutable std::mutex m_mutex;
+		//FbxCustomAllocator m_alloc;
+		//ManagerPtr m_manager;
+		//FbxIOSettings* m_settings;
+		uint32_t m_version;
+		SceneCont m_scenes;
+
+	public:
+
+		Context(ErrorHandler error_cb)
+			: m_error_cb(error_cb)
+			, m_mutex()
+			//, m_alloc()
+			//, m_manager(Check(FbxManager::Create(), "Error: Unable to create FBX Manager"))
+			//, m_settings(Check(FbxIOSettings::Create(m_manager.get(), IOSROOT), "Error: Unable to create settings"))
+			, m_version(UFBX_VERSION)
+			, m_scenes()
 		{
-			if (!m_out.good())
-				throw std::runtime_error("FBX output stream is unhealthy");
 		}
-		OStream(OStream&&) = delete;
-		OStream(OStream const&) = delete;
-		OStream& operator =(OStream&&) = delete;
-		OStream& operator =(OStream const&) = delete;
+		Context(Context&&) = delete;
+		Context(Context const&) = delete;
+		Context& operator=(Context&&) = delete;
+		Context& operator=(Context const&) = delete;
 
-		virtual int GetReaderID() const override { return -1; }
-		virtual int GetWriterID() const override { return m_format; }
+		// Report errors
+		void ReportError(std::string_view msg) const
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_error_cb(msg);
+		}
 
-		// Query the current state of the stream.
-		virtual EState GetState() override { return m_out.bad() ? EState::eClosed : EState::eOpen; }
-
-		// Open the stream.
-		virtual bool Open(void* /*pStreamData*/) override { return m_out.seekp(0).good(); }
-
-		// Close the stream.
-		virtual bool Close() override { return true; }
-
-		// Empties the internal data of the stream.
-		virtual bool Flush() override { return m_out.flush().good(); }
-
-		// Writes a memory block.
-		virtual size_t Write(const void* data, FbxUInt64 size) override { return m_out.write(static_cast<char const*>(data), static_cast<std::streamsize>(size)).good() ? s_cast<size_t>(size) : 0; }
-
-		// Read bytes from the stream and store them in the memory block.
-		virtual size_t Read(void* /*data*/, FbxUInt64 /*size*/) const override { throw std::runtime_error("not implemented"); }
-
-		// Adjust the current stream position.
-		virtual void Seek(const FbxInt64& offset, FbxFile::ESeekPos const& seek_pos) override { m_out.seekp(static_cast<std::streamoff>(offset), static_cast<int>(seek_pos)); }
-
-		// Get the current stream position.
-		virtual FbxInt64 GetPosition() const override { return static_cast<FbxInt64>(m_out.tellp()); }
-
-		// Set the current stream position.
-		virtual void SetPosition(FbxInt64 position) override { m_out.seekp(static_cast<std::streampos>(position)); }
-
-		// Return 0 if no errors occurred. Otherwise, return 1 to indicate an error.
-		virtual int GetError() const override { return m_out.good() ? 0 : 1; }
-
-		// Clear current error condition by setting the current error value to 0.
-		virtual void ClearError() override { throw std::runtime_error("not implemented"); }
+		// Add 'fbxscene' to this context
+		SceneData* AddScene(ufbx_scene* fbxscene)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+			m_scenes.push_back(SceneDataPtr{ new SceneData(fbxscene) });
+			return m_scenes.back().get();
+		}
 	};
-
-	// Adapter from FbxStream to std::istream
-	struct IStream :FbxStream
-	{
-		std::istream& m_src;
-		int m_format;
-
-		IStream(std::istream& src, int format)
-			: m_src(src)
-			, m_format(format)
-		{
-			if (!m_src.good())
-				throw std::runtime_error("FBX input stream is unhealthy");
-		}
-		IStream(IStream&&) = delete;
-		IStream(IStream const&) = delete;
-		IStream& operator =(IStream&&) = delete;
-		IStream& operator =(IStream const&) = delete;
-
-		virtual int GetReaderID() const override { return m_format; }
-		virtual int GetWriterID() const override { return -1; }
-
-		// Query the current state of the stream.
-		virtual EState GetState() override { return m_src.bad() ? EState::eClosed : m_src.peek() == std::char_traits<char>::eof() ? EState::eEmpty : EState::eOpen; }
-
-		// Open the stream.
-		virtual bool Open(void* /*pStreamData*/) override { return m_src.seekg(0).good(); }
-
-		// Close the stream.
-		virtual bool Close() override { return true; }
-
-		// Empties the internal data of the stream.
-		virtual bool Flush() override { throw std::runtime_error("not implemented"); }
-
-		// Writes a memory block.
-		virtual size_t Write(const void* /*pData*/, FbxUInt64 /*pSize*/) override { throw std::runtime_error("not implemented"); }
-
-		// Read bytes from the stream and store them in the memory block.
-		virtual size_t Read(void* pData, FbxUInt64 pSize) const override { return s_cast<size_t>(m_src.read(static_cast<char*>(pData), static_cast<std::streamsize>(pSize)).gcount()); }
-
-		// Adjust the current stream position.
-		virtual void Seek(const FbxInt64& offset, FbxFile::ESeekPos const& seek_pos) override { m_src.seekg(static_cast<std::streamoff>(offset), static_cast<int>(seek_pos)); }
-
-		// Get the current stream position.
-		virtual FbxInt64 GetPosition() const override { return static_cast<FbxInt64>(m_src.tellg()); }
-
-		// Set the current stream position.
-		virtual void SetPosition(FbxInt64 pPosition) override { m_src.seekg(static_cast<std::streampos>(pPosition)); }
-
-		// Return 0 if no errors occurred. Otherwise, return 1 to indicate an error.
-		virtual int GetError() const override { return m_src.good() ? 0 : 1; }
-
-		// Clear current error condition by setting the current error value to 0.
-		virtual void ClearError() override { throw std::runtime_error("not implemented"); }
-	};
-
-	// Write an FBX scene to disk
-	static void Export(Context& manager, std::ostream& out, FbxScene& scene, EFormat format = EFormat::Binary, ErrorList* errors = nullptr)
-	{
-		ExporterPtr exporter(Check(FbxExporter::Create(manager, ""), "Failed to create Exporter"));
-
-		// Initialise the exporter
-		OStream stream(out, manager.FileFormatID(format));
-		if (!exporter->Initialize(&stream, nullptr, manager.FileFormatID(format)))
-		{
-			FbxArray<FbxString*> history;
-			exporter->GetStatus().GetErrorStringHistory(history);
-
-			// Record any errors
-			if (errors != nullptr)
-			{
-				for (int i = 0; i != history.GetCount(); ++i)
-					errors->push_back(history[i]->Buffer());
-			}
-
-			// Throw the error
-			throw std::runtime_error(std::format("FbxExporter::Initialize() failed. {}", exporter->GetStatus().GetErrorString()));
-		}
-
-		// Do the export
-		auto result = exporter->Export(&scene);
-		if (!result || exporter->GetStatus() != FbxStatus::eSuccess)
-			throw std::runtime_error(std::format("Failed to write fbx file. {}", exporter->GetStatus().GetErrorString()));
-	}
-
-	// Parse and FBX Scene from 'src'
-	static FbxScene* Import(Context& manager, std::istream& src, EFormat format = EFormat::Binary, ErrorList* errors = nullptr)
-	{
-		auto* scene = Check(FbxScene::Create(manager, ""), "Error: Unable to create FBX scene");
-
-		// Import the stream
-		IStream stream(src, manager.FileFormatID(format));
-		ImporterPtr importer(Check(FbxImporter::Create(manager, ""), "Failed to create Importer"));
-		if (!importer->Initialize(&stream, nullptr, manager.FileFormatID(format)))
-		{
-			FbxArray<FbxString*> history;
-			importer->GetStatus().GetErrorStringHistory(history);
-
-			// Record any errors
-			if (errors != nullptr)
-			{
-				for (int i = 0; i != history.GetCount(); ++i)
-					errors->push_back(history[i]->Buffer());
-			}
-
-			// Throw the error
-			throw std::runtime_error(std::format("FbxImporter::Initialize() failed. {}", importer->GetStatus().GetErrorString()));
-		}
-
-		// Check the file is actually an fbx file
-		if (!importer->IsFBX())
-			throw std::runtime_error(std::format("Imported file is not an FBX file"));
-
-		// Import the scene.
-		auto result = importer->Import(scene);
-		if (!result || importer->GetStatus() != FbxStatus::eSuccess)
-			throw std::runtime_error(std::format("Failed to read fbx from file. {}", importer->GetStatus().GetErrorString()));
-
-		return scene;
-	}
 }
 
 extern "C"
 {
-	using namespace pr::geometry::fbx;
-
 	std::mutex g_mutex;
 	std::vector<std::unique_ptr<Context>> g_contexts;
 	HINSTANCE g_instance;
@@ -2658,46 +1516,45 @@ extern "C"
 	// Release a dll context
 	__declspec(dllexport) void __stdcall Fbx_Release(Context* ctx)
 	{
-		if (ctx == nullptr)
-			return;
-
 		try
 		{
+			if (ctx == nullptr) return;
 			std::lock_guard<std::mutex> lock(g_mutex);
 			g_contexts.erase(std::remove_if(begin(g_contexts), end(g_contexts), [ctx](auto& p) { return p.get() == ctx; }), end(g_contexts));
 		}
 		catch (std::exception const& ex)
 		{
-			ctx->m_error_cb(ex.what());
+			ctx->ReportError(ex.what());
 		}
 	}
 
 	// Load an fbx scene
-	__declspec(dllexport) SceneData* __stdcall Fbx_Scene_Load(Context& ctx, std::istream& src)
+	__declspec(dllexport) SceneData* __stdcall Fbx_Scene_Load(Context& ctx, std::istream& src, LoadOptions const& opts) // threadsafe
 	{
 		try
 		{
-			auto fbxscene = Import(ctx, src);
-			ctx.m_scenes.push_back(SceneDataPtr{ new SceneData(fbxscene) });
-			return ctx.m_scenes.back().get();
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return nullptr;
-		}
-	}
+			// Convert user options
+			auto ufbx_opts = To<ufbx_load_opts>(opts);
 
-	// Save an fbx scene
-	__declspec(dllexport) void __stdcall Fbx_Scene_Save(Context& ctx, SceneData const& scene, std::ostream& out, EFormat format)
-	{
-		try
-		{
-			Export(ctx, out, *scene.m_fbxscene, format);
+			// Use a threadpool
+			ufbx::thread_pool thread_pool = {};
+			ufbx_opts.thread_opts = { .pool = thread_pool };
+
+			// Create a stream adapter
+			pr::geometry::fbx::IStream stream(src);
+
+			// Load the scene
+			ufbx_error error = {};
+			auto fbxscene = ufbx_load_stream(&stream, &ufbx_opts, &error);
+			if (error.type != UFBX_ERROR_NONE)
+				throw std::runtime_error(To<std::string>(error));
+
+			return ctx.AddScene(fbxscene);
 		}
 		catch (std::exception const& ex)
 		{
-			ctx.m_error_cb(ex.what());
+			ctx.ReportError(ex.what());
+			return nullptr;
 		}
 	}
 
@@ -2709,29 +1566,42 @@ extern "C"
 			if (scene.m_fbxscene == nullptr)
 				throw std::runtime_error("Scene is null");
 
-			return scene.m_props;
+			return SceneProps{
+				.m_animation_stack_count = s_cast<int>(scene.m_fbxscene->anim_stacks.count),
+				.m_frame_rate = scene.m_fbxscene->settings.frames_per_second,
+				.m_material_available = s_cast<int>(scene.m_fbxscene->materials.count),
+				.m_meshes_available = s_cast<int>(scene.m_fbxscene->meshes.count),
+				.m_skeletons_available = s_cast<int>(0),
+				.m_animations_available = s_cast<int>(0),
+
+				// Scene object counts (loaded scene objects)
+				.m_material_count = 0,
+				.m_mesh_count = 0,
+				.m_skeleton_count = 0,
+				.m_animation_count = 0,
+				.m_mesh_names = {},
+				.m_skel_names = {},
+			};
 		}
 		catch (std::exception const& ex)
 		{
-			ctx.m_error_cb(ex.what());
+			ctx.ReportError(ex.what());
 			return {};
 		}
 	}
 
 	// Read the hierarchy from the scene
-	__declspec(dllexport) void __stdcall Fbx_Scene_Read(Context& ctx, SceneData& scene, ReadOptions const& options)
+	__declspec(dllexport) void __stdcall Fbx_Scene_Read(Context& ctx, SceneData& scene, ReadOptions const& options, IReadOutput& out)
 	{
 		try
 		{
-			if (scene.m_fbxscene == nullptr)
-				throw std::runtime_error("Scene is null");
-
-			Reader reader(scene, options);
+			NullCheck(scene.m_fbxscene, "Scene is null");
+			Reader reader(scene, options, out);
 			reader.Do();
 		}
 		catch (std::exception const& ex)
 		{
-			ctx.m_error_cb(ex.what());
+			ctx.ReportError(ex.what());
 		}
 	}
 
@@ -2740,140 +1610,21 @@ extern "C"
 	{
 		try
 		{
+			NullCheck(scene.m_fbxscene, "Scene is null");
 			Dumper dumper(*scene.m_fbxscene, options, out);
 			dumper.Do();
 		}
 		catch (std::exception const& ex)
 		{
-			ctx.m_error_cb(ex.what());
-		}
-	}
-
-	// Access a mesh by index
-	__declspec(dllexport) Mesh __stdcall Fbx_Scene_MeshGet(Context& ctx, SceneData const& scene, int i)
-	{
-		try
-		{
-			auto const& m = scene.m_meshes[i];
-			return Mesh{
-				.m_id = m.m_id,
-				.m_name = m.m_name,
-				.m_vbuf = m.m_vbuf,
-				.m_ibuf = m.m_ibuf,
-				.m_nbuf = m.m_nbuf,
-				.m_skin = Skin{
-					.m_skel_id = m.m_skin.m_skel_id,
-					.m_offsets = m.m_skin.m_offsets,
-					.m_bones = m.m_skin.m_bones,
-					.m_weights = m.m_skin.m_weights,
-				},
-				.m_bbox = m.m_bbox,
-				.m_o2p = m.m_o2p,
-				.m_level = m.m_level,
-			};
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return {};
-		}
-	}
-
-	// Access a skeleton by index
-	__declspec(dllexport) Skeleton __stdcall Fbx_Scene_SkeletonGet(Context& ctx, SceneData const& scene, int i)
-	{
-		try
-		{
-			auto const& s = scene.m_skeletons[i];
-			return Skeleton{
-				.m_id = s.m_id,
-				.m_bone_ids = s.m_bone_ids,
-				.m_names = s.m_names,
-				.m_o2bp = s.m_o2bp,
-				.m_hierarchy = s.m_hierarchy,
-			};
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return {};
-		}
-	}
-
-	// Access an animation by index
-	__declspec(dllexport) Animation __stdcall Fbx_Scene_AnimationGet(Context& ctx, SceneData const& scene, int i)
-	{
-		try
-		{
-			auto const& a = scene.m_animations[i];
-			return Animation{
-				.m_skel_id = a.m_skel->m_id,
-				.m_time_range = a.m_time_range,
-				.m_frame_rate = a.m_frame_rate,
-				.m_bone_count = a.m_bone_count,
-				.m_offsets = a.m_offsets,
-				.m_times = a.m_times,
-				.m_rotation = a.m_rotation,
-				.m_position = a.m_position,
-				.m_scale = a.m_scale,
-			};
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return {};
-		}
-	}
-
-	// Access a material by id
-	__declspec(dllexport) Material __stdcall Fbx_Scene_MaterialGetById(Context& ctx, SceneData const& scene, uint64_t mat_id)
-	{
-		try
-		{
-			auto& m = scene.m_materials.at(mat_id);
-			return Material{
-				.m_ambient = m.m_ambient,
-				.m_diffuse = m.m_diffuse,
-				.m_specular = m.m_specular,
-				.m_tex_diff = m.m_tex_diff,
-			};
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return {};
-		}
-	}
-
-	// Access a skeleton by index
-	__declspec(dllexport) Skeleton __stdcall Fbx_Scene_SkeletonGetById(Context& ctx, SceneData const& scene, uint64_t skel_id)
-	{
-		try
-		{
-			auto it = std::ranges::find_if(scene.m_skeletons, [&skel_id](SkeletonData const& s) { return s.m_id == skel_id; });
-			if (it == end(scene.m_skeletons))
-				throw std::runtime_error(std::format("Skeleton {} not found", skel_id));
-
-			auto& s = *it;
-			return Skeleton{
-				.m_id = s.m_id,
-				.m_bone_ids = s.m_bone_ids,
-				.m_names = s.m_names,
-				.m_o2bp = s.m_o2bp,
-				.m_hierarchy = s.m_hierarchy,
-			};
-		}
-		catch (std::exception const& ex)
-		{
-			ctx.m_error_cb(ex.what());
-			return {};
+			ctx.ReportError(ex.what());
 		}
 	}
 
 	// Static function signature checks
 	void Fbx::StaticChecks()
 	{
-		#define PR_FBX_API_CHECK(prefix, name, function_type) static_assert(std::is_same_v<Fbx::prefix##name##Fn, decltype(&Fbx_##prefix##name)>, "Function signature mismatch for Fbx_"#prefix#name);
+		#define PR_FBX_API_CHECK(prefix, name, function_type)\
+		static_assert(std::is_same_v<Fbx::prefix##name##Fn, decltype(&Fbx_##prefix##name)>, "Function signature mismatch for Fbx_"#prefix#name);
 		PR_FBX_API(PR_FBX_API_CHECK);
 		#undef PR_FBX_API_CHECK
 	}

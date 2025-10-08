@@ -15,7 +15,7 @@
   Property Sheets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(PropsPath)dll.props" />
   <!--
@@ -29,42 +29,28 @@
       <AdditionalIncludeDirectories>
         ;$(ProjectDir)
         ;$(RylogicRoot)include
-        ;$(SDKPath)fbx/fbx/include
+        ;$(SDKPath)ufbx
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>
         ;%(PreprocessorDefinitions)
-        ;FBXSDK_DEFINE_NAMESPACE
+        ;UFBX_USE_SSE
+        ;UFBX_OS_IMPLEMENTATION
         ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
       </PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Condition="'$(Configuration)'=='Debug'">
-      <PreprocessorDefinitions>
-        ;%(PreprocessorDefinitions)
-        ;_ITERATOR_DEBUG_LEVEL=2
-      </PreprocessorDefinitions>
-    </ClCompile>
-    <Link>
-      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalLibraryDirectories>
-          ;$(SDKPath)fbx/fbx/lib/$(Platform)/$(Configuration)/
-          ;%(AdditionalLibraryDirectories)
-        </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-          ;libfbxsdk-mt.lib
-          ;libxml2-mt.lib
-          ;alembic-mt.lib
-          ;zlib-mt.lib
-          ;%(AdditionalDependencies)
-        </AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <!--
   Files
   -->
   <ItemGroup>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
+    <None Include="src\fbx-DELETEME.cpp" />
     <ClCompile Include="src\fbx.cpp" />
+    <ClInclude Include="$(SDKPath)ufbx\ufbx\ufbx.h" />
+    <ClCompile Include="$(SDKPath)ufbx\ufbx\ufbx.c" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
+    <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbx.natvis" />
+    <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbxi.natvis" />
   </ItemGroup>
   <!--
   Targets

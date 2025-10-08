@@ -76,8 +76,8 @@ struct Main :Form
 	{
 		// Set up the scene
 		//View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
-		//View3D_CameraPositionSet(m_win3d, {200, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 0});
-		View3D_CameraPositionSet(m_win3d, {0, 0, 10, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		View3D_CameraPositionSet(m_win3d, {200, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 0});
+		//View3D_CameraPositionSet(m_win3d, {0, 0, 10, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	
 		// Cast shadows
 		auto light = View3D_LightPropertiesGet(m_win3d);
@@ -93,9 +93,12 @@ struct Main :Form
 			std::uniform_real_distribution dist(-10.0f, 10.0f);
 
 			m_obj0 = View3D_ObjectCreateLdrA(
-				"*Triangle nice_tri FF00FF00 { *Data { -1 -1 0  +1 -1 0  0 +1 0} }"
+				//"*Triangle nice_tri FF00FF00 { *Data { -1 -1 0  +1 -1 0  0 +1 0} }"
 				//"*Box nice_box FF00FF00 { *Data {1 2 3} }"
-				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } *Animation{*Style{PingPong}} }"
+				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } }"
+				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } }"
+				"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\Pendulum\\Pendulum.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } *Animation{*Style{PingPong}} }"
 				, false, nullptr, nullptr);
@@ -103,7 +106,7 @@ struct Main :Form
 			m_obj1 = View3D_ObjectCreateLdrA(
 				//"*Sphere sever FF0080FF { *Data {0.4} }"
 				//"*Box Origin FF00FF00 { *Data {1 1 1} }"
-				"*CoordFrame origin { *Scale {10} }"
+				"*CoordFrame origin { *Scale {1} }"
 				, false, nullptr, nullptr);
 
 			//auto builder = ldraw::Builder();

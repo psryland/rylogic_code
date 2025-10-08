@@ -13,22 +13,23 @@ namespace pr::rdr12
 	//     B     C     I   J
 	//   / | \   |         |
 	//  D  E  F  G         K
-	//  Serialised as: A0 B1 D2 E2 F2 C1 G2  H0 I1 J1 K2
-	//  (i.e. a depth first traversal of the trees)
-	//  Children are all nodes to the right with level > the current.
+	//
+	// - Serialised as: A0 B1 D2 E2 F2 C1 G2  H0 I1 J1 K2 (i.e. a depth first traversal of the trees)
+	// - Children = all nodes to the right with level > the current.
+	// - Multiple trees are stored contiguously
 	struct ModelTreeNode
 	{
-		// The renderer model for this node in the model tree
-		ModelPtr m_model;
+		// Model to parent transform
+		m4x4 m_o2p = m4x4::Identity();
 
-		// The height of this node in the tree. m_level == 0 for root nodes.
-		int m_level;
-		
-		ModelTreeNode() = default;
-		ModelTreeNode(ModelPtr model, int level)
-			: m_model(model)
-			, m_level(level)
-		{}
+		// Model instance name
+		std::string_view m_name = {};
+
+		// The renderer model for this node in the model tree
+		ModelPtr m_model = {};
+
+		// The depth of this node in the tree. m_level == 0 for root nodes.
+		int m_level = 0;
 	};
 
 	using ModelTree = pr::vector<ModelTreeNode>;

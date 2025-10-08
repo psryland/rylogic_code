@@ -36,7 +36,7 @@ namespace pr::rdr12
 	// Return the frame rate of the underlying animation
 	double Animator_SingleKeyFrameAnimation::FrameRate() const
 	{
-		return m_anim->m_frame_rate;
+		return m_anim->frame_rate();
 	}
 
 	// Apply an animation to the given bones

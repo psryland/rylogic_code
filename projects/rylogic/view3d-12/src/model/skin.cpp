@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -14,7 +14,7 @@ namespace pr::rdr12
 		, m_skel_id()
 	{
 	}
-	Skin::Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint64_t skel_id)
+	Skin::Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint32_t skel_id)
 		: m_res()
 		, m_srv()
 		, m_skel_id(skel_id)
