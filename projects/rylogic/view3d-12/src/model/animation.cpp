@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -79,22 +79,24 @@ namespace pr::rdr12
 
 		// Convert the time into a frame number.
 		// Note, by scaling 'm_duration' or 'time_s' the playback rate of the animation can be changed.
-		auto kidx0 = Lerp(0, kcount, Frac<double>(0.0, time_s, m_duration));
+		auto kidx0 = Lerp(0, kcount - 1, Frac<double>(0.0, time_s, m_duration));
 		auto kidx1 = kidx0 + 1; // Note: +1 before clamping
-		kidx0 = Clamp(kidx0, 0, kcount);
-		kidx1 = Clamp(kidx1, 0, kcount);
+		kidx0 = Clamp(kidx0, 0, kcount - 1);
+		kidx1 = Clamp(kidx1, 0, kcount - 1);
 
 		BoneKey key0 = {
 			.m_rot = !m_rotation.empty() ? m_rotation[kidx0 * bcount + bone_index] : quat::Identity(),
 			.m_pos = !m_position.empty() ? m_position[kidx0 * bcount + bone_index] : v3::Zero(),
 			.m_scl = !m_scale.empty() ? m_scale[kidx0 * bcount + bone_index] : v3::One(),
 			.m_time = std::floor(time_s / period) * period,
+			.m_idx = kidx0,
 		};
 		BoneKey key1 = {
 			.m_rot = !m_rotation.empty() ? m_rotation[kidx1 * bcount + bone_index] : quat::Identity(),
 			.m_pos = !m_position.empty() ? m_position[kidx1 * bcount + bone_index] : v3::Zero(),
 			.m_scl = !m_scale.empty() ? m_scale[kidx1 * bcount + bone_index] : v3::One(),
 			.m_time = key0.m_time + period,
+			.m_idx = kidx1,
 		};
 		return { key0, key1 };
 	}

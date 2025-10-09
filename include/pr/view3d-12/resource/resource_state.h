@@ -72,13 +72,11 @@ namespace pr::rdr12
 
 		// Records the independent states of up to N mips.
 		MipState m_state[16];         // last value is a sentinel
-		D3DPtr<ID3D12Resource> m_res; // Hold a reference to the resource
 
 	public:
 
-		ResStateData(ID3D12Resource const* res, D3D12_RESOURCE_STATES default_state)
+		ResStateData(D3D12_RESOURCE_STATES default_state)
 			: m_state()
-			, m_res(const_cast<ID3D12Resource*>(res), true)
 		{
 			Apply(default_state);
 		}

@@ -1003,11 +1003,13 @@ namespace pr::geometry::fbx
 		void ReadSkin(ufbx_mesh const& fbxmesh)
 		{
 			auto& skin = m_mesh.m_skin;
-			auto& influences = m_influences;
-			influences.resize(fbxmesh.num_vertices);
 			skin.Reset();
 
+			auto& influences = m_influences;
+			influences.resize(0);
+
 			ufbx_node const* root = nullptr;
+			influences.resize(fbxmesh.num_vertices);
 
 			// Get the skinning data for this mesh
 			for (size_t  d = 0; d != fbxmesh.skin_deformers.count; ++d)
@@ -1029,7 +1031,7 @@ namespace pr::geometry::fbx
 						auto vidx = cluster.vertices[w];
 						auto weight = s_cast<float>(cluster.weights[w]);
 
-						influences[vidx].m_bones.push_back(fbxbone->typed_id);
+						influences[vidx].m_bones.push_back(fbxbone->bone->typed_id);
 						influences[vidx].m_weights.push_back(weight);
 					}
 				}
@@ -1104,22 +1106,46 @@ namespace pr::geometry::fbx
 						bind_pose[pose.bone_node] = &pose;
 				}
 
+				// Blender workaround
+				auto coord_bake = m4x4::Identity();
+				if (root->parent != nullptr && To<std::string_view>(root->parent->name) == "Armature")
+					coord_bake = Invert(To<m4x4>(root->parent->node_to_world));
+
 				// Walk the bone hierarchy creating the skeleton
-				WalkHierarchy(root, [&skel, &bind_pose](ufbx_node const* node)
+				WalkHierarchy(root, [&skel, &bind_pose, &coord_bake](ufbx_node const* node)
 				{
 					if (node->bone == nullptr)
 						return false;
 
 					auto const& bone = *node->bone;
+					auto level = s_cast<int>(node->node_depth - BoneRoot(node)->node_depth);
 
-					// Object space to bind pose.
-					auto bp2o = bind_pose.contains(node)
-						? To<m4x4>(bind_pose[node]->bone_to_world)
-						: To<m4x4>(node->node_to_world);
+					// Notes:
+					//  - World space == object space for this description.
+					//  - Geometry and bones are built independently of each other. Then, clusters are used
+					//    to define which verts are influenced by which bones.
+					//  - A skeleton just records the bone-to-world transforms for each bone (as world-to-bone actually).
+					//  - A bind pose just allows the skeleton to be built in a different position, then moved
+					//    to match the geometry.
+					//  - At rendering time, and animation sets the transforms for each bone (parent relative).
+					//    We need to apply the change in bone positions to the verts that are influenced by each bone.
+					//  - 'cluster.geometry_to_bone' == 'Invert(bind_pose.bone_to_parent)'
+					m4x4 bp2o;
+					if (auto iter = bind_pose.find(node); iter != bind_pose.end())
+					{
+						bp2o = coord_bake * To<m4x4>(iter->second->bone_to_world);
+					}
+					else
+					{
+						bp2o = coord_bake * To<m4x4>(node->node_to_world);
+					}
+
+					// Object space to bind pose. Bind pose just means the rest shape of the skeleton (aka T pose)
+					// The o2bp transforms are used to take verts in object space and make them bone relative.
+					// At runtime, a pose contains transforms: currentpose-to-world * bindpose-to-currentpose
 					auto o2bp = IsOrthonormal(bp2o)
 						? InvertFast(bp2o)
 						: Invert(bp2o);
-					auto level = s_cast<int>(node->node_depth - BoneRoot(node)->node_depth);
 					
 					skel.m_bone_ids.push_back(bone.typed_id);
 					skel.m_names.push_back(std::string(To<std::string_view>(node->name)));

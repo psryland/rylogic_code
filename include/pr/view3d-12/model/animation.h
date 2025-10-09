@@ -76,6 +76,7 @@ namespace pr::rdr12
 		v3 m_scl = v3::One();
 		float m_time = 0; // seconds
 		EAnimInterpolation m_interp = EAnimInterpolation::Linear;
+		int m_idx = 0;
 
 		// Convert to an affine transform
 		operator m4x4() const

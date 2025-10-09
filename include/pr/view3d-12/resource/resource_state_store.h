@@ -36,7 +36,7 @@ namespace pr::rdr12
 			auto iter = m_states.find(resource);
 			if (iter == end(m_states))
 			{
-				auto state = ResStateData(resource, DefaultResState(resource));
+				auto state = ResStateData(DefaultResState(resource));
 				iter = m_states.emplace(resource, state).first;
 			}
 			return iter->second;

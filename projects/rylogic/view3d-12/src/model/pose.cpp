@@ -85,6 +85,8 @@ namespace pr::rdr12
 
 		// Populate the pose buffer. These are transforms from object-space to deformed-object-space.
 		// I.e. object space verts are transformed to be bone relative, then deformed, then back to object space.
+		//    `os_vert = cp2o * bp2cp * o2bp * os_vert`, where cp = current-pose, and bp = bind-pose.
+		//               [ animation ] [skel]  [model]
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
 		auto ptr = update.ptr<m4x4>();
 		{

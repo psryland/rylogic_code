@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1297,8 +1297,16 @@ namespace pr::rdr12
 					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
 
 					auto const& skel = *m_skels[skin.m_skel_id].get();
-					const auto id_to_idx16 = [&skel](uint32_t id) { return s_cast<int16_t>(index_of(skel.m_bone_ids, id)); };
-					const auto norm_to_u16 = [](double w) { return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535); };
+					auto id_to_idx16 = [&skel](uint32_t id)
+					{
+						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
+						assert(idx >= 0 && idx < isize(skel.m_bone_ids) && "Bone id not found in skeleton");
+						return idx;
+					};
+					auto norm_to_u16 = [](double w)
+					{
+						return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535);
+					};
 
 					// Read the influences per vertex
 					vector<Skinfluence> influences(skin.vert_count());
@@ -1354,6 +1362,15 @@ namespace pr::rdr12
 				SkeletonPtr skel(rdr12::New<Skeleton>(fbxskel.m_skel_id, fbxskel.m_bone_ids, names, fbxskel.m_o2bp, hierarchy), true);
 				m_skels[fbxskel.m_skel_id] = skel;
 				
+				/*{
+					std::ofstream ofile("E:\\Dump\\LDraw\\PendulumAnimDump2.txt");
+					ofile << "Skel: " << skel->m_id << "\n";
+					ofile << "  BoneIds:\n"; for (auto x : skel->m_bone_ids) ofile << "    " << x << "\n";
+					ofile << "  Names:\n"; for (auto x : skel->m_names) ofile << "    " << x << "\n";
+					ofile << "  O2BP:\n"; for (auto x : skel->m_o2bp) ofile << "    " << x << "\n";
+					ofile << "  Hierarchy:\n"; for (auto x : skel->m_hierarchy) ofile << "    " << (int)x << "\n";
+				}*/
+
 				m_out.Skeleton(std::move(skel));
 			}
 
@@ -1369,6 +1386,32 @@ namespace pr::rdr12
 				anim->m_position = fbxanim.m_position;
 				anim->m_scale = fbxanim.m_scale;
 
+				/*{
+					std::ofstream ofile("E:\\Dump\\LDraw\\PendulumAnimDump2.txt");
+					ofile << "Anim:\n";
+					if (!anim->m_rotation.empty())
+					{
+						ofile << "  Rotations:\n";
+						for (int b = 0; b != anim->bone_count(); ++b)
+							for (int k = 0; k != anim->key_count(); ++k)
+								ofile << "    " << anim->m_rotation[k * anim->bone_count() + b] << "\n";
+					}
+					if (!anim->m_position.empty())
+					{
+						ofile << "  Positions:\n";
+						for (int b = 0; b != anim->bone_count(); ++b)
+							for (int k = 0; k != anim->key_count(); ++k)
+								ofile << "    " << anim->m_position[k * anim->bone_count() + b] << "\n";
+					}
+					if (!anim->m_scale.empty())
+					{
+						ofile << "  Scale:\n";
+						for (int b = 0; b != anim->bone_count(); ++b)
+							for (int k = 0; k != anim->key_count(); ++k)
+								ofile << "    " << anim->m_scale[k * anim->bone_count() + b] << "\n";
+					}
+				}*/
+
 				// Save the animation
 				return m_out.Animation(std::move(anim)) == IModelOut::EResult::Continue;
 			}
@@ -1382,7 +1425,7 @@ namespace pr::rdr12
 				.up = fbx::ECoordAxis::PosZ,
 				.front = fbx::ECoordAxis::PosX,
 			},
-			//.target_unit_meters = 1.0f,
+			.target_unit_meters = 1.0f,
 		});
 		scene.Read(read_out, fbx::ReadOptions{
 			.m_parts = out.Parts(),
