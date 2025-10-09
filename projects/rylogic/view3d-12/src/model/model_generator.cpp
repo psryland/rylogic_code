@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1356,10 +1356,10 @@ namespace pr::rdr12
 				constexpr auto ToU8 = [](int x) -> uint8_t { return s_cast<uint8_t>(x); };
 				constexpr auto ToString32 = [](std::string const& x) -> string32 { return static_cast<string32>(x); };
 
-				auto names = transform<Skeleton::Names>(fbxskel.m_names, ToString32);
+				auto bone_names = transform<Skeleton::Names>(fbxskel.m_bone_names, ToString32);
 				auto hierarchy = transform<Skeleton::Hierarchy>(fbxskel.m_hierarchy, ToU8);
 
-				SkeletonPtr skel(rdr12::New<Skeleton>(fbxskel.m_skel_id, fbxskel.m_bone_ids, names, fbxskel.m_o2bp, hierarchy), true);
+				SkeletonPtr skel(rdr12::New<Skeleton>(fbxskel.m_skel_id, fbxskel.m_bone_ids, bone_names, fbxskel.m_o2bp, hierarchy), true);
 				m_skels[fbxskel.m_skel_id] = skel;
 				
 				/*{
@@ -1419,19 +1419,31 @@ namespace pr::rdr12
 
 		// Load the fbx scene
 		fbx::Scene scene(src, fbx::LoadOptions{
-			//.evaluate_skinning = true,
+			.load_at_frame = out.LoadAtFrame(),
+			.space_conversion = fbx::ESpaceConversion::TransformRoot,
+			.pivot_handling = fbx::EPivotHandling::Retain,
 			.target_axes = {
-				.right = fbx::ECoordAxis::PosY,
+				.right = fbx::ECoordAxis::PosX,
 				.up = fbx::ECoordAxis::PosZ,
-				.front = fbx::ECoordAxis::PosX,
+				.front = fbx::ECoordAxis::NegY,
 			},
 			.target_unit_meters = 1.0f,
 		});
+		#if 0
+		{
+			//hack
+			std::ofstream ofile("E:\\Dump\\LDraw\\SceneDump.txt");
+			scene.Dump(ofile, fbx::DumpOptions{
+				.m_parts = ESceneParts::MainObjects,
+			});
+		}
+		#endif
 		scene.Read(read_out, fbx::ReadOptions{
 			.m_parts = out.Parts(),
 			.m_frame_range = out.FrameRange(),
 			.m_mesh_filter = std::bind(&IModelOut::ModelFilter, &out, _1),
 			.m_skel_filter = std::bind(&IModelOut::SkeletonFilter, &out, _1),
+			.m_anim_filter = std::bind(&IModelOut::AnimationFilter, &out, _1),
 			.m_progress = std::bind(&IModelOut::Progress, &out, _1, _2, _3, _4),
 		});
 	}

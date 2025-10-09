@@ -12,9 +12,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\fbx-DELETEME.cpp">
-      <Filter>src</Filter>
-    </None>
     <ClCompile Include="src\fbx.cpp">
       <Filter>src</Filter>
     </ClCompile>

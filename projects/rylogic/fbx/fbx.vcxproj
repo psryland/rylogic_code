@@ -44,7 +44,6 @@
   Files
   -->
   <ItemGroup>
-    <None Include="src\fbx-DELETEME.cpp" />
     <ClCompile Include="src\fbx.cpp" />
     <ClInclude Include="$(SDKPath)ufbx\ufbx\ufbx.h" />
     <ClCompile Include="$(SDKPath)ufbx\ufbx\ufbx.c" />

@@ -11,7 +11,7 @@
 
 namespace pr::rdr12
 {
-	constexpr int HeapCapacityView = 256;
+	constexpr int HeapCapacityView = 65536;
 	constexpr int HeapCapacitySamp = 16;
 	constexpr int HeapIdxMsaaRtv = 0;
 	constexpr int HeapIdxMsaaDsv = 0;

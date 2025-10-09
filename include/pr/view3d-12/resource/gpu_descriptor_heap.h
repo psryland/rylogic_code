@@ -13,6 +13,22 @@ namespace pr::rdr12
 	template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
 	struct GpuDescriptorHeap
 	{
+		// TODO: The GpuDescriptorHeap needs to be dynamic because we don't know how many we'll
+		//  need at draw time, and we're forced to set the descriptor heaps in the command list
+		//  up front.
+		// The modern way to do this is to use a Bindless table. If you’re on D3D12 Tier 2+ or
+		//  Vulkan descriptor indexing, use a bindless table. You create one giant descriptor
+		//  heap (e.g. all SRVs for the whole scene). Shaders receive indices into that heap
+		//  instead of fixed bindings. The command list doesn’t need per-object descriptor
+		//  sets at all.
+		//  Pros:
+		//    - Super flexible: no per-draw descriptor binding.
+		//    - Perfect for modern forward+ or clustered shading.
+		//    - Great GPU parallelism — CPU stays out of the way.
+		//  Cons:
+		//    - Slightly more complex resource lifetime tracking.
+		//    - Requires GPU feature support.
+		//
 		// Notes:
 		//  - This heap is used to pass descriptors to the GPU. Use a DescriptorStore for long
 		//    term storage of the descriptors. This heap type can be bound to a command list,
@@ -31,7 +47,7 @@ namespace pr::rdr12
 		//    This handle is then set on the command list using 'SetGraphicsRootDescriptorTable'.
 		//  Compute Shaders:
 		//    For resources used in compute shaders, the ResourceManager's descriptor store can still be
-		//    used, but the code managing the compute shader should create it's only GpuDescriptorHeap.
+		//    used, but the code managing the compute shader should create it's own GpuDescriptorHeap.
 		//    (If using ComputeJob, there's one already in there). Copy the UAV/SRV descriptors into the heap
 		//    for each job run.
 		//  Constant Buffer View:
@@ -45,6 +61,7 @@ namespace pr::rdr12
 		//    3. In Job use: cmd_list.SetComputeRootDescriptorTable(n, upload.Add(my_tex->m_uav));
 		//    4. Use Barrier.UAV(my_tex->m_res.get()) before using the texture.
 		//    
+	private:
 
 		using HeapPtr = D3DPtr<ID3D12DescriptorHeap>;
 		using Lookup = Lookup<int, D3D12_GPU_DESCRIPTOR_HANDLE>;
@@ -59,7 +76,9 @@ namespace pr::rdr12
 		AutoSub    m_eh0;      // Event subscription
 		int        m_des_size; // The size of one descriptor
 		int        m_head;     // Insert point for added descriptors
-
+	
+	public:
+	
 		GpuDescriptorHeap(int size, GpuSync& gsync)
 			:m_heap()
 			,m_size(size)
@@ -109,16 +128,18 @@ namespace pr::rdr12
 		D3D12_GPU_DESCRIPTOR_HANDLE Add(std::span<Descriptor const> descriptors)
 		{
 			// Checks
+			#if PR_DBG_RDR
 			for (auto& des : descriptors)
 			{
 				if (des.m_type != HeapType)
 					throw std::runtime_error("Descriptor is the wrong type");
 			}
+			#endif
 
 			// Hash the CPU descriptor indices to generate a lookup key
-			auto key = pr::hash::FNV_offset_basis32;
+			auto key = hash::FNV_offset_basis32;
 			for (auto& des : descriptors)
-				key = pr::hash::Hash32CT(des.m_index, key);
+				key = hash::Hash32CT(des.m_index, key);
 
 			// See if this combination of descriptors has already been added
 			auto iter = m_lookup.find(key);
@@ -126,7 +147,7 @@ namespace pr::rdr12
 				return iter->second;
 
 			// The number of descriptors to add in a contiguous block
-			auto count = s_cast<int>(descriptors.size());
+			auto count = isize(descriptors);
 
 			// Assert capacity
 			PurgeCompleted();
@@ -268,3 +289,4 @@ namespace pr::rdr12
 		}
 	};
 }
+

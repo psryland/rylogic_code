@@ -36,6 +36,7 @@
 //        Armature FBXNode Type: Null
 //        Only Deform Bones: No
 //        Add Leaf Bones: No
+
 #pragma once
 #include <memory>
 #include <string>
@@ -51,12 +52,10 @@
 namespace pr::geometry::fbx
 {
 	static constexpr uint32_t NoId = ~0UL;
+	static constexpr int NoIndex = -1;
 	using TimeRange = Range<double>;
 
 	// Opaque types
-	struct MeshData;
-	struct MaterialData;
-	struct SkinData;
 	struct SceneData;
 	struct Context;
 
@@ -101,9 +100,11 @@ namespace pr::geometry::fbx
 	};
 
 	// Specify how unit / coordinate system conversion should be performed.
-	// Affects how `ufbx_load_opts.target_axes` and `ufbx_load_opts.target_unit_meters` work,
-	// has no effect if neither is specified.
-	enum class ESpaceConversion {
+	enum class ESpaceConversion
+	{
+		// Notes:
+		//  Affects how `ufbx_load_opts.target_axes` and `ufbx_load_opts.target_unit_meters` work,
+		//  has no effect if neither is specified.
 
 		// Store the space conversion transform in the root node.
 		// Sets `ufbx_node.local_transform` of the root node.
@@ -141,6 +142,38 @@ namespace pr::geometry::fbx
 		AdjustToRotationPivot,
 	};
 
+	// How to handle FBX node geometry transforms.
+	enum class EGeometryTransformHandling
+	{
+		// Notes:
+		//  FBX nodes can have "geometry transforms" that affect only the attached meshes,
+		//  but not the children. This is not allowed in many scene representations so
+		//  ufbx provides some ways to simplify them.
+		//  Geometry transforms can also be used to transform any other attributes such
+		//  as lights or cameras.
+
+		// Preserve the geometry transforms as-is.
+		// To be correct for all files you have to use `ufbx_node.geometry_transform`,
+		// `ufbx_node.geometry_to_node`, or `ufbx_node.geometry_to_world` to compensate
+		// for any potential geometry transforms.
+		Preserve,
+
+		// Add helper nodes between the nodes and geometry where needed.
+		// The created nodes have `ufbx_node.is_geometry_transform_helper` set and are
+		// named `ufbx_load_opts.geometry_transform_helper_name`.
+		HelperNodes,
+
+		// Modify the geometry of meshes attached to nodes with geometry transforms.
+		// Will add helper nodes like `UFBX_GEOMETRY_TRANSFORM_HANDLING_HELPER_NODES` if
+		// necessary, for example if there are multiple instances of the same mesh with
+		// geometry transforms.
+		ModifyGeometry,
+
+		// Modify the geometry of meshes attached to nodes with geometry transforms.
+		// NOTE: This will not work correctly for instanced geometry.
+		ModifyGeometryNoFallback,
+	};
+
 	// Axis used to mirror transformations for handedness conversion.
 	enum class EMirrorAxis
 	{
@@ -170,7 +203,7 @@ namespace pr::geometry::fbx
 	{
 		ECoordAxis right;
 		ECoordAxis up;
-		ECoordAxis front;
+		ECoordAxis front; // means out of the screen direction
 	};
 
 	// A rotation, translation, scale transform
@@ -184,6 +217,9 @@ namespace pr::geometry::fbx
 	// Scene load options
 	struct LoadOptions
 	{
+		// Load the model at a specific frame.
+		std::optional<int> load_at_frame = {};
+
 		#if 0
 		ufbx_allocator_opts temp_allocator;   // < Allocator used during loading
 		ufbx_allocator_opts result_allocator; // < Allocator used for the final scene
@@ -306,22 +342,18 @@ namespace pr::geometry::fbx
 		ufbx_open_file_cb open_file_cb;
 		#endif
 
-		#if 0
-		// How to handle geometry transforms in the nodes.
-		// See `ufbx_geometry_transform_handling` for an explanation.
-		ufbx_geometry_transform_handling geometry_transform_handling;
+		// How to handle geometry transforms in the nodes. See `ufbx_geometry_transform_handling` for an explanation.
+		EGeometryTransformHandling geometry_transform_handling;
 
-		// How to handle unconventional transform inherit modes.
-		// See `ufbx_inherit_mode_handling` for an explanation.
+		#if 0
+		// How to handle unconventional transform inherit modes. See `ufbx_inherit_mode_handling` for an explanation.
 		ufbx_inherit_mode_handling inherit_mode_handling;
 		#endif
 
-		// How to perform space conversion by `target_axes` and `target_unit_meters`.
-		// See `ufbx_space_conversion` for an explanation.
+		// How to perform space conversion by `target_axes` and `target_unit_meters`. See `ufbx_space_conversion` for an explanation.
 		ESpaceConversion space_conversion;
 		
-		// How to handle pivots.
-		// See `ufbx_pivot_handling` for an explanation.
+		// How to handle pivots. See `ufbx_pivot_handling` for an explanation.
 		EPivotHandling pivot_handling;
 
 		// Retain the original transforms of empties when converting pivots.
@@ -478,11 +510,14 @@ namespace pr::geometry::fbx
 		// The animation frame range to read
 		pr::Range<int> m_frame_range = { 0, std::numeric_limits<int>::max() };
 
-		// The subset of meshes to load. Empty means load all.
+		// The subset of meshes to load. Empty means load all. Returning true means load
 		std::function<bool(std::string_view)> m_mesh_filter = {};
 
-		// The subset of skeletons to load. Empty means load all.
+		// The subset of skeletons to load. Empty means load all. Returning true means load
 		std::function<bool(std::string_view)> m_skel_filter = {};
+
+		// The subset of animations to load. Empty means load all. Returning true means load
+		std::function<bool(std::string_view)> m_anim_filter = {};
 
 		// Progress callback
 		std::function<bool(int64_t step, int64_t total, char const* message, int nest)> m_progress = {};
@@ -517,7 +552,7 @@ namespace pr::geometry::fbx
 	};
 	struct Nugget
 	{
-		uint32_t m_mat_id = 0;
+		uint32_t m_mat_id = NoId;
 		ETopo m_topo = ETopo::TriList;
 		EGeom m_geom = EGeom::Vert;
 		Range<int64_t> m_vrange = Range<int64_t>::Reset();
@@ -525,6 +560,8 @@ namespace pr::geometry::fbx
 	};
 	struct Material
 	{
+		uint32_t m_mat_id = NoId;
+		std::string_view m_name = {};
 		Colour m_ambient = ColourBlack;
 		Colour m_diffuse = ColourWhite;
 		Colour m_specular = ColourZero;
@@ -553,11 +590,12 @@ namespace pr::geometry::fbx
 	};
 	struct Skeleton
 	{
-		uint32_t m_skel_id = NoId;            // Unique skeleton Id
-		std::span<uint32_t const> m_bone_ids; // Bone unique ids (first is the root bone)
-		std::span<std::string const> m_names; // Bone names
-		std::span<m4x4 const> m_o2bp;         // Inverse of the bind-pose to root-object-space transform for each bone
-		std::span<int const> m_hierarchy;     // Hierarchy levels. level == 0 are root bones.
+		uint32_t m_skel_id = NoId;                 // Unique skeleton Id
+		std::string_view m_name;                   // Skeleton name
+		std::span<uint32_t const> m_bone_ids;      // Bone unique ids (first is the root bone)
+		std::span<std::string const> m_bone_names; // Bone names
+		std::span<m4x4 const> m_o2bp;              // Inverse of the bind-pose to root-object-space transform for each bone
+		std::span<int const> m_hierarchy;          // Hierarchy levels. level == 0 are root bones.
 
 		// The number of bones in this skeleton
 		int size() const
@@ -585,6 +623,7 @@ namespace pr::geometry::fbx
 		uint32_t m_skel_id = NoId;            // The skeleton that these tracks should match
 		double m_duration;                    // The length (in seconds) of the animation
 		double m_frame_rate;                  // The native frame rate of the animation
+		std::string_view m_name;              // Animation "Take" name
 		std::span<uint32_t const> m_bone_map; // The bone id for each track. Length = bone count.
 		std::span<quat const> m_rotation;     // Frames of bone rotations
 		std::span<v3 const> m_position;       // Frames of bone positions
@@ -644,13 +683,6 @@ namespace pr::geometry::fbx
 		x(Scene_ , Load, SceneData* (__stdcall *)(Context& ctx, std::istream& src, LoadOptions const& opts))\
 		x(Scene_ , Read, void (__stdcall *)(Context& ctx, SceneData& scene, ReadOptions const& options, IReadOutput& out))\
 		x(Scene_ , Dump, void (__stdcall *)(Context& ctx, SceneData const& scene, DumpOptions const& options, std::ostream& out))
-		//x(Scene_ , ReadProps, SceneProps (__stdcall *)(Context& ctx, SceneData const& scene))\
-		//x(Scene_ , MeshGet, Mesh (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
-		//x(Scene_ , SkeletonGet, Skeleton (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
-		//x(Scene_ , AnimationGet, Animation (__stdcall *)(Context& ctx, SceneData const& scene, int i))\
-		//x(Scene_ , MaterialGetById, Material (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t mat_id))\
-		//x(Scene_ , SkeletonGetById, Skeleton (__stdcall *)(Context& ctx, SceneData const& scene, uint64_t skel_id))
-
 		#define PR_FBX_FUNCTION_MEMBERS(prefix, name, function_type) using prefix##name##Fn = function_type; prefix##name##Fn prefix##name = {};
 		PR_FBX_API(PR_FBX_FUNCTION_MEMBERS)
 		#undef PR_FBX_FUNCTION_MEMBERS
@@ -713,9 +745,8 @@ namespace pr::geometry::fbx
 		}
 
 		// Read the full scene into memory
-		void Dump(DumpOptions const& options, std::ostream& out)
+		void Dump(std::ostream& out, DumpOptions const& options)
 		{
-			// You probably want to read first
 			Fbx::get().Scene_Dump(*m_ctx, *m_scene, options, out);
 		}
 	};

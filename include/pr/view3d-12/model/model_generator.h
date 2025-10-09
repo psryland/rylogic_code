@@ -234,6 +234,10 @@ namespace pr::rdr12
 			{
 				return geometry::ESceneParts::All;
 			}
+			virtual std::optional<int> LoadAtFrame() const
+			{
+				return {};
+			}
 			virtual bool ModelFilter(std::string_view model_name) const
 			{
 				(void)model_name;
@@ -243,6 +247,11 @@ namespace pr::rdr12
 			{
 				(void)skeleton_name;
 				return true; // True means include the skeleton in the output
+			}
+			virtual bool AnimationFilter(std::string_view animation_name) const
+			{
+				(void)animation_name;
+				return true; // True means include the animation in the output
 			}
 			virtual rdr12::FrameRange FrameRange() const
 			{

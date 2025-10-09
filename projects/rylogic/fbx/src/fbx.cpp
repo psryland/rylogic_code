@@ -153,6 +153,20 @@ namespace pr
 			}
 		}
 	};
+	template <> struct Convert<ufbx_geometry_transform_handling, EGeometryTransformHandling>
+	{
+		constexpr static ufbx_geometry_transform_handling To_(EGeometryTransformHandling x)
+		{
+			switch (x)
+			{
+				case EGeometryTransformHandling::Preserve: return ufbx_geometry_transform_handling::UFBX_GEOMETRY_TRANSFORM_HANDLING_PRESERVE;
+				case EGeometryTransformHandling::HelperNodes: return ufbx_geometry_transform_handling::UFBX_GEOMETRY_TRANSFORM_HANDLING_HELPER_NODES;
+				case EGeometryTransformHandling::ModifyGeometry: return ufbx_geometry_transform_handling::UFBX_GEOMETRY_TRANSFORM_HANDLING_MODIFY_GEOMETRY;
+				case EGeometryTransformHandling::ModifyGeometryNoFallback: return ufbx_geometry_transform_handling::UFBX_GEOMETRY_TRANSFORM_HANDLING_MODIFY_GEOMETRY_NO_FALLBACK;
+				default: throw std::runtime_error("Unknown enum value");
+			}
+		}
+	};
 	template <> struct Convert<ufbx_mirror_axis, EMirrorAxis>
 	{
 		constexpr static ufbx_mirror_axis To_(EMirrorAxis x)
@@ -217,7 +231,8 @@ namespace pr
 				.read_buffer_size = x.read_buffer_size,
 
 				.filename = To<ufbx_string>(x.filename),
-
+				
+				.geometry_transform_handling = To<ufbx_geometry_transform_handling>(x.geometry_transform_handling),
 				.space_conversion = To<ufbx_space_conversion>(x.space_conversion),
 				.pivot_handling = To<ufbx_pivot_handling>(x.pivot_handling),
 				.pivot_handling_retain_empties = x.pivot_handling_retain_empties,
@@ -392,11 +407,74 @@ namespace pr::geometry::fbx
 		int level;
 		int index;
 	};
-	static constexpr int NoIndex = -1;
 	static constexpr Vert NoVert = { .m_idx0 = {NoIndex, 0} };
-	using SceneDataPtr = std::unique_ptr<SceneData>;
 	using MeshNodeMap = std::unordered_map<uint64_t, MeshNode>; // Map from mesh id to mesh
 	using BoneNodeMap = std::unordered_map<uint64_t, BoneNode>; // Map from bone id to bone
+
+	// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
+	template <std::invocable<ufbx_node const*> Callback> requires std::convertible_to<std::invoke_result_t<Callback, ufbx_node const*>, bool>
+	inline void WalkHierarchy(ufbx_node const* root, Callback cb)
+	{
+		vector<ufbx_node const*> stack; stack.reserve(64);
+		stack.push_back(root);
+
+		for (; !stack.empty(); )
+		{
+			auto* node = stack.back();
+			stack.pop_back();
+
+			// Return true to recurse into the node. n.b. 'node->node_depth'
+			if (!cb(node))
+				continue;
+
+			// Recurse in depth first order
+			for (auto i = node->children.count; i-- != 0; )
+				stack.push_back(node->children[i]);
+		}
+	}
+
+	// Find the root nodes in the list of elements
+	template <typename Elements, typename IsRootFn>
+	inline auto FindRoots(Elements const& elements, IsRootFn is_root)
+	{
+		vector<ufbx_node const*, 4> roots;
+		for (auto const* element : elements)
+		{
+			for (auto const* node : element->instances)
+			{
+				if (!is_root(node)) continue;
+				roots.push_back(node);
+			}
+		}
+		roots.resize(std::unique(begin(roots), end(roots)) - std::begin(roots));
+		return roots;
+	}
+
+	// True if 'node' is a mesh root node
+	inline bool IsMeshRoot(ufbx_node const* node)
+	{
+		return node->mesh != nullptr && (node->parent == nullptr || node->parent->mesh == nullptr);
+	}
+
+	// True if 'node' is a bone root node
+	inline bool IsBoneRoot(ufbx_node const* node)
+	{
+		return node->bone != nullptr && (node->parent == nullptr || node->parent->bone == nullptr);
+	}
+
+	// Return the ancestor of 'node' that is not a mesh node
+	inline ufbx_node const* MeshRoot(ufbx_node const* node)
+	{
+		for (; !IsMeshRoot(node); node = node->parent) {}
+		return node;
+	}
+
+	// Return the ancestor of 'node' that is not a bone node
+	inline ufbx_node const* BoneRoot(ufbx_node const* node)
+	{
+		for (; !IsBoneRoot(node); node = node->parent) {}
+		return node;
+	}
 
 	// FBX file input stream
 	struct IStream : ufbx_stream
@@ -453,10 +531,24 @@ namespace pr::geometry::fbx
 	// Model data types
 	struct MaterialData
 	{
+		uint32_t m_mat_id = NoId;
+		std::string m_name = "default";
 		Colour m_ambient = ColourBlack;
 		Colour m_diffuse = ColourWhite;
 		Colour m_specular = ColourZero;
 		std::string m_tex_diff;
+
+		operator Material() const
+		{
+			return Material{
+				.m_mat_id = m_mat_id,
+				.m_name = m_name,
+				.m_ambient = m_ambient,
+				.m_diffuse = m_diffuse,
+				.m_specular = m_specular,
+				.m_tex_diff = m_tex_diff,
+			};
+		}
 	};
 	struct SkinData
 	{
@@ -486,32 +578,35 @@ namespace pr::geometry::fbx
 	{
 		// Notes:
 		//  - Skeletons can have multiple root bones. Check for a 'm_hierarchy[i] == 0' values
-		uint32_t m_skel_id = NoId;   // Skeleton Id (= the node id that contains the root bone, because skeletons can instance bones)
-		vector<uint32_t> m_bone_ids; // Bone unique ids
-		vector<std::string> m_names; // Bone names
-		vector<m4x4> m_o2bp;         // Inverse of the bind-pose to root-object-space transform for each bone
-		vector<int> m_hierarchy;     // Hierarchy levels. level == 0 are root bones.
+		uint32_t m_skel_id = NoId;        // Skeleton Id (= the node id that contains the root bone, because skeletons can instance bones)
+		std::string m_name;               // Skeleton name
+		vector<uint32_t> m_bone_ids;      // Bone unique ids
+		vector<std::string> m_bone_names; // Bone names
+		vector<m4x4> m_o2bp;              // Inverse of the bind-pose to root-object-space transform for each bone
+		vector<int> m_hierarchy;          // Hierarchy levels. level == 0 are root bones.
 
 		void Reset()
 		{
 			m_skel_id = NoId;
+			m_name = "";
 			m_bone_ids.resize(0);
-			m_names.resize(0);
+			m_bone_names.resize(0);
 			m_o2bp.resize(0);
 			m_hierarchy.resize(0);
 		}
 		operator Skeleton() const
 		{
 			assert(
-				isize(m_bone_ids) == isize(m_names) &&
-				isize(m_names) == isize(m_o2bp) &&
-				isize(m_o2bp) == isize(m_hierarchy)
+				isize(m_bone_ids) == isize(m_bone_names) &&
+				isize(m_bone_ids) == isize(m_o2bp) &&
+				isize(m_bone_ids) == isize(m_hierarchy)
 			);
 
 			return Skeleton{
 				.m_skel_id = m_skel_id,
+				.m_name = m_name,
 				.m_bone_ids = m_bone_ids,
-				.m_names = m_names,
+				.m_bone_names = m_bone_names,
 				.m_o2bp = m_o2bp,
 				.m_hierarchy = m_hierarchy,
 			};
@@ -522,6 +617,7 @@ namespace pr::geometry::fbx
 		uint32_t m_skel_id = NoId;      // The skeleton that this animation should be used with
 		double m_duration = 0;          // The length (in seconds) of the animation
 		double m_frame_rate = 24.0;     // The native frame rate of the animation
+		std::string m_name;             // Animation "Take" name
 		vector<uint32_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
 		vector<quat, 0> m_rotation;     // Frames of bone rotations
 		vector<v3, 0> m_position;       // Frames of bone positions
@@ -543,6 +639,7 @@ namespace pr::geometry::fbx
 				.m_skel_id = m_skel_id,
 				.m_duration = m_duration,
 				.m_frame_rate = m_frame_rate,
+				.m_name = m_name,
 				.m_bone_map = m_bone_map,
 				.m_rotation = m_rotation,
 				.m_position = m_position,
@@ -589,52 +686,6 @@ namespace pr::geometry::fbx
 		}
 	};
 
-	// Loaded scene data
-	struct SceneData
-	{
-		// Notes:
-		//  - Root nodes for meshes, skeletons can occur at any level.
-		//  - Any mesh/skeleton node whose parent is not a mesh/skeleton
-		//    node is the start of a new mesh/skeleton hierarchy.
-		std::shared_ptr<ufbx_scene> m_fbxscene;
-		SceneData(ufbx_scene* scene)
-			: m_fbxscene(scene, ufbx_free_scene)
-		{
-			//TraverseHierarchy(*m_fbxscene, EParts::All, m_mesh_node_map, m_bone_node_map);
-			/*
-			// Create a list of the root mesh names
-			for (auto const& [id, meshnode] : m_mesh_node_map)
-			{
-				if (meshnode.mesh != meshnode.root) continue;
-				m_mesh_names.push_back(meshnode.root->GetNode()->GetName());
-			}
-
-			// Create a list of the root bone names
-			for (auto const& [id, bonenode] : m_bone_node_map)
-			{
-				if (bonenode.bone != bonenode.root) continue;
-				m_skel_names.push_back(bonenode.root->GetNode()->GetName());
-			}
-
-			// Read properties from the scene
-			m_props = SceneProps{
-				.m_animation_stack_count = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
-				.m_frame_rate = FbxTime::GetFrameRate(m_fbxscene->GetGlobalSettings().GetTimeMode()),
-				.m_material_available = m_fbxscene->GetMaterialCount(),
-				.m_meshes_available = s_cast<int>(std::ranges::count_if(m_mesh_node_map, [](auto const& x) { return x.second.mesh == x.second.root; })),
-				.m_skeletons_available = s_cast<int>(std::ranges::count_if(m_bone_node_map, [](auto const& x) { return x.second.bone == x.second.root; })),
-				.m_animations_available = m_fbxscene->GetSrcObjectCount<FbxAnimStack>(),
-				.m_material_count = 0,
-				.m_mesh_count = 0,
-				.m_skeleton_count = 0,
-				.m_animation_count = 0,
-				.m_mesh_names = m_mesh_names,
-				.m_skel_names = m_skel_names,
-			};
-			*/
-		}
-	};
-
 	// Read data from a scene and output it to the caller
 	struct Reader
 	{
@@ -658,8 +709,8 @@ namespace pr::geometry::fbx
 		vector<uint32_t> m_tri_indices;
 		vector<Influence> m_influences;
 
-		Reader(SceneData const& scene, ReadOptions const& opts, IReadOutput& out)
-			: m_fbxscene(*scene.m_fbxscene)
+		Reader(ufbx_scene const& fbxscene, ReadOptions const& opts, IReadOutput& out)
+			: m_fbxscene(fbxscene)
 			, m_opts(opts)
 			, m_out(out)
 			, m_mesh()
@@ -707,94 +758,13 @@ namespace pr::geometry::fbx
 				Progress(1LL + (&m - m_fbxscene.materials.begin()), m_fbxscene.materials.count, "Reading materials...");
 
 				Material mat = {};
-				switch (m->shader_type)
-				{
-					// Unknown shading model
-					case ufbx_shader_type::UFBX_SHADER_UNKNOWN:
-					{
-						break;
-					}
-					// FBX builtin diffuse material
-					case ufbx_shader_type::UFBX_SHADER_FBX_LAMBERT:
-					{
-						mat.m_ambient = To<Colour>(m->fbx.ambient_color.value_vec4);
-						mat.m_diffuse = To<Colour>(m->fbx.diffuse_color.value_vec4);
-						mat.m_specular = To<Colour>(m->fbx.specular_color.value_vec4);
-						break;
-					}
-					// FBX builtin diffuse+specular material
-					case ufbx_shader_type::UFBX_SHADER_FBX_PHONG:
-					{
-						mat.m_ambient = To<Colour>(m->fbx.ambient_color.value_vec4);
-						mat.m_diffuse = To<Colour>(m->fbx.diffuse_color.value_vec4);
-						mat.m_specular = To<Colour>(m->fbx.specular_color.value_vec4);
-						break;
-					}
-					// Open Shading Language standard surface
-					// https://github.com/Autodesk/standard-surface
-					case ufbx_shader_type::UFBX_SHADER_OSL_STANDARD_SURFACE:
-					{
-						break;
-					}
-					// Arnold standard surface
-					// https://docs.arnoldrenderer.com/display/A5AFMUG/Standard+Surface
-					case ufbx_shader_type::UFBX_SHADER_ARNOLD_STANDARD_SURFACE:
-					{
-						break;
-					}
-					// 3ds Max Physical Material
-					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2022/ENU/3DSMax-Lighting-Shading/files/GUID-C1328905-7783-4917-AB86-FC3CC19E8972-htm.html
-					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PHYSICAL_MATERIAL:
-					{
-						break;
-					}
-					// 3ds Max PBR (Metal/Rough) material
-					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2021/ENU/3DSMax-Lighting-Shading/files/GUID-A16234A5-6500-4662-8B20-A5EC9FE1B255-htm.html
-					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PBR_METAL_ROUGH:
-					{
-						break;
-					}
-					// 3ds Max PBR (Spec/Gloss) material
-					// https://knowledge.autodesk.com/support/3ds-max/learn-explore/caas/CloudHelp/cloudhelp/2021/ENU/3DSMax-Lighting-Shading/files/GUID-18087194-B2A6-43EF-9B80-8FD1736FAE52-htm.html
-					case ufbx_shader_type::UFBX_SHADER_3DS_MAX_PBR_SPEC_GLOSS:
-					{
-						break;
-					}
-					// 3ds glTF Material
-					// https://help.autodesk.com/view/3DSMAX/2023/ENU/?guid=GUID-7ABFB805-1D9F-417E-9C22-704BFDF160FA
-					case ufbx_shader_type::UFBX_SHADER_GLTF_MATERIAL:
-					{
-						break;
-					}
-					// 3ds OpenPBR Material
-					// https://help.autodesk.com/view/3DSMAX/2025/ENU/?guid=GUID-CD90329C-1E2B-4BBA-9285-3BB46253B9C2
-					case ufbx_shader_type::UFBX_SHADER_OPENPBR_MATERIAL:
-					{
-						break;
-					}
-					// Stingray ShaderFX shader graph.
-					// Contains a serialized `"ShaderGraph"` in `ufbx_props`.
-					case ufbx_shader_type::UFBX_SHADER_SHADERFX_GRAPH:
-					{
-						break;
-					}
-					// Variation of the FBX phong shader that can recover PBR properties like
-					// `metalness` or `roughness` from the FBX non-physical values.
-					// NOTE: Enable `ufbx_load_opts.use_blender_pbr_material`.
-					case ufbx_shader_type::UFBX_SHADER_BLENDER_PHONG:
-					{
-						break;
-					}
-					// Wavefront .mtl format shader (used by .obj files)
-					case ufbx_shader_type::UFBX_SHADER_WAVEFRONT_MTL:
-					{
-						break;
-					}
-					default:
-					{
-						break;
-					}
-				}
+				if (m->fbx.ambient_color.has_value)
+					mat.m_ambient = To<Colour>(m->fbx.ambient_color.value_vec4);
+				if (m->fbx.diffuse_color.has_value)
+					mat.m_diffuse = To<Colour>(m->fbx.diffuse_color.value_vec4);
+				if (m->fbx.specular_color.has_value)
+					mat.m_specular = To<Colour>(m->fbx.specular_color.value_vec4);
+
 				m_materials.push_back(mat);
 			}
 		}
@@ -808,6 +778,19 @@ namespace pr::geometry::fbx
 			// Output each mesh to the caller, then output a tree with references to the meshes plus a transform.
 			for (auto const* fbxmesh : m_fbxscene.meshes)
 			{
+				// Don't bother creating meshes that are only used in filtered out models
+				if (m_opts.m_mesh_filter)
+				{
+					auto used = false;
+					for (auto const* inst : fbxmesh->instances)
+					{
+						auto root = MeshRoot(inst); assert(root != nullptr);
+						used |= m_opts.m_mesh_filter(To<std::string_view>(root->name));
+					}
+					if (!used) continue;
+				}
+
+				// Load the mesh
 				ReadMesh(*fbxmesh);
 				m_out.CreateMesh(m_mesh, m_materials);
 				mesh_nodes += fbxmesh->instances.count;
@@ -822,17 +805,28 @@ namespace pr::geometry::fbx
 			{
 				Progress(1 + (&root - roots.data()), ssize(roots), "Reading models...");
 
+				// Filter out unwanted models
+				auto name = To<std::string_view>(root->name);
+				if (m_opts.m_mesh_filter && !m_opts.m_mesh_filter(name))
+					continue;
+				
 				// Walk the node hierarchy and build the mesh tree
-				WalkHierarchy(root, [&mesh_tree](ufbx_node const* node) -> bool
+				WalkHierarchy(root, [root, &mesh_tree](ufbx_node const* node) -> bool
 				{
 					if (node->mesh == nullptr)
 						return false;
 
-					auto level = s_cast<int>(node->node_depth - MeshRoot(node)->node_depth);
+					assert(node->has_geometry_transform == false && "ignoring this currently");
+
+					auto mesh_id = node->mesh->typed_id;
+					auto name = To<std::string_view>(node->name);
+					auto level = s_cast<int>(node->node_depth - root->node_depth);
+					auto o2p = level == 0 ? To<m4x4>(node->node_to_world) : To<m4x4>(node->node_to_parent);
+
 					mesh_tree.push_back(MeshTree{
-						.m_o2p = level == 0 ? To<m4x4>(node->node_to_world) : To<m4x4>(node->node_to_parent),
-						.m_name = To<std::string_view>(node->name),
-						.m_mesh_id = node->mesh->typed_id,
+						.m_o2p = o2p,
+						.m_name = name,
+						.m_mesh_id = mesh_id,
 						.m_level = level,
 					});
 					return true;
@@ -935,7 +929,11 @@ namespace pr::geometry::fbx
 					if (n.m_mat_id != mat_id) continue;
 					return n;
 				}
-				mesh.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
+				mesh.m_nbuf.push_back(Nugget{
+					.m_mat_id = mat_id,
+					.m_topo = ETopo::TriList,
+					.m_geom = EGeom::Vert,
+				});
 				return mesh.m_nbuf.back();
 			};
 
@@ -947,34 +945,50 @@ namespace pr::geometry::fbx
 				if (mesh_part.num_triangles == 0)
 					continue;
 
-				assert(m_materials.size() != 0 && "There should be a default material if no materials have been loaded");
-				auto mat_id = Clamp<uint32_t>(mesh_part.index, 0, s_cast<uint32_t>(m_materials.size() - 1));
-
-				Nugget nugget = {};
-				nugget.m_mat_id = mat_id;
-				nugget.m_topo = ETopo::TriList;
-				nugget.m_geom = EGeom::Vert |
-					(fbxmesh.vertex_color.exists ? EGeom::Colr : EGeom::None) |
-					(fbxmesh.vertex_normal.exists ? EGeom::Norm : EGeom::None) |
-					(fbxmesh.vertex_uv.exists ? EGeom::Tex0 : EGeom::None);
-
 				// "Inflate" the verts into a unique list of each required combination
 				for (size_t fi = 0; fi < mesh_part.num_faces; fi++)
 				{
 					ufbx_face const& face = fbxmesh.faces[mesh_part.face_indices[fi]];
+
+					// Get the material used on this face
+					uint32_t mat_id = 0;
+					if (m_materials.size() > 1)
+					{
+						mat_id = fbxmesh.materials[mesh_part.index]->typed_id;
+						assert(mat_id >= 0 && mat_id < m_materials.size());
+					}
+
+					auto& nugget = GetOrAddNugget(mat_id);
 					auto num_tris = ufbx_triangulate_face(tri_indices.data(), tri_indices.size(), &fbxmesh, face);
 
 					// Iterate through every vertex of every triangle in the triangulated result
 					for (size_t vi = 0; vi != num_tris * 3; ++vi)
 					{
 						auto ix = tri_indices[vi];
-						auto vidx = fbxmesh.vertex_indices[ix];
 						auto vert = To<v4>(ufbx_get_vertex_vec3(&fbxmesh.vertex_position, ix), 1.0f);
-						auto colr = fbxmesh.vertex_color.exists ? To<Colour>(ufbx_get_vertex_vec4(&fbxmesh.vertex_color, ix)) : ColourWhite;
-						auto norm = fbxmesh.vertex_normal.exists ? To<v4>(ufbx_get_vertex_vec3(&fbxmesh.vertex_normal, ix), 0.0f) : v4::Zero();
-						auto tex0 = fbxmesh.vertex_uv.exists ? To<v2>(ufbx_get_vertex_vec2(&fbxmesh.vertex_uv, ix)) : v2::Zero();
-						auto idx0 = iv2{ s_cast<int>(vidx), 0 };
 
+						auto colr = ColourWhite;
+						if (fbxmesh.vertex_color.exists)
+						{
+							colr = To<Colour>(ufbx_get_vertex_vec4(&fbxmesh.vertex_color, ix));
+							nugget.m_geom |= EGeom::Colr;
+						}
+
+						auto norm = v4::Zero();
+						if (fbxmesh.vertex_normal.exists)
+						{
+							norm = To<v4>(ufbx_get_vertex_vec3(&fbxmesh.vertex_normal, ix), 0.0f);
+							nugget.m_geom |= EGeom::Norm;
+						}
+				
+						auto tex0 = v2::Zero();
+						if (fbxmesh.vertex_uv.exists)
+						{
+							tex0 = To<v2>(ufbx_get_vertex_vec2(&fbxmesh.vertex_uv, ix));
+							nugget.m_geom |= EGeom::Tex0;
+						}
+
+						auto vidx = fbxmesh.vertex_indices[ix];
 						vidx = AddVert(vidx, vert, colr, norm, tex0);
 						mesh.m_ibuf.push_back(vidx);
 
@@ -982,9 +996,6 @@ namespace pr::geometry::fbx
 						nugget.m_irange.grow(isize(mesh.m_ibuf) - 1);
 					}
 				}
-
-				// Add the nugget
-				mesh.m_nbuf.push_back(nugget);
 			}
 
 			// Compute the bounding box
@@ -1030,8 +1041,9 @@ namespace pr::geometry::fbx
 					{
 						auto vidx = cluster.vertices[w];
 						auto weight = s_cast<float>(cluster.weights[w]);
+						auto bone_id = fbxbone->bone->typed_id;
 
-						influences[vidx].m_bones.push_back(fbxbone->bone->typed_id);
+						influences[vidx].m_bones.push_back(bone_id);
 						influences[vidx].m_weights.push_back(weight);
 					}
 				}
@@ -1079,7 +1091,7 @@ namespace pr::geometry::fbx
 
 			SkeletonData skel;
 			skel.m_bone_ids.reserve(m_fbxscene.bones.count);
-			skel.m_names.reserve(m_fbxscene.bones.count);
+			skel.m_bone_names.reserve(m_fbxscene.bones.count);
 			skel.m_o2bp.reserve(m_fbxscene.bones.count);
 			skel.m_hierarchy.reserve(m_fbxscene.bones.count);
 
@@ -1092,6 +1104,11 @@ namespace pr::geometry::fbx
 			{
 				Progress(1 + (&root - roots.data()), ssize(roots), "Reading skeletons...");
 				
+				// Filter out unwanted skeletons
+				skel.m_name = To<std::string_view>(root->name);
+				if (m_opts.m_skel_filter && !m_opts.m_skel_filter(To<std::string_view>(root->name)))
+					continue;
+
 				// Skeleton Id is the id of the node that contains the root bone,
 				// because the same bone could be instanced in multiple nodes/skeletons.
 				skel.m_skel_id = root->typed_id;
@@ -1106,19 +1123,20 @@ namespace pr::geometry::fbx
 						bind_pose[pose.bone_node] = &pose;
 				}
 
-				// Blender workaround
+				// ???
 				auto coord_bake = m4x4::Identity();
-				if (root->parent != nullptr && To<std::string_view>(root->parent->name) == "Armature")
+				if (root->parent != nullptr)
 					coord_bake = Invert(To<m4x4>(root->parent->node_to_world));
 
 				// Walk the bone hierarchy creating the skeleton
-				WalkHierarchy(root, [&skel, &bind_pose, &coord_bake](ufbx_node const* node)
+				WalkHierarchy(root, [&skel, root, &bind_pose, &coord_bake](ufbx_node const* node)
 				{
 					if (node->bone == nullptr)
 						return false;
 
-					auto const& bone = *node->bone;
-					auto level = s_cast<int>(node->node_depth - BoneRoot(node)->node_depth);
+					auto bone_id = node->bone->typed_id;
+					auto name = To<std::string_view>(node->name);
+					auto level = s_cast<int>(node->node_depth - root->node_depth);
 
 					// Notes:
 					//  - World space == object space for this description.
@@ -1133,12 +1151,14 @@ namespace pr::geometry::fbx
 					m4x4 bp2o;
 					if (auto iter = bind_pose.find(node); iter != bind_pose.end())
 					{
-						bp2o = coord_bake * To<m4x4>(iter->second->bone_to_world);
+						bp2o = To<m4x4>(iter->second->bone_to_world);
 					}
 					else
 					{
-						bp2o = coord_bake * To<m4x4>(node->node_to_world);
+						bp2o = To<m4x4>(node->node_to_world);
 					}
+
+					bp2o = coord_bake * bp2o;
 
 					// Object space to bind pose. Bind pose just means the rest shape of the skeleton (aka T pose)
 					// The o2bp transforms are used to take verts in object space and make them bone relative.
@@ -1147,8 +1167,8 @@ namespace pr::geometry::fbx
 						? InvertFast(bp2o)
 						: Invert(bp2o);
 					
-					skel.m_bone_ids.push_back(bone.typed_id);
-					skel.m_names.push_back(std::string(To<std::string_view>(node->name)));
+					skel.m_bone_ids.push_back(bone_id);
+					skel.m_bone_names.push_back(std::string(name));
 					skel.m_o2bp.push_back(o2bp);
 					skel.m_hierarchy.push_back(level);
 					return true;
@@ -1176,6 +1196,11 @@ namespace pr::geometry::fbx
 				auto const& fbxstack = *m_fbxscene.anim_stacks[i];
 				auto const& fbxanim = *fbxstack.anim;
 				if (fbxanim.layers.count == 0 || fbxanim.time_begin == fbxanim.time_end || m_fbxscene.settings.frames_per_second == 0)
+					continue;
+
+				// Filter out unwanted animations
+				anim.m_name = To<std::string_view>(fbxstack.name);
+				if (m_opts.m_anim_filter && !m_opts.m_anim_filter(anim.m_name))
 					continue;
 
 				// Native frame rate
@@ -1291,28 +1316,6 @@ namespace pr::geometry::fbx
 			}
 		}
 
-		// Traverse the scene hierarchy building up lookup tables from unique IDs to nodes (mesh, skeleton)
-		template <std::invocable<ufbx_node const*> Callback> requires std::convertible_to<std::invoke_result_t<Callback, ufbx_node const*>, bool>
-		static void WalkHierarchy(ufbx_node const* root, Callback cb)
-		{
-			vector<ufbx_node const*> stack; stack.reserve(64);
-			stack.push_back(root);
-
-			for (; !stack.empty(); )
-			{
-				auto* node = stack.back();
-				stack.pop_back();
-
-				// Return true to recurse into the node. n.b. 'node->node_depth'
-				if (!cb(node))
-					continue;
-
-				// Recurse in depth first order
-				for (auto i = node->children.count; i-- != 0; )
-					stack.push_back(node->children[i]);
-			}
-		}
-
 		// Report progress
 		void Progress(int64_t step, int64_t total, char const* message, int nest = 0) const
 		{
@@ -1320,82 +1323,28 @@ namespace pr::geometry::fbx
 			if (m_opts.m_progress(step, total, message, nest)) return;
 			throw std::runtime_error("user cancelled");
 		}
-
-		// Find the root nodes in the list of elements
-		template <typename Elements, typename IsRootFn>
-		static auto FindRoots(Elements const& elements, IsRootFn is_root)
-		{
-			vector<ufbx_node const*, 4> roots;
-			for (auto const* element : elements)
-			{
-				for (auto const* node : element->instances)
-				{
-					if (!is_root(node)) continue;
-					roots.push_back(node);
-				}
-			}
-			roots.resize(std::unique(begin(roots), end(roots)) - std::begin(roots));
-			return roots;
-		}
-
-		// True if 'node' is a mesh root node
-		static bool IsMeshRoot(ufbx_node const* node)
-		{
-			return node->mesh != nullptr && (node->parent == nullptr || node->parent->mesh == nullptr);
-		}
-
-		// True if 'node' is a bone root node
-		static bool IsBoneRoot(ufbx_node const* node)
-		{
-			return node->bone != nullptr && (node->parent == nullptr || node->parent->bone == nullptr);
-		}
-
-		// Return the ancestor of 'node' that is not a mesh node
-		static ufbx_node const* MeshRoot(ufbx_node const* node)
-		{
-			for (; !IsMeshRoot(node); node = node->parent) {}
-			return node;
-		}
-
-		// Return the ancestor of 'node' that is not a bone node
-		static ufbx_node const* BoneRoot(ufbx_node const* node)
-		{
-			for (; !IsBoneRoot(node); node = node->parent) {}
-			return node;
-		}
 	};
 
 	// Dump the structure of an FBX file to a stream
 	struct Dumper
 	{
-		//using NodeAndLevel = struct NodeAndLevel { FbxNode* node; int level; };
-
-		std::ostream& m_out;
-		ufbx_scene& m_fbxscene;
-		//MeshNodeMap m_meshes;
-		//BoneNodeMap m_bones;
+		ufbx_scene const& m_fbxscene;
 		DumpOptions const& m_opts;
-		//double m_frame_rate;
+		std::ostream& m_out;
 
-		Dumper(ufbx_scene& fbxscene, DumpOptions const& opts, std::ostream& out)
-			: m_out(out)
-			, m_fbxscene(fbxscene)
-			//, m_meshes()
-			//, m_bones()
+		Dumper(ufbx_scene const& fbxscene, DumpOptions const& opts, std::ostream& out)
+			: m_fbxscene(fbxscene)
 			, m_opts(opts)
-			//, m_frame_rate(FbxTime::GetFrameRate(m_fbxscene.GetGlobalSettings().GetTimeMode()))
+			, m_out(out)
 		{
-			// Bake transforms into the nodes
-			//m_fbxscene.GetRootNode()->ConvertPivotAnimationRecursive(nullptr, FbxNode::eDestinationPivot, m_frame_rate);
-			//ConvertScene(m_fbxscene, m_opts.m_coord_system);
-			out << std::showpos;
+			out << std::showpos; // show '+' values on numbers
 		}
 
 		void Do() const
 		{
-			/*
 			if (AllSet(m_opts.m_parts, EParts::MainObjects))
 				DumpMainObjects();
+			/*
 			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
 				DumpGlobalSettings();
 			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
@@ -1403,46 +1352,100 @@ namespace pr::geometry::fbx
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				DumpMaterials();
 			*/
+			/*
 			if (AllSet(m_opts.m_parts, EParts::Meshes))
 				DumpGeometry();
-			/*
 			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				DumpSkeletons();
 			if (AllSet(m_opts.m_parts, EParts::Animation))
 				DumpAnimations();
 			*/
 		}
+		void DumpMainObjects() const
+		{
+			int ind = 0;
+			m_out << "Main Objects:\n";
+			{
+				++ind;
+				for (auto const& mesh : m_fbxscene.meshes)
+				{
+					for (auto const& node : mesh->instances)
+					{
+						if (!IsMeshRoot(node)) continue;
+						m_out << Indent(ind) << "MESH: " << To<std::string_view>(node->name) << "(" << mesh->typed_id << ")" << "\n";
+						{
+							++ind;
+							m_out << Indent(ind) << "N2P: " << To<m4x4>(node->node_to_parent) << "\n";
+							m_out << Indent(ind) << "N2W: " << To<m4x4>(node->node_to_world) << "\n";
+							m_out << Indent(ind) << "G2N: " << To<m4x4>(node->geometry_to_node) << "\n";
+							m_out << Indent(ind) << "G2W: " << To<m4x4>(node->geometry_to_world) << "\n";
+							--ind;
+						}
+					}
+				}
+				for (auto const& bone : m_fbxscene.bones)
+				{
+					for (auto const& node : bone->instances)
+					{
+						if (!IsBoneRoot(node)) continue;
+						m_out << Indent(ind) << "SKEL: " << To<std::string_view>(node->name) << "(" << bone->typed_id << ")" << "\n";
+						{
+							++ind;
+							m_out << Indent(ind) << "N2P: " << To<m4x4>(node->node_to_parent) << "\n";
+							m_out << Indent(ind) << "N2W: " << To<m4x4>(node->node_to_world) << "\n";
+							m_out << Indent(ind) << "G2N: " << To<m4x4>(node->geometry_to_node) << "\n";
+							m_out << Indent(ind) << "G2W: " << To<m4x4>(node->geometry_to_world) << "\n";
+							--ind;
+						}
+					}
+				}
+				for (auto const& as : m_fbxscene.anim_stacks)
+				{
+					auto const& animstack = *as;
+					auto const& anim = *animstack.anim;
+					m_out << Indent(ind) << "ANIM: " << To<std::string_view>(animstack.name) << "(" << animstack.typed_id << ")" << "\n";
+					{
+						++ind;
+						m_out << Indent(ind) << "TimeBeg: " << anim.time_begin << "\n";
+						m_out << Indent(ind) << "TimeEnd: " << anim.time_end << "\n";
+						m_out << Indent(ind) << "FrameRate: " << m_fbxscene.settings.frames_per_second << "\n";
+						--ind;
+					}
+				}
+				--ind;
+			}
+		}
 		void DumpGeometry() const
 		{
-			m_out << " GEOMETRY =====================================================================================================\n";
+			int ind = 0;
+			m_out << " Geometry:\n";
 
 			for (auto const* fbxmesh : m_fbxscene.meshes)
 			{
-				//auto& mesh = *meshnode.mesh;
-				//auto& node = *mesh.GetNode();
-				auto level = 0;
-				m_out << Indent(level) << "Mesh (ID: " << fbxmesh->element_id << "):\n";
+				++ind;
+				m_out << Indent(ind) << "Mesh (ID: " << fbxmesh->element_id << "):\n";
 				{
-					++level;
-					m_out << Indent(level) << "Name: " << To<std::string_view>(fbxmesh->name) << "\n";
-					m_out << Indent(level) << "Instances:\n";
+					++ind;
+					m_out << Indent(ind) << "Name: " << To<std::string_view>(fbxmesh->name) << "\n";
+					m_out << Indent(ind) << "Instances:\n";
 					for (auto const* inst : fbxmesh->instances)
 					{
-						++level;
-						m_out << Indent(level) << "Name: " << To<std::string_view>(inst->name) << "\n";
-						--level;
+						++ind;
+						m_out << Indent(ind) << "Name: " << To<std::string_view>(inst->name) << "\n";
+						--ind;
 					}
-					m_out << Indent(level) << "Vert Count: " << fbxmesh->num_vertices << "\n";
-					m_out << Indent(level) << "Index Count: " << fbxmesh->num_indices << "\n";
-					m_out << Indent(level) << "Face Count: " << fbxmesh->num_faces << "\n";
-					m_out << Indent(level) << "Tri Count: " << fbxmesh->num_triangles << "\n";
-					m_out << Indent(level) << "Edge Count: " << fbxmesh->num_edges << "\n";
-					m_out << Indent(level) << "Max Face Tri Count: " << fbxmesh->max_face_triangles << "\n";
-					m_out << Indent(level) << "Empty Face Count: " << fbxmesh->num_empty_faces << "\n";
-					m_out << Indent(level) << "Point Face Count: " << fbxmesh->num_point_faces << "\n";
-					m_out << Indent(level) << "Line Face Count: " << fbxmesh->num_line_faces << "\n";
-					--level;
+					m_out << Indent(ind) << "Vert Count: " << fbxmesh->num_vertices << "\n";
+					m_out << Indent(ind) << "Index Count: " << fbxmesh->num_indices << "\n";
+					m_out << Indent(ind) << "Face Count: " << fbxmesh->num_faces << "\n";
+					m_out << Indent(ind) << "Tri Count: " << fbxmesh->num_triangles << "\n";
+					m_out << Indent(ind) << "Edge Count: " << fbxmesh->num_edges << "\n";
+					m_out << Indent(ind) << "Max Face Tri Count: " << fbxmesh->max_face_triangles << "\n";
+					m_out << Indent(ind) << "Empty Face Count: " << fbxmesh->num_empty_faces << "\n";
+					m_out << Indent(ind) << "Point Face Count: " << fbxmesh->num_point_faces << "\n";
+					m_out << Indent(ind) << "Line Face Count: " << fbxmesh->num_line_faces << "\n";
+					--ind;
 				}
+				--ind;
 			}
 		}
 
@@ -1455,17 +1458,77 @@ namespace pr::geometry::fbx
 		}
 	};
 
+	// Loaded scene data
+	struct SceneData
+	{
+		std::shared_ptr<ufbx_scene> m_fbxscene;
+		std::shared_ptr<ufbx_scene> m_evaluated;
+
+		SceneData(std::istream& src, LoadOptions const& opts)
+			: m_fbxscene()
+			, m_evaluated()
+		{
+			// Convert user options
+			auto ufbx_opts = To<ufbx_load_opts>(opts);
+
+			// Use a threadpool
+			ufbx::thread_pool thread_pool = {};
+			ufbx_opts.thread_opts = { .pool = thread_pool };
+
+			// Create a stream adapter
+			pr::geometry::fbx::IStream stream(src);
+
+			// Load the scene
+			ufbx_error error = {};
+			auto fbxscene = ufbx_load_stream(&stream, &ufbx_opts, &error);
+			if (error.type != UFBX_ERROR_NONE)
+				throw std::runtime_error(To<std::string>(error));
+
+			m_fbxscene = std::shared_ptr<ufbx_scene>(fbxscene, ufbx_free_scene);
+
+			// If 'load_at_frame' is specified, evaluate the scene
+			if (opts.load_at_frame && fbxscene->anim != nullptr)
+			{
+				// Convert the frame to a time
+				auto time = fbxscene->settings.frames_per_second * *opts.load_at_frame;
+
+				// Select the default animation in the scene
+				auto const* anim = fbxscene->anim; // Todo, select an anim?
+
+				// Eval options
+				ufbx_evaluate_opts eval_opts = {
+					.temp_allocator = ufbx_opts.temp_allocator,
+					.result_allocator = ufbx_opts.result_allocator,
+					.evaluate_skinning = ufbx_opts.evaluate_skinning,
+					.evaluate_caches = ufbx_opts.evaluate_caches,
+					.evaluate_flags = 0, // See `ufbx_evaluate_flags` for information.
+					.load_external_files = ufbx_opts.load_external_files, // WARNING: Potentially unsafe! Try to open external files such as geometry caches
+					.open_file_cb = {} // External file callbacks (defaults to stdio.h)
+				};
+
+				// Evaluate the scene
+				error = ufbx_error{};
+				auto evaluated = ufbx_evaluate_scene(fbxscene, anim, time, &eval_opts, &error);
+				if (error.type != UFBX_ERROR_NONE)
+					throw std::runtime_error(To<std::string>(error));
+
+				m_evaluated = std::shared_ptr<ufbx_scene>(evaluated, ufbx_free_scene);
+			}
+		}
+		operator ufbx_scene const& () const
+		{
+			return m_evaluated ? *m_evaluated : *m_fbxscene;
+		}
+	};
+
 	// An RAII dll reference
 	struct Context
 	{
 	private:
-		using SceneCont = std::vector<SceneDataPtr>;
+		using SceneCont = std::vector<std::shared_ptr<SceneData>>;
 
 		ErrorHandler m_error_cb;
 		mutable std::mutex m_mutex;
-		//FbxCustomAllocator m_alloc;
-		//ManagerPtr m_manager;
-		//FbxIOSettings* m_settings;
 		uint32_t m_version;
 		SceneCont m_scenes;
 
@@ -1474,9 +1537,6 @@ namespace pr::geometry::fbx
 		Context(ErrorHandler error_cb)
 			: m_error_cb(error_cb)
 			, m_mutex()
-			//, m_alloc()
-			//, m_manager(Check(FbxManager::Create(), "Error: Unable to create FBX Manager"))
-			//, m_settings(Check(FbxIOSettings::Create(m_manager.get(), IOSROOT), "Error: Unable to create settings"))
 			, m_version(UFBX_VERSION)
 			, m_scenes()
 		{
@@ -1494,10 +1554,10 @@ namespace pr::geometry::fbx
 		}
 
 		// Add 'fbxscene' to this context
-		SceneData* AddScene(ufbx_scene* fbxscene)
+		SceneData* AddScene(std::shared_ptr<SceneData>&& scene)
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
-			m_scenes.push_back(SceneDataPtr{ new SceneData(fbxscene) });
+			m_scenes.push_back(scene);
 			return m_scenes.back().get();
 		}
 	};
@@ -1559,23 +1619,7 @@ extern "C"
 	{
 		try
 		{
-			// Convert user options
-			auto ufbx_opts = To<ufbx_load_opts>(opts);
-
-			// Use a threadpool
-			ufbx::thread_pool thread_pool = {};
-			ufbx_opts.thread_opts = { .pool = thread_pool };
-
-			// Create a stream adapter
-			pr::geometry::fbx::IStream stream(src);
-
-			// Load the scene
-			ufbx_error error = {};
-			auto fbxscene = ufbx_load_stream(&stream, &ufbx_opts, &error);
-			if (error.type != UFBX_ERROR_NONE)
-				throw std::runtime_error(To<std::string>(error));
-
-			return ctx.AddScene(fbxscene);
+			return ctx.AddScene(std::shared_ptr<SceneData>{ new SceneData(src, opts) });
 		}
 		catch (std::exception const& ex)
 		{
@@ -1637,7 +1681,7 @@ extern "C"
 		try
 		{
 			NullCheck(scene.m_fbxscene, "Scene is null");
-			Dumper dumper(*scene.m_fbxscene, options, out);
+			Dumper dumper(scene, options, out);
 			dumper.Do();
 		}
 		catch (std::exception const& ex)
