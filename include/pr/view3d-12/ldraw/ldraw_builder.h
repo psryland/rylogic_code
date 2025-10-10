@@ -116,6 +116,7 @@ namespace pr::rdr12::ldraw
 		struct LdrCone;
 		struct LdrSpline;
 		struct LdrFrustum;
+		struct LdrModel;
 		struct LdrInstance;
 		struct LdrGroup;
 		struct LdrCommands;
@@ -163,6 +164,7 @@ namespace pr::rdr12::ldraw
 			LdrCone& Cone(Name name = {}, Colour colour = Colour());
 			LdrSpline& Spline(Name name = {}, Colour colour = Colour());
 			LdrFrustum& Frustum(Name name = {}, Colour colour = Colour());
+			LdrModel& Model(Name name = {}, Colour colour = Colour());
 			LdrInstance& Instance(Name name = {}, Colour colour = Colour());
 			LdrGroup& Group(Name name = {}, Colour colour = Colour());
 			LdrCommands& Command(Name name = {}, Colour colour = Colour());
@@ -1349,6 +1351,32 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		};
+		struct LdrModel :LdrBase<LdrModel>
+		{
+			std::filesystem::path m_filepath;
+
+			LdrModel()
+				: m_filepath()
+			{}
+
+			// Model filepath
+			LdrModel& filepath(std::filesystem::path filepath)
+			{
+				m_filepath = filepath;
+				return *this;
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Model, m_name, m_colour, [&]
+				{
+					Writer::Write(out, EKeyword::FilePath, m_filepath.string());
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
+		};
 		struct LdrInstance :LdrBase<LdrInstance>
 		{
 			// Write to 'out'
@@ -1551,6 +1579,12 @@ namespace pr::rdr12::ldraw
 		inline LdrFrustum& LdrBuilder::Frustum(Name name, Colour colour)
 		{
 			auto ptr = new LdrFrustum;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrModel& LdrBuilder::Model(Name name, Colour colour)
+		{
+			auto ptr = new LdrModel;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}

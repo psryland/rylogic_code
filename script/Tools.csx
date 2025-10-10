@@ -7,14 +7,31 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using Rylogic.Extn;
 using Console = Internal.Console;
+using IOPath = System.IO.Path;
 
 public class Tools
 {
+	/// <summary>Path helper</summary>
+	public static string Path(IEnumerable<string> path_parts, bool check_exists = true, bool normalise = true)
+	{
+		return UserVars.Path(path_parts, check_exists, normalise);
+	}
+
+	// Ensure the directory 'dir' exists and is empty
+	public static void CleanDir(string dir)
+	{
+		Console.WriteLine($"Cleaning deploy directory: {dir}");
+		Directory.Delete(dir, true);
+		Directory.CreateDirectory(dir);
+	}
+
 	//Executes a program and returns it's stdout/stderr as a string
 	// 'checked' will raise an exception if the program returns a non-zero exit code
 	// 'return_output' will return the output of the program as a string. If false, the output is printed to stdout
@@ -100,24 +117,18 @@ public class Tools
 		if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			return;
 
-		// VS environment not set up in user vars
-		//if not UserVars.vs_envvars: 
-		//	print("VS Environment not set in UserVars")
-		//	return
-
-		//print("Initializing VS Environment", flush=True)
+		Console.WriteLine("Initializing VS Environment");
 
 		// Find 'vswhere.exe' from the VS installer
-		var vswhere = Path.Join(Environment.GetEnvironmentVariable("ProgramFiles(x86)"), "Microsoft Visual Studio", "Installer", "vswhere.exe");
-		if (!Path.Exists(vswhere))
-			throw new Exception($"vswhere.exe not found at: {vswhere}");
+		var program_files = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? throw new Exception("ProgramFiles(x86) environment variable is not defined");
+		var vswhere = Path([program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe"]);
 
 		// Get the VS install path
 		var (_, vs_path) = Run([vswhere, "-latest", "-property", "installationPath"]);
 		vs_path = vs_path.TrimEnd();
 
 		// Get the VcVars batch file
-		var vsvars_path = Path.Join(vs_path, "VC", "Auxiliary", "Build", "vcvars64.bat");
+		var vsvars_path = Path([vs_path, "VC", "Auxiliary", "Build", "vcvars64.bat"]);
 
 		// Run the vcvars batch file, then dump the state of the environment variables
 		var (_, env) = Run(["cmd", "/C", vsvars_path, "&", "set"]);
@@ -129,13 +140,14 @@ public class Tools
 			if (!m.Success)
 				continue;
 
-			var key = m.Captures[1].Value;
-			var value = m.Captures[2].Value;
+			var key = m.Groups[1].Value.Trim();
+			var value = m.Groups[2].Value.Trim();
 			Environment.SetEnvironmentVariable(key, value);
 		}
 
-		// print("Environment:\n")
-		// for k in os.environ: print(f"{k} = {os.environ[k]}")
+		//Console.WriteLine("Environment:\n");
+		//foreach (System.Collections.DictionaryEntry x in Environment.GetEnvironmentVariables())
+		//	Console.WriteLine($"{x.Key} = {x.Value}");
 	}
 
 	// Invoke MSBuild on a solution or project file.
@@ -153,7 +165,6 @@ public class Tools
 	//	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
 	public static void MSBuild(string sln_or_proj_file, IList<string>? projects = null, IList<string>? platforms = null, IList<string>? configs = null, bool parallel = false, bool same_window = true, IList<string>? additional_args = null)
 	{
-		//Log.Message(f"\nBuilding {name}")
 		SetupVcEnvironment();
 
 		if (UserVars.MSBuild is null)
@@ -166,15 +177,14 @@ public class Tools
 		additional_args ??= [];
 
 		// Build the arguments list
-		List<string> args = [UserVars.MSBuild, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"];
-		args.AddRange(additional_args);
+		List<string> args = [UserVars.MSBuild, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo", ..additional_args];
 
 		// Set the targets to build
 		// Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)
 		if (projects.Count != 0)
 		{
 			// Replace '.' in the project name with '_'
-			projects = [.. projects.Select(x => x.Replace(".", "_"))];
+			projects = [..projects.Select(x => x.Replace(".", "_")), ];
 			args.Add($"/t:{string.Join(';', projects)}");
 		}
 
@@ -193,16 +203,14 @@ public class Tools
 				{
 					foreach (var config in configs)
 					{
-						var args_ = args;
-						args_.Add($"/p:Configuration={config};Platform={platform}");
-
+						List<string> args_ = [..args, $"/p:Configuration={config};Platform={platform}"];
 						if (parallel)
 						{
 							procs.Add(Spawn(args_, same_window: same_window));
 						}
 						else
 						{
-							//Log.Message($"{platform}|{config}:");
+							Console.WriteLine($"{platform}|{config}:");
 							Run(args_);
 						}
 					}
@@ -221,5 +229,157 @@ public class Tools
 
 		if (errors)
 			throw new Exception("Build Failed");
+	}
+
+	// Extract data from a text file using a regex
+	// Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
+	// Returns the regex match object for the first match or null
+	// Encoding can be: ascii, utf-8, cp1250, etc
+	public static Match Extract(string filepath, Regex pat, Encoding? encoding = null, bool by_line = true)
+	{
+		if (by_line)
+		{
+			foreach (var line in File.ReadAllLines(filepath, encoding: encoding ?? Encoding.UTF8))
+			{
+				var m = pat.Match(line);
+				if (m.Success)
+					return m;
+			}
+		}
+		else
+		{
+			var s = File.ReadAllText(filepath);
+			var m = pat.Match(s);
+			if (m.Success)
+				return m;
+		}
+
+		return Match.Empty;
+	}
+
+	// Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
+	public static void Copy(string src, string dst, bool only_if_modified = true, bool show_unchanged = false, bool ignore_missing = false, bool quiet = false, bool full_paths = true, Regex? filter = null, bool follow_symlinks = true)
+	{
+		bool src_is_dir = src.EndsWith("/") || src.EndsWith("\\");
+		bool dst_is_dir = dst.EndsWith("/") || dst.EndsWith("\\");
+		src = Path([src], check_exists: true);
+		dst = Path([dst], check_exists: false);
+		src_is_dir |= Directory.Exists(src);
+		dst_is_dir |= Directory.Exists(dst) || src_is_dir;
+
+		// Find the source files/directories to copy (filenames only, not full paths)
+		List<string> lst = [];
+		if (src_is_dir)
+		{
+			var fnames = Directory.GetFileSystemEntries(src).Select(IOPath.GetFileName).Where(x => x is not null).Select(x => x!).ToList();
+			lst.AddRange(fnames);
+		}
+		else if (File.Exists(src))
+		{
+			lst.Add(IOPath.GetFileName(src));
+		}
+		else if (src.Contains("*") || src.Contains("?"))
+		{
+			var dir = IOPath.GetDirectoryName(src) ?? Directory.GetCurrentDirectory();
+			var pattern = IOPath.GetFileName(src);
+			var fnames = Directory.GetFiles(dir, pattern).Select(IOPath.GetFileName).Where(x => x is not null).Select(x => x!).ToList();
+			lst.AddRange(fnames);
+		}
+		else if (!ignore_missing)
+		{
+			throw new FileNotFoundException($"ERROR: {src} does not exist");
+		}
+
+		// If the 'src' represents multiple files, 'dst' must be a directory
+		if (src_is_dir || lst.Count > 1)
+		{
+			if (!Directory.Exists(dst))
+			{
+				dst_is_dir = true;
+			}
+			else if (!dst_is_dir)
+			{
+				throw new FileNotFoundException($"ERROR: {dst} is not a valid directory");
+			}
+		}
+
+		var srcdir = (src_is_dir ? src : IOPath.GetDirectoryName(src) ?? string.Empty).TrimEnd('/', '\\');
+		var dstdir = (dst_is_dir ? dst : IOPath.GetDirectoryName(dst) ?? string.Empty).TrimEnd('/', '\\');
+
+		// Ensure 'dstdir' exists
+		if (!Directory.Exists(dstdir))
+		{
+			Directory.CreateDirectory(dstdir);
+
+			// Copy directory attributes if needed
+			if (src_is_dir && Directory.Exists(srcdir))
+			{
+				var srcInfo = new DirectoryInfo(srcdir);
+				var dstInfo = new DirectoryInfo(dstdir);
+				dstInfo.Attributes = srcInfo.Attributes;
+			}
+
+			if (!quiet)
+				Console.WriteLine($"{srcdir} --> {dstdir}");
+		}
+
+		// Copy the source files/directories to 'dst'
+		foreach (var src_item in lst)
+		{
+			var s = IOPath.Combine(srcdir, src_item);
+			var d = dst_is_dir ? IOPath.Combine(dstdir, src_item) : dst;
+
+			// Test for symlinks...
+			if (File.Exists(s) && new FileInfo(s).Attributes.HasFlag(FileAttributes.ReparsePoint))
+				throw new Exception("ERROR: This copy function doesn't consider symlinks yet. It's a todo...");
+
+			// Call recursively for directory copies
+			if (Directory.Exists(s))
+			{
+				Copy(s, d + "\\", only_if_modified, show_unchanged, ignore_missing, quiet, full_paths, filter, follow_symlinks);
+			}
+			else
+			{
+				// Copy if not excluded by the filter
+				if (filter != null && !filter.IsMatch(s))
+					continue;
+
+				// Copy if modified or always based on the flag
+				if (only_if_modified && !DiffContent(s, d))
+				{
+					if (!quiet && show_unchanged)
+						Console.WriteLine($"{s} --> unchanged");
+
+					continue;
+				}
+
+				if (!quiet)
+				{
+					if (full_paths)
+						Console.WriteLine($"{s} --> {d}");
+					else
+						Console.WriteLine($"{IOPath.GetFileName(s)} --> {IOPath.GetFileName(d)}");
+				}
+				File.Copy(s, d, true);
+			}
+		}
+	}
+
+	// Helper: Compare file contents
+	public static bool DiffContent(string src, string dst)
+	{
+		if (!File.Exists(dst))
+			return true;
+
+		var srcInfo = new FileInfo(src);
+		var dstInfo = new FileInfo(dst);
+
+		if (srcInfo.Length != dstInfo.Length)
+			return true;
+		if (srcInfo.LastWriteTime > dstInfo.LastWriteTime)
+			return true;
+
+		// Optionally, compare file contents byte by byte for more accuracy
+		return false;
 	}
 }

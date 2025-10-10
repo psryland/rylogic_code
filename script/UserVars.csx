@@ -62,7 +62,11 @@ public class UserVars
 	private static string? m_code_sign_cert_thumbprint = null;
 
 	/// <summary>Code signing cert password</summary>
-	public static string CodeSignCert_Pw => m_code_sign_cert_pw ??= Prompt("Code Signing Cert Password: ");
+	public static string CodeSignCert_Pw
+	{
+		get => m_code_sign_cert_pw ??= Prompt("Code Signing Cert Password: ");
+		set => m_code_sign_cert_pw = value;
+	}
 	private static string? m_code_sign_cert_pw = null;
 
 	/// <summary>Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)</summary>

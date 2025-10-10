@@ -30,6 +30,8 @@ namespace Rylogic.LDraw
 
 	public class Builder
 	{
+		/// <summary>Access the objects already in the builder</summary>
+		public IReadOnlyList<Builder> Objects => m_objects;
 		private List<Builder> m_objects = [];
 
 		/// <summary>Reset the builder</summary>
@@ -131,6 +133,12 @@ namespace Rylogic.LDraw
 		public LdrFrustum Frustum(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrFrustum();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
+		public LdrModel Model(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrModel();
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
@@ -1210,6 +1218,27 @@ namespace Rylogic.LDraw
 			}
 		}
 
+	}
+	public class LdrModel : LdrBase<LdrModel>
+	{
+		private string m_filepath = string.Empty;
+
+		// Model filepath
+		public LdrModel filepath(string filepath)
+		{
+			m_filepath = filepath;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Model, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.FilePath, m_filepath);
+				base.WriteTo(res);
+			});
+		}
 	}
 	public class LdrInstance : LdrBase<LdrInstance>
 	{
