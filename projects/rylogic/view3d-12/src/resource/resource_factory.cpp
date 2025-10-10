@@ -141,7 +141,7 @@ namespace pr::rdr12
 				map.Write(desc.Data[i], AllSet(desc.MiscFlags, ResDesc::EMiscFlags::PartialInitData));
 				map.Commit(EFinalState::Override, desc.DefaultState);
 			}
-			
+
 			// Generate mip maps for the texture (if needed)
 			// 'm_mipmap_gen' should use the same cmd-list as the resource manager, so that mips are generated as
 			// textures are created. Remember cmd-lists are executed serially.
@@ -157,6 +157,16 @@ namespace pr::rdr12
 		barriers.Transition(res.get(), desc.DefaultState);
 		barriers.Commit();
 
+		// Trace the pointers of resources that have been created
+		#if 0
+		{
+			OutputDebugStringA(std::format("{} -> 0x{:016x}\n", name, uintptr_t(res.get())).c_str());
+			if (name == "Cube.003-ibuf")
+				name = name;
+		}
+		#endif
+
+		m_keep_alive.Add(res);
 		m_flush_required = true;
 		return res;
 	}
@@ -170,8 +180,8 @@ namespace pr::rdr12
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
 		// Create a V/I buffers
-		vb = vb ? vb : CreateResource(mdesc.m_vb, mdesc.m_name);
-		ib = ib ? ib : CreateResource(mdesc.m_ib, mdesc.m_name);
+		vb = vb ? vb : CreateResource(mdesc.m_vb, string32(mdesc.m_name).append("-vbuf"));
+		ib = ib ? ib : CreateResource(mdesc.m_ib, string32(mdesc.m_name).append("-ibuf"));
 
 		// Set the size and alignment of the vertex/index element types
 		SizeAndAlign16 vstride(mdesc.m_vb.ElemStride, mdesc.m_vb.DataAlignment);
@@ -402,7 +412,6 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		Texture2DPtr inst(rdr12::New<Texture2D>(rdr(), res.get(), desc), true);
 		assert(rdr().mem_tracker().add(inst.get()));
-		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add the texture instance pointer (not ref counted) to the store.
 		// The caller owns the texture, when released it will be removed automatically.
@@ -507,7 +516,6 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		Texture2DPtr inst(rdr12::New<Texture2D>(rdr(), res.get(), desc), true);
 		assert(rdr().mem_tracker().add(inst.get()));
-		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
@@ -640,7 +648,6 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		TextureCubePtr inst(rdr12::New<TextureCube>(rdr(), res.get(), desc), true);
 		assert(rdr().mem_tracker().add(inst.get()));
-		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
@@ -918,7 +925,7 @@ namespace pr::rdr12
 		// Allocate a new sampler instance
 		SamplerPtr inst(rdr12::New<Sampler>(rdr(), desc), true);
 		assert(rdr().mem_tracker().add(inst.get()));
-		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
+		m_keep_alive.Add(inst);
 
 		// Add the sampler instance pointer (not ref counted) to the lookup table.
 		// The caller owns the sampler, when released it will be removed from this lookup.

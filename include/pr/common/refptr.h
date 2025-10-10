@@ -16,32 +16,27 @@
 
 #define PR_REFPTR_TRACE 0
 #if PR_REFPTR_TRACE == 1
-	#include <d3d11.h>
-	#include "pr/common/fmt.h"
+	#include <format>
+	#include <string_view>
 	#include "pr/common/assert.h"
 	#include "pr/win32/stackdump.h"
+	//#define PR_REFPTR_TRACE_TYPE IDXGISwapChain
 #endif
 
 namespace pr
 {
 	#if PR_REFPTR_TRACE == 1
-	// A function prototype for clients to implement/specialise to aid stack traces, etc
-	// Example code:
-	// #define PR_REFPTR_TRACE 1
-	// #include "pr/common/assert.h"
-	// #include "pr/win32/stackdump.h"
-	// template <typename T> inline long PtrRefCount(T*);
-	// template <typename T> inline void RefPtrTrace(bool, T*){}
-	// template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
-	// {
-	//    OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-	//    pr::DumpStack([](std::string const& name, std::string const& file, int line)
-	//    {
-	//        OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str()));
-	//    },3,5);
-	// }
-	template <typename T> void RefPtrTrace(bool,T*) {}
-	template <typename T> long PtrRefCount(T*);
+	template <RefCountedType T> long PtrRefCount(T*);
+	template <RefCountedType T> inline void RefPtrTrace(bool add, T* ptr)
+	{
+		#if defined(PR_REFPTR_TRACE_TYPE)
+		if constexpr (std::is_convertible_v<T, PR_REFPTR_TRACE_TYPE>)
+		#endif
+		{
+			OutputDebugStringA(std::format("[{}] - [{:016x}] - Count = {}\n", (add ? "AddRef" : "Release"), uintptr_t(ptr), PtrRefCount(ptr)).c_str());
+			DumpStack([](std::string_view name, std::string_view file, int line) { OutputDebugStringA(std::format("{}({}): {}\n", file, line, name).c_str()); }, 3, 5);
+		}
+	}
 	#endif
 
 	// A ptr wrapper to a reference counting object. 'T' should have methods 'AddRef' and 'Release'
@@ -102,7 +97,8 @@ namespace pr
 		RefPtr(U* t, bool add_ref)
 			:m_ptr(t)
 		{
-			if (!m_ptr) return;
+			if (!m_ptr)
+				return;
 
 			// There are two common cases:
 			//  - the object is created with an initial ref count of zero (COM case).
@@ -329,19 +325,5 @@ namespace pr
 		//   D3DPtr<IBlahBase> b = p.m_ptr; -- this is wrong, it should be: b = p;
 		return impl::RefCount(ptr, nullptr);
 	}
-
-	// Some helper trace methods
-	#if PR_REFPTR_TRACE == 1
-	//template <> inline void RefPtrTrace<ID3D11Device>(bool add, ID3D11Device* ptr)
-	//{
-	//	OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-	//	pr::DumpStack([](std::string const& name, std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); },3,5);
-	//}
-	//template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
-	//{
-	//	OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-	//	pr::DumpStack([](std::string const& name, std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); },3,5);
-	//}
-	#endif
 }
 

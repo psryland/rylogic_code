@@ -217,15 +217,26 @@ namespace pr::rdr12
 		static ModelPtr SkyboxSixSidedCube(ResourceFactory& factory, std::filesystem::path const& texture_path_pattern, float radius = 1.0f, CreateOptions const* opts = nullptr);
 
 		// ModelFile **************************************************************************
-		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
+		// Load a 3D model/scene from a stream.
+		// - A 3D scene is assumed to be a node hierarchy where each node is an instance of a mesh + transform.
+		// - A mesh can consist of multiple "nuggets" (one per material).
+		// - The IModelOut interface is used to translate from the various model structures into the
+		//   caller's desired structure.
 		struct IModelOut
 		{
+			// Notes:
+			//  - This is the interface between the caller (e.g. LDraw) and the output of the Load functions (already View3d models)
+			//    The interface between the various model readers and the model generator is defined in each model reader header.
 			enum EResult { Continue, Stop };
 
 			virtual ~IModelOut() = default;
 			virtual geometry::ESceneParts Parts() const
 			{
 				return geometry::ESceneParts::All;
+			}
+			virtual std::optional<int> LoadAtFrame() const
+			{
+				return {};
 			}
 			virtual bool ModelFilter(std::string_view model_name) const
 			{
@@ -237,6 +248,11 @@ namespace pr::rdr12
 				(void)skeleton_name;
 				return true; // True means include the skeleton in the output
 			}
+			virtual bool AnimationFilter(std::string_view animation_name) const
+			{
+				(void)animation_name;
+				return true; // True means include the animation in the output
+			}
 			virtual rdr12::FrameRange FrameRange() const
 			{
 				// The frame range of animation data to return
@@ -247,7 +263,12 @@ namespace pr::rdr12
 				// Output model receiver
 				return EResult::Stop; // Read more models or stop
 			}
-			virtual EResult Animation(vector<SkeletonPtr>&&, vector<KeyFrameAnimationPtr>&&)
+			virtual EResult Skeleton(SkeletonPtr&&)
+			{
+				// Output animation receiver
+				return EResult::Stop; // Read more animations or stop
+			}
+			virtual EResult Animation(KeyFrameAnimationPtr&&)
 			{
 				// Output animation receiver
 				return EResult::Stop; // Read more animations or stop

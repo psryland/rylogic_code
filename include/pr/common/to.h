@@ -16,22 +16,22 @@ namespace pr
 	// Convert 'from' to 'to'
 	template <typename TTo, typename TFrom> struct Convert
 	{
-		static TTo To_(TFrom const&)
+		constexpr static TTo To_(TFrom const&)
 		{
 			static_assert(std::is_same_v<TTo, std::false_type>, "No conversion from this type is available");
 		}
-		template <typename... Args> static TTo To_(TFrom const&, Args...)
+		template <typename... Args> constexpr static TTo To_(TFrom const&, Args...)
 		{
 			static_assert(std::is_same_v<TTo, std::false_type>, "No conversion from this type is available");
 		}
 	};
 
 	// Conversion function: auto b = To<B>(a);
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
+	template <typename TTo, typename TFrom> constexpr inline TTo To(TFrom const& from)
 	{
 		return Convert<TTo, TFrom>::To_(from);
 	}
-	template <typename TTo, typename TFrom, typename... Args> inline TTo To(TFrom const& from, Args... args)
+	template <typename TTo, typename TFrom, typename... Args> constexpr inline TTo To(TFrom const& from, Args... args)
 	{
 		return Convert<TTo, TFrom>::To_(from, std::forward<Args>(args)...);
 	}

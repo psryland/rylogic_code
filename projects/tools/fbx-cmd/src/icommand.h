@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "src/forward.h"
 
 namespace fbx_cmd
@@ -75,9 +75,9 @@ namespace fbx_cmd
 		}
 
 		// Show command help
-		virtual void ShowHelp() const = 0;
+		virtual void ShowHelp() const {}
 
 		// Execute the command
-		virtual int Run() = 0;
+		virtual int Run() { return -1; }
 	};
 }

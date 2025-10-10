@@ -88,6 +88,7 @@ namespace pr
 			{
 				rhs.m_sub = Sub();
 			}
+			AutoSub(AutoSub const& rhs) = delete;
 			AutoSub& operator =(AutoSub&& rhs) noexcept
 			{
 				if (this == &rhs) return *this;
@@ -95,14 +96,12 @@ namespace pr
 				rhs.m_sub = Sub();
 				return *this;
 			}
+			AutoSub& operator = (AutoSub const& rhs) = delete;
 			~AutoSub()
 			{
 				if (m_sub.m_mc != nullptr)
 					m_sub.m_mc->unsubscribe(m_sub);
 			}
-
-			AutoSub(AutoSub const& rhs) = delete;
-			AutoSub& operator = (AutoSub const& rhs) = delete;
 		};
 	
 		// Null proxy for 'std::mutex' when threadsafety isn't needed

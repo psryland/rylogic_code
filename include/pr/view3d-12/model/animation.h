@@ -68,40 +68,20 @@ namespace pr::rdr12
 		Cubic = 2,
 	};
 
-	// Data at a KeyFrame time
-	struct TimeKey
-	{
-		float m_time;         // In seconds
-		EAnimInterpolation m_interp;
-
-		TimeKey() = default;
-		TimeKey(float time_s, EAnimInterpolation interp)
-			: m_time(time_s)
-			, m_interp(interp)
-		{}
-		TimeKey(int frame_index, double frame_rate, EAnimInterpolation interp = EAnimInterpolation::Linear)
-			: m_time(s_cast<float>(frame_index / frame_rate))
-			, m_interp(interp)
-		{}
-		friend std::partial_ordering operator <=>(TimeKey lhs, TimeKey rhs)
-		{
-			return lhs.m_time <=> rhs.m_time;
-		}
-	};
-
 	// Transient type for a bone transform
 	struct BoneKey
 	{
-		quat m_rot;
-		v4 m_pos;
-		v4 m_scale;
-		TimeKey m_timekey;
-		int m_kf_index;
+		quat m_rot = quat::Identity();
+		v3 m_pos = v3::Zero();
+		v3 m_scl = v3::One();
+		float m_time = 0; // seconds
+		EAnimInterpolation m_interp = EAnimInterpolation::Linear;
+		int m_idx = 0;
 
 		// Convert to an affine transform
 		operator m4x4() const
 		{
-			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scale.x, m_scale.y, m_scale.z), m_pos);
+			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scl.x, m_scl.y, m_scl.z), m_pos.w1());
 		}
 
 		// Interpolate between two key frames
@@ -117,31 +97,14 @@ namespace pr::rdr12
 			return BoneKey{
 				.m_rot = Slerp(lhs.m_rot, rhs.m_rot, frac),
 				.m_pos = Lerp(lhs.m_pos, rhs.m_pos, frac),
-				.m_scale = Lerp(lhs.m_scale, rhs.m_scale, frac),
-				.m_timekey = TimeKey(Lerp(lhs.m_timekey.m_time, rhs.m_timekey.m_time, frac), EAnimInterpolation::Linear)
+				.m_scl = Lerp(lhs.m_scl, rhs.m_scl, frac),
+				.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
 			};
 		}
 	};
 
-	// The animation data for a bone
-	struct BoneTrack
-	{
-		std::span<TimeKey const> m_times;
-		std::span<quat const> m_rotation;
-		std::span<v3 const> m_position;
-		std::span<v3 const> m_scale;
-		double m_frame_rate; // Only used if m_times.empty()
-		int m_bone_index;
-
-		// Get the bone key (transform) at the given frame index
-		BoneKey operator[](int frame_index) const;
-
-		// Get the latest bone key (transform) <= 'time_s'
-		BoneKey operator[](double time_s) const;
-	};
-
 	// A single key frame that includes kinematic data
-	struct KinematicKeyFrame
+	struct KinematicKey
 	{
 		quat m_rotation;
 		v3 m_translation;
@@ -170,9 +133,9 @@ namespace pr::rdr12
 		}
 
 		// Identity key frame
-		static KinematicKeyFrame Identity()
+		static KinematicKey Identity()
 		{
-			return KinematicKeyFrame {
+			return KinematicKey {
 				.m_rotation = quat::Identity(),
 				.m_translation = v3::Zero(),
 				.m_scale = v3::One(),
@@ -186,7 +149,7 @@ namespace pr::rdr12
 		}
 
 		// Linearly interpolate between two key frames
-		friend KinematicKeyFrame Interp(KinematicKeyFrame const& lhs, KinematicKeyFrame const& rhs, float frac)
+		friend KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac)
 		{
 			switch (lhs.Interpolation())
 			{
@@ -195,7 +158,7 @@ namespace pr::rdr12
 				case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
 				default: throw std::runtime_error("Unknown interpolation style");
 			}
-			return KinematicKeyFrame{
+			return KinematicKey{
 				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
 				.m_translation = Lerp(lhs.m_translation, rhs.m_translation, frac),
 				.m_scale = Lerp(lhs.m_scale, rhs.m_scale, frac),
@@ -232,37 +195,43 @@ namespace pr::rdr12
 	struct KeyFrameAnimation : RefCounted<KeyFrameAnimation>
 	{
 		// Notes:
-		//  - Bone transform data are stored concatenated for each bone, e.g.,
-		//       m_rotation: [(bone0,,,)(bone1,,,)(bone2,,)...]
-		//       m_position: [(bone0,,,)(bone1,,,)(bone2,,)...]
-		//       m_scale:    [(bone0,,,)(bone1,,,)(bone2,,)...]
-		//  - Each (boneN...) is a "track", not all tracks are the same length. However, the length of a bone's track is the same in each array.
-		//  - Some arrays can be empty if unused. Track lengths only apply to non-empty arrays
-		//  - '[m_offsets[bone_index], m_offsets[bone_index+1])' is the index range into the arrays for a bone.
-
-		//  - 'Sample' is a key frame for each bone at some time, t.
-		//  - Frame spacing is not necessarily fixed.
-		//  - Tracks store contiguous frames, where each frame is an array of length 'm_bone_count'.
-		//  - This arrangement is easier to move/copy, less fragmented, and allows for some tracks being empty.
+		//  - "Frames" are the spans of time between "Keys".
+		//    Frames ==> 0   1   2   3   4   5
+		//             |...|...|...|...|...|...|
+		//    Keys ==> 0   1   2   3   4   5   6
+		//  - If the frame rate is 24 fps, then at t == 1sec, key24 is about to start (because key0 is at t = 0).
+		//    Put another way, a 24fps animation clip requires 25 keys in order to last for 1 second.
+		//  - Bone transform data are stored interleaved for each key, e.g.,
+		//      m_rotation: [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
+		//      m_position: [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
+		//      m_scale:    [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
+		//    This is because it's more cache friendly to have all data for a key local in memory.
 		//  - Any of the tracks can be empty. The lengths will be either equal or zero.
 		using Sample = vector<BoneKey, 0>;
 
-		uint64_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
-		TimeRange m_time_range;     // The time range spanned by this animation
-		double m_frame_rate;        // The native frame rate of the animation, so we can convert from frames <-> seconds
-		int m_bone_count;           // The number of bones per key frame
+		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
+		double m_duration;          // The length (in seconds) of this animation
+		double m_native_frame_rate; // The native frame rate of the animation (for reference. frame rate is implied key_count and duration)
 
 		// Tracks
-		vector<int, 0> m_offsets;   // Index offsets to the start of each bone track (one for each bone in the skeleton)
-		vector<TimeKey, 0> m_times; // The key frame time for each entry. If empty, assume a key every 1/fps.
+		vector<uint32_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
 		vector<quat, 0> m_rotation;
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
 
-		KeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate, int bone_count);
+		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
 
-		// Return the animation data for a single bone
-		BoneTrack Track(int bone_index) const;
+		// Number of bone tracks in this animation
+		int bone_count() const;
+
+		// Number of keys in this animation
+		int key_count() const;
+
+		// The effective frame rate implied by the duration and number of keys
+		double frame_rate() const;
+
+		// Get the keys on either side of 'time_s' (to interpolate between)
+		std::tuple<BoneKey, BoneKey> Key(float time_s, int bone_index) const;
 
 		// Returns the interpolated key frames a 'time_s'
 		void EvaluateAtTime(float time_s, std::span<m4x4> out) const;

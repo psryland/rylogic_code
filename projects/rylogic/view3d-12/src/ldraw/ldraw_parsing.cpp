@@ -4520,14 +4520,16 @@ namespace pr::rdr12::ldraw
 			// Model output helper
 			struct ModelOut : ModelGenerator::IModelOut
 			{
-				LdrObject& m_obj;
-				ResourceFactory& m_factory;
 				ObjectCreator& m_this;
+				ResourceFactory& m_factory;
+				LdrObject& m_obj;
+				vector<SkeletonPtr> m_skels;
 
-				ModelOut(LdrObject& obj, ResourceFactory& factory, ObjectCreator& this_)
-					: m_obj(obj)
+				ModelOut(ObjectCreator& this_, ResourceFactory& factory, LdrObject& obj)
+					: m_this(this_)
 					, m_factory(factory)
-					, m_this(this_)
+					, m_obj(obj)
+					, m_skels()
 				{
 				}
 				ESceneParts Parts() const override
@@ -4552,23 +4554,26 @@ namespace pr::rdr12::ldraw
 					ModelTreeToLdr(&m_obj, tree);
 					return EResult::Continue;
 				}
-				EResult Animation(vector<SkeletonPtr>&& skels, vector<KeyFrameAnimationPtr>&& anims) override
+				EResult Skeleton(SkeletonPtr&& skel) override
+				{
+					m_skels.push_back(skel);
+					return EResult::Continue;
+				}
+				EResult Animation(KeyFrameAnimationPtr&& anim) override
 				{
 					if (!m_this.m_anim_info)
 						return EResult::Stop;
 
-					// Only use the first animation
-					auto const& animation = anims.front();
-					auto const& skeleton = pr::get_if(skels, [&](SkeletonPtr skel) { return skel->Id() == animation->m_skel_id; });
+					auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
 					auto const& anim_info = *m_this.m_anim_info;
 
-					// Clamp the time range to the frame range
-					auto time_range = ToTimeRange(anim_info.m_frame_range, animation->m_frame_rate);
-					time_range = Intersect(time_range, animation->m_time_range);
+					// The time/frame range in the anim info is the portion of the animation to use during playback
+					auto time_range = ToTimeRange(anim_info.m_frame_range, anim->frame_rate());
+					time_range = Intersect(time_range, TimeRange{ 0, anim->m_duration });
 					time_range = Intersect(time_range, anim_info.m_time_range);
 
 					// Create an animator that uses the animation and a pose for it to animate
-					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(animation), true };
+					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anim), true };
 					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
 
 					// Set the pose for each model in the hierarchy.
@@ -4581,12 +4586,13 @@ namespace pr::rdr12::ldraw
 						return true;
 					}, "");
 
-					return EResult::Continue;
+					// Only use the first animation
+					return EResult::Stop;
 				}
 			};
 
 			// Create the models
-			ModelOut model_out(*obj, m_pp.m_factory, *this);
+			ModelOut model_out(*this, m_pp.m_factory, *obj);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
 		}
@@ -5940,8 +5946,9 @@ namespace pr::rdr12::ldraw
 
 			// Create an LdrObject for each model
 			LdrObjectPtr obj(new LdrObject(ELdrObject::Model, parent.obj, root->m_context_id), true);
-			obj->m_name = node.m_model->m_name;
+			obj->m_name = node.m_name;
 			obj->m_model = node.m_model;
+			obj->m_o2p = node.m_o2p;
 
 			// Add 'obj' as the current leaf node
 			parent.obj->m_child.push_back(obj);

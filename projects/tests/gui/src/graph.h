@@ -1,6 +1,5 @@
-#pragma once
+﻿#pragma once
 #include "src/forward.h"
-#include "pr/gui/graph_ctrl.h"
 
 namespace pr::gui
 {

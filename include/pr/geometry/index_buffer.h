@@ -323,7 +323,7 @@ namespace pr::geometry
 			}
 
 			// Ranged-for helper for looping over indices as type 'Idx'
-			template <std::integral Idx> auto casting_span() const
+			template <std::integral Idx> auto span_as() const
 			{
 				struct casting_span_t
 				{
@@ -584,25 +584,25 @@ namespace pr::geometry
 				{
 					case 8:
 					{
-						for (auto idx : rhs.casting_span<uint64_t const>())
+						for (auto idx : rhs.span_as<uint64_t const>())
 							m_buf.push_back(idx);
 						break;
 					}
 					case 4:
 					{
-						for (auto idx : rhs.casting_span<uint32_t const>())
+						for (auto idx : rhs.span_as<uint32_t const>())
 							m_buf.push_back(idx);
 						break;
 					}
 					case 2:
 					{
-						for (auto idx : rhs.casting_span<uint16_t const>())
+						for (auto idx : rhs.span_as<uint16_t const>())
 							m_buf.push_back(idx);
 						break;
 					}
 					case 1:
 					{
-						for (auto idx : rhs.casting_span<uint8_t const>())
+						for (auto idx : rhs.span_as<uint8_t const>())
 							m_buf.push_back(idx);
 						break;
 					}
@@ -667,7 +667,7 @@ namespace pr::geometry
 		}
 
 		// Ranged-for helper for looping over indices as type 'Idx'
-		template <std::integral Idx> auto casting_span() const
+		template <std::integral Idx> auto span_as() const
 		{
 			struct casting_span_t
 			{
@@ -845,7 +845,7 @@ namespace pr::geometry::unittests
 		}
 
 		k = 0;
-		for (auto i : ibuf0.casting_span<short>())
+		for (auto i : ibuf0.span_as<short>())
 		{
 			PR_EXPECT(i == (short)k++);
 			PR_EXPECT(sizeof(i) == sizeof(short));
@@ -903,7 +903,7 @@ namespace pr::geometry::unittests
 		}
 
 		k = 0;
-		for (auto i : ispan.casting_span<short>())
+		for (auto i : ispan.span_as<short>())
 		{
 			PR_EXPECT(i == (short)k++);
 			PR_EXPECT(sizeof(i) == sizeof(short));

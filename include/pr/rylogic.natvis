@@ -221,7 +221,7 @@ old:
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_iv4"></DisplayString>
 		-->
 	</Type>
-	<Type Name="pr::Quat">
+	<Type Name="pr::Quat&lt;*&gt;">
 		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
 		<!--
 		<DisplayString>new quat({x,g}f,  {y,g}f,  {z,g}f,  {w,g}f)</DisplayString>
@@ -235,9 +235,9 @@ old:
 		-->
 	</Type>
 	<Type Name="pr::Mat3x4&lt;*,*&gt;">
-		<DisplayString>new m3x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f)&#10;);</DisplayString>
-		<!--
 		<DisplayString>[{x.xyz}]  [{y.xyz}]  [{z.xyz}]</DisplayString>
+		<!--
+		<DisplayString>new m3x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f)&#10;);</DisplayString>
 		<DisplayString>*rot {{&#10;	{x.x} {x.y} {x.z}&#10;	{y.x} {y.y} {y.z}&#10;	{z.x} {z.y} {z.z}&#10;}}</DisplayString>
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m3x4"></DisplayString>
 		-->
@@ -246,8 +246,8 @@ old:
 		<DisplayString>[{x}]  [{y}]  [{z}]  [{w}]</DisplayString>
 		<!--
 		<DisplayString>[{x}] &#10;[{y}] &#10;[{z}] &#10;[{w}]</DisplayString>
-		<DisplayString>*o2w {{&#10;	{x.x} {x.y} {x.z} {x.w}&#10;	{y.x} {y.y} {y.z} {y.w}&#10;	{z.x} {z.y} {z.z} {z.w}&#10;	{w.x} {w.y} {w.z} {w.w}&#10;}}</DisplayString>
 		<DisplayString>new m4x4(&#10;	new v4({x.x}f, {x.y}f, {x.z}f, {x.w}f),&#10;	new v4({y.x}f, {y.y}f, {y.z}f, {y.w}f),&#10;	new v4({z.x}f, {z.y}f, {z.z}f, {z.w}f),&#10;	new v4({w.x}f, {w.y}f, {w.z}f, {w.w}f)&#10;)</DisplayString>
+		<DisplayString>*o2w {{&#10;	{x.x} {x.y} {x.z} {x.w}&#10;	{y.x} {y.y} {y.z} {y.w}&#10;	{z.x} {z.y} {z.z} {z.w}&#10;	{w.x} {w.y} {w.z} {w.w}&#10;}}</DisplayString>
 		<DisplayString LegacyAddin="P:\pr\obj\v142\prautoexp\x86\Debug\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
 		-->
 	</Type>

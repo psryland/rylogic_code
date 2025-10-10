@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -71,11 +71,12 @@ namespace pr::rdr12
 		};
 
 		// Records the independent states of up to N mips.
-		MipState m_state[16];   // last value is a sentinel
+		MipState m_state[16];         // last value is a sentinel
 
 	public:
 
-		explicit ResStateData(D3D12_RESOURCE_STATES default_state)
+		ResStateData(D3D12_RESOURCE_STATES default_state)
+			: m_state()
 		{
 			Apply(default_state);
 		}

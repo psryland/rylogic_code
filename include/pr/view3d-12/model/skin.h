@@ -21,10 +21,10 @@ namespace pr::rdr12
 		// See description in "animation.h"
 		D3DPtr<ID3D12Resource> m_res; // Buffer of 'Skinfluence[]'
 		Descriptor m_srv;             // SRV of the skin influence buffer
-		uint64_t m_skel_id;           // The skeleton that this skin is matched with.
+		uint32_t m_skel_id;           // The skeleton that this skin is matched with.
 
 		Skin();
-		Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint64_t skel_id);
+		Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint32_t skel_id);
 
 		// True if 'has skin'
 		explicit operator bool() const

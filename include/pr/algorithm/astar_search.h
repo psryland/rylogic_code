@@ -57,6 +57,9 @@ namespace pr::algorithm::astar
 
 		// The edge to the next node in the path.
 		typename C::edge_ref edge = C::NoEdge;
+
+		// The cost to reach this node
+		typename C::cost_type cost_to_node = {};
 	};
 
 	// Working data set for repeated calls
@@ -299,9 +302,11 @@ namespace pr::algorithm::astar
 						// Technically, we can known in advance if 'next.node' is in the pending list
 						// but the lookup and update on each SearchData is probably more expensive than
 						// this rarer case of trying to erase a node that isn't in the list.
-						next.huristic_cost = prev.heuristic_cost; // keep the old heuristic cost
-						next.is_goal = prev.is_goal; // keep the old goal state
 						pending.erase(next.node);
+
+						// Copy the heuristic value because that shouldn't have changed
+						next.heuristic_cost = prev.heuristic_cost;
+						next.is_goal = prev.is_goal;
 						AddToPending(next, false);
 					}
 
@@ -321,10 +326,10 @@ namespace pr::algorithm::astar
 
 		// Construct the path from 'best_match' to 'start', then reverse the order.
 		path_type path;
-		path.push_back(PathItem{ .node = best_match.node, .edge = Adapter::NoEdge });
+		path.push_back(PathItem{ .node = best_match.node, .edge = Adapter::NoEdge, .cost_to_node = best_match.cost_to_node });
 		for (auto const* i = &best_match; i->parent != Adapter::NoNode;)
 		{
-			path.push_back(PathItem{ .node = i->parent, .edge = i->parent_edge });
+			path.push_back(PathItem{ .node = i->parent, .edge = i->parent_edge, .cost_to_node = i->cost_to_node });
 
 			// Find the parent of 'i'
 			auto parent = storage.find(i->parent);

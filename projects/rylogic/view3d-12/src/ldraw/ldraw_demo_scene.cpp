@@ -1,4 +1,4 @@
-﻿//***************************************************************************************************
+//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -1159,13 +1159,19 @@ namespace pr::rdr12::ldraw
 			"}\n"
 			"\n"
 			"// Model from a 3D model file.\n"
-			"// Supported formats: *.3ds, *.stl, *.p3d, (so far)\n"
+			"// Supported formats: *.p3d, *fbx, *.3ds, *.stl, (so far)\n"
 			"*Model model_from_file\n"
 			"{\n"
 			"	//*FilePath {\"<model-filepath>\"} // The file to create the model from\n"
-			"	*Parts {}                        // Only load named models from the file\n"
-			"	*Animation {}                    // Load animation data from the model file\n"
-			"	*GenerateNormals {30}            // Generate normals for the model (smoothing angle between faces)\n"
+			"	*Parts {}                        // Optional. Only load named models from the file\n"
+			"	*Animation {                     // Optional. Load animation data from the model file\n"
+			"		*Style {PingPong}            // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong\n"
+			"		*Frame {10}                  // Load a single frame from the animation\n"
+			"		*FrameRange {10 20}          // Load a sub range of frames from the animation\n"
+			"		*TimeRange {0.4 2.0}         // Load a time range from the animation\n"
+			"		*Stretch {1.2}               // Change the duration of the animation\n"
+			"	}\n"
+			"	*GenerateNormals {30}            // Optional. Generate normals for the model (smoothing angle between faces)\n"
 			"	*BakeTransform {*pos{0 0 0}}     // Optional. Bake a transform into the model (independent of *o2w)\n"
 			"}\n"
 			"\n"

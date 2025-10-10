@@ -11,176 +11,26 @@
 
 namespace pr::rdr12
 {
-	constexpr int HeapCapacityView = 256;
+	constexpr int HeapCapacityView = 65536;
 	constexpr int HeapCapacitySamp = 16;
 	constexpr int HeapIdxMsaaRtv = 0;
 	constexpr int HeapIdxMsaaDsv = 0;
 	constexpr int HeapIdxSwapRtv = 1;
 
 	// Constructor
-	Window::Window(Renderer& rdr, WndSettings const& settings)
-		:m_rdr(&rdr)
-		,m_hwnd(settings.m_hwnd)
-		,m_hwnd_dummy()
-		,m_swap_chain_flags(settings.m_swap_chain_flags)
-		,m_swap_chain_dbg()
-		,m_swap_chain()
-		,m_rtv_heap()
-		,m_dsv_heap()
-		,m_d2d_dc()
-		,m_gsync(rdr.D3DDevice())
-		,m_swap_bb(settings.m_buffer_count)
-		,m_msaa_bb()
-		,m_bb_index()
-		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
-		,m_ds_props(settings.m_depth_format, 1.0f, 0)
-		,m_cmd_alloc_pool(m_gsync)
-		,m_cmd_list_pool(m_gsync)
-		,m_heap_view(HeapCapacityView, m_gsync)
-		,m_heap_samp(HeapCapacitySamp, m_gsync)
-		,m_res_state()
-		,m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
-		,m_diag(*this)
-		,m_frame_number()
-		,m_vsync(settings.m_vsync)
-		,m_idle(false)
-		,m_name(settings.m_name)
+	WindowBase::WindowBase(Renderer& rdr, WndSettings const& settings)
+		: m_rdr(&rdr)
+		, m_hwnd(settings.m_hwnd)
+		, m_hwnd_dummy()
+		, m_swap_chain_flags(settings.m_swap_chain_flags)
+		, m_swap_chain_dbg()
+		, m_swap_chain()
+		, m_rtv_heap()
+		, m_dsv_heap()
+		, m_d2d_dc()
+	{}
+	WindowBase::~WindowBase()
 	{
-		// Notes:
-		//  The swap chain is the data that's sent to the monitor, and monitors can't display MSAA textures.
-		//  In older versions of D3D, they allowed you to do this, and internally they pulled some magic to resolve the MSAA data
-		//  to a non-MSAA texture before it was sent to the monitor. D3D12 gets rid of all that internal magic. So -
-		//  create your swap chain as normal (non-MSAA), but create yourself another texture that is MSAA and render
-		//  the scene to it. Then resolve your MSAA texture to your non-MSAA swap chain.
-		//
-		// Todo: w-buffer
-		//  https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
-		//  https://www.mvps.org/directx/articles/using_w-buffers.htm
-
-		try
-		{
-			auto device = rdr.D3DDevice();
-
-			// Validate settings
-			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_options, ERdrOptions::BGRASupport))
-				Check(false, "D3D device has not been created with GDI compatibility");
-			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
-				Check(false, "GDI compatibility does not support multi-sampling");
-			if (settings.m_vsync && (settings.m_mode.RefreshRate.Numerator == 0 || settings.m_mode.RefreshRate.Denominator == 0))
-				Check(false, "If VSync is enabled, the refresh rate should be provided (matching the value returned from the graphics card)");
-			if (settings.m_multisamp.Count < 1 || settings.m_multisamp.Count > D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT)
-				Check(false, "MSAA sample count invalid");
-
-			// Check feature support
-			auto const& features = rdr.Features();
-			auto multisamp = settings.m_multisamp;
-			multisamp.ScaleQualityLevel(device, m_rt_props.Format);
-			multisamp.ScaleQualityLevel(device, m_ds_props.Format);
-			if (multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-				Check(false, "Device does not support MSAA for requested render target format");
-			if (multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-				Check(false, "Device does not support MSAA for requested depth stencil format");
-
-			// Get the factory that was used to create 'rdr.m_device'
-			D3DPtr<IDXGIFactory4> factory;
-			Check(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void**)factory.address_of()));
-
-			// Create the swap chain, if there is a HWND. (Depth Stencil created into BackBufferSize)
-			if (settings.m_hwnd != nullptr)
-			{
-				DXGI_SWAP_CHAIN_DESC1 desc0 = {
-					.Width = settings.m_mode.Width,
-					.Height = settings.m_mode.Height,
-					.Format = settings.m_mode.Format,
-					.Stereo = false, // interesting...
-					.SampleDesc = MultiSamp{}, // Flip Swap chains are always 1 sample
-					.BufferUsage = settings.m_usage,
-					.BufferCount = settings.m_buffer_count,
-					.Scaling = settings.m_scaling,
-					.SwapEffect = settings.m_swap_effect,
-					.AlphaMode = settings.m_alpha_mode,
-					.Flags = s_cast<UINT>(settings.m_swap_chain_flags),
-				};
-				DXGI_SWAP_CHAIN_FULLSCREEN_DESC desc1 = {
-					.RefreshRate = settings.m_mode.RefreshRate,
-					.ScanlineOrdering = settings.m_mode.ScanlineOrdering,
-					.Scaling = settings.m_mode.Scaling,
-					.Windowed = settings.m_windowed,
-				};
-
-				// Create the swap chain. Swap chains only contain render targets, not deep buffers.
-				D3DPtr<IDXGISwapChain1> swap_chain;
-				Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, swap_chain.address_of()));
-				Check(swap_chain->QueryInterface(m_swap_chain.address_of()));
-				DebugName(m_swap_chain, "SwapChain");
-		
-				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-				Check(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
-			}
-			else
-			{
-				// Creating a 'Window' with hwnd == nullptr is allowed if you only want to render to off-screen render targets.
-				m_swap_bb.resize(0); // callers should use CustomSwapChain().
-			}
-
-			// Create a descriptor heap for the back buffers (swap chain buffers + MSAA RT).
-			D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
-				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-				.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
-				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			};
-			Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_rtv_heap.address_of()));
-
-			// Create a descriptor heap for the depth stencil
-			D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
-				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-				.NumDescriptors = 1,
-				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			};
-			Check(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_dsv_heap.address_of()));
-
-			// If D2D is enabled, create a device context for this window
-			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
-			{
-				// Create a D2D device context
-				Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, m_d2d_dc.address_of()));
-			}
-
-			// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
-			if (AllSet(rdr.Settings().m_options, ERdrOptions::DeviceDebug))
-			{
-				DXGI_SWAP_CHAIN_DESC sd = {
-					.BufferDesc = DisplayMode(16,16),
-					.SampleDesc = MultiSamp(),
-					.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-					.BufferCount = 2,
-					.OutputWindow = m_hwnd_dummy,
-					.Windowed = TRUE,
-					.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
-					.Flags = s_cast<DXGI_SWAP_CHAIN_FLAG>(0),
-				};
-				Check(factory->CreateSwapChain(rdr.GfxQueue(), &sd, m_swap_chain_dbg.address_of()));
-				DebugName(m_swap_chain_dbg, FmtS("swap chain dbg"));
-			}
-
-			// Initialise the render target views
-			BackBufferSize(iv2{s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height)}, true, &multisamp);
-		}
-		catch (...)
-		{
-			this->~Window();
-			throw;
-		}
-	}
-	Window::~Window()
-	{
-		// Release COM pointers
-		m_rtv_heap = nullptr;
-		m_dsv_heap = nullptr;
-		m_msaa_bb = {};
-		m_swap_bb.resize(0);
-		m_gsync.Release();
-
 		// Destroy the D2D device context
 		if (m_d2d_dc != nullptr)
 		{
@@ -210,6 +60,146 @@ namespace pr::rdr12
 			m_swap_chain_dbg->SetFullscreenState(FALSE, nullptr);
 			m_swap_chain_dbg = nullptr;
 		}
+	}
+
+	// Constructor
+	Window::Window(Renderer& rdr, WndSettings const& settings)
+		:WindowBase(rdr, settings)
+		,m_gsync(rdr.D3DDevice())
+		,m_swap_bb(settings.m_buffer_count)
+		,m_msaa_bb()
+		,m_bb_index()
+		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
+		,m_ds_props(settings.m_depth_format, 1.0f, 0)
+		,m_cmd_alloc_pool(m_gsync)
+		,m_cmd_list_pool(m_gsync)
+		,m_heap_view(HeapCapacityView, m_gsync)
+		,m_heap_samp(HeapCapacitySamp, m_gsync)
+		,m_res_state()
+		,m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
+		,m_diag(*this)
+		,m_frame_number()
+		,m_vsync(settings.m_vsync)
+		,m_idle(false)
+		,m_name(settings.m_name)
+	{
+		// Notes:
+		//  The swap chain is the data that's sent to the monitor, and monitors can't display MSAA textures.
+		//  In older versions of D3D, they allowed you to do this, and internally they pulled some magic to resolve the MSAA data
+		//  to a non-MSAA texture before it was sent to the monitor. D3D12 gets rid of all that internal magic. So -
+		//  create your swap chain as normal (non-MSAA), but create yourself another texture that is MSAA and render
+		//  the scene to it. Then resolve your MSAA texture to your non-MSAA swap chain.
+		//
+		// Todo: w-buffer
+		//  https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
+		//  https://www.mvps.org/directx/articles/using_w-buffers.htm
+
+		auto device = rdr.D3DDevice();
+
+		// Validate settings
+		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_options, ERdrOptions::BGRASupport))
+			Check(false, "D3D device has not been created with GDI compatibility");
+		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
+			Check(false, "GDI compatibility does not support multi-sampling");
+		if (settings.m_vsync && (settings.m_mode.RefreshRate.Numerator == 0 || settings.m_mode.RefreshRate.Denominator == 0))
+			Check(false, "If VSync is enabled, the refresh rate should be provided (matching the value returned from the graphics card)");
+		if (settings.m_multisamp.Count < 1 || settings.m_multisamp.Count > D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT)
+			Check(false, "MSAA sample count invalid");
+
+		// Check feature support
+		auto const& features = rdr.Features();
+		auto multisamp = settings.m_multisamp;
+		multisamp.ScaleQualityLevel(device, m_rt_props.Format);
+		multisamp.ScaleQualityLevel(device, m_ds_props.Format);
+		if (multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			Check(false, "Device does not support MSAA for requested render target format");
+		if (multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			Check(false, "Device does not support MSAA for requested depth stencil format");
+
+		// Get the factory that was used to create 'rdr.m_device'
+		D3DPtr<IDXGIFactory4> factory;
+		Check(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void**)factory.address_of()));
+
+		// Create the swap chain, if there is a HWND. (Depth Stencil created into BackBufferSize)
+		if (settings.m_hwnd != nullptr)
+		{
+			DXGI_SWAP_CHAIN_DESC1 desc0 = {
+				.Width = settings.m_mode.Width,
+				.Height = settings.m_mode.Height,
+				.Format = settings.m_mode.Format,
+				.Stereo = false, // interesting...
+				.SampleDesc = MultiSamp{}, // Flip Swap chains are always 1 sample
+				.BufferUsage = settings.m_usage,
+				.BufferCount = settings.m_buffer_count,
+				.Scaling = settings.m_scaling,
+				.SwapEffect = settings.m_swap_effect,
+				.AlphaMode = settings.m_alpha_mode,
+				.Flags = s_cast<UINT>(settings.m_swap_chain_flags),
+			};
+			DXGI_SWAP_CHAIN_FULLSCREEN_DESC desc1 = {
+				.RefreshRate = settings.m_mode.RefreshRate,
+				.ScanlineOrdering = settings.m_mode.ScanlineOrdering,
+				.Scaling = settings.m_mode.Scaling,
+				.Windowed = settings.m_windowed,
+			};
+
+			// Create the swap chain. Swap chains only contain render targets, not deep buffers.
+			D3DPtr<IDXGISwapChain1> swap_chain;
+			Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, swap_chain.address_of()));
+			Check(swap_chain->QueryInterface(m_swap_chain.address_of()));
+			DebugName(m_swap_chain, "SwapChain");
+		
+			// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
+			Check(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+		}
+		else
+		{
+			// Creating a 'Window' with hwnd == nullptr is allowed if you only want to render to off-screen render targets.
+			m_swap_bb.resize(0); // callers should use CustomSwapChain().
+		}
+
+		// Create a descriptor heap for the back buffers (swap chain buffers + MSAA RT).
+		D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
+			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
+			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		};
+		Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_rtv_heap.address_of()));
+
+		// Create a descriptor heap for the depth stencil
+		D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
+			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+			.NumDescriptors = 1,
+			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		};
+		Check(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)m_dsv_heap.address_of()));
+
+		// If D2D is enabled, create a device context for this window
+		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+		{
+			// Create a D2D device context
+			Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, m_d2d_dc.address_of()));
+		}
+
+		// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
+		if (AllSet(rdr.Settings().m_options, ERdrOptions::DeviceDebug))
+		{
+			DXGI_SWAP_CHAIN_DESC sd = {
+				.BufferDesc = DisplayMode(16,16),
+				.SampleDesc = MultiSamp(),
+				.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+				.BufferCount = 2,
+				.OutputWindow = m_hwnd_dummy,
+				.Windowed = TRUE,
+				.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+				.Flags = s_cast<DXGI_SWAP_CHAIN_FLAG>(0),
+			};
+			Check(factory->CreateSwapChain(rdr.GfxQueue(), &sd, m_swap_chain_dbg.address_of()));
+			DebugName(m_swap_chain_dbg, FmtS("swap chain dbg"));
+		}
+
+		// Initialise the render target views
+		BackBufferSize(iv2{s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height)}, true, &multisamp);
 	}
 
 	// Access the renderer manager classes
