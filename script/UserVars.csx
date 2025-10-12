@@ -32,7 +32,7 @@ public class UserVars
 
 	/// <summary>The version of installed Visual Studio</summary>
 	public static string VSVersion => "17.0";
-	public static string VCVersion => "14.41.34120";
+	public static string VCVersion => "14.44.35207";
 
 	/// <summary>Visual Studio installation directory</summary>
 	public static string VSDir => m_vs_dir ??= Path(["C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise"]);
@@ -69,9 +69,16 @@ public class UserVars
 	}
 	private static string? m_code_sign_cert_pw = null;
 
-	/// <summary>Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)</summary>
+	/// <summary>Nuget package manager</summary>
 	public static string Nuget => Path([Root, "tools\\nuget\\nuget.exe"]);
-	public static string? NugetApiKey = null; // Leave as none, set once per script run
+
+	/// <summary>API Key for publishing nuget packages (regenerated every 6months)</summary>
+	public static string NugetApiKey
+	{
+		get => m_nuget_api_key ??= UserSecret("RylogicNugetAPIKey") ?? throw new Exception("Nuget API Key no set");
+		set => m_nuget_api_key = value;
+	}
+	private static string? m_nuget_api_key = null;
 
 	/// <summary>The full path to the windows sdk and version</summary>
 	public static string WinSDKVersion => m_win_sdk_version ??= "10.0.26100.0";

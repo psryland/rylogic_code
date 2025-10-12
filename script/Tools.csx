@@ -113,7 +113,7 @@ public class Tools
 	public static void SetupVcEnvironment()
 	{
 		// Already set up
-		if (Environment.GetEnvironmentVariable("VISUALSTUDIOVERSION") is not null)
+		if (m_vc_env_setup)
 			return;
 
 		// Not a windows environment
@@ -122,40 +122,55 @@ public class Tools
 
 		Console.WriteLine("Initializing VS Environment");
 
-		// Just need this?
-		// set VCToolsInstallDir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\
-		// set PATH=%VCToolsInstallDir%bin\Hostx64\x64;%PATH%
-
-		// Find 'vswhere.exe' from the VS installer
-		var program_files = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? throw new Exception("ProgramFiles(x86) environment variable is not defined");
-		var vswhere = Path([program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe"]);
-
-		// Get the VS install path
-		var (_, vs_path) = Run([vswhere, "-latest", "-property", "installationPath"]);
-		vs_path = vs_path.TrimEnd();
-
-		// Get the VcVars batch file
-		var vsvars_path = Path([vs_path, "VC", "Auxiliary", "Build", "vcvars64.bat"]);
-
-		// Run the vcvars batch file, then dump the state of the environment variables
-		var (_, env) = Run(["cmd", "/C", vsvars_path, "&", "set"]);
-
-		// Add/Replace the environment variables in 'os.environ'
-		foreach (var line in env.Split("\n", StringSplitOptions.RemoveEmptyEntries))
+		// Check for newer versions
 		{
-			var m = Regex.Match(line, "^(.+?)=(.*)$");
-			if (!m.Success)
-				continue;
-
-			var key = m.Groups[1].Value.Trim();
-			var value = m.Groups[2].Value.Trim();
-			Environment.SetEnvironmentVariable(key, value);
+			var msvc_version = Path([UserVars.VSDir, $"VC\\Tools\\MSVC"]);
+			var available_versions = Directory.GetDirectories(msvc_version).Select(IOPath.GetFileName).OrderByDescending(x => x).ToList();
+			if (available_versions.Count == 0 || !available_versions.Contains(UserVars.VCVersion))
+				throw new Exception($"\n *** VC Version not Found : Latest = {available_versions[0]} *** \n");
+			if (UserVars.VCVersion.CompareTo(available_versions[0]) < 0)
+				Console.WriteLine($"\n *** Newer VC Version Available : Latest = {available_versions[0]} *** \n");
 		}
 
-		//Console.WriteLine("Environment:\n");
-		//foreach (System.Collections.DictionaryEntry x in Environment.GetEnvironmentVariables())
-		//	Console.WriteLine($"{x.Key} = {x.Value}");
+		// Just need this?
+		var path = Environment.GetEnvironmentVariable("PATH");
+		var msbuild_tools = Path([UserVars.VSDir, "MSBuild\\Current\\Bin"]);
+		var vc_tools = Path([UserVars.VSDir, $"VC\\Tools\\MSVC\\{UserVars.VCVersion}\\bin\\Hostx64\\x64"]);
+		Environment.SetEnvironmentVariable("PATH", $"{msbuild_tools};{vc_tools};{path}");
+
+		m_vc_env_setup = true;
+
+		/* Previous method
+		{
+			// Find 'vswhere.exe' from the VS installer
+			var program_files = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? throw new Exception("ProgramFiles(x86) environment variable is not defined");
+			var vswhere = Path([program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe"]);
+
+			// Get the VS install path
+			var (_, vs_path) = Run([vswhere, "-latest", "-property", "installationPath"]);
+			vs_path = vs_path.TrimEnd();
+
+			// Get the VcVars batch file
+			var vsvars_path = Path([vs_path, "VC", "Auxiliary", "Build", "vcvars64.bat"]);
+
+			// Run the vcvars batch file, then dump the state of the environment variables
+			var (_, env) = Run(["cmd", "/C", vsvars_path, "&", "set"]);
+
+			// Add/Replace the environment variables in 'os.environ'
+			foreach (var line in env.Split("\n", StringSplitOptions.RemoveEmptyEntries))
+			{
+				var m = Regex.Match(line, "^(.+?)=(.*)$");
+				if (!m.Success)
+					continue;
+
+				var key = m.Groups[1].Value.Trim();
+				var value = m.Groups[2].Value.Trim();
+				Environment.SetEnvironmentVariable(key, value);
+			}
+		}
+		*/
 	}
+	private static bool m_vc_env_setup = false;
 
 	// Invoke MSBuild on a solution or project file.
 	// Solution file usage:
@@ -242,6 +257,28 @@ public class Tools
 		return !errors;
 	}
 
+	// Sign an assembly
+	public static void SignAssembly(string target)
+	{
+		if (UserVars.CodeSignCert_Pfx.Length == 0)
+			return;
+
+		Run([UserVars.SignTool, "sign", "/f", UserVars.CodeSignCert_Pfx, "/p", UserVars.CodeSignCert_Pw, "/fd", "SHA1", target]);
+	}
+
+	// Sign a VSIX extension package
+	public static void SignVsix(string vsix_filepath, string algo)
+	{
+		// Use 'dotnet tool install -g OpenVsixSignTool' to install 'OpenVsixSignTool'
+		// 'OpenVsixSignTool' is an open source (and better) version of 'VsixSignTool' (https://github.com/vcsjones/OpenOpcSignTool)
+		// 'e1053e6fa1aeb7bd4ee453302116a129ca4112f9' is the thumbprint of the code signing certificate installed on the machine.
+		// Run 'mmc' then add 'Certificates' to the console. Find your code signing cert (Rylogic Limited, Sectigo RSA Code Signing CA),
+		// and open it. Under 'details' find 'Thumbprint'. The OpenVsixSignTool uses this hash value to find the cert in the store.
+		// If the vsix supports VS versions less than 14.0, you need to use "-fd sha1" or the cert shows up as invalid. If the VSIX only
+		// supports VS versions >= 14.0, use sha256 instead.
+		Run(["openvsixsigntool", "sign", "--sha1", UserVars.CodeSignCert_Thumbprint, "-fd", algo, vsix_filepath]);
+	}
+
 	// Extract data from a text file using a regex
 	// Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 	// Returns the regex match object for the first match or null
@@ -266,6 +303,20 @@ public class Tools
 		}
 
 		return Match.Empty;
+	}
+
+	// Extract data from a text file using a regex
+	// Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
+	// Returns a collection of matches from within the file
+	// Encoding can be: ascii, utf-8, cp1250, etc
+	public static IEnumerable<Match> ExtractMany(string filepath, Regex pat, Encoding? encoding = null)
+	{
+		foreach (var line in File.ReadAllLines(filepath, encoding: encoding ?? Encoding.UTF8))
+		{
+			var m = pat.Match(line);
+			if (m.Success)
+				yield return m;
+		}
 	}
 
 	// Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'

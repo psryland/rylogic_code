@@ -6,6 +6,7 @@
 #load "UserVars.csx"
 #load "Tools.csx"
 #load "BuildInstaller.csx"
+#load "Nuget.csx"
 #nullable enable
 
 using System;
@@ -42,18 +43,53 @@ public enum EProjects
 }
 
 // Base class for all builders
-public class Common(string workspace)
+public abstract class Common
 {
-	public string Workspace = workspace;
-	public bool RequiresSigning = false;
+	public string Workspace;
+	public bool RequiresSigning;
+	public Common(string workspace)
+	{
+		Workspace = workspace;
+		RequiresSigning = false;
+	}
 	public virtual void Clean() { }
 	public virtual void Build() { }
 	public virtual void Deploy() { }
 	public virtual void Publish() { }
 }
 
+// Groups of projects
+public abstract class Group : Common
+{
+	public List<Common> Items = [];
+
+	public Group(string workspace)
+		: base(workspace)
+	{ }
+	public override void Clean()
+	{
+		foreach (var item in Items)
+			item.Clean();
+	}
+	public override void Build()
+	{
+		foreach (var item in Items)
+			item.Build();
+	}
+	public override void Deploy()
+	{
+		foreach (var item in Items)
+			item.Deploy();
+	}
+	public override void Publish()
+	{
+		foreach (var item in Items)
+			item.Publish();
+	}
+}
+
 // Base class for .NET projects
-public class Managed : Common
+public abstract class Managed : Common
 {
 	public string ProjName;
 	public string ProjDir;
@@ -106,13 +142,55 @@ public class Managed : Common
 	private static List<string> m_restored = [];
 }
 
+// Rylogic .NET assembly (base)
+public abstract class RylogicAssembly : Managed
+{
+	public string? Nupkg = null;
+
+	public RylogicAssembly(string proj_name, List<string> frameworks, string workspace, List<string>? platforms, List<string>? configs)
+		:base(proj_name, Tools.Path([workspace, "projects\\rylogic", proj_name]), frameworks, workspace, platforms, configs)
+	{
+	}
+	public override void Build()
+	{
+		DotNetRestore(RylogicSln);
+		Tools.MSBuild(RylogicSln, [$"Rylogic\\{ProjName}"], Platforms, Configs);
+	}
+	public override void Deploy()
+	{
+		Nupkg = Nuget.Package(Tools.Path([ProjDir, $"{ProjName}.csproj"]), NugetFiles());
+	}
+	public override void Publish()
+	{
+		if (Nupkg is null || !Path.Exists(Nupkg))
+			throw new Exception("Call Deploy before calling Publish");
+
+		Nuget.Publish(Nupkg);
+	}
+	protected abstract IEnumerable<Nuget.File> NugetFiles();
+}
+
+// Rylogic.Core .NET assembly
+public class RylogicCore : RylogicAssembly
+{
+	public RylogicCore(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Core", ["net9.0", "net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override IEnumerable<Nuget.File> NugetFiles()
+	{
+		// Rylogic.Core isn't depended on windows
+		foreach (var fw in (string[])["net9.0", "net481"])
+			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib\\{fw}\\", true);
+	}
+}
+
 // LDraw
 class LDraw : Managed
 {
 	public string DeployDir = string.Empty;
 	public string? MsiPath = null;
 
-	public LDraw(string workspace, IList<string>? platforms = null, IList<string>? configs = null)
+	public LDraw(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("LDraw", "/projects/apps/LDraw", ["net9.0-windows"], workspace, ["x64"], configs)
 	{
 		DeployDir = Tools.Path([UserVars.Root, "bin/LDraw"], check_exists: false);
@@ -337,8 +415,9 @@ void Main(IList<string> args)
 
 // Testing
 List<string> args =
-	Environment.GetCommandLineArgs().Skip(2).ToList();
+	//Environment.GetCommandLineArgs().Skip(2).ToList();
 	//["-project", "LDraw", "-deploy"];
+	["-project", "Rylogic.Core", "-build", "-deploy"];
 
 if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
 	Console.WriteLine("WARNING: Command line overridden for testing");
