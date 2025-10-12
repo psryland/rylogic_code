@@ -64,7 +64,7 @@ public class UserVars
 	/// <summary>Code signing cert password</summary>
 	public static string CodeSignCert_Pw
 	{
-		get => m_code_sign_cert_pw ??= Prompt("Code Signing Cert Password: ");
+		get => m_code_sign_cert_pw ??= UserSecret("RylogicCodeSigningCertPassword") ?? Prompt("Code Signing Cert Password: ");
 		set => m_code_sign_cert_pw = value;
 	}
 	private static string? m_code_sign_cert_pw = null;
@@ -130,6 +130,27 @@ public class UserVars
 
 		// return file.FileName;
 		throw new NotImplementedException("Browse method is not implemented. Use OpenFileDialog in a WPF context.");
+	}
+
+	/// <summary>Try to read a user secret with the given name</summary>
+	public static string? UserSecret(string name)
+	{
+		try
+		{
+			var secrets_filepath = Path([Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "user-secrets", "secrets.json"], check_exists: false);
+			if (File.Exists(secrets_filepath))
+			{
+				using var file = File.OpenText(secrets_filepath);
+				using var json = JsonDocument.Parse(file.ReadToEnd());
+				if (json.RootElement.TryGetProperty(name, out var secret))
+					return secret.GetString();
+			}
+		}
+		catch (Exception ex)
+		{
+			Debug.WriteLine($"Error reading user-secrets: {ex.Message}");
+		}
+		return null;
 	}
 
 	/// <summary>Load user provided defaults</summary>

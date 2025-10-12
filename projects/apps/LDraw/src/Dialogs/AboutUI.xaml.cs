@@ -17,12 +17,12 @@ namespace LDraw.Dialogs
 
 			DataContext = this;
 
-			var anim = $"*Animation {{ *Style PlayContinuous *Period {{1}} *AngVelocity {{ 1 1 1 }} }}";
+			var anim = $"*RootAnimation {{ *Style {{Continuous}} *Period {{1}} *AngVelocity {{ 1 1 1 }} }}";
 			var src = m_view.View3d.LoadScriptFromString(
-				$"*Sphere s FF0000FF {{ 0.6 }}\n" +
-				$"*Box b0 FFFF0000 {{ 1.003 {anim} }}\n" +
-				$"*Box b1 FF00FF00 {{ 1.002 {anim} }}\n" +
-				$"*Box b2 FF0000FF {{ 1.001 {anim} }}\n");
+				$"*Sphere s FF0000FF {{ *Data {{0.6}} }}\n" +
+				$"*Box b0 FFFF0000 {{ *Data {{1.003}} {anim} }}\n" +
+				$"*Box b1 FF00FF00 {{ *Data {{1.002}} {anim} }}\n" +
+				$"*Box b2 FF0000FF {{ *Data {{1.001}} {anim} }}\n");
 
 			m_view.Window.AddObjects(src.ContextId);
 			m_view.Window.SetLightSource(v4.Origin, new v4(-1, -1, -2, 0), true);

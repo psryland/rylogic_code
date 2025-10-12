@@ -54,12 +54,15 @@ public class Tools
 				Arguments = arguments,
 				RedirectStandardOutput = return_output,
 				RedirectStandardError = return_output,
-				UseShellExecute = shell,
-				CreateNoWindow = true,
+				UseShellExecute = shell, // Must be false to redirect output
+				CreateNoWindow = false, // Show output in current console window
 				WorkingDirectory = cwd ?? string.Empty,
-				StandardOutputEncoding = encoding ?? Encoding.UTF8,
-				StandardErrorEncoding = encoding ?? Encoding.UTF8,
 			};
+			if (return_output)
+			{
+				psi.StandardOutputEncoding = encoding ?? Encoding.UTF8;
+				psi.StandardErrorEncoding = encoding ?? Encoding.UTF8;
+			}
 
 			using var proc = new Process { StartInfo = psi };
 			proc.Start();
@@ -119,6 +122,10 @@ public class Tools
 
 		Console.WriteLine("Initializing VS Environment");
 
+		// Just need this?
+		// set VCToolsInstallDir=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\
+		// set PATH=%VCToolsInstallDir%bin\Hostx64\x64;%PATH%
+
 		// Find 'vswhere.exe' from the VS installer
 		var program_files = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? throw new Exception("ProgramFiles(x86) environment variable is not defined");
 		var vswhere = Path([program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe"]);
@@ -163,7 +170,7 @@ public class Tools
 	//	platforms = ["x64","x86","AnyCPU"]
 	//	configs = ["release","debug"]
 	//	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-	public static void MSBuild(string sln_or_proj_file, IList<string>? projects = null, IList<string>? platforms = null, IList<string>? configs = null, bool parallel = false, bool same_window = true, IList<string>? additional_args = null)
+	public static bool MSBuild(string sln_or_proj_file, IList<string>? projects = null, IList<string>? platforms = null, IList<string>? configs = null, bool parallel = false, bool same_window = true, IList<string>? additional_args = null)
 	{
 		SetupVcEnvironment();
 
@@ -211,15 +218,20 @@ public class Tools
 						else
 						{
 							Console.WriteLine($"{platform}|{config}:");
-							Run(args_);
+							Run(args_, return_output: false, show_arguments: false);
 						}
 					}
 				}
 			}
 		}
-		// Wait for all processes to finish, and check for error return codes
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Build Errors: {ex.Message}");
+			errors = true;
+		}
 		finally
 		{
+			// Wait for all processes to finish, and check for error return codes
 			foreach (var proc in procs)
 			{
 				proc.WaitForExit();
@@ -227,8 +239,7 @@ public class Tools
 			}
 		}
 
-		if (errors)
-			throw new Exception("Build Failed");
+		return !errors;
 	}
 
 	// Extract data from a text file using a regex
@@ -258,7 +269,7 @@ public class Tools
 	}
 
 	// Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-	public static void Copy(string src, string dst, bool only_if_modified = true, bool show_unchanged = false, bool ignore_missing = false, bool quiet = false, bool full_paths = true, Regex? filter = null, bool follow_symlinks = true)
+	public static void Copy(string src, string dst, bool only_if_modified = true, bool show_unchanged = false, bool ignore_missing = false, bool quiet = false, bool full_paths = true, Regex? filter = null, bool follow_symlinks = true, string? indent = null)
 	{
 		bool src_is_dir = src.EndsWith("/") || src.EndsWith("\\");
 		bool dst_is_dir = dst.EndsWith("/") || dst.EndsWith("\\");
@@ -266,6 +277,8 @@ public class Tools
 		dst = Path([dst], check_exists: false);
 		src_is_dir |= Directory.Exists(src);
 		dst_is_dir |= Directory.Exists(dst) || src_is_dir;
+
+		indent ??= string.Empty;
 
 		// Find the source files/directories to copy (filenames only, not full paths)
 		List<string> lst = [];
@@ -320,7 +333,13 @@ public class Tools
 			}
 
 			if (!quiet)
-				Console.WriteLine($"{srcdir} --> {dstdir}");
+			{
+				if (full_paths)
+					Console.WriteLine($"{indent}{srcdir}\\ --> {dstdir}\\");
+				else
+					Console.WriteLine($"{indent}{IOPath.GetFileName(srcdir)}\\ --> {IOPath.GetFileName(dstdir)}\\");
+			}
+				;
 		}
 
 		// Copy the source files/directories to 'dst'
@@ -336,7 +355,7 @@ public class Tools
 			// Call recursively for directory copies
 			if (Directory.Exists(s))
 			{
-				Copy(s, d + "\\", only_if_modified, show_unchanged, ignore_missing, quiet, full_paths, filter, follow_symlinks);
+				Copy(s, d + "\\", only_if_modified, show_unchanged, ignore_missing, quiet, full_paths, filter, follow_symlinks, indent + indent);
 			}
 			else
 			{
@@ -348,7 +367,7 @@ public class Tools
 				if (only_if_modified && !DiffContent(s, d))
 				{
 					if (!quiet && show_unchanged)
-						Console.WriteLine($"{s} --> unchanged");
+						Console.WriteLine($"{indent}{s} --> unchanged");
 
 					continue;
 				}
@@ -356,30 +375,55 @@ public class Tools
 				if (!quiet)
 				{
 					if (full_paths)
-						Console.WriteLine($"{s} --> {d}");
+						Console.WriteLine($"{indent}{s} --> {d}");
 					else
-						Console.WriteLine($"{IOPath.GetFileName(s)} --> {IOPath.GetFileName(d)}");
+						Console.WriteLine($"{indent}{IOPath.GetFileName(s)} --> {IOPath.GetFileName(d)}");
 				}
 				File.Copy(s, d, true);
 			}
 		}
 	}
 
-	// Helper: Compare file contents
-	public static bool DiffContent(string src, string dst)
+	// Compare the content of two files and return true if they are different, ignoring file timestamps
+	public static bool DiffContent(string src, string dst, bool trace = false, int blocksize = 65536)
 	{
-		if (!File.Exists(dst))
-			return true;
+		var sfound = File.Exists(src);
+		var dfound = File.Exists(dst);
 
-		var srcInfo = new FileInfo(src);
-		var dstInfo = new FileInfo(dst);
-
-		if (srcInfo.Length != dstInfo.Length)
+		if (!sfound)
+		{
+			if (trace) Console.WriteLine($"Content different, '{src}' not found");
 			return true;
-		if (srcInfo.LastWriteTime > dstInfo.LastWriteTime)
+		}
+		if (!dfound)
+		{
+			if (trace) Console.WriteLine($"Content different, '{dst}' not found");
 			return true;
+		}
 
-		// Optionally, compare file contents byte by byte for more accuracy
+		var src_info = new FileInfo(src);
+		var dst_info = new FileInfo(dst);
+
+		if (src_info.Length != dst_info.Length)
+		{
+			if (trace) Console.WriteLine($"Content different, '{src}' and '{dst}' have different sizes");
+			return true;
+		}
+
+		using (var sha256 = System.Security.Cryptography.SHA256.Create())
+		{
+			byte[] srcHash, dstHash;
+			using (var s = new FileStream(src, FileMode.Open, FileAccess.Read))
+				srcHash = sha256.ComputeHash(s);
+			using (var d = new FileStream(dst, FileMode.Open, FileAccess.Read))
+				dstHash = sha256.ComputeHash(d);
+
+			if (!srcHash.SequenceEqual(dstHash))
+			{
+				if (trace) Console.WriteLine($"Content different, '{src}' and '{dst}' have different hashes");
+				return true;
+			}
+		}
 		return false;
 	}
 }

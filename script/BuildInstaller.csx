@@ -38,6 +38,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Rylogic.Extn;
 
 public class HarvestPath
 {
@@ -58,105 +59,7 @@ public class HarvestPath
 }
 
 public class BuildInstaller
-{
-	// Generate a UUID suitable for an Id
-	private static string Id()
-	{
-		return Guid.NewGuid().ToString("N").ToUpper();
-	}
-
-	// Add a single file component to 'elem'
-	private static void CreateFileComponent(XElement elem, string filepath, bool keypath = true, string? directory_id = null)
-	{
-		// Get the file title from the full filepath
-		var file = Path.GetFileNameWithoutExtension(filepath);
-		file = Regex.Replace(file, @"[^0-9a-zA-Z_]", "_");
-		var uid = Id();
-
-		// Create the component to contain the file
-		var cmp_attr = new Dictionary<string, string>
-		{
-			["Id"] = $"Cmp_{file}_{uid}"[..72],
-			["Guid"] = "*",
-		};
-		if (directory_id != null) cmp_attr["Directory"] = directory_id;
-		var cmp = new XElement("Component", cmp_attr);
-
-		var fcp_attr = new Dictionary<string, string>
-		{
-			["Id"] = $"{file}_{uid}"[..72],
-			["Source"] = Path.GetFullPath(filepath),
-		};
-		if (keypath) fcp_attr["KeyPath"] = "yes";
-		cmp.Add(new XElement("File", fcp_attr));
-
-		elem.Add(cmp);
-	}
-
-	// Create a component group in 'frag'
-	private static void CreateComponentGroup(XElement elem, string id, string directory, IEnumerable<string> filepaths)
-	{
-		// Create the 'ComponentGroup' XML element
-		var cg = new XElement("ComponentGroup", new XAttribute("Id", id), new XAttribute("Directory", directory));
-
-		// Add each component
-		bool keypath = true;
-		foreach (var filepath in filepaths)
-		{
-			CreateFileComponent(cg, filepath, keypath);
-			keypath = false;
-		}
-
-		elem.Add(cg);
-	}
-
-	// Create an XML tree of a WiX fragment by enumerating the files within a directory.
-	// 'group_id' is the corresponding ComponentGroupRef for the feature
-	// 'dir' is the directory to harvest
-	// 'recursive' is true if directories should be harvested recursively
-	// 'filters' is a collection of filters for the files to include
-	// 'install_dir' is the directory Id in the main installer
-	private static XElement HarvestDirectory(string group_id, string dir, bool recursive, List<Regex> filters, string install_dir)
-	{
-		var ns = "http://schemas.microsoft.com/wix/2006/wi";
-		var xml_root = new XElement(XName.Get("Wix", ns));
-		var xml_frag = new XElement("Fragment");
-		xml_root.Add(xml_frag);
-
-		// The directory structure sub tree
-		var xml_dr = new XElement("DirectoryRef", new XAttribute("Id", install_dir));
-		xml_frag.Add(xml_dr);
-
-		// The component group sub tree
-		var xml_cg = new XElement("ComponentGroup", new XAttribute("Id", group_id));
-		xml_frag.Add(xml_cg);
-
-		// Walk the directory recursively
-		void WalkDir(XElement xml_dr, XElement xml_cg, string directory)
-		{
-			foreach (var fname in Directory.GetFileSystemEntries(directory))
-			{
-				var path = Path.GetFullPath(fname);
-				if (File.Exists(path))
-				{
-					if (filters.Count != 0 && !filters.Any(f => f.IsMatch(Path.GetFileName(path)))) continue;
-					CreateFileComponent(xml_cg, path, true, xml_dr.Attribute("Id")?.Value);
-				}
-				if (Directory.Exists(path) && recursive)
-				{
-					var xml_sub = new XElement("Directory",
-						new XAttribute("Name", Path.GetFileName(path)),
-						new XAttribute("Id", $"Dir_{Path.GetFileName(path)}_{Id()}"));
-					xml_dr.Add(xml_sub);
-					WalkDir(xml_sub, xml_cg, path);
-				}
-			}
-		}
-
-		WalkDir(xml_dr, xml_cg, dir);
-		return xml_root;
-	}
-
+{	
 	// Build an installer .msi file
 	// 'projname' is the name of the application (<projname>Installer_v<version>.msi is returned)
 	// 'version' is the application version number
@@ -186,7 +89,7 @@ public class BuildInstaller
 			throw new Exception($"'{installer}' does not exist");
 
 		// Ensure WiX tools are available
-		Tools.Run([Tools.Path([UserVars.Root, "tools\\wix\\_get.ps1"])]);
+		Tools.Run([UserVars.Pwsh, Tools.Path([UserVars.Root, "tools\\wix\\_get.ps1"])]);
 
 		// Create a temporary working directory for the 'wixobj' files
 		var objdir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -222,7 +125,7 @@ public class BuildInstaller
 		}
 
 		// Compile all of the .wxs files to object files in 'objdir'
-		var wix_candle = Tools.Path([UserVars.Root, @"tools\WiX\candle.exe"]);
+		var wix_candle = Tools.Path([UserVars.Root, @"tools\wiX\wix\candle.exe"]);
 		Tools.Run((List<string>)[
 			wix_candle,
 			"-nologo",
@@ -235,7 +138,7 @@ public class BuildInstaller
 		]);
 
 		// Create the .msi
-		var wix_light = Tools.Path([UserVars.Root, @"tools\WiX\light.exe"]);
+		var wix_light = Tools.Path([UserVars.Root, @"tools\wiX\wix\light.exe"]);
 		Tools.Run((List<string>)[
 			wix_light,
 			"-nologo",
@@ -255,5 +158,101 @@ public class BuildInstaller
 		// Clean up
 		Directory.Delete(objdir, true);
 		return Path.GetFullPath(Path.Combine(dstdir, msi_filename));
+	}
+
+	// Generate a UUID suitable for an Id
+	private static string Id() => Guid.NewGuid().ToString("N").ToUpper();
+
+	/// <summary>Default namespace for WiX3</summary>
+	private static string DefaultNS => XNamespace.Get("http://schemas.microsoft.com/wix/2006/wi").NamespaceName;
+
+	// Create an XML tree of a WiX fragment by enumerating the files within a directory.
+	// 'group_id' is the corresponding ComponentGroupRef for the feature
+	// 'dir' is the directory to harvest
+	// 'recursive' is true if directories should be harvested recursively
+	// 'filters' is a collection of filters for the files to include
+	// 'install_dir' is the directory Id in the main installer
+	private static XElement HarvestDirectory(string group_id, string dir, bool recursive, List<Regex> filters, string install_dir)
+	{
+		var xml_root = new XElement(XName.Get("Wix", DefaultNS));
+
+		// Add files to a fragment
+		var xml_frag = new XElement(XName.Get("Fragment", DefaultNS));
+		xml_root.Add(xml_frag);
+
+		// The directory structure sub tree
+		var xml_dr = new XElement(XName.Get("DirectoryRef", DefaultNS), new XAttribute("Id", install_dir));
+		xml_frag.Add(xml_dr);
+
+		// The component group sub tree
+		var xml_cg = new XElement(XName.Get("ComponentGroup", DefaultNS), new XAttribute("Id", group_id));
+		xml_frag.Add(xml_cg);
+
+		// Walk the directory recursively
+		void WalkDir(XElement xml_dr, XElement xml_cg, string directory)
+		{
+			foreach (var fname in Directory.GetFileSystemEntries(directory))
+			{
+				var path = Path.GetFullPath(fname);
+				if (File.Exists(path))
+				{
+					if (filters.Count != 0 && !filters.Any(f => f.IsMatch(Path.GetFileName(path)))) continue;
+					CreateFileComponent(xml_cg, path, true, xml_dr.Attribute("Id")?.Value);
+				}
+				if (Directory.Exists(path) && recursive)
+				{
+					var xml_sub = new XElement(XName.Get("Directory", DefaultNS),
+						new XAttribute("Name", Path.GetFileName(path)),
+						new XAttribute("Id", $"Dir_{Path.GetFileName(path)}_{Id()}"));
+					xml_dr.Add(xml_sub);
+					WalkDir(xml_sub, xml_cg, path);
+				}
+			}
+		}
+
+		WalkDir(xml_dr, xml_cg, dir);
+		return xml_root;
+	}
+
+	// Create a component group in 'frag'
+	private static void CreateComponentGroup(XElement elem, string id, string directory, IEnumerable<string> filepaths)
+	{
+		// Create the 'ComponentGroup' XML element
+		var cg = elem.Add2(new XElement(XName.Get("ComponentGroup", DefaultNS),
+			new XAttribute("Id", id),
+			new XAttribute("Directory", directory)
+		));
+
+		// Add each component
+		bool keypath = true;
+		foreach (var filepath in filepaths)
+		{
+			CreateFileComponent(cg, filepath, keypath);
+			keypath = false;
+		}
+	}
+
+	// Add a single file component to 'elem'
+	private static void CreateFileComponent(XElement elem, string filepath, bool keypath = true, string? directory_id = null)
+	{
+		// Get the file title from the full filepath
+		var file = Path.GetFileNameWithoutExtension(filepath);
+		file = Regex.Replace(file, @"[^0-9a-zA-Z_]", "_");
+		var uid = Id();
+
+		// Create the component to contain the file
+		var cmp = elem.Add2(new XElement(XName.Get("Component", DefaultNS),
+			new XAttribute("Id", $"Cmp_{file}_{uid}"),
+			new XAttribute("Guid", "*")
+		));
+		if (directory_id != null)
+			cmp.SetAttributeValue("Directory", directory_id);
+
+		var fcp = cmp.Add2(new XElement(XName.Get("File", DefaultNS),
+			new XAttribute("Id", $"{file}_{uid}"),
+			new XAttribute("Source", Path.GetFullPath(filepath))
+		));
+		if (keypath)
+			fcp.SetAttributeValue("KeyPath", "yes");
 	}
 }

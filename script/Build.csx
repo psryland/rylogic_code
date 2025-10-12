@@ -128,24 +128,35 @@ class LDraw : Managed
 	{
 		// Check versions
 		var proj_file = Tools.Path([ProjDir, "LDraw.csproj"]);
-		var version = Tools.Extract(proj_file, new Regex("<Version>(.*)</Version>")).Captures[1].Value;
+		var version = Tools.Extract(proj_file, new Regex("<Version>(.*)</Version>")).Groups[1].Value;
 		Console.WriteLine($"Deploying LDraw Version: {version}\n");
 
 		// Ensure output directories exist and are empty
 		Tools.CleanDir(DeployDir);
 
+		var file_list = (List<string>)[
+			"LDraw.exe",
+			"dxcompiler.dll",
+			"dxil.dll",
+			"ICSharpCode.AvalonEdit.dll",
+			"LDraw.dll",
+			"Rylogic.Core.dll",
+			"Rylogic.Gfx.dll",
+			"Rylogic.Gui.WPF.dll",
+			"Rylogic.Windows.dll",
+			"LDraw.runtimeconfig.json",
+		];
+		var dir_list = (List<string>)[
+			"lib",
+		];
+
 		// Copy build products to the output directory
-		Console.WriteLine($"Copying files to {DeployDir}...\n");
+		Console.WriteLine($"Deploying files to '{DeployDir}\\':\n");
 		var target_dir = Tools.Path([ProjDir, "bin/Release", Frameworks[0]]);
-		Tools.Copy(Tools.Path([target_dir, "LDraw.exe"                 ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "LDraw.dll"                 ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "LDraw.runtimeconfig.json"  ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "Rylogic.Core.dll"          ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "Rylogic.Core.Windows.dll"  ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "Rylogic.Gui.WPF.dll"       ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "Rylogic.View3d.dll"        ]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "ICSharpCode.AvalonEdit.dll"]), DeployDir);
-		Tools.Copy(Tools.Path([target_dir, "lib"                       ]), Tools.Path([DeployDir, "lib"], check_exists: false));
+		foreach (var file in file_list)
+			Tools.Copy(Tools.Path([target_dir, file]), DeployDir, full_paths: false, indent: "    ");
+		foreach (var dir in dir_list)
+			Tools.Copy(Tools.Path([target_dir, dir]), Tools.Path([DeployDir, dir], check_exists: false), full_paths: false, indent: "    ");
 
 		// Build the installer
 		Console.WriteLine("Building installer...\n");
@@ -177,7 +188,7 @@ void Main(IList<string> args)
 	List<string>? platforms = null;
 	List<string>? configs = null;
 	bool clean = false;
-	bool build = true;
+	bool build = false;
 	bool deploy = false;
 	bool publish = false;
 
@@ -326,6 +337,10 @@ void Main(IList<string> args)
 
 // Testing
 List<string> args =
-//Environment.GetCommandLineArgs().Skip(1).ToList();
-["-project", "LDraw"];
+	Environment.GetCommandLineArgs().Skip(2).ToList();
+	//["-project", "LDraw", "-deploy"];
+
+if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
+	Console.WriteLine("WARNING: Command line overridden for testing");
+
 Main(args);

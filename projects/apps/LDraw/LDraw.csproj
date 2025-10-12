@@ -12,7 +12,7 @@
 	<PropertyGroup>
 		<Description>3D Visualization tool created by Rylogic.</Description>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
-		<Version>6.4.0</Version>
+		<Version>7.0.1</Version>
 	</PropertyGroup>
 
 	<!-- Code -->

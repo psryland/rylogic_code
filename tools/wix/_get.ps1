@@ -9,12 +9,12 @@ Set-Location -Path $script_path
 
 # if the 'dependencies' directory doesn't exist, download the zip
 if (!(Test-Path -Path "wix")) {
-	if (!(Test-Path -Path "wix311-binaries.zip")) {
+	if (!(Test-Path -Path "wix314-binaries.zip")) {
 		Invoke-WebRequest `
-			-Uri "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip" `
-			-OutFile "wix311-binaries.zip"
+			-Uri "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip" `
+			-OutFile "wix314-binaries.zip"
 	}
-	Expand-Archive -Path "wix311-binaries.zip" -DestinationPath "wix"
+	Expand-Archive -Path "wix314-binaries.zip" -DestinationPath "wix"
 }
 
 # Pop the current directory from the stack
