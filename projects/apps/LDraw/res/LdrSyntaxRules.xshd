@@ -146,6 +146,7 @@
 			<Word>*LineList</Word>
 			<Word>*Lines</Word>
 			<Word>*LineStrip</Word>
+			<Word>*LoadAtFrame</Word>
 			<Word>*LookAt</Word>
 			<Word>*M3x3</Word>
 			<Word>*M4x4</Word>

@@ -43,8 +43,5 @@
     <ClInclude Include="src\icommand.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\commands\cmd_triangulate.h">
-      <Filter>src\commands</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

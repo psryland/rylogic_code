@@ -787,9 +787,8 @@ namespace pr::gui
 		void RenderGraph(HDC hdc, Rect const& graph_area, Rect& plot_area) const
 		{
 			Graphics gfx(hdc);
-			auto area = pr::To<Rect>(graph_area);
-			plot_area = PlotArea(gfx, area);
-			RenderGraphFrame(gfx, area, plot_area);
+			plot_area = PlotArea(gfx, graph_area);
+			RenderGraphFrame(gfx, graph_area, plot_area);
 			RenderData(gfx, plot_area);
 		}
 		void RenderGraph(HDC hdc, Rect const& graph_area) const

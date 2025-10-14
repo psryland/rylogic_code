@@ -18,6 +18,7 @@
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
+			<EnableModules>false</EnableModules>
 			<AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include

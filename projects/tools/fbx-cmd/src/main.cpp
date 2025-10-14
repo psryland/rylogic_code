@@ -1,7 +1,6 @@
 ﻿#include "src/forward.h"
 #include "src/icommand.h"
 #include "src/commands/cmd_dump.h"
-#include "src/commands/cmd_triangulate.h"
 
 using namespace pr;
 using namespace pr::geometry;
@@ -58,7 +57,6 @@ namespace fbx_cmd
 				ICommand::Title() <<
 				"  Syntax: fbx-cmd -command [parameters]\n"
 				"    -dump : Dump the structure of an FBX file\n"
-				"    -triangulate : \n"
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type fbx-cmd -command -help for help on a particular command\n"
@@ -72,7 +70,6 @@ namespace fbx_cmd
 			{
 				if (m_command) break;
 				if (pr::str::EqualI(option, "-dump")) { m_command = CmdPtr{ new DumpFbx }; break; }
-				if (pr::str::EqualI(option, "-triangulate")) { m_command = CmdPtr{ new Triangulate }; break; }
 				// NEW_COMMAND - handle the command
 				return ICommand::CmdLineOption(option, arg, arg_end);
 			}

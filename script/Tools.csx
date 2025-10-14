@@ -132,13 +132,14 @@ public class Tools
 				Console.WriteLine($"\n *** Newer VC Version Available : Latest = {available_versions[0]} *** \n");
 		}
 
-		// Just need this?
-		var path = Environment.GetEnvironmentVariable("PATH");
-		var msbuild_tools = Path([UserVars.VSDir, "MSBuild\\Current\\Bin"]);
-		var vc_tools = Path([UserVars.VSDir, $"VC\\Tools\\MSVC\\{UserVars.VCVersion}\\bin\\Hostx64\\x64"]);
-		Environment.SetEnvironmentVariable("PATH", $"{msbuild_tools};{vc_tools};{path}");
-
-		m_vc_env_setup = true;
+		///* Just need this?
+		{
+			var path = Environment.GetEnvironmentVariable("PATH");
+			var msbuild_tools = Path([UserVars.VSDir, "MSBuild\\Current\\Bin"]);
+			var vc_tools = Path([UserVars.VSDir, $"VC\\Tools\\MSVC\\{UserVars.VCVersion}\\bin\\Hostx64\\x64"]);
+			Environment.SetEnvironmentVariable("PATH", $"{msbuild_tools};{vc_tools};{path}");
+		}
+		//*/
 
 		/* Previous method
 		{
@@ -168,7 +169,8 @@ public class Tools
 				Environment.SetEnvironmentVariable(key, value);
 			}
 		}
-		*/
+		//*/
+		m_vc_env_setup = true;
 	}
 	private static bool m_vc_env_setup = false;
 

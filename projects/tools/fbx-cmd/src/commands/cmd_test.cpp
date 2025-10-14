@@ -1,4 +1,4 @@
-#include "src/forward.h"
+﻿#include "src/forward.h"
 
 using namespace pr;
 using namespace pr::geometry;
@@ -30,16 +30,14 @@ namespace fbx_cmd
 		//' dll.Fbx_RoundTripTest(ifile, ofile);
 		//' dll.Fbx_DumpStream(ifile, dfile);
 		fbx::Scene scene(ifile);
-		scene.Dump({
+		scene.Dump(dfile, {
 			.m_parts =
 				fbx::EParts::NodeHierarchy |
 				fbx::EParts::Meshes |
 				fbx::EParts::Skeletons |
 				fbx::EParts::Skins |
 				fbx::EParts::None,
-			.m_coord_system = fbx::ECoordSystem::PosX_PosY_NegZ,
-			.m_triangulate_meshes = true,
-		}, dfile);
+		});
 
 		#if 0
 		// Convert the models the p3d

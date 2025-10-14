@@ -20,6 +20,15 @@
 			Rylogic Library service release
 		</releaseNotes>
 		<dependencies>
+			<!--
+			- Global Dependency
+			<dependency id="MyLibrary" version="1.2.3" />
+
+			- Platform specific dependency
+			<group targetFramework="net9.0">
+				<dependency id="MyLibrary" version="1.2.3" />
+			</group>
+			-->
 		</dependencies>
 	</metadata>
 
@@ -33,6 +42,16 @@
 
 		- .NET Framework 4.8.1
 		<file src="bin\Release\net481\MyLibrary.dll" target="lib\net481\" />
+
+		- Misc files
+		<file src="include\pr\license.txt" target="license.txt" />
+		<file src="build\props\**\*.*" target="build\props" />
+		<file src="build\targets\**\*.*" target="build\targets" />
+
+		- Native projects
+		<file src="include\**\*.*" target="include" />
+		<file src="lib\**\*.*" target="lib" />
+		<file src="lib\x64\Release\*.dll" target="runtimes/win-x64/native" />
 		-->
 	</files>
 </package>

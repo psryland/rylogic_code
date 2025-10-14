@@ -46,11 +46,12 @@ public enum EProjects
 public abstract class Common
 {
 	public string Workspace;
-	public bool RequiresSigning;
+	public string RylogicSln;
+
 	public Common(string workspace)
 	{
 		Workspace = workspace;
-		RequiresSigning = false;
+		RylogicSln = Tools.Path([Workspace, "Rylogic.sln"]);
 	}
 	public virtual void Clean() { }
 	public virtual void Build() { }
@@ -88,12 +89,35 @@ public abstract class Group : Common
 	}
 }
 
+// Base class for native projects
+public abstract class Native : Common
+{
+	public string ProjName;
+	public string ProjDir;
+	public string ProjFile;
+	public string ObjDir;
+	public IList<string> Platforms;
+	public IList<string> Configs;
+
+	public Native(string proj_name, string proj_dir, string workspace, List<string>? platforms, List<string>? configs)
+		:base(workspace)
+	{
+		ProjName = proj_name;
+		ProjDir = Tools.Path([workspace, proj_dir]);
+		ProjFile = Tools.Path([ProjDir, $"{proj_name}.vcxproj"]);
+		Platforms = platforms ?? ["x64", "x86"];
+		Configs = configs ?? ["Release", "Debug"];
+		ObjDir = Tools.Path([Workspace, "obj", UserVars.PlatformToolset], check_exists: false);
+		Directory.CreateDirectory(ObjDir);
+	}
+}
+
 // Base class for .NET projects
 public abstract class Managed : Common
 {
 	public string ProjName;
 	public string ProjDir;
-	public string RylogicSln;
+	public string ProjFile;
 	public IList<string> Frameworks;
 	public IList<string> Platforms;
 	public IList<string> Configs;
@@ -103,11 +127,10 @@ public abstract class Managed : Common
 	{
 		ProjName = proj_name;
 		ProjDir = Tools.Path([workspace, proj_dir]);
-		RylogicSln = Tools.Path([workspace, "rylogic.sln"]);
+		ProjFile = Tools.Path([ProjDir, $"{ProjName}.csproj"]);
 		Frameworks = frameworks;
 		Platforms = platforms ?? ["Any CPU"];
 		Configs = configs ?? ["Release", "Debug"];
-		RequiresSigning = true;
 	}
 	public override void Clean()
 	{
@@ -142,14 +165,42 @@ public abstract class Managed : Common
 	private static List<string> m_restored = [];
 }
 
-// Rylogic .NET assembly (base)
-public abstract class RylogicAssembly : Managed
+// View3d
+public class View3d : Native
 {
+	public View3d(string workspace, List<string>? platforms, List<string>? configs)
+		: base("view3d-12", Tools.Path([workspace, $"projects\\rylogic\\view3d-12"]), workspace, platforms, configs)
+	{
+	}
+	public override void Clean()
+	{
+		Tools.CleanDir(Tools.Path([ObjDir, "view3d-12"], check_exists: false));
+		Tools.CleanDir(Tools.Path([ObjDir, "view3d-12.dll"], check_exists: false));
+	}
+	public override void Build()
+	{
+		Tools.MSBuild(RylogicSln, [@"Rylogic\view3d-12"], Platforms, Configs);
+		Tools.MSBuild(RylogicSln, [@"Rylogic\view3d-12.dll"], Platforms, Configs);
+	}
+	public override void Deploy()
+	{
+		//DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d"), self.platforms, self.configs)
+		//DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d.dll"), self.platforms, self.configs)
+	}
+}
+
+// Rylogic .NET assemblies
+public abstract class RylogicAssembly : Managed, Nuget.ISource
+{
+	public string Version = "1.0.0";
 	public string? Nupkg = null;
 
 	public RylogicAssembly(string proj_name, List<string> frameworks, string workspace, List<string>? platforms, List<string>? configs)
 		:base(proj_name, Tools.Path([workspace, "projects\\rylogic", proj_name]), frameworks, workspace, platforms, configs)
 	{
+		Tools.SetupVcEnvironment();
+		var (_, version) = Tools.Run([UserVars.MSBuild, ProjFile, "-getProperty:Version", "-nologo", "-verbosity:quiet"]);
+		Version = version.Trim();
 	}
 	public override void Build()
 	{
@@ -158,7 +209,7 @@ public abstract class RylogicAssembly : Managed
 	}
 	public override void Deploy()
 	{
-		Nupkg = Nuget.Package(Tools.Path([ProjDir, $"{ProjName}.csproj"]), NugetFiles());
+		Nupkg = Nuget.Package(ProjFile, this);
 	}
 	public override void Publish()
 	{
@@ -167,20 +218,56 @@ public abstract class RylogicAssembly : Managed
 
 		Nuget.Publish(Nupkg);
 	}
-	protected abstract IEnumerable<Nuget.File> NugetFiles();
+	public virtual IEnumerable<Nuget.File> NugetFiles()
+	{
+		yield break;
+	}
+	public virtual IEnumerable<Nuget.Dep> Dependencies()
+	{
+		yield break;
+	}
+	protected static string FwToTarget(string fw)
+	{
+		return fw.EndsWith("windows") ? $"{fw}{UserVars.WinSDKVersion}" : fw;
+	}
 }
-
-// Rylogic.Core .NET assembly
 public class RylogicCore : RylogicAssembly
 {
 	public RylogicCore(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Core", ["net9.0", "net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
-	protected override IEnumerable<Nuget.File> NugetFiles()
+	public override IEnumerable<Nuget.File> NugetFiles()
 	{
 		// Rylogic.Core isn't depended on windows
-		foreach (var fw in (string[])["net9.0", "net481"])
-			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib\\{fw}\\", true);
+		foreach (var fw in Frameworks)
+			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib\\{FwToTarget(fw)}\\", true);
+	}
+}
+public class RylogicGfx : RylogicAssembly
+{
+	public RylogicGfx(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Gfx", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	public override IEnumerable<Nuget.File> NugetFiles()
+	{
+		foreach (var fw in Frameworks)
+			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib\\{FwToTarget(fw)}\\", true);
+
+		// yield return new Nuget.File(Tools.Path([ProjDir, "build\\props\\**\\*.*"], check_exists: false), $"build\\props");
+		// yield return new Nuget.File(Tools.Path([ProjDir, "build\\targets\\**\\*.*"], check_exists: false), $"build\\targets");
+
+		// yield return new Nuget.File(Tools.Path([ProjDir, "include\\**\\*.*"], check_exists: false), "include");
+		// yield return new Nuget.File(Tools.Path([ProjDir, "lib\\**\\*.*"], check_exists: false), "lib");
+		// yield return new Nuget.File(Tools.Path([ProjDir, "lib\\x64\\Release\\*.dll"], check_exists: false), "runtimes/win-x64/native");
+
+		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
+		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
+		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
+	}
+	public override IEnumerable<Nuget.Dep> Dependencies()
+	{
+		yield return new Nuget.Dep("Rylogic.Core", Version);
+		yield return new Nuget.Dep("Rylogic", Version);
 	}
 }
 
@@ -331,7 +418,9 @@ void Main(IList<string> args)
 					}
 					for (; IsDataArg(i);)
 					{
-						projects.Add(Enum<EProjects>.Parse(args[i++].Replace(".","")));
+						var proj_name = args[i++].Replace(".", "");
+						var proj_enum = Enum<EProjects>.Parse(proj_name, ignore_case: true);
+						projects.Add(proj_enum);
 					}
 					break;
 				}
@@ -388,7 +477,7 @@ void Main(IList<string> args)
 			?? throw new Exception($"Failed to create the builder type foe {project}");
 
 		// Prompt for the cert password if signing is needed
-		if ((deploy || publish) && builder.RequiresSigning)
+		if (deploy || publish)
 			UserVars.CodeSignCert_Pw = UserVars.CodeSignCert_Pw; // Prompt if needed
 
 		// Clean if '-clean' is used
@@ -415,11 +504,21 @@ void Main(IList<string> args)
 
 // Testing
 List<string> args =
-	//Environment.GetCommandLineArgs().Skip(2).ToList();
+	["-project", "View3d", "-build", "-deploy"]
+	//["-project", "Rylogic.Core", "-build", "-deploy"]
+	//["-project", "Rylogic.Gfx", "-build", "-deploy"]
 	//["-project", "LDraw", "-deploy"];
-	["-project", "Rylogic.Core", "-build", "-deploy"];
+	//Environment.GetCommandLineArgs().Skip(2).ToList()
+	;
 
 if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
 	Console.WriteLine("WARNING: Command line overridden for testing");
 
-Main(args);
+try
+{
+	Main(args);
+}
+catch (Exception ex)
+{
+	Console.WriteLine(ex.Message);
+}

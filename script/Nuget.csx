@@ -18,17 +18,25 @@ using IOPath = System.IO.Path;
 
 public class Nuget
 {
+	public interface ISource
+	{
+		/// <summary>The Files to include in the package</summary>
+		IEnumerable<File> NugetFiles();
+
+		/// <summary>The libraries that this package is dependency on</summary>
+		IEnumerable<Dep> Dependencies();
+	}
+
 	// Notes:
 	//  - Assembly signing, packaging, and publishing are all separate steps.
-	public record class File(string Filepath, string Target, bool Sign)
-	{
-	}
+	public record class File(string Path, string Target, bool Sign = false) { }
+	public record class Dep(string AssemblyName, string Version, string? Framework = null) { }
 
 	// Create a Nuget package from the given project file
 	// Expects a file called 'package.nuspec' in the same directory as 'proj'
 	// The resulting package will be in UserVars.root\lib\packages
 	// The full package path is returned
-	public static string Package(string proj, IEnumerable<File> files)
+	public static string Package(string proj, ISource src)
 	{
 		var proj_name = IOPath.GetFileNameWithoutExtension(proj) ?? throw new Exception("Could not read project filename");
 		var proj_dir = IOPath.GetDirectoryName(proj) ?? throw new Exception("Could not read project directory");
@@ -51,10 +59,10 @@ public class Nuget
 
 		// Add each file to the spec
 		var xml_files = xml_nuspec.Element(XName.Get("files", ns)) ?? throw new Exception("files element not found in nuspec template");
-		foreach (var file in files)
+		foreach (var file in src.NugetFiles())
 		{
 			// Check the file exists
-			var filepath = Tools.Path([proj_dir, file.Filepath]);
+			var filepath = Tools.Path([proj_dir, file.Path]);
 
 			// Sign if required
 			if (file.Sign)
@@ -65,6 +73,13 @@ public class Nuget
 				new XAttribute("src", filepath),
 				new XAttribute("target", file.Target)
 				));
+		}
+
+		// Add dependencies
+		var xml_dependencies = xml_metadata.Element(XName.Get("dependencies", ns)) ?? throw new Exception("dependencies element not found in nuspec template");
+		foreach (var dep in src.Dependencies())
+		{
+
 		}
 
 		// Write the nuspec to 'objdir'

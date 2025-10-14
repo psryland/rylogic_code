@@ -62,7 +62,6 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
     <ClInclude Include="src\commands\cmd_dump.h" />
-    <ClInclude Include="src\commands\cmd_triangulate.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\icommand.h" />
   </ItemGroup>

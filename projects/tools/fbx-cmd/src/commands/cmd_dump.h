@@ -55,11 +55,9 @@ namespace fbx_cmd
 				},
 			});
 
-			scene.Dump({
+			scene.Dump(std::cout, {
 				.m_parts = m_parts,
-				.m_coord_system = fbx::ECoordSystem::PosX_PosY_NegZ,
-				.m_triangulate_meshes = true,
-			}, std::cout);
+			});
 
 			return 0;
 		}
