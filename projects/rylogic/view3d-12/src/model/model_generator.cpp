@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1434,7 +1434,10 @@ namespace pr::rdr12
 			//hack
 			std::ofstream ofile("E:\\Dump\\LDraw\\SceneDump.txt");
 			scene.Dump(ofile, fbx::DumpOptions{
-				.m_parts = ESceneParts::MainObjects,
+				.m_parts =
+					ESceneParts::MainObjects |
+					ESceneParts::NodeHierarchy |
+					ESceneParts::None,
 			});
 		}
 		#endif

@@ -102,7 +102,7 @@ struct Main :Form
 				//"*Model { *Filepath { \"E:\\Rylogic\\Code\\art\\models\\AnimCharacter\\AnimatedCharacter.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample.fbx\" } *Animation{*Style{PingPong}} }"
 				//"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\hyperpose_sample2.fbx\" } *Animation{*Style{PingPong}} }"
-				"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\Extra_Wall_Flip.fbx\" } *Animation{*Style{PingPong}} }"
+				"*Model { *Filepath { \"E:\\Dump\\Hyperpose\\fbx\\Extra_Wall_Flip.fbx\" } *LoadAtFrame {20} }"//*Animation{*Style{PingPong}} }"
 				, false, nullptr, nullptr);
 
 			m_obj1 = View3D_ObjectCreateLdrA(

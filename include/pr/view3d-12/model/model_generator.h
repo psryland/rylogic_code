@@ -238,6 +238,11 @@ namespace pr::rdr12
 			{
 				return {};
 			}
+			virtual rdr12::FrameRange FrameRange() const
+			{
+				// The frame range of animation data to return
+				return { 0, std::numeric_limits<int>::max() };
+			}
 			virtual bool ModelFilter(std::string_view model_name) const
 			{
 				(void)model_name;
@@ -252,11 +257,6 @@ namespace pr::rdr12
 			{
 				(void)animation_name;
 				return true; // True means include the animation in the output
-			}
-			virtual rdr12::FrameRange FrameRange() const
-			{
-				// The frame range of animation data to return
-				return { 0, std::numeric_limits<int>::max() };
 			}
 			virtual EResult Model(ModelTree&&)
 			{

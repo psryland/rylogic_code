@@ -1344,15 +1344,13 @@ namespace pr::geometry::fbx
 		{
 			if (AllSet(m_opts.m_parts, EParts::MainObjects))
 				DumpMainObjects();
+			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
+				DumpHierarchy();
 			/*
 			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
 				DumpGlobalSettings();
-			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
-				DumpHierarchy();
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				DumpMaterials();
-			*/
-			/*
 			if (AllSet(m_opts.m_parts, EParts::Meshes))
 				DumpGeometry();
 			if (AllSet(m_opts.m_parts, EParts::Skeletons))
@@ -1413,6 +1411,21 @@ namespace pr::geometry::fbx
 					}
 				}
 				--ind;
+			}
+		}
+		void DumpHierarchy() const
+		{
+			m_out << "Node Hierarchy:\n";
+			{
+				WalkHierarchy(m_fbxscene.root_node, [this](ufbx_node const* node) -> bool
+				{
+					m_out << Indent(node->node_depth + 1) << "NODE: " << To<std::string_view>(node->name) << "(" << node->typed_id << ")" << "\n";
+					m_out << Indent(node->node_depth + 2) << "O2W: " << To<m4x4>(node->node_to_parent) << "\n";
+					m_out << Indent(node->node_depth + 2) << "Rot: " << To<quat>(node->local_transform.rotation) << "\n";
+					m_out << Indent(node->node_depth + 2) << "Pos: " << To<v3>(node->local_transform.translation) << "\n";
+					m_out << Indent(node->node_depth + 2) << "Scl: " << To<v3>(node->local_transform.scale) << "\n";
+					return true;
+				});
 			}
 		}
 		void DumpGeometry() const
@@ -1490,7 +1503,7 @@ namespace pr::geometry::fbx
 			if (opts.load_at_frame && fbxscene->anim != nullptr)
 			{
 				// Convert the frame to a time
-				auto time = fbxscene->settings.frames_per_second * *opts.load_at_frame;
+				auto time = *opts.load_at_frame / fbxscene->settings.frames_per_second;
 
 				// Select the default animation in the scene
 				auto const* anim = fbxscene->anim; // Todo, select an anim?

@@ -4422,25 +4422,31 @@ namespace pr::rdr12::ldraw
 	};
 
 	// ELdrObject::Model
-	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
+	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator, ModelGenerator::IModelOut
 	{
 		std::filesystem::path m_filepath;
 		std::unique_ptr<std::istream> m_file_stream;
 		std::unordered_set<string32> m_model_parts;
 		std::unordered_set<string32> m_skel_parts;
 		std::optional<KeyFrameAnimInfo> m_anim_info;
+		std::optional<int> m_load_at_frame;
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
+		vector<SkeletonPtr, 1> m_skels;
+		LdrObject* m_obj;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_filepath()
 			, m_file_stream()
-			, m_gen_norms()
-			, m_bake()
 			, m_model_parts()
 			, m_skel_parts()
 			, m_anim_info()
+			, m_load_at_frame()
+			, m_gen_norms()
+			, m_bake()
+			, m_skels()
+			, m_obj()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -4452,6 +4458,11 @@ namespace pr::rdr12::ldraw
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 					m_filepath = reader.String<std::filesystem::path>();
 					m_file_stream = reader.PathResolver.OpenStream(m_filepath, IPathResolver::EFlags::Binary);
+					return true;
+				}
+				case EKeyword::LoadAtFrame:
+				{
+					m_load_at_frame = reader.Int<int>();
 					return true;
 				}
 				case EKeyword::Parts:
@@ -4517,84 +4528,73 @@ namespace pr::rdr12::ldraw
 				args.handled = true;
 			};
 
-			// Model output helper
-			struct ModelOut : ModelGenerator::IModelOut
-			{
-				ObjectCreator& m_this;
-				ResourceFactory& m_factory;
-				LdrObject& m_obj;
-				vector<SkeletonPtr> m_skels;
-
-				ModelOut(ObjectCreator& this_, ResourceFactory& factory, LdrObject& obj)
-					: m_this(this_)
-					, m_factory(factory)
-					, m_obj(obj)
-					, m_skels()
-				{
-				}
-				ESceneParts Parts() const override
-				{
-					return m_this.m_anim_info ? geometry::ESceneParts::All : geometry::ESceneParts::ModelOnly;
-				}
-				bool ModelFilter(std::string_view model_name) const override
-				{
-					return m_this.m_model_parts.empty() || m_this.m_model_parts.contains(model_name);
-				}
-				bool SkeletonFilter(std::string_view skeleton_name) const override
-				{
-					return m_this.m_skel_parts.empty() || m_this.m_skel_parts.contains(skeleton_name);
-				}
-				rdr12::FrameRange FrameRange() const override
-				{
-					// The frame range of animation data to return
-					return m_this.m_anim_info ? m_this.m_anim_info->m_frame_range : ModelGenerator::IModelOut::FrameRange();
-				}
-				EResult Model(ModelTree&& tree) override
-				{
-					ModelTreeToLdr(&m_obj, tree);
-					return EResult::Continue;
-				}
-				EResult Skeleton(SkeletonPtr&& skel) override
-				{
-					m_skels.push_back(skel);
-					return EResult::Continue;
-				}
-				EResult Animation(KeyFrameAnimationPtr&& anim) override
-				{
-					if (!m_this.m_anim_info)
-						return EResult::Stop;
-
-					auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
-					auto const& anim_info = *m_this.m_anim_info;
-
-					// The time/frame range in the anim info is the portion of the animation to use during playback
-					auto time_range = ToTimeRange(anim_info.m_frame_range, anim->frame_rate());
-					time_range = Intersect(time_range, TimeRange{ 0, anim->m_duration });
-					time_range = Intersect(time_range, anim_info.m_time_range);
-
-					// Create an animator that uses the animation and a pose for it to animate
-					AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anim), true };
-					PosePtr pose{ rdr12::New<Pose>(m_factory, skeleton, animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
-
-					// Set the pose for each model in the hierarchy.
-					m_obj.Apply([&](LdrObject* obj)
-					{
-						obj->m_pose = pose;
-						if (anim_info.m_style != EAnimStyle::NoAnimation)
-							obj->Flags(ELdrFlags::Animated, true);
-
-						return true;
-					}, "");
-
-					// Only use the first animation
-					return EResult::Stop;
-				}
-			};
-
 			// Create the models
-			ModelOut model_out(*this, m_pp.m_factory, *obj);
+			m_obj = obj;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, model_out, &opts);
+			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, *this, &opts);
+		}
+
+		// IModelOut functions
+		geometry::ESceneParts Parts() const override
+		{
+			return m_anim_info ? geometry::ESceneParts::All : geometry::ESceneParts::ModelOnly;
+		}
+		std::optional<int> LoadAtFrame() const override
+		{
+			return m_load_at_frame;
+		}
+		rdr12::FrameRange FrameRange() const override
+		{
+			// The frame range of animation data to return
+			return m_anim_info ? m_anim_info->m_frame_range : ModelGenerator::IModelOut::FrameRange();
+		}
+		bool ModelFilter(std::string_view model_name) const override
+		{
+			return m_model_parts.empty() || m_model_parts.contains(model_name);
+		}
+		bool SkeletonFilter(std::string_view skeleton_name) const override
+		{
+			return m_skel_parts.empty() || m_skel_parts.contains(skeleton_name);
+		}
+		EResult Model(ModelTree&& tree) override
+		{
+			ModelTreeToLdr(m_obj, tree);
+			return EResult::Continue;
+		}
+		EResult Skeleton(SkeletonPtr&& skel) override
+		{
+			m_skels.push_back(skel);
+			return EResult::Continue;
+		}
+		EResult Animation(KeyFrameAnimationPtr&& anim) override
+		{
+			if (!m_anim_info)
+				return EResult::Stop;
+
+			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
+			auto const& anim_info = *m_anim_info;
+
+			// The time/frame range in the anim info is the portion of the animation to use during playback
+			auto time_range = ToTimeRange(anim_info.m_frame_range, anim->frame_rate());
+			time_range = Intersect(time_range, TimeRange{ 0, anim->m_duration });
+			time_range = Intersect(time_range, anim_info.m_time_range);
+
+			// Create an animator that uses the animation and a pose for it to animate
+			AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anim), true };
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
+
+			// Set the pose for each model in the hierarchy.
+			m_obj->Apply([&](LdrObject* obj)
+			{
+				obj->m_pose = pose;
+				if (anim_info.m_style != EAnimStyle::NoAnimation)
+					obj->Flags(ELdrFlags::Animated, true);
+
+				return true;
+			}, "");
+
+			// Only use the first animation
+			return EResult::Stop;
 		}
 	};
 
