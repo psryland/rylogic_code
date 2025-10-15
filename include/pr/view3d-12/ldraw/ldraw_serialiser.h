@@ -212,7 +212,7 @@ namespace pr::rdr12::ldraw
 		static bytebuf& write(bytebuf& out, std::span<std::byte const> data, int64_t ofs = -1)
 		{
 			ofs = ofs != -1 ? ofs : ssize(out);
-			out.resize(std::max<size_t>(out.size(), ofs + data.size()));
+			out.resize(std::max<size_t>(out.size(), s_cast<size_t>(ofs + data.size())));
 			std::memcpy(out.data() + ofs, data.data(), data.size());
 			return out;
 		}

@@ -468,6 +468,38 @@ namespace pr::rdr12::ldraw
 				});
 			}
 		};
+		struct LdrAnimation
+		{
+			std::optional<pr::Range<int>> m_frame_range = {};
+
+			// Limit frame range
+			LdrAnimation& frames(int beg, int end)
+			{
+				m_frame_range = pr::Range<int>(beg, end);
+				return *this;
+			}
+			LdrAnimation& Frame(int frame)
+			{
+				return frames(frame, frame + 1);
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Animation, [&]
+				{
+					if (m_frame_range)
+					{
+						auto& range = *m_frame_range;
+						if (range.size() == 1)
+							Writer::Write(out, EKeyword::Frame, range.begin());
+						else
+							Writer::Write(out, EKeyword::FrameRange, range.begin(), range.end());
+					}
+				});
+			}
+		};
 
 		// Object types
 		struct LdrPoint :LdrBase<LdrPoint>
@@ -1354,9 +1386,11 @@ namespace pr::rdr12::ldraw
 		struct LdrModel :LdrBase<LdrModel>
 		{
 			std::filesystem::path m_filepath;
+			std::optional<LdrAnimation> m_anim;
 
 			LdrModel()
 				: m_filepath()
+				, m_anim()
 			{}
 
 			// Model filepath
@@ -1366,6 +1400,13 @@ namespace pr::rdr12::ldraw
 				return *this;
 			}
 
+			// Add animation to the model
+			LdrAnimation& anim()
+			{
+				if (!m_anim) m_anim = LdrAnimation{};
+				return *m_anim;
+			}
+
 			// Write to 'out'
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
@@ -1373,6 +1414,7 @@ namespace pr::rdr12::ldraw
 				Writer::Write(out, EKeyword::Model, m_name, m_colour, [&]
 				{
 					Writer::Write(out, EKeyword::FilePath, m_filepath.string());
+					if (m_anim) m_anim->WriteTo<Writer>(out);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}

@@ -504,11 +504,11 @@ void Main(IList<string> args)
 
 // Testing
 List<string> args =
-	["-project", "View3d", "-build", "-deploy"]
+	//["-project", "View3d", "-build", "-deploy"]
 	//["-project", "Rylogic.Core", "-build", "-deploy"]
 	//["-project", "Rylogic.Gfx", "-build", "-deploy"]
 	//["-project", "LDraw", "-deploy"];
-	//Environment.GetCommandLineArgs().Skip(2).ToList()
+	Environment.GetCommandLineArgs().Skip(2).ToList()
 	;
 
 if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))

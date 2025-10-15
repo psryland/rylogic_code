@@ -458,6 +458,36 @@ namespace Rylogic.LDraw
 			});
 		}
 	}
+	public class LdrAnimation
+	{
+		private RangeI? m_frame_range = null;
+
+		/// <summary>Limit frame range</summary>
+		public LdrAnimation frames(int beg, int end)
+		{
+			m_frame_range = new RangeI(beg, end);
+			return this;
+		}
+		public LdrAnimation frame(int frame)
+		{
+			return frames(frame, frame + 1);
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Animation, () =>
+			{
+				if (m_frame_range is RangeI range)
+				{
+					if (range.Count == 1)
+						res.Write(EKeyword.Frame, range.Beg);
+					else
+						res.Write(EKeyword.FrameRange, range.Beg, range.End);
+				}
+			});
+		}
+	}
 
 	// Object types
 	public class LdrPoint : LdrBase<LdrPoint>
@@ -1222,12 +1252,20 @@ namespace Rylogic.LDraw
 	public class LdrModel : LdrBase<LdrModel>
 	{
 		private string m_filepath = string.Empty;
+		private LdrAnimation? m_anim = null;
 
-		// Model filepath
+		/// <summary>Model filepath</summary>
 		public LdrModel filepath(string filepath)
 		{
-			m_filepath = filepath;
+			m_filepath = Path_.Canonicalise(filepath);
 			return this;
+		}
+
+		/// <summary>Add animation to the model</summary>
+		public LdrAnimation anim()
+		{
+			m_anim ??= new();
+			return m_anim;
 		}
 
 		/// <inheritdoc/>
@@ -1235,18 +1273,29 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Model, m_name, m_colour, () =>
 			{
-				res.Write(EKeyword.FilePath, m_filepath);
+				res.Write(EKeyword.FilePath, $"\"{m_filepath}\"");
+				m_anim?.WriteTo(res);
 				base.WriteTo(res);
 			});
 		}
 	}
 	public class LdrInstance : LdrBase<LdrInstance>
 	{
+		private LdrAnimation? m_anim = null;
+
+		/// <summary>Add animation to the instance</summary>
+		public LdrAnimation anim()
+		{
+			m_anim ??= new();
+			return m_anim;
+		}
+
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
 			res.Write(EKeyword.Instance, m_name, m_colour, () =>
 			{
+				m_anim?.WriteTo(res);
 				base.WriteTo(res);
 			});
 		}
