@@ -37,7 +37,7 @@
 		</None>
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath)" />
+		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath)" />
 	</Target>
 
 </Project>

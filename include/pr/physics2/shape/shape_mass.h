@@ -1,9 +1,8 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics2/forward.h"
 #include "pr/physics2/shape/mass.h"
 #include "pr/physics2/shape/inertia.h"

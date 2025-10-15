@@ -17,6 +17,7 @@
 #include "pr/maths/maths.h"
 #include "pr/maths/spatial.h"
 #include "pr/collision/shapes.h"
+#include "pr/collision/collision.h"
 #include "pr/geometry/closest_point.h"
 #include "pr/geometry/intersect.h"
 

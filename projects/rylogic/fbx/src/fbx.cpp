@@ -266,7 +266,7 @@ namespace pr
 		{
 			std::string err;
 			err.reserve(msg.size() + 1 + UFBX_ERROR_INFO_LENGTH);
-			err.append(msg).append(" ");
+			err.append(msg).append(msg.empty() ? "" : " ");
 			
 			auto ofs = err.size();
 			err.append(UFBX_ERROR_INFO_LENGTH, '\0');

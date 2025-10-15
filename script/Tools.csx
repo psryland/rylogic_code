@@ -13,7 +13,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using Rylogic.Extn;
-using Console = Internal.Console;
+using Console = System.Console;
 using IOPath = System.IO.Path;
 
 public class Tools
@@ -30,6 +30,42 @@ public class Tools
 		Console.WriteLine($"Cleaning deploy directory: {dir}");
 		Directory.Delete(dir, true);
 		Directory.CreateDirectory(dir);
+	}
+
+	// Deploy lib and/or dll files to the '/lib' folder
+	public static void DeployLib(string target_name, string obj_dir, IList<string> platforms, IList<string> configs)
+	{
+		// Notes:
+		//  - Watch out for pdb files overwriting projects with the same name.
+		//  - The MSBuild system creates the '$(TargetName).pdb' file even if the project file sets the pdb name to something else.
+		//  - Debugging will only load '$(TargetName).pdb' so trying to use '$(TargetName)$(TargetExt).pdb' doesn't work (sadly).
+		//  - The only option is to use separate names for lib and dll projects :(
+		//  - Use <project>-static.lib.
+		//  - Don't make $(TargetName) == $(ProjectName), just set the name explicitly.
+		foreach (var p in platforms)
+		{
+			foreach (var c in configs)
+			{
+				var target_dir = Tools.Path([obj_dir, p, c]);
+				var target_files = (string[])[
+					Tools.Path([target_dir, $"{target_name}.lib"], check_exists: false),
+					Tools.Path([target_dir, $"{target_name}.dll"], check_exists: false),
+					Tools.Path([target_dir, $"{target_name}.imp"], check_exists: false),
+					Tools.Path([target_dir, $"{target_name}.pdb"], check_exists: false),
+				];
+
+				// Get the destination directory: /lib/p/c/target_name.extn
+				var dst_dir = Tools.Path([UserVars.Root, "lib", p, c], check_exists: false);
+				Directory.CreateDirectory(dst_dir);
+
+				// Copy the target files to the destination directories
+				foreach (var filepath in target_files.Where(x => IOPath.Exists(x)))
+				{
+					var dst_path = Tools.Path([dst_dir, IOPath.GetFileName(filepath)], check_exists: false);
+					Tools.Copy(filepath, dst_path);
+				}
+			}
+		}
 	}
 
 	//Executes a program and returns it's stdout/stderr as a string
@@ -88,7 +124,7 @@ public class Tools
 	//  e.g.
 	//    proc = Spawn(["cmd", "/C" ,"echo Hello"])
 	//    proc.wait()
-	public static Process Spawn(IList<string> args, int expected_return_code = 0, bool same_window = false, bool show_window = true, bool show_arguments = false)
+	public static Process Spawn(string prefix, IList<string> args, int expected_return_code = 0, bool same_window = false, bool show_window = true, bool show_arguments = false)
 	{
 		if (args.Count == 0)
 			throw new ArgumentException("args must contain at least one element (the program to run)");
@@ -101,12 +137,31 @@ public class Tools
 		{
 			FileName = filename,
 			Arguments = arguments,
-			UseShellExecute = !same_window, // Required to open a new console
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			UseShellExecute = false, // Required to open a new console
 			CreateNoWindow = !show_window,
 			WindowStyle = show_window ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden,
 		};
-		
-		return Process.Start(psi) ?? throw new Exception("Failed to start process");
+
+		var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+		process.OutputDataReceived += (s, e) =>
+		{
+			if (e.Data == null) return;
+			System.Console.WriteLine($"{prefix}{e.Data}");
+		};
+		process.ErrorDataReceived += (s, e) =>
+		{
+			if (e.Data == null) return;
+			System.Console.Error.WriteLine($"{prefix}{e.Data}");
+		};
+
+		if (!process.Start())
+			throw new Exception("Failed to start process");
+
+		process.BeginOutputReadLine();
+		process.BeginErrorReadLine();
+		return process;
 	}
 
 	// Find the visual studio batch file for setting up a dev environment
@@ -187,7 +242,7 @@ public class Tools
 	//	platforms = ["x64","x86","AnyCPU"]
 	//	configs = ["release","debug"]
 	//	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-	public static bool MSBuild(string sln_or_proj_file, IList<string>? projects = null, IList<string>? platforms = null, IList<string>? configs = null, bool parallel = false, bool same_window = true, IList<string>? additional_args = null)
+	public static bool MSBuild(string sln_or_proj_file, IList<string>? projects = null, IList<string>? platforms = null, IList<string>? configs = null, bool parallel = true, bool same_window = true, IList<string>? additional_args = null)
 	{
 		SetupVcEnvironment();
 
@@ -223,6 +278,7 @@ public class Tools
 			}
 			else
 			{
+				int i = 0;
 				foreach (var platform in platforms)
 				{
 					foreach (var config in configs)
@@ -230,7 +286,7 @@ public class Tools
 						List<string> args_ = [..args, $"/p:Configuration={config};Platform={platform}"];
 						if (parallel)
 						{
-							procs.Add(Spawn(args_, same_window: same_window));
+							procs.Add(Spawn($"{++i}>", args_, same_window: same_window));
 						}
 						else
 						{

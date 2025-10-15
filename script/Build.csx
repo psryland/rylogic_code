@@ -14,7 +14,8 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using Rylogic.Extn;
-using Console = Internal.Console;
+using Console = System.Console;
+using IOPath = System.IO.Path;
 
 // Available projects that can be built
 public enum EProjects
@@ -22,6 +23,7 @@ public enum EProjects
 	Sqlite3,            // = "Sqlite3";
 	Scintilla,          // = "Scintilla";
 	Audio,              // = "Audio";
+	Fbx,                // = "Fbx";
 	View3d,             // = "View3d";
 	P3d,                // = "P3d";
 	Rylogic,            // = "Rylogic";
@@ -41,6 +43,11 @@ public enum EProjects
 	AllManaged,         // = "AllManaged";
 	All,                // = "All";
 }
+
+// Get the version number of the Rylogic library
+public static string RylogicLibraryVersion =>
+	Tools.Extract(Tools.Path([UserVars.Root, "Directory.Build.props"]),
+		new Regex("<RylogicLibraryVersion>(?<Version>.*)</RylogicLibraryVersion>")).Groups["Version"].Value;
 
 // Base class for all builders
 public abstract class Common
@@ -184,23 +191,20 @@ public class View3d : Native
 	}
 	public override void Deploy()
 	{
-		//DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d"), self.platforms, self.configs)
-		//DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d.dll"), self.platforms, self.configs)
+		// To publish the nuget package, use AllNative
+		Tools.DeployLib(ProjName, Tools.Path([ObjDir, "view3d-12"]), Platforms, Configs);
+		Tools.DeployLib(ProjName, Tools.Path([ObjDir, "view3d-12.dll"]), Platforms, Configs);
 	}
 }
 
 // Rylogic .NET assemblies
-public abstract class RylogicAssembly : Managed, Nuget.ISource
+public abstract class RylogicAssembly : Managed
 {
-	public string Version = "1.0.0";
-	public string? Nupkg = null;
+	public Nuget? Package = null;
 
 	public RylogicAssembly(string proj_name, List<string> frameworks, string workspace, List<string>? platforms, List<string>? configs)
 		:base(proj_name, Tools.Path([workspace, "projects\\rylogic", proj_name]), frameworks, workspace, platforms, configs)
 	{
-		Tools.SetupVcEnvironment();
-		var (_, version) = Tools.Run([UserVars.MSBuild, ProjFile, "-getProperty:Version", "-nologo", "-verbosity:quiet"]);
-		Version = version.Trim();
 	}
 	public override void Build()
 	{
@@ -209,22 +213,17 @@ public abstract class RylogicAssembly : Managed, Nuget.ISource
 	}
 	public override void Deploy()
 	{
-		Nupkg = Nuget.Package(ProjFile, this);
+		Package = new Nuget()
+		{
+			PackageName = ProjFile,
+			Version = RylogicLibraryVersion,
+			Tags = "rylogic csharp library",
+		};
 	}
 	public override void Publish()
 	{
-		if (Nupkg is null || !Path.Exists(Nupkg))
-			throw new Exception("Call Deploy before calling Publish");
-
-		Nuget.Publish(Nupkg);
-	}
-	public virtual IEnumerable<Nuget.File> NugetFiles()
-	{
-		yield break;
-	}
-	public virtual IEnumerable<Nuget.Dep> Dependencies()
-	{
-		yield break;
+		if (Package is null) throw new Exception("Call Deploy before calling Publish");
+		Package.Publish();
 	}
 	protected static string FwToTarget(string fw)
 	{
@@ -236,11 +235,12 @@ public class RylogicCore : RylogicAssembly
 	public RylogicCore(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Core", ["net9.0", "net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
-	public override IEnumerable<Nuget.File> NugetFiles()
+	public override void Deploy()
 	{
-		// Rylogic.Core isn't depended on windows
+		base.Deploy();
+		if (Package is null) throw new Exception("Package creation failed");
 		foreach (var fw in Frameworks)
-			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib\\{FwToTarget(fw)}\\", true);
+			Package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib/{FwToTarget(fw)}/", true));
 	}
 }
 public class RylogicGfx : RylogicAssembly
@@ -248,31 +248,20 @@ public class RylogicGfx : RylogicAssembly
 	public RylogicGfx(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Gfx", ["net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
-	public override IEnumerable<Nuget.File> NugetFiles()
+	public override void Deploy()
 	{
+		base.Deploy();
+		if (Package is null) throw new Exception("Package creation failed");
 		foreach (var fw in Frameworks)
-			yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib\\{FwToTarget(fw)}\\", true);
+			Package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib/{FwToTarget(fw)}/", true));
 
-		// yield return new Nuget.File(Tools.Path([ProjDir, "build\\props\\**\\*.*"], check_exists: false), $"build\\props");
-		// yield return new Nuget.File(Tools.Path([ProjDir, "build\\targets\\**\\*.*"], check_exists: false), $"build\\targets");
-
-		// yield return new Nuget.File(Tools.Path([ProjDir, "include\\**\\*.*"], check_exists: false), "include");
-		// yield return new Nuget.File(Tools.Path([ProjDir, "lib\\**\\*.*"], check_exists: false), "lib");
-		// yield return new Nuget.File(Tools.Path([ProjDir, "lib\\x64\\Release\\*.dll"], check_exists: false), "runtimes/win-x64/native");
-
-		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
-		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
-		// yield return new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\net481\\Rylogic.Core.dll"]), $"lib\\net481\\", true);
-	}
-	public override IEnumerable<Nuget.Dep> Dependencies()
-	{
-		yield return new Nuget.Dep("Rylogic.Core", Version);
-		yield return new Nuget.Dep("Rylogic", Version);
+		Package.Deps.Add(new Nuget.Dep("Rylogic.Core", RylogicLibraryVersion));
+		Package.Deps.Add(new Nuget.Dep("Rylogic", RylogicLibraryVersion));
 	}
 }
 
 // LDraw
-class LDraw : Managed
+public class LDraw : Managed
 {
 	public string DeployDir = string.Empty;
 	public string? MsiPath = null;
@@ -341,6 +330,61 @@ class LDraw : Managed
 
 		//Console.WriteLine("\nPublishing to web site...");
 		//Tools.Copy(MsiPath, Tools.Path([UserVars.WWWRoot, "files/ldraw", check_exists=False))
+	}
+}
+
+// All Native projects
+public class AllNative : Group
+{
+	private Nuget? Package = null;
+
+	public AllNative(string workspace, List<string> platforms, List<string> configs)
+		: base(workspace)
+	{
+		foreach (var type in typeof(Native).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Native))))
+		{
+			var instance = (Common?)Activator.CreateInstance(type, workspace, platforms, configs) ?? throw new Exception($"Failed to create instance of type {type}");
+			Items.Add(instance);
+		}
+	}
+	public override void Deploy()
+	{
+		base.Deploy();
+		Package = new Nuget()
+		{
+			PackageName = "RylogicNative",
+			Version = RylogicLibraryVersion,
+			Tags = "rylogic native library view3d",
+		};
+		Package.Files.AddRange([
+			new Nuget.File(Tools.Path([UserVars.Root, "include\\**\\*.*"], check_exists: false), "build/native/include/"),
+			new Nuget.File(Tools.Path([UserVars.Root, "build\\props\\**\\*.*"], check_exists: false), "build/native/props/"),
+			new Nuget.File(Tools.Path([UserVars.Root, "build\\targets\\**\\*.*"], check_exists: false), "build/native/targets/"),
+			new Nuget.File(Tools.Path([UserVars.Root, $"lib\\x64\\Release\\*.dll"], check_exists: false), "runtimes/win-x64/native/"),
+			new Nuget.File(Tools.Path([UserVars.Root, $"lib\\x64\\Release\\*.imp"], check_exists: false), "runtimes/win-x64/native/"),
+		]);
+	}
+	public override void Publish()
+	{
+		base.Publish();
+		if (Package is null)
+			throw new Exception("Call Deploy before calling Publish");
+
+		Package.Publish();
+	}
+}
+
+// All projects
+public class All : Group
+{
+	public All(string workspace, List<string> platforms, List<string> configs)
+		: base(workspace)
+	{
+		foreach (var type in typeof(Common).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Common)) && !t.IsSubclassOf(Group)))
+		{
+			var instance = (Common?)Activator.CreateInstance(type, workspace, platforms, configs) ?? throw new Exception($"Failed to create instance of type {type}");
+			Items.Add(instance);
+		}
 	}
 }
 
@@ -501,21 +545,20 @@ void Main(IList<string> args)
 	return;
 }
 
-
-// Testing
-List<string> args =
-	//["-project", "View3d", "-build", "-deploy"]
-	//["-project", "Rylogic.Core", "-build", "-deploy"]
-	//["-project", "Rylogic.Gfx", "-build", "-deploy"]
-	//["-project", "LDraw", "-deploy"];
-	Environment.GetCommandLineArgs().Skip(2).ToList()
-	;
-
-if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
-	Console.WriteLine("WARNING: Command line overridden for testing");
-
 try
 {
+	// Testing
+	List<string> args =
+		//["-project", "View3d", "-build", "-deploy"]
+		//["-project", "Rylogic.Core", "-build", "-deploy"]
+		//["-project", "Rylogic.Gfx", "-build", "-deploy"]
+		//["-project", "LDraw", "-deploy"];
+		//["-project", "AllNative", "-build", "-deploy"]
+		Environment.GetCommandLineArgs().Skip(2).ToList()
+	;
+	if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
+		Console.WriteLine("WARNING: Command line overridden for testing");
+
 	Main(args);
 }
 catch (Exception ex)

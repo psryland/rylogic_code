@@ -47,7 +47,7 @@
   <!-- Find unit tests -->
   <Target Name="HarvestFiles" BeforeTargets="PrepareForBuild">
     <Message Importance="high" Text="Harvesting files..." />
-    <Exec Command="py &quot;$(ProjectDir)harvest_files.py&quot; $(PlatformTarget) $(Configuration)" />
+    <Exec Command="dotnet-script $(ScriptPath)HarvestFiles.csx $(ProjectDir)src\unittests.h" />
   </Target>
   <!-- Files -->
   <ItemGroup>
@@ -388,7 +388,7 @@
   </ItemGroup>
   <!-- Run unit tests -->
   <Target Name="RunUnitTests" AfterTargets="Build">
-    <Exec Command="py $(ProjectDir)run_tests.py $(TargetPath)" />
+    <Exec Command="dotnet-script $(ScriptPath)RunTests.csx $(TargetPath)" />
   </Target>
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

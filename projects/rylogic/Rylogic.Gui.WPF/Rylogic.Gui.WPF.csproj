@@ -52,6 +52,6 @@
 	  </None>
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath) Rylogic.Core Rylogic.Windows" />
+		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) Rylogic.Core Rylogic.Windows" />
 	</Target>
 </Project>

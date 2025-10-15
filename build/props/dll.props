@@ -37,7 +37,7 @@
   <!-- Dependencies -->
   <Target Name="Deploy" AfterTargets="Build">
     <Exec
-      Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)"
+      Command="dotnet-script.exe $(ScriptPath)DeployLib.csx $(TargetPath)"
       WorkingDirectory="$(RylogicRoot)"
     />
   </Target>
