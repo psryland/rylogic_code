@@ -37,6 +37,6 @@
 	  </None>
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) Rylogic.Core Rylogic.Scintilla Rylogic.Gfx" />
+		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) true Rylogic.Core Rylogic.Scintilla Rylogic.Gfx" />
 	</Target>
 </Project>

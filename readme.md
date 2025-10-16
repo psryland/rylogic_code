@@ -39,9 +39,10 @@ This repository contains the Rylogic Ltd code.
 	|   |-- Rylogic.TextAligner
 	|   |-- etc...
 	|
-	|-- script          - Python scripts used in the build process. Only the variables in 'UserVars.py'
-	|   |-- UserVars.py   should need to be set to have the library build.
-	|   |-- Rylogic.py  - Helper python functions
+	|-- script            - Scripts used in the build process.
+	|   |-- UserVars.csx  - User variables required to build the library.
+	|   |-- UserVars.json - Local customisation of user variables.
+	|   |-- Tools.csx     - Helper functions
 	|   |-- etc...
 	|
 	|-- sdk             - Third party libraries and source
@@ -56,12 +57,13 @@ This repository contains the Rylogic Ltd code.
 
 ## Building
 
-This project is only used on windows. Compiling requires MSBuild and Python 3.
+This project is only used on windows. Compiling requires MSBuild, dotnet, dotnet-script.
 Follow these steps to build:
 
-- Pull to a clean directory
-- Run the _/script/UserVars.Setup.py_ file to generate the _/script/UserVars.py_ file.
-- Use _/script/Build.py_ to build projects from the command line, or, open _Rylogic.sln_ in Visual Studio 2022.
+- Pull to a clean directory,
+- Ensure the 'dotnet-script' tool is installed (use `dotnet tool install -g dotnet-script`),
+- Customise _/script/UserVars.csx_ or _/script/UserVars.json_ as needed,
+- Run `dotnet-script ./script/Build.csx` to build projects from the command line, or, open _Rylogic.sln_ in Visual Studio.
 
 This repo is actively developed, often refactored, and frequently broken. It is public so that the source for my released projects is publicly available.
 

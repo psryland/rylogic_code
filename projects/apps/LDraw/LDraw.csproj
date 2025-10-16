@@ -37,7 +37,7 @@
 
 	<!-- Pre Build -->
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-		<Exec Command="py $(ProjectDir)update_syntax_rules.py" />
+		<Exec Command="dotnet-script $(ScriptPath)UpdateLDrawSyntax.csx" />
 	</Target>
 
 	<!-- Targets  -->

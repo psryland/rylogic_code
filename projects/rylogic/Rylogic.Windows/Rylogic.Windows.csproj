@@ -38,6 +38,6 @@
 		</None>
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) Rylogic.Core" />
+		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) true Rylogic.Core WindowsBase" />
 	</Target>
 </Project>

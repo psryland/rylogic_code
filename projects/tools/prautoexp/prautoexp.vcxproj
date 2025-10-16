@@ -36,12 +36,6 @@
 		</Link>
 	</ItemDefinitionGroup>
 
- 	<!-- Generate the dll 'def' file -->
-	<Target Name="GenerateDefFile" BeforeTargets="PrepareForBuild">
-		<Message Text="Generate def file..." />
-		<Exec Command="py &quot;$(ProjectDir)generate_def_file.py&quot;" />
-	</Target>
-
 	<!-- Files -->
 	<ItemGroup>
 		<ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h" />

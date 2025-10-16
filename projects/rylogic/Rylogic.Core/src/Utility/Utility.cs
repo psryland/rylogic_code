@@ -11,10 +11,13 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -582,6 +585,51 @@ namespace Rylogic.Utility
 			var attr = ass.GetCustomAttributes(typeof(T), false);
 			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
 			return (T)(attr[0]);
+		}
+
+		/// <summary>Read the framework type of an assembly</summary>
+		public static string GetTargetFramework(string assemblyPath)
+		{
+			static string? GetAttributeTypeName(MetadataReader reader, EntityHandle ctorHandle)
+			{
+				if (ctorHandle.Kind == HandleKind.MemberReference)
+				{
+					var memberRef = reader.GetMemberReference((MemberReferenceHandle)ctorHandle);
+					var parent = memberRef.Parent;
+					if (parent.Kind == HandleKind.TypeReference)
+					{
+						var typeRef = reader.GetTypeReference((TypeReferenceHandle)parent);
+						return reader.GetString(typeRef.Namespace) + "." + reader.GetString(typeRef.Name);
+					}
+				}
+				return null;
+			}
+			static string? GetTargetFrameworkValue(MetadataReader reader, CustomAttribute attribute)
+			{
+				var valueBlob = reader.GetBlobReader(attribute.Value);
+				// Attribute value blob format: Prolog (2 bytes), followed by constructor args
+				valueBlob.ReadUInt16(); // skip prolog
+				return valueBlob.ReadSerializedString();
+			}
+
+			using var stream = File.OpenRead(assemblyPath);
+			using var peReader = new PEReader(stream);
+			var mdReader = peReader.GetMetadataReader();
+			foreach (var handle in mdReader.GetCustomAttributes(EntityHandle.AssemblyDefinition))
+			{
+				var attr = mdReader.GetCustomAttribute(handle);
+				var ctorHandle = attr.Constructor;
+				var attrType = GetAttributeTypeName(mdReader, ctorHandle);
+
+				if (attrType != typeof(TargetFrameworkAttribute).FullName)
+					continue;
+
+				if (GetTargetFrameworkValue(mdReader, attr) is not string value)
+					continue;
+
+				return value;
+			}
+			return "Unknown";
 		}
 
 		/// <summary>Return the main assembly for the currently running application</summary>

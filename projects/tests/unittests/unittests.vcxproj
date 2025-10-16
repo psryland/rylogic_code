@@ -388,7 +388,7 @@
   </ItemGroup>
   <!-- Run unit tests -->
   <Target Name="RunUnitTests" AfterTargets="Build">
-    <Exec Command="dotnet-script $(ScriptPath)RunTests.csx $(TargetPath)" />
+    <Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) false" />
   </Target>
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

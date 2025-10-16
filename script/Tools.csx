@@ -1,5 +1,4 @@
 #! "net9.0"
-// This is a port of 'Rylogic.py' to C# script
 #r "System.Text.Json"
 #r "nuget: Rylogic.Core, 1.0.4"
 #r "System.Diagnostics.Process"
@@ -10,8 +9,12 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 using Rylogic.Extn;
 using Console = System.Console;
 using IOPath = System.IO.Path;
@@ -337,6 +340,73 @@ public class Tools
 		Run(["openvsixsigntool", "sign", "--sha1", UserVars.CodeSignCert_Thumbprint, "-fd", algo, vsix_filepath]);
 	}
 
+	// Run the units tests in a .net assembly
+	public static void UnitTest(string binary_filepath, bool managed, List<string>? deps = null, bool run_tests = true)
+	{
+		// Set this to false to disable running tests on compiling
+		var RunTests = run_tests;
+		//RunTests = false;
+		if (!RunTests)
+			return;
+
+		if (!IOPath.Exists(binary_filepath))
+		{
+			Console.WriteLine($"{binary_filepath} assembly not found.   **** Unit tests skipped ****");
+			return;
+		}
+
+		// Run unit tests in a managed assembly
+		if (managed)
+		{
+			if (binary_filepath.EndsWith(".exe"))
+			{
+				var (res,outp) = Run([binary_filepath], throw_on_error: false, return_output: true);
+				Console.WriteLine(outp);
+				if (!res) throw new Exception("   **** Unit tests failed ****   ");
+				return;
+			}
+			if (binary_filepath.EndsWith(".dll"))
+			{
+				var command =
+					"& {\n" + 
+					$"    Set-Location {IOPath.GetDirectoryName(binary_filepath)};\n" +
+					$"    Add-Type -AssemblyName '{binary_filepath}';\n" + 
+					$"    $result = [{IOPath.GetFileNameWithoutExtension(binary_filepath)}.Program]::Main();\n" + 
+					$"    Exit $result;\n" + 
+					"}";
+				var (res,outp) = Run([UserVars.Pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]);
+				Console.WriteLine(outp);
+				if (!res) throw new Exception("   **** Unit tests failed ****   ");
+				return;
+
+				// If the assembly is '.NETCoreApp' then the assembly can actually be loaded in this process.
+				#if false
+				{
+					// Load the assembly and call Program.Main()
+					var ass = Assembly.LoadFile(binary_filepath);
+					var ns = IOPath.GetFileNameWithoutExtension(binary_filepath);
+					var type_program = ass.GetType($"{ns}.Program") ?? throw new Exception($"Type '{ns}.Program' not found in assembly '{binary_filepath}'");
+					var mi_main = type_program.GetMethod("Main", BindingFlags.Public | BindingFlags.Static) ?? throw new Exception($"Program.Main method not found in assembly '{binary_filepath}'");
+					var result = mi_main.Invoke(null, null);
+					if (result is not int res || res != 0)
+						throw new Exception("   **** Unit tests failed ****   ");
+					return;
+				}
+				#endif
+			}
+		}
+		else
+		{
+			if (binary_filepath.EndsWith(".exe"))
+			{
+				var (res,outp) = Run([binary_filepath], throw_on_error: false, return_output: true);
+				Console.WriteLine(outp);
+				if (!res) throw new Exception("   **** Unit tests failed ****   ");
+				return;
+			}
+		}
+	}
+
 	// Extract data from a text file using a regex
 	// Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 	// Returns the regex match object for the first match or null
@@ -375,6 +445,65 @@ public class Tools
 			if (m.Success)
 				yield return m;
 		}
+	}
+
+	// Modify a file, line-by-line, using regex
+	// Capture groups are defined like: (?<name>.*) and accessed like: m.Groups["name"].Value
+	public static void UpdateFileByLine(string filepath, Regex pat, string repl, bool all = false)
+	{
+		var do_replace = true;
+		var text = File.ReadAllText(filepath);
+		var updated = new StringBuilder(text.Length);
+		foreach (var line in text.Split('\n'))
+		{
+			if (do_replace)
+			{
+				var m = pat.Match(line);
+				if (m.Success)
+				{
+					updated.Append(pat.Replace(line, repl)).Append('\n');
+					do_replace &= all;
+					continue;
+				}
+			}
+
+			updated.Append(line).Append('\n');
+		}
+		var newt = updated.ToString();
+		if (text != newt)
+		{
+			File.WriteAllText(filepath + ".tmp", newt);
+			File.Replace(filepath + ".tmp", filepath, null);
+		}
+	}
+
+	// Modify a whole file using regex.
+	public static void UpdateFile(string filepath, Regex pat, string repl)
+	{
+		var text = File.ReadAllText(filepath);
+		var newt = pat.Replace(text, repl);
+		if (text != newt)
+		{
+			File.WriteAllText(filepath + ".tmp", newt);
+			File.Replace(filepath + ".tmp", filepath, null);
+		}
+	}
+
+	// Replace a tagged section within a file
+	public static void UpdateTaggedSection(string filepath, string tag_beg, string tag_end, string repl)
+	{
+		// Check the file exists
+		if (!IOPath.Exists(filepath))
+			throw new FileNotFoundException($"Cannot update tagged section in '{filepath}'.", filepath);
+
+		// Create the string to replace with
+		var section = $"{tag_beg}{repl}{tag_end}";
+
+		// The tagged section pattern
+		var pat = new Regex($"{tag_beg}(.*?){tag_end}", RegexOptions.Singleline);
+
+		// Replace the tagged section in 'filepath'
+		UpdateFile(filepath, pat, section);
 	}
 
 	// Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
@@ -535,4 +664,23 @@ public class Tools
 		}
 		return false;
 	}
+}
+
+// Allow methods within Tools to be invoked from the command line
+var args = Environment.GetCommandLineArgs().Skip(1).ToList();
+if (args.Count > 1 && args[0].EndsWith("Tools.csx") && typeof(Tools).GetMethod(args[1]) is MethodInfo mi)
+{
+	args = args[2..];
+
+	// Correct number of parameters given?
+	var pi = mi.GetParameters();
+	if (pi.Length != args.Count)
+		return;
+
+	// Convert strings to paramater types
+	var parameters = (List<object?>)[];
+	for (int i = 0; i != pi.Length; ++i)
+		parameters.Add(Convert.ChangeType(args[i], pi[i].ParameterType));
+
+	mi.Invoke(null, parameters.ToArray());
 }
