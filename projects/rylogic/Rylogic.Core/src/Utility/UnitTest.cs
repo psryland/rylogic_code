@@ -195,13 +195,34 @@ namespace Rylogic.UnitTests
 			}
 		}
 
-		/// <summary>A location containing unit test resources</summary>
+		/// <summary>Find the repository root (at runtime)</summary>
+		public static string RepoRoot
+		{
+			get
+			{
+				// This is needed because build determinism prevents building absolute paths into the assembly.
+				if (m_repo_root == null)
+				{
+					for (var dir = new DirectoryInfo(Directory.GetCurrentDirectory()); dir != null; dir = dir.Parent)
+					{
+						// System.Console.WriteLine(dir.FullName);
+						if (!dir.GetFiles("Rylogic.sln").Any()) continue;
+						m_repo_root = dir.FullName;
+						break;
+					}
+				}
+				return m_repo_root ?? throw new DirectoryNotFoundException("Repository root not found.");
+			}
+		}
+		private static string? m_repo_root;
+
+		/// <summary>The repo location containing unit test resources</summary>
 		public static string ResourcePath
 		{
 			get
 			{
-				var path = Path_.CombinePath(Util.ThisDirectory(), "..\\..\\..\\..\\tests\\unittests\\res");
-				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Resource path '{path}' is missing");
+				var path = Path_.CombinePath(RepoRoot, @"projects\tests\unittests\res");
+				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Resource path '{path}' is missing.");
 				return path;
 			}
 		}
@@ -211,8 +232,8 @@ namespace Rylogic.UnitTests
 		{
 			get
 			{
-				var path = Path_.CombinePath(Util.ThisDirectory(), "..\\..\\..\\..\\..\\lib");
-				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Library path '{path}' is missing");
+				var path = Path_.CombinePath(RepoRoot, @"lib");
+				if (!Path_.DirExists(path)) throw new Exception($"Unit Testing: Library path '{path}' is missing.");
 				return path;
 			}
 		}

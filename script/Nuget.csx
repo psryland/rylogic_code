@@ -44,10 +44,9 @@ public class Nuget
 
 		// Update metadata
 		var xml_metadata = xml_nuspec.Element(XName.Get("metadata", ns)) ?? throw new Exception("metadata element not found in nuspec template");
-
-		// Now you can update metadata elements, for example:
 		xml_metadata.Element(XName.Get("id", ns))?.SetValue(PackageName);
-		xml_metadata.Element(XName.Get("version", ns))?.SetValue(Version); // or get from project file
+		xml_metadata.Element(XName.Get("version", ns))?.SetValue(Version);
+		xml_metadata.Element(XName.Get("tags", ns))?.SetValue(Tags);
 
 		// Add each file to the spec
 		var xml_files = xml_nuspec.Element(XName.Get("files", ns)) ?? throw new Exception("files element not found in nuspec template");
@@ -72,7 +71,10 @@ public class Nuget
 		var xml_dependencies = xml_metadata.Element(XName.Get("dependencies", ns)) ?? throw new Exception("dependencies element not found in nuspec template");
 		foreach (var dep in Deps)
 		{
-			//todo
+			xml_dependencies.Add2(new XElement(XName.Get("dependency", ns),
+				new XAttribute("id", dep.AssemblyName),
+				new XAttribute("version", dep.Version)
+			));
 		}
 
 		var objdir = Path.Combine(Path.GetTempPath(), "rylogic");

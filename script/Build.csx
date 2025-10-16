@@ -215,16 +215,19 @@ public abstract class RylogicAssembly : Managed
 	{
 		Package = new Nuget()
 		{
-			PackageName = ProjFile,
+			PackageName = IOPath.GetFileNameWithoutExtension(ProjFile),
 			Version = RylogicLibraryVersion,
 			Tags = "rylogic csharp library",
 		};
+		Populate(Package);
+		Package.Package();
 	}
 	public override void Publish()
 	{
 		if (Package is null) throw new Exception("Call Deploy before calling Publish");
 		Package.Publish();
 	}
+	protected abstract void Populate(Nuget package);
 	protected static string FwToTarget(string fw)
 	{
 		return fw.EndsWith("windows") ? $"{fw}{UserVars.WinSDKVersion}" : fw;
@@ -235,12 +238,13 @@ public class RylogicCore : RylogicAssembly
 	public RylogicCore(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Core", ["net9.0", "net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
-	public override void Deploy()
+	protected override void Populate(Nuget package)
 	{
-		base.Deploy();
-		if (Package is null) throw new Exception("Package creation failed");
 		foreach (var fw in Frameworks)
-			Package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib/{FwToTarget(fw)}/", true));
+		{
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib/{FwToTarget(fw)}/", true));
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.pdb"]), $"lib/{FwToTarget(fw)}/"));
+		}
 	}
 }
 public class RylogicGfx : RylogicAssembly
@@ -248,15 +252,17 @@ public class RylogicGfx : RylogicAssembly
 	public RylogicGfx(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Gfx", ["net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
-	public override void Deploy()
+	protected override void Populate(Nuget package)
 	{
-		base.Deploy();
-		if (Package is null) throw new Exception("Package creation failed");
+		package.Tags += " view3d";
 		foreach (var fw in Frameworks)
-			Package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib/{FwToTarget(fw)}/", true));
+		{
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib/{FwToTarget(fw)}/", true));
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.pdb"]), $"lib/{FwToTarget(fw)}/"));
+		}	
 
-		Package.Deps.Add(new Nuget.Dep("Rylogic.Core", RylogicLibraryVersion));
-		Package.Deps.Add(new Nuget.Dep("Rylogic", RylogicLibraryVersion));
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+		package.Deps.Add(new Nuget.Dep("RylogicNative", $"[{RylogicLibraryVersion},)"));
 	}
 }
 
@@ -380,7 +386,7 @@ public class All : Group
 	public All(string workspace, List<string> platforms, List<string> configs)
 		: base(workspace)
 	{
-		foreach (var type in typeof(Common).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Common)) && !t.IsSubclassOf(Group)))
+		foreach (var type in typeof(Common).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Common)) && !t.IsSubclassOf(typeof(Group))))
 		{
 			var instance = (Common?)Activator.CreateInstance(type, workspace, platforms, configs) ?? throw new Exception($"Failed to create instance of type {type}");
 			Items.Add(instance);
@@ -551,7 +557,7 @@ try
 	List<string> args =
 		//["-project", "View3d", "-build", "-deploy"]
 		//["-project", "Rylogic.Core", "-build", "-deploy"]
-		//["-project", "Rylogic.Gfx", "-build", "-deploy"]
+		//["-project", "Rylogic.Gfx", "-deploy"]
 		//["-project", "LDraw", "-deploy"];
 		//["-project", "AllNative", "-build", "-deploy"]
 		Environment.GetCommandLineArgs().Skip(2).ToList()

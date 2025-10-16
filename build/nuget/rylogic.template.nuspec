@@ -20,7 +20,7 @@
         <dependencies>
             <!--
             - Global Dependency
-            <dependency id="MyLibrary" version="1.2.3" />
+            <dependency id="MyLibrary" version="[1.2.3,)" />
 
             - Platform specific dependency
             <group targetFramework="net9.0">

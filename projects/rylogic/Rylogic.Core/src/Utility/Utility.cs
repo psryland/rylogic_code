@@ -232,11 +232,13 @@ namespace Rylogic.Utility
 			static bool DebuggerAttached() => Debugger.IsAttached;
 		}
 
-		/// <summary>__FILE__</summary>
+		/// <summary>__FILE__. Note: Relative paths only when deterministic builds are enabled</summary>
 		public static string ThisFile([CallerFilePath] string caller_filepath = "")
 		{
 			return caller_filepath;
 		}
+
+		/// <summary>__FILE__(ish). Note: Relative paths only when deterministic builds are enabled</summary>
 		public static string ThisDirectory([CallerFilePath] string caller_filepath = "")
 		{
 			return Path.GetDirectoryName(caller_filepath) ?? string.Empty;

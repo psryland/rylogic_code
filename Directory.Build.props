@@ -36,6 +36,13 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<RylogicLibraryVersion>2.0.0</RylogicLibraryVersion>
 
+		<!-- Deterministic builds -->
+		<Deterministic>true</Deterministic>
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<RepositoryUrl>https://github.com/psryland/rylogic_code</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+
 		<!-- Default build configuration -->
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>

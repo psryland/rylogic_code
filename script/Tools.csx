@@ -368,12 +368,12 @@ public class Tools
 			if (binary_filepath.EndsWith(".dll"))
 			{
 				var command =
-					"& {\n" + 
-					$"    Set-Location {IOPath.GetDirectoryName(binary_filepath)};\n" +
+					$"& {{\n" + 
+					$"    Set-Location {UserVars.Root};\n" +
 					$"    Add-Type -AssemblyName '{binary_filepath}';\n" + 
 					$"    $result = [{IOPath.GetFileNameWithoutExtension(binary_filepath)}.Program]::Main();\n" + 
 					$"    Exit $result;\n" + 
-					"}";
+					$"}}";
 				var (res,outp) = Run([UserVars.Pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]);
 				Console.WriteLine(outp);
 				if (!res) throw new Exception("   **** Unit tests failed ****   ");
