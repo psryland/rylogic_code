@@ -478,7 +478,7 @@ namespace pr::rdr12::ldraw
 				m_frame_range = pr::Range<int>(beg, end);
 				return *this;
 			}
-			LdrAnimation& Frame(int frame)
+			LdrAnimation& frame(int frame)
 			{
 				return frames(frame, frame + 1);
 			}
