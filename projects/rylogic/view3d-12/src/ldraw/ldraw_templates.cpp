@@ -491,6 +491,8 @@ namespace pr::rdr12::ldraw
 			"*Model [<name>] [<colour>]\n"
 			"{\n"
 			"	*FilePath {<model_filepath>}\n"
+			"	[*Parts {(<mesh_name>)}]\n"
+			"	[*NoMaterials {}]\n"
 			"	[@Animation]\n"
 			"	[@GenerateNormals]\n"
 			"	[@BakeTransform]\n"

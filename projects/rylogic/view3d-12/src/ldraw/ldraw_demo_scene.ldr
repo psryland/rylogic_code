@@ -1146,7 +1146,8 @@
 *Model model_from_file
 {
 	//*FilePath {"<model-filepath>"} // The file to create the model from
-	*Parts {}                        // Optional. Only load named models from the file
+	*Parts {"<mesh_name>" ...}       // Optional. Only load named models from the file
+	*NoMaterials {}                  // Optional. Ignore any materials in the model file
 	*Animation {                     // Optional. Load animation data from the model file
 		*Style {PingPong}            // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
 		*Frame {10}                  // Load a single frame from the animation

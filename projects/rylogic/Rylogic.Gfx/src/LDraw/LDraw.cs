@@ -99,6 +99,7 @@ namespace Rylogic.LDraw
 		Near = unchecked((int)1425233679),
 		NewLine = unchecked((int)4281549323),
 		NonAffine = unchecked((int)3876544483),
+		NoMaterials = unchecked((int)762077060),
 		Normalise = unchecked((int)4066511049),
 		Normals = unchecked((int)247908339),
 		NoZTest = unchecked((int)329427844),

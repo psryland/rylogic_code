@@ -126,6 +126,7 @@ namespace pr::rdr12::ldraw
 		x(Near              , = HashI("Near"                  ))\
 		x(NewLine           , = HashI("NewLine"               ))\
 		x(NonAffine         , = HashI("NonAffine"             ))\
+		x(NoMaterials       , = HashI("NoMaterials"           ))\
 		x(Normalise         , = HashI("Normalise"             ))\
 		x(Normals           , = HashI("Normals"               ))\
 		x(NoZTest           , = HashI("NoZTest"               ))\

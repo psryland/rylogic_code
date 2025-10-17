@@ -216,6 +216,7 @@ class EKeyword(Enum):
 	Near = 1425233679
 	NewLine = 4281549323
 	NonAffine = 3876544483
+	NoMaterials = 762077060
 	Normalise = 4066511049
 	Normals = 247908339
 	NoZTest = 329427844

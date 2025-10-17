@@ -4433,6 +4433,7 @@ namespace pr::rdr12::ldraw
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
 		vector<SkeletonPtr, 1> m_skels;
+		bool m_ignore_materials;
 		LdrObject* m_obj;
 
 		ObjectCreator(ParseParams& pp)
@@ -4446,6 +4447,7 @@ namespace pr::rdr12::ldraw
 			, m_gen_norms()
 			, m_bake()
 			, m_skels()
+			, m_ignore_materials()
 			, m_obj()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
@@ -4463,6 +4465,11 @@ namespace pr::rdr12::ldraw
 				case EKeyword::LoadAtFrame:
 				{
 					m_load_at_frame = reader.Int<int>();
+					return true;
+				}
+				case EKeyword::NoMaterials:
+				{
+					m_ignore_materials = true;
 					return true;
 				}
 				case EKeyword::Parts:
@@ -4537,7 +4544,12 @@ namespace pr::rdr12::ldraw
 		// IModelOut functions
 		geometry::ESceneParts Parts() const override
 		{
-			return m_anim_info ? geometry::ESceneParts::All : geometry::ESceneParts::ModelOnly;
+			auto parts = m_anim_info
+				? geometry::ESceneParts::All
+				: geometry::ESceneParts::ModelOnly;
+			if (m_ignore_materials)
+				parts = SetBits(parts, geometry::ESceneParts::Materials, false);
+			return parts;
 		}
 		std::optional<int> LoadAtFrame() const override
 		{

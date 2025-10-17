@@ -36,8 +36,23 @@ public class Tools
 	}
 
 	// Deploy lib and/or dll files to the '/lib' folder
-	public static void DeployLib(string target_name, string obj_dir, IList<string> platforms, IList<string> configs)
+	public static void DeployLib(string target_path)
 	{
+		// 'Target' is the build target (i.e. in the obj/ directory)
+		var m = Regex.Match(target_path, @"^(?<objdir>.*)[\\/](?<platform>.*?)[\\/](?<config>.*?)[\\/](?<target_name>.*?)$");
+		if (!m.Success)
+			throw new Exception($"Invalid $(TargetPath): {target_path}");
+
+		var obj_dir = m.Groups["objdir"].Value;
+		var platform = m.Groups["platform"].Value;
+		var config = m.Groups["config"].Value;
+		var target_name = IOPath.GetFileNameWithoutExtension(m.Groups["target_name"].Value);
+		var target_dir = Tools.Path([obj_dir, platform, config]);
+
+		// Get the destination directory: /lib/p/c/target_name.extn
+		var dst_dir = Tools.Path([UserVars.Root, "lib", platform, config], check_exists: false);
+		Directory.CreateDirectory(dst_dir);
+	
 		// Notes:
 		//  - Watch out for pdb files overwriting projects with the same name.
 		//  - The MSBuild system creates the '$(TargetName).pdb' file even if the project file sets the pdb name to something else.
@@ -45,29 +60,19 @@ public class Tools
 		//  - The only option is to use separate names for lib and dll projects :(
 		//  - Use <project>-static.lib.
 		//  - Don't make $(TargetName) == $(ProjectName), just set the name explicitly.
-		foreach (var p in platforms)
+		var target_files = (string[])[
+			Tools.Path([target_dir, $"{target_name}.lib"], check_exists: false),
+			Tools.Path([target_dir, $"{target_name}.dll"], check_exists: false),
+			Tools.Path([target_dir, $"{target_name}.imp"], check_exists: false),
+			Tools.Path([target_dir, $"{target_name}.pdb"], check_exists: false),
+		];
+
+		// Copy the target files to the destination directories
+		foreach (var filepath in target_files)
 		{
-			foreach (var c in configs)
-			{
-				var target_dir = Tools.Path([obj_dir, p, c]);
-				var target_files = (string[])[
-					Tools.Path([target_dir, $"{target_name}.lib"], check_exists: false),
-					Tools.Path([target_dir, $"{target_name}.dll"], check_exists: false),
-					Tools.Path([target_dir, $"{target_name}.imp"], check_exists: false),
-					Tools.Path([target_dir, $"{target_name}.pdb"], check_exists: false),
-				];
-
-				// Get the destination directory: /lib/p/c/target_name.extn
-				var dst_dir = Tools.Path([UserVars.Root, "lib", p, c], check_exists: false);
-				Directory.CreateDirectory(dst_dir);
-
-				// Copy the target files to the destination directories
-				foreach (var filepath in target_files.Where(x => IOPath.Exists(x)))
-				{
-					var dst_path = Tools.Path([dst_dir, IOPath.GetFileName(filepath)], check_exists: false);
-					Tools.Copy(filepath, dst_path);
-				}
-			}
+			if (!IOPath.Exists(filepath)) continue;
+			var dst_path = Tools.Path([dst_dir, IOPath.GetFileName(filepath)], check_exists: false);
+			Tools.Copy(filepath, dst_path);
 		}
 	}
 

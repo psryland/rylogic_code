@@ -23,18 +23,10 @@ try
 		Environment.GetCommandLineArgs().Skip(2).ToList()
 	;
 
-	// 'Target' is the build target (i.e. in the obj/ directory)
 	var target_path = args.Count > 0 ? args[0] : throw new Exception("Target Path?");
-	var m = Regex.Match(target_path, @"^(?<objdir>.*)[\\/](?<platform>.*?)[\\/](?<config>.*?)[\\/](?<target_name>.*?)$");
-	if (!m.Success) throw new Exception($"Invalid $(TargetPath): {target_path}");
-
-	Tools.DeployLib(
-		m.Groups["target_name"].Value,
-		m.Groups["objdir"].Value,
-		[m.Groups["platform"].Value],
-		[m.Groups["config"].Value]);
+	Tools.DeployLib(target_path);
 }
 catch (Exception ex)
 {
-	Console.WriteLine(ex.Message);
+	Console.Error.WriteLine(ex.Message);
 }
