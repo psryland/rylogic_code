@@ -101,7 +101,7 @@ namespace pr::rdr12
 
 			// Is Skinned
 			if (ModelPtr const* model = inst.find<ModelPtr>(EInstComp::ModelPtr); model && (*model)->m_skin)
-				if (PosePtr const* pose = inst.find<PosePtr>(EInstComp::PosePtr); pose)
+				if (PosePtr const* pose = inst.find<PosePtr>(EInstComp::PosePtr); pose && *pose)
 					model_flags |= shaders::ModelFlags_IsSkinned;
 		}
 
