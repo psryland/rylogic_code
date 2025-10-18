@@ -21,26 +21,26 @@ namespace pr::rdr12
 
 	// -----------------------------------------------------------------------------------------------
 
-	Animator_SingleKeyFrameAnimation::Animator_SingleKeyFrameAnimation(KeyFrameAnimationPtr anim)
+	Animator_KeyFrameAnimation::Animator_KeyFrameAnimation(KeyFrameAnimationPtr anim)
 		: Animator()
 		, m_anim(anim)
 	{
 	}
 
 	// Return the ID of the skeleton we're animating
-	uint64_t Animator_SingleKeyFrameAnimation::SkelId() const
+	uint64_t Animator_KeyFrameAnimation::SkelId() const
 	{
 		return m_anim->m_skel_id;
 	}
 
 	// Return the frame rate of the underlying animation
-	double Animator_SingleKeyFrameAnimation::FrameRate() const
+	double Animator_KeyFrameAnimation::FrameRate() const
 	{
 		return m_anim->frame_rate();
 	}
 
 	// Apply an animation to the given bones
-	void Animator_SingleKeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s)
+	void Animator_KeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s)
 	{
 		m_anim->EvaluateAtTime(time_s, bones);
 	}

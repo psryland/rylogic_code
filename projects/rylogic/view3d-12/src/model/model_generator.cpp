@@ -1386,32 +1386,6 @@ namespace pr::rdr12
 				anim->m_position = fbxanim.m_position;
 				anim->m_scale = fbxanim.m_scale;
 
-				/*{
-					std::ofstream ofile("E:\\Dump\\LDraw\\PendulumAnimDump2.txt");
-					ofile << "Anim:\n";
-					if (!anim->m_rotation.empty())
-					{
-						ofile << "  Rotations:\n";
-						for (int b = 0; b != anim->bone_count(); ++b)
-							for (int k = 0; k != anim->key_count(); ++k)
-								ofile << "    " << anim->m_rotation[k * anim->bone_count() + b] << "\n";
-					}
-					if (!anim->m_position.empty())
-					{
-						ofile << "  Positions:\n";
-						for (int b = 0; b != anim->bone_count(); ++b)
-							for (int k = 0; k != anim->key_count(); ++k)
-								ofile << "    " << anim->m_position[k * anim->bone_count() + b] << "\n";
-					}
-					if (!anim->m_scale.empty())
-					{
-						ofile << "  Scale:\n";
-						for (int b = 0; b != anim->bone_count(); ++b)
-							for (int k = 0; k != anim->key_count(); ++k)
-								ofile << "    " << anim->m_scale[k * anim->bone_count() + b] << "\n";
-					}
-				}*/
-
 				// Save the animation
 				return m_out.Animation(std::move(anim)) == IModelOut::EResult::Continue;
 			}
@@ -1419,7 +1393,6 @@ namespace pr::rdr12
 
 		// Load the fbx scene
 		fbx::Scene scene(src, fbx::LoadOptions{
-			.load_at_frame = out.LoadAtFrame(),
 			.space_conversion = fbx::ESpaceConversion::TransformRoot,
 			.pivot_handling = fbx::EPivotHandling::Retain,
 			.target_axes = {

@@ -89,7 +89,6 @@ namespace Rylogic.LDraw
 		LineList = unchecked((int)419493935),
 		Lines = unchecked((int)3789825596),
 		LineStrip = unchecked((int)4082781759),
-		LoadAtFrame = unchecked((int)2484361697),
 		LookAt = unchecked((int)3951693683),
 		M3x3 = unchecked((int)1709156072),
 		M4x4 = unchecked((int)3279345952),

@@ -67,7 +67,8 @@ namespace pr::rdr12
 	// The effective frame rate implied by the duration and number of keys
 	double KeyFrameAnimation::frame_rate() const
 	{
-		return (key_count() - 1) / m_duration;
+		auto kcount = key_count();
+		return kcount > 1 ? (kcount - 1.0) / m_duration : m_native_frame_rate;
 	}
 	
 	// Get the keys on either side of 'time_s' (to interpolate between)
@@ -75,6 +76,18 @@ namespace pr::rdr12
 	{
 		auto bcount = bone_count();
 		auto kcount = key_count();
+		if (kcount == 1)
+		{
+			BoneKey key = {
+				.m_rot = !m_rotation.empty() ? m_rotation[bone_index] : quat::Identity(),
+				.m_pos = !m_position.empty() ? m_position[bone_index] : v3::Zero(),
+				.m_scl = !m_scale.empty() ? m_scale[bone_index] : v3::One(),
+				.m_time = 0.0f,
+				.m_idx = 0,
+			};
+			return { key, key };
+		}
+
 		auto period = s_cast<float>(1.0 / frame_rate());
 
 		// Convert the time into a frame number.

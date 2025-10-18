@@ -217,9 +217,6 @@ namespace pr::geometry::fbx
 	// Scene load options
 	struct LoadOptions
 	{
-		// Load the model at a specific frame.
-		std::optional<int> load_at_frame = {};
-
 		#if 0
 		ufbx_allocator_opts temp_allocator;   // < Allocator used during loading
 		ufbx_allocator_opts result_allocator; // < Allocator used for the final scene

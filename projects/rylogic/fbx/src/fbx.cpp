@@ -1212,13 +1212,13 @@ namespace pr::geometry::fbx
 					static_cast<int>(std::floor(fbxanim.time_end * anim.m_frame_rate))
 				));
 				auto num_keys = frame_range.size() + 1;
-				if (num_keys <= 1)
+				if (num_keys == 0)
 					continue;
 
 				// Set the duration of the animation
 				anim.m_duration = (num_keys - 1) / anim.m_frame_rate;
 				auto time_offset = frame_range.begin() / anim.m_frame_rate;
-				assert(FEql((num_keys - 1) / anim.m_duration, anim.m_frame_rate));
+				assert(anim.m_duration == 0 || FEql((num_keys - 1) / anim.m_duration, anim.m_frame_rate));
 
 				// Evaluate the animation for each skeleton
 				auto roots = FindRoots(m_fbxscene.bones, IsBoneRoot);
@@ -1475,11 +1475,9 @@ namespace pr::geometry::fbx
 	struct SceneData
 	{
 		std::shared_ptr<ufbx_scene> m_fbxscene;
-		std::shared_ptr<ufbx_scene> m_evaluated;
 
 		SceneData(std::istream& src, LoadOptions const& opts)
 			: m_fbxscene()
-			, m_evaluated()
 		{
 			// Convert user options
 			auto ufbx_opts = To<ufbx_load_opts>(opts);
@@ -1498,39 +1496,10 @@ namespace pr::geometry::fbx
 				throw std::runtime_error(To<std::string>(error));
 
 			m_fbxscene = std::shared_ptr<ufbx_scene>(fbxscene, ufbx_free_scene);
-
-			// If 'load_at_frame' is specified, evaluate the scene
-			if (opts.load_at_frame && fbxscene->anim != nullptr)
-			{
-				// Convert the frame to a time
-				auto time = *opts.load_at_frame / fbxscene->settings.frames_per_second;
-
-				// Select the default animation in the scene
-				auto const* anim = fbxscene->anim; // Todo, select an anim?
-
-				// Eval options
-				ufbx_evaluate_opts eval_opts = {
-					.temp_allocator = ufbx_opts.temp_allocator,
-					.result_allocator = ufbx_opts.result_allocator,
-					.evaluate_skinning = ufbx_opts.evaluate_skinning,
-					.evaluate_caches = ufbx_opts.evaluate_caches,
-					.evaluate_flags = 0, // See `ufbx_evaluate_flags` for information.
-					.load_external_files = ufbx_opts.load_external_files, // WARNING: Potentially unsafe! Try to open external files such as geometry caches
-					.open_file_cb = {} // External file callbacks (defaults to stdio.h)
-				};
-
-				// Evaluate the scene
-				error = ufbx_error{};
-				auto evaluated = ufbx_evaluate_scene(fbxscene, anim, time, &eval_opts, &error);
-				if (error.type != UFBX_ERROR_NONE)
-					throw std::runtime_error(To<std::string>(error));
-
-				m_evaluated = std::shared_ptr<ufbx_scene>(evaluated, ufbx_free_scene);
-			}
 		}
 		operator ufbx_scene const& () const
 		{
-			return m_evaluated ? *m_evaluated : *m_fbxscene;
+			return *m_fbxscene;
 		}
 	};
 

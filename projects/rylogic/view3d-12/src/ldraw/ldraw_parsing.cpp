@@ -573,7 +573,7 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Frame:
 				{
 					auto frame = reader.Int<int>();
-					anim_info.m_frame_range = { frame, frame + 1 };
+					anim_info.m_frame_range = { frame, frame };
 					break;
 				}
 				case EKeyword::FrameRange:
@@ -4429,7 +4429,6 @@ namespace pr::rdr12::ldraw
 		std::unordered_set<string32> m_model_parts;
 		std::unordered_set<string32> m_skel_parts;
 		std::optional<KeyFrameAnimInfo> m_anim_info;
-		std::optional<int> m_load_at_frame;
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
 		vector<SkeletonPtr, 1> m_skels;
@@ -4443,7 +4442,6 @@ namespace pr::rdr12::ldraw
 			, m_model_parts()
 			, m_skel_parts()
 			, m_anim_info()
-			, m_load_at_frame()
 			, m_gen_norms()
 			, m_bake()
 			, m_skels()
@@ -4460,11 +4458,6 @@ namespace pr::rdr12::ldraw
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 					m_filepath = reader.String<std::filesystem::path>();
 					m_file_stream = reader.PathResolver.OpenStream(m_filepath, IPathResolver::EFlags::Binary);
-					return true;
-				}
-				case EKeyword::LoadAtFrame:
-				{
-					m_load_at_frame = reader.Int<int>();
 					return true;
 				}
 				case EKeyword::NoMaterials:
@@ -4551,10 +4544,6 @@ namespace pr::rdr12::ldraw
 				parts = SetBits(parts, geometry::ESceneParts::Materials, false);
 			return parts;
 		}
-		std::optional<int> LoadAtFrame() const override
-		{
-			return m_load_at_frame;
-		}
 		rdr12::FrameRange FrameRange() const override
 		{
 			// The frame range of animation data to return
@@ -4587,12 +4576,10 @@ namespace pr::rdr12::ldraw
 			auto const& anim_info = *m_anim_info;
 
 			// The time/frame range in the anim info is the portion of the animation to use during playback
-			auto time_range = ToTimeRange(anim_info.m_frame_range, anim->frame_rate());
-			time_range = Intersect(time_range, TimeRange{ 0, anim->m_duration });
-			time_range = Intersect(time_range, anim_info.m_time_range);
+			auto time_range = TimeRange{ 0, anim->m_duration };
 
 			// Create an animator that uses the animation and a pose for it to animate
-			AnimatorPtr animator{ rdr12::New<Animator_SingleKeyFrameAnimation>(anim), true };
+			AnimatorPtr animator{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
 			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, anim_info.m_style, time_range, anim_info.m_stretch), true };
 
 			// Set the pose for each model in the hierarchy.

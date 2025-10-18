@@ -234,10 +234,6 @@ namespace pr::rdr12
 			{
 				return geometry::ESceneParts::All;
 			}
-			virtual std::optional<int> LoadAtFrame() const
-			{
-				return {};
-			}
 			virtual rdr12::FrameRange FrameRange() const
 			{
 				// The frame range of animation data to return

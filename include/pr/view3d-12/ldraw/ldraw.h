@@ -116,7 +116,6 @@ namespace pr::rdr12::ldraw
 		x(LineList          , = HashI("LineList"              ))\
 		x(Lines             , = HashI("Lines"                 ))\
 		x(LineStrip         , = HashI("LineStrip"             ))\
-		x(LoadAtFrame       , = HashI("LoadAtFrame"           ))\
 		x(LookAt            , = HashI("LookAt"                ))\
 		x(M3x3              , = HashI("M3x3"                  ))\
 		x(M4x4              , = HashI("M4x4"                  ))\

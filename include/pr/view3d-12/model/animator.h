@@ -34,14 +34,14 @@ namespace pr::rdr12
 		static void RefCountZero(RefCounted<Animator>* doomed);
 	};
 
-	struct Animator_SingleKeyFrameAnimation : Animator
+	struct Animator_KeyFrameAnimation : Animator
 	{
 		// Notes:
 		//  - This animator reads from a single key frame animation
 
 		KeyFrameAnimationPtr m_anim;   // The animation sequence to read from
 
-		Animator_SingleKeyFrameAnimation(KeyFrameAnimationPtr anim);
+		Animator_KeyFrameAnimation(KeyFrameAnimationPtr anim);
 
 		// Return the ID of the skeleton we're animating
 		uint64_t SkelId() const override;

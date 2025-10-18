@@ -206,7 +206,6 @@ class EKeyword(Enum):
 	LineList = 419493935
 	Lines = 3789825596
 	LineStrip = 4082781759
-	LoadAtFrame = 2484361697
 	LookAt = 3951693683
 	M3x3 = 1709156072
 	M4x4 = 3279345952
