@@ -140,7 +140,7 @@ namespace pr::rdr12::ldraw
 			// Reset the builder
 			LdrBuilder& Clear(int count = -1)
 			{
-				if (count >= 0 && count < m_objects.size())
+				if (count >= 0 && count < isize(m_objects))
 					m_objects.resize(m_objects.size() - count);
 				else
 					m_objects.clear();

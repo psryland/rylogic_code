@@ -294,11 +294,13 @@ public class Tools
 						List<string> args_ = [..args, $"/p:Configuration={config};Platform={platform}"];
 						if (parallel)
 						{
-							procs.Add(Spawn($"{++i}>", args_, same_window: same_window));
+							var instance_id = ++i;
+							Console.WriteLine($"{instance_id}> --- {platform}|{config} ---:");
+							procs.Add(Spawn($"{instance_id}>", args_, same_window: same_window));
 						}
 						else
 						{
-							Console.WriteLine($"{platform}|{config}:");
+							Console.WriteLine($"--- {platform}|{config} ---:");
 							Run(args_, return_output: false, show_arguments: false);
 						}
 					}

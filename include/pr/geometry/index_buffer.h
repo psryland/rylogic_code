@@ -88,6 +88,14 @@ namespace pr::geometry
 				lhs.m_ptr.set(lhs.m_stride, rhs.m_ptr.get<Idx>(rhs.m_stride));
 				rhs.m_ptr.set(rhs.m_stride, tmp);
 			}
+			friend bool operator == (proxy_t lhs, proxy_t rhs)
+			{
+				return lhs.m_ptr.get<int64_t>(lhs.m_stride) == rhs.m_ptr.get<int64_t>(rhs.m_stride);
+			}
+			friend bool operator != (proxy_t lhs, proxy_t rhs)
+			{
+				return !(lhs == rhs);
+			}
 		};
 
 		// Index iterator
@@ -417,15 +425,15 @@ namespace pr::geometry
 		}
 
 		// Index accessor
-		uint64_t operator [] (ptrdiff_t i) const
+		uint64_t operator [] (size_t i) const
 		{
-			assert(i >= 0 && i < s_cast<ptrdiff_t>(size()));
+			assert(i < size());
 			auto p = cptr_t{ .p = m_buf.data() + i * stride() };
 			return p.get<uint64_t const>(stride());
 		}
-		auto operator [] (ptrdiff_t i)
+		auto operator [] (size_t i)
 		{
-			assert(i >= 0 && i < s_cast<ptrdiff_t>(size()));
+			assert(i < size());
 			auto p = mptr_t{ .p = m_buf.data() + i * stride() };
 			return index_buffer::proxy_t<uint64_t>{p, stride()};
 		}

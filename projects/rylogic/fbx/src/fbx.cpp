@@ -502,7 +502,7 @@ namespace pr::geometry::fbx
 		static size_t Read(void* ctx, void* data, size_t size)
 		{
 			auto& src = static_cast<IStream*>(ctx)->m_src;
-			auto bytes_read = src.read(char_ptr(data), size).gcount();
+			auto bytes_read = s_cast<size_t>(src.read(char_ptr(data), size).gcount());
 			return src.bad() ? SIZE_MAX : bytes_read;
 		}
 
@@ -1189,7 +1189,7 @@ namespace pr::geometry::fbx
 			AnimationData anim;
 
 			// Set the animation to use
-			for (int i = 0; i != m_fbxscene.anim_stacks.count; ++i)
+			for (size_t i = 0; i != m_fbxscene.anim_stacks.count; ++i)
 			{
 				Progress(1LL + i, m_fbxscene.anim_stacks.count, "Reading animation...");
 

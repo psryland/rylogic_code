@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -77,19 +77,19 @@ namespace pr::rdr12
 		template <typename VType>
 		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, Range irange, float gen_normals)
 		{
-			auto iptr = cache.m_icont.begin<int64_t>() + irange.begin();
+			auto iptr = cache.m_icont.begin<int64_t>() + s_cast<ptrdiff_t>(irange.begin());
 
 			geometry::GenerateNormals(
 				isize(irange), iptr, gen_normals, isize(cache.m_vcont),
 				[&](int64_t idx)
 				{
-					return GetP(cache.m_vcont[idx]);
+					return GetP(cache.m_vcont[s_cast<size_t>(idx)]);
 				},
 				[&](int64_t idx, int64_t orig, v4 const& norm)
 				{
 					assert(idx <= isize(cache.m_vcont));
 					if (idx == isize(cache.m_vcont)) cache.m_vcont.push_back(cache.m_vcont[orig]);
-					SetN(cache.m_vcont[idx], norm);
+					SetN(cache.m_vcont[s_cast<size_t>(idx)], norm);
 				},
 				[&](int64_t i0, int64_t i1, int64_t i2)
 				{

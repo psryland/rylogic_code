@@ -1006,7 +1006,7 @@ namespace pr::rdr12::ldraw
 					if (nug.m_irange != Range::Reset())
 					{
 						icount = isize(nug.m_irange);
-						iptr += nug.m_irange.begin();
+						iptr += s_cast<int>(nug.m_irange.begin());
 					}
 
 					// Not sure if this works... needs testing
@@ -1017,7 +1017,7 @@ namespace pr::rdr12::ldraw
 						},
 						[&](int new_idx, int orig_idx, v4 const& norm)
 						{
-							if (new_idx >= verts.size())
+							if (new_idx >= isize(verts))
 							{
 								verts.resize(new_idx + 1, verts[orig_idx]);
 								normals.resize(new_idx + 1, normals[orig_idx]);
@@ -4316,7 +4316,8 @@ namespace pr::rdr12::ldraw
 				{
 					for (auto i : nug.m_irange.enumerate())
 					{
-						if (!HasAlpha(m_colours[m_indices[i]]))
+						auto ii = static_cast<uint64_t>(m_indices[s_cast<size_t>(i)]);
+						if (!HasAlpha(m_colours[s_cast<size_t>(ii)]))
 							continue;
 
 						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, true);

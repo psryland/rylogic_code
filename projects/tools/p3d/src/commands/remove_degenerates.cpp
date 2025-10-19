@@ -212,7 +212,7 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 		auto count = isize(nug.m_vidx);
 		auto iptr = nug.m_vidx.begin<int64_t>();
 		for (int i = 0; i != count; ++i, ++iptr)
-			*iptr = map[*iptr].kept - verts.data();
+			*iptr = map[static_cast<size_t>(*iptr)].kept - verts.data();
 	}
 
 	// Replace the vert containers in the mesh

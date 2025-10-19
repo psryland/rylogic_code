@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -119,7 +119,7 @@ namespace pr::rdr12
 	static void EvaluateAtTime(float time_s, KeyFrameAnimation const& anim, std::span<Key> out)
 	{
 		// For each bone...
-		assert(anim.bone_count() == out.size());
+		assert(anim.bone_count() == isize(out));
 		std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), [&](Key& key)
 		{
 			// Get the keys to interpolate between

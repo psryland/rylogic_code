@@ -111,7 +111,7 @@ public abstract class Native : Common
 		ProjName = proj_name;
 		ProjDir = Tools.Path([workspace, proj_dir]);
 		ProjFile = Tools.Path([ProjDir, $"{proj_name}.vcxproj"]);
-		Platforms = platforms ?? ["x64", "x86"];
+		Platforms = platforms ?? ["x64"]; // "x86"
 		Configs = configs ?? ["Release", "Debug"];
 		ObjDir = Tools.Path([Workspace, "obj", UserVars.PlatformToolset], check_exists: false);
 		Directory.CreateDirectory(ObjDir);
@@ -215,7 +215,7 @@ public class Fbx : Native
 	}
 	public override void Build()
 	{
-		Tools.MSBuild(RylogicSln, [@"projects\rylogic\fbx"], Platforms, Configs);
+		Tools.MSBuild(RylogicSln, [@"Rylogic\fbx"], Platforms, Configs);
 	}
 	public override void Deploy()
 	{

@@ -1,9 +1,10 @@
-//******************************************
+﻿//******************************************
 // Arena Allocator
 //  Copyright (c) Oct 2025 Rylogic
 //******************************************
 #pragma once
 #include <cassert>
+#include <type_traits>
 #include <memory>
 #include <vector>
 
@@ -25,8 +26,16 @@ namespace pr
 
 		struct AllocHeader
 		{
-			size_t size; // The size of the allocation *excluding* this header
-			size_t used; // The requested size of the allocation *excluding* this header
+			#pragma warning(push)
+			#pragma warning(disable:4201) // nameless struct
+			union {
+				struct {
+					size_t size; // The size of the allocation *excluding* this header
+					size_t used; // The requested size of the allocation *excluding* this header
+				};
+				std::byte _[Alignment];
+			};
+			#pragma warning(pop)
 		};
 		struct Block
 		{
@@ -55,14 +64,20 @@ namespace pr
 					Block const* block;
 					size_t offset;
 
-					AllocHeader const& operator*() const { return *reinterpret_cast<AllocHeader const*>(block->mem.get() + offset); }
+					AllocHeader const& operator*() const
+					{
+						return *reinterpret_cast<AllocHeader const*>(block->mem.get() + offset);
+					}
 					I& operator++()
 					{
 						auto const* alloc = reinterpret_cast<AllocHeader const*>(block->mem.get() + offset);
 						offset += sizeof(AllocHeader) + alloc->size;
 						return *this;
 					}
-					bool operator!=(I const& rhs) const { return offset != rhs.offset; }
+					bool operator!=(I const& rhs) const
+					{
+						return offset != rhs.offset;
+					}
 				};
 				struct R
 				{
