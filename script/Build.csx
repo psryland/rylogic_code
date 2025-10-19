@@ -1,5 +1,4 @@
 #! "net9.0"
-// Build script
 #r "System.IO"
 #r "System.Text.Json"
 #r "nuget: Rylogic.Core, 1.0.4"
@@ -26,7 +25,6 @@ public enum EProjects
 	Fbx,                // = "Fbx";
 	View3d,             // = "View3d";
 	P3d,                // = "P3d";
-	Rylogic,            // = "Rylogic";
 	RylogicCore,        // = "Rylogic.Core";
 	RylogicDB,          // = "Rylogic.DB";
 	RylogicDirectShow,  // = "Rylogic.DirectShow";
@@ -41,6 +39,7 @@ public enum EProjects
 	RylogicTextAligner, // = "Rylogic.TextAligner";
 	AllNative,          // = "AllNative";
 	AllManaged,         // = "AllManaged";
+	AllRylogic,         // = "AllRylogic";
 	All,                // = "All";
 }
 
@@ -191,9 +190,42 @@ public class View3d : Native
 	}
 	public override void Deploy()
 	{
-		// To publish the nuget package, use AllNative
-		Tools.DeployLib(ProjName, Tools.Path([ObjDir, "view3d-12"]), Platforms, Configs);
-		Tools.DeployLib(ProjName, Tools.Path([ObjDir, "view3d-12.dll"]), Platforms, Configs);
+		// To publish the nuget package, use AllNative`
+		foreach (var p in Platforms)
+		{
+			foreach (var c in Configs)
+			{
+				Tools.DeployLib(Tools.Path([ObjDir, "view3d-12", p, c, "view3d-12-static.lib"]));
+				Tools.DeployLib(Tools.Path([ObjDir, "view3d-12.dll", p, c, "view3d-12.dll"]));
+			}
+		}
+	}
+}
+
+// Fbx
+public class Fbx : Native
+{
+	public Fbx(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		: base("fbx", Tools.Path([workspace, $"projects\\rylogic\\fbx"]), workspace, platforms, configs)
+	{
+	}
+	public override void Clean()
+	{
+		Tools.CleanDir(Tools.Path([ObjDir, "fbx"], check_exists: false));
+	}
+	public override void Build()
+	{
+		Tools.MSBuild(RylogicSln, [@"projects\rylogic\fbx"], Platforms, Configs);
+	}
+	public override void Deploy()
+	{
+		foreach (var p in Platforms)
+		{
+			foreach (var c in Configs)
+			{
+				Tools.DeployLib(Tools.Path([ObjDir, "fbx", p, c, "fbx.dll"]));
+			}
+		}
 	}
 }
 
@@ -259,10 +291,59 @@ public class RylogicGfx : RylogicAssembly
 		{
 			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib/{FwToTarget(fw)}/", true));
 			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.pdb"]), $"lib/{FwToTarget(fw)}/"));
-		}	
+		}
 
 		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
 		package.Deps.Add(new Nuget.Dep("RylogicNative", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class RylogicGuiWPF : RylogicAssembly
+{
+	public RylogicGuiWPF(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Gui.WPF", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override void Populate(Nuget package)
+	{
+		package.Tags += " wpf gui";
+		foreach (var fw in Frameworks)
+		{
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gui.WPF.dll"]), $"lib/{FwToTarget(fw)}/", true));
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gui.WPF.pdb"]), $"lib/{FwToTarget(fw)}/"));
+		}
+
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+		package.Deps.Add(new Nuget.Dep("Rylogic.Windows", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class RylogicWindows : RylogicAssembly
+{
+	public RylogicWindows(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Windows", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override void Populate(Nuget package)
+	{
+		package.Tags += " windows";
+		foreach (var fw in Frameworks)
+		{
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Windows.dll"]), $"lib/{FwToTarget(fw)}/", true));
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Windows.pdb"]), $"lib/{FwToTarget(fw)}/"));
+		}
+
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class AllRylogic : Group
+{
+	public AllRylogic(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		: base(workspace)
+	{
+		Items.Add(new View3d(workspace, platforms, configs));
+		Items.Add(new Fbx(workspace, platforms, configs));
+		foreach (var type in typeof(RylogicAssembly).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(RylogicAssembly))))
+		{
+			var instance = (Common?)Activator.CreateInstance(type, workspace, platforms, configs) ?? throw new Exception($"Failed to create instance of type {type}");
+			Items.Add(instance);
+		}
 	}
 }
 
@@ -560,7 +641,8 @@ try
 		//["-project", "Rylogic.Gfx", "-deploy"]
 		//["-project", "LDraw", "-deploy"];
 		//["-project", "AllNative", "-build", "-deploy"]
-		Environment.GetCommandLineArgs().Skip(2).ToList()
+		["-project", "AllRylogic", "-build", "-deploy"]
+		//Environment.GetCommandLineArgs().Skip(2).ToList()
 	;
 	if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
 		Console.WriteLine("WARNING: Command line overridden for testing");
