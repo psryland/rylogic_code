@@ -13,9 +13,12 @@ using Console = System.Console;
 try
 {
 	List<string> args =
-	 	["E:\\Rylogic\\Code\\projects\\tests\\unittests\\src\\unittests.h"]
-		//Environment.GetCommandLineArgs().Skip(2).ToList()
+	 	//["E:\\Rylogic\\Code\\projects\\tests\\unittests\\src\\unittests.h"]
+		Args.ToList()
 	;
+	if (!args.SequenceEqual(Args))
+	    Console.WriteLine("WARNING: Command line overridden for testing");
+
 	var outfile = args.Count > 0 ? args[0] : throw new Exception("Output filepath not provided");
 
 	var srcdirs = (List<string>)[

@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // JSON DOM
 //  Copyright (c) Rylogic Ltd 2024
 //**********************************
@@ -9,10 +9,11 @@
 #include <variant>
 #include <algorithm>
 #include <ostream>
-#include <sstream>
 #include <fstream>
+#include <execution>
 #include <filesystem>
 #include <type_traits>
+#include <format>
 #include "pr/str/utf8.h"
 
 namespace pr::json
@@ -20,52 +21,73 @@ namespace pr::json
 	struct Value;
 	Value const& NullValue();
 
+	using key_t = std::string;
+	using keys_t = std::vector<key_t>;
+	using vals_t = std::vector<Value>;
+	static constexpr int GrowRate = 100;
+
 	// Compound types
 	struct Array
 	{
-		std::vector<Value> items;
+		vals_t values;
 
 		Array() = default;
-		Array(std::initializer_list<Value> values)
-			: items(values)
+		Array(std::initializer_list<Value> values_)
+			: values(values_)
 		{}
 
 		// Array interface
 		bool empty() const
 		{
-			return items.empty();
+			return values.size() == 0;
 		}
 		size_t size() const
 		{
-			return items.size();
+			return values.size();
 		}
-		auto begin() const
+
+		// RAnged based for interation
+		using citer_t = vals_t::const_iterator;
+		using miter_t = vals_t::iterator;
+		citer_t begin() const
 		{
-			return items.begin();
+			return values.begin();
 		}
-		auto end() const
+		citer_t end() const
 		{
-			return items.end();
+			return values.end();
+		}
+
+		// Append items to the array
+		void push_back(Value&& value)
+		{
+			values.push_back(std::move(value));
+
+			if (values.size() == values.capacity())
+				values.reserve(values.capacity() * GrowRate);
+		}
+		void push_back(Value const& value)
+		{
+			values.push_back(value);
+
+			if (values.size() == values.capacity())
+				values.reserve(values.capacity() * GrowRate);
 		}
 
 		// Access the value associated with 'index'
 		Value const& operator [] (size_t index) const
 		{
-			if (index >= items.size()) return NullValue();
-			return items[index];
+			if (index >= values.size()) return NullValue();
+			return values[index];
 		}
 		Value& operator[](size_t index)
 		{
-			items.resize(std::max<size_t>(items.size(), index + 1));
-			return items[index];
+			values.resize(std::max<size_t>(values.size(), index + 1));
+			return values[index];
 		}
 	};
 	struct Object
 	{
-		using key_t = std::string;
-		using keys_t = std::vector<key_t>;
-		using vals_t = std::vector<Value>;
-		
 		keys_t keys;
 		vals_t values;
 
@@ -102,26 +124,42 @@ namespace pr::json
 				++value;
 				return *this;
 			}
+			Iter& operator += (ptrdiff_t ofs)
+			{
+				key += ofs;
+				value += ofs;
+				return *this;
+			}
+			friend Iter operator + (Iter const& lhs, ptrdiff_t rhs)
+			{
+				return Iter(lhs) += rhs;
+			}
+			friend ptrdiff_t operator - (Iter const& lhs, Iter const& rhs)
+			{
+				return lhs.key - rhs.key;
+			}
 			friend bool operator != (Iter const& lhs, Iter const& rhs)
 			{
 				return lhs.key != rhs.key;
 			}
 		};
-		auto begin() const
+		using citer_t = Iter<keys_t::const_iterator, vals_t::const_iterator>;
+		using miter_t = Iter<keys_t::iterator, vals_t::iterator>;
+		citer_t begin() const
 		{
-			return Iter<keys_t::const_iterator, vals_t::const_iterator>{ keys.begin(), values.begin() };
+			return citer_t{ keys.begin(), values.begin() };
 		}
-		auto begin()
+		miter_t begin()
 		{
-			return Iter<keys_t::iterator, vals_t::iterator>{ keys.begin(), values.begin() };
+			return miter_t{ keys.begin(), values.begin() };
 		}
-		auto end() const
+		citer_t end() const
 		{
-			return Iter<keys_t::const_iterator, vals_t::const_iterator>{ keys.end(), values.end() };
+			return citer_t{ keys.end(), values.end() };
 		}
-		auto end()
+		miter_t end()
 		{
-			return Iter<keys_t::iterator, vals_t::iterator>{ keys.end(), values.end() };
+			return miter_t{ keys.end(), values.end() };
 		}
 
 		// Find 'key' in the object and return its index
@@ -157,6 +195,12 @@ namespace pr::json
 				idx = keys.size();
 				keys.push_back(std::string{ key });
 				values.push_back(NullValue());
+
+				if (keys.size() == keys.capacity())
+				{
+					keys.reserve(keys.capacity() * GrowRate);
+					values.reserve(values.capacity() * GrowRate);
+				}
 			}
 			return (*this)[idx];
 		}
@@ -177,6 +221,7 @@ namespace pr::json
 	// Variant type
 	struct Value
 	{
+		enum TypeIndex { Null, Bool, String, Number, ChildArray, ChildObject };
 		using variant_t = std::variant<nullptr_t, bool, std::string, double, Array, Object>;
 		variant_t value;
 
@@ -186,8 +231,6 @@ namespace pr::json
 		Value& operator = (Value&& rhs) = default;
 		Value& operator = (Value const& rhs) = default;
 
-		// Want implicit conversion to Value for all types but don't want implicit conversion to bool.
-		// Only way to avoid this is to provide a constructor for each type.
 		Value(nullptr_t)
 			: value(nullptr)
 		{}
@@ -206,10 +249,16 @@ namespace pr::json
 		Value(char const* value_)
 			: Value(std::string{ value_ })
 		{}
+		Value(float value_)
+			: Value(static_cast<double>(value_))
+		{}
 		Value(double value_)
 			: value(value_)
 		{}
-		Value(int value_)
+		Value(int32_t value_)
+			: Value(static_cast<int64_t>(value_))
+		{}
+		Value(int64_t value_)
 			: Value(static_cast<double>(value_))
 		{}
 		Value(Array&& value_)
@@ -262,7 +311,7 @@ namespace pr::json
 			if (auto object = as<Object>())
 				return (*object)[key_];
 
-			throw std::runtime_error("Not an object");
+			throw std::runtime_error(std::format("{} is not a key within this object", key_));
 		}
 		Value const& operator [] (size_t index) const
 		{
@@ -271,7 +320,7 @@ namespace pr::json
 			if (auto list = as<Array>())
 				return (*list)[index];
 
-			throw std::runtime_error("Not an object or array");
+			throw std::runtime_error(std::format("Index {} is not with this array", index));
 		}
 
 		// Comparison operators
@@ -311,6 +360,9 @@ namespace pr::json
 		Document()
 			:Value(Object{})
 		{}
+		Document(Value&& doc)
+			:Value(std::move(doc))
+		{}
 		Object const& root() const
 		{
 			return std::get<Object>(value);
@@ -324,13 +376,25 @@ namespace pr::json
 	// Json parsing options
 	struct Options
 	{
-		// Deserialize options
+		// Deserialize options ---
 		bool AllowComments = false;
 		bool AllowTrailingCommas = false;
 		
-		// Serialize options
+		// Serialize options ---
 		bool Indent = false;
 		std::string_view IndentString = "\t";
+		
+		// Number of elements in a "short" array
+		int ShortArrayLength = 20;
+
+		// Length of a "short" string
+		int ShortStringLength = 16;
+
+		// Line length for arrays before wrapping (0 = one element per line)
+		int LineWrapArrays = 0;
+
+		// Use parallel serialization on large arrays or objects (length >= to this value)
+		int ParallelSerialise = 10000;
 	};
 
 	// Static null value returned for non-existent keys/indices
@@ -343,6 +407,8 @@ namespace pr::json
 	// Convert a normal string to an escaped string
 	inline std::string EscapeString(std::string_view str)
 	{
+		namespace utf8 = str::utf8;
+
 		auto ptr = str.data();
 		auto end = str.data() + str.size();
 
@@ -356,10 +422,10 @@ namespace pr::json
 				out.push_back('\\');
 				out.push_back(*ptr++);
 			}
-			else if (str::utf8::ByteLength(*ptr) > 1)
+			else if (utf8::ByteLength(*ptr) > 1)
 			{
-				auto code = str::utf8::CodePoint(ptr, end);
-				str::utf8::Escape(code, out);
+				auto code = utf8::CodePoint(ptr, end);
+				utf8::Escape(code, out);
 			}
 			else
 			{
@@ -440,6 +506,7 @@ namespace pr::json
 		: keys()
 		, values()
 	{
+		// Outside the class because we need 'Value' to be defined
 		for (auto& [key, value] : items)
 		{
 			keys.push_back(std::string{ key });
@@ -470,16 +537,6 @@ namespace pr::json
 			EToken token;
 			std::string_view data;
 		};
-
-		// Format a string with arguments
-		template <typename... Args>
-		inline std::string Fmt(char const* fmt, Args... args)
-		{
-			std::string result;
-			result.resize(std::snprintf(nullptr, 0, fmt, args...));
-			std::snprintf(result.data(), result.size() + 1, fmt, args...);
-			return result;
-		}
 
 		// Advance the string pointer to the next non-whitespace character
 		inline bool EatWS(std::string_view& src, bool allow_eos)
@@ -703,7 +760,7 @@ namespace pr::json
 						}
 
 						// Not the end of the array, so add the next value
-						list.items.push_back(NextValue(src, opts));
+						list.values.push_back(NextValue(src, opts));
 						require_comma = true;
 					}
 					return list;
@@ -752,8 +809,245 @@ namespace pr::json
 		}
 	}
 
-	/// <summary>Parse a UTF-8 JSON string into a DOM tree.</summary>
-	inline Value Parse(std::string_view src, Options const& opts)
+	// Write a JSON DOM to a string
+	inline std::string Write(Value const& value, Options const& opts)
+	{
+		struct Serializer
+		{
+			using pair_iter_t = typename Object::citer_t;
+			using item_iter_t = typename Array::citer_t;
+			enum EArrType
+			{
+				Normal = 0,
+				Basic = 1 << 0,
+				Short = 1 << 1,
+				Homogeneous = 1 << 2,
+			};
+
+			Options const& m_opts;
+
+			Serializer(Options const& opts)
+				: m_opts(opts)
+			{}
+			void DoSerialize(std::string& buf, Value const& value, int indent)
+			{
+				auto const& val = value.value;
+				switch (val.index())
+				{
+					case Value::TypeIndex::Null:
+					{
+						buf.append("null");
+						break;
+					}
+					case Value::TypeIndex::Bool:
+					{
+						buf.append(std::get<bool>(val) ? "true" : "false");
+						break;
+					}
+					case Value::TypeIndex::String:
+					{
+						buf.append("\"").append(EscapeString(std::get<std::string>(val))).append("\"");
+						break;
+					}
+					case Value::TypeIndex::Number:
+					{
+						char s[32];
+						auto [ptr,ec] = std::to_chars(&s[0], &s[0] + _countof(s), std::get<double>(val));
+						if (ec == std::errc{})
+							buf.append(&s[0], ptr - &s[0]);
+						else
+							buf.append("NaN");
+						break;
+					}
+					case Value::TypeIndex::ChildArray:
+					{
+						auto& arr = std::get<Array>(value.value);
+						auto arr_type = ClassifyArray(arr);
+
+						buf.append("[");
+						if (arr.size() < m_opts.ParallelSerialise)
+						{
+							WriteValues(buf, arr.begin(), arr.end(), arr_type, indent);
+							if (!HasFlag(arr_type, EArrType::Short))
+								Indent(buf, indent);
+						}
+						else
+						{
+							auto num_threads = std::thread::hardware_concurrency();
+							auto chunk_size = (arr.size() + num_threads - 1) / num_threads;
+							std::vector<std::string> chunks(num_threads);
+							
+							std::for_each(std::execution::par, begin(chunks), end(chunks), [&arr, &chunks, chunk_size, arr_type, indent, this](std::string& chunk)
+							{
+								auto i = static_cast<ptrdiff_t>(&chunk - chunks.data());
+								auto ptr = arr.begin() + std::min((i + 0) * chunk_size, arr.size());
+								auto end = arr.begin() + std::min((i + 1) * chunk_size, arr.size());
+
+								chunk.resize(0);
+								WriteValues(chunk, ptr, end, arr_type, indent);
+							});
+
+							// Write the chunks to 'out'
+							char const* comma = "";
+							for (auto const& chunk : chunks)
+							{
+								if (chunk.empty()) break;
+								buf.append(comma).append(chunk);
+								comma = ",";
+							}
+
+							if (!HasFlag(arr_type, EArrType::Short))
+								Indent(buf, indent);
+						}
+						buf.append("]");
+						break;
+					}
+					case Value::TypeIndex::ChildObject:
+					{
+						auto const& obj = std::get<Object>(value.value);
+
+						buf.append("{");
+						if (obj.size() < m_opts.ParallelSerialise)
+						{
+							WritePairs(buf, obj.begin(), obj.end(), indent);
+							Indent(buf, indent);
+						}
+						else
+						{
+							auto num_threads = std::thread::hardware_concurrency();
+							auto chunk_size = (obj.size() + num_threads - 1) / num_threads;
+							std::vector<std::string> chunks(num_threads);
+							
+							std::for_each(std::execution::par, begin(chunks), end(chunks), [&obj, &chunks, chunk_size, indent, this](std::string& chunk)
+							{
+								auto i = static_cast<ptrdiff_t>(&chunk - chunks.data());
+								auto ptr = obj.begin() + std::min((i + 0) * chunk_size, obj.size());
+								auto end = obj.begin() + std::min((i + 1) * chunk_size, obj.size());
+								
+								chunk.resize(0);
+								WritePairs(chunk, ptr, end, indent);
+							});
+
+							// Write the chunks to 'out'
+							char const* comma = "";
+							for (auto const& chunk: chunks)
+							{
+								if (chunk.empty()) break;
+								buf.append(comma).append(chunk);
+								comma = ",";
+							}
+
+							Indent(buf, indent);
+						}
+						buf.append("}");
+						break;
+					}
+				}
+			}
+			EArrType ClassifyArray(Array const& arr)
+			{
+				auto arr_type = EArrType::Basic | EArrType::Short | EArrType::Homogeneous;
+
+				if (arr.size() == 0)
+					return static_cast<EArrType>(arr_type);
+
+				if (arr.size() > m_opts.ShortArrayLength)
+					arr_type &= ~EArrType::Short;
+
+				auto idx0 = arr.begin()->value.index();
+				for (auto const& val : arr)
+				{
+					auto idx = val.value.index();
+
+					if (idx != idx0)
+						arr_type &= ~EArrType::Homogeneous;
+					if (idx == Value::TypeIndex::ChildArray)
+						arr_type &= ~EArrType::Basic;
+					if (idx == Value::TypeIndex::ChildObject)
+						arr_type &= ~EArrType::Basic;
+					if (idx == Value::TypeIndex::String && std::get<std::string>(val.value).size() > m_opts.ShortStringLength)
+						arr_type &= ~EArrType::Short;
+				}
+
+				return static_cast<EArrType>(arr_type);
+			}
+			void Indent(std::string& buf, int indent)
+			{
+				if (!m_opts.Indent || m_opts.IndentString.empty())
+					return;
+
+				buf.append("\n");
+				for (int i = 0; i != indent; ++i)
+					buf.append(m_opts.IndentString);
+			}
+			void WritePairs(std::string& buf, pair_iter_t beg, pair_iter_t end, int indent)
+			{
+				char const* comma = "";
+				char const* space = m_opts.Indent ? " " : "";
+				for (auto ptr = beg; ptr != end; ++ptr)
+				{
+					auto const& [key, val] = *ptr;
+
+					buf.append(comma);
+					Indent(buf, indent + 1);
+					buf.append("\"").append(EscapeString(key)).append("\":").append(space);
+					DoSerialize(buf, val, indent + 1);
+					comma = ",";
+				}
+			}
+			void WriteValues(std::string& buf, item_iter_t beg, item_iter_t end, EArrType arr_type, int indent)
+			{
+				char const* comma = "";
+				auto linestart = buf.size();
+				bool linewrap = !HasFlag(arr_type, EArrType::Short);
+
+				for (auto ptr = beg; ptr != end; ++ptr)
+				{
+					auto const& val = *ptr;
+
+					buf.append(comma);
+					if (linewrap)
+					{
+						Indent(buf, indent + 1);
+						linestart = buf.size();
+						linewrap = false;
+					}
+					DoSerialize(buf, val, indent + 1);
+					linewrap =
+						!HasFlag(arr_type, EArrType::Short) && (
+						!HasFlag(arr_type, EArrType::Basic) || buf.size() - linestart > m_opts.LineWrapArrays);
+
+					comma = ",";
+				}
+			}
+			bool HasFlag(EArrType ty, EArrType flags) const
+			{
+				return (ty & flags) == flags;
+			}
+		};
+
+		std::string buf;
+		buf.reserve(10ULL * 1024 * 1024);
+
+		Serializer s(opts);
+		s.DoSerialize(buf, value, 0);
+		return std::move(buf);
+	}
+	inline std::ostream& Write(std::ostream& out, Value const& value, Options const& opts)
+	{
+		return out << Write(value, opts);
+	}
+	inline void Write(std::filesystem::path filepath, Value const& value, Options const& opts)
+	{
+		std::ofstream file(filepath);
+		if (!file.is_open())
+			throw std::runtime_error(std::format("Failed to open file '{}'", filepath.string()));
+
+		Write(file, value, opts);
+	}
+
+	// Parse a UTF-8 JSON string into a DOM tree.
+	inline Value Read(std::string_view src, Options const& opts)
 	{
 		using namespace impl;
 
@@ -764,119 +1058,46 @@ namespace pr::json
 		}
 		catch (std::runtime_error& ex)
 		{
-			ex = std::runtime_error(impl::Fmt("Parsing failed at offset %zu - %s", src.data() - start.data(), ex.what()));
+			ex = std::runtime_error(std::format("Parsing failed at offset {} - {}", src.data() - start.data(), ex.what()));
 			throw;
 		}
 	}
 
-	/// <summary>Read a JSON file into a DOM tree.</summary>
+	// Read JSON data from a stream into a DOM tree.
+	inline Value Read(std::istream& in, Options const& opts, size_t size_estimate = std::dynamic_extent)
+	{
+		size_estimate = size_estimate != std::dynamic_extent ? size_estimate : 1ULL * 1024 * 1024;
+		
+		std::string data(size_estimate, '\0');
+		for (size_t i = 0; in.good(); )
+		{
+			auto read = in.read(data.data() + i, data.size() - i).gcount();
+			if (i + read != data.size())
+			{
+				data.resize(i + read);
+				break;
+			}
+
+			data.resize(data.size() * 2);
+			i += read;
+		}
+		return Read(std::string_view{ data }, opts);
+	}
+
+	// Read a JSON file into a DOM tree.
 	inline Value Read(std::filesystem::path const& path, Options const& opts)
 	{
 		std::ifstream file(path);
 		if (!file.is_open())
-			throw std::runtime_error(impl::Fmt("Failed to open file '%s'", path.string().c_str()));
+			throw std::runtime_error(std::format("Failed to open file '{}'", path.string()));
 
 		auto size = std::filesystem::file_size(path);
 		if (size > std::numeric_limits<size_t>::max())
-			throw std::runtime_error(impl::Fmt("File '%s' is too large", path.string().c_str()));
+			throw std::runtime_error(std::format("File '{}' is too large", path.string()));
 
 		std::string data(static_cast<size_t>(size), '\0');
 		file.read(data.data(), data.size());
-		return Parse(data, opts);
-	}
-
-	/// <summary>Write a JSON DOM to a string</summary>
-	inline std::ostream& Serialize(std::ostream& out, Value const& value, Options const& opts)
-	{
-		struct L {
-			static void DoSerialize(std::ostream& out, Value const& value, Options const& opts, int indent)
-			{
-				switch (value.value.index())
-				{
-					case 0:
-					{
-						out << "null";
-						break;
-					}
-					case 1:
-					{
-						out << (std::get<bool>(value.value) ? "true" : "false");
-						break;
-					}
-					case 2:
-					{
-						out << '"' << EscapeString(std::get<std::string>(value.value)) << '"';
-						break;
-					}
-					case 3:
-					{
-						out << std::get<double>(value.value);
-						break;
-					}
-					case 4:
-					{
-						auto& arr = std::get<Array>(value.value);
-						char const* comma = "";
-
-						out << '[';
-						for (auto& item : arr.items)
-						{
-							out << comma;
-							Indent(out, indent + 1, opts);
-							DoSerialize(out, item, opts, indent + 1);
-							comma = ",";
-						}
-						Indent(out, indent, opts);
-						out << ']';
-						break;
-					}
-					case 5:
-					{
-						auto const& obj = std::get<Object>(value.value);
-						char const* comma = "";
-						char const* space = opts.Indent ? " " : "";
-
-						out << '{';
-						for (auto const& [key, val] : obj)
-						{
-							out << comma;
-							Indent(out, indent + 1, opts);
-							out << '"' << EscapeString(key) << '"' << ":" << space;
-							DoSerialize(out, val, opts, indent + 1);
-							comma = ",";
-						}
-						Indent(out, indent, opts);
-						out << '}';
-						break;
-					}
-				}
-			}
-			static void Indent(std::ostream& out, int indent, Options const& opts)
-			{
-				if (!opts.Indent || opts.IndentString.empty())
-					return;
-
-				out << '\n';
-				for (int i = 0; i < indent; ++i)
-					out << opts.IndentString;
-			}
-		};
-		L::DoSerialize(out, value, opts, 0);
-		return out;
-	}
-	inline std::string Serialize(Value const& value, Options const& opts)
-	{
-		std::ostringstream out;
-		Serialize(out, value, opts);
-		return out.str();
-	}
-	inline void Serialize(std::filesystem::path filepath, Value const& value, Options const& opts)
-	{
-		std::ofstream file(filepath);
-		if (!file.is_open())
-			throw std::runtime_error(impl::Fmt("Failed to open file '%s'", filepath.string().c_str()));
-
-		Serialize(file, value, opts);
+		return Read(std::string_view{ data }, opts);
 	}
 }
 
@@ -925,7 +1146,7 @@ namespace pr::storage
 				"	]\n"
 				"}\n";
 
-			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
+			auto root = json::Read(std::string_view{ test_data }, json::Options{ .AllowComments = true, .AllowTrailingCommas = true });
 			PR_EXPECT(root["key1"].to<std::string_view>() == "value1");
 			PR_EXPECT(root["key2"].to<double>() == 123);
 			PR_EXPECT(root["key3"].to<bool>() == true);
@@ -945,7 +1166,7 @@ namespace pr::storage
 				"	],\n"
 				"}\n";
 
-			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
+			auto root = json::Read(std::string_view{ test_data }, json::Options{ .AllowComments = true, .AllowTrailingCommas = true });
 			PR_EXPECT(root["SearchPaths"][0].to<std::string>() == "C:\\Work\\Path");
 			PR_EXPECT(root["EscapedString"].to<std::string>() == "This is a string with a \"quote\" in it");
 		}
@@ -988,12 +1209,7 @@ namespace pr::storage
 				"	\"key4\": \"value1\",\n"
 				"	\"key5\": 123,\n"
 				"	\"key6\": 456.78,\n"
-				"	\"key7\": [\n"
-				"		1,\n"
-				"		2,\n"
-				"		3,\n"
-				"		4\n"
-				"	],\n"
+				"	\"key7\": [1,2,3,4],\n"
 				"	\"key8\": {\n"
 				"		\"key10\": null,\n"
 				"		\"key11\": true,\n"
@@ -1001,11 +1217,7 @@ namespace pr::storage
 				"		\"key13\": \"value2\",\n"
 				"		\"key14\": 456,\n"
 				"		\"key15\": 123.45,\n"
-				"		\"key16\": [\n"
-				"			true,\n"
-				"			\"value3\",\n"
-				"			80085\n"
-				"		],\n"
+				"		\"key16\": [true,\"value3\",80085],\n"
 				"		\"key17\": {\n"
 				"			\"one\": \"1\",\n"
 				"			\"two\": 2,\n"
@@ -1050,7 +1262,9 @@ namespace pr::storage
 			PR_EXPECT(obj["key17"]["two"].to<int>() == 2);
 			PR_EXPECT(obj["key17"]["three"].to<bool>() == true);
 
-			std::string str = json::Serialize(doc, { .Indent = true });
+			std::string str = json::Write(doc, json::Options{ .Indent = true });
+			PR_EXPECT(str == expected);
+			str = json::Write(doc, json::Options{ .Indent = true, .ParallelSerialise = 2 });
 			PR_EXPECT(str == expected);
 		}
 	}

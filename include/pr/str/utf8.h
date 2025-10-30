@@ -1,7 +1,5 @@
-﻿//**********************************
-// UTF-8
-//  Copyright (c) Rylogic Ltd 2024
-//**********************************
+﻿// HyperPose
+// Copyright (c) 2025
 #pragma once
 #include <cstdint>
 #include <stdexcept>
@@ -58,7 +56,7 @@ namespace pr::str::utf8
 		if (end - ptr < len)
 			throw std::runtime_error("Incomplete unicode character");
 		if (len == 1)
-			return *ptr;
+			return *ptr++;
 
 		code_point_t code = *ptr++ & (0x7F >> len);
 		for (--len; len != 0; --len)
@@ -111,7 +109,8 @@ namespace pr::str::utf8
 	{
 		auto size = str.size();
 		str.resize(size + 4);
-		str.resize(Write(code_point, str.data() + size, str.data() + str.size()));
+		auto written = Write(code_point, str.data() + size, str.data() + str.size());
+		str.resize(size + written);
 	}
 	inline std::string Write(code_point_t code_point)
 	{
@@ -204,6 +203,21 @@ namespace pr::str
 		PR_EXPECT(utf8::Unescape("\\U0001F34C") == 0x1f34c);
 		PR_EXPECT(utf8::Unescape("\\u2714") == 0x2714);
 		PR_EXPECT(utf8::Unescape("\\u2717") == 0x2717);
+
+		{
+			std::string str = "UTF8 is the ";
+			utf8::Write(0x1f4a9, str);
+			PR_EXPECT(str == "UTF8 is the \xf0\x9f\x92\xa9");
+		}
+		{
+			std::string_view str = "A\xf0\x9f\x92\xa9""B";
+			char const* ptr = str.data(), *end = ptr + str.size();
+			
+			PR_EXPECT(utf8::CodePoint(ptr, end) == 'A');
+			PR_EXPECT(utf8::CodePoint(ptr, end) == 0x1f4a9);
+			PR_EXPECT(utf8::CodePoint(ptr, end) == 'B');
+			PR_EXPECT(ptr == end);
+		}
 	}
 }
 #endif

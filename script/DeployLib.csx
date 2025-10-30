@@ -20,8 +20,10 @@ try
 {
 	List<string> args =
 		//["E:\\Rylogic\\Code\\obj\\v143\\view3d-12\\x64\\Debug\\view3d-12-static.lib"]
-		Environment.GetCommandLineArgs().Skip(2).ToList()
+		Args.ToList()
 	;
+	if (!args.SequenceEqual(Args))
+	    Console.WriteLine("WARNING: Command line overridden for testing");
 
 	var target_path = args.Count > 0 ? args[0] : throw new Exception("Target Path?");
 	Tools.DeployLib(target_path);

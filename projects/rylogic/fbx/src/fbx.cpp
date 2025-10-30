@@ -26,6 +26,87 @@
 using namespace pr;
 using namespace pr::geometry::fbx;
 
+#pragma region ufbx compat
+//{
+	template <> struct ufbx_converter<std::string_view>
+	{
+		static ufbx_string_view to(std::string_view s)
+		{
+			return { s.data(), s.size() };
+		}
+		static std::string_view from(ufbx_string_view s)
+		{
+			return { s.data, s.length };
+		}
+		static std::string_view from(ufbx_string const& s)
+		{
+			return { s.data, s.length };
+		}
+	};
+	template <> struct ufbx_converter<std::string>
+	{
+		static std::string to(ufbx_string_view s)
+		{
+			return { s.data, s.length };
+		}
+		static std::string to(ufbx_string const& s)
+		{
+			return { s.data, s.length };
+		}
+		static std::string to(ufbx_error const& error, std::string_view msg = {})
+		{
+			std::string err;
+			err.reserve(msg.size() + 1 + UFBX_ERROR_INFO_LENGTH);
+			err.append(msg).append(msg.empty() ? "" : " ");
+
+			auto ofs = err.size();
+			err.append(UFBX_ERROR_INFO_LENGTH, '\0');
+			err.resize(ofs + ufbx_format_error(err.data() + ofs, err.size() - ofs, &error));
+			return err;
+		}
+	};
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_vec2 const& vec)
+	{
+		return out << vec.x << " " << vec.y;
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_vec3 const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z;
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_vec4 const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_quat const& quat)
+	{
+		return out << quat.x << " " << quat.y << " " << quat.z << " " << quat.w;
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_matrix const& mat)
+	{
+		return out << mat.cols[0] << "  " << mat.cols[1] << "  " << mat.cols[2] << "  " << mat.cols[3];
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_transform const& xform)
+	{
+		return out << "rot=(" << xform.rotation << ") pos=(" << xform.translation << ") scl=(" << xform.scale << ")";
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_string const& str)
+	{
+		return out << ufbx_converter<std::string_view>::from(str);
+	}
+	template <typename OStream> requires (std::is_base_of_v<std::ostream, OStream>)
+	inline OStream& operator << (OStream& out, ufbx_string_view const& str)
+	{
+		return out << ufbx_converter<std::string_view>::from(str);
+	}
+//}
+#pragma endregion
 namespace pr
 {
 	template <typename T> requires (requires (T t) { t == nullptr; })
@@ -1328,6 +1409,13 @@ namespace pr::geometry::fbx
 	// Dump the structure of an FBX file to a stream
 	struct Dumper
 	{
+		struct IndentScope
+		{
+			int& m_indent;
+			IndentScope(int& indent) : m_indent(++indent) {}
+			~IndentScope() { --m_indent; }
+		};
+
 		ufbx_scene const& m_fbxscene;
 		DumpOptions const& m_opts;
 		std::ostream& m_out;
@@ -1346,17 +1434,17 @@ namespace pr::geometry::fbx
 				DumpMainObjects();
 			if (AllSet(m_opts.m_parts, EParts::NodeHierarchy))
 				DumpHierarchy();
+			if (AllSet(m_opts.m_parts, EParts::Meshes))
+				DumpGeometry();
+			if (AllSet(m_opts.m_parts, EParts::Animation))
+				DumpAnimation();
 			/*
 			if (AllSet(m_opts.m_parts, EParts::GlobalSettings))
 				DumpGlobalSettings();
 			if (AllSet(m_opts.m_parts, EParts::Materials))
 				DumpMaterials();
-			if (AllSet(m_opts.m_parts, EParts::Meshes))
-				DumpGeometry();
 			if (AllSet(m_opts.m_parts, EParts::Skeletons))
 				DumpSkeletons();
-			if (AllSet(m_opts.m_parts, EParts::Animation))
-				DumpAnimations();
 			*/
 		}
 		void DumpMainObjects() const
@@ -1459,6 +1547,34 @@ namespace pr::geometry::fbx
 					--ind;
 				}
 				--ind;
+			}
+		}
+		void DumpAnimation() const
+		{
+			int ind = 0;
+			m_out << "Animation:\n";
+			for (auto const* fbxanimstack : m_fbxscene.anim_stacks)
+			{
+				IndentScope i1(ind);
+				m_out << Indent(ind) << "AnimStack (ID: " << fbxanimstack->typed_id << "):\n";
+				{
+					IndentScope i2(ind);
+					auto const& anim = fbxanimstack->anim;
+					m_out << Indent(ind) << "Name: " << fbxanimstack->name << "\n";
+					m_out << Indent(ind) << "Time: " << anim->time_begin << " -> " << anim->time_end << "\n";
+					m_out << Indent(ind) << "Layers: " << anim->layers.count << "\n";
+					for (auto const* fbxlayer : anim->layers)
+					{
+						IndentScope i3(ind);
+						m_out << Indent(ind) << "Additive: " << fbxlayer->additive << "\n";
+						m_out << Indent(ind) << "Blended: " << fbxlayer->blended << "\n";
+						m_out << Indent(ind) << "Weight: " << fbxlayer->weight << " (" << (fbxlayer->weight_is_animated ? "animated" : "not animated") << ")" << "\n";
+						m_out << Indent(ind) << "Compose Rot: " << fbxlayer->compose_rotation << "\n";
+						m_out << Indent(ind) << "Compose Scl: " << fbxlayer->compose_scale << "\n";
+						m_out << Indent(ind) << "Num Anim Values: " << fbxlayer->anim_values.count << "\n";
+						m_out << Indent(ind) << "Num Anim Props: " << fbxlayer->anim_props.count << "\n";
+					}
+				}
 			}
 		}
 

@@ -1077,8 +1077,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
       <Filter>pr\view3d-12</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="run_tests.py" />

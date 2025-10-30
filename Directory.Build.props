@@ -46,6 +46,7 @@
 		<!-- Default build configuration -->
 		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<SubDir>$(MSBuildProjectName)\$(TargetFramework)\$(Platform)\$(Configuration)</SubDir>
 	</PropertyGroup>
 
 	<!-- C++ -->
@@ -64,6 +65,9 @@
 		<!-- Default build configuration -->
 		<PlatformTarget Condition=" '$(PlatformTarget)' == '' ">x64</PlatformTarget>
 		<ConfigurationName Condition=" '$(ConfigurationName)' == '' ">Debug</ConfigurationName>
+		<SubDir>$(MSBuildProjectName)\$(PlatformTarget)\$(Configuration)</SubDir>
+		<OutDir>$(RylogicRoot)obj\$(SubDir)\</OutDir>
+		<IntDir>$(RylogicRoot)obj\$(SubDir)\</IntDir>
 	</PropertyGroup>
 
 </Project>

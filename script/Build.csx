@@ -1,4 +1,4 @@
-#! "net9.0"
+﻿#! "net9.0"
 #r "System.IO"
 #r "System.Text.Json"
 #r "nuget: Rylogic.Core, 1.0.4"
@@ -259,7 +259,14 @@ public abstract class RylogicAssembly : Managed
 		if (Package is null) throw new Exception("Call Deploy before calling Publish");
 		Package.Publish();
 	}
-	protected abstract void Populate(Nuget package);
+	protected virtual void Populate(Nuget package)
+	{
+		foreach (var fw in Frameworks)
+		{
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\{ProjName}.dll"]), $"lib/{FwToTarget(fw)}/", true));
+			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\{ProjName}.pdb"]), $"lib/{FwToTarget(fw)}/"));
+		}
+	}
 	protected static string FwToTarget(string fw)
 	{
 		return fw.EndsWith("windows") ? $"{fw}{UserVars.WinSDKVersion}" : fw;
@@ -270,13 +277,27 @@ public class RylogicCore : RylogicAssembly
 	public RylogicCore(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		:base("Rylogic.Core", ["net9.0", "net9.0-windows", "net481"], workspace, platforms, configs)
 	{}
+}
+public class RylogicDB : RylogicAssembly
+{
+	public RylogicDB(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.DB", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
 	protected override void Populate(Nuget package)
 	{
-		foreach (var fw in Frameworks)
-		{
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.dll"]), $"lib/{FwToTarget(fw)}/", true));
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Core.pdb"]), $"lib/{FwToTarget(fw)}/"));
-		}
+		base.Populate(package);
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class RylogicDirectShow : RylogicAssembly
+{
+	public RylogicDirectShow(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.DirectShow", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override void Populate(Nuget package)
+	{
+		base.Populate(package);
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
 	}
 }
 public class RylogicGfx : RylogicAssembly
@@ -286,13 +307,8 @@ public class RylogicGfx : RylogicAssembly
 	{}
 	protected override void Populate(Nuget package)
 	{
+		base.Populate(package);
 		package.Tags += " view3d";
-		foreach (var fw in Frameworks)
-		{
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.dll"]), $"lib/{FwToTarget(fw)}/", true));
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gfx.pdb"]), $"lib/{FwToTarget(fw)}/"));
-		}
-
 		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
 		package.Deps.Add(new Nuget.Dep("RylogicNative", $"[{RylogicLibraryVersion},)"));
 	}
@@ -304,14 +320,34 @@ public class RylogicGuiWPF : RylogicAssembly
 	{}
 	protected override void Populate(Nuget package)
 	{
+		base.Populate(package);
 		package.Tags += " wpf gui";
-		foreach (var fw in Frameworks)
-		{
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gui.WPF.dll"]), $"lib/{FwToTarget(fw)}/", true));
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Gui.WPF.pdb"]), $"lib/{FwToTarget(fw)}/"));
-		}
-
 		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+		package.Deps.Add(new Nuget.Dep("Rylogic.Windows", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class RylogicNet : RylogicAssembly
+{
+	public RylogicNet(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Net", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override void Populate(Nuget package)
+	{
+		base.Populate(package);
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+	}
+}
+public class RylogicScintilla : RylogicAssembly
+{
+	public RylogicScintilla(string workspace, List<string>? platforms = null, List<string>? configs = null)
+		:base("Rylogic.Scintilla", ["net9.0-windows", "net481"], workspace, platforms, configs)
+	{}
+	protected override void Populate(Nuget package)
+	{
+		base.Populate(package);
+		package.Tags += " scintilla";
+		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
+		package.Deps.Add(new Nuget.Dep("Rylogic.Gui.WPF", $"[{RylogicLibraryVersion},)"));
 		package.Deps.Add(new Nuget.Dep("Rylogic.Windows", $"[{RylogicLibraryVersion},)"));
 	}
 }
@@ -322,13 +358,8 @@ public class RylogicWindows : RylogicAssembly
 	{}
 	protected override void Populate(Nuget package)
 	{
+		base.Populate(package);
 		package.Tags += " windows";
-		foreach (var fw in Frameworks)
-		{
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Windows.dll"]), $"lib/{FwToTarget(fw)}/", true));
-			package.Files.Add(new Nuget.File(Tools.Path([ProjDir, $"bin\\Release\\{fw}\\Rylogic.Windows.pdb"]), $"lib/{FwToTarget(fw)}/"));
-		}
-
 		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
 	}
 }
@@ -636,16 +667,16 @@ try
 {
 	// Testing
 	List<string> args =
-		//["-project", "View3d", "-build", "-deploy"]
-		//["-project", "Rylogic.Core", "-build", "-deploy"]
-		//["-project", "Rylogic.Gfx", "-deploy"]
-		//["-project", "LDraw", "-deploy"];
-		//["-project", "AllNative", "-build", "-deploy"]
-		["-project", "AllRylogic", "-build", "-deploy"]
-		//Environment.GetCommandLineArgs().Skip(2).ToList()
+	    //["-project", "View3d", "-build", "-deploy"]
+	    //["-project", "Rylogic.Core", "-build", "-deploy"]
+	    //["-project", "Rylogic.Gfx", "-deploy"]
+	    //["-project", "LDraw", "-deploy"];
+	    //["-project", "AllNative", "-build", "-deploy"]
+	    //["-project", "AllRylogic", "-build", "-deploy"]
+	    Args.ToList()
 	;
-	if (!args.SequenceEqual(Environment.GetCommandLineArgs().Skip(2)))
-		Console.WriteLine("WARNING: Command line overridden for testing");
+	if (!args.SequenceEqual(Args))
+	    Console.WriteLine("WARNING: Command line overridden for testing");
 
 	Main(args);
 }

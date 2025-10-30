@@ -1413,7 +1413,7 @@ namespace pr::rdr12::ldraw
 			{
 				Writer::Write(out, EKeyword::Model, m_name, m_colour, [&]
 				{
-					Writer::Write(out, EKeyword::FilePath, m_filepath.string());
+					Writer::Write(out, EKeyword::FilePath, std::format("\"{}\"", m_filepath.string()));
 					if (m_anim) m_anim->WriteTo<Writer>(out);
 					LdrBase::WriteTo<Writer>(out);
 				});

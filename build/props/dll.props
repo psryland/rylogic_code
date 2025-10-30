@@ -5,8 +5,8 @@
 
   <!-- Properties -->
   <PropertyGroup Label="Globals">
-    <OutDir>$(RylogicRoot)obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>$(RylogicRoot)obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>$(RylogicRoot)obj\$(SubDir)\</OutDir>
+    <IntDir>$(RylogicRoot)obj\$(SubDir)\</IntDir>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
 
@@ -37,7 +37,7 @@
   <!-- Dependencies -->
   <Target Name="Deploy" AfterTargets="Build">
     <Exec
-      Command="dotnet-script.exe $(ScriptPath)DeployLib.csx $(TargetPath)"
+      Command="dotnet-script.exe --cache-path %TEMP%\$(SubDir) $(ScriptPath)DeployLib.csx -- $(TargetPath)"
       WorkingDirectory="$(RylogicRoot)"
     />
   </Target>

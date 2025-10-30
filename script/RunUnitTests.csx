@@ -13,8 +13,10 @@ try
 	List<string> args =
 		//["E:/Rylogic/Code/projects/rylogic/Rylogic.Core/bin/Debug/net9.0-windows/Rylogic.Core.dll", "true"]
 		//["E:/Rylogic/Code/projects/rylogic/Rylogic.Windows/bin/Debug/net9.0-windows/Rylogic.Windows.dll", "true", "Rylogic.Core", "WindowsBase"]
-		Environment.GetCommandLineArgs().Skip(2).ToList()
+		Args.ToList()
 	;
+	if (!args.SequenceEqual(Args))
+	    Console.WriteLine("WARNING: Command line overridden for testing");
 
 	var target_path = args.Count > 0 ? args[0] : throw new Exception("TargetPath not provided");
 	var is_managed = args.Count > 1 ? bool.Parse(args[1]) : throw new Exception("IsManaged not provided");

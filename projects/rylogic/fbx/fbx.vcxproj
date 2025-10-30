@@ -48,6 +48,7 @@
     <ClInclude Include="$(SDKPath)ufbx\ufbx\ufbx.h" />
     <ClCompile Include="$(SDKPath)ufbx\ufbx\ufbx.c" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
+    <ClInclude Include="src\ufbx_compat.h" />
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbx.natvis" />
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbxi.natvis" />
   </ItemGroup>

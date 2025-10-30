@@ -35,6 +35,6 @@
 		</None>
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="dotnet-script $(ScriptPath)RunUnitTests.csx $(TargetPath) true Rylogic.Core" />
+		<Exec Command="dotnet-script --cache-path %TEMP%\$(SubDir) $(ScriptPath)RunUnitTests.csx -- $(TargetPath) true Rylogic.Core" />
 	</Target>
 </Project>

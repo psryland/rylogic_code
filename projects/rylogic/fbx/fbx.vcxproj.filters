@@ -4,10 +4,7 @@
     <Filter Include="src">
       <UniqueIdentifier>{667527c8-b0bf-4c5a-975f-ac90bae4d191}</UniqueIdentifier>
     </Filter>
-    <Filter Include="lib">
-      <UniqueIdentifier>{c7b25275-2189-47cb-bbbe-47e387b5a5ee}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\ufbx">
+    <Filter Include="ufbx">
       <UniqueIdentifier>{779e1111-fcc3-4a91-89a9-30ef9681bbab}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -16,18 +13,23 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="$(SDKPath)ufbx\ufbx\ufbx.c">
-      <Filter>src\ufbx</Filter>
+      <Filter>ufbx</Filter>
     </ClCompile>
     <ClInclude Include="$(SDKPath)ufbx\ufbx\ufbx.h">
-      <Filter>src\ufbx</Filter>
+      <Filter>ufbx</Filter>
     </ClInclude>
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbx.natvis">
-      <Filter>src\ufbx</Filter>
+      <Filter>ufbx</Filter>
     </Natvis>
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbxi.natvis">
-      <Filter>src\ufbx</Filter>
+      <Filter>ufbx</Filter>
     </Natvis>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\ufbx_compat.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

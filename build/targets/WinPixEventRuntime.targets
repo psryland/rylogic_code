@@ -7,8 +7,21 @@
 
 	<!-- Use `msbuild Rylogic.sln -restore` to restore packages. You'll probably need to do it manually -->
 	<ItemGroup>
+		<!--
+			Don't use PackageReference for C++ projects, nuget.exe restore buggers them up and creates the
+			'Sequence contains no elements' error.
+			Instead, create a `packages.config` file in your project folder
+
+			```
+			<?xml version="1.0" encoding="utf-8"?>
+			<packages>
+				<package id="WinPixEventRuntime" version="1.0.240308001" targetFramework="native" />
+			</packages>
+			```
+
 		<PackageReference Include="WinPixEventRuntime" />
 		<PackageVersion Include="WinPixEventRuntime" Version="1.0.240308001" />
+		-->
 	</ItemGroup>
 
 	<ItemGroup>

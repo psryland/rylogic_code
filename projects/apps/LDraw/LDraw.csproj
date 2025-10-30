@@ -37,7 +37,7 @@
 
 	<!-- Pre Build -->
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-		<Exec Command="dotnet-script $(ScriptPath)UpdateLDrawSyntax.csx" />
+		<Exec Command="dotnet-script --cache-path %TEMP%\$(SubDir) $(ScriptPath)UpdateLDrawSyntax.csx" />
 	</Target>
 
 	<!-- Targets  -->

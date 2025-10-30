@@ -1,4 +1,4 @@
-#! "net9.0"
+﻿#! "net9.0"
 #r "System.Text.Json"
 #r "nuget: Rylogic.Core, 1.0.4"
 #r "System.Diagnostics.Process"
@@ -295,12 +295,12 @@ public class Tools
 						if (parallel)
 						{
 							var instance_id = ++i;
-							Console.WriteLine($"{instance_id}> --- {platform}|{config} ---:");
+							Console.WriteLine($"{instance_id}> --- {string.Join(",", projects)} --- {platform}|{config} ---");
 							procs.Add(Spawn($"{instance_id}>", args_, same_window: same_window));
 						}
 						else
 						{
-							Console.WriteLine($"--- {platform}|{config} ---:");
+							Console.WriteLine($"--- {string.Join(",", projects)} --- {platform}|{config} ---");
 							Run(args_, return_output: false, show_arguments: false);
 						}
 					}
@@ -674,20 +674,20 @@ public class Tools
 }
 
 // Allow methods within Tools to be invoked from the command line
-var args = Environment.GetCommandLineArgs().Skip(1).ToList();
-if (args.Count > 1 && args[0].EndsWith("Tools.csx") && typeof(Tools).GetMethod(args[1]) is MethodInfo mi)
-{
-	args = args[2..];
-
-	// Correct number of parameters given?
-	var pi = mi.GetParameters();
-	if (pi.Length != args.Count)
-		return;
-
-	// Convert strings to paramater types
-	var parameters = (List<object?>)[];
-	for (int i = 0; i != pi.Length; ++i)
-		parameters.Add(Convert.ChangeType(args[i], pi[i].ParameterType));
-
-	mi.Invoke(null, parameters.ToArray());
-}
+//var args = Environment.GetCommandLineArgs().Skip(1).ToList();
+//if (args.Count > 1 && args[0].EndsWith("Tools.csx") && typeof(Tools).GetMethod(args[1]) is MethodInfo mi)
+//{
+//	args = args[2..];
+//
+//	// Correct number of parameters given?
+//	var pi = mi.GetParameters();
+//	if (pi.Length != args.Count)
+//		return;
+//
+//	// Convert strings to paramater types
+//	var parameters = (List<object?>)[];
+//	for (int i = 0; i != pi.Length; ++i)
+//		parameters.Add(Convert.ChangeType(args[i], pi[i].ParameterType));
+//
+//	mi.Invoke(null, parameters.ToArray());
+//}
