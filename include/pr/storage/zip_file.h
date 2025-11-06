@@ -4067,7 +4067,7 @@ namespace pr::storage
 			//auto now = std::filesystem::file_time_type::clock::now();
 			//auto dos = zip::ZipArchive::FSTimeToDosTime(now);
 			//auto NOW = zip::ZipArchive::DosTimeToFSTime(dos);
-			//PR_CHECK(NOW - now < std::chrono::seconds(3), true); // DOS time has 2s resolution
+			//PR_EXPECT(NOW - now < std::chrono::seconds(3)); // DOS time has 2s resolution
 		}
 
 		// Write a test zip file
@@ -4083,30 +4083,30 @@ namespace pr::storage
 
 			// Read back the zip
 			zip::ZipArchive z2(path / "zip_out.zip");
-			PR_CHECK(z2.Count(), 4);
+			PR_EXPECT(z2.Count() == 4);
 			{
 				std::basic_string<uint8_t> bytes;
 				pr::mem_ostream mem(bytes);
 				z2.Extract("file1.txt", mem);
-				PR_CHECK(MatchToFile(bytes, path / "file1.txt"), true);
+				PR_EXPECT(MatchToFile(bytes, path / "file1.txt"));
 			}
 			{
 				std::basic_string<uint8_t> bytes;
 				pr::mem_ostream mem(bytes);
 				z2.Extract("file2.txt", mem);
-				PR_CHECK(MatchToFile(bytes, path / "file2.txt"), true);
+				PR_EXPECT(MatchToFile(bytes, path / "file2.txt"));
 			}
 			{
 				std::basic_string<uint8_t> bytes;
 				pr::mem_ostream mem(bytes);
 				z2.Extract("file3.txt", mem);
-				PR_CHECK(MatchToFile(bytes, path / "file3.txt"), true);
+				PR_EXPECT(MatchToFile(bytes, path / "file3.txt"));
 			}
 			{
 				std::basic_string<uint8_t> bytes;
 				pr::mem_ostream mem(bytes);
 				z2.Extract("binary-00-0F.bin", mem);
-				PR_CHECK(MatchToFile(bytes, path / "binary-00-0F.bin"), true);
+				PR_EXPECT(MatchToFile(bytes, path / "binary-00-0F.bin"));
 			}
 
 		}
@@ -4118,27 +4118,27 @@ namespace pr::storage
 		{
 			auto file_data = FileToBytes(path / "binary-00-0F.zip");
 			zip::ZipArchive z(file_data);
-			PR_CHECK(z.Count(), 1);
-			PR_CHECK(z.Name(0), "binary-00-0F.bin");
-			PR_CHECK(z.IndexOf("binary-00-0F.bin"), 0);
+			PR_EXPECT(z.Count() == 1);
+			PR_EXPECT(z.Name(0) == "binary-00-0F.bin");
+			PR_EXPECT(z.IndexOf("binary-00-0F.bin") == 0);
 
 			std::basic_string<uint8_t> bytes;
 			pr::mem_ostream mem(bytes);
 			z.Extract("binary-00-0F.bin", mem);
-			PR_CHECK(MatchToFile(bytes, path / "binary-00-0F.bin"), true);
+			PR_EXPECT(MatchToFile(bytes, path / "binary-00-0F.bin"));
 		}
 
 		// Read a zip from file
 		{
 			zip::ZipArchive z(path / "binary-00-0F.zip", zip::ZipArchive::EMode::ReadOnly, zip::ZipArchive::EZipFlags::FastNameLookup);
-			PR_CHECK(z.Count(), 1);
-			PR_CHECK(z.Name(0), "binary-00-0F.bin");
-			PR_CHECK(z.IndexOf("binary-00-0F.bin"), 0);
+			PR_EXPECT(z.Count() == 1);
+			PR_EXPECT(z.Name(0) == "binary-00-0F.bin");
+			PR_EXPECT(z.IndexOf("binary-00-0F.bin") == 0);
 			
 			std::basic_string<uint8_t> bytes;
 			pr::mem_ostream mem(bytes);
 			z.Extract("binary-00-0F.bin", mem);
-			PR_CHECK(MatchToFile(bytes, path / "binary-00-0F.bin"), true);
+			PR_EXPECT(MatchToFile(bytes, path / "binary-00-0F.bin"));
 		}
 	}
 }

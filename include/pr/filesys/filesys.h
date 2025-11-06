@@ -573,7 +573,7 @@ namespace pr::filesys
 			{
 				//// Path compare is case insensitive (on windows)
 				//auto r0 = weakly_canonical(p0).compare(weakly_canonical(p1));
-				//PR_CHECK(r0 == 0, true);
+				//PR_EXPECT(r0 == 0);
 			
 			}
 			catch (filesystem_error const& ex)
@@ -585,7 +585,7 @@ namespace pr::filesys
 		{// Equal paths
 			auto p0 = path{ L"C:\\dir\\file.txt" };
 			auto p1 = path{ "C:/DIR/DIR2/../FiLE.TXT" };
-			PR_CHECK(Equal(p0, p1, true), true);
+			PR_EXPECT(Equal(p0, p1, true));
 		}
 		{// Equal contents
 			auto file_content0 = temp_dir / L"file_content0.bin";
@@ -596,20 +596,20 @@ namespace pr::filesys
 			char const content1[] = { 0, 1, 2, 3, 'A', 5, 6, 7, 8, 9 };
 			{
 				std::ofstream file(file_content0);
-				PR_CHECK(file.write(&content0[0], sizeof(content0)).good(), true);
+				PR_EXPECT(file.write(&content0[0], sizeof(content0)).good());
 			}
 			{
 				std::ofstream file(file_content1);
-				PR_CHECK(file.write(&content1[0], sizeof(content1)).good(), true);
+				PR_EXPECT(file.write(&content1[0], sizeof(content1)).good());
 			}
 			{
 				std::ofstream file(file_content2);
-				PR_CHECK(file.write(&content0[0], sizeof(content0)).good(), true);
+				PR_EXPECT(file.write(&content0[0], sizeof(content0)).good());
 			}
 
-			PR_CHECK(EqualContents(file_content0, file_content0), true);
-			PR_CHECK(EqualContents(file_content0, file_content1), false);
-			PR_CHECK(EqualContents(file_content0, file_content2), true);
+			PR_EXPECT(EqualContents(file_content0, file_content0));
+			PR_EXPECT(!EqualContents(file_content0, file_content1));
+			PR_EXPECT(EqualContents(file_content0, file_content2));
 		}
 		{// Buffer to/from File
 			auto filepath = temp_dir / L"file_test.txt";
@@ -626,13 +626,13 @@ namespace pr::filesys
 
 					{// Read binary data into 'std::vector<byte>', no conversion
 						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EEncoding::binary);
-						PR_CHECK(read.size() == sizeof(data), true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+						PR_EXPECT(read.size() == sizeof(data));
+						PR_EXPECT(memcmp(&read[0], data, sizeof(data)) == 0);
 					}
 					{// Read binary data into 'std::wstring', no conversion
 						auto read = FileToBuffer<std::wstring>(filepath, EEncoding::binary);
-						PR_CHECK(read.size() == (sizeof(data) + 1) / 2, true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+						PR_EXPECT(read.size() == (sizeof(data) + 1) / 2);
+						PR_EXPECT(memcmp(&read[0], data, sizeof(data)) == 0);
 					}
 				}
 				{// write !bytes
@@ -641,13 +641,13 @@ namespace pr::filesys
 
 					{// Read binary data into 'std::vector<byte>', no conversion
 						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EEncoding::binary);
-						PR_CHECK(read.size() == sizeof(data), true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+						PR_EXPECT(read.size() == sizeof(data));
+						PR_EXPECT(memcmp(&read[0], data, sizeof(data)) == 0);
 					}
 					{// Read binary data into 'std::wstring', no conversion
 						auto read = FileToBuffer<std::wstring>(filepath, EEncoding::binary);
-						PR_CHECK(read.size() == sizeof(data) / 2, true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+						PR_EXPECT(read.size() == sizeof(data) / 2);
+						PR_EXPECT(memcmp(&read[0], data, sizeof(data)) == 0);
 					}
 				}
 			}
@@ -656,22 +656,22 @@ namespace pr::filesys
 				wchar_t const utf16[] = { 0x4f60, 0x597d, '\n', 0x4f60, 0x597d };
 
 				BufferToFile(utf8, 0, _countof(utf8), filepath, EEncoding::utf8, EEncoding::utf8, false, true);
-				PR_CHECK(DetectFileEncoding(filepath) == EEncoding::utf8, true);
+				PR_EXPECT(DetectFileEncoding(filepath) == EEncoding::utf8);
 
 				{// Read UTF-8 - BOM automatically stripped
 					auto read = FileToBuffer<std::string>(filepath, EEncoding::utf8);
-					PR_CHECK(read.size() == _countof(utf8), true);
-					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf8));
+					PR_EXPECT(memcmp(&read[0], utf8, sizeof(utf8)) == 0);
 				}
 				{// Read UTF-8 to UTF-16 - BOM automatically stripped
 					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_le);
-					PR_CHECK(read.size() == _countof(utf16), true);
-					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf16));
+					PR_EXPECT(memcmp(&read[0], utf16, sizeof(utf16)) == 0);
 				}
 				{// Read UTF-8 to UCS2 - BOM automatically stripped
 					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::ucs2_le);
-					PR_CHECK(read.size() == _countof(utf16), true);
-					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf16));
+					PR_EXPECT(memcmp(&read[0], utf16, sizeof(utf16)) == 0);
 				}
 			}
 			{// Write UTF-16 text
@@ -680,22 +680,22 @@ namespace pr::filesys
 				wchar_t const utf16be[] = { 0x604f, 0x7d59, 0x0A00, 0x604f, 0x7d59 };
 
 				BufferToFile(utf16, 0, _countof(utf16), filepath, EEncoding::utf16_le, EEncoding::utf16_le, false, true);
-				PR_CHECK(DetectFileEncoding(filepath) == EEncoding::utf16_le, true);
+				PR_EXPECT(DetectFileEncoding(filepath) == EEncoding::utf16_le);
 
 				{// Read UTF-16 to UTF-16 - BOM automatically stripped
 					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_le);
-					PR_CHECK(read.size() == _countof(utf16), true);
-					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf16));
+					PR_EXPECT(memcmp(&read[0], utf16, sizeof(utf16)) == 0);
 				}
 				{// Read UTF-16 to UTF-16be - BOM automatically stripped
 					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_be);
-					PR_CHECK(read.size() == _countof(utf16be), true);
-					PR_CHECK(memcmp(&read[0], utf16be, sizeof(utf16be)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf16be));
+					PR_EXPECT(memcmp(&read[0], utf16be, sizeof(utf16be)) == 0);
 				}
 				{// Read UTF-16 to UTF-8 - BOM automatically stripped
 					auto read = FileToBuffer<std::string>(filepath, EEncoding::utf8);
-					PR_CHECK(read.size() == _countof(utf8), true);
-					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+					PR_EXPECT(read.size() == _countof(utf8));
+					PR_EXPECT(memcmp(&read[0], utf8, sizeof(utf8)) == 0);
 				}
 			}
 			{// todo...
@@ -717,11 +717,11 @@ namespace pr::filesys
 					files.push_back(dir_entry.path());
 			}
 			PR_CHECK(files.size(), 3U);
-			PR_CHECK(Equal(files[0], temp_dir / L"dir1" / L"bytes.bin", true), true);
-			PR_CHECK(Equal(files[1], temp_dir / L"dir1" / L"digits.txt", true), true);
-			PR_CHECK(Equal(files[2], temp_dir / L"dir1" / L"dir2" / L"letters.txt", true), true);
+			PR_EXPECT(Equal(files[0], temp_dir / L"dir1" / L"bytes.bin", true));
+			PR_EXPECT(Equal(files[1], temp_dir / L"dir1" / L"digits.txt", true));
+			PR_EXPECT(Equal(files[2], temp_dir / L"dir1" / L"dir2" / L"letters.txt", true));
 			PR_CHECK(dirs.size(), 1U);
-			PR_CHECK(Equal(dirs[0], temp_dir / L"dir1" / L"dir2", true), true);
+			PR_EXPECT(Equal(dirs[0], temp_dir / L"dir1" / L"dir2", true));
 		}
 	}
 }
@@ -1531,10 +1531,10 @@ namespace pr::filesys
 		}
 		{//Files
 			auto dir = CurrentDirectory();
-			PR_CHECK(DirectoryExists(dir), true);
+			PR_EXPECT(DirectoryExists(dir));
 
 			auto fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
-			PR_CHECK(FileExists(fn), false);
+			PR_EXPECT(!FileExists(fn));
 
 			auto path = dir / fn;
 
@@ -1542,40 +1542,40 @@ namespace pr::filesys
 			f << "Hello World";
 			f.close();
 
-			PR_CHECK(FileExists(path), true);
+			PR_EXPECT(FileExists(path));
 			std::string fn2 = MakeUniqueFilename<std::string>("test_fileXXXXXX");
 			std::string path2 = GetFullPath(fn2);
 
 			RenameFile(path, path2);
-			PR_CHECK(FileExists(path2), true);
-			PR_CHECK(FileExists(path), false);
+			PR_EXPECT(FileExists(path2));
+			PR_EXPECT(!FileExists(path));
 
 			CpyFile(path2, path);
-			PR_CHECK(FileExists(path2), true);
-			PR_CHECK(FileExists(path), true);
+			PR_EXPECT(FileExists(path2));
+			PR_EXPECT(FileExists(path));
 
 			EraseFile(path2);
-			PR_CHECK(FileExists(path2), false);
-			PR_CHECK(FileExists(path), true);
+			PR_EXPECT(!FileExists(path2));
+			PR_EXPECT(FileExists(path));
 
 			int64_t size = FileLength(path);
 			PR_CHECK(size, 11);
 
 			auto attr = GetAttribs(path);
 			auto flags = EAttrib::File|EAttrib::WriteAccess|EAttrib::ReadAccess;
-			PR_CHECK(attr == flags, true);
+			PR_EXPECT(attr == flags);
 
 			attr = GetAttribs(dir);
 			flags = EAttrib::Directory|EAttrib::WriteAccess|EAttrib::ReadAccess|EAttrib::ExecAccess;
-			PR_CHECK(attr == flags, true);
+			PR_EXPECT(attr == flags);
 
 			std::string drive = GetDrive(path);
 			uint64_t disk_free = GetDiskFree(drive[0]);
 			uint64_t disk_size = GetDiskSize(drive[0]);
-			PR_CHECK(disk_size > disk_free, true);
+			PR_EXPECT(disk_size > disk_free);
 
 			EraseFile(path);
-			PR_CHECK(FileExists(path), false);
+			PR_EXPECT(!FileExists(path));
 		}
 		{//DirectoryOps
 			{

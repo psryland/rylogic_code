@@ -1126,33 +1126,34 @@ namespace pr::script
 #include "pr/common/unittests.h"
 namespace pr::script
 {
-	PRUnitTest(ReaderTests)
+	PRUnitTestClass(ReaderTests)
 	{
-		{// basic extract methods
-			char const* src =
-				"#define NUM 23\n"
-				"*Identifier ident\n"
-				"*String \"simple string\"\n"
-				"*CString \"C:\\\\Path\\\\Filename.txt\"\n"
-				"*Bool true\n"
-				"*Intg -NUM\n"
-				"*Intg16 ABCDEF00\n"
-				"*Real -2.3e+3\n"
-				"*BoolArray 1 0 true false\n"
-				"*IntArray -3 2 +1 -0\n"
-				"*RealArray 2.3 -1.0e-1 2 -0.2\n"
-				"*Vector3 1.0 2.0 3.0\n"
-				"*Vector4 4.0 3.0 2.0 1.0\n"
-				"*Quaternion 0.0 -1.0 -2.0 -3.0\n"
-				"*M3x3 1.0 0.0 0.0  0.0 1.0 0.0  0.0 0.0 1.0\n"
-				"*M4x4 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0\n"
-				"*Data 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 00\n"
-				"*Junk\n"
-				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
-				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
-				"*Token 123token\n"
-				"*LastThing";
+		inline static constexpr char const* Script =
+			"#define NUM 23\n"
+			"*Identifier ident\n"
+			"*String \"simple string\"\n"
+			"*CString \"C:\\\\Path\\\\Filename.txt\"\n"
+			"*Bool true\n"
+			"*Intg -NUM\n"
+			"*Intg16 ABCDEF00\n"
+			"*Real -2.3e+3\n"
+			"*BoolArray 1 0 true false\n"
+			"*IntArray -3 2 +1 -0\n"
+			"*RealArray 2.3 -1.0e-1 2 -0.2\n"
+			"*Vector3 1.0 2.0 3.0\n"
+			"*Vector4 4.0 3.0 2.0 1.0\n"
+			"*Quaternion 0.0 -1.0 -2.0 -3.0\n"
+			"*M3x3 1.0 0.0 0.0  0.0 1.0 0.0  0.0 0.0 1.0\n"
+			"*M4x4 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0\n"
+			"*Data 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 00\n"
+			"*Junk\n"
+			"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+			"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+			"*Token 123token\n"
+			"*LastThing";
 
+		PRUnitTestMethod(BasicExtractMethods)
+		{
 			char kw[50];
 			int hashed_kw = 0;
 			std::string str;
@@ -1165,64 +1166,65 @@ namespace pr::script
 			pr::m3x4 mat3;
 			pr::m4x4 mat4;
 
-			Reader reader(src, true);
-			PR_CHECK(reader.CaseSensitive()         ,true);
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
-			PR_CHECK(reader.Identifier(str)         ,true); PR_CHECK(str             , "ident"                       );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "String"                      );
-			PR_CHECK(reader.String(str)             ,true); PR_CHECK(str             , "simple string"               );
-			PR_CHECK(reader.NextKeywordH(hashed_kw) ,true); PR_CHECK(hashed_kw       , reader.HashKeyword(L"CString"));
-			PR_CHECK(reader.CString(str)            ,true); PR_CHECK(str             , "C:\\Path\\Filename.txt"      );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Bool"                        );
-			PR_CHECK(reader.Bool(bval)              ,true); PR_CHECK(bval            , true                          );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Intg"                        );
-			PR_CHECK(reader.Int(ival, 10)           ,true); PR_CHECK(ival            , -23                           );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Intg16"                      );
-			PR_CHECK(reader.Int(uival, 16)          ,true); PR_CHECK(uival           , 0xABCDEF00                    );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Real"                        );
-			PR_CHECK(reader.Real(fval)              ,true); PR_CHECK(fval            , -2.3e+3                       );
-			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "BoolArray"                   );
-			PR_CHECK(reader.Bool(barray, 4)         ,true);
-			PR_CHECK(barray[0], true );
-			PR_CHECK(barray[1], false);
-			PR_CHECK(barray[2], true );
-			PR_CHECK(barray[3], false);
-			PR_CHECK(reader.NextKeywordS(kw)   ,true); PR_CHECK(std::string(kw) , "IntArray");
-			PR_CHECK(reader.Int(iarray, 4, 10) ,true);
-			PR_CHECK(iarray[0], -3);
-			PR_CHECK(iarray[1], +2);
-			PR_CHECK(iarray[2], +1);
-			PR_CHECK(iarray[3], -0);
-			PR_CHECK(reader.NextKeywordS(kw) ,true); PR_CHECK(std::string(kw) , "RealArray");
-			PR_CHECK(reader.Real(farray, 4)  ,true);
-			PR_CHECK(farray[0], 2.3f    );
-			PR_CHECK(farray[1], -1.0e-1f);
-			PR_CHECK(farray[2], +2.0f   );
-			PR_CHECK(farray[3], -0.2f   );
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector3");
-			PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql(vec, pr::v4(1.0f, 2.0f, 3.0f,-1.0f)), true);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector4");
-			PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql(vec, pr::v4(4.0f, 3.0f, 2.0f, 1.0f)), true);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Quaternion");
-			PR_CHECK(reader.Quaternion(q)               ,true); PR_CHECK(pr::FEql(q, pr::quat(0.0f, -1.0f, -2.0f, -3.0f)), true);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M3x3");
-			PR_CHECK(reader.Matrix3x3(mat3)             ,true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M4x4");
-			PR_CHECK(reader.Matrix4x4(mat4)             ,true); PR_CHECK(pr::FEql(mat4, pr::m4x4Identity), true);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Data");
-			PR_CHECK(reader.Data(kw, 16)                ,true); PR_CHECK(std::string(kw) , "ABCDEFGHIJKLMNO");
-			PR_CHECK(reader.FindKeyword(L"Section") ,true); str.resize(0);
-			PR_CHECK(reader.Section(str, false)         ,true); PR_CHECK(str, "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
-			PR_CHECK(reader.FindKeyword(L"Section") ,true); str.resize(0);
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Token");
-			PR_CHECK(reader.Token(str)                  ,true); PR_CHECK(str, "123token");
-			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "LastThing");
-			PR_CHECK(!reader.IsKeyword()                ,true);
-			PR_CHECK(!reader.IsSectionStart()           ,true);
-			PR_CHECK(!reader.IsSectionEnd()             ,true);
-			PR_CHECK(reader.IsSourceEnd()               ,true);
+			Reader reader(Script, true);
+			PR_EXPECT(reader.CaseSensitive());
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Identifier");
+			PR_EXPECT(reader.Identifier(str) && str == "ident");
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "String" );
+			PR_EXPECT(reader.String(str) && str == "simple string");
+			PR_EXPECT(reader.NextKeywordH(hashed_kw) && hashed_kw == reader.HashKeyword(L"CString"));
+			PR_EXPECT(reader.CString(str) && str == "C:\\Path\\Filename.txt");
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Bool");
+			PR_EXPECT(reader.Bool(bval) && bval == true);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Intg");
+			PR_EXPECT(reader.Int(ival, 10) && ival == -23);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Intg16" );
+			PR_EXPECT(reader.Int(uival, 16) && uival == 0xABCDEF00);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Real" );
+			PR_EXPECT(reader.Real(fval) && fval == -2.3e+3);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "BoolArray" );
+			PR_EXPECT(reader.Bool(barray, 4));
+			PR_EXPECT(barray[0]);
+			PR_EXPECT(!barray[1]);
+			PR_EXPECT(barray[2]);
+			PR_EXPECT(!barray[3]);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "IntArray");
+			PR_EXPECT(reader.Int(iarray, 4, 10));
+			PR_EXPECT(iarray[0] == -3);
+			PR_EXPECT(iarray[1] == +2);
+			PR_EXPECT(iarray[2] == +1);
+			PR_EXPECT(iarray[3] == -0);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "RealArray");
+			PR_EXPECT(reader.Real(farray, 4));
+			PR_EXPECT(farray[0] == 2.3f);
+			PR_EXPECT(farray[1] == -1.0e-1f);
+			PR_EXPECT(farray[2] == +2.0f);
+			PR_EXPECT(farray[3] == -0.2f);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Vector3");
+			PR_EXPECT(reader.Vector3(vec,-1.0f) && FEql(vec, v4(1.0f, 2.0f, 3.0f,-1.0f)));
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Vector4");
+			PR_EXPECT(reader.Vector4(vec) && FEql(vec, v4(4.0f, 3.0f, 2.0f, 1.0f)));
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Quaternion");
+			PR_EXPECT(reader.Quaternion(q) && FEql(q, quat(0.0f, -1.0f, -2.0f, -3.0f)));
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "M3x3");
+			PR_EXPECT(reader.Matrix3x3(mat3) && FEql(mat3, m3x4Identity));
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "M4x4");
+			PR_EXPECT(reader.Matrix4x4(mat4) && FEql(mat4, m4x4Identity));
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Data");
+			PR_EXPECT(reader.Data(kw, 16) && std::string(kw) == "ABCDEFGHIJKLMNO");
+			PR_EXPECT(reader.FindKeyword(L"Section")); str.resize(0);
+			PR_EXPECT(reader.Section(str, false) && str == "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
+			PR_EXPECT(reader.FindKeyword(L"Section")); str.resize(0);
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "Token");
+			PR_EXPECT(reader.Token(str) && str == "123token");
+			PR_EXPECT(reader.NextKeywordS(kw) && std::string(kw) == "LastThing");
+			PR_EXPECT(reader.IsKeyword() == false);
+			PR_EXPECT(reader.IsSectionStart() == false);
+			PR_EXPECT(reader.IsSectionEnd() == false);
+			PR_EXPECT(reader.IsSourceEnd());
 		}
-		{// Dot delimited identifiers
+		PRUnitTestMethod(DotDelimitedIdentifiers)
+		{
 			char const* s =
 				"A.B\n"
 				"a.b.c\n"
@@ -1231,11 +1233,12 @@ namespace pr::script
 			std::string s0,s1,s2,s3;
 
 			Reader reader(s);
-			reader.Identifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
-			reader.Identifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
-			reader.Identifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
+			reader.Identifiers('.',s0,s1);        PR_EXPECT(s0 == "A" && s1 == "B");
+			reader.Identifiers('.',s0,s1,s2);     PR_EXPECT(s0 == "a" && s1 == "b" && s2 == "c");
+			reader.Identifiers('.',s0,s1,s2,s3);  PR_EXPECT(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D");
 		}
-		{// AddressAt
+		PRUnitTestMethod(AddressAt)
+		{
 			wchar_t const* str0 = L""
 				L"*Group { *Width {1} *Smooth *Box\n" //33
 				L"{\n" //35
@@ -1246,52 +1249,52 @@ namespace pr::script
 				L"	*o2w { *pos {"; // 112
 			{
 				StringSrc src({ str0, 0 });
-				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), ""));
 			}
 			{
 				StringSrc src({ str0, 18 });
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Width"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "Group.Width"));
 			}
 			{
 				StringSrc src({ str0, 19 });
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "Group"));
 			}
 			{
 				StringSrc src({ str0, 35 });
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Box"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "Group.Box"));
 			}
 			{
 				StringSrc src({ str0, 88 });
-				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true); // because partway through a literal string
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "")); // because partway through a literal string
 			}
 			{
 				StringSrc src(str0);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Box.o2w.pos"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "Group.Box.o2w.pos"));
 			}
 
 			auto const u8str1 = u8"*One { \"💩🍌\" \"💩🍌\" }";
 			char const* str1 = reinterpret_cast<char const*>(&u8str1[0]);
 			{
 				StringSrc src(str1); src.Limit(6);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "One"));
 			}
 			{
 				StringSrc src(str1); src.Limit(9);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), ""));
 			}
 			{
 				StringSrc src(str1); src.Limit(11);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "One"));
 			}
 			{
 				StringSrc src(str1); src.Limit(14);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), ""));
 			}
 			{
 				StringSrc src(str1); src.Limit(16);
-				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+				PR_EXPECT(str::Equal(Reader::AddressAt(src), "One"));
 			}
 		}
-	}
+	};
 }
 #endif

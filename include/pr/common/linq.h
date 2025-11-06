@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // LinQ
 //  Copyright (c) Rylogic Ltd 2016
 //*****************************************************************************************
@@ -152,11 +152,11 @@ namespace pr::common
 			auto expr = linq(cont)
 				.where([](int x){ return (x%2) == 1; });
 
-			PR_CHECK(*expr++ == 1, true);
-			PR_CHECK(*expr++ == 3, true);
-			PR_CHECK(*expr++ == 5, true);
-			PR_CHECK(*expr++ == 7, true);
-			PR_CHECK(*expr++ == 9, true);
+			PR_EXPECT(*expr++ == 1);
+			PR_EXPECT(*expr++ == 3);
+			PR_EXPECT(*expr++ == 5);
+			PR_EXPECT(*expr++ == 7);
+			PR_EXPECT(*expr++ == 9);
 		}
 		{ // Container type
 			std::vector<int> cont = {0,1,2,3,4,5,6,7,8,9};
@@ -186,7 +186,7 @@ namespace pr::common
 			bool cont[] = {false, false, false, true, false};
 			auto result = linq(cont).any([](bool b) { return b; });
 
-			PR_CHECK(result, true);
+			PR_EXPECT(result);
 		}
 		#endif
 	}

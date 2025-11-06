@@ -504,15 +504,15 @@ namespace pr::common
 			++fcount;
 		});
 
-		PR_CHECK(fcount > 3, true);
+		PR_EXPECT(fcount > 3);
 
 		// Requires debug symbols...
 		#if !defined(NDEBUG)
 		auto s = out.str();
 		std::string::size_type ofs = 0U;
-		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos, true);
-		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos, true);
-		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos, true);
+		PR_EXPECT((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos);
+		PR_EXPECT((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos);
+		PR_EXPECT((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos);
 		#endif
 		#endif
 	}

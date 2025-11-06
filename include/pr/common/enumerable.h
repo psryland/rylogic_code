@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Enumerable
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
@@ -141,18 +141,18 @@ namespace pr::common
 			Foo foo;
 			for (auto& i : foo.OddInts())
 				i *= 10;
-			PR_CHECK(foo.m_int[0], 10);
-			PR_CHECK(foo.m_int[1], 2);
-			PR_CHECK(foo.m_int[2], 30);
+			PR_EXPECT(foo.m_int[0] == 10);
+			PR_EXPECT(foo.m_int[1] == 2);
+			PR_EXPECT(foo.m_int[2] == 30);
 		}
 		{
 			Foo foo;
 			for (auto& i : MakeEnumerable(foo.m_int, [](int item){ return (item % 2) == 0; }))
 				i *= -10;
 				
-			PR_CHECK(foo.m_int[0], 1);
-			PR_CHECK(foo.m_int[1], -20);
-			PR_CHECK(foo.m_int[2], 3);
+			PR_EXPECT(foo.m_int[0] == 1);
+			PR_EXPECT(foo.m_int[1] == -20);
+			PR_EXPECT(foo.m_int[2] == 3);
 		}
 	}
 }

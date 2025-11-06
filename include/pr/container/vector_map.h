@@ -1,4 +1,4 @@
-//***********************************************************
+﻿//***********************************************************
 // Vector Map
 //  Copyright (c) Rylogic Ltd 2011
 //***********************************************************
@@ -122,13 +122,12 @@ namespace pr
 	};
 }
 
-
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/container/vector.h"
 namespace pr::container
 {
-	namespace unittests::vector_map
+	PRUnitTestClass(VectorMapTests)
 	{
 		struct Thing
 		{
@@ -136,27 +135,27 @@ namespace pr::container
 			Thing() :m_id() {}
 			Thing(int id) :m_id(id) {}
 		};
-	}
-	PRUnitTest(VectorMapTests)
-	{
-		using namespace unittests::vector_map;
-		typedef pr::vector<std::pair<int, Thing>, 10, true> fixed_buffer;
-		typedef pr::vector_map<int, Thing, fixed_buffer> Map;
 
-		Map map;
+		using fixed_buffer = pr::vector<std::pair<int, Thing>, 10, true>;
+		using Map = pr::vector_map<int, Thing, fixed_buffer>;
 
-		map[3] = Thing(3);
-		map[1] = Thing(1);
-		map[9] = Thing(9);
+		PRUnitTestMethod(General)
+		{
+			Map map;
 
-		PR_CHECK(!map.empty(), true);
-		PR_CHECK(map.size(), 3U);
-		PR_CHECK(map[9].m_id, 9);
-		PR_CHECK(map[1].m_id, 1);
-		PR_CHECK(map[3].m_id, 3);
+			map[3] = Thing(3);
+			map[1] = Thing(1);
+			map[9] = Thing(9);
 
-		map.clear();
-		PR_CHECK(map.empty(), true);
-	}
+			PR_EXPECT(!map.empty());
+			PR_EXPECT(map.size() == 3U);
+			PR_EXPECT(map[9].m_id == 9);
+			PR_EXPECT(map[1].m_id == 1);
+			PR_EXPECT(map[3].m_id == 3);
+
+			map.clear();
+			PR_EXPECT(map.empty());
+		}
+	};
 }
 #endif

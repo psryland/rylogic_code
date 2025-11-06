@@ -1,4 +1,4 @@
-//*********************************************************************
+﻿//*********************************************************************
 // Chain
 //  Copyright (c) Rylogic Ltd 2004
 //*********************************************************************
@@ -642,77 +642,74 @@ namespace pr::chain
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::container
+namespace pr::chain
 {
-	struct Member
+	PRUnitTestClass(ChainTests)
 	{
-		int m_i;
-		Member *m_next, *m_prev;
-		Member(int i) :m_i(i) { pr::chain::Init(*this); }
-	};
+		struct Member
+		{
+			int m_i;
+			Member *m_next, *m_prev;
+			Member(int i) :m_i(i) { pr::chain::Init(*this); }
+		};
 
-	struct Field
-	{
-		int m_i;
-		pr::chain::Link<Field> m_link;
-		Field(int i) :m_i(i) { m_link.init(this); }
-	};
+		struct Field
+		{
+			int m_i;
+			pr::chain::Link<Field> m_link;
+			Field(int i) :m_i(i) { m_link.init(this); }
+		};
 
-	struct Mixin : pr::chain::link<Mixin>
-	{
-		int m_i;
-		Mixin(int i) :m_i(i) {}
-	};
+		struct Mixin : pr::chain::link<Mixin>
+		{
+			int m_i;
+			Mixin(int i) :m_i(i) {}
+		};
 
-	PRUnitTest(ChainTests)
-	{
-		using namespace pr::chain;
-
-		// Member Chain
+		PRUnitTestMethod(MemberChain)
 		{
 			Member m0(0), m1(1), m2(2);
 			Insert(m2, m1);
 			Insert(m1, m0);
-			PR_CHECK(Size(m0) ,3U);
-			PR_CHECK(Size(m1) ,3U);
-			PR_CHECK(Size(m2) ,3U);
+			PR_EXPECT(Size(m0) == 3U);
+			PR_EXPECT(Size(m1) == 3U);
+			PR_EXPECT(Size(m2) == 3U);
 			{
 				member_chain_iterator<Member> iter(m0);
-				PR_CHECK(iter->m_i, 0); ++iter;
-				PR_CHECK(iter->m_i, 1); ++iter;
-				PR_CHECK(iter->m_i, 2); ++iter;
-				PR_CHECK(iter == 0, true);
+				PR_EXPECT(iter->m_i == 0); ++iter;
+				PR_EXPECT(iter->m_i == 1); ++iter;
+				PR_EXPECT(iter->m_i == 2); ++iter;
+				PR_EXPECT(iter == 0);
 			}
 
 			Member m3(3), m4(4), m5(5);
 			Insert(m5, m4);
 			Insert(m4, m3);
-			PR_CHECK(Size(m4), 3U);
+			PR_EXPECT(Size(m4) == 3U);
 			{
 				member_chain_iterator<Member> iter(m4);
-				PR_CHECK(iter->m_i, 4); --iter;
-				PR_CHECK(iter->m_i, 3); --iter;
-				PR_CHECK(iter->m_i, 5); --iter;
-				PR_CHECK(iter == 0, true);
+				PR_EXPECT(iter->m_i == 4); --iter;
+				PR_EXPECT(iter->m_i == 3); --iter;
+				PR_EXPECT(iter->m_i == 5); --iter;
+				PR_EXPECT(iter == 0);
 			}
 
 			Remove(m5);
-			PR_CHECK(Size(m3), 2U);
-			PR_CHECK(Size(m4), 2U);
+			PR_EXPECT(Size(m3) == 2U);
+			PR_EXPECT(Size(m4) == 2U);
 
 			Join(m0, m3);
 			{
 				member_chain_iterator<Member> iter(m0);
-				PR_CHECK(iter->m_i, 0); ++iter;
-				PR_CHECK(iter->m_i, 1); ++iter;
-				PR_CHECK(iter->m_i, 2); ++iter;
-				PR_CHECK(iter->m_i, 3); ++iter;
-				PR_CHECK(iter->m_i, 4); ++iter;
-				PR_CHECK(iter == 0, true);
+				PR_EXPECT(iter->m_i == 0); ++iter;
+				PR_EXPECT(iter->m_i == 1); ++iter;
+				PR_EXPECT(iter->m_i == 2); ++iter;
+				PR_EXPECT(iter->m_i == 3); ++iter;
+				PR_EXPECT(iter->m_i == 4); ++iter;
+				PR_EXPECT(iter == 0);
 			}
 		}
-		
-		// Field Chain
+		PRUnitTestMethod(FieldChain)
 		{
 			Link<Field> head;
 			Field f0(0), f1(1), f2(2);
@@ -721,25 +718,24 @@ namespace pr::container
 			Insert(head, f2.m_link);
 			{
 				Link<Field>* i = head.begin();
-				PR_CHECK(i->m_owner->m_i, 0); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 1); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
-				PR_CHECK(i == &head, true);
+				PR_EXPECT(i->m_owner->m_i == 0); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 1); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 2); i = i->m_next;
+				PR_EXPECT(i == &head);
 			}
 
 			Field f3(f2), f4(4); f4 = f3; // copy construct/assignment
 			{
 				Link<Field>* i = head.begin();
-				PR_CHECK(i->m_owner->m_i, 0); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 1); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
-				PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
-				PR_CHECK(i == &head, true);
+				PR_EXPECT(i->m_owner->m_i == 0); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 1); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 2); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 2); i = i->m_next;
+				PR_EXPECT(i->m_owner->m_i == 2); i = i->m_next;
+				PR_EXPECT(i == &head);
 			}
 		}
-
-		// Mixin Chain
+		PRUnitTestMethod(MixinChain)
 		{
 			head<Mixin> chain;
 			Mixin m0(0), m1(1), m2(2), m3(3), m4(4);
@@ -751,28 +747,28 @@ namespace pr::container
 			chain.push_back(m4);
 			{
 				auto i = std::begin(chain);
-				PR_CHECK(i->m_i, 0); ++i;
-				PR_CHECK(i->m_i, 1); ++i;
-				PR_CHECK(i->m_i, 2); ++i;
-				PR_CHECK(i->m_i, 3); ++i;
-				PR_CHECK(i->m_i, 4); ++i;
-				PR_CHECK(i == std::end(chain), true);
+				PR_EXPECT(i->m_i == 0); ++i;
+				PR_EXPECT(i->m_i == 1); ++i;
+				PR_EXPECT(i->m_i == 2); ++i;
+				PR_EXPECT(i->m_i == 3); ++i;
+				PR_EXPECT(i->m_i == 4); ++i;
+				PR_EXPECT(i == std::end(chain));
 			}
 
 			auto odds = filter(chain, [](auto& m) { return (m.m_i & 1) == 1; });
 			{
 				auto i = std::begin(chain);
-				PR_CHECK(i->m_i, 0); ++i;
-				PR_CHECK(i->m_i, 2); ++i;
-				PR_CHECK(i->m_i, 4); ++i;
-				PR_CHECK(i == std::end(chain), true);
+				PR_EXPECT(i->m_i == 0); ++i;
+				PR_EXPECT(i->m_i == 2); ++i;
+				PR_EXPECT(i->m_i == 4); ++i;
+				PR_EXPECT(i == std::end(chain));
 
 				auto j = std::begin(odds);
-				PR_CHECK(j->m_i, 1); ++j;
-				PR_CHECK(j->m_i, 3); ++j;
-				PR_CHECK(j == std::end(odds), true);
+				PR_EXPECT(j->m_i == 1); ++j;
+				PR_EXPECT(j->m_i == 3); ++j;
+				PR_EXPECT(j == std::end(odds));
 			}
 		}
-	}
+	};
 }
 #endif

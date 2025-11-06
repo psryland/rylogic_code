@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -540,21 +540,21 @@ namespace pr::maths
 				PR_CHECK(static_cast<int64_t>(a), +i);
 				PR_CHECK(static_cast<int64_t>(b), -i);
 				PR_CHECK(static_cast<int64_t>(c), +i);
-				PR_CHECK(a == c, true);
-				PR_CHECK(a == -b, true);
+				PR_EXPECT(a == c);
+				PR_EXPECT(a == -b);
 			}
 		}
 		{// Operator ~
 			Int a = {0x55555555UL, 0x55555555UL, 0x55555555UL, 0x55555555UL};
 			Int b = {0xAAAAAAAAUL, 0xAAAAAAAAUL, 0xAAAAAAAAUL, 0xAAAAAAAAUL};
-			PR_CHECK(~a == b, true);
+			PR_EXPECT(~a == b);
 		}
 		{// Operator !
 			Int a = 10;
 			Int b = !a;
 			Int c = !b;
-			PR_CHECK(b == 0, true);
-			PR_CHECK(c == 1, true);
+			PR_EXPECT(b == 0);
+			PR_EXPECT(c == 1);
 		}
 		{// operator +
 			int64_t const v = 5000000000LL;
@@ -579,29 +579,29 @@ namespace pr::maths
 			Int a = std::numeric_limits<int64_t>::max();
 			Int b = 3;
 			Int c = a;
-			PR_CHECK(a == b, false);
-			PR_CHECK(a == c, true);
-			PR_CHECK(a != b, true);
-			PR_CHECK(a != c, false);
+			PR_EXPECT(!a == b);
+			PR_EXPECT(a == c);
+			PR_EXPECT(a != b);
+			PR_EXPECT(!a != c);
 		}
 		//{// operators <,>,<=,>=
 		//	Int a = {0x01234567, 0x89ABCDEF};
 		//	Int b = {0x89ABCDEF, 0x01234567};
-		//	PR_CHECK(a < b, true);
-		//	PR_CHECK(b < a, false);
-		//	PR_CHECK(a < a, false);
+		//	PR_EXPECT(a < b);
+		//	PR_EXPECT(!b < a);
+		//	PR_EXPECT(!a < a);
 		//
-		//	PR_CHECK(a > b, false);
-		//	PR_CHECK(b > a, true);
-		//	PR_CHECK(a > a, false);
+		//	PR_EXPECT(!a > b);
+		//	PR_EXPECT(b > a);
+		//	PR_EXPECT(!a > a);
 		//
-		//	PR_CHECK(a <= b, true);
-		//	PR_CHECK(b <= a, false);
-		//	PR_CHECK(a <= a, true);
+		//	PR_EXPECT(a <= b);
+		//	PR_EXPECT(!b <= a);
+		//	PR_EXPECT(a <= a);
 		//
-		//	PR_CHECK(a >= b, false);
-		//	PR_CHECK(b >= a, true);
-		//	PR_CHECK(a >= a, true);
+		//	PR_EXPECT(!a >= b);
+		//	PR_EXPECT(b >= a);
+		//	PR_EXPECT(a >= a);
 		//}
 		{
 			// Russian multiply

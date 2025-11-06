@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -244,52 +244,52 @@ namespace pr::maths
 
 		{// Create
 			auto V0 = mat2_t(1,2,3,4);
-			PR_CHECK(V0.x == vec2_t(1,2), true);
-			PR_CHECK(V0.y == vec2_t(3,4), true);
+			PR_EXPECT(V0.x == vec2_t(1,2));
+			PR_EXPECT(V0.y == vec2_t(3,4));
 
 			auto V1 = mat2_t(vec2_t(1,2), vec2_t(3,4));
-			PR_CHECK(V1.x == vec2_t(1,2), true);
-			PR_CHECK(V1.y == vec2_t(3,4), true);
+			PR_EXPECT(V1.x == vec2_t(1,2));
+			PR_EXPECT(V1.y == vec2_t(3,4));
 
 			auto V2 = mat2_t({1,2,3,4});
-			PR_CHECK(V2.x == vec2_t(1,2), true);
-			PR_CHECK(V2.y == vec2_t(3,4), true);
+			PR_EXPECT(V2.x == vec2_t(1,2));
+			PR_EXPECT(V2.y == vec2_t(3,4));
 
 			auto V3 = mat2_t{4,5,6,7};
-			PR_CHECK(V3.x == vec2_t(4,5), true);
-			PR_CHECK(V3.y == vec2_t(6,7), true);
+			PR_EXPECT(V3.x == vec2_t(4,5));
+			PR_EXPECT(V3.y == vec2_t(6,7));
 		}
 		{// Operators
 			auto V0 = mat2_t(10,20,30,40);
 			auto V1 = mat2_t(20,30,40,50);
 
-			PR_CHECK(V0 + V1, mat2_t(30,50,70,90));
-			PR_CHECK(V0 - V1, mat2_t(-10,-10,-10,-10));
+			PR_EXPECT(V0 + V1 == mat2_t(30,50,70,90));
+			PR_EXPECT(V0 - V1 == mat2_t(-10,-10,-10,-10));
 
 			// 1 3     2 4     2+9  4+15     11 19
 			// 2 4  x  3 5  =  4+12 8+20  =  16 28
-			PR_CHECK(V0 * V1, mat2_t(1100,1600,1900,2800));
+			PR_EXPECT(V0 * V1 == mat2_t(1100,1600,1900,2800));
 
-			PR_CHECK(S(3) * V0, mat2_t(30,60,90,120));
-			PR_CHECK(V0 * S(3), mat2_t(30,60,90,120));
-			PR_CHECK(V0 / S(2), mat2_t(5, 10, 15, 20));
-			PR_CHECK(V0 % S(20), mat2_t(10,0,10,0));
+			PR_EXPECT(S(3) * V0 == mat2_t(30,60,90,120));
+			PR_EXPECT(V0 * S(3) == mat2_t(30,60,90,120));
+			PR_EXPECT(V0 / S(2) == mat2_t(5, 10, 15, 20));
+			PR_EXPECT(V0 % S(20) == mat2_t(10,0,10,0));
 
-			PR_CHECK(+V0, mat2_t(+10,+20,+30,+40));
-			PR_CHECK(-V0, mat2_t(-10,-20,-30,-40));
+			PR_EXPECT(+V0 == mat2_t(+10,+20,+30,+40));
+			PR_EXPECT(-V0 == mat2_t(-10,-20,-30,-40));
 
-			PR_CHECK(V0 == mat2_t(10,20,30,40), true);
-			PR_CHECK(V0 != mat2_t(40,30,20,10), true);
+			PR_EXPECT(V0 == mat2_t(10,20,30,40));
+			PR_EXPECT(V0 != mat2_t(40,30,20,10));
 		}
 		{// Min/Max/Clamp
 			auto V0 = mat2_t(1,2,3,4);
 			auto V1 = mat2_t(-1,-2,-3,-4);
 			auto V2 = mat2_t(2,4,6,8);
 
-			PR_CHECK(Min(V0,V1,V2), mat2_t(-1,-2,-3,-4));
-			PR_CHECK(Max(V0,V1,V2), mat2_t(2,4,6,8));
-			PR_CHECK(Clamp(V0,V1,V2), mat2_t(1,2,3,4));
-			PR_CHECK(Clamp(V0,S(0),S(1)), mat2_t(1,1,1,1));
+			PR_EXPECT(Min(V0,V1,V2) == mat2_t(-1,-2,-3,-4));
+			PR_EXPECT(Max(V0,V1,V2) == mat2_t(2,4,6,8));
+			PR_EXPECT(Clamp(V0,V1,V2) == mat2_t(1,2,3,4));
+			PR_EXPECT(Clamp(V0,S(0),S(1)) == mat2_t(1,1,1,1));
 		}
 	}
 }

@@ -1,4 +1,4 @@
-//*******************************************************
+﻿//*******************************************************
 // PE File
 //  Copyright (c) Rylogic Ltd 2015
 //*******************************************************
@@ -217,7 +217,7 @@ namespace pr::common
 		GetModuleFileName(nullptr, name, _countof(name));
 		PEFile file(name, true);
 		auto hdr = file.SectionHeader(".text");
-		PR_CHECK(_stricmp((char const*)hdr->Name, ".text") == 0, true);
+		PR_EXPECT(_stricmp((char const*)hdr->Name, ".text") == 0);
 	}
 }
 #endif

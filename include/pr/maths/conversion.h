@@ -588,193 +588,201 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(ToStringTests)
+	PRUnitTestClass(ToStringTests)
 	{
-		{// Vec2
-			PR_CHECK(To<std::string>(Vec2<float, void>(2.125f, -4.75f)), "2.125 -4.75");
-			PR_CHECK(To<std::string>(Vec2<double, void>(2.125, -4.75)), "2.125 -4.75");
-			PR_CHECK(To<std::string>(Vec2<int, void>(12, -34)), "12 -34");
-			PR_CHECK(To<std::string>(Vec2<long long, void>(12, -34)), "12 -34");
+		PRUnitTestMethod(Vec2)
+		{
+			PR_EXPECT(To <std::string>(Vec2 <float, void >(2.125f, -4.75f)) == "2.125 -4.75");
+			PR_EXPECT(To <std::string>(Vec2 <double, void >(2.125, -4.75))  == "2.125 -4.75");
+			PR_EXPECT(To <std::string>(Vec2 <int, void >(12, -34))          == "12 -34");
+			PR_EXPECT(To <std::string>(Vec2 <long long, void >(12, -34))    == "12 -34");
 
-			PR_CHECK((To<Vec2<double, void>>("1.2 3.4")), (Vec2<double, void>(1.2, 3.4)));
-			PR_CHECK((To<Vec2<int, void>>("1 -2")      ), (Vec2<int, void>(1, -2)));
-			PR_CHECK((To<Vec2<int, void>>("AA 55", 16) ), (Vec2<int, void>(170, 85)));
+			PR_EXPECT((To<Vec2<double, void>>("1.2 3.4")) == (Vec2<double, void>(1.2, 3.4)));
+			PR_EXPECT((To<Vec2<int, void>>("1 -2")      ) == (Vec2<int, void>(1, -2)));
+			PR_EXPECT((To<Vec2<int, void>>("AA 55", 16) ) == (Vec2<int, void>(170, 85)));
 		}
-		{// Vec3
-			PR_CHECK(To<std::string>(Vec3<float, void>(2.125f, 4.75f, -1.375f)), "2.125 4.75 -1.375");
-			PR_CHECK(To<std::string>(Vec3<double, void>(2.125, 4.75, -1.375)), "2.125 4.75 -1.375");
-			PR_CHECK(To<std::string>(Vec3<int, void>(12, -34, 56)), "12 -34 56");
-			PR_CHECK(To<std::string>(Vec3<long long, void>(12, -34, 56)), "12 -34 56");
+		PRUnitTestMethod(Vec3)
+		{
+			PR_EXPECT(To<std::string>(Vec3<float, void>(2.125f, 4.75f, -1.375f)) == "2.125 4.75 -1.375");
+			PR_EXPECT(To<std::string>(Vec3<double, void>(2.125, 4.75, -1.375))   == "2.125 4.75 -1.375");
+			PR_EXPECT(To<std::string>(Vec3<int, void>(12, -34, 56))              == "12 -34 56");
+			PR_EXPECT(To<std::string>(Vec3<long long, void>(12, -34, 56))        == "12 -34 56");
 		}
-		{// Vec4
-			PR_CHECK(To<std::string>(Vec4<float, void>(2.125f, 4.75f, -1.375f, -0.825f)), "2.125 4.75 -1.375 -0.825");
-			PR_CHECK(To<std::string>(Vec4<double, void>(2.125, 4.75, -1.375, -0.825)), "2.125 4.75 -1.375 -0.825");
-			PR_CHECK(To<std::string>(Vec4<int, void>(12, -34, 56, -78)), "12 -34 56 -78");
-			PR_CHECK(To<std::string>(Vec4<long long, void>(12, -34, 56, -78)), "12 -34 56 -78");
+		PRUnitTestMethod(Vec4)
+		{
+			PR_EXPECT(To<std::string>(Vec4<float, void>(2.125f, 4.75f, -1.375f, -0.825f)) == "2.125 4.75 -1.375 -0.825");
+			PR_EXPECT(To<std::string>(Vec4<double, void>(2.125, 4.75, -1.375, -0.825))    == "2.125 4.75 -1.375 -0.825");
+			PR_EXPECT(To<std::string>(Vec4<int, void>(12, -34, 56, -78))                  == "12 -34 56 -78");
+			PR_EXPECT(To<std::string>(Vec4<long long, void>(12, -34, 56, -78))            == "12 -34 56 -78");
 		}
-		{// Vec8
-			PR_CHECK(To<std::string>(Vec8<float, void>(-1.125f, 2.25f, -3.375f, 4.4f, -5.5f, 6.675f)), "-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0");
-			PR_CHECK(To<std::string>(Vec8<double, void>(-1.125, 2.25, -3.375, 4.4, -5.5, 6.675)), "-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0");
-			PR_CHECK(To<std::string>(Vec8<int, void>(12, -34, 56, -78, 90, -11)), "12 -34 56 0  -78 90 -11 0");
-			PR_CHECK(To<std::string>(Vec8<long long, void>(12, -34, 56, -78, 90, -11)), "12 -34 56 0  -78 90 -11 0");
+		PRUnitTestMethod(Vec8)
+		{
+			PR_EXPECT(To<std::string>(Vec8<float, void>(-1.125f, 2.25f, -3.375f, 4.4f, -5.5f, 6.675f)) == "-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0");
+			PR_EXPECT(To<std::string>(Vec8<double, void>(-1.125, 2.25, -3.375, 4.4, -5.5, 6.675))      == "-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0");
+			PR_EXPECT(To<std::string>(Vec8<int, void>(12, -34, 56, -78, 90, -11))                      == "12 -34 56 0  -78 90 -11 0");
+			PR_EXPECT(To<std::string>(Vec8<long long, void>(12, -34, 56, -78, 90, -11))                == "12 -34 56 0  -78 90 -11 0");
 
-			PR_CHECK((To<Vec8<double, void>>("-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0")), (Vec8<double, void>(-1.125, 2.25, -3.375, 0.0, 4.4, -5.5, 6.675, 0.0)));
-			PR_CHECK((To<Vec8<int, void>>("12 -34 56 0  -78 90 -11 0")), (Vec8<int, void>(12, -34, 56, 0, -78, 90, -11, 0)));
-			PR_CHECK((To<Vec8<int, void>>("10 11 12 13  14 15 16 17", 16)), (Vec8<int, void>(16, 17, 18, 19, 20, 21, 22, 23)));
+			PR_EXPECT((To<Vec8<double, void>>("-1.125 2.25 -3.375 0  4.4 -5.5 6.675 0")) == (Vec8<double, void>(-1.125, 2.25, -3.375, 0.0, 4.4, -5.5, 6.675, 0.0)));
+			PR_EXPECT((To<Vec8<int, void>>("12 -34 56 0  -78 90 -11 0"))                 == (Vec8<int, void>(12, -34, 56, 0, -78, 90, -11, 0)));
+			PR_EXPECT((To<Vec8<int, void>>("10 11 12 13  14 15 16 17", 16))              == (Vec8<int, void>(16, 17, 18, 19, 20, 21, 22, 23)));
 		}
-		{// Mat2x2
-			PR_CHECK(To<std::string>(Mat2x2<float, void, void>(
+		PRUnitTestMethod(Mat2x2)
+		{
+			PR_EXPECT(To<std::string>(Mat2x2<float, void, void>(
 				2.125f, -4.75f,
-				-1.375f, -0.825f)),
+				-1.375f, -0.825f)) ==
 				"2.125 -4.75 "
 				"-1.375 -0.825");
-			PR_CHECK(To<std::string>(Mat2x2<double, void, void>(
+			PR_EXPECT(To<std::string>(Mat2x2<double, void, void>(
 				2.125, -4.75,
-				-1.375, -0.825)),
+				-1.375, -0.825)) ==
 				"2.125 -4.75 "
 				"-1.375 -0.825");
-			PR_CHECK(To<std::string>(Mat2x2<int, void, void>(
+			PR_EXPECT(To<std::string>(Mat2x2<int, void, void>(
 				12, -34,
-				56, -78)),
+				56, -78)) ==
 				"12 -34 "
 				"56 -78");
-			PR_CHECK(To<std::string>(Mat2x2<long long, void, void>(
+			PR_EXPECT(To<std::string>(Mat2x2<long long, void, void>(
 				12, -34,
-				56, -78)),
+				56, -78)) ==
 				"12 -34 "
 				"56 -78");
 		}
-		{// Mat3x4
-			PR_CHECK(To<std::string>(Mat3x4<float, void, void>(
+		PRUnitTestMethod(Mat3x4)
+		{
+			PR_EXPECT(To<std::string>(Mat3x4<float, void, void>(
 				Vec4<float,void>(1.2f, 2.4f, -4.8f, -8.16f),
 				Vec4<float,void>(2.1f, 4.2f, -8.4f, -1.68f),
-				Vec4<float,void>(1.1f, 2.2f, -3.3f, -4.44f))),
+				Vec4<float,void>(1.1f, 2.2f, -3.3f, -4.44f))) ==
 				"1.2 2.4 -4.8 -8.16 "
 				"2.1 4.2 -8.4 -1.68 "
 				"1.1 2.2 -3.3 -4.44");
-			PR_CHECK(To<std::string>(Mat3x4<double, void, void>(
+			PR_EXPECT(To<std::string>(Mat3x4<double, void, void>(
 				Vec4<double, void>(1.2, 2.4, -4.8, -8.16),
 				Vec4<double, void>(2.1, 4.2, -8.4, -1.68),
-				Vec4<double, void>(1.1, 2.2, -3.3, -4.44))),
+				Vec4<double, void>(1.1, 2.2, -3.3, -4.44))) ==
 				"1.2 2.4 -4.8 -8.16 "
 				"2.1 4.2 -8.4 -1.68 "
 				"1.1 2.2 -3.3 -4.44");
-			PR_CHECK(To<std::string>(Mat3x4<int, void, void>(
+			PR_EXPECT(To<std::string>(Mat3x4<int, void, void>(
 				Vec4<int, void>(1, 2, -3, -4),
 				Vec4<int, void>(5, 6, -7, -8),
-				Vec4<int, void>(9, 0, -1, -2))),
+				Vec4<int, void>(9, 0, -1, -2))) ==
 				"1 2 -3 -4 "
 				"5 6 -7 -8 "
 				"9 0 -1 -2");
-			PR_CHECK(To<std::string>(Mat3x4<long long, void, void>(
+			PR_EXPECT(To<std::string>(Mat3x4<long long, void, void>(
 				Vec4<long long, void>(1, 2, -3, -4),
 				Vec4<long long, void>(5, 6, -7, -8),
-				Vec4<long long, void>(9, 0, -1, -2))),
+				Vec4<long long, void>(9, 0, -1, -2))) ==
 				"1 2 -3 -4 "
 				"5 6 -7 -8 "
 				"9 0 -1 -2");
 		}
-		{// Mat4x4
-			PR_CHECK(To<std::string>(Mat4x4<float, void, void>(
+		PRUnitTestMethod(Mat4x4)
+		{
+			PR_EXPECT(To<std::string>(Mat4x4<float, void, void>(
 				Vec4<float, void>(1.2f, 2.4f, -4.8f, -8.16f),
 				Vec4<float, void>(2.1f, 4.2f, -8.4f, -1.68f),
 				Vec4<float, void>(1.1f, 2.2f, -3.3f, -4.44f),
-				Vec4<float, void>(0.2f, 0.5f, -0.1f, -0.12f))),
+				Vec4<float, void>(0.2f, 0.5f, -0.1f, -0.12f))) ==
 				"1.2 2.4 -4.8 -8.16 "
 				"2.1 4.2 -8.4 -1.68 "
 				"1.1 2.2 -3.3 -4.44 "
 				"0.2 0.5 -0.1 -0.12");
-			PR_CHECK(To<std::string>(Mat4x4<double, void, void>(
+			PR_EXPECT(To<std::string>(Mat4x4<double, void, void>(
 				Vec4<double, void>(1.2, 2.4, -4.8, -8.16),
 				Vec4<double, void>(2.1, 4.2, -8.4, -1.68),
 				Vec4<double, void>(1.1, 2.2, -3.3, -4.44),
-				Vec4<double, void>(0.2, 0.5, -0.1, -0.12))),
+				Vec4<double, void>(0.2, 0.5, -0.1, -0.12))) ==
 				"1.2 2.4 -4.8 -8.16 "
 				"2.1 4.2 -8.4 -1.68 "
 				"1.1 2.2 -3.3 -4.44 "
 				"0.2 0.5 -0.1 -0.12");
-			PR_CHECK(To<std::string>(Mat4x4<int, void, void>(
+			PR_EXPECT(To<std::string>(Mat4x4<int, void, void>(
 				Vec4<int, void>(1, 2, -3, -4),
 				Vec4<int, void>(5, 6, -7, -8),
 				Vec4<int, void>(9, 0, -1, -2),
-				Vec4<int, void>(3, 4, -5, -6))),
+				Vec4<int, void>(3, 4, -5, -6))) ==
 				"1 2 -3 -4 "
 				"5 6 -7 -8 "
 				"9 0 -1 -2 "
 				"3 4 -5 -6");
-			PR_CHECK(To<std::string>(Mat4x4<long long, void, void>(
+			PR_EXPECT(To<std::string>(Mat4x4<long long, void, void>(
 				Vec4<long long, void>(1, 2, -3, -4),
 				Vec4<long long, void>(5, 6, -7, -8),
 				Vec4<long long, void>(9, 0, -1, -2),
-				Vec4<long long, void>(3, 4, -5, -6))),
+				Vec4<long long, void>(3, 4, -5, -6))) ==
 				"1 2 -3 -4 "
 				"5 6 -7 -8 "
 				"9 0 -1 -2 "
 				"3 4 -5 -6");
 		}
-		{// Mat6x8
-			PR_CHECK(To<std::string>(Mat6x8<float, void, void>(
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
-				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f))),
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0");
-			PR_CHECK(To<std::string>(Mat6x8<double, void, void>(
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
-				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125))),
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
-				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0");
-			PR_CHECK(To<std::string>(Mat6x8<int, void, void>(
-				Vec8<int, void>(1, -2, 3, -4, 5, -6),
-				Vec8<int, void>(1, -2, 3, -4, 5, -6),
-				Vec8<int, void>(1, -2, 3, -4, 5, -6),
-				Vec8<int, void>(1, -2, 3, -4, 5, -6),
-				Vec8<int, void>(1, -2, 3, -4, 5, -6),
-				Vec8<int, void>(1, -2, 3, -4, 5, -6))),
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0");
-			PR_CHECK(To<std::string>(Mat6x8<long long, void, void>(
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
-				Vec8<long long, void>(1, -2, 3, -4, 5, -6))),
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0 "
-				"1 -2 3 0  -4 5 -6 0");
-		}
-
+		PRUnitTestMethod(Mat6x8)
 		{
-			PR_CHECK(pr::To<std::string>(v4(1, 2, 3, 4)), "1 2 3 4");
-
-			PR_CHECK(pr::To<v2>("2 3"), v2(2, 3));
-			PR_CHECK(pr::To<v4>("1 2 3 4"), v4(1, 2, 3, 4));
-
-			PR_CHECK(pr::ToBinary<std::string>(uint8_t(0b11001010)), "11001010");
+			PR_EXPECT(To<std::string>(Mat6x8<float, void, void>(
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f),
+				Vec8<float, void>(1.1f, 2.2f, -3.25f, 4.5f, 5.25f, -6.125f))) ==
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0");
+			PR_EXPECT(To<std::string>(Mat6x8<double, void, void>(
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125),
+				Vec8<double, void>(1.1, 2.2, -3.25, 4.5, 5.25, -6.125))) ==
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0 "
+				"1.1 2.2 -3.25 0  4.5 5.25 -6.125 0");
+			PR_EXPECT(To<std::string>(Mat6x8<int, void, void>(
+				Vec8<int, void>(1, -2, 3, -4, 5, -6),
+				Vec8<int, void>(1, -2, 3, -4, 5, -6),
+				Vec8<int, void>(1, -2, 3, -4, 5, -6),
+				Vec8<int, void>(1, -2, 3, -4, 5, -6),
+				Vec8<int, void>(1, -2, 3, -4, 5, -6),
+				Vec8<int, void>(1, -2, 3, -4, 5, -6))) ==
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0");
+			PR_EXPECT(To<std::string>(Mat6x8<long long, void, void>(
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6),
+				Vec8<long long, void>(1, -2, 3, -4, 5, -6))) ==
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0 "
+				"1 -2 3 0  -4 5 -6 0");
 		}
-	}
+		PRUnitTestMethod(General)
+		{
+			PR_EXPECT(To<std::string>(v4(1, 2, 3, 4)) == "1 2 3 4");
+
+			PR_EXPECT(To<v2>("2 3") == v2(2, 3));
+			PR_EXPECT(To<v4>("1 2 3 4") == v4(1, 2, 3, 4));
+
+			PR_EXPECT(ToBinary<std::string>(uint8_t(0b11001010)) == "11001010");
+		}
+	};
 }
 #endif

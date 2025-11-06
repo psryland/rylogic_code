@@ -1,4 +1,4 @@
-//*********************************************************************
+﻿//*********************************************************************
 // Concurrent Queue
 //  Copyright (c) Rylogic Ltd 2011
 //*********************************************************************
@@ -152,8 +152,8 @@ namespace pr::threads
 		thd2.join();
 		thd3.join();
 
-		PR_CHECK(thing.m_count, 0);
-		PR_CHECK(thing.m_calls >= 100, true);
+		PR_EXPECT(thing.m_count == 0);
+		PR_EXPECT(thing.m_calls >= 100);
 	}
 }
 #endif

@@ -1,4 +1,4 @@
-//*********************************************************************
+﻿//*********************************************************************
 // Concurrent Queue
 //  Copyright (c) Rylogic Ltd 2011
 //*********************************************************************
@@ -252,7 +252,7 @@ namespace pr::threads
 		{
 			pr::threads::ConcurrentQueue<Item>::Lock lock(queue);
 			auto size = lock.m_queue.size() + items.size();
-			PR_CHECK(size >= 20 && size <= 30, true); // since t0,t1 have finished
+			PR_EXPECT(size >= 20 && size <= 30); // since t0,t1 have finished
 		}
 
 		// Start consuming
@@ -265,10 +265,10 @@ namespace pr::threads
 		// Finish consuming
 		t3.join();
 
-		PR_CHECK(items.size(), 30U);
+		PR_EXPECT(items.size() == 30U);
 		std::sort(begin(items),end(items));
 		for (auto i = 0U; i != items.size(); ++i)
-			PR_CHECK(items[i], pr::Fmt("t%d_%d", i/10, i%10));
+			PR_EXPECT(items[i] == std::format("t{}_{}", i/10, i%10));
 	}
 }
 #endif

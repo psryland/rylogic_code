@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -120,7 +120,7 @@ namespace pr::physics
 
 		// Initial KE should be zero
 		auto ke0 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, 0.f), true);
+		PR_EXPECT(FEql(ke0, 0.f));
 		
 		// Get it moving by applying forces/torques
 		auto dke = KineticEnergyChange(force, rb.MomentumWS(), rb.InertiaInvWS(), 1.0f);
@@ -130,7 +130,7 @@ namespace pr::physics
 		// KE Gained
 		ke0 += dke;
 		auto ke1 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, ke1), true);
+		PR_EXPECT(FEql(ke0, ke1));
 
 		// More force
 		dke = KineticEnergyChange(force, rb.MomentumWS(), rb.InertiaInvWS(), 1.0f);
@@ -140,7 +140,7 @@ namespace pr::physics
 		// KE Gained again
 		ke0 += dke;
 		auto ke2 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, ke2), true);
+		PR_EXPECT(FEql(ke0, ke2));
 
 		// No force
 		dke = 0;
@@ -149,7 +149,7 @@ namespace pr::physics
 		// KE unchanged
 		ke0 += dke;
 		auto ke3 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, ke3), true);
+		PR_EXPECT(FEql(ke0, ke3));
 
 		// Apply a force to stop the motion
 		force = -rb.MomentumWS();
@@ -160,10 +160,10 @@ namespace pr::physics
 		// KE lost
 		ke0 += dke;
 		auto ke4 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, ke4), true);
+		PR_EXPECT(FEql(ke0, ke4));
 
 		// KE back to zero
-		PR_CHECK(FEql(ke0, 0.f), true);
+		PR_EXPECT(FEql(ke0, 0.f));
 	}
 }
 #endif

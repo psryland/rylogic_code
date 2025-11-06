@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // User Data
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
@@ -195,24 +195,24 @@ namespace pr::common
 		udtest.get<double>() = 3.14;
 		udtest.get<m4x4>(0) = m4x4Identity; // store aligned types
 
-		PR_CHECK(udtest.has<Blob>(), true);
-		PR_CHECK(udtest.has<double>(), true);
-		PR_CHECK(udtest.has<int>(), false);
-		PR_CHECK(udtest.has<m4x4>(), true);
+		PR_EXPECT(udtest.has<Blob>());
+		PR_EXPECT(udtest.has<double>());
+		PR_EXPECT(!udtest.has<int>());
+		PR_EXPECT(udtest.has<m4x4>());
 
-		PR_CHECK(udtest.get<double>(), 3.14);
-		PR_CHECK(pr::str::Equal(udtest.get<Blob>().str, "HelloWorld"), true);
-		PR_CHECK(&udtest.get<Blob>() != &blob, true);
-		PR_CHECK(udtest.get<m4x4>() == m4x4Identity, true);
-		PR_CHECK(&udtest.get<m4x4>() != &m4x4Identity, true);
+		PR_EXPECT(udtest.get<double>() == 3.14);
+		PR_EXPECT(pr::str::Equal(udtest.get<Blob>().str, "HelloWorld"));
+		PR_EXPECT(&udtest.get<Blob>() != &blob);
+		PR_EXPECT(udtest.get<m4x4>() == m4x4Identity);
+		PR_EXPECT(&udtest.get<m4x4>() != &m4x4Identity);
 
 		udtest.get<double>() = 6.28;
-		PR_CHECK(udtest.get<double>(), 6.28);
+		PR_EXPECT(udtest.get<double>() == 6.28);
 
 		udtest.erase<double>();
 		udtest.erase<Blob>();
-		PR_CHECK(udtest.has<double>(), false);
-		PR_CHECK(udtest.has<Blob>(), false);
+		PR_EXPECT(!udtest.has<double>());
+		PR_EXPECT(!udtest.has<Blob>());
 	}
 }
 #endif

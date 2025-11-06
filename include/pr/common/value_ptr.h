@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Value smart pointer
 //  Copyright (c) Rylogic Ltd 2020
 //*********************************************
@@ -65,9 +65,9 @@ namespace pr
 			std::swap(m_ptr, p.m_ptr);
 			return *this;
 		}
-		T* operator*() const noexcept
+		T& operator*() const noexcept
 		{
-			return get();
+			return *get();
 		}
 		T* operator->() const noexcept
 		{
@@ -127,7 +127,7 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::common
 {
-	PRUnitTest(ValuePtrTests)
+	PRUnitTestClass(TestValuePtr)
 	{
 		struct Thing
 		{
@@ -135,20 +135,23 @@ namespace pr::common
 			Thing(int i) :m_i(i) {}
 		};
 
-		value_ptr<Thing> v0(new Thing(0));
-		value_ptr<Thing> v1(new Thing(1));
-		PR_CHECK(v0->m_i, 0);
-		PR_CHECK(v1->m_i, 1);
+		PRUnitTestMethod(ValueSemantics)
+		{
+			value_ptr<Thing> v0(new Thing(0));
+			value_ptr<Thing> v1(new Thing(1));
+			PR_EXPECT(v0->m_i == 0);
+			PR_EXPECT(v1->m_i == 1);
 
-		auto v2 = v1;
-		PR_CHECK(v2->m_i, 1);
+			auto v2 = v1;
+			PR_EXPECT(v2->m_i == 1);
 
-		v2->m_i++;
-		PR_CHECK(v1->m_i, 1);
-		PR_CHECK(v2->m_i, 2);
+			v2->m_i++;
+			PR_EXPECT(v1->m_i == 1);
+			PR_EXPECT(v2->m_i == 2);
 
-		v1 = std::move(v2);
-		PR_CHECK(v1->m_i, 2);
-	}
+			v1 = std::move(v2);
+			PR_EXPECT(v1->m_i == 2);
+		}
+	};
 }
 #endif

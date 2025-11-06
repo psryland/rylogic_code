@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <mutex>
 #include <condition_variable>
@@ -67,12 +67,12 @@ namespace pr::threads
 			ws.Set(false);
 		});
 
-		PR_CHECK(flag, false);
+		PR_EXPECT(!flag);
 
 		ws.Set(true);
 		ws.Wait(false);
 
-		PR_CHECK(flag, true);
+		PR_EXPECT(flag);
 		thread.join();
 	}
 }

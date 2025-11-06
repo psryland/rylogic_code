@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -158,7 +158,7 @@ namespace pr::maths
 		for (int i = 0, j = 0; i <= maths::prime[_countof(maths::prime) - 1]; ++i)
 		{
 			auto is_prime = i == maths::prime[j];
-			PR_CHECK(IsPrime(i), is_prime);
+			PR_EXPECT(IsPrime(i) == is_prime);
 			j += int(is_prime);
 		}
 
@@ -167,8 +167,8 @@ namespace pr::maths
 			for (int i = 0; i != 10000; ++i)
 				p = PrimeGtrThan(p);
 
-			PR_CHECK(p == 104743, true);
-			PR_CHECK(IsPrime(p), true);
+			PR_EXPECT(p == 104743);
+			PR_EXPECT(IsPrime(p));
 		}
 
 		{// Check PrevPrime
@@ -176,8 +176,8 @@ namespace pr::maths
 			for (int i = _countof(maths::prime); i-- != 0; )
 			{
 				p = PrimeLessThan(p);
-				PR_CHECK(p == maths::prime[i], true);
-				PR_CHECK(IsPrime(p), true);
+				PR_EXPECT(p == maths::prime[i]);
+				PR_EXPECT(IsPrime(p));
 			}
 		}
 	}

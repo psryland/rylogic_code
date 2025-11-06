@@ -233,21 +233,25 @@ namespace pr
 	class vector
 	{
 	public:
+
 		using type            = vector<Type, LocalCount, Fixed, Alignment, Allocator>;
 		using allocator_type  = Allocator;
 		using alloc_traits    = std::allocator_traits<std::remove_pointer_t<allocator_type>>;
-		using const_iterator  = pr::impl::vector::citer<Type>;
-		using iterator        = pr::impl::vector::miter<Type>;
+		using const_iterator  = impl::vector::citer<Type>;
+		using iterator        = impl::vector::miter<Type>;
 		using value_type      = typename alloc_traits::value_type;
 		using pointer         = typename alloc_traits::pointer;
 		using const_pointer   = typename alloc_traits::const_pointer;
 		using difference_type = typename alloc_traits::difference_type;
 		using size_type       = typename alloc_traits::size_type;
 
+		inline static constexpr int  local_capacity = LocalCount;
+
+	private:
+
 		inline static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
 		inline static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
 		inline static constexpr int  type_alignment_v   = std::max(Alignment, int(alignof(Type*)));
-		inline static constexpr int  local_count_v      = LocalCount;
 
 		struct traits
 		{
@@ -378,20 +382,20 @@ namespace pr
 
 	private:
 
-		using local_store_t = struct alignas(type_alignment_v)
+		struct alignas(type_alignment_v) local_store_t
 		{
-			std::byte _[std::max<size_t>({ type_alignment_v, sizeof(Type*), local_count_v * sizeof(Type) })];
+			std::byte _[std::max<size_t>({ type_alignment_v, sizeof(Type*), local_capacity * sizeof(Type) })];
 		};
 		static_assert((std::alignment_of_v<local_store_t> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
 
-		local_store_t m_local;              // Local cache for small arrays
-		union {                             // Union of types for debugging
-		Type      (*m_data)[local_count_v]; // Debugging helper for viewing the data as an array
-		Type*       m_ptr;                  // Pointer to the array of data
-		};                                  //
-		size_type m_capacity;               // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
-		size_type m_count;                  // The number of used elements in the array
-		allocator_type m_alloc;             // The memory allocator
+		local_store_t m_local;           // Local cache for small arrays
+		union {                          // Union of types for debugging
+		Type  (*m_data)[local_capacity]; // Debugging helper for viewing the data as an array
+		Type* m_ptr;                     // Pointer to the array of data
+		};                               //
+		size_type m_capacity;            // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
+		size_type m_count;               // The number of used elements in the array
+		allocator_type m_alloc;          // The memory allocator ([[no_unique_address]] not supported in MSVC 17.7)
 
 		// Any combination of type, local count, fixed, alignment, and allocator is a friend
 		template <class T, int L, bool F, int A, class C> friend class vector;
@@ -436,7 +440,7 @@ namespace pr
 		{
 			if constexpr (!Fixed)
 			{
-				assert(m_capacity >= local_count_v);
+				assert(m_capacity >= local_capacity);
 				if (new_count <= m_capacity)
 					return;
 
@@ -461,7 +465,7 @@ namespace pr
 
 				m_ptr = new_array;
 				m_capacity = new_cap;
-				assert(m_capacity >= local_count_v);
+				assert(m_capacity >= local_capacity);
 			}
 			else
 			{
@@ -476,7 +480,7 @@ namespace pr
 		// construct empty collection
 		vector()
 			:m_ptr(local_ptr())
-			,m_capacity(local_count_v)
+			,m_capacity(local_capacity)
 			,m_count(0)
 			,m_alloc()
 		{}
@@ -484,7 +488,7 @@ namespace pr
 		// construct with custom allocator
 		explicit vector(allocator_type const& allocator)
 			:m_ptr(local_ptr())
-			,m_capacity(local_count_v)
+			,m_capacity(local_capacity)
 			,m_count(0)
 			,m_alloc(allocator)
 		{}
@@ -744,7 +748,7 @@ namespace pr
 			traits::destruct(alloc(), m_ptr, m_count);
 			if (!local()) alloc().deallocate(m_ptr, m_capacity);
 			m_ptr      = local_ptr();
-			m_capacity = local_count_v;
+			m_capacity = local_capacity;
 			m_count    = 0;
 		}
 
@@ -1035,15 +1039,15 @@ namespace pr
 		// Requests the removal of unused capacity
 		void shrink_to_fit()
 		{
-			assert(m_capacity >= local_count_v);
-			if (m_capacity != local_count_v)
+			assert(m_capacity >= local_capacity);
+			if (m_capacity != local_capacity)
 			{
 				assert(!local());
 
 				Type* new_array; size_type new_count;
-				if (m_count <= local_count_v)
+				if (m_count <= local_capacity)
 				{
-					new_count = local_count_v;
+					new_count = local_capacity;
 					new_array = local_ptr();
 				}
 				else
@@ -1136,7 +1140,7 @@ namespace pr
 				// If using different allocators => can't steal
 				// If right is locally buffered => can't steal
 				// If right's capacity is <= our local buffer size, no point in stealing
-				if (!(alloc() == right.alloc()) || right.local() || right.capacity() <= local_count_v)
+				if (!(alloc() == right.alloc()) || right.local() || right.capacity() <= local_capacity)
 				{
 					// Move the elements of right
 					if (right.size() == 0) // new sequence empty, erase existing sequence
@@ -1178,7 +1182,7 @@ namespace pr
 
 					// Set right to empty. 'right's elements don't need destructing in this case because we're grabbed them
 					right.m_ptr      = right.local_ptr();
-					right.m_capacity = right.local_count_v;
+					right.m_capacity = right.local_capacity;
 					right.m_count    = 0;
 				}
 			}
@@ -1262,53 +1266,50 @@ namespace pr
 }
 
 #if PR_UNITTESTS
-#include <algorithm>
-#include <random>
 #include "pr/common/unittests.h"
-#include "pr/common/refcount.h"
-#include "pr/common/refptr.h"
 #include "pr/maths/maths.h"
 namespace pr::container
 {
-	namespace unittests::vector
+	PRUnitTestClass(VectorTests)
 	{
 		// The number of 'Type' instances in existence
 		inline static int object_count = 0;
 
-		// A ref-counted singleton
-		struct Single :RefCount<Single>
+		// A singleton
+		struct Single {};
+		inline static std::shared_ptr<Single> const& ref()
 		{
-			static void RefCountZero(RefCount<Single>*) {}
-			static Single& instance()
-			{
-				static Single single;
-				return single;
-			}
+			static std::shared_ptr<Single> ptr(new Single);
+			return ptr;
 		};
+
+		// Marker for moved values
+		inline static constexpr int MovedValue = -1;
 
 		// A copy constructable type
 		struct Type
 		{
 			int val;
-			RefPtr<Single> ptr;
+			std::shared_ptr<Single> ptr;
 
 			Type()
-				:Type(0)
+				: Type(0)
 			{}
 			Type(int w)
-				:val(w)
-				, ptr(&Single::instance(), true)
+				: val(w)
+				, ptr(ref())
 			{
 				++object_count;
 			}
 			Type(Type&& rhs) noexcept
-				:Type()
+				: Type()
 			{
 				std::swap(val, rhs.val);
 				std::swap(ptr, rhs.ptr);
+				rhs.val = MovedValue;
 			}
 			Type(Type const& rhs)
-				:val(rhs.val)
+				: val(rhs.val)
 				, ptr(rhs.ptr)
 			{
 				++object_count;
@@ -1319,6 +1320,7 @@ namespace pr::container
 				{
 					std::swap(val, rhs.val);
 					std::swap(ptr, rhs.ptr);
+					rhs.val = MovedValue;
 				}
 				return *this;
 			}
@@ -1334,12 +1336,16 @@ namespace pr::container
 			virtual ~Type()
 			{
 				--object_count;
-				PR_EXPECT(ptr.m_ptr == &Single::instance()); // destructing an invalid Type
+				PR_EXPECT(ptr.get() == ref().get()); // destructing an invalid Type
 				val = 0xdddddddd;
 			}
 			friend bool operator == (Type const& lhs, Type const& rhs)
 			{
 				return lhs.val == rhs.val;
+			}
+			friend bool operator == (Type const& lhs, int rhs)
+			{
+				return lhs.val == rhs;
 			}
 		};
 		static_assert(std::is_move_constructible<Type>::value);
@@ -1380,28 +1386,35 @@ namespace pr::container
 
 			Check()
 				:m_count(object_count)
-				,m_refs(Single::instance().m_ref_count)
+				,m_refs(ref().use_count())
 			{}
 			~Check()
 			{
 				PR_EXPECT(object_count == m_count);
-				PR_EXPECT(Single::instance().m_ref_count == m_refs);
+				PR_EXPECT(ref().use_count() == m_refs);
 			}
 		};
 
 		using Array0 = pr::vector<Type, 8, false>;
 		using Array1 = pr::vector<Type, 16, true>;
 		using Array2 = pr::vector<NonCopyable, 4, false>;
-	}
-	PRUnitTest(VectorTests)
-	{
-		using namespace unittests::vector;
-		std::vector<Type> ints;
-		for (int i = 0; i != 16; ++i)
-			ints.push_back(Type(i));
+
+		// A number of items that ensures the non-local storage is tested
+		inline static constexpr int Many = static_cast<int>(Array0::local_capacity + 2);
+		inline static constexpr int Few = static_cast<int>(Array0::local_capacity);
+		static_assert(Few > 0);
 
 		Check global_chk;
-		{// Constructors
+		std::vector<Type> ints = {};
+		
+		TestClass_VectorTests()
+		{
+			for (int i = 0; i != 16; ++i)
+				ints.push_back(Type(i));
+		}
+
+		PRUnitTestMethod(Constructors)
+		{
 			{
 				Check chk;
 				{
@@ -1419,32 +1432,137 @@ namespace pr::container
 			}{
 				Check chk;
 				{
-					Array0 arr(5U, 3);
+					Array0 arr(5u, Type(3));
 					PR_EXPECT(arr.size() == 5U);
 					for (int i = 0; i != 5; ++i)
-						PR_EXPECT(arr[i].val == 3);
+						PR_EXPECT(arr[i] == 3);
 				}
 			}{
 				Check chk;
 				{
-					Array0 arr0(5U,3);
-					Array1 arr1(arr0);
-					PR_EXPECT(arr1.size() == arr0.size());
-					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_EXPECT(arr1[i].val == arr0[i].val);
+					Array0 arr0(4, Type(6));
+					Array1 arr1(std::move(arr0));
+					PR_EXPECT(arr1.size() == 4u);
+					for (int i = 0; i != ssize(arr1); ++i)
+						PR_EXPECT(arr1[i] == 6);
 				}
 			}{
 				Check chk;
 				{
-					std::vector<Type> vec0(4U, Type(6));
+					std::vector<Type> vec0(4u, Type(6));
+
 					Array0 arr1(vec0);
 					PR_EXPECT(arr1.size() == vec0.size());
-					for (int i = 0; i != int(vec0.size()); ++i)
-						PR_EXPECT(arr1[i].val == vec0[i]);
+					for (int i = 0; i != ssize(arr1); ++i)
+						PR_EXPECT(arr1[i] == vec0[i]);
+				}
+			} {
+				Check chk;
+				{
+					Array0 arr0{ 1, 2, 3, 4, 5 };
+					PR_EXPECT(arr0.size() == 5);
+					PR_EXPECT(arr0[0] == 1);
+					PR_EXPECT(arr0[1] == 2);
+					PR_EXPECT(arr0[2] == 3);
+					PR_EXPECT(arr0[3] == 4);
+					PR_EXPECT(arr0[4] == 5);
 				}
 			}
 		}
-		{//Assign
+		PRUnitTestMethod(Assignment)
+		{
+			{
+				Check chk;
+				{// Copy assignment
+					Array0 arr0 = { 10,20,30 };
+					{
+						Array0 arr1 = { 0,1,2,3,4,5,6,7,8,9 };
+						arr0 = arr1;
+					}
+					PR_EXPECT(arr0.size() == 10u);
+					for (int i = 0; i != ssize(arr0); ++i)
+						PR_EXPECT(arr0[i] == i);
+				}
+			} {
+				Check chk;
+				{ // Move assignment, local storage -> local storage
+					vector<Type> arr0;
+					for (int i = 0; i != Few; ++i)
+						arr0.push_back(i * 10);
+
+					{
+						vector<Type> arr1;
+						for (int i = 0; i != Few - 1; ++i)
+							arr1.push_back(i);
+
+						arr0 = std::move(arr1);
+					}
+
+					PR_EXPECT(arr0.size() == Few - 1);
+					for (int i = 0; i != ssize(arr0); ++i)
+						PR_EXPECT(arr0[i] == i);
+				}
+			} {
+				Check chk;
+				{// Move assignment, local -> !local
+					vector<Type> arr0;
+					for (int i = 0; i != Many; ++i)
+						arr0.push_back(i * 10);
+
+					{
+						vector<Type> arr1;
+						for (int i = 0; i != Few; ++i)
+							arr1.push_back(i);
+
+						arr0 = std::move(arr1);
+					}
+
+					PR_EXPECT(arr0.size() == Few);
+					for (int i = 0; i != ssize(arr0); ++i)
+						PR_EXPECT(arr0[i] == i);
+				}
+			} {
+				Check chk;
+				{// Move assignment, local -> !local
+					vector<Type> arr0;
+					for (int i = 0; i != Few; ++i)
+						arr0.push_back(i * 10);
+
+					{
+						vector<Type> arr1;
+						for (int i = 0; i != Many; ++i)
+							arr1.push_back(i);
+
+						arr0 = std::move(arr1);
+					}
+
+					PR_EXPECT(arr0.size() == Many);
+					for (int i = 0; i != ssize(arr0); ++i)
+						PR_EXPECT(arr0[i] == i);
+				}
+			} {
+				Check chk;
+				{// Move assignment, !local -> !local
+					vector<Type> arr0;
+					for (int i = 0; i != Many; ++i)
+						arr0.push_back(i * 10);
+
+					{
+						vector<Type> arr1;
+						for (int i = 0; i != Many + 1; ++i)
+							arr1.push_back(i);
+
+						arr0 = std::move(arr1);
+					}
+
+					PR_EXPECT(arr0.size() == Many + 1);
+					for (int i = 0; i != ssize(arr0); ++i)
+						PR_EXPECT(arr0[i] == i);
+				}
+			}
+		}
+		PRUnitTestMethod(Assign)
+		{
 			Check chk;
 			{
 				Array0 arr0;
@@ -1460,7 +1578,8 @@ namespace pr::container
 					PR_EXPECT(arr1[i].val == ints[i].val);
 			}
 		}
-		{//Clear
+		PRUnitTestMethod(Clear)
+		{
 			{
 				Check chk;
 				{// Basic clear
@@ -1478,7 +1597,8 @@ namespace pr::container
 				}
 			}
 		}
-		{//Erase
+		PRUnitTestMethod(Erase)
+		{
 			{
 				Check chk;
 				{// Erase range, stable order
@@ -1569,7 +1689,8 @@ namespace pr::container
 				}
 			}
 		}
-		{//Insert
+		PRUnitTestMethod(Insert)
+		{
 			{
 				Check chk;
 				{
@@ -1627,7 +1748,8 @@ namespace pr::container
 				}
 			}
 		}
-		{//PushPop
+		PRUnitTestMethod(PushPop)
+		{
 			{
 				Check chk;
 				{
@@ -1666,7 +1788,8 @@ namespace pr::container
 				}
 			}
 		}
-		{//Operators
+		PRUnitTestMethod(Operators)
+		{
 			{
 				Check chk;
 				{
@@ -1700,7 +1823,8 @@ namespace pr::container
 				}
 			}*/
 		}
-		{//Mem
+		PRUnitTestMethod(Mem)
+		{
 			{
 				Check chk;
 				{
@@ -1712,11 +1836,12 @@ namespace pr::container
 					PR_EXPECT(arr0.capacity() == 50U);
 					arr0.resize(1);
 					arr0.shrink_to_fit();
-					PR_EXPECT(arr0.capacity() == (size_t)arr0.local_count_v);
+					PR_EXPECT(arr0.capacity() == (size_t)arr0.local_capacity);
 				}
 			}
 		}
-		{// Copy
+		PRUnitTestMethod(Copy)
+		{
 			{
 				Check chk;
 				{
@@ -1731,7 +1856,8 @@ namespace pr::container
 				}
 			}
 		}
-		{// Move
+		PRUnitTestMethod(Move)
+		{
 			{
 				Check chk;
 				{
@@ -1786,7 +1912,8 @@ namespace pr::container
 				}
 			}
 		}
-		{// Non-copyable types
+		PRUnitTestMethod(NonCopyableTypes)
+		{
 			{
 				Check chk;
 				{
@@ -1863,7 +1990,8 @@ namespace pr::container
 				}
 			}
 		}
-		{// No local storage
+		PRUnitTestMethod(NoLocalStorage)
+		{
 			pr::vector<Type, 0, false> arr0;
 			for (int i = 0; i != 10; ++i)
 				arr0.push_back(Type(i));
@@ -1872,7 +2000,7 @@ namespace pr::container
 				arr0.pop_back();
 			PR_EXPECT(arr0.ssize() == 0);
 		}
-	}
+	};
 }
 #endif
 

@@ -264,29 +264,29 @@ namespace pr::maths
 
 		{// Create
 			auto V0 = vec3_t(S(1));
-			PR_CHECK(V0.x == S(1), true);
-			PR_CHECK(V0.y == S(1), true);
-			PR_CHECK(V0.z == S(1), true);
+			PR_EXPECT(V0.x == S(1));
+			PR_EXPECT(V0.y == S(1));
+			PR_EXPECT(V0.z == S(1));
 
 			auto V1 = vec3_t(S(1), S(2), S(3));
-			PR_CHECK(V1.x == S(1), true);
-			PR_CHECK(V1.y == S(2), true);
+			PR_EXPECT(V1.x == S(1));
+			PR_EXPECT(V1.y == S(2));
 
 			auto V2 = vec3_t({S(3), S(4), S(5)});
-			PR_CHECK(V2.x == S(3), true);
-			PR_CHECK(V2.y == S(4), true);
-			PR_CHECK(V2.z == S(5), true);
+			PR_EXPECT(V2.x == S(3));
+			PR_EXPECT(V2.y == S(4));
+			PR_EXPECT(V2.z == S(5));
 
 			vec3_t V3 = {S(4), S(5), S(6)};
-			PR_CHECK(V3[0] == S(4), true);
-			PR_CHECK(V3[1] == S(5), true);
-			PR_CHECK(V3[2] == S(6), true);
+			PR_EXPECT(V3[0] == S(4));
+			PR_EXPECT(V3[1] == S(5));
+			PR_EXPECT(V3[2] == S(6));
 
 			if constexpr (std::floating_point<S>)
 			{
 				auto V4 = vec3_t::Normal(S(3), S(4), S(5));
 				auto V4_expected = vec3_t(S(0.42426406871192), S(0.56568542494923), S(0.70710678118654));
-				PR_CHECK(FEql(V4, V4_expected), true);
+				PR_EXPECT(FEql(V4, V4_expected));
 			}
 		}
 	}

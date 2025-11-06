@@ -1351,51 +1351,52 @@ namespace pr
 }
 
 #if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include "pr/common/refcount.h"
-#include "pr/common/refptr.h"
-#include "pr/maths/maths.h"
 #include <deque>
+#include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
 namespace pr::container
 {
-	namespace unittests::deque
+	PRUnitTestClass(DequeTests)
 	{
-		inline static int object_count;
+		// The number of 'Type' instances in existence
+		inline static int object_count = 0;
 
-		// A ref-counted singleton
-		struct Single :RefCount<Single>
+		// A singleton
+		struct Single {};
+		inline static std::shared_ptr<Single> const& ref()
 		{
-			static void RefCountZero(RefCount<Single>*) {}
-			static Single& instance()
-			{
-				static Single single;
-				return single;
-			}
+			static std::shared_ptr<Single> ptr(new Single);
+			return ptr;
 		};
+
+		// Marker for moved values
+		inline static constexpr int MovedValue = -1;
 
 		// A copy constructable type
 		struct Type
 		{
 			int val;
-			RefPtr<Single> ptr;
+			std::shared_ptr<Single> ptr;
 
 			Type()
-				:Type(0)
-			{}
+				: Type(0)
+			{
+			}
 			Type(int w)
-				:val(w)
-				, ptr(&Single::instance(), true)
+				: val(w)
+				, ptr(ref())
 			{
 				++object_count;
 			}
 			Type(Type&& rhs) noexcept
-				:Type()
+				: Type()
 			{
 				std::swap(val, rhs.val);
 				std::swap(ptr, rhs.ptr);
+				rhs.val = MovedValue;
 			}
 			Type(Type const& rhs)
-				:val(rhs.val)
+				: val(rhs.val)
 				, ptr(rhs.ptr)
 			{
 				++object_count;
@@ -1406,6 +1407,7 @@ namespace pr::container
 				{
 					std::swap(val, rhs.val);
 					std::swap(ptr, rhs.ptr);
+					rhs.val = MovedValue;
 				}
 				return *this;
 			}
@@ -1421,12 +1423,16 @@ namespace pr::container
 			virtual ~Type()
 			{
 				--object_count;
-				PR_CHECK(ptr.m_ptr == &Single::instance(), true); // destructing an invalid Type
+				PR_EXPECT(ptr.get() == ref().get()); // destructing an invalid Type
 				val = 0xdddddddd;
 			}
 			friend bool operator == (Type const& lhs, Type const& rhs)
 			{
 				return lhs.val == rhs.val;
+			}
+			friend bool operator == (Type const& lhs, int rhs)
+			{
+				return lhs.val == rhs;
 			}
 		};
 		static_assert(std::is_move_constructible<Type>::value);
@@ -1439,13 +1445,16 @@ namespace pr::container
 		{
 			NonCopyable()
 				:Type()
-			{}
+			{
+			}
 			NonCopyable(int w)
 				:Type(w)
-			{}
+			{
+			}
 			NonCopyable(NonCopyable&& rhs) noexcept
 				:Type(std::move(rhs))
-			{}
+			{
+			}
 			NonCopyable& operator = (NonCopyable&& rhs) noexcept
 			{
 				Type::operator=(std::move(rhs));
@@ -1467,426 +1476,424 @@ namespace pr::container
 
 			Check()
 				:m_count(object_count)
-				, m_refs(Single::instance().m_ref_count)
-			{}
+				, m_refs(ref().use_count())
+			{
+			}
 			~Check()
 			{
-				PR_CHECK(object_count, m_count);
-				PR_CHECK(Single::instance().m_ref_count, m_refs);
+				PR_EXPECT(object_count == m_count);
+				PR_EXPECT(ref().use_count() == m_refs);
 			}
 		};
 
 		using Deque0 = pr::deque<Type, 8>;
 		using Deque1 = pr::deque<Type, 16>;
 		using Deque2 = pr::deque<NonCopyable, 4>;
-	}
-	PRUnitTest(DequeTests)
-	{
-		using namespace unittests::deque;
-		
+
 		Check global_chk;
+		std::vector<int> ints;
+		std::vector<Type> types;
+
+		TestClass_DequeTests()
 		{
-			std::vector<int> ints;
-			std::vector<Type> types;
 			for (int i = 0; i != 16; ++i)
 			{
 				ints.push_back(i);
 				types.push_back(Type(i));
 			}
+		}
 
-			{// Constructors
-				{
-					Check chk;
-					{
-						// default constructor
-						Deque0 deq;
-						PR_CHECK(deq.empty(), true);
-						PR_CHECK(deq.size(), 0U);
-					}
-				}
-				{
-					Check chk;
-					{
-						// construct with allocator
-						std::allocator<int> al;
-						pr::deque<int, 16, std::allocator<int>> deq0(al);
-						deq0.push_back(42);
-
-						// copy to deque of different type
-						pr::deque<int, 8, std::allocator<int>> deq1;
-						deq1 = deq0;
-						PR_CHECK(deq0.size(), 1U);
-						PR_CHECK(deq0[0], 42);
-						PR_CHECK(deq1.size(), 1U);
-						PR_CHECK(deq1[0], 42);
-					}
-				}
-				{
-					Check chk;
-					{
-						// count constructor
-						Deque1 deq(15);
-						PR_CHECK(!deq.empty(), true);
-						PR_CHECK(deq.size(), 15U);
-					}
-				}
-				{
-					Check chk;
-					{
-						// count + instance constructor
-						Deque0 deq(5U, 3);
-						PR_CHECK(deq.size(), 5U);
-						for (size_t i = 0; i != 5; ++i)
-							PR_CHECK(deq[i].val, 3);
-					}
-				}
-				{
-					Check chk;
-					{
-						// copy constructor
-						Deque0 deq0(5U, 3);
-						Deque1 deq1(deq0);
-						PR_CHECK(deq1.size(), deq0.size());
-						for (size_t i = 0; i != deq0.size(); ++i)
-							PR_CHECK(deq1[i].val, deq0[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// Construct from a std::deque
-						std::deque<int> deq0(4U, 6);
-						Deque0 deq1(deq0);
-						PR_CHECK(deq1.size(), deq0.size());
-						for (size_t i = 0; i != deq0.size(); ++i)
-							PR_CHECK(deq1[i].val, deq0[i]);
-					}
-				}
-				{
-					Check chk;
-					{
-						// Construct from range
-						int r[] = { 1, 2, 3, 4 };
-						Deque0 deq1(std::begin(r), std::end(r));
-						PR_CHECK(deq1.size(), 4U);
-						PR_CHECK(deq1[0].val, r[0]);
-						PR_CHECK(deq1[1].val, r[1]);
-						PR_CHECK(deq1[2].val, r[2]);
-						PR_CHECK(deq1[3].val, r[3]);
-					}
-				}
-				{
-					Check chk;
-					{
-						// Move construct
-						Deque0 deq0(4U, 6);
-						Deque0 deq1 = std::move(deq0);
-						PR_CHECK(deq0.size(), 0U);
-						PR_CHECK(deq1.size(), 4U);
-						for (size_t i = 0; i != deq1.size(); ++i)
-							PR_CHECK(deq1[i].val, 6);
-					}
-				}
-			}
-			{//Assign
-				{
-					Check chk;
-					{
-						// Copy assign
-						Deque0 deq0(4U, 5);
-						Deque1 deq1;
-						deq1 = deq0;
-						PR_CHECK(deq0.size(), deq1.size());
-						for (size_t i = 0; i != deq0.size(); ++i)
-							PR_CHECK(deq1[i].val, deq0[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// Move assign
-						Deque0 deq0(4U, 5);
-						Deque1 deq1;
-						deq1 = std::move(deq0);
-						PR_CHECK(deq0.size(), 0U);
-						PR_CHECK(deq1.size(), 4U);
-						for (auto& i : deq1)
-							PR_CHECK(i.val, 5);
-					}
-				}
-				{
-					Check chk;
-					{
-						// assign method
-						Deque0 deq0;
-						deq0.assign(3U, 5);
-						PR_CHECK(deq0.size(), 3U);
-						for (size_t i = 0; i != 3; ++i)
-							PR_CHECK(deq0[i].val, 5);
-
-						// assign range method
-						Deque1 deq1;
-						deq1.assign(&types[0], &types[8]);
-						PR_CHECK(deq1.size(), 8U);
-						for (size_t i = 0; i != 8; ++i)
-							PR_CHECK(deq1[i].val, types[i].val);
-					}
-				}
-			}
-			{//Clear
-				{
-					Check chk;
-					{
-						pr::deque<int, 8> deq0({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
-						PR_CHECK(!deq0.empty(), true);
-						PR_CHECK(deq0.front(), 0);
-						PR_CHECK(deq0.back(), 15);
-						deq0.clear();
-						PR_CHECK(deq0.empty(), true);
-					}
-				}
-			}
-			{//Erase
-				{
-					Check chk;
-					{
-						// erase range non-pods
-						Deque0 deq0(std::begin(types), std::end(types));
-						auto b = deq0.begin();
-						deq0.erase(b + 3, b + 13);
-						PR_CHECK(deq0.size(), 6U);
-						for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i].val, types[i].val);
-						for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i].val, types[i + 10].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// erase range pods
-						pr::deque<int, 8> deq0(std::begin(ints), std::end(ints));
-						auto b = deq0.begin();
-						deq0.erase(b + 3, b + 13);
-						PR_CHECK(deq0.size(), 6U);
-						for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], ints[i]);
-						for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], ints[i + 10]);
-					}
-				}
-				{
-					Check chk;
-					{
-						// erase at
-						Deque1 deq1(types.begin(), types.begin() + 4);
-						deq1.erase(deq1.begin() + 2);
-						PR_CHECK(deq1.size(), 3U);
-						for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, types[i].val);
-						for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i].val, types[i + 1].val);
-					}
-				}
-			}
-			{//Insert
-				{
-					Check chk;
-					{
-						// insert count*val at 'at'
-						Deque0 deq0;
-						deq0.insert(deq0.end(), 4U, 9);
-						PR_CHECK(deq0.size(), 4U);
-						for (size_t i = 0; i != 4; ++i)
-							PR_CHECK(deq0[i].val, 9);
-					}
-				}
-				{
-					Check chk;
-					{
-						// insert range
-						Deque1 deq1(4U, 6);
-						deq1.insert(deq1.begin() + 2, &types[2], &types[7]);
-						PR_CHECK(deq1.size(), 9U);
-						for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, 6);
-						for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i].val, types[i].val);
-						for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i].val, 6);
-					}
-				}
-			}
-			{//PushPop
-				{
-					Check chk;
-					{
-						// pop_back
-						Deque0 deq;
-						deq.insert(std::end(deq), std::begin(types), std::begin(types) + 3);
-						auto addr = &deq[1];
-						deq.insert(std::end(deq), std::begin(types) + 3, std::end(types));
-						PR_CHECK(deq.size(), 16U);
-						PR_CHECK(&deq[1], addr);
-						deq.pop_back();
-						deq.pop_back();
-						deq.pop_back();
-						deq.pop_back();
-						PR_CHECK(deq.size(), 12U);
-						PR_CHECK(&deq[1], addr);
-						for (size_t i = 0; i != deq.size(); ++i)
-							PR_CHECK(deq[i].val, types[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// push_back
-						Deque1 deq;
-						deq.emplace_back(0);
-						auto addr = &deq[0];
-						PR_CHECK(deq.size(), 1U);
-
-						for (int i = 1; i != 4; ++i) deq.emplace_back(i);
-						PR_CHECK(deq.size(), 4U);
-						PR_CHECK(&deq[0], addr);
-
-						for (int i = 4; i != 9; ++i) deq.push_back(i);
-						PR_CHECK(deq.size(), 9U);
-						PR_CHECK(&deq[0], addr);
-
-						for (size_t i = 0; i != deq.size(); ++i)
-							PR_CHECK(deq[i].val, types[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// pop_front
-						Deque0 deq;
-						deq.insert(std::end(deq), std::begin(types), std::begin(types) + 8);
-						auto addr = &deq[7];
-						deq.insert(std::end(deq), std::begin(types) + 8, std::end(types));
-						PR_CHECK(deq.size(), 16U);
-						PR_CHECK(&deq[7], addr);
-						deq.pop_front();
-						deq.pop_front();
-						deq.pop_front();
-						deq.pop_front();
-						PR_CHECK(deq.size(), 12U);
-						PR_CHECK(&deq[3], addr);
-						for (size_t i = 0; i != deq.size(); ++i)
-							PR_CHECK(deq[i].val, types[i + 4].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// push_front
-						Deque1 deq;
-						deq.emplace_front(0);
-						auto addr = &deq[0];
-						PR_CHECK(deq.size(), 1U);
-
-						for (int i = 1; i != 4; ++i) deq.emplace_front(i);
-						PR_CHECK(deq.size(), 4U);
-						PR_CHECK(&deq[3], addr);
-
-						for (int i = 4; i != 9; ++i) deq.push_front(i);
-						PR_CHECK(deq.size(), 9U);
-						PR_CHECK(&deq[8], addr);
-
-						for (size_t i = 0; i != deq.size(); ++i)
-							PR_CHECK(deq[i].val, 8 - types[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// resize
-						Deque0 deq;
-						deq.insert(std::begin(deq), types.data(), types.data() + 16);
-						PR_CHECK(deq.size(), 16U);
-						deq.resize(7);
-						PR_CHECK(deq.size(), 7U);
-						for (size_t i = 0; i != deq.size(); ++i)
-							PR_CHECK(deq[i].val, types[i].val);
-						deq.resize(12);
-						PR_CHECK(deq.size(), 12U);
-						for (size_t i = 0; i != 7U; ++i)
-							PR_CHECK(deq[i].val, types[i].val);
-						for (size_t i = 7U; i != 12U; ++i)
-							PR_CHECK(deq[i].val, 0);
-					}
-				}
-			}
-			{//Operators
-				{
-					Check chk;
-					{
-						// assign and equality
-						Deque0 deq0(4U, 1);
-						Deque0 deq1(3U, 2);
-						deq1 = deq0;
-						PR_CHECK(deq0 == deq1, true);
-						PR_CHECK(deq0.size(), 4U);
-						PR_CHECK(deq1.size(), 4U);
-						for (size_t i = 0; i != 4; ++i)
-							PR_CHECK(deq1[i].val, deq0[i].val);
-					}
-				}
-				{
-					Check chk;
-					{
-						// inequality between different types
-						Deque0 deq0(4U, 1);
-						Deque1 deq1;
-						deq1 = deq0;
-						PR_CHECK(deq0 != deq1, false);
-					}
-				}
-				{
-					Check chk;
-					{
-						// explicit conversion to std::deque
-						Deque0 deq0(4U, 1);
-						std::deque<Type> d(deq0.begin(), deq0.end());
-						auto deq1 = static_cast<std::deque<Type>>(deq0);
-						PR_CHECK(deq1.size(), 4U);
-						for (size_t i = 0; i != 4; ++i)
-							PR_CHECK(deq1[i].val, deq0[i].val);
-					}
-				}
-			}
-			{//Mem
+		PRUnitTestMethod(Constructors)
+		{
+			{
 				Check chk;
 				{
-					pr::deque<int, 8> deq0;
-					const int count = 20;
-					for (int i = 0; i != count; ++i) deq0.push_back(i);
-					PR_CHECK(deq0.capacity_front(), 0U);
-					PR_CHECK(deq0.capacity_back(), 4U);
+					// default constructor
+					Deque0 deq;
+					PR_EXPECT(deq.empty());
+					PR_EXPECT(deq.size() == 0U);
+				}
+			} {
+				Check chk;
+				{
+					// construct with allocator
+					std::allocator<int> al;
+					pr::deque<int, 16, std::allocator<int>> deq0(al);
+					deq0.push_back(42);
 
-					deq0.push_front(-1);
-					PR_CHECK(deq0.capacity_front(), 7U);
-					PR_CHECK(deq0.capacity_back(), 4U);
-
-					deq0.erase(std::begin(deq0) + 10, std::end(deq0));
-					PR_CHECK(deq0.capacity_front(), 7U);
-					PR_CHECK(deq0.capacity_back(), 15U);
-					deq0.erase(std::begin(deq0) + 9, std::end(deq0));
-					PR_CHECK(deq0.capacity_front(), 7U);
-					PR_CHECK(deq0.capacity_back(), 16U);
-					deq0.emplace_back(9);
-
-					deq0.shrink_to_fit();
-					PR_CHECK(deq0.capacity_front(), 7U);
-					PR_CHECK(deq0.capacity_back(), 7U);
-
-					deq0.pop_front();
-					deq0.pop_back();
-					deq0.shrink_to_fit();
-					PR_CHECK(deq0.capacity_front(), 0U);
-					PR_CHECK(deq0.capacity_back(), 0U);
-
-					deq0.resize(0);
-					deq0.shrink_to_fit();
-					PR_CHECK(deq0.capacity_front(), 0U);
-					PR_CHECK(deq0.capacity_front(), 0U);
+					// copy to deque of different type
+					pr::deque<int, 8, std::allocator<int>> deq1;
+					deq1 = deq0;
+					PR_EXPECT(deq0.size() == 1U);
+					PR_EXPECT(deq0[0] == 42);
+					PR_EXPECT(deq1.size() == 1U);
+					PR_EXPECT(deq1[0] == 42);
+				}
+			} {
+				Check chk;
+				{
+					// count constructor
+					Deque1 deq(15);
+					PR_EXPECT(!deq.empty());
+					PR_EXPECT(deq.size() == 15U);
+				}
+			} {
+				Check chk;
+				{
+					// count + instance constructor
+					Deque0 deq(5U, 3);
+					PR_EXPECT(deq.size() == 5U);
+					for (size_t i = 0; i != 5; ++i)
+						PR_EXPECT(deq[i] == 3);
+				}
+			} {
+				Check chk;
+				{
+					// copy constructor
+					Deque0 deq0(5U, 3);
+					Deque1 deq1(deq0);
+					PR_EXPECT(deq1.size() == deq0.size());
+					for (size_t i = 0; i != deq0.size(); ++i)
+						PR_EXPECT(deq1[i] == deq0[i]);
+				}
+			} {
+				Check chk;
+				{
+					// Construct from a std::deque
+					std::deque<int> deq0(4U, 6);
+					Deque0 deq1(deq0);
+					PR_EXPECT(deq1.size() == deq0.size());
+					for (size_t i = 0; i != deq0.size(); ++i)
+						PR_EXPECT(deq1[i] == deq0[i]);
+				}
+			} {
+				Check chk;
+				{
+					// Construct from range
+					int r[] = { 1, 2, 3, 4 };
+					Deque0 deq1(std::begin(r), std::end(r));
+					PR_EXPECT(deq1.size() == 4U);
+					PR_EXPECT(deq1[0] == r[0]);
+					PR_EXPECT(deq1[1] == r[1]);
+					PR_EXPECT(deq1[2] == r[2]);
+					PR_EXPECT(deq1[3] == r[3]);
+				}
+			} {
+				Check chk;
+				{
+					// Move construct
+					Deque0 deq0(4U, 6);
+					Deque0 deq1 = std::move(deq0);
+					PR_EXPECT(deq0.size() == 0U);
+					PR_EXPECT(deq1.size() == 4U);
+					for (size_t i = 0; i != deq1.size(); ++i)
+						PR_EXPECT(deq1[i] == 6);
 				}
 			}
 		}
-	}
+		PRUnitTestMethod(Assign)
+		{
+			{
+				Check chk;
+				{
+					// Copy assign
+					Deque0 deq0(4U, 5);
+					Deque1 deq1;
+					deq1 = deq0;
+					PR_EXPECT(deq0.size() == deq1.size());
+					for (size_t i = 0; i != deq0.size(); ++i)
+						PR_EXPECT(deq1[i] == deq0[i]);
+				}
+			} {
+				Check chk;
+				{
+					// Move assign
+					Deque0 deq0(4U, 5);
+					Deque1 deq1;
+					deq1 = std::move(deq0);
+					PR_EXPECT(deq0.size() == 0U);
+					PR_EXPECT(deq1.size() == 4U);
+					for (auto& i : deq1)
+						PR_EXPECT(i == 5);
+				}
+			} {
+				Check chk;
+				{
+					// assign method
+					Deque0 deq0;
+					deq0.assign(3U, 5);
+					PR_EXPECT(deq0.size() == 3U);
+					for (size_t i = 0; i != 3; ++i)
+						PR_EXPECT(deq0[i] == 5);
+
+					// assign range method
+					Deque1 deq1;
+					deq1.assign(&types[0], &types[8]);
+					PR_EXPECT(deq1.size() == 8U);
+					for (size_t i = 0; i != 8; ++i)
+						PR_EXPECT(deq1[i] == types[i]);
+				}
+			}
+		}
+		PRUnitTestMethod(Clear)
+		{
+			{
+				Check chk;
+				{
+					pr::deque<int, 8> deq0({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
+					PR_EXPECT(!deq0.empty());
+					PR_EXPECT(deq0.front() == 0);
+					PR_EXPECT(deq0.back() == 15);
+					deq0.clear();
+					PR_EXPECT(deq0.empty());
+				}
+			}
+		}
+		PRUnitTestMethod(Erase)
+		{
+			{
+				Check chk;
+				{
+					// erase range non-pods
+					Deque0 deq0(std::begin(types), std::end(types));
+					auto b = deq0.begin();
+					deq0.erase(b + 3, b + 13);
+					PR_EXPECT(deq0.size() == 6U);
+					for (size_t i = 0; i != 3; ++i) PR_EXPECT(deq0[i] == types[i]);
+					for (size_t i = 3; i != 6; ++i) PR_EXPECT(deq0[i] == types[i + 10]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// erase range pods
+					pr::deque<int, 8> deq0(std::begin(ints), std::end(ints));
+					auto b = deq0.begin();
+					deq0.erase(b + 3, b + 13);
+					PR_EXPECT(deq0.size() == 6U);
+					for (size_t i = 0; i != 3; ++i) PR_EXPECT(deq0[i] == ints[i]);
+					for (size_t i = 3; i != 6; ++i) PR_EXPECT(deq0[i] == ints[i + 10]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// erase at
+					Deque1 deq1(types.begin(), types.begin() + 4);
+					deq1.erase(deq1.begin() + 2);
+					PR_EXPECT(deq1.size() == 3U);
+					for (size_t i = 0; i != 2; ++i) PR_EXPECT(deq1[i] == types[i]);
+					for (size_t i = 2; i != 3; ++i) PR_EXPECT(deq1[i] == types[i + 1]);
+				}
+			}
+		}
+		PRUnitTestMethod(Insert)
+		{
+			{
+				Check chk;
+				{
+					// insert count*val at 'at'
+					Deque0 deq0;
+					deq0.insert(deq0.end(), 4U, 9);
+					PR_EXPECT(deq0.size() == 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_EXPECT(deq0[i] == 9);
+				}
+			}
+			{
+				Check chk;
+				{
+					// insert range
+					Deque1 deq1(4U, 6);
+					deq1.insert(deq1.begin() + 2, &types[2], &types[7]);
+					PR_EXPECT(deq1.size() == 9U);
+					for (size_t i = 0; i != 2; ++i) PR_EXPECT(deq1[i] == 6);
+					for (size_t i = 2; i != 7; ++i) PR_EXPECT(deq1[i] == types[i]);
+					for (size_t i = 7; i != 9; ++i) PR_EXPECT(deq1[i] == 6);
+				}
+			}
+		}
+		PRUnitTestMethod(PushPop)
+		{
+			{
+				Check chk;
+				{
+					// pop_back
+					Deque0 deq;
+					deq.insert(std::end(deq), std::begin(types), std::begin(types) + 3);
+					auto addr = &deq[1];
+					deq.insert(std::end(deq), std::begin(types) + 3, std::end(types));
+					PR_EXPECT(deq.size() == 16U);
+					PR_EXPECT(&deq[1] == addr);
+					deq.pop_back();
+					deq.pop_back();
+					deq.pop_back();
+					deq.pop_back();
+					PR_EXPECT(deq.size() == 12U);
+					PR_EXPECT(&deq[1] == addr);
+					for (size_t i = 0; i != deq.size(); ++i)
+						PR_EXPECT(deq[i] == types[i]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// push_back
+					Deque1 deq;
+					deq.emplace_back(0);
+					auto addr = &deq[0];
+					PR_EXPECT(deq.size() == 1U);
+
+					for (int i = 1; i != 4; ++i) deq.emplace_back(i);
+					PR_EXPECT(deq.size() == 4U);
+					PR_EXPECT(&deq[0] == addr);
+
+					for (int i = 4; i != 9; ++i) deq.push_back(i);
+					PR_EXPECT(deq.size() == 9U);
+					PR_EXPECT(&deq[0] == addr);
+
+					for (size_t i = 0; i != deq.size(); ++i)
+						PR_EXPECT(deq[i] == types[i]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// pop_front
+					Deque0 deq;
+					deq.insert(std::end(deq), std::begin(types), std::begin(types) + 8);
+					auto addr = &deq[7];
+					deq.insert(std::end(deq), std::begin(types) + 8, std::end(types));
+					PR_EXPECT(deq.size() == 16U);
+					PR_EXPECT(&deq[7] == addr);
+					deq.pop_front();
+					deq.pop_front();
+					deq.pop_front();
+					deq.pop_front();
+					PR_EXPECT(deq.size() == 12U);
+					PR_EXPECT(&deq[3] == addr);
+					for (size_t i = 0; i != deq.size(); ++i)
+						PR_EXPECT(deq[i] == types[i + 4]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// push_front
+					Deque1 deq;
+					deq.emplace_front(0);
+					auto addr = &deq[0];
+					PR_EXPECT(deq.size() == 1U);
+
+					for (int i = 1; i != 4; ++i) deq.emplace_front(i);
+					PR_EXPECT(deq.size() == 4U);
+					PR_EXPECT(&deq[3] == addr);
+
+					for (int i = 4; i != 9; ++i) deq.push_front(i);
+					PR_EXPECT(deq.size() == 9U);
+					PR_EXPECT(&deq[8] == addr);
+
+					for (size_t i = 0; i != deq.size(); ++i)
+						PR_EXPECT(deq[i].val == 8 - types[i].val);
+				}
+			}
+			{
+				Check chk;
+				{
+					// resize
+					Deque0 deq;
+					deq.insert(std::begin(deq), types.data(), types.data() + 16);
+					PR_EXPECT(deq.size() == 16U);
+					deq.resize(7);
+					PR_EXPECT(deq.size() == 7U);
+					for (size_t i = 0; i != deq.size(); ++i)
+						PR_EXPECT(deq[i] == types[i]);
+					deq.resize(12);
+					PR_EXPECT(deq.size() == 12U);
+					for (size_t i = 0; i != 7U; ++i)
+						PR_EXPECT(deq[i] == types[i]);
+					for (size_t i = 7U; i != 12U; ++i)
+						PR_EXPECT(deq[i] == 0);
+				}
+			}
+		}
+		PRUnitTestMethod(Operators)
+		{
+			{
+				Check chk;
+				{
+					// assign and equality
+					Deque0 deq0(4U, 1);
+					Deque0 deq1(3U, 2);
+					deq1 = deq0;
+					PR_EXPECT(deq0 == deq1);
+					PR_EXPECT(deq0.size() == 4U);
+					PR_EXPECT(deq1.size() == 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_EXPECT(deq1[i] == deq0[i]);
+				}
+			}
+			{
+				Check chk;
+				{
+					// inequality between different types
+					Deque0 deq0(4U, 1);
+					Deque1 deq1;
+					deq1 = deq0;
+					PR_EXPECT(!(deq0 != deq1));
+				}
+			}
+			{
+				Check chk;
+				{
+					// explicit conversion to std::deque
+					Deque0 deq0(4U, 1);
+					std::deque<Type> d(deq0.begin(), deq0.end());
+					auto deq1 = static_cast<std::deque<Type>>(deq0);
+					PR_EXPECT(deq1.size() == 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_EXPECT(deq1[i] == deq0[i]);
+				}
+			}
+		}
+		PRUnitTestMethod(Mem)
+		{
+			Check chk;
+			{
+				pr::deque<int, 8> deq0;
+				const int count = 20;
+				for (int i = 0; i != count; ++i) deq0.push_back(i);
+				PR_EXPECT(deq0.capacity_front() == 0U);
+				PR_EXPECT(deq0.capacity_back() == 4U);
+
+				deq0.push_front(-1);
+				PR_EXPECT(deq0.capacity_front() == 7U);
+				PR_EXPECT(deq0.capacity_back() == 4U);
+
+				deq0.erase(std::begin(deq0) + 10, std::end(deq0));
+				PR_EXPECT(deq0.capacity_front() == 7U);
+				PR_EXPECT(deq0.capacity_back() == 15U);
+				deq0.erase(std::begin(deq0) + 9, std::end(deq0));
+				PR_EXPECT(deq0.capacity_front() == 7U);
+				PR_EXPECT(deq0.capacity_back() == 16U);
+				deq0.emplace_back(9);
+
+				deq0.shrink_to_fit();
+				PR_EXPECT(deq0.capacity_front() == 7U);
+				PR_EXPECT(deq0.capacity_back() == 7U);
+
+				deq0.pop_front();
+				deq0.pop_back();
+				deq0.shrink_to_fit();
+				PR_EXPECT(deq0.capacity_front() == 0U);
+				PR_EXPECT(deq0.capacity_back() == 0U);
+
+				deq0.resize(0);
+				deq0.shrink_to_fit();
+				PR_EXPECT(deq0.capacity_front() == 0U);
+				PR_EXPECT(deq0.capacity_front() == 0U);
+			}
+		}
+	};
 }
 #endif

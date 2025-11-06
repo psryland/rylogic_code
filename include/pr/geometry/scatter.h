@@ -281,7 +281,7 @@ namespace pr::geometry
 			auto& ldr_links = ldr.Line("Link", 0xFF005000);
 			for (auto const& link : links)
 				ldr_links.line(bodies[link.m_body0].m_point, bodies[link.m_body1].m_point);
-			ldr.Save(temp_dir / "scatter.ldr");
+			ldr.Save(temp_dir() / "scatter.ldr");
 		};
 
 		Scatterer<Dim> scat(bodies, links, {});

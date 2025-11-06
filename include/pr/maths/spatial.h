@@ -284,14 +284,14 @@ namespace pr::maths
 				auto v1 = v8motion(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
 				auto r1 = CPM(v0) * v1;
-				PR_CHECK(FEql(r0, r1), true);
+				PR_EXPECT(FEql(r0, r1));
 			}
 			{// Test: CPM(f) * a == f x* a
 				auto v0 = v8force(1, 1, 1, 2, 2, 2);
 				auto v1 = v8force(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
 				auto r1 = CPM(v0) * v1;
-				PR_CHECK(FEql(r0, r1), true);
+				PR_EXPECT(FEql(r0, r1));
 			}
 			{// Test: vx* == -Transpose(vx)
 				auto v = v8(-2.3f, +1.3f, 0.9f, -2.2f, 0.0f, -1.0f);
@@ -299,7 +299,7 @@ namespace pr::maths
 				auto m1 = CPM(static_cast<v8force>(v)); // vx*
 				auto m2 = Transpose(m1);
 				auto m3 = static_cast<m6x8m>(-m2);
-				PR_CHECK(FEql(m0, m3), true);
+				PR_EXPECT(FEql(m0, m3));
 			}
 		}
 		{// Transforms
@@ -312,7 +312,7 @@ namespace pr::maths
 			auto A2C = m6x8m{a2c.rot, m3x4Zero, CPM(a2c.pos) * a2c.rot, a2c.rot};
 
 			auto r = B2C * A2B;
-			PR_CHECK(FEql(A2C, r), true);
+			PR_EXPECT(FEql(A2C, r));
 		}
 		{// Transforms
 			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
@@ -324,14 +324,14 @@ namespace pr::maths
 			auto A2Cm = Transform<Motion>(a2c);
 
 			auto Rm = B2Cm * A2Bm;
-			PR_CHECK(FEql(A2Cm, Rm), true);
+			PR_EXPECT(FEql(A2Cm, Rm));
 
 			auto A2Bf = Transform<Force>(a2b);
 			auto B2Cf = Transform<Force>(b2c);
 			auto A2Cf = Transform<Force>(a2c);
 
 			auto Rf = B2Cf * A2Bf;
-			PR_CHECK(FEql(A2Cf, Rf), true);
+			PR_EXPECT(FEql(A2Cf, Rf));
 		}
 		{// Transforming a spatial vector
 			std::default_random_engine rng(1);
@@ -403,7 +403,7 @@ namespace pr::maths
 
 						// Should be equivalent to the velocity measured in frame 'a'
 						auto VEL_A = c2a * vel_c;
-						PR_CHECK(FEql(VEL_A, vel_a), true);
+						PR_EXPECT(FEql(VEL_A, vel_a));
 					}
 
 					// Calculation using Spatial Transforms
@@ -415,7 +415,7 @@ namespace pr::maths
 
 						// Should be equivalent to the velocity measured in frame 'a'
 						auto VEL_A = c2a * vel_c;
-						PR_CHECK(FEql(VEL_A, vel_a), true);
+						PR_EXPECT(FEql(VEL_A, vel_a));
 					}
 
 					// Calculation using affine transforms
@@ -426,7 +426,7 @@ namespace pr::maths
 
 						// Should be equivalent to the velocity measured in frame 'a'
 						auto VEL_A = c2a * vel_c;
-						PR_CHECK(FEql(VEL_A, vel_a), true);
+						PR_EXPECT(FEql(VEL_A, vel_a));
 					}
 				}
 				{// Force vectors
@@ -443,7 +443,7 @@ namespace pr::maths
 
 						// Should be equivalent to the torque measured in frame 'a'
 						auto TORQUE_A = c2a * torque_c;
-						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+						PR_EXPECT(FEql(TORQUE_A, torque_a));
 					}
 
 					// Calculation using Spatial Transforms
@@ -455,7 +455,7 @@ namespace pr::maths
 
 						// Should be equivalent to the torque measured in frame 'a'
 						auto TORQUE_A = c2a * torque_c;
-						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+						PR_EXPECT(FEql(TORQUE_A, torque_a));
 					}
 
 					// Calculation using affine transforms
@@ -466,7 +466,7 @@ namespace pr::maths
 
 						// Should be equivalent to the torque measured in frame 'a'
 						auto TORQUE_A = c2a * torque_c;
-						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+						PR_EXPECT(FEql(TORQUE_A, torque_a));
 					}
 				}
 			}

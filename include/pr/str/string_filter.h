@@ -515,9 +515,10 @@ namespace pr::str
 #include "pr/common/unittests.h"
 namespace pr::str
 {
-	PRUnitTest(StringFilterTests)
+	PRUnitTestClass(StringFilterTests)
 	{
-		{// InLiteral
+		PRUnitTestMethod(InLiteral)
+		{
 			{
 				// Escaped quotes are ignored
 				char const* src = " \"\\\"\" ";
@@ -527,9 +528,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (lit.WithinLiteral(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
+					PR_EXPECT(lit.WithinLiteral(*src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Escape sequences are not always 1 character, but it doesn't
@@ -542,9 +543,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (lit.WithinLiteral(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
+					PR_EXPECT(lit.WithinLiteral(*src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Literals must match " to " and ' to '
@@ -555,9 +556,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (lit.WithinLiteral(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
+					PR_EXPECT(lit.WithinLiteral(*src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Literals *are* closed by '\n'
@@ -568,9 +569,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (lit.WithinLiteral(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
+					PR_EXPECT(lit.WithinLiteral(*src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Literals are not closed by EOS
@@ -581,13 +582,14 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (lit.WithinLiteral(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
+					PR_EXPECT(lit.WithinLiteral(*src) == exp[i]);
 				}
-				PR_CHECK(lit.WithinLiteral(*src), true);
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(lit.WithinLiteral(*src));
+				PR_EXPECT(*src == '\0');
 			}
 		}
-		{// InComment
+		PRUnitTestMethod(InComment)
+		{
 			{
 				// Simple block comment
 				char const* src = " /**/ ";
@@ -597,9 +599,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// No substring matching within block comment markers
@@ -610,9 +612,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Line comment ends at unescaped new line (exclusive)
@@ -623,9 +625,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Line comment ends at EOS
@@ -636,9 +638,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// No comments within literal strings
@@ -649,9 +651,9 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src == '\0');
 			}
 			{
 				// Ignore literal strings within comments
@@ -662,12 +664,13 @@ namespace pr::str
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
 					if (com.WithinComment(src) == exp[i]) continue;
-					PR_CHECK(com.WithinComment(src), exp[i]);
+					PR_EXPECT(com.WithinComment(src) == exp[i]);
 				}
-				PR_CHECK(*src, '\0');
+				PR_EXPECT(*src =='\0');
 			}
 		}
-		{// Escape
+		PRUnitTestMethod(Escape)
+		{
 			std::u8string str = char8_ptr(u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?");
 			std::string res = "abcS\\u00b1\\a\\b\\f\\n\\r\\t\\v\\\\\\\"\\\'\\?";
 			std::string out;
@@ -677,9 +680,10 @@ namespace pr::str
 			for (auto ch : str)
 				esc.Translate(ch, out, len);
 
-			PR_CHECK(out, res);
+			PR_EXPECT(out == res);
 		}
-		{// Unescape
+		PRUnitTestMethod(Unescape)
+		{
 			std::string str = "abc\\123\\u00b1\\a\\b\\f\\n\\r\\t\\v\\\\\\\"\\\'\\?";
 			std::u8string res = char8_ptr(u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?");
 			std::u8string out;
@@ -689,8 +693,8 @@ namespace pr::str
 			for (auto ch : str)
 				esc.Translate(ch, out, len);
 
-			PR_CHECK(out, res);
+			PR_EXPECT(out == res);
 		}
-	}
+	};
 }
 #endif

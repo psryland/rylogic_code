@@ -294,12 +294,13 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::common
 {
-	PRUnitTest(RangeTests)
+	PRUnitTestClass(RangeTests)
 	{
 		static_assert(Range<int>::is_integral == true);
 		static_assert(Range<float>::is_integral == false);
 		static_assert(Range<char*>::is_integral == true);
 
+		PRUnitTestMethod(General)
 		{
 			using IRange = pr::Range<int>;
 			IRange r0(0,5);
@@ -307,51 +308,52 @@ namespace pr::common
 			IRange r2(3,7);
 			IRange r3(0,10);
 
-			PR_CHECK(r0.empty(), false);
-			PR_CHECK(r0.size() , 5);
+			PR_EXPECT(!r0.empty());
+			PR_EXPECT(r0.size() == 5);
 
-			PR_CHECK(IsWithin(r0, -1) , false);
-			PR_CHECK(IsWithin(r0,  0) , true );
-			PR_CHECK(IsWithin(r0,  4) , true );
-			PR_CHECK(IsWithin(r0,  5) , false);
-			PR_CHECK(IsWithin(r0,  6) , false);
+			PR_EXPECT(!IsWithin(r0, -1));
+			PR_EXPECT(IsWithin(r0, 0));
+			PR_EXPECT(IsWithin(r0, 4));
+			PR_EXPECT(!IsWithin(r0, 5));
+			PR_EXPECT(!IsWithin(r0, 6));
 
-			PR_CHECK(IsWithin(r3, r0), true  );
-			PR_CHECK(IsWithin(r3, r1), true  );
-			PR_CHECK(IsWithin(r3, r2), true  );
-			PR_CHECK(IsWithin(r2, r0), false );
-			PR_CHECK(IsWithin(r2, r1), false );
-			PR_CHECK(IsWithin(r2, r3), false );
-			PR_CHECK(IsWithin(r1, r0), false );
-			PR_CHECK(IsWithin(r0, r1), false );
+			PR_EXPECT(IsWithin(r3, r0) == true);
+			PR_EXPECT(IsWithin(r3, r1) == true);
+			PR_EXPECT(IsWithin(r3, r2) == true);
+			PR_EXPECT(IsWithin(r2, r0) == false);
+			PR_EXPECT(IsWithin(r2, r1) == false);
+			PR_EXPECT(IsWithin(r2, r3) == false);
+			PR_EXPECT(IsWithin(r1, r0) == false);
+			PR_EXPECT(IsWithin(r0, r1) == false);
 
-			PR_CHECK(Intersects(r3, r0), true );
-			PR_CHECK(Intersects(r3, r1), true );
-			PR_CHECK(Intersects(r3, r2), true );
-			PR_CHECK(Intersects(r2, r0), true );
-			PR_CHECK(Intersects(r2, r1), true );
-			PR_CHECK(Intersects(r2, r3), true );
-			PR_CHECK(Intersects(r1, r0), false);
-			PR_CHECK(Intersects(r0, r1), false);
+			PR_EXPECT(Intersects(r3, r0) == true);
+			PR_EXPECT(Intersects(r3, r1) == true);
+			PR_EXPECT(Intersects(r3, r2) == true);
+			PR_EXPECT(Intersects(r2, r0) == true);
+			PR_EXPECT(Intersects(r2, r1) == true);
+			PR_EXPECT(Intersects(r2, r3) == true);
+			PR_EXPECT(!Intersects(r1, r0));
+			PR_EXPECT(!Intersects(r0, r1));
 
 			r0 = Shift(r0, +3);
 			r1 = Shift(r1, -2);
-			PR_CHECK(r0 == r1, true);
+			PR_EXPECT(r0 == r1);
 
-			PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_EXPECT(r3.mid() == r2.mid());
 
 			r0 = Shift(r0, -3);
 			r0.resize(3);
-			PR_CHECK(r0.size(), 3);
+			PR_EXPECT(r0.size() == 3);
 
 			IRange r4 = IRange::Reset();
 			Grow(r4, 4);
-			PR_CHECK(4, r4.m_beg);
-			PR_CHECK(5, r4.m_end);
-			PR_CHECK(1, r4.size());
-			PR_CHECK(IsWithin(r4, 4), true);
+			PR_EXPECT(4 == r4.m_beg);
+			PR_EXPECT(5 == r4.m_end);
+			PR_EXPECT(1 == r4.size());
+			PR_EXPECT(IsWithin(r4, 4));
 		}
-		{//IterRange
+		PRUnitTestMethod(IterRange)
+		{
 			using Vec = std::vector<int>;
 			using IRange = pr::Range<Vec::const_iterator>;
 			Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
@@ -361,106 +363,108 @@ namespace pr::common
 			IRange r2(vec.begin()+3,vec.begin()+7);
 			IRange r3(vec.begin(),vec.end());
 
-			PR_CHECK(r0.empty() ,false);
-			PR_CHECK(r0.size()  ,5);
+			PR_EXPECT(r0.empty() == false);
+			PR_EXPECT(r0.size() == 5);
 
-			PR_CHECK(IsWithin(r0, vec.begin()     ) ,true  );
-			PR_CHECK(IsWithin(r0, vec.begin() + 4 ) ,true  );
-			PR_CHECK(IsWithin(r0, vec.begin() + 5 ) ,false );
-			PR_CHECK(IsWithin(r0, vec.end()       ) ,false );
+			PR_EXPECT(IsWithin(r0, vec.begin()) == true);
+			PR_EXPECT(IsWithin(r0, vec.begin() + 4) == true);
+			PR_EXPECT(IsWithin(r0, vec.begin() + 5) == false);
+			PR_EXPECT(IsWithin(r0, vec.end()) == false);
 
-			PR_CHECK(IsWithin(r3, r0), true  );
-			PR_CHECK(IsWithin(r3, r1), true  );
-			PR_CHECK(IsWithin(r3, r2), true  );
-			PR_CHECK(IsWithin(r2, r0), false );
-			PR_CHECK(IsWithin(r2, r1), false );
-			PR_CHECK(IsWithin(r2, r3), false );
-			PR_CHECK(IsWithin(r1, r0), false );
-			PR_CHECK(IsWithin(r0, r1), false );
+			PR_EXPECT(IsWithin(r3, r0) == true);
+			PR_EXPECT(IsWithin(r3, r1) == true);
+			PR_EXPECT(IsWithin(r3, r2) == true);
+			PR_EXPECT(IsWithin(r2, r0) == false);
+			PR_EXPECT(IsWithin(r2, r1) == false);
+			PR_EXPECT(IsWithin(r2, r3) == false);
+			PR_EXPECT(IsWithin(r1, r0) == false);
+			PR_EXPECT(IsWithin(r0, r1) == false);
 
-			PR_CHECK(Intersects(r3, r0), true  );
-			PR_CHECK(Intersects(r3, r1), true  );
-			PR_CHECK(Intersects(r3, r2), true  );
-			PR_CHECK(Intersects(r2, r0), true  );
-			PR_CHECK(Intersects(r2, r1), true  );
-			PR_CHECK(Intersects(r2, r3), true  );
-			PR_CHECK(Intersects(r1, r0), false );
-			PR_CHECK(Intersects(r0, r1), false );
+			PR_EXPECT(Intersects(r3, r0) == true);
+			PR_EXPECT(Intersects(r3, r1) == true);
+			PR_EXPECT(Intersects(r3, r2) == true);
+			PR_EXPECT(Intersects(r2, r0) == true);
+			PR_EXPECT(Intersects(r2, r1) == true);
+			PR_EXPECT(Intersects(r2, r3) == true);
+			PR_EXPECT(Intersects(r1, r0) == false);
+			PR_EXPECT(Intersects(r0, r1) == false);
 
 			r0 = Shift(r0, +3);
 			r1 = Shift(r1, -2);
-			PR_CHECK(r0 == r1, true);
+			PR_EXPECT(r0 == r1);
 
-			PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_EXPECT(r3.mid() == r2.mid());
 
 			r0 = Shift(r0, -3);
 			r0.resize(3);
-			PR_CHECK(r0.size(), 3);
+			PR_EXPECT(r0.size() == 3);
 
 			IRange r4(vec.end(),vec.begin());
 			Grow(r4, vec.begin() + 4);
-			PR_CHECK(vec.begin() + 4 == r4.m_beg, true);
-			PR_CHECK(vec.begin() + 5 == r4.m_end, true);
-			PR_CHECK(1, r4.size());
-			PR_CHECK(IsWithin(r4, vec.begin() + 4), true);
+			PR_EXPECT(vec.begin() + 4 == r4.m_beg);
+			PR_EXPECT(vec.begin() + 5 == r4.m_end);
+			PR_EXPECT(1 == r4.size());
+			PR_EXPECT(IsWithin(r4, vec.begin() + 4));
 		}
-		{// Floating point range
+		PRUnitTestMethod(FloatingPointRange)
+		{
 			using FRange = pr::Range<float>;
 			FRange r0(0.0f, 5.0f);
 			FRange r1(5.0f, 10.0f);
 			FRange r2(3.0f, 7.0f);
 			FRange r3(0.0f, 10.0f);
 
-			PR_CHECK(r0.empty(), false);
-			PR_CHECK(r0.size() , 5.0f);
+			PR_EXPECT(!r0.empty());
+			PR_EXPECT(r0.size() == 5.0f);
 
-			PR_CHECK(IsWithin(r0, -1.0f), false);
-			PR_CHECK(IsWithin(r0, 0.0f) , true );
-			PR_CHECK(IsWithin(r0, 4.0f) , true );
-			PR_CHECK(IsWithin(r0, 5.0f) , true );
-			PR_CHECK(IsWithin(r0, 6.0f) , false);
+			PR_EXPECT(!IsWithin(r0, -1.0f));
+			PR_EXPECT(IsWithin(r0, 0.0f));
+			PR_EXPECT(IsWithin(r0, 4.0f));
+			PR_EXPECT(IsWithin(r0, 5.0f));
+			PR_EXPECT(!IsWithin(r0, 6.0f));
 
-			PR_CHECK(IsWithin(r3, r0), true  );
-			PR_CHECK(IsWithin(r3, r1), true  );
-			PR_CHECK(IsWithin(r3, r2), true  );
-			PR_CHECK(IsWithin(r2, r0), false );
-			PR_CHECK(IsWithin(r2, r1), false );
-			PR_CHECK(IsWithin(r2, r3), false );
-			PR_CHECK(IsWithin(r1, r0), false );
-			PR_CHECK(IsWithin(r0, r1), false );
+			PR_EXPECT(IsWithin(r3, r0) == true);
+			PR_EXPECT(IsWithin(r3, r1) == true);
+			PR_EXPECT(IsWithin(r3, r2) == true);
+			PR_EXPECT(IsWithin(r2, r0) == false);
+			PR_EXPECT(IsWithin(r2, r1) == false);
+			PR_EXPECT(IsWithin(r2, r3) == false);
+			PR_EXPECT(IsWithin(r1, r0) == false);
+			PR_EXPECT(IsWithin(r0, r1) == false);
 
-			PR_CHECK(Intersects(r3, r0), true );
-			PR_CHECK(Intersects(r3, r1), true );
-			PR_CHECK(Intersects(r3, r2), true );
-			PR_CHECK(Intersects(r2, r0), true );
-			PR_CHECK(Intersects(r2, r1), true );
-			PR_CHECK(Intersects(r2, r3), true );
-			PR_CHECK(Intersects(r1, r0), false);
-			PR_CHECK(Intersects(r0, r1), false);
+			PR_EXPECT(Intersects(r3, r0) == true);
+			PR_EXPECT(Intersects(r3, r1) == true);
+			PR_EXPECT(Intersects(r3, r2) == true);
+			PR_EXPECT(Intersects(r2, r0) == true);
+			PR_EXPECT(Intersects(r2, r1) == true);
+			PR_EXPECT(Intersects(r2, r3) == true);
+			PR_EXPECT(!Intersects(r1, r0));
+			PR_EXPECT(!Intersects(r0, r1));
 
 			r0 = Shift(r0, +3.0f);
 			r1 = Shift(r1, -2.0f);
-			PR_CHECK(r0 == r1, true);
+			PR_EXPECT(r0 == r1);
 
-			PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_EXPECT(r3.mid() == r2.mid());
 
 			r0 = Shift(r0, -3.0f);
 			r0.resize(3.0f);
-			PR_CHECK(r0.size(), 3.0f);
+			PR_EXPECT(r0.size() == 3.0f);
 
 			FRange r4 = FRange::Reset();
 			Grow(r4, 4.0f);
-			PR_CHECK(4.0f, r4.m_beg);
-			PR_CHECK(4.0f, r4.m_end);
-			PR_CHECK(0.0f, r4.size());
-			PR_CHECK(IsWithin(r4, 4.0f), true);
+			PR_EXPECT(4.0f == r4.m_beg);
+			PR_EXPECT(4.0f == r4.m_end);
+			PR_EXPECT(0.0f == r4.size());
+			PR_EXPECT(IsWithin(r4, 4.0f));
 		}
-		{ // Implicit conversion
+		PRUnitTestMethod(ImplicitConversion)
+		{
 			Range<uint16_t> r0(0, 65535);
 			Range<uint32_t> r1;
 			r1 = r0;
-			PR_CHECK(r1 == Range<uint32_t>(0, 65535), true);
+			PR_EXPECT(r1 == Range<uint32_t>(0, 65535));
 		}
-	}
+	};
 }
 #endif

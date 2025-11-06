@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -605,7 +605,7 @@ namespace pr::maths
 				auto out_ = Norm64bit::Decompress(enc);
 				max_error = std::max(Length(out_ - in_), max_error);
 			}
-			PR_CHECK(max_error < 1e-6f, true);
+			PR_EXPECT(max_error < 1e-6f);
 		}
 		{ // Norm32bit
 			float max_error = 0.0f;
@@ -621,7 +621,7 @@ namespace pr::maths
 				if (max_error > 0.01)
 					max_error = max_error;
 			}
-			PR_CHECK(max_error < 0.0002f, true); 
+			PR_EXPECT(max_error < 0.0002f); 
 		}
 		{ // Norm16bit
 			float max_error = 0.0f;
@@ -635,7 +635,7 @@ namespace pr::maths
 				auto out_ = Norm16bit::Decompress(enc);
 				max_error = std::max(Length(out_ - in_), max_error);
 			}
-			PR_CHECK(max_error < 0.03f, true);
+			PR_EXPECT(max_error < 0.03f);
 		}
 		{ // Norm5bit
 			float max_error = 0.0f;
@@ -649,7 +649,7 @@ namespace pr::maths
 				v4   out_ = Norm5bit::Decompress(enc);
 				max_error = std::max(Length(out_ - in_), max_error);
 			}
-			PR_CHECK(max_error < 0.6f, true);
+			PR_EXPECT(max_error < 0.6f);
 		}
 	}
 }

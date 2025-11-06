@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Base64
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
@@ -129,29 +129,29 @@ namespace pr::common
 		unsigned int len, dlen;
 
 		// zero length data
-		len = EncodeSize(0);                          PR_CHECK(len        ,0U);
-		Encode("", 0, dst, dst_length);               PR_CHECK(dst_length ,0U);
-		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length ,0U);
+		len = EncodeSize(0);                          PR_EXPECT(len        == 0U);
+		Encode("", 0, dst, dst_length);               PR_EXPECT(dst_length == 0U);
+		Decode(dst, dst_length, src, src_length);     PR_EXPECT(src_length == 0U);
 
 		// one input char
-		len = EncodeSize(1);                          PR_CHECK(len ,4U);
-		Encode("A", 1, dst, dst_length);              PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='Q' && dst[2]=='=' && dst[3]=='=', true);
-		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 1 && src[0]=='A', true);
+		len = EncodeSize(1);                          PR_EXPECT(len == 4U);
+		Encode("A", 1, dst, dst_length);              PR_EXPECT(dst_length == 4 && dst[0]=='Q' && dst[1]=='Q' && dst[2]=='=' && dst[3]=='=');
+		Decode(dst, dst_length, src, src_length);     PR_EXPECT(src_length == 1 && src[0]=='A');
 
 		// two chars
-		len = EncodeSize(2);                          PR_CHECK(len ,4U);
-		Encode("AB", 2, dst, dst_length);             PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='I' && dst[3]=='=', true);
-		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 2 && src[0]=='A' && src[1]=='B', true);
+		len = EncodeSize(2);                          PR_EXPECT(len == 4U);
+		Encode("AB", 2, dst, dst_length);             PR_EXPECT(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='I' && dst[3]=='=');
+		Decode(dst, dst_length, src, src_length);     PR_EXPECT(src_length == 2 && src[0]=='A' && src[1]=='B');
 
 		// three chars
-		len = EncodeSize(3);                          PR_CHECK(len ,4U);
-		Encode("ABC", 3, dst, dst_length);            PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D', true);
-		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 3 && src[0]=='A' && src[1]=='B' && src[2]=='C', true);
+		len = EncodeSize(3);                          PR_EXPECT(len == 4U);
+		Encode("ABC", 3, dst, dst_length);            PR_EXPECT(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D');
+		Decode(dst, dst_length, src, src_length);     PR_EXPECT(src_length == 3 && src[0]=='A' && src[1]=='B' && src[2]=='C');
 
 		// four chars
-		len = EncodeSize(4);                          PR_CHECK(len ,8U);
-		Encode("ABCD", 4, dst, dst_length);           PR_CHECK(dst_length == 8 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D' && dst[4]=='R' && dst[5]=='A', true);
-		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 4 && src[0]=='A' && src[1]=='B' && src[2]=='C' && src[3]=='D', true);
+		len = EncodeSize(4);                          PR_EXPECT(len == 8U);
+		Encode("ABCD", 4, dst, dst_length);           PR_EXPECT(dst_length == 8 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D' && dst[4]=='R' && dst[5]=='A');
+		Decode(dst, dst_length, src, src_length);     PR_EXPECT(src_length == 4 && src[0]=='A' && src[1]=='B' && src[2]=='C' && src[3]=='D');
 
 		// All bytes from 0 to ff
 		unsigned char sbuf[256]; for (int i = 0; i != 256; ++i) sbuf[i] = (unsigned char)i;
@@ -166,19 +166,19 @@ namespace pr::common
 		unsigned int ssize = sizeof(sbuf), dsize = sizeof(dbuf) - 1;
 
 		len = EncodeSize(ssize);
-		PR_CHECK(len, dsize);
+		PR_EXPECT(len == dsize);
 		
 		Encode(sbuf, ssize, dst, dst_length);
-		PR_CHECK(dst_length ,dsize);
+		PR_EXPECT(dst_length == dsize);
 		for (size_t i = 0; i != dsize; ++i)
-			PR_CHECK(dst[i] ,dbuf[i]);
+			PR_EXPECT(dst[i] == dbuf[i]);
 		
 		dlen = DecodeSize(len);
-		PR_CHECK(dlen < sizeof(src), true);
+		PR_EXPECT(dlen < sizeof(src));
 		Decode(dst, dst_length, src, src_length);
-		PR_CHECK(src_length ,ssize);
+		PR_EXPECT(src_length == ssize);
 		for (size_t i = 0; i != ssize; ++i)
-			PR_CHECK(src[i] ,sbuf[i]);
+			PR_EXPECT(src[i] == sbuf[i]);
 
 		// Random binary data
 		for (size_t i = 0; i != ssize; ++i)
@@ -186,9 +186,9 @@ namespace pr::common
 
 		Encode(sbuf, ssize, dst, dst_length);
 		Decode(dst, dst_length, src, src_length);
-		PR_CHECK(src_length ,ssize);
+		PR_EXPECT(src_length == ssize);
 		for (size_t i = 0; i != ssize; ++i)
-			PR_CHECK(src[i] ,sbuf[i]);
+			PR_EXPECT(src[i] == sbuf[i]);
 	}
 }
 #endif

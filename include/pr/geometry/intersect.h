@@ -654,50 +654,50 @@ namespace pr::geometry
 	{
 		{// Intersect2D_InfiniteLineToInfiniteLine
 			v2 pt;
-			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, pt), true);
-			PR_CHECK(FEql(pt, v2(1,1)), true);
+			PR_EXPECT(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, pt));
+			PR_EXPECT(FEql(pt, v2(1,1)));
 
 			// Parallel
-			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, pt), false);
+			PR_EXPECT(!Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, pt));
 
 			// Colinear
-			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, pt), false);
+			PR_EXPECT(!Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, pt));
 		}
 		{// Intersect2D_LineSegmentToLineSegment
 			float ta,tb;
 
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, ta, tb), true);
-			PR_CHECK(FEql(ta, 0.5f), true);
-			PR_CHECK(FEql(tb, 0.5f), true);
+			PR_EXPECT(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, ta, tb));
+			PR_EXPECT(FEql(ta, 0.5f));
+			PR_EXPECT(FEql(tb, 0.5f));
 
 			// Non-parallel but not crossing
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 0.9f, 0.95f }, ta, tb), false);
+			PR_EXPECT(!Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 0.9f, 0.95f }, ta, tb));
 
 			// Non-parallel but not crossing, other side
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1.1f, 1.01f}, v2{ 2, 1.5f }, ta, tb), false);
+			PR_EXPECT(!Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1.1f, 1.01f}, v2{ 2, 1.5f }, ta, tb));
 
 			// Parallel
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, ta, tb), false);
+			PR_EXPECT(!Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, ta, tb));
 
 			// Colinear - meeting at point
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, ta, tb), true);
-			PR_CHECK(FEql(ta, 1.0f), true);
-			PR_CHECK(FEql(tb, 1.0f), true);
+			PR_EXPECT(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, ta, tb));
+			PR_EXPECT(FEql(ta, 1.0f));
+			PR_EXPECT(FEql(tb, 1.0f));
 
 			// Colinear - overlapping
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 1 }, v2{ 2, 0 }, ta, tb), true);
-			PR_CHECK(FEql(ta, 0.5f), true);
-			PR_CHECK(FEql(tb, 1.0f), true);
+			PR_EXPECT(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 1 }, v2{ 2, 0 }, ta, tb));
+			PR_EXPECT(FEql(ta, 0.5f));
+			PR_EXPECT(FEql(tb, 1.0f));
 
 			// Colinear - overlapping b within a
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0.5f, 1.5f }, v2{ 1.5f, 0.5f }, ta, tb), true);
-			PR_CHECK(FEql(ta, 0.25f), true);
-			PR_CHECK(FEql(tb, 1.0f), true);
+			PR_EXPECT(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0.5f, 1.5f }, v2{ 1.5f, 0.5f }, ta, tb));
+			PR_EXPECT(FEql(ta, 0.25f));
+			PR_EXPECT(FEql(tb, 1.0f));
 
 			// Colinear - overlapping a within b
-			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{-0.5f, 2.5f }, v2{ 2.5f,-0.5f }, ta, tb), true);
-			PR_CHECK(FEql(ta, 0.0f), true);
-			PR_CHECK(FEql(tb, 5.f/6.f), true);
+			PR_EXPECT(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{-0.5f, 2.5f }, v2{ 2.5f,-0.5f }, ta, tb));
+			PR_EXPECT(FEql(ta, 0.0f));
+			PR_EXPECT(FEql(tb, 5.f/6.f));
 		}
 		{// Intersect_LineToBBox
 			float tmin = 0.0f, tmax = 1.0f;
@@ -707,13 +707,13 @@ namespace pr::geometry
 			auto bbox = BBox(v4Origin, v4(0.25f, 0.15f, 0.2f, 0.0f));
 				
 			auto r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
-			PR_CHECK(r, true);
-			PR_CHECK(pr::FEqlRelative(s + tmin*d, pr::v4(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
-			PR_CHECK(pr::FEqlRelative(s + tmax*d, pr::v4(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
+			PR_EXPECT(r);
+			PR_EXPECT(pr::FEqlRelative(s + tmin*d, pr::v4(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f));
+			PR_EXPECT(pr::FEqlRelative(s + tmax*d, pr::v4(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f));
 
 			s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 			r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 		}
 		{// Intersect_LineToSphere
 			float tmin = 0.0f, tmax = 1.0f;
@@ -723,49 +723,49 @@ namespace pr::geometry
 			auto rad = 0.3f;
 				
 			auto r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
-			PR_CHECK(r, true);
-			PR_CHECK(pr::FEqlRelative(s + tmin*d, pr::v4(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
-			PR_CHECK(pr::FEqlRelative(s + tmax*d, pr::v4(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
+			PR_EXPECT(r);
+			PR_EXPECT(pr::FEqlRelative(s + tmin*d, pr::v4(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f));
+			PR_EXPECT(pr::FEqlRelative(s + tmax*d, pr::v4(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f));
 
 			s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 			r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 		}
 		{ // Intersect_BBoxToPlane
 			auto p = pr::plane::make(v4(0.1f, 0.4f, -0.3f, 1), v4::Normal(0.3f,-0.4f,0.5f,0));
 			auto b = BBox(v4(0.0f, 0.2f, 0.0f, 1.0f), v4(0.25f, 0.15f, 0.2f, 0));
 			auto r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, true);
+			PR_EXPECT(r);
 
 			b.m_centre = v4(0.0f, 0.1f, 0.0f, 1.0f);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 
 			b.m_centre = v4(0.0f, 0.4f, -0.7f, 1.0f);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, true);
+			PR_EXPECT(r);
 
 			b.m_centre = v4(0.0f, 0.4f, -0.72f, 1.0f);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 
 			// Degenerate cases
 			p = pr::plane::make(v4Origin, v4XAxis);
 			b.m_centre = v4(-0.250001f, 0, 0, 1);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 
 			b.m_centre = v4(-0.2499f, 0, 0, 1);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, true);
+			PR_EXPECT(r);
 
 			b.m_centre = v4(+0.2499f, 0, 0, 1);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, true);
+			PR_EXPECT(r);
 
 			b.m_centre = v4(+0.250001f, 0, 0, 1);
 			r = Intersect_BBoxToPlane(b, p);
-			PR_CHECK(r, false);
+			PR_EXPECT(!r);
 		}
 	}
 }

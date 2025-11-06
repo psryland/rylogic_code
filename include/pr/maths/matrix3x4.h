@@ -891,28 +891,28 @@ namespace pr::maths
 			auto m2 = S(2);
 			auto R = mat3_t{vec4_t{2,4,6,8}, vec4_t{2,2,2,2}, vec4_t{8,6,4,2}};
 			auto r = m1 * m2;
-			PR_CHECK(FEql(r, R), true);
+			PR_EXPECT(FEql(r, R));
 		}
 		{// Multiply vector4
 			auto m = mat3_t{vec4_t{1,2,3,4}, vec4_t{1,1,1,1}, vec4_t{4,3,2,1}};
 			auto v = vec4_t{-3,4,2,-2};
 			auto R = vec4_t{9,4,-1,-2};
 			auto r = m * v;
-			PR_CHECK(FEql(r, R), true);
+			PR_EXPECT(FEql(r, R));
 		}
 		{// Multiply vector3
 			auto m = mat3_t{vec4_t{1,2,3,4}, vec4_t{1,1,1,1}, vec4_t{4,3,2,1}};
 			auto v = vec3_t{-3,4,2};
 			auto R = vec3_t{9,4,-1};
 			auto r = m * v;
-			PR_CHECK(FEql(r, R), true);
+			PR_EXPECT(FEql(r, R));
 		}
 		{// Multiply matrix
 			auto m1 = mat3_t{vec4_t{1,2,3,4}, vec4_t{1,1,1,1}, vec4_t{4,3,2,1}};
 			auto m2 = mat3_t{vec4_t{1,1,1,1}, vec4_t{2,2,2,2}, vec4_t{-2,-2,-2,-2}};
 			auto R  = mat3_t{vec4_t{6,6,6,0}, vec4_t{12,12,12,0}, vec4_t{-12,-12,-12,0}};
 			auto r = m1 * m2;
-			PR_CHECK(FEql(r, R), true);
+			PR_EXPECT(FEql(r, R));
 		}
 		{//OriFromDir
 			if constexpr (std::floating_point<S>)
@@ -920,20 +920,20 @@ namespace pr::maths
 				vec4_t dir(0, 1, 0, 0);
 				{
 					auto ori = OriFromDir(dir, AxisId::PosZ, vec4_t::ZAxis());
-					PR_CHECK(dir == +ori.z, true);
-					PR_CHECK(IsOrthonormal(ori), true);
+					PR_EXPECT(dir == +ori.z);
+					PR_EXPECT(IsOrthonormal(ori));
 				}
 				{
 					auto ori = OriFromDir(dir, AxisId::NegX);
-					PR_CHECK(dir == -ori.x, true);
-					PR_CHECK(IsOrthonormal(ori), true);
+					PR_EXPECT(dir == -ori.x);
+					PR_EXPECT(IsOrthonormal(ori));
 				}
 				{
 					auto scale = S(0.125);
 					auto sdir = scale * dir;
 					auto ori = ScaledOriFromDir(sdir, AxisId::PosY);
-					PR_CHECK(sdir == +ori.y, true);
-					PR_CHECK(IsOrthonormal((1 / scale) * ori), true);
+					PR_EXPECT(sdir == +ori.y);
+					PR_EXPECT(IsOrthonormal((1 / scale) * ori));
 				}
 			}
 		}
@@ -944,7 +944,7 @@ namespace pr::maths
 					auto m = mat3_t::Random(rng, vec4_t::RandomN(rng, 0), -constants<S>::tau, +constants<S>::tau);
 					auto inv_m0 = InvertFast(m);
 					auto inv_m1 = Invert(m);
-					PR_CHECK(FEql(inv_m0, inv_m1), true);
+					PR_EXPECT(FEql(inv_m0, inv_m1));
 				}
 				{
 					auto m = mat3_t::Random(rng, S(-5), S(+5));
@@ -952,8 +952,8 @@ namespace pr::maths
 					auto I0 = inv_m * m;
 					auto I1 = m * inv_m;
 
-					PR_CHECK(FEql(I0, mat3_t::Identity()), true);
-					PR_CHECK(FEql(I1, mat3_t::Identity()), true);
+					PR_EXPECT(FEql(I0, mat3_t::Identity()));
+					PR_EXPECT(FEql(I1, mat3_t::Identity()));
 				}
 				{
 					auto m = mat3_t(
@@ -966,7 +966,7 @@ namespace pr::maths
 						vec4_t(S(+7.0), S(-8.333333), S(+2.333333), S(0)));
 
 					auto inv_m = Invert(m);
-					PR_CHECK(FEqlRelative(inv_m, INV_M, S(0.0001)), true);
+					PR_EXPECT(FEqlRelative(inv_m, INV_M, S(0.0001)));
 				}
 			}
 		}
@@ -979,7 +979,7 @@ namespace pr::maths
 				auto a0 = vec4_t::Random(rng, vec4_t::Zero(), S(5), S(0));
 				auto A0 = m * a0;
 				auto A1 = Cross(v, a0);
-				PR_CHECK(FEql(A0, A1), true);
+				PR_EXPECT(FEql(A0, A1));
 			}
 		}
 		{// LogMap/ExpMap

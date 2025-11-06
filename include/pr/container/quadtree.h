@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Quad Tree
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************
@@ -480,34 +480,34 @@ namespace pr::common
 		// just inside quad0 at the root level
 		Watzit w0(-0.5f*qtree.CellSize(0,15),-0.5f*qtree.CellSize(1,15), 0);
 		auto n0 = qtree.Insert(w0, w0.pos, w0.radius);
-		PR_CHECK(qtree.m_nodes.size(), 2U);
-		PR_CHECK(n0->m_level, 7U);
-		PR_CHECK(n0->m_coord[0], 0x40U - 1);
-		PR_CHECK(n0->m_coord[1], 0x40U - 1);
+		PR_EXPECT(qtree.m_nodes.size() == 2U);
+		PR_EXPECT(n0->m_level == 7U);
+		PR_EXPECT(n0->m_coord[0] == 0x40U - 1);
+		PR_EXPECT(n0->m_coord[1] == 0x40U - 1);
 
 		// somewhere in quad3 at the root level
 		Watzit w1(2.5f, 2.5f, 0.2f);
 		auto n1 = qtree.Insert(w1, w1.pos, w1.radius);
-		PR_CHECK(qtree.m_nodes.size(), 3U);
-		PR_CHECK(n1->m_level, 4U);
-		PR_CHECK(n1->m_coord[0], 10U);
-		PR_CHECK(n1->m_coord[1], 12U);
+		PR_EXPECT(qtree.m_nodes.size() == 3U);
+		PR_EXPECT(n1->m_level == 4U);
+		PR_EXPECT(n1->m_coord[0] == 10U);
+		PR_EXPECT(n1->m_coord[1] == 12U);
 
 		// Outside the region but within the overhang at level 1
 		Watzit w2(-14.99f, -7.2499f, 0);
 		auto n2 = qtree.Insert(w2, w2.pos, w2.radius);
-		PR_CHECK(qtree.m_nodes.size(), 4U);
-		PR_CHECK(n2->m_level, 1U);
-		PR_CHECK(n2->m_coord[0], 0U);
-		PR_CHECK(n2->m_coord[1], 0U);
+		PR_EXPECT(qtree.m_nodes.size() == 4U);
+		PR_EXPECT(n2->m_level == 1U);
+		PR_EXPECT(n2->m_coord[0] == 0U);
+		PR_EXPECT(n2->m_coord[1] == 0U);
 
 		// Outside the region on y but within on x
 		Watzit w3(6.5f, 7.24449f, 0);
 		auto n3 = qtree.Insert(w3, w3.pos, w3.radius);
-		PR_CHECK(qtree.m_nodes.size(), 5U);
-		PR_CHECK(n3->m_level, 1U);
-		PR_CHECK(n3->m_coord[0], 1U);
-		PR_CHECK(n3->m_coord[1], 1U);
+		PR_EXPECT(qtree.m_nodes.size() == 5U);
+		PR_EXPECT(n3->m_level == 1U);
+		PR_EXPECT(n3->m_coord[0] == 1U);
+		PR_EXPECT(n3->m_coord[1] == 1U);
 
 		for (int i = 0; i != 10000; ++i)
 		{
@@ -522,10 +522,10 @@ namespace pr::common
 			{
 				float min[2],max[2];
 				qtree.NodeBounds(*n, true, min, max);
-				PR_CHECK(w.pos[0] - w.radius >= min[0], true);
-				PR_CHECK(w.pos[1] - w.radius >= min[1], true);
-				PR_CHECK(w.pos[0] + w.radius <  max[0], true);
-				PR_CHECK(w.pos[1] + w.radius <  max[1], true);
+				PR_EXPECT(w.pos[0] - w.radius >= min[0]);
+				PR_EXPECT(w.pos[1] - w.radius >= min[1]);
+				PR_EXPECT(w.pos[0] + w.radius <  max[0]);
+				PR_EXPECT(w.pos[1] + w.radius <  max[1]);
 			}
 		}
 
@@ -533,10 +533,10 @@ namespace pr::common
 		size_t count = 0;
 		for (auto& node : qtree.m_nodes)
 		{
-			PR_CHECK(qtree.SanityCheck(node), true);
+			PR_EXPECT(qtree.SanityCheck(node));
 			count += node.m_items.size();
 		}
-		PR_CHECK(count, qtree.m_count);
+		PR_EXPECT(count == qtree.m_count);
 
 		for (int i = 0; i != 100; ++i)
 		{
@@ -558,7 +558,7 @@ namespace pr::common
 			// All flagged should collide, not flagged should not
 			for (auto& node : qtree.m_nodes)
 				for (auto& item : node.m_items)
-					PR_CHECK(Collide(W, item), item.flag);
+					PR_EXPECT(Collide(W, item) == item.flag);
 		}
 
 		/*

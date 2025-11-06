@@ -830,12 +830,12 @@ namespace pr::maths
 			auto m1 = mat4_t::Identity();
 			auto m2 = mat4_t::Identity();
 			auto m3 = m1 * m2;
-			PR_CHECK(FEql(m3, mat4_t::Identity()), true);
+			PR_EXPECT(FEql(m3, mat4_t::Identity()));
 		}
 		{// Largest/Smallest element
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{-2, -3, -4, -5}, vec4_t{1, 1, -1, 9}, vec4_t{-8, 5, 0, 0}};
-			PR_CHECK(MinComponent(m1) == -8, true);
-			PR_CHECK(MaxComponent(m1) == +9, true);
+			PR_EXPECT(MinComponent(m1) == -8);
+			PR_EXPECT(MaxComponent(m1) == +9);
 		}
 		{// FEql
 			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
@@ -844,15 +844,15 @@ namespace pr::maths
 
 			m1.x.x = m1.y.y = 1.0e-5f;
 			m2.x.x = m2.y.y = 1.1e-5f;
-			PR_CHECK(FEql(MaxComponent(m1), 1.f), true);
-			PR_CHECK(FEql(MaxComponent(m2), 1.f), true);
-			PR_CHECK(FEql(m1, m2), true);
+			PR_EXPECT(FEql(MaxComponent(m1), 1.f));
+			PR_EXPECT(FEql(MaxComponent(m2), 1.f));
+			PR_EXPECT(FEql(m1, m2));
 
 			m1.z.z = m1.w.w = 1.0e-5f;
 			m2.z.z = m2.w.w = 1.1e-5f;
-			PR_CHECK(FEql(MaxComponent(m1), 1.0e-5f), true);
-			PR_CHECK(FEql(MaxComponent(m2), 1.1e-5f), true);
-			PR_CHECK(FEql(m1, m2), false);
+			PR_EXPECT(FEql(MaxComponent(m1), 1.0e-5f));
+			PR_EXPECT(FEql(MaxComponent(m2), 1.1e-5f));
+			PR_EXPECT(!FEql(m1, m2));
 		}
 		{// Finite
 			if constexpr (std::floating_point<S>)
@@ -862,10 +862,10 @@ namespace pr::maths
 				vec4_t arr1(0, 1, 1 / f0, 0 / f0);
 				mat4_t m1(arr0, arr0, arr0, arr0);
 				mat4_t m2(arr1, arr1, arr1, arr1);
-				PR_CHECK(IsFinite(m1), true);
-				PR_CHECK(!IsFinite(m2), true);
-				PR_CHECK(!All(m1, [](S x) { return x < S(5); }), true);
-				PR_CHECK(Any(m1, [](S x) { return x < S(5); }), true);
+				PR_EXPECT(IsFinite(m1));
+				PR_EXPECT(!IsFinite(m2));
+				PR_EXPECT(!All(m1, [](S x) { return x < S(5); }));
+				PR_EXPECT(Any(m1, [](S x) { return x < S(5); }));
 			}
 		}
 		{// Multiply scalar
@@ -873,71 +873,71 @@ namespace pr::maths
 			auto m2 = 2.0f;
 			auto m3 = mat4_t{vec4_t{2, 4, 6, 8}, vec4_t{2, 2, 2, 2}, vec4_t{-4, -4, -4, -4}, vec4_t{8, 6, 4, 2}};
 			auto r = m1 * m2;
-			PR_CHECK(FEql(r, m3), true);
+			PR_EXPECT(FEql(r, m3));
 		}
 		{// Multiply vector
 			auto m = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto v = vec4_t{-3, 4, 2, -1};
 			auto R = vec4_t{-7, -9, -11, -13};
 			auto r = m * v;
-			PR_CHECK(FEql(r, R), true);
+			PR_EXPECT(FEql(r, R));
 		}
 		{// Multiply matrix
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto m2 = mat4_t{vec4_t{1, 1, 1, 1}, vec4_t{2, 2, 2, 2}, vec4_t{-1, -1, -1, -1}, vec4_t{-2, -2, -2, -2}};
 			auto m3 = mat4_t{vec4_t{4, 4, 4, 4}, vec4_t{8, 8, 8, 8}, vec4_t{-4, -4, -4, -4}, vec4_t{-8, -8, -8, -8}};
 			auto r = m1 * m2;
-			PR_CHECK(FEql(r, m3), true);
+			PR_EXPECT(FEql(r, m3));
 		}
 		{// Component multiply
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto m2 = vec4_t(2, 1, -2, -1);
 			auto m3 = mat4_t{vec4_t{2, 4, 6, 8}, vec4_t{1, 1, 1, 1}, vec4_t{+4, +4, +4, +4}, vec4_t{-4, -3, -2, -1}};
 			auto r = CompMul(m1, m2);
-			PR_CHECK(FEql(r, m3), true);
+			PR_EXPECT(FEql(r, m3));
 		}
 		{//m4x4Translation
 			auto m1 = mat4_t(vec4_t::XAxis(), vec4_t::YAxis(), vec4_t::ZAxis(), vec4_t(1.0f, 2.0f, 3.0f, 1.0f));
 			auto m2 = mat4_t::Translation(vec4_t(1.0f, 2.0f, 3.0f, 1.0f));
-			PR_CHECK(FEql(m1, m2), true);
+			PR_EXPECT(FEql(m1, m2));
 		}
 		{//m4x4CreateFrom
 			auto V1 = vec4_t::Random(rng, 0.0f, 10.0f, 1);
 			auto a2b = mat4_t::Transform(vec4_t::Normal(+3, -2, -1, 0), +1.23f, vec4_t(+4.4f, -3.3f, +2.2f, 1.0f));
 			auto b2c = mat4_t::Transform(vec4_t::Normal(-1, +2, -3, 0), -3.21f, vec4_t(-1.1f, +2.2f, -3.3f, 1.0f));
-			PR_CHECK(IsOrthonormal(a2b), true);
-			PR_CHECK(IsOrthonormal(b2c), true);
+			PR_EXPECT(IsOrthonormal(a2b));
+			PR_EXPECT(IsOrthonormal(b2c));
 			vec4_t V2 = a2b * V1;
 			vec4_t V3 = b2c * V2; V3;
 			mat4_t a2c = b2c * a2b;
 			vec4_t V4 = a2c * V1; V4;
-			PR_CHECK(FEql(V3, V4), true);
+			PR_EXPECT(FEql(V3, V4));
 		}
 		{//m4x4CreateFrom2
 			auto q = quat(1.0f, 0.5f, 0.7f);
 			mat4_t m1 = mat4_t::Transform(1.0f, 0.5f, 0.7f, vec4_t::Origin());
 			mat4_t m2 = mat4_t::Transform(q, vec4_t::Origin());
-			PR_CHECK(IsOrthonormal(m1), true);
-			PR_CHECK(IsOrthonormal(m2), true);
-			PR_CHECK(FEql(m1, m2), true);
+			PR_EXPECT(IsOrthonormal(m1));
+			PR_EXPECT(IsOrthonormal(m2));
+			PR_EXPECT(FEql(m1, m2));
 
 			std::uniform_real_distribution<S> dist(-1.0f, +1.0f);
 			auto ang = dist(rng);
 			vec4_t axis = vec4_t::RandomN(rng, 0);
 			m1 = mat4_t::Transform(axis, ang, vec4_t::Origin());
 			m2 = mat4_t::Transform(quat(axis, ang), vec4_t::Origin());
-			PR_CHECK(IsOrthonormal(m1), true);
-			PR_CHECK(IsOrthonormal(m2), true);
-			PR_CHECK(FEql(m1, m2), true);
+			PR_EXPECT(IsOrthonormal(m1));
+			PR_EXPECT(IsOrthonormal(m2));
+			PR_EXPECT(FEql(m1, m2));
 		}
 		{// Invert
 			mat4_t a2b = mat4_t::Transform(vec4_t::Normal(-4, -3, +2, 0), -2.15f, vec4_t(-5, +3, +1, 1));
 			mat4_t b2a = Invert(a2b);
 			mat4_t a2a = b2a * a2b;
-			PR_CHECK(FEql(mat4_t::Identity(), a2a), true);
+			PR_EXPECT(FEql(mat4_t::Identity(), a2a));
 
 			mat4_t b2a_fast = InvertFast(a2b);
-			PR_CHECK(FEql(b2a_fast, b2a), true);
+			PR_EXPECT(FEql(b2a_fast, b2a));
 		}
 		{//m4x4Orthonormalise
 			mat4_t a2b;
@@ -945,7 +945,7 @@ namespace pr::maths
 			a2b.y = vec4_t(4.0f, -1.0f, 2.0f, 0.0f);
 			a2b.z = vec4_t(1.0f, -2.0f, 4.0f, 0.0f);
 			a2b.w = vec4_t(1.0f, 2.0f, 3.0f, 1.0f);
-			PR_CHECK(IsOrthonormal(Orthonorm(a2b)), true);
+			PR_EXPECT(IsOrthonormal(Orthonorm(a2b)));
 		}
 		{// CPM
 			if constexpr (std::floating_point<S>)
@@ -956,7 +956,7 @@ namespace pr::maths
 
 				vec4_t c = Cross3(a, b);
 				vec4_t d = a2b * b;
-				PR_CHECK(FEql(c.xyz, d.xyz), true);
+				PR_EXPECT(FEql(c.xyz, d.xyz));
 			}
 		}
 	}

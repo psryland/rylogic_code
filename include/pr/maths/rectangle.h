@@ -357,22 +357,22 @@ namespace pr::maths
 			auto rt = IRect(50,50,200,300);
 			auto nss = NormalisePoint(rt, pt, 1.0f, 1.0f);
 			auto ss  = ScalePoint(rt, nss, 1.0f, 1.0f);
-			PR_CHECK(FEql(nss, v2(1.0f, 1.0f)), true);
-			PR_CHECK(FEql(pt, ss), true);
+			PR_EXPECT(FEql(nss, v2(1.0f, 1.0f)));
+			PR_EXPECT(FEql(pt, ss));
 
 			pt = v2(200, 300);
 			rt = IRect(50,50,200,300);
 			nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
 			ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
-			PR_CHECK(FEql(nss, v2(1.0f, -1.0f)), true);
-			PR_CHECK(FEql(pt, ss), true);
+			PR_EXPECT(FEql(nss, v2(1.0f, -1.0f)));
+			PR_EXPECT(FEql(pt, ss));
 
 			pt = v2(75, 130);
 			rt = IRect(50,50,200,300);
 			nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
 			ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
-			PR_CHECK(FEql(nss, v2(-0.666667f, 0.36f)), true);
-			PR_CHECK(FEql(pt, ss), true);
+			PR_EXPECT(FEql(nss, v2(-0.666667f, 0.36f)));
+			PR_EXPECT(FEql(pt, ss));
 		}
 	}
 }

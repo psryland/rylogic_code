@@ -494,14 +494,14 @@ namespace pr::maths
 		};
 		auto bbox = BBox::Reset();
 		for (auto& p : pt) Grow(bbox, p);
-		PR_CHECK(bbox.Lower().x, -1.0f);
-		PR_CHECK(bbox.Lower().y, -2.0f);
-		PR_CHECK(bbox.Lower().z, -1.0f);
-		PR_CHECK(bbox.Lower().w, +1.0f);
-		PR_CHECK(bbox.Upper().x, +1.0f);
-		PR_CHECK(bbox.Upper().y, +1.0f);
-		PR_CHECK(bbox.Upper().z, +1.0f);
-		PR_CHECK(bbox.Upper().w, +1.0f);
+		PR_EXPECT(bbox.Lower().x == -1.0f);
+		PR_EXPECT(bbox.Lower().y == -2.0f);
+		PR_EXPECT(bbox.Lower().z == -1.0f);
+		PR_EXPECT(bbox.Lower().w == +1.0f);
+		PR_EXPECT(bbox.Upper().x == +1.0f);
+		PR_EXPECT(bbox.Upper().y == +1.0f);
+		PR_EXPECT(bbox.Upper().z == +1.0f);
+		PR_EXPECT(bbox.Upper().w == +1.0f);
 	}
 }
 #endif

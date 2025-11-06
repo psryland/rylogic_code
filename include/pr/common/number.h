@@ -1,4 +1,4 @@
-//*************************************************************
+﻿//*************************************************************
 // Number
 //  Copyright (c) Rylogic Ltd 2008
 //*************************************************************
@@ -248,40 +248,39 @@ namespace pr::common
 	PRUnitTest(NumberTests)
 	{
 		auto n0 = Number{1.3};
-		PR_CHECK(n0.db() , 1.3);
-		PR_CHECK(n0.ll() , 1LL);
-		PR_CHECK(n0.ul() , 1ULL);
+		PR_EXPECT(n0.db() == 1.3);
+		PR_EXPECT(n0.ll() == 1LL);
+		PR_EXPECT(n0.ul() == 1ULL);
 
 		auto n1 = Number{1ULL};
-		PR_CHECK(n1.db() , 1.0);
-		PR_CHECK(n1.ll() , 1LL);
-		PR_CHECK(n1.ul() , 1ULL);
+		PR_EXPECT(n1.db() == 1.0);
+		PR_EXPECT(n1.ll() == 1LL);
+		PR_EXPECT(n1.ul() == 1ULL);
 
 		auto n2 = Number("+0.1");
-		PR_CHECK(n2.db() , 0.1);
-		PR_CHECK(n2.ll() , 0);
-		PR_CHECK(n2.ul() , 0);
+		PR_EXPECT(n2.db() == 0.1);
+		PR_EXPECT(n2.ll() == 0);
+		PR_EXPECT(n2.ul() == 0);
 
 		auto n3 = Number("1ULL");
-		PR_CHECK(n3.db(), 1.0);
-		PR_CHECK(n3.ll(), 1LL);
-		PR_CHECK(n3.ul(), 1ULL);
+		PR_EXPECT(n3.db() == 1.0);
+		PR_EXPECT(n3.ll() == 1LL);
+		PR_EXPECT(n3.ul() == 1ULL);
 
 		auto n4 = Number("-1.234e-13f");
-		PR_CHECK(FEql(n4.db(), -1.234e-13), true);
-		PR_CHECK(n4.ll(), 0);
-		PR_CHECK(n4.ul(), 0);
+		PR_EXPECT(FEql(n4.db(), -1.234e-13));
+		PR_EXPECT(n4.ll() == 0);
+		PR_EXPECT(n4.ul() == 0);
 
 		auto n5 = Number("0xDeaDBeeF");
-		PR_CHECK(FEql(n5.db(), static_cast<double>(0xDeaDBeeF)), true);
-		PR_CHECK(n5.ll(), 0xDeaDBeeFLL);
-		PR_CHECK(n5.ul(), 0xDeaDBeeFULL);
+		PR_EXPECT(FEql(n5.db(), static_cast<double>(0xDeaDBeeF)));
+		PR_EXPECT(n5.ll() == 0xDeaDBeeFLL);
+		PR_EXPECT(n5.ul() == 0xDeaDBeeFULL);
 
 		auto n6 = Number("10110101", nullptr, 2);
-		PR_CHECK(FEql(n6.db(), static_cast<double>(0b10110101)), true);
-		PR_CHECK(n6.ll(), 0b10110101LL);
-		PR_CHECK(n6.ul(), 0b10110101ULL);
-
+		PR_EXPECT(FEql(n6.db(), static_cast<double>(0b10110101)));
+		PR_EXPECT(n6.ll() == 0b10110101LL);
+		PR_EXPECT(n6.ul() == 0b10110101ULL);
 	}
 }
 #endif

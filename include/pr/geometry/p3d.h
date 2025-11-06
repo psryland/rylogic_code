@@ -2610,7 +2610,7 @@ namespace pr::geometry
 		//{
 		//	std::ofstream buf("\\dump\\test.p3d", std::ofstream::binary);
 		//	auto size = Write(buf, file, EFlags::Default);
-		//	PR_CHECK(size_t(buf.tellp()), size_t(size));
+		//	PR_EXPECT(size_t(buf.tellp()) == size_t(size));
 		//}
 
 		// Read the file from a stream and compare contents
@@ -2619,7 +2619,7 @@ namespace pr::geometry
 			std::stringstream buf(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 			{
 				auto size = Write(buf, file, EFlags::Default);
-				PR_CHECK(size_t(buf.tellp()), size_t(size));
+				PR_EXPECT(size_t(buf.tellp()) == size_t(size));
 			}
 
 			//*
@@ -2630,74 +2630,74 @@ namespace pr::geometry
 				OutputDebugStringA(ex.what());
 			}
 
-			PR_CHECK(cmp.m_version, file.m_version);
-			PR_CHECK(cmp.m_scene.m_materials.size(), file.m_scene.m_materials.size());
-			PR_CHECK(cmp.m_scene.m_meshes.size(), file.m_scene.m_meshes.size());
+			PR_EXPECT(cmp.m_version == file.m_version);
+			PR_EXPECT(cmp.m_scene.m_materials.size() == file.m_scene.m_materials.size());
+			PR_EXPECT(cmp.m_scene.m_meshes.size() == file.m_scene.m_meshes.size());
 			for (size_t i = 0; i != file.m_scene.m_materials.size(); ++i)
 			{
 				auto& m0 = cmp.m_scene.m_materials[i];
 				auto& m1 = file.m_scene.m_materials[i];
-				PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
-				PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
-				PR_CHECK(m0.m_textures.size() == m1.m_textures.size(), true);
+				PR_EXPECT(pr::str::Equal(m0.m_id.str, m1.m_id.str));
+				PR_EXPECT(m0.m_diffuse == m1.m_diffuse);
+				PR_EXPECT(m0.m_textures.size() == m1.m_textures.size());
 				for (size_t j = 0; j != m1.m_textures.size(); ++j)
 				{
 					auto& t0 = m0.m_textures[j];
 					auto& t1 = m1.m_textures[j];
-					PR_CHECK(t0.m_filepath, t1.m_filepath);
-					PR_CHECK(t0.m_type, t1.m_type);
-					PR_CHECK(t0.m_addr_mode, t1.m_addr_mode);
-					PR_CHECK(t0.m_flags, t1.m_flags);
+					PR_EXPECT(t0.m_filepath == t1.m_filepath);
+					PR_EXPECT(t0.m_type == t1.m_type);
+					PR_EXPECT(t0.m_addr_mode == t1.m_addr_mode);
+					PR_EXPECT(t0.m_flags == t1.m_flags);
 				}
 			}
 			for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
 			{
 				auto& m0 = cmp.m_scene.m_meshes[i];
 				auto& m1 = file.m_scene.m_meshes[i];
-				PR_CHECK(m0.m_name, m1.m_name);
-				PR_CHECK(m0.m_vert.size(), m1.m_vert.size());
-				PR_CHECK(m0.m_diff.size(), m1.m_diff.size());
-				PR_CHECK(m0.m_norm.size(), m1.m_norm.size());
-				PR_CHECK(m0.m_tex0.size(), m1.m_tex0.size());
-				PR_CHECK(m0.m_nugget.size(), m1.m_nugget.size());
+				PR_EXPECT(m0.m_name == m1.m_name);
+				PR_EXPECT(m0.m_vert.size() == m1.m_vert.size());
+				PR_EXPECT(m0.m_diff.size() == m1.m_diff.size());
+				PR_EXPECT(m0.m_norm.size() == m1.m_norm.size());
+				PR_EXPECT(m0.m_tex0.size() == m1.m_tex0.size());
+				PR_EXPECT(m0.m_nugget.size() == m1.m_nugget.size());
 				for (int j = 0; j != (int)m1.m_vert.size(); ++j)
 				{
 					auto& v0 = m0.m_vert[j];
 					auto& v1 = m1.m_vert[j];
-					PR_CHECK(v0 == v1, true);
+					PR_EXPECT(v0 == v1);
 				}
 				for (int j = 0; j != (int)m1.m_diff.size(); ++j)
 				{
 					auto& c0 = m0.m_diff[j];
 					auto& c1 = m1.m_diff[j];
-					PR_CHECK(c0 == c1, true);
+					PR_EXPECT(c0 == c1);
 				}
 				for (int j = 0; j != (int)m1.m_norm.size(); ++j)
 				{
 					auto& n0 = m0.m_norm[j];
 					auto& n1 = m1.m_norm[j];
-					PR_CHECK(n0 == n1, true);
+					PR_EXPECT(n0 == n1);
 				}
 				for (int j = 0; j != (int)m1.m_tex0.size(); ++j)
 				{
 					auto& t0 = m0.m_tex0[j];
 					auto& t1 = m1.m_tex0[j];
-					PR_CHECK(t0 == t1, true);
+					PR_EXPECT(t0 == t1);
 				}
 				for (int j = 0; j != (int)m1.m_nugget.size(); ++j)
 				{
 					auto& n0 = m0.m_nugget[j];
 					auto& n1 = m1.m_nugget[j];
-					PR_CHECK(n0.m_topo == n1.m_topo, true);
-					PR_CHECK(n0.m_geom == n1.m_geom, true);
-					PR_CHECK(n0.m_mat == n1.m_mat, true);
-					PR_CHECK(n0.m_vidx.size() == n1.m_vidx.size(), true);
-					PR_CHECK(n0.m_vidx.stride() == n1.m_vidx.stride(), true);
+					PR_EXPECT(n0.m_topo == n1.m_topo);
+					PR_EXPECT(n0.m_geom == n1.m_geom);
+					PR_EXPECT(n0.m_mat == n1.m_mat);
+					PR_EXPECT(n0.m_vidx.size() == n1.m_vidx.size());
+					PR_EXPECT(n0.m_vidx.stride() == n1.m_vidx.stride());
 					for (int k = 0, kend = s_cast<int>(n1.icount()); k != kend; ++k)
 					{
 						auto i0 = n0.m_vidx[k];
 						auto i1 = n1.m_vidx[k];
-						PR_CHECK(i0 == i1, true);
+						PR_EXPECT(i0 == i1);
 					}
 				}
 			}
@@ -2736,11 +2736,11 @@ namespace pr::geometry
 			for (auto const& v : mesh.fat_verts())
 				fat.push_back(v);
 
-			PR_CHECK(fat[0].m_vert, v4{-1, -1, 0, 1});
-			PR_CHECK(fat[1].m_diff, Colour(Colour32Green));
-			PR_CHECK(fat[2].m_norm, v4{0, 0, 1, 0});
-			PR_CHECK(fat[1].m_tex0, v2{0.5f, 0.0f});
-			PR_CHECK(fat[2].pad, v2{0.0f, 0.0f});
+			PR_EXPECT(fat[0].m_vert == v4(-1, -1, 0, 1));
+			PR_EXPECT(fat[1].m_diff == Colour(Colour32Green));
+			PR_EXPECT(fat[2].m_norm == v4(0, 0, 1, 0));
+			PR_EXPECT(fat[1].m_tex0 == v2(0.5f, 0.0f));
+			PR_EXPECT(fat[2].pad == v2(0.0f, 0.0f));
 		}
 		//std::ifstream ifile("\\dump\\test2.3ds", std::ifstream::binary);
 		//Read3DSMaterials(ifile, [](max_3ds::Material&&){});

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Value smart pointer
 //  Copyright (c) Rylogic Ltd 2020
 //*********************************************
@@ -216,7 +216,7 @@ namespace pr::common
 		auto range = stride_range<byte_t>(arr, offsetof(Thing, m_byte));
 		for (auto x : range)
 		{
-			PR_CHECK(x == i, true);
+			PR_EXPECT(x == i);
 			++i;
 		}
 	}

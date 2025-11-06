@@ -146,12 +146,12 @@ namespace pr::common
 		{
 			auto t = seconds(1234);
 			auto s = pr::To<std::string>(t, "%S seconds");
-			PR_CHECK(s, "1234 seconds");
+			PR_EXPECT(s == "1234 seconds");
 		}
 		{
 			auto t = hours(1) + minutes(23) + seconds(45) + milliseconds(67);
 			auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
-			PR_CHECK(s, "01:23:45.067");
+			PR_EXPECT(s == "01:23:45.067");
 		}
 	}
 }
@@ -665,12 +665,12 @@ namespace pr::common
 		{
 			auto t = seconds(1234);
 			auto s = pr::To<std::string>(t, "%S seconds");
-			PR_CHECK(s, "1234 seconds");
+			PR_EXPECT(s == "1234 seconds");
 		}
 		{
 			auto t = hours(1) + minutes(23) + seconds(45) + milliseconds(67);
 			auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
-			PR_CHECK(s, "01:23:45.067");
+			PR_EXPECT(s == "01:23:45.067");
 		}
 
 		{// Testing DateTime
@@ -682,29 +682,29 @@ namespace pr::common
 			auto ofs1 = dt2 - dt1;
 			auto ofs1_seconds = ofs1.To<seconds>().count();
 			auto ofs_hours = duration_cast<hours>(dt2.m_offset - dt1.m_offset).count();
-			PR_CHECK(ofs1_seconds == 0, true); // Both times should represent the same moment in time
-			PR_CHECK(ofs_hours == tz_hours, true);
+			PR_EXPECT(ofs1_seconds == 0); // Both times should represent the same moment in time
+			PR_EXPECT(ofs_hours == tz_hours);
 
 			auto dt3 = DateTime(1976,12,29,3,45,0,hours(12));
 			auto dt4 = DateTime(1977,12,8,10,15,0,hours(12));
 			auto ofs2 = dt4 - dt3;
-			PR_CHECK(ofs2.To<seconds>().count() == 29745000, true);
+			PR_EXPECT(ofs2.To<seconds>().count() == 29745000);
 
 			auto ts1 = TimeSpan(days(1) + seconds(5000));
-			PR_CHECK(ts1.To<minutes>().count() == 1523, true);
+			PR_EXPECT(ts1.To<minutes>().count() == 1523);
 		}
 
 		{ // unit test of chrono-Compatible Low-Level Date Algorithms
-			PR_CHECK(days_from_civil(1970, 1, 1) == 0, true);                    // 1970-01-01 is day 0
-			PR_CHECK(civil_from_days(0) == std::make_tuple(1970, 1, 1), true);   // 1970-01-01 is day 0
-			PR_CHECK(weekday_from_days(days_from_civil(1970, 1, 1)) == 4, true); // 1970-01-01 is a Thursday
+			PR_EXPECT(days_from_civil(1970, 1, 1) == 0);                    // 1970-01-01 is day 0
+			PR_EXPECT(civil_from_days(0) == std::make_tuple(1970, 1, 1));   // 1970-01-01 is day 0
+			PR_EXPECT(weekday_from_days(days_from_civil(1970, 1, 1)) == 4); // 1970-01-01 is a Thursday
 
 			auto ystart = -10;// for speed instead of -1000000;
 			auto prev_z = days_from_civil(ystart, 1, 1) - 1;
-			PR_CHECK(prev_z < 0, true);
+			PR_EXPECT(prev_z < 0);
 				
 			auto prev_wd = weekday_from_days(prev_z);
-			PR_CHECK(0 <= prev_wd && prev_wd <= 6, true);
+			PR_EXPECT(0 <= prev_wd && prev_wd <= 6);
 
 			for (auto y = ystart; y <= -ystart; ++y)
 			{
@@ -714,26 +714,26 @@ namespace pr::common
 					for (auto d = 1; d <= e; ++d)
 					{
 						int z = days_from_civil(y, m, d);
-						PR_CHECK(prev_z < z, true);
-						PR_CHECK(z == prev_z+1, true);
+						PR_EXPECT(prev_z < z);
+						PR_EXPECT(z == prev_z+1);
 
 						int yp; int mp, dp;
 						std::tie(yp, mp, dp) = civil_from_days(z);
-						PR_CHECK(y == yp, true);
-						PR_CHECK(m == mp, true);
-						PR_CHECK(d == dp, true);
+						PR_EXPECT(y == yp);
+						PR_EXPECT(m == mp);
+						PR_EXPECT(d == dp);
 
 						auto wd = weekday_from_days(z);
-						PR_CHECK(0 <= wd && wd <= 6, true);
-						PR_CHECK(wd == next_weekday(prev_wd), true);
-						PR_CHECK(prev_wd == prev_weekday(wd), true);
+						PR_EXPECT(0 <= wd && wd <= 6);
+						PR_EXPECT(wd == next_weekday(prev_wd));
+						PR_EXPECT(prev_wd == prev_weekday(wd));
 						prev_z = z;
 						prev_wd = wd;
 					}
 				}
 			}
 			auto count_days = days_from_civil(1000000, 12, 31) - days_from_civil(-1000000, 1, 1);
-			PR_CHECK(count_days, 730485365);
+			PR_EXPECT(count_days == 730485365);
 		}
 		{// Example of using the datetime functions to avoid C time interfaces
 			long long year; unsigned month; unsigned day;

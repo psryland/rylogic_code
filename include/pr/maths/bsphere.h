@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -328,8 +328,8 @@ namespace pr::maths
 		for (auto& p : pt)
 			Grow(bsph, p);
 
-		PR_CHECK(FEql(bsph.Centre(), v4(0.5f, 0.5f, 0.5f, 1)), true);
-		PR_CHECK(FEql(bsph.Radius(), 0.8660254f), true);
+		PR_EXPECT(FEql(bsph.Centre(), v4(0.5f, 0.5f, 0.5f, 1)));
+		PR_EXPECT(FEql(bsph.Radius(), 0.8660254f));
 	}
 }
 #endif

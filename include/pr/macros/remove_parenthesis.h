@@ -1,4 +1,4 @@
-//*************************************
+﻿//*************************************
 // Remove parenthesis from macro parameters
 // Copyright (c) Rylogic Ltd 2014
 //*************************************
@@ -18,29 +18,32 @@
 #include "pr/common/unittests.h"
 namespace pr::macros
 {
-	struct Thing1
+	PRUnitTestClass(RemoveParensTest)
 	{
-		int val;
-		Thing1() { val = 45; }
-	};
-	template <typename A, typename B> struct Thing2
-	{
-		A a;
-		B b;
-	};
+		struct Thing1
+		{
+			int val;
+			Thing1() { val = 45; }
+		};
+		template <typename A, typename B> struct Thing2
+		{
+			A a;
+			B b;
+		};
 
-	PRUnitTest(RemoveParensTest)
-	{
 		#define DECLARE_VAR(type, name, init) PR_REMOVE_PARENS(type) name PR_REMOVE_PARENS(init)
 		DECLARE_VAR(float, pi, = 3.14f);
 		DECLARE_VAR(Thing1, t1, );
 		DECLARE_VAR((Thing2<int, float>), t2, (= { 10, 5.99f }));
 		#undef DECLARE_VAR
 
-		PR_CHECK(pi, 3.14f);
-		PR_CHECK(t1.val, 45);
-		PR_CHECK(t2.a, 10);
-		PR_CHECK(t2.b, 5.99f);
-	}
+		PRUnitTestMethod(General)
+		{
+			PR_EXPECT(pi == 3.14f);
+			PR_EXPECT(t1.val == 45);
+			PR_EXPECT(t2.a == 10);
+			PR_EXPECT(t2.b == 5.99f);
+		}
+	};
 }
 #endif

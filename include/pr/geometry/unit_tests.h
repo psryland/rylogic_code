@@ -23,10 +23,10 @@ namespace pr::geometry
 				v4(+2.0f, +0.5f, 0.0f, 1.0f),
 				v4(-0.5f, +2.0f, 0.0f, 1.0f),
 			};
-			PR_CHECK(PointWithinConvexPolygon(v4Origin, poly, _countof(poly)), true);
-			PR_CHECK(PointWithinConvexPolygon(poly[0], poly, _countof(poly)), false);
-			PR_CHECK(PointWithinConvexPolygon(v4(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)), false);
-			PR_CHECK(PointWithinConvexPolygon(v4(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)), true);
+			PR_EXPECT(PointWithinConvexPolygon(v4Origin, poly, _countof(poly)));
+			PR_EXPECT(!PointWithinConvexPolygon(poly[0], poly, _countof(poly)));
+			PR_EXPECT(!PointWithinConvexPolygon(v4(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)));
+			PR_EXPECT(PointWithinConvexPolygon(v4(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)));
 		}
 	}
 	PRUnitTest(DistanceTests)
@@ -35,10 +35,10 @@ namespace pr::geometry
 			auto s = pr::v4(1.0f, 1.0f, 0.0f, 1.0f);
 			auto e = pr::v4(3.0f, 2.0f, 0.0f, 1.0f);
 			auto a = pr::v4(2.0f, 1.0f, 0.0f, 1.0f);
-			PR_CHECK(FEql(DistanceSq_PointToLineSegment(s, s, e), 0.0f), true);
-			PR_CHECK(FEql(DistanceSq_PointToLineSegment(e, s, e), 0.0f), true);
-			PR_CHECK(FEql(DistanceSq_PointToLineSegment((s+e)*0.5f, s, e), 0.0f), true);
-			PR_CHECK(FEql(DistanceSq_PointToLineSegment(a, s, e), Sqr(sin(atan(0.5f)))), true);
+			PR_EXPECT(FEql(DistanceSq_PointToLineSegment(s, s, e), 0.0f));
+			PR_EXPECT(FEql(DistanceSq_PointToLineSegment(e, s, e), 0.0f));
+			PR_EXPECT(FEql(DistanceSq_PointToLineSegment((s+e)*0.5f, s, e), 0.0f));
+			PR_EXPECT(FEql(DistanceSq_PointToLineSegment(a, s, e), Sqr(sin(atan(0.5f)))));
 		}
 	}
 	PRUnitTest(ClosestPointTests)

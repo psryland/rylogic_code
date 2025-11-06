@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -137,7 +137,7 @@ namespace pr::maths
 			static_assert(sizeof(h0) == sizeof(half_t));
 
 			auto h1 = F32toF16(1.2345f);
-			PR_CHECK(h0, h1);
+			PR_EXPECT(h0 == h1);
 		}
 
 		// Scalar
@@ -145,55 +145,55 @@ namespace pr::maths
 			auto x0 = 0.0f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x0, x2);
+			PR_EXPECT(x0 == x2);
 		}
 		{
 			auto x0 = 6.28318530f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEqlRelative(x0, x2, 0.005f), true);
+			PR_EXPECT(FEqlRelative(x0, x2, 0.005f));
 		}
 		{
 			auto x0 = -1.0f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEqlRelative(x0, x2, 0.005f), true);
+			PR_EXPECT(FEqlRelative(x0, x2, 0.005f));
 		}
 		{
 			auto x0 = -4000.0f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEqlRelative(x0, x2, 0.005f), true);
+			PR_EXPECT(FEqlRelative(x0, x2, 0.005f));
 		}
 		{
 			auto x0 = 200.0f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEqlRelative(x0, x2, 0.005f), true);
+			PR_EXPECT(FEqlRelative(x0, x2, 0.005f));
 		}
 		{
 			auto x0 = -4.125e-6f;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEqlRelative(x0, x2, 0.005f), true);
+			PR_EXPECT(FEqlRelative(x0, x2, 0.005f));
 		}
 		{
 			auto x0 = maths::float_inf;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x0, x2);
+			PR_EXPECT(x0 == x2);
 		}
 		{
 			auto x0 = -maths::float_inf;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x0, x2);
+			PR_EXPECT(x0 == x2);
 		}
 		{
 			auto x0 = maths::float_nan;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x0, x2);
+			PR_EXPECT((x0 == x2) == false);
 		}
 
 		// Half4
@@ -201,19 +201,19 @@ namespace pr::maths
 			auto x0 = v4Zero;
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x2, x0);
+			PR_EXPECT(x2 == x0);
 		}
 		{
 			auto x0 = v4{1,2,3,4};
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(x2, x0);
+			PR_EXPECT(x2 == x0);
 		}
 		{
 			auto x0 = v4{-4000.0f, -200.0f, 0.003f, -4.125e-6f};
 			auto x1 = F32toF16(x0);
 			auto x2 = F16toF32(x1);
-			PR_CHECK(FEql(x2, x0), true);
+			PR_EXPECT(FEql(x2, x0));
 		}
 	}
 }

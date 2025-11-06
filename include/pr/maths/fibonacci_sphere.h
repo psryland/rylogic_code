@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -123,7 +123,7 @@ namespace pr::maths
 			{
 				auto pt = FibonacciSphericalMapping(i, N);
 				auto idx = FibonacciSphericalMapping(pt, N);
-				PR_CHECK(idx, i);
+				PR_EXPECT(idx == i);
 			}
 		}
 		{// Test random sampling
@@ -144,7 +144,7 @@ namespace pr::maths
 					max_i = i;
 				}
 			}
-			PR_CHECK(max_dist < 0.02f, true);
+			PR_EXPECT(max_dist < 0.02f);
 		}
 	}
 }

@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Progress Dialog
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
@@ -453,7 +453,7 @@ namespace pr
 				}, arg);
 
 			auto r = dlg.ShowDialog(nullptr);
-			PR_CHECK(r == pr::gui::EDialogResult::Ok || r == pr::gui::EDialogResult::Cancel, true);
+			PR_EXPECT(r == pr::gui::EDialogResult::Ok || r == pr::gui::EDialogResult::Cancel);
 		}
 	}
 }

@@ -559,7 +559,7 @@ namespace pr::rdr12::ldraw
 
 		#if 1
 		{
-			std::ofstream ofile(temp_dir / "ldraw_test.lbr", std::ios::binary);
+			std::ofstream ofile(temp_dir() / "ldraw_test.lbr", std::ios::binary);
 			ofile.write(data.data(), data.size());
 		}
 		#endif

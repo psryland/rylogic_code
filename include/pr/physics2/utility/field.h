@@ -302,7 +302,7 @@ namespace pr::physics
 		}
 
 		auto v0 = field.get(v2(5, 5));
-		PR_CHECK(v0 == v2::Zero(), true);
+		PR_EXPECT(v0 == v2::Zero());
 		//*/
 	}
 }

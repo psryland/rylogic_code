@@ -120,21 +120,21 @@ namespace pr::common
 				[&]{ flag = true;  },
 				[&]{ flag = false; });
 
-			PR_CHECK(flag, true);
+			PR_EXPECT(flag);
 		}
-		PR_CHECK(flag, false);
+		PR_EXPECT(!flag);
 
 		int value = 1;
 		{
 			auto s = Scope<int>(
 				[=]{ return value; },
 				[&](int i){ value = i; });
-			PR_CHECK(s.m_state, 1);
+			PR_EXPECT(s.m_state == 1);
 
 			++value;
-			PR_CHECK(value, 2);
+			PR_EXPECT(value == 2);
 		}
-		PR_CHECK(value, 1);
+		PR_EXPECT(value == 1);
 	}
 }
 #endif

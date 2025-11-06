@@ -569,7 +569,7 @@ namespace pr
 #include "pr/common/static_callback.h"
 namespace pr::common
 {
-	namespace unittests::multicast
+	PRUnitTestClass(EventHandlerTests)
 	{
 		struct Thing
 		{
@@ -578,7 +578,7 @@ namespace pr::common
 			Thing() :m_count() {}
 			Thing(Thing const&) = delete;
 			Thing& operator=(Thing const&) = delete;
-				
+
 			void Call1() { Event1(*this, EmptyArgs{}); }
 			EventHandler<Thing&, EmptyArgs const&> Event1;
 
@@ -615,34 +615,31 @@ namespace pr::common
 				++thg.m_count;
 			}
 		};
-	}
-	PRUnitTest(EventHandlerTests)
-	{
-		using namespace unittests::multicast;
 
-		{// Event Hander tests
+		PRUnitTestMethod(EventHander)
+		{
 			{// lambda handler
 				Thing thg;
 				int count = 0;
 
 				auto sub = thg.Event1 += [&](Thing&, EmptyArgs const&) { ++count; };
 				thg.Call1();
-				PR_CHECK(count, 1);
+				PR_EXPECT(count == 1);
 				thg.Event1 -= sub;
 				thg.Call1();
-				PR_CHECK(count, 1);
+				PR_EXPECT(count == 1);
 			}
 			{// static function handler
 				Thing thg;
 				struct L { static void Handler(Thing& thing, EmptyArgs const&) { ++thing.m_count; }; };
 				thg.Event1 += &L::Handler;
 
-				PR_CHECK(thg.m_count, 0);
+				PR_EXPECT(thg.m_count == 0);
 				thg.Call1();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 				thg.Event1 -= &L::Handler;
 				thg.Call1();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 			}
 			{// Class member handler
 				Thing thg;
@@ -652,28 +649,28 @@ namespace pr::common
 				auto sub = thg.Event1 += std::bind(&Observer::Handler, &obs, _1, _2);
 
 				thg.Call1();
-				PR_CHECK(thg.m_count, 2);
-				PR_CHECK(obs.m_count, 1);
+				PR_EXPECT(thg.m_count == 2);
+				PR_EXPECT(obs.m_count == 1);
 				thg.Event1 -= &Thing::Handler;
 				thg.Event1 -= sub;
 				thg.Call1();
-				PR_CHECK(thg.m_count, 2);
-				PR_CHECK(obs.m_count, 1);
+				PR_EXPECT(thg.m_count == 2);
+				PR_EXPECT(obs.m_count == 1);
 			}
 			{ // pr::StaticCB
 				Thing thg;
 				struct L { static void __stdcall Handler(void* ctx, Thing&, EmptyArgs const&) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Event1 += StaticCB{&count, &L::Handler};
+				thg.Event1 += StaticCB{ &count, &L::Handler };
 				thg.Call1();
-				PR_CHECK(count, 1);
-				thg.Event1 -= StaticCB{&other, &L::Handler}; // should not remove anything because ctx is different
+				PR_EXPECT(count == 1);
+				thg.Event1 -= StaticCB{ &other, &L::Handler }; // should not remove anything because ctx is different
 				thg.Call1();
-				PR_CHECK(count, 2);
-				thg.Event1 -= StaticCB{&count, &L::Handler}; // should remove the callback
+				PR_EXPECT(count == 2);
+				thg.Event1 -= StaticCB{ &count, &L::Handler }; // should remove the callback
 				thg.Call1();
-				PR_CHECK(count, 2);
+				PR_EXPECT(count == 2);
 			}
 			{// static function handler using std::bind
 				Thing thg;
@@ -681,12 +678,12 @@ namespace pr::common
 				{
 					AutoSub sub = thg.Event1 += std::bind(Handler, nullptr, _1, _2);
 					thg.Call1();
-					PR_CHECK(thg.m_count, 1);
+					PR_EXPECT(thg.m_count == 1);
 				}
 				thg.Call1();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 			}
-			{// Multiple handers
+			{// Multiple handlers
 				Thing thg;
 				auto& count = thg.m_count;
 
@@ -698,36 +695,36 @@ namespace pr::common
 				auto sub2 = thg.Event1 += std::bind(Lambda, _1, _2, &count);
 
 				thg.Call1();
-				PR_CHECK(count, 3);
+				PR_EXPECT(count == 3);
 				thg.Event1 -= &L::Handler;
 				thg.Call1();
-				PR_CHECK(count, 5);
+				PR_EXPECT(count == 5);
 				thg.Event1 -= sub0;
 				thg.Call1();
-				PR_CHECK(count, 6);
+				PR_EXPECT(count == 6);
 				thg.Event1 -= sub2;
 				thg.Call1();
-				PR_CHECK(count, 6);
+				PR_EXPECT(count == 6);
 			}
-			{// thread safety
+			{ // Thread safety
 				Thing thg;
 				std::atomic_int c0 = 0, c1 = 0;
 				auto t0 = std::thread([&]
+				{
+					for (; c0 == 0;)
 					{
-						for (; c0 == 0;)
-						{
-							AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c0; };
-							std::this_thread::yield();
-						}
-					});
+						AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c0; };
+						std::this_thread::yield();
+					}
+				});
 				auto t1 = std::thread([&]
+				{
+					for (; c1 == 0;)
 					{
-						for (; c1 == 0;)
-						{
-							AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c1; };
-							std::this_thread::yield();
-						}
-					});
+						AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c1; };
+						std::this_thread::yield();
+					}
+				});
 
 				int c2 = 0;
 				{
@@ -736,41 +733,42 @@ namespace pr::common
 					{
 						thg.Call2();
 						std::this_thread::yield();
-						PR_CHECK(i < 100000, true);
+						PR_EXPECT(i < 100000);
 					}
 				}
 
 				t0.join();
 				t1.join();
 
-				PR_CHECK(thg.m_count, c2);
-				PR_CHECK(c0 > 0 && c0 <= thg.m_count, true);
-				PR_CHECK(c1 > 0 && c1 <= thg.m_count, true);
+				PR_EXPECT(thg.m_count == c2);
+				PR_EXPECT(c0 > 0 && c0 <= thg.m_count);
+				PR_EXPECT(c1 > 0 && c1 <= thg.m_count);
 			}
 		}
-		{// MultiCast tests
+		PRUnitTestMethod(MultiCast)
+		{
 			{// lambda handler
 				Thing thg;
 				int count = 0;
 
 				auto sub = thg.Action1 += [&](int* c) { *c = ++count; };
 				thg.Call3();
-				PR_CHECK(count, 1);
+				PR_EXPECT(count == 1);
 				thg.Action1 -= sub;
 				thg.Call3();
-				PR_CHECK(count, 1);
+				PR_EXPECT(count == 1);
 			}
 			{// static function handler
 				Thing thg;
 				struct L { static void __stdcall Handler(int* count) { ++(*count); }; };
 				auto sub = thg.Action1 += &L::Handler;
 
-				PR_CHECK(thg.m_count, 0);
+				PR_EXPECT(thg.m_count == 0);
 				thg.Call3();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 				thg.Action1 -= sub;// &L::Handler;
 				thg.Call3();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 			}
 			{ // pr::StaticCB
 				Thing thg;
@@ -779,13 +777,13 @@ namespace pr::common
 
 				thg.Action3 += StaticCB{ &count, &L::Handler};
 				thg.Call5();
-				PR_CHECK(count, 1);
+				PR_EXPECT(count == 1);
 				thg.Action3 -= StaticCB{ &other, &L::Handler }; // should not remove anything because ctx is different
 				thg.Call5();
-				PR_CHECK(count, 2);
+				PR_EXPECT(count == 2);
 				thg.Action3 -= StaticCB{ &count, &L::Handler}; // should remove the callback
 				thg.Call5();
-				PR_CHECK(count, 2);
+				PR_EXPECT(count == 2);
 			}
 			{// static function handler using std::bind
 				Thing thg;
@@ -793,10 +791,10 @@ namespace pr::common
 				{
 					AutoSub sub = thg.Action1 += std::bind(Handler, nullptr, _1);
 					thg.Call3();
-					PR_CHECK(thg.m_count, 1);
+					PR_EXPECT(thg.m_count == 1);
 				}
 				thg.Call3();
-				PR_CHECK(thg.m_count, 1);
+				PR_EXPECT(thg.m_count == 1);
 			}
 			{// Multiple handers
 				Thing thg;
@@ -810,16 +808,16 @@ namespace pr::common
 				auto sub2 = thg.Action1 += std::bind(Lambda, nullptr, _1);
 
 				thg.Call3();
-				PR_CHECK(count, 3);
+				PR_EXPECT(count == 3);
 				thg.Action1 -= sub1;// &L::Handler;
 				thg.Call3();
-				PR_CHECK(count, 5);
+				PR_EXPECT(count == 5);
 				thg.Action1 -= sub0;
 				thg.Call3();
-				PR_CHECK(count, 6);
+				PR_EXPECT(count == 6);
 				thg.Action1 -= sub2;
 				thg.Call3();
-				PR_CHECK(count, 6);
+				PR_EXPECT(count == 6);
 			}
 			{// thread safety
 				Thing thg;
@@ -848,18 +846,18 @@ namespace pr::common
 					{
 						thg.Call4();
 						std::this_thread::yield();
-						PR_CHECK(i < 100000, true);
+						PR_EXPECT(i < 100000);
 					}
 				}
 
 				t0.join();
 				t1.join();
 
-				PR_CHECK(thg.m_count, c2);
-				PR_CHECK(c0 > 0 && c0 <= thg.m_count, true);
-				PR_CHECK(c1 > 0 && c1 <= thg.m_count, true);
+				PR_EXPECT(thg.m_count == c2);
+				PR_EXPECT(c0 > 0 && c0 <= thg.m_count);
+				PR_EXPECT(c1 > 0 && c1 <= thg.m_count);
 			}
 		}
-	}
+	};
 }
 #endif

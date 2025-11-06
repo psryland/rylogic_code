@@ -458,13 +458,13 @@ namespace pr::onebit
 			{
 				return (lhs.Block(b, x) & word & mask) != 0;
 			});
-			PR_CHECK(hit, true);
+			PR_EXPECT(hit);
 
 			hit = Combine(s0, s1, 10, 8, [](auto& lhs, auto&, int b, int x, auto word, auto mask)
 			{
 				return (lhs.Block(b, x) & word & mask) != 0;
 			});
-			PR_CHECK(hit, false);
+			PR_EXPECT(!hit);
 		}
 	}
 }

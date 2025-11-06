@@ -566,8 +566,8 @@ namespace pr::maths
 				}
 			}
 
-			PR_CHECK(max_err0 < -10, true);
-			PR_CHECK(max_err1 < -10, true);
+			PR_EXPECT(max_err0 < -10);
+			PR_EXPECT(max_err1 < -10);
 		}
 		// Test Convolution
 		{
@@ -593,7 +593,7 @@ namespace pr::maths
 				}
 			}
 
-			PR_CHECK(max_err < -10, true);
+			PR_EXPECT(max_err < -10);
 		}
 		// Other
 		#if 1

@@ -470,12 +470,12 @@ namespace pr::geometry
 			switch (i)
 			{
 				case 0:
-					PR_CHECK(vout.size(), 4U);
-					PR_CHECK(iout.size(), 6U);
+					PR_EXPECT(vout.size() == 4U);
+					PR_EXPECT(iout.size() == 6U);
 					break;
 				case 1:
-					PR_CHECK(vout.size(), 6U);
-					PR_CHECK(iout.size(), 6U);
+					PR_EXPECT(vout.size() == 6U);
+					PR_EXPECT(iout.size() == 6U);
 					break;
 			}
 		}

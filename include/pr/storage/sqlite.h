@@ -1601,13 +1601,13 @@ namespace pr::sqlite
 #include "pr/common/guid.h"
 namespace pr::sqlite
 {
-	namespace unittests::sqlite
+	PRUnitTestClass(SqliteTests)
 	{
-		typedef unsigned char byte;
-		typedef unsigned short ushort;
-		typedef unsigned int uint32_t;
-		typedef unsigned __int64 uint64;
-		typedef std::vector<byte> buffer;
+		using byte = unsigned char;
+		using ushort = unsigned short;
+		using uint32_t = unsigned int;
+		using uint64 = unsigned __int64;
+		using buffer = std::vector<byte>;
 
 		enum class Enum { One, Two, Three };
 
@@ -1615,23 +1615,22 @@ namespace pr::sqlite
 		{
 			DB() :pr::sqlite::Database(L":memory:") {}
 		};
-		inline void SqliteLog(void*, int code, char const* msg)
+
+		// Set the log function
+		TestClass_SqliteTests()
+		{
+			Configure((int)EConfig::Log, &SqliteLog, 0);
+			sqlite3_log(-1, "%s", "test");
+		}
+		static void SqliteLog(void*, int code, char const* msg)
 		{
 			(void)code;
 			(void)msg;
 			//std::cout << "[Sqlite] " << code << " - " << msg << "\n";
 		}
-	}
-	PRUnitTest(SqliteTests)
-	{
-		using namespace unittests::sqlite;
 
-		// Set the log function
-		pr::sqlite::Configure((int)EConfig::Log, SqliteLog, 0);
-		sqlite3_log(-1, "%s", "test");
-
-
-		{//SimpleTypeStorage
+		PRUnitTestMethod(SimpleTypeStorage)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -1699,8 +1698,8 @@ namespace pr::sqlite
 
 			DB db;
 			db.DropTable<Record>();
-			PR_CHECK(db.CreateTable<Record>(), SQLITE_OK);
-			PR_CHECK(db.TableExists<Record>(), true);
+			PR_EXPECT(db.CreateTable<Record>() == SQLITE_OK);
+			PR_EXPECT(db.TableExists<Record>());
 			auto table = db.Table<Record>();
 
 			Record r;
@@ -1722,42 +1721,43 @@ namespace pr::sqlite
 			r.m_string      = "Paul Was Here";
 			r.m_buf;        for (int i = 0; i != 10; ++i) r.m_buf.push_back(byte(i));
 			r.m_empty_buf   .clear();
-			PR_CHECK(table.Insert(r, r.m_key), 1);
+			PR_EXPECT(table.Insert(r, r.m_key) == 1);
 
 			Record R = table.Get(PKs(r.m_key));
-			PR_CHECK(R.m_key    ,r.m_key    );
-			PR_CHECK(R.m_bool   ,r.m_bool   );
-			PR_CHECK(R.m_char   ,r.m_char   );
-			PR_CHECK(R.m_byte   ,r.m_byte   );
-			PR_CHECK(R.m_short  ,r.m_short  );
-			PR_CHECK(R.m_ushort ,r.m_ushort );
-			PR_CHECK(R.m_int    ,r.m_int    );
-			PR_CHECK(R.m_uint   ,r.m_uint   );
-			PR_CHECK(R.m_int64  ,r.m_int64  );
-			PR_CHECK(R.m_uint64 ,r.m_uint64 );
-			PR_CHECK(R.m_float  ,r.m_float  );
-			PR_CHECK(R.m_double ,r.m_double );
-			for (int i = 0; i != 10; ++i) PR_CHECK(R.m_char_array[i] , r.m_char_array[i]);
-			for (int i = 0; i != 10; ++i) PR_CHECK(R.m_int_array[i]  , r.m_int_array[i] );
-			PR_CHECK(R.m_enum == r.m_enum, true);
-			PR_CHECK(R.m_string == r.m_string, true);
-			PR_CHECK(R.m_buf.size() , r.m_buf.size());
-			for (size_t i = 0; i != r.m_buf.size() && i != R.m_buf.size(); ++i) PR_CHECK(R.m_buf[i], r.m_buf[i]);
-			PR_CHECK(R.m_empty_buf.size(), 0U);
+			PR_EXPECT(R.m_key    == r.m_key    );
+			PR_EXPECT(R.m_bool   == r.m_bool   );
+			PR_EXPECT(R.m_char   == r.m_char   );
+			PR_EXPECT(R.m_byte   == r.m_byte   );
+			PR_EXPECT(R.m_short  == r.m_short  );
+			PR_EXPECT(R.m_ushort == r.m_ushort );
+			PR_EXPECT(R.m_int    == r.m_int    );
+			PR_EXPECT(R.m_uint   == r.m_uint   );
+			PR_EXPECT(R.m_int64  == r.m_int64  );
+			PR_EXPECT(R.m_uint64 == r.m_uint64 );
+			PR_EXPECT(R.m_float  == r.m_float  );
+			PR_EXPECT(R.m_double == r.m_double );
+			for (int i = 0; i != 10; ++i) PR_EXPECT(R.m_char_array[i] == r.m_char_array[i]);
+			for (int i = 0; i != 10; ++i) PR_EXPECT(R.m_int_array[i]  == r.m_int_array[i] );
+			PR_EXPECT(R.m_enum == r.m_enum);
+			PR_EXPECT(R.m_string == r.m_string);
+			PR_EXPECT(R.m_buf.size() == r.m_buf.size());
+			for (size_t i = 0; i != r.m_buf.size() && i != R.m_buf.size(); ++i) PR_EXPECT(R.m_buf[i] == r.m_buf[i]);
+			PR_EXPECT(R.m_empty_buf.size() == 0U);
 
 			int key = r.m_key;
 			r.m_string = "Modified string";
 			r.m_empty_buf.push_back(42);
-			PR_CHECK(table.Update(r), 1);
-			PR_CHECK(r.m_key, key);
+			PR_EXPECT(table.Update(r) == 1);
+			PR_EXPECT(r.m_key == key);
 
 			R = table.Get(PKs(r.m_key));
-			PR_CHECK(R.m_string, r.m_string);
-			PR_CHECK(R.m_empty_buf.size(), r.m_empty_buf.size());
+			PR_EXPECT(R.m_string == r.m_string);
+			PR_EXPECT(R.m_empty_buf.size() == r.m_empty_buf.size());
 			for (size_t i = 0; i != r.m_empty_buf.size() && i != R.m_empty_buf.size(); ++i)
-				PR_CHECK(R.m_empty_buf[i], r.m_empty_buf[i]);
+				PR_EXPECT(R.m_empty_buf[i] == r.m_empty_buf[i]);
 		}
-		{//Insert
+		PRUnitTestMethod(Insert)
+		{
 			struct Record
 			{
 				int  m_key;
@@ -1778,21 +1778,22 @@ namespace pr::sqlite
 			db.CreateTable<Record>();
 			auto table = db.Table<Record>();
 
-			PR_CHECK(table.Insert(Record(1, 'a')), 1);
-			PR_CHECK(table.Insert(Record(2, 'b')), 1);
+			PR_EXPECT(table.Insert(Record(1, 'a')) == 1);
+			PR_EXPECT(table.Insert(Record(2, 'b')) == 1);
 
 			try { table.Insert(Record(1, 'c'), EOnConstraint::Reject); }
-			catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_CONSTRAINT); }
+			catch (pr::sqlite::Exception const& ex) { PR_EXPECT(ex.code() == SQLITE_CONSTRAINT); }
 
 			// Ignore, should ignore constraints violations
-			PR_CHECK(table.Insert(Record(1, 'd'), EOnConstraint::Ignore), 0);
-			PR_CHECK(table.Get(PKs(1)).m_char, 'a');
+			PR_EXPECT(table.Insert(Record(1, 'd'), EOnConstraint::Ignore) == 0);
+			PR_EXPECT(table.Get(PKs(1)).m_char == 'a');
 
 			// Replace, should replace on constraint violation
-			PR_CHECK(table.Insert(Record(1, 'e'), EOnConstraint::Replace), 1);
-			PR_CHECK(table.Get(PKs(1)).m_char, 'e');
+			PR_EXPECT(table.Insert(Record(1, 'e'), EOnConstraint::Replace) == 1);
+			PR_EXPECT(table.Get(PKs(1)).m_char == 'e');
 		}
-		{//PartialObjectUpdates
+		PRUnitTestMethod(PartialObjectUpdates)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -1802,9 +1803,9 @@ namespace pr::sqlite
 				PR_SQLITE_TABLE(Record, "")
 					PR_SQLITE_COLUMN(Key    , m_key    ,integer ,"primary key autoincrement not null")
 					PR_SQLITE_COLUMN(String , m_string ,text    ,"")
-					PR_SQLITE_TABLE_END()
+				PR_SQLITE_TABLE_END()
 
-					Record() :m_key() ,m_string() {}
+				Record() :m_key() ,m_string() {}
 				Record(char const* str) :m_key() ,m_string(str) {}
 			};
 
@@ -1813,19 +1814,20 @@ namespace pr::sqlite
 			db.CreateTable<Record>();
 			auto table = db.Table<Record>();
 
-			PR_CHECK(table.Insert(Record("Elem1")), 1);
-			PR_CHECK(table.Insert(Record("Elem2")), 1);
-			PR_CHECK(table.Insert(Record("Elem3")), 1);
+			PR_EXPECT(table.Insert(Record("Elem1")) == 1);
+			PR_EXPECT(table.Insert(Record("Elem2")) == 1);
+			PR_EXPECT(table.Insert(Record("Elem3")) == 1);
 
 			Record r = table.Get(PKs(2));
-			PR_CHECK(r.m_string.c_str(), "Elem2");
+			PR_EXPECT(r.m_string == "Elem2");
 
-			PR_CHECK(table.Update("[String]", std::string("Modified"), PKs(r.m_key)), 1);
+			PR_EXPECT(table.Update("[String]", std::string("Modified"), PKs(r.m_key)) == 1);
 
 			Record r2 = table.Get(PKs(r.m_key));
-			PR_CHECK(r2.m_string.c_str(), "Modified");
+			PR_EXPECT(r2.m_string == "Modified");
 		}
-		{//MultiplePKs
+		PRUnitTestMethod(MultiplePKs)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -1849,7 +1851,7 @@ namespace pr::sqlite
 
 			DB db;
 			db.DropTable<Record>();
-			PR_CHECK(db.CreateTable<Record>(), SQLITE_OK);
+			PR_EXPECT(db.CreateTable<Record>() == SQLITE_OK);
 			auto table = db.Table<Record>();
 
 			Record r[4];
@@ -1866,10 +1868,10 @@ namespace pr::sqlite
 			r[3].m_bool   = true;
 			r[3].m_string = "2 true";
 
-			PR_CHECK(table.Insert(r[0]), 1);
-			PR_CHECK(table.Insert(r[1]), 1);
-			PR_CHECK(table.Insert(r[2]), 1);
-			PR_CHECK(table.Insert(r[3]), 1);
+			PR_EXPECT(table.Insert(r[0]) == 1);
+			PR_EXPECT(table.Insert(r[1]) == 1);
+			PR_EXPECT(table.Insert(r[2]) == 1);
+			PR_EXPECT(table.Insert(r[3]) == 1);
 
 			Record R[4];
 			R[0] = table.Get(PKs(1, false));
@@ -1879,24 +1881,25 @@ namespace pr::sqlite
 
 			for (int i = 0; i != 4; ++i)
 			{
-				PR_CHECK(R[i].m_key    , r[i].m_key    );
-				PR_CHECK(R[i].m_bool   , r[i].m_bool   );
-				PR_CHECK(R[i].m_string , r[i].m_string );
+				PR_EXPECT(R[i].m_key    == r[i].m_key    );
+				PR_EXPECT(R[i].m_bool   == r[i].m_bool   );
+				PR_EXPECT(R[i].m_string == r[i].m_string );
 			}
 
 			PKArgs args = PrimaryKeys<PKArgs>(r[3]);
-			PR_CHECK(args.pk1, r[3].m_key );
-			PR_CHECK(args.pk2, r[3].m_bool);
+			PR_EXPECT(args.pk1 == r[3].m_key );
+			PR_EXPECT(args.pk2 == r[3].m_bool);
 
 			r[3].m_string = "2 true - modified";
-			PR_CHECK(table.Update("String", r[3].m_string, PrimaryKeys<PKArgs>(r[3])), 1);
+			PR_EXPECT(table.Update("String", r[3].m_string, PrimaryKeys<PKArgs>(r[3])) == 1);
 
 			R[3] = table.Get(PrimaryKeys<PKArgs>(r[3]));
-			PR_CHECK(R[3].m_key    , r[3].m_key    );
-			PR_CHECK(R[3].m_bool   , r[3].m_bool   );
-			PR_CHECK(R[3].m_string , r[3].m_string );
+			PR_EXPECT(R[3].m_key    == r[3].m_key    );
+			PR_EXPECT(R[3].m_bool   == r[3].m_bool   );
+			PR_EXPECT(R[3].m_string == r[3].m_string );
 		}
-		{//Collation
+		PRUnitTestMethod(Collation)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -1917,116 +1920,117 @@ namespace pr::sqlite
 
 			DB db;
 			db.DropTable<Record>();
-			PR_CHECK(db.CreateTable<Record>(), SQLITE_OK);
-			PR_CHECK(db.Execute("insert into Record values (1 , 'abc' , 'abc'  , 'abc  ' , 'abc')"), 1);
-			PR_CHECK(db.Execute("insert into Record values (2 , 'abc' , 'abc'  , 'abc'   , 'ABC')"), 1);
-			PR_CHECK(db.Execute("insert into Record values (3 , 'abc' , 'abc'  , 'abc '  , 'Abc')"), 1);
-			PR_CHECK(db.Execute("insert into Record values (4 , 'abc' , 'abc ' , 'ABC'   , 'abc')"), 1);
+			PR_EXPECT(db.CreateTable<Record>() == SQLITE_OK);
+			PR_EXPECT(db.Execute("insert into Record values (1 , 'abc' , 'abc'  , 'abc  ' , 'abc')") == 1);
+			PR_EXPECT(db.Execute("insert into Record values (2 , 'abc' , 'abc'  , 'abc'   , 'ABC')") == 1);
+			PR_EXPECT(db.Execute("insert into Record values (3 , 'abc' , 'abc'  , 'abc '  , 'Abc')") == 1);
+			PR_EXPECT(db.Execute("insert into Record values (4 , 'abc' , 'abc ' , 'ABC'   , 'abc')") == 1);
 
 			int value;
 			{
 				// Text comparison a=b is performed using the BINARY collating sequence.
 				Query q(db, "select x from Record where a = b order by x");
 				//--result 1 2 3
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Text comparison a=b is performed using the RTRIM collating sequence.
 				Query q(db, "select x from Record where a = b collate rtrim order by x");
 				//--result 1 2 3 4
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Text comparison d=a is performed using the NOCASE collating sequence.
 				Query q(db, "select x from Record where d = a order by x");
 				//--result 1 2 3 4
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Text comparison a=d is performed using the BINARY collating sequence.
 				Query q(db, "select x from Record where a = d order by x");
 				//--result 1 4
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Text comparison 'abc'=c is performed using the RTRIM collating sequence.
 				Query q(db, "select x from Record where 'abc' = c order by x");
 				//--result 1 2 3
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Text comparison c='abc' is performed using the RTRIM collating sequence.
 				Query q(db, "select x from Record where c = 'abc' order by x");
 				//--result 1 2 3
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Grouping is performed using the NOCASE collating sequence. (Values 'abc', 'ABC', and 'Abc' are placed in the same group).
 				Query q(db, "select count(*) from Record group by d order by 1");
 				//--result 4
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Grouping is performed using the BINARY collating sequence. 'abc' and 'ABC' and 'Abc' form different groups
 				Query q(db, "select count(*) from Record group by (d || '') order by 1");
 				//--result 1 1 2
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Sorting or column c is performed using the RTRIM collating sequence.
 				Query q(db, "select x from Record order by c, x");
 				//--result 4 1 2 3
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Sorting of (c||'') is performed using the BINARY collating sequence.
 				Query q(db, "select x from Record order by (c||''), x");
 				//--result 4 2 3 1
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(!q.Step());
 			}
 			{
 				// Sorting of column c is performed using the NOCASE collating sequence.
 				Query q(db, "select x from Record order by c collate nocase, x");
 				//--result 2 4 3 1
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 2);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 4);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 3);
-				PR_CHECK(q.Step(), true); PR_CHECK(read_int(q, 0, value), 1);
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 2);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 4);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 3);
+				PR_EXPECT(q.Step() && read_int(q, 0, value) == 1);
+				PR_EXPECT(!q.Step());
 			}
 		}
-		{//Unique
+		PRUnitTestMethod(Unique)
+		{
 			struct Record
 			{
 				int  m_key;
@@ -2047,14 +2051,15 @@ namespace pr::sqlite
 			db.CreateTable<Record>();
 			auto table = db.Table<Record>();
 
-			PR_CHECK(table.Insert(Record('a')), 1);
-			PR_CHECK(table.Insert(Record('b')), 1);
+			PR_EXPECT(table.Insert(Record('a')) == 1);
+			PR_EXPECT(table.Insert(Record('b')) == 1);
 			Record a('a');
 			PR_THROWS(table.Insert(a), pr::sqlite::Exception);
 			try { table.Insert(Record('b')); }
-			catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_CONSTRAINT); }
+			catch (pr::sqlite::Exception const& ex) { PR_EXPECT(ex.code() == SQLITE_CONSTRAINT); }
 		}
-		{//Find
+		PRUnitTestMethod(Find)
+		{
 			struct Record
 			{
 				int  m_key;
@@ -2075,21 +2080,22 @@ namespace pr::sqlite
 			db.CreateTable<Record>();
 			auto table = db.Table<Record>();
 
-			PR_CHECK(table.Insert(Record('a')), 1);
-			PR_CHECK(table.Insert(Record('b')), 1);
-			PR_CHECK(table.Insert(Record('c')), 1);
-			PR_CHECK(table.Insert(Record('d')), 1);
-			PR_CHECK(table.Insert(Record('e')), 1);
+			PR_EXPECT(table.Insert(Record('a')) == 1);
+			PR_EXPECT(table.Insert(Record('b')) == 1);
+			PR_EXPECT(table.Insert(Record('c')) == 1);
+			PR_EXPECT(table.Insert(Record('d')) == 1);
+			PR_EXPECT(table.Insert(Record('e')) == 1);
 
 			Record r = table.Get(PKs(3));
 			try { table.Get(PKs(6)); }
-			catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_NOTFOUND); }
+			catch (pr::sqlite::Exception const& ex) { PR_EXPECT(ex.code() == SQLITE_NOTFOUND); }
 
 			Record R;
-			PR_CHECK( table.Find(PKs(3), R), true);
-			PR_CHECK(!table.Find(PKs(6), R), true);
+			PR_EXPECT( table.Find(PKs(3), R));
+			PR_EXPECT(!table.Find(PKs(6), R));
 		}
-		{//Unicode
+		PRUnitTestMethod(Unicode)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -2115,9 +2121,10 @@ namespace pr::sqlite
 			table.Insert(Record(str), row);
 
 			std::wstring STR = table.GetColumn<std::wstring>(PKs(row), 1);
-			PR_CHECK(str == STR, true);
+			PR_EXPECT(str == STR);
 		}
-		{// GUIDs
+		PRUnitTestMethod(GUIDs)
+		{
 			struct Record
 			{
 				GUID m_guid;
@@ -2134,9 +2141,10 @@ namespace pr::sqlite
 			db.CreateTable<Record>();
 			auto table = db.Table<Record>();
 
-			PR_CHECK(table.Insert(Record()), 1);
+			PR_EXPECT(table.Insert(Record()) == 1);
 		}
-		{//Iteration
+		PRUnitTestMethod(Iteration)
+		{
 			struct Record
 			{
 				int          m_key;
@@ -2155,42 +2163,42 @@ namespace pr::sqlite
 
 			DB db;
 			db.DropTable<Record>();
-			PR_CHECK(db.CreateTable<Record>(), SQLITE_OK);
-			PR_CHECK(db.TableExists<Record>(), true);
+			PR_EXPECT(db.CreateTable<Record>() == SQLITE_OK);
+			PR_EXPECT(db.TableExists<Record>());
 			auto table = db.Table<Record>();
 
 			Record r0; r0.m_string = "r0";
 			Record r1; r1.m_string = "r1";
 			Record r2; r2.m_string = "r2";
 			Record r3; r3.m_string = "r3";
-			PR_CHECK(table.Insert(r0, r0.m_key), 1);
-			PR_CHECK(table.Insert(r1, r1.m_key), 1);
-			PR_CHECK(table.Insert(r2, r2.m_key), 1);
-			PR_CHECK(table.Insert(r3, r3.m_key), 1);
+			PR_EXPECT(table.Insert(r0, r0.m_key) == 1);
+			PR_EXPECT(table.Insert(r1, r1.m_key) == 1);
+			PR_EXPECT(table.Insert(r2, r2.m_key) == 1);
+			PR_EXPECT(table.Insert(r3, r3.m_key) == 1);
 
 			Record r;
 			{//  for (pr::sqlite::Query q(db, "select * from Record"); q.Step();) {}
 				pr::sqlite::Query q(db, "select * from Record");
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r0");
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r1");
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r2");
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r3");
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r0");
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r1");
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r2");
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r3");
+				PR_EXPECT(!q.Step());
 			}
 
 			{//for (pr::sqlite::EnumRows<Record> row(cached_query); !row.end(); row.next()) {}
 				pr::sqlite::Query q(db, "select * from Record where String = ?");
 				q.Bind(1,"r1");
 
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r1");
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r1");
+				PR_EXPECT(!q.Step());
 
 				q.Reset();
 				q.Bind(1,"r3");
-				PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r3");
-				PR_CHECK(q.Step(), false);
+				PR_EXPECT(q.Step()); r = q.Read<Record>(); PR_EXPECT(r.m_string == "r3");
+				PR_EXPECT(!q.Step());
 			}
 		}
-	}
+	};
 }
 #endif

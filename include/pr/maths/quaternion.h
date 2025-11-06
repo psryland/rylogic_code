@@ -579,7 +579,7 @@ namespace pr::maths
 				auto v0 = Vec4<float, void>::RandomN(rng, 0);
 				auto r0 = mat * v0;
 				auto r1 = Rotate(q, v0);
-				PR_CHECK(FEql(r0, r1), true);
+				PR_EXPECT(FEql(r0, r1));
 			}
 		}
 		{
@@ -632,7 +632,7 @@ namespace pr::maths
 			}
 
 			auto actual_mean = avr.Mean();
-			PR_CHECK(FEqlRelative(ideal_mean, actual_mean, S(0.01)), true);
+			PR_EXPECT(FEqlRelative(ideal_mean, actual_mean, S(0.01)));
 		}
 		{// LogMap <-> ExpMap
 

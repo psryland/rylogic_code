@@ -133,7 +133,7 @@ namespace pr::geometry
 
 		v4 out_position, out_direction;
 		auto reflected = Reflect_RayToPlanes(Walls, position, direction, distance, out_position, out_direction);
-		PR_CHECK(reflected, true);
+		PR_EXPECT(reflected);
 		*/
 	}
 }

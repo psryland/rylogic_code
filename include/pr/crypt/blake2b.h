@@ -1,4 +1,4 @@
-//*************************************************************************************************
+﻿//*************************************************************************************************
 // Blake2b
 //*************************************************************************************************
 //  100% free public domain implementation of the SHA-512 algorithm.
@@ -316,12 +316,12 @@ namespace pr::hash
 		char str1[] = "0123456789a";
 		auto hash1 = Blake2bHash(str0, sizeof(str0));
 		auto hash2 = Blake2bHash(str1, sizeof(str1));
-		PR_CHECK(hash1 != hash2, true);
+		PR_EXPECT(hash1 != hash2);
 
 		// This hash doesn't seem to produce the same result as the windows context menu one
 		//auto hash3 = Blake2bHashFile("P:\\pr\\include\\pr\\crypt\\rijndael.h");
 		//auto hash4 = Blake2b<>::hash_t{0xD4,0x90,0xE7,0x7B,0x83,0x9D,0x61,0x2B,0x72,0x93,0x76,0x6E,0xFC,0x01,0x4C,0x0B,0x45,0x51,0x63,0x29,0x21,0xBA,0x3F,0xB4,0xB6,0x2A,0x5C,0xA5,0x40,0x0D,0x7E,0x75};
-		//PR_CHECK(hash3 == hash4, true);
+		//PR_EXPECT(hash3 == hash4);
 	}
 }
 #endif

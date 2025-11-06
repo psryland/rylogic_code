@@ -122,12 +122,12 @@ namespace pr::common
 		StaticCB<void> cb1 = {(void*)0, &L::Func };
 		StaticCB<void> cb2 = {(void*)1, &L::Func };
 	
-		PR_CHECK(cb0 == cb1, true);
-		PR_CHECK(cb0 != cb2, true);
-		PR_CHECK(cb0 <  cb2, true);
-		PR_CHECK(cb0 >  cb2, false);
-		PR_CHECK(cb0 <= cb1, true);
-		PR_CHECK(cb0 >= cb2, false);
+		PR_EXPECT(cb0 == cb1);
+		PR_EXPECT(cb0 != cb2);
+		PR_EXPECT(cb0 <  cb2);
+		PR_EXPECT(cb0 <= cb2);
+		PR_EXPECT(cb0 <= cb1);
+		PR_EXPECT(cb0 <  cb2);
 	}
 }
 #endif

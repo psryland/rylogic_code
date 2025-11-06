@@ -654,9 +654,9 @@ namespace pr::container
 			{
 				auto sep = Length(search_point - p);
 				if (IsFound(p, results))
-					PR_CHECK(sep < search_radius + maths::tinyf, true);
+					PR_EXPECT(sep < search_radius + maths::tinyf);
 				else
-					PR_CHECK(sep > search_radius - maths::tinyf, true);
+					PR_EXPECT(sep > search_radius - maths::tinyf);
 			}
 		}
 
@@ -686,9 +686,9 @@ namespace pr::container
 			{
 				auto sep = Length(search_point - p);
 				if (IsFound(p, results))
-					PR_CHECK(sep < search_radius + maths::tinyf, true);
+					PR_EXPECT(sep < search_radius + maths::tinyf);
 				else
-					PR_CHECK(sep > search_radius - maths::tinyf, true);
+					PR_EXPECT(sep > search_radius - maths::tinyf);
 			}
 		}
 
@@ -747,9 +747,9 @@ namespace pr::container
 			{
 				auto sep = Length(search_point - p);
 				if (IsFound(p, results))
-					PR_CHECK(sep < search_radius + maths::tinyf, true);
+					PR_EXPECT(sep < search_radius + maths::tinyf);
 				else
-					PR_CHECK(sep > search_radius - maths::tinyf, true);
+					PR_EXPECT(sep > search_radius - maths::tinyf);
 			}
 
 			#if 0

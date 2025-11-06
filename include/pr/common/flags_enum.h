@@ -186,14 +186,14 @@ namespace pr::common
 		};
 		static_assert(is_flags_enum_v<NotFlags> == false);
 			
-		enum class Flags
+		enum class Flags : uint32_t // Flags should be unsigned types
 		{
 			One   = 1 << 0,
 			Two   = 1 << 1,
 
 			_flags_enum = 0,
 		};
-		static_assert(is_flags_enum_v<Flags> == true);
+		static_assert(FlagsEnum<Flags>);
 
 		enum class Numbers
 		{
@@ -206,7 +206,7 @@ namespace pr::common
 
 			_arith_enum = 0,
 		};
-		static_assert(is_arith_enum_v<Numbers> == true);
+		static_assert(ArithEnum<Numbers>);
 	}
 	PRUnitTest(FlagsEnumTests)
 	{
@@ -237,7 +237,7 @@ namespace pr::common
 
 		{// Arithmetic
 			using E = Numbers;
-			static_assert(is_arith_enum_v<E>);
+			static_assert(ArithEnum<E>);
 
 			PR_EXPECT(+E::One == E::One);
 			PR_EXPECT(-E::Two == E::MinusTwo);

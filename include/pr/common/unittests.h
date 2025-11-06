@@ -12,9 +12,16 @@ namespace pr::unittests
 {
 	PRUnitTest(TestName)
 	{
-		using namespace pr;
-		PR_CHECK(1+1, 2);
+		PR_EXPECT(1+1 == 2);
 	}
+	PRUnitTestClass(TestClassName)
+	{
+		PRUnitTestMethod(MethodName)
+		{
+			auto tmp = temp_dir() / "file.ext";
+			PR_EXPECT(tmp != "");
+		}
+	};
 }
 #endif
 */
@@ -23,6 +30,8 @@ namespace pr::unittests
 // need to add an include of the file containing the unit test, so that it gets included
 // in the build.
 #pragma once
+#include <type_traits>
+#include <concepts>
 #include <span>
 #include <memory>
 #include <iostream>
@@ -56,6 +65,10 @@ namespace pr::unittests
 	#include "CppUnitTest.h"
 	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 	// Create tests with; TEST_CLASS(MyTest) { public: TEST_METHOD(MyTestMethod){ ... } };
+	#define PRTestClass(testname)\
+		ONLY_USED_AT_NAMESPACE_SCOPE class testname : public ::Microsoft::VisualStudio::CppUnitTestFramework::TestClass<testname>
+	#define PRTestMethod(testname)\
+		TEST_METHOD(testname)
 #else
 	//#pragma message ("Using Rylogic Unit Test Framework")
 	#define TEST_CLASS(testname) class testname
@@ -68,29 +81,6 @@ namespace pr::unittests
 
 namespace pr::unittests
 {
-	using TestFunc = std::function<void(void)>;
-
-	struct UnitTestItem
-	{
-		char const* m_name;
-		TestFunc    m_func;
-		std::filesystem::path m_temp_dir;
-		char const* m_file;
-		int m_line;
-
-		UnitTestItem(char const* name, TestFunc func, std::filesystem::path const& temp_dir, char const* file, int line)
-			: m_name(name)
-			, m_func(func)
-			, m_temp_dir(temp_dir)
-			, m_file(file)
-			, m_line(line)
-		{}
-		friend bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs)
-		{
-			return strcmp(lhs.m_name, rhs.m_name) < 0;
-		}
-	};
-
 	// Platform string constant
 	constexpr wchar_t const* const Platform =
 		sizeof(void*) == 8 ? L"x64" :
@@ -163,64 +153,118 @@ namespace pr::unittests
 		}
 	}
 
+	// Helper base class for unit test classes
+	template <typename Derived>
+	struct UnitTestBase
+	{
+		using test_class_type = Derived;
+		mutable std::filesystem::path m_cached_temp_dir = {};
+		int m_count = 0;
+
+		virtual ~UnitTestBase()
+		{
+			if (!m_cached_temp_dir.empty())
+				std::filesystem::remove_all(m_cached_temp_dir);
+		}
+
+		// Test class name
+		std::string_view class_name() const
+		{
+			// Extract class name from type name
+			auto const* name = typeid(Derived).name();
+			for (auto const* found = strstr(name, "::"); found != nullptr; found = strstr(name, "::"))
+				name = found + 2;
+
+			return name;
+		}
+
+		// A directory for temporary files needed by unit tests. Note: automatically cleaned
+		// Use 'temp_dir' in your unit test. Also remember 'auto temp_file = temp_dir / std::filesystem::unique_path("tempfile-%%%%-%%%%-%%%%-%%%%")'
+		std::filesystem::path temp_dir() const
+		{
+			using namespace std::filesystem;
+			if (m_cached_temp_dir.empty())
+			{
+				m_cached_temp_dir = weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / class_name() / Platform / Config / "");
+				std::filesystem::create_directories(m_cached_temp_dir);
+			}
+			return m_cached_temp_dir;
+		}
+
+		// Return a path relative to the repo root
+		inline std::filesystem::path repo_path(wchar_t const* repo_path)
+		{
+			using namespace std::filesystem;
+			return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / repo_path);
+		}
+	};
+
+	// Meta data for a test case
+	struct UnitTestItem
+	{
+		// Test function signature
+		using TestFunc = std::function<void(void)>;
+
+		char const*      m_name;  // Test name (short)
+		TestFunc         m_func;  // The unit test function
+		type_info const* m_class; // Type info of the test class
+		char const*      m_file;  // The file that the test is in
+		int              m_line;  // Line number of the test function
+
+		friend bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs) { return strcmp(lhs.m_name, rhs.m_name) < 0; }
+	};
+
 	// Test Framework functions
 	struct TestFramework
 	{
-		// A counter used for the number of tests performed
-		inline static int TestCount = 0;
-
 		// All registered tests
 		inline static std::vector<UnitTestItem> Tests;
 
+		// The number of calls to 'PR_EXPECT'
+		inline static int TestCount;
+
 		// A pointer to the stream that output is written to
 		inline static std::ostream* ostream = &std::cout;
-		inline static std::ostream& out() { return *ostream; }
+		static std::ostream& out() { return *ostream; }
 
 		// Append a unit test to the Tests() collection
-		inline static bool AddTest(UnitTestItem const& test)
+		template <class T>
+		static bool AddTest(char const* name, void (T::*method)(), char const* file, int line)
 		{
-			Tests.push_back(test);
+			Tests.push_back(UnitTestItem{
+				.m_name = name,
+				.m_func = [=]()
+				{
+					T t;
+					(t.*method)();
+				},
+				.m_class = &typeid(T),
+				.m_file = file,
+				.m_line = line,
+			});
 			return true;
 		}
 
 		// Unit test check functions
-		static void Fail(wchar_t const* msg, char const* file, int line)
+		static void Fail(char const* msg, char const* file, int line)
 		{
-			using namespace impl;
-
 			++TestCount;
-			#if USE_MS_UNITTESTS
-			Assert::Fail(msg);
-			#endif
-			std::wstringstream ss; ss << file << "(" << line << "): " << msg;
-			throw std::runtime_error(Narrow(ss.str()).c_str());
+			throw std::runtime_error(std::format("{}({}): {}", file, line, msg));
 		}
 
 		// Assert that a unit test result is true
 		static void IsTrue(bool result, wchar_t const* expr, char const* file, int line)
 		{
-			using namespace impl;
-
 			++TestCount;
-			#if USE_MS_UNITTESTS
-			Assert::IsTrue(result, expr);
-			#endif
 			if (result) return;
-			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' failed";
-			throw std::runtime_error(Narrow(ss.str()).c_str());
+			throw std::runtime_error(std::format("{}({}): '{}' failed", file, line, impl::Narrow(expr)));
 		}
 
 		// Check that 'func' throws a 'TExcept' exception
 		template <typename TExcept, typename Func>
 		static void Throws(Func func, wchar_t const* expr, char const* file, int line)
 		{
-			using namespace impl;
-
 			++TestCount;
-			#if USE_MS_UNITTESTS
-			Assert::ExpectException<TExcept>(func, expr);
-			#endif
-
 			bool threw = false;
 			bool threw_expected = false;
 			try
@@ -239,10 +283,9 @@ namespace pr::unittests
 			if (threw_expected)
 				return;
 
-			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
+			throw std::runtime_error(std::format("{}({}): '{}' {}", file, line, impl::Narrow(expr), (threw
 				? "threw an exception of an unexpected type"
-				: "didn't throw when it was expected to");
-			throw std::runtime_error(Narrow(ss.str()).c_str());
+				: "didn't throw when it was expected to")));
 		}
 	};
 
@@ -255,40 +298,48 @@ namespace pr::unittests
 			TestFramework::out() << " **** Begin Unit Tests **** " << std::endl;
 			std::sort(std::begin(TestFramework::Tests), std::end(TestFramework::Tests));
 
-			// Run the tests
 			int passed = 0, failed = 0;
 			auto T0 = high_resolution_clock::now();
-			for (auto const& test : TestFramework::Tests)
+			std::mutex m;
+
+			// Run the tests
+			std::for_each(std::execution::seq, begin(TestFramework::Tests), end(TestFramework::Tests), [&](auto const& test)
 			{
-				TestFramework::TestCount = 0;
 				try
 				{
-					if (wordy) TestFramework::out() << std::format("{}{}", test.m_name, std::string(40 - strlen(test.m_name), '.'));
+					if (wordy)
+					{
+						std::lock_guard<std::mutex> lock(m);
+						TestFramework::out() << std::format("{}{}", test.m_name, std::string(40 - strlen(test.m_name), '.'));
+					}
 
-					// Clean the test's temp dir
-					std::error_code err;
-					std::filesystem::remove_all(test.m_temp_dir, err);
-					std::filesystem::create_directories(test.m_temp_dir, err);
-			
+					TestFramework::TestCount = 0;
+
 					// Run the test
 					auto t0 = high_resolution_clock::now();
 					test.m_func();
 					auto t1 = high_resolution_clock::now();
 
-					if (wordy) TestFramework::out() << std::format("success. ({:10} tests in {:10.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1-t0).count());
-					++passed;
+					{
+						std::lock_guard<std::mutex> lock(m);
+						++passed;
+						if (wordy)
+							TestFramework::out() << std::format("success. ({:10} tests in {:10.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1 - t0).count());
+					}
 				}
 				catch (std::exception const& e)
 				{
-					TestFramework::out() << std::format("{}({}): {} failed\n   {}\n", test.m_file, test.m_line, test.m_name, e.what());
+					std::lock_guard<std::mutex> lock(m);
+					TestFramework::out() << std::format("{}\n   {}({}): {} failed\n", e.what(), test.m_file, test.m_line, test.m_class->name());
 					++failed;
 				}
-			}
+			});
+
 			auto T1 = high_resolution_clock::now();
 
 			// Print the results
 			if (failed == 0)
-				TestFramework::out() << std::format(" **** UnitTest results: All {} tests passed. (taking {:1.3f} ms) ****\n", (failed+passed), 0.001 * duration_cast<microseconds>(T1-T0).count());
+				TestFramework::out() << std::format(" **** UnitTest results: All {} unit tests passed. (taking {:1.3f} ms) ****\n", (failed+passed), 0.001 * duration_cast<microseconds>(T1-T0).count());
 			else
 				TestFramework::out() << std::format(" **** UnitTest results: {} of {} failed. ****\n", failed, failed+passed);
 
@@ -348,46 +399,36 @@ namespace pr::unittests
 	{
 		return wcscmp(lhs, rhs) == 0;
 	}
-
-	// A directory for temporary files needed by unit tests. Note: automatically cleaned
-	// Use 'temp_dir' in your unit test. Also remember 'auto temp_file = temp_dir / std::filesystem::unique_path("tempfile-%%%%-%%%%-%%%%-%%%%")'
-	inline std::filesystem::path CreateTempDir(char const* testname)
-	{
-		using namespace std::filesystem;
-		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
-	}
-
-	// Return a path relative to the repo root
-	inline std::filesystem::path RepoPath(wchar_t const* repo_path)
-	{
-		using namespace std::filesystem;
-		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / repo_path);
-	}
 }
 
-// This macro creates a class using the unit test name, followed by a method that is the body of the test case
-#define PRUnitTest(testname, ...)\
-	TEST_CLASS(testname)\
+// Test class
+#define PRUnitTestClass(classname)\
+	struct TestClass_##classname : pr::unittests::UnitTestBase<TestClass_##classname>
+
+// Test method
+#define PRUnitTestMethod(methodname, ...)\
+	template <typename T = void, typename... Args>\
+	void Test_##methodname##_()\
 	{\
-	public:\
-		inline static std::filesystem::path const temp_dir = pr::unittests::CreateTempDir(#testname);\
-		TEST_METHOD(UnitTest) { func(); }\
-		static void func()\
-		{\
-			tests<##__VA_ARGS__>();\
-		}\
-		template <typename T = void, typename... Args> static void tests()\
-		{\
-			test<T>();\
-			if constexpr (sizeof...(Args) > 0)\
-				tests<Args...>();\
-		}\
-		template <typename T> static void test();\
+		Test_##methodname<T>();\
+		if constexpr (sizeof...(Args) > 0)\
+			Test_##methodname##_<Args...>();\
+	}\
+	inline static bool s_registered_##methodname = pr::unittests::TestFramework::AddTest<test_class_type>(\
+		#methodname,\
+		&test_class_type::Test_##methodname##_<##__VA_ARGS__>,\
+		__FILE__,\
+		__LINE__);\
+	template <typename T>\
+	void Test_##methodname()
+
+// Test function
+#define PRUnitTest(testname, ...)\
+	PRUnitTestClass(testname)\
+	{\
+		PRUnitTestMethod(testname, __VA_ARGS__);\
 	};\
-	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(\
-		pr::unittests::UnitTestItem{ #testname, &testname::func, testname::temp_dir, __FILE__, __LINE__ }\
-	);\
-	template <typename T> void testname::test()
+	template <typename T> void TestClass_##testname::Test_##testname()
 
 #define PR_EXPECT(expr)\
 	pr::unittests::TestFramework::IsTrue(expr, L#expr, __FILE__, __LINE__)
@@ -395,19 +436,3 @@ namespace pr::unittests
 #define PR_THROWS(expr, what)\
 	pr::unittests::TestFramework::Throws<what>([&]{ expr; }, L#expr, __FILE__, __LINE__)
 
-// Deprecated
-#define PR_FAIL(msg)\
-	pr::unittests::TestFramework::Fail(msg, __FILE__, __LINE__)
-#define PR_CHECK(expr, ...)\
-	pr::unittests::TestFramework::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr, __FILE__, __LINE__)
-#define PR_THROWS2(func, what)\
-	pr::unittests::TestFramework::Throws<what>(func, L#func, __FILE__, __LINE__)
-#define PR_UNITTEST_OUT\
-	pr::unittests::TestFramework::out()
-
-#if USE_MS_UNITTESTS
-	#define PRTestClass(testname)\
-		ONLY_USED_AT_NAMESPACE_SCOPE class testname : public ::Microsoft::VisualStudio::CppUnitTestFramework::TestClass<testname>
-	#define PRTestMethod(testname)\
-		TEST_METHOD(testname)
-#endif

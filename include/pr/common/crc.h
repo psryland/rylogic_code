@@ -1,4 +1,4 @@
-//************************************************************************
+﻿//************************************************************************
 // CRC
 //  Copyright (c) Rylogic Ltd 2009
 //************************************************************************
@@ -140,28 +140,28 @@ namespace pr::common
 
 		{ // Check basic Crc32 and Crc64
 			auto crc0 = pr::Crc(sizeof(data), data);
-			PR_CHECK(crc0, 0x1d87d389U);
+			PR_EXPECT(crc0 == 0x1d87d389U);
 		}
 		{ // CRC of wide strings, or non-char strings
 			auto crc0 = Crc(L"Wide String");
-			PR_CHECK(crc0, 0x609d2b1eU);
+			PR_EXPECT(crc0 == 0x609d2b1eU);
 
 			static const int ints[] = {1,2,3,4,5,0};
 			auto crc1 = Crc(ints, 0);
 			auto crc2 = Crc(sizeof(ints) - 1*sizeof(int), ints);
-			PR_CHECK(crc1, 0xd6e7566fU);
-			PR_CHECK(crc2, 0xd6e7566fU); // Note: Same for little endian only
+			PR_EXPECT(crc1 == 0xd6e7566fU);
+			PR_EXPECT(crc2 == 0xd6e7566fU); // Note: Same for little endian only
 		}
 		{ // Compare the CRC of the whole data in one go, verses two goes
 			auto crc0 = pr::Crc(sizeof(data)  , data);
 			auto crc1 = pr::Crc(sizeof(data)-5, data+5, pr::Crc(5, data));
 			auto crc2 = pr::Crc(sizeof(data)-9, data+9, pr::Crc(9, data));
-			PR_CHECK(crc0, crc1);
-			PR_CHECK(crc0, crc2);
+			PR_EXPECT(crc0 == crc1);
+			PR_EXPECT(crc0 == crc2);
 		}
 		{ // Crc32 a file
 			auto crc0 = pr::CrcFile(__FILEW__, 10, 1000);
-			PR_CHECK(crc0, 0x5a32e322U);
+			PR_EXPECT(crc0 == 0x83ee20a2U); // CRC of *this* file. I.e. it will change if the file is changed
 		}
 	}
 }

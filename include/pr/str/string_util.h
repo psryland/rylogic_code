@@ -682,174 +682,190 @@ namespace pr::str
 #include "pr/common/unittests.h"
 namespace pr::str
 {
-	PRUnitTest(StringUtilTests)
+	PRUnitTestClass(StringUtilTests)
 	{
-		{// EnsureNewline
+		PRUnitTestMethod(EnsureNewline)
+		{
 			std::string thems_without   = "without";
 			std::wstring thems_with     = L"with\n";
 			EnsureNewline(thems_without);
 			EnsureNewline(thems_with);
-			PR_CHECK(*(End(thems_without) - 1), '\n');
-			PR_CHECK(*(End(thems_with)    - 1),L'\n');
+			PR_EXPECT(*(End(thems_without) - 1) ==  '\n');
+			PR_EXPECT(*(End(thems_with)    - 1) == L'\n');
 		}
-		{//Contains
+		PRUnitTestMethod(Contains)
+		{
 			std::string src = "string";
-			PR_CHECK(Contains(src, "in") , true);
-			PR_CHECK(Contains(src, "ing"), true);
-			PR_CHECK(ContainsI(src, "iNg"), true);
-			PR_CHECK(ContainsI(src, "inG"), true);
+			PR_EXPECT(Contains(src, "in") );
+			PR_EXPECT(Contains(src, "ing"));
+			PR_EXPECT(ContainsI(src, "iNg"));
+			PR_EXPECT(ContainsI(src, "inG"));
 		}
-		{//Compare
+		PRUnitTestMethod(Compare)
+		{
 			std::string src = "string1";
-			PR_CHECK(Compare(src, "string2") , -1);
-			PR_CHECK(Compare(src, "string1") ,  0);
-			PR_CHECK(Compare(src, "string0") ,  1);
-			PR_CHECK(Compare(src, "string11"), -1);
-			PR_CHECK(Compare(src, "string")  ,  1);
-			PR_CHECK(CompareI(src, "striNg2" ), -1);
-			PR_CHECK(CompareI(src, "stRIng1" ),  0);
-			PR_CHECK(CompareI(src, "strinG0" ),  1);
-			PR_CHECK(CompareI(src, "string11"), -1);
-			PR_CHECK(CompareI(src, "strinG"  ),  1);
+			PR_EXPECT(Compare(src, "string2")  == -1);
+			PR_EXPECT(Compare(src, "string1")  ==  0);
+			PR_EXPECT(Compare(src, "string0")  ==  1);
+			PR_EXPECT(Compare(src, "string11") == -1);
+			PR_EXPECT(Compare(src, "string")   ==  1);
+			PR_EXPECT(CompareI(src, "striNg2" ) == -1);
+			PR_EXPECT(CompareI(src, "stRIng1" ) ==  0);
+			PR_EXPECT(CompareI(src, "strinG0" ) ==  1);
+			PR_EXPECT(CompareI(src, "string11") == -1);
+			PR_EXPECT(CompareI(src, "strinG"  ) ==  1);
 		}
-		{//Count
+		PRUnitTestMethod(Count)
+		{
 			char            aarr[] =  "s0tr0";
 			wchar_t         warr[] = L"s0tr0";
 			std::string     astr   =  "s0tr0";
 			std::wstring    wstr   = L"s0tr0";
-			PR_CHECK(Count(aarr, "0t"), 1U);
-			PR_CHECK(Count(warr, "0") , 2U);
-			PR_CHECK(Count(astr, "0") , 2U);
-			PR_CHECK(Count(wstr, "0t"), 1U);
+			PR_EXPECT(Count(aarr, "0t") == 1U);
+			PR_EXPECT(Count(warr, "0")  == 2U);
+			PR_EXPECT(Count(astr, "0")  == 2U);
+			PR_EXPECT(Count(wstr, "0t") == 1U);
 		}
-		{//CompressDelimiters
+		PRUnitTestMethod(CompressDelimiters)
+		{
 			char src[] = "\n\nstuff     with  \n  white\n   space   \n in   ";
 			char res[] = "stuff with\nwhite\nspace\nin";
 			CompressDelimiters(src, " \n", ' ', true);
-			PR_CHECK(src, res);
+			PR_EXPECT(Equal(src, res));
 		}
-		{//Tokenise
+		PRUnitTestMethod(Tokenise)
+		{
 			char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4 'tok5 & tok6'";
 			std::vector<std::string> tokens;
 			Tokenise(src, tokens);
-			PR_CHECK(tokens.size(), 6U);
-			PR_CHECK(tokens[0].c_str(), "tok0"          );
-			PR_CHECK(tokens[1].c_str(), "tok1"          );
-			PR_CHECK(tokens[2].c_str(), "tok2"          );
-			PR_CHECK(tokens[3].c_str(), "tok3 and tok3" );
-			PR_CHECK(tokens[4].c_str(), "tok4"          );
-			PR_CHECK(tokens[5].c_str(), "tok5 & tok6"   );
+			PR_EXPECT(tokens.size() == 6U);
+			PR_EXPECT(tokens[0] == "tok0"          );
+			PR_EXPECT(tokens[1] == "tok1"          );
+			PR_EXPECT(tokens[2] == "tok2"          );
+			PR_EXPECT(tokens[3] == "tok3 and tok3" );
+			PR_EXPECT(tokens[4] == "tok4"          );
+			PR_EXPECT(tokens[5] == "tok5 & tok6"   );
 		}
-		{//StripComments
+		PRUnitTestMethod(StripComments)
+		{
 			char src[] =
 				"//Line Comment\n"
 				"Not a comment\n"
 				"/* multi\n"
 				"-line comment*/";
 			char res[] = "\nNot a comment\n";
-			PR_CHECK(StripCppComments(src), res);
+			PR_EXPECT(Equal(StripCppComments(src), res));
 		}
-		{//Replace
+		PRUnitTestMethod(Replace)
+		{
 			char src[] = "Bite my shiny donkey metal donkey";
 			char res1[] = "Bite my shiny arse metal arse";
 			char res2[] = "Bite my shiny donkey metal donkey";
-			PR_CHECK(Replace(src, "donkey", "arse"), size_t(2));
-			PR_CHECK(src, res1);
-			PR_CHECK(Replace(src, "arse", "donkey"), size_t(2));
-			PR_CHECK(src, res2);
-			PR_CHECK(ReplaceI(src, "DONKEY", "arse"), size_t(2));
-			PR_CHECK(src, res1);
+			PR_EXPECT(Replace(src, "donkey", "arse") == 2u);
+			PR_EXPECT(Equal(src, res1));
+			PR_EXPECT(Replace(src, "arse", "donkey") == 2u);
+			PR_EXPECT(Equal(src, res2));
+			PR_EXPECT(ReplaceI(src, "DONKEY", "arse") == 2u);
+			PR_EXPECT(Equal(src, res1));
 		}
-		{//ConvertToCString
+		PRUnitTestMethod(ConvertToCString)
+		{
 			char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";
 			char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
 				
 			auto cstr1 = StringToCString<std::string>(str);
 			auto str1  = CStringToString(cstr1);
-			PR_CHECK(Equal(cstr1, res), true);
-			PR_CHECK(Equal(str1, str), true);
+			PR_EXPECT(Equal(cstr1, res));
+			PR_EXPECT(Equal(str1, str));
 		}
-		{//FindIdentifier
-			PR_CHECK(2  == FindIdentifier(" 1token"        , "token"), true);
-			PR_CHECK(2  == FindIdentifier(" 1token"        , "token", 2), true);
-			PR_CHECK(8  == FindIdentifier(" 1token2"       , "token"), true);
-			PR_CHECK(9  == FindIdentifier(" 1token2 token ", "token"), true);
-			PR_CHECK(2  == FindIdentifier(" 1token2"       , "token", 2, 5), true);
-			PR_CHECK(8  == FindIdentifier(" _1token"       , "token"), true);
-			PR_CHECK(3  == FindIdentifier(" _1token"       , "token", 3), true);
-			PR_CHECK(9  == FindIdentifier(" _1token2"      , "token", 3), true);
-			PR_CHECK(3  == FindIdentifier(" _1token2"      , "token", 3, 5), true);
-			PR_CHECK(8  == FindIdentifier(" _1token2"      , "token", 0, 8), true);
-			PR_CHECK(11 == FindIdentifier(" _1111token"    , "token"), true);
-			PR_CHECK(6  == FindIdentifier(" _1111token"    , "token", 2), true);
+		PRUnitTestMethod(FindIdentifier)
+		{
+			PR_EXPECT(2  == FindIdentifier(" 1token"        , "token"));
+			PR_EXPECT(2  == FindIdentifier(" 1token"        , "token", 2));
+			PR_EXPECT(8  == FindIdentifier(" 1token2"       , "token"));
+			PR_EXPECT(9  == FindIdentifier(" 1token2 token ", "token"));
+			PR_EXPECT(2  == FindIdentifier(" 1token2"       , "token", 2, 5));
+			PR_EXPECT(8  == FindIdentifier(" _1token"       , "token"));
+			PR_EXPECT(3  == FindIdentifier(" _1token"       , "token", 3));
+			PR_EXPECT(9  == FindIdentifier(" _1token2"      , "token", 3));
+			PR_EXPECT(3  == FindIdentifier(" _1token2"      , "token", 3, 5));
+			PR_EXPECT(8  == FindIdentifier(" _1token2"      , "token", 0, 8));
+			PR_EXPECT(11 == FindIdentifier(" _1111token"    , "token"));
+			PR_EXPECT(6  == FindIdentifier(" _1111token"    , "token", 2));
 		}
-		{// NextIdentifier
+		PRUnitTestMethod(NextIdentifier)
+		{
 			char const str[] = "_1st,;=2nd\n_3rd";
 			size_t idx = 0;
 
 			auto ident = NextIdentifier(str, idx);
-			PR_CHECK(ident == "_1st", true);
+			PR_EXPECT(ident == "_1st");
 			idx = ident.size() + ident.data() - &str[0];
 
 			ident = NextIdentifier(str, idx);
-			PR_CHECK(ident == "_3rd", true);
+			PR_EXPECT(ident == "_3rd");
 			idx = ident.size() + ident.data() - &str[0];
 
 			ident = NextIdentifier(str, idx);
-			PR_CHECK(ident.empty(), true);
+			PR_EXPECT(ident.empty());
 		}
-		{//Quotes
+		PRUnitTestMethod(Quotes)
+		{
 			char empty[3] = "";
 			wchar_t one[4] = L"1";
 			std::string two = "\"two\"";
 			std::wstring three = L"three";
-			PR_CHECK(str::Equal("\"\""       ,Quotes(empty ,true)), true);
-			PR_CHECK(str::Equal("\"1\""      ,Quotes(one   ,true)), true);
-			PR_CHECK(str::Equal("\"two\""    ,Quotes(two   ,true)), true);
-			PR_CHECK(str::Equal(L"\"three\"" ,Quotes(three ,true)), true);
-			PR_CHECK(str::Equal(""       ,Quotes(empty ,false)), true);
-			PR_CHECK(str::Equal("1"      ,Quotes(one   ,false)), true);
-			PR_CHECK(str::Equal("two"    ,Quotes(two   ,false)), true);
-			PR_CHECK(str::Equal(L"three" ,Quotes(three ,false)), true);
+			PR_EXPECT(str::Equal("\"\""       ,Quotes(empty ,true)));
+			PR_EXPECT(str::Equal("\"1\""      ,Quotes(one   ,true)));
+			PR_EXPECT(str::Equal("\"two\""    ,Quotes(two   ,true)));
+			PR_EXPECT(str::Equal(L"\"three\"" ,Quotes(three ,true)));
+			PR_EXPECT(str::Equal(""       ,Quotes(empty ,false)));
+			PR_EXPECT(str::Equal("1"      ,Quotes(one   ,false)));
+			PR_EXPECT(str::Equal("two"    ,Quotes(two   ,false)));
+			PR_EXPECT(str::Equal(L"three" ,Quotes(three ,false)));
 		}
-		{// Pretty Bytes
+		PRUnitTestMethod(PrettyBytes)
+		{
 			auto pretty = [](long long bytes)
 			{
 				return PrettyBytes<>(bytes, true, 1) + " " + PrettyBytes<>(bytes, false, 1);
 			};
-			PR_CHECK(pretty(0)                   ,      "0B 0iB"      );
-			PR_CHECK(pretty(27)                  ,     "27B 27iB"     );
-			PR_CHECK(pretty(999)                 ,    "999B 999iB"    );
-			PR_CHECK(pretty(1000)                ,   "1.0KB 1000iB"   );
-			PR_CHECK(pretty(1023)                ,   "1.0KB 1023iB"   );
-			PR_CHECK(pretty(1024)                ,   "1.0KB 1.0KiB"   );
-			PR_CHECK(pretty(1728)                ,   "1.7KB 1.7KiB"   );
-			PR_CHECK(pretty(110592)              , "110.6KB 108.0KiB" );
-			PR_CHECK(pretty(7077888)             ,   "7.1MB 6.8MiB"   );
-			PR_CHECK(pretty(452984832)           , "453.0MB 432.0MiB" );
-			PR_CHECK(pretty(28991029248)         ,  "29.0GB 27.0GiB"  );
-			PR_CHECK(pretty(1855425871872)       ,   "1.9TB 1.7TiB"   );
-			PR_CHECK(pretty(9223372036854775807) ,   "9.2EB 8.0EiB"   );
+			PR_EXPECT(pretty(0)                   ==      "0B 0iB"      );
+			PR_EXPECT(pretty(27)                  ==     "27B 27iB"     );
+			PR_EXPECT(pretty(999)                 ==    "999B 999iB"    );
+			PR_EXPECT(pretty(1000)                ==   "1.0KB 1000iB"   );
+			PR_EXPECT(pretty(1023)                ==   "1.0KB 1023iB"   );
+			PR_EXPECT(pretty(1024)                ==   "1.0KB 1.0KiB"   );
+			PR_EXPECT(pretty(1728)                ==   "1.7KB 1.7KiB"   );
+			PR_EXPECT(pretty(110592)              == "110.6KB 108.0KiB" );
+			PR_EXPECT(pretty(7077888)             ==   "7.1MB 6.8MiB"   );
+			PR_EXPECT(pretty(452984832)           == "453.0MB 432.0MiB" );
+			PR_EXPECT(pretty(28991029248)         ==  "29.0GB 27.0GiB"  );
+			PR_EXPECT(pretty(1855425871872)       ==   "1.9TB 1.7TiB"   );
+			PR_EXPECT(pretty(9223372036854775807) ==   "9.2EB 8.0EiB"   );
 		}
-		{// Pretty Number
-			PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 6, 3)    , L"12,340.000"    );
-			PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 3, 3)    , L"12,340,000.000");
-			PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  , L"0.000"         );
-			PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -12, 3) , L"123.400"       );
+		PRUnitTestMethod(PrettyNumber)
+		{
+			PR_EXPECT(PrettyNumber<std::wstring>(1.234e10, 6, 3)    == L"12,340.000"    );
+			PR_EXPECT(PrettyNumber<std::wstring>(1.234e10, 3, 3)    == L"12,340,000.000");
+			PR_EXPECT(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  == L"0.000"         );
+			PR_EXPECT(PrettyNumber<std::wstring>(1.234e-10, -12, 3) == L"123.400"       );
 		}
-		{// ProcessIndentedNewlines
+		PRUnitTestMethod(ProcessIndentedNewlines)
+		{
 			std::string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
 			ProcessIndentedNewlines(str);
-			PR_CHECK(str, "\nwords    and\nmore  words\n and more\nwords\n");
+			PR_EXPECT(str == "\nwords    and\nmore  words\n and more\nwords\n");
 		}
-		{// LevenshteinDistance
-			PR_CHECK(LevenshteinDistance("Book", "Back"), 2);
-			PR_CHECK(LevenshteinDistance("Hippopotamus", "Giraffe"), 10);
-			PR_CHECK(LevenshteinDistance("", "Giraffe"), 7);
-			PR_CHECK(LevenshteinDistance("Hippopotamus", ""), 12);
-			PR_CHECK(LevenshteinDistance("A crazy long string containing all sorts of stuff", "Some other string"), 41);
+		PRUnitTestMethod(LevenshteinDistance)
+		{
+			PR_EXPECT(LevenshteinDistance("Book", "Back") == 2);
+			PR_EXPECT(LevenshteinDistance("Hippopotamus", "Giraffe") == 10);
+			PR_EXPECT(LevenshteinDistance("", "Giraffe") == 7);
+			PR_EXPECT(LevenshteinDistance("Hippopotamus", "") == 12);
+			PR_EXPECT(LevenshteinDistance("A crazy long string containing all sorts of stuff", "Some other string") == 41);
 		}
-	}
+	};
 }
 #endif
 

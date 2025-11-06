@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -275,8 +275,8 @@ namespace pr::maths
 			for (int r = 0; r != 6; ++r)
 				for (int c = 0; c != 8; ++c)
 				{
-					PR_CHECK(FEql(m1(r, c), M1[r][c]), true);
-					PR_CHECK(FEql(m2(r, c), M2[r][c]), true);
+					PR_EXPECT(FEql(m1(r, c), M1[r][c]));
+					PR_EXPECT(FEql(m2(r, c), M2[r][c]));
 				}
 
 			auto M3 = mat6_t // = [{1} {2} {3} {4} {5} {6}]
@@ -288,7 +288,7 @@ namespace pr::maths
 				vec8_t{5, 5, 5, 5, 5, 5, 5, 5},
 				vec8_t{6, 6, 6, 6, 6, 6, 6, 6},
 			};
-			PR_CHECK(FEql(M3, M1), true);
+			PR_EXPECT(FEql(M3, M1));
 		}
 		{// Array access
 			auto m1 = mat6_t
@@ -296,18 +296,18 @@ namespace pr::maths
 				mat3_t{vec4_t(1), vec4_t(2), vec4_t(3)}, mat3_t{vec4_t(4), vec4_t(5), vec4_t(6)}, // = [{1} {2} {3} {4} {5} {6}]
 				mat3_t{vec4_t(1), vec4_t(2), vec4_t(3)}, mat3_t{vec4_t(4), vec4_t(5), vec4_t(6)}
 			};
-			PR_CHECK(FEql(m1[0], vec8_t{1, 1, 1, 1, 1, 1, 1, 1}), true);
-			PR_CHECK(FEql(m1[1], vec8_t{2, 2, 2, 2, 2, 2, 2, 2}), true);
-			PR_CHECK(FEql(m1[2], vec8_t{3, 3, 3, 3, 3, 3, 3, 3}), true);
-			PR_CHECK(FEql(m1[3], vec8_t{4, 4, 4, 4, 4, 4, 4, 4}), true);
-			PR_CHECK(FEql(m1[4], vec8_t{5, 5, 5, 5, 5, 5, 5, 5}), true);
-			PR_CHECK(FEql(m1[5], vec8_t{6, 6, 6, 6, 6, 6, 6, 6}), true);
+			PR_EXPECT(FEql(m1[0], vec8_t{1, 1, 1, 1, 1, 1, 1, 1}));
+			PR_EXPECT(FEql(m1[1], vec8_t{2, 2, 2, 2, 2, 2, 2, 2}));
+			PR_EXPECT(FEql(m1[2], vec8_t{3, 3, 3, 3, 3, 3, 3, 3}));
+			PR_EXPECT(FEql(m1[3], vec8_t{4, 4, 4, 4, 4, 4, 4, 4}));
+			PR_EXPECT(FEql(m1[4], vec8_t{5, 5, 5, 5, 5, 5, 5, 5}));
+			PR_EXPECT(FEql(m1[5], vec8_t{6, 6, 6, 6, 6, 6, 6, 6}));
 
 			auto tmp = m1.col(0);
 			m1.col(0, m1[5]);
 			m1.col(5, tmp);
-			PR_CHECK(FEql(m1[0], vec8_t{6, 6, 6, 6, 6, 6, 6, 6}), true);
-			PR_CHECK(FEql(m1[5], vec8_t{1, 1, 1, 1, 1, 1, 1, 1}), true);
+			PR_EXPECT(FEql(m1[0], vec8_t{6, 6, 6, 6, 6, 6, 6, 6}));
+			PR_EXPECT(FEql(m1[5], vec8_t{1, 1, 1, 1, 1, 1, 1, 1}));
 		}
 		{// Multiply vector
 			auto m = Matrix<float>{6, 6,
@@ -328,7 +328,7 @@ namespace pr::maths
 				91, 91, 91, 91, 91, 91,
 			}};
 			auto r = m * v;
-			PR_CHECK(FEql(r, e), true);
+			PR_EXPECT(FEql(r, e));
 
 			auto M = mat6_t
 			{
@@ -346,7 +346,7 @@ namespace pr::maths
 				vec4_t{91, 91, 91, 0},
 			};
 			auto R = M * V;
-			PR_CHECK(FEql(R, E), true);
+			PR_EXPECT(FEql(R, E));
 		}
 		{// Multiply matrix
 			auto m1 = Matrix<float>{6, 6,
@@ -377,7 +377,7 @@ namespace pr::maths
 				78, 78, 78, 78, 78, 78,
 			}};
 			auto m4 = m1 * m2;
-			PR_CHECK(FEql(m3, m4), true);
+			PR_EXPECT(FEql(m3, m4));
 
 			auto M1 = mat6_t
 			{
@@ -395,7 +395,7 @@ namespace pr::maths
 				mat3_t{vec3_t(36), vec3_t(36), vec3_t(36)}, mat3_t{vec3_t(78), vec3_t(78), vec3_t(78)}
 			};
 			auto M4 = M1 * M2;
-			PR_CHECK(FEql(M3, M4), true);
+			PR_EXPECT(FEql(M3, M4));
 		}
 		{// Transpose
 			auto m1 = Matrix<float>{6, 6,
@@ -417,14 +417,14 @@ namespace pr::maths
 
 			for (int i = 0; i != 6; ++i)
 			{
-				PR_CHECK(FEql(M2[i], vec8_t{vec3_t{1, 2, 3}, vec3_t{4, 5, 6}}), true);
+				PR_EXPECT(FEql(M2[i], vec8_t{vec3_t{1, 2, 3}, vec3_t{4, 5, 6}}));
 
-				PR_CHECK(FEql(m2(i, 0), M2[i].ang.x), true);
-				PR_CHECK(FEql(m2(i, 1), M2[i].ang.y), true);
-				PR_CHECK(FEql(m2(i, 2), M2[i].ang.z), true);
-				PR_CHECK(FEql(m2(i, 3), M2[i].lin.x), true);
-				PR_CHECK(FEql(m2(i, 4), M2[i].lin.y), true);
-				PR_CHECK(FEql(m2(i, 5), M2[i].lin.z), true);
+				PR_EXPECT(FEql(m2(i, 0), M2[i].ang.x));
+				PR_EXPECT(FEql(m2(i, 1), M2[i].ang.y));
+				PR_EXPECT(FEql(m2(i, 2), M2[i].ang.z));
+				PR_EXPECT(FEql(m2(i, 3), M2[i].lin.x));
+				PR_EXPECT(FEql(m2(i, 4), M2[i].lin.y));
+				PR_EXPECT(FEql(m2(i, 5), M2[i].lin.z));
 			}
 		}
 		{// Inverse
@@ -448,13 +448,13 @@ namespace pr::maths
 			};
 
 			auto m_ = Invert(M);
-			PR_CHECK(FEql(m_, M_), true);
+			PR_EXPECT(FEql(m_, M_));
 
 			auto I = M * M_;
-			PR_CHECK(FEql(I, mat6_t::Identity()), true);
+			PR_EXPECT(FEql(I, mat6_t::Identity()));
 
 			auto i = M * m_;
-			PR_CHECK(FEql(i, mat6_t::Identity()), true);
+			PR_EXPECT(FEql(i, mat6_t::Identity()));
 		}
 	}
 }

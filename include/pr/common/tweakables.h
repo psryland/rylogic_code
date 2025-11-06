@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 // Tweakable
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
@@ -244,7 +244,7 @@ namespace pr::tweakables
 		}
 
 		#if PR_UNITTESTS
-		friend class TweakablesTests;
+		friend struct TestClass_TweakablesTests;
 		#endif
 	};
 
@@ -300,7 +300,7 @@ namespace pr::tweakables
 	{
 		#if 1
 		using namespace pr::tweakables;
-		Tweakables::filepath = temp_dir / "tweakables.ini";
+		Tweakables::filepath = temp_dir() / "tweakables.ini";
 		Tweakables::poll_rate = std::chrono::milliseconds(100);
 
 		Tweakable<bool, "MY_BOOL"> my_bool = true;

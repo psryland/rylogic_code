@@ -1,4 +1,4 @@
-// Rijndael (pronounced Reindaal) is a block cipher, designed by Joan Daemen and Vincent Rijmen as a candidate algorithm for the AES.
+﻿// Rijndael (pronounced Reindaal) is a block cipher, designed by Joan Daemen and Vincent Rijmen as a candidate algorithm for the AES.
 // The cipher has a variable block length and key length. The authors currently specify how to use keys with a length
 // of 128, 192, or 256 bits to encrypt blocks with a length of 128, 192 or 256 bits (all nine combinations of
 // key length and block length are possible). Both block length and key length can be extended very easily to
@@ -1608,8 +1608,8 @@ namespace pr::crypt
 
 				rj.Encrypt(data, enc, len, Rijndael::EMode::ECB);
 				rj.Decrypt(enc, dec, len, Rijndael::EMode::ECB);
-				PR_CHECK(memcmp(data, enc, len) != 0, true);
-				PR_CHECK(memcmp(data, dec, len) == 0, true);
+				PR_EXPECT(memcmp(data, enc, len) != 0);
+				PR_EXPECT(memcmp(data, dec, len) == 0);
 			}
 		}
 		{// Test ECB in-place mode
@@ -1620,9 +1620,9 @@ namespace pr::crypt
 
 				memcpy(enc, data, sizeof(data));
 				rj.Encrypt(enc, enc, len, Rijndael::EMode::ECB);
-				PR_CHECK(memcmp(data, enc, len) != 0, true);
+				PR_EXPECT(memcmp(data, enc, len) != 0);
 				rj.Decrypt(enc, enc, len, Rijndael::EMode::ECB);
-				PR_CHECK(memcmp(data, enc, len) == 0, true);
+				PR_EXPECT(memcmp(data, enc, len) == 0);
 			}
 		}
 		{// Test CBC and CFB modes
@@ -1640,8 +1640,8 @@ namespace pr::crypt
 					Rijndael::Chain chain;
 					rj.Decrypt(enc, dec, len, mode, &chain);
 				}
-				PR_CHECK(memcmp(data, enc, len) != 0, true);
-				PR_CHECK(memcmp(data, dec, len) == 0, true);
+				PR_EXPECT(memcmp(data, enc, len) != 0);
+				PR_EXPECT(memcmp(data, dec, len) == 0);
 			}
 		}
 	}

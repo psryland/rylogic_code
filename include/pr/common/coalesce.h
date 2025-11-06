@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Pointer coalesing operator
 //  Copyright (c) 2023 Paul Ryland
 //******************************************
@@ -99,43 +99,43 @@ namespace pr::common
 
 		ptr = inside;
 		ptr = coalesce(ptr, outside);
-		PR_CHECK(ptr == inside, true);
+		PR_EXPECT(ptr == inside);
 
 		ptr = nullptr;
 		ptr = coalesce(ptr, outside);
-		PR_CHECK(ptr == outside, true);
+		PR_EXPECT(ptr == outside);
 
 		ptr = inside;
 		create_called_count = 0;
 		ptr = coalesce(ptr, CreateInt);
-		PR_CHECK(ptr == inside, true);
-		PR_CHECK(create_called_count == 0, true);
+		PR_EXPECT(ptr == inside);
+		PR_EXPECT(create_called_count == 0);
 
 		ptr = nullptr;
 		create_called_count = 0;
 		ptr = coalesce(ptr, [] { return CreateInt(); });
-		PR_CHECK(ptr == outside, true);
-		PR_CHECK(create_called_count == 1, true);
+		PR_EXPECT(ptr == outside);
+		PR_EXPECT(create_called_count == 1);
 
 		//ptr = inside;
 		//ptr <<= outside;
-		//PR_CHECK(ptr == inside, true);
+		//PR_EXPECT(ptr == inside);
 
 		//ptr = nullptr;
 		//ptr <<= outside;
-		//PR_CHECK(ptr == outside, true);
+		//PR_EXPECT(ptr == outside);
 
 		//ptr = inside;
 		//create_called_count = 0;
 		//ptr <<= [] { return CreateInt(); };
-		//PR_CHECK(ptr == inside, true);
-		//PR_CHECK(create_called_count == 1, true);
+		//PR_EXPECT(ptr == inside);
+		//PR_EXPECT(create_called_count == 1);
 
 		//ptr = nullptr;
 		//create_called_count = 0;
 		//ptr <<= [] { return CreateInt(); };
-		//PR_CHECK(ptr == outside, true);
-		//PR_CHECK(create_called_count == 1, true);
+		//PR_EXPECT(ptr == outside);
+		//PR_EXPECT(create_called_count == 1);
 	}
 }
 #endif

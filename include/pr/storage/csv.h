@@ -410,42 +410,53 @@ namespace pr::csv
 #include "pr/common/unittests.h"
 namespace pr::storage
 {
-	PRUnitTest(CsvTests)
+	PRUnitTestClass(CsvTests)
 	{
-		using namespace pr::csv;
-		auto test_csv = temp_dir / L"test_csv.csv";
+		using Str = pr::csv::Str;
+		using Csv = pr::csv::Csv;
 
-		{// Escape round trip
+		std::filesystem::path test_csv = temp_dir() / L"test_csv.csv";
+
+		PRUnitTestMethod(EscapeRoundTrip)
+		{
+			using namespace pr::csv;
+
 			Str str = "A \"string\" with \r\n quotes, commas, and 'new' lines";
 			auto esc = EscapeString(str);
-			PR_CHECK(esc, "\"A \"\"string\"\" with \r\n quotes, commas, and 'new' lines\"");
+			PR_EXPECT(esc == "\"A \"\"string\"\" with \r\n quotes, commas, and 'new' lines\"");
 			auto ori = UnescapeString(esc);
-			PR_CHECK(ori, str);
+			PR_EXPECT(ori == str);
 		}
-		{// Basic csv
+		PRUnitTestMethod(BasicCSV)
+		{
+			using namespace pr::csv;
+
 			Csv csv;
 			Item(csv, 1, 1) = "Hello";
 			Item(csv, 1, 2) = "World";
-			PR_CHECK(ItemT(csv, 0).size(), 0U);
-			PR_CHECK(ItemT(csv, 1,0).size(), 0U);
-			PR_CHECK(ItemT(csv, 1,1), "Hello");
-			PR_CHECK(ItemT(csv, 1,2), "World");
+			PR_EXPECT(ItemT(csv, 0).size() == 0U);
+			PR_EXPECT(ItemT(csv, 1,0).size() == 0U);
+			PR_EXPECT(ItemT(csv, 1,1) == "Hello");
+			PR_EXPECT(ItemT(csv, 1,2) == "World");
 
 			Loc loc;
 			Csv csv2;
 			Save(test_csv, csv);
 			Load(test_csv, csv2, loc);
-			PR_CHECK(std::filesystem::remove(test_csv), true);
-			PR_CHECK(loc.row == 1 && loc.col == 2, true);
+			PR_EXPECT(std::filesystem::remove(test_csv));
+			PR_EXPECT(loc.row == 1 && loc.col == 2);
 
-			PR_CHECK(csv.size(), 2U);
-			PR_CHECK(csv[1].size(), 3U);
-			PR_CHECK(ItemT(csv, 0).size(), 0U);
-			PR_CHECK(ItemT(csv, 1,0).size(), 0U);
-			PR_CHECK(ItemT(csv, 1,1), "Hello");
-			PR_CHECK(ItemT(csv, 1,2), "World");
+			PR_EXPECT(csv.size() == 2U);
+			PR_EXPECT(csv[1].size() == 3U);
+			PR_EXPECT(ItemT(csv, 0).size() == 0U);
+			PR_EXPECT(ItemT(csv, 1,0).size() == 0U);
+			PR_EXPECT(ItemT(csv, 1,1) == "Hello");
+			PR_EXPECT(ItemT(csv, 1,2) == "World");
 		}
-		{// Save csv with escaped items
+		PRUnitTestMethod(SaveCSVWithEscapedItems)
+		{
+			using namespace pr::csv;
+
 			Csv csv1;
 			csv1 << "One" << endi << "Two" << endi << "Three" << endi << "\"Four\"" << endi << "\"," << "\r\n\"" << endr;
 			csv1 << "1,1" << endi << "2\r2" << endi << "3\n3" << endi << "4\r\n" << endr;
@@ -455,32 +466,35 @@ namespace pr::storage
 			Csv csv2;
 			Save(test_csv, csv1);
 			Load(test_csv, csv2);
-			PR_CHECK(std::filesystem::remove(test_csv), true);
+			PR_EXPECT(std::filesystem::remove(test_csv));
 
-			PR_CHECK(csv2.size(), 4U);
-			PR_CHECK(csv2[0].size(), 5U);
-			PR_CHECK(csv2[1].size(), 4U);
-			PR_CHECK(csv2[2].size(), 0U);
-			PR_CHECK(csv2[3].size(), 4U);
+			PR_EXPECT(csv2.size() == 4U);
+			PR_EXPECT(csv2[0].size() == 5U);
+			PR_EXPECT(csv2[1].size() == 4U);
+			PR_EXPECT(csv2[2].size() == 0U);
+			PR_EXPECT(csv2[3].size() == 4U);
 
-			PR_CHECK(csv2[0][0], "One"      );
-			PR_CHECK(csv2[0][1], "Two"      );
-			PR_CHECK(csv2[0][2], "Three"    );
-			PR_CHECK(csv2[0][3], "\"Four\"" );
-			PR_CHECK(csv2[0][4], "\",\r\n\"");
+			PR_EXPECT(csv2[0][0] == "One"      );
+			PR_EXPECT(csv2[0][1] == "Two"      );
+			PR_EXPECT(csv2[0][2] == "Three"    );
+			PR_EXPECT(csv2[0][3] == "\"Four\"" );
+			PR_EXPECT(csv2[0][4] == "\",\r\n\"");
 
-			PR_CHECK(csv2[1][0], "1,1"  );
-			PR_CHECK(csv2[1][1], "2\r2" );
-			PR_CHECK(csv2[1][2], "3\n3" );
-			PR_CHECK(csv2[1][3], "4\r\n");
+			PR_EXPECT(csv2[1][0] == "1,1"  );
+			PR_EXPECT(csv2[1][1] == "2\r2" );
+			PR_EXPECT(csv2[1][2] == "3\n3" );
+			PR_EXPECT(csv2[1][3] == "4\r\n");
 
-			PR_CHECK(csv2[3][0], "1"  );
-			PR_CHECK(csv2[3][1], "3.14" );
-			PR_CHECK(csv2[3][2], "3" );
-			PR_CHECK(csv2[3][3], "16");
+			PR_EXPECT(csv2[3][0] == "1"  );
+			PR_EXPECT(csv2[3][1] == "3.14" );
+			PR_EXPECT(csv2[3][2] == "3" );
+			PR_EXPECT(csv2[3][3] == "16");
 		}
-/*
-		{// Stream csv
+		PRUnitTestMethod(StreamCSV)
+		{
+			using namespace pr::csv;
+
+			/*
 			std::ofstream outf("test_csv.csv");
 			outf
 				<< "Hello,World\n"
@@ -493,34 +507,34 @@ namespace pr::storage
 
 			Loc loc;
 			Str s0; char s1[10];
-			PR_CHECK(Read(inf, s0, loc), true);
-			PR_CHECK(Read(inf, s1, loc), true);
-			PR_CHECK(s0, "Hello");
-			PR_CHECK(std::string(s1), "World");
-			PR_CHECK(loc.row = 1 && loc.col == 0, true);
+			PR_EXPECT(Read(inf, s0, loc));
+			PR_EXPECT(Read(inf, s1, loc));
+			PR_EXPECT(s0 == "Hello");
+			PR_EXPECT(std::string(s1) == "World");
+			PR_EXPECT(loc.row = 1 && loc.col == 0);
 
 			char ch;
-			inf >> ch >> loc; PR_CHECK(ch, 'a');
-			inf >> loc;       PR_CHECK(loc.row == 1 && loc.col == 1, true);
-			inf >> ch >> loc; PR_CHECK(ch, 'b');
-			inf >> ch >> loc; PR_CHECK(ch, 'c');
+			inf >> ch >> loc; PR_EXPECT(ch == 'a');
+			inf >> loc;       PR_EXPECT(loc.row == 1 && loc.col == 1);
+			inf >> ch >> loc; PR_EXPECT(ch == 'b');
+			inf >> ch >> loc; PR_EXPECT(ch == 'c');
 
-			PR_CHECK(loc.row == 2 && loc.col == 0, true);
+			PR_EXPECT(loc.row == 2 && loc.col == 0);
 			csv >> loc;
-			PR_CHECK(loc.row == 2 && loc.col == 1, true);
+			PR_EXPECT(loc.row == 2 && loc.col == 1);
 			csv >> loc;
-			PR_CHECK(loc.row == 3 && loc.col == 0, true);
+			PR_EXPECT(loc.row == 3 && loc.col == 0);
 
 			int i; float f; double d;
 			csv >> i >> loc >> f >> loc >> d >> loc;
-			PR_CHECK(i, 1);
-			PR_CHECK(f, 2.0f);
-			PR_CHECK(d, 3.0);
+			PR_EXPECT(i == 1);
+			PR_EXPECT(f == 2.0f);
+			PR_EXPECT(d == 3.0);
 
-			PR_CHECK(loc.row == 4 && loc.col == 0, true);
-			PR_CHECK(pr::filesys::EraseFile<std::string>("test_csv.csv"), true);
+			PR_EXPECT(loc.row == 4 && loc.col == 0);
+			PR_EXPECT(pr::filesys::EraseFile<std::string>("test_csv.csv"));
+			*/
 		}
-	*/
-	}
+	};
 }
 #endif

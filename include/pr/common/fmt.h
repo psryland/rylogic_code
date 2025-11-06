@@ -209,6 +209,7 @@ namespace pr::common
 {
 	PRUnitTest(FmtTests)
 	{
+		using namespace pr::str;
 		{// char - simple specifiers
 			auto s0 = FmtS("%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
 				,'A' ,L'W'
@@ -231,7 +232,7 @@ namespace pr::common
 			#else
 			auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
 			#endif
-			PR_CHECK(s0, s1);
+			PR_EXPECT(Equal(s0, s1));
 		}
 		{// wchar_t - simple
 			auto s0 = FmtS(L"%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
@@ -256,7 +257,7 @@ namespace pr::common
 			auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
 			#endif
 
-			PR_CHECK(s0, s1);
+			PR_EXPECT(Equal(s0, s1));
 		}
 		{// char - length specifiers
 			auto s0 = FmtS("%hhd %hd %lx %llx %Lf"
@@ -267,7 +268,7 @@ namespace pr::common
 				,1000000000000000000.0
 				);
 
-			PR_CHECK(s0, "127 32767 55555555 123456789abcdef 1000000000000000000.000000");
+			PR_EXPECT(Equal(s0, "127 32767 55555555 123456789abcdef 1000000000000000000.000000"));
 		}
 		{// wchar_t - length specifiers
 			auto s0 = FmtS(L"%hhd %hd %lx %llx %Lf"
@@ -278,28 +279,28 @@ namespace pr::common
 				,1000000000000000000.0
 				);
 
-			PR_CHECK(s0, L"127 32767 55555555 123456789abcdef 1000000000000000000.000000");
+			PR_EXPECT(Equal(s0, L"127 32767 55555555 123456789abcdef 1000000000000000000.000000"));
 		}
 		{
 			std::string s0;
 			pr::Format(s0, "String %d", 0);
-			PR_CHECK(s0, "String 0");
+			PR_EXPECT(s0 == "String 0");
 
 			char const* s1 = pr::FmtS("String %d",1);
-			PR_CHECK(s1, "String 1");
+			PR_EXPECT(Equal(s1, "String 1"));
 
 			auto s2 = pr::FmtS(L"wide string %d", 2);
-			PR_CHECK(s2, L"wide string 2");
+			PR_EXPECT(Equal(s2, L"wide string 2"));
 
 			auto s3 = pr::Fmt("std::string %d", 3);
-			PR_CHECK(s3.size(), 13U);
+			PR_EXPECT(s3.size() == 13U);
 
 			auto s4 = pr::Fmt<pr::string<>>("pr::string %d",4);
-			PR_CHECK(s4, "pr::string 4");
-			PR_CHECK(s4.size(), 12U);
+			PR_EXPECT(s4 == "pr::string 4");
+			PR_EXPECT(s4.size() == 12U);
 
 			auto s5 = pr::FmtX<struct P, 128>("c-string %d", 5);
-			PR_CHECK(s5, "c-string 5");
+			PR_EXPECT(Equal(s5, "c-string 5"));
 		}
 	}
 }

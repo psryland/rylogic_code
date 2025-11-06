@@ -667,141 +667,141 @@ namespace pr::maths
 			auto F = Frustum::MakeFromProjection(p);
 			auto P = F.projection(2.0f, 10.0f);
 
-			PR_CHECK(FEql(F, f), true);
-			PR_CHECK(FEql(P, p), true);
+			PR_EXPECT(FEql(F, f));
+			PR_EXPECT(FEql(P, p));
 		}
 		{ // FA Frustum
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
 			
 			// ZDist
 			f.zfar(5.0f);
-			PR_CHECK(f.zfar(), 5.0f);
+			PR_EXPECT(f.zfar() == 5.0f);
 			f.zfar(10.0f);
-			PR_CHECK(f.zfar(), 10.0f);
+			PR_EXPECT(f.zfar() == 10.0f);
 
 			// aspect = tan(fovX/2) / tan(fovY/2)
-			PR_CHECK(FEql(f.aspect(), 1.75f), true);
+			PR_EXPECT(FEql(f.aspect(), 1.75f));
 
 			// FOV
-			PR_CHECK(FEql(f.fovY(), maths::tau_by_8f), true);
-			PR_CHECK(FEql(f.fovX(), 2 * Atan(f.aspect() * Tan(f.fovY()/2))), true);
+			PR_EXPECT(FEql(f.fovY(), maths::tau_by_8f));
+			PR_EXPECT(FEql(f.fovX(), 2 * Atan(f.aspect() * Tan(f.fovY()/2))));
 
 			// width/height
 			auto wh = f.area(1.0f);
-			PR_CHECK(FEql(wh.x, 2 * Tan(f.fovX() / 2)), true);
-			PR_CHECK(FEql(wh.y, 2 * Tan(f.fovY() / 2)), true);
+			PR_EXPECT(FEql(wh.x, 2 * Tan(f.fovX() / 2)));
+			PR_EXPECT(FEql(wh.y, 2 * Tan(f.fovY() / 2)));
 
 			f.zfar(2.0f);
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f));
 
 			// ZFar test
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+			PR_EXPECT(!IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f));
+			PR_EXPECT(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}));
 
 			// Random points
-			PR_CHECK(IsWithin(f, v4{+0.4f, -0.2f, -0.8f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{-0.3f, +0.4f, -0.8f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{+0.4f, -0.2f, -0.8f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{-0.3f, +0.4f, -0.8f, 1}, 0.0f));
 
 			// Radius test
-			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.07f), true);
-			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.06f), false);
+			PR_EXPECT(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.07f));
+			PR_EXPECT(!IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.06f));
 
 			// GetCorners
 			auto corners = Corners(f, 1.0f);
-			PR_CHECK(FEql(corners.x, v4(-0.724874f, -0.414214f, -1.0f, 1)), true);
-			PR_CHECK(FEql(corners.y, v4(-0.724874f, +0.414214f, -1.0f, 1)), true);
-			PR_CHECK(FEql(corners.z, v4(+0.724874f, +0.414214f, -1.0f, 1)), true);
-			PR_CHECK(FEql(corners.w, v4(+0.724874f, -0.414214f, -1.0f, 1)), true);
+			PR_EXPECT(FEql(corners.x, v4(-0.724874f, -0.414214f, -1.0f, 1)));
+			PR_EXPECT(FEql(corners.y, v4(-0.724874f, +0.414214f, -1.0f, 1)));
+			PR_EXPECT(FEql(corners.z, v4(+0.724874f, +0.414214f, -1.0f, 1)));
+			PR_EXPECT(FEql(corners.w, v4(+0.724874f, -0.414214f, -1.0f, 1)));
 		}
 		{ // WH Frustum
 			auto f = Frustum::MakeWH(v2(16.0f, 9.0f), 10.0f, 20.0f);
 			
 			// ZDist
-			PR_CHECK(f.zfar(), 20.0f);
+			PR_EXPECT(f.zfar() == 20.0f);
 
 			// aspect = tan(fovX/2) / tan(fovY/2)
-			PR_CHECK(FEql(f.aspect(), 16.0f/9.0f), true);
+			PR_EXPECT(FEql(f.aspect(), 16.0f/9.0f));
 
 			// FOV
-			PR_CHECK(FEql(f.fovX(), 2 * Atan(8.0f / 10.0f)), true);
-			PR_CHECK(FEql(f.fovY(), 2 * Atan(4.5f / 10.0f)), true);
+			PR_EXPECT(FEql(f.fovX(), 2 * Atan(8.0f / 10.0f)));
+			PR_EXPECT(FEql(f.fovY(), 2 * Atan(4.5f / 10.0f)));
 
 			// width/height
 			auto wh = f.area(1.0f);
-			PR_CHECK(FEql(wh.x, 1.6f), true);
-			PR_CHECK(FEql(wh.y, 0.9f), true);
+			PR_EXPECT(FEql(wh.x, 1.6f));
+			PR_EXPECT(FEql(wh.y, 0.9f));
 
 			f.zfar(2.0f);
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f));
 			
 			// ZFar test
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+			PR_EXPECT(!IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f));
+			PR_EXPECT(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}));
 			
 			// Random points
-			PR_CHECK(IsWithin(f, v4{+0.6f, -0.2f, -0.8f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{+0.6f, -0.2f, -0.8f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.0f));
 			
 			// Radius test
-			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.23f), true);
-			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.20f), true); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
+			PR_EXPECT(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.23f));
+			PR_EXPECT(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.20f)); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
 			
 			// GetCorners
 			auto corners = Corners(f, 2.0f);
-			PR_CHECK(FEql(corners.x, v4(-1.6f, -0.9f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.y, v4(-1.6f, +0.9f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.z, v4(+1.6f, +0.9f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.w, v4(+1.6f, -0.9f, -2.0f, 1)), true);
+			PR_EXPECT(FEql(corners.x, v4(-1.6f, -0.9f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.y, v4(-1.6f, +0.9f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.z, v4(+1.6f, +0.9f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.w, v4(+1.6f, -0.9f, -2.0f, 1)));
 		}
 		{// Ortho frustum
 			auto f = Frustum::MakeOrtho(v2(1.6f, 0.9f));
 
 			// zdist
-			PR_CHECK(FEql(f.zfar(), maths::float_inf), true);
+			PR_EXPECT(FEql(f.zfar(), maths::float_inf));
 
 			// aspect = tan(fovX/2) / tan(fovY/2)
-			PR_CHECK(FEql(f.aspect(), 1.6f/0.9f), true);
+			PR_EXPECT(FEql(f.aspect(), 1.6f/0.9f));
 
 			// fov
-			PR_CHECK(FEql(f.fovX(), 0.0f), true);
-			PR_CHECK(FEql(f.fovY(), 0.0f), true);
+			PR_EXPECT(FEql(f.fovX(), 0.0f));
+			PR_EXPECT(FEql(f.fovY(), 0.0f));
 
 			// width/height
 			auto wh = f.area(1.0f);
-			PR_CHECK(FEql(wh.x, 1.6f), true);
-			PR_CHECK(FEql(wh.y, 0.9f), true);
+			PR_EXPECT(FEql(wh.x, 1.6f));
+			PR_EXPECT(FEql(wh.y, 0.9f));
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f));
 			
 			// zfar test
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+			PR_EXPECT(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f));
+			PR_EXPECT(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}));
 			
 			// Random points
-			PR_CHECK(IsWithin(f, v4{+0.3f, -0.44f, -0.8f, 1}, 0.0f), true);
-			PR_CHECK(IsWithin(f, v4{+0.3f, -0.46f, -0.8f, 1}, 0.0f), false);
+			PR_EXPECT(IsWithin(f, v4{+0.3f, -0.44f, -0.8f, 1}, 0.0f));
+			PR_EXPECT(!IsWithin(f, v4{+0.3f, -0.46f, -0.8f, 1}, 0.0f));
 			
 			// Radius test
-			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.06f), true);
-			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.04f), false);
+			PR_EXPECT(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.06f));
+			PR_EXPECT(!IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.04f));
 
 			// GetCorners
 			auto corners = Corners(f, 2.0f);
-			PR_CHECK(FEql(corners.x, v4(-0.8f, -0.45f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.y, v4(-0.8f, +0.45f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.z, v4(+0.8f, +0.45f, -2.0f, 1)), true);
-			PR_CHECK(FEql(corners.w, v4(+0.8f, -0.45f, -2.0f, 1)), true);
+			PR_EXPECT(FEql(corners.x, v4(-0.8f, -0.45f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.y, v4(-0.8f, +0.45f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.z, v4(+0.8f, +0.45f, -2.0f, 1)));
+			PR_EXPECT(FEql(corners.w, v4(+0.8f, -0.45f, -2.0f, 1)));
 		}
 		{// Grow with points
 			std::vector<v4> pts;
@@ -811,7 +811,7 @@ namespace pr::maths
 			auto nf = v2Zero;
 			auto f2w = m4x4Identity;
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
-			PR_CHECK(f.zfar() == 0.0f, true);
+			PR_EXPECT(f.zfar() == 0.0f);
 
 			for (auto& pt : pts)
 			{
@@ -827,7 +827,7 @@ namespace pr::maths
 			for (auto& pt : pts)
 			{
 				auto within = IsWithin(f, InvertFast(f2w) * pt, 0.001f, nf);
-				PR_CHECK(within, true);
+				PR_EXPECT(within);
 			}
 		}
 		{// Grow with bboxes
@@ -843,7 +843,7 @@ namespace pr::maths
 			auto nf = v2::Zero();
 			auto f2w = m4x4::Identity();
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
-			PR_CHECK(f.zfar() == 0.0f, true);
+			PR_EXPECT(f.zfar() == 0.0f);
 			for (auto& bb : bboxes)
 			{
 				Grow(f, f2w, nf, bb);
@@ -858,7 +858,7 @@ namespace pr::maths
 			for (auto& bb : bboxes)
 			{
 				auto within = IsWithin(f, InvertFast(f2w) * bb, nf);
-				PR_CHECK(within, true);
+				PR_EXPECT(within);
 			}
 		}
 		{// Grow with spheres
@@ -874,7 +874,7 @@ namespace pr::maths
 			auto nf = v2::Zero();
 			auto f2w = m4x4::Identity();
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
-			PR_CHECK(f.zfar() == 0.0f, true);
+			PR_EXPECT(f.zfar() == 0.0f);
 			for (auto& bs : spheres)
 			{
 				Grow(f, f2w, nf, bs);
@@ -889,7 +889,7 @@ namespace pr::maths
 			for (auto& bs : spheres)
 			{
 				auto within = IsWithin(f, InvertFast(f2w) * bs, nf);
-				PR_CHECK(within, true);
+				PR_EXPECT(within);
 			}
 		}
 	}

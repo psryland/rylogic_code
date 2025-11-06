@@ -451,39 +451,39 @@ namespace pr::storage
 		Enum<Enum1>::NameA();
 
 		Settings s;
-		PR_CHECK(s.m_count    , 2                 );
-		PR_CHECK(s.m_scale    , 3.14f             );
-		PR_CHECK(s.m_mask     , 0xABCU            );
-		PR_CHECK(s.m_colour   , pr::Colour32Green );
-		PR_CHECK(s.m_area     , pr::v2(1,2)       );
-		PR_CHECK(s.m_position , pr::v4(1,2,3,1)   );
-		PR_CHECK(s.m_name == "hello settings" , true);
-		PR_CHECK(s.m_emun == Enum1::Two    , true);
-		PR_CHECK(s.m_emun2 == Enum2::Free , true);
-		PR_CHECK(s.SaveRequired(), false);
+		PR_EXPECT(s.m_count == 2);
+		PR_EXPECT(s.m_scale == 3.14f);
+		PR_EXPECT(s.m_mask == 0xABCU);
+		PR_EXPECT(s.m_colour == pr::Colour32Green);
+		PR_EXPECT(s.m_area == pr::v2(1,2));
+		PR_EXPECT(s.m_position == pr::v4(1,2,3,1));
+		PR_EXPECT(s.m_name == "hello settings");
+		PR_EXPECT(s.m_emun == Enum1::Two);
+		PR_EXPECT(s.m_emun2 == Enum2::Free);
+		PR_EXPECT(!s.SaveRequired());
 
-		s.m_count    = 4;
-		s.m_scale    = 1.6f;
-		s.m_mask     = 0xCDEU;
-		s.m_colour   = pr::Colour32Blue;
-		s.m_area     = pr::v2One;
+		s.m_count = 4;
+		s.m_scale = 1.6f;
+		s.m_mask = 0xCDEU;
+		s.m_colour = pr::Colour32Blue;
+		s.m_area = pr::v2One;
 		s.m_position = pr::v4(3, 2, 1, 1);
-		s.m_name     = "renamed";
-		s.m_emun     = Enum1::Three;
-		s.m_emun2    = Enum2::Won;
-		PR_CHECK(s.SaveRequired(), true         );
-		PR_CHECK(s.m_count    , 4               );
-		PR_CHECK(s.m_scale    , 1.6f            );
-		PR_CHECK(s.m_mask     , 0xCDEU          );
-		PR_CHECK(s.m_colour   , pr::Colour32Blue);
-		PR_CHECK(s.m_area     , pr::v2One       );
-		PR_CHECK(s.m_position , pr::v4(3,2,1,1) );
-		PR_CHECK(s.m_name == "renamed" , true);
-		PR_CHECK(s.m_emun == Enum1::Three , true);
-		PR_CHECK(s.m_emun2 == Enum2::Won  , true);
+		s.m_name = "renamed";
+		s.m_emun = Enum1::Three;
+		s.m_emun2 = Enum2::Won;
+		PR_EXPECT(s.SaveRequired());
+		PR_EXPECT(s.m_count == 4);
+		PR_EXPECT(s.m_scale == 1.6f);
+		PR_EXPECT(s.m_mask == 0xCDEU);
+		PR_EXPECT(s.m_colour == pr::Colour32Blue);
+		PR_EXPECT(s.m_area == pr::v2One);
+		PR_EXPECT(s.m_position == pr::v4(3,2,1,1) );
+		PR_EXPECT(s.m_name == "renamed");
+		PR_EXPECT(s.m_emun == Enum1::Three);
+		PR_EXPECT(s.m_emun2 == Enum2::Won);
 
 		std::string settings = s.Export();
-		PR_CHECK(settings,
+		PR_EXPECT(settings ==
 			"*count {4}\r\n"
 			"*scale {1.6}\r\n"
 			"*mask {3294}\r\n"
@@ -493,20 +493,20 @@ namespace pr::storage
 			"*name {\"renamed\"}\r\n"
 			"*emun {Three}\r\n"
 			"*emun2 {0}\r\n"
-			);
+		);
 
 		Settings s2;
-		s2.Import(settings                       );
-		PR_CHECK(s2.m_count    , 4               );
-		PR_CHECK(s2.m_scale    , 1.6f            );
-		PR_CHECK(s2.m_mask     , 0xCDEU          );
-		PR_CHECK(s2.m_colour   , pr::Colour32Blue);
-		PR_CHECK(s2.m_area     , pr::v2One       );
-		PR_CHECK(s2.m_position , pr::v4(3,2,1,1) );
-		PR_CHECK(s2.m_name == "renamed"       , true);
-		PR_CHECK(s2.m_emun == Enum1::Three , true);
-		PR_CHECK(s2.m_emun2 == Enum2::Won , true);
-		PR_CHECK(s2.SaveRequired(), false);
+		s2.Import(settings);
+		PR_EXPECT(s2.m_count == 4);
+		PR_EXPECT(s2.m_scale == 1.6f);
+		PR_EXPECT(s2.m_mask == 0xCDEU);
+		PR_EXPECT(s2.m_colour == pr::Colour32Blue);
+		PR_EXPECT(s2.m_area == pr::v2One);
+		PR_EXPECT(s2.m_position == pr::v4(3,2,1,1) );
+		PR_EXPECT(s2.m_name == "renamed");
+		PR_EXPECT(s2.m_emun == Enum1::Three);
+		PR_EXPECT(s2.m_emun2 == Enum2::Won);
+		PR_EXPECT(s2.SaveRequired() == false);
 	}
 }
 #endif

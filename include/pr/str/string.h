@@ -1759,82 +1759,82 @@ namespace pr::str
 		std::string s0 = "std::string";
 		std::wstring w0 = L"std::wstring";
 
-		pr::string<> str0;              PR_CHECK(str0.empty(), true);
-		pr::string<> str1 = "Test1";    PR_CHECK(str1, "Test1");
-		pr::string<> str2 = str1;       PR_CHECK(str2, str1);
-		PR_CHECK(str2.c_str() == str1.c_str(), false);
+		pr::string<> str0;              PR_EXPECT(str0.empty());
+		pr::string<> str1 = "Test1";    PR_EXPECT(str1 == "Test1");
+		pr::string<> str2 = str1;       PR_EXPECT(str2 == str1);
+		PR_EXPECT(str2.c_str() == str1.c_str() == false);
 
 		pr::string<> str3(str1, 2, pr::string<>::npos);
-		PR_CHECK(str3.compare("st1"), 0);
+		PR_EXPECT(str3.compare("st1") == 0);
 
 		pr::string<> str4 = s0;
-		PR_CHECK(str4, pr::string<>(s0));
+		PR_EXPECT(str4 == pr::string<>(s0));
 
 		pr::string<wchar_t> wstr0 = wsrc;
-		PR_CHECK(wstr0.compare(wsrc), 0);
+		PR_EXPECT(wstr0.compare(wsrc) == 0);
 
 		pr::string<wchar_t> wstr1 = w0;
-		PR_CHECK(wstr1.compare(w0), 0);
+		PR_EXPECT(wstr1.compare(w0) == 0);
 
 		pr::string<wchar_t> wstr2 = L"C++ string";
 		std::wstring        w2    = L"C++ string";
-		PR_CHECK(wstr2 == w2, true);
+		PR_EXPECT(wstr2 == w2);
 		wstr2 = L"pr C++ string";
 		w2    = L"std C++ string";
-		PR_CHECK(wstr2 != w2, true);
+		PR_EXPECT(wstr2 != w2);
 
-		str0.assign(10, 'A');                               PR_CHECK(str0, "AAAAAAAAAA");
-		str1.assign(s0);                                    PR_CHECK(str1, "std::string");
-		str2.assign("Test2");                               PR_CHECK(str2, "Test2");
-		str4.assign(src, src + 6);                          PR_CHECK(str4, "abcdef");
-		str4.assign(s0.begin(), s0.begin() + 5);            PR_CHECK(str4, "std::");
+		str0.assign(10, 'A');                               PR_EXPECT(str0 == "AAAAAAAAAA");
+		str1.assign(s0);                                    PR_EXPECT(str1 == "std::string");
+		str2.assign("Test2");                               PR_EXPECT(str2 == "Test2");
+		str4.assign(src, src + 6);                          PR_EXPECT(str4 == "abcdef");
+		str4.assign(s0.begin(), s0.begin() + 5);            PR_EXPECT(str4 == "std::");
 
-		str0.append(str1, 0, 3);                            PR_CHECK(str0  , "AAAAAAAAAAstd");
-		str1.append(str2);                                  PR_CHECK(str1  , "std::stringTest2");
-		str2.append(3, 'B');                                PR_CHECK(str2  , "Test2BBB");
-		str0.append("Hello", 4);                            PR_CHECK(str0  , "AAAAAAAAAAstdHell");
-		str0.append("o");                                   PR_CHECK(str0  , "AAAAAAAAAAstdHello");
-		str4.append(s0.begin()+7, s0.end());                PR_CHECK(str4  , "std::ring");
-		wstr0.append(4, L'x');                              PR_CHECK(wstr0 , L"abcdefghijxxxx");
+		str0.append(str1, 0, 3);                            PR_EXPECT(str0   == "AAAAAAAAAAstd");
+		str1.append(str2);                                  PR_EXPECT(str1   == "std::stringTest2");
+		str2.append(3, 'B');                                PR_EXPECT(str2   == "Test2BBB");
+		str0.append("Hello", 4);                            PR_EXPECT(str0   == "AAAAAAAAAAstdHell");
+		str0.append("o");                                   PR_EXPECT(str0   == "AAAAAAAAAAstdHello");
+		str4.append(s0.begin()+7, s0.end());                PR_EXPECT(str4   == "std::ring");
+		wstr0.append(4, L'x');                              PR_EXPECT(wstr0  == L"abcdefghijxxxx");
 
-		str0.insert(2, 3, 'C');                             PR_CHECK(str0, "AACCCAAAAAAAAstdHello");
-		str1.insert(str1.begin(), 'D');                     PR_CHECK(str1, "Dstd::stringTest2");
-		str2.insert(str2.begin());                          PR_CHECK(str2[0] == 0 && !str2.empty(), true);
-		str3.insert(2, pr::string<>("and"));                PR_CHECK(str3, "stand1");
+		str0.insert(2, 3, 'C');                             PR_EXPECT(str0 == "AACCCAAAAAAAAstdHello");
+		str1.insert(str1.begin(), 'D');                     PR_EXPECT(str1 == "Dstd::stringTest2");
+		str2.insert(str2.begin());                          PR_EXPECT(str2[0] == 0 && !str2.empty());
+		str3.insert(2, pr::string<>("and"));                PR_EXPECT(str3 == "stand1");
 
-		str0.erase(0, 13);                                  PR_CHECK(str0, "stdHello");
-		str2.erase(0, 1);                                   PR_CHECK(str2, "Test2BBB");
-		str2.erase(str2.begin()+4);                         PR_CHECK(str2, "TestBBB");
-		str2.erase(str2.begin()+4, str2.begin()+7);         PR_CHECK(str2, "Test");
+		str0.erase(0, 13);                                  PR_EXPECT(str0 == "stdHello");
+		str2.erase(0, 1);                                   PR_EXPECT(str2 == "Test2BBB");
+		str2.erase(str2.begin()+4);                         PR_EXPECT(str2 == "TestBBB");
+		str2.erase(str2.begin()+4, str2.begin()+7);         PR_EXPECT(str2 == "Test");
 		str2 += "2BBB";
 
-		PR_CHECK(str0.compare(1, 2, "te", 2)                       < 0, true);
-		PR_CHECK(str1.compare(1, 5, pr::string<>("Dstd::"), 1, 5) == 0, true);
-		PR_CHECK(str2.compare(pr::string<>("Test2BBB"))           == 0, true);
-		PR_CHECK(str0.compare(0, 2, pr::string<>("sr"))            > 0, true);
-		PR_CHECK(str1.compare("Dstd::string")                      > 0, true);
-		PR_CHECK(str2.compare(5, 3, "BBB")                        == 0, true);
+		PR_EXPECT(str0.compare(1, 2, "te", 2) < 0);
+		PR_EXPECT(str1.compare(1, 5, pr::string<>("Dstd::"), 1, 5) == 0);
+		PR_EXPECT(str2.compare(pr::string <>("Test2BBB")) == 0);
+		PR_EXPECT(str0.compare(0, 2, pr::string<>("sr")) > 0);
+		PR_EXPECT(str1.compare("Dstd::string") > 0);
+		PR_EXPECT(str2.compare(5, 3, "BBB") == 0);
 
 		str0.clear();
-		PR_CHECK(str0.empty() && str0.capacity() == str0.LocalLength - 1, true);
-		PR_CHECK(::size_t(str1.end() - str1.begin()), str1.size());
-		str1.resize(0);                                     PR_CHECK(str1.empty(), true);
-		str1.push_back('E');                                PR_CHECK(str1.size() == 1 && str1[0] == 'E', true);
+		PR_EXPECT(str0.empty() && str0.capacity() == str0.LocalLength - 1);
+		PR_EXPECT(::size_t(str1.end() - str1.begin()) == str1.size());
+		str1.resize(0);                                     PR_EXPECT(str1.empty());
+		str1.push_back('E');                                PR_EXPECT(str1.size() == 1 && str1[0] == 'E');
 
-		str0 = pr::string<>("Test0");                       PR_CHECK(str0, "Test0");
-		str1 = "Test1";                                     PR_CHECK(str1, "Test1");
-		str2 = 'F';                                         PR_CHECK(str2, "F");
+		str0 = pr::string<>("Test0");                       PR_EXPECT(str0 == "Test0");
+		str1 = "Test1";                                     PR_EXPECT(str1 == "Test1");
+		str2 = 'F';                                         PR_EXPECT(str2 == "F");
 
-		str0 += pr::string<>("Pass");                       PR_CHECK(str0, "Test0Pass");
-		str1 += "Pass";                                     PR_CHECK(str1, "Test1Pass");
-		str2 += 'G';                                        PR_CHECK(str2, "FG");
+		str0 += pr::string<>("Pass");                       PR_EXPECT(str0 == "Test0Pass");
+		str1 += "Pass";                                     PR_EXPECT(str1 == "Test1Pass");
+		str2 += 'G';                                        PR_EXPECT(str2 == "FG");
 
-		str0 = pr::string<>("Jin") + pr::string<>("Jang");  PR_CHECK(str0, "JinJang");
-		str1 = pr::string<>("Purple") + "Monkey";           PR_CHECK(str1, "PurpleMonkey");
-		str2 = pr::string<>("H") + 'I';                     PR_CHECK(str2, "HI");
+		str0 = pr::string<>("Jin") + pr::string<>("Jang");  PR_EXPECT(str0 == "JinJang");
+		str1 = pr::string<>("Purple") + "Monkey";           PR_EXPECT(str1 == "PurpleMonkey");
+		str2 = pr::string<>("H") + 'I';                     PR_EXPECT(str2 == "HI");
 
-		wstr0 = L"A";                                       PR_CHECK(wstr0, L"A");
-		wstr0 += L'b';                                      PR_CHECK(wstr0, L"Ab");
+		wstr0 = L"A";                                       PR_EXPECT(wstr0 == L"A");
+		wstr0 += L'b';                                      PR_EXPECT(wstr0 == L"Ab");
 
 		PR_EXPECT(pr::string<>("A") == pr::string<>("A") );
 		PR_EXPECT(pr::string<>("A") != pr::string<>("B") );
@@ -1873,19 +1873,19 @@ namespace pr::str
 		}
 
 		str4 = "abcdef";
-		std::string stdstr = str4;     PR_CHECK(pr::str::Equal(stdstr, str4), true);
-		stdstr = str3;                 PR_CHECK(pr::str::Equal(stdstr, str3), true);
+		std::string stdstr = str4;     PR_EXPECT(Equal(stdstr, str4));
+		stdstr = str3;                 PR_EXPECT(Equal(stdstr, str3));
 
 		std::string str5 = "ABCDEFG";
 		str5.replace(1, 3, "bcde", 2);
 		PR_EXPECT(str5.size() == 6U);
 
 		pr::string<> str6 = "abcdefghij";
-		str6.replace(0, 3, pr::string<>("AB"));              PR_CHECK(str6, "ABdefghij");
-		str6.replace(3, 3, pr::string<>("DEFGHI"), 1, 3);    PR_CHECK(str6, "ABdEFGhij");
-		str6.replace(1, pr::string<>::npos, "bcdefghi", 4);  PR_CHECK(str6, "Abcde");
-		str6.replace(1, pr::string<>::npos, "bcdefghi");     PR_CHECK(str6, "Abcdefghi");
-		str6.replace(4, 20, 3, 'X');                         PR_CHECK(str6, "AbcdXXX");
+		str6.replace(0, 3, pr::string<>("AB"));              PR_EXPECT(str6 == "ABdefghij");
+		str6.replace(3, 3, pr::string<>("DEFGHI"), 1, 3);    PR_EXPECT(str6 == "ABdEFGhij");
+		str6.replace(1, pr::string<>::npos, "bcdefghi", 4);  PR_EXPECT(str6 == "Abcde");
+		str6.replace(1, pr::string<>::npos, "bcdefghi");     PR_EXPECT(str6 == "Abcdefghi");
+		str6.replace(4, 20, 3, 'X');                         PR_EXPECT(str6 == "AbcdXXX");
 
 		// Test move constructor/assignment
 		pr::string<> str7 = "my_string";

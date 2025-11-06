@@ -1,4 +1,4 @@
-//*************************************************************************************************
+﻿//*************************************************************************************************
 // SHA512
 //*************************************************************************************************
 //  100% free public domain implementation of the SHA-512 algorithm.
@@ -291,12 +291,12 @@ namespace pr::hash
 		char str1[] = "0123456789a";
 		auto hash1 = Sha512Hash(str0, sizeof(str0));
 		auto hash2 = Sha512Hash(str1, sizeof(str1));
-		PR_CHECK(hash1 != hash2, true);
+		PR_EXPECT(hash1 != hash2);
 
 		// This hash doesn't seem to produce the same result as the windows context menu one
 		//auto hash3 = Sha512HashFile("P:\\pr\\include\\pr\\crypt\\rijndael.h");
 		//auto hash4 = SHA512::hash_t{0x49,0x74,0x3D,0x87,0xDF,0xC8,0x63,0x83,0x18,0xBE,0x23,0x42,0xB2,0x47,0x06,0xE9,0x16,0x09,0xE9,0x85};
-		//PR_CHECK(hash3 == hash4, true);
+		//PR_EXPECT(hash3 == hash4);
 	}
 }
 #endif

@@ -2146,367 +2146,367 @@ namespace pr::common
 		{// Compiled expressions
 			{ // constants
 				auto expr = Compile("2 + x");
-				PR_CHECK(expr(3), Val(5));
-				PR_CHECK(expr(1.5), Val(3.5));
-				PR_CHECK(expr(iv4(3)), Val(iv4(5)));
-				PR_CHECK(expr(v4(1.5f)), Val(v4(3.5f)));
+				PR_EXPECT(expr(3) == Val(5));
+				PR_EXPECT(expr(1.5) == Val(3.5));
+				PR_EXPECT(expr(iv4(3)) == Val(iv4(5)));
+				PR_EXPECT(expr(v4(1.5f)) == Val(v4(3.5f)));
 			}
 			{ // add
 				auto expr = Compile("x + y");
-				PR_CHECK(expr(3, 5), Val(8));
-				PR_CHECK(expr({{"y", 5.25}, {"x", -2.5}}), Val(2.75));
-				PR_CHECK(expr({{"y", iv4(5)}, {"x", iv4(3)}}), Val(iv4(8)));
-				PR_CHECK(expr({{"y", v4(5.25f)}, {"x", v4(-2.5f)}}), Val(v4(2.75f)));
+				PR_EXPECT(expr(3, 5) == Val(8));
+				PR_EXPECT(expr({{"y", 5.25}, {"x", -2.5}}) == Val(2.75));
+				PR_EXPECT(expr({{"y", iv4(5)}, {"x", iv4(3)}}) == Val(iv4(8)));
+				PR_EXPECT(expr({{"y", v4(5.25f)}, {"x", v4(-2.5f)}}) == Val(v4(2.75f)));
 			}
 			{ // subtract
 				auto expr0 = Compile("x - y");
-				PR_CHECK(expr0(3, 5), Val(-2));
-				PR_CHECK(expr0({{"y", 2.25}, {"x", -2.25}}), Val(-4.5));
-				PR_CHECK(expr0({{"y", iv4(5)}, {"x", iv4(3)}}), Val(iv4(-2)));
-				PR_CHECK(expr0({{"y", v4(2.25f)}, {"x", v4(-2.25f)}}), Val(v4(-4.5f)));
+				PR_EXPECT(expr0(3, 5) == Val(-2));
+				PR_EXPECT(expr0({{"y", 2.25}, {"x", -2.25}}) == Val(-4.5));
+				PR_EXPECT(expr0({{"y", iv4(5)}, {"x", iv4(3)}}) == Val(iv4(-2)));
+				PR_EXPECT(expr0({{"y", v4(2.25f)}, {"x", v4(-2.25f)}}) == Val(v4(-4.5f)));
 
 				auto expr1 = Compile("x - y - z");
-				PR_CHECK(expr1(10, 3, 2), Val(5));
-				PR_CHECK(expr1(10.0, 3.0, 2.0), Val(5.0));
-				PR_CHECK(expr1(iv4(10), iv4(3), iv4(2)), Val(iv4(5)));
-				PR_CHECK(expr1(v4(10), v4(3), v4(2)), Val(v4(5)));
+				PR_EXPECT(expr1(10, 3, 2) == Val(5));
+				PR_EXPECT(expr1(10.0, 3.0, 2.0) == Val(5.0));
+				PR_EXPECT(expr1(iv4(10), iv4(3), iv4(2)) == Val(iv4(5)));
+				PR_EXPECT(expr1(v4(10), v4(3), v4(2)) == Val(v4(5)));
 			}
 			{ // multiply
 				auto expr = Compile("x*x + y");
-				PR_CHECK(expr(3, 5), Val(14));
-				PR_CHECK(expr({{"y", 2.5}, {"x", -2.5}}), Val(8.75));
-				PR_CHECK(expr({{"y", iv4(5)}, {"x", iv4(3)}}), Val(iv4(14)));
-				PR_CHECK(expr({{"y", v4(2.5f)}, {"x", v4(-2.5f)}}), Val(v4(8.75f)));
+				PR_EXPECT(expr(3, 5) == Val(14));
+				PR_EXPECT(expr({{"y", 2.5}, {"x", -2.5}}) == Val(8.75));
+				PR_EXPECT(expr({{"y", iv4(5)}, {"x", iv4(3)}}) == Val(iv4(14)));
+				PR_EXPECT(expr({{"y", v4(2.5f)}, {"x", v4(-2.5f)}}) == Val(v4(8.75f)));
 			}
 			{ // divide
 				auto expr = Compile("x / y");
-				PR_CHECK(expr(5, 2), Val(2));
-				PR_CHECK(expr({{"y", 2.0}, {"x", -5.0}}), Val(-2.5));
-				PR_CHECK(expr(iv4(5), iv4(2)), Val(iv4(2)));
-				PR_CHECK(expr(v4(5), v4(2)), Val(v4(2.5f)));
+				PR_EXPECT(expr(5, 2) == Val(2));
+				PR_EXPECT(expr({{"y", 2.0}, {"x", -5.0}}) == Val(-2.5));
+				PR_EXPECT(expr(iv4(5), iv4(2)) == Val(iv4(2)));
+				PR_EXPECT(expr(v4(5), v4(2)) == Val(v4(2.5f)));
 			}
 			{ // modulus
 				auto expr = Compile("x % y");
-				PR_CHECK(expr(5, 2), Val(1));
-				PR_CHECK(FEql(expr(11.3, 3.1).db(), Val(std::fmod(11.3, 3.1)).db()), true);
-				PR_CHECK(expr(iv4(5), iv4(2)), Val(iv4(1)));
-				PR_CHECK(expr(v4(5), v4(2)), Val(v4(1)));
+				PR_EXPECT(expr(5, 2) == Val(1));
+				PR_EXPECT(FEql(expr(11.3, 3.1).db(), Val(std::fmod(11.3, 3.1)).db()));
+				PR_EXPECT(expr(iv4(5), iv4(2)) == Val(iv4(1)));
+				PR_EXPECT(expr(v4(5), v4(2)) == Val(v4(1)));
 			}
 			{ // unary plus
 				auto expr = Compile("+x");
-				PR_CHECK(expr(5), Val(5));
-				PR_CHECK(expr(-5.0), Val(-5.0));
-				PR_CHECK(expr(iv4(-5)), Val(iv4(-5)));
-				PR_CHECK(expr(v4(-5.0f)), Val(v4(-5.0f)));
+				PR_EXPECT(expr(5) == Val(5));
+				PR_EXPECT(expr(-5.0) == Val(-5.0));
+				PR_EXPECT(expr(iv4(-5)) == Val(iv4(-5)));
+				PR_EXPECT(expr(v4(-5.0f)) == Val(v4(-5.0f)));
 			}
 			{ // unary minus
 				auto expr0 = Compile("-x");
-				PR_CHECK(expr0(5), Val(-5));
-				PR_CHECK(expr0(-5.0), Val(+5.0));
-				PR_CHECK(expr0(iv4(-1,-2,-3,-4)), Val(iv4(1,2,3,4)));
-				PR_CHECK(expr0(v4(-1,-2,-3,-4)), Val(v4(1,2,3,4)));
+				PR_EXPECT(expr0(5) == Val(-5));
+				PR_EXPECT(expr0(-5.0) == Val(+5.0));
+				PR_EXPECT(expr0(iv4(-1,-2,-3,-4)) == Val(iv4(1,2,3,4)));
+				PR_EXPECT(expr0(v4(-1,-2,-3,-4)) == Val(v4(1,2,3,4)));
 
 				auto expr1 = Compile("-+x");
-				PR_CHECK(expr1(5), Val(-5));
-				PR_CHECK(expr1(iv4(5)), Val(iv4(-5)));
+				PR_EXPECT(expr1(5) == Val(-5));
+				PR_EXPECT(expr1(iv4(5)) == Val(iv4(-5)));
 
 				auto expr2 = Compile("-++-1");
-				PR_CHECK(expr2(), Val(1));
+				PR_EXPECT(expr2() == Val(1));
 			}
 			{ // twos complement
 				auto expr = Compile("~x");
-				PR_CHECK(expr(5), Val(~5));
-				PR_CHECK(expr(iv4(5)), Val(iv4(~5)));
+				PR_EXPECT(expr(5) == Val(~5));
+				PR_EXPECT(expr(iv4(5)) == Val(iv4(~5)));
 			}
 			{ // boolean not
 				auto expr0 = Compile("!x");
-				PR_CHECK(expr0(5), Val(0));
-				PR_CHECK(expr0(0), Val(1));
-				PR_CHECK(expr0(iv4(5)), Val(iv4(0)));
-				PR_CHECK(expr0(iv4(0)), Val(iv4(1)));
+				PR_EXPECT(expr0(5) == Val(0));
+				PR_EXPECT(expr0(0) == Val(1));
+				PR_EXPECT(expr0(iv4(5)) == Val(iv4(0)));
+				PR_EXPECT(expr0(iv4(0)) == Val(iv4(1)));
 
 				auto expr1 = Compile("!!true");
-				PR_CHECK(expr1(), Val(1));
+				PR_EXPECT(expr1() == Val(1));
 
 				auto expr2 = Compile("-!!!false");
-				PR_CHECK(expr2(), Val(-1));
+				PR_EXPECT(expr2() == Val(-1));
 			}
 			{ // logical OR
 				auto expr = Compile("x || y");
-				PR_CHECK(expr(0, 0), Val(0));
-				PR_CHECK(expr(5, 0), Val(1));
-				PR_CHECK(expr(0, 5), Val(1));
-				PR_CHECK(expr(3, 5), Val(1));
-				PR_CHECK(expr(iv4(0,5,0,3), iv4(0,0,5,5)), Val(iv4(0,1,1,1)));
+				PR_EXPECT(expr(0, 0) == Val(0));
+				PR_EXPECT(expr(5, 0) == Val(1));
+				PR_EXPECT(expr(0, 5) == Val(1));
+				PR_EXPECT(expr(3, 5) == Val(1));
+				PR_EXPECT(expr(iv4(0,5,0,3), iv4(0,0,5,5)) == Val(iv4(0,1,1,1)));
 			}
 			{ // logical AND
 				auto expr = Compile("x && y");
-				PR_CHECK(expr(0, 0), Val(0));
-				PR_CHECK(expr(5, 0), Val(0));
-				PR_CHECK(expr(0, 5), Val(0));
-				PR_CHECK(expr(3, 5), Val(1));
-				PR_CHECK(expr(iv4(0,5,0,3), iv4(0,0,5,5)), Val(iv4(0,0,0,1)));
+				PR_EXPECT(expr(0, 0) == Val(0));
+				PR_EXPECT(expr(5, 0) == Val(0));
+				PR_EXPECT(expr(0, 5) == Val(0));
+				PR_EXPECT(expr(3, 5) == Val(1));
+				PR_EXPECT(expr(iv4(0,5,0,3), iv4(0,0,5,5)) == Val(iv4(0,0,0,1)));
 			}
 			{ // logical Equal
 				auto expr = Compile("x == y");
-				PR_CHECK(expr(0, 0), Val(1));
-				PR_CHECK(expr(5, 0), Val(0));
-				PR_CHECK(expr(5, 5), Val(1));
-				PR_CHECK(expr(3.5, 3.5), Val(1));
-				PR_CHECK(expr(3.5, 5.3), Val(0));
-				PR_CHECK(expr(iv4(0,0,0,0), iv4(0,0,0,0)), Val(iv4(1)));
-				PR_CHECK(expr(iv4(1,2,3,4), iv4(1,2,3,4)), Val(iv4(1)));
-				PR_CHECK(expr(iv4(1,2,3,4), iv4(4,3,2,1)), Val(iv4(0)));
-				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(1.f)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(1.f)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(0.f)));
+				PR_EXPECT(expr(0, 0) == Val(1));
+				PR_EXPECT(expr(5, 0) == Val(0));
+				PR_EXPECT(expr(5, 5) == Val(1));
+				PR_EXPECT(expr(3.5, 3.5) == Val(1));
+				PR_EXPECT(expr(3.5, 5.3) == Val(0));
+				PR_EXPECT(expr(iv4(0,0,0,0), iv4(0,0,0,0)) == Val(iv4(1)));
+				PR_EXPECT(expr(iv4(1,2,3,4), iv4(1,2,3,4)) == Val(iv4(1)));
+				PR_EXPECT(expr(iv4(1,2,3,4), iv4(4,3,2,1)) == Val(iv4(0)));
+				PR_EXPECT(expr(v4(0,0,0,0), v4(0,0,0,0)) == Val(v4(1.f)));
+				PR_EXPECT(expr(v4(1,2,3,4), v4(1,2,3,4)) == Val(v4(1.f)));
+				PR_EXPECT(expr(v4(1,2,3,4), v4(4,3,2,1)) == Val(v4(0.f)));
 			}
 			{ // logical Not Equal
 				auto expr = Compile("x != y");
-				PR_CHECK(expr(0, 0), Val(0));
-				PR_CHECK(expr(5, 0), Val(1));
-				PR_CHECK(expr(5, 5), Val(0));
-				PR_CHECK(expr(3.5, 3.5), Val(0));
-				PR_CHECK(expr(3.5, 5.3), Val(1));
-				PR_CHECK(expr(iv4(0,0,0,0), iv4(0,0,0,0)), Val(iv4(0)));
-				PR_CHECK(expr(iv4(1,2,3,4), iv4(1,2,3,4)), Val(iv4(0)));
-				PR_CHECK(expr(iv4(1,2,3,4), iv4(4,3,2,1)), Val(iv4(1)));
-				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(0.f)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(0.f)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(1.f)));
+				PR_EXPECT(expr(0, 0) == Val(0));
+				PR_EXPECT(expr(5, 0) == Val(1));
+				PR_EXPECT(expr(5, 5) == Val(0));
+				PR_EXPECT(expr(3.5, 3.5) == Val(0));
+				PR_EXPECT(expr(3.5, 5.3) == Val(1));
+				PR_EXPECT(expr(iv4(0,0,0,0), iv4(0,0,0,0)) == Val(iv4(0)));
+				PR_EXPECT(expr(iv4(1,2,3,4), iv4(1,2,3,4)) == Val(iv4(0)));
+				PR_EXPECT(expr(iv4(1,2,3,4), iv4(4,3,2,1)) == Val(iv4(1)));
+				PR_EXPECT(expr(v4(0,0,0,0), v4(0,0,0,0)) == Val(v4(0.f)));
+				PR_EXPECT(expr(v4(1,2,3,4), v4(1,2,3,4)) == Val(v4(0.f)));
+				PR_EXPECT(expr(v4(1,2,3,4), v4(4,3,2,1)) == Val(v4(1.f)));
 			}
 			{ // logical less than
 				auto expr = Compile("x < y");
-				PR_CHECK(expr(0, 0), Val(0));
-				PR_CHECK(expr(5, 0), Val(0));
-				PR_CHECK(expr(3, 5), Val(1));
-				PR_CHECK(expr(3.5, 3.5), Val(0));
-				PR_CHECK(expr(3.5, 5.3), Val(1));
+				PR_EXPECT(expr(0, 0) == Val(0));
+				PR_EXPECT(expr(5, 0) == Val(0));
+				PR_EXPECT(expr(3, 5) == Val(1));
+				PR_EXPECT(expr(3.5, 3.5) == Val(0));
+				PR_EXPECT(expr(3.5, 5.3) == Val(1));
 			}
 			{ // logical less than or equal
 				auto expr = Compile("x <= y");
-				PR_CHECK(expr(0, 0), Val(1));
-				PR_CHECK(expr(5, 0), Val(0));
-				PR_CHECK(expr(3, 5), Val(1));
-				PR_CHECK(expr(3.5, 3.5), Val(1));
-				PR_CHECK(expr(3.5, 5.3), Val(1));
+				PR_EXPECT(expr(0, 0) == Val(1));
+				PR_EXPECT(expr(5, 0) == Val(0));
+				PR_EXPECT(expr(3, 5) == Val(1));
+				PR_EXPECT(expr(3.5, 3.5) == Val(1));
+				PR_EXPECT(expr(3.5, 5.3) == Val(1));
 			}
 			{ // logical greater than
 				auto expr = Compile("x > y");
-				PR_CHECK(expr(0, 0), Val(0));
-				PR_CHECK(expr(5, 0), Val(1));
-				PR_CHECK(expr(3, 5), Val(0));
-				PR_CHECK(expr(3.5, 3.5), Val(0));
-				PR_CHECK(expr(3.5, 5.3), Val(0));
+				PR_EXPECT(expr(0, 0) == Val(0));
+				PR_EXPECT(expr(5, 0) == Val(1));
+				PR_EXPECT(expr(3, 5) == Val(0));
+				PR_EXPECT(expr(3.5, 3.5) == Val(0));
+				PR_EXPECT(expr(3.5, 5.3) == Val(0));
 			}
 			{ // logical greater than or equal
 				auto expr = Compile("x >= y");
-				PR_CHECK(expr(0, 0), Val(1));
-				PR_CHECK(expr(5, 0), Val(1));
-				PR_CHECK(expr(3, 5), Val(0));
-				PR_CHECK(expr(3.5, 3.5), Val(1));
-				PR_CHECK(expr(3.5, 5.3), Val(0));
+				PR_EXPECT(expr(0, 0) == Val(1));
+				PR_EXPECT(expr(5, 0) == Val(1));
+				PR_EXPECT(expr(3, 5) == Val(0));
+				PR_EXPECT(expr(3.5, 3.5) == Val(1));
+				PR_EXPECT(expr(3.5, 5.3) == Val(0));
 			}
 			{ // bitwise OR
 				auto expr = Compile("x | y");
-				PR_CHECK(expr(0x55, 0xAA), Val(0xFF));
-				PR_CHECK(expr(0x8000, 1), Val(0x8001));
-				PR_CHECK(expr(iv4(0x55), iv4(0xAA)), Val(iv4(0xFF)));
-				PR_CHECK(expr(iv4(0x8000), iv4(1)), Val(iv4(0x8001)));
+				PR_EXPECT(expr(0x55, 0xAA) == Val(0xFF));
+				PR_EXPECT(expr(0x8000, 1) == Val(0x8001));
+				PR_EXPECT(expr(iv4(0x55), iv4(0xAA)) == Val(iv4(0xFF)));
+				PR_EXPECT(expr(iv4(0x8000), iv4(1)) == Val(iv4(0x8001)));
 			}
 			{ // bitwise AND
 				auto expr = Compile("x & y");
-				PR_CHECK(expr(0xFFF0, 0x0FFF), Val(0x0FF0));
-				PR_CHECK(expr(iv4(0xFFF0), iv4(0x0FFF)), Val(iv4(0x0FF0)));
+				PR_EXPECT(expr(0xFFF0, 0x0FFF) == Val(0x0FF0));
+				PR_EXPECT(expr(iv4(0xFFF0), iv4(0x0FFF)) == Val(iv4(0x0FF0)));
 			}
 			{ // bitwise XOR
 				auto expr = Compile("x ^ y");
-				PR_CHECK(expr(0xA5, 0x55), Val(0xF0));
-				PR_CHECK(expr(iv4(0xA5), iv4(0x55)), Val(iv4(0xF0)));
+				PR_EXPECT(expr(0xA5, 0x55) == Val(0xF0));
+				PR_EXPECT(expr(iv4(0xA5), iv4(0x55)) == Val(iv4(0xF0)));
 			}
 			{ // left shift
 				auto expr = Compile("x << y");
-				PR_CHECK(expr(0x3, 2), Val(0xC));
-				PR_CHECK(expr(iv4(0x3), 2), Val(iv4(0xC)));
+				PR_EXPECT(expr(0x3, 2) == Val(0xC));
+				PR_EXPECT(expr(iv4(0x3), 2) == Val(iv4(0xC)));
 			}
 			{ // right shift
 				auto expr = Compile("x >> y");
-				PR_CHECK(expr(0xC, 2), Val(0x3));
-				PR_CHECK(expr(iv4(0xC), iv4(1,2,3,4)), Val(iv4(0x6,0x3,0x1,0x0)));
+				PR_EXPECT(expr(0xC, 2) == Val(0x3));
+				PR_EXPECT(expr(iv4(0xC), iv4(1,2,3,4)) == Val(iv4(0x6,0x3,0x1,0x0)));
 			}
 			{ // ceil
 				auto expr = Compile("ceil(x)");
-				PR_CHECK(FEql(expr(3.4).db(), 4.0), true);
-				PR_CHECK(FEql(expr(-3.4).db(), -3.0), true);
-				PR_CHECK(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-1.0f, 4.0f, -5.0f, 8.0f)), true);
+				PR_EXPECT(FEql(expr(3.4).db(), 4.0));
+				PR_EXPECT(FEql(expr(-3.4).db(), -3.0));
+				PR_EXPECT(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-1.0f, 4.0f, -5.0f, 8.0f)));
 			}
 			{ // floor
 				auto expr = Compile("floor(x)");
-				PR_CHECK(FEql(expr(3.4).db(), 3.0), true);
-				PR_CHECK(FEql(expr(-3.4).db(), -4.0), true);
-				PR_CHECK(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-2.0f, 3.0f, -6.0f, 7.0f)), true);
+				PR_EXPECT(FEql(expr(3.4).db(), 3.0));
+				PR_EXPECT(FEql(expr(-3.4).db(), -4.0));
+				PR_EXPECT(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-2.0f, 3.0f, -6.0f, 7.0f)));
 			}
 			{ // round
 				auto expr = Compile("round(x)");
-				PR_CHECK(FEql(expr(+3.5).db(), +4.0), true);
-				PR_CHECK(FEql(expr(-3.5).db(), -4.0), true);
-				PR_CHECK(FEql(expr(+3.2).db(), +3.0), true);
-				PR_CHECK(FEql(expr(-3.2).db(), -3.0), true);
-				PR_CHECK(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-1.0f, 3.0f, -6.0f, 8.0f)), true);
+				PR_EXPECT(FEql(expr(+3.5).db(), +4.0));
+				PR_EXPECT(FEql(expr(-3.5).db(), -4.0));
+				PR_EXPECT(FEql(expr(+3.2).db(), +3.0));
+				PR_EXPECT(FEql(expr(-3.2).db(), -3.0));
+				PR_EXPECT(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f)).v4(), v4(-1.0f, 3.0f, -6.0f, 8.0f)));
 			}
 			{ // min
 				auto expr = Compile("min(x,y)");
-				PR_CHECK(FEql(expr(-3.2, -3.4).db(), -3.4), true);
-				PR_CHECK(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f), v4(-0.2f, 3.5f, -5.7f, 7.7f)).v4(), v4(-1.2f, 3.4f, -5.7f, 7.7f)), true);
+				PR_EXPECT(FEql(expr(-3.2, -3.4).db(), -3.4));
+				PR_EXPECT(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f), v4(-0.2f, 3.5f, -5.7f, 7.7f)).v4(), v4(-1.2f, 3.4f, -5.7f, 7.7f)));
 			}
 			{ // max
 				auto expr = Compile("max(x,y)");
-				PR_CHECK(FEql(expr(-3.2, -3.4).db(), -3.2), true);
-				PR_CHECK(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f), v4(-0.2f, 3.5f, -5.7f, 7.7f)).v4(), v4(-0.2f, 3.5f, -5.6f, 7.8f)), true);
+				PR_EXPECT(FEql(expr(-3.2, -3.4).db(), -3.2));
+				PR_EXPECT(FEql(expr(v4(-1.2f, 3.4f, -5.6f, 7.8f), v4(-0.2f, 3.5f, -5.7f, 7.7f)).v4(), v4(-0.2f, 3.5f, -5.6f, 7.8f)));
 			}
 			{ // clamp
 				auto expr = Compile("clamp(x,mn,mx)");
-				PR_CHECK(FEql(expr(+10.0, -3.4, -3.2).db(), -3.2), true);
-				PR_CHECK(FEql(expr(-10.0, -3.4, -3.2).db(), -3.4), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 3.4f, -5.6f, 7.8f), -v4One, +v4One).v4(), v4(-0.2f, 1.0f, -1.0f, 1.0f)), true);
+				PR_EXPECT(FEql(expr(+10.0, -3.4, -3.2).db(), -3.2));
+				PR_EXPECT(FEql(expr(-10.0, -3.4, -3.2).db(), -3.4));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 3.4f, -5.6f, 7.8f), -v4One, +v4One).v4(), v4(-0.2f, 1.0f, -1.0f, 1.0f)));
 			}
 			{ // sin
 				auto expr = Compile("sin(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Sin(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sin(-0.2f), Sin(0.4f), Sin(-0.6f), Sin(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Sin(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sin(-0.2f), Sin(0.4f), Sin(-0.6f), Sin(0.8f))));
 			}
 			{ // cos
 				auto expr = Compile("cos(x)");
-				PR_CHECK(FEql(expr(0.2).db(), Cos(0.2)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Cos(-0.2f), Cos(0.4f), Cos(-0.6f), Cos(0.8f))), true);
+				PR_EXPECT(FEql(expr(0.2).db(), Cos(0.2)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Cos(-0.2f), Cos(0.4f), Cos(-0.6f), Cos(0.8f))));
 			}
 			{ // tan
 				auto expr = Compile("tan(x)");
-				PR_CHECK(FEql(expr(0.2).db(), Tan(0.2)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Tan(-0.2f), Tan(0.4f), Tan(-0.6f), Tan(0.8f))), true);
+				PR_EXPECT(FEql(expr(0.2).db(), Tan(0.2)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Tan(-0.2f), Tan(0.4f), Tan(-0.6f), Tan(0.8f))));
 			}
 			{ // asin
 				auto expr = Compile("asin(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Asin(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Asin(-0.2f), Asin(0.4f), Asin(-0.6f), Asin(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Asin(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Asin(-0.2f), Asin(0.4f), Asin(-0.6f), Asin(0.8f))));
 			}
 			{ // acos
 				auto expr = Compile("acos(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Acos(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Acos(-0.2f), Acos(0.4f), Acos(-0.6f), Acos(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Acos(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Acos(-0.2f), Acos(0.4f), Acos(-0.6f), Acos(0.8f))));
 			}
 			{ // atan
 				auto expr = Compile("atan(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Atan(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Atan(-0.2f), Atan(0.4f), Atan(-0.6f), Atan(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Atan(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Atan(-0.2f), Atan(0.4f), Atan(-0.6f), Atan(0.8f))));
 			}
 			{ // atan2
 				auto expr = Compile("atan2(y,x)");
-				PR_CHECK(FEql(expr(2.3, -3.9).db(), Atan2(2.3, -3.9)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(Atan2(-0.2f, 0.1f), Atan2(0.4f, -0.3f), Atan2(-0.6f, 0.5f), Atan2(0.8f, -0.7f))), true);
+				PR_EXPECT(FEql(expr(2.3, -3.9).db(), Atan2(2.3, -3.9)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(Atan2(-0.2f, 0.1f), Atan2(0.4f, -0.3f), Atan2(-0.6f, 0.5f), Atan2(0.8f, -0.7f))));
 			}
 			{ // sinh
 				auto expr = Compile("sinh(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Sinh(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sinh(-0.2f), Sinh(0.4f), Sinh(-0.6f), Sinh(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Sinh(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sinh(-0.2f), Sinh(0.4f), Sinh(-0.6f), Sinh(0.8f))));
 			}
 			{ // cosh
 				auto expr = Compile("cosh(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Cosh(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Cosh(-0.2f), Cosh(0.4f), Cosh(-0.6f), Cosh(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Cosh(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Cosh(-0.2f), Cosh(0.4f), Cosh(-0.6f), Cosh(0.8f))));
 			}
 			{ // tanh
 				auto expr = Compile("tanh(x)");
-				PR_CHECK(FEql(expr(-0.8).db(), Tanh(-0.8)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Tanh(-0.2f), Tanh(0.4f), Tanh(-0.6f), Tanh(0.8f))), true);
+				PR_EXPECT(FEql(expr(-0.8).db(), Tanh(-0.8)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Tanh(-0.2f), Tanh(0.4f), Tanh(-0.6f), Tanh(0.8f))));
 			}
 			{ // exp
 				auto expr = Compile("exp(x)");
-				PR_CHECK(FEql(expr(2.3).db(), Exp(2.3)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Exp(-0.2f), Exp(0.4f), Exp(-0.6f), Exp(0.8f))), true);
+				PR_EXPECT(FEql(expr(2.3).db(), Exp(2.3)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Exp(-0.2f), Exp(0.4f), Exp(-0.6f), Exp(0.8f))));
 			}
 			{ // log
 				auto expr = Compile("log(x)");
-				PR_CHECK(FEql(expr(209.3).db(), Log(209.3)), true);
-				PR_CHECK(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f)).v4(), v4(Log(0.2f), Log(0.4f), Log(0.6f), Log(0.8f))), true);
+				PR_EXPECT(FEql(expr(209.3).db(), Log(209.3)));
+				PR_EXPECT(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f)).v4(), v4(Log(0.2f), Log(0.4f), Log(0.6f), Log(0.8f))));
 			}
 			{ // log10
 				auto expr = Compile("log10(x)");
-				PR_CHECK(FEql(expr(209.3).db(), Log10(209.3)), true);
-				PR_CHECK(FEql(expr(v4(1.2f, 10.4f, 100.6f, 1000.8f)).v4(), v4(Log10(1.2f), Log10(10.4f), Log10(100.6f), Log10(1000.8f))), true);
+				PR_EXPECT(FEql(expr(209.3).db(), Log10(209.3)));
+				PR_EXPECT(FEql(expr(v4(1.2f, 10.4f, 100.6f, 1000.8f)).v4(), v4(Log10(1.2f), Log10(10.4f), Log10(100.6f), Log10(1000.8f))));
 			}
 			{ // pow
 				auto expr = Compile("pow(x,y)");
-				PR_CHECK(FEql(expr(2.3, -1.3).db(), Pow(2.3, -1.3)), true);
-				PR_CHECK(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(Pow(0.2f, 0.1f), Pow(0.4f, -0.3f), Pow(0.6f, 0.5f), Pow(0.8f, -0.7f))), true);
+				PR_EXPECT(FEql(expr(2.3, -1.3).db(), Pow(2.3, -1.3)));
+				PR_EXPECT(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f), v4(+0.1f, -0.3f, +0.5f, -0.7f)).v4(), v4(Pow(0.2f, 0.1f), Pow(0.4f, -0.3f), Pow(0.6f, 0.5f), Pow(0.8f, -0.7f))));
 			}
 			{ // sqrt
 				auto expr = Compile("sqrt(x)");
-				PR_CHECK(FEql(expr(2.3).db(), Sqrt(2.3)), true);
-				PR_CHECK(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f)).v4(), v4(Sqrt(0.2f), Sqrt(0.4f), Sqrt(0.6f), Sqrt(0.8f))), true);
+				PR_EXPECT(FEql(expr(2.3).db(), Sqrt(2.3)));
+				PR_EXPECT(FEql(expr(v4(0.2f, 0.4f, 0.6f, 0.8f)).v4(), v4(Sqrt(0.2f), Sqrt(0.4f), Sqrt(0.6f), Sqrt(0.8f))));
 			}
 			{ // sqr
 				auto expr = Compile("sqr(x)");
-				PR_CHECK(FEql(expr(-2.3).db(), Sqr(-2.3)), true);
-				PR_CHECK(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sqr(-0.2f), Sqr(0.4f), Sqr(-0.6f), Sqr(0.8f))), true);
+				PR_EXPECT(FEql(expr(-2.3).db(), Sqr(-2.3)));
+				PR_EXPECT(FEql(expr(v4(-0.2f, 0.4f, -0.6f, 0.8f)).v4(), v4(Sqr(-0.2f), Sqr(0.4f), Sqr(-0.6f), Sqr(0.8f))));
 			}
 			{ // len2
 				auto expr = Compile("len2(x,y)");
-				PR_CHECK(FEql(expr(3, 4).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0)).db()), true);
+				PR_EXPECT(FEql(expr(3, 4).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0)).db()));
 			}
 			{ // len3
 				auto expr = Compile("len3(x,y,z)");
-				PR_CHECK(FEql(expr(3, 4, 5).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0)).db()), true);
+				PR_EXPECT(FEql(expr(3, 4, 5).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0)).db()));
 			}
 			{ // len4
 				auto expr = Compile("len4(x,y,z,w)");
-				PR_CHECK(FEql(expr(3, 4, 5, 6).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0 + 6.0 * 6.0)).db()), true);
+				PR_EXPECT(FEql(expr(3, 4, 5, 6).db(), Val(std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0 + 6.0 * 6.0)).db()));
 			}
 			{ // deg
 				auto expr = Compile("deg(x)");
-				PR_CHECK(FEql(expr(-1.24).db(), Val(-1.24 * maths::E60_by_tau).db()), true);
+				PR_EXPECT(FEql(expr(-1.24).db(), Val(-1.24 * maths::E60_by_tau).db()));
 			}
 			{ // rad
 				auto expr = Compile("rad(x)");
-				PR_CHECK(FEql(expr(241.32).db(), Val(241.32 * maths::tau_by_360).db()), true);
+				PR_EXPECT(FEql(expr(241.32).db(), Val(241.32 * maths::tau_by_360).db()));
 			}
 			{ // hash
 				auto expr = Compile("hash(\"A String\")");
-				PR_CHECK(expr(), Val(hash::HashCT("A String")));
+				PR_EXPECT(expr() == Val(hash::HashCT("A String")));
 			}
 			{ // long expression, no variables
 				auto expr = Compile("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))");
 				auto res = Sqr(Sqrt(2.3) * -Abs(4 % 2) / 15.0 - Tan(maths::tau / -6));
-				PR_CHECK(FEql(expr().db(), res), true);
+				PR_EXPECT(FEql(expr().db(), res));
 			}
 			{ // long expression, with variables
 				auto expr = Compile("sqr(sqrt(x)*-abs(y%3)/x-tan(TAU/-y))");
 				auto res = Sqr(Sqrt(2.3) * -Abs(13 % 3) / 2.3 - Tan(maths::tau / -13));
-				PR_CHECK(FEql(expr(2.3, 13).db(), res), true);
-				PR_CHECK(FEql(expr(v4(2.3f), v4(13.0f)).v4(), v4(float(res))), true);
+				PR_EXPECT(FEql(expr(2.3, 13).db(), res));
+				PR_EXPECT(FEql(expr(v4(2.3f), v4(13.0f)).v4(), v4(float(res))));
 			}
 			{ // large values
 				auto expr = Compile("123456789000000 / 2");
-				PR_CHECK(expr().ll(), 123456789000000LL / 2);
+				PR_EXPECT(expr().ll() == 123456789000000LL / 2);
 			}
 			{ // operator ?:
 				auto expr0 = Compile("x != y ? 5 : 6");
-				PR_CHECK(expr0(1, 2).ll(), Val(5));
-				PR_CHECK(expr0(1, 1).ll(), Val(6));
+				PR_EXPECT(expr0(1, 2).ll() == Val(5));
+				PR_EXPECT(expr0(1, 1).ll() == Val(6));
 
 				auto expr1 = Compile("true ? x : 6 + 1");
-				PR_CHECK(expr1(1).ll(), Val(1));
+				PR_EXPECT(expr1(1).ll() == Val(1));
 
 				auto expr2 = Compile("false ? x : 6 + 1");
-				PR_CHECK(expr2(1).ll(), Val(7));
+				PR_EXPECT(expr2(1).ll() == Val(7));
 			}
 			{ // Parenthesis
 				auto expr = Compile("sqr(-2) ? (1+2) : max(-2,-3)");
-				PR_CHECK(expr(), Val(3));
+				PR_EXPECT(expr() == Val(3));
 			}
 			{ // literals
 				auto expr = Compile("'1' + '2'");
-				PR_CHECK(expr(), Val('1' + '2'));
+				PR_EXPECT(expr() == Val('1' + '2'));
 			}
 		}
 	}
@@ -3081,112 +3081,112 @@ namespace pr::common
 	#if 0
 	{
 		#define VAL(exp) ReadValue(#exp, (exp))
-		PR_CHECK(VAL(1), true);
-		PR_CHECK(VAL(1.0), true);
-		PR_CHECK(VAL(-1), true);
-		PR_CHECK(VAL(-1.0), true);
-		PR_CHECK(VAL(10U), true);
-		PR_CHECK(VAL(100L), true);
-		PR_CHECK(VAL(-100L), true);
-		PR_CHECK(VAL(0x1000UL), true);
-		PR_CHECK(VAL(0x7FFFFFFF), true);
-		PR_CHECK(VAL(0x80000000), true);
-		PR_CHECK(VAL(0xFFFFFFFF), true);
-		PR_CHECK(VAL(0xFFFFFFFFU), true);
-		PR_CHECK(VAL(0xFFFFFFFFULL), true);
-		PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
-		PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
+		PR_EXPECT(VAL(1));
+		PR_EXPECT(VAL(1.0));
+		PR_EXPECT(VAL(-1));
+		PR_EXPECT(VAL(-1.0));
+		PR_EXPECT(VAL(10U));
+		PR_EXPECT(VAL(100L));
+		PR_EXPECT(VAL(-100L));
+		PR_EXPECT(VAL(0x1000UL));
+		PR_EXPECT(VAL(0x7FFFFFFF));
+		PR_EXPECT(VAL(0x80000000));
+		PR_EXPECT(VAL(0xFFFFFFFF));
+		PR_EXPECT(VAL(0xFFFFFFFFU));
+		PR_EXPECT(VAL(0xFFFFFFFFULL));
+		PR_EXPECT(VAL(0x7FFFFFFFFFFFFFFFLL));
+		PR_EXPECT(VAL(0xFFFFFFFFFFFFFFFFULL));
 		#undef VAL
 	}
 	{
 		#define EXPR(exp) Expr(#exp, (exp))
-		PR_CHECK(EXPR(1.0), true);
-		PR_CHECK(EXPR(+1.0), true);
-		PR_CHECK(EXPR(-1.0), true);
-		PR_CHECK(EXPR(-(1.0 + 2.0)), true);
-		PR_CHECK(EXPR(8.0 * -1.0), true);
-		PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
-		PR_CHECK(EXPR(1.0 + +2.0), true);
-		PR_CHECK(EXPR(1.0 - -2.0), true);
-		PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
-		PR_CHECK(EXPR(1.0 * +2.0), true);
-		PR_CHECK(EXPR(1 / 2), true);
-		PR_CHECK(EXPR(1.0 / 2.0), true);
-		PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
-		PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
-		PR_CHECK(EXPR((1 || 0) && 2), true);
-		PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
-		PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
-		PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
-		PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
-		PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
-		PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
-		PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
-		PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
-		PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
-		PR_CHECK(EXPR(~37 & ~0), true);
-		PR_CHECK(EXPR(!37 | !0), true);
-		PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
-		PR_CHECK(EXPR(~(4294967295 >> 2)), true);
-		PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
-		PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
-		PR_CHECK(Expr("sin(1.0 + 2.0)", std::sin(1.0 + 2.0)), true);
-		PR_CHECK(Expr("cos(TAU)", std::cos(eval::TAU)), true);
-		PR_CHECK(Expr("tan(PHI)", std::tan(eval::PHI)), true);
-		PR_CHECK(Expr("abs( 1.0)", std::abs(1.0)), true);
-		PR_CHECK(Expr("abs(-1.0)", std::abs(-1.0)), true);
-		PR_CHECK(EXPR(11 % 3), true);
-		PR_CHECK(Expr("11.3 % 3.1", std::fmod(11.3, 3.1)), true);
-		PR_CHECK(Expr("3.0 * (17.3 % 2.1)", 3.0 * std::fmod(17.3, 2.1)), true);
-		PR_CHECK(EXPR(1 << 10), true);
-		PR_CHECK(EXPR(1024 >> 3), true);
-		PR_CHECK(Expr("ceil(3.4)", std::ceil(3.4)), true);
-		PR_CHECK(Expr("ceil(-3.4)", std::ceil(-3.4)), true);
-		PR_CHECK(Expr("floor(3.4)", std::floor(3.4)), true);
-		PR_CHECK(Expr("floor(-3.4)", std::floor(-3.4)), true);
-		PR_CHECK(Expr("round( 3.5)", std::round(3.5)), true);
-		PR_CHECK(Expr("round(-3.5)", std::round(-3.5)), true);
-		PR_CHECK(Expr("round( 3.2)", std::round(3.2)), true);
-		PR_CHECK(Expr("round(-3.2)", std::round(-3.2)), true);
-		PR_CHECK(Expr("asin(-0.8)", std::asin(-0.8)), true);
-		PR_CHECK(Expr("acos(0.2)", std::acos(0.2)), true);
-		PR_CHECK(Expr("atan(2.3/12.9)", std::atan(2.3 / 12.9)), true);
-		PR_CHECK(Expr("atan2(2.3,-3.9)", std::atan2(2.3, -3.9)), true);
-		PR_CHECK(Expr("sinh(0.8)", std::sinh(0.8)), true);
-		PR_CHECK(Expr("cosh(0.2)", std::cosh(0.2)), true);
-		PR_CHECK(Expr("tanh(2.3)", std::tanh(2.3)), true);
-		PR_CHECK(Expr("exp(2.3)", std::exp(2.3)), true);
-		PR_CHECK(Expr("log(209.3)", std::log(209.3)), true);
-		PR_CHECK(Expr("log10(209.3)", std::log10(209.3)), true);
-		PR_CHECK(Expr("pow(2.3, -1.3)", std::pow(2.3, -1.3)), true);
-		PR_CHECK(Expr("sqrt(2.3)", std::sqrt(2.3)), true);
-		PR_CHECK(Expr("sqr(-2.3)", pr::Sqr(-2.3)), true);
-		PR_CHECK(Expr("len2(3,4)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0)), true);
-		PR_CHECK(Expr("len3(3,4,5)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0)), true);
-		PR_CHECK(Expr("len4(3,4,5,6)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0 + 6.0 * 6.0)), true);
-		PR_CHECK(Expr("deg(-1.24)", -1.24 * (360.0 / eval::TAU)), true);
-		PR_CHECK(Expr("rad(241.32)", 241.32 * (eval::TAU / 360.0)), true);
-		PR_CHECK(Expr("min(-3.2, -3.4)", std::min(-3.2, -3.4)), true);
-		PR_CHECK(Expr("max(-3.2, -3.4)", std::max(-3.2, -3.4)), true);
-		PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)", pr::Clamp(10.0, -3.4, -3.2)), true);
-		PR_CHECK(Expr("hash(\"A String\")", hash::HashCT("A String")), true);
-		PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(std::sqrt(2.3) * -std::abs(4 % 2) / 15.0 - std::tan(eval::TAU / -6))), true);
+		PR_EXPECT(EXPR(1.0));
+		PR_EXPECT(EXPR(+1.0));
+		PR_EXPECT(EXPR(-1.0));
+		PR_EXPECT(EXPR(-(1.0 + 2.0)));
+		PR_EXPECT(EXPR(8.0 * -1.0));
+		PR_EXPECT(EXPR(4.0 * -1.0 + 2.0));
+		PR_EXPECT(EXPR(1.0 + +2.0));
+		PR_EXPECT(EXPR(1.0 - -2.0));
+		PR_EXPECT(EXPR(1.0 - 2.0 - 3.0 + 4.0));
+		PR_EXPECT(EXPR(1.0 * +2.0));
+		PR_EXPECT(EXPR(1 / 2));
+		PR_EXPECT(EXPR(1.0 / 2.0));
+		PR_EXPECT(EXPR(1.0 / 2.0 + 3.0));
+		PR_EXPECT(EXPR(1.0 / 2.0 * 3.0));
+		PR_EXPECT(EXPR((1 || 0) && 2));
+		PR_EXPECT(EXPR(((13 ^ 7) | 6) & 14));
+		PR_EXPECT(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)));
+		PR_EXPECT(EXPR(1.0 + 2.0 * 3.0 - 4.0));
+		PR_EXPECT(EXPR(2.0 * 3.0 + 1.0 - 4.0));
+		PR_EXPECT(EXPR(1.0 - 4.0 + 2.0 * 3.0));
+		PR_EXPECT(EXPR((1.0 + 2.0) * 3.0 - 4.0));
+		PR_EXPECT(EXPR(1.0 + 2.0 * -(3.0 - 4.0)));
+		PR_EXPECT(EXPR(1.0 + (2.0 * (3.0 - 4.0))));
+		PR_EXPECT(EXPR((1.0 + 2.0) * (3.0 - 4.0)));
+		PR_EXPECT(EXPR(~37 & ~0));
+		PR_EXPECT(EXPR(!37 | !0));
+		PR_EXPECT(EXPR(~(0xFFFFFFFF >> 2)));
+		PR_EXPECT(EXPR(~(4294967295 >> 2)));
+		PR_EXPECT(EXPR(~(0xFFFFFFFFLL >> 2)));
+		PR_EXPECT(EXPR(~(4294967295LL >> 2)));
+		PR_EXPECT(Expr("sin(1.0 + 2.0)", std::sin(1.0 + 2.0)));
+		PR_EXPECT(Expr("cos(TAU)", std::cos(eval::TAU)));
+		PR_EXPECT(Expr("tan(PHI)", std::tan(eval::PHI)));
+		PR_EXPECT(Expr("abs( 1.0)", std::abs(1.0)));
+		PR_EXPECT(Expr("abs(-1.0)", std::abs(-1.0)));
+		PR_EXPECT(EXPR(11 % 3));
+		PR_EXPECT(Expr("11.3 % 3.1", std::fmod(11.3, 3.1)));
+		PR_EXPECT(Expr("3.0 * (17.3 % 2.1)", 3.0 * std::fmod(17.3, 2.1)));
+		PR_EXPECT(EXPR(1 << 10));
+		PR_EXPECT(EXPR(1024 >> 3));
+		PR_EXPECT(Expr("ceil(3.4)", std::ceil(3.4)));
+		PR_EXPECT(Expr("ceil(-3.4)", std::ceil(-3.4)));
+		PR_EXPECT(Expr("floor(3.4)", std::floor(3.4)));
+		PR_EXPECT(Expr("floor(-3.4)", std::floor(-3.4)));
+		PR_EXPECT(Expr("round( 3.5)", std::round(3.5)));
+		PR_EXPECT(Expr("round(-3.5)", std::round(-3.5)));
+		PR_EXPECT(Expr("round( 3.2)", std::round(3.2)));
+		PR_EXPECT(Expr("round(-3.2)", std::round(-3.2)));
+		PR_EXPECT(Expr("asin(-0.8)", std::asin(-0.8)));
+		PR_EXPECT(Expr("acos(0.2)", std::acos(0.2)));
+		PR_EXPECT(Expr("atan(2.3/12.9)", std::atan(2.3 / 12.9)));
+		PR_EXPECT(Expr("atan2(2.3,-3.9)", std::atan2(2.3, -3.9)));
+		PR_EXPECT(Expr("sinh(0.8)", std::sinh(0.8)));
+		PR_EXPECT(Expr("cosh(0.2)", std::cosh(0.2)));
+		PR_EXPECT(Expr("tanh(2.3)", std::tanh(2.3)));
+		PR_EXPECT(Expr("exp(2.3)", std::exp(2.3)));
+		PR_EXPECT(Expr("log(209.3)", std::log(209.3)));
+		PR_EXPECT(Expr("log10(209.3)", std::log10(209.3)));
+		PR_EXPECT(Expr("pow(2.3, -1.3)", std::pow(2.3, -1.3)));
+		PR_EXPECT(Expr("sqrt(2.3)", std::sqrt(2.3)));
+		PR_EXPECT(Expr("sqr(-2.3)", pr::Sqr(-2.3)));
+		PR_EXPECT(Expr("len2(3,4)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0)));
+		PR_EXPECT(Expr("len3(3,4,5)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0)));
+		PR_EXPECT(Expr("len4(3,4,5,6)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0 + 6.0 * 6.0)));
+		PR_EXPECT(Expr("deg(-1.24)", -1.24 * (360.0 / eval::TAU)));
+		PR_EXPECT(Expr("rad(241.32)", 241.32 * (eval::TAU / 360.0)));
+		PR_EXPECT(Expr("min(-3.2, -3.4)", std::min(-3.2, -3.4)));
+		PR_EXPECT(Expr("max(-3.2, -3.4)", std::max(-3.2, -3.4)));
+		PR_EXPECT(Expr("clamp(10.0, -3.4, -3.2)", pr::Clamp(10.0, -3.4, -3.2)));
+		PR_EXPECT(Expr("hash(\"A String\")", hash::HashCT("A String")));
+		PR_EXPECT(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(std::sqrt(2.3) * -std::abs(4 % 2) / 15.0 - std::tan(eval::TAU / -6))));
 		{
 			long long v1 = 0, v0 = 123456789000000LL / 2;
-			PR_CHECK(Evaluate("123456789000000 / 2", v1), true);
-			PR_CHECK(v0 == v1, true);
+			PR_EXPECT(Evaluate("123456789000000 / 2", v1));
+			PR_EXPECT(v0 == v1);
 		}
-		PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
-		PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
-		PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
-		PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
-		PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
-		PR_CHECK(Expr("-+1", -1), true);
-		PR_CHECK(Expr("-++-1", 1), true);
-		PR_CHECK(Expr("!!true", 1), true);
-		PR_CHECK(Expr("-!!!false", -1), true);
-		PR_CHECK(Expr("10 - 3 - 2", 5), true);
-		PR_CHECK(Expr("'1' + '2'", '1' + '2'), true);
+		PR_EXPECT(Expr("1 != 2 ? 5 : 6", 5));
+		PR_EXPECT(Expr("1 == 2 ? 5 : 6", 6));
+		PR_EXPECT(Expr("true ? 5 : 6 + 1", 5));
+		PR_EXPECT(Expr("false ? 5 : 6 + 1", 7));
+		PR_EXPECT(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3));
+		PR_EXPECT(Expr("-+1", -1));
+		PR_EXPECT(Expr("-++-1", 1));
+		PR_EXPECT(Expr("!!true", 1));
+		PR_EXPECT(Expr("-!!!false", -1));
+		PR_EXPECT(Expr("10 - 3 - 2", 5));
+		PR_EXPECT(Expr("'1' + '2'", '1' + '2'));
 		#undef EXPR
 	}
 	#endif

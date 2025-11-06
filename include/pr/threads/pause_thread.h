@@ -187,26 +187,26 @@ namespace pr::threads
 			worker.Main();
 		});
 
-		PR_CHECK(thread.joinable(), true);
-		PR_CHECK(worker.IsPaused(), false);
+		PR_EXPECT(thread.joinable());
+		PR_EXPECT(!worker.IsPaused());
 
 		worker.Pause(true);
 
-		PR_CHECK(worker.IsPaused(), true);
+		PR_EXPECT(worker.IsPaused());
 
 		int count = worker.m_count;
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-		PR_CHECK(worker.IsPaused(), true);
-		PR_CHECK(worker.m_count, count);
+		PR_EXPECT(worker.IsPaused());
+		PR_EXPECT(worker.m_count == count);
 
 		worker.Pause(false);
 
-		PR_CHECK(worker.IsPaused(), false);
+		PR_EXPECT(!worker.IsPaused());
 
 		for (;worker.m_count == count; std::this_thread::yield()) {}
 
-		PR_CHECK(worker.m_count > count, true);
+		PR_EXPECT(worker.m_count > count);
 
 		worker.m_exit_signalled = true;
 		thread.join();

@@ -508,7 +508,7 @@ namespace pr::network
 		ipc_server.MessageReceived += [&ServerMsgsRecv, &cv_signal](std::span<uint8_t const> data)
 		{
 			std::string_view msg(reinterpret_cast<char const*>(data.data()), data.size());
-			PR_CHECK(msg == "Message To Server", true);
+			PR_EXPECT(msg == "Message To Server");
 
 			++ServerMsgsRecv;
 			cv_signal.notify_one();
@@ -516,7 +516,7 @@ namespace pr::network
 		ipc_client.MessageReceived += [&ClientMsgsRecv, &cv_signal](std::span<uint8_t const> data)
 		{
 			std::string_view msg(reinterpret_cast<char const*>(data.data()), data.size());
-			PR_CHECK(msg == "Message To Client", true);
+			PR_EXPECT(msg == "Message To Client");
 
 			++ClientMsgsRecv;
 			cv_signal.notify_one();
@@ -560,8 +560,8 @@ namespace pr::network
 			cv_signal.wait(lock, [&ServerMsgsRecv, &ClientMsgsSent] { return ServerMsgsRecv == ClientMsgsSent; });
 		}
 
-		PR_CHECK(ClientMsgsRecv == ClientMsgsSent, true);
-		PR_CHECK(ServerMsgsRecv == ServerMsgsSent, true);
+		PR_EXPECT(ClientMsgsRecv == ClientMsgsSent);
+		PR_EXPECT(ServerMsgsRecv == ServerMsgsSent);
 
 		// Shutdown
 		shutdown.request_stop();

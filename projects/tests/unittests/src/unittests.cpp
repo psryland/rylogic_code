@@ -96,6 +96,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
 //#include "pr/script/byte_reader.h"
+//#include "pr/script/unit_tests.h"
 //#include "pr/threads/thread_pool.h"
 //#include "pr/network/pipe.h"
 //#include "pr/network/pipe2.h"

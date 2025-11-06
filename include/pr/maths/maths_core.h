@@ -1579,180 +1579,184 @@ namespace std
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(MathsCoreTests)
+	PRUnitTestClass(MathsCoreTests)
 	{
-		{// Permutations
+		PRUnitTestMethod(Permutations)
+		{
 			auto eql = [](int const* arr, int a, int b, int c, int d)
 			{
 				return arr[0] == a && arr[1] == b && arr[2] == c && arr[3] == d;
 			};
 			{// 4-sequential
 				int arr1[] = {1, 2, 3, 4};
-				PR_CHECK(PermutationFirst(arr1, _countof(arr1)) && eql(arr1, 1, 2, 3, 4), true);//0
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 2, 4, 3), true);//1
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 2, 4), true);//2
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 4, 2), true);//3
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 2, 3), true);//4
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 3, 2), true);//5
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 3, 4), true);//6
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 4, 3), true);//7
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 1, 4), true);//8
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 4, 1), true);//9
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 1, 3), true);//10
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 3, 1), true);//11
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 2, 4), true);//12
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 4, 2), true);//13
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 1, 4), true);//14
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 4, 1), true);//15
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 1, 2), true);//16
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 2, 1), true);//17
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 2, 3), true);//18
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 3, 2), true);//19
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 1, 3), true);//20
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 3, 1), true);//21
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 1, 2), true);//22
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 2, 1), true);//23
-				PR_CHECK(PermutationNext(arr1, _countof(arr1)), false);//24
+				PR_EXPECT(PermutationFirst(arr1, _countof(arr1)) && eql(arr1, 1, 2, 3, 4));//0
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 2, 4, 3));//1
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 2, 4));//2
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 4, 2));//3
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 2, 3));//4
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 3, 2));//5
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 3, 4));//6
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 4, 3));//7
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 1, 4));//8
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 4, 1));//9
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 1, 3));//10
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 3, 1));//11
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 2, 4));//12
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 4, 2));//13
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 1, 4));//14
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 4, 1));//15
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 1, 2));//16
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 2, 1));//17
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 2, 3));//18
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 3, 2));//19
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 1, 3));//20
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 3, 1));//21
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 1, 2));//22
+				PR_EXPECT(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 2, 1));//23
+				PR_EXPECT(!PermutationNext(arr1, _countof(arr1)));//24
 			}
 			{// non-sequential
 				int i, arr2[] = {-1, 4, 11, 20};
 				for (i = 1; i != 24; ++i)//== 4!
 				{
-					PR_CHECK(PermutationNext(arr2, _countof(arr2)), true);
-					if (i == 6) PR_CHECK(eql(arr2, 4, -1, 11, 20), true);
-					if (i == 13) PR_CHECK(eql(arr2, 11, -1, 20, 4), true);
+					PR_EXPECT(PermutationNext(arr2, _countof(arr2)));
+					if (i == 6) PR_EXPECT(eql(arr2, 4, -1, 11, 20));
+					if (i == 13) PR_EXPECT(eql(arr2, 11, -1, 20, 4));
 				}
-				PR_CHECK(PermutationNext(arr2, _countof(arr2)), false);
+				PR_EXPECT(!PermutationNext(arr2, _countof(arr2)));
 			}
 			{// large number of permutations
 				int i, arr3[] = {-10, -9, -8, -1, 0, +1, +3, +6, +9};
 				for (i = 1; PermutationNext(arr3, _countof(arr3)); ++i) {}
-				PR_CHECK(i == 362880, true); // == 9!
+				PR_EXPECT(i == 362880); // == 9!
 			}
 		}
-		{// Floating point compare
+		PRUnitTestMethod(FloatingPointCompare)
+		{
 			float const _6dp = 1.000000111e-6f;
 
 			// Regular large numbers - generally not problematic
-			PR_CHECK(FEqlRelative(1000000.0f, 1000001.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(1000001.0f, 1000000.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(1000000.0f, 1000010.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(1000010.0f, 1000000.0f, _6dp), false);
+			PR_EXPECT(FEqlRelative(1000000.0f, 1000001.0f, _6dp));
+			PR_EXPECT(FEqlRelative(1000001.0f, 1000000.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(1000000.0f, 1000010.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(1000010.0f, 1000000.0f, _6dp));
 
 			// Negative large numbers
-			PR_CHECK(FEqlRelative(-1000000.0f, -1000001.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(-1000001.0f, -1000000.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(-1000000.0f, -1000010.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(-1000010.0f, -1000000.0f, _6dp), false);
+			PR_EXPECT(FEqlRelative(-1000000.0f, -1000001.0f, _6dp));
+			PR_EXPECT(FEqlRelative(-1000001.0f, -1000000.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1000000.0f, -1000010.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1000010.0f, -1000000.0f, _6dp));
 
 			// Numbers around 1
-			PR_CHECK(FEqlRelative(1.0000001f, 1.0000002f, _6dp), true);
-			PR_CHECK(FEqlRelative(1.0000002f, 1.0000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(1.0000020f, 1.0000010f, _6dp), false);
-			PR_CHECK(FEqlRelative(1.0000010f, 1.0000020f, _6dp), false);
+			PR_EXPECT(FEqlRelative(1.0000001f, 1.0000002f, _6dp));
+			PR_EXPECT(FEqlRelative(1.0000002f, 1.0000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(1.0000020f, 1.0000010f, _6dp));
+			PR_EXPECT(!FEqlRelative(1.0000010f, 1.0000020f, _6dp));
 
 			// Numbers around -1
-			PR_CHECK(FEqlRelative(-1.0000001f, -1.0000002f, _6dp), true);
-			PR_CHECK(FEqlRelative(-1.0000002f, -1.0000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(-1.0000010f, -1.0000020f, _6dp), false);
-			PR_CHECK(FEqlRelative(-1.0000020f, -1.0000010f, _6dp), false);
+			PR_EXPECT(FEqlRelative(-1.0000001f, -1.0000002f, _6dp));
+			PR_EXPECT(FEqlRelative(-1.0000002f, -1.0000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1.0000010f, -1.0000020f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1.0000020f, -1.0000010f, _6dp));
 
 			// Numbers between 1 and 0
-			PR_CHECK(FEqlRelative(0.000000001000001f, 0.000000001000002f, _6dp), true);
-			PR_CHECK(FEqlRelative(0.000000001000002f, 0.000000001000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(0.000000000100002f, 0.000000000100001f, _6dp), false);
-			PR_CHECK(FEqlRelative(0.000000000100001f, 0.000000000100002f, _6dp), false);
+			PR_EXPECT(FEqlRelative(0.000000001000001f, 0.000000001000002f, _6dp));
+			PR_EXPECT(FEqlRelative(0.000000001000002f, 0.000000001000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(0.000000000100002f, 0.000000000100001f, _6dp));
+			PR_EXPECT(!FEqlRelative(0.000000000100001f, 0.000000000100002f, _6dp));
 
 			// Numbers between -1 and 0
-			PR_CHECK(FEqlRelative(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
-			PR_CHECK(FEqlRelative(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
-			PR_CHECK(FEqlRelative(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
+			PR_EXPECT(FEqlRelative(-0.0000000010000001f, -0.0000000010000002f, _6dp));
+			PR_EXPECT(FEqlRelative(-0.0000000010000002f, -0.0000000010000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-0.0000000001000002f, -0.0000000001000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-0.0000000001000001f, -0.0000000001000002f, _6dp));
 
 			// Comparisons involving zero
-			PR_CHECK(FEqlRelative(+0.0f, +0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(+0.0f, -0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(-0.0f, -0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(+0.000001f, +0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(+0.0f, +0.000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(-0.000001f, +0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(+0.0f, -0.000001f, _6dp), true);
-			PR_CHECK(FEqlRelative(+0.00001f, +0.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(+0.0f, +0.00001f, _6dp), false);
-			PR_CHECK(FEqlRelative(-0.00001f, +0.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(+0.0f, -0.00001f, _6dp), false);
+			PR_EXPECT(FEqlRelative(+0.0f, +0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(+0.0f, -0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(-0.0f, -0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(+0.000001f, +0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(+0.0f, +0.000001f, _6dp));
+			PR_EXPECT(FEqlRelative(-0.000001f, +0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(+0.0f, -0.000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(+0.00001f, +0.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(+0.0f, +0.00001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-0.00001f, +0.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(+0.0f, -0.00001f, _6dp));
 
 			// Comparisons involving extreme values (overflow potential)
 			auto float_hi = maths::float_max;
 			auto float_lo = maths::float_lowest;
-			PR_CHECK(FEqlRelative(float_hi, float_hi, _6dp), true);
-			PR_CHECK(FEqlRelative(float_hi, float_lo, _6dp), false);
-			PR_CHECK(FEqlRelative(float_lo, float_hi, _6dp), false);
-			PR_CHECK(FEqlRelative(float_lo, float_lo, _6dp), true);
-			PR_CHECK(FEqlRelative(float_hi, float_hi / 2, _6dp), false);
-			PR_CHECK(FEqlRelative(float_hi, float_lo / 2, _6dp), false);
-			PR_CHECK(FEqlRelative(float_lo, float_hi / 2, _6dp), false);
-			PR_CHECK(FEqlRelative(float_lo, float_lo / 2, _6dp), false);
+			PR_EXPECT(FEqlRelative(float_hi, float_hi, _6dp));
+			PR_EXPECT(!FEqlRelative(float_hi, float_lo, _6dp));
+			PR_EXPECT(!FEqlRelative(float_lo, float_hi, _6dp));
+			PR_EXPECT(FEqlRelative(float_lo, float_lo, _6dp));
+			PR_EXPECT(!FEqlRelative(float_hi, float_hi / 2, _6dp));
+			PR_EXPECT(!FEqlRelative(float_hi, float_lo / 2, _6dp));
+			PR_EXPECT(!FEqlRelative(float_lo, float_hi / 2, _6dp));
+			PR_EXPECT(!FEqlRelative(float_lo, float_lo / 2, _6dp));
 
 			// Comparisons involving infinities
-			PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_inf, _6dp), true);
-			PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_inf, _6dp), true);
-			PR_CHECK(FEqlRelative(-maths::float_inf, +maths::float_inf, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_max, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_max, _6dp), false);
+			PR_EXPECT(FEqlRelative(+maths::float_inf, +maths::float_inf, _6dp));
+			PR_EXPECT(FEqlRelative(-maths::float_inf, -maths::float_inf, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_inf, +maths::float_inf, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_inf, +maths::float_max, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_inf, -maths::float_max, _6dp));
 
 			// Comparisons involving NaN values
-			PR_CHECK(FEqlRelative(maths::float_nan, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, +0.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(-0.0f, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, -0.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(+0.0f, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, +maths::float_inf, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_inf, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, -maths::float_inf, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_inf, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, +maths::float_max, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_max, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, -maths::float_max, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_max, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, +maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_min, maths::float_nan, _6dp), false);
-			PR_CHECK(FEqlRelative(maths::float_nan, -maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_min, maths::float_nan, _6dp), false);
+			PR_EXPECT(!FEqlRelative(maths::float_nan, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, +0.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(-0.0f, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, -0.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(+0.0f, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, +maths::float_inf, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_inf, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, -maths::float_inf, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_inf, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, +maths::float_max, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_max, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, -maths::float_max, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_max, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, +maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_min, maths::float_nan, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_nan, -maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_min, maths::float_nan, _6dp));
 
 			// Comparisons of numbers on opposite sides of 0
-			PR_CHECK(FEqlRelative(+1.0f, -1.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(-1.0f, +1.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(+1.000000001f, -1.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(-1.0f, +1.000000001f, _6dp), false);
-			PR_CHECK(FEqlRelative(-1.000000001f, +1.0f, _6dp), false);
-			PR_CHECK(FEqlRelative(+1.0f, -1.000000001f, _6dp), false);
-			PR_CHECK(FEqlRelative(2 * maths::float_min, 0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(maths::float_min, -maths::float_min, _6dp), false);
+			PR_EXPECT(!FEqlRelative(+1.0f, -1.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1.0f, +1.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(+1.000000001f, -1.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1.0f, +1.000000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-1.000000001f, +1.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(+1.0f, -1.000000001f, _6dp));
+			PR_EXPECT(FEqlRelative(2 * maths::float_min, 0.0f, _6dp));
+			PR_EXPECT(!FEqlRelative(maths::float_min, -maths::float_min, _6dp));
 
 			// The really tricky part - comparisons of numbers very close to zero.
-			PR_CHECK(FEqlRelative(+maths::float_min, +maths::float_min, _6dp), true);
-			PR_CHECK(FEqlRelative(+maths::float_min, -maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_min, +maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_min, 0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(-maths::float_min, 0.0f, _6dp), true);
-			PR_CHECK(FEqlRelative(0.0f, +maths::float_min, _6dp), true);
-			PR_CHECK(FEqlRelative(0.0f, -maths::float_min, _6dp), true);
+			PR_EXPECT(FEqlRelative(+maths::float_min, +maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_min, -maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_min, +maths::float_min, _6dp));
+			PR_EXPECT(FEqlRelative(+maths::float_min, 0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(-maths::float_min, 0.0f, _6dp));
+			PR_EXPECT(FEqlRelative(0.0f, +maths::float_min, _6dp));
+			PR_EXPECT(FEqlRelative(0.0f, -maths::float_min, _6dp));
 
-			PR_CHECK(FEqlRelative(0.000000001f, -maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(0.000000001f, +maths::float_min, _6dp), false);
-			PR_CHECK(FEqlRelative(+maths::float_min, 0.000000001f, _6dp), false);
-			PR_CHECK(FEqlRelative(-maths::float_min, 0.000000001f, _6dp), false);
+			PR_EXPECT(!FEqlRelative(0.000000001f, -maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(0.000000001f, +maths::float_min, _6dp));
+			PR_EXPECT(!FEqlRelative(+maths::float_min, 0.000000001f, _6dp));
+			PR_EXPECT(!FEqlRelative(-maths::float_min, 0.000000001f, _6dp));
 		}
-		{// Floating point vector compare
+		PRUnitTestMethod(FloatingPointVectorCompare)
+		{
 			float arr0[] = {1, 2, 3, 4};
 			float arr1[] = {1, 2, 3, 5};
 			static_assert(maths::VectorX<decltype(arr0)>);
 			static_assert(maths::VectorX<decltype(arr1)>);
 
-			PR_CHECK(!Equal(arr0, arr1), true);
+			PR_EXPECT(!Equal(arr0, arr1));
 		}
-		{// FEql arrays
+		PRUnitTestMethod(FEqlArrays)
+		{
 			auto t0 = 0.0f;
 			auto t1 = maths::tinyf * 0.5f;
 			auto t2 = maths::tinyf * 1.5f;
@@ -1760,66 +1764,72 @@ namespace pr::maths
 			float arr1[] = {t1, 0, maths::tinyf, -1};
 			float arr2[] = {t2, 0, maths::tinyf, -1};
 
-			PR_CHECK(FEql(arr0, arr1), true); // Different by 1.000005%
-			PR_CHECK(FEql(arr0, arr2), false); // Different by 1.000015%
+			PR_EXPECT(FEql(arr0, arr1)); // Different by 1.000005%
+			PR_EXPECT(!FEql(arr0, arr2)); // Different by 1.000015%
 		}
-		{// Finite
+		PRUnitTestMethod(Finite)
+		{
 			volatile auto f0 = 0.0f;
 			volatile auto d0 = 0.0;
-			PR_CHECK(IsFinite(1.0f), true);
-			PR_CHECK(IsFinite(limits<int>::max()), true);
-			PR_CHECK(!IsFinite(1.0f / f0), true);
-			PR_CHECK(!IsFinite(0.0 / d0), true);
-			PR_CHECK(!IsFinite(11, 10), true);
+			PR_EXPECT(IsFinite(1.0f));
+			PR_EXPECT(IsFinite(limits<int>::max()));
+			PR_EXPECT(!IsFinite(1.0f / f0));
+			PR_EXPECT(!IsFinite(0.0 / d0));
+			PR_EXPECT(!IsFinite(11, 10));
 
 			#if 0 // move
 			iv2 arr4(10, 1);
-			PR_CHECK(IsFinite(arr4), true);
-			PR_CHECK(!All(arr4, [](int x) { return x < 5; }), true);
-			PR_CHECK(Any(arr4, [](int x) { return x < 5; }), true);
+			PR_EXPECT(IsFinite(arr4));
+			PR_EXPECT(!All(arr4, [](int x) { return x < 5; }));
+			PR_EXPECT(Any(arr4, [](int x) { return x < 5; }));
 			#endif
 		}
-		{// Abs
-			PR_CHECK(Abs(-1.0f) == Abs(-1.0f), true);
-			PR_CHECK(Abs(-1.0f) == Abs(+1.0f), true);
-			PR_CHECK(Abs(+1.0f) == Abs(+1.0f), true);
+		PRUnitTestMethod(Abs)
+		{
+			PR_EXPECT(Abs(-1.0f) == Abs(-1.0f));
+			PR_EXPECT(Abs(-1.0f) == Abs(+1.0f));
+			PR_EXPECT(Abs(+1.0f) == Abs(+1.0f));
 
 			float arr3[] = {+1, -2, +3, -4};
 			float arr4[] = {+1, +2, +3, +4};
 			auto arr5 = Abs(arr3);
 			std::span<float const> span0(arr5);
 			std::span<float const> span1(arr4);
-			PR_CHECK(FEql(span0, span1), true);
+			PR_EXPECT(FEql(span0, span1));
 
 			std::array<float, 5> const arr6 = {1, 2, 3, 4, 5};
 			std::span<float const> span5(arr6);
 		}
-		{// Any/All
+		PRUnitTestMethod(AnyAll)
+		{
 			float arr0[] = {1.0f, 2.0f, 0.0f, -4.0f};
 			auto are_zero = [](float x) { return x == 0.0f; };
 			auto not_zero = [](float x) { return x != 0.0f; };
 
-			PR_CHECK(!All(arr0, are_zero), true);
-			PR_CHECK(!All(arr0, not_zero), true);
-			PR_CHECK(Any(arr0, not_zero), true);
-			PR_CHECK(Any(arr0, are_zero), true);
+			PR_EXPECT(!All(arr0, are_zero));
+			PR_EXPECT(!All(arr0, not_zero));
+			PR_EXPECT(Any(arr0, not_zero));
+			PR_EXPECT(Any(arr0, are_zero));
 		}
-		{// Lengths
-			PR_CHECK(LenSq(3, 4) == 25, true);
-			PR_CHECK(LenSq(3, 4, 5) == 50, true);
-			PR_CHECK(LenSq(3, 4, 5, 6) == 86, true);
-			PR_CHECK(FEql(Len<float>(3, 4), 5.0f), true);
-			PR_CHECK(FEql(Len<float>(3, 4, 5), 7.0710678f), true);
-			PR_CHECK(FEql(Len<float>(3, 4, 5, 6), 9.2736185f), true);
+		PRUnitTestMethod(Lengths)
+		{
+			PR_EXPECT(LenSq(3, 4) == 25);
+			PR_EXPECT(LenSq(3, 4, 5) == 50);
+			PR_EXPECT(LenSq(3, 4, 5, 6) == 86);
+			PR_EXPECT(FEql(Len<float>(3, 4), 5.0f));
+			PR_EXPECT(FEql(Len<float>(3, 4, 5), 7.0710678f));
+			PR_EXPECT(FEql(Len<float>(3, 4, 5, 6), 9.2736185f));
 		}
-		{// Min/Max/Clamp
-			PR_CHECK(Min(1, 2, -3, 4, -5) == -5, true);
-			PR_CHECK(Max(1, 2, -3, 4, -5) == 4, true);
-			PR_CHECK(Clamp(-1, 0, 10) == 0, true);
-			PR_CHECK(Clamp(3, 0, 10) == 3, true);
-			PR_CHECK(Clamp(12, 0, 10) == 10, true);
+		PRUnitTestMethod(MinMaxClamp)
+		{
+			PR_EXPECT(Min(1, 2, -3, 4, -5) == -5);
+			PR_EXPECT(Max(1, 2, -3, 4, -5) == 4);
+			PR_EXPECT(Clamp(-1, 0, 10) == 0);
+			PR_EXPECT(Clamp(3, 0, 10) == 3);
+			PR_EXPECT(Clamp(12, 0, 10) == 10);
 		}
-		{// Wrap
+		PRUnitTestMethod(Wrap)
+		{
 			PR_EXPECT(Wrap(-1, 0, 3) == 2); // [0, 3)
 			PR_EXPECT(Wrap(+0, 0, 3) == 0);
 			PR_EXPECT(Wrap(+1, 0, 3) == 1);
@@ -1872,60 +1882,64 @@ namespace pr::maths
 			PR_EXPECT(Wrap(+1, -1, 0) == -1);
 			PR_EXPECT(Wrap(+2, -1, 0) == -1);
 		}
-		{// Smallest/Largest element
+		PRUnitTestMethod(SmallestLargestElement)
+		{
 			int arr0[] = {1, 2, 3, 4, 5};
 			int arr1[] = {2, 1, 3, 4, 5};
 			int arr2[] = {2, 3, 1, 4, 5};
 			int arr3[] = {2, 3, 4, 1, 5};
 			int arr4[] = {2, 3, 4, 5, 1};
 
-			PR_CHECK(MinComponent(arr0) == 1, true);
-			PR_CHECK(MinComponent(arr1) == 1, true);
-			PR_CHECK(MinComponent(arr2) == 1, true);
-			PR_CHECK(MinComponent(arr3) == 1, true);
-			PR_CHECK(MinComponent(arr4) == 1, true);
+			PR_EXPECT(MinComponent(arr0) == 1);
+			PR_EXPECT(MinComponent(arr1) == 1);
+			PR_EXPECT(MinComponent(arr2) == 1);
+			PR_EXPECT(MinComponent(arr3) == 1);
+			PR_EXPECT(MinComponent(arr4) == 1);
 
 			float arr5[] = {1, 2, 3, 4, 5};
 			float arr6[] = {1, 2, 3, 5, 4};
 			float arr7[] = {2, 3, 5, 1, 4};
 			float arr8[] = {2, 5, 3, 4, 1};
 			float arr9[] = {5, 2, 3, 4, 1};
-			PR_CHECK(MaxComponent(arr5) == 5, true);
-			PR_CHECK(MaxComponent(arr6) == 5, true);
-			PR_CHECK(MaxComponent(arr7) == 5, true);
-			PR_CHECK(MaxComponent(arr8) == 5, true);
-			PR_CHECK(MaxComponent(arr9) == 5, true);
+			PR_EXPECT(MaxComponent(arr5) == 5);
+			PR_EXPECT(MaxComponent(arr6) == 5);
+			PR_EXPECT(MaxComponent(arr7) == 5);
+			PR_EXPECT(MaxComponent(arr8) == 5);
+			PR_EXPECT(MaxComponent(arr9) == 5);
 		}
-		{// Smallest/Largest element index
+		PRUnitTestMethod(SmallestLargestElementIndex)
+		{
 			int arr0[] = {1, 2, 3, 4, 5};
 			int arr1[] = {2, 1, 3, 4, 5};
 			int arr2[] = {2, 3, 1, 4, 5};
 			int arr3[] = {2, 3, 4, 1, 5};
 			int arr4[] = {2, 3, 4, 5, 1};
 
-			PR_CHECK(MinElementIndex(arr0) == 0, true);
-			PR_CHECK(MinElementIndex(arr1) == 1, true);
-			PR_CHECK(MinElementIndex(arr2) == 2, true);
-			PR_CHECK(MinElementIndex(arr3) == 3, true);
-			PR_CHECK(MinElementIndex(arr4) == 4, true);
+			PR_EXPECT(MinElementIndex(arr0) == 0);
+			PR_EXPECT(MinElementIndex(arr1) == 1);
+			PR_EXPECT(MinElementIndex(arr2) == 2);
+			PR_EXPECT(MinElementIndex(arr3) == 3);
+			PR_EXPECT(MinElementIndex(arr4) == 4);
 
 			float arr5[] = {1, 2, 3, 4, 5};
 			float arr6[] = {1, 2, 3, 5, 4};
 			float arr7[] = {2, 3, 5, 1, 4};
 			float arr8[] = {2, 5, 3, 4, 1};
 			float arr9[] = {5, 2, 3, 4, 1};
-			PR_CHECK(MaxElementIndex(arr5) == 4, true);
-			PR_CHECK(MaxElementIndex(arr6) == 3, true);
-			PR_CHECK(MaxElementIndex(arr7) == 2, true);
-			PR_CHECK(MaxElementIndex(arr8) == 1, true);
-			PR_CHECK(MaxElementIndex(arr9) == 0, true);
+			PR_EXPECT(MaxElementIndex(arr5) == 4);
+			PR_EXPECT(MaxElementIndex(arr6) == 3);
+			PR_EXPECT(MaxElementIndex(arr7) == 2);
+			PR_EXPECT(MaxElementIndex(arr8) == 1);
+			PR_EXPECT(MaxElementIndex(arr9) == 0);
 		}
-		{// Trunc
-			PR_CHECK(Trunc(1.9f) == 1.0f, true);
-			PR_CHECK(Trunc(1.9f, ETruncType::ToNearest) == 2.0f, true);
-			PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
+		PRUnitTestMethod(Trunc)
+		{
+			PR_EXPECT(Trunc(1.9f) == 1.0f);
+			PR_EXPECT(Trunc(1.9f, ETruncType::ToNearest) == 2.0f);
+			PR_EXPECT(Trunc(10000000000000.9) == 10000000000000.0);
 		}
-		{// Dot
+		PRUnitTestMethod(Dot)
+		{
 			#if 0 // move
 			v3 arr0(1, 2, 3);
 			v3 arr1(2, 3, 4);
@@ -1933,60 +1947,68 @@ namespace pr::maths
 			iv2 arr3(3, 4);
 			quat arr4(4, 3, 2, 1);
 			quat arr5(1, 2, 3, 4);
-			PR_CHECK(FEql(Dot(arr0, arr1), 20), true);
-			PR_CHECK(Dot(arr2, arr3) == 11, true);
-			PR_CHECK(Dot(arr4, arr5) == 20, true);
+			PR_EXPECT(FEql(Dot(arr0, arr1), 20));
+			PR_EXPECT(Dot(arr2, arr3) == 11);
+			PR_EXPECT(Dot(arr4, arr5) == 20);
 			#endif
 		}
-		{// CosAngle
-			PR_CHECK(FEql(CosAngle(1.0, 1.0, maths::root2) - Cos(DegreesToRadians(90.0)), 0.0), true);
-			PR_CHECK(FEql(Angle(1.0, 1.0, maths::root2), DegreesToRadians(90.0)), true);
-			PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), maths::root2f), true);
+		PRUnitTestMethod(CosAngle)
+		{
+			PR_EXPECT(FEql(CosAngle(1.0, 1.0, maths::root2) - Cos(DegreesToRadians(90.0)), 0.0));
+			PR_EXPECT(FEql(Angle(1.0, 1.0, maths::root2), DegreesToRadians(90.0)));
+			PR_EXPECT(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), maths::root2f));
 		}
-		{// Fraction
-			PR_CHECK(FEql(Frac<float>(-5, 2, 5), 7.0f / 10.0f), true);
+		PRUnitTestMethod(Fraction)
+		{
+			PR_EXPECT(FEql(Frac<float>(-5, 2, 5), 7.0f / 10.0f));
 		}
-		{// Cube Root (32bit)
-			auto a = 1.23456789123456789f;
-			auto b = Cubert(a * a * a);
-			PR_CHECK(FEqlRelative(a, b, 0.000001f), true);
+		PRUnitTestMethod(CubeRoot)
+		{
+			{// 32bit
+				auto a = 1.23456789123456789f;
+				auto b = Cubert(a * a * a);
+				PR_EXPECT(FEqlRelative(a, b, 0.000001f));
+			}
+			{// 64bit
+				auto a = 1.23456789123456789;
+				auto b = Cubert(a * a * a);
+				PR_EXPECT(FEqlRelative(a, b, 0.000000000001));
+			}
 		}
-		{// Cube Root (64bit)
-			auto a = 1.23456789123456789;
-			auto b = Cubert(a * a * a);
-			PR_CHECK(FEqlRelative(a, b, 0.000000000001), true);
-		}
-		{// Sqrt Root
+		PRUnitTestMethod(SqrtRoot)
+		{
 			PR_EXPECT(Sqrt(64.0) == 8.0);
 			static_assert(ISqrt(64) == 8);
 			static_assert(ISqrt(4294836225) == 65535);
 			static_assert(ISqrt(10000000000000000000LL) == 3162277660LL);
 			static_assert(ISqrt(18446744065119617025LL) == 4294967295LL);
 		}
-		{// Arithmetic sequence
+		PRUnitTestMethod(ArithmeticSequence)
+		{
 			ArithmeticSequence a(2, 5);
-			PR_CHECK(a(), 2);
-			PR_CHECK(a(), 7);
-			PR_CHECK(a(), 12);
-			PR_CHECK(a(), 17);
+			PR_EXPECT(a() == 2);
+			PR_EXPECT(a() == 7);
+			PR_EXPECT(a() == 12);
+			PR_EXPECT(a() == 17);
 
-			PR_CHECK(ArithmeticSum(0, 2, 4), 20);
-			PR_CHECK(ArithmeticSum(4, 2, 2), 18);
-			PR_CHECK(ArithmeticSum(1, 2, 0), 1);
-			PR_CHECK(ArithmeticSum(1, 2, 5), 36);
+			PR_EXPECT(ArithmeticSum(0, 2, 4) == 20);
+			PR_EXPECT(ArithmeticSum(4, 2, 2) == 18);
+			PR_EXPECT(ArithmeticSum(1, 2, 0) == 1);
+			PR_EXPECT(ArithmeticSum(1, 2, 5) == 36);
 		}
-		{// Geometric sequence
+		PRUnitTestMethod(GeometricSequence)
+		{
 			GeometricSequence g(2, 5);
-			PR_CHECK(g(), 2);
-			PR_CHECK(g(), 10);
-			PR_CHECK(g(), 50);
-			PR_CHECK(g(), 250);
+			PR_EXPECT(g() == 2);
+			PR_EXPECT(g() == 10);
+			PR_EXPECT(g() == 50);
+			PR_EXPECT(g() == 250);
 
-			PR_CHECK(GeometricSum(1, 2, 4), 31);
-			PR_CHECK(GeometricSum(4, 2, 2), 28);
-			PR_CHECK(GeometricSum(1, 3, 0), 1);
-			PR_CHECK(GeometricSum(1, 3, 5), 364);
+			PR_EXPECT(GeometricSum(1, 2, 4) == 31);
+			PR_EXPECT(GeometricSum(4, 2, 2) == 28);
+			PR_EXPECT(GeometricSum(1, 3, 0) == 1);
+			PR_EXPECT(GeometricSum(1, 3, 5) == 364);
 		}
-	}
+	};
 }
 #endif

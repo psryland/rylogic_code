@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -478,9 +478,9 @@ namespace pr::maths
 			v2 c(1.0f, 0.6f);
 
 			auto q = Quadratic::FromPoints(a,b,c);
-			PR_CHECK(FEql(float(q.F(a.x)), a.y), true);
-			PR_CHECK(FEql(float(q.F(b.x)), b.y), true);
-			PR_CHECK(FEql(float(q.F(c.x)), c.y), true);
+			PR_EXPECT(FEql(float(q.F(a.x)), a.y));
+			PR_EXPECT(FEql(float(q.F(b.x)), b.y));
+			PR_EXPECT(FEql(float(q.F(c.x)), c.y));
 		}
 		{ // FromPoints
 			double a[] = {0.5,  0.3};
@@ -488,9 +488,9 @@ namespace pr::maths
 			double c[] = {1.0,  0.6};
 
 			auto q = Quadratic::FromPoints(a[0], a[1], b[0], b[1], c[0], c[1]);
-			PR_CHECK(FEql(q.F(a[0]), a[1]), true);
-			PR_CHECK(FEql(q.F(b[0]), b[1]), true);
-			PR_CHECK(FEql(q.F(c[0]), c[1]), true);
+			PR_EXPECT(FEql(q.F(a[0]), a[1]));
+			PR_EXPECT(FEql(q.F(b[0]), b[1]));
+			PR_EXPECT(FEql(q.F(c[0]), c[1]));
 		}
 	}
 }

@@ -285,13 +285,13 @@ namespace pr::common
 		{
 			auto pt = COrder2D(i);
 			auto index = COrder2D(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 		for (int i = 0; i != 64; ++i)
 		{
 			auto pt = COrder3D(i);
 			auto index = COrder3D(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 		for (int y = -100; y != 100; ++y)
 		{
@@ -299,7 +299,7 @@ namespace pr::common
 			{
 				auto index = COrder2D(iv2(x,y));
 				auto pt = COrder2D(index);
-				PR_CHECK(pt == iv2(x,y), true);
+				PR_EXPECT(pt == iv2(x,y));
 			}
 		}
 
@@ -308,13 +308,13 @@ namespace pr::common
 		{
 			auto pt = ZOrder2D(i);
 			auto index = ZOrder2D(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 		for (int i = 0; i != 1000; ++i)
 		{
 			auto pt = ZOrder3D(i);
 			auto index = ZOrder3D(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 
 		/* failing
@@ -322,13 +322,13 @@ namespace pr::common
 		{
 			auto pt = Hilbert2D<4>(i);
 			auto index = Hilbert2D<4>(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 		for (int i = 0; i != 1000; ++i)
 		{
 			auto pt = Hilbert3D(i);
 			auto index = Hilbert3D(pt);
-			PR_CHECK(index == i, true);
+			PR_EXPECT(index == i);
 		}
 		*/
 

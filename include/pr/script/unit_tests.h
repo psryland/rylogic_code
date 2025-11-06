@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -8,66 +8,75 @@
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
 #include "pr/script/script_core.h"
+#include "pr/script/src_stack.h"
+#include "pr/script/filter.h"
+#include "pr/script/macros.h"
+#include "pr/script/includes.h"
+#include "pr/script/tokeniser.h"
+#include "pr/script/preprocessor.h"
 #include "pr/script/embedded_lua.h"
 #include "pr/win32/win32.h"
 
 namespace pr::script
 {
-	PRUnitTest(CoreTests)
+	PRUnitTestClass(ScriptCoreTests)
 	{
-		using namespace pr::str;
+		std::filesystem::path const script_utf;
+		TestClass_ScriptCoreTests()
+			:script_utf(temp_dir() / L"script_utf.txt")
+		{
+		}
 
-		std::filesystem::path const script_utf = L"script_utf.txt";
-		auto cleanup = pr::Scope<void>([]{}, [&]{ std::filesystem::remove(script_utf); });
-
-		{// Simple buffering
+		PRUnitTestMethod(SimpleBuffering)
+		{
 			char const str[] = "123abc";
 			StringSrc ptr(str);
 
-			PR_CHECK(*ptr  , L'1');
-			PR_CHECK(ptr[5], L'c');
-			PR_CHECK(ptr[0], L'1');
+			PR_EXPECT(*ptr   == L'1');
+			PR_EXPECT(ptr[5] == L'c');
+			PR_EXPECT(ptr[0] == L'1');
 
-			PR_CHECK(*(++ptr)   , L'2');
-			PR_CHECK(*(ptr += 3), L'b');
-			PR_CHECK(*(++ptr)   , L'c');
+			PR_EXPECT(*(++ptr)    == L'2');
+			PR_EXPECT(*(ptr += 3) == L'b');
+			PR_EXPECT(*(++ptr)    == L'c');
 
-			PR_CHECK(*(++ptr),  0);
+			PR_EXPECT(*(++ptr) == 0);
 		}
-		{// Limited source
+		PRUnitTestMethod(LimitedSource)
+		{
 			char const str[] = "1234567890";
 			StringSrc ptr(str);
 			ptr.Limit(3);
 
-			PR_CHECK(ptr[0], L'1');
-			PR_CHECK(ptr[1], L'2');
-			PR_CHECK(ptr[2], L'3');
-			PR_CHECK(ptr[3], L'\0');
-			PR_CHECK(ptr[4], L'\0');
+			PR_EXPECT(ptr[0] == L'1');
+			PR_EXPECT(ptr[1] == L'2');
+			PR_EXPECT(ptr[2] == L'3');
+			PR_EXPECT(ptr[3] == L'\0');
+			PR_EXPECT(ptr[4] == L'\0');
 
-			PR_CHECK(*ptr, L'1'); ++ptr;
-			PR_CHECK(*ptr, L'2'); ++ptr;
-			PR_CHECK(*ptr, L'3'); ++ptr;
-			PR_CHECK(*ptr, L'\0'); ++ptr;
-			PR_CHECK(*ptr, L'\0'); ++ptr;
+			PR_EXPECT(*ptr == L'1'); ++ptr;
+			PR_EXPECT(*ptr == L'2'); ++ptr;
+			PR_EXPECT(*ptr == L'3'); ++ptr;
+			PR_EXPECT(*ptr == L'\0'); ++ptr;
+			PR_EXPECT(*ptr == L'\0'); ++ptr;
 
 			ptr.Limit(2);
 
-			PR_CHECK(ptr[0], L'4');
-			PR_CHECK(ptr[1], L'5');
-			PR_CHECK(ptr[2], L'\0');
-			PR_CHECK(ptr[3], L'\0');
+			PR_EXPECT(ptr[0] == L'4');
+			PR_EXPECT(ptr[1] == L'5');
+			PR_EXPECT(ptr[2] == L'\0');
+			PR_EXPECT(ptr[3] == L'\0');
 
-			PR_CHECK(*ptr, L'4'); ++ptr;
-			PR_CHECK(*ptr, L'5'); ++ptr;
-			PR_CHECK(*ptr, L'\0'); ++ptr;
-			PR_CHECK(*ptr, L'\0'); ++ptr;
+			PR_EXPECT(*ptr == L'4'); ++ptr;
+			PR_EXPECT(*ptr == L'5'); ++ptr;
+			PR_EXPECT(*ptr == L'\0'); ++ptr;
+			PR_EXPECT(*ptr == L'\0'); ++ptr;
 
 			ptr.Limit(5);
 
 			auto len0 = ptr.ReadAhead(5);
-			PR_CHECK(len0, 5);
-			PR_CHECK(ptr.Buffer().size(), 5ULL);
+			PR_EXPECT(len0 == 5);
+			PR_EXPECT(ptr.Buffer().size() == 5);
 
 			ptr.Limit(3);
 
@@ -75,20 +84,21 @@ namespace pr::script
 			// Because of this, Buffer().size() should not be used to determine the available characters
 			// after a call to ReadAhead()
 			auto len1 = ptr.ReadAhead(5);
-			PR_CHECK(len1, 3);
-			PR_CHECK(ptr.Buffer().size(), 5ULL);
+			PR_EXPECT(len1 == 3);
+			PR_EXPECT(ptr.Buffer().size() == 5);
 		}
-		{// Matching
+		PRUnitTestMethod(Matching)
+		{
 			wchar_t const str[] = L"0123456789";
 			StringSrc ptr(str);
 
-			PR_CHECK(ptr.Match(L"0123"), true);
-			PR_CHECK(ptr.Match(L"012345678910"), false);
+			PR_EXPECT(ptr.Match(L"0123"));
+			PR_EXPECT(ptr.Match(L"012345678910") == false);
 			ptr += 5;
-			PR_CHECK(ptr.Match(L"567"), true);
+			PR_EXPECT(ptr.Match(L"567"));
 		}
-		{// UTF8 File source
-
+		PRUnitTestMethod(UTF8FileSource)
+		{
 			// UTF-8 data
 			unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao
 			wchar_t str[] = {0x4f60, 0x597d};
@@ -99,18 +109,18 @@ namespace pr::script
 			}
 
 			FileSrc file(script_utf);
-			PR_CHECK(*file, str[0]); ++file;
-			PR_CHECK(*file, str[1]); ++file;
+			PR_EXPECT(*file == str[0]); ++file;
+			PR_EXPECT(*file == str[1]); ++file;
 
 			// Buffering a file in a string
 			FileSrc file2(script_utf);
 			StringSrc str2 = file2.ToStringSrc();
-			PR_CHECK(*file2, *str2); ++file2; ++str2;
-			PR_CHECK(*file2, *str2); ++file2; ++str2;
-			PR_CHECK(*file2, *str2); ++file2; ++str2;
+			PR_EXPECT(*file2 == *str2); ++file2; ++str2;
+			PR_EXPECT(*file2 == *str2); ++file2; ++str2;
+			PR_EXPECT(*file2 == *str2); ++file2; ++str2;
 		}
-		{// UTF 16 little endian File source
-
+		PRUnitTestMethod(UTF16LittleEndianFileSource)
+		{
 			// UTF-16le data (if host system is little-endian)
 			unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao
 			wchar_t str[] = {0x4f60, 0x597d};
@@ -121,11 +131,11 @@ namespace pr::script
 			}
 
 			FileSrc file(script_utf);
-			PR_CHECK(*file, str[0]); ++file;
-			PR_CHECK(*file, str[1]); ++file;
+			PR_EXPECT(*file == str[0]); ++file;
+			PR_EXPECT(*file == str[1]); ++file;
 		}
-		{// UTF 16 big endian File source
-
+		PRUnitTestMethod(UTF16BigEndianFileSource)
+		{
 			// UTF-16be data (if host system is little-endian)
 			unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao
 			wchar_t str[] = {0x4f60, 0x597d};
@@ -136,204 +146,208 @@ namespace pr::script
 			}
 
 			FileSrc file(script_utf);
-			PR_CHECK(*file, str[0]); ++file;
-			PR_CHECK(*file, str[1]); ++file;
+			PR_EXPECT(*file == str[0]); ++file;
+			PR_EXPECT(*file == str[1]); ++file;
 		}
-		{ // Eat functions
+		PRUnitTestMethod(EatFunctions)
+		{
 			{
 				StringSrc src(" \t\n,Text");
 				EatDelimiters(src, "\n\t ,");
-				PR_CHECK(*src, 'T');
+				PR_EXPECT(*src == 'T');
 			}
 			{
 				StringSrc src("991239Text");
 				Eat(src, 2, 1, [](auto& s) { return *s < '5'; });
-				PR_CHECK(*src, 'T');
+				PR_EXPECT(*src == 'T');
 			}
 			{
 				StringSrc src0("01 \t \t \r\n");
 				EatLineSpace(src0, 2, 0);
-				PR_CHECK(*src0, '\n');
+				PR_EXPECT(*src0 == '\n');
 
 				StringSrc src1("01 \t \t \r");
 				EatLineSpace(src1, 2, 1);
-				PR_CHECK(*src1, '\0');
+				PR_EXPECT(*src1 == '\0');
 			}
 			{
 				StringSrc src("01 \t \t \rA");
 				EatWhiteSpace(src, 2, 0);
-				PR_CHECK(*src, 'A');
+				PR_EXPECT(*src == 'A');
 			}
 			{
 				StringSrc src0("0123456\r\nABC");
 				EatLine(src0, 0, 2, false);
-				PR_CHECK(*src0, 'A');
+				PR_EXPECT(*src0 == 'A');
 
 				StringSrc src1("0123456");
 				EatLine(src1, 0, 0, true);
-				PR_CHECK(*src1, '\0');
+				PR_EXPECT(*src1 == '\0');
 			}
 			{
 				StringSrc src("{{ block }}#");
 				EatBlock(src, L"{{", L"}}");
-				PR_CHECK(*src, '#');
+				PR_EXPECT(*src == '#');
 			}
 			{
 				StringSrc src0("\"A \\\"string\\\" within a string\"#");
 				EatLiteral(src0);
-				PR_CHECK(*src0, '#');
+				PR_EXPECT(*src0 == '#');
 
 				StringSrc src1("\"A \\\\\"#  \"@ ");
 				EatLiteral(src1);
-				PR_CHECK(*src1, '#');
+				PR_EXPECT(*src1 == '#');
 
 				StringSrc src2("\"\\\"\"#");
 				EatLiteral(src2);
-				PR_CHECK(*src2, '#');
+				PR_EXPECT(*src2 == '#');
 			}
 			{
 				StringSrc src(";comment \r\n#");
 				EatLineComment(src, L";");
-				PR_CHECK(*src, '\r');
+				PR_EXPECT(*src == '\r');
 			}
 			{
 				StringSrc src("<!-- comment \r\n -->#");
 				EatBlockComment(src, L"<!--", L"-->");
-				PR_CHECK(*src, '#');
+				PR_EXPECT(*src == '#');
 			}
 		}
-		{// Buffer functions
+		PRUnitTestMethod(BufferFunctions)
+		{
 			{
 				auto len = 0;
 				StringSrc src("_123abc#");
-				PR_CHECK(BufferIdentifier(src, 0, &len), true);
-				PR_CHECK(len, 7);
-				PR_CHECK(src.ReadN(len), L"_123abc");
+				PR_EXPECT(BufferIdentifier(src, 0, &len));
+				PR_EXPECT(len == 7);
+				PR_EXPECT(src.ReadN(len) == L"_123abc");
 			}
 			{
 				auto len = 5;
 				StringSrc src("123abc#");
-				PR_CHECK(BufferIdentifier(src, 0, &len), false);
-				PR_CHECK(len, 0);
+				PR_EXPECT(!BufferIdentifier(src, 0, &len));
+				PR_EXPECT(len == 0);
 			}
 			{
 				auto len = 0;
 				StringSrc src("  \"Lit\\\"er\\\"al\" ");
-				PR_CHECK(BufferLiteral(src, 2, &len), true);
-				PR_CHECK(len, 15);
+				PR_EXPECT(BufferLiteral(src, 2, &len));
+				PR_EXPECT(len == 15);
 				src += 2; len -= 2;
-				PR_CHECK(src.ReadN(len), L"\"Lit\\\"er\\\"al\"");
+				PR_EXPECT(src.ReadN(len) == L"\"Lit\\\"er\\\"al\"");
 			}
 			{
 				auto len = 0;
 				StringSrc src("\"\\\\\"   \"");
-				PR_CHECK(BufferLiteral(src, 0, &len), true);
-				PR_CHECK(len, 4);
-				PR_CHECK(src.ReadN(len), L"\"\\\\\"");
+				PR_EXPECT(BufferLiteral(src, 0, &len));
+				PR_EXPECT(len == 4);
+				PR_EXPECT(src.ReadN(len) == L"\"\\\\\"");
 			}
 			{
 				auto len = 0;
 				StringSrc src("abc\ndef");
-				PR_CHECK(BufferLine(src, true, 0, &len), true);
-				PR_CHECK(len, 4);
-				PR_CHECK(src.ReadN(len), L"abc\n");
+				PR_EXPECT(BufferLine(src, true, 0, &len));
+				PR_EXPECT(len == 4);
+				PR_EXPECT(src.ReadN(len) == L"abc\n");
 			}
 			{
 				auto len = 0;
 				StringSrc src("  abc\ndef");
-				PR_CHECK(BufferLine(src, false, 2, &len), true);
-				PR_CHECK(len, 5);
+				PR_EXPECT(BufferLine(src, false, 2, &len));
+				PR_EXPECT(len == 5);
 				src += 2; len -= 2;
-				PR_CHECK(src.ReadN(len), L"abc");
+				PR_EXPECT(src.ReadN(len) == L"abc");
 			}
 			{
 				auto len = 0;
 				StringSrc src("a b\tc\nd,end;f");
-				PR_CHECK(BufferTo(src, L"end", true, 0, &len), true);
-				PR_CHECK(len, 11);
-				PR_CHECK(src.ReadN(len), L"a b\tc\nd,end");
+				PR_EXPECT(BufferTo(src, L"end", true, 0, &len));
+				PR_EXPECT(len == 11);
+				PR_EXPECT(src.ReadN(len) == L"a b\tc\nd,end");
 			}
 			{
 				auto len = 0;
 				StringSrc src("a b\tc\nd,");
-				PR_CHECK(BufferTo(src, L"end", false, 0, &len), false);
-				PR_CHECK(len, 8);
-				PR_CHECK(src.ReadN(len), L"a b\tc\nd,");
+				PR_EXPECT(!BufferTo(src, L"end", false, 0, &len));
+				PR_EXPECT(len == 8);
+				PR_EXPECT(src.ReadN(len) == L"a b\tc\nd,");
 			}
 			{
 				auto len = 0;
 				StringSrc src("a b\tc\nd,");
-				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return !s.Match(L"\tc\n", i); }, 0, &len), true);
-				PR_CHECK(len, 3);
-				PR_CHECK(src.ReadN(len), L"a b");
+				PR_EXPECT(BufferWhile(src, [](Src& s, int i) { return !s.Match(L"\tc\n", i); }, 0, &len));
+				PR_EXPECT(len == 3);
+				PR_EXPECT(src.ReadN(len) == L"a b");
 			}
 			{
 				auto len = 0;
 				StringSrc src("abcde");
-				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return s[i] != 'f'; }, 0, &len), false);
-				PR_CHECK(len, 5);
-				PR_CHECK(src.ReadN(len), L"abcde");
+				PR_EXPECT(!BufferWhile(src, [](Src& s, int i) { return s[i] != 'f'; }, 0, &len));
+				PR_EXPECT(len == 5);
+				PR_EXPECT(src.ReadN(len) == L"abcde");
 			}
 			{
 				auto len = 0;
 				StringSrc src("a_b_c_d");
-				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return s[i] != '_' ? 2 : 0; }, 0, &len), false);
-				PR_CHECK(len, 7);
-				PR_CHECK(src.ReadN(len), L"a_b_c_d");
+				PR_EXPECT(!BufferWhile(src, [](Src& s, int i) { return s[i] != '_' ? 2 : 0; }, 0, &len));
+				PR_EXPECT(len == 7);
+				PR_EXPECT(src.ReadN(len) == L"a_b_c_d");
 			}
 		}
-	}
-	PRUnitTest(BufTests)
+	};
+	PRUnitTestClass(ScriptBufTests)
 	{
-		using namespace pr::str;
-
-		{// BufW2
+		PRUnitTestMethod(BufW2)
+		{
 			wchar_t const data[] = L"0123456789";
 			wchar_t const* const src = &data[0];
 			Buf<2, wchar_t> buf(src);
-			PR_CHECK(buf[0], L'0');
-			PR_CHECK(buf[1], L'1');
-			PR_CHECK(*src, L'0');
-
+			PR_EXPECT(buf[0] == L'0');
+			PR_EXPECT(buf[1] == L'1');
+			PR_EXPECT(*src == L'0');
 		}
-		{// BufW4
+		PRUnitTestMethod(BufW4)
+		{
 			wchar_t const data[] = L"0123456789";
 			wchar_t const* src = &data[0];
 			Buf<4, wchar_t> buf(src);
-			PR_CHECK(*src, L'4');
-			PR_CHECK(buf[0], L'0');
-			PR_CHECK(buf[1], L'1');
-			PR_CHECK(buf[2], L'2');
-			PR_CHECK(buf[3], L'3');
+			PR_EXPECT(*src == L'4');
+			PR_EXPECT(buf[0] == L'0');
+			PR_EXPECT(buf[1] == L'1');
+			PR_EXPECT(buf[2] == L'2');
+			PR_EXPECT(buf[3] == L'3');
 			buf.shift(*src++);
-			PR_CHECK(buf[0], L'1');
-			PR_CHECK(buf[1], L'2');
-			PR_CHECK(buf[2], L'3');
-			PR_CHECK(buf[3], L'4');
+			PR_EXPECT(buf[0] == L'1');
+			PR_EXPECT(buf[1] == L'2');
+			PR_EXPECT(buf[2] == L'3');
+			PR_EXPECT(buf[3] == L'4');
 		}
-		{// BufW8
+		PRUnitTestMethod(BufW8)
+		{
+			using namespace str;
 			using BufW8 = Buf<8, wchar_t>;
 			wchar_t const src[] = L"0123456";
-			PR_CHECK(Equal(BufW8(src).c_str(), src), true);
-			PR_CHECK(BufW8(L"Paul"       ).match(BufW8(L"PaulWasHere")), true);
-			PR_CHECK(BufW8(L"PaulWasHere").match(BufW8(L"Paul"       )), false);
-			PR_CHECK(BufW8(L"ABC") == BufW8(L"ABC"), true);
+			PR_EXPECT(Equal(BufW8(src).c_str(), src));
+			PR_EXPECT(BufW8(L"Paul").match(BufW8(L"PaulWasHere")));
+			PR_EXPECT(BufW8(L"PaulWasHere").match(BufW8(L"Paul")) == false);
+			PR_EXPECT(BufW8(L"ABC") == BufW8(L"ABC"));
 		}
-		{// Src
+		PRUnitTestMethod(Source)
+		{
 			script::StringSrc src("0123456789");
-			Buf<4,wchar_t> buf(src);
-			PR_CHECK(*src, L'4');
-			PR_CHECK(buf[0], L'0');
-			PR_CHECK(buf[1], L'1');
-			PR_CHECK(buf[2], L'2');
-			PR_CHECK(buf[3], L'3');
+			Buf<4, wchar_t> buf(src);
+			PR_EXPECT(*src == L'4');
+			PR_EXPECT(buf[0] == L'0');
+			PR_EXPECT(buf[1] == L'1');
+			PR_EXPECT(buf[2] == L'2');
+			PR_EXPECT(buf[3] == L'3');
 			buf.shift(*src);
-			PR_CHECK(buf[0], L'1');
-			PR_CHECK(buf[1], L'2');
-			PR_CHECK(buf[2], L'3');
-			PR_CHECK(buf[3], L'4');
+			PR_EXPECT(buf[0] == L'1');
+			PR_EXPECT(buf[1] == L'2');
+			PR_EXPECT(buf[2] == L'3');
+			PR_EXPECT(buf[3] == L'4');
 		}
-	}
+	};
 	PRUnitTest(LocationTests)
 	{
 		char const* str =
@@ -345,8 +359,8 @@ namespace pr::script
 		for (auto s = str; *s; ++s)
 			loc.inc(*s);
 
-		PR_CHECK(loc.Line(), 3);
-		PR_CHECK(loc.Col(), 6);
+		PR_EXPECT(loc.Line() == 3);
+		PR_EXPECT(loc.Col() == 6);
 	}
 	PRUnitTest(SrcStackTests)
 	{
@@ -357,22 +371,22 @@ namespace pr::script
 		SrcStack stack(src1);
 
 		for (int i = 0; i != 2; ++i, ++stack)
-			PR_CHECK(*stack, str1[i]);
+			PR_EXPECT(*stack == str1[i]);
 
 		stack.Push(src2);
 
 		for (int i = 0; i != 3; ++i, ++stack)
-			PR_CHECK(*stack, str2[i]);
+			PR_EXPECT(*stack == str2[i]);
 
 		for (int i = 2; i != 3; ++i, ++stack)
-			PR_CHECK(*stack, str1[i]);
+			PR_EXPECT(*stack == str1[i]);
 
-		PR_CHECK(*stack, '\0');
+		PR_EXPECT(*stack == '\0');
 	}
-	PRUnitTest(FilterTests)
+	PRUnitTestClass(ScriptFilterTests)
 	{
-		using namespace pr::str;
-		{// StripLineContinuations
+		PRUnitTestMethod(StripLineContinuations)
+		{
 			char const str_in[] = "Li\
 				on";
 			char const str_out[] = "Li				on";
@@ -384,11 +398,12 @@ namespace pr::script
 			for (; *strip; ++strip, ++out)
 			{
 				if (*strip == *out) continue;
-				PR_CHECK(*strip, *out);
+				PR_EXPECT(*strip == *out);
 			}
-			PR_CHECK(*out, 0);
+			PR_EXPECT(*out == 0);
 		}
-		{// StripComments
+		PRUnitTestMethod(StripComments)
+		{
 			char const str_in[] = 
 				"123// comment         \n"
 				"456/* blo/ck */789\n"
@@ -428,11 +443,12 @@ namespace pr::script
 			for (;*strip; ++strip, ++out)
 			{
 				if (*strip == *out) continue;
-				PR_CHECK(*strip, *out);
+				PR_EXPECT(*strip == *out);
 			}
-			PR_CHECK(*out, 0);
+			PR_EXPECT(*out == 0);
 		}
-		{// Strip ASM comments
+		PRUnitTestMethod(StripASMComments)
+		{
 			char const str_in[] =
 				"; asm comments start with a ; character\r\n"
 				"mov 43 2\r\n"
@@ -449,11 +465,12 @@ namespace pr::script
 			for (; *strip; ++strip, ++out)
 			{
 				if (*strip == *out) continue;
-				PR_CHECK(*strip, *out);
+				PR_EXPECT(*strip == *out);
 			}
-			PR_CHECK(*out, 0);
+			PR_EXPECT(*out == 0);
 		}
-		{// StripNewLines
+		PRUnitTestMethod(StripNewLines)
+		{
 			char const str_in[] =
 				"  \n"
 				"      \n"
@@ -483,9 +500,9 @@ namespace pr::script
 				for (; *strip; ++strip, ++out)
 				{
 					if (*strip == *out) continue;
-					PR_CHECK(*strip, *out);
+					PR_EXPECT(*strip == *out);
 				}
-				PR_CHECK(*out, 0);
+				PR_EXPECT(*out == 0);
 			}
 			{// min 0, max 1 lines
 				char const str_out[] =
@@ -504,9 +521,9 @@ namespace pr::script
 				for (; *strip; ++strip, ++out)
 				{
 					if (*strip == *out) continue;
-					PR_CHECK(*strip, *out);
+					PR_EXPECT(*strip == *out);
 				}
-				PR_CHECK(*out, 0);
+				PR_EXPECT(*out == 0);
 			}
 			{// min 2, max 2 lines
 				char const str_out[] =
@@ -528,12 +545,12 @@ namespace pr::script
 				for (; *strip; ++strip, ++out)
 				{
 					if (*strip == *out) continue;
-					PR_CHECK(*strip, *out);
+					PR_EXPECT(*strip == *out);
 				}
-				PR_CHECK(*out, 0);
+				PR_EXPECT(*out == 0);
 			}
 		}
-	}
+	};
 	PRUnitTest(MacroTests)
 	{
 		MacroDB macros;
@@ -545,22 +562,22 @@ namespace pr::script
 			macros.Add(macro2);
 
 			// Macros are copied into the DB
-			PR_CHECK(macros.Find(L"One") != &macro1, true);
-			PR_CHECK(macros.Find(L"Two") != &macro2, true);
-			PR_CHECK(*macros.Find(L"One") == macro1, true);
-			PR_CHECK(*macros.Find(L"Two") == macro2, true);
+			PR_EXPECT(macros.Find(L"One") != &macro1);
+			PR_EXPECT(macros.Find(L"Two") != &macro2);
+			PR_EXPECT(*macros.Find(L"One") == macro1);
+			PR_EXPECT(*macros.Find(L"Two") == macro2);
 		}
 
-		PR_CHECK(macros.Find(L"One") != nullptr, true);
-		PR_CHECK(macros.Find(L"Two") != nullptr, true);
-		PR_CHECK(macros.Find(L"Three") == nullptr, true);
+		PR_EXPECT(macros.Find(L"One") != nullptr);
+		PR_EXPECT(macros.Find(L"Two") != nullptr);
+		PR_EXPECT(macros.Find(L"Three") == nullptr);
 
 		string_t result;
 		macros.Find(L"One")->Expand(result, {}, Loc());
-		PR_CHECK(result, L"OneExpanded");
+		PR_EXPECT(result ==L"OneExpanded");
 
 		macros.Find(L"Two")->Expand(result, { L"A", L"B" }, Loc());
-		PR_CHECK(result, L"TwoExpanded A B");
+		PR_EXPECT(result ==L"TwoExpanded A B");
 	}
 	PRUnitTest(IncludesTests)
 	{
@@ -568,7 +585,7 @@ namespace pr::script
 		using string = pr::string<wchar_t>;
 
 		char data[] = "Included";
-		auto script_include = temp_dir / L"script_include.txt";
+		auto script_include = temp_dir() / L"script_include.txt";
 		auto cleanup = Scope<void>([]{}, [=] { std::filesystem::remove(script_include); });
 
 		{// Create the file
@@ -586,7 +603,7 @@ namespace pr::script
 			auto& src = *src_ptr;
 
 			std::wstring r; for (;*src; ++src) r.push_back(*src);
-			PR_CHECK(pr::str::Equal(r, data), true);
+			PR_EXPECT(pr::str::Equal(r, data));
 		}
 	}
 	PRUnitTest(TokeniserTests)
@@ -601,90 +618,90 @@ namespace pr::script
 
 		StringSrc src(str_in);
 		Tokeniser tkr(src);
-		PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Int      , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Struct   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Break    , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Else     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Long     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Switch   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Case     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Enum     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Register , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Typedef  , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Char     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Extern   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Return   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Union    , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Const    , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Float    , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Short    , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Unsigned , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Continue , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::For      , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Signed   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Void     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Default  , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Goto     , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Sizeof   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Volatile , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Do       , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::If       , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::Static   , true); ++tkr;
-		PR_CHECK(*tkr == EKeyword::While    , true); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Auto     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Double   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Int      ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Struct   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Break    ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Else     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Long     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Switch   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Case     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Enum     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Register ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Typedef  ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Char     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Extern   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Return   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Union    ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Const    ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Float    ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Short    ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Unsigned ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Continue ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::For      ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Signed   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Void     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Default  ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Goto     ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Sizeof   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Volatile ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Do       ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::If       ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::Static   ); ++tkr;
+		PR_EXPECT(*tkr == EKeyword::While    ); ++tkr;
 
-		PR_CHECK(*tkr == ESymbol::NewLine      , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Assign       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::SemiColon    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Complement   , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Not          , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Ptr          , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::AddressOf    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Plus         , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Minus        , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Divide       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Modulus      , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::LessThan     , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::GtrThan      , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BitOr        , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BitXor       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Comma        , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Conditional  , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BraceOpen    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BraceClose   , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BracketOpen  , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BracketClose , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ParenthOpen  , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ParenthClose , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Dot          , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Colon        , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Hash         , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Dollar       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::At           , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Increment    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Decrement    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ShiftL       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ShiftR       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::LessEql      , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::GtrEql       , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Equal        , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::NotEqual     , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::LogicalAnd   , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::LogicalOr    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ShiftLAssign , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ShiftRAssign , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BitAndAssign , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BitOrAssign  , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::BitXorAssign , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::AddAssign    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::SubAssign    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::MulAssign    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::DivAssign    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::ModAssign    , true); ++tkr;
-		PR_CHECK(*tkr == ESymbol::Ellipsis     , true); ++tkr;
-		PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
-		PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::NewLine      ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Assign       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::SemiColon    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Complement   ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Not          ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Ptr          ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::AddressOf    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Plus         ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Minus        ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Divide       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Modulus      ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::LessThan     ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::GtrThan      ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BitOr        ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BitXor       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Comma        ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Conditional  ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BraceOpen    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BraceClose   ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BracketOpen  ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BracketClose ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ParenthOpen  ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ParenthClose ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Dot          ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Colon        ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Hash         ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Dollar       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::At           ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Increment    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Decrement    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ShiftL       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ShiftR       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::LessEql      ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::GtrEql       ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Equal        ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::NotEqual     ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::LogicalAnd   ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::LogicalOr    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ShiftLAssign ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ShiftRAssign ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BitAndAssign ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BitOrAssign  ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::BitXorAssign ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::AddAssign    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::SubAssign    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::MulAssign    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::DivAssign    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::ModAssign    ); ++tkr;
+		PR_EXPECT(*tkr == ESymbol::Ellipsis     ); ++tkr;
+		PR_EXPECT(*tkr == EToken::EndOfStream   ); ++tkr;
+		PR_EXPECT(*tkr == EToken::EndOfStream   ); ++tkr;
 	}
 	PRUnitTest(InputStackTests)
 	{
@@ -703,12 +720,13 @@ namespace pr::script
 		str1.push_back(*pp); ++pp;
 		str1.push_back(*pp); ++pp;
 		str1.push_back(*pp); ++pp;
-		PR_CHECK(Equal(str1, L"ab123cd"), true);
-		PR_CHECK(*pp, 0);
+		PR_EXPECT(Equal(str1, L"ab123cd"));
+		PR_EXPECT(*pp == 0);
 	}
-	PRUnitTest(PreprocessorTests)
+	PRUnitTestClass(PreprocessorTests)
 	{
-		{// Consecutive strings
+		PRUnitTestMethod(ConsecutiveStrings)
+		{
 			char const* str_in = 
 				"\"consecutive \"  \t\"string\""
 				;
@@ -719,11 +737,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// ignored stuff
+		PRUnitTestMethod(IgnoredStuff)
+		{
 			char const* str_in =
 				"\"#if ignore #define this stuff\"\n"
 				;
@@ -735,11 +754,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// Line continuation tests line endings
+		PRUnitTestMethod(LineContinuationLineEndings)
+		{
 			char const* str_in =
 				"#define BLAH(x)\\\r\n"
 				"   \\\r\n"
@@ -757,11 +777,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// simple macros
+		PRUnitTestMethod(SimpleMacros)
+		{
 			char const* str_in =
 				"#  define ONE 1 // ignore me \n"
 				"# define    ONE  1\n" // same definition, allowed
@@ -782,11 +803,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// Multi-line preprocessor
+		PRUnitTestMethod(MultiLinePreprocessor)
+		{
 			char const* str_in =
 				"#define ml\\\n"
 				"  MULTI\\\n"
@@ -799,11 +821,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// simple macro functions
+		PRUnitTestMethod(SimpleMmacroFunctions)
+		{
 			char const* str_in =
 				"#\tdefine PLUS(x,y) \\\n"
 				" (x)+(y) xx 0x _0x  \n"
@@ -817,11 +840,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// recursive macros
+		PRUnitTestMethod(RecursiveMacros)
+		{
 			char const* str_in =
 				"#define C(x) A(x) B(x) C(x)\n"
 				"#define B(x) C(x)\n"
@@ -836,11 +860,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// #eval
+		PRUnitTestMethod(HashEval)
+		{
 			char const* str_in =
 				"#eval{1+#eval{1+1}}\n"
 				;
@@ -852,11 +877,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// recursive macros/evals
+		PRUnitTestMethod(RecursiveMacrosEvals)
+		{
 			char const* str_in =
 				"#define X 3.0\n"
 				"#define Y 4.0\n"
@@ -869,11 +895,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// #if/#else/#etc
+		PRUnitTestMethod(IfElseEndifEtc)
+		{
 			char const* str_in =
 				"#  define ONE 1 // ignore me \n"
 				"#  define NOT_ONE (!ONE) /*and me*/ \n"
@@ -923,11 +950,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// includes
+		PRUnitTestMethod(Includes)
+		{
 			char const* str_in =
 				"#  define ONE 1 // ignore me \n"
 				"#include \"inc\"\n"
@@ -945,11 +973,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// miscellaneous
+		PRUnitTestMethod(Miscellaneous)
+		{
 			char const* str_in =
 				"\"#error this would throw an error\"\n"
 				"#pragma ignore this\n"
@@ -979,11 +1008,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// Using a preloaded buffer
+		PRUnitTestMethod(PreloadedBuffer)
+		{
 			std::string str_in =
 				"#define BOB(x) #x\n"
 				"BOB(this is a string)\n"
@@ -997,11 +1027,12 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-		{// X Macros
+		PRUnitTestMethod(XMacros)
+		{
 			char const* str_in =
 				"#define LINE(x) x = #x\n"
 				"#define DEFINE(values) values(LINE)\n"
@@ -1019,10 +1050,10 @@ namespace pr::script
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
+				PR_EXPECT(*pp == *str_out);
 			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_EXPECT(*str_out == 0 && *pp == 0);
 		}
-	}
+	};
 }
 #endif

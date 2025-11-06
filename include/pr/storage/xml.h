@@ -629,22 +629,22 @@ R"(
 
 		// XML doesn't accept \0 in the string
 		pr::xml::Node root = pr::xml::Load(xml, sizeof(xml) - 1);
-		PR_CHECK(root.m_child.size(), 2U);
-		PR_CHECK(root.element(L"node0") != nullptr, true);
-		PR_CHECK(root.element(L"child") != nullptr, true);
-		PR_CHECK(root.element(L"boris") == nullptr, true);
+		PR_EXPECT(root.m_child.size() == 2U);
+		PR_EXPECT(root.element(L"node0") != nullptr);
+		PR_EXPECT(root.element(L"child") != nullptr);
+		PR_EXPECT(root.element(L"boris") == nullptr);
 
 		auto& node0 = root.m_child[0];
-		PR_CHECK(node0.m_child.size(), 0U);
-		PR_CHECK(node0.as<int>(), 1);
+		PR_EXPECT(node0.m_child.size() == 0U);
+		PR_EXPECT(node0.as<int>() == 1);
 
 		auto& child = root.m_child[1];
-		PR_CHECK(child.m_child.size(), 1U);
-		PR_CHECK(child.element(L"node1") != nullptr, true);
+		PR_EXPECT(child.m_child.size() == 1U);
+		PR_EXPECT(child.element(L"node1") != nullptr);
 
 		auto& node1 = child.m_child[0];
-		PR_CHECK(node1.m_child.size(), 0U);
-		PR_CHECK(node1.as<std::string>(), "a string");
+		PR_EXPECT(node1.m_child.size() == 0U);
+		PR_EXPECT(node1.as<std::string>() == "a string");
 	}
 }
 #endif

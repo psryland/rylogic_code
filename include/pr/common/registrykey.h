@@ -1,4 +1,4 @@
-// **********************************************************************
+﻿// **********************************************************************
 // Registry key
 //  Copyright (c) Rylogic Ltd 2009
 // **********************************************************************
@@ -311,19 +311,19 @@ namespace pr::common
 		{// Check values exist
 			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
-			PR_CHECK(rkey.HasValue("String"), true);
-			PR_CHECK(rkey.HasValue("DWord"), true);
-			PR_CHECK(rkey.HasValue("Double"), true);
-			PR_CHECK(rkey.HasValue("Blob"), true);
+			PR_EXPECT(rkey.HasValue("String"));
+			PR_EXPECT(rkey.HasValue("DWord"));
+			PR_EXPECT(rkey.HasValue("Double"));
+			PR_EXPECT(rkey.HasValue("Blob"));
 
 			// Read the values
-			PR_CHECK(rkey.Read("String") == "Paul Was Here", true);
-			PR_CHECK(rkey.Read<DWORD>("DWord") == 1234U, true);
-			PR_CHECK(FEql(rkey.Read<double>("Double"), 3.14), true);
+			PR_EXPECT(rkey.Read("String") == "Paul Was Here");
+			PR_EXPECT(rkey.Read<DWORD>("DWord") == 1234U);
+			PR_EXPECT(FEql(rkey.Read<double>("Double"), 3.14));
 
 			char blob[5];
 			rkey.Read("Blob", blob, sizeof(blob), REG_BINARY);
-			PR_CHECK(memcmp(blob, "ABCD", 4) == 0, true);
+			PR_EXPECT(memcmp(blob, "ABCD", 4) == 0);
 		}
 		{// Delete the values
 			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
@@ -336,14 +336,14 @@ namespace pr::common
 		{// Check values deleted
 			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
-			PR_CHECK(rkey.HasValue("String"), false);
-			PR_CHECK(rkey.HasValue("DWord"), false);
-			PR_CHECK(rkey.HasValue("Double"), false);
-			PR_CHECK(rkey.HasValue("Blob"), false);
+			PR_EXPECT(!rkey.HasValue("String"));
+			PR_EXPECT(!rkey.HasValue("DWord"));
+			PR_EXPECT(!rkey.HasValue("Double"));
+			PR_EXPECT(!rkey.HasValue("Blob"));
 		}
 		{// Delete the key
 			pr::RegistryKey::Delete(HKEY_CURRENT_USER, subkey);
-			PR_CHECK(pr::RegistryKey::Exists(HKEY_CURRENT_USER, subkey), false);
+			PR_EXPECT(!pr::RegistryKey::Exists(HKEY_CURRENT_USER, subkey));
 		}
 	}
 }

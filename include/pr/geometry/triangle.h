@@ -397,9 +397,9 @@ namespace pr::geometry
 			angles.y = pr::RadiansToDegrees(angles.y);
 			angles.z = pr::RadiansToDegrees(angles.z);
 				
-			PR_CHECK(FEql(angles.x, 26.56505f), true);
-			PR_CHECK(FEql(angles.y, 45.0f    ), true);
-			PR_CHECK(FEql(angles.z, 108.4349f), true);
+			PR_EXPECT(FEql(angles.x, 26.56505f));
+			PR_EXPECT(FEql(angles.y, 45.0f    ));
+			PR_EXPECT(FEql(angles.z, 108.4349f));
 		}
 	}
 	PRUnitTest(TriangulatePolygonTests)

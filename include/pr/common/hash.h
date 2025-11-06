@@ -1,4 +1,4 @@
-//*************************************
+﻿//*************************************
 // Hash
 //  Copyright (c) Rylogic Ltd 2009
 //*************************************
@@ -572,43 +572,43 @@ namespace pr::common
 
 		{// basic hashing
 			auto h0 = Hash("");
-			PR_CHECK(h0 == static_cast<HashValue32>(pr::hash::FNV_offset_basis32), true);
+			PR_EXPECT(h0 == static_cast<HashValue32>(pr::hash::FNV_offset_basis32));
 		}
 		{// Compile time hash vs. std::hash
 			char const data[] = "Paul was here. CrC this, mofo";
 			const auto h0  = sizeof(size_t) == 8 ? Hash64CT(data) : Hash32CT(data);
 			auto h1 = std::hash<std::string>{}(&data[0]);
-			PR_CHECK(h0 == h1, true);
+			PR_EXPECT(h0 == h1);
 		}
 		{// Compile time vs. run time
 			char const data[] = "Paul was here. CrC this, mofo";
 			const auto h0 = HashCT(&data[0]);
 			const auto h1 = Hash(&data[0]);
-			PR_CHECK(h0 == h1, true);
+			PR_EXPECT(h0 == h1);
 
 			enum { h2 = HashCT("four") };
 			const auto h3 = Hash("four");
-			PR_CHECK(h2 == h3, true);
+			PR_EXPECT(h2 == h3);
 
 			char const* five = "five";
 			enum { h4 = HashCT("five") };
 			const auto h5 = Hash(five);
-			PR_CHECK(h4 == h5, true);
+			PR_EXPECT(h4 == h5);
 		}
 		{// Hash Bytes
 			uint8_t const alignas(8) data[] = { 0,1,2,3,4,5,6,7, 8,9,0,1,2,3,4,5, 6,7,8,9,0,1,2,3, 4,5,6,7,8,9,0,1,2 };
 			auto h0 = HashBytes64(&data[2], &data[4]); // within alignment boundary
-			PR_CHECK(h0 == 0x08395507b4f137f2LL, true);
+			PR_EXPECT(h0 == 0x08395507b4f137f2LL);
 			auto h1 = HashBytes64(&data[5], &data[9]); // spanning alignment boundary + < sizeof(u64)
-			PR_CHECK(h1 == 0x614326560c39f905LL, true);
+			PR_EXPECT(h1 == 0x614326560c39f905LL);
 			auto h2 = HashBytes64(&data[5], &data[18]); // spanning alignment boundary + > sizeof(u64)
-			PR_CHECK(h2 == 0xd2c939dd1c78c0f4LL, true);
+			PR_EXPECT(h2 == 0xd2c939dd1c78c0f4LL);
 			auto h3 = HashBytes64(&data[8], &data[16]); // on alignment boundaries
-			PR_CHECK(h3 == 0x5b3ae47deb0dc61dLL, true);
+			PR_EXPECT(h3 == 0x5b3ae47deb0dc61dLL);
 			auto h4 = HashBytes64(&data[15], &data[19]); // locality check
-			PR_CHECK(h4 == h1, true);
+			PR_EXPECT(h4 == h1);
 			auto h5 = HashBytes64(&data[15], &data[28]); // locality check
-			PR_CHECK(h5 == h2, true);
+			PR_EXPECT(h5 == h2);
 		}
 		{// Hash POD
 			struct POD { int i; char c[4]; float f; };
@@ -620,26 +620,26 @@ namespace pr::common
 			const auto h0 = HashArgs(pod0);
 			const auto h1 = HashArgs(pod1);
 			const auto h2 = HashArgs(pod2);
-			PR_CHECK(h0 != h1, true);
-			PR_CHECK(h0 == h2, true);
+			PR_EXPECT(h0 != h1);
+			PR_EXPECT(h0 == h2);
 		}
 		{// Case insensitive hash
 			enum E { Blah = HashICT("Blah"), };
 			const auto h0 = HashI("Blah");
-			PR_CHECK(E(h0) == Blah, true);
+			PR_EXPECT(E(h0) == Blah);
 		}
 		{ // HsiehHash16
 			char const data[] = "Hsieh hash test!";
 			auto h0 = HsiehHash16(&data[0], sizeof(data));
-			PR_CHECK(h0, int(0xe85f5a90));
+			PR_EXPECT(h0 ==int(0xe85f5a90));
 		}
 		{ // MurmurHash
 			char const data[] = "Murmur hash test";
 			auto h0 = MurmurHash2_32(&data[0], sizeof(data));
 			auto h1 = MurmurHash2_64(&data[0], sizeof(data));
 
-			PR_CHECK(h0, 0x6bfb39d7);
-			PR_CHECK(h1, 0x52ce8bc5882d9212LL);
+			PR_EXPECT(h0 == 0x6bfb39d7);
+			PR_EXPECT(h1 == 0x52ce8bc5882d9212LL);
 		}
 		{ // Hash arguments
 			char const* s = "was";
@@ -651,7 +651,7 @@ namespace pr::common
 			pod.s[1] = 2;
 			pod.s[2] = 3;
 			const auto h0 = HashArgs("Paul", s, L"here", 1976, 12.29, 1234U, pod);
-			PR_CHECK(h0, static_cast<HashValue32>(0xe94b6ef9));
+			PR_EXPECT(h0 == static_cast<HashValue32>(0xe94b6ef9));
 		}
 	}
 }

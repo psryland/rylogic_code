@@ -1,4 +1,4 @@
-//*********************************************************************
+﻿//*********************************************************************
 // Concurrent Queue
 //  Copyright (c) Rylogic Ltd 2011
 //*********************************************************************
@@ -127,10 +127,10 @@ namespace pr::threads
 		}
 
 		pool.WaitAll();
-		PR_CHECK(count == 20, true);
+		PR_EXPECT(count == 20);
 
 	//	auto result = pool.QueueTaskR([] { std::this_thread::sleep_for(std::chrono::milliseconds(100)); return 42; });
-	//	PR_CHECK(result.get() == 42, true);
+	//	PR_EXPECT(result.get() == 42);
 #endif
 	}
 }

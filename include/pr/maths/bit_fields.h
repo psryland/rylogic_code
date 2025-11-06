@@ -297,11 +297,10 @@ namespace pr
 	}
 
 	// Convert a string of 1s and 0s into a bitmask
-	template <typename T> inline T BitsFromString(char const* bits)
+	template <typename T> inline T BitsFromString(std::string_view bits)
 	{
 		T n = 0;
-		for (;*bits != 0; ++bits)
-			n = (n << 1) | T(*bits == '1');
+		for (auto b : bits) n = (n << 1) | T(b == '1');
 		return n;
 	}
 
@@ -480,65 +479,71 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(BitFunctionTest)
+	PRUnitTestClass(BitFunctionTests)
 	{
+		PRUnitTestMethod(MakeLL)
 		{
 			auto [hi,lo] = BreakLL(0x0123456789abcdef);
-			PR_CHECK(hi, 0x01234567U);
-			PR_CHECK(lo, 0x89abcdefU);
+			PR_EXPECT(hi == 0x01234567U);
+			PR_EXPECT(lo == 0x89abcdefU);
 
 			auto ll = MakeLL(hi, lo);
-			PR_CHECK(ll, 0x0123456789abcdefULL);
+			PR_EXPECT(ll == 0x0123456789abcdefULL);
 		}
+		PRUnitTestMethod(BitsFromString)
 		{
-			char const* mask_str = "1001010011";
+			std::string_view mask_str = "1001010011";
 			auto mask = BitsFromString<long long>(mask_str);
-			PR_CHECK(BitsToString(mask), mask_str);
+			PR_EXPECT(BitsToString(mask) == mask_str);
 
 			std::vector<long long> bits;
 			for (auto b : pr::EnumerateBits(mask))
 				bits.push_back(b);
 
-			PR_CHECK(bits.size(), 5U);
-			PR_CHECK(bits[0], 1U << 0);
-			PR_CHECK(bits[1], 1U << 1);
-			PR_CHECK(bits[2], 1U << 4);
-			PR_CHECK(bits[3], 1U << 6);
-			PR_CHECK(bits[4], 1U << 9);
+			PR_EXPECT(bits.size() == 5U);
+			PR_EXPECT(bits[0] == 1U << 0);
+			PR_EXPECT(bits[1] == 1U << 1);
+			PR_EXPECT(bits[2] == 1U << 4);
+			PR_EXPECT(bits[3] == 1U << 6);
+			PR_EXPECT(bits[4] == 1U << 9);
 		}
+		PRUnitTestMethod(PackGrabBits)
 		{
 			uint8_t bits = 0;
 			bits = PackBits(bits, 0b101, 6, 3);
-			PR_CHECK(bits == 0b00101000, true);
-			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
+			PR_EXPECT(bits == 0b00101000);
+			PR_EXPECT(GrabBits<uint8_t>(bits, 6, 3) == 0b101);
 
 			bits = 0b11111100;
 			bits = PackBits(bits, 0b101, 6, 3);
-			PR_CHECK(bits == 0b11101100, true);
-			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
+			PR_EXPECT(bits == 0b11101100);
+			PR_EXPECT(GrabBits<uint8_t>(bits, 6, 3) == 0b101);
 		}
+		PRUnitTestMethod(FloorLog2)
 		{
 			auto n0 = 0b1; // 1
-			PR_CHECK(FloorLog2(n0), 0);
+			PR_EXPECT(FloorLog2(n0) == 0);
 			auto n1 = 0b10; // 2
-			PR_CHECK(FloorLog2(n1), 1);
+			PR_EXPECT(FloorLog2(n1) == 1);
 			auto n2 = 0b1000000; // 64
-			PR_CHECK(FloorLog2(n2), 6);
+			PR_EXPECT(FloorLog2(n2) == 6);
 			auto n3 = 0b101010101010101ULL; // 21845
-			PR_CHECK(FloorLog2(n3), 14);
+			PR_EXPECT(FloorLog2(n3) == 14);
 			auto n4 = 0xFFFFFFFFFFFFFFFFULL; // 18446744073709551615
-			PR_CHECK(FloorLog2(n4), 63);
+			PR_EXPECT(FloorLog2(n4) == 63);
 		}
+		PRUnitTestMethod(HighLowBits)
 		{
-			char const* mask_str = "1001110010";
+			std::string_view mask_str = "1001110010";
 			auto mask = BitsFromString<uint32_t>(mask_str);
-			PR_CHECK(mask, 626U);
-			PR_CHECK(BitsToString(mask), mask_str);
-			PR_CHECK(HighBitIndex(mask), 9);
-			PR_CHECK(LowBitIndex(mask), 1);
-			PR_CHECK(LowBit(mask), 2U);
-			PR_CHECK(HighBit(mask), 0x200U);
+			PR_EXPECT(mask == 626U);
+			PR_EXPECT(BitsToString(mask) == mask_str);
+			PR_EXPECT(HighBitIndex(mask) == 9);
+			PR_EXPECT(LowBitIndex(mask) == 1);
+			PR_EXPECT(LowBit(mask) == 2U);
+			PR_EXPECT(HighBit(mask) == 0x200U);
 		}
+		PRUnitTestMethod(BitIndex)
 		{
 			auto bits = 0b001011000100;
 			PR_EXPECT(HighBitIndex(bits) == 9);
@@ -546,85 +551,88 @@ namespace pr::maths
 			PR_EXPECT((1ULL << FloorLog2(bits)) == 0b001000000000ULL);
 			PR_EXPECT((1ULL << CeilLog2(bits))  == 0b010000000000ULL);
 			PR_EXPECT(LeadingZeros(bits) == 63 - 9);
-		}
-		{
-			char const* mask_str = "1111010100010";
+		
+			std::string_view mask_str = "1111010100010";
 			auto mask = BitsFromString<uint16_t>(mask_str);
-			PR_CHECK(mask, 7842);
-			PR_CHECK(HighBitIndex(mask), 12);
-			PR_CHECK(LowBitIndex(mask), 1);
-			PR_CHECK(LowBit(mask), 2);
-			PR_CHECK(HighBit(mask), 0x1000);
+			PR_EXPECT(mask == 7842);
+			PR_EXPECT(HighBitIndex(mask) == 12);
+			PR_EXPECT(LowBitIndex(mask) == 1);
+			PR_EXPECT(LowBit(mask) == 2);
+			PR_EXPECT(HighBit(mask) == 0x1000);
 		}
+		PRUnitTestMethod(PowerOfTwo)
 		{
-			char const* mask_str = "1001001100110010101010010100111010010110010101110110000110100100";
+			std::string_view mask_str = "1001001100110010101010010100111010010110010101110110000110100100";
 			auto mask = BitsFromString<unsigned long long>(mask_str);
-			PR_CHECK(mask, 0x9332A94E965761A4ULL);
-			PR_CHECK(HighBitIndex(mask), 63);
-			PR_CHECK(LowBitIndex(mask), 2);
-			PR_CHECK(LowBit(mask), 4);
-			PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
-		}
-		{
-			PR_CHECK(PowerOfTwoLessEqualTo(1), 1);
-			PR_CHECK(PowerOfTwoLessEqualTo(256), 256);
-			PR_CHECK(PowerOfTwoLessEqualTo(255), 128);
-		}
-		{
-			PR_CHECK(PowerOfTwoGreaterEqualTo(0), 1);
-			PR_CHECK(PowerOfTwoGreaterEqualTo(256), 256);
-			PR_CHECK(PowerOfTwoGreaterEqualTo(0x12345678), 0x20000000);
-			PR_CHECK(PowerOfTwoGreaterEqualTo(0x7FFFFFFFU), 0x80000000U);
-			PR_CHECK(PowerOfTwoGreaterEqualTo(0x9876543210UL), 0x10000000000UL);
-			PR_CHECK(PowerOfTwoGreaterEqualTo(int16_t(0x9a)), int16_t(0x100));
-			PR_CHECK(PowerOfTwoGreaterEqualTo(uint16_t(0x9a)), uint16_t(0x100));
-		}
-		{
-			auto a = uint8_t(0b10110101);
-			auto b = uint8_t(0b10101101);
-			auto c = ReverseBits8(a);
-			PR_CHECK(b, c);
-		}
-		{            //01234567890123456789012345678901 32bits
-			auto a = 0b01100011110000011111100000001111U;
+			PR_EXPECT(mask == 0x9332A94E965761A4ULL);
+			PR_EXPECT(HighBitIndex(mask) == 63);
+			PR_EXPECT(LowBitIndex(mask) == 2);
+			PR_EXPECT(LowBit(mask) == 4);
+			PR_EXPECT(HighBit(mask) == 0x8000000000000000ULL);
 
-			auto b = ReverseBits32(a);
-			auto B = 0b11110000000111111000001111000110U;
-			PR_CHECK(b, B);
+			PR_EXPECT(PowerOfTwoLessEqualTo(1) == 1);
+			PR_EXPECT(PowerOfTwoLessEqualTo(256) == 256);
+			PR_EXPECT(PowerOfTwoLessEqualTo(255) == 128);
 
-			auto c = ReverseBits32(a, 8); // just the lower 8 bits
-			auto C = 0b01100011110000011111100011110000U;
-			PR_CHECK(c, C);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(0) == 1);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(256) == 256);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(0x12345678) == 0x20000000);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(0x7FFFFFFFU) == 0x80000000U);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(0x9876543210UL) == 0x10000000000UL);
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(int16_t(0x9a)) == int16_t(0x100));
+			PR_EXPECT(PowerOfTwoGreaterEqualTo(uint16_t(0x9a)) == uint16_t(0x100));
 		}
-		{            //0123456789_123456789_123456789_123456789_123456789_123456879_123 64bits
-			auto a = 0b0110001111000001111110000000111111110000000001111111111000000000ULL;
-
-			auto b = ReverseBits64(a);
-			auto B = 0b0000000001111111111000000000111111110000000111111000001111000110ULL;
-			PR_CHECK(b, B);
-
-			auto c = ReverseBits64(a, 12); // just the lower 12 bits
-			auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
-			PR_CHECK(c, C);
-		}
+		PRUnitTestMethod(Reverseits)
 		{
-			auto d1 = -9.887654321e126;
-			auto [sign, exponent, mantissa] = Decompose(d1);
-			auto d2 = Compose(sign, exponent, mantissa);
-			PR_CHECK(d1 == d2, true);
-			PR_CHECK(sign, -1);
-			PR_CHECK(exponent, 421);
-			PR_CHECK(mantissa, 0x001d36ae824ee75f);
+			{
+				auto a = uint8_t(0b10110101);
+				auto b = uint8_t(0b10101101);
+				auto c = ReverseBits8(a);
+				PR_EXPECT(b == c);
+			}
+			{            //01234567890123456789012345678901 32bits
+				auto a = 0b01100011110000011111100000001111U;
+
+				auto b = ReverseBits32(a);
+				auto B = 0b11110000000111111000001111000110U;
+				PR_EXPECT(b == B);
+
+				auto c = ReverseBits32(a, 8); // just the lower 8 bits
+				auto C = 0b01100011110000011111100011110000U;
+				PR_EXPECT(c == C);
+			}
+			{            //0123456789_123456789_123456789_123456789_123456789_123456879_123 64bits
+				auto a = 0b0110001111000001111110000000111111110000000001111111111000000000ULL;
+
+				auto b = ReverseBits64(a);
+				auto B = 0b0000000001111111111000000000111111110000000111111000001111000110ULL;
+				PR_EXPECT(b == B);
+
+				auto c = ReverseBits64(a, 12); // just the lower 12 bits
+				auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
+				PR_EXPECT(c == C);
+			}
 		}
+		PRUnitTestMethod(IEEEFloats)
 		{
-			auto f1 = -9.887654321e25f;
-			auto [sign, exponent, mantissa] = Decompose(f1);
-			auto f2 = Compose(sign, exponent, mantissa);
-			PR_CHECK(f1 == f2, true);
-			PR_CHECK(sign, -1);
-			PR_CHECK(exponent, 86);
-			PR_CHECK(mantissa, 0x00a393d8);
+			{
+				auto d1 = -9.887654321e126;
+				auto [sign, exponent, mantissa] = Decompose(d1);
+				auto d2 = Compose(sign, exponent, mantissa);
+				PR_EXPECT(d1 == d2);
+				PR_EXPECT(sign == -1);
+				PR_EXPECT(exponent == 421);
+				PR_EXPECT(mantissa == 0x001d36ae824ee75f);
+			} {
+				auto f1 = -9.887654321e25f;
+				auto [sign, exponent, mantissa] = Decompose(f1);
+				auto f2 = Compose(sign, exponent, mantissa);
+				PR_EXPECT(f1 == f2);
+				PR_EXPECT(sign == -1);
+				PR_EXPECT(exponent == 86);
+				PR_EXPECT(mantissa == 0x00a393d8);
+			}
 		}
-	}
+	};
 }
 #endif

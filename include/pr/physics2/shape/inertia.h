@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -924,38 +924,38 @@ namespace pr::physics
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 
 			auto I0 = Inertia{moment, mass};
-			PR_CHECK(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}), true);
-			PR_CHECK(FEql(I0, Inertia{I0.To6x6()}), true);
+			PR_EXPECT(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}));
+			PR_EXPECT(FEql(I0, Inertia{I0.To6x6()}));
 
 			auto I1 = Transform(I0, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
-			PR_CHECK(FEql(I1, Inertia{I1.To3x3(1), I1.Mass()}), true);
-			PR_CHECK(FEql(I1, Inertia{I1.To6x6()}), true);
+			PR_EXPECT(FEql(I1, Inertia{I1.To3x3(1), I1.Mass()}));
+			PR_EXPECT(FEql(I1, Inertia{I1.To6x6()}));
 
 			// Note: about Inertia{3x3, com} vs. Translate,
 			//  Inertia{3x3, com} says "'3x3' is the inertia over there at 'com'"
 			//  Translate(3x3, ofs) says "'3x3' is the inertia here at the CoM, now measure it over there at 'ofs'"
 			auto I2 = Inertia{I1, -v4{3,2,1,0}};
-			PR_CHECK(FEql(I2, Inertia{I2.To6x6()}), true);
+			PR_EXPECT(FEql(I2, Inertia{I2.To6x6()}));
 		}
 		{// InertiaInv Construction
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 			
 			auto I0¯ = Invert(Inertia{moment, mass});
-			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}), true);
-			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To6x6()}), true);
+			PR_EXPECT(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}));
+			PR_EXPECT(FEql(I0¯, InertiaInv{I0¯.To6x6()}));
 			
 			auto I1¯ = Transform(I0¯, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
-			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To3x3(1), I1¯.InvMass()}), true);
-			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To6x6()}), true);
+			PR_EXPECT(FEql(I1¯, InertiaInv{I1¯.To3x3(1), I1¯.InvMass()}));
+			PR_EXPECT(FEql(I1¯, InertiaInv{I1¯.To6x6()}));
 
 			auto I2¯ = InertiaInv{I1¯, -v4{3,2,1,0}};
-			PR_CHECK(FEql(I2¯, InertiaInv{I2¯.To6x6()}), true);
+			PR_EXPECT(FEql(I2¯, InertiaInv{I2¯.To6x6()}));
 		}
 		{// Infinite
 			auto inf¯ = Invert(Inertia::Infinite());
-			PR_CHECK(inf¯ == InertiaInv::Zero(), true);
+			PR_EXPECT(inf¯ == InertiaInv::Zero());
 			auto inf = Invert(inf¯);
-			PR_CHECK(inf == Inertia::Infinite(), true);
+			PR_EXPECT(inf == Inertia::Infinite());
 		}
 		{// Translate and Rotate
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
@@ -967,7 +967,7 @@ namespace pr::physics
 			Ic1 = Rotate(Ic1, m3x4::Rotation(0, float(maths::tau_by_4), 0));
 			Ic1 = Translate(Ic1, v4{0,0,1,0}, ETranslateInertia::TowardCoM);
 			
-			PR_CHECK(FEql(Ic0, Ic1), true);
+			PR_EXPECT(FEql(Ic0, Ic1));
 		}
 		{// Transform
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
@@ -975,7 +975,7 @@ namespace pr::physics
 			auto Ic0 = Inertia{moment, mass};
 			auto Ic1 = Translate(Rotate(Ic0, a2b.rot), a2b.pos, ETranslateInertia::AwayFromCoM);
 			auto Ic2 = Transform(Ic0, a2b, ETranslateInertia::AwayFromCoM);
-			PR_CHECK(FEql(Ic1, Ic2), true);
+			PR_EXPECT(FEql(Ic1, Ic2));
 		}
 		{// Translate Inverse
 			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
@@ -996,9 +996,9 @@ namespace pr::physics
 			auto IO1¯ = Translate(IC0¯, +a2b.pos, ETranslateInertia::AwayFromCoM);
 			auto IC2¯ = Translate(IO1¯, -a2b.pos, ETranslateInertia::TowardCoM);
 
-			PR_CHECK(FEql(Ic0¯, IC0¯), true);
-			PR_CHECK(FEql(Io1¯, IO1¯), true);
-			PR_CHECK(FEql(Ic2¯, IC2¯), true);
+			PR_EXPECT(FEql(Ic0¯, IC0¯));
+			PR_EXPECT(FEql(Io1¯, IO1¯));
+			PR_EXPECT(FEql(Ic2¯, IC2¯));
 		}
 		{// 6x6 vs 3x3 no offset
 			auto avel = v4{0, 0, 1, 0}; //v4(-1,-2,-3,0);
@@ -1015,13 +1015,13 @@ namespace pr::physics
 			// Spatial inertia for the same sphere, expressed at (0,0,0)
 			auto sIc = Inertia(Ic, mass);
 			auto mom = sIc * vel;
-			PR_CHECK(FEql(mom.ang, amom), true);
-			PR_CHECK(FEql(mom.lin, lmom), true);
+			PR_EXPECT(FEql(mom.ang, amom));
+			PR_EXPECT(FEql(mom.lin, lmom));
 
 			// Full spatial matrix multiply
 			auto sIc2 = sIc.To6x6();
 			auto mom2 = sIc2 * vel;
-			PR_CHECK(FEql(mom, mom2), true);
+			PR_EXPECT(FEql(mom, mom2));
 		}
 		{// 6x6 with offset
 			auto avel = v4{0, 0, 1, 0};
@@ -1040,8 +1040,8 @@ namespace pr::physics
 			auto vel_r = Shift(vel, r);
 			auto sI_r = Inertia(Ic.To3x3(1), mass, -r);
 			auto mom = sI_r * vel_r;
-			PR_CHECK(FEql(mom.ang, amom), true);
-			PR_CHECK(FEql(mom.lin, lmom), true);
+			PR_EXPECT(FEql(mom.ang, amom));
+			PR_EXPECT(FEql(mom.lin, lmom));
 
 			// Expressed at another point
 			r = v4{2,0,0,0};
@@ -1052,8 +1052,8 @@ namespace pr::physics
 			vel_r = Shift(vel, r);
 			sI_r = Inertia(Ic.To3x3(1), mass, -r);
 			mom = sI_r * vel_r;
-			PR_CHECK(FEql(mom.ang, amom), true);
-			PR_CHECK(FEql(mom.lin, lmom), true);
+			PR_EXPECT(FEql(mom.ang, amom));
+			PR_EXPECT(FEql(mom.lin, lmom));
 
 			// Expressed at another point
 			r = v4{1,2,3,0};
@@ -1064,8 +1064,8 @@ namespace pr::physics
 			vel_r = Shift(vel, r);
 			sI_r = Inertia(Ic.To3x3(1), mass, -r);
 			mom = sI_r * vel_r;
-			PR_CHECK(FEql(mom.ang, amom), true);
-			PR_CHECK(FEql(mom.lin, lmom), true);
+			PR_EXPECT(FEql(mom.ang, amom));
+			PR_EXPECT(FEql(mom.lin, lmom));
 		}
 		{// Addition/Subtraction inertia
 			auto sph0 = Inertia::Sphere(0.5f, mass);
@@ -1075,8 +1075,8 @@ namespace pr::physics
 			auto sph2 = Inertia::Sphere(0.5f, 2*mass);
 			auto SPH2 = Join(sph0, sph1);
 			auto SPH3 = Split(sph2, sph1);
-			PR_CHECK(FEql(sph2, SPH2), true);
-			PR_CHECK(FEql(sph0, SPH3), true);
+			PR_EXPECT(FEql(sph2, SPH2));
+			PR_EXPECT(FEql(sph0, SPH3));
 
 			// Addition/Subtraction of translated inertias
 			auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
@@ -1084,8 +1084,8 @@ namespace pr::physics
 			auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
 			auto SPH6 = Join(sph4, sph5);
 			auto SPH7 = Split(sph6, sph4);
-			PR_CHECK(FEql(sph6, SPH6), true);
-			PR_CHECK(FEql(sph5, SPH7), true);
+			PR_EXPECT(FEql(sph6, SPH6));
+			PR_EXPECT(FEql(sph5, SPH7));
 
 			// Addition/Subtraction of inertias with offsets
 			auto sph8 = Inertia{sph0, v4{1,2,3,0}};
@@ -1093,8 +1093,8 @@ namespace pr::physics
 			auto sph10 = Inertia{sph2, v4{1,2,3,0}};
 			auto SPH10 = Join(sph8, sph9);
 			auto SPH11 = Split(sph10, sph9);
-			PR_CHECK(FEql(sph10, SPH10), true);
-			PR_CHECK(FEql(sph8, SPH11), true);
+			PR_EXPECT(FEql(sph10, SPH10));
+			PR_EXPECT(FEql(sph8, SPH11));
 		}
 		{// Addition/Subtraction inverse inertia
 			auto sph0 = Inertia::Sphere(0.5f, mass);
@@ -1104,8 +1104,8 @@ namespace pr::physics
 			// Simple addition/subtraction of inertia in CoM frame
 			auto SPH2 = Join(Invert(sph0), Invert(sph1));
 			auto SPH3 = Split(Invert(sph2), Invert(sph1));
-			PR_CHECK(FEql(Invert(sph2), SPH2), true);
-			PR_CHECK(FEql(Invert(sph0), SPH3), true);
+			PR_EXPECT(FEql(Invert(sph2), SPH2));
+			PR_EXPECT(FEql(Invert(sph0), SPH3));
 
 			// Addition/Subtraction of translated inertias
 			auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
@@ -1113,8 +1113,8 @@ namespace pr::physics
 			auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
 			auto SPH6 = Join(Invert(sph4), Invert(sph5));
 			auto SPH7 = Split(Invert(sph6), Invert(sph4));
-			PR_CHECK(FEql(Invert(sph6), SPH6), true);
-			PR_CHECK(FEql(Invert(sph5), SPH7), true);
+			PR_EXPECT(FEql(Invert(sph6), SPH6));
+			PR_EXPECT(FEql(Invert(sph5), SPH7));
 
 			// Addition/Subtraction of inertias with offsets
 			auto sph8 = Inertia{sph0, v4{1,2,3,0}};
@@ -1122,8 +1122,8 @@ namespace pr::physics
 			auto sph10 = Inertia{sph2, v4{1,2,3,0}};
 			auto SPH10 = Join(Invert(sph8), Invert(sph9));
 			auto SPH11 = Split(Invert(sph10), Invert(sph9));
-			PR_CHECK(FEql(Invert(sph10), SPH10), true);
-			PR_CHECK(FEql(Invert(sph8), SPH11), true);
+			PR_EXPECT(FEql(Invert(sph10), SPH10));
+			PR_EXPECT(FEql(Invert(sph8), SPH11));
 		}
 		{// Inverting 6x6 inertia
 			auto Ic = Inertia::Sphere(0.5f, 1);
@@ -1140,9 +1140,9 @@ namespace pr::physics
 			auto B = Invert(A);
 			auto C = Invert(B);
 
-			PR_CHECK(FEqlRelative(a6x6, A, 0.001f), true);
-			PR_CHECK(FEqlRelative(b6x6, B, 0.001f), true);
-			PR_CHECK(FEqlRelative(c6x6, C, 0.001f), true);
+			PR_EXPECT(FEqlRelative(a6x6, A, 0.001f));
+			PR_EXPECT(FEqlRelative(b6x6, B, 0.001f));
+			PR_EXPECT(FEqlRelative(c6x6, C, 0.001f));
 		}
 		{// a = I¯.f
 			auto F = 2.0f;
@@ -1156,14 +1156,14 @@ namespace pr::physics
 			// Apply a force at the CoM
 			auto f0 = v8force{0, 0, 0, F, 0, 0};
 			auto a0 = Ic¯ * f0;
-			PR_CHECK(FEql(a0, v8motion{0, 0, 0, F/mass, 0, 0}), true);
+			PR_EXPECT(FEql(a0, v8motion{0, 0, 0, F/mass, 0, 0}));
 
 			// Apply a force at the top
 			// a = F/m, A = F.d/I
 			auto r = v4{0, 0.5f*L, 0, 0};
 			auto f1 = Shift(f0, -r);
 			auto a1 = Ic¯ * f1;
-			PR_CHECK(FEql(a1, v8motion{0, 0, -F*r.y/I, F/mass, 0, 0}), true);
+			PR_EXPECT(FEql(a1, v8motion{0, 0, -F*r.y/I, F/mass, 0, 0}));
 
 			// Apply a force at an arbitrary point
 			r = v4{3,2,0,0};
@@ -1171,7 +1171,7 @@ namespace pr::physics
 			auto a2 = Ic¯ * f2;
 			auto a = (1.0f/mass)*f0.lin;
 			auto A = Ic¯.To3x3() * Cross(r, f0.lin);
-			PR_CHECK(FEql(a2, v8motion{A, a}), true);
+			PR_EXPECT(FEql(a2, v8motion{A, a}));
 		}
 		{ // Kinetic energy: 0.5 * Dot(v, h) = 0.5 * v.I.v
 
@@ -1192,7 +1192,7 @@ namespace pr::physics
 			auto mom = sIc * vel;
 			auto KE = 0.5f * Dot(vel, mom); // 0.5 v.I.v
 
-			PR_CHECK(FEql(KE, ke), true);
+			PR_EXPECT(FEql(KE, ke));
 		}
 	};
 }

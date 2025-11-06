@@ -458,29 +458,31 @@ namespace pr::container
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 
-			PR_CHECK(suffix_array::Contains<char>({ "m", 1 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "i", 1 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "iis", 3 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "isp", 3 }, data, sa), false);
-			PR_CHECK(suffix_array::Contains<char>({ "mmiisiisiissiippiiii", 20 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "iiiii", 5 }, data, sa), false);
+			PR_EXPECT(suffix_array::Contains<char>({ "m", 1 }, data, sa));
+			PR_EXPECT(suffix_array::Contains<char>({ "i", 1 }, data, sa));
+			PR_EXPECT(suffix_array::Contains<char>({ "iis", 3 }, data, sa));
+			PR_EXPECT(!suffix_array::Contains<char>({ "isp", 3 }, data, sa));
+			PR_EXPECT(suffix_array::Contains<char>({ "mmiisiisiissiippiiii", 20 }, data, sa));
+			PR_EXPECT(!suffix_array::Contains<char>({ "iiiii", 5 }, data, sa));
 
-			PR_CHECK(suffix_array::Count<char>({ "i", 1 }, data, sa) == 12, true);
-			PR_CHECK(suffix_array::Count<char>({ "ii", 2 }, data, sa) == 7, true);
-			PR_CHECK(suffix_array::Count<char>({ "iii", 3 }, data, sa) == 2, true);
-			PR_CHECK(suffix_array::Count<char>({ "iiii", 4 }, data, sa) == 1, true);
-			PR_CHECK(suffix_array::Count<char>({ "iiiii", 5 }, data, sa) == 0, true);
-			PR_CHECK(suffix_array::Count<char>({ "m", 1 }, data, sa) == 2, true);
-			PR_CHECK(suffix_array::Count<char>({ "isis", 4 }, data, sa) == 0, true);
+			PR_EXPECT(suffix_array::Count<char>({ "i", 1 }, data, sa) == 12);
+			PR_EXPECT(suffix_array::Count<char>({ "ii", 2 }, data, sa) == 7);
+			PR_EXPECT(suffix_array::Count<char>({ "iii", 3 }, data, sa) == 2);
+			PR_EXPECT(suffix_array::Count<char>({ "iiii", 4 }, data, sa) == 1);
+			PR_EXPECT(suffix_array::Count<char>({ "iiiii", 5 }, data, sa) == 0);
+			PR_EXPECT(suffix_array::Count<char>({ "m", 1 }, data, sa) == 2);
+			PR_EXPECT(suffix_array::Count<char>({ "isis", 4 }, data, sa) == 0);
 			{
 				auto mr = suffix_array::Find<char>({ "ii", 2 }, data, sa);
 				for (auto i = 0; i != std::ssize(sa); ++i)
 				{
 					auto s = data.substr(sa[i]);
-					PR_CHECK(s.substr(0, 2) == "ii", size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end);
+					auto is_ii = s.substr(0, 2) == "ii";
+					auto should_be_ii = size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end;
+					PR_EXPECT(is_ii == should_be_ii);
 				}
 			}
 			{
@@ -488,7 +490,9 @@ namespace pr::container
 				for (auto i = 0; i != std::ssize(sa); ++i)
 				{
 					auto s = data.substr(sa[i]);
-					PR_CHECK(s.substr(0, 3) == "isi", size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end);
+					auto is_isi = s.substr(0, 3) == "isi";
+					auto should_be_isi = size_t(i) >= mr.sa_beg && size_t(i) < mr.sa_end;
+					PR_EXPECT(is_isi == should_be_isi);
 				}
 			}
 		}
@@ -509,7 +513,7 @@ namespace pr::container
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 		}
 		{// Limited alphabet data
@@ -527,7 +531,7 @@ namespace pr::container
 			{
 				auto a = sdata.substr(sa[i]);
 				auto b = sdata.substr(sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 		}
 		{// Highly repeditious data
@@ -543,7 +547,7 @@ namespace pr::container
 			{
 				auto a = std::string_view(data.data() + sa[i]);
 				auto b = std::string_view(data.data() + sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 		}
 		{// int data
@@ -562,7 +566,7 @@ namespace pr::container
 			{
 				auto a = sdata.substr(sa[i]);
 				auto b = sdata.substr(sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 		}
 		{// use this file
@@ -581,10 +585,10 @@ namespace pr::container
 			{
 				auto a = sdata.substr(sa[i + 0]);
 				auto b = sdata.substr(sa[i + 1]);
-				PR_CHECK(a < b, true);
+				PR_EXPECT(a < b);
 			}
 
-			PR_CHECK(suffix_array::Contains<char>({ "Boobs", 5 }, data, sa), true);
+			PR_EXPECT(suffix_array::Contains<char>({ "Boobs", 5 }, data, sa));
 		}
 	}
 }

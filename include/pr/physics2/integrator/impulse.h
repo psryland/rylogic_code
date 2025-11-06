@@ -329,8 +329,8 @@ namespace pr::physics
 			objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
 			auto velA = objA.VelocityWS();
 			auto velB = objB.VelocityWS();
-			PR_CHECK(FEql(velA, v8motion{0,0,0, -2.0f/3.0f,0,0}), true);
-			PR_CHECK(FEql(velB, v8motion{0,0,0, +1.0f/3.0f,0,0}), true);
+			PR_EXPECT(FEql(velA, v8motion{0,0,0, -2.0f/3.0f,0,0}));
+			PR_EXPECT(FEql(velB, v8motion{0,0,0, +1.0f/3.0f,0,0}));
 		}
 		{
 			// Normal collision, not through the CoM for both objects, unequal masses.
@@ -352,8 +352,8 @@ namespace pr::physics
 			objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
 			auto velA = objA.VelocityWS();
 			auto velB = objB.VelocityWS();
-			PR_CHECK(FEql(velA, v8motion{0,0,-1.14286f, -2.0f/3.0f,-0.285714f, 0}), true);
-			PR_CHECK(FEql(velB, v8motion{0,0,-1.14286f, +1.0f/3.0f,-0.428572f, 0}), true);
+			PR_EXPECT(FEql(velA, v8motion{0,0,-1.14286f, -2.0f/3.0f,-0.285714f, 0}));
+			PR_EXPECT(FEql(velB, v8motion{0,0,-1.14286f, +1.0f/3.0f,-0.428572f, 0}));
 		}
 		{
 			// Off-Normal collision, not through the CoM for both objects, equal masses.
@@ -375,13 +375,13 @@ namespace pr::physics
 			objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
 			auto velA = objA.VelocityWS();
 			auto velB = objB.VelocityWS();
-			//PR_CHECK(FEql(velA, v8motion{0,0,-0.228571f, -0.733333f,-0.228571f, 0}), true);
-			//PR_CHECK(FEql(velB, v8motion{0,0,-2.28571f, +0.466666f,-0.542857f, 0}), true);
+			//PR_EXPECT(FEql(velA, v8motion{0,0,-0.228571f, -0.733333f,-0.228571f, 0}));
+			//PR_EXPECT(FEql(velB, v8motion{0,0,-2.28571f, +0.466666f,-0.542857f, 0}));
 
 			auto dvel = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
 			auto vout = dvel.LinAt(c.m_point);
 			auto expected_vout = v4{-1,-1,0,0} - 2 * Dot(v4{-1,-1,0,0}, c.m_axis) * c.m_axis;
-			PR_CHECK(FEql(vout, expected_vout), true);
+			PR_EXPECT(FEql(vout, expected_vout));
 		}
 		{
 			// Tangential impulse. Glancing collision from two rotating, but not translating, objects.
@@ -401,8 +401,8 @@ namespace pr::physics
 			// friction less, there is a tiny normal component, and the relative
 			// velocity at the contact point is nearly zero.
 			impulse_pair = RestitutionImpulse(c);
-			PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{}, 0.001f), true);
-			PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{}, 0.001f), true);
+			PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{}, 0.001f));
+			PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{}, 0.001f));
 		}
 		{
 			// Change the angular velocity so that the collision point now does have opposing velocity.
@@ -420,8 +420,8 @@ namespace pr::physics
 
 			// Impulses are still near zero because the normal component of the impulse is zero
 			impulse_pair = RestitutionImpulse(c);
-			PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{0,0,-2, 0,-4,0}, 0.001f), true);
-			PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{0,0,-2, 0,+4,0}, 0.001f), true);
+			PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{0,0,-2, 0,-4,0}, 0.001f));
+			PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{0,0,-2, 0,+4,0}, 0.001f));
 		}
 		//{
 		//	// Same setup, but with elastic tangential should still be zero because
@@ -439,8 +439,8 @@ namespace pr::physics
 		//	Dump(c);
 
 		//	impulse_pair = RestitutionImpulse(c);
-		//	PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{}, 0.001f), true);
-		//	PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{}, 0.001f), true);
+		//	PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objA, v8force{}, 0.001f));
+		//	PR_EXPECT(FEqlRelative(impulse_pair.m_os_impulse_objB, v8force{}, 0.001f));
 		//}
 		//{
 		//	// Glancing collision from two rotating, but not translating, objects.
@@ -467,8 +467,8 @@ namespace pr::physics
 		//
 		//	auto velA = objA.VelocityWS();
 		//	auto velB = objB.VelocityWS();
-		//	PR_CHECK(FEql(velA, v8motion{0, 0, -0.428571f,  0, -0.285714f, +0}), true);
-		//	PR_CHECK(FEql(velB, v8motion{0, 0, -0.428571f,  0, +0.285714f, +0}), true);
+		//	PR_EXPECT(FEql(velA, v8motion{0, 0, -0.428571f,  0, -0.285714f, +0}));
+		//	PR_EXPECT(FEql(velB, v8motion{0, 0, -0.428571f,  0, +0.285714f, +0}));
 		//}
 		//{// ObjA and ObjB rotating in opposite directions, should stop after collision impulses
 		//	ShapeSphere sph(0.5f);
@@ -490,10 +490,10 @@ namespace pr::physics
 		//	objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
 		//
 		//	// 
-		//	PR_CHECK(FEql(objA.O2W().pos, v4{-0.5f, 0, 1, 1}), true);
-		//	PR_CHECK(FEql(objB.O2W().pos, v4{+0.5f, 0, 1, 1}), true);
-		//	PR_CHECK(FEql(objA.VelocityWS(), v8motion{}), true);
-		//	PR_CHECK(FEql(objB.VelocityWS(), v8motion{}), true);
+		//	PR_EXPECT(FEql(objA.O2W().pos, v4{-0.5f, 0, 1, 1}));
+		//	PR_EXPECT(FEql(objB.O2W().pos, v4{+0.5f, 0, 1, 1}));
+		//	PR_EXPECT(FEql(objA.VelocityWS(), v8motion{}));
+		//	PR_EXPECT(FEql(objB.VelocityWS(), v8motion{}));
 		//}
 		#endif
 	}
