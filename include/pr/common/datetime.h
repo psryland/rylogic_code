@@ -32,7 +32,7 @@ namespace pr
 			using Char = typename Str::value_type;
 
 			template <typename TRep, typename TPeriod>
-			static Str To_(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
+			static Str Func(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
 			{
 				fmt = fmt ? fmt : PR_STRLITERAL(Char, "%s");
 				return FmtF(fmt, [=](Char const*& code)
@@ -309,7 +309,7 @@ namespace pr
 			using Char = typename Str::value_type;
 
 			template <typename TRep, typename TPeriod>
-			static Str To_(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
+			static Str Func(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
 			{
 				fmt = fmt ? fmt : PR_STRLITERAL(Char, "%s");
 				return FmtF(fmt, [=](Char const*& code)

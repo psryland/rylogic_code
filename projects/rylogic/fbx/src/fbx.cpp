@@ -119,7 +119,7 @@ namespace pr
 	// Convert to ufbx
 	template <> struct Convert<ufbx_vec2, v2>
 	{
-		constexpr static ufbx_vec2 To_(v2_cref v)
+		constexpr static ufbx_vec2 Func(v2_cref v)
 		{
 			ufbx_vec2 r = {};
 			r.x = s_cast<ufbx_real>(v.x);
@@ -129,7 +129,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_vec3, v3>
 	{
-		constexpr static ufbx_vec3 To_(v3_cref v)
+		constexpr static ufbx_vec3 Func(v3_cref v)
 		{
 			ufbx_vec3 r = {};
 			r.x = s_cast<ufbx_real>(v.x);
@@ -140,7 +140,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_vec3, v4>
 	{
-		constexpr static ufbx_vec3 To_(v4_cref v)
+		constexpr static ufbx_vec3 Func(v4_cref v)
 		{
 			ufbx_vec3 r = {};
 			r.x = s_cast<ufbx_real>(v.x);
@@ -151,7 +151,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_quat, quat>
 	{
-		constexpr static ufbx_quat To_(quat_cref v)
+		constexpr static ufbx_quat Func(quat_cref v)
 		{
 			ufbx_quat r = {};
 			r.x = s_cast<ufbx_real>(v.x);
@@ -163,7 +163,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_matrix, m4x4>
 	{
-		constexpr static ufbx_matrix To_(m4x4 const& v)
+		constexpr static ufbx_matrix Func(m4x4 const& v)
 		{
 			ufbx_matrix r = {};
 			r.cols[0] = To<ufbx_vec3>(v.x);
@@ -175,7 +175,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_transform, Transform>
 	{
-		constexpr static ufbx_transform To_(Transform const& x)
+		constexpr static ufbx_transform Func(Transform const& x)
 		{
 			return ufbx_transform{
 				.translation = To<ufbx_vec3>(x.translation),
@@ -186,14 +186,14 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_string, std::string_view>
 	{
-		constexpr static ufbx_string To_(std::string_view sv)
+		constexpr static ufbx_string Func(std::string_view sv)
 		{
 			return ufbx_string{ .data = sv.data(), .length = sv.size() };
 		}
 	};
 	template <> struct Convert<ufbx_coordinate_axis, ECoordAxis>
 	{
-		constexpr static ufbx_coordinate_axis To_(ECoordAxis x)
+		constexpr static ufbx_coordinate_axis Func(ECoordAxis x)
 		{
 			switch (x)
 			{
@@ -210,7 +210,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_space_conversion, ESpaceConversion>
 	{
-		constexpr static ufbx_space_conversion To_(ESpaceConversion x)
+		constexpr static ufbx_space_conversion Func(ESpaceConversion x)
 		{
 			switch (x)
 			{
@@ -223,7 +223,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_pivot_handling, EPivotHandling>
 	{
-		constexpr static ufbx_pivot_handling To_(EPivotHandling x)
+		constexpr static ufbx_pivot_handling Func(EPivotHandling x)
 		{
 			switch (x)
 			{
@@ -236,7 +236,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_geometry_transform_handling, EGeometryTransformHandling>
 	{
-		constexpr static ufbx_geometry_transform_handling To_(EGeometryTransformHandling x)
+		constexpr static ufbx_geometry_transform_handling Func(EGeometryTransformHandling x)
 		{
 			switch (x)
 			{
@@ -250,7 +250,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_mirror_axis, EMirrorAxis>
 	{
-		constexpr static ufbx_mirror_axis To_(EMirrorAxis x)
+		constexpr static ufbx_mirror_axis Func(EMirrorAxis x)
 		{
 			switch (x)
 			{
@@ -264,7 +264,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_coordinate_axes, CoordAxes>
 	{
-		constexpr static ufbx_coordinate_axes To_(CoordAxes x)
+		constexpr static ufbx_coordinate_axes Func(CoordAxes x)
 		{
 			return ufbx_coordinate_axes{
 				.right = To<ufbx_coordinate_axis>(x.right),
@@ -275,7 +275,7 @@ namespace pr
 	};
 	template <> struct Convert<ufbx_load_opts, LoadOptions>
 	{
-		static ufbx_load_opts To_(LoadOptions const& x)
+		static ufbx_load_opts Func(LoadOptions const& x)
 		{
 			return ufbx_load_opts {
 				._begin_zero = 0,
@@ -337,13 +337,13 @@ namespace pr
 	};
 	template <> struct Convert<std::string, ufbx_error>
 	{
-		static std::string To_(ufbx_error const& error)
+		static std::string Func(ufbx_error const& error)
 		{
 			std::string err(UFBX_ERROR_INFO_LENGTH, '\0');
 			err.resize(ufbx_format_error(err.data(), err.size(), &error));
 			return err;
 		}
-		static std::string To_(ufbx_error const& error, std::string_view msg)
+		static std::string Func(ufbx_error const& error, std::string_view msg)
 		{
 			std::string err;
 			err.reserve(msg.size() + 1 + UFBX_ERROR_INFO_LENGTH);
@@ -359,7 +359,7 @@ namespace pr
 	// Convert from ufbx
 	template <> struct Convert<v2, ufbx_vec2>
 	{
-		constexpr static v2 To_(ufbx_vec2 const& v)
+		constexpr static v2 Func(ufbx_vec2 const& v)
 		{
 			return v2{
 				s_cast<float>(v.x),
@@ -369,7 +369,7 @@ namespace pr
 	};
 	template <> struct Convert<v3, ufbx_vec3>
 	{
-		constexpr static v3 To_(ufbx_vec3 const& v)
+		constexpr static v3 Func(ufbx_vec3 const& v)
 		{
 			return v3{
 				s_cast<float>(v.x),
@@ -380,7 +380,7 @@ namespace pr
 	};
 	template <> struct Convert<v4, ufbx_vec3>
 	{
-		constexpr static v4 To_(ufbx_vec3 const& v, float w)
+		constexpr static v4 Func(ufbx_vec3 const& v, float w)
 		{
 			return v4{
 				s_cast<float>(v.x),
@@ -392,7 +392,7 @@ namespace pr
 	};
 	template <> struct Convert<v4, ufbx_vec4>
 	{
-		constexpr static v4 To_(ufbx_vec4 const& v)
+		constexpr static v4 Func(ufbx_vec4 const& v)
 		{
 			return v4{
 				s_cast<float>(v.x),
@@ -404,7 +404,7 @@ namespace pr
 	};
 	template <> struct Convert<quat, ufbx_quat>
 	{
-		constexpr static quat To_(ufbx_quat const& v)
+		constexpr static quat Func(ufbx_quat const& v)
 		{
 			return quat{
 				s_cast<float>(v.x),
@@ -416,7 +416,7 @@ namespace pr
 	};
 	template <> struct Convert<m4x4, ufbx_matrix>
 	{
-		constexpr static m4x4 To_(ufbx_matrix const& v)
+		constexpr static m4x4 Func(ufbx_matrix const& v)
 		{
 			return m4x4{
 				To<v4>(v.cols[0], 0.f),
@@ -428,14 +428,14 @@ namespace pr
 	};
 	template <> struct Convert<std::string_view, ufbx_string>
 	{
-		constexpr static std::string_view To_(ufbx_string sv)
+		constexpr static std::string_view Func(ufbx_string sv)
 		{
 			return std::string_view(sv.data, sv.length);
 		}
 	};
 	template <> struct Convert<Colour, ufbx_vec4>
 	{
-		constexpr static Colour To_(ufbx_vec4 const& v)
+		constexpr static Colour Func(ufbx_vec4 const& v)
 		{
 			return Colour{
 				s_cast<float>(v.x),

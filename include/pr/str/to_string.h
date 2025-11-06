@@ -25,7 +25,7 @@ namespace pr
 	template <StringType Str>
 	struct Convert<Str, bool>
 	{
-		static Str To_(bool from)
+		static Str Func(bool from)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
@@ -37,7 +37,7 @@ namespace pr
 	template <StringType Str>
 	struct Convert<bool, Str>
 	{
-		static bool To_(Str const& from)
+		static bool Func(Str const& from)
 		{
 			return str::CompareI(from, "true") == 0 || str::CompareI(from, "1") == 0;
 		}
@@ -47,7 +47,7 @@ namespace pr
 	template <StringType Str>
 	struct Convert<Str, char>
 	{
-		static Str To_(char from)
+		static Str Func(char from)
 		{
 			Str str;
 			string_traits<Str>::resize(str, 1);
@@ -60,7 +60,7 @@ namespace pr
 	template <StringTypeDynamic Str, std::integral Intg>
 	struct Convert<Str, Intg>
 	{
-		static Str To_(Intg from, int radix)
+		static Str Func(Intg from, int radix)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			Char buf[128];
@@ -73,16 +73,16 @@ namespace pr
 				return char_traits<Char>::itostr(from, buf, _countof(buf), radix);
 			}
 		}
-		static Str To_(Intg from)
+		static Str Func(Intg from)
 		{
-			return To_(from, 10);
+			return Func(from, 10);
 		}
 	};
 	template <std::integral Intg, StringType Str>
 	struct Convert<Intg, Str>
 	{
 		using Char = typename string_traits<Str>::value_type;
-		static Intg To_(Str const& s, int radix = 10, Char const** end = nullptr)
+		static Intg Func(Str const& s, int radix = 10, Char const** end = nullptr)
 		{
 			auto ptr = string_traits<Str>::ptr(s);
 			errno = 0;
@@ -102,7 +102,7 @@ namespace pr
 	template <StringTypeDynamic Str, std::floating_point FP>
 	struct Convert<Str, FP>
 	{
-		static Str To_(FP from)
+		static Str Func(FP from)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			Char buf[128];
@@ -124,7 +124,7 @@ namespace pr
 	struct Convert<FP, Str>
 	{
 		using Char = typename string_traits<Str>::value_type;
-		static FP To_(Str const& s, Char const** end = nullptr)
+		static FP Func(Str const& s, Char const** end = nullptr)
 		{
 			auto ptr = string_traits<Str>::ptr(s);
 			errno = 0;
@@ -137,7 +137,7 @@ namespace pr
 	template <StringType Str0, StringType Str1>
 	struct Convert<Str0, Str1>
 	{
-		static Str0 To_(Str1 const& s)
+		static Str0 Func(Str1 const& s)
 		{
 			// Notes:
 			//  - Remember type deduction doesn't work for string views

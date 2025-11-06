@@ -71,7 +71,7 @@ namespace pr
 	{
 		struct ToU8
 		{
-			static std::u8string_view To_(std::string_view str)
+			static std::u8string_view Func(std::string_view str)
 			{
 				return std::u8string_view(char8_ptr(str.data()), str.size());
 			}

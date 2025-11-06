@@ -4,7 +4,7 @@
 //  dotnet-script.exe auto_gen.csx $(RylogicRoot)
 #r "System.IO"
 #r "System.Text.RegularExpressions"
-#r "nuget: Rylogic.Core, 1.0.4"
+#r "nuget: Rylogic.Core, 2.0.0"
 #nullable enable
 
 using System;

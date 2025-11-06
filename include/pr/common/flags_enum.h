@@ -1,4 +1,4 @@
-//******************************************************************************
+﻿//******************************************************************************
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
@@ -12,8 +12,8 @@
 #ifdef __cplusplus // C does not require operators
 #include <type_traits>
 
-	template <typename T> concept HasFlagsEnumField = requires(T t) { std::is_enum_v<T>; T::_flags_enum; };
-	template <typename T> concept HasArithEnumField = requires(T t) { std::is_enum_v<T>; T::_arith_enum; };
+	template <typename T> concept HasFlagsEnumField = std::is_enum_v<T> && requires(T t) { T::_flags_enum; };
+	template <typename T> concept HasArithEnumField = std::is_enum_v<T> && requires(T t) { T::_arith_enum; };
 
 	// Traits
 	template <typename T> struct is_flags_enum : std::false_type {};
@@ -63,38 +63,38 @@
 	{
 		return lhs = (lhs ^ rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr TEnum operator << (TEnum lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr TEnum operator << (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) << rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr TEnum operator >> (TEnum lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr TEnum operator >> (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) >> rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr TEnum& operator <<= (TEnum& lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr TEnum& operator <<= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs << rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr TEnum& operator >>= (TEnum& lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr TEnum& operator >>= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs >> rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr bool operator == (TEnum lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr bool operator == (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<UT>(lhs) == static_cast<UT>(rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr bool operator == (T lhs, TEnum rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr bool operator == (T lhs, TEnum rhs)
 	{
 		return rhs == lhs;
 	}
-	template <FlagsEnum TEnum, typename T> constexpr bool operator != (TEnum lhs, T rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr bool operator != (TEnum lhs, T rhs)
 	{
 		return !(lhs == rhs);
 	}
-	template <FlagsEnum TEnum, typename T> constexpr bool operator != (T lhs, TEnum rhs)
+	template <FlagsEnum TEnum, std::integral T> constexpr bool operator != (T lhs, TEnum rhs)
 	{
 		return rhs != lhs;
 	}
@@ -133,39 +133,39 @@
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) / static_cast<UT>(rhs));
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator + (TEnum lhs, T rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator + (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) + rhs);
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator + (T lhs, TEnum rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator + (T lhs, TEnum rhs)
 	{
 		return rhs + lhs;
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator - (TEnum lhs, T rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator - (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) - rhs);
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator - (T lhs, TEnum rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator - (T lhs, TEnum rhs)
 	{
 		return -(rhs - lhs);
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator * (TEnum lhs, T rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator * (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) * rhs);
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator * (T lhs, TEnum rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator * (T lhs, TEnum rhs)
 	{
 		return rhs * lhs;
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator / (TEnum lhs, T rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator / (TEnum lhs, T rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(static_cast<UT>(lhs) / rhs);
 	}
-	template <ArithEnum TEnum, typename T> constexpr TEnum operator / (T lhs, TEnum rhs)
+	template <ArithEnum TEnum, std::integral T> constexpr TEnum operator / (T lhs, TEnum rhs)
 	{
 		using UT = std::underlying_type_t<TEnum>;
 		return static_cast<TEnum>(lhs / static_cast<UT>(rhs));

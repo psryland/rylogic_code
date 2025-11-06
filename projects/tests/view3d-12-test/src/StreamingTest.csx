@@ -1,9 +1,6 @@
 #! "net9.0"
-//#r "nuget: System.Text.Json, 9.0.3"
-//#r "nuget: Rylogic.Core, 1.0.4"
-//#r "nuget: Rylogic.Gfx, 1.0.4"
-#r "E:\Rylogic\Code\projects\rylogic\Rylogic.Core\bin\Debug\net9.0-windows\Rylogic.Core.dll"
-#r "E:\Rylogic\Code\projects\rylogic\Rylogic.Gfx\bin\Debug\net9.0-windows\Rylogic.Gfx.dll"
+#r "nuget: Rylogic.Core, 2.0.0"
+#r "nuget: Rylogic.Gfx, 2.0.0"
 
 using System.Threading;
 using System.Net.Sockets;

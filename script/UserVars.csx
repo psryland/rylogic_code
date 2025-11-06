@@ -1,6 +1,6 @@
 #! "net9.0"
 #r "System.Text.Json"
-#r "nuget: Rylogic.Core, 1.0.4"
+#r "nuget: Rylogic.Core, 2.0.0"
 #nullable enable
 
 using System;
@@ -17,7 +17,7 @@ public class UserVars
 	public static int Version => 1;
 
 	/// <summary>Location of the root for the code library</summary>
-	public static string Root => m_root ??= Path([Path_.Directory(Util.__FILE__()), ".."]);
+	public static string Root => m_root ??= Path([Util.ThisDirectory(), ".."]);
 	private static string? m_root;
 
 	/// <summary>Location for trash/temp files</summary>

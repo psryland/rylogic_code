@@ -46,7 +46,7 @@ namespace pr
 		// Whatever to GdiColour
 		struct ToGdiColor
 		{
-			static gdi::Color To_(COLORREF col)
+			static gdi::Color Func(COLORREF col)
 			{
 				gdi::Color c;
 				c.SetFromCOLORREF(col);
@@ -57,11 +57,11 @@ namespace pr
 		// Whatever to GdiRect
 		struct ToGdiRect
 		{
-			static gdi::Rect To_(RECT const& r)
+			static gdi::Rect Func(RECT const& r)
 			{
 				return gdi::Rect(r.left, r.top, r.right - r.left, r.bottom - r.top);
 			}
-			static gdi::Rect To_(gdi::RectF const& r)
+			static gdi::Rect Func(gdi::RectF const& r)
 			{
 				return gdi::Rect(int(r.X), int(r.Y), int(r.Width), int(r.Height));
 			}
@@ -70,7 +70,7 @@ namespace pr
 		// Whatever to GdiRectF
 		struct ToGdiRectF
 		{
-			static gdi::RectF To_(RECT const& r)
+			static gdi::RectF Func(RECT const& r)
 			{
 				return gdi::RectF(float(r.left), float(r.top), float(r.right - r.left), float(r.bottom - r.top));
 			}
@@ -79,11 +79,11 @@ namespace pr
 		// GdiRect to RECT
 		struct GdiRectToRECT
 		{
-			static RECT To_(gdi::RectF const& r)
+			static RECT Func(gdi::RectF const& r)
 			{
 				return RECT{int(r.GetLeft()), int(r.GetTop()), int(r.GetRight()), int(r.GetBottom())};
 			}
-			static RECT To_(gdi::Rect const& r)
+			static RECT Func(gdi::Rect const& r)
 			{
 				return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
 			}

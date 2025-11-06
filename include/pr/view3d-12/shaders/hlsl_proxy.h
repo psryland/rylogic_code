@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -422,14 +422,14 @@ namespace pr
 {
 	template <> struct Convert<v4, hlsl::float4>
 	{
-		static v4 To_(hlsl::float4 const& v)
+		static v4 Func(hlsl::float4 const& v)
 		{
 			return v4(v.x, v.y, v.z, v.w);
 		}
 	};
 	template <> struct Convert<hlsl::float4, v4>
 	{
-		static hlsl::float4 To_(v4 const& v)
+		static hlsl::float4 Func(v4 const& v)
 		{
 			return hlsl::float4(v.x, v.y, v.z, v.w);
 		}

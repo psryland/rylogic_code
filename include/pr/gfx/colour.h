@@ -853,7 +853,7 @@ namespace pr
 	// Colour32 to std::string
 	template <typename Char> struct Convert<std::basic_string<Char>, Colour32>
 	{
-		static std::basic_string<Char> To_(Colour32 c)
+		static std::basic_string<Char> Func(Colour32 c)
 		{
 			return To<std::basic_string<Char>>(c.argb, 16);
 		}
@@ -862,7 +862,7 @@ namespace pr
 	// Colour to std::string
 	template <typename Char> struct Convert<std::basic_string<Char>, Colour>
 	{
-		static std::basic_string<Char> To_(Colour const& c)
+		static std::basic_string<Char> Func(Colour const& c)
 		{
 			return To<std::basic_string<Char>>(static_cast<Colour32>(c));
 		}
@@ -871,7 +871,7 @@ namespace pr
 	// Colour32 to pr::string
 	template <typename Char, int L, bool F, typename A> struct Convert<pr::string<Char,L,F,A>, Colour32>
 	{
-		static pr::string<Char,L,F,A> To_(Colour32 c)
+		static pr::string<Char,L,F,A> Func(Colour32 c)
 		{
 			return To<pr::string<Char,L,F,A>>(c.argb, 16);
 		}
@@ -880,7 +880,7 @@ namespace pr
 	// Colour to pr::string
 	template <typename Char, int L, bool F, typename A> struct Convert<pr::string<Char,L,F,A>, Colour>
 	{
-		static pr::string<Char,L,F,A> To_(Colour const& c)
+		static pr::string<Char,L,F,A> Func(Colour const& c)
 		{
 			return To<pr::string<Char,L,F,A>>(static_cast<Colour32>(c));
 		}
@@ -889,7 +889,7 @@ namespace pr
 	// Colour to pr::v4
 	template <> struct Convert<v4, Colour>
 	{
-		static v4 To_(Colour const& c)
+		static v4 Func(Colour const& c)
 		{
 			return v4(c.r, c.g, c.b, c.a);
 		}
@@ -899,13 +899,13 @@ namespace pr
 	template <typename TFrom> struct Convert<Colour32, TFrom>
 	{
 		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-		static Colour32 To_(Str const& s, Char const** end = nullptr)
+		static Colour32 Func(Str const& s, Char const** end = nullptr)
 		{
 			auto ptr = string_traits<Str>::ptr(s);
 			auto argb = pr::To<unsigned int>(ptr, 16, end); // pr:: needed
 			return Colour32(argb);
 		}
-		static Colour32 To_(Colour const& c)
+		static Colour32 Func(Colour const& c)
 		{
 			return c.argb();
 		}
@@ -915,7 +915,7 @@ namespace pr
 	template <typename TFrom> struct Convert<Colour, TFrom>
 	{
 		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-		static Colour To_(Str const& s, Char const** end = nullptr)
+		static Colour Func(Str const& s, Char const** end = nullptr)
 		{
 			Char* e;
 			auto r = pr::To<float>(s, &e);
@@ -925,11 +925,11 @@ namespace pr
 			if (end) *end = e;
 			return Colour(r,g,b,a);
 		}
-		static Colour To_(Colour32 c)
+		static Colour Func(Colour32 c)
 		{
 			return static_cast<Colour>(c);
 		}
-		static Colour To_(v4_cref c)
+		static Colour Func(v4_cref c)
 		{
 			return Colour(c.x, c.y, c.z, c.w);
 		}
@@ -939,13 +939,13 @@ namespace pr
 	#ifdef D3DCOLORVALUE_DEFINED
 	template <typename TFrom> struct Convert<D3DCOLORVALUE, TFrom>
 	{
-		static D3DCOLORVALUE To_(Colour const& c)
+		static D3DCOLORVALUE Func(Colour const& c)
 		{
 			return D3DCOLORVALUE{c.r, c.g, c.b, c.a};
 		}
-		static D3DCOLORVALUE To_(Colour32 c)
+		static D3DCOLORVALUE Func(Colour32 c)
 		{
-			return To_(static_cast<Colour>(c));
+			return Func(static_cast<Colour>(c));
 		}
 	};
 	#endif

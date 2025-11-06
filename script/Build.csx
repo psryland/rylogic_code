@@ -1,7 +1,7 @@
 ﻿#! "net9.0"
 #r "System.IO"
 #r "System.Text.Json"
-#r "nuget: Rylogic.Core, 1.0.4"
+#r "nuget: Rylogic.Core, 2.0.0"
 #load "UserVars.csx"
 #load "Tools.csx"
 #load "BuildInstaller.csx"
@@ -44,9 +44,10 @@ public enum EProjects
 }
 
 // Get the version number of the Rylogic library
-public static string RylogicLibraryVersion =>
-	Tools.Extract(Tools.Path([UserVars.Root, "Directory.Build.props"]),
-		new Regex("<RylogicLibraryVersion>(?<Version>.*)</RylogicLibraryVersion>")).Groups["Version"].Value;
+public static string RylogicLibraryVersion
+{
+	get => Tools.Extract(Tools.Path([UserVars.Root, "Directory.Build.props"]), new Regex("<RylogicLibraryVersion>(?<Version>.*)</RylogicLibraryVersion>")).Groups["Version"].Value;
+}
 
 // Base class for all builders
 public abstract class Common
@@ -113,7 +114,7 @@ public abstract class Native : Common
 		ProjFile = Tools.Path([ProjDir, $"{proj_name}.vcxproj"]);
 		Platforms = platforms ?? ["x64"]; // "x86"
 		Configs = configs ?? ["Release", "Debug"];
-		ObjDir = Tools.Path([Workspace, "obj", UserVars.PlatformToolset], check_exists: false);
+		ObjDir = Tools.Path([Workspace, "obj"], check_exists: false);
 		Directory.CreateDirectory(ObjDir);
 	}
 }
@@ -169,6 +170,37 @@ public abstract class Managed : Common
 		m_restored.Add(sln_or_proj);
 	}
 	private static List<string> m_restored = [];
+}
+
+// Audio
+public class Audio : Native
+{
+	public Audio(string workspace, List<string>? platforms, List<string>? configs)
+		: base("audio", Tools.Path([workspace, $"projects\\rylogic\\audio"]), workspace, platforms, configs)
+	{
+	}
+	public override void Clean()
+	{
+		Tools.CleanDir(Tools.Path([ObjDir, "audio"], check_exists: false));
+		Tools.CleanDir(Tools.Path([ObjDir, "audio.dll"], check_exists: false));
+	}
+	public override void Build()
+	{
+		Tools.MSBuild(RylogicSln, [@"Rylogic\audio"], Platforms, Configs);
+		Tools.MSBuild(RylogicSln, [@"Rylogic\audio.dll"], Platforms, Configs);
+	}
+	public override void Deploy()
+	{
+		// To publish the nuget package, use AllNative`
+		foreach (var p in Platforms)
+		{
+			foreach (var c in Configs)
+			{
+				Tools.DeployLib(Tools.Path([ObjDir, "audio", p, c, "audio.lib"]));
+				Tools.DeployLib(Tools.Path([ObjDir, "audio.dll", p, c, "audio.dll"]));
+			}
+		}
+	}
 }
 
 // View3d
@@ -310,7 +342,7 @@ public class RylogicGfx : RylogicAssembly
 		base.Populate(package);
 		package.Tags += " view3d";
 		package.Deps.Add(new Nuget.Dep("Rylogic.Core", $"[{RylogicLibraryVersion},)"));
-		package.Deps.Add(new Nuget.Dep("RylogicNative", $"[{RylogicLibraryVersion},)"));
+		package.Deps.Add(new Nuget.Dep("Rylogic.Native", $"[{RylogicLibraryVersion},)"));
 	}
 }
 public class RylogicGuiWPF : RylogicAssembly
@@ -368,8 +400,7 @@ public class AllRylogic : Group
 	public AllRylogic(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		: base(workspace)
 	{
-		Items.Add(new View3d(workspace, platforms, configs));
-		Items.Add(new Fbx(workspace, platforms, configs));
+		Items.Add(new AllNative(workspace, platforms, configs));
 		foreach (var type in typeof(RylogicAssembly).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(RylogicAssembly))))
 		{
 			var instance = (Common?)Activator.CreateInstance(type, workspace, platforms, configs) ?? throw new Exception($"Failed to create instance of type {type}");
@@ -385,7 +416,7 @@ public class LDraw : Managed
 	public string? MsiPath = null;
 
 	public LDraw(string workspace, List<string>? platforms = null, List<string>? configs = null)
-		:base("LDraw", "/projects/apps/LDraw", ["net9.0-windows"], workspace, ["x64"], configs)
+		:base("LDraw", Tools.Path([workspace, "projects\\apps\\LDraw"]), ["net9.0-windows"], workspace, ["x64"], configs)
 	{
 		DeployDir = Tools.Path([UserVars.Root, "bin/LDraw"], check_exists: false);
 	}
@@ -456,7 +487,7 @@ public class AllNative : Group
 {
 	private Nuget? Package = null;
 
-	public AllNative(string workspace, List<string> platforms, List<string> configs)
+	public AllNative(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		: base(workspace)
 	{
 		foreach (var type in typeof(Native).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Native))))
@@ -470,7 +501,7 @@ public class AllNative : Group
 		base.Deploy();
 		Package = new Nuget()
 		{
-			PackageName = "RylogicNative",
+			PackageName = "Rylogic.Native",
 			Version = RylogicLibraryVersion,
 			Tags = "rylogic native library view3d",
 		};
@@ -481,6 +512,7 @@ public class AllNative : Group
 			new Nuget.File(Tools.Path([UserVars.Root, $"lib\\x64\\Release\\*.dll"], check_exists: false), "runtimes/win-x64/native/"),
 			new Nuget.File(Tools.Path([UserVars.Root, $"lib\\x64\\Release\\*.imp"], check_exists: false), "runtimes/win-x64/native/"),
 		]);
+		Package.Package();
 	}
 	public override void Publish()
 	{
@@ -495,7 +527,7 @@ public class AllNative : Group
 // All projects
 public class All : Group
 {
-	public All(string workspace, List<string> platforms, List<string> configs)
+	public All(string workspace, List<string>? platforms = null, List<string>? configs = null)
 		: base(workspace)
 	{
 		foreach (var type in typeof(Common).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Common)) && !t.IsSubclassOf(typeof(Group))))
@@ -667,13 +699,13 @@ try
 {
 	// Testing
 	List<string> args =
-	    //["-project", "View3d", "-build", "-deploy"]
-	    //["-project", "Rylogic.Core", "-build", "-deploy"]
-	    //["-project", "Rylogic.Gfx", "-deploy"]
-	    //["-project", "LDraw", "-deploy"];
-	    //["-project", "AllNative", "-build", "-deploy"]
-	    //["-project", "AllRylogic", "-build", "-deploy"]
-	    Args.ToList()
+		//["-project", "View3d", "-build", "-deploy"]
+		//["-project", "Rylogic.Core", "-build", "-deploy"]
+		//["-project", "Rylogic.Gfx", "-deploy"]
+		//["-project", "LDraw", "-deploy"];
+		//["-project", "AllNative", "-build", "-deploy"]
+		//["-project", "AllRylogic", "-build", "-deploy"]
+		Args.ToList()
 	;
 	if (!args.SequenceEqual(Args))
 	    Console.WriteLine("WARNING: Command line overridden for testing");

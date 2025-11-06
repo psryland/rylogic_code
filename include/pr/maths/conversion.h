@@ -18,7 +18,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename T>
 	struct Convert<Str, Vec2<S, T>>
 	{
-		static Str To_(Vec2<S, T> const& x)
+		static Str Func(Vec2<S, T> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
@@ -31,14 +31,14 @@ namespace pr
 	struct Convert<Vec2<S, T>, TFrom>
 	{
 		// Vec2 to Vec2
-		template <Scalar SS, typename TT> static Vec2<S,T> To_(Vec2<SS,TT> const& v)
+		template <Scalar SS, typename TT> static Vec2<S,T> Func(Vec2<SS,TT> const& v)
 		{
 			return Vec2<S,T>(s_cast<S>(v.x), s_cast<S>(v.y));
 		}
 
 		// String to Vec2<floating_point>
 		template <StringType Str>
-		static Vec2<S,T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
+		static Vec2<S,T> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -51,7 +51,7 @@ namespace pr
 
 		// String to Vec2<integral>
 		template <StringType Str>
-		static Vec2<S,T> To_(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
+		static Vec2<S,T> Func(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 			
@@ -63,26 +63,26 @@ namespace pr
 		}
 
 		// Rect to Vec2
-		static Vec2<S, T> To_(FRect const& x)
+		static Vec2<S, T> Func(FRect const& x)
 		{
 			return Vec2<S, T>(s_cast<S>(x.SizeX()), s_cast<S>(x.SizeY()));
 		}
-		static Vec2<S,T> To_(IRect const& x)
+		static Vec2<S,T> Func(IRect const& x)
 		{
 			return Vec2<S, T>(s_cast<S>(x.SizeX()), s_cast<S>(x.SizeY()));
 		}
 
 		// Win32 primitive types to Vec2
 		#ifdef _WINDEF_
-		static Vec2<S,T> To_(POINT const& x)
+		static Vec2<S,T> Func(POINT const& x)
 		{
 			return Vec2<S, T>(s_cast<S>(x.x), s_cast<S>(x.y));
 		}
-		static Vec2<S,T> To_(SIZE const& x)
+		static Vec2<S,T> Func(SIZE const& x)
 		{
 			return Vec2<S,T>(s_cast<S>(x.cx), s_cast<S>(x.cy));
 		}
-		static Vec2<S,T> To_(RECT const& x)
+		static Vec2<S,T> Func(RECT const& x)
 		{
 			return Vec2<S, T>(s_cast<S>(x.right - x.left), s_cast<S>(x.bottom - x.top));
 		}
@@ -90,11 +90,11 @@ namespace pr
 
 		// GDI+ types to Vec2
 		#ifdef _GDIPLUS_H
-		static Vec2<S,T> To_(Gdiplus::Rect const& x)
+		static Vec2<S,T> Func(Gdiplus::Rect const& x)
 		{
 			return Vec2<S,T>(s_cast<S>(x.Width), s_cast<S>(x.Height));
 		}
-		static Vec2<S, T> To_(Gdiplus::RectF const& x)
+		static Vec2<S, T> Func(Gdiplus::RectF const& x)
 		{
 			return Vec2<S, T>(s_cast<S>(x.Width), s_cast<S>(x.Height));
 		}
@@ -105,7 +105,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename T>
 	struct Convert<Str, Vec3<S, T>>
 	{
-		static Str To_(Vec3<S, T> const& x)
+		static Str Func(Vec3<S, T> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
@@ -118,14 +118,14 @@ namespace pr
 	struct Convert<Vec3<S, T>, TFrom>
 	{
 		// Vec3 to Vec3
-		template <Scalar SS, typename TT> static Vec3<S, T> To_(Vec3<SS, TT> const& v)
+		template <Scalar SS, typename TT> static Vec3<S, T> Func(Vec3<SS, TT> const& v)
 		{
 			return Vec3<S, T>(s_cast<S>(v.x), s_cast<S>(v.y), s_cast<S>(v.z));
 		}
 
 		// String to Vec3
 		template <StringType Str>
-		static Vec3<S, T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Vec3<S, T> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -137,7 +137,7 @@ namespace pr
 			return Vec3<S, T>(x, y, z);
 		}
 		template <typename Str>
-		static Vec3<S, T> To_(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
+		static Vec3<S, T> Func(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -154,7 +154,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename T>
 	struct Convert<Str, Vec4<S, T>>
 	{
-		static Str To_(Vec4<S, T> const& x)
+		static Str Func(Vec4<S, T> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
@@ -167,14 +167,14 @@ namespace pr
 	struct Convert<Vec4<S, T>, TFrom>
 	{
 		// Vec4 to Vec4
-		template <Scalar SS, typename TT> static Vec4<S, T> To_(Vec4<SS, TT> const& v)
+		template <Scalar SS, typename TT> static Vec4<S, T> Func(Vec4<SS, TT> const& v)
 		{
 			return Vec4<S, T>(s_cast<S>(v.x), s_cast<S>(v.y), s_cast<S>(v.z), s_cast<S>(v.w));
 		}
 
 		// String to Vec4
 		template <StringType Str>
-		static Vec4<S, T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Vec4<S, T> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -187,7 +187,7 @@ namespace pr
 			return Vec4<S, T>(x, y, z, w);
 		}
 		template <StringType Str>
-		static Vec4<S, T> To_(Str const& s, S w, string_traits<Str>::value_type const** end = nullptr)
+		static Vec4<S, T> Func(Str const& s, S w, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -199,7 +199,7 @@ namespace pr
 			return Vec4<S, T>(x, y, z, w);
 		}
 		template <StringType Str>
-		static Vec4<S, T> To_(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
+		static Vec4<S, T> Func(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -212,7 +212,7 @@ namespace pr
 			return Vec4<S, T>(x, y, z, w);
 		}
 		template <StringType Str>
-		static Vec4<S, T> To_(Str const& s, S w, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
+		static Vec4<S, T> Func(Str const& s, S w, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -229,7 +229,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename T>
 	struct Convert<Str, Vec8<S, T>>
 	{
-		static Str To_(Vec8<S, T> const& x)
+		static Str Func(Vec8<S, T> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
@@ -242,14 +242,14 @@ namespace pr
 	struct Convert<Vec8<S, T>, TFrom>
 	{
 		// Vec8 to Vec8
-		template <Scalar SS, typename TT> static Vec8<S, T> To_(Vec8<SS, TT> const& v)
+		template <Scalar SS, typename TT> static Vec8<S, T> Func(Vec8<SS, TT> const& v)
 		{
 			return Vec8<S, T>(To<Vec4<S,T>>(v.ang), To<Vec4<S,T>>(v.lin));
 		}
 
 		// String to Vec8
 		template <StringType Str>
-		static Vec8<S, T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
+		static Vec8<S, T> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -268,7 +268,7 @@ namespace pr
 				Vec4<S, T>(lin_x, lin_y, lin_z, lin_w));
 		}
 		template <StringType Str>
-		static Vec8<S, T> To_(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
+		static Vec8<S, T> Func(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -292,7 +292,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
 	struct Convert<Str, Mat2x2<S,A,B>>
 	{
-		static Str To_(Mat2x2<S,A,B> const& x)
+		static Str Func(Mat2x2<S,A,B> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			return
@@ -304,7 +304,7 @@ namespace pr
 	struct Convert<Mat2x2<S, A, B>, TFrom>
 	{
 		// Mat2x2 to Mat2x2
-		template <Scalar SS, typename AA, typename BB> static Mat2x2<S, A, B> To_(Mat2x2<SS, AA, BB> const& v)
+		template <Scalar SS, typename AA, typename BB> static Mat2x2<S, A, B> Func(Mat2x2<SS, AA, BB> const& v)
 		{
 			return Mat2x2<S, A, B>(
 				To<Vec2<S, void>>(v.x),
@@ -313,7 +313,7 @@ namespace pr
 
 		// String to Mat2x2
 		template <StringType Str>
-		static Mat2x2<S, A, B> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Mat2x2<S, A, B> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -329,7 +329,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
 	struct Convert<Str, Mat3x4<S, A, B>>
 	{
-		static Str To_(Mat3x4<S, A, B> const& x)
+		static Str Func(Mat3x4<S, A, B> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			return
@@ -342,7 +342,7 @@ namespace pr
 	struct Convert<Mat3x4<S, A, B>, TFrom>
 	{
 		// Mat3x4 to Mat3x4
-		template <Scalar SS, typename AA, typename BB> static Mat3x4<S, A, B> To_(Mat3x4<SS, AA, BB> const& v)
+		template <Scalar SS, typename AA, typename BB> static Mat3x4<S, A, B> Func(Mat3x4<SS, AA, BB> const& v)
 		{
 			return Mat3x4<S, A, B>(
 				To<Vec3<S, void>>(v.x),
@@ -352,7 +352,7 @@ namespace pr
 
 		// String to Mat3x4
 		template <StringType Str>
-		static Mat3x4<S, A, B> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Mat3x4<S, A, B> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -369,7 +369,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
 	struct Convert<Str, Mat4x4<S, A, B>>
 	{
-		static Str To_(Mat4x4<S, A, B> const& x)
+		static Str Func(Mat4x4<S, A, B> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			return
@@ -383,7 +383,7 @@ namespace pr
 	struct Convert<Mat4x4<S, A, B>, TFrom>
 	{
 		// Mat4x4 to Mat4x4
-		template <Scalar SS, typename AA, typename BB> static Mat4x4<S, A, B> To_(Mat4x4<SS, AA, BB> const& v)
+		template <Scalar SS, typename AA, typename BB> static Mat4x4<S, A, B> Func(Mat4x4<SS, AA, BB> const& v)
 		{
 			return Mat4x4<S, A, B>(
 				To<Vec4<S, void>>(v.x),
@@ -394,7 +394,7 @@ namespace pr
 
 		// String to Mat4x4
 		template <StringType Str>
-		static Mat4x4<S, A, B> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Mat4x4<S, A, B> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -412,7 +412,7 @@ namespace pr
 	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
 	struct Convert<Str, Mat6x8<S, A, B>>
 	{
-		static Str To_(Mat6x8<S, A, B> const& x)
+		static Str Func(Mat6x8<S, A, B> const& x)
 		{
 			using Char = typename string_traits<Str>::value_type;
 			return
@@ -428,7 +428,7 @@ namespace pr
 	struct Convert<Mat6x8<S, A, B>, TFrom>
 	{
 		// Mat6x8 to Mat6x8
-		template <Scalar SS, typename AA, typename BB> static Mat6x8<S, A, B> To_(Mat6x8<SS, AA, BB> const& v)
+		template <Scalar SS, typename AA, typename BB> static Mat6x8<S, A, B> Func(Mat6x8<SS, AA, BB> const& v)
 		{
 			return Mat6x8<S, A, B>(
 				To<Mat3x4<S, void>>(v.m00),
@@ -439,7 +439,7 @@ namespace pr
 
 		// String to Mat6x8
 		template <StringType Str>
-		static Mat6x8<S, A, B> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Mat6x8<S, A, B> Func(Str const& s, string_traits<Str>::value_type const** end = nullptr)
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -460,13 +460,13 @@ namespace pr
 	struct Convert<IRect, TFrom>
 	{
 		template <Scalar S, typename T>
-		static IRect To_(Vec2<S,T> const& x)
+		static IRect Func(Vec2<S,T> const& x)
 		{
 			return IRect(
 				Vec2<int, void>(0, 0),
 				To<Vec2<int, void>>(x));
 		}
-		static IRect To_(FRect const& x)
+		static IRect Func(FRect const& x)
 		{
 			return IRect(
 				Vec2<int, void>(s_cast<int>(x.m_min.x), s_cast<int>(x.m_min.y)),
@@ -474,11 +474,11 @@ namespace pr
 		}
 
 		#ifdef _WINDEF_
-		static IRect To_(RECT const& x)
+		static IRect Func(RECT const& x)
 		{
 			return IRect(x.left, x.top, x.right, x.bottom);
 		}
-		static IRect To_(SIZE const& x)
+		static IRect Func(SIZE const& x)
 		{
 			return IRect(0, 0, x.cx, x.cy);
 		}
@@ -488,13 +488,13 @@ namespace pr
 	struct Convert<FRect, TFrom>
 	{
 		template <Scalar S, typename T>
-		static FRect To_(Vec2<S,T> const& x)
+		static FRect Func(Vec2<S,T> const& x)
 		{
 			return FRect(
 				Vec2<float, void>(0, 0),
 				To<Vec2<float, void>>(x));
 		}
-		static FRect To_(IRect const& x)
+		static FRect Func(IRect const& x)
 		{
 			return FRect(
 				To<Vec2<float, void>>(x.m_min),
@@ -502,7 +502,7 @@ namespace pr
 		}
 
 		#ifdef _WINDEF_
-		static FRect To_(RECT const& x)
+		static FRect Func(RECT const& x)
 		{
 			return FRect(
 				s_cast<float>(x.left),
@@ -510,7 +510,7 @@ namespace pr
 				s_cast<float>(x.right),
 				s_cast<float>(x.bottom));
 		}
-		static FRect To_(SIZE const& x)
+		static FRect Func(SIZE const& x)
 		{
 			return FRect(0, 0, s_cast<float>(x.cx), s_cast<float>(x.cy));
 		}
