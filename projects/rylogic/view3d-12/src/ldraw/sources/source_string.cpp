@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "view3d-12/src/ldraw/sources/source_string.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
 namespace pr::rdr12::ldraw

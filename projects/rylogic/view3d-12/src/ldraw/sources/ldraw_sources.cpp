@@ -12,8 +12,8 @@
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_binary.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/main/renderer.h"
 

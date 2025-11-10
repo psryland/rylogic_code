@@ -2,7 +2,7 @@
 // Ldraw Script Text Serialiser
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 #include "pr/script/script.h"
 
 namespace pr::rdr12::ldraw

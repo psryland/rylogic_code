@@ -18,7 +18,7 @@
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 #include "pr/view3d-12/utility/update_resource.h"
 
 namespace pr::rdr12

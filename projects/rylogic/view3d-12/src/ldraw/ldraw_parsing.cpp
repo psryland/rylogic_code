@@ -1,11 +1,11 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_binary.h"
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
@@ -5551,16 +5551,16 @@ namespace pr::rdr12::ldraw
 		LdrObjectPtr obj = {};
 		switch (type)
 		{
-			#define PR_LDRAW_PARSE_OBJS_IMPL(name, hash)\
-				case ELdrObject::name:\
-				{\
-					pp.m_type = ELdrObject::name;\
-					ObjectCreator<ELdrObject::name> creator(pp);\
-					obj = creator.Parse(reader);\
-					break;\
-				}
-			#define PR_LDRAW_PARSE_OBJS(x) x(PR_LDRAW_PARSE_OBJS_IMPL)
-			PR_LDRAW_PARSE_OBJS(PR_ENUM_LDRAW_OBJECTS)
+			#define PR_LDRAW_PARSE_OBJECTS(name)\
+			case ELdrObject::name:\
+			{\
+				pp.m_type = ELdrObject::name;\
+				ObjectCreator<ELdrObject::name> creator(pp);\
+				obj = creator.Parse(reader);\
+				break;\
+			}
+			PR_LDRAW_OBJECTS(PR_LDRAW_PARSE_OBJECTS)
+			#undef PR_LDRAW_PARSE_OBJECTS
 			default: return false;
 		}
 

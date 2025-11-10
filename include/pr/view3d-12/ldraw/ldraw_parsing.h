@@ -235,7 +235,7 @@ namespace pr::rdr12::ldraw
 		template <typename TEnum> requires (!ReflectedEnum<TEnum> && requires (TEnum t) { { To<TEnum>(std::declval<std::string_view>()) } -> std::convertible_to<TEnum>; })
 		TEnum Enum()
 		{
-			static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::To<TEnum>(str)); };
+			static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(To<TEnum>(str)); };
 			auto value = EnumImpl(sizeof(TEnum), parse);
 			return static_cast<TEnum>(value);
 		}

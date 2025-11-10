@@ -37,256 +37,266 @@ namespace pr::rdr12::ldraw
 	// Keywords in ldraw script. This includes object types and field names because they need to have unique hashes
 	enum class EKeyword : int
 	{
-		#define PR_ENUM_LDRAW_KEYWORDS(x)\
-		x(Accel             , = HashI("Accel"                 ))\
-		x(Addr              , = HashI("Addr"                  ))\
-		x(Align             , = HashI("Align"                 ))\
-		x(Alpha             , = HashI("Alpha"                 ))\
-		x(Ambient           , = HashI("Ambient"               ))\
-		x(Anchor            , = HashI("Anchor"                ))\
-		x(AngAccel          , = HashI("AngAccel"              ))\
-		x(AngVelocity       , = HashI("AngVelocity"           ))\
-		x(Animation         , = HashI("Animation"             ))\
-		x(Arrow             , = HashI("Arrow"                 ))\
-		x(Aspect            , = HashI("Aspect"                ))\
-		x(Axis              , = HashI("Axis"                  ))\
-		x(AxisId            , = HashI("AxisId"                ))\
-		x(BackColour        , = HashI("BackColour"            ))\
-		x(BakeTransform     , = HashI("BakeTransform"         ))\
-		x(Bar               , = HashI("Bar"                   ))\
-		x(Billboard         , = HashI("Billboard"             ))\
-		x(Billboard3D       , = HashI("Billboard3D"           ))\
-		x(BinaryStream      , = HashI("BinaryStream"          ))\
-		x(Box               , = HashI("Box"                   ))\
-		x(BoxList           , = HashI("BoxList"               ))\
-		x(Camera            , = HashI("Camera"                ))\
-		x(CastShadow        , = HashI("CastShadow"            ))\
-		x(Chart             , = HashI("Chart"                 ))\
-		x(Circle            , = HashI("Circle"                ))\
-		x(Closed            , = HashI("Closed"                ))\
-		x(Colour            , = HashI("Colour"                ))\
-		x(Colours           , = HashI("Colours"               ))\
-		x(Commands          , = HashI("Commands"              ))\
-		x(Cone              , = HashI("Cone"                  ))\
-		x(ConvexHull        , = HashI("ConvexHull"            ))\
-		x(CoordFrame        , = HashI("CoordFrame"            ))\
-		x(CornerRadius      , = HashI("CornerRadius"          ))\
-		x(CrossSection      , = HashI("CrossSection"          ))\
-		x(CString           , = HashI("CString"               ))\
-		x(Custom            , = HashI("Custom"                ))\
-		x(Cylinder          , = HashI("Cylinder"              ))\
-		x(Dashed            , = HashI("Dashed"                ))\
-		x(Data              , = HashI("Data"                  ))\
-		x(Depth             , = HashI("Depth"                 ))\
-		x(Diffuse           , = HashI("Diffuse"               ))\
-		x(Dim               , = HashI("Dim"                   ))\
-		x(Direction         , = HashI("Direction"             ))\
-		x(Divisions         , = HashI("Divisions"             ))\
-		x(Equation          , = HashI("Equation"              ))\
-		x(Euler             , = HashI("Euler"                 ))\
-		x(Faces             , = HashI("Faces"                 ))\
-		x(Facets            , = HashI("Facets"                ))\
-		x(Far               , = HashI("Far"                   ))\
-		x(FilePath          , = HashI("FilePath"              ))\
-		x(Filter            , = HashI("Filter"                ))\
-		x(Font              , = HashI("Font"                  ))\
-		x(ForeColour        , = HashI("ForeColour"            ))\
-		x(Format            , = HashI("Format"                ))\
-		x(Fov               , = HashI("Fov"                   ))\
-		x(FovX              , = HashI("FovX"                  ))\
-		x(FovY              , = HashI("FovY"                  ))\
-		x(Frame             , = HashI("Frame"                 ))\
-		x(FrameRange        , = HashI("FrameRange"            ))\
-		x(FrustumFA         , = HashI("FrustumFA"             ))\
-		x(FrustumWH         , = HashI("FrustumWH"             ))\
-		x(GenerateNormals   , = HashI("GenerateNormals"       ))\
-		x(Grid              , = HashI("Grid"                  ))\
-		x(Group             , = HashI("Group"                 ))\
-		x(GroupColour       , = HashI("GroupColour"           ))\
-		x(Hidden            , = HashI("Hidden"                ))\
-		x(Instance          , = HashI("Instance"              ))\
-		x(Inverse           , = HashI("Inverse"               ))\
-		x(Layers            , = HashI("Layers"                ))\
-		x(LeftHanded        , = HashI("LeftHanded"            ))\
-		x(LightSource       , = HashI("LightSource"           ))\
-		x(LineNew           , = HashI("LineNew"               ))\
-		x(Line              , = HashI("Line"                  ))\
-		x(LineBox           , = HashI("LineBox"               ))\
-		x(LineD             , = HashI("LineD"                 ))\
-		x(LineList          , = HashI("LineList"              ))\
-		x(Lines             , = HashI("Lines"                 ))\
-		x(LineStrip         , = HashI("LineStrip"             ))\
-		x(LookAt            , = HashI("LookAt"                ))\
-		x(M3x3              , = HashI("M3x3"                  ))\
-		x(M4x4              , = HashI("M4x4"                  ))\
-		x(Mesh              , = HashI("Mesh"                  ))\
-		x(Model             , = HashI("Model"                 ))\
-		x(Name              , = HashI("Name"                  ))\
-		x(Near              , = HashI("Near"                  ))\
-		x(NewLine           , = HashI("NewLine"               ))\
-		x(NonAffine         , = HashI("NonAffine"             ))\
-		x(NoMaterials       , = HashI("NoMaterials"           ))\
-		x(Normalise         , = HashI("Normalise"             ))\
-		x(Normals           , = HashI("Normals"               ))\
-		x(NoZTest           , = HashI("NoZTest"               ))\
-		x(NoZWrite          , = HashI("NoZWrite"              ))\
-		x(O2W               , = HashI("O2W"                   ))\
-		x(Orthographic      , = HashI("Orthographic"          ))\
-		x(Orthonormalise    , = HashI("Orthonormalise"        ))\
-		x(Padding           , = HashI("Padding"               ))\
-		x(Param             , = HashI("Param"                 ))\
-		x(Parametrics       , = HashI("Parametrics"           ))\
-		x(Part              , = HashI("Part"                  ))\
-		x(Parts             , = HashI("Parts"                 ))\
-		x(Period            , = HashI("Period"                ))\
-		x(PerItemColour     , = HashI("PerItemColour"         ))\
-		x(PerItemParametrics, = HashI("PerItemParametrics"    ))\
-		x(Pie               , = HashI("Pie"                   ))\
-		x(Plane             , = HashI("Plane"                 ))\
-		x(Point             , = HashI("Point"                 ))\
-		x(Polygon           , = HashI("Polygon"               ))\
-		x(Pos               , = HashI("Pos"                   ))\
-		x(Position          , = HashI("Position"              ))\
-		x(Quad              , = HashI("Quad"                  ))\
-		x(Quat              , = HashI("Quat"                  ))\
-		x(QuatPos           , = HashI("QuatPos"               ))\
-		x(Rand4x4           , = HashI("Rand4x4"               ))\
-		x(RandColour        , = HashI("RandColour"            ))\
-		x(RandOri           , = HashI("RandOri"               ))\
-		x(RandPos           , = HashI("RandPos"               ))\
-		x(Range             , = HashI("Range"                 ))\
-		x(Rect              , = HashI("Rect"                  ))\
-		x(Reflectivity      , = HashI("Reflectivity"          ))\
-		x(Resolution        , = HashI("Resolution"            ))\
-		x(Ribbon            , = HashI("Ribbon"                ))\
-		x(RootAnimation     , = HashI("RootAnimation"         ))\
-		x(Round             , = HashI("Round"                 ))\
-		x(Scale             , = HashI("Scale"                 ))\
-		x(ScreenSpace       , = HashI("ScreenSpace"           ))\
-		x(Series            , = HashI("Series"                ))\
-		x(Size              , = HashI("Size"                  ))\
-		x(Smooth            , = HashI("Smooth"                ))\
-		x(Solid             , = HashI("Solid"                 ))\
-		x(Source            , = HashI("Source"                ))\
-		x(Specular          , = HashI("Specular"              ))\
-		x(Sphere            , = HashI("Sphere"                ))\
-		x(Spline            , = HashI("Spline"                ))\
-		x(Square            , = HashI("Square"                ))\
-		x(Step              , = HashI("Step"                  ))\
-		x(Stretch           , = HashI("Stretch"               ))\
-		x(Strikeout         , = HashI("Strikeout"             ))\
-		x(Style             , = HashI("Style"                 ))\
-		x(Tetra             , = HashI("Tetra"                 ))\
-		x(TexCoords         , = HashI("TexCoords"             ))\
-		x(Text              , = HashI("Text"                  ))\
-		x(TextLayout        , = HashI("TextLayout"            ))\
-		x(TextStream        , = HashI("TextStream"            ))\
-		x(Texture           , = HashI("Texture"               ))\
-		x(TimeRange         , = HashI("TimeRange"             ))\
-		x(Transpose         , = HashI("Transpose"             ))\
-		x(Triangle          , = HashI("Triangle"              ))\
-		x(TriList           , = HashI("TriList"               ))\
-		x(TriStrip          , = HashI("TriStrip"              ))\
-		x(Tube              , = HashI("Tube"                  ))\
-		x(Txfm              , = HashI("Txfm"                  ))\
-		x(Underline         , = HashI("Underline"             ))\
-		x(Unknown           , = HashI("Unknown"               ))\
-		x(Up                , = HashI("Up"                    ))\
-		x(Velocity          , = HashI("Velocity"              ))\
-		x(Verts             , = HashI("Verts"                 ))\
-		x(Video             , = HashI("Video"                 ))\
-		x(ViewPlaneZ        , = HashI("ViewPlaneZ"            ))\
-		x(Wedges            , = HashI("Wedges"                ))\
-		x(Weight            , = HashI("Weight"                ))\
-		x(Width             , = HashI("Width"                 ))\
-		x(Wireframe         , = HashI("Wireframe"             ))\
-		x(XAxis             , = HashI("XAxis"                 ))\
-		x(XColumn           , = HashI("XColumn"               ))\
-		x(YAxis             , = HashI("YAxis"                 ))\
-		x(ZAxis             , = HashI("ZAxis"                 ))
-		PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)
+		#define PR_LDRAW_KEYWORDS(x)\
+		x(Accel             )\
+		x(Addr              )\
+		x(Align             )\
+		x(Alpha             )\
+		x(Ambient           )\
+		x(Anchor            )\
+		x(AngAccel          )\
+		x(AngVelocity       )\
+		x(Animation         )\
+		x(Arrow             )\
+		x(Aspect            )\
+		x(Axis              )\
+		x(AxisId            )\
+		x(BackColour        )\
+		x(BakeTransform     )\
+		x(Bar               )\
+		x(Billboard         )\
+		x(Billboard3D       )\
+		x(BinaryStream      )\
+		x(Box               )\
+		x(BoxList           )\
+		x(Camera            )\
+		x(CastShadow        )\
+		x(Chart             )\
+		x(Circle            )\
+		x(Closed            )\
+		x(Colour            )\
+		x(Colours           )\
+		x(Commands          )\
+		x(Cone              )\
+		x(ConvexHull        )\
+		x(CoordFrame        )\
+		x(CornerRadius      )\
+		x(CrossSection      )\
+		x(CString           )\
+		x(Custom            )\
+		x(Cylinder          )\
+		x(Dashed            )\
+		x(Data              )\
+		x(Depth             )\
+		x(Diffuse           )\
+		x(Dim               )\
+		x(Direction         )\
+		x(Divisions         )\
+		x(Equation          )\
+		x(Euler             )\
+		x(Faces             )\
+		x(Facets            )\
+		x(Far               )\
+		x(FilePath          )\
+		x(Filter            )\
+		x(Font              )\
+		x(ForeColour        )\
+		x(Format            )\
+		x(Fov               )\
+		x(FovX              )\
+		x(FovY              )\
+		x(Frame             )\
+		x(FrameRange        )\
+		x(FrustumFA         )\
+		x(FrustumWH         )\
+		x(GenerateNormals   )\
+		x(Grid              )\
+		x(Group             )\
+		x(GroupColour       )\
+		x(Hidden            )\
+		x(Instance          )\
+		x(Inverse           )\
+		x(Layers            )\
+		x(LeftHanded        )\
+		x(LightSource       )\
+		x(LineNew           )\
+		x(Line              )\
+		x(LineBox           )\
+		x(LineD             )\
+		x(LineList          )\
+		x(Lines             )\
+		x(LineStrip         )\
+		x(LookAt            )\
+		x(M3x3              )\
+		x(M4x4              )\
+		x(Mesh              )\
+		x(Model             )\
+		x(Name              )\
+		x(Near              )\
+		x(NewLine           )\
+		x(NonAffine         )\
+		x(NoMaterials       )\
+		x(Normalise         )\
+		x(Normals           )\
+		x(NoZTest           )\
+		x(NoZWrite          )\
+		x(O2W               )\
+		x(Orthographic      )\
+		x(Orthonormalise    )\
+		x(Padding           )\
+		x(Param             )\
+		x(Parametrics       )\
+		x(Part              )\
+		x(Parts             )\
+		x(Period            )\
+		x(PerItemColour     )\
+		x(PerItemParametrics)\
+		x(Pie               )\
+		x(Plane             )\
+		x(Point             )\
+		x(Polygon           )\
+		x(Pos               )\
+		x(Position          )\
+		x(Quad              )\
+		x(Quat              )\
+		x(QuatPos           )\
+		x(Rand4x4           )\
+		x(RandColour        )\
+		x(RandOri           )\
+		x(RandPos           )\
+		x(Range             )\
+		x(Rect              )\
+		x(Reflectivity      )\
+		x(Resolution        )\
+		x(Ribbon            )\
+		x(RootAnimation     )\
+		x(Round             )\
+		x(Scale             )\
+		x(ScreenSpace       )\
+		x(Series            )\
+		x(Size              )\
+		x(Smooth            )\
+		x(Solid             )\
+		x(Source            )\
+		x(Specular          )\
+		x(Sphere            )\
+		x(Spline            )\
+		x(Square            )\
+		x(Step              )\
+		x(Stretch           )\
+		x(Strikeout         )\
+		x(Style             )\
+		x(Tetra             )\
+		x(TexCoords         )\
+		x(Text              )\
+		x(TextLayout        )\
+		x(TextStream        )\
+		x(Texture           )\
+		x(TimeRange         )\
+		x(Transpose         )\
+		x(Triangle          )\
+		x(TriList           )\
+		x(TriStrip          )\
+		x(Tube              )\
+		x(Txfm              )\
+		x(Underline         )\
+		x(Unknown           )\
+		x(Up                )\
+		x(Velocity          )\
+		x(Verts             )\
+		x(Video             )\
+		x(ViewPlaneZ        )\
+		x(Wedges            )\
+		x(Weight            )\
+		x(Width             )\
+		x(Wireframe         )\
+		x(XAxis             )\
+		x(XColumn           )\
+		x(YAxis             )\
+		x(ZAxis             )
+		// PR_LDRAW_KEYWORDS_END
+
+		#define PR_LDRAW_ENUM_MEMBERS(name) name = HashI(#name),
+		PR_LDRAW_KEYWORDS(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
 	};
-	PR_ENUM_REFLECTION2(EKeyword, PR_ENUM_LDRAW_KEYWORDS);
 
 	// An enum of just the object types
 	enum class ELdrObject : int
 	{
-		#define PR_ENUM_LDRAW_OBJECTS(x)\
-		x(Arrow      ,= EKeyword::Arrow      )\
-		x(Bar        ,= EKeyword::Bar        )\
-		x(Box        ,= EKeyword::Box        )\
-		x(BoxList    ,= EKeyword::BoxList    )\
-		x(Chart      ,= EKeyword::Chart      )\
-		x(Circle     ,= EKeyword::Circle     )\
-		x(Cone       ,= EKeyword::Cone       )\
-		x(ConvexHull ,= EKeyword::ConvexHull )\
-		x(CoordFrame ,= EKeyword::CoordFrame )\
-		x(Custom     ,= EKeyword::Custom     )\
-		x(Cylinder   ,= EKeyword::Cylinder   )\
-		x(Equation   ,= EKeyword::Equation   )\
-		x(FrustumFA  ,= EKeyword::FrustumFA  )\
-		x(FrustumWH  ,= EKeyword::FrustumWH  )\
-		x(Grid       ,= EKeyword::Grid       )\
-		x(Group      ,= EKeyword::Group      )\
-		x(Instance   ,= EKeyword::Instance   )\
-		x(LightSource,= EKeyword::LightSource)\
-		x(LineNew    ,= EKeyword::LineNew    )\
-		x(Line       ,= EKeyword::Line       )\
-		x(LineBox    ,= EKeyword::LineBox    )\
-		x(LineD      ,= EKeyword::LineD      )\
-		x(LineStrip  ,= EKeyword::LineStrip  )\
-		x(Mesh       ,= EKeyword::Mesh       )\
-		x(Model      ,= EKeyword::Model      )\
-		x(Pie        ,= EKeyword::Pie        )\
-		x(Plane      ,= EKeyword::Plane      )\
-		x(Point      ,= EKeyword::Point      )\
-		x(Polygon    ,= EKeyword::Polygon    )\
-		x(Quad       ,= EKeyword::Quad       )\
-		x(Rect       ,= EKeyword::Rect       )\
-		x(Ribbon     ,= EKeyword::Ribbon     )\
-		x(Series     ,= EKeyword::Series     )\
-		x(Sphere     ,= EKeyword::Sphere     )\
-		x(Spline     ,= EKeyword::Spline     )\
-		x(Text       ,= EKeyword::Text       )\
-		x(Triangle   ,= EKeyword::Triangle   )\
-		x(Tube       ,= EKeyword::Tube       )\
-		x(Unknown    ,= EKeyword::Unknown    )
-		PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_OBJECTS)
+		#define PR_LDRAW_OBJECTS(x)\
+		x(Arrow      )\
+		x(Bar        )\
+		x(Box        )\
+		x(BoxList    )\
+		x(Chart      )\
+		x(Circle     )\
+		x(Cone       )\
+		x(ConvexHull )\
+		x(CoordFrame )\
+		x(Custom     )\
+		x(Cylinder   )\
+		x(Equation   )\
+		x(FrustumFA  )\
+		x(FrustumWH  )\
+		x(Grid       )\
+		x(Group      )\
+		x(Instance   )\
+		x(LightSource)\
+		x(LineNew    )\
+		x(Line       )\
+		x(LineBox    )\
+		x(LineD      )\
+		x(LineStrip  )\
+		x(Mesh       )\
+		x(Model      )\
+		x(Pie        )\
+		x(Plane      )\
+		x(Point      )\
+		x(Polygon    )\
+		x(Quad       )\
+		x(Rect       )\
+		x(Ribbon     )\
+		x(Series     )\
+		x(Sphere     )\
+		x(Spline     )\
+		x(Text       )\
+		x(Triangle   )\
+		x(Tube       )\
+		x(Unknown    )
+		// PR_LDRAW_OBJECTS_END
+		
+		#define PR_LDRAW_ENUM_MEMBERS(name) name = EKeyword::name,
+		PR_LDRAW_OBJECTS(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
 	};
-	PR_ENUM_REFLECTION2(ELdrObject, PR_ENUM_LDRAW_OBJECTS);
 
-	// Arrow styles
-	enum class EArrowType : uint8_t
+	// Ldraw script commands (for streaming)
+	enum class ECommandId : int
 	{
-		#define PR_ENUM(x)\
-		x(Line        ,= 0)\
-		x(Fwd         ,= 1 << 0)\
-		x(Back        ,= 1 << 1)\
-		x(FwdBack     ,= Fwd | Back)\
-		x(_flags_enum ,= 0xFF)
-		PR_ENUM_MEMBERS2(PR_ENUM)
+		#define PR_LDRAW_COMMANDS(x)\
+		x(Invalid       )\
+		x(AddToScene    ) /* <scene-id> */\
+		x(CameraToWorld ) /* <scene-id> <o2w> */\
+		x(CameraPosition) /* <scene-id> <pos> */\
+		x(ObjectToWorld ) /* <object-name> <o2w> */\
+		x(Render        ) /* <scene-id> */
+		// PR_LDRAW_COMMANDS_END
+
+		#define PR_LDRAW_ENUM_MEMBERS(name) name = HashI(#name),
+		PR_LDRAW_COMMANDS(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
 	};
-	PR_ENUM_REFLECTION2(EArrowType, PR_ENUM);
-	#undef PR_ENUM
 
 	// Point styles
 	enum class EPointStyle : uint8_t
 	{
-		#define PR_ENUM(x)\
+		#define PR_LDRAW_POINT_STYLES(x)\
 		x(Square)\
 		x(Circle)\
 		x(Triangle)\
 		x(Star)\
 		x(Annulus)
-		PR_ENUM_MEMBERS1(PR_ENUM)
+
+		#define PR_LDRAW_ENUM_MEMBERS(name) name,
+		PR_LDRAW_POINT_STYLES(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
 	};
-	PR_ENUM_REFLECTION1(EPointStyle, PR_ENUM);
-	#undef PR_ENUM
 
 	// Line styles
 	enum class ELineStyle : uint8_t
 	{
-		#define PR_ENUM(x)\
+		#define PR_LDRAW_LINE_STYLES(x)\
 		x(LineSegment)\
 		x(LineStrip)\
 		x(Direction)\
@@ -294,13 +304,29 @@ namespace pr::rdr12::ldraw
 		x(HermiteSpline)\
 		x(BSplineSpline)\
 		x(CatmullRom)
-		PR_ENUM_MEMBERS1(PR_ENUM)
+		
+		#define PR_LDRAW_ENUM_MEMBERS(name) name,
+		PR_LDRAW_LINE_STYLES(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
 	};
-	PR_ENUM_REFLECTION1(ELineStyle, PR_ENUM);
-	#undef PR_ENUM
+
+	// Arrow styles
+	enum class EArrowType : uint8_t
+	{
+		#define PR_LDRAW_ARROW_TYPES(x)\
+		x(Line        , 0)\
+		x(Fwd         , 1 << 0)\
+		x(Back        , 1 << 1)\
+		x(FwdBack     , Fwd | Back)\
+		x(_flags_enum , 0xFF)
+		
+		#define PR_LDRAW_ENUM_MEMBERS(name, value) name = value,
+		PR_LDRAW_ARROW_TYPES(PR_LDRAW_ENUM_MEMBERS)
+		#undef PR_LDRAW_ENUM_MEMBERS
+	};
 
 	// Camera fields
-	enum class ECamField
+	enum class ECamField :int
 	{
 		None = 0,
 		C2W = 1 << 0,
@@ -332,7 +358,7 @@ namespace pr::rdr12::ldraw
 	};
 
 	// Flags for extra behaviour of an object
-	enum class ELdrFlags// sync with 'view3d-dll.h'
+	enum class ELdrFlags : int // sync with 'view3d-dll.h'
 	{
 		// Notes:
 		//  - Flags are for a single object only. Don't set the recursively.
@@ -402,7 +428,7 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename T> friend std::basic_ostream<T>& operator << (std::basic_ostream<T>& out, textbuf const& ldr)
 		{
-			out.write(type_ptr<T>(ldr.data()), ldr.size());
+			out.write(reinterpret_cast<T const*>(ldr.data()), ldr.size());
 			return out;
 		}
 		friend std::ptrdiff_t ssize(textbuf const& buf)
@@ -414,7 +440,7 @@ namespace pr::rdr12::ldraw
 	{
 		template <typename T> friend std::basic_ostream<T>& operator << (std::basic_ostream<T>& out, bytebuf const& ldr)
 		{
-			out.write(type_ptr<T>(ldr.data()), ldr.size());
+			out.write(reinterpret_cast<T const*>(ldr.data()), ldr.size());
 			return out;
 		}
 		friend std::ptrdiff_t ssize(bytebuf const& buf)
@@ -422,7 +448,22 @@ namespace pr::rdr12::ldraw
 			return std::ssize(buf);
 		}
 	};
+
+	// Reflection
+	PR_ENUM_REFLECTION1(EKeyword, PR_LDRAW_KEYWORDS);
+	PR_ENUM_REFLECTION1(ELdrObject, PR_LDRAW_OBJECTS);
+	PR_ENUM_REFLECTION1(ECommandId, PR_LDRAW_COMMANDS);
+	PR_ENUM_REFLECTION1(EPointStyle, PR_LDRAW_POINT_STYLES);
+	PR_ENUM_REFLECTION1(ELineStyle, PR_LDRAW_LINE_STYLES);
+	PR_ENUM_REFLECTION2(EArrowType, PR_LDRAW_ARROW_TYPES);
+
+	#undef PR_LDRAW_KEYWORDS
+	#undef PR_LDRAW_COMMANDS
+	#undef PR_LDRAW_ARROW_TYPES
+	#undef PR_LDRAW_POINT_STYLES
+	#undef PR_LDRAW_LINE_STYLES
 }
+
 namespace pr
 {
 	template <> struct is_string<rdr12::ldraw::textbuf> : std::true_type {};

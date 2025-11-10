@@ -347,116 +347,116 @@ namespace pr::algorithm::astar
 #include "pr/common/unittests.h"
 namespace pr::algorithm::astar::unittests
 {
-	struct Graph
+	PRUnitTestClass(AStarSearchTests)
 	{
-		struct Node { float x, y; };
-		struct Edge { int a, b; };
-		Node const m_nodes[11] = { {-10, -3}, {-7, +2}, {+5, +5}, {+6, -4}, {-1, -7}, {+1, -2}, {-3, +5}, {-4, -1}, {+2, +3}, {+6, +2}, {-5, -5} };
-		Edge const m_edges[13] = { {0, 1}, {0, 10}, {1, 6}, {1, 7}, {7, 10}, {10, 4}, {10, 5}, {6, 2}, {8, 5}, {2, 8}, {5, 3}, {2, 9}, {9, 3} };
-		std::vector<int> m_adj[_countof(m_nodes)]; // Adjacency data. One 'm_adj[i]' for each node, containing a list of the nodes it's connected to
-
-		Graph()
+		struct Graph
 		{
-			// Create the adjacency data
-			for (auto const& edge : m_edges)
+			struct Node { float x, y; };
+			struct Edge { int a, b; };
+			Node const m_nodes[11] = { {-10, -3}, {-7, +2}, {+5, +5}, {+6, -4}, {-1, -7}, {+1, -2}, {-3, +5}, {-4, -1}, {+2, +3}, {+6, +2}, {-5, -5} };
+			Edge const m_edges[13] = { {0, 1}, {0, 10}, {1, 6}, {1, 7}, {7, 10}, {10, 4}, {10, 5}, {6, 2}, {8, 5}, {2, 8}, {5, 3}, {2, 9}, {9, 3} };
+			std::vector<int> m_adj[_countof(m_nodes)]; // Adjacency data. One 'm_adj[i]' for each node, containing a list of the nodes it's connected to
+
+			Graph()
 			{
-				m_adj[edge.a].push_back(edge.b);
-				m_adj[edge.b].push_back(edge.a);
+				// Create the adjacency data
+				for (auto const& edge : m_edges)
+				{
+					m_adj[edge.a].push_back(edge.b);
+					m_adj[edge.b].push_back(edge.a);
+				}
 			}
-		}
-	};
-	struct Adptr
-	{
-		// astar::ConfigType
-		using node_ref = int;
-		using edge_ref = int;
-		using cost_type = float;
-		template <typename T> using vector_type = std::vector<T>;
-		template <typename K, typename V> using hashmap_type = std::unordered_map<K,V>;
-		static constexpr node_ref NoNode = -1;
-		static constexpr edge_ref NoEdge = -1;
-		static constexpr cost_type CostMax = std::numeric_limits<cost_type>::max();
-
-		// astar::AdapterType
-		using WorkingData = astar::WorkingData<Adptr>;
-		using path_type = std::vector<PathItem<Adptr>>;
-		using NodeData = astar::NodeData<Adptr>;
-		using EdgeData = astar::EdgeData<Adptr>;
-		using GraphNode = typename Graph::Node;
-
-		Graph& m_graph;
-		GraphNode m_goal;
-		WorkingData m_astar_working_data;
-
-		Adptr(Graph& graph, GraphNode const& goal)
-			: m_graph(graph)
-			, m_goal(goal)
-		{
-		}
-
-		// Reused data structures for repeated searches
-		WorkingData& astar_working_data()
-		{
-			return m_astar_working_data;
-		}
-
-		// The distance between nodes
-		static float Distance(Graph::Node const& a, Graph::Node const& b)
-		{
-			constexpr auto sqr = [](auto x) { return x * x; };
-			return std::sqrtf(sqr(a.x - b.x) + sqr(a.y - b.y));
 		};
-
-		// Get a reference to the next edge of 'node'.
-		edge_ref NextEdge(node_ref node, edge_ref edge) const
+		struct Adptr
 		{
-			++edge;
-			return edge >= 0 && edge < ssize(m_graph.m_adj[node]) ? edge : NoEdge;
-		}
+			// astar::ConfigType
+			using node_ref = int;
+			using edge_ref = int;
+			using cost_type = float;
+			template <typename T> using vector_type = std::vector<T>;
+			template <typename K, typename V> using hashmap_type = std::unordered_map<K, V>;
+			static constexpr node_ref NoNode = -1;
+			static constexpr edge_ref NoEdge = -1;
+			static constexpr cost_type CostMax = std::numeric_limits<cost_type>::max();
 
-		// Return the edge data for the given edge index.
-		EdgeData ReadEdge(node_ref node, edge_ref edge) const
-		{
-			assert(node >= 0 && node < _countof(m_graph.m_adj));
-			assert(edge >= 0 && edge < static_cast<int>(ssize(m_graph.m_adj[node])));
+			// astar::AdapterType
+			using WorkingData = astar::WorkingData<Adptr>;
+			using path_type = std::vector<PathItem<Adptr>>;
+			using NodeData = astar::NodeData<Adptr>;
+			using EdgeData = astar::EdgeData<Adptr>;
+			using GraphNode = typename Graph::Node;
 
-			// The node that "nodes[node].edges[edge]" is connected to
-			auto next_idx = m_graph.m_adj[node][edge];
-			auto const& node0 = m_graph.m_nodes[node];
-			auto const& node1 = m_graph.m_nodes[next_idx];
+			Graph& m_graph;
+			GraphNode m_goal;
+			WorkingData m_astar_working_data;
 
-			return EdgeData{
-				.target_node = next_idx,
-				.edge_cost = Distance(node0, node1),
+			Adptr(Graph& graph, GraphNode const& goal)
+				: m_graph(graph)
+				, m_goal(goal)
+			{
+			}
+
+			// Reused data structures for repeated searches
+			WorkingData& astar_working_data()
+			{
+				return m_astar_working_data;
+			}
+
+			// The distance between nodes
+			static float Distance(Graph::Node const& a, Graph::Node const& b)
+			{
+				constexpr auto sqr = [](auto x) { return x * x; };
+				return std::sqrtf(sqr(a.x - b.x) + sqr(a.y - b.y));
 			};
-		}
 
-		// Read the heuristic value for the node (aka. cost-to-goal value)
-		NodeData MeasureNode(node_ref node_idx) const
-		{
-			assert(node_idx >= 0 && node_idx < _countof(m_graph.m_adj));
+			// Get a reference to the next edge of 'node'.
+			edge_ref NextEdge(node_ref node, edge_ref edge) const
+			{
+				++edge;
+				return edge >= 0 && edge < ssize(m_graph.m_adj[node]) ? edge : NoEdge;
+			}
 
-			auto const& node0 = m_graph.m_nodes[node_idx];
-			auto distance = Distance(node0, m_goal);
-			return NodeData{
-				.heuristic_cost = distance,
-				.is_goal = distance < 0.001f,
-			};
-		}
+			// Return the edge data for the given edge index.
+			EdgeData ReadEdge(node_ref node, edge_ref edge) const
+			{
+				assert(node >= 0 && node < _countof(m_graph.m_adj));
+				assert(edge >= 0 && edge < static_cast<int>(ssize(m_graph.m_adj[node])));
 
-		// Combines the 'cost_to_node' with the 'cost_to_goal' value (since they can be in different units)
-		cost_type CombinedCost(cost_type cost_to_node, cost_type cost_to_goal) const
-		{
-			return cost_to_node + cost_to_goal;
-		}
-	};
-	static_assert(astar::AdapterType<Adptr>);
+				// The node that "nodes[node].edges[edge]" is connected to
+				auto next_idx = m_graph.m_adj[node][edge];
+				auto const& node0 = m_graph.m_nodes[node];
+				auto const& node1 = m_graph.m_nodes[next_idx];
 
-	PRUnitTest(AStarSearchTest)
-	{
+				return EdgeData{
+					.target_node = next_idx,
+					.edge_cost = Distance(node0, node1),
+				};
+			}
+
+			// Read the heuristic value for the node (aka. cost-to-goal value)
+			NodeData MeasureNode(node_ref node_idx) const
+			{
+				assert(node_idx >= 0 && node_idx < _countof(m_graph.m_adj));
+
+				auto const& node0 = m_graph.m_nodes[node_idx];
+				auto distance = Distance(node0, m_goal);
+				return NodeData{
+					.heuristic_cost = distance,
+					.is_goal = distance < 0.001f,
+				};
+			}
+
+			// Combines the 'cost_to_node' with the 'cost_to_goal' value (since they can be in different units)
+			cost_type CombinedCost(cost_type cost_to_node, cost_type cost_to_goal) const
+			{
+				return cost_to_node + cost_to_goal;
+			}
+		};
+		static_assert(astar::AdapterType<Adptr>);
+
 		Graph graph;
 
-		const auto RunTest = [&graph](Graph::Node const& start, Graph::Node const& goal, bool should_find, std::span<int const> expected)
+		void RunTest(Graph::Node const& start, Graph::Node const& goal, bool should_find, std::span<int const> expected)
 		{
 			Adptr adapter(graph, goal);
 			auto start_index = static_cast<int>(&start - &graph.m_nodes[0]);
@@ -472,30 +472,33 @@ namespace pr::algorithm::astar::unittests
 				PR_EXPECT(hop.node == expected[i]);
 				PR_EXPECT(i + 1 == ssize(path) || adj[hop.edge] == path[i + 1].node);
 			}
-		};
+		}
 
-		{ // Node0 -> Node8
-			int const expected[] = { 0, 10, 5, 8 };
-			RunTest(graph.m_nodes[0], graph.m_nodes[8], true, expected);
+		PRUnitTestMethod(General)
+		{
+			{ // Node0 -> Node8
+				int const expected[] = { 0, 10, 5, 8 };
+				RunTest(graph.m_nodes[0], graph.m_nodes[8], true, expected);
+			}
+			{ // Node6 -> Node3
+				int const expected[] = { 6, 2, 9, 3 };
+				RunTest(graph.m_nodes[6], graph.m_nodes[3], true, expected);
+			}
+			{ // Node4 -> (0,0)
+				int const expected[] = { 4, 10, 5 };
+				RunTest(graph.m_nodes[4], Graph::Node{ 0, 0 }, false, expected);
+			}
+			{ // Node7 -> (7,7)
+				int const expected[] = { 7, 1, 6, 2 };
+				RunTest(graph.m_nodes[7], Graph::Node{ 7, 7 }, false, expected);
+			}
+			{ // Node7 -> Node7 (degenerate case)
+				RunTest(graph.m_nodes[7], graph.m_nodes[7], true, {});
+			}
+			{ // Node7 -> (-4,0) ("near" node7 degenerate case)
+				RunTest(graph.m_nodes[7], Graph::Node{ -4, 0 }, false, {});
+			}
 		}
-		{ // Node6 -> Node3
-			int const expected[] = { 6, 2, 9, 3 };
-			RunTest(graph.m_nodes[6], graph.m_nodes[3], true, expected);
-		}
-		{ // Node4 -> (0,0)
-			int const expected[] = { 4, 10, 5 };
-			RunTest(graph.m_nodes[4], Graph::Node{ 0, 0 }, false, expected);
-		}
-		{ // Node7 -> (7,7)
-			int const expected[] = { 7, 1, 6, 2 };
-			RunTest(graph.m_nodes[7], Graph::Node{ 7, 7 }, false, expected);
-		}
-		{ // Node7 -> Node7 (degenerate case)
-			RunTest(graph.m_nodes[7], graph.m_nodes[7], true, {});
-		}
-		{ // Node7 -> (-4,0) ("near" node7 degenerate case)
-			RunTest(graph.m_nodes[7], Graph::Node{ -4, 0 }, false, {});
-		}
-	}
+	};
 }
 #endif

@@ -3,28 +3,17 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 
 namespace pr::rdr12::ldraw
 {
-	//struct Str
-	//{
-	//	std::string m_str;
-	//	Str(std::string const& str) :m_str(str) {}
-	//	Str(std::wstring const& str) :m_str(Narrow(str)) {}
-	//};
 	struct Name
 	{
 		std::string m_name;
 		Name() :m_name() {}
 		Name(std::string_view str) :m_name(Sanitise(str)) {}
-		Name(std::wstring_view str) :m_name(Sanitise(Narrow(str))) {}
 		Name(std::string const& str) :m_name(Sanitise(str)) {}
-		Name(std::wstring const& str) :m_name(Sanitise(Narrow(str))) {}
 		template <int N> Name(char const (&str)[N]) :m_name(Sanitise(str)) {}
-		template <int N> Name(wchar_t const (&str)[N]) :m_name(Sanitise(Narrow(str))) {}
-		Name(string32 const& str) :m_name(Sanitise(std::string(str.begin(), str.end()))) {}
 		static std::string Sanitise(std::string_view name)
 		{
 			std::string result(name);
@@ -37,24 +26,25 @@ namespace pr::rdr12::ldraw
 	{
 		Colour32 m_colour;
 		EKeyword m_kw;
-		Colour() : m_colour(0xFFFFFFFF), m_kw(EKeyword::Colour) {}
+		Colour() :m_colour(0xFFFFFFFF), m_kw(EKeyword::Colour) {}
 		Colour(Colour32 c) :m_colour(c), m_kw(EKeyword::Colour) {}
 		Colour(uint32_t argb) :m_colour(argb), m_kw(EKeyword::Colour) {}
 		Colour(Colour32 c, EKeyword kw) :m_colour(c), m_kw(kw) {}
+		bool IsDefault() const { return m_colour == 0xFFFFFFFF; }
 	};
 	struct Size
 	{
 		float m_size;
-		Size() :m_size(0) {}
-		Size(float size) :m_size(size) {}
-		Size(int size) :m_size(float(size)) {}
+		Size() : m_size() {}
+		Size(float size) : m_size(size) {}
+		Size(int size) : m_size(float(size)) {}
 	};
 	struct Size2
 	{
 		v2 m_size;
-		Size2() :m_size() {}
-		Size2(v2 size) :m_size(size) {}
-		Size2(iv2 size) :m_size(float(size.x), float(size.y)) {}
+		Size2() : m_size() {}
+		Size2(v2 size) : m_size(size) {}
+		Size2(iv2 size) : m_size(static_cast<float>(size.x), static_cast<float>(size.y)) {}
 	};
 	struct Width
 	{
@@ -66,7 +56,7 @@ namespace pr::rdr12::ldraw
 	struct Scale
 	{
 		float m_scale;
-		Scale() : m_scale(1.0f) {}
+		Scale() : m_scale(1) {}
 		Scale(float scale) : m_scale(scale) {}
 	};
 	struct Scale2
@@ -79,7 +69,7 @@ namespace pr::rdr12::ldraw
 	{
 		v3 m_scale;
 		Scale3() : m_scale(v3::One()) {}
-		Scale3(v3 scale) : m_scale(scale) {}
+		Scale3(v3 scale) :m_scale(scale) {}
 	};
 	struct PerItemColour
 	{
@@ -132,31 +122,39 @@ namespace pr::rdr12::ldraw
 	};
 	struct AxisId
 	{
-		pr::AxisId m_axis = pr::AxisId::None;
-		AxisId(pr::AxisId axis) :m_axis(axis) {}
+		pr::AxisId m_axis;
+		AxisId() : m_axis(pr::AxisId::None) {}
+		AxisId(pr::AxisId axis) : m_axis(axis) {}
+		bool IsDefault() const { return m_axis == pr::AxisId::None; }
 	};
 	struct ArrowType
 	{
-		EArrowType m_type = EArrowType::Fwd;
-		ArrowType(EArrowType type) :m_type(type) {}
+		EArrowType m_type;
+		ArrowType() : m_type(EArrowType::Fwd) {}
+		ArrowType(EArrowType type) : m_type(type) {}
 	};
 	struct Pos
 	{
 		v4 m_pos;
-		Pos(v4 const& pos) :m_pos(pos) {}
-		Pos(m4x4 const& mat) :m_pos(mat.pos) {}
+		Pos() : m_pos(v4::Origin()) {}
+		Pos(v4 pos) : m_pos(pos) {}
+		Pos(m4x4 const& mat) : Pos(mat.pos) {}
+		bool IsOrigin() const { return m_pos == v4::Origin(); }
 	};
 	struct O2W
 	{
 		m4x4 m_mat;
-		O2W() :m_mat(m4x4::Identity()) {}
-		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
+		O2W() : m_mat(m4x4::Identity()) {}
 		O2W(m4x4 const& mat) :m_mat(mat) {}
+		O2W(v4 pos) : m_mat(m4x4::Identity()) { m_mat.pos = pos; }
+		bool IsIdentity() const { return m_mat == m4x4::Identity(); }
+		bool IsTranslation() const { return m_mat.x == v4::XAxis() && m_mat.y == v4::YAxis() && m_mat.z == v4::ZAxis() && m_mat.pos.w == 1; }
+		bool IsAffine() const { return pr::IsAffine(m_mat); }
 	};
 	struct VariableInt
 	{
 		int m_value;
-		VariableInt() :m_value() {}
+		VariableInt() : m_value() {}
 		VariableInt(int value) : m_value(value & 0x3FFFFFFF) {}
 	};
 	struct StringWithLength
@@ -192,7 +190,7 @@ namespace pr::rdr12::ldraw
 		static int last(TOut&)
 		{
 			// Last emitted char, if available
-			return char_traits<char>::eof();
+			return std::char_traits<char>::eof();
 		}
 	};
 	template <> struct traits<textbuf>
@@ -204,7 +202,7 @@ namespace pr::rdr12::ldraw
 		}
 		static int last(textbuf& out)
 		{
-			return !out.empty() ? out.back() : char_traits<char>::eof();
+			return !out.empty() ? out.back() : std::char_traits<char>::eof();
 		}
 	};
 	template <> struct traits<bytebuf>
@@ -212,7 +210,7 @@ namespace pr::rdr12::ldraw
 		static bytebuf& write(bytebuf& out, std::span<std::byte const> data, int64_t ofs = -1)
 		{
 			ofs = ofs != -1 ? ofs : ssize(out);
-			out.resize(std::max<size_t>(out.size(), s_cast<size_t>(ofs + data.size())));
+			out.resize(std::max<size_t>(out.size(), static_cast<size_t>(ofs + data.size())));
 			std::memcpy(out.data() + ofs, data.data(), data.size());
 			return out;
 		}
@@ -222,17 +220,26 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
-	// Types that can be 'memcpy'ed
-	template <typename T> concept PrimitiveType =
-		std::is_integral_v<T> ||
-		std::is_floating_point_v<T> ||
-		std::is_enum_v<T> ||
-		maths::VecOrMatType<T> ||
-		false;
-	template <typename T> concept PrimitiveSpanType = requires(T t)
+	// Memcpyable arrays
+	template <typename T> concept PrimitiveSpanType =
+		std::is_trivially_copyable_v<T> &&
+		std::is_same_v<T, std::string_view> == false &&
+		std::is_same_v<T, std::string> == false &&
+		std::is_same_v<T, string32> == false &&
+		requires(T t)
+		{
+			{ t.data() } -> std::same_as<typename T::value_type*>;
+			{ t.size() } -> std::same_as<std::size_t>;
+		};
+
+	// The section header
+	struct SectionHeader
 	{
-		PrimitiveType<typename T::value_type>;
-		{ t.data() } -> std::same_as<typename T::value_type*>;
-		{ t.size() } -> std::same_as<std::size_t>;
+		// The hash of the keyword (4-bytes)
+		EKeyword m_keyword;
+
+		// The length of the section in bytes (excluding the header size)
+		int m_size;
 	};
+	static_assert(sizeof(SectionHeader) == 8);
 }

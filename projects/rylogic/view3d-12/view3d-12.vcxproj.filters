@@ -255,7 +255,7 @@
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp">
+    <ClCompile Include="src\ldraw\ldraw_reader_text.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\ldraw\sources\ldraw_sources.cpp">
@@ -659,6 +659,24 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_ray_cast.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_allocation.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer_page.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_reader_binary.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_writer_binary.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_writer_text.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_reader_text.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision_builder.h">
       <Filter>src\compute\particle_collision</Filter>
     </ClInclude>
@@ -710,12 +728,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h">
-      <Filter>src\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h">
-      <Filter>src\ldraw</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
@@ -742,12 +754,6 @@
     </ClInclude>
     <ClInclude Include="src\ldraw\sources\source_binary.h">
       <Filter>src\ldraw\sources</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_allocation.h">
-      <Filter>src\resource</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer_page.h">
-      <Filter>src\resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

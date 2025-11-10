@@ -1,10 +1,10 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 
 namespace pr::rdr12
 {

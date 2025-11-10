@@ -1,4 +1,4 @@
-#! "net9.0"
+﻿#! "net9.0"
 // Auto generator for View3d.
 // Use:
 //  dotnet-script.exe auto_gen.csx $(RylogicRoot)
@@ -11,7 +11,7 @@ using System;
 using System.Text.RegularExpressions;
 using Rylogic.Utility;
 
-static Regex Pattern = new Regex(@"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*\""(.*?)\""\s*\)\).*");
+static Regex Pattern = new Regex(@"\s*x\(\s*(.*?)\s*\).*");
 string Root = Args.Count != 0 ? Args[0] : "E:\\Rylogic\\Code";
 
 // Do the auto gen
@@ -31,16 +31,16 @@ void AutoGen()
 	ReplaceSection(
 		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "projects/rylogic/Rylogic.Gfx/src/LDraw/LDraw.cs"),
-		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
+		"#define PR_LDRAW_KEYWORDS(x)",
+		"PR_LDRAW_KEYWORDS_END",
 		"// AUTO-GENERATED-KEYWORDS-BEGIN",
 		"// AUTO-GENERATED-KEYWORDS-END",
 		TransformEnumLineToCSharp);
 	ReplaceSection(
-		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw_commands.h"),
+		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "projects/rylogic/Rylogic.Gfx/src/LDraw/LDraw.cs"),
-		"#define PR_ENUM_LDRAW_COMMANDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
+		"#define PR_LDRAW_COMMANDS(x)",
+		"PR_LDRAW_COMMANDS_END",
 		"// AUTO-GENERATED-COMMANDS-BEGIN",
 		"// AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineToCSharp);
@@ -49,16 +49,16 @@ void AutoGen()
 	ReplaceSection(
 		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "projects/rylogic/py-rylogic/rylogic/ldraw/ldraw.py"),
-		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
+		"#define PR_LDRAW_KEYWORDS(x)",
+		"PR_LDRAW_KEYWORDS_END",
 		"# AUTO-GENERATED-KEYWORDS-BEGIN",
 		"# AUTO-GENERATED-KEYWORDS-END",
 		TransformEnumLineToPython);
 	ReplaceSection(
-		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw_commands.h"),
+		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "projects/rylogic/py-rylogic/rylogic/ldraw/ldraw.py"),
-		"#define PR_ENUM_LDRAW_COMMANDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
+		"#define PR_LDRAW_COMMANDS(x)",
+		"PR_LDRAW_COMMANDS_END",
 		"# AUTO-GENERATED-COMMANDS-BEGIN",
 		"# AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineToPython);
@@ -67,16 +67,16 @@ void AutoGen()
 	ReplaceSection(
 		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "miscellaneous/010 templates/LDRTemplate.bt"),
-		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
+		"#define PR_LDRAW_KEYWORDS(x)",
+		"PR_LDRAW_KEYWORDS_END",
 		"// AUTO-GENERATED-KEYWORDS-BEGIN",
 		"// AUTO-GENERATED-KEYWORDS-END",
 		TransformEnumLineTo010Template);
 	ReplaceSection(
-		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw_commands.h"),
+		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
 		Path.Join(Root, "miscellaneous/010 templates/LDRTemplate.bt"),
-		"#define PR_ENUM_LDRAW_COMMANDS(x)",
-		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
+		"#define PR_LDRAW_COMMANDS(x)",
+		"PR_LDRAW_COMMANDS_END",
 		"// AUTO-GENERATED-COMMANDS-BEGIN",
 		"// AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineTo010Template);
@@ -94,21 +94,21 @@ string TransformToCppString(string line)
 string TransformEnumLineToCSharp(string line)
 {
 	var match = Pattern.Match(line.Trim());
-	return match.Success ? $"{match.Groups[1].Value} = unchecked((int){HashI(match.Groups[2].Value)})," : line.Trim();
+	return match.Success ? $"{match.Groups[1].Value} = unchecked((int){HashI(match.Groups[1].Value)})," : line.Trim();
 }
 
 // Convert from C++ code macro to python
 string TransformEnumLineToPython(string line)
 {
 	var match = Pattern.Match(line.Trim());
-	return match.Success ? $"{match.Groups[1].Value} = {HashI(match.Groups[2].Value)}" : line.Trim();
+	return match.Success ? $"{match.Groups[1].Value} = {HashI(match.Groups[1].Value)}" : line.Trim();
 }
 
 // Convert from C++ code macro to C++
 string TransformEnumLineTo010Template(string line)
 {
 	var match = Pattern.Match(line.Trim());
-	return match.Success ? $"{match.Groups[1].Value} = {HashI(match.Groups[2].Value)}," : line.Trim();
+	return match.Success ? $"{match.Groups[1].Value} = {HashI(match.Groups[1].Value)}," : line.Trim();
 }
 
 // Replace a block of lines within a file from lines from another file

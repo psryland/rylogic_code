@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -8,6 +8,8 @@
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/resource/gpu_transfer_buffer.h"
+#include "pr/view3d-12/resource/gpu_descriptor_heap.h"
+#include "pr/view3d-12/utility/cmd_list_collection.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/keep_alive.h"
 

@@ -5,7 +5,7 @@
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/dll/context.h"

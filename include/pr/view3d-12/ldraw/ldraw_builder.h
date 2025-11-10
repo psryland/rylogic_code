@@ -1,4 +1,4 @@
-﻿//************************************
+//************************************
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -13,15 +13,14 @@
 //      pr::network::socket_stream ldr("localhost", 1976);
 //      ldr << builder.ToText(false) << std::flush;
 #pragma once
-#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_writer_text.h"
+#include "pr/view3d-12/ldraw/ldraw_writer_binary.h"
 
 namespace pr::rdr12::ldraw
 {
-	enum class ESaveFlags
+	enum class ESaveFlags : uint32_t
 	{
 		None = 0,
 		Binary = 1 << 0,
@@ -140,7 +139,7 @@ namespace pr::rdr12::ldraw
 			// Reset the builder
 			LdrBuilder& Clear(int count = -1)
 			{
-				if (count >= 0 && count < isize(m_objects))
+				if (count >= 0 && count < ssize(m_objects))
 					m_objects.resize(m_objects.size() - count);
 				else
 					m_objects.clear();
@@ -252,7 +251,7 @@ namespace pr::rdr12::ldraw
 			LdrBase()
 				: m_name()
 				, m_colour()
-				, m_o2w(m4x4::Identity())
+				, m_o2w()
 				, m_wire()
 				, m_axis_id(pr::AxisId::None)
 				, m_solid()

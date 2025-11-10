@@ -3,15 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2025
 //********************************
 #pragma once
-#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
-#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
 namespace pr::rdr12::ldraw
 {
 	struct TextWriter
 	{
+		template <typename T> struct no_overload;
 		template <typename TOut, typename Type> static void Append(TOut& out, Type)
 		{
 			// Note: if you hit this error, it's probably because Append(out, ???) is being
@@ -19,7 +18,8 @@ namespace pr::rdr12::ldraw
 			// Also watch out for the error being a typedef of a common type,
 			// e.g. I've seen 'Type=std::ios_base::openmode' as an error, but really it was
 			// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
-			static_assert(dependent_false<Type>, "no overload for 'Type'");
+			no_overload<Type> missing_overload;
+			//static_assert(std::is_same_v<Type, std::false_type>, "no overload for 'Type'");
 		}
 		template <typename TOut> static void Append(TOut& out, std::string_view s)
 		{
@@ -30,15 +30,15 @@ namespace pr::rdr12::ldraw
 			}
 			traits<TOut>::append(out, s);
 		}
-		template <typename TOut> static void Append(TOut& out, std::string&& s)
-		{
-			Append(out, std::string_view{ s });
-		}
-		template <typename TOut> static void Append(TOut& out, char const* s)
+		template <typename TOut> static void Append(TOut& out, std::string s)
 		{
 			Append(out, std::string_view{ s });
 		}
 		template <typename TOut> static void Append(TOut& out, string32 s)
+		{
+			Append(out, std::string_view{ s });
+		}
+		template <typename TOut> static void Append(TOut& out, char const* s)
 		{
 			Append(out, std::string_view{ s });
 		}
@@ -242,7 +242,7 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, AxisId a)
 		{
-			if (a.m_axis.value == pr::AxisId::None) return;
+			if (a.IsDefault()) return;
 			Write(out, EKeyword::AxisId, a.m_axis.value);
 		}
 		template <typename TOut> static void Append(TOut& out, ArrowType a)
@@ -252,7 +252,7 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{
-			if (p.m_pos == v4::Origin()) return;
+			if (p.IsOrigin()) return;
 			Write(out, EKeyword::O2W, [&]
 			{
 				Write(out, EKeyword::Pos, p.m_pos.xyz);
@@ -260,18 +260,20 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, O2W o2w)
 		{
-			if (o2w.m_mat == m4x4::Identity())
+			if (o2w.IsIdentity())
 				return;
 
-			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
+			if (o2w.IsTranslation())
+			{
 				return Write(out, EKeyword::O2W, [&]
-					{
-						Write(out, EKeyword::Pos, o2w.m_mat.pos.xyz);
-					});
+				{
+					Write(out, EKeyword::Pos, o2w.m_mat.pos.xyz);
+				});
+			}
 
 			Write(out, EKeyword::O2W, [&]
 			{
-				if (!IsAffine(o2w.m_mat)) Write(out, EKeyword::NonAffine);
+				if (!o2w.IsAffine()) Write(out, EKeyword::NonAffine);
 				Write(out, EKeyword::M4x4, o2w.m_mat);
 			});
 		}
@@ -291,7 +293,7 @@ namespace pr::rdr12::ldraw
 			// Optional name/colour
 			if (!name.m_name.empty())
 				Append(out, std::string_view{ name.m_name });
-			if (colour.m_colour != Colour32White)
+			if (!colour.IsDefault())
 				Append(out, colour.m_colour);
 
 			// Section start
@@ -326,99 +328,19 @@ namespace pr::rdr12::ldraw
 				(Append(out, std::forward<TItem>(items)), ...);
 			});
 		}
-	};
 
-	struct TextReader : IReader
-	{
-		alignas(8) std::byte m_src[208];
-		alignas(8) std::byte m_pp[880];
-		mutable Location m_location;
-		string32 m_keyword;
-		wstring32 m_delim;
-		int m_section_level;
-		int m_nest_level;
-
-		TextReader(std::istream& stream, std::filesystem::path src_filepath, EEncoding enc = EEncoding::utf8, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = NoIncludes::Instance());
-		TextReader(std::wistream& stream, std::filesystem::path src_filepath, EEncoding enc = EEncoding::utf16_le, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = NoIncludes::Instance());
-		TextReader(TextReader&&) = delete;
-		TextReader(TextReader const&) = delete;
-		TextReader& operator=(TextReader&&) = delete;
-		TextReader& operator=(TextReader const&) = delete;
-		~TextReader();
-
-		// Return the current location in the source
-		virtual Location const& Loc() const override;
-
-		// Move into a nested section
-		virtual void PushSection() override;
-
-		// Leave the current nested section
-		virtual void PopSection() override;
-
-		// True when the current position has reached the end of the current section
-		virtual bool IsSectionEnd() override;
-
-		// True when the source is exhausted
-		virtual bool IsSourceEnd() override;
-
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
-		virtual bool NextKeywordImpl(int& kw) override;
-
-		// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 IdentifierImpl() override;
-
-		// Read a utf8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 StringImpl(char escape_char) override;
-
-		// Read an integral value from the current section
-		virtual int64_t IntImpl(int byte_count, int radix) override;
-
-		// Read a floating point value from the current section
-		virtual double RealImpl(int byte_count) override;
-
-		// Read an enum value from the current section
-		virtual int64_t EnumImpl(int byte_count, ParseEnumIdentCB parse) override;
-
-		// Read a boolean value from the current section
-		virtual bool BoolImpl() override;
-	};
-}
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::rdr12::ldraw
-{
-	PRUnitTest(LDrawTextSerialiserTests)
-	{
-		std::ostringstream strm;
-		TextWriter::Write(strm, EKeyword::Point, "TestPoints", 0xFF00FF00, [&]
+		// Convert values to string
+		template <typename T, int N> static std::string_view conv(char(&buf)[N], T value)
 		{
-			TextWriter::Write(strm, EKeyword::Data, v3(1, 1, 1), v3(2, 2, 2), v3(3, 3, 3));
-			TextWriter::Write(strm, EKeyword::Line, "TestLines", 0xFF0000FF, [&]
-			{
-				TextWriter::Write(strm, EKeyword::Data, v3(-1, -1, 0), v3(1, 1, 0), v3(-1, 1, 0), v3(1, -1, 0));
-			});
-			TextWriter::Write(strm, EKeyword::Sphere, "TestSphere", 0xFFFF0000, [&]
-			{
-				TextWriter::Write(strm, EKeyword::Data, 1.0f);
-			});
-			TextWriter::Write(strm, EKeyword::Custom, [&]
-			{
-				std::string_view s = "ShortString";
-				TextWriter::Write(strm, EKeyword::Name, StringWithLength{ s }, StringWithLength{ s });
-			});
-		});
-
-		auto data = strm.str();
-		PR_EXPECT(data.size() != 0);
-
-		#if 0
-		{
-			std::ofstream ofile(temp_dir / "ldraw_test.lbr");
-			ofile.write(data.data(), data.size());
+			auto [ptr, ec] = std::to_chars(&buf[0], &buf[0] + N, value);
+			if (ec != std::errc{}) throw std::system_error(std::make_error_code(ec));
+			return std::string_view{ &buf[0], static_cast<size_t>(ptr - &buf[0]) };
 		}
-		#endif
-	}
+		template <typename T, int N> static std::string_view conv(char(&buf)[N], T value, int base)
+		{
+			auto [ptr, ec] = std::to_chars(&buf[0], &buf[0] + N, value, base);
+			if (ec != std::errc{}) throw std::system_error(std::make_error_code(ec));
+			return std::string_view{ &buf[0], static_cast<size_t>(ptr - &buf[0]) };
+		}
+	};
 }
-#endif

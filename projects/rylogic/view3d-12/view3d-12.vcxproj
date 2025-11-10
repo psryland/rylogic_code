@@ -64,7 +64,7 @@
   <ItemGroup>
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
     <ClCompile Include="src\ldraw\ldraw_object.cpp" />
-    <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_reader_text.cpp" />
     <ClCompile Include="src\ldraw\ldraw_demo_scene.cpp" />
     <ClCompile Include="src\ldraw\ldraw_templates.cpp" />
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
@@ -173,13 +173,15 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_builder.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_reader_binary.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_reader_text.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_angle_tool.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_measure_tool.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_object_manager.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_script_editor.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_writer_binary.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_writer_text.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h" />
@@ -276,7 +278,6 @@
   Shaders
   -->
   <ItemDefinitionGroup>
-
     <View3dShaderBuild>
       <ShaderType>Effect</ShaderType>
       <ShaderModel>6.6</ShaderModel>
@@ -287,7 +288,6 @@
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </View3dShaderBuild>
-
     <FxCompile>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
@@ -298,7 +298,6 @@
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </FxCompile>
-    
     <!-- HLSL Compiler settings for IntelliSense
     <HLSLCompiler>
       <ShaderModel>6.6</ShaderModel>
@@ -311,7 +310,6 @@
       <EnableDebuggingInformation>true</EnableDebuggingInformation>
     </HLSLCompiler>
     -->
-
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

@@ -11,6 +11,7 @@ namespace pr
 	// Notes:
 	//  - Add conversions by specialising 'Convert' or by simply overloading the 'To' function
 	//  - Include 'string_core' for string conversion
+	//  - To find an existing implementation, search for `Convert<MyType,`
 
 	// Convert 'from' to 'to'
 	template <typename TTo, typename TFrom> struct Convert : std::false_type
@@ -19,12 +20,12 @@ namespace pr
 		constexpr static TTo Func(TFrom const&)
 		{
 			no_conversion_for_these_types error;
-			static_assert(Convert<TTo, TFrom>::value, "No conversion from this type is available");
+			//static_assert(Convert<TTo, TFrom>::value, "No conversion from this type is available");
 		}
 		template <typename... Args> constexpr static TTo Func(TFrom const&, Args...)
 		{
 			no_conversion_for_these_types error;
-			static_assert(Convert<TTo, TFrom>::value, "No conversion from this type is available");
+			//static_assert(Convert<TTo, TFrom>::value, "No conversion from this type is available");
 		}
 	};
 

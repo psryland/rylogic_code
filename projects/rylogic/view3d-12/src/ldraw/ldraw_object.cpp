@@ -116,7 +116,7 @@ namespace pr::rdr12::ldraw
 	// Return the declaration name of this object
 	string32 LdrObject::TypeAndName() const
 	{
-		return string32(Enum<ELdrObject>::ToStringA(m_type)) + " " + m_name;
+		return string32(ELdrObject_::ToStringA(m_type)) + " " + m_name;
 	}
 
 	// Recursively add this object and its children to a viewport

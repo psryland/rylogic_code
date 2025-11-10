@@ -47,6 +47,7 @@ namespace pr::unittests
 #include <random>
 #include <chrono>
 #include <cstdarg>
+#include <cmath>
 #include <locale>
 #include <format>
 #include <Windows.h>

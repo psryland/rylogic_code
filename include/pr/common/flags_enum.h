@@ -177,19 +177,19 @@
 #include "pr/common/unittests.h"
 namespace pr::common
 {
-	namespace unittests::flag_enum
+	PRUnitTestClass(FlagsEnumTests)
 	{
 		enum class NotFlags
 		{
-			One   = 1,
-			Two   = 2,
+			One = 1,
+			Two = 2,
 		};
 		static_assert(is_flags_enum_v<NotFlags> == false);
-			
+
 		enum class Flags : uint32_t // Flags should be unsigned types
 		{
-			One   = 1 << 0,
-			Two   = 1 << 1,
+			One = 1 << 0,
+			Two = 1 << 1,
 
 			_flags_enum = 0,
 		};
@@ -197,28 +197,25 @@ namespace pr::common
 
 		enum class Numbers
 		{
-			Zero     = 0,
-			Two      = 2,
-			One      = 1,
-			Six      = 6,
-			Three    = 3,
+			Zero = 0,
+			Two = 2,
+			One = 1,
+			Six = 6,
+			Three = 3,
 			MinusTwo = -2,
 
 			_arith_enum = 0,
 		};
 		static_assert(ArithEnum<Numbers>);
-	}
-	PRUnitTest(FlagsEnumTests)
-	{
-		using namespace unittests::flag_enum;
 
-		{// Bitwise
+		PRUnitTestMethod(Bitwise)
+		{
 			using E = Flags;
 			//using E = NotFlags; // Uncomment to test not-compiling-ness
 
-			auto a =  E::One | E::Two;
-			auto b =  E::One & E::Two;
-			auto c =  E::One ^ E::Two;
+			auto a = E::One | E::Two;
+			auto b = E::One & E::Two;
+			auto c = E::One ^ E::Two;
 			auto f = ~E::One;
 
 			PR_EXPECT((int)a == 3);
@@ -234,8 +231,8 @@ namespace pr::common
 			PR_EXPECT((int)b == 0);
 			PR_EXPECT((int)c == 1);
 		}
-
-		{// Arithmetic
+		PRUnitTestMethod(Arithmetic)
+		{
 			using E = Numbers;
 			static_assert(ArithEnum<E>);
 
@@ -255,6 +252,6 @@ namespace pr::common
 			PR_EXPECT(E::Two / 2 == E::One);
 			PR_EXPECT(6 / E::Two == E::Three);
 		}
-	}
+	};
 }
 #endif
