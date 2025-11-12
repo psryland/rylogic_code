@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Numerics;
 using Rylogic.Extn;
 
 namespace Rylogic.Maths
@@ -145,6 +146,16 @@ namespace Rylogic.Maths
 			return new double[] { p.x, p.y, p.z, p.w };
 		}
 
+		/// <summary>Implicit conversion to System.Numerics</summary>
+		public static implicit operator v4(Vector4 v)
+		{
+			return new v4(v.X, v.Y, v.Z, v.W);
+		}
+		public static implicit operator Vector4(v4 v)
+		{
+			return new Vector4(v.x, v.y, v.z, v.w);
+		}
+
 		public v4 w0 => new(x, y, z, 0);
 		public v4 w1 => new(x, y, z, 1);
 
@@ -248,7 +259,16 @@ namespace Rylogic.Maths
 		#region ToString
 		public override string ToString() => $"{x} {y} {z} {w}";
 		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
-		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Cpp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Python => $"{x:+0.0000000;-0.0000000;+0.0000000}, {y:+0.0000000;-0.0000000;+0.0000000}, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -758,6 +778,20 @@ namespace Rylogic.UnitTests
 			var a = new v4(-2,  4,  2,  6);
 			var b = new v4( 3, -5,  2, -4);
 			Assert.True(Math_.FEql(Math_.Dot(a,b), -46f));
+		}
+		[Test] public void NumericsConversion()
+		{
+			var vec0 = new Vector4(1,2,3,4);
+			var vec1 = (v4)vec0;
+			var vec2 = (Vector4)vec1;
+			var vec3 = (v4)vec2;
+
+			Assert.True(vec0 == vec2);
+			Assert.True(vec1 == vec3);
+			Assert.True(vec0.X == vec1.x);
+			Assert.True(vec0.Y == vec1.y);
+			Assert.True(vec0.Z == vec1.z);
+			Assert.True(vec0.W == vec1.w);
 		}
 	}
 }

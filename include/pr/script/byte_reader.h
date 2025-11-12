@@ -537,7 +537,7 @@ namespace pr::script
 				}
 				if (kw == ETransformKeyword::Inverse)
 				{
-					p2w = IsOrthonormal(p2w) ? InvertFast(p2w) : Invert(p2w);
+					p2w = IsOrthonormal(p2w) ? InvertAffine(p2w) : Invert(p2w);
 					continue;
 				}
 				if (kw == ETransformKeyword::Normalise)

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Numerics;
 using Rylogic.Extn;
 
 namespace Rylogic.Maths
@@ -99,16 +100,6 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		[Obsolete]
-		public float get(int r, int c)
-		{
-			return this[r, c];
-		}
-		[Obsolete]
-		public void set(int r, int c, float value)
-		{
-			this[r, c] = value;
-		}
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
@@ -120,6 +111,26 @@ namespace Rylogic.Maths
 				z.x, z.y, z.z, z.w,
 				w.x, w.y, w.z, w.w,
 			};
+		}
+
+		/// <summary>Implicit conversion to System.Numerics</summary>
+		public static implicit operator m4x4(Matrix4x4 m)
+		{
+			return new m4x4(
+				new v4(m.M11, m.M12, m.M13, m.M14),
+				new v4(m.M21, m.M22, m.M23, m.M24),
+				new v4(m.M31, m.M32, m.M33, m.M34),
+				new v4(m.M41, m.M42, m.M43, m.M44)
+			);
+		}
+		public static implicit operator Matrix4x4(m4x4 m)
+		{
+			return new Matrix4x4(
+				m.x.x, m.x.y, m.x.z, m.x.w,
+				m.y.x, m.y.y, m.y.z, m.y.w,
+				m.z.x, m.z.y, m.z.z, m.z.w,
+				m.w.x, m.w.y, m.w.z, m.w.w
+			);
 		}
 
 		/// <summary>Create a translation matrix</summary>
@@ -345,7 +356,16 @@ namespace Rylogic.Maths
 		public string ToString4x4(string delim = "\n") => $"{x} {delim}{y} {delim}{z} {delim}{w} {delim}";
 		public string ToString3x4(string delim = "\n") => $"{x} {delim}{y} {delim}{z} {delim}";
 		public string ToString(string format, string delim = "\n") => $"{x.ToString(format)} {delim}{y.ToString(format)} {delim}{z.ToString(format)} {delim}{w.ToString(format)} {delim}";
-		public string ToCodeString() => $"new m4x4(\nnew v4({x.ToCodeString()}),\n new v4({y.ToCodeString()}),\n new v4({z.ToCodeString()}),\n new v4({w.ToCodeString()})\n)";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"new m4x4(\nnew v4({x.ToCodeString(fmt)}),\n new v4({y.ToCodeString(fmt)}),\n new v4({z.ToCodeString(fmt)}),\n new v4({w.ToCodeString(fmt)})\n)",
+				ECodeString.Cpp => $"{{\n{{{x.ToCodeString(fmt)}}},\n{{{y.ToCodeString(fmt)}}},\n{{{z.ToCodeString(fmt)}}},\n{{{w.ToCodeString(fmt)}}},\n}}",
+				ECodeString.Python => $"[\n[{x.ToCodeString(fmt)}],\n[{y.ToCodeString(fmt)}],\n[{z.ToCodeString(fmt)}],\n[{w.ToCodeString(fmt)}],\n]",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -553,6 +573,12 @@ namespace Rylogic.Maths
 			return m;
 		}
 
+		/// <summary>True if 'm' is orthogonal</summary>
+		public static bool IsOrthogonal(m4x4 m)
+		{
+			return IsOrthogonal(m.rot);
+		}
+
 		/// <summary>True if the rotation part of this transform is orthonormal</summary>
 		public static bool IsOrthonormal(m4x4 m)
 		{
@@ -570,20 +596,44 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
-		public static void InvertFast(ref m4x4 m)
+		public static void InvertAffine(ref m4x4 m)
 		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			var trans = m.w;
+			Debug.Assert(IsAffine(m));
+
+			var translation = m.w;
+
+			var s = new v3(m.x.LengthSq, m.y.LengthSq, m.z.LengthSq);
+			if (!FEql(s, v3.One))
+			{
+				if (s.x == 0 || s.y == 0 || s.z == 0)
+					throw new Exception("Cannot invert a degenerate matrix");
+				s = Sqrt(s);
+			}
+
+			// Remove scale
+			m.x /= s.x;
+			m.y /= s.y;
+			m.z /= s.z;
+
+			// Invert rotation
 			Transpose(ref m.rot);
-			m.w.x = -(trans.x * m.x.x + trans.y * m.y.x + trans.z * m.z.x);
-			m.w.y = -(trans.x * m.x.y + trans.y * m.y.y + trans.z * m.z.y);
-			m.w.z = -(trans.x * m.x.z + trans.y * m.y.z + trans.z * m.z.z);
+
+			// Invert the scale
+			m.x /= s.x;
+			m.y /= s.y;
+			m.z /= s.z;
+
+			// Invert translation
+			m.w.x = -(translation.x * m.x.x + translation.y * m.y.x + translation.z * m.z.x);
+			m.w.y = -(translation.x * m.x.y + translation.y * m.y.y + translation.z * m.z.y);
+			m.w.z = -(translation.x * m.x.z + translation.y * m.y.z + translation.z * m.z.z);
+			m.w.w = 1;
 		}
 
 		/// <summary>Return 'm' inverted (assuming an orthonormal matrix</summary>
-		public static m4x4 InvertFast(m4x4 m)
+		public static m4x4 InvertAffine(m4x4 m)
 		{
-			InvertFast(ref m);
+			InvertAffine(ref m);
 			return m;
 		}
 
@@ -805,7 +855,7 @@ namespace Rylogic.UnitTests
 			var a2a = b2a * a2b;
 			Assert.True(Math_.FEql(m4x4.Identity, a2a));
 
-			var b2a_fast = Math_.InvertFast(a2b);
+			var b2a_fast = Math_.InvertAffine(a2b);
 			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 
@@ -818,6 +868,20 @@ namespace Rylogic.UnitTests
 			a2b.z = new v4(1.0f, -2.0f, 4.0f, 0.0f);
 			a2b.w = new v4(1.0f, 2.0f, 3.0f, 1.0f);
 			Assert.True(Math_.IsOrthonormal(Math_.Orthonormalise(a2b)));
+		}
+
+		[Test]
+		public void InvertAffine()
+		{
+			var rng = new Random(1);
+			var a2b = new m4x4(m3x4.Rotation(v4.Random3N(0.0f, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
+			
+			var b2a = Math_.Invert(a2b);
+			var a2a = b2a * a2b;
+			Assert.True(Math_.FEql(m4x4.Identity, a2a));
+
+			var b2a_fast = Math_.InvertAffine(a2b);
+			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 
 		[Test]
@@ -841,6 +905,18 @@ namespace Rylogic.UnitTests
 				var MAT = m3x4.Parse(mat.ToString3x4());
 				Assert.Equals(mat.rot, MAT);
 			}
+		}
+
+		[Test]
+		public void NumericsConversion()
+		{
+			var vec0 = new Matrix4x4(1,2,3,4, 5,6,7,8, -1,-2,-3,-4, -5,-6,-7,-8);
+			var vec1 = (m4x4)vec0;
+			var vec2 = (Matrix4x4)vec1;
+			var vec3 = (m4x4)vec2;
+
+			Assert.True(vec0 == vec2);
+			Assert.True(vec1 == vec3);
 		}
 	}
 }

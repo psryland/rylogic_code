@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -38,8 +38,8 @@ namespace pr
 
 				ShapePolytope const& polyA = shape_cast<ShapePolytope>(shapeA);
 				ShapePolytope const& polyB = shape_cast<ShapePolytope>(shapeB);
-				auto w2a = InvertFast(a2w.rot);
-				auto w2b = InvertFast(b2w.rot);
+				auto w2a = InvertAffine(a2w.rot);
+				auto w2b = InvertAffine(b2w.rot);
 
 				//	if( a2w.pos == b2w.pos ) return false;
 

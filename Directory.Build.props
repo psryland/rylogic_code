@@ -34,7 +34,7 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
-		<RylogicLibraryVersion>2.0.0</RylogicLibraryVersion>
+		<RylogicLibraryVersion>2.0.1</RylogicLibraryVersion>
 
 		<!-- Deterministic builds -->
 		<Deterministic>true</Deterministic>

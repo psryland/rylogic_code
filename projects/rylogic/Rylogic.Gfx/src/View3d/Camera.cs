@@ -152,7 +152,7 @@ namespace Rylogic.Gfx
 				get => View3D_CameraToWorldGet(m_window.Handle);
 				set => View3D_CameraToWorldSet(m_window.Handle, ref value);
 			}
-			public m4x4 W2O => Math_.InvertFast(O2W);
+			public m4x4 W2O => Math_.InvertAffine(O2W);
 
 			/// <summary>Set the current O2W transform as the reference point</summary>
 			public void Commit()

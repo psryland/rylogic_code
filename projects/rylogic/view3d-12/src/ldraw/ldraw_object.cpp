@@ -216,7 +216,7 @@ namespace pr::rdr12::ldraw
 	{
 		Apply([&](LdrObject* o)
 		{
-			o->m_o2p = o->m_parent ? InvertFast(o->m_parent->O2W()) * o2w : o2w;
+			o->m_o2p = o->m_parent ? InvertAffine(o->m_parent->O2W()) * o2w : o2w;
 			assert(FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
 			return true;
 		}, name);

@@ -68,12 +68,12 @@ namespace pr
 		// Array access
 		S const& operator [] (int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		S& operator [] (int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -257,12 +257,13 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Vector3Tests, float, double, int32_t, int64_t)
+	PRUnitTestClass(Vector3Tests)
 	{
-		using S = T;
-		using vec3_t = Vec3<S, void>;
+		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec3_t = Vec3<S, void>;
 
-		{// Create
 			auto V0 = vec3_t(S(1));
 			PR_EXPECT(V0.x == S(1));
 			PR_EXPECT(V0.y == S(1));
@@ -272,23 +273,25 @@ namespace pr::maths
 			PR_EXPECT(V1.x == S(1));
 			PR_EXPECT(V1.y == S(2));
 
-			auto V2 = vec3_t({S(3), S(4), S(5)});
+			auto V2 = vec3_t({ S(3), S(4), S(5) });
 			PR_EXPECT(V2.x == S(3));
 			PR_EXPECT(V2.y == S(4));
 			PR_EXPECT(V2.z == S(5));
 
-			vec3_t V3 = {S(4), S(5), S(6)};
+			vec3_t V3 = { S(4), S(5), S(6) };
 			PR_EXPECT(V3[0] == S(4));
 			PR_EXPECT(V3[1] == S(5));
 			PR_EXPECT(V3[2] == S(6));
-
-			if constexpr (std::floating_point<S>)
-			{
-				auto V4 = vec3_t::Normal(S(3), S(4), S(5));
-				auto V4_expected = vec3_t(S(0.42426406871192), S(0.56568542494923), S(0.70710678118654));
-				PR_EXPECT(FEql(V4, V4_expected));
-			}
 		}
-	}
+		PRUnitTestMethod(Normal, float, double)
+		{
+			using S = T;
+			using vec3_t = Vec3<S, void>;
+
+			auto V4 = vec3_t::Normal(S(3), S(4), S(5));
+			auto V4_expected = vec3_t(S(0.42426406871192), S(0.56568542494923), S(0.70710678118654));
+			PR_EXPECT(FEql(V4, V4_expected));
+		}
+	};
 }
 #endif

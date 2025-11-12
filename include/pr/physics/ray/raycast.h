@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -31,7 +31,7 @@ namespace pr
 		template <typename ShapeType>
 		inline bool RayCastWS(Ray const& ray, ShapeType const& shape, m4x4 const& s2w, RayCastResult& result)
 		{
-			if( !RayCast(InvertFast(s2w) * ray, shape, result) ) return false;
+			if( !RayCast(InvertAffine(s2w) * ray, shape, result) ) return false;
 			result.m_normal = s2w * result.m_normal;
 			return true;
 		}

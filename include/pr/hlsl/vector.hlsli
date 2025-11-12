@@ -40,17 +40,53 @@ float2 RotateCCW(float2 a)
 }
 
 // Invert a matrix assuming that it's an orthonormal matrix
-float4x4 InvertFast(float4x4 mat)  
+float4x4 InvertOrthonormal(float4x4 mat)
 {
-	float3x3 Rt = transpose((float3x3)mat);
-	float3 invT = -mul(mat[3].xyz, Rt);
+	float3x3 rt = transpose((float3x3) mat);
+	float3 inv_t = -mul(mat[3].xyz, rt);
+	
+	// Reconstruct the inverse matrix
+	return float4x4(
+		rt[0].x, rt[0].y, rt[0].z, 0,
+		rt[1].x, rt[1].y, rt[1].z, 0,
+		rt[2].x, rt[2].y, rt[2].z, 0,
+		inv_t.x, inv_t.y, inv_t.z, 1
+	);
+}
+
+// Invert a matrix assuming that it's an affine matrix
+float4x4 InvertAffine(float4x4 mat)
+{
+	float3 t = mat[3].xyz;
+	float3x3 r = (float3x3)mat;
+	float3 s = float3(length(r[0]), length(r[1]), length(r[2]));
+	
+	// Remove scale
+	r[0] /= s.x;
+	r[1] /= s.y;
+	r[2] /= s.z;
+
+	// Invert rotation
+	float3x3 rt = transpose(r);
+
+	// Invert scale
+	rt[0] /= s.x;
+	rt[1] /= s.y;
+	rt[2] /= s.z;
+
+	// Invert translation
+	float3 inv_t = float3(
+		-(t.x * rt[0].x + t.y * rt[1].x + t.z * rt[2].x),
+		-(t.x * rt[0].y + t.y * rt[1].y + t.z * rt[2].y),
+		-(t.x * rt[0].z + t.y * rt[1].z + t.z * rt[2].z)
+	);
 
 	// Reconstruct the inverse matrix
 	return float4x4(
-		Rt[0].x, Rt[0].y, Rt[0].z, 0,
-		Rt[1].x, Rt[1].y, Rt[1].z, 0,
-		Rt[2].x, Rt[2].y, Rt[2].z, 0,
-		invT.x, invT.y, invT.z, 1
+		rt[0].x, rt[0].y, rt[0].z, 0,
+		rt[1].x, rt[1].y, rt[1].z, 0,
+		rt[2].x, rt[2].y, rt[2].z, 0,
+		inv_t.x, inv_t.y, inv_t.z, 1
 	);
 }
 

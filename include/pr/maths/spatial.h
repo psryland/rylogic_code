@@ -116,7 +116,7 @@ namespace pr::maths::spatial
 	{
 		// [ E    0] * [v.ang] = [E*v.ang             ]
 		// [-E*rx E]   [v.lin]   [E*v.lin - E*rx*v.ang]
-		assert("'lhs' is not an affine transform" && IsAffine(a2b));
+		pr_assert("'lhs' is not an affine transform" && IsAffine(a2b));
 		auto ang_b = m3x4{a2b.rot} * vec.ang;
 		auto lin_b = m3x4{a2b.rot} * vec.lin + Cross(a2b.pos, ang_b);
 		return Vec8f<T>{ang_b, lin_b};
@@ -132,7 +132,7 @@ namespace pr::maths::spatial
 	{
 		// [E -E*rx] * [v.ang] = [E*v.ang - E*rx*v.lin]
 		// [0     E]   [v.lin]   [E*v.lin             ]
-		assert("'lhs' is not an affine transform" && IsAffine(a2b));
+		pr_assert("'lhs' is not an affine transform" && IsAffine(a2b));
 		auto lin_b = m3x4{a2b.rot} * vec.lin;
 		auto ang_b = m3x4{a2b.rot} * vec.ang + Cross(a2b.pos, lin_b);
 		return Vec8f<T>{ang_b, lin_b};
@@ -343,7 +343,7 @@ namespace pr::maths
 			{
 				auto a2c = m4x4::Transform(v4::RandomN(rng, 0), float(dist(rng)), v4::Random(rng, v4Origin, 3.0f, 1));
 				//auto a2c = m4x4::Translation(v4{1,0,0,1});
-				auto c2a = InvertFast(a2c);
+				auto c2a = InvertAffine(a2c);
 
 				// A body-fixed point in frame 'a' and the same point in frame 'c'
 				auto pt_a = v4{x,y,0.01f,1};

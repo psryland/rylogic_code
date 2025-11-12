@@ -767,6 +767,14 @@ namespace Rylogic.Maths
 			return Math.Atan(x/n) / TauBy4;
 		}
 	}
+
+	/// <summary>Formats for CodeString output</summary>
+	public enum ECodeString
+	{
+		CSharp,
+		Cpp,
+		Python,
+	}
 }
 
 #if PR_UNITTESTS

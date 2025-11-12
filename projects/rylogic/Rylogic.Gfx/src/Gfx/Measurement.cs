@@ -201,7 +201,7 @@ namespace Rylogic.Gfx
 		/// <summary>The starting point in reference space</summary>
 		public v4 BegPoint
 		{
-			get => Math_.InvertFast(RefSpaceToWorld) * Hit0.PointWS;
+			get => Math_.InvertAffine(RefSpaceToWorld) * Hit0.PointWS;
 			set
 			{
 				Hit0.PointWS = RefSpaceToWorld * value;
@@ -212,7 +212,7 @@ namespace Rylogic.Gfx
 		}
 		public v4 EndPoint
 		{
-			get => Math_.InvertFast(RefSpaceToWorld) * Hit1.PointWS;
+			get => Math_.InvertAffine(RefSpaceToWorld) * Hit1.PointWS;
 			set
 			{
 				Hit1.PointWS = RefSpaceToWorld * value;
@@ -398,7 +398,7 @@ namespace Rylogic.Gfx
 				if (m_gfx_measure == null && MeasurementValid)
 				{
 					var r2w = RefSpaceToWorld;
-					var w2r = Math_.InvertFast(r2w);
+					var w2r = Math_.InvertAffine(r2w);
 					var pt0 = w2r * Hit0.PointWS;
 					var pt1 = w2r * Hit1.PointWS;
 					var dist_x = Math.Abs(pt1.x - pt0.x);
@@ -472,7 +472,7 @@ namespace Rylogic.Gfx
 			if (MeasurementValid)
 			{
 				// Convert the points into the selected space
-				var w2rf = Math_.InvertFast(RefSpaceToWorld);
+				var w2rf = Math_.InvertAffine(RefSpaceToWorld);
 				var pt0 = w2rf * Hit0.PointWS;
 				var pt1 = w2rf * Hit1.PointWS;
 

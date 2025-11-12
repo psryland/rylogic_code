@@ -200,7 +200,7 @@ namespace pr
 	}
 	template <typename T> constexpr T Clamp(T x, T mn, T mx) requires (requires (T a, T b) { a < b; } && !maths::VectorX<T>)
 	{
-		assert("[min,max] must be a positive range" && !(mx < mn));
+		pr_assert("[min,max] must be a positive range" && !(mx < mn));
 		return (mx < x) ? mx : (x < mn) ? mn : x;
 	}
 	template <maths::VectorX T> constexpr T Min(T const& x, T const& y)
@@ -418,7 +418,7 @@ namespace pr
 	template <std::floating_point T> constexpr bool FEqlAbsolute(T a, T b, T tol)
 	{
 		// When float operations are performed at compile time, the compiler warnings about 'inf'
-		assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
+		pr_assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
 		return Abs(a - b) < tol;
 	}
 	template <std::floating_point T> inline bool FEqlAbsolute(std::span<T> a, std::span<T> b, std::decay_t<T> tol)
@@ -590,7 +590,7 @@ namespace pr
 	}
 	template <Scalar S> inline S RoundSD(S d, int significant_digits)
 	{
-		assert(significant_digits >= 0 && "'significant_digits' value must be >= 0");
+		pr_assert(significant_digits >= 0 && "'significant_digits' value must be >= 0");
 
 		// No significant digits is always zero
 		if (d == 0 || significant_digits == 0)
@@ -696,7 +696,7 @@ namespace pr
 		{
 			case ETruncType::ToNearest:  return static_cast<S>(static_cast<long long>(x + Sign(x) * S(0.5)));
 			case ETruncType::TowardZero: return static_cast<S>(static_cast<long long>(x));
-			default: assert("Unknown truncation type" && false); return x;
+			default: pr_assert("Unknown truncation type" && false); return x;
 		}
 	}
 	template <maths::VectorFP T> constexpr T Trunc(T const& v, ETruncType ty = ETruncType::TowardZero)
@@ -719,21 +719,21 @@ namespace pr
 	template <Scalar S> constexpr S Sqr(S x)
 	{
 		if constexpr (std::is_same_v<S, int8_t>)
-			assert("Overflow" && Abs(x) <= 0xB);
+			pr_assert("Overflow" && Abs(x) <= 0xB);
 		if constexpr (std::is_same_v<S, uint8_t>)
-			assert("Overflow" && Abs(x) <= 0xF);
+			pr_assert("Overflow" && Abs(x) <= 0xF);
 		if constexpr (std::is_same_v<S, int16_t>)
-			assert("Overflow" && Abs(x) <= 0xB5);
+			pr_assert("Overflow" && Abs(x) <= 0xB5);
 		if constexpr (std::is_same_v<S, uint16_t>)
-			assert("Overflow" && Abs(x) <= 0xFF);
+			pr_assert("Overflow" && Abs(x) <= 0xFF);
 		if constexpr (std::is_same_v<S, int32_t> || std::is_same_v<S, long>)
-			assert("Overflow" && Abs(x) <= 0xB504);
+			pr_assert("Overflow" && Abs(x) <= 0xB504);
 		if constexpr (std::is_same_v<S, uint32_t> || std::is_same_v<S, unsigned long>)
-			assert("Overflow" && Abs(x) <= 0xFFFFU);
+			pr_assert("Overflow" && Abs(x) <= 0xFFFFU);
 		if constexpr (std::is_same_v<S, int64_t>)
-			assert("Overflow" && Abs(x) <= 0xB504F333LL);
+			pr_assert("Overflow" && Abs(x) <= 0xB504F333LL);
 		if constexpr (std::is_same_v<S, uint64_t>)
-			assert("Overflow" && Abs(x) <= 0xFFFFFFFFULL);
+			pr_assert("Overflow" && Abs(x) <= 0xFFFFFFFFULL);
 
 		return x * x;
 	}
@@ -746,21 +746,21 @@ namespace pr
 	template <Scalar S> constexpr S Cube(S x)
 	{
 		if constexpr (std::is_same_v<S, int8_t>)
-			assert("Overflow" && Abs(x) <= 0x5);
+			pr_assert("Overflow" && Abs(x) <= 0x5);
 		if constexpr (std::is_same_v<S, uint8_t>)
-			assert("Overflow" && Abs(x) <= 0x6);
+			pr_assert("Overflow" && Abs(x) <= 0x6);
 		if constexpr (std::is_same_v<S, int16_t>)
-			assert("Overflow" && Abs(x) <= 0x1F);
+			pr_assert("Overflow" && Abs(x) <= 0x1F);
 		if constexpr (std::is_same_v<S, uint16_t>)
-			assert("Overflow" && Abs(x) <= 0x28);
+			pr_assert("Overflow" && Abs(x) <= 0x28);
 		if constexpr (std::is_same_v<S, int32_t> || std::is_same_v<S, long>)
-			assert("Overflow" && Abs(x) <= 0x50A);
+			pr_assert("Overflow" && Abs(x) <= 0x50A);
 		if constexpr (std::is_same_v<S, uint32_t> || std::is_same_v<S, unsigned long>)
-			assert("Overflow" && Abs(x) <= 0x659U);
+			pr_assert("Overflow" && Abs(x) <= 0x659U);
 		if constexpr (std::is_same_v<S, int64_t>)
-			assert("Overflow" && Abs(x) <= 0x1FFFFFLL);
+			pr_assert("Overflow" && Abs(x) <= 0x1FFFFFLL);
 		if constexpr (std::is_same_v<S, uint64_t>)
-			assert("Overflow" && Abs(x) <= 0x285145ULL);
+			pr_assert("Overflow" && Abs(x) <= 0x285145ULL);
 
 		return x * x * x;
 	}
@@ -773,9 +773,9 @@ namespace pr
 	template <Scalar S> auto Sqrt(S x) -> decltype(std::sqrt(x))
 	{
 		if constexpr (std::floating_point<S>)
-			assert("Sqrt of undefined value" && IsFinite(x));
+			pr_assert("Sqrt of undefined value" && IsFinite(x));
 		if constexpr (std::is_signed_v<S>)
-			assert("Sqrt of negative value" && x >= S(0));
+			pr_assert("Sqrt of negative value" && x >= S(0));
 
 		return std::sqrt(x);
 	}
@@ -783,7 +783,7 @@ namespace pr
 	{
 		// Sqrt is ill-defined for non-square matrices.
 		// Matrices have an overload that finds the matrix whose product is 'x'.
-		static_assert(dependent_false<T>, "Sqrt is not defined for general vector types");
+		static_assert(maths::always_false<T>, "Sqrt is not defined for general vector types");
 	}
 	template <maths::VectorX T> inline T CompSqrt(T const& v) // Component Sqrt
 	{
@@ -1138,7 +1138,7 @@ namespace pr
 	// Return the normalised fraction that 'x' is, in the range ['min', 'max']
 	template <std::floating_point S> inline S Frac(S min, S x, S max)
 	{
-		assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
+		pr_assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
 		return (x - min) / (max - min);
 	}
 	template <maths::VectorX T> inline T Frac(T const& min, T const& x, T const& max)
@@ -1162,7 +1162,7 @@ namespace pr
 	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
 	template <maths::VectorFP T> inline T Slerp(T const& a, T const& b, maths::vec_comp_t<T> frac)
 	{
-		assert("Cannot spherically interpolate to/from the zero vector" && a != T{} && b != T{});
+		pr_assert("Cannot spherically interpolate to/from the zero vector" && a != T{} && b != T{});
 
 		auto a_len = Length(a);
 		auto b_len = Length(b);
@@ -1191,14 +1191,14 @@ namespace pr
 	// Return the cosine of the angle of the triangle apex opposite 'opp'
 	template <std::floating_point T> inline T CosAngle(T adj0, T adj1, T opp)
 	{
-		assert("Angle undefined an when adjacent length is zero" && !FEql(adj0, T{}) && !FEql(adj1, T{}));
+		pr_assert("Angle undefined an when adjacent length is zero" && !FEql(adj0, T{}) && !FEql(adj1, T{}));
 		return Clamp<T>((adj0*adj0 + adj1*adj1 - opp*opp) / (2 * adj0 * adj1), -1, 1);
 	}
 
 	// Return the cosine of the angle between two vectors
 	template <maths::VectorX T> inline maths::vec_comp_t<T> CosAngle(T const& lhs, T const& rhs)
 	{
-		assert("CosAngle undefined for zero vectors" && lhs != T{} && rhs != T{});
+		pr_assert("CosAngle undefined for zero vectors" && lhs != T{} && rhs != T{});
 		auto const one = maths::vec_comp_t<T>{1};
 		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -one, +one);
 	}
@@ -1411,7 +1411,7 @@ namespace pr
 	// Returns the number to add to pad 'size' up to 'alignment'
 	template <std::integral T> constexpr T Pad(T size, int alignment)
 	{
-		assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
+		pr_assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
 		return static_cast<T>(~(size - 1) & (alignment - 1));
 	}
 

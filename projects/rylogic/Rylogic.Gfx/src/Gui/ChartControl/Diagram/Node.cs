@@ -286,7 +286,7 @@ public abstract class Node :ChartControl.Element, IHasStyle
 	public virtual AnchorPoint? NearestAnchor(v4 pt, bool pt_in_node_space)
 	{
 		if (!pt_in_node_space)
-			pt = Math_.InvertFast(O2W) * pt;
+			pt = Math_.InvertAffine(O2W) * pt;
 
 		return AnchorPoints().MinBy(x => (x.Location - pt).LengthSq);
 	}

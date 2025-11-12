@@ -62,7 +62,7 @@ namespace pr::rdr12
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
 		m4x4* ptr = update.ptr<m4x4>();
 		for (int i = 0, iend = BoneCount(); i != iend; ++i)
-			ptr[i] = InvertFast(m_skeleton->m_o2bp[i]);
+			ptr[i] = InvertAffine(m_skeleton->m_o2bp[i]);
 
 		update.Commit();
 	}

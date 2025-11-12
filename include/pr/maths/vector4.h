@@ -88,11 +88,11 @@ namespace pr
 		Vec4(intrinsic_t v)
 			: vec(v)
 		{
-			assert(maths::is_aligned(this));
+			pr_assert(maths::is_aligned(this));
 		}
 		Vec4& operator =(intrinsic_t v)
 		{
-			assert(maths::is_aligned(this));
+			pr_assert(maths::is_aligned(this));
 			vec = v;
 			return *this;
 		}
@@ -119,12 +119,12 @@ namespace pr
 		// Array access
 		S const& operator [] (int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		S& operator [] (int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -697,7 +697,7 @@ namespace pr
 	// Returns a vector perpendicular to 'v' with the same length of 'v'
 	template <Scalar S, typename T> inline Vec4<S, T> pr_vectorcall Perpendicular(Vec4_cref<S, T> v)
 	{
-		assert("Cannot make a perpendicular to a zero vector" && (v != Vec4<S, T>::Zero()));
+		pr_assert("Cannot make a perpendicular to a zero vector" && (v != Vec4<S, T>::Zero()));
 		auto vec = Cross3(v, CreateNotParallelTo(v));
 		vec *= Sqrt(LengthSq(v) / LengthSq(vec));
 		return vec;
@@ -711,7 +711,7 @@ namespace pr
 		if (vec == Vec4<S, T>::Zero())
 		{
 			// Both 'vec' and 'previous' cannot be zero
-			assert("Cannot make a perpendicular to a zero vector" && (previous != Vec4<S, T>::Zero()));
+			pr_assert("Cannot make a perpendicular to a zero vector" && (previous != Vec4<S, T>::Zero()));
 			return previous;
 		}
 		if (Parallel(vec, previous)) // includes 'previous' == zero
@@ -787,14 +787,13 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Vector4Tests, float, double, int32_t, int64_t)
+	PRUnitTestClass(Vector4Tests)
 	{
-		using S = T;
-		using vec4_t = Vec4<S, void>;
-		using vec3_t = Vec3<S, void>;
-		using len_t = decltype(Sqrt(S{}));
-
-		{// Operators
+		PRUnitTestMethod(Operators, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			auto a = vec4_t{10, 20, 30, 40};
 			auto b = vec4_t{-40, -30, -20, -10};
 
@@ -815,16 +814,24 @@ namespace pr::maths
 			PR_EXPECT((arr0 <= arr1) == !(arr0 > arr1));
 			PR_EXPECT((arr0 >= arr1) == !(arr0 < arr1));
 		}
-		{// Largest/Smallest element
+		PRUnitTestMethod(LargestSmallestElement, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			auto v1 = vec4_t{1,-2,-3,4};
 			PR_EXPECT(MinComponent(v1) == S(-3));
 			PR_EXPECT(MaxComponent(v1) == S(+4));
 			PR_EXPECT(MinElementIndex(v1) == 2);
 			PR_EXPECT(MaxElementIndex(v1) == 3);
 		}
-		{// FEql
+		PRUnitTestMethod(FEql, float, double)
+		{
+			using S = T;
+			using vec3_t = Vec3<S, void>;
+			using vec4_t = Vec4<S, void>;
+
 			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
-			if constexpr (std::floating_point<S>)
 			{
 				auto a = vec4_t{S(-2),0,0,0};
 				auto b = vec4_t{S(-2),0,0,maths::tiny<S>};
@@ -836,7 +843,6 @@ namespace pr::maths
 			}
 
 			// Not equal if the relative difference is less than tiny compared to the maximum element in the matrix.
-			if constexpr (std::floating_point<S>)
 			{
 				auto a = vec4_t{S(-0.5), 0, 0, 0};
 				auto b = vec4_t{S(-0.5), 0, 0, maths::tiny<S>};
@@ -846,7 +852,6 @@ namespace pr::maths
 				PR_EXPECT(FEql(MaxComponent(b), maths::tiny<S>));
 				PR_EXPECT(!FEql(a, b));
 			}
-			if constexpr (std::floating_point<S>)
 			{
 				vec4_t a(1, 1, -1, -1);
 				auto t2 = S(maths::tiny<S> *2);
@@ -857,7 +862,11 @@ namespace pr::maths
 				PR_EXPECT(FEql(vec4_t(ht, 0, 0, ht), vec4_t::Zero()));
 			}
 		}
-		{// Abs
+		PRUnitTestMethod(Abs, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			vec4_t arr0 = {+1, -2, +3, -4};
 			vec4_t arr1 = {-1, +2, -3, +4};
 			vec4_t arr2 = {+1, +2, +3, +4};
@@ -865,19 +874,24 @@ namespace pr::maths
 			PR_EXPECT(Abs(arr0) == Abs(arr2));
 			PR_EXPECT(Abs(arr1) == Abs(arr2));
 		}
-		{// Finite
-			if constexpr (std::floating_point<S>)
-			{
-				volatile auto f0 = S(0);
-				vec4_t arr0(0, 1, 10, 1);
-				vec4_t arr1(0, 1, 1 / f0, 0 / f0);
-				PR_EXPECT(IsFinite(arr0));
-				PR_EXPECT(!IsFinite(arr1));
-				PR_EXPECT(!All(arr0, [](S x) { return x < S(5); }));
-				PR_EXPECT(Any(arr0, [](S x) { return x < S(5); }));
-			}
+		PRUnitTestMethod(Finite, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
+			volatile auto f0 = S(0);
+			vec4_t arr0(0, 1, 10, 1);
+			vec4_t arr1(0, 1, 1 / f0, 0 / f0);
+			PR_EXPECT(IsFinite(arr0));
+			PR_EXPECT(!IsFinite(arr1));
+			PR_EXPECT(!All(arr0, [](S x) { return x < S(5); }));
+			PR_EXPECT(Any(arr0, [](S x) { return x < S(5); }));
 		}
-		{// Min/Max/Clamp
+		PRUnitTestMethod(MinMaxClamp, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			vec4_t a(3,-1,2,-4);
 			vec4_t b = {-2,-1,4,2};
 			PR_EXPECT(Max(a,b) == vec4_t(3,-1,4,2));
@@ -891,24 +905,36 @@ namespace pr::maths
 			PR_EXPECT(Max(arr0, arr1, arr2, arr3) == vec4_t(+2, +2, +3, +4));
 			PR_EXPECT(Clamp(arr0, arr2, arr3) == vec4_t(+1, +0, +2, +0));
 		}
-		{// Min/Max component
+		PRUnitTestMethod(MinMaxComponent, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			vec4_t a(3,-1,2,-4);
 			PR_EXPECT(MinComponent(a) == S(-4));
 			PR_EXPECT(MaxComponent(a) == S(+3));
 		}
-		{// Truncate
-			if constexpr (std::floating_point<S>)
-			{
-				vec4_t arr0 = {S(+1.1), S(-1.2), S(+2.8), S(-2.9)};
-				vec4_t arr1 = {S(+1.0), S(-1.0), S(+2.0), S(-2.0)};
-				vec4_t arr2 = {S(+1.0), S(-1.0), S(+3.0), S(-3.0)};
-				vec4_t arr3 = {S(+0.1), S(-0.2), S(+0.8), S(-0.9)};
-				PR_EXPECT(Trunc(arr0, ETruncType::TowardZero) == arr1);
-				PR_EXPECT(Trunc(arr0, ETruncType::ToNearest) == arr2);
-				PR_EXPECT(FEql(Frac(arr0), arr3));
-			}
+		PRUnitTestMethod(Truncate, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using vec3_t = Vec3<S, void>;
+			using len_t = decltype(Sqrt(S{}));
+
+			vec4_t arr0 = {S(+1.1), S(-1.2), S(+2.8), S(-2.9)};
+			vec4_t arr1 = {S(+1.0), S(-1.0), S(+2.0), S(-2.0)};
+			vec4_t arr2 = {S(+1.0), S(-1.0), S(+3.0), S(-3.0)};
+			vec4_t arr3 = {S(+0.1), S(-0.2), S(+0.8), S(-0.9)};
+			PR_EXPECT(Trunc(arr0, ETruncType::TowardZero) == arr1);
+			PR_EXPECT(Trunc(arr0, ETruncType::ToNearest) == arr2);
+			PR_EXPECT(FEql(Frac(arr0), arr3));
 		}
-		{// Length
+		PRUnitTestMethod(Length, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using len_t = decltype(Length(vec4_t{}));
+
 			vec4_t a(3,-1,2,-4);
 			PR_EXPECT(LengthSq(a) == S(a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w));
 			PR_EXPECT(Length(a) == len_t(Sqrt(LengthSq(a))));
@@ -918,35 +944,49 @@ namespace pr::maths
 			PR_EXPECT(FEql(Length(b.xyz), len_t(10.0/maths::root2)));
 			PR_EXPECT(FEql(Length(b), len_t(9.273618495495704)));
 		}
-		{// Normalise
-			if constexpr (std::floating_point<S>)
-			{
-				vec4_t a(3, -1, 2, -4);
-				vec4_t b = Normalise(a.w0());
-				vec4_t c = Normalise(a);
-				PR_EXPECT(FEql(Length(b), len_t(1.0)));
-				PR_EXPECT(FEql(Length(c), len_t(1.0)));
-				PR_EXPECT(!IsNormal(a));
-				PR_EXPECT(IsNormal(b));
-				PR_EXPECT(IsNormal(c));
+		PRUnitTestMethod(Normalise, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using len_t = decltype(Length(vec4_t{}));
 
-				auto arr0 = vec4_t(1, 2, 3, 4);
-				auto len0 = Sqrt(S(1*1 + 2*2 + 3*3 + 4*4));
-				PR_EXPECT(FEql(Normalise(vec4_t::Zero(), arr0), arr0));
-				PR_EXPECT(FEql(Normalise(arr0), arr0/len0));
-			}
+			vec4_t a(3, -1, 2, -4);
+			vec4_t b = Normalise(a.w0());
+			vec4_t c = Normalise(a);
+			PR_EXPECT(FEql(Length(b), len_t(1.0)));
+			PR_EXPECT(FEql(Length(c), len_t(1.0)));
+			PR_EXPECT(!IsNormal(a));
+			PR_EXPECT(IsNormal(b));
+			PR_EXPECT(IsNormal(c));
+
+			auto arr0 = vec4_t(1, 2, 3, 4);
+			auto len0 = Sqrt(S(1*1 + 2*2 + 3*3 + 4*4));
+			PR_EXPECT(FEql(Normalise(vec4_t::Zero(), arr0), arr0));
+			PR_EXPECT(FEql(Normalise(arr0), arr0/len0));
 		}
-		{// Dot
+		PRUnitTestMethod(Dot, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			vec4_t a = {-2,  4,  2,  6};
 			vec4_t b = { 3, -5,  2, -4};
 			PR_EXPECT(Dot4(a,b) == S(-46));
 			PR_EXPECT(Dot3(a,b) == S(-22));
 		}
-		{ // ComponentSum
+		PRUnitTestMethod(ComponentSum, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			vec4_t a = {1, 2, 3, 4};
 			PR_EXPECT(ComponentSum(a) == S(1+2+3+4));
 		}
-		{ // Alignment
+		PRUnitTestMethod(Alignment, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
 			char c0;
 			vec4_t const pt0[] =
 			{
@@ -963,49 +1003,53 @@ namespace pr::maths
 			PR_EXPECT(maths::is_aligned(&pt0[0]));
 			PR_EXPECT(maths::is_aligned(&pt1[0]));
 		}
-		{// Linear interpolate
-			if constexpr (std::floating_point<S>)
+		PRUnitTestMethod(LinearInterpolate, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
+			vec4_t arr0(1, 10, 100, 1000);
+			vec4_t arr1(2, 20, 200, 2000);
+			auto lerp = Lerp(arr0, arr1, S(0.7));
+			auto expected = vec4_t(S(1.7), 17, 170, 1700);
+			PR_EXPECT(FEql(lerp, expected));
+		}
+		PRUnitTestMethod(SphericalLinearInterpolate, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
+			auto a0 = vec4_t::XAxis();
+			auto a1 = S(2) * vec4_t::YAxis();
+			auto slerp = Slerp(a0, a1, S(0.5));
+			auto expected = S(1.5) * vec4_t::Normal(S(0.5), S(0.5), 0, 0);
+			PR_EXPECT(FEql(slerp, expected));
+		}
+		PRUnitTestMethod(Quantise, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
+			vec4_t arr0(S(1.0 / 3.0), 0, S(2.0), constants<S>::tau);
+			auto quantised = Quantise(arr0, 1024);
+			auto expected = vec4_t(S(0.3330078125), 0, S(2), S(6.2822265625000000));
+			PR_EXPECT(FEql(quantised, expected));
+		}
+		PRUnitTestMethod(Random, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			
+			auto radius = 10;
+			auto centre = vec4_t{1, 1, 1, 1};
+			auto prev = vec4_t{};
+			for (int i = 0; i != 100; ++i)
 			{
-				vec4_t arr0(1, 10, 100, 1000);
-				vec4_t arr1(2, 20, 200, 2000);
-				auto lerp = Lerp(arr0, arr1, S(0.7));
-				auto expected = vec4_t(S(1.7), 17, 170, 1700);
-				PR_EXPECT(FEql(lerp, expected));
+				auto v = vec4_t::Random(g_rng(), centre, S(10));
+				PR_EXPECT(v != prev);
+				PR_EXPECT(Length(v - centre) < radius);
 			}
 		}
-		{// Spherical linear interpolate
-			if constexpr (std::floating_point<S>)
-			{
-				auto a0 = vec4_t::XAxis();
-				auto a1 = S(2) * vec4_t::YAxis();
-				auto slerp = Slerp(a0, a1, S(0.5));
-				auto expected = S(1.5) * vec4_t::Normal(S(0.5), S(0.5), 0, 0);
-				PR_EXPECT(FEql(slerp, expected));
-			}
-		}
-		{// Quantise
-			if constexpr (std::floating_point<S>)
-			{
-				vec4_t arr0(S(1.0 / 3.0), 0, S(2.0), constants<S>::tau);
-				auto quantised = Quantise(arr0, 1024);
-				auto expected = vec4_t(S(0.3330078125), 0, S(2), S(6.2822265625000000));
-				PR_EXPECT(FEql(quantised, expected));
-			}
-		}
-		{// Random
-			if constexpr (std::floating_point<S>)
-			{
-				auto radius = 10;
-				auto centre = vec4_t{1, 1, 1, 1};
-				auto prev = vec4_t{};
-				for (int i = 0; i != 100; ++i)
-				{
-					auto v = vec4_t::Random(g_rng(), centre, S(10));
-					PR_EXPECT(v != prev);
-					PR_EXPECT(Length(v - centre) < radius);
-				}
-			}
-		}
-	}
+	};
 }
 #endif

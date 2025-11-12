@@ -116,6 +116,9 @@
     <Filter Include="pr\algorithm">
       <UniqueIdentifier>{016d8fe3-fd0d-4d63-8697-53c4932cbe43}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\hlsl">
+      <UniqueIdentifier>{49abda68-2c1c-4ab5-bd62-5efc4673e067}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
@@ -126,6 +129,9 @@
     </ClCompile>
     <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c">
       <Filter>pr\crypt</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dependecy_check_math.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1080,6 +1086,24 @@
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h">
       <Filter>pr\algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\savitzky_golay_filter.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="run_tests.py" />

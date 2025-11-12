@@ -60,12 +60,12 @@ namespace pr
 		// Array access
 		Vec2<S,void> const& operator [](int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		Vec2<S,void>& operator [](int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -80,11 +80,28 @@ namespace pr
 		}
 
 		// Create a rotation matrix
-		static Mat2x2<S,A,B> Rotation(S angle)
+		static Mat2x2 Rotation(S angle)
 		{
-			return Mat2x2<S,A,B>{
+			return Mat2x2{
 				Vec2<S,void>(+Cos(angle), +Sin(angle)),
-				Vec2<S,void>(-Sin(angle), +Cos(angle))};
+				Vec2<S,void>(-Sin(angle), +Cos(angle)),
+			};
+		}
+
+		// Create a scale matrix
+		static Mat2x2 Scale(S scale)
+		{
+			Mat2x2 mat = {};
+			mat.x.x = mat.y.y = scale;
+			return mat;
+		}
+		static Mat2x2 Scale(S sx, S sy, S sz)
+		{
+			Mat2x2 mat = {};
+			mat.x.x = sx;
+			mat.y.y = sy;
+			mat.z.z = sz;
+			return mat;
 		}
 
 		// Create a 2D matrix containing random rotation between angles [min_angle, max_angle)
@@ -120,13 +137,13 @@ namespace pr
 		friend Mat2x2 operator / (Mat2x2_cref<S,A,B> lhs, S rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
+			//pr_assert("divide by zero" && rhs != 0);
 			return Mat2x2{lhs.x / rhs, lhs.y / rhs};
 		}
 		friend Mat2x2 operator % (Mat2x2_cref<S,A,B> lhs, S rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
+			//pr_assert("divide by zero" && rhs != 0);
 			return Mat2x2{lhs.x % rhs, lhs.y % rhs};
 		}
 		friend Mat2x2 operator + (Mat2x2_cref<S,A,B> lhs, Mat2x2_cref<S,A,B> rhs)
@@ -182,37 +199,41 @@ namespace pr
 		return m;
 	}
 
+	// Return true if 'mat' is an affine transform
+	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsAffine(Mat2x2_cref<S,A,B>)
+	{
+		// All 2x2 matrices are Affine
+		return true;
+	}
+
+	// Return true if 'mat' is orthogonal
+	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthogonal(Mat2x2_cref<S,A,B> mat)
+	{
+		return FEql(Dot(mat.x, mat.y), 0);
+	}
+
 	// Returns true if 'mat' has an inverse
 	template <Scalar S, typename A, typename B> inline bool IsInvertible(Mat2x2_cref<S,A,B> mat)
 	{
 		return Determinant(mat) != 0;
 	}
 
-	// Returns the inverse of 'mat' assuming is it a pure rotation matrix
-	template <Scalar S, typename A, typename B> inline Mat2x2<S,B,A> InvertFast(Mat2x2_cref<S,A,B> mat)
-	{
-		assert("Matrix is not pure rotation" && FEql(Determinant(mat), S(1)));
-		
-		auto m = Mat2x2<S,B,A>{mat};
-		m.x.x =  mat.y.y;
-		m.x.y = -mat.y.x;
-		m.y.y =  mat.x.x;
-		m.y.x = -mat.x.y;
-		return m;
-	}
-
 	// Returns the inverse of 'mat'
 	template <Scalar S, typename A, typename B> inline Mat2x2<S,B,A> Invert(Mat2x2_cref<S,A,B> mat)
 	{
-		assert("Matrix is singular" && Determinant(mat) != S(0));
+		pr_assert("Matrix is singular" && Determinant(mat) != S(0));
 
-		auto m = Mat2x2<S,B,A>{mat};
 		auto det = Determinant(mat);
-		m.x.x =  mat.y.y / det;
-		m.x.y = -mat.y.x / det;
-		m.y.y =  mat.x.x / det;
-		m.y.x = -mat.x.y / det;
-		return m;
+		return Mat2x2<S, B, A>{
+			{ +mat.y.y / det, -mat.x.y / det },
+			{ -mat.y.x / det, +mat.x.x / det },
+		};
+	}
+
+	// Returns the inverse of 'mat' assuming is it a pure rotation matrix
+	template <Scalar S, typename A, typename B> inline Mat2x2<S, B, A> InvertAffine(Mat2x2_cref<S, A, B> mat)
+	{
+		return Invert(mat); // Just as cheap
 	}
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
@@ -236,61 +257,106 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Matrix2x2Tests, float, double, int32_t, int64_t)
+	PRUnitTestClass(Matrix2x2Tests)
 	{
-		using S = T;
-		using mat2_t = Mat2x2<S, void, void>;
-		using vec2_t = Vec2<S, void>;
+		//using S = T;
+		//using mat2_t = Mat2x2<S, void, void>;
+		//using vec2_t = Vec2<S, void>;
 
-		{// Create
-			auto V0 = mat2_t(1,2,3,4);
-			PR_EXPECT(V0.x == vec2_t(1,2));
-			PR_EXPECT(V0.y == vec2_t(3,4));
+		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
 
-			auto V1 = mat2_t(vec2_t(1,2), vec2_t(3,4));
-			PR_EXPECT(V1.x == vec2_t(1,2));
-			PR_EXPECT(V1.y == vec2_t(3,4));
+			auto V0 = mat2_t(1, 2, 3, 4);
+			PR_EXPECT(V0.x == vec2_t(1, 2));
+			PR_EXPECT(V0.y == vec2_t(3, 4));
 
-			auto V2 = mat2_t({1,2,3,4});
-			PR_EXPECT(V2.x == vec2_t(1,2));
-			PR_EXPECT(V2.y == vec2_t(3,4));
+			auto V1 = mat2_t(vec2_t(1, 2), vec2_t(3, 4));
+			PR_EXPECT(V1.x == vec2_t(1, 2));
+			PR_EXPECT(V1.y == vec2_t(3, 4));
 
-			auto V3 = mat2_t{4,5,6,7};
-			PR_EXPECT(V3.x == vec2_t(4,5));
-			PR_EXPECT(V3.y == vec2_t(6,7));
+			auto V2 = mat2_t({ 1,2,3,4 });
+			PR_EXPECT(V2.x == vec2_t(1, 2));
+			PR_EXPECT(V2.y == vec2_t(3, 4));
+
+			auto V3 = mat2_t{ 4,5,6,7 };
+			PR_EXPECT(V3.x == vec2_t(4, 5));
+			PR_EXPECT(V3.y == vec2_t(6, 7));
 		}
-		{// Operators
-			auto V0 = mat2_t(10,20,30,40);
-			auto V1 = mat2_t(20,30,40,50);
+		PRUnitTestMethod(Operators, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
 
-			PR_EXPECT(V0 + V1 == mat2_t(30,50,70,90));
-			PR_EXPECT(V0 - V1 == mat2_t(-10,-10,-10,-10));
+			auto V0 = mat2_t(10, 20, 30, 40);
+			auto V1 = mat2_t(20, 30, 40, 50);
+
+			PR_EXPECT(V0 + V1 == mat2_t(30, 50, 70, 90));
+			PR_EXPECT(V0 - V1 == mat2_t(-10, -10, -10, -10));
 
 			// 1 3     2 4     2+9  4+15     11 19
 			// 2 4  x  3 5  =  4+12 8+20  =  16 28
-			PR_EXPECT(V0 * V1 == mat2_t(1100,1600,1900,2800));
+			PR_EXPECT(V0 * V1 == mat2_t(1100, 1600, 1900, 2800));
 
-			PR_EXPECT(S(3) * V0 == mat2_t(30,60,90,120));
-			PR_EXPECT(V0 * S(3) == mat2_t(30,60,90,120));
+			PR_EXPECT(S(3) * V0 == mat2_t(30, 60, 90, 120));
+			PR_EXPECT(V0 * S(3) == mat2_t(30, 60, 90, 120));
 			PR_EXPECT(V0 / S(2) == mat2_t(5, 10, 15, 20));
-			PR_EXPECT(V0 % S(20) == mat2_t(10,0,10,0));
+			PR_EXPECT(V0 % S(20) == mat2_t(10, 0, 10, 0));
 
-			PR_EXPECT(+V0 == mat2_t(+10,+20,+30,+40));
-			PR_EXPECT(-V0 == mat2_t(-10,-20,-30,-40));
+			PR_EXPECT(+V0 == mat2_t(+10, +20, +30, +40));
+			PR_EXPECT(-V0 == mat2_t(-10, -20, -30, -40));
 
-			PR_EXPECT(V0 == mat2_t(10,20,30,40));
-			PR_EXPECT(V0 != mat2_t(40,30,20,10));
+			PR_EXPECT(V0 == mat2_t(10, 20, 30, 40));
+			PR_EXPECT(V0 != mat2_t(40, 30, 20, 10));
 		}
-		{// Min/Max/Clamp
-			auto V0 = mat2_t(1,2,3,4);
-			auto V1 = mat2_t(-1,-2,-3,-4);
-			auto V2 = mat2_t(2,4,6,8);
+		PRUnitTestMethod(MinMaxClamp, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
 
-			PR_EXPECT(Min(V0,V1,V2) == mat2_t(-1,-2,-3,-4));
-			PR_EXPECT(Max(V0,V1,V2) == mat2_t(2,4,6,8));
-			PR_EXPECT(Clamp(V0,V1,V2) == mat2_t(1,2,3,4));
-			PR_EXPECT(Clamp(V0,S(0),S(1)) == mat2_t(1,1,1,1));
+			auto V0 = mat2_t(1, 2, 3, 4);
+			auto V1 = mat2_t(-1, -2, -3, -4);
+			auto V2 = mat2_t(2, 4, 6, 8);
+
+			PR_EXPECT(Min(V0, V1, V2) == mat2_t(-1, -2, -3, -4));
+			PR_EXPECT(Max(V0, V1, V2) == mat2_t(2, 4, 6, 8));
+			PR_EXPECT(Clamp(V0, V1, V2) == mat2_t(1, 2, 3, 4));
+			PR_EXPECT(Clamp(V0, S(0), S(1)) == mat2_t(1, 1, 1, 1));
 		}
-	}
+		PRUnitTestMethod(Determinant, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using mat2_t = Mat2x2<S, void, void>;
+
+			auto a2b = mat2_t{
+				{2, 1},
+				{3, 4},
+			};
+			PR_EXPECT(Determinant(a2b) == 2 * 4 - 3 * 1);
+
+		}
+		PRUnitTestMethod(Inverse, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
+
+			auto a2b = mat2_t{
+				{2, 1},
+				{3, 4},
+			};
+
+			auto b2a = Invert(a2b);
+			auto a2a = b2a * a2b;
+			PR_EXPECT(FEql(mat2_t::Identity(), a2a));
+
+			auto b2a_fast = InvertAffine(a2b);
+			PR_EXPECT(FEql(b2a_fast, b2a));
+		}
+	};
 }
 #endif

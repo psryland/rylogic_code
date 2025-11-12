@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -237,7 +237,7 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 	}
 
 	// Convert the triangle into box space
-	m4x4 t2b = InvertFast(a2w) * b2w; // Tri to Box space
+	m4x4 t2b = InvertAffine(a2w) * b2w; // Tri to Box space
 
 	m4x4 tri_bs = t2b * tri.m_v;
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_boxtri2.pr_script"));

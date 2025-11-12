@@ -71,12 +71,12 @@ namespace pr
 		// Array access
 		S const& operator [] (int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		S& operator [] (int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 

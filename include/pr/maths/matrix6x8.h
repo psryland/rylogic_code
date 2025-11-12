@@ -79,19 +79,19 @@ namespace pr
 		{
 			// Note: Creating a Vec8Proxy doesn't work because by default the compiler selects the
 			// mutable overload for non-const instances, so swap-style assignments don't work.
-			assert("index out of range" && i >= 0 && i < 6);
+			pr_assert("index out of range" && i >= 0 && i < 6);
 			return i < 3
 				? Vec8<S,void>{m00[i  ], m10[i  ]}
 				: Vec8<S,void>{m01[i-3], m11[i-3]};
 		}
 		Vec8<S,void> col(int i) const
 		{
-			assert("index out of range" && i >= 0 && i < 6);
+			pr_assert("index out of range" && i >= 0 && i < 6);
 			return (*this)[i];
 		}
 		void col(int i, Vec8_cref<S,void> rhs)
 		{
-			assert("index out of range" && i >= 0 && i < 6);
+			pr_assert("index out of range" && i >= 0 && i < 6);
 			if (i < 3) { m00[i  ] = rhs.ang; m10[i  ] = rhs.lin; }
 			else       { m01[i-3] = rhs.ang; m11[i-3] = rhs.lin; }
 		}

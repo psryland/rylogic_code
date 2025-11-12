@@ -69,11 +69,11 @@ namespace pr
 		Quat(intrinsic_t v)
 			:vec(v)
 		{
-			assert(maths::is_aligned(this));
+			pr_assert(maths::is_aligned(this));
 		}
 		Quat& operator =(intrinsic_t v)
 		{
-			assert(maths::is_aligned(this));
+			pr_assert(maths::is_aligned(this));
 			vec = v;
 			return *this;
 		}
@@ -100,12 +100,12 @@ namespace pr
 		// Array access
 		S const& operator [] (int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		S& operator [] (int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -142,7 +142,7 @@ namespace pr
 		// Construct a quaternion from two vectors representing start and end orientations
 		Quat(Vec4_cref<S, void> from, Vec4_cref<S, void> to)
 		{
-			assert(from.w == 0 && to.w == 0);
+			pr_assert(from.w == 0 && to.w == 0);
 			auto d = Dot(from, to);
 			auto s = Sqrt(LengthSq(from) * LengthSq(to)) + d;
 			auto axis = Cross3(from, to);
@@ -176,7 +176,7 @@ namespace pr
 		// Return the cosine of the angle of rotation about 'Axis()'
 		S CosAngle() const
 		{
-			//assert("quaternion isn't normalised" && IsNormal(*this));
+			//pr_assert("quaternion isn't normalised" && IsNormal(*this));
 
 			// Trig:
 			//' w == cos(θ/2)
@@ -397,7 +397,7 @@ namespace pr
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
 	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall Scale(Quat_cref<S,A,B> q, S frac)
 	{
-		assert("quaternion isn't normalised" && IsNormal4(q));
+		pr_assert("quaternion isn't normalised" && IsNormal4(q));
 
 		// Trig:
 		//' sin^2(x) + cos^2(x) == 1
@@ -419,7 +419,7 @@ namespace pr
 	// Return the axis and angle from a quaternion
 	template <Scalar S, typename A, typename B> inline void pr_vectorcall AxisAngle(Quat_cref<S,A,B> q, Vec4<S,void>& axis, S& angle)
 	{
-		assert("quaternion isn't normalised" && IsNormal(q));
+		pr_assert("quaternion isn't normalised" && IsNormal(q));
 
 		// Trig:
 		//' sin^2(x) + cos^2(x) == 1
@@ -562,13 +562,19 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(QuaternionTests, float, double)
+	PRUnitTestClass(QuaternionTests)
 	{
-		using S = T;
-		using quat_t = Quat<S, void, void>;
-		std::default_random_engine rng(1U);
+		std::default_random_engine rng;
+		TestClass_QuaternionTests()
+			:rng(1u)
+		{
+		}
 
-		{ // Create from m3x4
+		PRUnitTestMethod(CreateFromMat3x4, float, double)
+		{
+			using S = T;
+			using quat_t = Quat<S, void, void>;
+
 			std::uniform_real_distribution<float> rng_angle(-constants<float>::tau, +constants<float>::tau);
 			for (int i = 0; i != 100; ++i)
 			{
@@ -582,7 +588,11 @@ namespace pr::maths
 				PR_EXPECT(FEql(r0, r1));
 			}
 		}
+		PRUnitTestMethod(Angle, float, double)
 		{
+			using S = T;
+			using quat_t = Quat<S, void, void>;
+
 			float const angles[] = {
 				-maths::tau_by_2f,
 				-maths::tau_by_3f,
@@ -616,7 +626,11 @@ namespace pr::maths
 				}
 			}
 		}
-		{ // Average
+		PRUnitTestMethod(Average, float, double)
+		{
+			using S = T;
+			using quat_t = Quat<S, void, void>;
+
 			auto ideal_mean = quat_t(Normalise(Vec4<S,void>(1, 1, 1, 0)), S(0.5));
 
 			std::uniform_int_distribution<int> rng_bool(0, 1);
@@ -634,7 +648,10 @@ namespace pr::maths
 			auto actual_mean = avr.Mean();
 			PR_EXPECT(FEqlRelative(ideal_mean, actual_mean, S(0.01)));
 		}
-		{// LogMap <-> ExpMap
+		PRUnitTestMethod(LogMapExpMap, float, double)
+		{
+			using S = T;
+			using quat_t = Quat<S, void, void>;
 
 			// Degenerate cases
 			{
@@ -674,7 +691,11 @@ namespace pr::maths
 				PR_EXPECT(Abs(angular_error) < 0.001f);
 			}
 		}
-		{// RotationAt
+		PRUnitTestMethod(RotationAt, float, double)
+		{
+			using S = T;
+			using quat_t = Quat<S, void, void>;
+
 			{// Analytic solution case
 				auto ori = quat::Random(rng);
 				auto avl = v4{ 0.6f, 0, 0.6f, 0 };
@@ -712,7 +733,6 @@ namespace pr::maths
 				}
 			}
 		}
-	}
-
+	};
 }
 #endif

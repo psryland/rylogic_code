@@ -23,7 +23,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Compute a transform for 'rhs' in 'lhs's frame
-		auto r2l = InvertFast(l2w) * r2w;
+		auto r2l = InvertAffine(l2w) * r2w;
 
 		// Line segment mid-point in box space
 		auto mid = r2l.pos;

@@ -36,7 +36,7 @@ namespace pr
 			,m_radius(radius)
 		{
 			// Catch invalid bbox radii (make an exception for the 'Reset' bbox)
-			assert("Invalid bounding box" && (
+			pr_assert("Invalid bounding box" && (
 				(radius.x >= 0.0f && radius.y >= 0.0f && radius.z >= 0.0f) ||
 				(radius.x == -1.f && radius.y == -1.f && radius.z == -1.f)));
 		}
@@ -171,8 +171,8 @@ namespace pr
 		//   2) Union = operates on a const BBox returning a new BBox that includes 'point'
 		v4_cref Grow(v4_cref point)
 		{
-			assert("BBox Grow. Point must have w = 1" && point.w == 1.0f);
-			assert("'point' must be aligned to 16" && maths::is_aligned(&point));
+			pr_assert("BBox Grow. Point must have w = 1" && point.w == 1.0f);
+			pr_assert("'point' must be aligned to 16" && maths::is_aligned(&point));
 
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 const zero = _mm_set_ps1(+0.0f);
@@ -248,8 +248,8 @@ namespace pr
 		}
 		friend BBox pr_vectorcall operator * (m4_cref m, BBox_cref rhs)
 		{
-			assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
-			assert("Transforming an invalid bounding box" && rhs.valid());
+			pr_assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
+			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
 			BBox bb(m.pos, v4Zero);
 			m4x4 mat = Transpose3x3(m);
@@ -262,7 +262,7 @@ namespace pr
 		}
 		friend BBox pr_vectorcall operator * (m3_cref m, BBox_cref rhs)
 		{
-			assert("Transforming an invalid bounding box" && rhs.valid());
+			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
 			BBox bb(v4Origin, v4Zero);
 			auto mat = Transpose(m);
@@ -324,7 +324,7 @@ namespace pr
 	// Return a corner of the bounding box
 	inline v4 pr_vectorcall Corner(BBox_cref bbox, int corner)
 	{
-		assert("Invalid corner index" && corner >= 0 && corner < 8);
+		pr_assert("Invalid corner index" && corner >= 0 && corner < 8);
 		auto x = ((corner >> 0) & 0x1) * 2 - 1;
 		auto y = ((corner >> 1) & 0x1) * 2 - 1;
 		auto z = ((corner >> 2) & 0x1) * 2 - 1;
@@ -369,7 +369,7 @@ namespace pr
 	{
 		switch (side)
 		{
-		default: assert(false && "Unknown side index"); return Plane();
+		default: pr_assert(false && "Unknown side index"); return Plane();
 		case BBox::EPlane::Lx: return plane::make( 1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
 		case BBox::EPlane::Ux: return plane::make(-1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
 		case BBox::EPlane::Ly: return plane::make( 0.0f,  1.0f,  0.0f, bbox.m_centre.y + bbox.m_radius.y);
@@ -388,7 +388,7 @@ namespace pr
 	// Multiply the bounding box by a non-affine transform
 	inline BBox pr_vectorcall MulNonAffine(m4_cref m, BBox_cref rhs)
 	{
-		assert("Transforming an invalid bounding box" && rhs.valid());
+		pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
 		auto bb = BBox::Reset();
 		for (auto& c : Corners(rhs))

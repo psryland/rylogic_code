@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Numerics;
 using Rylogic.Extn;
 
 namespace Rylogic.Maths
@@ -174,6 +175,16 @@ namespace Rylogic.Maths
 			set => this[(int)i] = value;
 		}
 
+		/// <summary>Implicit conversion to System.Numerics</summary>
+		public static implicit operator Quat(Quaternion q)
+		{
+			return new Quat(q.X, q.Y, q.Z, q.W);
+		}
+		public static implicit operator Quaternion(Quat q)
+		{
+			return new Quaternion(q.x, q.y, q.z, q.w);
+		}
+
 		/// <summary>Length</summary>
 		public readonly float LengthSq => x * x + y * y + z * z + w * w;
 		public readonly float Length => (float)Math.Sqrt(LengthSq);
@@ -318,7 +329,16 @@ namespace Rylogic.Maths
 		#region ToString
 		public override string ToString() => $"{x} {y} {z} {w}";
 		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
-		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Cpp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Python => $"{x:+0.0000000;-0.0000000;+0.0000000}, {y:+0.0000000;-0.0000000;+0.0000000}, {z:+0.0000000;-0.0000000;+0.0000000}f, {w:+0.0000000;-0.0000000;+0.0000000}",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -790,6 +810,17 @@ namespace Rylogic.UnitTests
 					Assert.True(Math_.FEql(ROT, ROT2));
 				}
 			}
+		}
+		[Test]
+		public void NumericsConversion()
+		{
+			var vec0 = Quaternion.Normalize(new Quaternion(1, 2, 3, 4));
+			var vec1 = (Quat)vec0;
+			var vec2 = (Quaternion)vec1;
+			var vec3 = (Quat)vec2;
+
+			Assert.True(vec0 == vec2);
+			Assert.True(vec1 == vec3);
 		}
 	}
 }

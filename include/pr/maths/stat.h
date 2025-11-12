@@ -663,7 +663,7 @@ namespace pr::maths
 
 		void Reset(int window_size = MaxWindowSize)
 		{
-			assert(window_size <= MaxWindowSize);
+			pr_assert(window_size <= MaxWindowSize);
 			m_in    = &m_window[0];
 			m_size  = window_size;
 			m_mean  = Type();

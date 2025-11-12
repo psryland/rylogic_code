@@ -21,7 +21,7 @@ namespace pr
 	// Returns a spherical direction vector corresponding to the ith point of a Fibonacci sphere
 	inline v4 FibonacciSphericalMapping(int i, int N)
 	{
-		assert(i >= 0 && i < N && "index value out of range");
+		pr_assert(i >= 0 && i < N && "index value out of range");
 
 		// Z goes from -1 to +1
 		// Using a half step bias so that there is no point at the poles.

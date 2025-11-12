@@ -1,4 +1,4 @@
-
+﻿
 #include <stdio.h>
 #include <conio.h>
 #include "pr/common/min_max_fix.h"
@@ -318,7 +318,7 @@ int main(void)
 //	//		//bool intersect3 =	!(m[m.LargestElement3()] > 0.0f ||
 //	//		//					  n[n.LargestElement3()] > 0.0f);
 //	//		
-//	//		assert(intersect1 == intersect2 && intersect1 == intersect3 && "");
+//	//		pr_assert(intersect1 == intersect2 && intersect1 == intersect3 && "");
 //	//	}
 //	//	//return !(box1[0] - box2[1] > 0 || box2[0] - box1[1] > 0);
 //	//	return;
@@ -727,7 +727,7 @@ void UnitTest_Rand()
 //			sum += rand.value();
 //		}
 //		float avr = sum / 1000.0f; avr;
-//		assert(FEql(avr, 0.5f, 0.01f));
+//		pr_assert(FEql(avr, 0.5f, 0.01f));
 //	}
 //	{
 //		int sum = 0;
@@ -738,7 +738,7 @@ void UnitTest_Rand()
 //			sum += rand.value();
 //		}
 //		float avr = sum / 1000.0f; avr;
-//		//assert(FEql(avr, 0.5f, 0.01f));
+//		//pr_assert(FEql(avr, 0.5f, 0.01f));
 //	}
 //}
 

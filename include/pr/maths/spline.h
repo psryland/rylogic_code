@@ -325,7 +325,7 @@ namespace pr
 		Spline(v4 const& start, v4 const& start_ctrl, v4 const& end_ctrl, v4 const& end)
 			:m4x4(start, start_ctrl, end_ctrl, end)
 		{
-			assert(start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f && "Splines are constructed from 4 positions");
+			pr_assert(start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f && "Splines are constructed from 4 positions");
 		}
 		Spline(v4 const* spline)
 			:Spline(spline[Spline::Start], spline[Spline::SCtrl], spline[Spline::ECtrl], spline[Spline::End])
@@ -411,7 +411,7 @@ namespace pr
 	// Note: 'spline' passed by value to prevent aliasing problems with 'lhs' and 'rhs'
 	inline void Split(Spline const& spline, float t, Spline& lhs, Spline& rhs)
 	{
-		assert(&lhs != &rhs && "lhs and rhs must not be the same spline");
+		pr_assert(&lhs != &rhs && "lhs and rhs must not be the same spline");
 		v4 P5;
 		lhs.x = spline.x;                      // P0
 		lhs.y = Lerp(spline.x, spline.y, t);   // P4

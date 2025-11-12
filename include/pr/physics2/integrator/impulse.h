@@ -106,7 +106,7 @@ namespace pr::physics
 		//	// Assert that impulse0 would kill the relative velocity
 		//	auto imp = Shift(v8force{v4{}, impulse0}, v4Origin - pt);
 		//	auto velA_ws = (objA.InertiaInvWS() * (objA.O2W().rot * (objA.MomentumOS() +                       -imp)));
-		//	auto velB_ws = (objB.InertiaInvWS() * (objB.O2W().rot * (objB.MomentumOS() + InvertFast(c.m_b2a) * +imp)));
+		//	auto velB_ws = (objB.InertiaInvWS() * (objB.O2W().rot * (objB.MomentumOS() + InvertAffine(c.m_b2a) * +imp)));
 		//	
 		//	auto pt_ws = objA.O2W() * pt;
 		//	auto velA_at_pt_ws = velA_ws.LinAt(pt_ws - objA.O2W().pos);
@@ -143,7 +143,7 @@ namespace pr::physics
 
 		auto impulse_pair = ImpulsePair{};
 		impulse_pair.m_os_impulse_objA = -impulse;
-		impulse_pair.m_os_impulse_objB = InvertFast(c.m_b2a) * +impulse;
+		impulse_pair.m_os_impulse_objB = InvertAffine(c.m_b2a) * +impulse;
 		impulse_pair.m_contact = &c;
 		return impulse_pair;
 	}
@@ -208,7 +208,7 @@ namespace pr::physics
 			auto imp = -(inertia * c.m_velocity);
 			auto pt_ws = c.m_objA->O2W() * c.m_point;
 			auto velA_ws = (c.m_objA->InertiaInvWS() * (c.m_objA->O2W().rot * (c.m_objA->MomentumOS() +                       -imp)));
-			auto velB_ws = (c.m_objB->InertiaInvWS() * (c.m_objB->O2W().rot * (c.m_objB->MomentumOS() + InvertFast(c.m_b2a) * +imp)));
+			auto velB_ws = (c.m_objB->InertiaInvWS() * (c.m_objB->O2W().rot * (c.m_objB->MomentumOS() + InvertAffine(c.m_b2a) * +imp)));
 			auto velA_at_pt_ws = velA_ws.LinAt(pt_ws);
 			auto velB_at_pt_ws = velB_ws.LinAt(pt_ws);
 			auto dvel_ws = (velB_at_pt_ws - velA_at_pt_ws);
@@ -236,7 +236,7 @@ namespace pr::physics
 		// Assert that impulse0 would kill the relative velocity
 		#if PR_DBG
 		auto velA_ws = c.m_objA->O2W().rot * (c.m_objA->InertiaInvOS() * (c.m_objA->MomentumOS() + -impulse0));
-		auto velB_ws = c.m_objB->O2W().rot * (c.m_objB->InertiaInvOS() * (c.m_objB->MomentumOS() + InvertFast(c.m_b2a) * +impulse0));
+		auto velB_ws = c.m_objB->O2W().rot * (c.m_objB->InertiaInvOS() * (c.m_objB->MomentumOS() + InvertAffine(c.m_b2a) * +impulse0));
 		auto vel_at_point = (velB_ws - velA_ws).LinAt(c.m_objA->O2W() * c.m_point);
 		assert(FEqlRelative(Length(vel_at_point), 0, 0.0001f));
 		#endif
@@ -289,7 +289,7 @@ namespace pr::physics
 
 		auto impulse_pair = ImpulsePair{};
 		impulse_pair.m_os_impulse_objA = -impulse;
-		impulse_pair.m_os_impulse_objB = InvertFast(c.m_b2a) * +impulse;
+		impulse_pair.m_os_impulse_objB = InvertAffine(c.m_b2a) * +impulse;
 		impulse_pair.m_contact = &c;
 		return impulse_pair;
 #endif

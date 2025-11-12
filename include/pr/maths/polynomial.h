@@ -52,7 +52,7 @@ namespace pr::maths
 		}
 		double operator[](int i) const
 		{
-			assert(i >= 0 && i < m_count);
+			pr_assert(i >= 0 && i < m_count);
 			return m_root[i];
 		}
 	};
@@ -599,7 +599,7 @@ namespace pr::maths
 	//	}
 	//	void Set(float const* coefs, uint32_t num_coefs)
 	//	{
-	//		assert(num_coefs <= N && "This object cannot represent a polynomial of this order");
+	//		pr_assert(num_coefs <= N && "This object cannot represent a polynomial of this order");
 	//		m_degree = num_coefs - 1;
 	//		float* in = m_coefs + m_degree;
 	//		float const* out = coefs;

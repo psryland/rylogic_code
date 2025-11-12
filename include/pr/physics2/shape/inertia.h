@@ -839,14 +839,14 @@ namespace pr::physics
 	inline Inertia Rotate(Inertia const& inertia, m3_cref a2b)
 	{
 		// Ib = a2b*Ia*b2a
-		auto b2a = InvertFast(a2b);
+		auto b2a = InvertAffine(a2b);
 		auto Ic = a2b * inertia.Ic3x3(1) * b2a;
 		return Inertia{Ic, inertia.Mass(), inertia.CoM()};
 	}
 	inline InertiaInv Rotate(InertiaInv const& inertia_inv, m3_cref a2b)
 	{
 		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
-		auto b2a = InvertFast(a2b);
+		auto b2a = InvertAffine(a2b);
 		auto Ic¯ = a2b * inertia_inv.Ic3x3(1) * b2a;
 		return InertiaInv{Ic¯, inertia_inv.InvMass(), inertia_inv.CoM()};
 	}

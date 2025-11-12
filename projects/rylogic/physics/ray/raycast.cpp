@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -411,7 +411,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapeArray const& shape, RayCastResult& res
 	RayCastResult res;
 	for( Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = Inc(s) )
 	{
-		if( RayCast(InvertFast(s->m_shape_to_model) * ray, *s, res) && res.m_t0 < result.m_t0 )
+		if( RayCast(InvertAffine(s->m_shape_to_model) * ray, *s, res) && res.m_t0 < result.m_t0 )
 		{
 			result = res;
 			result.m_normal = s->m_shape_to_model * result.m_normal;

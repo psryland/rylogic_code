@@ -118,7 +118,7 @@ namespace pr::physics
 		}
 		m4x4 W2O() const
 		{
-			return InvertFast(O2W());
+			return InvertAffine(O2W());
 		}
 		void O2W(m4_cref o2w)
 		{
@@ -417,7 +417,7 @@ namespace pr::physics
 			auto o2w = rb.O2W();
 			auto pos = v4{0.5f / mass,0,0,1};
 			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));
-			auto invrot = InvertFast(rot);
+			auto invrot = InvertAffine(rot);
 			PR_EXPECT(FEql(o2w.pos, pos));
 			PR_EXPECT(FEql(o2w.rot, rot));
 
@@ -497,7 +497,7 @@ namespace pr::physics
 			auto o2w = rb.O2W();
 			auto pos = v4{0.5f / mass,0,0,1};
 			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));
-			auto invrot = InvertFast(rot);
+			auto invrot = InvertAffine(rot);
 			PR_EXPECT(FEql(o2w.pos, pos));
 			PR_EXPECT(FEql(o2w.rot, rot));
 

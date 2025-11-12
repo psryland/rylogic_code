@@ -825,7 +825,7 @@ namespace Rylogic.Script
 					}
 				case "inverse":
 					{
-						p2w = Math_.IsOrthonormal(p2w) ? Math_.InvertFast(p2w) : Math_.Invert(p2w);
+						p2w = Math_.IsOrthonormal(p2w) ? Math_.InvertAffine(p2w) : Math_.Invert(p2w);
 						break;
 					}
 				case "normalise":

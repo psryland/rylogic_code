@@ -12,6 +12,7 @@
 #include <span>
 #include <array>
 #include <limits>
+#include <stdexcept>
 #include <intrin.h>
 #include <immintrin.h>
 #include <emmintrin.h>
@@ -21,7 +22,6 @@
 #include <complex>
 #include <cassert>
 #include <random>
-#include "pr/meta/dep_constants.h"
 
 // Libraries built to use DirectXMath should be fine when linked in projects
 // that don't use DirectXMath because all of the maths types have the same
@@ -46,6 +46,22 @@ static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisati
 #ifndef thread_local
 #define thread_local __declspec(thread)
 #endif
+
+// Allow assert handler replacement
+#ifndef pr_assert
+#define pr_assert(x) assert(x)
+//#define pr_assert(condition, message)\
+//	do {\
+//		if constexpr (std::is_constant_evaluated()) { \
+//			if (!(condition)) throw std::logic_error(message); \
+//		} else\
+//			if (!(condition)) pr_assert_fail(#condition, message, __FILE__, __LINE__); \
+//		} \
+//	} while(0)
+#endif
+//#ifndef pr_assert_fail
+//#define pr_assert_fail(condition, message) assert((message) && (condition))
+//#endif
 
 // C++11's 'alignas'
 #if _MSC_VER < 1900
@@ -128,6 +144,10 @@ namespace pr
 
 	namespace maths
 	{
+		// Dependent false
+		template <typename T>
+		concept always_false = false;
+
 		// The 'is_vec' trait means, "Can be converted to a N component vector"
 		// Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
 		template <typename T> struct is_vec :std::false_type

@@ -59,7 +59,7 @@ namespace pr::physics
 			// 'm_b2a' is the position/orientation of objB in objA space at 'time'
 			// 'm_velocity' is value of objB's velocity vector field sampled at objA's origin.
 			// 'm_point_at_t' is adjusted by half 'dt' because it is the average of the overlap.
-			m_b2a = InvertFast(m_objA->O2W(dt)) * m_objB->O2W(dt);
+			m_b2a = InvertAffine(m_objA->O2W(dt)) * m_objB->O2W(dt);
 			m_velocity = m_b2a * m_objB->VelocityOS() - m_objA->VelocityOS();
 			m_point_at_t = m_point + 0.5f * dt * m_velocity.LinAt(m_point);
 			m_time = dt;

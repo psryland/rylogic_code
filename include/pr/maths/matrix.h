@@ -75,7 +75,7 @@ namespace pr
 		Matrix(int vecs, int cmps, std::initializer_list<Real> data, bool transposed)
 			:Matrix(!transposed ? vecs : cmps, !transposed ? cmps : vecs)
 		{
-			assert("Data length mismatch" && int(data.size()) == vecs*cmps);
+			pr_assert("Data length mismatch" && int(data.size()) == vecs*cmps);
 			memcpy(m_data, data.begin(), sizeof(Real) * size_t(vecs * cmps));
 			m_transposed = transposed;
 		}
@@ -162,15 +162,15 @@ namespace pr
 		Real operator()(int vec, int cmp) const
 		{
 			if (m_transposed) std::swap(vec, cmp);
-			assert(vec >= 0 && vec < m_vecs);
-			assert(cmp >= 0 && cmp < m_cmps);
+			pr_assert(vec >= 0 && vec < m_vecs);
+			pr_assert(cmp >= 0 && cmp < m_cmps);
 			return m_data[vec * m_cmps + cmp];
 		}
 		Real& operator()(int vec, int cmp)
 		{
 			if (m_transposed) std::swap(vec, cmp);
-			assert(vec >= 0 && vec < m_vecs);
-			assert(cmp >= 0 && cmp < m_cmps);
+			pr_assert(vec >= 0 && vec < m_vecs);
+			pr_assert(cmp >= 0 && cmp < m_cmps);
 			return m_data[vec * m_cmps + cmp];
 		}
 
@@ -212,7 +212,7 @@ namespace pr
 				:m_mat(&m)
 				,m_idx(idx)
 			{
-				assert(idx >= 0 && idx < m_mat->vecs());
+				pr_assert(idx >= 0 && idx < m_mat->vecs());
 			}
 			operator Matrix() const
 			{
@@ -224,7 +224,7 @@ namespace pr
 			}
 			VecProxy& operator = (Matrix const& rhs)
 			{
-				assert("'rhs' must be a vector" && rhs.vecs() == 1 && rhs.cmps() == m_mat->cmps());
+				pr_assert("'rhs' must be a vector" && rhs.vecs() == 1 && rhs.cmps() == m_mat->cmps());
 
 				for (int i = 0, iend = m_mat->cmps(); i != iend; ++i)
 					(*m_mat)(m_idx, i) = rhs(0, i);
@@ -255,7 +255,7 @@ namespace pr
 				:m_mat(&m)
 				,m_idx(idx)
 			{
-				assert(idx >= 0 && idx < m_mat->cmps());
+				pr_assert(idx >= 0 && idx < m_mat->cmps());
 			}
 			operator Matrix() const
 			{
@@ -267,7 +267,7 @@ namespace pr
 			}
 			CmpProxy& operator = (Matrix const& rhs)
 			{
-				assert("'rhs' must be a transposed vector" && rhs.cmps() == 1 && rhs.vecs() == m_mat->vecs());
+				pr_assert("'rhs' must be a transposed vector" && rhs.cmps() == 1 && rhs.vecs() == m_mat->vecs());
 
 				for (int i = 0, iend = m_mat->vecs(); i != iend; ++i)
 					(*m_mat)(i, m_idx) = rhs(i, 0);
@@ -419,8 +419,8 @@ namespace pr
 		// Addition/Subtraction
 		friend Matrix<Real> operator + (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 		{
-			assert(lhs.vecs() == rhs.vecs());
-			assert(lhs.cmps() == rhs.cmps());
+			pr_assert(lhs.vecs() == rhs.vecs());
+			pr_assert(lhs.cmps() == rhs.cmps());
 
 			// If one of the matrices is transposed, we need to add element-by-element
 			// If both are transposed (or not), we can vectorise element adding
@@ -446,8 +446,8 @@ namespace pr
 		}
 		friend Matrix<Real> operator - (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 		{
-			assert(lhs.vecs() == rhs.vecs());
-			assert(lhs.cmps() == rhs.cmps());
+			pr_assert(lhs.vecs() == rhs.vecs());
+			pr_assert(lhs.cmps() == rhs.cmps());
 
 			// If one of the matrices is transposed, we need to subtract element-by-element
 			// If both are transposed (or not), we can vectorise element substracting
@@ -501,7 +501,7 @@ namespace pr
 			//       [a2c]       [  b2c  ]       [a2b]
 			//       [1x3]   =   [  2x3  ]   *   [1x2]
 			//       [   ]       [       ]       [   ]
-			assert("Wrong matrix dimensions" && a2b.cmps() == b2c.vecs());
+			pr_assert("Wrong matrix dimensions" && a2b.cmps() == b2c.vecs());
 
 			// Result
 			Matrix res(a2b.vecs(), b2c.cmps());
@@ -857,8 +857,8 @@ namespace pr
 			{}
 			Real operator ()(int vec, int cmp) const
 			{
-				assert(vec >= 0 && vec < m_mat->vecs());
-				assert(cmp >= 0 && cmp < m_mat->cmps());
+				pr_assert(vec >= 0 && vec < m_mat->vecs());
+				pr_assert(cmp >= 0 && cmp < m_mat->cmps());
 				return cmp > vec ? (*m_mat)(vec, cmp) : cmp == vec ? 1 : 0;
 			}
 		};
@@ -870,8 +870,8 @@ namespace pr
 			{}
 			Real operator ()(int vec, int cmp) const
 			{
-				assert(vec >= 0 && vec < m_mat->vecs());
-				assert(cmp >= 0 && cmp < m_mat->cmps());
+				pr_assert(vec >= 0 && vec < m_mat->vecs());
+				pr_assert(cmp >= 0 && cmp < m_mat->cmps());
 				return cmp <= vec ? (*m_mat)(vec, cmp) : 0;
 			}
 		};
@@ -1005,8 +1005,8 @@ namespace pr
 	// Return the dot product of two vectors
 	template <typename Real> inline Real Dot(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 	{
-		assert("Dot product is between column vectors" && lhs.vecs() == 1 && rhs.vecs() == 1);
-		assert("Dot product must be between vectors of the same length" && lhs.cmps() == rhs.cmps());
+		pr_assert("Dot product is between column vectors" && lhs.vecs() == 1 && rhs.vecs() == 1);
+		pr_assert("Dot product must be between vectors of the same length" && lhs.cmps() == rhs.cmps());
 
 		Real dp = 0;
 		for (int i = 0, iend = lhs.cmps(); i != iend; ++i)
@@ -1028,7 +1028,7 @@ namespace pr
 	template <typename Real> inline Matrix<Real> Solve(MatrixLU<Real> const& A, Matrix<Real> const& v)
 	{
 		// e.g. [4x4][1x4] = [1x4]
-		assert("Solution vector 'v' has the wrong dimensions" && A.dim() == v.cmps() && v.vecs() == 1);
+		pr_assert("Solution vector 'v' has the wrong dimensions" && A.dim() == v.cmps() && v.vecs() == 1);
 
 		// Switch items in 'v' due to permutation matrix
 		Matrix<Real> a(1, A.dim());
@@ -1068,7 +1068,7 @@ namespace pr
 	// Return the inverse of matrix 'm'
 	template <typename Real> inline Matrix<Real> Invert(MatrixLU<Real> const& lu)
 	{
-		assert("Matrix has no inverse" && IsInvertible(lu));
+		pr_assert("Matrix has no inverse" && IsInvertible(lu));
 
 		// Inverse of an NxM matrix is a MxN matrix (even though this only works for square matrices)
 		Matrix<Real> inv(lu.dim(), lu.dim());

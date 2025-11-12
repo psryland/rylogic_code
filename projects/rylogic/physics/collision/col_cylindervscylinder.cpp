@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -148,7 +148,7 @@ float Project(v4 const& axis, v4 const& cyl_axis, float height, float radius, Po
 //	//{
 //	//}
 //
-//	//m4x4 a2b = b2w.InvertFast() * a2w;
+//	//m4x4 a2b = b2w.InvertAffine() * a2w;
 //	//v4 e0 =  cylA.m_height * v4ZAxis;
 //	//v4 s0 = -e0;
 //	//v4 e1 =  cylB.m_height * a2b.z;

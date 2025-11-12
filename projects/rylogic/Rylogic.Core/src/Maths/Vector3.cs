@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Numerics;
 using Rylogic.Extn;
 
 namespace Rylogic.Maths
@@ -100,7 +101,17 @@ namespace Rylogic.Maths
 		{
 			return new double[] { p.x, p.y, p.z };
 		}
-		
+
+		/// <summary>Implicit conversion to System.Numerics</summary>
+		public static implicit operator v3(Vector3 v)
+		{
+			return new v3(v.X, v.Y, v.Z);
+		}
+		public static implicit operator Vector3(v3 v)
+		{
+			return new Vector3(v.x, v.y, v.z);
+		}
+
 		public v4 w0 => new(x, y, z, 0);
 		public v4 w1 => new(x, y, z, 1);
 
@@ -200,7 +211,16 @@ namespace Rylogic.Maths
 		#region ToString
 		public override string ToString() => $"{x} {y} {z}";
 		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)}";
-		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Cpp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f, {z:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Python => $"{x:+0.0000000;-0.0000000;+0.0000000}, {y:+0.0000000;-0.0000000;+0.0000000}, {z:+0.0000000;-0.0000000;+0.0000000}",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -425,7 +445,16 @@ namespace Rylogic.Maths
 			int i = v.y <= v.z ? 1 : 2;
 			return v.x <= v[i] ? 0 : i;
 		}
-		
+
+		/// <summary>Return the component-wise square root of a vector</summary>
+		public static v3 Sqrt(v3 a)
+		{
+			return new(
+				(float)Math.Sqrt(a.x),
+				(float)Math.Sqrt(a.y),
+				(float)Math.Sqrt(a.z));
+		}
+
 		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
 		public static v3 Normalise(v3 vec)
 		{

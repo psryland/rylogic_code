@@ -354,7 +354,10 @@ public class Tools
 		var RunTests = run_tests;
 		//RunTests = false;
 		if (!RunTests)
+		{
+			Console.WriteLine($"{binary_filepath}. **** Unit tests disabled ****");
 			return;
+		}
 
 		if (!IOPath.Exists(binary_filepath))
 		{

@@ -6076,7 +6076,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Inverse:
 				{
-					p2w = IsOrthonormal(p2w) ? InvertFast(p2w) : Invert(p2w);
+					p2w = IsOrthonormal(p2w) ? InvertAffine(p2w) : Invert(p2w);
 					break;
 				}
 				case EKeyword::Normalise:

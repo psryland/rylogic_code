@@ -1,4 +1,4 @@
-﻿//*******************************************************************************************
+//*******************************************************************************************
 // UnitTests
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
@@ -39,6 +39,7 @@ namespace pr::unittests
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <tuple>
 #include <filesystem>
 #include <algorithm>
 #include <functional>
@@ -158,7 +159,14 @@ namespace pr::unittests
 	template <typename Derived>
 	struct UnitTestBase
 	{
+		// Notes:
+		//  - There is no point adding the type-pack to the test class. Only methods can be
+		//    invoked with different types so it only makes sense to have the types specified
+		//    on the test methods.
+
+		using base_t = UnitTestBase<Derived>;
 		using test_class_type = Derived;
+	
 		mutable std::filesystem::path m_cached_temp_dir = {};
 		int m_count = 0;
 
@@ -229,16 +237,12 @@ namespace pr::unittests
 		static std::ostream& out() { return *ostream; }
 
 		// Append a unit test to the Tests() collection
-		template <class T>
-		static bool AddTest(char const* name, void (T::*method)(), char const* file, int line)
+		template <typename T>
+		static bool AddTest(char const* name, UnitTestItem::TestFunc method, char const* file, int line)
 		{
 			Tests.push_back(UnitTestItem{
 				.m_name = name,
-				.m_func = [=]()
-				{
-					T t;
-					(t.*method)();
-				},
+				.m_func = method,
 				.m_class = &typeid(T),
 				.m_file = file,
 				.m_line = line,
@@ -404,22 +408,22 @@ namespace pr::unittests
 
 // Test class
 #define PRUnitTestClass(classname)\
-	struct TestClass_##classname : pr::unittests::UnitTestBase<TestClass_##classname>
+struct TestClass_##classname : pr::unittests::UnitTestBase<TestClass_##classname>
 
 // Test method
 #define PRUnitTestMethod(methodname, ...)\
-	template <typename T = void, typename... Args>\
-	void Test_##methodname##_()\
+	template <typename... Types>\
+	static void Test_##methodname##_()\
 	{\
-		Test_##methodname<T>();\
-		if constexpr (sizeof...(Args) > 0)\
-			Test_##methodname##_<Args...>();\
+		typename base_t::test_class_type t;\
+		(t.Test_##methodname<Types>(), ...);\
 	}\
 	inline static bool s_registered_##methodname = pr::unittests::TestFramework::AddTest<test_class_type>(\
 		#methodname,\
-		&test_class_type::Test_##methodname##_<##__VA_ARGS__>,\
+		+[](){ Test_##methodname##_<##__VA_ARGS__>(); },\
 		__FILE__,\
-		__LINE__);\
+		__LINE__\
+	);\
 	template <typename T>\
 	void Test_##methodname()
 

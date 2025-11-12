@@ -64,12 +64,12 @@ namespace pr
 		// Array access
 		S const& operator [] (int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		S& operator [] (int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -241,12 +241,13 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Vector2Tests, float, double, int32_t, int64_t)
+	PRUnitTestClass(Vector2Tests)
 	{
-		using S = T;
-		using vec2_t = Vec2<S, void>;
+		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
 
-		{// Create
 			auto V0 = vec2_t(S(1));
 			PR_EXPECT(V0.x == S(1));
 			PR_EXPECT(V0.y == S(1));
@@ -255,29 +256,35 @@ namespace pr::maths
 			PR_EXPECT(V1.x == S(1));
 			PR_EXPECT(V1.y == S(2));
 
-			auto V2 = vec2_t({S(3), S(4)});
+			auto V2 = vec2_t({ S(3), S(4) });
 			PR_EXPECT(V2.x == S(3));
 			PR_EXPECT(V2.y == S(4));
 
-			vec2_t V3 = {S(4), S(5)};
+			vec2_t V3 = { S(4), S(5) };
 			PR_EXPECT(V3.x == S(4));
 			PR_EXPECT(V3.y == S(5));
-
-			if constexpr (std::floating_point<S>)
-			{
-				auto V4 = vec2_t::Normal(S(3), S(4));
-				auto V4_expected = vec2_t(S(0.6), S(0.8));
-				PR_EXPECT(FEql(V4, V4_expected));
-				PR_EXPECT(FEql(V4[0], S(0.6)));
-				PR_EXPECT(FEql(V4[1], S(0.8)));
-			}
 		}
-		{// Operators
+		PRUnitTestMethod(Normal, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+
+			auto V4 = vec2_t::Normal(S(3), S(4));
+			auto V4_expected = vec2_t(S(0.6), S(0.8));
+			PR_EXPECT(FEql(V4, V4_expected));
+			PR_EXPECT(FEql(V4[0], S(0.6)));
+			PR_EXPECT(FEql(V4[1], S(0.8)));
+		}
+		PRUnitTestMethod(Operators, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+
 			auto V0 = vec2_t(S(10), S(8));
 			auto V1 = vec2_t(S(2), S(12));
 			auto eql = [](auto lhs, auto rhs)
 			{
-				if constexpr(std::floating_point<S>)
+				if constexpr (std::floating_point<S>)
 					return FEql(lhs, rhs);
 				else
 					return lhs == rhs;
@@ -306,7 +313,11 @@ namespace pr::maths
 			// Explicit cast to T!=void
 			Vec2<S, int> V3 = static_cast<Vec2<S, int>>(V2);
 		}
-		{// Min/Max/Clamp
+		PRUnitTestMethod(MinMaxClamp, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+
 			auto V0 = vec2_t(S(+1), S(+2));
 			auto V1 = vec2_t(S(-1), S(-2));
 			auto V2 = vec2_t(S(+2), S(+4));
@@ -316,25 +327,27 @@ namespace pr::maths
 			PR_EXPECT(Clamp(V0, V1, V2) == vec2_t(S(1), S(2)));
 			PR_EXPECT(Clamp(V0, S(0), S(1)) == vec2_t(S(1), S(1)));
 		}
-		{// Normalise
-			if constexpr (std::floating_point<S>)
-			{
-				auto arr0 = vec2_t(S(1), S(2));
-				auto len = Length(arr0);
-				PR_EXPECT(FEql(Normalise(vec2_t::Zero(), arr0), arr0));
-				PR_EXPECT(FEql(Normalise(arr0), vec2_t(S(1)/len, S(2)/len)));
-				PR_EXPECT(IsNormal(Normalise(arr0)));
-			}
+		PRUnitTestMethod(Normalise, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+
+			auto arr0 = vec2_t(S(1), S(2));
+			auto len = Length(arr0);
+			PR_EXPECT(FEql(Normalise(vec2_t::Zero(), arr0), arr0));
+			PR_EXPECT(FEql(Normalise(arr0), vec2_t(S(1) / len, S(2) / len)));
+			PR_EXPECT(IsNormal(Normalise(arr0)));
 		}
-		{// CosAngle
-			if constexpr (std::floating_point<S>)
-			{
-				vec2_t arr0(S(1), S(0));
-				vec2_t arr1(S(0), S(1));
-				PR_EXPECT(FEql(CosAngle(arr0, arr1) - Cos(DegreesToRadians(S(90))), S(0)));
-				PR_EXPECT(FEql(Angle(arr0, arr1), DegreesToRadians(S(90))));
-			}
+		PRUnitTestMethod(CosAngle, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+
+			vec2_t arr0(S(1), S(0));
+			vec2_t arr1(S(0), S(1));
+			PR_EXPECT(FEql(CosAngle(arr0, arr1) - Cos(DegreesToRadians(S(90))), S(0)));
+			PR_EXPECT(FEql(Angle(arr0, arr1), DegreesToRadians(S(90))));
 		}
-	}
+	};
 }
 #endif

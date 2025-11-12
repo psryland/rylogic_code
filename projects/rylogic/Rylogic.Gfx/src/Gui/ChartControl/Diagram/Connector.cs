@@ -328,7 +328,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				return null;
 
 			// Convert the hit point to connector space
-			var pt = Math_.InvertFast(O2W) * results.m_ws_intercept;
+			var pt = Math_.InvertAffine(O2W) * results.m_ws_intercept;
 			var hit = new ChartControl.HitTestResult.Hit(this, pt, null);
 			return hit;
 		}

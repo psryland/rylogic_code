@@ -13,10 +13,12 @@
 #include <cuchar>
 #include <string>
 #include <string_view>
+#include <charconv>
 #include <vector>
 #include <concepts>
 #include <functional>
 #include <type_traits>
+#include <system_error>
 #include <locale>
 #include <cstdlib>
 #include <cstdarg>
@@ -87,6 +89,7 @@ namespace pr
 	template <typename Char>
 	struct char_traits;
 
+	// char traits base class
 	template <typename Char>
 	struct char_traits_common :std::char_traits<Char>
 	{
@@ -104,8 +107,7 @@ namespace pr
 			return count;
 		}
 
-		// This is broken for multi-byte encodings
-		// Convert a code point to lower case
+		// Convert a code point to lower case. WARNING: This is broken for multi-byte encodings
 		static Char lwr(Char ch)
 		{
 			return std::char_traits<Char>::to_char_type(std::tolower(std::char_traits<Char>::to_int_type(ch), locale()));
@@ -126,15 +128,39 @@ namespace pr
 			return str;
 		}
 
-		static int strcmp(char const* lhs, char const* rhs)                     { return ::strcmp(lhs, rhs); }
-		static int strncmp(char const* lhs, char const* rhs, size_t max_count)  { return ::strncmp(lhs, rhs, max_count); }
-		static int strnicmp(char const* lhs, char const* rhs, size_t max_count) { return ::_strnicmp(lhs, rhs, max_count); }
+		static int strcmp(char const* lhs, char const* rhs)
+		{
+			return ::strcmp(lhs, rhs);
+		}
+		static int strncmp(char const* lhs, char const* rhs, size_t max_count) 
+		{
+			return ::strncmp(lhs, rhs, max_count);
+		}
+		static int strnicmp(char const* lhs, char const* rhs, size_t max_count)
+		{
+			return ::_strnicmp(lhs, rhs, max_count);
+		}
 
-		static double             strtod(char const* str, char const** end)                   { return ::strtod(str, (char**)end); }
-		static long               strtol(char const* str, char const** end, int radix)        { return ::strtol(str, (char**)end, radix); }
-		static unsigned long      strtoul(char const* str, char const** end, int radix)       { return ::strtoul(str, (char**)end, radix); }
-		static long long          strtoi64(char const* str, char const** end, int radix)      { return ::_strtoi64(str, (char**)end, radix); }
-		static unsigned long long strtoui64(char const* str, char const** end, int radix)     { return ::_strtoui64(str, (char**)end, radix); }
+		static double strtod(char const* str, char const** end)
+		{
+			 return ::strtod(str, (char**)end);
+		}
+		static long strtol(char const* str, char const** end, int radix)
+		{
+			 return ::strtol(str, (char**)end, radix);
+		}
+		static unsigned long strtoul(char const* str, char const** end, int radix)
+		{
+			 return ::strtoul(str, (char**)end, radix);
+		}
+		static long long strtoi64(char const* str, char const** end, int radix)
+		{
+			 return ::_strtoi64(str, (char**)end, radix);
+		}
+		static unsigned long long strtoui64(char const* str, char const** end, int radix)
+		{
+			 return ::_strtoui64(str, (char**)end, radix);
+		}
 
 		static char* itostr(long long from, char* buf, int count, int radix)
 		{
@@ -168,15 +194,39 @@ namespace pr
 			return str; 
 		}
 
-		static int strcmp(wchar_t const* lhs, wchar_t const* rhs)                     { return ::wcscmp(lhs, rhs); }
-		static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)  { return ::wcsncmp(lhs, rhs, max_count); }
-		static int strnicmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count) { return ::_wcsnicmp(lhs, rhs, max_count); }
+		static int strcmp(wchar_t const* lhs, wchar_t const* rhs)
+		{
+			return ::wcscmp(lhs, rhs);
+		}
+		static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)
+		{
+			return ::wcsncmp(lhs, rhs, max_count);
+		}
+		static int strnicmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)
+		{
+			return ::_wcsnicmp(lhs, rhs, max_count);
+		}
 
-		static double             strtod(wchar_t const* str, wchar_t const** end)                   { return ::wcstod(str, (wchar_t**)end); }
-		static long               strtol(wchar_t const* str, wchar_t const** end, int radix)        { return ::wcstol(str, (wchar_t**)end, radix); }
-		static long long          strtoi64(wchar_t const* str, wchar_t const** end, int radix)      { return ::_wcstoi64(str, (wchar_t**)end, radix); }
-		static unsigned long      strtoul(wchar_t const* str, wchar_t const** end, int radix)       { return ::wcstoul(str, (wchar_t**)end, radix); }
-		static unsigned long long strtoui64(wchar_t const* str, wchar_t const** end, int radix)     { return ::_wcstoui64(str, (wchar_t**)end, radix); }
+		static double strtod(wchar_t const* str, wchar_t const** end)
+		{
+			return ::wcstod(str, (wchar_t**)end);
+		}
+		static long strtol(wchar_t const* str, wchar_t const** end, int radix)
+		{
+			return ::wcstol(str, (wchar_t**)end, radix);
+		}
+		static long long strtoi64(wchar_t const* str, wchar_t const** end, int radix)
+		{
+			return ::_wcstoi64(str, (wchar_t**)end, radix);
+		}
+		static unsigned long strtoul(wchar_t const* str, wchar_t const** end, int radix)
+		{
+			return ::wcstoul(str, (wchar_t**)end, radix);
+		}
+		static unsigned long long strtoui64(wchar_t const* str, wchar_t const** end, int radix)
+		{
+			return ::_wcstoui64(str, (wchar_t**)end, radix);
+		}
 
 		static wchar_t* itostr(long long from, wchar_t* buf, int count, int radix)
 		{

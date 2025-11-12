@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -293,8 +293,8 @@ namespace pr::collision
 		auto featB = EFeature{};
 		v4 pointA[FeaturePolygonMaxSides] = {};
 		v4 pointB[FeaturePolygonMaxSides] = {};
-		SupportFeature(lhs, InvertFast(l2w) * +axis, featA, pointA);
-		SupportFeature(rhs, InvertFast(r2w) * -axis, featB, pointB);
+		SupportFeature(lhs, InvertAffine(l2w) * +axis, featA, pointA);
+		SupportFeature(rhs, InvertAffine(r2w) * -axis, featB, pointB);
 
 		return FindContactPoint(pointA, featA, pointB, featB, l2w, r2w, axis, pen);
 	}

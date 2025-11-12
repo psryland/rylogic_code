@@ -159,13 +159,13 @@ namespace pr
 		friend bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 		friend BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref offset)
 		{
-			assert(offset.w == 0.0f);
+			pr_assert(offset.w == 0.0f);
 			lhs.m_ctr_rad += offset;
 			return lhs;
 		}
 		friend BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref offset)
 		{
-			assert(offset.w == 0.0f);
+			pr_assert(offset.w == 0.0f);
 			lhs.m_ctr_rad -= offset;
 			return lhs;
 		}

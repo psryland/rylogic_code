@@ -52,8 +52,8 @@ namespace pr
 		// Create a frustum from 'width' and 'height' at 'z' from the apex
 		static Frustum MakeWH(float width, float height, float z, float zfar)
 		{
-			assert(z > 0 && "The focus plane should be a positive distance from the apex");
-			assert(zfar >= 0 && "The far plane should be a positive distance from the apex");
+			pr_assert(z > 0 && "The focus plane should be a positive distance from the apex");
+			pr_assert(zfar >= 0 && "The far plane should be a positive distance from the apex");
 
 			Frustum f;
 			f.m_Tplanes.x = v4(+z, 0.0f, -width * 0.5f, 0.0f); // left
@@ -378,7 +378,7 @@ namespace pr
 	// Returns the corners of the frustum (in frustum space) at a given 'z' distance (i.e. apex at (0,0,0). Far plane at (0,0,-zfar)). Return order: x=lb, y=lt, z=rt, w=rb
 	inline m4x4 Corners(Frustum const& frustum, float z)
 	{
-		assert(z >= 0 && "'z' should be a positive distance from the apex");
+		pr_assert(z >= 0 && "'z' should be a positive distance from the apex");
 		auto edges = frustum.edges();
 		
 		if (frustum.orthographic())
@@ -453,12 +453,12 @@ namespace pr
 	}
 	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BSphere_cref bsphere, v2 nf = v2Zero)
 	{
-		assert(bsphere.valid() && "Invalid bsphere used in 'IsWithin' test against frustum");
+		pr_assert(bsphere.valid() && "Invalid bsphere used in 'IsWithin' test against frustum");
 		return IsWithin(frustum, bsphere.Centre(), bsphere.Radius(), nf);
 	}
 	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BBox_cref bbox, v2 nf = v2Zero)
 	{
-		assert(bbox.valid() && "Invalid bbox used in 'IsWithin' test against frustum");
+		pr_assert(bbox.valid() && "Invalid bbox used in 'IsWithin' test against frustum");
 
 		auto bb = bbox;
 		auto frustum_apex = 0.0f;
@@ -517,12 +517,12 @@ namespace pr
 		// However, zfar0 can be 0.0.
 		// So instead, make a copy of 'frustum' and set zfar0 to 1.0.
 		// Calculate the zfar1 value for all planes and choose the maximum.
-		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+		pr_assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
 
 		// The caller assumes (0,0,0) is the apex and the far plane is (0,0,-zfar).
 		// Transform 'ws_pt' to frustum space, then offset to be relative to (0,0,zfar)
 		auto frustum_zfar = frustum.zfar();
-		auto pt = InvertFast(f2w) * ws_pt;
+		auto pt = InvertAffine(f2w) * ws_pt;
 		pt.z += frustum_zfar;
 		
 		// If 'pt' is beyond the far plane, extend the far plane
@@ -559,17 +559,17 @@ namespace pr
 	}
 	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v2& nf, BSphere_cref ws_bsphere)
 	{
-		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+		pr_assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
 		return Grow(frustum, f2w, nf, ws_bsphere.Centre(), ws_bsphere.Radius());
 	}
 	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v2& nf, BBox_cref ws_bbox)
 	{
-		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+		pr_assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
 
 		// The caller assumes (0,0,0) is the apex and the far plane is (0,0,-zfar).
 		// Transform 'ws_bbox' to frustum space, then offset to be relative to (0,0,zfar)
 		auto frustum_zfar = frustum.zfar();
-		auto bbox = InvertFast(f2w) * ws_bbox;
+		auto bbox = InvertAffine(f2w) * ws_bbox;
 		bbox.m_centre.z += frustum_zfar;
 		
 		// If 'pt' is beyond the far plane, extend the far plane
@@ -826,7 +826,7 @@ namespace pr::maths
 			//}
 			for (auto& pt : pts)
 			{
-				auto within = IsWithin(f, InvertFast(f2w) * pt, 0.001f, nf);
+				auto within = IsWithin(f, InvertAffine(f2w) * pt, 0.001f, nf);
 				PR_EXPECT(within);
 			}
 		}
@@ -857,7 +857,7 @@ namespace pr::maths
 			//}
 			for (auto& bb : bboxes)
 			{
-				auto within = IsWithin(f, InvertFast(f2w) * bb, nf);
+				auto within = IsWithin(f, InvertAffine(f2w) * bb, nf);
 				PR_EXPECT(within);
 			}
 		}
@@ -888,7 +888,7 @@ namespace pr::maths
 			//}
 			for (auto& bs : spheres)
 			{
-				auto within = IsWithin(f, InvertFast(f2w) * bs, nf);
+				auto within = IsWithin(f, InvertAffine(f2w) * bs, nf);
 				PR_EXPECT(within);
 			}
 		}

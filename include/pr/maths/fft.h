@@ -433,7 +433,7 @@ namespace pr
 		// Return the frequency domain values in 'buffer'
 		void Spectrum(Real* buffer, int length)
 		{
-			assert("Insufficient buffer space" && length >= WindowSize() / 2);
+			pr_assert("Insufficient buffer space" && length >= WindowSize() / 2);
 			auto N = WindowSize();
 
 			// 'm_out' contains the spectrum twice, with the upper portion mirrored

@@ -1164,7 +1164,7 @@ namespace Rylogic.Gui.WPF
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
 			// Set the axes range
-			var w2c = Math_.InvertFast(Scene.Camera.O2W);
+			var w2c = Math_.InvertAffine(Scene.Camera.O2W);
 			var xmin = -w2c.pos.x - wh.x * 0.5;
 			var xmax = -w2c.pos.x + wh.x * 0.5;
 			var ymin = -w2c.pos.y - wh.y * 0.5;

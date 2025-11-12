@@ -159,7 +159,16 @@ namespace Rylogic.Maths
 		public override string ToString() => ToString2x2();
 		public string ToString2x2() => $"{x} \n{y} \n";
 		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n";
-		public string ToCodeString() => $"new m4x4(\nnew v4({x.ToCodeString()}),\n new v4({y.ToCodeString()})\n)";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"new m4x4(\nnew v4({x.ToCodeString(fmt)}),\n new v4({y.ToCodeString(fmt)})\n)",
+				ECodeString.Cpp => $"{{\n{{{x.ToCodeString(fmt)}}},\n{{{y.ToCodeString(fmt)}}},\n}}",
+				ECodeString.Python => $"[\n[{x.ToCodeString(fmt)}],\n[{y.ToCodeString(fmt)}],\n]",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -301,18 +310,10 @@ namespace Rylogic.Maths
 			return m;
 		}
 
-		/// <summary>Invert 'm' in place assuming m is orthonormal</summary>
-		public static void InvertFast(ref m2x2 m)
-		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose(ref m);
-		}
-
 		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
-		public static m2x2 InvertFast(m2x2 m)
+		public static m2x2 InvertAffine(m2x2 m)
 		{
-			InvertFast(ref m);
-			return m;
+			return Invert(m); // Same cost
 		}
 
 		/// <summary>True if 'm' can be inverted</summary>
@@ -327,10 +328,10 @@ namespace Rylogic.Maths
 			Debug.Assert(IsInvertible(m), "Matrix has no inverse");
 
 			var det = Determinant(m);
-			var tmp = new m2x2(
+			return new m2x2(
 				new v2(m.y.y, -m.x.y) / det,
-				new v2(-m.y.x, m.x.x) / det);
-			return tmp;
+				new v2(-m.y.x, m.x.x) / det
+			);
 		}
 
 		/// <summary>Orthonormalise 'm' in-place</summary>
@@ -382,14 +383,16 @@ namespace Rylogic.UnitTests
 {
 	using Maths;
 
-	[TestFixture] public class UnitTestM2x2
+	[TestFixture]
+	public class UnitTestM2x2
 	{
-		[Test] public void TestInversion()
+		[Test]
+		public void TestInversion()
 		{
 			var rng = new Random();
 			//{
 			//	var m = m2x2.Random(rng, v4.Random3N(0, rng), -(float)Math_.Tau, +(float)Math_.Tau);
-			//	var inv_m0 = m3x4.InvertFast(m);
+			//	var inv_m0 = m3x4.InvertAffine(m);
 			//	var inv_m1 = m3x4.Invert(m);
 			//	Assert.True(m3x4.FEql(inv_m0, inv_m1, 0.001f));
 			//}
@@ -397,7 +400,7 @@ namespace Rylogic.UnitTests
 				//m2x2.Random(rng, -5.0f, +5.0f);
 				var m = new m2x2(
 					new v2(-3.0f, +4.2f),
-					new v2( 1.2f, -0.3f));
+					new v2(1.2f, -0.3f));
 				var inv_m = Math_.Invert(m);
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
@@ -411,16 +414,33 @@ namespace Rylogic.UnitTests
 					new v2(2f, 6f));
 				var inv_m = Math_.Invert(m);
 
-				var det = 4f*6f - 7f*2f;
+				var det = 4f * 6f - 7f * 2f;
 				var INV_M = new m2x2(
-					new v2(6f, -7f)/det,
-					new v2(-2f, 4f)/det);
+					new v2(6f, -7f) / det,
+					new v2(-2f, 4f) / det);
 
-				Assert.True(Math_.FEql(m*INV_M, m2x2.Identity));
-				Assert.True(Math_.FEql(  inv_m,         INV_M));
+				Assert.True(Math_.FEql(m * INV_M, m2x2.Identity));
+				Assert.True(Math_.FEql(inv_m, INV_M));
 			}
 		}
-		[Test] public void TestQuatConversion()
+
+		[Test]
+		public void InvertAffine()
+	{
+			var a2b = new m2x2(
+				new v2(4f, 7f),
+				new v2(2f, 6f)
+			);
+			var b2a = Math_.Invert(a2b);
+			var a2a = b2a * a2b;
+			Assert.True(Math_.FEql(m2x2.Identity, a2a));
+
+			var b2a_fast = Math_.InvertAffine(a2b);
+			Assert.True(Math_.FEql(b2a_fast, b2a));
+		}
+
+		[Test]
+		public void TestQuatConversion()
 		{
 		}
 	}

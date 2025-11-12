@@ -85,12 +85,12 @@ namespace pr
 		// Array access
 		Vec4<S, void> const& operator [](int i) const
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 		Vec4<S, void>& operator [](int i)
 		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
+			pr_assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
@@ -128,7 +128,7 @@ namespace pr
 		}
 		Mat4x4 w1(Vec4_cref<S,void> xyz) const
 		{
-			assert("'pos' must be a position vector" && xyz.w == 1);
+			pr_assert("'pos' must be a position vector" && xyz.w == 1);
 			return Mat4x4{rot, xyz};
 		}
 
@@ -168,7 +168,7 @@ namespace pr
 		static Mat4x4 Translation(Vec4_cref<S,void> xyz)
 		{
 			// 'xyz' can be a position or an offset
-			assert("translation should be an affine vector" && (xyz.w == S(0) || xyz.w == S(1)));
+			pr_assert("translation should be an affine vector" && (xyz.w == S(0) || xyz.w == S(1)));
 			return Mat4x4(Mat3x4<S,A,B>::Identity(), xyz.w1());
 		}
 		static Mat4x4 Translation(S x, S y, S z)
@@ -185,7 +185,7 @@ namespace pr
 		// Create from an axis and angle. 'axis' should be normalised
 		static Mat4x4 Transform(Vec4_cref<S,void> axis, S angle, Vec4_cref<S,void> pos)
 		{
-			assert("'axis' should be normalised" && IsNormal(axis));
+			pr_assert("'axis' should be normalised" && IsNormal(axis));
 			return Mat4x4(Mat3x4<S,A,B>::Rotation(axis, angle), pos);
 		}
 
@@ -195,10 +195,16 @@ namespace pr
 			return Mat4x4(Mat3x4<S,A,B>::Rotation(angular_displacement), pos);
 		}
 
+		// Create from rotation and translation
+		static Mat4x4 Transform(Mat3x4<S,A,B> const& rot, Vec4_cref<S,void> pos)
+		{
+			return Mat4x4(rot, pos);
+		}
+
 		// Create from quaternion
 		static Mat4x4 Transform(Quat<S,A,B> const& q, Vec4_cref<S,void> pos)
 		{
-			assert("'q' should be a normalised quaternion" && IsNormal(q));
+			pr_assert("'q' should be a normalised quaternion" && IsNormal(q));
 			return Mat4x4(Mat3x4<S,A,B>::Rotation(q), pos);
 		}
 
@@ -233,9 +239,9 @@ namespace pr
 		// Orientation matrix to "look" at a point
 		static Mat4x4 LookAt(Vec4_cref<S,void> eye, Vec4_cref<S,void> at, Vec4_cref<S,void> up)
 		{
-			assert("Invalid position/direction vectors passed to LookAt" && eye.w == S(1) && at.w == S(1) && up.w == S(0));
-			assert("LookAt 'eye' and 'at' positions are coincident" && (eye - at != Vec4<S,void>{}));
-			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, S(0)));
+			pr_assert("Invalid position/direction vectors passed to LookAt" && eye.w == S(1) && at.w == S(1) && up.w == S(0));
+			pr_assert("LookAt 'eye' and 'at' positions are coincident" && (eye - at != Vec4<S,void>{}));
+			pr_assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, S(0)));
 			auto mat = Mat4x4{};
 			mat.z = Normalise(eye - at);
 			mat.x = Normalise(Cross3(up, mat.z));
@@ -247,8 +253,8 @@ namespace pr
 		// Construct an orthographic projection matrix
 		static Mat4x4 ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded)
 		{
-			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0));
-			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && (zn - zf) != 0);
+			pr_assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0));
+			pr_assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && (zn - zf) != 0);
 			auto rh = Bool2SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = S(2) / w;
@@ -266,8 +272,8 @@ namespace pr
 			//   p0 = c2s * Vec4<S,void>(0,0,-zn,1); p0/p0.w = (0,0,0,1)
 			//   p1 = c2s * Vec4<S,void>(0,0,-zf,1); p1/p1.w = (0,0,1,1)
 
-			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0));
-			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
+			pr_assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0));
+			pr_assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
 			auto rh = Bool2SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = S(2) * zn / w;
@@ -281,8 +287,8 @@ namespace pr
 		// Construct a perspective projection matrix offset from the centre
 		static Mat4x4 ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded)
 		{
-			assert("invalid view rect" && IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > S(0) && (t - b) > S(0));
-			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
+			pr_assert("invalid view rect" && IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > S(0) && (t - b) > S(0));
+			pr_assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
 			auto rh = Bool2SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.x.x = S(2) * zn / (r - l);
@@ -298,8 +304,8 @@ namespace pr
 		// Construct a perspective projection matrix using field of view
 		static Mat4x4 ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded)
 		{
-			assert("invalid aspect ratio" && IsFinite(aspect) && aspect > S(0));
-			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
+			pr_assert("invalid aspect ratio" && IsFinite(aspect) && aspect > S(0));
+			pr_assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0));
 			auto rh = Bool2SignF(righthanded);
 			auto mat = Mat4x4{};
 			mat.y.y = S(1) / Tan(fovY / S(2));
@@ -493,16 +499,6 @@ namespace pr
 	PR_MAT4X4_CHECKS(int64_t);
 	#undef PR_MAT4X4_CHECKS
 
-	// Return true if 'mat' is an affine transform
-	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsAffine(Mat4x4_cref<S,A,B> mat)
-	{
-		return
-			mat.x.w == S(0) &&
-			mat.y.w == S(0) &&
-			mat.z.w == S(0) &&
-			mat.w.w == S(1);
-	}
-
 	// Return the determinant of the rotation part of this matrix
 	template <Scalar S, typename A, typename B> inline S pr_vectorcall Determinant3(Mat4x4_cref<S,A,B> mat)
 	{
@@ -512,7 +508,7 @@ namespace pr
 	// Return the 4x4 determinant of the affine transform 'mat'
 	template <Scalar S, typename A, typename B> inline S pr_vectorcall DeterminantFast4(Mat4x4_cref<S,A,B> mat)
 	{
-		assert("'mat' must be an affine transform to use this function" && IsAffine(mat));
+		pr_assert("'mat' must be an affine transform to use this function" && IsAffine(mat));
 		return
 			(mat.x.x * mat.y.y * mat.z.z) +
 			(mat.x.y * mat.y.z * mat.z.x) +
@@ -606,6 +602,28 @@ namespace pr
 		return m;
 	}
 
+	// Return true if 'mat' is an affine transform
+	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsAffine(Mat4x4_cref<S,A,B> mat)
+	{
+		return
+			mat.x.w == S(0) &&
+			mat.y.w == S(0) &&
+			mat.z.w == S(0) &&
+			mat.w.w == S(1);
+	}
+
+	// Return true if 'mat' is orthogonal
+	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthogonal(Mat4x4_cref<S,A,B> mat)
+	{
+		return
+			FEql(Dot(mat.x, mat.y), 0) &&
+			FEql(Dot(mat.x, mat.z), 0) &&
+			FEql(Dot(mat.x, mat.w), 0) &&
+			FEql(Dot(mat.y, mat.z), 0) &&
+			FEql(Dot(mat.y, mat.w), 0) &&
+			FEql(Dot(mat.z, mat.w), 0);
+	}
+
 	// Return true if this matrix is orthonormal
 	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthonormal(Mat4x4_cref<S,A,B> mat)
 	{
@@ -620,17 +638,6 @@ namespace pr
 	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsInvertible(Mat4x4_cref<S,A,B> mat)
 	{
 		return Determinant4(mat) != S(0);
-	}
-
-	// Return the inverse of 'mat' (assuming an orthonormal matrix)
-	template <Scalar S, typename A, typename B> inline Mat4x4<S,B,A> pr_vectorcall InvertFast(Mat4x4_cref<S,A,B> mat)
-	{
-		assert("Matrix is not orthonormal" && IsOrthonormal(mat));
-		auto m = Mat4x4<S,B,A>{Transpose3x3(mat)};
-		m.pos.x = -Dot3(mat.x, mat.pos);
-		m.pos.y = -Dot3(mat.y, mat.pos);
-		m.pos.z = -Dot3(mat.z, mat.pos);
-		return m;
 	}
 
 	// Return the inverse of 'mat'
@@ -662,7 +669,7 @@ namespace pr
 				+mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y};
 
 			auto det = mat.x.x * inv.x.x + mat.x.y * inv.y.x + mat.x.z * inv.z.x + mat.x.w * inv.w.x;
-			assert("matrix has no inverse" && det != S(0));
+			pr_assert("matrix has no inverse" && det != S(0));
 			return inv * (S(1) / det);
 		}
 		else // Reference implementation
@@ -681,7 +688,7 @@ namespace pr
 				if (j <= 3 && val < Abs(mA.w[j])) { pivot = 3; val = Abs(mA.w[j]); }
 				if (val < maths::tiny<S>)
 				{
-					assert("Matrix has no inverse" && false);
+					pr_assert("Matrix has no inverse" && false);
 					return mat;
 				}
 
@@ -711,6 +718,40 @@ namespace pr
 		}
 	}
 
+	// Return the inverse of 'mat' (assuming an orthonormal matrix)
+	template <Scalar S, typename A, typename B> inline Mat4x4<S,B,A> pr_vectorcall InvertAffine(Mat4x4_cref<S,A,B> mat)
+	{
+		pr_assert("Matrix is not affine" && IsAffine(mat));
+		auto m = mat;
+
+		auto s = Vec3<S,void>(LengthSq(mat.x), LengthSq(mat.y), LengthSq(mat.z));
+		if (!FEql(s, Vec3<S,void>::One()))
+		{
+			pr_assert(s.x != 0 && s.y != 0 && s.z != 0 && "Cannot invert a degenerate matrix");
+			s = CompSqrt(s);
+		}
+
+		// Remove scale
+		m.x /= s.x;
+		m.y /= s.y;
+		m.z /= s.z;
+
+		// Invert rotation
+		m.rot = Transpose(m.rot);
+
+		// Invert scale
+		m.x /= s.x;
+		m.y /= s.y;
+		m.z /= s.z;
+
+		// Invert translation
+		m.pos.x = -(mat.pos.x * m.x.x + mat.pos.y * m.y.x + mat.pos.z * m.z.x);
+		m.pos.y = -(mat.pos.x * m.x.y + mat.pos.y * m.y.y + mat.pos.z * m.z.y);
+		m.pos.z = -(mat.pos.x * m.x.z + mat.pos.y * m.y.z + mat.pos.z * m.z.z);
+
+		return m;
+	}
+
 	// Return the inverse of 'mat' using double precision floats
 	template <Scalar S, typename A, typename B> inline Mat4x4<S,B,A> pr_vectorcall InvertPrecise(Mat4x4_cref<S,A,B> mat)
 	{
@@ -733,7 +774,7 @@ namespace pr
 		inv[3][3] = 0.0 + mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y;
 
 		auto det = mat.x.x * inv[0][0] + mat.x.y * inv[1][0] + mat.x.z * inv[2][0] + mat.x.w * inv[3][0];
-		assert("matrix has no inverse" && det != S(0));
+		pr_assert("matrix has no inverse" && det != S(0));
 		auto inv_det = 1.0 / det;
 
 		Mat4x4<S,B,A> m;
@@ -766,7 +807,7 @@ namespace pr
 		m.x = Normalise(m.x);
 		m.y = Normalise(Cross3(m.z, m.x));
 		m.z = Cross3(m.x, m.y);
-		assert(IsOrthonormal(m));
+		pr_assert(IsOrthonormal(m));
 		return m;
 	}
 
@@ -795,7 +836,7 @@ namespace pr
 	// Return a vector representing the approximate rotation between two orthonormal transforms
 	template <Scalar S, typename A, typename B> inline Vec4<S,void> pr_vectorcall RotationVectorApprox(Mat4x4_cref<S,A,B> from, Mat4x4_cref<S,A,B> to)
 	{
-		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
+		pr_assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
 		auto cpm_x_i2wR = to - from;
 		auto w2iR = Transpose3x3(from).w0();
@@ -806,8 +847,8 @@ namespace pr
 	// Spherically interpolate between two affine transforms
 	template <Scalar S, typename A, typename B> inline Mat4x4<S,A,B> pr_vectorcall Slerp(Mat4x4_cref<S,A,B> lhs, Mat4x4_cref<S,A,B> rhs, S frac)
 	{
-		assert(IsAffine(lhs));
-		assert(IsAffine(rhs));
+		pr_assert(IsAffine(lhs));
+		pr_assert(IsAffine(rhs));
 
 		auto q = Slerp(Quat<S,void>(lhs.rot), Quat<S,void>(rhs.rot), frac);
 		auto p = Lerp(lhs.pos, rhs.pos, frac);
@@ -819,89 +860,133 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Matrix4x4Tests, float)
+	PRUnitTestClass(Matrix4x4Tests)
 	{
-		using S = T;
-		using mat4_t = Mat4x4<S, void, void>;
-		using vec4_t = Vec4<S, void>;
-
 		std::default_random_engine rng;
+
+		PRUnitTestMethod(Identity, float, double, int32_t, int64_t)
 		{
+			using S = T;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto m1 = mat4_t::Identity();
 			auto m2 = mat4_t::Identity();
 			auto m3 = m1 * m2;
 			PR_EXPECT(FEql(m3, mat4_t::Identity()));
 		}
-		{// Largest/Smallest element
+		PRUnitTestMethod(LargestSmallestElement, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{-2, -3, -4, -5}, vec4_t{1, 1, -1, 9}, vec4_t{-8, 5, 0, 0}};
 			PR_EXPECT(MinComponent(m1) == -8);
 			PR_EXPECT(MaxComponent(m1) == +9);
 		}
-		{// FEql
+		PRUnitTestMethod(FEql, float, double)
+		{
+			using S = T;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
-			auto m1 = mat4_t::Identity();
-			auto m2 = mat4_t::Identity();
+			auto m1 = mat4_t::Zero();
+			auto m2 = mat4_t::Zero();
 
-			m1.x.x = m1.y.y = 1.0e-5f;
-			m2.x.x = m2.y.y = 1.1e-5f;
-			PR_EXPECT(FEql(MaxComponent(m1), 1.f));
-			PR_EXPECT(FEql(MaxComponent(m2), 1.f));
-			PR_EXPECT(FEql(m1, m2));
-
-			m1.z.z = m1.w.w = 1.0e-5f;
-			m2.z.z = m2.w.w = 1.1e-5f;
-			PR_EXPECT(FEql(MaxComponent(m1), 1.0e-5f));
-			PR_EXPECT(FEql(MaxComponent(m2), 1.1e-5f));
+			// Not equal, because the difference is 10% of the max value
+			m1.x.x = S(0.10) * maths::tiny<S>;
+			m2.x.x = S(0.11) * maths::tiny<S>;
+			PR_EXPECT(FEql(MaxComponent(m1), m1.x.x));
+			PR_EXPECT(FEql(MaxComponent(m2), m2.x.x));
 			PR_EXPECT(!FEql(m1, m2));
+
+			// Now they are equal because, compared to 1 the difference is tiny
+			m1.y.y = S(1);
+			m2.y.y = S(1);
+			PR_EXPECT(FEql(MaxComponent(m1), m1.y.y));
+			PR_EXPECT(FEql(MaxComponent(m2), m2.y.y));
+			PR_EXPECT(FEql(m1, m2));
 		}
-		{// Finite
-			if constexpr (std::floating_point<S>)
-			{
-				volatile auto f0 = S(0);
-				vec4_t arr0(0, 1, 10, 1);
-				vec4_t arr1(0, 1, 1 / f0, 0 / f0);
-				mat4_t m1(arr0, arr0, arr0, arr0);
-				mat4_t m2(arr1, arr1, arr1, arr1);
-				PR_EXPECT(IsFinite(m1));
-				PR_EXPECT(!IsFinite(m2));
-				PR_EXPECT(!All(m1, [](S x) { return x < S(5); }));
-				PR_EXPECT(Any(m1, [](S x) { return x < S(5); }));
-			}
+		PRUnitTestMethod(Finite, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
+			volatile auto f0 = S(0);
+			vec4_t arr0(0, 1, 10, 1);
+			vec4_t arr1(0, 1, 1 / f0, 0 / f0);
+			mat4_t m1(arr0, arr0, arr0, arr0);
+			mat4_t m2(arr1, arr1, arr1, arr1);
+			PR_EXPECT(IsFinite(m1));
+			PR_EXPECT(!IsFinite(m2));
+			PR_EXPECT(!All(m1, [](S x) { return x < S(5); }));
+			PR_EXPECT(Any(m1, [](S x) { return x < S(5); }));
 		}
-		{// Multiply scalar
+		PRUnitTestMethod(MultiplyScalar, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+			
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
-			auto m2 = 2.0f;
+			auto m2 = S(2);
 			auto m3 = mat4_t{vec4_t{2, 4, 6, 8}, vec4_t{2, 2, 2, 2}, vec4_t{-4, -4, -4, -4}, vec4_t{8, 6, 4, 2}};
 			auto r = m1 * m2;
 			PR_EXPECT(FEql(r, m3));
 		}
-		{// Multiply vector
+		PRUnitTestMethod(MultiplyVector, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto m = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto v = vec4_t{-3, 4, 2, -1};
 			auto R = vec4_t{-7, -9, -11, -13};
 			auto r = m * v;
 			PR_EXPECT(FEql(r, R));
 		}
-		{// Multiply matrix
+		PRUnitTestMethod(MultiplyMatrix, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto m2 = mat4_t{vec4_t{1, 1, 1, 1}, vec4_t{2, 2, 2, 2}, vec4_t{-1, -1, -1, -1}, vec4_t{-2, -2, -2, -2}};
 			auto m3 = mat4_t{vec4_t{4, 4, 4, 4}, vec4_t{8, 8, 8, 8}, vec4_t{-4, -4, -4, -4}, vec4_t{-8, -8, -8, -8}};
 			auto r = m1 * m2;
 			PR_EXPECT(FEql(r, m3));
 		}
-		{// Component multiply
+		PRUnitTestMethod(ComponentMultiply, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto m1 = mat4_t{vec4_t{1, 2, 3, 4}, vec4_t{1, 1, 1, 1}, vec4_t{-2, -2, -2, -2}, vec4_t{4, 3, 2, 1}};
 			auto m2 = vec4_t(2, 1, -2, -1);
 			auto m3 = mat4_t{vec4_t{2, 4, 6, 8}, vec4_t{1, 1, 1, 1}, vec4_t{+4, +4, +4, +4}, vec4_t{-4, -3, -2, -1}};
 			auto r = CompMul(m1, m2);
 			PR_EXPECT(FEql(r, m3));
 		}
-		{//m4x4Translation
-			auto m1 = mat4_t(vec4_t::XAxis(), vec4_t::YAxis(), vec4_t::ZAxis(), vec4_t(1.0f, 2.0f, 3.0f, 1.0f));
-			auto m2 = mat4_t::Translation(vec4_t(1.0f, 2.0f, 3.0f, 1.0f));
+		PRUnitTestMethod(Translation, float, double, int32_t, int64_t)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
+			auto m1 = mat4_t(vec4_t::XAxis(), vec4_t::YAxis(), vec4_t::ZAxis(), vec4_t(1, 2, 3, 1));
+			auto m2 = mat4_t::Translation(vec4_t(1, 2, 3, 1));
 			PR_EXPECT(FEql(m1, m2));
 		}
-		{//m4x4CreateFrom
+		PRUnitTestMethod(CreateFrom, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			auto V1 = vec4_t::Random(rng, 0.0f, 10.0f, 1);
 			auto a2b = mat4_t::Transform(vec4_t::Normal(+3, -2, -1, 0), +1.23f, vec4_t(+4.4f, -3.3f, +2.2f, 1.0f));
 			auto b2c = mat4_t::Transform(vec4_t::Normal(-1, +2, -3, 0), -3.21f, vec4_t(-1.1f, +2.2f, -3.3f, 1.0f));
@@ -913,52 +998,90 @@ namespace pr::maths
 			vec4_t V4 = a2c * V1; V4;
 			PR_EXPECT(FEql(V3, V4));
 		}
-		{//m4x4CreateFrom2
-			auto q = quat(1.0f, 0.5f, 0.7f);
-			mat4_t m1 = mat4_t::Transform(1.0f, 0.5f, 0.7f, vec4_t::Origin());
-			mat4_t m2 = mat4_t::Transform(q, vec4_t::Origin());
-			PR_EXPECT(IsOrthonormal(m1));
-			PR_EXPECT(IsOrthonormal(m2));
-			PR_EXPECT(FEql(m1, m2));
+		PRUnitTestMethod(CreateFrom2, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using quat_t = Quat<S, void, void>;
+			using mat4_t = Mat4x4<S, void, void>;
 
-			std::uniform_real_distribution<S> dist(-1.0f, +1.0f);
-			auto ang = dist(rng);
-			vec4_t axis = vec4_t::RandomN(rng, 0);
-			m1 = mat4_t::Transform(axis, ang, vec4_t::Origin());
-			m2 = mat4_t::Transform(quat(axis, ang), vec4_t::Origin());
-			PR_EXPECT(IsOrthonormal(m1));
-			PR_EXPECT(IsOrthonormal(m2));
-			PR_EXPECT(FEql(m1, m2));
+			{
+				auto q = quat_t(1.0f, 0.5f, 0.7f);
+				mat4_t m1 = mat4_t::Transform(1.0f, 0.5f, 0.7f, vec4_t::Origin());
+				mat4_t m2 = mat4_t::Transform(q, vec4_t::Origin());
+				PR_EXPECT(IsOrthonormal(m1));
+				PR_EXPECT(IsOrthonormal(m2));
+				PR_EXPECT(FEql(m1, m2));
+			}
+			{
+				std::uniform_real_distribution<S> dist(-1.0f, +1.0f);
+				auto ang = S(dist(rng));
+				vec4_t axis = vec4_t::RandomN(rng, 0);
+				mat4_t m1 = mat4_t::Transform(axis, ang, vec4_t::Origin());
+				mat4_t m2 = mat4_t::Transform(quat_t(axis, ang), vec4_t::Origin());
+				PR_EXPECT(IsOrthonormal(m1));
+				PR_EXPECT(IsOrthonormal(m2));
+				PR_EXPECT(FEql(m1, m2));
+			}
 		}
-		{// Invert
+		PRUnitTestMethod(Invert, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			mat4_t a2b = mat4_t::Transform(vec4_t::Normal(-4, -3, +2, 0), -2.15f, vec4_t(-5, +3, +1, 1));
 			mat4_t b2a = Invert(a2b);
 			mat4_t a2a = b2a * a2b;
 			PR_EXPECT(FEql(mat4_t::Identity(), a2a));
 
-			mat4_t b2a_fast = InvertFast(a2b);
+			mat4_t b2a_fast = InvertAffine(a2b);
 			PR_EXPECT(FEql(b2a_fast, b2a));
 		}
-		{//m4x4Orthonormalise
+		PRUnitTestMethod(InvertAffine, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat3_t = Mat3x4<S, void, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
+			auto pos = vec4_t(-5, +3, +1, 1);
+			auto rot = mat3_t::Rotation(vec4_t::Normal(-4, -3, +2, 0), -2.15f) * mat3_t::Scale(2);
+			auto a2b = mat4_t::Transform(rot, pos);
+			
+			auto b2a = Invert(a2b);
+			auto a2a = b2a * a2b;
+			PR_EXPECT(FEql(mat4_t::Identity(), a2a));
+
+			auto b2a_fast = InvertAffine(a2b);
+			PR_EXPECT(FEql(b2a_fast, b2a));
+		}
+		PRUnitTestMethod(Orthonormalise, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat4_t = Mat4x4<S, void, void>;
+
 			mat4_t a2b;
-			a2b.x = vec4_t(-2.0f, 3.0f, 1.0f, 0.0f);
-			a2b.y = vec4_t(4.0f, -1.0f, 2.0f, 0.0f);
-			a2b.z = vec4_t(1.0f, -2.0f, 4.0f, 0.0f);
-			a2b.w = vec4_t(1.0f, 2.0f, 3.0f, 1.0f);
+			a2b.x = vec4_t(-2.0f, +3.0f, +1.0f, +0.0f);
+			a2b.y = vec4_t(+4.0f, -1.0f, +2.0f, +0.0f);
+			a2b.z = vec4_t(+1.0f, -2.0f, +4.0f, +0.0f);
+			a2b.w = vec4_t(+1.0f, +2.0f, +3.0f, +1.0f);
 			PR_EXPECT(IsOrthonormal(Orthonorm(a2b)));
 		}
-		{// CPM
-			if constexpr (std::floating_point<S>)
-			{
-				vec4_t a = {-2, 4, 2, 6};
-				vec4_t b = {3, -5, 2, -4};
-				auto a2b = CPM(a, vec4_t::Origin());
+		PRUnitTestMethod(CPM, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
 
-				vec4_t c = Cross3(a, b);
-				vec4_t d = a2b * b;
-				PR_EXPECT(FEql(c.xyz, d.xyz));
-			}
+			vec4_t a = {-2, 4, 2, 6};
+			vec4_t b = {3, -5, 2, -4};
+			auto a2b = CPM(a, vec4_t::Origin());
+
+			vec4_t c = Cross3(a, b);
+			vec4_t d = a2b * b;
+			PR_EXPECT(FEql(c.xyz, d.xyz));
 		}
-	}
+	};
 }
 #endif

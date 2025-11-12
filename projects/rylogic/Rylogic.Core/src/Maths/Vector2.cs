@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Numerics;
 using Rylogic.Extn;
 
 namespace Rylogic.Maths
@@ -92,6 +93,16 @@ namespace Rylogic.Maths
 		public static explicit operator double[] (v2 p)
 		{
 			return new double[] { p.x, p.y };
+		}
+
+		/// <summary>Implicit conversion to System.Numerics</summary>
+		public static implicit operator v2(Vector2 v)
+		{
+			return new v2(v.X, v.Y);
+		}
+		public static implicit operator Vector2(v2 v)
+		{
+			return new Vector2(v.x, v.y);
 		}
 
 		#region Statics
@@ -189,7 +200,16 @@ namespace Rylogic.Maths
 		#region ToString
 		public override string ToString() => $"{x} {y}";
 		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)}";
-		public string ToCodeString() => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Cpp => $"{x:+0.0000000;-0.0000000;+0.0000000}f, {y:+0.0000000;-0.0000000;+0.0000000}f",
+				ECodeString.Python => $"{x:+0.0000000;-0.0000000;+0.0000000}, {y:+0.0000000;-0.0000000;+0.0000000}",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -430,6 +450,14 @@ namespace Rylogic.Maths
 		public static int MinElementIndex(v2 v)
 		{
 			return v.x <= v.y ? 0 : 1;
+		}
+
+		/// <summary>Return the component-wise square root of a vector</summary>
+		public static v2 Sqrt(v2 a)
+		{
+			return new(
+				(float)Math.Sqrt(a.x),
+				(float)Math.Sqrt(a.y));
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XY components</summary>

@@ -16,9 +16,9 @@
     <ClCompile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>
-				;PR_UNITTESTS=1
-				;PR_MATHS_USE_DIRECTMATH=1
 				;%(PreprocessorDefinitions)
+				;PR_MATHS_USE_DIRECTMATH=1
+				;PR_UNITTESTS=1
 			</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
@@ -53,6 +53,8 @@
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\savitzky_golay_filter.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
@@ -379,9 +381,14 @@
 				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
     </ClCompile>
-    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
+    <ClCompile Include="src\dependecy_check_math.cpp" />
     <ClCompile Include="src\unittests.cpp" />
     <ClInclude Include="src\unittests.h" />
+    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli" />
     <None Include="cpp.hint" />
     <None Include="harvest_files.py" />
     <None Include="run_tests.py" />

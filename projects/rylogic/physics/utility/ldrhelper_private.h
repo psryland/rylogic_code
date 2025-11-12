@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -39,8 +39,8 @@ namespace pr
 		template <typename TStr> void PhMinkowski(char const* name, unsigned int colour, ph::Shape const& shapeA, m4x4 const& a2w, ph::Shape const& shapeB, m4x4 const& b2w, TStr& str)
 		{
 			Geometry sph; geometry::GenerateGeosphere(sph, 1.0f, 4);
-			m3x4 w2a = a2w.Getm3x4().InvertFast();
-			m3x4 w2b = b2w.Getm3x4().InvertFast();
+			m3x4 w2a = a2w.Getm3x4().InvertAffine();
+			m3x4 w2b = b2w.Getm3x4().InvertAffine();
 			std::size_t p_id = 0, q_id = 0;
 			TVertexCont& verts = sph.m_frame[0].m_mesh.m_vertex;
 			for( TVertexCont::iterator v = verts.begin(), v_end = verts.end(); v != v_end; ++v )

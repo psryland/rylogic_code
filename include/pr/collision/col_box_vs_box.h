@@ -21,7 +21,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Compute a transform for 'rhs' in 'lhs's frame
-		auto r2l = InvertFast(l2w) * r2w;
+		auto r2l = InvertAffine(l2w) * r2w;
 
 		// Compute common sub expressions. Add in an epsilon term to counteract arithmetic
 		// errors when two edges are parallel and their cross product is (near) 0

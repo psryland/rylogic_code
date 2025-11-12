@@ -220,7 +220,7 @@ namespace Rylogic.Maths
 				case +3: o2t = Identity; break;
 				default: throw new Exception("axis_id must one of \uC2B11, \uC2B12, \uC2B13");
 			}
-			return o2t * Math_.InvertFast(o2f);
+			return o2t * Math_.InvertAffine(o2f);
 		}
 
 		/// <summary>Create a scale matrix</summary>
@@ -340,7 +340,16 @@ namespace Rylogic.Maths
 		public string ToString4x3() => $"{x} \n{y} \n{z} \n";
 		public string ToString3x3() => $"{x.xyz} \n{y.xyz} \n{z.xyz} \n";
 		public string ToString(string format) => $"{x.ToString(format)} \n{y.ToString(format)} \n{z.ToString(format)} \n";
-		public string ToCodeString() => $"new m4x4(\nnew v4({x.ToCodeString()}),\n new v4({y.ToCodeString()}),\n new v4({z.ToCodeString()})\n)";
+		public string ToCodeString(ECodeString fmt = ECodeString.CSharp)
+		{
+			return fmt switch
+			{
+				ECodeString.CSharp => $"new m4x4(\nnew v4({x.ToCodeString(fmt)}),\n new v4({y.ToCodeString(fmt)}),\n new v4({z.ToCodeString(fmt)})\n)",
+				ECodeString.Cpp => $"{{\n{{{x.ToCodeString(fmt)}}},\n{{{y.ToCodeString(fmt)}}},\n{{{z.ToCodeString(fmt)}}},\n}}",
+				ECodeString.Python => $"[\n[{x.ToCodeString(fmt)}],\n[{y.ToCodeString(fmt)}],\n[{z.ToCodeString(fmt)}],\n]",
+				_ => ToString(),
+			};
+		}
 		#endregion
 
 		#region Parse
@@ -538,6 +547,15 @@ namespace Rylogic.Maths
 				IsNaN(m.z);
 		}
 
+		/// <summary>True if 'm' is orthogonal</summary>
+		public static bool IsOrthogonal(m3x4 m)
+		{
+			return
+				FEql(Dot(m.x, m.y), 0f) &&
+				FEql(Dot(m.x, m.z), 0f) &&
+				FEql(Dot(m.y, m.z), 0f);
+		}
+
 		/// <summary>True if 'm' is orthonormal</summary>
 		public static bool IsOrthonormal(m3x4 m)
 		{
@@ -587,17 +605,46 @@ namespace Rylogic.Maths
 			return m;
 		}
 
-		/// <summary>Invert 'm' in-place assuming m is orthonormal</summary>
-		public static void InvertFast(ref m3x4 m)
+		// Return true if 'mat' is an affine transform
+		public static bool IsAffine(m3x4 mat)
 		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			return
+				mat.x.w == 0.0f &&
+				mat.y.w == 0.0f &&
+				mat.z.w == 0.0f;
+		}
+
+		/// <summary>Invert 'm' in-place assuming m is affine</summary>
+		public static void InvertAffine(ref m3x4 m)
+		{
+			Debug.Assert(IsAffine(m), "Matrix is not affine");
+			
+			var s = new v3(m.x.LengthSq, m.y.LengthSq, m.z.LengthSq);
+			if (!FEql(s, v3.One))
+			{
+				if (s.x == 0 || s.y == 0 || s.z == 0)
+					throw new Exception("Cannot invert a degenerate matrix");
+				s = Sqrt(s);
+			}
+
+			// Remove scale
+			m.x /= s.x;
+			m.y /= s.y;
+			m.z /= s.z;
+
+			// Invert rotation
 			Transpose(ref m);
+
+			// Invert scale
+			m.x /= s.x;
+			m.y /= s.y;
+			m.z /= s.z;
 		}
 
 		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
-		public static m3x4 InvertFast(m3x4 m)
+		public static m3x4 InvertAffine(m3x4 m)
 		{
-			InvertFast(ref m);
+			InvertAffine(ref m);
 			return m;
 		}
 
@@ -792,7 +839,7 @@ namespace Rylogic.UnitTests
 			var rng = new Random();
 			{
 				var m = m3x4.Random(v4.Random3N(0, rng), -Math_.TauF, +Math_.TauF, rng);
-				var inv_m0 = Math_.InvertFast(m);
+				var inv_m0 = Math_.InvertAffine(m);
 				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
 			} {
@@ -821,6 +868,20 @@ namespace Rylogic.UnitTests
 				var inv_m = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m, INV_M, 0.001f));
 			}
+		}
+
+		[Test]
+		public void InvertAffine()
+		{
+			var rng = new Random(1);
+			var a2b = m3x4.Rotation(v4.Random3N(0, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f);
+			
+			var b2a = Math_.Invert(a2b);
+			var a2a = b2a * a2b;
+			Assert.True(Math_.FEql(m3x4.Identity, a2a));
+
+			var b2a_fast = Math_.InvertAffine(a2b);
+			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 
 		[Test]
