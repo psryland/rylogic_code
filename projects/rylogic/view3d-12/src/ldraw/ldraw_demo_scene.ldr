@@ -399,8 +399,9 @@
 		+0.18176337 -0.24681160 -0.12977648 FFA7D8AE
 		+0.38887858 +0.24615003 +0.06563436 FFB9BA96
 	}
-	*Size {40 40}             // Optional. {width, [height]} Specify a size for the point
-	*Style {Star}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'
+	*Size {40 40}  // Optional. {width, [height]} Specify a size for the point (in pixels)
+	*Style {Star}  // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'
+	//*Depth {}    // Optional. Points scale based on depth. *Size is in world units.
 	*Texture { *FilePath {"#whitespot"}} // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.
 	*o2w{*pos{16 6 6}}
 }
@@ -1130,6 +1131,11 @@
 		*YAxis {"abs(C2 - C1)"}  // Expression for the Y values
 		*Width {7}               // Optional. A width for the lines
 		*Dashed {0.1 0.1}        // Optional. Dashed line pattern
+		*DataPoints {
+			*Size {30}          // Optional. The size of data points on the graph
+			*Colour {FFFF00FF}  // Optional. The colour of the data points
+			*Style {Circle}     // Optional. Data point marker shape
+		}
 	}
 	*Series plot2 FFA000E0 // Colour is auto assigned if not given
 	{
@@ -1146,7 +1152,7 @@
 *Model model_from_file
 {
 	//*FilePath {"<model-filepath>"} // The file to create the model from
-	*Parts {"<mesh_name>" ...}       // Optional. Only load named models from the file
+	*Parts {"<mesh_name>" /*...*/}   // Optional. Only load named models from the file
 	*NoMaterials {}                  // Optional. Ignore any materials in the model file
 	*Animation {                     // Optional. Load animation data from the model file
 		*Style {PingPong}            // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong

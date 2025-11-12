@@ -281,54 +281,6 @@ inline float4 Random4(float2 seed)
 	return normalize(float4(x, y, z, w));
 }
 
-// Return a vector that is not parallel to 'v'
-inline float2 NotParallel(float2 v)
-{
-	v = abs(v);
-	return select(v.x > v.y, float2(0,1), float2(1,0));
-}
-inline float3 NotParallel(float3 v)
-{
-	v = abs(v);
-	return select(v.x > v.y && v.x > v.z, float3(0,0,1), float3(1,0,0));
-}
-inline float4 NotParallel(float4 v)
-{
-	v = abs(v);
-	return select(v.x > v.y && v.x > v.z, float4(0,0,1,0), float4(1,0,0,0));
-}
-
-// Normalise a vector or return zero if the length is zero
-inline float2 NormaliseOrZero(float2 vec)
-{
-	float len = length(vec);
-	return select(len != 0, vec / len, float2(0,0));
-}
-inline float3 NormaliseOrZero(float3 vec)
-{
-	float len = length(vec);
-	return select(len != 0, vec / len, float3(0,0,0));
-}
-inline float4 NormaliseOrZero(float4 vec)
-{
-	float len = length(vec);
-	return select(len != 0, vec / len, float4(0,0,0,0));
-}
-
-// Invert an orthonormal matrix
-inline row_major float4x4 InvertOrthonormal(row_major float4x4 mat)
-{
-	// This assumes row_major float4x4's
-	return float4x4(
-		mat._m00, mat._m10, mat._m20, 0,
-		mat._m01, mat._m11, mat._m21, 0,
-		mat._m02, mat._m12, mat._m22, 0,
-		-dot(mat._m00_m01_m02_m03, mat._m30_m31_m32_m33),
-		-dot(mat._m10_m11_m12_m13, mat._m30_m31_m32_m33),
-		-dot(mat._m20_m21_m22_m23, mat._m30_m31_m32_m33),
-		1);
-}
-
 // Optimised conditional test. If all active threads in a wave have 'condition' equal
 // the wave will take only take one of the conditional branches
 inline bool WaveActiveOrThisThreadTrue(bool condition)

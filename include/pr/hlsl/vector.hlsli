@@ -4,6 +4,7 @@
 //*********************************************
 #ifndef PR_HLSL_VECTOR_HLSLI
 #define PR_HLSL_VECTOR_HLSLI
+#include "pr/hlsl/core.hlsli"
 
 // Returns true if all vector elements are 0
 bool AllZero(float4 a)
@@ -39,19 +40,68 @@ float2 RotateCCW(float2 a)
 	return float2(-a.y, a.x);
 }
 
-// Invert a matrix assuming that it's an orthonormal matrix
+// Return a vector that is not parallel to 'v'
+inline float2 NotParallel(float2 v)
+{
+	v = abs(v);
+	return select(v.x > v.y, float2(0,1), float2(1,0));
+}
+inline float3 NotParallel(float3 v)
+{
+	v = abs(v);
+	return select(v.x > v.y && v.x > v.z, float3(0,0,1), float3(1,0,0));
+}
+inline float4 NotParallel(float4 v)
+{
+	v = abs(v);
+	return select(v.x > v.y && v.x > v.z, float4(0,0,1,0), float4(1,0,0,0));
+}
+
+// Normalise a vector or return zero if the length is zero
+inline float2 NormaliseOrZero(float2 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float2(0,0));
+}
+inline float3 NormaliseOrZero(float3 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float3(0,0,0));
+}
+inline float4 NormaliseOrZero(float4 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float4(0,0,0,0));
+}
+
+// Orthonormalise a rotation matrix
+float3x3 Orthonormalise(float3x3 mat)
+{
+	mat[0] = normalize(mat[0]);
+	mat[1] = normalize(cross(mat[2], mat[0]));
+	mat[2] = cross(mat[0], mat[1]);
+	return mat;
+}
+float4x4 Orthonormalise(float4x4 mat)
+{
+	mat[0].xyz = normalize(mat[0].xyz);
+	mat[1].xyz = normalize(cross(mat[2].xyz, mat[0].xyz));
+	mat[2].xyz = cross(mat[0].xyz, mat[1].xyz);
+	return mat;
+}
+
+// Invert an orthonormal matrix
 float4x4 InvertOrthonormal(float4x4 mat)
 {
-	float3x3 rt = transpose((float3x3) mat);
-	float3 inv_t = -mul(mat[3].xyz, rt);
-	
-	// Reconstruct the inverse matrix
+	// This assumes row_major float4x4's
 	return float4x4(
-		rt[0].x, rt[0].y, rt[0].z, 0,
-		rt[1].x, rt[1].y, rt[1].z, 0,
-		rt[2].x, rt[2].y, rt[2].z, 0,
-		inv_t.x, inv_t.y, inv_t.z, 1
-	);
+		mat._m00, mat._m10, mat._m20, 0,
+		mat._m01, mat._m11, mat._m21, 0,
+		mat._m02, mat._m12, mat._m22, 0,
+		-dot(mat._m00_m01_m02_m03, mat._m30_m31_m32_m33),
+		-dot(mat._m10_m11_m12_m13, mat._m30_m31_m32_m33),
+		-dot(mat._m20_m21_m22_m23, mat._m30_m31_m32_m33),
+		1);
 }
 
 // Invert a matrix assuming that it's an affine matrix
@@ -122,22 +172,5 @@ float3 RotationVectorApprox(float3x3 from, float3x3 to)
 	float3x3 cpm = mul((to - from), transpose(from));
 	return float3(cpm[1].z, cpm[2].x, cpm[0].y);
 }
-
-// Orthonormalise a rotation matrix
-float3x3 Orthonormalise(float3x3 mat)
-{
-	mat[0] = normalize(mat[0]);
-	mat[1] = normalize(cross(mat[2], mat[0]));
-	mat[2] = cross(mat[0], mat[1]);
-	return mat;
-}
-float4x4 Orthonormalise(float4x4 mat)
-{
-	mat[0].xyz = normalize(mat[0].xyz);
-	mat[1].xyz = normalize(cross(mat[2].xyz, mat[0].xyz));
-	mat[2].xyz = cross(mat[0].xyz, mat[1].xyz);
-	return mat;
-}
-
 
 #endif

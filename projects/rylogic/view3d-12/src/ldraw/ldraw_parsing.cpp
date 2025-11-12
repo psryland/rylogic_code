@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -784,6 +784,134 @@ namespace pr::rdr12::ldraw
 	
 	namespace creation
 	{
+		// Direction:
+		//  - Prefer these 'creation' objects. Many of the 'ParseXYZ' functions above could be objects in here
+
+		// Get/Create a texture for a 2D Point sprite
+		static Texture2DPtr PointStyleTexture(EPointStyle style, iv2 size, ParseParams& pp)
+		{
+			using TDrawOnIt = std::function<void(D2D1Context&, ID2D1SolidColorBrush*, ID2D1SolidColorBrush*)>;
+			auto CreatePointStyleTexture = [&](ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw) -> Texture2DPtr
+			{
+				ResDesc tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget | EUsage::SimultaneousAccess).heap_flags(D3D12_HEAP_FLAG_SHARED);
+				TextureDesc desc = TextureDesc(id, tdesc).name(name);
+				auto tex = pp.m_factory.CreateTexture2D(desc);
+
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+
+				// Create the brushes
+				D3DPtr<ID2D1SolidColorBrush> fr_brush;
+				D3DPtr<ID2D1SolidColorBrush> bk_brush;
+				auto fr = D3DCOLORVALUE{ 1.f, 1.f, 1.f, 1.f };
+				auto bk = D3DCOLORVALUE{ 0.f, 0.f, 0.f, 0.f };
+				Check(dc->CreateSolidColorBrush(fr, fr_brush.address_of()));
+				Check(dc->CreateSolidColorBrush(bk, bk_brush.address_of()));
+
+				// Draw the spot
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				draw(dc, fr_brush.get(), bk_brush.get());
+				Check(dc->EndDraw());
+				return tex;
+			};
+
+			iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
+			switch (style)
+			{
+				case EPointStyle::Square:
+				{
+					// No texture needed for square style
+					return nullptr;
+				}
+				case EPointStyle::Circle:
+				{
+					ResourceStore::Access store(pp.m_rdr);
+					auto id = hash::HashArgs("PointStyleCircle", sz);
+					return store.FindTexture<Texture2D>(id, [&]
+					{
+						auto w0 = sz.x * 0.5f;
+						auto h0 = sz.y * 0.5f;
+						return CreatePointStyleTexture(pp, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({ {w0, h0}, w0, h0 }, fr); });
+					});
+				}
+				case EPointStyle::Triangle:
+				{
+					ResourceStore::Access store(pp.m_rdr);
+					auto id = hash::HashArgs("PointStyleTriangle", sz);
+					return store.FindTexture<Texture2D>(id, [&]
+					{
+						D3DPtr<ID2D1PathGeometry> geom;
+						D3DPtr<ID2D1GeometrySink> sink;
+						Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+						Check(geom->Open(sink.address_of()));
+
+						auto w0 = 1.0f * sz.x;
+						auto h0 = 0.5f * sz.y * (float)tan(DegreesToRadians(60.0f));
+						auto h1 = 0.5f * (sz.y - h0);
+
+						sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
+						sink->AddLine({ 0.0f * w0, h1 });
+						sink->AddLine({ 0.5f * w0, h0 + h1 });
+						sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+						Check(sink->Close());
+
+						return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+					});
+				}
+				case EPointStyle::Star:
+				{
+					ResourceStore::Access store(pp.m_rdr);
+					auto id = hash::HashArgs("PointStyleStar", sz);
+					return store.FindTexture<Texture2D>(id, [&]
+					{
+						D3DPtr<ID2D1PathGeometry> geom;
+						D3DPtr<ID2D1GeometrySink> sink;
+						Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
+						Check(geom->Open(sink.address_of()));
+
+						auto w0 = 1.0f * sz.x;
+						auto h0 = 1.0f * sz.y;
+
+						sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
+						sink->AddLine({ 0.4f * w0, 0.4f * h0 });
+						sink->AddLine({ 0.0f * w0, 0.5f * h0 });
+						sink->AddLine({ 0.4f * w0, 0.6f * h0 });
+						sink->AddLine({ 0.5f * w0, 1.0f * h0 });
+						sink->AddLine({ 0.6f * w0, 0.6f * h0 });
+						sink->AddLine({ 1.0f * w0, 0.5f * h0 });
+						sink->AddLine({ 0.6f * w0, 0.4f * h0 });
+						sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+						Check(sink->Close());
+
+						return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+					});
+				}
+				case EPointStyle::Annulus:
+				{
+					ResourceStore::Access store(pp.m_rdr);
+					auto id = hash::HashArgs("PointStyleAnnulus", sz);
+					return store.FindTexture<Texture2D>(id, [&]
+					{
+						auto w0 = sz.x * 0.5f;
+						auto h0 = sz.y * 0.5f;
+						auto w1 = sz.x * 0.4f;
+						auto h1 = sz.y * 0.4f;
+						return CreatePointStyleTexture(pp, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
+						{
+							dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+							dc->FillEllipse({ {w0, h0}, w0, h0 }, fr);
+							dc->FillEllipse({ {w0, h0}, w1, h1 }, bk);
+						});
+					});
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown point style");
+				}
+			}
+		}
+
 		// Support for objects with a texture
 		struct Textured
 		{
@@ -910,13 +1038,15 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Apply main axis transform
-			void Apply(std::span<v4> verts)
+			void BakeTransform(std::span<v4> verts)
 			{
-				if (m_main_axis.m_axis == m_align.m_axis)
-					return;
-
 				for (auto& v : verts)
 					v = m_o2w * v;
+			}
+
+			explicit operator bool() const
+			{
+				return m_main_axis.m_axis != m_align.m_axis;
 			}
 		};
 
@@ -1065,17 +1195,18 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			void Apply(VCont& verts)
+			void InterpolateVerts(VCont& verts)
 			{
-				if (!m_smooth)
-					return;
-
 				VCont out;
 				std::swap(out, verts);
 				pr::Smooth(out, Spline::ETopo::Continuous3, [&](auto points, auto)
 				{
 					verts.insert(verts.end(), points.begin(), points.end());
 				});
+			}
+			explicit operator bool() const
+			{
+				return m_smooth;
 			}
 		};
 
@@ -1101,11 +1232,8 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			void Apply(LdrObject* obj, bool is_line_list)
+			void ConvertNuggets(LdrObject* obj, bool is_line_list)
 			{
-				if (m_width == 0.0f)
-					return;
-
 				auto shdr = is_line_list
 					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_width))
 					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_width));
@@ -1116,181 +1244,99 @@ namespace pr::rdr12::ldraw
 					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
 				}
 			}
+			explicit operator bool() const
+			{
+				return m_width != 0.0f;
+			}
 		};
 
 		// Support for point sprites
 		struct PointSprite
 		{
-			v2 m_point_size;
+			v2 m_size;
 			EPointStyle m_style;
 			bool m_depth;
 
 			PointSprite()
-				: m_point_size()
+				: m_size()
 				, m_style(EPointStyle::Square)
 				, m_depth(false)
 			{}
-			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
+			void CreateNugget(LdrObject* obj, ParseParams& pp, Range vrange = Range::Reset())
 			{
-				switch (kw)
-				{
-					case EKeyword::Size:
-					{
-						m_point_size = reader.Vector2f();
-						return true;
-					}
-					case EKeyword::Style:
-					{
-						m_style = reader.Enum<EPointStyle>();
-						return true;
-					}
-					case EKeyword::Depth:
-					{
-						m_depth = true;
-						return true;
-					}
-					default:
-					{
-						return false;
-					}
-				}
-			}
-			void Apply(LdrObject* obj, ParseParams& pp)
-			{
-				if (m_point_size == v2::Zero())
-					return;
-
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_point_size, m_depth);
-
-				obj->m_model->DeleteNuggets();
+				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, m_depth);
 				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 					.use_shader(ERenderStep::RenderForward, shdr)
-					.tex_diffuse(PointStyleTexture(pp)));
+					.tex_diffuse(PointStyleTexture(m_style, To<iv2>(m_size), pp))
+					.flags(ENuggetFlag::RangesCanOverlap)
+					.vrange(vrange)
+				);
 			}
-
-			template <std::invocable<D2D1Context&, ID2D1SolidColorBrush*, ID2D1SolidColorBrush*> TDrawOnIt>
-			Texture2DPtr CreatePointStyleTexture(ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
+			explicit operator bool() const
 			{
-				ResDesc tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget | EUsage::SimultaneousAccess).heap_flags(D3D12_HEAP_FLAG_SHARED);
-				TextureDesc desc = TextureDesc(id, tdesc).name(name);
-				auto tex = pp.m_factory.CreateTexture2D(desc);
-
-				// Get a D2D device context to draw on
-				auto dc = tex->GetD2DeviceContext();
-
-				// Create the brushes
-				D3DPtr<ID2D1SolidColorBrush> fr_brush;
-				D3DPtr<ID2D1SolidColorBrush> bk_brush;
-				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
-				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Check(dc->CreateSolidColorBrush(fr, fr_brush.address_of()));
-				Check(dc->CreateSolidColorBrush(bk, bk_brush.address_of()));
-
-				// Draw the spot
-				dc->BeginDraw();
-				dc->Clear(&bk);
-				draw(dc, fr_brush.get(), bk_brush.get());
-				Check(dc->EndDraw());
-				return tex;
+				return m_size != v2::Zero();
 			}
-			Texture2DPtr PointStyleTexture(ParseParams& pp)
+		};
+
+		// Information on data point markers
+		struct DataPoints
+		{
+			v2 m_size;
+			Colour32 m_colour;
+			EPointStyle m_style;
+
+			DataPoints()
+				:m_size()
+				,m_colour(Colour32White)
+				,m_style(EPointStyle::Square)
+			{}
+			void Parse(IReader& reader, ParseParams& pp)
 			{
-				EPointStyle style = m_style;
-				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
-				switch (style)
+				auto section = reader.SectionScope();
+				for (EKeyword kw; reader.NextKeyword(kw);)
 				{
-					case EPointStyle::Square:
+					switch (kw)
 					{
-						// No texture needed for square style
-						return nullptr;
-					}
-					case EPointStyle::Circle:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = hash::HashArgs("PointStyleCircle", sz);
-						return store.FindTexture<Texture2D>(id, [&]
+						case EKeyword::Size:
 						{
-							auto w0 = sz.x * 0.5f;
-							auto h0 = sz.y * 0.5f;
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({ {w0, h0}, w0, h0 }, fr); });
-						});
-					}
-					case EPointStyle::Triangle:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = hash::HashArgs("PointStyleTriangle", sz);
-						return store.FindTexture<Texture2D>(id, [&]
+							m_size.x = reader.Real<float>();
+							m_size.y = reader.IsSectionEnd() ? m_size.x : reader.Real<float>();
+							break;
+						}
+						case EKeyword::Colour:
 						{
-							D3DPtr<ID2D1PathGeometry> geom;
-							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
-							Check(geom->Open(sink.address_of()));
-
-							auto w0 = 1.0f * sz.x;
-							auto h0 = 0.5f * sz.y * (float)tan(DegreesToRadians(60.0f));
-							auto h1 = 0.5f * (sz.y - h0);
-
-							sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
-							sink->AddLine({ 0.0f * w0, h1 });
-							sink->AddLine({ 0.5f * w0, h0 + h1 });
-							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							Check(sink->Close());
-
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-						});
-					}
-					case EPointStyle::Star:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = hash::HashArgs("PointStyleStar", sz);
-						return store.FindTexture<Texture2D>(id, [&]
+							m_colour = reader.Int<uint32_t>(16);
+							break;
+						}
+						case EKeyword::Style:
 						{
-							D3DPtr<ID2D1PathGeometry> geom;
-							D3DPtr<ID2D1GeometrySink> sink;
-							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(geom.address_of()));
-							Check(geom->Open(sink.address_of()));
-
-							auto w0 = 1.0f * sz.x;
-							auto h0 = 1.0f * sz.y;
-
-							sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
-							sink->AddLine({ 0.4f * w0, 0.4f * h0 });
-							sink->AddLine({ 0.0f * w0, 0.5f * h0 });
-							sink->AddLine({ 0.4f * w0, 0.6f * h0 });
-							sink->AddLine({ 0.5f * w0, 1.0f * h0 });
-							sink->AddLine({ 0.6f * w0, 0.6f * h0 });
-							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
-							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
-							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							Check(sink->Close());
-
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [&geom](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-						});
-					}
-					case EPointStyle::Annulus:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = hash::HashArgs("PointStyleAnnulus", sz);
-						return store.FindTexture<Texture2D>(id, [&]
+							m_style = reader.Enum<EPointStyle>();
+							break;
+						}
+						default:
 						{
-							auto w0 = sz.x * 0.5f;
-							auto h0 = sz.y * 0.5f;
-							auto w1 = sz.x * 0.4f;
-							auto h1 = sz.y * 0.4f;
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
-							{
-								dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-								dc->FillEllipse({ {w0, h0}, w0, h0 }, fr);
-								dc->FillEllipse({ {w0, h0}, w1, h1 }, bk);
-							});
-						});
-					}
-					default:
-					{
-						throw std::runtime_error("Unknown point style");
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *DataPoints", EKeyword_::ToStringA(kw)));
+							break;
+						}
 					}
 				}
+			}
+			void CreateNugget(LdrObject* obj, ParseParams& pp, Range vrange = Range::Reset())
+			{
+				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, false);
+				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+					.use_shader(ERenderStep::RenderForward, shdr)
+					.tex_diffuse(PointStyleTexture(m_style, To<iv2>(m_size), pp))
+					.flags(ENuggetFlag::RangesCanOverlap)
+					.tint(m_colour)
+					.vrange(vrange)
+				);
+			}
+			explicit operator bool() const
+			{
+				return m_size != v2::Zero();
 			}
 		};
 
@@ -1394,11 +1440,8 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			void Apply(VCont& verts, bool& is_line_list)
+			void CreateSegments(VCont& verts, bool& is_line_list)
 			{
-				if (m_dash == v2(1, 0))
-					return;
-
 				// Convert each line segment to dashed lines
 				VCont out;
 				std::swap(out, verts);
@@ -1409,6 +1452,10 @@ namespace pr::rdr12::ldraw
 
 				// Conversion to dashes turns the buffer into a line list
 				is_line_list = true;
+			}
+			explicit operator bool() const
+			{
+				return m_dash != v2(1, 0);
 			}
 
 		private:
@@ -1569,11 +1616,26 @@ namespace pr::rdr12::ldraw
 					m_per_item_colour = true;
 					return true;
 				}
+				case EKeyword::Size:
+				{
+					m_sprite.m_size.x = reader.Real<float>();
+					m_sprite.m_size.y = reader.IsSectionEnd() ? m_sprite.m_size.x : reader.Real<float>();
+					return true;
+				}
+				case EKeyword::Style:
+				{
+					m_sprite.m_style = reader.Enum<EPointStyle>();
+					return true;
+				}
+				case EKeyword::Depth:
+				{
+					m_sprite.m_depth = true;
+					return true;
+				}
 				default:
 				{
 					return
 						m_tex.ParseKeyword(reader, m_pp, kw) ||
-						m_sprite.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
@@ -1589,8 +1651,12 @@ namespace pr::rdr12::ldraw
 			obj->m_model = ModelGenerator::Points(m_pp.m_factory, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
-			// USe Point sprites
-			m_sprite.Apply(obj, m_pp);
+			// Use Point sprites
+			if (m_sprite)
+			{
+				obj->m_model->DeleteNuggets();
+				m_sprite.CreateNugget(obj, m_pp);
+			}
 		}
 	};
 
@@ -1826,7 +1892,8 @@ namespace pr::rdr12::ldraw
 			//obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -1898,7 +1965,8 @@ namespace pr::rdr12::ldraw
 			m_parametric.Apply(is_line_list, m_verts, m_pp, loc);
 
 			// Convert lines to dashed lines
-			m_dashed.Apply(m_verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(m_verts, is_line_list);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1906,7 +1974,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -1977,7 +2046,8 @@ namespace pr::rdr12::ldraw
 
 			// Convert lines to dashed lines
 			bool is_line_list = true;
-			m_dashed.Apply(m_verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(m_verts, is_line_list);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1985,7 +2055,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -2050,11 +2121,13 @@ namespace pr::rdr12::ldraw
 			m_parametric.Apply(false, m_verts, m_pp, loc);
 
 			// Smooth the points
-			m_smooth.Apply(m_verts);
+			if (m_smooth)
+				m_smooth.InterpolateVerts(m_verts);
 
 			// Convert lines to dashed lines
 			auto is_line_list = false;
-			m_dashed.Apply(m_verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(m_verts, is_line_list);
 
 			// The thick line strip shader uses LineAdj which requires an extra first and last vert
 			if (!is_line_list && m_thick.m_width != 0.0f)
@@ -2071,7 +2144,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -2128,7 +2202,8 @@ namespace pr::rdr12::ldraw
 
 			// Convert lines to dashed lines
 			auto is_line_list = true;
-			m_dashed.Apply(m_verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(m_verts, is_line_list);
 
 			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
 
@@ -2142,7 +2217,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -2199,10 +2275,12 @@ namespace pr::rdr12::ldraw
 
 			// Convert lines to dashed lines
 			auto is_line_list = true;
-			m_dashed.Apply(m_verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(m_verts, is_line_list);
 
 			// Apply main axis transform
-			m_axis.Apply(m_verts);
+			if (m_axis)
+				m_axis.BakeTransform(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -2210,7 +2288,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
 		}
 	};
 
@@ -2335,7 +2414,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, false);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, false);
 		}
 	};
 
@@ -2394,7 +2474,8 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Convert the points into a spline if smooth is specified
-			m_smooth.Apply(m_verts);
+			if (m_smooth)
+				m_smooth.InterpolateVerts(m_verts);
 
 			// Geometry properties
 			geometry::Props props;
@@ -2554,7 +2635,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, true);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, true);
 		}
 	};
 
@@ -2776,6 +2858,7 @@ namespace pr::rdr12::ldraw
 		creation::ThickLine m_thick;
 		creation::DashedLines m_dashed;
 		creation::SmoothLine m_smooth;
+		creation::DataPoints m_data_points;
 		
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
@@ -2787,6 +2870,7 @@ namespace pr::rdr12::ldraw
 			, m_thick()
 			, m_dashed()
 			, m_smooth()
+			, m_data_points()
 		{}
 		LdrObjectPtr Parse(IReader& reader) override
 		{
@@ -2822,6 +2906,11 @@ namespace pr::rdr12::ldraw
 					for (auto& name : m_yaxis.m_arg_names)
 						m_yiter.push_back(DataIter{name, m_chart->m_dim});
 
+					return true;
+				}
+				case EKeyword::DataPoints:
+				{
+					m_data_points.Parse(reader, m_pp);
 					return true;
 				}
 				default:
@@ -2879,12 +2968,19 @@ namespace pr::rdr12::ldraw
 			if (verts.empty())
 				return;
 
+			// If we're showing data points, save the verts that represent actual data
+			VCont data_verts;
+			if (m_data_points)
+				data_verts = verts;
+
 			// Convert the points into a spline if smooth is specified
-			m_smooth.Apply(verts);
+			if (m_smooth)
+				m_smooth.InterpolateVerts(verts);
 
 			// Convert lines to dashed lines
 			bool is_line_list = false;
-			m_dashed.Apply(verts, is_line_list);
+			if (m_dashed)
+				m_dashed.CreateSegments(verts, is_line_list);
 
 			// The thick line strip shader uses LineAdj which requires an extra first and last vert
 			if (!is_line_list && m_thick.m_width != 0.0f)
@@ -2898,7 +2994,27 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			m_thick.Apply(obj, is_line_list);
+			if (m_thick)
+				m_thick.ConvertNuggets(obj, is_line_list);
+
+			// Add data points as a child object
+			if (m_data_points)
+			{
+				ParseParams pp(m_pp, obj->m_child, obj, this);
+				
+				LdrObjectPtr data_points(new LdrObject(ELdrObject::Point, obj, obj->m_context_id), true);
+				data_points->m_name = "DataPoints";
+
+				opts = ModelGenerator::CreateOptions().colours({&data_points->m_base_colour, 1});
+				data_points->m_model = ModelGenerator::Points(m_pp.m_factory, data_verts, &opts);
+				data_points->m_model->m_name = data_points->TypeAndName();
+				data_points->m_model->DeleteNuggets();
+				m_data_points.CreateNugget(data_points.get(), m_pp);
+
+				// Add the object to the parent
+				ApplyObjectState(data_points.get());
+				obj->m_child.push_back(data_points);
+			}
 		}
 		double GetValue(DataIter const& iter, int i, bool& in_range) const
 		{
@@ -3277,7 +3393,8 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Apply the axis id rotation
-			m_axis.Apply(m_verts);
+			if (m_axis)
+				m_axis.BakeTransform(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -3470,7 +3587,8 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Smooth the points
-			m_smooth.Apply(m_verts);
+			if (m_smooth)
+				m_smooth.InterpolateVerts(m_verts);
 
 			v4 normal = m_axis.m_align.m_axis;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -4114,7 +4232,8 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Smooth the tube centre line
-			m_smooth.Apply(m_verts);
+			if (m_smooth)
+				m_smooth.InterpolateVerts(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);

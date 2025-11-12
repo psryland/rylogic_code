@@ -77,6 +77,7 @@ namespace pr::rdr12::ldraw
 		x(Cylinder          )\
 		x(Dashed            )\
 		x(Data              )\
+		x(DataPoints        )\
 		x(Depth             )\
 		x(Diffuse           )\
 		x(Dim               )\
@@ -144,6 +145,9 @@ namespace pr::rdr12::ldraw
 		x(Pie               )\
 		x(Plane             )\
 		x(Point             )\
+		x(PointDepth        )\
+		x(PointSize         )\
+		x(PointStyle        )\
 		x(Polygon           )\
 		x(Pos               )\
 		x(Position          )\
