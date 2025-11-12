@@ -5707,9 +5707,8 @@ namespace pr::rdr12::ldraw
 		return true;
 	}
 
-	// Reads all ldr objects from a script.
-	// 'add_cb' is 'bool function(int object_index, ParseResult& out, Location const& loc)'
-	template <typename AddCB>
+	// Reads all ldr objects from a script. 'add_cb' is 'void function(int object_index)'
+	template <std::invocable<int> AddCB>
 	void ParseLdrObjects(IReader& reader, ParseParams& pp, AddCB add_cb)
 	{
 		// Loop over keywords in the script
