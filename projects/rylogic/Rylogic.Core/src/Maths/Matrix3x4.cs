@@ -563,7 +563,22 @@ namespace Rylogic.Maths
 				FEql(m.x.LengthSq, 1f) &&
 				FEql(m.y.LengthSq, 1f) &&
 				FEql(m.z.LengthSq, 1f) &&
-				FEql(Cross(m.x, m.y) - m.z, v4.Zero);
+				FEql(Determinant(m), 1f);
+		}
+
+		// Return true if 'mat' is an affine transform
+		public static bool IsAffine(m3x4 mat)
+		{
+			return
+				mat.x.w == 0.0f &&
+				mat.y.w == 0.0f &&
+				mat.z.w == 0.0f;
+		}
+
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertible(m3x4 m)
+		{
+			return Determinant(m) != 0;
 		}
 
 		/// <summary>Return the determinant of 'm'</summary>
@@ -605,13 +620,18 @@ namespace Rylogic.Maths
 			return m;
 		}
 
-		// Return true if 'mat' is an affine transform
-		public static bool IsAffine(m3x4 mat)
+		/// <summary>Invert 'm' in-place assuming m is orthonormal</summary>
+		public static void InvertOrthonormal(ref m3x4 m)
 		{
-			return
-				mat.x.w == 0.0f &&
-				mat.y.w == 0.0f &&
-				mat.z.w == 0.0f;
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			Transpose(ref m);
+		}
+
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
+		public static m3x4 InvertOrthonormal(m3x4 m)
+		{
+			InvertOrthonormal(ref m);
+			return m;
 		}
 
 		/// <summary>Invert 'm' in-place assuming m is affine</summary>
@@ -646,12 +666,6 @@ namespace Rylogic.Maths
 		{
 			InvertAffine(ref m);
 			return m;
-		}
-
-		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertible(m3x4 m)
-		{
-			return Determinant(m) != 0;
 		}
 
 		/// <summary>Invert the matrix 'm'</summary>
@@ -834,15 +848,39 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void TestInversion()
+		public void Inversion()
 		{
-			var rng = new Random();
+			var rng = new Random(1);
+
 			{
 				var m = m3x4.Random(v4.Random3N(0, rng), -Math_.TauF, +Math_.TauF, rng);
 				var inv_m0 = Math_.InvertAffine(m);
 				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
-			} {
+			}
+			{
+				var a2b = m3x4.Rotation(v4.Random3N(0, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f);
+				Assert.True(Math_.IsAffine(a2b));
+
+				var b2a = Math_.Invert(a2b);
+				var a2a = b2a * a2b;
+				Assert.True(Math_.FEql(m3x4.Identity, a2a));
+
+				var b2a_fast = Math_.InvertAffine(a2b);
+				Assert.True(Math_.FEql(b2a_fast, b2a));
+			}
+			{
+				var a2b = m3x4.Rotation(v4.Random3N(0, rng), rng.FloatC(-5f, +5f));
+				Assert.True(Math_.IsOrthonormal(a2b));
+
+				var b2a = Math_.Invert(a2b);
+				var a2a = b2a * a2b;
+				Assert.True(Math_.FEql(m3x4.Identity, a2a));
+
+				var b2a_fast = Math_.InvertOrthonormal(a2b);
+				Assert.True(Math_.FEql(b2a_fast, b2a));
+			}
+			{
 				for (; ; )
 				{
 					var m = m3x4.Random(-5.0f, +5.0f, 0, rng);
@@ -855,7 +893,9 @@ namespace Rylogic.UnitTests
 					Assert.True(Math_.FEqlRelative(I1, m3x4.Identity, 0.001f));
 					break;
 				}
-			} {
+			}
+
+			{
 				var m = new m3x4(
 					new v4(0.25f, 0.5f, 1.0f, 0.0f),
 					new v4(0.49f, 0.7f, 1.0f, 0.0f),
@@ -868,20 +908,6 @@ namespace Rylogic.UnitTests
 				var inv_m = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m, INV_M, 0.001f));
 			}
-		}
-
-		[Test]
-		public void InvertAffine()
-		{
-			var rng = new Random(1);
-			var a2b = m3x4.Rotation(v4.Random3N(0, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f);
-			
-			var b2a = Math_.Invert(a2b);
-			var a2a = b2a * a2b;
-			Assert.True(Math_.FEql(m3x4.Identity, a2a));
-
-			var b2a_fast = Math_.InvertAffine(a2b);
-			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 
 		[Test]

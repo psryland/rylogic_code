@@ -519,6 +519,34 @@ namespace Rylogic.Maths
 				IsNaN(m.w);
 		}
 
+		/// <summary>True if 'm' is orthogonal</summary>
+		public static bool IsOrthogonal(m4x4 m)
+		{
+			return IsOrthogonal(m.rot);
+		}
+
+		/// <summary>True if the rotation part of this transform is orthonormal</summary>
+		public static bool IsOrthonormal(m4x4 m)
+		{
+			return IsOrthonormal(m.rot);
+		}
+
+		// Return true if 'mat' is an affine transform
+		public static bool IsAffine(m4x4 mat)
+		{
+			return
+				mat.x.w == 0.0f &&
+				mat.y.w == 0.0f &&
+				mat.z.w == 0.0f &&
+				mat.w.w == 1.0f;
+		}
+
+		/// <summary>True if 'mat' has an inverse</summary>
+		public static bool IsInvertible(m4x4 m)
+		{
+			return Determinant(m) != 0;
+		}
+
 		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>
 		public static float Determinant(m4x4 m)
 		{
@@ -573,26 +601,22 @@ namespace Rylogic.Maths
 			return m;
 		}
 
-		/// <summary>True if 'm' is orthogonal</summary>
-		public static bool IsOrthogonal(m4x4 m)
+		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
+		public static void InvertOrthonormal(ref m4x4 m)
 		{
-			return IsOrthogonal(m.rot);
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			var trans = m.w;
+			Transpose(ref m.rot);
+			m.w.x = -(trans.x * m.x.x + trans.y * m.y.x + trans.z * m.z.x);
+			m.w.y = -(trans.x * m.x.y + trans.y * m.y.y + trans.z * m.z.y);
+			m.w.z = -(trans.x * m.x.z + trans.y * m.y.z + trans.z * m.z.z);
 		}
 
-		/// <summary>True if the rotation part of this transform is orthonormal</summary>
-		public static bool IsOrthonormal(m4x4 m)
+		/// <summary>Return 'm' inverted (assuming an orthonormal matrix</summary>
+		public static m4x4 InvertOrthonormal(m4x4 m)
 		{
-			return IsOrthonormal(m.rot);
-		}
-
-		// Return true if 'mat' is an affine transform
-		public static bool IsAffine(m4x4 mat)
-		{
-			return
-				mat.x.w == 0.0f &&
-				mat.y.w == 0.0f &&
-				mat.z.w == 0.0f &&
-				mat.w.w == 1.0f;
+			InvertOrthonormal(ref m);
+			return m;
 		}
 
 		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
@@ -635,12 +659,6 @@ namespace Rylogic.Maths
 		{
 			InvertAffine(ref m);
 			return m;
-		}
-
-		/// <summary>True if 'mat' has an inverse</summary>
-		public static bool IsInvertible(m4x4 m)
-		{
-			return Determinant(m) != 0;
 		}
 
 		/// <summary>Return 'm' inverted</summary>
@@ -871,17 +889,31 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void InvertAffine()
+		public void Inverersion()
 		{
 			var rng = new Random(1);
-			var a2b = new m4x4(m3x4.Rotation(v4.Random3N(0.0f, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
-			
-			var b2a = Math_.Invert(a2b);
-			var a2a = b2a * a2b;
-			Assert.True(Math_.FEql(m4x4.Identity, a2a));
+			{
+				var a2b = new m4x4(m3x4.Rotation(v4.Random3N(0.0f, rng), rng.FloatC(-5f, +5f)) * m3x4.Scale(2.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
+				Assert.True(Math_.IsAffine(a2b));
 
-			var b2a_fast = Math_.InvertAffine(a2b);
-			Assert.True(Math_.FEql(b2a_fast, b2a));
+				var b2a = Math_.Invert(a2b);
+				var a2a = b2a * a2b;
+				Assert.True(Math_.FEql(m4x4.Identity, a2a));
+
+				var b2a_fast = Math_.InvertAffine(a2b);
+				Assert.True(Math_.FEql(b2a_fast, b2a));
+			}
+			{
+				var a2b = new m4x4(m3x4.Rotation(v4.Random3N(0.0f, rng), rng.FloatC(-5f, +5f)), v4.Random3(0.0f, 10.0f, 1.0f, rng));
+				Assert.True(Math_.IsOrthonormal(a2b));
+
+				var b2a = Math_.Invert(a2b);
+				var a2a = b2a * a2b;
+				Assert.True(Math_.FEql(m4x4.Identity, a2a));
+
+				var b2a_fast = Math_.InvertOrthonormal(a2b);
+				Assert.True(Math_.FEql(b2a_fast, b2a));
+			}
 		}
 
 		[Test]

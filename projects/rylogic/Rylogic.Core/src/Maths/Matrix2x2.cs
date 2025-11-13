@@ -291,6 +291,27 @@ namespace Rylogic.Maths
 				IsNaN(m.y);
 		}
 
+		/// <summary>True if 'm' is orthogonal</summary>
+		public static bool IsOrthogonal(m2x2 m)
+		{
+			return FEql(Dot(m.x, m.y), 0f);
+		}
+
+		/// <summary>True if 'm' is orthonormal</summary>
+		public static bool IsOrthonormal(m2x2 m)
+		{
+			return
+				FEql(m.x.LengthSq, 1f) &&
+				FEql(m.y.LengthSq, 1f) &&
+				FEql(Determinant(m), 1f);
+		}
+
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertible(m2x2 m)
+		{
+			return Determinant(m) != 0;
+		}
+
 		/// <summary>Return the determinant of 'm'</summary>
 		public static float Determinant(m2x2 m)
 		{
@@ -311,22 +332,22 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
-		public static m2x2 InvertAffine(m2x2 m)
+		public static m2x2 InvertOrthonormal(m2x2 m)
 		{
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
 			return Invert(m); // Same cost
 		}
 
-		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertible(m2x2 m)
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
+		public static m2x2 InvertAffine(m2x2 m)
 		{
-			return Determinant(m) != 0;
+			return Invert(m); // Same cost
 		}
 
 		/// <summary>Return the inverse of 'm'</summary>
 		public static m2x2 Invert(m2x2 m)
 		{
 			Debug.Assert(IsInvertible(m), "Matrix has no inverse");
-
 			var det = Determinant(m);
 			return new m2x2(
 				new v2(m.y.y, -m.x.y) / det,
@@ -346,15 +367,6 @@ namespace Rylogic.Maths
 		{
 			Orthonormalise(ref m);
 			return m;
-		}
-
-		/// <summary>True if 'm' is orthonormal</summary>
-		public static bool IsOrthonormal(m2x2 m)
-		{
-			return
-				FEql(m.x.LengthSq, 1f) &&
-				FEql(m.y.LengthSq, 1f) &&
-				FEql(Dot(m.x, m.y), 0f);
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
@@ -422,21 +434,6 @@ namespace Rylogic.UnitTests
 				Assert.True(Math_.FEql(m * INV_M, m2x2.Identity));
 				Assert.True(Math_.FEql(inv_m, INV_M));
 			}
-		}
-
-		[Test]
-		public void InvertAffine()
-	{
-			var a2b = new m2x2(
-				new v2(4f, 7f),
-				new v2(2f, 6f)
-			);
-			var b2a = Math_.Invert(a2b);
-			var a2a = b2a * a2b;
-			Assert.True(Math_.FEql(m2x2.Identity, a2a));
-
-			var b2a_fast = Math_.InvertAffine(a2b);
-			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 
 		[Test]

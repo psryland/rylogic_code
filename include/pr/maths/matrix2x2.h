@@ -105,14 +105,14 @@ namespace pr
 		}
 
 		// Create a 2D matrix containing random rotation between angles [min_angle, max_angle)
-		template <typename Rng = std::default_random_engine> inline Mat2x2 Random(Rng& rng, S min_angle, S max_angle)
+		template <typename Rng = std::default_random_engine> static Mat2x2 Random(Rng& rng, S min_angle, S max_angle)
 		{
 			std::uniform_real_distribution<S> dist(min_angle, max_angle);
 			return Rotation(dist(rng));
 		}
 
 		// Create a random 2D rotation matrix
-		template <typename Rng = std::default_random_engine> inline Mat2x2 Random(Rng& rng)
+		template <typename Rng = std::default_random_engine> static Mat2x2 Random(Rng& rng)
 		{
 			return Random(rng, S(0), constants<S>::tau);
 		}
@@ -209,7 +209,16 @@ namespace pr
 	// Return true if 'mat' is orthogonal
 	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthogonal(Mat2x2_cref<S,A,B> mat)
 	{
-		return FEql(Dot(mat.x, mat.y), 0);
+		return FEql(Dot(mat.x, mat.y), S(0));
+	}
+
+	// Return true if 'mat' is orthonormal
+	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthonormal(Mat2x2_cref<S,A,B> mat)
+	{
+		return
+			FEql(LengthSq(mat.x), S(1)) &&
+			FEql(LengthSq(mat.y), S(1)) &&
+			FEql(Abs(Determinant(mat)), S(1));
 	}
 
 	// Returns true if 'mat' has an inverse
@@ -235,6 +244,16 @@ namespace pr
 	{
 		return Invert(mat); // Just as cheap
 	}
+	 
+	// Returns the inverse of 'mat' assuming is it a pure rotation matrix 
+	template <Scalar S, typename A, typename B> inline Mat2x2<S,B,A> InvertOrthonormal(Mat2x2_cref<S,A,B> mat) 
+	{ 
+		assert("Matrix is not pure rotation" && FEql(Determinant(mat), S(1))); 
+		return Mat2x2<S,B,A>{
+			{ +mat.y.y, -mat.x.y },
+			{ -mat.y.x, +mat.x.x },
+		}; 
+	} 
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
 	template <Scalar S, typename A, typename B> inline Mat2x2<S,A,B> Sqrt(Mat2x2_cref<S,A,B> mat)
@@ -259,9 +278,11 @@ namespace pr::maths
 {
 	PRUnitTestClass(Matrix2x2Tests)
 	{
-		//using S = T;
-		//using mat2_t = Mat2x2<S, void, void>;
-		//using vec2_t = Vec2<S, void>;
+		std::default_random_engine rng;
+		TestClass_Matrix2x2Tests()
+			:rng(1u)
+		{
+		}
 
 		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
 		{
@@ -339,7 +360,7 @@ namespace pr::maths
 			PR_EXPECT(Determinant(a2b) == 2 * 4 - 3 * 1);
 
 		}
-		PRUnitTestMethod(Inverse, float, double)
+		PRUnitTestMethod(GenerateInvert, float, double)
 		{
 			using S = T;
 			using vec2_t = Vec2<S, void>;
@@ -349,12 +370,45 @@ namespace pr::maths
 				{2, 1},
 				{3, 4},
 			};
+			PR_EXPECT(IsInvertible(a2b));
+
+			auto b2a = Invert(a2b);
+			auto a2a = b2a * a2b;
+			PR_EXPECT(FEql(mat2_t::Identity(), a2a));
+		}
+		PRUnitTestMethod(AffineInvert, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
+
+			auto a2b = mat2_t{
+				{2, 1},
+				{3, 4},
+			};
+			PR_EXPECT(IsAffine(a2b));
 
 			auto b2a = Invert(a2b);
 			auto a2a = b2a * a2b;
 			PR_EXPECT(FEql(mat2_t::Identity(), a2a));
 
 			auto b2a_fast = InvertAffine(a2b);
+			PR_EXPECT(FEql(b2a_fast, b2a));
+		}
+		PRUnitTestMethod(OrthonormalInvert, float, double)
+		{
+			using S = T;
+			using vec2_t = Vec2<S, void>;
+			using mat2_t = Mat2x2<S, void, void>;
+
+			auto a2b = mat2_t::Random(rng, -S(5), +S(5));
+			PR_EXPECT(IsOrthogonal(a2b));
+
+			auto b2a = Invert(a2b);
+			auto a2a = b2a * a2b;
+			PR_EXPECT(FEql(mat2_t::Identity(), a2a));
+
+			auto b2a_fast = InvertOrthonormal(a2b);
 			PR_EXPECT(FEql(b2a_fast, b2a));
 		}
 	};

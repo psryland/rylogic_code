@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -545,7 +545,7 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 		return;
 	
 	// The position in world space of the texture coordinate
-	float4 pos = mul(Map.MapToWorld, float4(dtid.x, dtid.y, 0, 1));
+	float4 pos = mul(Map.MapToWorld, float4(dtid.x, dtid.y, 0, 1));// backwards? normally it's mul(vec, mat)
 	float4 rand_dir = RandomNWithDim(float2(dtid.x, 0), Map.Dimensions);
 	float4 value = float4(0,0,0,0);
 

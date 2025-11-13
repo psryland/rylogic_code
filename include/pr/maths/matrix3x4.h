@@ -616,11 +616,18 @@ namespace pr
 
 		return m;
 	}
+ 
+	// Invert the orthonormal matrix 'mat' 
+	template <Scalar S, typename A, typename B> inline Mat3x4<S,B,A> pr_vectorcall InvertOrthonormal(Mat3x4_cref<S,A,B> mat) 
+	{ 
+		assert("Matrix is not orthonormal" && IsOrthonormal(mat)); 
+		return static_cast<Mat3x4<S,B,A>>(Transpose(mat)); 
+	} 
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
-	// Using 'Denman-Beavers' square root iteration. Should converge quadratically
 	template <Scalar S, typename A, typename B> inline Mat3x4<S,A,B> pr_vectorcall Sqrt(Mat3x4_cref<S,A,B> mat)
 	{
+		// Using 'Denman-Beavers' square root iteration. Should converge quadratically
 		auto a = mat;                       // Converges to mat^0.5
 		auto b = Mat3x4<S,A,B>::Identity(); // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
@@ -921,6 +928,11 @@ namespace pr::maths
 	PRUnitTestClass(Matrix3x3Tests)
 	{
 		std::default_random_engine rng;
+		TestClass_Matrix3x3Tests()
+			:rng(1u)
+		{
+		}
+
 		PRUnitTestMethod(MultiplyScalar, float, double, int32_t, int64_t)
 		{
 			using S = T;
@@ -998,18 +1010,12 @@ namespace pr::maths
 				}
 			}
 		}
-		PRUnitTestMethod(Inverse, float, double)
+		PRUnitTestMethod(GeneralInvert, float, double)
 		{
 			using S = T;
 			using vec4_t = Vec4<S, void>;
 			using mat3_t = Mat3x4<S, void, void>;
 
-			{
-				auto m = mat3_t::Random(rng, vec4_t::RandomN(rng, 0), -constants<S>::tau, +constants<S>::tau);
-				auto inv_m0 = InvertAffine(m);
-				auto inv_m1 = Invert(m);
-				PR_EXPECT(FEql(inv_m0, inv_m1));
-			}
 			{
 				auto m = mat3_t::Random(rng, S(-5), S(+5));
 				auto inv_m = Invert(m);
@@ -1033,19 +1039,36 @@ namespace pr::maths
 				PR_EXPECT(FEqlRelative(inv_m, INV_M, S(0.0001)));
 			}
 		}
-		PRUnitTestMethod(InvertAffine, float, double)
+		PRUnitTestMethod(AffineInvert, float, double)
 		{
 			using S = T;
 			using vec4_t = Vec4<S, void>;
 			using mat3_t = Mat3x4<S, void, void>;
 
 			auto a2b = mat3_t::Rotation(vec4_t::Normal(-4, -3, +2, 0), -2.15f) * mat3_t::Scale(2.0f);
+			PR_EXPECT(IsAffine(a2b));
 			
 			auto b2a = Invert(a2b);
 			auto a2a = b2a * a2b;
 			PR_EXPECT(FEql(mat3_t::Identity(), a2a));
 
 			auto b2a_fast = InvertAffine(a2b);
+			PR_EXPECT(FEql(b2a_fast, b2a));
+		}
+		PRUnitTestMethod(OrthonormalInvert, float, double)
+		{
+			using S = T;
+			using vec4_t = Vec4<S, void>;
+			using mat3_t = Mat3x4<S, void, void>;
+
+			auto a2b = mat3_t::Rotation(vec4_t::Normal(-4, -3, +2, 0), -2.15f);
+			PR_EXPECT(IsOrthonormal(a2b));
+			
+			auto b2a = Invert(a2b);
+			auto a2a = b2a * a2b;
+			PR_EXPECT(FEql(mat3_t::Identity(), a2a));
+
+			auto b2a_fast = InvertOrthonormal(a2b);
 			PR_EXPECT(FEql(b2a_fast, b2a));
 		}
 		PRUnitTestMethod(CPM, float, double)
