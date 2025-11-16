@@ -31,7 +31,7 @@ namespace pr
 	{
 		// Notes:
 		//  - Some of these are not compatible with some spline types. It's up to the caller
-		//    to choice logical combinations of topology and curve type.
+		//    to choose logical combinations of topology and curve type.
 
 		// 3 points per curve. Sliding window of 3 points per curve
 		Continuous3,
@@ -194,6 +194,16 @@ namespace pr
 			m_curves.push_back(CubicCurve3{ p0, p1, p2, p3, coeff });
 		}
 
+		// Min/Max time for the spline
+		float Time0() const
+		{
+			return 0.0f;
+		}
+		float Time1() const
+		{
+			return static_cast<float>(m_curves.size());
+		}
+
 		// Interpolated position on the spline at time 't'
 		v4 Position(float time) const
 		{
@@ -291,7 +301,168 @@ namespace pr
 		}
 	};
 
-	// Previous implementation
+	namespace spline
+	{
+		// Return the length of a Cubic Curve from t0 to t1
+		inline float Length(CubicCurve3 const& curve, float t0, float t1, float tol = maths::tinyf)
+		{
+			struct L
+			{
+				static float Len(CubicCurve3 const& curve, float t0, float t1, float tol)
+				{
+					return Len(curve, t0, t1,
+						pr::Length(curve.EvalDerivative(t0)),
+						pr::Length(curve.EvalDerivative(0.5f * (t0 + t1))),
+						pr::Length(curve.EvalDerivative(t1)),
+						tol, 0);
+				}
+				static float Len(CubicCurve3 const& curve, float a, float b, float fa, float fm, float fb, float tol, int depth)
+				{
+					// Simpson estimate on [a,b]
+					auto len1 = (b - a) * (fa + 4 * fm + fb) / 6.0f;
+
+					auto mid = 0.5f * (a + b);
+					auto mid_l = 0.5f * (a + mid);
+					auto mid_r = 0.5f * (mid + b);
+
+					// Tangent magnitudes at quarter points
+					auto fmid_l = pr::Length(curve.EvalDerivative(mid_l)); // ||P'(lm)||
+					auto fmid_r = pr::Length(curve.EvalDerivative(mid_r)); // ||P'(rm)||
+
+					// Two smaller Simpson estimates
+					auto len2_l = (mid - a) * (fa + 4 * fmid_l + fm) / 6.0f;
+					auto len2_r = (b - mid) * (fm + 4 * fmid_r + fb) / 6.0f;
+					auto len2 = len2_l + len2_r;
+
+					// If close enough, accept smaller partition
+					if (FEqlRelative(len1, len2, tol))
+						return len2;
+
+					static constexpr int max_depth = 20;
+					if (depth >= max_depth)
+						return len2;
+
+					// Otherwise recurse deeper
+					return
+						Len(curve, a, mid, fa, fmid_l, fm, tol, depth + 1) +
+						Len(curve, mid, b, fm, fmid_r, fb, tol, depth + 1);
+				}
+			};
+
+			return L::Len(curve, t0, t1, tol);
+		}
+
+		// Return the length of a spline from t0 to t1
+		inline float Length(CubicSpline const& spline, float t0, float t1, float tol = maths::tinyf)
+		{
+			auto length = 0.0f;
+			int i0 = std::clamp(static_cast<int>(std::floor(t0)), 0, isize(spline.m_curves) - 1);
+			int i1 = std::clamp(static_cast<int>(std::ceil(t1)), 0, isize(spline.m_curves) - 1);
+			for (auto i = i0; i <= i1; ++i)
+			{
+				auto const& curve = spline.m_curves[i];
+				length += Length(curve,
+					i == i0 ? t0 - i0 : 0.0f,
+					i == i1 ? t1 - i1 : 1.0f,
+					tol);
+			}
+			return length; // CHECK ME
+		}
+
+		// Fill a container of points with a rasterized version of 'spline'
+		// 'points' is the vert along the spline
+		// 'times' is the times along 'spline' at the point locations
+		template <std::invocable<v4, float> Out>
+		inline void Raster(CubicSpline const& spline, int max_points, Out out, float tol = maths::tinyf)
+		{
+			struct L
+			{
+				vector<v4> m_stack; // Stored as xyz = pos, w = time
+				int m_max_points;
+
+				L(CubicSpline const& spline, int max_points, float tol)
+					: m_stack()
+					, m_max_points(max_points)
+				{
+					auto p0 = spline.Position(spline.Time0()); p0.w = spline.Time0();
+					auto p1 = spline.Position(spline.Time1()); p1.w = spline.Time1();
+					m_stack.push_back(p0);
+					m_stack.push_back(p1);
+				}
+				void Do(Out out)
+				{
+					(void)out;
+				}
+				#if 0
+				struct Elem // Linked list element type used to form a priority queue
+				{
+					Elem* m_next;      // The next subsection of spline with less error
+					Spline const* m_spline;    // Pointer to the subsection of the spline
+					float         m_t0, m_t1;  // Times along the original spline
+					int           m_ins;       // The position to insert a vert in the out container
+					float         m_err;       // How much a straight line diverges from 'm_spline'
+
+					Elem(Spline const& s, float t0, float t1, int ins)
+						:m_next(0)
+						, m_spline(&s)
+						, m_t0(t0)
+						, m_t1(t1)
+						, m_ins(ins)
+						, m_err(Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z) - Length(s.w - s.x))
+					{
+					}
+				};
+
+				// Insert 'elem' into the priority queue of which 'queue' is the head
+				static Elem* QInsert(Elem* queue, Elem& elem)
+				{
+					if (queue == 0 || queue->m_err < elem.m_err) { elem.m_next = queue; return &elem; }
+					Elem* i; for (i = queue; i->m_next && i->m_next->m_err > elem.m_err; i = i->m_next) {}
+					elem.m_next = i->m_next; // 'i->m_next' has an error less than 'elem' (i.m_next might be 0)
+					i->m_next = &elem;
+					return queue;
+				}
+
+				// Breadth-first recursive raster of this spline
+				static void Raster(PCont& points, TCont& times, Elem* queue, int& pts_remaining, float tol)
+				{
+					// Pop the top spline segment from the queue or we've run out of points
+					Elem const& elem = *queue;
+					queue = queue->m_next;
+
+					// Stop if the error is less than 'tol'
+					if (elem.m_err < tol || pts_remaining <= 0)
+						return;
+
+					// Subdivide the spline segment and insert the mid-point into 'points'
+					Spline Lhalf, Rhalf;                       // Spline segments for each half
+					Split(*elem.m_spline, 0.5f, Lhalf, Rhalf); // splits the spline at t=0.5
+					float t = (elem.m_t0 + elem.m_t1) * 0.5f;  // Find the time on the original spline
+					points.insert(points.begin() + elem.m_ins, Lhalf.Point1());
+					times.insert(times.begin() + elem.m_ins, t);
+
+					// Increment the insert position for all elements after 'elem.m_ins'
+					for (Elem* i = queue; i != 0; i = i->m_next)
+						i->m_ins += (i->m_ins > elem.m_ins);
+
+					// Insert both halves into the queue
+					Elem lhs(Lhalf, elem.m_t0, t, elem.m_ins);
+					Elem rhs(Rhalf, t, elem.m_t1, elem.m_ins + 1);
+					queue = QInsert(queue, lhs);
+					queue = QInsert(queue, rhs);
+					Raster(points, times, queue, --pts_remaining, tol); // continue recursively
+				}
+				#endif
+			};
+
+			L raster(spline, max_points, tol);
+			raster.Do(out);
+		}
+	}
+
+
+
+	// Previous implementation *************************
 
 	struct Spline :m4x4
 	{
@@ -803,9 +974,11 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(SplineTests)
+	PRUnitTestClass(SplineTests)
 	{
-		
-	}
+		PRUnitTestMethod(CubicCurveLength)
+		{
+		}
+	};
 }
 #endif

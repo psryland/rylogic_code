@@ -174,8 +174,8 @@ namespace pr::rdr12::ldraw
 			"	(<idx> <t0> <t1>)\n"
 			"}\n"
 			"**Dashed {<on_length> <off_length>}\n"
-			"**PerItemColour {}\n"
-			"**PerItemParametrics {}\n"
+			"**PerItemColour {[<true|false>]}\n"
+			"**PerItemParametrics {[<true|false>]}\n"
 			"**Solid {}\n"
 
 			// Special objects

@@ -1440,8 +1440,8 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// The selected collection contains all that is selected and no more
-			var selected0 = elements.Where(x => x.Selected).ToArray().Sort(ByGuid);
-			var selected1 = Selected.ToArray().Sort(ByGuid);
+			var selected0 = elements.Where(x => x.Selected).ToArray().QuickSort(ByGuid);
+			var selected1 = Selected.ToArray().QuickSort(ByGuid);
 			if (!selected0.SequenceEqual(selected1, ByGuid))
 				throw new Exception("Selected elements collection is inconsistent with the selected state of the elements");
 

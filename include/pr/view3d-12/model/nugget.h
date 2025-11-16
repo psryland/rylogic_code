@@ -122,6 +122,20 @@ namespace pr::rdr12
 			, m_irange(Range::Reset())
 		{}
 
+		// Set the nugget topology
+		NuggetDesc& topo(ETopo topology)
+		{
+			m_topo = topology;
+			return *this;
+		}
+
+		// Set the nugget vertex format
+		NuggetDesc& geom(EGeom geometry)
+		{
+			m_geom = geometry;
+			return *this;
+		}
+
 		// Set the vertex range for this nugget
 		NuggetDesc& vrange(Range range)
 		{

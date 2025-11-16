@@ -153,7 +153,7 @@ namespace pr::rdr12
 				m_options |= EOptions::NormalGeneration;
 				return *this;
 			}
-		};
+			};
 
 		// Points/Sprites *********************************************************************
 		// Generate a cloud of points from an array of points
@@ -485,5 +485,9 @@ namespace pr::rdr12
 				}
 			}
 		};
+
+		// Create a model from 'cache'
+		template <typename VType>
+		static ModelPtr Create(ResourceFactory& factory, Cache<VType>& cache, CreateOptions const* opts = nullptr);
 	};
 }

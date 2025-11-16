@@ -1201,9 +1201,9 @@ namespace pr
 			assert(count == std::dynamic_extent || count <= size() - ofs);
 			return std::span<Type>(data() + ofs, std::min(size() - ofs, count));
 		}
-		std::span<Type const> cspan()
+		std::span<Type const> cspan(size_t ofs = 0, size_t count = std::dynamic_extent)
 		{
-			return std::as_const(*this).span();
+			return std::as_const(*this).span(ofs, count);
 		}
 
 		// Implicit conversion to initialiser list.

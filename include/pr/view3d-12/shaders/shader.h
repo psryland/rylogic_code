@@ -45,7 +45,7 @@ namespace pr::rdr12
 		SortKeyId SortId() const;
 
 		// Create a shader
-		template <typename TShader, typename... Args> requires (std::is_base_of_v<Shader, TShader>)
+		template <typename TShader, typename... Args> requires (std::is_base_of_v<Shader, TShader> && std::constructible_from<TShader, Args...>)
 		static RefPtr<TShader> Create(Args... args)
 		{
 			RefPtr<TShader> shdr(rdr12::New<TShader>(std::forward<Args>(args)...), true);

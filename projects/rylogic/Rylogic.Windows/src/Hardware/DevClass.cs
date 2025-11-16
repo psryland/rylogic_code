@@ -37,9 +37,9 @@ namespace Rylogic.Hardware
 			{
 				var ty = typeof(DevClass);
 				var fields = ty.GetFields(BindingFlags.Static|BindingFlags.Public);
-				foreach (var field in fields.Where(x => x.FieldType == ty))
+				foreach (var f in fields.Where(x => x.FieldType == ty))
 				{
-					if (!(field.GetValue(null) is DevClass dc)) continue;
+					if (f.GetValue(null) is not DevClass dc) continue;
 					yield return dc;
 				}
 			}

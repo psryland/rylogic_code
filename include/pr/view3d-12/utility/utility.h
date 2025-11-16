@@ -20,7 +20,7 @@ namespace pr::rdr12
 	}
 
 	// Helper for allocating and constructing a type using 'alloc_traits'
-	template <typename T, typename... Args>
+	template <typename T, typename... Args> requires std::constructible_from<T, Args...>
 	[[nodiscard]] inline T* New(Args&&... args)
 	{
 		Allocator<T> alex;

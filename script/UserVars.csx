@@ -165,6 +165,7 @@ public class UserVars
 	{
 		try
 		{
+			// Load user provided defaults
 			var uservars_json = Path_.CombinePath(Root, "Script/UserVars.json");
 			if (Path_.FileExists(uservars_json))
 			{
@@ -201,6 +202,48 @@ public class UserVars
 							if (prop.Name == "") break; // Ignore empty names
 							throw new Exception($"Unknown property '{prop.Name}' in {uservars_json}");
 						}
+					}
+				}
+			}
+
+			// Check for newer VCVersion
+			if (VSDir is not null && VSVersion is not null)
+			{
+				var dir = Path([VSDir, "VC\\Tools\\MSVC"], check_exists: false);
+				if (Directory.Exists(dir))
+				{
+					var vc_versions = Directory.EnumerateDirectories(dir)
+						.Select(d => System.IO.Path.GetFileName(d))
+						.Where(name => !string.IsNullOrEmpty(name))
+						.OrderByDescending(name => name)
+						.ToArray();
+					
+					// Check the latest version is being used
+					if (vc_versions.Length != 0)
+					{
+						if (string.Compare(vc_versions[0], VCVersion, StringComparison.OrdinalIgnoreCase) > 0)
+							Console.WriteLine($"Newer VC version available: {vc_versions[0]} (current: {VCVersion})");
+					}
+				}
+			}
+
+			// Check for newer WinSDK
+			if (WinSDK is not null && WinSDKVersion is not null)
+			{
+				var dir = Path([WinSDK, "Include"], check_exists: false);
+				if (Directory.Exists(dir))
+				{
+					var sdk_versions = Directory.EnumerateDirectories(dir)
+						.Select(d => System.IO.Path.GetFileName(d))
+						.Where(name => !string.IsNullOrEmpty(name) && name.StartsWith("10."))
+						.OrderByDescending(name => name)
+						.ToArray();
+					
+					// Check the latest version is being used
+					if (sdk_versions.Length != 0)
+					{
+						if (string.Compare(sdk_versions[0], WinSDKVersion, StringComparison.OrdinalIgnoreCase) > 0)
+							Console.WriteLine($"Newer Windows SDK version available: {sdk_versions[0]} (current: {WinSDKVersion})");
 					}
 				}
 			}

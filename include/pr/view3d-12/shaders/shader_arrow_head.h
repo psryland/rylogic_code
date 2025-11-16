@@ -10,8 +10,7 @@ namespace pr::rdr12::shaders
 {
 	struct ArrowHeadGS :ShaderOverride
 	{
-		float m_size;
-		explicit ArrowHeadGS(float size);
+		explicit ArrowHeadGS();
 		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

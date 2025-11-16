@@ -3,17 +3,18 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
 #pragma once
-
-#include "pr/common/interpolate.h"
+#include <span>
+#include <functional>
 
 namespace pr
 {
-	// An iterator wrapper that returns N items from an iterator
-	// that points to M items, where N/M is an integer > 0
-	template <typename TCIter, typename TItem, typename Interp = typename Interpolate<TItem>::Point>
+	// An iterator wrapper that returns N items from an iterator that points to M items, where N/M is an integer > 0
+	template <typename TCIter, typename TItem>
 	struct Repeater
 	{
-		Interp m_interp;   // The interpolation functor
+		using Interp = TItem(*)(TItem const& lhs, TItem const& rhs, int n, int N);
+
+		Interp m_interp;   // The interpolation function
 		TCIter m_iter;     // The source iterator
 		int    m_count;    // The number of items available through 'm_iter'
 		int    m_output;   // The total number of items to return
@@ -28,19 +29,17 @@ namespace pr
 		// 'count' is the number of available items pointed to by 'iter'
 		// 'output_count' is the number items to be output from the iterator
 		// 'def' is the value to return when 'iter' is exhausted
-		Repeater(TCIter iter, int count, int output_count, TItem const& def, Interp interp = Interp())
-			:m_interp(interp)
-			,m_iter(iter)
-			,m_count(count)
-			,m_output(output_count)
-			,m_i(0)
-			,m_r(0)
-			,m_default(def)
-			,m_curr(Next())
-			,m_next(Next())
-			,m_item(m_interp(m_curr, m_next, 0, 1))
-		{}
-		virtual ~Repeater()
+		Repeater(TCIter iter, int count, int output_count, TItem const& def, Interp interp)
+			: m_interp(interp)
+			, m_iter(iter)
+			, m_count(count)
+			, m_output(output_count)
+			, m_i(0)
+			, m_r(0)
+			, m_default(def)
+			, m_curr(Next())
+			, m_next(Next())
+			, m_item(m_interp(m_curr, m_next, 0, 1))
 		{}
 		TItem operator*() const
 		{
@@ -75,10 +74,7 @@ namespace pr
 			++(*this);
 			return r;
 		}
-
-	protected:
-
-		virtual TItem Next()
+		TItem Next()
 		{
 			// Exhausted the iterator? return the default
 			if (m_i != m_count)
@@ -90,16 +86,21 @@ namespace pr
 		}
 	};
 
-	// Helper method for returning a point sampling repeater
-	// 'iter' is the src iterator
-	// 'count' is the number of available items pointed to by 'iter'
-	// 'output_count' is the number of times the iterator will be incremented
-	// 'def' is the value to return when 'iter' is exhausted
+	//// Helper method for returning a point sampling repeater
+	//// 'iter' is the src iterator
+	//// 'count' is the number of available items pointed to by 'iter'
+	//// 'output_count' is the number of times the iterator will be incremented
+	//// 'def' is the value to return when 'iter' is exhausted
 	template <typename TCIter, typename TItem>
-	Repeater<TCIter,TItem,typename Interpolate<TItem>::Point>
-	CreateRepeater(TCIter iter, int count, int output_count, TItem const& def)
+	Repeater<TCIter, TItem> CreateRepeater(TCIter iter, int count, int output_count, TItem const& def)
 	{
-		return Repeater<TCIter,TItem,typename Interpolate<TItem>::Point>(iter, count, output_count, def);
+		constexpr auto PointInterp = [](TItem const& lhs, TItem const&, int, int) { return lhs; };
+		return Repeater<TCIter, TItem>(iter, count, output_count, def, PointInterp);
+	}
+	template <typename TItem>
+	Repeater<TItem const*, TItem> CreateRepeater(std::span<TItem const> source, int output_count, TItem const& def)
+	{
+		return CreateRepeater(source.data(), static_cast<int>(source.size()), output_count, def);
 	}
 
 	// Helper method for returning a linear interpolating repeater
@@ -108,10 +109,19 @@ namespace pr
 	// 'output_count' is the number of times the iterator will be incremented
 	// 'def' is the value to return when 'iter' is exhausted
 	template <typename TCIter, typename TItem>
-	Repeater<TCIter,TItem,typename Interpolate<TItem>::Linear>
-	CreateLerpRepeater(TCIter iter, int count, int output_count, TItem const& def)
+	Repeater<TCIter, TItem> CreateLerpRepeater(TCIter iter, int count, int output_count, TItem const& def)
 	{
-		return Repeater<TCIter,TItem,typename Interpolate<TItem>::Linear>(iter, count, output_count, def);
+		constexpr auto LinearInterp = [](TItem const& lhs, TItem const& rhs, int n, int N)
+		{
+			if (N == 0) return lhs;
+			return (static_cast<float>(N - n) * lhs + static_cast<float>(n) * rhs) / static_cast<float>(N);
+		};
+		return Repeater<TCIter, TItem>(iter, count, output_count, def, LinearInterp);
+	}
+	template <typename TItem>
+	Repeater<TItem const*, TItem> CreateLerpRepeater(std::span<TItem const> source, int output_count, TItem const& def)
+	{
+		return CreateLerpRepeater(source.data(), static_cast<int>(source.size()), output_count, def);
 	}
 }
 
@@ -127,7 +137,7 @@ namespace pr::common
 			vec.push_back(1);
 			vec.push_back(2);
 
-			auto rep = pr::CreateRepeater(begin(vec), int(vec.size()), 6, -1);
+			auto rep = pr::CreateRepeater(vec, 6, -1);
 			PR_EXPECT(*(rep  ) ==  0);
 			PR_EXPECT(*(++rep) ==  0);
 			PR_EXPECT(*(++rep) ==  0);
@@ -145,7 +155,7 @@ namespace pr::common
 			vec.push_back(0.5f);
 			vec.push_back(1.0f);
 
-			auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, 1.0f);
+			auto rep = pr::CreateLerpRepeater(vec, 6, 1.0f);
 			PR_EXPECT(*rep++ == 0.0f);
 			PR_EXPECT(*rep++ == 0.2f);
 			PR_EXPECT(*rep++ == 0.4f);
@@ -160,7 +170,7 @@ namespace pr::common
 			vec.push_back(0.0f);
 			vec.push_back(1.0f);
 				
-			auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, -1.0f);
+			auto rep = pr::CreateLerpRepeater(vec, 6, -1.0f);
 			PR_EXPECT(*rep++ == 0.0f);
 			PR_EXPECT(*rep++ == 0.2f);
 			PR_EXPECT(*rep++ == 0.4f);
@@ -183,7 +193,7 @@ namespace pr::common
 		}
 		{
 			float f = 1.0f;
-			auto rep = pr::CreateLerpRepeater(&f, 1, 4, 2.0f);
+			auto rep = pr::CreateLerpRepeater({ &f, 1 }, 4, 2.0f);
 			PR_EXPECT(*rep++ == 1.0f);
 			PR_EXPECT(*rep++ == 1.0f);
 			PR_EXPECT(*rep++ == 1.0f);

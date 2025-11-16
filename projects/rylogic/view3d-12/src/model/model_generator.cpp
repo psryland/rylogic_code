@@ -126,10 +126,10 @@ namespace pr::rdr12
 
 	// Create a model from 'cache'
 	template <typename VType>
-	static ModelPtr Create(ResourceFactory& factory, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const* opts)
+	ModelPtr ModelGenerator::Create(ResourceFactory& factory, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const* opts)
 	{
 		// Sanity check 'cache'
-		assert(!cache.m_ncont.empty() && "No nuggets given");
+		assert("No nuggets given" && !cache.m_ncont.empty());
 		for (auto& nug : cache.m_ncont)
 		{
 			// Invalid range means "full range"
@@ -138,10 +138,8 @@ namespace pr::rdr12
 			if (nug.m_irange == Range::Reset())
 				nug.m_irange = Range(0, cache.ICount());
 
-			assert(nug.m_vrange.begin() < cache.VCount() && "Nugget range invalid");
-			assert(nug.m_irange.begin() < cache.ICount() && "Nugget range invalid");
-			assert(nug.m_vrange.end() <= cache.VCount() && "Nugget range invalid");
-			assert(nug.m_irange.end() <= cache.ICount() && "Nugget range invalid");
+			assert("Nugget range invalid" && nug.m_vrange.begin() >= 0 && nug.m_vrange.end() <= cache.VCount());
+			assert("Nugget range invalid" && nug.m_irange.begin() >= 0 && nug.m_irange.end() <= cache.ICount());
 		}
 
 		// Bake a transform into the model
@@ -186,6 +184,7 @@ namespace pr::rdr12
 		// Return the freshly minted model.
 		return model;
 	}
+	template ModelPtr ModelGenerator::Create<Vert>(ResourceFactory& factory, ModelGenerator::Cache<Vert>& cache, ModelGenerator::CreateOptions const* opts);
 
 	// Points/Sprites *********************************************************************
 	ModelPtr ModelGenerator::Points(ResourceFactory& factory, std::span<v4 const> points, CreateOptions const* opts)

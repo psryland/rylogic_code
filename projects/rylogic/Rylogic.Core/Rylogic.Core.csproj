@@ -26,8 +26,8 @@
 	<!-- Dependencies -->
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-		<PackageReference Include="System.Memory" />
-		<PackageReference Include="System.Runtime.Loader" />
+		<!-- <PackageReference Include="System.Memory" /> -->
+		<PackageReference Include="System.Runtime.Loader" Condition="'$(TargetFramework)' == 'net481'"/>
 	</ItemGroup>
 
 	<!-- Post build -->

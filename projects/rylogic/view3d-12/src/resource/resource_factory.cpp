@@ -1062,14 +1062,7 @@ namespace pr::rdr12
 			// Arrow params: *Size {size}
 			case EStockShader::ArrowHeadGS:
 			{
-				auto size = 0.0f;
-				for (int kw; reader.NextKeyword(kw);) switch (kw)
-				{
-					case rdr12::ldraw::HashI("Size"):
-						size = reader.Real<float>();
-						break;
-				}
-				return Shader::Create<shaders::ArrowHeadGS>(size);
+				return Shader::Create<shaders::ArrowHeadGS>();
 			}
 
 			default:

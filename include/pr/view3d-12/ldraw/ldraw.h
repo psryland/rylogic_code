@@ -301,7 +301,7 @@ namespace pr::rdr12::ldraw
 	enum class ELineStyle : uint8_t
 	{
 		#define PR_LDRAW_LINE_STYLES(x)\
-		x(LineSegment)\
+		x(LineSegments)\
 		x(LineStrip)\
 		x(Direction)\
 		x(BezierSpline)\

@@ -100,6 +100,8 @@ namespace pr::rdr12::ldraw
 	bool TextReader::IsSectionEnd()
 	{
 		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
 		script::EatDelimiters(pp, m_delim.c_str());
 		return *pp == '}' || *pp == 0;
 	}
@@ -108,6 +110,8 @@ namespace pr::rdr12::ldraw
 	bool TextReader::IsSourceEnd()
 	{
 		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
 		EatDelimiters(pp, m_delim.c_str());
 		return *pp == 0;
 	}

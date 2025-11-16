@@ -24,11 +24,11 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<PackageReference Include="System.Drawing.Common" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<PackageReference Include="System.Drawing.Common"/>
 		<PackageReference Include="System.Drawing.Primitives" />
 		<PackageReference Include="System.Reflection.Emit" />
 		<PackageReference Include="Microsoft.CSharp" />
-		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
 	
 	<!-- Post Build -->
@@ -40,4 +40,15 @@
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="dotnet-script --cache-path %TEMP%\$(SubDir) $(ScriptPath)RunUnitTests.csx -- $(TargetPath) true Rylogic.Core WindowsBase" />
 	</Target>
+
+	<!-- Work Around for System.Drawing.Common types being missing-->
+	<Target Name="_addDrawingReference" AfterTargets="ResolveTargetingPackAssets">
+		<ItemGroup>
+			<Reference Condition="'%(Reference.FileName)' == 'PresentationCore'" Include=
+				"%(Reference.RootDir)%(Reference.Directory)System.Drawing.Common.dll;
+				%(Reference.RootDir)%(Reference.Directory)System.Private.Windows.GdiPlus.dll;
+				%(Reference.RootDir)%(Reference.Directory)System.Private.Windows.Core.dll" />
+		</ItemGroup>
+	</Target>
+
 </Project>
