@@ -171,19 +171,19 @@ namespace pr::hash
 	}
 
 	// string to hash value
-	constexpr HashValue32 operator "" _hash(char const* str, size_t n)
+	constexpr HashValue32 operator ""_hash(char const* str, size_t n)
 	{
 		return HashCT(str, str + n);
 	}
-	constexpr HashValue32 operator "" _hashi(char const* str, size_t n)
+	constexpr HashValue32 operator ""_hashi(char const* str, size_t n)
 	{
 		return HashICT(str, str + n);
 	}
-	constexpr HashValue32 operator "" _hash(wchar_t const* str, size_t n)
+	constexpr HashValue32 operator ""_hash(wchar_t const* str, size_t n)
 	{
 		return HashCT(str, str + n);
 	}
-	constexpr HashValue32 operator "" _hashi(wchar_t const* str, size_t n)
+	constexpr HashValue32 operator ""_hashi(wchar_t const* str, size_t n)
 	{
 		return HashICT(str, str + n);
 	}

@@ -384,14 +384,11 @@
     <ClCompile Include="src\dependecy_check_math.cpp" />
     <ClCompile Include="src\unittests.cpp" />
     <ClInclude Include="src\unittests.h" />
-    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli" />
     <None Include="cpp.hint" />
-    <None Include="harvest_files.py" />
-    <None Include="run_tests.py" />
   </ItemGroup>
   <!-- Run unit tests -->
   <Target Name="RunUnitTests" AfterTargets="Build">

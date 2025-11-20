@@ -127,6 +127,12 @@ namespace pr::rdr12::ldraw
 		AxisId(pr::AxisId axis) : m_axis(axis) {}
 		bool IsDefault() const { return m_axis == pr::AxisId::None; }
 	};
+	struct PointStyle
+	{
+		EPointStyle m_style;
+		PointStyle() : m_style(EPointStyle::Square) {}
+		PointStyle(EPointStyle style) : m_style(style) {}
+	};
 	struct ArrowType
 	{
 		EArrowType m_type;

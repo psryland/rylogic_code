@@ -197,10 +197,10 @@ namespace pr::physics
 		}
 		InertiaInv InertiaInvOS(m3_cref o2a, v4_cref com = v4{}) const
 		{
-			auto inertia¯ = InertiaInvOS();
-			inertia¯ = Rotate(inertia¯, o2a);
-			inertia¯.CoM(com);
-			return inertia¯;
+			auto inertia_inv = InertiaInvOS();
+			inertia_inv = Rotate(inertia_inv, o2a);
+			inertia_inv.CoM(com);
+			return inertia_inv;
 		}
 		Inertia InertiaOS(m4_cref o2a) const
 		{

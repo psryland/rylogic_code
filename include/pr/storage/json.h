@@ -16,6 +16,35 @@
 #include <format>
 #include "pr/str/utf8.h"
 
+// Example use:
+#if 0
+{
+	json::Document doc;
+
+	doc.root()["key0"] = 123;
+	doc.root()["key1"] = 456.78;
+	doc.root()["key2"] = json::Array{ 1, 2, 3, 4 };
+	doc.root()["key3"] = json::Object{};
+
+	auto& child = root["key3"].to_object();
+	child["key10"] = nullptr;
+	child["key11"] = true;
+	child["key12"] = json::Array{
+		true,
+		"value3",
+		80085,
+	};
+
+	json::Object key4 = {
+		{"four", 4},
+		{"five", "five"},
+	};
+	root["key4"] = std::move(key4);
+
+	std::string str = json::Write(doc, {});
+}
+#endif
+
 namespace pr::json
 {
 	struct Value;
@@ -381,7 +410,7 @@ namespace pr::json
 		bool AllowTrailingCommas = false;
 		
 		// Serialize options ---
-		bool Indent = false;
+		bool Indent = true;
 		std::string_view IndentString = "\t";
 		
 		// Number of elements in a "short" array
@@ -810,7 +839,7 @@ namespace pr::json
 	}
 
 	// Write a JSON DOM to a string
-	inline std::string Write(Value const& value, Options const& opts)
+	inline std::string Write(Value const& value, Options const& opts = {})
 	{
 		struct Serializer
 		{
@@ -851,7 +880,7 @@ namespace pr::json
 					}
 					case Value::TypeIndex::Number:
 					{
-						char s[32];
+						char s[32] = {};
 						auto [ptr,ec] = std::to_chars(&s[0], &s[0] + _countof(s), std::get<double>(val));
 						if (ec == std::errc{})
 							buf.append(&s[0], ptr - &s[0]);
@@ -944,7 +973,7 @@ namespace pr::json
 					}
 				}
 			}
-			EArrType ClassifyArray(Array const& arr)
+			EArrType ClassifyArray(Array const& arr) const
 			{
 				auto arr_type = EArrType::Basic | EArrType::Short | EArrType::Homogeneous;
 
@@ -954,20 +983,34 @@ namespace pr::json
 				if (arr.size() > m_opts.ShortArrayLength)
 					arr_type &= ~EArrType::Short;
 
+				auto nested_count = 0;
 				auto idx0 = arr.begin()->value.index();
 				for (auto const& val : arr)
 				{
 					auto idx = val.value.index();
 
 					if (idx != idx0)
+					{
 						arr_type &= ~EArrType::Homogeneous;
+					}
 					if (idx == Value::TypeIndex::ChildArray)
+					{
 						arr_type &= ~EArrType::Basic;
+						nested_count += static_cast<int>(val.to_array().size());
+					}
 					if (idx == Value::TypeIndex::ChildObject)
+					{
 						arr_type &= ~EArrType::Basic;
+						nested_count += static_cast<int>(val.to_object().size());
+					}
 					if (idx == Value::TypeIndex::String && std::get<std::string>(val.value).size() > m_opts.ShortStringLength)
+					{
 						arr_type &= ~EArrType::Short;
+					}
 				}
+
+				if (nested_count > m_opts.ShortArrayLength)
+					arr_type &= ~EArrType::Short;
 
 				return static_cast<EArrType>(arr_type);
 			}
@@ -984,7 +1027,7 @@ namespace pr::json
 			{
 				char const* comma = "";
 				char const* space = m_opts.Indent ? " " : "";
-				for (auto ptr = beg; ptr != end; ++ptr)
+				for (pair_iter_t ptr = beg; ptr != end; ++ptr)
 				{
 					auto const& [key, val] = *ptr;
 
@@ -1001,7 +1044,7 @@ namespace pr::json
 				auto linestart = buf.size();
 				bool linewrap = !HasFlag(arr_type, EArrType::Short);
 
-				for (auto ptr = beg; ptr != end; ++ptr)
+				for (item_iter_t ptr = beg; ptr != end; ++ptr)
 				{
 					auto const& val = *ptr;
 
@@ -1033,11 +1076,11 @@ namespace pr::json
 		s.DoSerialize(buf, value, 0);
 		return std::move(buf);
 	}
-	inline std::ostream& Write(std::ostream& out, Value const& value, Options const& opts)
+	inline std::ostream& Write(std::ostream& out, Value const& value, Options const& opts = {})
 	{
 		return out << Write(value, opts);
 	}
-	inline void Write(std::filesystem::path filepath, Value const& value, Options const& opts)
+	inline void Write(std::filesystem::path filepath, Value const& value, Options const& opts = {})
 	{
 		std::ofstream file(filepath);
 		if (!file.is_open())
@@ -1047,7 +1090,7 @@ namespace pr::json
 	}
 
 	// Parse a UTF-8 JSON string into a DOM tree.
-	inline Value Read(std::string_view src, Options const& opts)
+	inline Value Read(std::string_view src, Options const& opts = {})
 	{
 		using namespace impl;
 
@@ -1064,7 +1107,7 @@ namespace pr::json
 	}
 
 	// Read JSON data from a stream into a DOM tree.
-	inline Value Read(std::istream& in, Options const& opts, size_t size_estimate = std::dynamic_extent)
+	inline Value Read(std::istream& in, Options const& opts = {}, size_t size_estimate = std::dynamic_extent)
 	{
 		size_estimate = size_estimate != std::dynamic_extent ? size_estimate : 1ULL * 1024 * 1024;
 		
@@ -1085,7 +1128,7 @@ namespace pr::json
 	}
 
 	// Read a JSON file into a DOM tree.
-	inline Value Read(std::filesystem::path const& path, Options const& opts)
+	inline Value Read(std::filesystem::path const& path, Options const& opts = {})
 	{
 		std::ifstream file(path);
 		if (!file.is_open())
@@ -1105,8 +1148,9 @@ namespace pr::json
 #include "pr/common/unittests.h"
 namespace pr::storage
 {
-	PRUnitTest(JsonTests)
+	PRUnitTestClass(JsonTests)
 	{
+		PRUnitTestMethod(Reading)
 		{
 			char const test_data[] =
 				"{\n"
@@ -1157,6 +1201,7 @@ namespace pr::storage
 			PR_EXPECT(root["key6"]["key12"].to_object().size() == 5);
 			PR_EXPECT(root["key6"]["key18"].to_array().empty() == false);
 		}
+		PRUnitTestMethod(ReadingEscapedStrings)
 		{
 			char const test_data[] =
 				"{\n"
@@ -1170,6 +1215,7 @@ namespace pr::storage
 			PR_EXPECT(root["SearchPaths"][0].to<std::string>() == "C:\\Work\\Path");
 			PR_EXPECT(root["EscapedString"].to<std::string>() == "This is a string with a \"quote\" in it");
 		}
+		PRUnitTestMethod(Writing)
 		{
 			json::Document doc;
 			auto& root = doc.root();
@@ -1200,6 +1246,12 @@ namespace pr::storage
 				{"two", 2},
 				{"three", true},
 			};
+
+			json::Object key9 = {
+				{"four", 4},
+				{"five", "five"},
+			};
+			root["key9"] = std::move(key9);
 			
 			char const* expected = 
 				"{\n"
@@ -1223,6 +1275,10 @@ namespace pr::storage
 				"			\"two\": 2,\n"
 				"			\"three\": true\n"
 				"		}\n"
+				"	},\n"
+				"	\"key9\": {\n"
+				"		\"four\": 4,\n"
+				"		\"five\": \"five\"\n"
 				"	}\n"
 				"}";
 
@@ -1267,6 +1323,6 @@ namespace pr::storage
 			str = json::Write(doc, json::Options{ .Indent = true, .ParallelSerialise = 2 });
 			PR_EXPECT(str == expected);
 		}
-	}
+	};
 }
 #endif

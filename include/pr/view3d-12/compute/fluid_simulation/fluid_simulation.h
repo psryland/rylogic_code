@@ -816,7 +816,7 @@ namespace pr::rdr12::compute::fluid
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 			job.m_barriers.Commit();
 			{
-				auto buf = job.m_readback.Alloc<OutputData>(1);
+				auto buf = job.m_readback.template Alloc<OutputData>(1);
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_output.get(), 0);
 				Output.m_cull_results = std::move(buf);
 			}
@@ -904,7 +904,7 @@ namespace pr::rdr12::compute::fluid
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 			job.m_barriers.Commit();
 			{
-				auto buf = job.m_readback.Alloc<OutputData>(1);
+				auto buf = job.m_readback.template Alloc<OutputData>(1);
 				job.m_cmd_list.CopyBufferRegion(buf, m_r_output.get(), 0);
 				Output.m_debug_results = std::move(buf);
 			}

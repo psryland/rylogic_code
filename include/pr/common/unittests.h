@@ -1,4 +1,4 @@
-//*******************************************************************************************
+﻿//*******************************************************************************************
 // UnitTests
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
@@ -308,14 +308,16 @@ namespace pr::unittests
 			std::mutex m;
 
 			// Run the tests
-			std::for_each(std::execution::seq, begin(TestFramework::Tests), end(TestFramework::Tests), [&](auto const& test)
+			for (auto const& test : TestFramework::Tests)
 			{
 				try
 				{
 					if (wordy)
 					{
 						std::lock_guard<std::mutex> lock(m);
-						TestFramework::out() << std::format("{}{}", test.m_name, std::string(40 - strlen(test.m_name), '.'));
+						auto test_name = std::format("{}.{}", test.m_class->name() + 7, test.m_name);
+						auto dots = std::string(60 - std::min<size_t>(60, test_name.size()), '.');
+						TestFramework::out() << std::format("{}{}", test_name, dots);
 					}
 
 					TestFramework::TestCount = 0;
@@ -338,7 +340,7 @@ namespace pr::unittests
 					TestFramework::out() << std::format("{}\n   {}({}): {} failed\n", e.what(), test.m_file, test.m_line, test.m_class->name());
 					++failed;
 				}
-			});
+			}
 
 			auto T1 = high_resolution_clock::now();
 
@@ -415,8 +417,16 @@ struct TestClass_##classname : pr::unittests::UnitTestBase<TestClass_##classname
 	template <typename... Types>\
 	static void Test_##methodname##_()\
 	{\
-		typename base_t::test_class_type t;\
-		(t.Test_##methodname<Types>(), ...);\
+		if constexpr (sizeof...(Types) > 0)\
+		{\
+			typename base_t::test_class_type t;\
+			(t.Test_##methodname<Types>(), ...);\
+		}\
+		else\
+		{\
+			typename base_t::test_class_type t;\
+			t.Test_##methodname<void>(); \
+		}\
 	}\
 	inline static bool s_registered_##methodname = pr::unittests::TestFramework::AddTest<test_class_type>(\
 		#methodname,\

@@ -174,84 +174,42 @@
 #endif
 
 #if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::common
+namespace pr::common::unittests
 {
-	PRUnitTestClass(FlagsEnumTests)
+	// Compile time unit tests only because of circular dependencies
+	enum class NotFlags
 	{
-		enum class NotFlags
-		{
-			One = 1,
-			Two = 2,
-		};
-		static_assert(is_flags_enum_v<NotFlags> == false);
-
-		enum class Flags : uint32_t // Flags should be unsigned types
-		{
-			One = 1 << 0,
-			Two = 1 << 1,
-
-			_flags_enum = 0,
-		};
-		static_assert(FlagsEnum<Flags>);
-
-		enum class Numbers
-		{
-			Zero = 0,
-			Two = 2,
-			One = 1,
-			Six = 6,
-			Three = 3,
-			MinusTwo = -2,
-
-			_arith_enum = 0,
-		};
-		static_assert(ArithEnum<Numbers>);
-
-		PRUnitTestMethod(Bitwise)
-		{
-			using E = Flags;
-			//using E = NotFlags; // Uncomment to test not-compiling-ness
-
-			auto a = E::One | E::Two;
-			auto b = E::One & E::Two;
-			auto c = E::One ^ E::Two;
-			auto f = ~E::One;
-
-			PR_EXPECT((int)a == 3);
-			PR_EXPECT((int)b == 0);
-			PR_EXPECT((int)c == 3);
-			PR_EXPECT((int)f == -2);
-
-			a |= E::Two;
-			b &= E::Two;
-			c ^= E::Two;
-
-			PR_EXPECT((int)a == 3);
-			PR_EXPECT((int)b == 0);
-			PR_EXPECT((int)c == 1);
-		}
-		PRUnitTestMethod(Arithmetic)
-		{
-			using E = Numbers;
-			static_assert(ArithEnum<E>);
-
-			PR_EXPECT(+E::One == E::One);
-			PR_EXPECT(-E::Two == E::MinusTwo);
-
-			PR_EXPECT(E::One + E::Two == E::Three);
-			PR_EXPECT(E::Six - E::Three == E::Three);
-			PR_EXPECT(E::Two * E::Three == E::Six);
-			PR_EXPECT(E::Six / E::Two == E::Three);
-
-			PR_EXPECT(-2 + E::Three == E::One);
-			PR_EXPECT(E::Six - 5 == E::One);
-			PR_EXPECT(1 - E::Zero == E::One);
-			PR_EXPECT(E::MinusTwo * -3 == E::Six);
-			PR_EXPECT(-1 * E::Two == E::MinusTwo);
-			PR_EXPECT(E::Two / 2 == E::One);
-			PR_EXPECT(6 / E::Two == E::Three);
-		}
+		One = 1,
+		Two = 2,
 	};
+	static_assert(is_flags_enum_v<NotFlags> == false);
+
+	enum class Flags : uint32_t // Flags should be unsigned types
+	{
+		None = 0,
+		One = 1 << 0,
+		Two = 1 << 1,
+		Three = One | Two,
+		_flags_enum = 0,
+	};
+	static_assert(FlagsEnum<Flags>);
+
+	enum class Numbers
+	{
+		Zero = 0,
+		Two = 2,
+		One = 1,
+		Six = 6,
+		Three = 3,
+		MinusTwo = -2,
+
+		_arith_enum = 0,
+	};
+	static_assert(ArithEnum<Numbers>);
+
+	static_assert((Flags::One | Flags::Two) == Flags::Three);
+	static_assert((Flags::One & Flags::Two) == Flags::None);
+	static_assert((Flags::One ^ Flags::Two) == Flags::Three);
+	static_assert(~Flags::One == static_cast<Flags>(-2));
 }
 #endif

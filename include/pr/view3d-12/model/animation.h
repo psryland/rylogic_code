@@ -68,6 +68,15 @@ namespace pr::rdr12
 		Cubic = 2,
 	};
 
+	// Behaviour flags for an animation
+	enum class EAnimFlags : uint32_t
+	{
+		None = 0,
+		NoRootTranslation = 1 << 0,
+		NoRootRotation = 1 << 1,
+		_flags_enum = 0,
+	};
+
 	// Transient type for a bone transform
 	struct BoneKey
 	{
@@ -210,6 +219,7 @@ namespace pr::rdr12
 		using Sample = vector<BoneKey, 0>;
 
 		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
+		EAnimFlags m_flags;         // Behaviour flags
 		double m_duration;          // The length (in seconds) of this animation
 		double m_native_frame_rate; // The native frame rate of the animation (for reference. frame rate is implied key_count and duration)
 
@@ -219,7 +229,7 @@ namespace pr::rdr12
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
 
-		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
+		KeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, double duration, double native_frame_rate);
 
 		// Number of bone tracks in this animation
 		int bone_count() const;
@@ -248,7 +258,8 @@ namespace pr::rdr12
 		using Vec3Track = pr::vector<v3,0>;
 
 		// Any of these tracks can be empty
-		uint64_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
+		uint32_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
+		EAnimFlags m_flags;     // Behaviour flags
 		Vec3Track m_rotation;   // Rotation data per frame. Compressed normalised quaternion
 		Vec3Track m_position;   // Bone position data per frame.
 		Vec3Track m_scale;      // Bone scale data per frame.
@@ -259,7 +270,7 @@ namespace pr::rdr12
 		TimeRange m_time_range; // The time range spanned by this animation
 		double m_frame_rate;    // The native frame rate of the animation, so we can convert from frames <-> seconds
 
-		KinematicKeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate);
+		KinematicKeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, TimeRange time_range, double frame_rate);
 	};
 
 	// Use 'style' to adjust 'time_s' so that it is within the given time range

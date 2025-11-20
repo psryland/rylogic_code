@@ -60,25 +60,25 @@ namespace pr
 	}
 
 	// Convert an int to a byte
-	constexpr char operator "" _uc(unsigned long long arg) noexcept
+	constexpr char operator ""_uc(unsigned long long arg) noexcept
 	{
 		return static_cast<unsigned char>(arg & 0xFF);
 	}
 
 	// Convert an int to a char
-	constexpr char operator "" _ch(unsigned long long arg) noexcept
+	constexpr char operator ""_ch(unsigned long long arg) noexcept
 	{
 		return static_cast<char>(arg & 0xFF);
 	}
 
 	// Convert an int to a char8
-	constexpr char8_t operator "" _c8(unsigned long long arg) noexcept
+	constexpr char8_t operator ""_c8(unsigned long long arg) noexcept
 	{
 		return static_cast<char8_t>(arg & 0xFF);
 	}
 
 	// Convert an int to a wchar_t
-	constexpr wchar_t operator "" _wc(unsigned long long arg) noexcept
+	constexpr wchar_t operator ""_wc(unsigned long long arg) noexcept
 	{
 		return static_cast<wchar_t>(arg & 0xFFFF);
 	}

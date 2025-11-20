@@ -102,16 +102,6 @@ namespace pr::rdr12::ldraw
 		{
 			Append(out, To<string32>(m));
 		}
-		template <typename TOut> static void Append(TOut& out, EArrowType type)
-		{
-			switch (type)
-			{
-				case EArrowType::Fwd:     return Append(out, "Fwd");
-				case EArrowType::Back:    return Append(out, "Back");
-				case EArrowType::FwdBack: return Append(out, "FwdBack");
-				default: throw std::runtime_error("Unknown arrow type");
-			}
-		}
 		template <typename TOut> static void Append(TOut& out, EAddrMode addr)
 		{
 			switch (addr)
@@ -138,6 +128,16 @@ namespace pr::rdr12::ldraw
 				case EFilter::Linear:            return Append(out, "Linear");
 				case EFilter::Anisotropic:       return Append(out, "Anisotropic");
 				default: throw std::runtime_error("Unknown texture addressing mode");
+			}
+		}
+		template <typename TOut> static void Append(TOut& out, EArrowType type)
+		{
+			switch (type)
+			{
+				case EArrowType::Fwd:     return Append(out, "Fwd");
+				case EArrowType::Back:    return Append(out, "Back");
+				case EArrowType::FwdBack: return Append(out, "FwdBack");
+				default: throw std::runtime_error("Unknown arrow type");
 			}
 		}
 		template <typename TOut> static void Append(TOut& out, EPointStyle style)
@@ -244,6 +244,11 @@ namespace pr::rdr12::ldraw
 		{
 			if (a.IsDefault()) return;
 			Write(out, EKeyword::AxisId, a.m_axis.value);
+		}
+		template <typename TOut> static void Append(TOut& out, PointStyle p)
+		{
+			if (p.m_style == EPointStyle::Square) return;
+			Write(out, EKeyword::Style, p.m_style);
 		}
 		template <typename TOut> static void Append(TOut& out, ArrowType a)
 		{

@@ -71,71 +71,68 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::common
 {
-	namespace unittests::coalesce
+	PRUnitTestClass(CoalesceTests)
 	{
-		int const s_outside = 42;
-
-		int create_called_count = 0;
-		int const* CreateInt()
+		inline static int const s_outside = 42;
+		inline static int create_called_count = 0;
+		static int const* CreateInt()
 		{
 			++create_called_count;
 			return &s_outside;
 		}
-	}
-	PRUnitTest(CoalesceTests)
-	{
-		using namespace pr;
-		using namespace unittests::coalesce;
+	
+		PRUnitTestMethod(CoalesceTests)
+		{
+			int const s_inside = 24;
+			int const* inside = &s_inside;
+			int const* outside = &s_outside;
+			int const* ptr;
 
-		int const s_inside = 24;
-		int const* inside = &s_inside;
-		int const* outside = &s_outside;
-		int const* ptr;
-		
-		static_assert(PointerType<const int*>);
-		static_assert(PointerType<decltype(inside)>);
-		static_assert(PointerType<decltype(outside)>);
-		static_assert(PointerType<decltype(ptr)>);
+			static_assert(PointerType<const int*>);
+			static_assert(PointerType<decltype(inside)>);
+			static_assert(PointerType<decltype(outside)>);
+			static_assert(PointerType<decltype(ptr)>);
 
-		ptr = inside;
-		ptr = coalesce(ptr, outside);
-		PR_EXPECT(ptr == inside);
+			ptr = inside;
+			ptr = coalesce(ptr, outside);
+			PR_EXPECT(ptr == inside);
 
-		ptr = nullptr;
-		ptr = coalesce(ptr, outside);
-		PR_EXPECT(ptr == outside);
+			ptr = nullptr;
+			ptr = coalesce(ptr, outside);
+			PR_EXPECT(ptr == outside);
 
-		ptr = inside;
-		create_called_count = 0;
-		ptr = coalesce(ptr, CreateInt);
-		PR_EXPECT(ptr == inside);
-		PR_EXPECT(create_called_count == 0);
+			ptr = inside;
+			create_called_count = 0;
+			ptr = coalesce(ptr, CreateInt);
+			PR_EXPECT(ptr == inside);
+			PR_EXPECT(create_called_count == 0);
 
-		ptr = nullptr;
-		create_called_count = 0;
-		ptr = coalesce(ptr, [] { return CreateInt(); });
-		PR_EXPECT(ptr == outside);
-		PR_EXPECT(create_called_count == 1);
+			ptr = nullptr;
+			create_called_count = 0;
+			ptr = coalesce(ptr, [] { return CreateInt(); });
+			PR_EXPECT(ptr == outside);
+			PR_EXPECT(create_called_count == 1);
 
-		//ptr = inside;
-		//ptr <<= outside;
-		//PR_EXPECT(ptr == inside);
+			//ptr = inside;
+			//ptr <<= outside;
+			//PR_EXPECT(ptr == inside);
 
-		//ptr = nullptr;
-		//ptr <<= outside;
-		//PR_EXPECT(ptr == outside);
+			//ptr = nullptr;
+			//ptr <<= outside;
+			//PR_EXPECT(ptr == outside);
 
-		//ptr = inside;
-		//create_called_count = 0;
-		//ptr <<= [] { return CreateInt(); };
-		//PR_EXPECT(ptr == inside);
-		//PR_EXPECT(create_called_count == 1);
+			//ptr = inside;
+			//create_called_count = 0;
+			//ptr <<= [] { return CreateInt(); };
+			//PR_EXPECT(ptr == inside);
+			//PR_EXPECT(create_called_count == 1);
 
-		//ptr = nullptr;
-		//create_called_count = 0;
-		//ptr <<= [] { return CreateInt(); };
-		//PR_EXPECT(ptr == outside);
-		//PR_EXPECT(create_called_count == 1);
-	}
+			//ptr = nullptr;
+			//create_called_count = 0;
+			//ptr <<= [] { return CreateInt(); };
+			//PR_EXPECT(ptr == outside);
+			//PR_EXPECT(create_called_count == 1);
+		}
+	};
 }
 #endif

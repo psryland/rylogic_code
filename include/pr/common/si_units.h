@@ -12,20 +12,20 @@ namespace pr
 	using seconds_t = double;
 	using kilograms_t = double;
 	using kilograms_p_sec_t = double;
-	using kilograms_p_metre³_t = double;
+	using kilograms_p_metre2_t = double;
 	using kilogram_metres_p_sec_t = double;
 	using metres_t = double;
 	using metres_p_sec_t = double;
-	using metres_p_sec²_t = double;
-	using metres³_t = double;
-	using metres³_p_day_t = double;
+	using metres_p_sec2_t = double;
+	using metres3_t = double;
+	using metres3_p_day_t = double;
 	using days_t = double;
 	using joules_t = double;
 	using kelvin_t = double;
 	using celsius_t = double;
-	using joules_p_metres³_t = double;
+	using joules_p_metres3_t = double;
 	using joules_p_kilogram_t = double;
-	using metres³_p_kilogram_p_sec²_t = double;
+	using metres3_p_kilogram_p_sec2_t = double;
 
 	// Conversions
 	inline kelvin_t CelsiusToKelvin(celsius_t c)

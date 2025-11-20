@@ -3993,7 +3993,7 @@ namespace pr
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
 
 				// Save the creation parameters
-				SaveParams(p.as<Params<>>());
+				SaveParams(p.template as<Params<>>());
 
 				// Record the parent
 				Parent(p.m_parent);

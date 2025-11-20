@@ -35,8 +35,9 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
+	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, double duration, double native_frame_rate)
 		: m_skel_id(skel_id)
+		, m_flags(flags)
 		, m_duration(duration)
 		, m_native_frame_rate(native_frame_rate)
 		, m_bone_map()
@@ -132,8 +133,16 @@ namespace pr::rdr12
 				time_s >= key1.m_time ? 1.0f :
 				Frac(key0.m_time, time_s, key1.m_time);
 
-			key = Interp(key0, key1, frac, key0.m_interp);
+			auto k = Interp(key0, key1, frac, key0.m_interp);
+
+			if (bone_index == 0 && AllSet(anim.m_flags, EAnimFlags::NoRootTranslation))
+				k.m_pos = v3::Zero();
+			if (bone_index == 0 && AllSet(anim.m_flags, EAnimFlags::NoRootRotation))
+				k.m_rot = quat::Identity();
+
+			key = k;
 		});
+
 	}
 
 	// Returns the linearly interpolated key frames a 'time_s'
@@ -162,8 +171,9 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint64_t skel_id, TimeRange time_range, double frame_rate)
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, TimeRange time_range, double frame_rate)
 		: m_skel_id(skel_id)
+		, m_flags(flags)
 		, m_rotation()
 		, m_position()
 		, m_scale()

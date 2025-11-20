@@ -157,7 +157,7 @@ namespace pr
 		//  Hermite:     p0, v0, p1, v1
 		//  Trajector:   p0, v0, a0, j0
 		CubicCurve3(v4_cref p0, v4_cref p1, v4_cref p2, v4_cref p3, m4x4 const& coeff)
-			: m_coeff(coeff * m4x4{ p0, p1, p2, p3 })
+			: m_coeff(m4x4{ p0, p1, p2, p3 } * coeff)
 		{
 		}
 		v4 Eval(float t) const
@@ -179,6 +179,16 @@ namespace pr
 		{
 			return m_coeff * v4{ 0, 0, 0, 6 };
 		}
+		float Curvature(float t) const
+		{
+			// Curvature formula: κ = |v × a| / |v|³
+			t = Clamp<float>(t, 0, 1);
+			auto vel = EvalDerivative(t);
+			auto acc = EvalDerivative2(t);
+			auto v_x_a = Length(Cross3(vel, acc));
+			auto vel_len = Length(vel);
+			return vel_len > maths::tinyf ? v_x_a / (vel_len * vel_len * vel_len) : 0;
+		}
 	};
 
 	// A Spline made from a continuous collection of CubicCurves
@@ -193,6 +203,10 @@ namespace pr
 		{
 			m_curves.push_back(CubicCurve3{ p0, p1, p2, p3, coeff });
 		}
+		CubicSpline(std::initializer_list<CubicCurve3> curves)
+			: m_curves(curves)
+		{
+		}
 
 		// Min/Max time for the spline
 		float Time0() const
@@ -204,25 +218,44 @@ namespace pr
 			return static_cast<float>(m_curves.size());
 		}
 
+		// Return the index of the curve that 'time' falls within
+		int CurveIndex(float time) const
+		{
+			return std::clamp<int>(static_cast<int>(time), 0, static_cast<int>(ssize(m_curves) - 1));
+		}
+
+		// Return the curve that 'time' falls within
+		CubicCurve3 const& Curve(float time) const
+		{
+			return m_curves[CurveIndex(time)];
+		}
+
 		// Interpolated position on the spline at time 't'
 		v4 Position(float time) const
 		{
-			auto const& curve = m_curves[static_cast<int>(time)];
-			return curve.Eval(time - static_cast<int>(time));
+			auto curve_index = CurveIndex(time);
+			return m_curves[curve_index].Eval(time - curve_index);
 		}
 
-		// Interpolated tangent on the spline at time 't'
-		v4 Tangent(float time) const
+		// Interpolated velocity on the spline at time 't'. (P'(t))
+		v4 Velocity(float time) const
 		{
-			auto const& curve = m_curves[static_cast<int>(time)];
-			return curve.EvalDerivative(time - static_cast<int>(time));
+			auto curve_index = CurveIndex(time);
+			return m_curves[curve_index].EvalDerivative(time - curve_index);
 		}
 
-		// Interpolated curvature of the spline at time 't'
-		v4 Curvature(float time) const
+		// Interpolated acceleration of the spline at time 't'. (P''(t))
+		v4 Acceleration(float time) const
 		{
-			auto const& curve = m_curves[static_cast<int>(time)];
-			return curve.EvalDerivative2(time - static_cast<int>(time));
+			auto curve_index = CurveIndex(time);
+			return m_curves[curve_index].EvalDerivative2(time - curve_index);
+		}
+
+		// The curvature of the curve at 'time'
+		float Curvature(float time) const
+		{
+			auto curve_index = CurveIndex(time);
+			return m_curves[curve_index].Curvature(time - curve_index);
 		}
 
 		// Construct a spline from a collection of points
@@ -369,101 +402,152 @@ namespace pr
 			return length; // CHECK ME
 		}
 
-		// Fill a container of points with a rasterized version of 'spline'
-		// 'points' is the vert along the spline
-		// 'times' is the times along 'spline' at the point locations
-		template <std::invocable<v4, float> Out>
-		inline void Raster(CubicSpline const& spline, int max_points, Out out, float tol = maths::tinyf)
+		// Fill a container of points with a rasterized version of 'spline'. Returns the span of used points.
+		[[nodiscard]] inline std::span<v4> Raster(CubicSpline const& spline, float t0, float t1, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tinyf)
 		{
 			struct L
 			{
-				vector<v4> m_stack; // Stored as xyz = pos, w = time
-				int m_max_points;
-
-				L(CubicSpline const& spline, int max_points, float tol)
-					: m_stack()
-					, m_max_points(max_points)
+				// Linked list element type used to form a priority queue
+				struct Elem
 				{
-					auto p0 = spline.Position(spline.Time0()); p0.w = spline.Time0();
-					auto p1 = spline.Position(spline.Time1()); p1.w = spline.Time1();
-					m_stack.push_back(p0);
-					m_stack.push_back(p1);
-				}
-				void Do(Out out)
-				{
-					(void)out;
-				}
-				#if 0
-				struct Elem // Linked list element type used to form a priority queue
-				{
-					Elem* m_next;      // The next subsection of spline with less error
-					Spline const* m_spline;    // Pointer to the subsection of the spline
-					float         m_t0, m_t1;  // Times along the original spline
-					int           m_ins;       // The position to insert a vert in the out container
-					float         m_err;       // How much a straight line diverges from 'm_spline'
-
-					Elem(Spline const& s, float t0, float t1, int ins)
-						:m_next(0)
-						, m_spline(&s)
-						, m_t0(t0)
-						, m_t1(t1)
-						, m_ins(ins)
-						, m_err(Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z) - Length(s.w - s.x))
-					{
-					}
+					// Notes:
+					//  - Storage for 'Elem' is on the stack as the function recurses.
+					Elem* m_next;     // The next subsection of spline with less error
+					v4 m_p0, m_p1;    // Points at the start and end of this section of spline. (times are in w)
+					float m_err;      // How much a straight line diverges from 'm_spline'
+					int m_idx;        // The position to insert a vert in the out container
 				};
 
-				// Insert 'elem' into the priority queue of which 'queue' is the head
-				static Elem* QInsert(Elem* queue, Elem& elem)
-				{
-					if (queue == 0 || queue->m_err < elem.m_err) { elem.m_next = queue; return &elem; }
-					Elem* i; for (i = queue; i->m_next && i->m_next->m_err > elem.m_err; i = i->m_next) {}
-					elem.m_next = i->m_next; // 'i->m_next' has an error less than 'elem' (i.m_next might be 0)
-					i->m_next = &elem;
-					return queue;
-				}
+				CubicSpline const& m_spline;
+				std::span<v4> m_out;
+				int m_pts_added;
+				float m_tol;
+				bool m_store_time_in_w;
+
+				L(CubicSpline const& spline, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tinyf)
+					: m_spline(spline)
+					, m_out(out)
+					, m_pts_added(0)
+					, m_tol(tol)
+					, m_store_time_in_w(store_time_in_w)
+				{}
 
 				// Breadth-first recursive raster of this spline
-				static void Raster(PCont& points, TCont& times, Elem* queue, int& pts_remaining, float tol)
+				int Raster(float t0 = 0.0f, float t1 = std::numeric_limits<float>::max())
+				{
+					t0 = std::clamp(t0, m_spline.Time0(), m_spline.Time1());
+					t1 = std::clamp(t1, m_spline.Time0(), m_spline.Time1());
+
+					Elem init = {};
+					init.m_p0 = m_spline.Position(t0); init.m_p0.w = t0;
+					init.m_p1 = m_spline.Position(t1); init.m_p1.w = t1;
+					init.m_err = std::numeric_limits<float>::max();
+					init.m_idx = 1;
+
+					assert(ssize(m_out) >= 2);
+					m_out[0] = m_store_time_in_w ? init.m_p0 : init.m_p0.w1();
+					m_out[1] = m_store_time_in_w ? init.m_p1 : init.m_p1.w1();
+					m_pts_added = 2;
+
+					Raster(&init);
+
+					return m_pts_added;
+				}
+
+				// Recursive raster (recursive so that 'Elem's are stored on the stack)
+				void Raster(Elem* queue)
 				{
 					// Pop the top spline segment from the queue or we've run out of points
 					Elem const& elem = *queue;
 					queue = queue->m_next;
 
 					// Stop if the error is less than 'tol'
-					if (elem.m_err < tol || pts_remaining <= 0)
+					if (elem.m_err < m_tol || m_pts_added == ssize(m_out))
 						return;
 
-					// Subdivide the spline segment and insert the mid-point into 'points'
-					Spline Lhalf, Rhalf;                       // Spline segments for each half
-					Split(*elem.m_spline, 0.5f, Lhalf, Rhalf); // splits the spline at t=0.5
-					float t = (elem.m_t0 + elem.m_t1) * 0.5f;  // Find the time on the original spline
-					points.insert(points.begin() + elem.m_ins, Lhalf.Point1());
-					times.insert(times.begin() + elem.m_ins, t);
+					// Subdivide the spline segment
+					auto t = 0.5f * (elem.m_p0.w + elem.m_p1.w);
+					auto pt = m_spline.Position(t); pt.w = t;
 
-					// Increment the insert position for all elements after 'elem.m_ins'
-					for (Elem* i = queue; i != 0; i = i->m_next)
-						i->m_ins += (i->m_ins > elem.m_ins);
+					// Insert the mid-point into 'points'
+					std::move(&m_out[elem.m_idx], &m_out[m_pts_added], &m_out[elem.m_idx + 1]); // Make a hole
+					m_out[elem.m_idx] = m_store_time_in_w ? pt : pt.w1();
+					++m_pts_added;
+
+					// Increment the insert index for all elements after 'elem.m_idx'
+					for (auto* i = queue; i != nullptr; i = i->m_next)
+						i->m_idx += int(i->m_idx > elem.m_idx);
 
 					// Insert both halves into the queue
-					Elem lhs(Lhalf, elem.m_t0, t, elem.m_ins);
-					Elem rhs(Rhalf, t, elem.m_t1, elem.m_ins + 1);
+					auto [lhs, rhs] = Split(elem, pt);
 					queue = QInsert(queue, lhs);
 					queue = QInsert(queue, rhs);
-					Raster(points, times, queue, --pts_remaining, tol); // continue recursively
+					Raster(queue);
 				}
-				#endif
+
+				// Insert 'elem' into the priority queue of which 'queue' is the head
+				Elem* QInsert(Elem* queue, Elem& elem)
+				{
+					if (queue == nullptr || elem.m_err >= queue->m_err)
+					{
+						elem.m_next = queue;
+						return &elem;
+					}
+
+					// Find where to insert 'elem'
+					Elem* i = queue;
+					for (; i->m_next != nullptr && i->m_next->m_err > elem.m_err; i = i->m_next) {}
+					
+					// Insert 'elem'. 'i->m_next' has an error less than 'elem' (i.m_next might be 0)
+					elem.m_next = i->m_next;
+					i->m_next = &elem;
+					return queue;
+				}
+
+				// Split 'elem' at 't'
+				std::tuple<Elem, Elem> Split(Elem const& elem, v4 const& mid) const
+				{
+					auto err = [this](v4 const& p0, v4 const& p1)
+					{
+						// If 't0' and 't1' are on different curves, pick a "large" error amount
+						if (p1.w - p0.w > 1.0f)
+							return std::numeric_limits<float>::max();
+
+						// Use geometric deviation from a chord
+						auto dpos = p1.xyz - p0.xyz;
+						auto dpos_len = Length(dpos);
+						auto mid = m_spline.Position(0.5f * (p1.w + p0.w));
+						return dpos_len > maths::tinyf ? Length(Cross(mid.xyz - p0.xyz, dpos)) / Length(dpos) : 0;
+					};
+
+					Elem lhs =
+					{
+						.m_p0 = elem.m_p0,
+						.m_p1 = mid,
+						.m_err = err(elem.m_p0, mid),
+						.m_idx = elem.m_idx,
+					};
+					Elem rhs =
+					{
+						.m_p0 = mid,
+						.m_p1 = elem.m_p1,
+						.m_err = err(mid, elem.m_p1), 
+						.m_idx = elem.m_idx + 1,
+					};
+					return { lhs, rhs };
+				}
 			};
 
-			L raster(spline, max_points, tol);
-			raster.Do(out);
+			L raster(spline, out, store_time_in_w, tol);
+			auto count = raster.Raster(t0, t1);
+			return out.subspan(0, count);
 		}
 	}
 
 
 
 	// Previous implementation *************************
-
+	#if 1
 	struct Spline :m4x4
 	{
 		// Notes:
@@ -968,16 +1052,62 @@ namespace pr
 			return Spline::Acceleration(m_clock);
 		}
 	};
+	#endif
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
+
 namespace pr::maths
 {
 	PRUnitTestClass(SplineTests)
 	{
 		PRUnitTestMethod(CubicCurveLength)
 		{
+			CubicCurve3 curve0(
+				v4{ 0,0,0,1 },
+				v4{ 1,0,0,1 },
+				v4{ 1,0,1,1 },
+				v4{ 0,0,1,1 },
+				CurveType::Bezier);
+
+			auto len0 = spline::Length(curve0, 0, 1);
+			PR_EXPECT(FEql(len0, 2.0f));
+		}
+		PRUnitTestMethod(Raster)
+		{
+			CubicSpline schpline = {
+				CubicCurve3(
+					v4{ 0,0,0,1 },
+					v4{ 1,0,0,1 },
+					v4{ 1,0,1,1 },
+					v4{ 0,0,1,1 },
+					CurveType::Bezier
+				),
+			};
+
+			vector<v4> points(50);
+			auto rastered = spline::Raster(schpline, 0, 1, points);
+			(void)rastered;
+		}
+		
+		void DumpToLDraw(CubicCurve3 const& curve)
+		{
+			using namespace rdr12::ldraw;
+
+			Builder builder;
+
+			builder.Box("bound", 0x200000FF).dim(1, 0.01f, 1).pos(0.5f, 0, 0.5f);
+
+			auto& ldr_line = builder.Line("SplineLine", 0xFF00FF00);
+			for (float t = 0.0f; t <= 1.0f; t += 0.01f)
+			{
+				auto pt = curve.Eval(t);
+				ldr_line.line_to(pt);
+			}
+
+			builder.Save("E:\\Dump\\Ldraw\\spline_line.ldr", ESaveFlags::Pretty);
 		}
 	};
 }
