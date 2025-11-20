@@ -98,6 +98,8 @@ namespace pr
 				, m_hs_last(half_space)
 				, m_hs_end(half_space + (fend - fbeg))
 				, m_vis_face_count(0)
+				, m_vis_face_buf1()
+				, m_vis_face_buf2()
 				, m_visible_face(m_vis_face_buf1)
 			{
 				PR_EXPAND(PR_DBG_CONVEX_HULL, g_data = this);
