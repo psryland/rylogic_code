@@ -137,6 +137,8 @@ namespace pr::rdr12::ldraw
 			"	[*FrameRange {<start> <end>}]\n"
 			"	[*TimeRange {<start> <end>}]\n"
 			"	[*Stretch {<speed_multiplier>}]\n"
+			"	[*NoRootTranslation {}]\n"
+			"	[*NoRootRotation {}]\n"
 			"}\n"
 			"**ObjectModifiers\n"
 			"{\n"

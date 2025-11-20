@@ -58,7 +58,7 @@ namespace pr::rdr12
 		static void FlipTriListFaces(ModelGenerator::Cache<VType>& cache, Range irange)
 		{
 			assert(irange.size() % 3 == 0);
-			auto iptr = cache.m_icont.begin<int64_t>();
+			auto iptr = cache.m_icont.template begin<int64_t>();
 			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
 				swap(*(iptr + 1), *(iptr + 2));
 		}
@@ -68,7 +68,7 @@ namespace pr::rdr12
 		static void FlipTriStripFaces(ModelGenerator::Cache<VType>& cache, Range irange)
 		{
 			assert(irange.size() % 2 == 0);
-			auto iptr = cache.m_icont.begin<int64_t>();
+			auto iptr = cache.m_icont.template begin<int64_t>();
 			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
 				swap(*(iptr + 0), *(iptr + 1));
 		}
@@ -77,7 +77,7 @@ namespace pr::rdr12
 		template <typename VType>
 		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, Range irange, float gen_normals)
 		{
-			auto iptr = cache.m_icont.begin<int64_t>() + s_cast<ptrdiff_t>(irange.begin());
+			auto iptr = cache.m_icont.template begin<int64_t>() + s_cast<ptrdiff_t>(irange.begin());
 
 			geometry::GenerateNormals(
 				isize(irange), iptr, gen_normals, isize(cache.m_vcont),
@@ -1377,7 +1377,7 @@ namespace pr::rdr12
 			virtual bool CreateAnimation(fbx::Animation const& fbxanim)
 			{
 				// Create an animation for 'fbxanim'
-				KeyFrameAnimationPtr anim(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, fbxanim.m_duration, fbxanim.m_frame_rate), true);
+				KeyFrameAnimationPtr anim(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimFlags::None, fbxanim.m_duration, fbxanim.m_frame_rate), true);
 
 				// Read the key frame data
 				anim->m_bone_map = fbxanim.m_bone_map;

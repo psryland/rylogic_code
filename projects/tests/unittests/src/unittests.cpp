@@ -60,6 +60,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/maths/vector3i.h"
 //#include "pr/maths/vector4i.h"
 //#include "pr/maths/maths_core.h"
+//#include "pr/maths/spline.h"
 //#include "pr/maths/matrix.h"
 //#include "pr/maths/large_int.h"
 //#include "pr/maths/spatial.h"

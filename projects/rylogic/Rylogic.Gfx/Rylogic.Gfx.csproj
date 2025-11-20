@@ -43,13 +43,4 @@
 		<Exec Command="dotnet-script --cache-path %TEMP%\$(SubDir) $(ScriptPath)RunUnitTests.csx -- $(TargetPath) true Rylogic.Core Rylogic.Gui.WPF" />
 	</Target>
 
-	<!-- Work Around for System.Drawing.Common types being missing-->
-	<Target Name="_addDrawingReference" AfterTargets="ResolveTargetingPackAssets">
-		<ItemGroup>
-			<Reference Condition="'%(Reference.FileName)' == 'PresentationCore'" Include=
-				"%(Reference.RootDir)%(Reference.Directory)System.Drawing.Common.dll;
-				%(Reference.RootDir)%(Reference.Directory)System.Private.Windows.GdiPlus.dll;
-				%(Reference.RootDir)%(Reference.Directory)System.Private.Windows.Core.dll" />
-		</ItemGroup>
-	</Target>
 </Project>

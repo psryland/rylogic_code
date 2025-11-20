@@ -1106,10 +1106,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="run_tests.py" />
     <None Include="cpp.hint" />
-    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
-    <None Include="harvest_files.py" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">

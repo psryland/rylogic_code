@@ -1,4 +1,4 @@
-//************************************
+﻿//************************************
 // LDraw Builder
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -26,6 +26,7 @@ namespace pr::rdr12::ldraw
 		Binary = 1 << 0,
 		Pretty = 1 << 1,
 		Append = 1 << 2,
+		NoThrowOnFailure = 1 << 8,
 		_flags_enum = 0,
 	};
 
@@ -216,31 +217,48 @@ namespace pr::rdr12::ldraw
 			// Write the script to a file
 			LdrBuilder& Save(std::filesystem::path const& filepath, ESaveFlags flags = ESaveFlags::None)
 			{
-				auto fpath = filepath;
-				auto binary = AllSet(flags, ESaveFlags::Binary);
-				auto append = AllSet(flags, ESaveFlags::Append);
-				auto pretty = AllSet(flags, ESaveFlags::Pretty);
-
-				if (!fpath.has_extension())
-					fpath.replace_extension(binary ? ".bdr" : ".ldr");
-
-				if (!std::filesystem::exists(fpath.parent_path()))
-					std::filesystem::create_directories(fpath.parent_path());
-
-				if (binary)
+				try
 				{
-					bytebuf out;
-					Write(out);
-					ldraw::Write(out, fpath, append);
+					std::default_random_engine rng;
+					std::uniform_int_distribution<uint64_t> dist(0);
+					auto tmp_path = filepath.parent_path() / std::format("{}.tmp", dist(rng));
+
+					auto binary = AllSet(flags, ESaveFlags::Binary);
+					auto append = AllSet(flags, ESaveFlags::Append);
+					auto pretty = AllSet(flags, ESaveFlags::Pretty);
+
+					if (!std::filesystem::exists(tmp_path.parent_path()))
+						std::filesystem::create_directories(tmp_path.parent_path());
+
+					if (binary)
+					{
+						bytebuf out;
+						Write(out);
+						ldraw::Write(out, tmp_path, append);
+					}
+					else
+					{
+						textbuf out;
+						Write(out);
+						if (pretty) out = FormatScript(out);
+						ldraw::Write(out, tmp_path, append);
+					}
+
+					auto outpath = filepath;
+					if (outpath.has_extension() == false)
+						outpath.replace_extension(binary ? ".bdr" : ".ldr");
+
+					// Replace/rename
+					std::filesystem::rename(tmp_path, outpath);
+					// 'std::filesystem::rename' might not replace existing files on windows...
+					//MoveFileExW(fpath.c_str(), outpath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 				}
-				else
+				catch (std::exception const& ex)
 				{
-					textbuf out;
-					Write(out);
-					if (pretty)
-						out = FormatScript(out);
-					ldraw::Write(out, fpath, append);
+					if (!AllSet(flags, ESaveFlags::NoThrowOnFailure)) throw;
+					OutputDebugStringA(std::format("LDraw save failed: {}", ex.what()).c_str());
 				}
+
 				return *this;
 			}
 		};
@@ -470,6 +488,8 @@ namespace pr::rdr12::ldraw
 		struct LdrAnimation
 		{
 			std::optional<pr::Range<int>> m_frame_range = {};
+			bool m_no_translation = false;
+			bool m_no_rotation = false;
 
 			// Limit frame range
 			LdrAnimation& frames(int beg, int end)
@@ -480,6 +500,18 @@ namespace pr::rdr12::ldraw
 			LdrAnimation& frame(int frame)
 			{
 				return frames(frame, frame + 1);
+			}
+
+			// Anim flags
+			LdrAnimation& no_translation(bool on = true)
+			{
+				m_no_translation = on;
+				return *this;
+			}
+			LdrAnimation& no_rotation(bool on = true)
+			{
+				m_no_rotation = on;
+				return *this;
 			}
 
 			// Write to 'out'
@@ -496,6 +528,14 @@ namespace pr::rdr12::ldraw
 						else
 							Writer::Write(out, EKeyword::FrameRange, range.begin(), range.end());
 					}
+					if (m_no_translation)
+					{
+						Writer::Write(out, EKeyword::NoRootTranslation);
+					}
+					if (m_no_rotation)
+					{
+						Writer::Write(out, EKeyword::NoRootRotation);
+					}
 				});
 			}
 		};
@@ -507,7 +547,7 @@ namespace pr::rdr12::ldraw
 			std::vector<Point> m_points;
 			Size2 m_size;
 			Depth m_depth;
-			EPointStyle m_style;
+			PointStyle m_style;
 			PerItemColour m_per_item_colour;
 			LdrTexture m_tex;
 
@@ -568,8 +608,7 @@ namespace pr::rdr12::ldraw
 			{
 				Writer::Write(out, EKeyword::Point, m_name, m_colour, [&]
 				{
-					Writer::Write(out, EKeyword::Style, m_style);
-					Writer::Append(out, m_size, m_depth, m_per_item_colour);
+					Writer::Append(out, m_style, m_size, m_depth, m_per_item_colour);
 					Writer::Write(out, EKeyword::Data, [&]
 					{
 						for (auto& point : m_points)
@@ -1672,6 +1711,7 @@ namespace pr::rdr12::ldraw
 
 	// Fluent Ldraw script builder
 	using Builder = fluent::LdrBuilder;
+	using Group = fluent::LdrGroup;
 }
 
 #if PR_UNITTESTS

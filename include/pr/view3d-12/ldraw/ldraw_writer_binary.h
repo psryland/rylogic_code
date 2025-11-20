@@ -124,7 +124,8 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, EArrowType type)
 		{
-			Append(out, static_cast<int>(type));
+			using ut = std::underlying_type_t<EArrowType>;
+			Append(out, static_cast<ut>(type));
 		}
 		template <typename TOut> static void Append(TOut& out, EPointStyle style)
 		{
@@ -229,6 +230,11 @@ namespace pr::rdr12::ldraw
 		{
 			if (a.IsDefault()) return;
 			Write(out, EKeyword::AxisId, a.m_axis.value);
+		}
+		template <typename TOut> static void Append(TOut& out, PointStyle p)
+		{
+			if (p.m_style == EPointStyle::Square) return;
+			Write(out, EKeyword::Style, p.m_style);
 		}
 		template <typename TOut> static void Append(TOut& out, ArrowType a)
 		{

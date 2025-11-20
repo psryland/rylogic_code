@@ -102,6 +102,8 @@ namespace Rylogic.LDraw
 		NoMaterials = unchecked((int)762077060),
 		Normalise = unchecked((int)4066511049),
 		Normals = unchecked((int)247908339),
+		NoRootTranslation = unchecked((int)3287374065),
+		NoRootRotation = unchecked((int)3606635828),
 		NoZTest = unchecked((int)329427844),
 		NoZWrite = unchecked((int)1339143375),
 		O2W = unchecked((int)2877203913),

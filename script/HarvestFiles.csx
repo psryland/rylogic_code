@@ -29,18 +29,15 @@ try
 		new Regex(@"pr/geometry/mesh_tools\.h"),
 		new Regex(@"pr/gui/"),
 		new Regex(@"pr/image/"),
-		new Regex(@"pr/ldraw/ldr_.*\.h"),
 		new Regex(@"pr/macros/on_exit\.h"),
 		new Regex(@"pr/maths/pr_to_ode\.h"),
 		new Regex(@"pr/physics/"),
 		new Regex(@"pr/sound/"),
 		new Regex(@"pr/storage/xfile/"),
 		new Regex(@"pr/storage/zip/"),
-		new Regex(@"pr/script_old/"),
 		new Regex(@"pr/terrain/"),
 		new Regex(@"pr/collision/todo/"),
 		new Regex(@"pr/collision/builder/"),
-		new Regex(@"pr/view3d/"),
 	];
 
 	List<string> includes = [];

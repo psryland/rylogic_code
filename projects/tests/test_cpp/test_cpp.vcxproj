@@ -43,9 +43,6 @@
 				;view3d-12.imp
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
-			<DelayLoadDLLs>
-				;view3d-12.dll
-			</DelayLoadDLLs>
 		</Link>
 	</ItemDefinitionGroup>
 	<!--

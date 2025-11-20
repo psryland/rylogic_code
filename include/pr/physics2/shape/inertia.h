@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -94,9 +94,9 @@ namespace pr::physics
 	Inertia Rotate(Inertia const& inertia, m3_cref a2b);
 	InertiaInv Rotate(InertiaInv const& inertia_inv, m3_cref a2b);
 	Inertia Translate(Inertia const& inertia0, v4_cref offset, ETranslateInertia direction);
-	InertiaInv Translate(InertiaInv const& inertia0¯, v4_cref offset, ETranslateInertia direction);
+	InertiaInv Translate(InertiaInv const& inertia0_inv, v4_cref offset, ETranslateInertia direction);
 	Inertia Transform(Inertia const& inertia0, m4_cref a2b, ETranslateInertia direction);
-	InertiaInv Transform(InertiaInv const& inertia0¯, m4_cref a2b, ETranslateInertia direction);
+	InertiaInv Transform(InertiaInv const& inertia0_inv, m4_cref a2b, ETranslateInertia direction);
 	#pragma endregion
 
 	struct Inertia
@@ -464,10 +464,10 @@ namespace pr::physics
 			// If 'invmass' is given, 'inertia_inv' is assumed to be a unit inverse inertia
 			assert(InertiaInv::Check(inertia_inv));
 
-			auto Ic¯ = inertia_inv.m00;
-			auto cx  = inertia_inv.m10 * Invert(Ic¯);
-			auto im = invmass >= 0 ? invmass : Trace(inertia_inv.m11 + cx*Ic¯*cx) / 3.0f;
-			*this = InertiaInv{(1/im)*Ic¯, im, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
+			auto Ic_inv = inertia_inv.m00;
+			auto cx  = inertia_inv.m10 * Invert(Ic_inv);
+			auto im = invmass >= 0 ? invmass : Trace(inertia_inv.m11 + cx*Ic_inv*cx) / 3.0f;
+			*this = InertiaInv{(1/im)*Ic_inv, im, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
 		}
 
 		// The mass to scale the inertia by
@@ -527,11 +527,11 @@ namespace pr::physics
 
 			auto dia = inv_mass * m_diagonal;
 			auto off = inv_mass * m_products;
-			auto Ic¯ = m3x4{
+			auto Ic_inv = m3x4{
 				v4{dia.x, off.x, off.y, 0},
 				v4{off.x, dia.y, off.z, 0},
 				v4{off.y, off.z, dia.z, 0}};
-			return Ic¯;
+			return Ic_inv;
 		}
 
 		// The mass scaled inverse inertia matrix
@@ -541,9 +541,9 @@ namespace pr::physics
 			if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
 				return m3x4::Identity();
 
-			auto Ic¯ = Ic3x3(inv_mass);
+			auto Ic_inv = Ic3x3(inv_mass);
 			if (CoM() == v4{})
-				return Ic¯;
+				return Ic_inv;
 
 			//' Io¯ = (Ic - mcxcx)¯                                  '
 			//' Identity: (A + B)¯ = A¯ - (1 + A¯B)¯A¯BA¯            '
@@ -554,9 +554,9 @@ namespace pr::physics
 
 			// This is cheaper
 			auto cx = CPM(CoM());
-			auto Io = Invert(Ic¯) - (1.0f/inv_mass) * cx * cx;
-			auto Io¯ = Invert(Io);
-			return Io¯;
+			auto Io = Invert(Ic_inv) - (1.0f/inv_mass) * cx * cx;
+			auto Io_inv = Invert(Io);
+			return Io_inv;
 		}
 
 		// Return the inverse inertia matrix as a full spatial matrix
@@ -566,10 +566,10 @@ namespace pr::physics
 			if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
 				return Mat6x8f<Force,Motion>{m6x8Identity};
 
-			auto Ic¯ = Ic3x3(inv_mass);
+			auto Ic_inv = Ic3x3(inv_mass);
 			auto cx  = CPM(CoM());
-			auto Io¯ = Mat6x8f<Force,Motion>{Ic¯, -Ic¯*cx, cx*Ic¯, inv_mass*m3x4Identity - cx*Ic¯*cx};
-			return Io¯;
+			auto Io_inv = Mat6x8f<Force,Motion>{Ic_inv, -Ic_inv*cx, cx*Ic_inv, inv_mass*m3x4Identity - cx*Ic_inv*cx};
+			return Io_inv;
 		}
 
 		// Sanity check
@@ -623,18 +623,18 @@ namespace pr::physics
 				return assert(false),false;
 
 			// Check 'Ic¯'
-			auto Ic¯ = inertia_inv.m00;
-			if (!Check(Ic¯))
+			auto Ic_inv = inertia_inv.m00;
+			if (!Check(Ic_inv))
 				return assert(false),false;
 
 			// Check 'Ic¯ * cxT'
-			auto cxT = Invert(Ic¯) * inertia_inv.m01;
+			auto cxT = Invert(Ic_inv) * inertia_inv.m01;
 			if (!FEql(Trace(cxT), 0.f) ||
 				!IsAntiSymmetric(cxT))
 				return assert(false),false;
 
 			// Check 'cx * Ic¯'
-			auto cx = inertia_inv.m10 * Invert(Ic¯);
+			auto cx = inertia_inv.m10 * Invert(Ic_inv);
 			if (!FEql(Trace(cx), 0.f) ||
 				!IsAntiSymmetric(cx))
 				return assert(false),false;
@@ -644,7 +644,7 @@ namespace pr::physics
 				return assert(false),false;
 
 			// Check '1/m'
-			auto im = inertia_inv.m11 + cx * Ic¯ * cx;
+			auto im = inertia_inv.m11 + cx * Ic_inv * cx;
 			if (!FEql(im.y.y - im.x.x, 0.f) ||
 				!FEql(im.z.z - im.x.x, 0.f))
 				return assert(false),false;
@@ -785,17 +785,17 @@ namespace pr::physics
 		if (lhs.CoM() != rhs.CoM())
 			throw std::runtime_error("Inertias must be in the same space");
 
-		auto& Ia¯ = lhs;
-		auto& Ib¯ = rhs;
+		auto& Ia_inv = lhs;
+		auto& Ib_inv = rhs;
 
-		auto massA = Ia¯.Mass();
-		auto massB = Ib¯.Mass();
+		auto massA = Ia_inv.Mass();
+		auto massB = Ib_inv.Mass();
 		auto mass = massA + massB;
 		auto com = lhs.CoM();
 
 		InertiaInv sum = {};
-		sum.m_diagonal = (massA*Ia¯.m_diagonal + massB*Ib¯.m_diagonal) / mass;
-		sum.m_products = (massA*Ia¯.m_products + massB*Ib¯.m_products) / mass;
+		sum.m_diagonal = (massA*Ia_inv.m_diagonal + massB*Ib_inv.m_diagonal) / mass;
+		sum.m_products = (massA*Ia_inv.m_products + massB*Ib_inv.m_products) / mass;
 		sum.m_com_and_invmass = v4{com, 1/mass};
 		return sum;
 	}
@@ -804,11 +804,11 @@ namespace pr::physics
 		if (lhs.CoM() != rhs.CoM())
 			throw std::runtime_error("Inertias must be in the same space");
 
-		auto& Ia¯ = lhs;
-		auto& Ib¯ = rhs;
+		auto& Ia_inv = lhs;
+		auto& Ib_inv = rhs;
 
-		auto massA = Ia¯.Mass();
-		auto massB = Ib¯.Mass();
+		auto massA = Ia_inv.Mass();
+		auto massB = Ib_inv.Mass();
 		auto mass = massA - massB;
 		auto com = lhs.CoM();
 		
@@ -817,8 +817,8 @@ namespace pr::physics
 			throw std::runtime_error("Inertia difference is undefined");
 		
 		InertiaInv sum = {};
-		sum.m_diagonal = (massA*Ia¯.m_diagonal - massB*Ib¯.m_diagonal) / mass;
-		sum.m_products = (massA*Ia¯.m_products - massB*Ib¯.m_products) / mass;
+		sum.m_diagonal = (massA*Ia_inv.m_diagonal - massB*Ib_inv.m_diagonal) / mass;
+		sum.m_products = (massA*Ia_inv.m_products - massB*Ib_inv.m_products) / mass;
 		sum.m_com_and_invmass = v4{com, 1/mass};
 		return sum;
 	}
@@ -826,8 +826,8 @@ namespace pr::physics
 	// Invert inertia
 	inline InertiaInv Invert(Inertia const& inertia)
 	{
-		auto unit_inertia¯ = Invert(inertia.Ic3x3(1));
-		return InertiaInv{unit_inertia¯, inertia.InvMass(), inertia.CoM()};
+		auto unit_inertia_inv = Invert(inertia.Ic3x3(1));
+		return InertiaInv{unit_inertia_inv, inertia.InvMass(), inertia.CoM()};
 	}
 	inline Inertia Invert(InertiaInv const& inertia_inv)
 	{
@@ -847,8 +847,8 @@ namespace pr::physics
 	{
 		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
 		auto b2a = InvertAffine(a2b);
-		auto Ic¯ = a2b * inertia_inv.Ic3x3(1) * b2a;
-		return InertiaInv{Ic¯, inertia_inv.InvMass(), inertia_inv.CoM()};
+		auto Ic_inv = a2b * inertia_inv.Ic3x3(1) * b2a;
+		return InertiaInv{Ic_inv, inertia_inv.InvMass(), inertia_inv.CoM()};
 	}
 
 	// Returns an inertia translated using the parallel axis theorem.
@@ -885,12 +885,12 @@ namespace pr::physics
 
 		return inertia1;
 	}
-	inline InertiaInv Translate(InertiaInv const& inertia0¯, v4_cref offset, ETranslateInertia direction)
+	inline InertiaInv Translate(InertiaInv const& inertia0_inv, v4_cref offset, ETranslateInertia direction)
 	{
-		auto inertia0 = Invert(inertia0¯);
+		auto inertia0 = Invert(inertia0_inv);
 		auto inertia1 = Translate(inertia0, offset, direction);
-		auto inertia1¯ = Invert(inertia1);
-		return inertia1¯;
+		auto inertia1_inv = Invert(inertia1);
+		return inertia1_inv;
 	}
 
 	// Rotate, then translate an inertia
@@ -901,12 +901,12 @@ namespace pr::physics
 		inertia1 = Translate(inertia1, a2b.pos, direction);
 		return inertia1;
 	}
-	inline InertiaInv Transform(InertiaInv const& inertia0¯, m4_cref a2b, ETranslateInertia direction)
+	inline InertiaInv Transform(InertiaInv const& inertia0_inv, m4_cref a2b, ETranslateInertia direction)
 	{
-		auto inertia1¯ = inertia0¯;
-		inertia1¯ = Rotate(inertia1¯, a2b.rot);
-		inertia1¯ = Translate(inertia1¯, a2b.pos, direction);
-		return inertia1¯;
+		auto inertia1_inv = inertia0_inv;
+		inertia1_inv = Rotate(inertia1_inv, a2b.rot);
+		inertia1_inv = Translate(inertia1_inv, a2b.pos, direction);
+		return inertia1_inv;
 	}
 
 	#pragma endregion
@@ -940,21 +940,21 @@ namespace pr::physics
 		{// InertiaInv Construction
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 			
-			auto I0¯ = Invert(Inertia{moment, mass});
-			PR_EXPECT(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}));
-			PR_EXPECT(FEql(I0¯, InertiaInv{I0¯.To6x6()}));
+			auto I0_inv = Invert(Inertia{moment, mass});
+			PR_EXPECT(FEql(I0_inv, InertiaInv{I0_inv.To3x3(1), I0_inv.InvMass()}));
+			PR_EXPECT(FEql(I0_inv, InertiaInv{I0_inv.To6x6()}));
 			
-			auto I1¯ = Transform(I0¯, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
-			PR_EXPECT(FEql(I1¯, InertiaInv{I1¯.To3x3(1), I1¯.InvMass()}));
-			PR_EXPECT(FEql(I1¯, InertiaInv{I1¯.To6x6()}));
+			auto I1_inv = Transform(I0_inv, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
+			PR_EXPECT(FEql(I1_inv, InertiaInv{I1_inv.To3x3(1), I1_inv.InvMass()}));
+			PR_EXPECT(FEql(I1_inv, InertiaInv{I1_inv.To6x6()}));
 
-			auto I2¯ = InertiaInv{I1¯, -v4{3,2,1,0}};
-			PR_EXPECT(FEql(I2¯, InertiaInv{I2¯.To6x6()}));
+			auto I2_inv = InertiaInv{I1_inv, -v4{3,2,1,0}};
+			PR_EXPECT(FEql(I2_inv, InertiaInv{I2_inv.To6x6()}));
 		}
 		{// Infinite
-			auto inf¯ = Invert(Inertia::Infinite());
-			PR_EXPECT(inf¯ == InertiaInv::Zero());
-			auto inf = Invert(inf¯);
+			auto inf_inv = Invert(Inertia::Infinite());
+			PR_EXPECT(inf_inv == InertiaInv::Zero());
+			auto inf = Invert(inf_inv);
 			PR_EXPECT(inf == Inertia::Infinite());
 		}
 		{// Translate and Rotate
@@ -980,25 +980,25 @@ namespace pr::physics
 		{// Translate Inverse
 			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
 			auto Ic0 = Rotate(Inertia::Box(v4{1,2,3,0}, mass, v4{1,1,1,0}), a2b.rot);
-			auto Ic0¯ = Invert(Ic0);
+			auto Ic0_inv = Invert(Ic0);
 
 			// Translate by invert-translate-invert
-			auto Ic1 = Invert(Ic0¯);
+			auto Ic1 = Invert(Ic0_inv);
 			auto Io1 = Translate(Ic1, +a2b.pos, ETranslateInertia::AwayFromCoM);
-			auto Io1¯ = Invert(Io1);
+			auto Io1_inv = Invert(Io1);
 
-			auto Io2 = Invert(Io1¯);
+			auto Io2 = Invert(Io1_inv);
 			auto Ic2 = Translate(Io2, -a2b.pos, ETranslateInertia::TowardCoM);
-			auto Ic2¯ = Invert(Ic2);
+			auto Ic2_inv = Invert(Ic2);
 
 			// Directly translate the inverse inertia
-			auto IC0¯ = Ic0¯;
-			auto IO1¯ = Translate(IC0¯, +a2b.pos, ETranslateInertia::AwayFromCoM);
-			auto IC2¯ = Translate(IO1¯, -a2b.pos, ETranslateInertia::TowardCoM);
+			auto IC0_inv = Ic0_inv;
+			auto IO1_inv = Translate(IC0_inv, +a2b.pos, ETranslateInertia::AwayFromCoM);
+			auto IC2_inv = Translate(IO1_inv, -a2b.pos, ETranslateInertia::TowardCoM);
 
-			PR_EXPECT(FEql(Ic0¯, IC0¯));
-			PR_EXPECT(FEql(Io1¯, IO1¯));
-			PR_EXPECT(FEql(Ic2¯, IC2¯));
+			PR_EXPECT(FEql(Ic0_inv, IC0_inv));
+			PR_EXPECT(FEql(Io1_inv, IO1_inv));
+			PR_EXPECT(FEql(Ic2_inv, IC2_inv));
 		}
 		{// 6x6 vs 3x3 no offset
 			auto avel = v4{0, 0, 1, 0}; //v4(-1,-2,-3,0);
@@ -1151,26 +1151,26 @@ namespace pr::physics
 
 			// Create a vertical rod inertia
 			auto Ic = Inertia::Box(v4{0.0001f, 0.5f*L, 0.0001f,0}, mass);
-			auto Ic¯ = Invert(Ic);
+			auto Ic_inv = Invert(Ic);
 
 			// Apply a force at the CoM
 			auto f0 = v8force{0, 0, 0, F, 0, 0};
-			auto a0 = Ic¯ * f0;
+			auto a0 = Ic_inv * f0;
 			PR_EXPECT(FEql(a0, v8motion{0, 0, 0, F/mass, 0, 0}));
 
 			// Apply a force at the top
 			// a = F/m, A = F.d/I
 			auto r = v4{0, 0.5f*L, 0, 0};
 			auto f1 = Shift(f0, -r);
-			auto a1 = Ic¯ * f1;
+			auto a1 = Ic_inv * f1;
 			PR_EXPECT(FEql(a1, v8motion{0, 0, -F*r.y/I, F/mass, 0, 0}));
 
 			// Apply a force at an arbitrary point
 			r = v4{3,2,0,0};
 			auto f2 = Shift(f0, -r);
-			auto a2 = Ic¯ * f2;
+			auto a2 = Ic_inv * f2;
 			auto a = (1.0f/mass)*f0.lin;
-			auto A = Ic¯.To3x3() * Cross(r, f0.lin);
+			auto A = Ic_inv.To3x3() * Cross(r, f0.lin);
 			PR_EXPECT(FEql(a2, v8motion{A, a}));
 		}
 		{ // Kinetic energy: 0.5 * Dot(v, h) = 0.5 * v.I.v

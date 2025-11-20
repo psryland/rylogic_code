@@ -41,7 +41,7 @@ public class UserVars
 	//vs_envvars = Path(vs_dir, "Common7\\Tools\\VsDevCmd.bat")
 
 	/// <sumary>The build system version. VS2013 == v120, VS2012 = v110, etc
-	public static string PlatformToolset => "v143";
+	public static string PlatformToolset => "v145";
 
 	/// <summary>Power shell</summary>
 	public static string Pwsh => Path(["C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe"]);

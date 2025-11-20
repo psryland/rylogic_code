@@ -219,6 +219,8 @@ class EKeyword(Enum):
 	NoMaterials = 762077060
 	Normalise = 4066511049
 	Normals = 247908339
+	NoRootTranslation = 3287374065
+	NoRootRotation = 3606635828
 	NoZTest = 329427844
 	NoZWrite = 1339143375
 	O2W = 2877203913

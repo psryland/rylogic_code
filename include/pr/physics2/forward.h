@@ -37,11 +37,11 @@ namespace pr::physics
 	struct Engine;
 
 	// Literals
-	constexpr float operator "" _kg(long double mass)
+	constexpr float operator ""_kg(long double mass)
 	{
 		return float(mass);
 	}
-	constexpr float operator "" _m(long double dist)
+	constexpr float operator ""_m(long double dist)
 	{
 		return float(dist);
 	}

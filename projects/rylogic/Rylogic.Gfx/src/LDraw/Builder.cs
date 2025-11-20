@@ -26,6 +26,7 @@ namespace Rylogic.LDraw
 		Binary = 1 << 0,
 		Pretty = 1 << 1,
 		Append = 1 << 2,
+		NoThrowOnFailure = 1 << 8,
 	}
 
 	public class Builder
@@ -215,20 +216,38 @@ namespace Rylogic.LDraw
 		/// <summary>Write to a file</summary>
 		public void Save(string filepath, ESaveFlags flags = ESaveFlags.None)
 		{
-			var binary = flags.HasFlag(ESaveFlags.Binary);
-			var append = flags.HasFlag(ESaveFlags.Append);
-			var pretty = flags.HasFlag(ESaveFlags.Pretty);
+			try
+			{
+				var rng = new Random();
+				var tmp_path = Path_.CombinePath(Path.GetDirectoryName(filepath) ?? string.Empty, $"{(uint)rng.Next()}.tmp");
+				if (!Path_.IsValidFilepath(tmp_path, true))
+					throw new Exception("Failed to create temporary file path for LDraw save");
 
-			if (Path.GetExtension(filepath) == "")
-				filepath = Path.ChangeExtension(filepath, binary ? ".bdr" : ".ldr");
+				var binary = flags.HasFlag(ESaveFlags.Binary);
+				var append = flags.HasFlag(ESaveFlags.Append);
+				var pretty = flags.HasFlag(ESaveFlags.Pretty);
 
-			if (Path.GetDirectoryName(filepath) is string directory)
-				Directory.CreateDirectory(directory);
-			
-			using var file = File.Open(filepath, append ? FileMode.Append : FileMode.Create);
-			var mem = binary ? ToBinary() : ToText();
-			if (!binary && pretty) mem = FormatScript(mem);
-			mem.CopyTo(file);
+				if (Path.GetDirectoryName(tmp_path) is string directory)
+					Directory.CreateDirectory(tmp_path);
+
+				{
+					using var file = File.Open(tmp_path, append ? FileMode.Append : FileMode.Create);
+					var mem = binary ? ToBinary() : ToText();
+					if (!binary && pretty) mem = FormatScript(mem);
+					mem.CopyTo(file);
+				}
+
+				var outpath = filepath;
+				if (Path.GetExtension(outpath) == string.Empty)
+					outpath = Path.ChangeExtension(outpath, binary ? ".bdr" : ".ldr");
+
+				File.Replace(tmp_path, outpath, null);
+			}
+			catch (Exception ex)
+			{
+				if (!flags.HasFlag(ESaveFlags.NoThrowOnFailure)) throw;
+				Debug.WriteLine($"Failed to save LDraw file to '{filepath}': {ex.Message}");
+			}
 		}
 
 		// Pretty format Ldraw script
@@ -461,6 +480,8 @@ namespace Rylogic.LDraw
 	public class LdrAnimation
 	{
 		private RangeI? m_frame_range = null;
+		private bool m_no_translation = false;
+		private bool m_no_rotation = false;
 
 		/// <summary>Limit frame range</summary>
 		public LdrAnimation frames(int beg, int end)
@@ -471,6 +492,18 @@ namespace Rylogic.LDraw
 		public LdrAnimation frame(int frame)
 		{
 			return frames(frame, frame + 1);
+		}
+
+		// Anim flags
+		public LdrAnimation no_translation(bool on = true)
+		{
+			m_no_translation = on;
+			return this;
+		}
+		public LdrAnimation no_rotation(bool on = true)
+		{
+			m_no_rotation = on;
+			return this;
 		}
 
 		// Write to 'out'
@@ -484,6 +517,14 @@ namespace Rylogic.LDraw
 						res.Write(EKeyword.Frame, range.Beg);
 					else
 						res.Write(EKeyword.FrameRange, range.Beg, range.End);
+				}
+				if (m_no_translation)
+				{
+					res.Write(EKeyword.NoRootTranslation);
+				}
+				if (m_no_rotation)
+				{
+					res.Write(EKeyword.NoRootRotation);
 				}
 			});
 		}

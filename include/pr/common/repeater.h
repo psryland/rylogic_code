@@ -97,8 +97,8 @@ namespace pr
 		constexpr auto PointInterp = [](TItem const& lhs, TItem const&, int, int) { return lhs; };
 		return Repeater<TCIter, TItem>(iter, count, output_count, def, PointInterp);
 	}
-	template <typename TItem>
-	Repeater<TItem const*, TItem> CreateRepeater(std::span<TItem const> source, int output_count, TItem const& def)
+	template <typename TContainer, typename TItem = typename TContainer::value_type>
+	Repeater<TItem const*, TItem> CreateRepeater(TContainer const& source, int output_count, TItem const& def)
 	{
 		return CreateRepeater(source.data(), static_cast<int>(source.size()), output_count, def);
 	}
@@ -118,8 +118,8 @@ namespace pr
 		};
 		return Repeater<TCIter, TItem>(iter, count, output_count, def, LinearInterp);
 	}
-	template <typename TItem>
-	Repeater<TItem const*, TItem> CreateLerpRepeater(std::span<TItem const> source, int output_count, TItem const& def)
+	template <typename TContainer, typename TItem = typename TContainer::value_type>
+	Repeater<TItem const*, TItem> CreateLerpRepeater(TContainer const& source, int output_count, TItem const& def)
 	{
 		return CreateLerpRepeater(source.data(), static_cast<int>(source.size()), output_count, def);
 	}
@@ -193,7 +193,7 @@ namespace pr::common
 		}
 		{
 			float f = 1.0f;
-			auto rep = pr::CreateLerpRepeater({ &f, 1 }, 4, 2.0f);
+			auto rep = pr::CreateLerpRepeater(&f, 1, 4, 2.0f);
 			PR_EXPECT(*rep++ == 1.0f);
 			PR_EXPECT(*rep++ == 1.0f);
 			PR_EXPECT(*rep++ == 1.0f);
