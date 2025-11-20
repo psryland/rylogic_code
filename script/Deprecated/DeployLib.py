@@ -14,7 +14,7 @@ import Rylogic, Build
 # Entry point
 if __name__ == "__main__":
 	try:
-		#sys.argv = ["", "P:\\pr\\obj\\v143\\audio.dll\\x64\\Debug\\audio.dll", "x64", "Debug"]
+		#sys.argv = ["", "P:\\pr\\obj\\v145\\audio.dll\\x64\\Debug\\audio.dll", "x64", "Debug"]
 		target_path = sys.argv[1] if len(sys.argv) > 1 else input("Target Path? ")
 		platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
 		config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")

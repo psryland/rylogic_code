@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1931,6 +1931,9 @@ namespace pr::rdr12::ldraw
 		}
 		std::tuple<int, int, int> ProcessSegments(Location const& loc)
 		{
+			// If a segments needs to change it's verts, it should remove them from 'm_verts'
+			// and insert the new verts at 'm_verts.begin() + vcount'
+
 			int vcount = 0;
 			int ccount = 0;
 			int ncount = 0;

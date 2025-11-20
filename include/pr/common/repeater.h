@@ -39,7 +39,7 @@ namespace pr
 			, m_default(def)
 			, m_curr(Next())
 			, m_next(Next())
-			, m_item(m_interp(m_curr, m_next, 0, 1))
+			, m_item(m_interp(m_curr, m_next, 0, 0))
 		{}
 		TItem operator*() const
 		{
@@ -114,7 +114,7 @@ namespace pr
 		constexpr auto LinearInterp = [](TItem const& lhs, TItem const& rhs, int n, int N)
 		{
 			if (N == 0) return lhs;
-			return (static_cast<float>(N - n) * lhs + static_cast<float>(n) * rhs) / static_cast<float>(N);
+			return Lerp(lhs, rhs, 1.0f * n / N);
 		};
 		return Repeater<TCIter, TItem>(iter, count, output_count, def, LinearInterp);
 	}

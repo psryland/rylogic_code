@@ -55,6 +55,7 @@
 		<PlatformToolset>v145</PlatformToolset>
 		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 		<RestorePackagesPath>$(PackagesPath)</RestorePackagesPath>
+		<VCToolsVersion />
 
 		<!-- These lines disable problematic imports -->
 		<ImportProjectExtensionProps>false</ImportProjectExtensionProps>
