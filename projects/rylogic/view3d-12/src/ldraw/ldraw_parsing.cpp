@@ -26,7 +26,6 @@
 #include "pr/view3d-12/texture/texture_desc.h"
 
 #include "pr/str/extract.h"
-#include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/geometry/index_buffer.h"
 #include "pr/container/byte_data.h"

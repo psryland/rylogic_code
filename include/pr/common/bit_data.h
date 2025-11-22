@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <concepts>
 #include <type_traits>
-#include <algorithm>
 #include <limits>
 #include <span>
 

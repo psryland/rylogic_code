@@ -3,14 +3,12 @@
 // //  Copyright (c) Rylogic Ltd 2024
 //************************************************************************
 #pragma once
-#include <cstdint>
-#include <exception>
 #include <chrono>
 #include <vector>
-#include <ranges>
 #include <span>
 #include <mutex>
 #include <condition_variable>
+#include <stdexcept>
 
 // Note:
 //  For simple use, there is std::stop_source

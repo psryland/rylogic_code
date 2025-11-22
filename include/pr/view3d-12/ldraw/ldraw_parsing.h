@@ -6,8 +6,6 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
-#include "pr/view3d-12/ldraw/ldraw_commands.h"
-#include "pr/view3d-12/utility/conversion.h"
 
 namespace pr::rdr12::ldraw
 {

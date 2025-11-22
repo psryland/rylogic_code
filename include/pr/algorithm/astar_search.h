@@ -1,10 +1,8 @@
 ﻿#pragma once
 #include <concepts>
-#include <type_traits>
 #include <vector>
 #include <tuple>
 #include <unordered_map>
-#include <algorithm>
 #include <cassert>
 
 namespace pr::algorithm::astar

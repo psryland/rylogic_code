@@ -1,4 +1,4 @@
-﻿//**********************************
+//**********************************
 // String Util
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -11,7 +11,6 @@
 // may be midway through the buffer
 
 #pragma once
-#include <cmath>
 #include "pr/str/string_core.h"
 #include "pr/str/string_filter.h"
 

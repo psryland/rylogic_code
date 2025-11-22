@@ -39,10 +39,8 @@
 
 #include <cassert>
 #include <vector>
-#include <algorithm>
 #include <typeinfo>
-#include "pr/common/fmt.h"
-#include "pr/common/hash.h"
+#include <format>
 
 namespace pr::archive
 {
@@ -224,17 +222,17 @@ namespace pr::archive
 			,m_data()
 		{
 			using namespace pr::hash;
-			assert(HashCT("s8"  ) == (int)EType::s8   && FmtS("Hash of s8   is incorrect. Should be 0x%08x\n", HashCT("s8"  )));
-			assert(HashCT("s16" ) == (int)EType::s16  && FmtS("Hash of s16  is incorrect. Should be 0x%08x\n", HashCT("s16" )));
-			assert(HashCT("s32" ) == (int)EType::s32  && FmtS("Hash of s32  is incorrect. Should be 0x%08x\n", HashCT("s32" )));
-			assert(HashCT("s64" ) == (int)EType::s64  && FmtS("Hash of s64  is incorrect. Should be 0x%08x\n", HashCT("s64" )));
-			assert(HashCT("u8"  ) == (int)EType::u8   && FmtS("Hash of u8   is incorrect. Should be 0x%08x\n", HashCT("u8"  )));
-			assert(HashCT("u16" ) == (int)EType::u16  && FmtS("Hash of u16  is incorrect. Should be 0x%08x\n", HashCT("u16" )));
-			assert(HashCT("u32" ) == (int)EType::u32  && FmtS("Hash of u32  is incorrect. Should be 0x%08x\n", HashCT("u32" )));
-			assert(HashCT("u64" ) == (int)EType::u64  && FmtS("Hash of u64  is incorrect. Should be 0x%08x\n", HashCT("u64" )));
-			assert(HashCT("f32" ) == (int)EType::f32  && FmtS("Hash of f32  is incorrect. Should be 0x%08x\n", HashCT("f32" )));
-			assert(HashCT("f64" ) == (int)EType::f64  && FmtS("Hash of f64  is incorrect. Should be 0x%08x\n", HashCT("f64" )));
-			assert(HashCT("f128") == (int)EType::f128 && FmtS("Hash of f128 is incorrect. Should be 0x%08x\n", HashCT("f128")));
+			static_assert(HashCT("s8"  ) == (int)EType::s8   );
+			static_assert(HashCT("s16" ) == (int)EType::s16  );
+			static_assert(HashCT("s32" ) == (int)EType::s32  );
+			static_assert(HashCT("s64" ) == (int)EType::s64  );
+			static_assert(HashCT("u8"  ) == (int)EType::u8   );
+			static_assert(HashCT("u16" ) == (int)EType::u16  );
+			static_assert(HashCT("u32" ) == (int)EType::u32  );
+			static_assert(HashCT("u64" ) == (int)EType::u64  );
+			static_assert(HashCT("f32" ) == (int)EType::f32  );
+			static_assert(HashCT("f64" ) == (int)EType::f64  );
+			static_assert(HashCT("f128") == (int)EType::f128 );
 		}
 
 		// Register a template description for 'Type'.

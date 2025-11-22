@@ -3,7 +3,6 @@
 //  Copyright (c) 2007 Rylogic
 //***********************************************************************
 #pragma once
-#include <new>
 #include <type_traits>
 #include <unordered_set>
 #include <malloc.h>

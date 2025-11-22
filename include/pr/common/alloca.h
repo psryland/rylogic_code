@@ -4,8 +4,6 @@
 //******************************************
 #pragma once
 
-#include <new>
-
 namespace pr
 {
 	namespace impl_alloca

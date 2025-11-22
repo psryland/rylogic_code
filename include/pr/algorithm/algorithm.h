@@ -4,7 +4,6 @@
 //********************************
 // Helper wrappers to 'std::algorithm'
 #pragma once
-#include <exception>
 #include <algorithm>
 #include <unordered_set>
 #include <unordered_map>
