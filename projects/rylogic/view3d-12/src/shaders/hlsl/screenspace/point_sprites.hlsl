@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
+#include "pr/hlsl/core.hlsli"
 #include "view3d-12/src/shaders/hlsl/types.hlsli"
 #include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 
@@ -11,10 +12,11 @@ void GSPointSprites(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 {
 	PSIn Out;
 
-	// Size of the sprite
-	float w = m_size.x * 0.5f;
-	float h = m_size.y * 0.5f;
+	// Size (in pixels) of the sprite. Use the size in the input normal.xy unless it's zero,
+	float w = select(In[0].ws_norm.x != 0, In[0].ws_norm.x, m_size.x * 0.5f);
+	float h = select(In[0].ws_norm.y != 0, In[0].ws_norm.y, m_size.y * 0.5f);
 
+	// The output normal is the camera forward vector
 	float4 ws_norm = m_cam.m_c2w[2];
 
 	// Output a camera facing quad: bottom to top 'S' order.

@@ -268,15 +268,19 @@ namespace pr
 				// 3 points per curve. Sliding window of 3 points per curve
 				case ECurveTopology::Continuous3:
 				{
-					for (int i = 0, iend = isize(p) - 2; i < iend; ++i)
+					if (&coeff == &CurveType::Bezier)
 					{
-						spline.m_curves.push_back(CubicCurve3(
-							p[i + 0],
-							0.5f * (p[i + 0] + p[i + 1]),
-							0.5f * (p[i + 1] + p[i + 2]),
-							p[i + 2],
-							coeff
-						));
+						// Mid-points are the curve ends, 
+						for (int i = 0, iend = isize(p) - 2; i < iend; ++i)
+						{
+							spline.m_curves.push_back(CubicCurve3(
+								i == 0 ? p[i + 0] : 0.5f * (p[i + 0] + p[i + 1]),
+								p[i + 1],
+								p[i + 1],
+								i + 1 == iend ? p[i + 2] : 0.5f * (p[i + 1] + p[i + 2]),
+								coeff
+							));
+						}
 					}
 					break;
 				}

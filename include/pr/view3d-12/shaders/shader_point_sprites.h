@@ -10,9 +10,11 @@ namespace pr::rdr12::shaders
 {
 	struct PointSpriteGS :ShaderOverride
 	{
+		// Default point size. Per-point size can be set using norm.xy
 		v2 m_size;
 		bool m_depth;
 
+		// 'size' is the point size used if per-point 'In.norm.xy' is zero
 		PointSpriteGS(v2 size, bool depth);
 		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};

@@ -145,7 +145,7 @@ struct Skinfluence
 		float4 ws_norm :NORMAL0;
 		float4 diff    :COLOR0;
 		float2 tex0    :TEXCOORD0;
-		float2 pad     :INDICES0;
+		float2 idx0    :INDICES0;
 	};
 
 	// Compute shader input

@@ -65,6 +65,9 @@ PSIn VSDefault(VSIn In)
 	// Texture2D (with transform)
 	Out.tex0 = mul(float4(In.tex0, 0, 1), m_tex2surf0).xy;
 
+	// Copy the source instance index
+	Out.idx0 = In.idx0;
+	
 	return Out;
 }
 

@@ -147,9 +147,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\algorithm.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\macros\align.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
@@ -1104,6 +1101,9 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
+    <ClInclude Include="..\..\..\include\pr\algorithm\algorithm.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

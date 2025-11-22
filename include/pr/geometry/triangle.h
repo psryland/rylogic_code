@@ -6,7 +6,7 @@
 #include <cassert>
 #include <concepts>
 #include "pr/maths/maths.h"
-#include "pr/common/algorithm.h"
+#include "pr/algorithm/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/container/ring.h"
 

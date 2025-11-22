@@ -57,7 +57,7 @@ cbuffer CBufNugget :reg(b1,0)
 
 	// EnvMap
 	float m_env_reflectivity; // Reflectivity of the environment map
-	float3 pad;
+	float3 ng_pad0;
 };
 
 // Constants used for radial fading.
@@ -80,8 +80,8 @@ cbuffer CBufScreenSpace :reg(b3,0)
 {
 	float2 m_screen_dim; // x = screen width, y = screen height, 
 	float2 m_size;       // x = width in pixels, y = height in pixels
-	bool   m_depth;      // True if depth scaling should be used
-	int    m_ss_pad[3];  // Padding for alignment
+	int m_depth;         // True if depth scaling should be used
+	int ss_pad0, ss_pad1, ss_pad2; // Padding for alignment
 };
 
 // Constants used for diagnostic shaders

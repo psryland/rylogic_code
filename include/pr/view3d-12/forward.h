@@ -54,8 +54,8 @@
 #include <d2d1_2.h>
 #include <dwrite_2.h>
 
+#include "pr/algorithm/algorithm.h"
 #include "pr/camera/camera.h"
-#include "pr/common/algorithm.h"
 #include "pr/common/alloca.h"
 #include "pr/common/allocator.h"
 #include "pr/common/assert.h"

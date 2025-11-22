@@ -9,7 +9,7 @@
 #include <filesystem>
 #include "pr/common/guid.h"
 #include "pr/common/event_handler.h"
-#include "pr/common/algorithm.h"
+#include "pr/algorithm/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/str/string.h"
 #include "pr/threads/synchronise.h"

@@ -78,7 +78,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_triangle.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\support.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\common\algorithm.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\alloca.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\allocator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\archiver.h" />
@@ -383,6 +382,7 @@
     </ClCompile>
     <ClCompile Include="src\dependecy_check_math.cpp" />
     <ClCompile Include="src\unittests.cpp" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\algorithm.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />

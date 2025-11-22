@@ -4,23 +4,15 @@
 //*************************************************************
 #pragma once
 #include <cmath>
-#include <cstring>
 #include <array>
-#include <vector>
 #include <string_view>
 #include <algorithm>
-#include <exception>
 #include <type_traits>
 #include <initializer_list>
 #include <cassert>
-#include <cerrno>
-#include <charconv>
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
-#include "pr/common/algorithm.h"
 #include "pr/maths/maths.h"
-#include "pr/str/string_core.h"
-#include "pr/container/span.h"
 #include "pr/container/vector.h"
 #include "pr/container/byte_data.h"
 
@@ -558,7 +550,7 @@ namespace pr::eval
 
 		// The names (hashes) and default values of the unique identifiers
 		// in the expression (in order of discovery from left to right).
-		pr::vector<Arg, 4> m_args;
+		vector<Arg, 4> m_args;
 
 		// Find the argument matching 'hash'
 		Arg const* find(IdentHash hash) const
@@ -755,7 +747,7 @@ namespace pr::eval
 	struct Expression
 	{
 		using ArgPair = struct { std::string_view name; Val val; };
-		using ArgNames = pr::vector<Ident>;
+		using ArgNames = vector<Ident>;
 
 		// The compiled expression
 		pr::byte_data<> m_op;

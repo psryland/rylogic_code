@@ -43,10 +43,10 @@
 #include "pr/common/cast.h"
 #include "pr/common/scope.h"
 #include "pr/common/flags_enum.h"
-#include "pr/common/algorithm.h"
 #include "pr/common/allocator.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
+#include "pr/algorithm/algorithm.h"
 #include "pr/storage/xml.h"
 #include "pr/win32/win32.h"
 

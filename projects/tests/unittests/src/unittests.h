@@ -4,6 +4,7 @@
 #include <winsock2.h> // Include winsock2.h before windows.h
 
 // Headers to unit test
+#include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
 #include "pr/algorithm/peak_detection.h"
 #include "pr/algorithm/savitzky_golay_filter.h"
@@ -44,7 +45,6 @@
 #include "pr/collision/shape.h"
 #include "pr/collision/shapes.h"
 #include "pr/collision/support.h"
-#include "pr/common/algorithm.h"
 #include "pr/common/alloca.h"
 #include "pr/common/allocator.h"
 #include "pr/common/archiver.h"

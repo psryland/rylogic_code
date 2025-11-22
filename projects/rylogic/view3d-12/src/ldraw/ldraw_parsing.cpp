@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1726,6 +1726,7 @@ namespace pr::rdr12::ldraw
 		};
 		vector<Segment, 1> m_segments; // Segments that make up the line
 		vector<Vert, 2> m_arrow_heads; // Buffer of arrow head instances
+		vector<Vert, 2> m_data_points; // Buffer of data point locations
 		Segment m_current;             // The current state read from the script
 		bool m_per_item_parametrics;   // True if each element is expected to have parametric values
 		bool m_per_item_colour;        // True if each element is expected to have a colour
@@ -1734,6 +1735,7 @@ namespace pr::rdr12::ldraw
 			: IObjectCreator(pp)
 			, m_segments()
 			, m_arrow_heads()
+			, m_data_points()
 			, m_current(ELineStyle::LineSegments)
 			, m_per_item_parametrics()
 			, m_per_item_colour()
@@ -1750,6 +1752,11 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Arrow:
 				{
 					m_current.m_arrow.m_type = reader.Enum<EArrowType>();
+					if (!reader.IsSectionEnd())
+					{
+						m_current.m_arrow.m_size.x = reader.Real<float>();
+						m_current.m_arrow.m_size.y = reader.IsSectionEnd() ? m_current.m_arrow.m_size.x : reader.Real<float>();
+					}
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -1770,7 +1777,6 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Width:
 				{
 					m_current.m_thick.m_width = reader.Real<float>();
-					m_current.m_arrow.m_size = v2{ m_current.m_thick.m_width };
 					return true;
 				}
 				case EKeyword::Dashed:
@@ -1941,6 +1947,22 @@ namespace pr::rdr12::ldraw
 			// Process each segment
 			for (auto& segment : m_segments)
 			{
+				// Add data points
+				if (segment.m_data_points)
+				{
+					auto verts = m_verts.span(vcount, segment.m_vcount);
+					for (auto const& v : verts)
+					{
+						m_data_points.push_back(Vert{
+							.m_vert = v,
+							.m_diff = pr::Colour(segment.m_data_points.m_colour),
+							.m_norm = v4{segment.m_data_points.m_size, 0, 0},
+							.m_tex0 = {},
+							.m_idx0 = {int(segment.m_data_points.m_style), 0},
+						});
+					}
+				}
+
 				// Clip lines to parametric values
 				if (segment.m_parametric)
 				{
@@ -1949,40 +1971,19 @@ namespace pr::rdr12::ldraw
 				}
 
 				// Smooth the points
-				if (segment.m_smooth)
+				if (segment.m_smooth && segment.m_style == ELineStyle::LineStrip)
 				{
-					#if 0 // todo
-					auto verts = m_verts.span(vcount, segment.m_vcount);
-					auto colrs = m_colours.span(ccount, segment.m_ccount);
+					// Convert the points of this segment into a Bezier cubic spline
+					CubicSpline spline = CubicSpline::FromPoints(m_verts.span(vcount, segment.m_vcount), ECurveTopology::Continuous3, CurveType::Bezier);
 
-					VCont v_out;
-					CCont c_out;
+					// Raster the spline into a new buffer
+					VCont spline_point_buf(50);
+					auto spline_points = spline::Raster(spline, spline.Time0(), spline.Time1(), spline_point_buf);
 
-					pr::Smooth(verts, Spline::ETopo::Continuous3, [&](std::span<v4 const> points, std::span<float const> /*times*/)
-					{
-						out.insert(out.end(), points.begin(), points.end());
-					});
-
-
-					auto new_verts = segment.m_smooth.InterpolateVerts(verts);
-					m_verts.erase(begin(m_verts) + vcount, begin(m_verts) + vcount + segment.m_vcount);
-					m_verts.insert(begin(m_verts) + vcount, begin(new_verts), end(new_verts));
-					segment.m_vcount = isize(new_verts);
-					#endif
-
-				}
-
-				// Convert lines to dashed lines
-				if (segment.m_dashed)
-				{
-					if (segment.m_vcount != 0)
-					{
-						auto verts = m_verts.span(vcount, segment.m_vcount);
-						auto new_verts = segment.m_dashed.CreateSegments(segment.m_style, verts, m_pp, loc);
-						m_verts.erase(begin(m_verts) + vcount, begin(m_verts) + vcount + segment.m_vcount);
-						m_verts.insert(begin(m_verts) + vcount, begin(new_verts), end(new_verts));
-						segment.m_vcount = isize(new_verts);
-					}
+					// Replace the verts with the smoothed verts
+					m_verts.erase(m_verts.begin() + vcount, m_verts.begin() + vcount + segment.m_vcount);
+					m_verts.insert(m_verts.begin() + vcount, begin(spline_points), end(spline_points));
+					segment.m_vcount = isize(spline_points);
 				}
 
 				// If the line has arrow heads, add them to 'arrow_heads'
@@ -1990,6 +1991,11 @@ namespace pr::rdr12::ldraw
 				{
 					auto verts = m_verts.span(vcount, segment.m_vcount);
 					auto colrs = m_colours.span(ccount, segment.m_ccount);
+					auto size =
+						m_current.m_arrow.m_size != v2::Zero() ? m_current.m_arrow.m_size :
+						m_current.m_thick.m_width != 0 ? v2{ m_current.m_thick.m_width * 2 } :
+						v2{ 8.0f };
+
 					switch (segment.m_style)
 					{
 						case ELineStyle::LineSegments:
@@ -2004,7 +2010,7 @@ namespace pr::rdr12::ldraw
 										.m_vert = elem[1],
 										.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.last<1>()[0]),
 										.m_norm = Normalise(elem[1] - elem[0]),
-										.m_tex0 = segment.m_arrow.m_size,
+										.m_tex0 = size,
 									});
 								}
 								if (AllSet(segment.m_arrow.m_type, EArrowType::Back))
@@ -2013,7 +2019,7 @@ namespace pr::rdr12::ldraw
 										.m_vert = elem[0],
 										.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.first<1>()[0]),
 										.m_norm = Normalise(elem[0] - elem[1]),
-										.m_tex0 = segment.m_arrow.m_size,
+										.m_tex0 = size,
 									});
 								}
 							}
@@ -2028,7 +2034,7 @@ namespace pr::rdr12::ldraw
 									.m_vert = head[1],
 									.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.last<1>()[0]),
 									.m_norm = Normalise(head[1] - head[0]),
-									.m_tex0 = segment.m_arrow.m_size,
+									.m_tex0 = size,
 								});
 							}
 							if (AllSet(segment.m_arrow.m_type, EArrowType::Back))
@@ -2038,7 +2044,7 @@ namespace pr::rdr12::ldraw
 									.m_vert = tail[0],
 									.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.first<1>()[0]),
 									.m_norm = Normalise(tail[0] - tail[1]),
-									.m_tex0 = segment.m_arrow.m_size,
+									.m_tex0 = size,
 								});
 							}
 							break;
@@ -2048,6 +2054,18 @@ namespace pr::rdr12::ldraw
 							throw std::runtime_error(std::format("Unsupported line style: {}", ELineStyle_::ToStringA(segment.m_style)));
 						}
 					}
+				}
+
+				// Convert lines to dashed lines
+				if (segment.m_dashed)
+				{
+					auto verts = m_verts.span(vcount, segment.m_vcount);
+					auto new_verts = segment.m_dashed.CreateSegments(segment.m_style, verts, m_pp, loc);
+
+					// Replace the verts with the dashed verts
+					m_verts.erase(begin(m_verts) + vcount, begin(m_verts) + vcount + segment.m_vcount);
+					m_verts.insert(begin(m_verts) + vcount, begin(new_verts), end(new_verts));
+					segment.m_vcount = isize(new_verts);
 				}
 
 				// The thick line strip shader uses LineAdj which requires an extra first and last vert
@@ -2080,6 +2098,11 @@ namespace pr::rdr12::ldraw
 			if (!m_arrow_heads.empty())
 			{
 				ncount += 1;
+			}
+			if (!m_data_points.empty())
+			{
+				for (auto _ : group_by(m_data_points, [](Vert const& v) { return v.m_idx0.x; }))
+					++ncount;
 			}
 
 			return { vcount, ccount, ncount };
@@ -2162,6 +2185,30 @@ namespace pr::rdr12::ldraw
 				);
 
 				vcount += isize(m_arrow_heads);
+			}
+
+			// Add geometry and a nugget for the data points
+			if (!m_data_points.empty())
+			{
+				cache.m_vcont.insert(end(cache.m_vcont), begin(m_data_points), end(m_data_points));
+
+				for (auto [b, e] : group_by(m_data_points, [](Vert const& v) { return v.m_idx0.x; }))
+				{
+					auto beg = static_cast<int>(b - m_data_points.data());
+					auto end = static_cast<int>(e - m_data_points.data());
+					auto style = static_cast<EPointStyle>(b->m_idx0.x);
+
+					// Add a nugget for this style
+					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(v2::Zero(), false);
+					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+						.vrange(vcount + beg, vcount + end)
+						.flags(ENuggetFlag::GeometryHasAlpha, std::ranges::any_of(m_data_points, [](Vert const& x) { return HasAlpha(x.m_diff); }))
+						.tex_diffuse(creation::PointStyleTexture(style, iv2{ 256, 256 }, m_pp))
+						.use_shader(ERenderStep::RenderForward, pt_shdr)
+					);
+				}
+
+				vcount += isize(m_data_points);
 			}
 
 			// Create the line model
