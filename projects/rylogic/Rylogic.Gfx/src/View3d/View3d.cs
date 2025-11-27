@@ -981,18 +981,19 @@ namespace Rylogic.Gfx
 			public Colour32 BackgroundColour;
 			public bool AllowAltEnter;
 			public bool GdiCompatibleBackBuffer;
+			public bool XrSupport;
 			public int Multisampling;
 			public string DbgName;
 
-			public static WindowOptions New(ReportErrorCB? error_cb = null, Colour32? background_colour = null, bool? allow_alt_enter = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
+			public static WindowOptions New(ReportErrorCB? error_cb = null, Colour32? background_colour = null, bool? allow_alt_enter = null, bool? xr_support = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
 			{
-				
 				return new()
 				{
 					ErrorCB = error_cb ?? ReportErrorCB.Default(),
 					BackgroundColour = background_colour ?? Colour32.Gray,
 					AllowAltEnter = allow_alt_enter ?? false,
 					GdiCompatibleBackBuffer = gdi_compatible_bb ?? false,
+					XrSupport = xr_support ?? false,
 					Multisampling = (gdi_compatible_bb ?? false) ? 1 : 4,
 					DbgName = dbg_name ?? string.Empty,
 				};

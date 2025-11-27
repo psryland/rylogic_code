@@ -378,6 +378,7 @@
 #include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/model/skin.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/openxr/openxr.h"
 #include "pr/view3d-12/render/back_buffer.h"
 #include "pr/view3d-12/render/drawlist_element.h"
 #include "pr/view3d-12/render/render_step.h"

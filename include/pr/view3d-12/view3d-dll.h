@@ -582,6 +582,7 @@ namespace pr
 			Colour        m_background_colour;
 			BOOL          m_allow_alt_enter;
 			BOOL          m_gdi_compatible_backbuffer;
+			BOOL          m_xr_support;
 			int           m_multisampling;
 			char const*   m_dbg_name;
 
@@ -590,6 +591,7 @@ namespace pr
 				, m_background_colour(0xFF808080)
 				, m_allow_alt_enter(true)
 				, m_gdi_compatible_backbuffer(false)
+				, m_xr_support(false)
 				, m_multisampling(1)
 				, m_dbg_name()
 			{
@@ -612,6 +614,11 @@ namespace pr
 			WindowOptions& gdi_compat(bool enable = true)
 			{
 				m_gdi_compatible_backbuffer = enable;
+				return *this;
+			}
+			WindowOptions& xr_support(bool enable = true)
+			{
+				m_xr_support = enable;
 				return *this;
 			}
 			WindowOptions& multisamp(int samples)

@@ -65,4 +65,5 @@
   <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
   <Import Project="$(TargetsPath)view3d-12.targets" />
   <Import Project="$(TargetsPath)fbx.targets" />
+  <Import Project="$(SDKPath)openxr/openxr.targets" />
 </Project>

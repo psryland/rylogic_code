@@ -7,6 +7,7 @@
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/frame.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/openxr/openxr.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
 
 namespace pr::rdr12
@@ -65,23 +66,23 @@ namespace pr::rdr12
 	// Constructor
 	Window::Window(Renderer& rdr, WndSettings const& settings)
 		:WindowBase(rdr, settings)
-		,m_gsync(rdr.D3DDevice())
-		,m_swap_bb(settings.m_buffer_count)
-		,m_msaa_bb()
-		,m_bb_index()
-		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
-		,m_ds_props(settings.m_depth_format, 1.0f, 0)
-		,m_cmd_alloc_pool(m_gsync)
-		,m_cmd_list_pool(m_gsync)
-		,m_heap_view(HeapCapacityView, m_gsync)
-		,m_heap_samp(HeapCapacitySamp, m_gsync)
-		,m_res_state()
-		,m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
-		,m_diag(*this)
-		,m_frame_number()
-		,m_vsync(settings.m_vsync)
-		,m_idle(false)
-		,m_name(settings.m_name)
+		, m_gsync(rdr.D3DDevice())
+		, m_swap_bb(settings.m_buffer_count)
+		, m_msaa_bb()
+		, m_bb_index()
+		, m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
+		, m_ds_props(settings.m_depth_format, 1.0f, 0)
+		, m_cmd_alloc_pool(m_gsync)
+		, m_cmd_list_pool(m_gsync)
+		, m_heap_view(HeapCapacityView, m_gsync)
+		, m_heap_samp(HeapCapacitySamp, m_gsync)
+		, m_res_state()
+		, m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
+		, m_diag(*this)
+		, m_frame_number()
+		, m_vsync(settings.m_vsync)
+		, m_idle(false)
+		, m_name(settings.m_name)
 	{
 		// Notes:
 		//  The swap chain is the data that's sent to the monitor, and monitors can't display MSAA textures.
@@ -148,7 +149,7 @@ namespace pr::rdr12
 			Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, swap_chain.address_of()));
 			Check(swap_chain->QueryInterface(m_swap_chain.address_of()));
 			DebugName(m_swap_chain, "SwapChain");
-		
+
 			// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 			Check(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 		}
@@ -199,7 +200,15 @@ namespace pr::rdr12
 		}
 
 		// Initialise the render target views
-		BackBufferSize(iv2{s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height)}, true, &multisamp);
+		BackBufferSize(iv2{ s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height) }, true, &multisamp);
+
+		// XR support
+		if (settings.m_xr_support)
+		{
+			using namespace openxr;
+			Config cfg = Config().device(rdr.D3DDevice()).queue(rdr.ComQueue());
+			m_open_xr = CreateInstance(cfg);
+		}
 	}
 
 	// Access the renderer manager classes

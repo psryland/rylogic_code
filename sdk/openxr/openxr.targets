@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Add a dependency on the dll (C#) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+		<Content Include="$(SDKPath)openxr\openxr\$(Platform)\bin\openxr_loader.dll">
+			<Link>openxr\lib\$(Platform)\openxr_loader.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	
+	<!-- Add a dependency on the dll (C++) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
+		<DependencyLink Include="$(SDKPath)openxr\openxr\$(Platform)\bin\openxr_loader.dll" >
+			<OutDir>$(OutDir)lib\$(Platform)\</OutDir>
+		</DependencyLink>
+	</ItemGroup>
+
+</Project>

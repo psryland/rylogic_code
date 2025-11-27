@@ -22,6 +22,7 @@
   <Import Project="$(PropsPath)view3d_shader_build.props" />
   <Import Project="$(PropsPath)csharp_script.props" />
   <Import Project="$(PropsPath)lib.props" />
+  <Import Project="$(SDKPath)openxr/openxr.props" />
   <!--
   Build options
   -->
@@ -85,6 +86,7 @@
     <ClCompile Include="src\model\pose.cpp" />
     <ClCompile Include="src\model\skeleton.cpp" />
     <ClCompile Include="src\model\skin.cpp" />
+    <ClCompile Include="src\openxr\openxr.cpp" />
     <ClCompile Include="src\render\back_buffer.cpp" />
     <ClCompile Include="src\render\render_forward.cpp" />
     <ClCompile Include="src\render\render_raycast.cpp" />
@@ -201,6 +203,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skin.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\pose.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\openxr\openxr.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\render_step.h" />
@@ -269,6 +272,7 @@
     <ClInclude Include="src\ldraw\sources\source_base.h" />
     <ClInclude Include="src\ldraw\sources\source_stream.h" />
     <ClInclude Include="src\ldraw\sources\source_string.h" />
+    <ClInclude Include="src\openxr\conversion.h" />
     <ClInclude Include="src\render\render_forward.h" />
     <ClInclude Include="src\render\render_raycast.h" />
     <ClInclude Include="src\render\render_smap.h" />

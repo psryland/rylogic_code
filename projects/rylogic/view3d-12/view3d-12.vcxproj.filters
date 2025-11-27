@@ -124,6 +124,9 @@
     <Filter Include="pr\hlsl">
       <UniqueIdentifier>{fada8f19-6cf4-4ca8-ab30-064bd7ddc4f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\openxr">
+      <UniqueIdentifier>{2b8da540-474d-4518-954d-73baf3b0c608}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\renderer.cpp">
@@ -293,6 +296,9 @@
     </ClCompile>
     <ClCompile Include="src\shaders\shader_ray_cast.cpp">
       <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\openxr\openxr.cpp">
+      <Filter>src\openxr</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -754,6 +760,12 @@
     </ClInclude>
     <ClInclude Include="src\ldraw\sources\source_binary.h">
       <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\openxr\openxr.h">
+      <Filter>src\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="src\openxr\conversion.h">
+      <Filter>src\openxr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

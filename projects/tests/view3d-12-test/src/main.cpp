@@ -15,15 +15,13 @@ using namespace pr::gui;
 using namespace pr::rdr12;
 
 std::filesystem::path const RylogicRoot = "E:\\Rylogic\\Code";
+std::filesystem::path const RylogicAssets = "E:\\Rylogic\\Assets";
 
 enum class EStepMode
 {
 	Single,
 	Run,
 };
-
-// TODO:
-//  Ray cast/ Hit test support
 
 // Application window
 struct Main :Form
@@ -46,6 +44,7 @@ struct Main :Form
 	static void __stdcall ReportError(void*, char const* msg, char const* filepath, int line, int64_t)
 	{
 		std::cout << filepath << "(" << line << "): " << msg << std::endl;
+		throw std::runtime_error(std::string(msg));
 	}
 	static view3d::WindowOptions WndOptions(Main& main)
 	{
@@ -54,7 +53,8 @@ struct Main :Form
 			.back_colour(0xFF908080)
 			.alt_enter()
 			.multisamp(8)
-			.name("TestWnd");
+			.name("TestWnd")
+			.xr_support();
 	}
 
 	Main(HINSTANCE)
@@ -67,7 +67,7 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise({ this, ReportError }))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
-		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
+		, m_envmap(View3D_CubeMapCreateFromUri((RylogicAssets / "textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 		, m_obj0()
 		, m_obj1()
 		, m_file_ctx()

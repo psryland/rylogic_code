@@ -64,12 +64,12 @@ namespace pr::rdr12
 		}
 		catch (std::exception const& e)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(FmtS("Failed to create View3D Window.\n%s", e.what()), "", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(std::format("Failed to create View3D Window.\n{}", e.what()).c_str(), "", 0, 0);
 			return nullptr;
 		}
 		catch (...)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(FmtS("Failed to create View3D Window.\nUnknown reason"), "", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb("Failed to create View3D Window.\nUnknown reason", "", 0, 0);
 			return nullptr;
 		}
 	}

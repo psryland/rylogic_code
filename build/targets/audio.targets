@@ -6,8 +6,9 @@ copy-if-newer content to the project which copies them to the build
 target directory.
 -->
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	<ItemGroup>
 
+	<!-- Add a dependency on the dll (C#) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 		<Content Include="$(RylogicRoot)lib\x64\debug\audio.dll">
 			<Link>lib\x64\debug\audio.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
@@ -16,6 +17,12 @@ target directory.
 			<Link>lib\x64\release\audio.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
-
+	</ItemGroup>
+	
+	<!-- Add a dependency on the dll (C++) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
+		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\audio.dll" />
+			<OutDir>$(OutDir)lib\$(Platform)\</OutDir>
+		</DependencyLink>
 	</ItemGroup>
 </Project>

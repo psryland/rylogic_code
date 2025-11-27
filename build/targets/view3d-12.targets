@@ -8,7 +8,7 @@ target directory.
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Add a dependency on the dll (C#) -->
-	<ItemGroup>
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
 		<Content Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
 			<Link>lib\x64\debug\view3d-12.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
@@ -21,7 +21,7 @@ target directory.
 	</ItemGroup>
 
 	<!-- Add a dependency on the dll (C++) -->
-	<ItemGroup>
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
 		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll" />
 	</ItemGroup>
 

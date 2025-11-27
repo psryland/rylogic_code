@@ -19,6 +19,7 @@ namespace pr::rdr12
 			.DefaultOutput()
 			.BackgroundColour(opts.m_background_colour)
 			.AllowAltEnter(opts.m_allow_alt_enter != 0)
+			.XrSupport(opts.m_xr_support != 0)
 			.MutliSampling(opts.m_multisampling)
 			.Name(opts.m_dbg_name)
 			;

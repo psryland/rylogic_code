@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/frame.h"
+#include "pr/view3d-12/openxr/openxr.h"
 #include "pr/view3d-12/render/back_buffer.h"
 #include "pr/view3d-12/resource/gpu_descriptor_heap.h"
 #include "pr/view3d-12/utility/wrappers.h"
@@ -50,10 +51,12 @@ namespace pr::rdr12
 		using CmdLists = pr::vector<ID3D12CommandList*, 4, false>;
 		using GpuViewHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
 		using GpuSampHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>;
+		using OpenXRPtr = std::unique_ptr<openxr::OpenXR>;
 
 		GpuSync                      m_gsync;            // GPU fence for frames
 		BackBuffers                  m_swap_bb;          // Back buffer render targets from the swap chain.
 		BackBuffer                   m_msaa_bb;          // The MSAA back buffer render target
+		OpenXRPtr                    m_open_xr;          // OpenXR support (if not null)
 		int                          m_bb_index;         // The current back buffer index
 		RTProps                      m_rt_props;         // The properties of the MSAA back buffer
 		DSProps                      m_ds_props;         // The properties of the depth stencil buffer

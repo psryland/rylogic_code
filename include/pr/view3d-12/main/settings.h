@@ -99,6 +99,7 @@ namespace pr::rdr12
 		DXGI_ALPHA_MODE       m_alpha_mode;       //
 		UINT                  m_buffer_count;     // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
 		UINT                  m_vsync;            // Present SyncInterval value
+		bool                  m_xr_support;       // Is this window used for XR rendering
 		bool                  m_use_w_buffer;     // Use W-Buffer depth rather than Z-Buffer
 		bool                  m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 		string32              m_name;             // A debugging name for the window
@@ -124,6 +125,7 @@ namespace pr::rdr12
 			,m_alpha_mode(DXGI_ALPHA_MODE_UNSPECIFIED)
 			,m_buffer_count(2)
 			,m_vsync(1)
+			,m_xr_support(false)
 			,m_use_w_buffer(true)
 			,m_allow_alt_enter(false)
 			,m_name()
@@ -155,6 +157,11 @@ namespace pr::rdr12
 		WndSettings& AllowAltEnter(bool allow)
 		{
 			m_allow_alt_enter = allow;
+			return *this;
+		}
+		WndSettings& XrSupport(bool enable)
+		{
+			m_xr_support = enable;
 			return *this;
 		}
 		WndSettings& Size(iv2 const& area)
