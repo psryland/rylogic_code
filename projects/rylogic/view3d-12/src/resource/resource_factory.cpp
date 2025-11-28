@@ -1059,10 +1059,22 @@ namespace pr::rdr12
 				return Shader::Create<shaders::ThickLineStripGS>(line_width);
 			}
 
-			// Arrow params: *Size {size}
+			// Arrow params: *Size {size} *Depth {true|false}
 			case EStockShader::ArrowHeadGS:
 			{
-				return Shader::Create<shaders::ArrowHeadGS>();
+				v2 size = { 1,1 };
+				bool depth = false;
+				for (int kw; reader.NextKeyword(kw);) switch (kw)
+				{
+					case rdr12::ldraw::HashI("Size"):
+						size.x = reader.IsSectionEnd() ? 1 : reader.Real<float>();
+						size.y = reader.IsSectionEnd() ? size.y : reader.Real<float>();
+						break;
+					case rdr12::ldraw::HashI("Depth"):
+						depth = reader.IsSectionEnd() ? true : reader.Bool();
+						break;
+				}
+				return Shader::Create<shaders::ArrowHeadGS>(size, depth);
 			}
 
 			default:

@@ -6,8 +6,6 @@
 #include "pr/view3d-12/shaders/shader_forward.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/render/drawlist_element.h"
-#include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/instance/instance.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12::shaders

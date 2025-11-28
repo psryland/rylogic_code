@@ -171,44 +171,41 @@ namespace Rylogic.LDraw
 					throw new Exception($"Unknown texture addressing mode ({filter})");
 			}
 		}
-		private void Append(EArrowType type)
-		{
-			switch (type)
-			{
-				case EArrowType.Fwd:
-					Append("Fwd");
-					break;
-				case EArrowType.Back:
-					Append("Back");
-					break;
-				case EArrowType.FwdBack:
-					Append("FwdBack");
-					break;
-				default:
-					throw new Exception("Unknown arrow type");
-			}
-		}
 		private void Append(EPointStyle style)
 		{
 			switch (style)
 			{
-				case EPointStyle.Square:
-					Append("Square");
-					break;
-				case EPointStyle.Circle:
-					Append("Circle");
-					break;
-				case EPointStyle.Triangle:
-					Append("Triangle");
-					break;
-				case EPointStyle.Star:
-					Append("Star");
-					break;
-				case EPointStyle.Annulus:
-					Append("Annulus");
-					break;
-				default:
-					throw new Exception($"Unknown arrow type ({style})");
+				case EPointStyle.Square: Append("Square"); break;
+				case EPointStyle.Circle: Append("Circle"); break;
+				case EPointStyle.Triangle: Append("Triangle"); break;
+				case EPointStyle.Star: Append("Star"); break;
+				case EPointStyle.Annulus: Append("Annulus"); break;
+				default: throw new Exception($"Unknown point style ({style})");
+			}
+		}
+		private void Append(ELineStyle style)
+		{
+			switch (style)
+			{
+				case ELineStyle.LineSegments: Append("LineSegments"); break;
+				case ELineStyle.LineStrip: Append("LineStrip"); break;
+				case ELineStyle.Direction: Append("Direction"); break;
+				case ELineStyle.BezierSpline: Append("BezierSpline"); break;
+				case ELineStyle.HermiteSpline: Append("HermiteSpline"); break;
+				case ELineStyle.BSplineSpline: Append("BSplineSpline"); break;
+				case ELineStyle.CatmullRom: Append("CatmullRom"); break;
+				default: throw new Exception($"Unknown line style ({style})");
+			}
+		}
+		private void Append(EArrowType type)
+		{
+			switch (type)
+			{
+				case EArrowType.Line: Append("Line"); break;
+				case EArrowType.Fwd:  Append("Fwd"); break;
+				case EArrowType.Back: Append("Back"); break;
+				case EArrowType.FwdBack: Append("FwdBack"); break;
+				default: throw new Exception("Unknown arrow type");
 			}
 		}
 		private void Append(Serialiser.VariableInt vint)
@@ -239,11 +236,6 @@ namespace Rylogic.LDraw
 			if (s.m_size == v2.Zero) return;
 			Write(EKeyword.Size, s.m_size);
 		}
-		private void Append(Serialiser.Width w)
-		{
-			if (w.m_width == 0) return;
-			Write(EKeyword.Width, w.m_width);
-		}
 		private void Append(Serialiser.Scale s)
 		{
 			if (s.m_scale == 1f) return;
@@ -261,54 +253,86 @@ namespace Rylogic.LDraw
 		}
 		private void Append(Serialiser.PerItemColour c)
 		{
-			if (!c.m_per_item_colour) return;
-			Write(EKeyword.PerItemColour);
+			if (!c) return;
+			Write(EKeyword.PerItemColour, c.m_per_item_colour);
+		}
+		private void Append(Serialiser.Width w)
+		{
+			if (!w) return;
+			Write(EKeyword.Width, w.m_width);
 		}
 		private void Append(Serialiser.Depth d)
 		{
-			if (d.m_depth == false) return;
-			Write(EKeyword.Depth);
+			if (!d) return;
+			Write(EKeyword.Depth, d.m_depth);
 		}
 		private void Append(Serialiser.Hidden h)
 		{
-			if (!h.m_hide) return;
-			Write(EKeyword.Hidden);
+			if (!h) return;
+			Write(EKeyword.Hidden, h.m_hide);
 		}
 		private void Append(Serialiser.Wireframe w)
 		{
-			if (!w.m_wire) return;
-			Write(EKeyword.Wireframe);
-		}
-		private void Append(Serialiser.Solid s)
-		{
-			if (!s.m_solid) return;
-			Write(EKeyword.Solid);
-		}
-		private void Append(Serialiser.Smooth s)
-		{
-			if (!s.m_smooth) return;
-			Write(EKeyword.Smooth);
-		}
-		private void Append(Serialiser.LeftHanded lh)
-		{
-			if (!lh.m_lh) return;
-			Write(EKeyword.LeftHanded);
+			if (!w) return;
+			Write(EKeyword.Wireframe, w.m_wire);
 		}
 		private void Append(Serialiser.Alpha a)
 		{
-			if (!a.m_has_alpha) return;
-			Write(EKeyword.Alpha);
+			if (!a) return;
+			Write(EKeyword.Alpha, a.m_has_alpha);
+		}
+		private void Append(Serialiser.Solid s)
+		{
+			if (!s) return;
+			Write(EKeyword.Solid, s.m_solid);
+		}
+		private void Append(Serialiser.Smooth s)
+		{
+			if (!s) return;
+			Write(EKeyword.Smooth, s.m_smooth);
+		}
+		private void Append(Serialiser.Dashed d)
+		{
+			if (!d) return;
+			Write(EKeyword.Dashed, d.m_dash);
+		}
+		private void Append(Serialiser.DataPoints dp)
+		{
+			if (!dp) return;
+			Write(EKeyword.Arrow, () =>
+			{
+				Write(EKeyword.Size, dp.m_size);
+				if (dp.m_style != EPointStyle.Square)
+					Write(EKeyword.Style, dp.m_style);
+				if (dp.m_colour != Colour32.White)
+					Write(EKeyword.Colour, dp.m_colour);
+			});
+		}
+		private void Append(Serialiser.LeftHanded lh)
+		{
+			if (!lh) return;
+			Write(EKeyword.LeftHanded, lh.m_lh);
 		}
 		private void Append(Serialiser.AxisId a)
 		{
-			if (a.m_axis == EAxisId.None) return;
+			if (!a) return;
 			Write(EKeyword.AxisId, (int)a.m_axis.Id);
 		}
-		private void Append(Serialiser.ArrowType a)
+		private void Append(Serialiser.PointStyle p)
 		{
-			if (a.m_type == EArrowType.Fwd) return;
-			Write(EKeyword.Style, a.m_type.ToString());
+			if (!p) return;
+			Write(EKeyword.Style, p.m_style);
 		}
+		private void Append(Serialiser.LineStyle l)
+		{
+			if (!l) return;
+			Write(EKeyword.Style, l.m_style);
+		}
+		private void Append(Serialiser.ArrowHeads a)
+		{
+			if (!a) return;
+			Write(EKeyword.Arrow, a.m_type, a.m_size);
+		}		
 		private void Append(Serialiser.Pos p)
 		{
 			if (p.m_pos == v4.Origin)

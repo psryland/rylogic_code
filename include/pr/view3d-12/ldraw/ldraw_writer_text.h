@@ -130,16 +130,6 @@ namespace pr::rdr12::ldraw
 				default: throw std::runtime_error("Unknown texture addressing mode");
 			}
 		}
-		template <typename TOut> static void Append(TOut& out, EArrowType type)
-		{
-			switch (type)
-			{
-				case EArrowType::Fwd:     return Append(out, "Fwd");
-				case EArrowType::Back:    return Append(out, "Back");
-				case EArrowType::FwdBack: return Append(out, "FwdBack");
-				default: throw std::runtime_error("Unknown arrow type");
-			}
-		}
 		template <typename TOut> static void Append(TOut& out, EPointStyle style)
 		{
 			switch (style)
@@ -149,6 +139,31 @@ namespace pr::rdr12::ldraw
 				case EPointStyle::Triangle: return Append(out, "Triangle");
 				case EPointStyle::Star:     return Append(out, "Star");
 				case EPointStyle::Annulus:  return Append(out, "Annulus");
+				default: throw std::runtime_error("Unknown arrow type");
+			}
+		}
+		template <typename TOut> static void Append(TOut& out, ELineStyle style)
+		{
+			switch (style)
+			{
+				case ELineStyle::LineSegments:  return Append(out, "LineSegments");
+				case ELineStyle::LineStrip:     return Append(out, "LineStrip");
+				case ELineStyle::Direction:     return Append(out, "Direction");
+				case ELineStyle::BezierSpline:  return Append(out, "BezierSpline");
+				case ELineStyle::HermiteSpline: return Append(out, "HermiteSpline");
+				case ELineStyle::BSplineSpline: return Append(out, "BSplineSpline");
+				case ELineStyle::CatmullRom:    return Append(out, "CatmullRom");
+				default: throw std::runtime_error("Unknown line style");
+			}
+		}
+		template <typename TOut> static void Append(TOut& out, EArrowType type)
+		{
+			switch (type)
+			{
+				case EArrowType::Line:    return Append(out, "Line");
+				case EArrowType::Fwd:     return Append(out, "Fwd");
+				case EArrowType::Back:    return Append(out, "Back");
+				case EArrowType::FwdBack: return Append(out, "FwdBack");
 				default: throw std::runtime_error("Unknown arrow type");
 			}
 		}
@@ -180,11 +195,6 @@ namespace pr::rdr12::ldraw
 			if (s.m_size == v2::Zero()) return;
 			Write(out, EKeyword::Size, s.m_size);
 		}
-		template <typename TOut> static void Append(TOut& out, Width w)
-		{
-			if (w.m_width == 0) return;
-			Write(out, EKeyword::Width, w.m_width);
-		}
 		template <typename TOut> static void Append(TOut& out, Scale s)
 		{
 			if (s.m_scale == 1.0f) return;
@@ -202,58 +212,85 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, PerItemColour c)
 		{
-			if (!c.m_per_item_colour) return;
-			Write(out, EKeyword::PerItemColour);
+			if (!c) return;
+			Write(out, EKeyword::PerItemColour, c.m_per_item_colour);
+		}
+		template <typename TOut> static void Append(TOut& out, Width w)
+		{
+			if (!w) return;
+			Write(out, EKeyword::Width, w.m_width);
 		}
 		template <typename TOut> static void Append(TOut& out, Depth d)
 		{
-			if (d.m_depth == false) return;
-			Write(out, EKeyword::Depth);
+			if (!d) return;
+			Write(out, EKeyword::Depth, d.m_depth);
 		}
 		template <typename TOut> static void Append(TOut& out, Hidden h)
 		{
-			if (!h.m_hide) return;
-			Write(out, EKeyword::Hidden);
+			if (!h) return;
+			Write(out, EKeyword::Hidden, h.m_hide);
 		}
 		template <typename TOut> static void Append(TOut& out, Wireframe w)
 		{
-			if (!w.m_wire) return;
-			Write(out, EKeyword::Wireframe);
-		}
-		template <typename TOut> static void Append(TOut& out, Solid s)
-		{
-			if (!s.m_solid) return;
-			Write(out, EKeyword::Solid);
-		}
-		template <typename TOut> static void Append(TOut& out, Smooth s)
-		{
-			if (!s.m_smooth) return;
-			Write(out, EKeyword::Smooth);
-		}
-		template <typename TOut> static void Append(TOut& out, LeftHanded lh)
-		{
-			if (!lh.m_lh) return;
-			Write(out, EKeyword::LeftHanded);
+			if (!w) return;
+			Write(out, EKeyword::Wireframe, w.m_wire);
 		}
 		template <typename TOut> static void Append(TOut& out, Alpha a)
 		{
-			if (!a.m_has_alpha) return;
-			Write(out, EKeyword::Alpha);
+			if (!a) return;
+			Write(out, EKeyword::Alpha, a.m_has_alpha);
+		}
+		template <typename TOut> static void Append(TOut& out, Solid s)
+		{
+			if (!s) return;
+			Write(out, EKeyword::Solid, s.m_solid);
+		}
+		template <typename TOut> static void Append(TOut& out, Smooth s)
+		{
+			if (!s) return;
+			Write(out, EKeyword::Smooth, s.m_smooth);
+		}
+		template <typename TOut> static void Append(TOut& out, Dashed d)
+		{
+			if (!d) return;
+			Write(out, EKeyword::Dashed, d.m_dash);
+		}
+		template <typename TOut> static void Append(TOut& out, DataPoints dp)
+		{
+			if (!dp) return;
+			Write(out, EKeyword::Arrow, [&]
+			{
+				Write(out, EKeyword::Size, dp.m_size);
+				if (dp.m_style != EPointStyle::Square)
+					Write(out, EKeyword::Style, dp.m_style);
+				if (dp.m_colour != Colour32White)
+					Write(out, EKeyword::Colour, dp.m_colour);
+			});
+		}
+		template <typename TOut> static void Append(TOut& out, LeftHanded lh)
+		{
+			if (!lh) return;
+			Write(out, EKeyword::LeftHanded, lh.m_lh);
 		}
 		template <typename TOut> static void Append(TOut& out, AxisId a)
 		{
-			if (a.IsDefault()) return;
+			if (!a) return;
 			Write(out, EKeyword::AxisId, a.m_axis.value);
 		}
 		template <typename TOut> static void Append(TOut& out, PointStyle p)
 		{
-			if (p.m_style == EPointStyle::Square) return;
+			if (!p) return;
 			Write(out, EKeyword::Style, p.m_style);
 		}
-		template <typename TOut> static void Append(TOut& out, ArrowType a)
+		template <typename TOut> static void Append(TOut& out, LineStyle l)
 		{
-			if (a.m_type == EArrowType::Fwd) return;
-			Write(out, EKeyword::Style, a.m_type);
+			if (!l) return;
+			Write(out, EKeyword::Style, l.m_style);
+		}
+		template <typename TOut> static void Append(TOut& out, ArrowHeads a)
+		{
+			if (!a) return;
+			Write(out, EKeyword::Arrow, a.m_type, a.m_size);
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{

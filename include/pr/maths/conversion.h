@@ -163,7 +163,7 @@ namespace pr
 				return std::format(L"{} {} {} {}", x.x, x.y, x.z, x.w);
 		}
 	};
-	template <Scalar S, typename T, typename TFrom>
+	template <Scalar S, typename T, typename TFrom> requires (!std::is_same_v<TFrom, Vec4<S, T>>)
 	struct Convert<Vec4<S, T>, TFrom>
 	{
 		// Vec4 to Vec4

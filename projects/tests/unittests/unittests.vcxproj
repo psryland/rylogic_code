@@ -374,10 +374,10 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>
+				;%(PreprocessorDefinitions)
 				;SQLITE_WIN32_GETVERSIONEX=0
 				;PR_UNITTESTS=1
 				;PR_MATHS_USE_DIRECTMATH=1
-				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="src\dependecy_check_math.cpp" />

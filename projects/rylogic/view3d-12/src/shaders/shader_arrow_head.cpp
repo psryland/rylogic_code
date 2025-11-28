@@ -9,8 +9,10 @@
 
 namespace pr::rdr12::shaders
 {
-	ArrowHeadGS::ArrowHeadGS()
-		:ShaderOverride()
+	ArrowHeadGS::ArrowHeadGS(v2 size, bool depth)
+		: ShaderOverride()
+		, m_size(size)
+		, m_depth(depth)
 	{
 		m_code = ShaderCode
 		{
@@ -26,8 +28,8 @@ namespace pr::rdr12::shaders
 	{
 		fwd::CBufScreenSpace cb = {
 			.m_screen_dim = To<v2>(scene.wnd().BackBufferSize()),
-			.m_size = {}, // Not used for arrow heads. 'size' is read from 'tex0' in the vertex
-			.m_depth = false,
+			.m_size = m_size, // Default if 'size' is not read from 'tex0' in the vertex
+			.m_depth = m_depth,
 		};
 		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);

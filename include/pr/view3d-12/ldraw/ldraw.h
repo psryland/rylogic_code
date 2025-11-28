@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // View3d
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -110,10 +110,8 @@ namespace pr::rdr12::ldraw
 		x(Layers            )\
 		x(LeftHanded        )\
 		x(LightSource       )\
-		x(LineNew           )\
 		x(Line              )\
 		x(LineBox           )\
-		x(LineD             )\
 		x(LineList          )\
 		x(Lines             )\
 		x(LineStrip         )\
@@ -176,7 +174,6 @@ namespace pr::rdr12::ldraw
 		x(Source            )\
 		x(Specular          )\
 		x(Sphere            )\
-		x(Spline            )\
 		x(Square            )\
 		x(Step              )\
 		x(Stretch           )\
@@ -221,7 +218,6 @@ namespace pr::rdr12::ldraw
 	enum class ELdrObject : int
 	{
 		#define PR_LDRAW_OBJECTS(x)\
-		x(Arrow      )\
 		x(Bar        )\
 		x(Box        )\
 		x(BoxList    )\
@@ -239,11 +235,8 @@ namespace pr::rdr12::ldraw
 		x(Group      )\
 		x(Instance   )\
 		x(LightSource)\
-		x(LineNew    )\
 		x(Line       )\
 		x(LineBox    )\
-		x(LineD      )\
-		x(LineStrip  )\
 		x(Mesh       )\
 		x(Model      )\
 		x(Pie        )\
@@ -255,7 +248,6 @@ namespace pr::rdr12::ldraw
 		x(Ribbon     )\
 		x(Series     )\
 		x(Sphere     )\
-		x(Spline     )\
 		x(Text       )\
 		x(Triangle   )\
 		x(Tube       )\

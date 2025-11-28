@@ -1,9 +1,8 @@
-﻿//***********************************************************************
+//***********************************************************************
 // Interpolation
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************************************
 #pragma once
-#include "pr/common/interpolate.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/spline.h"
 
@@ -20,6 +19,7 @@ namespace pr
 			, m_x1(x1)
 			, m_interval(interval)
 		{
+			assert(interval != 0);
 		}
 		v4 Eval(float t) const
 		{
@@ -50,6 +50,7 @@ namespace pr
 			, m_q1(q1)
 			, m_interval(interval)
 		{
+			assert(interval != 0);
 		}
 		quat Eval(float t) const
 		{
@@ -121,44 +122,51 @@ namespace pr
 			auto tangent = (LogMap(q_n1) - LogMap(q_p1)) / 2;
 			return tangent;
 		}
-	};
-
-	// Interpolate<v4>
-	template <> struct Interpolate<v4>
-	{
-		struct Point
+		static v4 Tangent2(quat_cref q, v4_cref w)
 		{
-			template <typename F> v2 operator()(v2 lhs, v4_cref, F, F) const
-			{
-				return lhs;
-			}
-			template <typename F> v3 operator()(v3 lhs, v4_cref, F, F) const
-			{
-				return lhs;
-			}
-			template <typename F> v4 operator()(v4_cref lhs, v4_cref, F, F) const
-			{
-				return lhs;
-			}
-		};
-		struct Linear
-		{
-			template <typename F> v2 operator()(v2 lhs, v2 rhs, F n, F N) const
-			{
-				if (N-- <= 1) return lhs;
-				return Lerp(lhs, rhs, float(n)/N);
-			}
-			template <typename F> v3 operator()(v3 lhs, v3 rhs, F n, F N) const
-			{
-				if (N-- <= 1) return lhs;
-				return Lerp(lhs, rhs, float(n)/N);
-			}
-			template <typename F> v4 operator()(v4_cref lhs, v4_cref rhs, F n, F N) const
-			{
-				if (N-- <= 1) return lhs;
-				return Lerp(lhs, rhs, float(n)/N);
-			}
-		};
-	};
+			// phi = axis * angle (radians) from quaternion
+			auto phi = LogMap(q);
+			float theta = Length(phi);
 
+			// Tiny-angle approximation: J^{-1}(phi) -> I - 0.5*hat(phi) + (1/12) hat(phi)^2 ...
+			const float EPS = 1e-8f;
+			if (theta < EPS)
+				return w; // up to first order, J^{-1} ≈ I, so tangent ≈ w
+
+			auto phi_x_w = Cross(phi, w);
+			auto phi_x_phi_x_w = Cross(phi, phi_x_w);
+
+			float inv_theta = 1.0f / theta;
+			float inv_theta2 = inv_theta * inv_theta;
+
+			float sin_t = std::sin(theta);
+			float cos_t = std::cos(theta);
+
+			// Safe guard for sin(theta) nearly zero
+			if (fabsf(sin_t) < 1e-6f)
+			{
+				// use series expansion for alpha ~ 1/12 when theta -> 0
+				float alpha = 1.0f / 12.0f;
+				return w - 0.5f * phi_x_w + alpha * phi_x_phi_x_w;
+			}
+
+			// exact alpha term for J^{-1}:
+			// alpha = 1/theta^2 - (1+cos(theta)) / (2*theta*sin(theta))
+			float alpha = inv_theta2 - (1.0f + cos_t) / (2.0f * theta * sin_t);
+
+			// J^{-1} * w = w - 0.5 * phi x w + alpha * (phi x (phi x w))
+			auto tangent = w - 0.5f * phi_x_w + alpha * phi_x_phi_x_w;
+			return tangent;
+		}
+	};
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::maths
+{
+	PRUnitTestClass(InterpolatorTests)
+	{
+	};
+}
+#endif

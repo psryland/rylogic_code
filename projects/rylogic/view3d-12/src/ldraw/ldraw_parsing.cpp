@@ -579,7 +579,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Alpha:
 				{
-					tex.m_has_alpha = true;
+					tex.m_has_alpha = reader.IsSectionEnd() ? true : reader.Bool();;
 					break;
 				}
 				default:
@@ -651,12 +651,14 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::Hidden:
 			{
-				obj->Flags(ELdrFlags::Hidden, true);
+				auto hide = reader.IsSectionEnd() ? true : reader.Bool();
+				obj->Flags(ELdrFlags::Hidden, hide);
 				return true;
 			}
 			case EKeyword::Wireframe:
 			{
-				obj->Flags(ELdrFlags::Wireframe, true);
+				auto wire = reader.IsSectionEnd() ? true : reader.Bool();
+				obj->Flags(ELdrFlags::Wireframe, wire);
 				return true;
 			}
 			case EKeyword::NoZTest:
@@ -1152,7 +1154,7 @@ namespace pr::rdr12::ldraw
 				{
 					case EKeyword::Width:
 					{
-						m_width = reader.Real<float>();
+						m_width = reader.IsSectionEnd() ? 0.0f : reader.Real<float>();
 						return true;
 					}
 					default:
@@ -1187,15 +1189,10 @@ namespace pr::rdr12::ldraw
 		// Support for point sprites
 		struct PointSprite
 		{
-			v2 m_size;
-			EPointStyle m_style;
-			bool m_depth;
+			EPointStyle m_style = EPointStyle::Square;
+			v2 m_size = {};
+			bool m_depth = false;
 
-			PointSprite()
-				: m_size()
-				, m_style(EPointStyle::Square)
-				, m_depth(false)
-			{}
 			void CreateNugget(LdrObject* obj, ParseParams& pp, Range vrange = Range::Reset())
 			{
 				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
@@ -1216,26 +1213,11 @@ namespace pr::rdr12::ldraw
 		// Support for arrow heads
 		struct ArrowHeads
 		{
-			EArrowType m_type = EArrowType::Line;
+			EArrowType m_style = EArrowType::Line;
+			Colour32 m_colour = Colour32White;
 			v2 m_size = {};
-			explicit operator bool() const
-			{
-				return m_type != EArrowType::Line;
-			}
-		};
+			bool m_depth = false;
 
-		// Information on data point markers
-		struct DataPoints
-		{
-			v2 m_size;
-			Colour32 m_colour;
-			EPointStyle m_style;
-
-			DataPoints()
-				:m_size()
-				,m_colour(Colour32White)
-				,m_style(EPointStyle::Square)
-			{}
 			void Parse(IReader& reader, ParseParams& pp)
 			{
 				auto section = reader.SectionScope();
@@ -1243,10 +1225,9 @@ namespace pr::rdr12::ldraw
 				{
 					switch (kw)
 					{
-						case EKeyword::Size:
+						case EKeyword::Style:
 						{
-							m_size.x = reader.Real<float>();
-							m_size.y = reader.IsSectionEnd() ? m_size.x : reader.Real<float>();
+							m_style = reader.Enum<EArrowType>();
 							break;
 						}
 						case EKeyword::Colour:
@@ -1254,9 +1235,15 @@ namespace pr::rdr12::ldraw
 							m_colour = reader.Int<uint32_t>(16);
 							break;
 						}
-						case EKeyword::Style:
+						case EKeyword::Size:
 						{
-							m_style = reader.Enum<EPointStyle>();
+							m_size.x = reader.IsSectionEnd() ? 0.0f : reader.Real<float>();
+							m_size.y = reader.IsSectionEnd() ? m_size.x : reader.Real<float>();
+							break;
+						}
+						case EKeyword::Depth:
+						{
+							m_depth = reader.IsSectionEnd() ? true : reader.Bool();
 							break;
 						}
 						default:
@@ -1267,17 +1254,55 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			void CreateNugget(LdrObject* obj, ParseParams& pp, Range vrange = Range::Reset())
+			explicit operator bool() const
 			{
-				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, false);
-				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, shdr)
-					.tex_diffuse(PointStyleTexture(m_style, To<iv2>(m_size), pp))
-					.flags(ENuggetFlag::RangesCanOverlap)
-					.tint(m_colour)
-					.vrange(vrange)
-				);
+				return m_style != EArrowType::Line;
+			}
+		};
+
+		// Information on data point markers
+		struct DataPoints
+		{
+			EPointStyle m_style = EPointStyle::Square;
+			Colour32 m_colour = Colour32White;
+			v2 m_size = {};
+			bool m_depth = false;
+
+			void Parse(IReader& reader, ParseParams& pp)
+			{
+				auto section = reader.SectionScope();
+				for (EKeyword kw; reader.NextKeyword(kw);)
+				{
+					switch (kw)
+					{
+						case EKeyword::Style:
+						{
+							m_style = reader.Enum<EPointStyle>();
+							break;
+						}
+						case EKeyword::Colour:
+						{
+							m_colour = reader.Int<uint32_t>(16);
+							break;
+						}
+						case EKeyword::Size:
+						{
+							m_size.x = reader.IsSectionEnd() ? 0.0f : reader.Real<float>();
+							m_size.y = reader.IsSectionEnd() ? m_size.x : reader.Real<float>();
+							break;
+						}
+						case EKeyword::Depth:
+						{
+							m_depth = reader.IsSectionEnd() ? true : reader.Bool();
+							break;
+						}
+						default:
+						{
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *DataPoints", EKeyword_::ToStringA(kw)));
+							break;
+						}
+					}
+				}
 			}
 			explicit operator bool() const
 			{
@@ -1648,7 +1673,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				case EKeyword::Size:
@@ -1664,7 +1689,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Depth:
 				{
-					m_sprite.m_depth = true;
+					m_sprite.m_depth = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -1700,7 +1725,7 @@ namespace pr::rdr12::ldraw
 	#pragma region Line Objects
 
 	// ELdrObject::Line
-	template <> struct ObjectCreator<ELdrObject::LineNew> :IObjectCreator
+	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreator
 	{
 		// Notes:
 		//  - Each *Data {} block is one segment.
@@ -1713,10 +1738,10 @@ namespace pr::rdr12::ldraw
 		struct Segment
 		{
 			ELineStyle m_style = ELineStyle::LineSegments; // The type of line this is
-			creation::ArrowHeads m_arrow;                  // The arrow heads to add to the segment
 			creation::ThickLine m_thick;                   // Thick line support for the segment
 			creation::DashedLines m_dashed;                // Dashed line support for the segment
 			creation::Parametrics m_parametric;            // Parametric values to apply to the segment elements
+			creation::ArrowHeads m_arrow_heads;            // The arrow heads to add to the segment
 			creation::DataPoints m_data_points;            // Point sprites for the verts of the line
 			creation::SmoothLine m_smooth;                 // Smoothing support for the segment
 			int m_vcount = 0;                              // Number of verts added due to this line segment
@@ -1748,16 +1773,6 @@ namespace pr::rdr12::ldraw
 					m_current.m_style = reader.Enum<ELineStyle>();
 					return true;
 				}
-				case EKeyword::Arrow:
-				{
-					m_current.m_arrow.m_type = reader.Enum<EArrowType>();
-					if (!reader.IsSectionEnd())
-					{
-						m_current.m_arrow.m_size.x = reader.Real<float>();
-						m_current.m_arrow.m_size.y = reader.IsSectionEnd() ? m_current.m_arrow.m_size.x : reader.Real<float>();
-					}
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
@@ -1768,18 +1783,26 @@ namespace pr::rdr12::ldraw
 					m_per_item_parametrics  = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
+				case EKeyword::Arrow:
+				{
+					m_current.m_arrow_heads = creation::ArrowHeads{};
+					m_current.m_arrow_heads.Parse(reader, m_pp);
+					return true;
+				}
 				case EKeyword::DataPoints:
 				{
+					m_current.m_data_points = creation::DataPoints{};
 					m_current.m_data_points.Parse(reader, m_pp);
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					m_current.m_thick.m_width = reader.Real<float>();
+					m_current.m_thick.m_width = reader.IsSectionEnd() ? 0.0f : reader.Real<float>();
 					return true;
 				}
 				case EKeyword::Dashed:
 				{
+					m_current.m_dashed = creation::DashedLines{};
 					m_current.m_dashed.m_dash = reader.Vector2f();
 					return true;
 				}
@@ -1946,10 +1969,11 @@ namespace pr::rdr12::ldraw
 			// Process each segment
 			for (auto& segment : m_segments)
 			{
-				// Add data points
+				// Copy the data points to a separate buffer because later steps can change them.
 				if (segment.m_data_points)
 				{
 					auto verts = m_verts.span(vcount, segment.m_vcount);
+					auto segment_idx = s_cast<int>(&segment - m_segments.data());
 					for (auto const& v : verts)
 					{
 						m_data_points.push_back(Vert{
@@ -1957,7 +1981,7 @@ namespace pr::rdr12::ldraw
 							.m_diff = pr::Colour(segment.m_data_points.m_colour),
 							.m_norm = v4{segment.m_data_points.m_size, 0, 0},
 							.m_tex0 = {},
-							.m_idx0 = {int(segment.m_data_points.m_style), 0},
+							.m_idx0 = {segment_idx, 0},
 						});
 					}
 				}
@@ -1986,13 +2010,14 @@ namespace pr::rdr12::ldraw
 				}
 
 				// If the line has arrow heads, add them to 'arrow_heads'
-				if (segment.m_arrow)
+				if (segment.m_arrow_heads)
 				{
 					auto verts = m_verts.span(vcount, segment.m_vcount);
 					auto colrs = m_colours.span(ccount, segment.m_ccount);
-					auto size =
-						m_current.m_arrow.m_size != v2::Zero() ? m_current.m_arrow.m_size :
-						m_current.m_thick.m_width != 0 ? v2{ m_current.m_thick.m_width * 2 } :
+					auto segment_idx = s_cast<int>(&segment - m_segments.data());
+					auto size = segment.m_arrow_heads.m_size =
+						segment.m_arrow_heads.m_size != v2::Zero() ? segment.m_arrow_heads.m_size :
+						segment.m_thick.m_width != 0 ? v2{ segment.m_thick.m_width * 2 } :
 						v2{ 8.0f };
 
 					switch (segment.m_style)
@@ -2003,22 +2028,24 @@ namespace pr::rdr12::ldraw
 							for (int i = 0; i != segment.m_vcount; i += 2)
 							{
 								auto elem = verts.subspan(i, 2);
-								if (AllSet(segment.m_arrow.m_type, EArrowType::Fwd))
+								if (AllSet(segment.m_arrow_heads.m_style, EArrowType::Fwd))
 								{
 									m_arrow_heads.push_back(Vert{
 										.m_vert = elem[1],
 										.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.last<1>()[0]),
 										.m_norm = Normalise(elem[1] - elem[0]),
 										.m_tex0 = size,
+										.m_idx0 = {segment_idx, 0},
 									});
 								}
-								if (AllSet(segment.m_arrow.m_type, EArrowType::Back))
+								if (AllSet(segment.m_arrow_heads.m_style, EArrowType::Back))
 								{
 									m_arrow_heads.push_back(Vert{
 										.m_vert = elem[0],
 										.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.first<1>()[0]),
 										.m_norm = Normalise(elem[0] - elem[1]),
 										.m_tex0 = size,
+										.m_idx0 = {segment_idx, 0},
 									});
 								}
 							}
@@ -2026,7 +2053,7 @@ namespace pr::rdr12::ldraw
 						}
 						case ELineStyle::LineStrip:
 						{
-							if (AllSet(segment.m_arrow.m_type, EArrowType::Fwd))
+							if (AllSet(segment.m_arrow_heads.m_style, EArrowType::Fwd))
 							{
 								auto head = verts.last<2>();
 								m_arrow_heads.push_back(Vert{
@@ -2034,9 +2061,10 @@ namespace pr::rdr12::ldraw
 									.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.last<1>()[0]),
 									.m_norm = Normalise(head[1] - head[0]),
 									.m_tex0 = size,
+									.m_idx0 = {segment_idx, 0},
 								});
 							}
-							if (AllSet(segment.m_arrow.m_type, EArrowType::Back))
+							if (AllSet(segment.m_arrow_heads.m_style, EArrowType::Back))
 							{
 								auto tail = verts.first<2>();
 								m_arrow_heads.push_back(Vert{
@@ -2044,6 +2072,7 @@ namespace pr::rdr12::ldraw
 									.m_diff = pr::Colour(colrs.empty() ? Colour32White : colrs.first<1>()[0]),
 									.m_norm = Normalise(tail[0] - tail[1]),
 									.m_tex0 = size,
+									.m_idx0 = {segment_idx, 0},
 								});
 							}
 							break;
@@ -2094,15 +2123,10 @@ namespace pr::rdr12::ldraw
 				ccount += segment.m_ccount;
 				ncount += 1;
 			}
-			if (!m_arrow_heads.empty())
-			{
-				ncount += 1;
-			}
-			if (!m_data_points.empty())
-			{
-				for (auto _ : group_by(m_data_points, [](Vert const& v) { return v.m_idx0.x; }))
-					++ncount;
-			}
+			for (auto _ : group_by(m_arrow_heads, [](Vert const& v) { return v.m_idx0.x; }))
+				++ncount;
+			for (auto _ : group_by(m_data_points, [](Vert const& v) { return v.m_idx0.x; }))
+				++ncount;
 
 			return { vcount, ccount, ncount };
 		}
@@ -2176,12 +2200,24 @@ namespace pr::rdr12::ldraw
 			{
 				cache.m_vcont.insert(end(cache.m_vcont), begin(m_arrow_heads), end(m_arrow_heads));
 
-				auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>();
-				cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert|EGeom::Colr)
-					.vrange(vcount, vcount + m_arrow_heads.size())
-					.flags(ENuggetFlag::GeometryHasAlpha, std::ranges::any_of(m_arrow_heads, [](Vert const& ah) { return HasAlpha(ah.m_diff); }))
-					.use_shader(ERenderStep::RenderForward, arw_shdr)
-				);
+				// Arrow heads for difference chunks can be different styles, depth
+				for (auto [b, e] : group_by(m_arrow_heads, [](Vert const& v) { return v.m_idx0.x; }))
+				{
+					auto const& arrow_heads = m_segments[b->m_idx0.x].m_arrow_heads;
+					auto beg = static_cast<int>(b - m_arrow_heads.data());
+					auto end = static_cast<int>(e - m_arrow_heads.data());
+					auto has_alpha = std::ranges::any_of(m_arrow_heads, [](Vert const& ah) { return HasAlpha(ah.m_diff); });
+					auto size = arrow_heads.m_size;
+					auto depth = arrow_heads.m_depth;
+
+					// Add a nugget for this style
+					auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(size, depth);
+					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr)
+						.use_shader(ERenderStep::RenderForward, arw_shdr)
+						.vrange(vcount + beg, vcount + end)
+						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
+					);
+				}
 
 				vcount += isize(m_arrow_heads);
 			}
@@ -2191,19 +2227,24 @@ namespace pr::rdr12::ldraw
 			{
 				cache.m_vcont.insert(end(cache.m_vcont), begin(m_data_points), end(m_data_points));
 
+				// Data points for difference chunks can be different styles
 				for (auto [b, e] : group_by(m_data_points, [](Vert const& v) { return v.m_idx0.x; }))
 				{
+					auto const& data_points = m_segments[b->m_idx0.x].m_data_points;
 					auto beg = static_cast<int>(b - m_data_points.data());
 					auto end = static_cast<int>(e - m_data_points.data());
-					auto style = static_cast<EPointStyle>(b->m_idx0.x);
+					auto style = data_points.m_style;
+					auto size = data_points.m_size;
+					auto depth = data_points.m_depth;
+					auto has_alpha = std::ranges::any_of(m_data_points, [](Vert const& x) { return HasAlpha(x.m_diff); });
 
 					// Add a nugget for this style
-					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(v2::Zero(), false);
+					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-						.vrange(vcount + beg, vcount + end)
-						.flags(ENuggetFlag::GeometryHasAlpha, std::ranges::any_of(m_data_points, [](Vert const& x) { return HasAlpha(x.m_diff); }))
-						.tex_diffuse(creation::PointStyleTexture(style, iv2{ 256, 256 }, m_pp))
 						.use_shader(ERenderStep::RenderForward, pt_shdr)
+						.tex_diffuse(creation::PointStyleTexture(style, iv2{ 256, 256 }, m_pp))
+						.vrange(vcount + beg, vcount + end)
+						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
 					);
 				}
 
@@ -2213,263 +2254,6 @@ namespace pr::rdr12::ldraw
 			// Create the line model
 			obj->m_model = ModelGenerator::Create(m_pp.m_factory, cache);
 			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Line
-	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreator
-	{
-		creation::Parametrics m_parametric;
-		creation::DashedLines m_dashed;
-		creation::ThickLine m_thick;
-		bool m_per_item_colour;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_parametric()
-			, m_dashed()
-			, m_thick()
-			, m_per_item_colour()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					for (; !reader.IsSectionEnd();)
-					{
-						auto p0 = reader.Vector3f().w1();
-						auto p1 = reader.Vector3f().w1();
-						m_verts.push_back(p0);
-						m_verts.push_back(p1);
-						if (m_per_item_colour)
-						{
-							Colour32 col = reader.Int<uint32_t>(16);
-							m_colours.push_back(col);
-							m_colours.push_back(col);
-						}
-						if (m_parametric.m_per_item_parametrics)
-						{
-							auto para = reader.Vector2f();
-							m_parametric.Add(isize(m_verts) / 2 - 1, para);
-						}
-					}
-					return true;
-				}
-				case EKeyword::PerItemColour:
-				{
-					m_per_item_colour = true;
-					return true;
-				}
-				default:
-				{
-					return
-						m_thick.ParseKeyword(reader, m_pp, kw) ||
-						m_parametric.ParseKeyword(reader, m_pp, kw) ||
-						m_dashed.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
-		{
-			// No points = no model
-			if (m_verts.size() < 2)
-				return;
-
-			auto line_style = ELineStyle::LineSegments;
-
-			// Clip lines to parametric values
-			if (m_parametric)
-				m_parametric.MoveEndpoints(line_style, m_verts, m_pp, loc);
-
-			// Convert lines to dashed lines
-			if (m_dashed)
-				m_dashed.CreateSegments(line_style, m_verts, m_pp, loc);
-
-			// Create the model
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
-		}
-	};
-
-	// ELdrObject::LineD
-	template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreator
-	{
-		creation::Parametrics m_parametric;
-		creation::DashedLines m_dashed;
-		creation::ThickLine m_thick;
-		bool m_per_item_colour;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_parametric()
-			, m_dashed()
-			, m_thick()
-			, m_per_item_colour()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					for (; !reader.IsSectionEnd();)
-					{
-						auto p0 = reader.Vector3f().w1();
-						auto p1 = reader.Vector3f().w0();
-						m_verts.push_back(p0);
-						m_verts.push_back(p0 + p1);
-						if (m_per_item_colour)
-						{
-							Colour32 col = reader.Int<uint32_t>(16);
-							m_colours.push_back(col);
-							m_colours.push_back(col);
-						}
-						if (m_parametric.m_per_item_parametrics)
-						{
-							auto para = reader.Vector2f();
-							m_parametric.Add(isize(m_verts) / 2 - 1, para);
-						}
-					}
-					return true;
-				}
-				case EKeyword::PerItemColour:
-				{
-					m_per_item_colour = true;
-					return true;
-				}
-				default:
-				{
-					return
-						m_thick.ParseKeyword(reader, m_pp, kw) ||
-						m_parametric.ParseKeyword(reader, m_pp, kw) ||
-						m_dashed.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
-		{
-			// No points = no model
-			if (m_verts.size() < 2)
-				return;
-
-			// Clip lines to parametric values
-			if (m_parametric)
-				m_parametric.MoveEndpoints(ELineStyle::LineSegments, m_verts, m_pp, loc);
-
-			// Convert lines to dashed lines
-			auto line_style = ELineStyle::LineSegments;
-			if (m_dashed)
-				m_dashed.CreateSegments(line_style, m_verts, m_pp, loc);
-
-			// Create the model
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
-		}
-	};
-
-	// ELdrObject::LineStrip
-	template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreator
-	{
-		creation::DashedLines m_dashed;
-		creation::Parametrics m_parametric;
-		creation::SmoothLine m_smooth;
-		creation::ThickLine m_thick;
-		bool m_per_item_colour;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_dashed()
-			, m_parametric()
-			, m_smooth()
-			, m_thick()
-			, m_per_item_colour()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override 
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					for (; !reader.IsSectionEnd();)
-					{
-						auto pt = reader.Vector3f().w1();
-						m_verts.push_back(pt);
-						if (m_per_item_colour)
-						{
-							Colour32 col = reader.Int<uint32_t>(16);
-							m_colours.push_back(col);
-						}
-					}
-					return true;
-				}
-				case EKeyword::PerItemColour:
-				{
-					m_per_item_colour = true;
-					return true;
-				}
-				default:
-				{
-					return
-						m_thick.ParseKeyword(reader, m_pp, kw) ||
-						m_smooth.ParseKeyword(reader, m_pp, kw) ||
-						m_dashed.ParseKeyword(reader, m_pp, kw) ||
-						m_parametric.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
-		{
-			// No points = no model
-			if (m_verts.size() < 2)
-				return;
-
-			auto line_style = ELineStyle::LineStrip;
-
-			// Clip lines to parametric values
-			if (m_parametric)
-				m_parametric.MoveEndpoints(ELineStyle::LineStrip, m_verts, m_pp, loc);
-
-			// Smooth the points
-			if (m_smooth)
-				m_smooth.InterpolateVerts(m_verts);
-
-			// Convert lines to dashed lines
-			if (m_dashed)
-				m_dashed.CreateSegments(line_style, m_verts, m_pp, loc);
-
-			// The thick line strip shader uses LineAdj which requires an extra first and last vert
-			if (line_style == ELineStyle::LineStrip && m_thick.m_width != 0.0f)
-			{
-				m_verts.insert(std::begin(m_verts), m_verts.front());
-				m_verts.insert(std::end(m_verts), m_verts.back());
-			}
-
-			// Create the model
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model =
-				line_style == ELineStyle::LineSegments ? ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts) :
-				line_style == ELineStyle::LineStrip ? ModelGenerator::LineStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, &opts) :
-				throw std::runtime_error(std::format("Unsupported line style: {}", ELineStyle_::ToStringA(line_style)));
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
 		}
 	};
 
@@ -2619,302 +2403,18 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
-	// ELdrObject::Spline
-	template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreator
-	{
-		pr::vector<Spline> m_splines;
-		creation::ThickLine m_thick;
-		CCont m_spline_colours;
-		bool m_per_item_colour;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_splines()
-			, m_thick()
-			, m_spline_colours()
-			, m_per_item_colour()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					for (; !reader.IsSectionEnd(); )
-					{
-						Spline spline;
-						spline.x = reader.Vector3f().w1();
-						spline.y = reader.Vector3f().w1();
-						spline.z = reader.Vector3f().w1();
-						spline.w = reader.Vector3f().w1();
-						m_splines.push_back(spline);
-						if (m_per_item_colour)
-						{
-							Colour32 col = reader.Int<uint32_t>(16);
-							m_spline_colours.push_back(col);
-						}
-					}
-					return true;
-				}
-				case EKeyword::PerItemColour:
-				{
-					m_per_item_colour = true;
-					return true;
-				}
-				default:
-				{
-					return
-						m_thick.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const&) override
-		{
-			// Validate
-			if (m_splines.empty())
-				return;
-
-			auto seg = -1;
-			auto thick = m_thick.m_width != 0.0f;
-			auto icount_estimate = isize(m_splines) * (30 + (thick ? 2 : 0) + 1);
-			auto idx_stride = icount_estimate > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
-
-			m_indices.resize(0, idx_stride);
-			m_verts.reserve(isize(m_splines) * 30);
-			m_indices.reserve(icount_estimate, idx_stride);
-
-			// Generate a line strip for all spline segments (separated using strip-cut indices)
-			pr::vector<v4, 30, true> raster;
-			for (auto& spline : m_splines)
-			{
-				++seg;
-
-				// Generate points for the spline
-				raster.resize(0);
-				Raster(spline, raster, 30);
-
-				// Add the line strip to the geometry buffers
-				auto vert = isize(m_verts);
-				m_verts.insert(std::end(m_verts), std::begin(raster), std::end(raster));
-
-				// Add the indices
-				{
-					auto ibeg = m_indices.size();
-
-					// The thick line strip shader uses LineAdj which requires an extra first and last vert
-					if (thick)
-						m_indices.push_back(vert);
-
-					auto iend = ibeg + raster.size();
-					for (auto i = ibeg; i != iend; ++i)
-						m_indices.push_back(vert++);
-
-					if (thick)
-						m_indices.push_back(vert - 1);
-
-					m_indices.push_back_strip_cut();
-				}
-
-				// Colours
-				if (m_per_item_colour)
-				{
-					auto ibeg = m_colours.size();
-					m_colours.reserve(m_colours.size() + raster.size());
-					
-					auto iend = ibeg + raster.size();
-					for (auto i = ibeg; i != iend; ++i)
-						m_colours.push_back_fast(m_spline_colours[seg]);
-				}
-			}
-
-			m_nuggets.push_back(NuggetDesc(ETopo::LineStrip, EGeom::Vert|EGeom::Colr));
-
-			// Create the model
-			auto cdata = MeshCreationData()
-				.verts  (m_verts)
-				.indices(m_indices)
-				.colours(m_colours)
-				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_thick)
-				m_thick.ConvertNuggets(ELineStyle::LineStrip, obj);
-		}
-	};
-
-	// ELdrObject::Arrow
-	template <> struct ObjectCreator<ELdrObject::Arrow> :IObjectCreator
-	{
-		EArrowType m_type;
-		creation::SmoothLine m_smooth;
-		creation::ThickLine m_thick;
-		bool m_per_item_colour;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_type(EArrowType::Fwd)
-			, m_smooth()
-			, m_thick()
-			, m_per_item_colour()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Style:
-				{
-					m_type = reader.Enum<EArrowType>();
-					return true;
-				}
-				case EKeyword::Data:
-				{
-					for (; !reader.IsSectionEnd();)
-					{
-						m_verts.push_back(reader.Vector3f().w1());
-						if (m_per_item_colour)
-							m_colours.push_back(reader.Int<uint32_t>(16));
-					}
-					return true;
-				}
-				case EKeyword::PerItemColour:
-				{
-					m_per_item_colour = true;
-					return true;
-				}
-				default:
-				{
-					return
-						m_thick.ParseKeyword(reader, m_pp, kw) ||
-						m_smooth.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const&) override
-		{
-			// Validate
-			if (m_verts.size() < 2)
-				return;
-
-			// Convert the points into a spline if smooth is specified
-			if (m_smooth)
-				m_smooth.InterpolateVerts(m_verts);
-
-			// Geometry properties
-			geometry::Props props;
-			auto idx_stride = isize(m_verts) > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
-
-			// Colour interpolation iterator
-			auto col = pr::CreateLerpRepeater(m_colours.data(), isize(m_colours), isize(m_verts), Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
-
-			// Model bounding box
-			auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
-
-			// Generate the model
-			// 'm_verts' should contain line strip data
-			ModelGenerator::Cache<> cache{ isize(m_verts) + 2, isize(m_verts) + 2, 0, idx_stride };
-
-			auto v_in = m_verts.data();
-			auto vptr = cache.m_vcont.data();
-			auto iptr = cache.m_icont.begin<int>();
-			Colour32 c = Colour32White;
-			int index = 0;
-
-			// Add the back arrow head geometry (a point)
-			if (AllSet(m_type, EArrowType::Back))
-			{
-				SetPCNT(*vptr++, *v_in, pr::Colour(*col), Normalise(*v_in - *(v_in + 1)), v2{m_thick.m_width*2});
-				*iptr++ = index++;
-			}
-
-			// Add the line strip
-			for (std::size_t i = 0, iend = m_verts.size(); i != iend; ++i)
-			{
-				SetPC(*vptr++, bb(*v_in++), pr::Colour(c = cc(*col++)));
-				*iptr++ = index++;
-			}
-			
-			// Add the forward arrow head geometry (a point)
-			if (AllSet(m_type, EArrowType::Fwd))
-			{
-				--v_in;
-				SetPCNT(*vptr++, *v_in, pr::Colour(c), pr::Normalise(*v_in - *(v_in-1)), v2{m_thick.m_width*2});
-				*iptr++ = index++;
-			}
-
-			// Create the model
-			ModelDesc mdesc = ModelDesc()
-				.vbuf(cache.m_vcont)
-				.ibuf(cache.m_icont)
-				.bbox(props.m_bbox)
-				.name(obj->TypeAndName());
-			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
-
-			// Get instances of the arrow head geometry shader and the thick line shader
-			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_thick.m_width);
-			auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>();
-
-			// Create nuggets
-			Range vrange(0,0);
-			Range irange(0,0);
-			if (AllSet(m_type, EArrowType::Back))
-			{
-				vrange = Range(0, 1);
-				irange = Range(0, 1);
-				NuggetDesc nug;
-				nug.m_topo = ETopo::PointList;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
-				nug.m_shaders.push_back({ arw_shdr, ERenderStep::RenderForward });
-				obj->m_model->CreateNugget(m_pp.m_factory, nug);
-			}
-			if (true)
-			{
-				vrange = Range(vrange.m_end, vrange.m_end + m_verts.size());
-				irange = Range(irange.m_end, irange.m_end + m_verts.size());
-				NuggetDesc nug;
-				nug.m_topo = ETopo::LineStrip;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
-				if (m_thick.m_width != 0) nug.m_shaders.push_back({ thk_shdr, ERenderStep::RenderForward });
-				obj->m_model->CreateNugget(m_pp.m_factory, nug);
-			}
-			if (AllSet(m_type, EArrowType::Fwd))
-			{
-				vrange = Range(vrange.m_end, vrange.m_end + 1);
-				irange = Range(irange.m_end, irange.m_end + 1);
-				NuggetDesc nug;
-				nug.m_topo = ETopo::PointList;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
-				nug.m_shaders.push_back({ arw_shdr, ERenderStep::RenderForward });
-				obj->m_model->CreateNugget(m_pp.m_factory, nug);
-			}
-		}
-	};
-
 	// ELdrObject::CoordFrame
 	template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreator
 	{
 		creation::ThickLine m_thick;
 		float m_scale;
-		bool m_rh;
+		bool m_lh;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_thick()
 			, m_scale(1.0f)
-			, m_rh(true)
+			, m_lh(false)
 		{
 			m_verts = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
 			m_colours = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
@@ -2931,7 +2431,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::LeftHanded:
 				{
-					m_rh = false;
+					m_lh = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -2950,7 +2450,7 @@ namespace pr::rdr12::ldraw
 				for (auto& pt : m_verts)
 					pt.xyz *= m_scale;
 			}
-			if (!m_rh)
+			if (m_lh)
 			{
 				m_verts[3].xyz = -m_verts[3].xyz;
 			}
@@ -3336,7 +2836,15 @@ namespace pr::rdr12::ldraw
 				data_points->m_model = ModelGenerator::Points(m_pp.m_factory, data_verts, &opts);
 				data_points->m_model->m_name = data_points->TypeAndName();
 				data_points->m_model->DeleteNuggets();
-				m_data_points.CreateNugget(data_points.get(), m_pp);
+
+				// Add a nugget for the data points
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_data_points.m_size, m_data_points.m_depth);
+				data_points->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+					.use_shader(ERenderStep::RenderForward, shdr)
+					.tex_diffuse(creation::PointStyleTexture(m_data_points.m_style, iv2{ 256, 256 }, pp))
+					.flags(ENuggetFlag::RangesCanOverlap)
+					.tint(m_data_points.m_colour)
+				);
 
 				// Add the object to the parent
 				ApplyObjectState(data_points.get());
@@ -3423,7 +2931,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Solid:
 				{
-					m_solid = true;
+					m_solid = reader.IsSectionEnd() ? true : reader.Bool();;
 					return true;
 				}
 				case EKeyword::Facets:
@@ -3484,7 +2992,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Solid:
 				{
-					m_solid = true;
+					m_solid = reader.IsSectionEnd() ? true : reader.Bool();;
 					return true;
 				}
 				case EKeyword::Scale:
@@ -3564,7 +3072,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Solid:
 				{
-					m_solid = true;
+					m_solid = reader.IsSectionEnd() ? true : reader.Bool();;
 					return true;
 				}
 				default:
@@ -3618,12 +3126,12 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Solid:
 				{
-					m_solid = true;
+					m_solid = reader.IsSectionEnd() ? true : reader.Bool();;
 					return true;
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -3701,7 +3209,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -3776,7 +3284,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -3889,12 +3397,12 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Width:
 				{
-					m_width = reader.Real<float>();
+					m_width = reader.IsSectionEnd() ? 0.0f : reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:
@@ -6054,7 +5562,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Wireframe:
 				{
-					pp.m_result.m_wireframe = true;
+					pp.m_result.m_wireframe = reader.IsSectionEnd() ? true : reader.Bool();
 					break;
 				}
 				case EKeyword::Font:

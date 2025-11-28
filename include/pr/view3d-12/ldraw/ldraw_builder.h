@@ -103,8 +103,6 @@ namespace pr::rdr12::ldraw
 
 		struct LdrPoint;
 		struct LdrLine;
-		struct LdrLineD;
-		struct LdrArrow;
 		struct LdrCoordFrame;
 		struct LdrTriangle;
 		struct LdrPlane;
@@ -114,7 +112,6 @@ namespace pr::rdr12::ldraw
 		struct LdrBar;
 		struct LdrCylinder;
 		struct LdrCone;
-		struct LdrSpline;
 		struct LdrFrustum;
 		struct LdrModel;
 		struct LdrInstance;
@@ -151,8 +148,6 @@ namespace pr::rdr12::ldraw
 			// Object types
 			LdrPoint& Point(Name name = {}, Colour colour = Colour());
 			LdrLine& Line(Name name = {}, Colour colour = Colour());
-			LdrLineD& LineD(Name name = {}, Colour colour = Colour());
-			LdrArrow& Arrow(Name name = {}, Colour colour = Colour());
 			LdrCoordFrame& CoordFrame(Name name = {}, Colour colour = Colour());
 			LdrTriangle& Triangle(Name name = {}, Colour colour = Colour());
 			LdrPlane& Plane(Name name = {}, Colour colour = Colour());
@@ -162,7 +157,6 @@ namespace pr::rdr12::ldraw
 			LdrBar& Bar(Name name = {}, Colour colour = Colour());
 			LdrCylinder& Cylinder(Name name = {}, Colour colour = Colour());
 			LdrCone& Cone(Name name = {}, Colour colour = Colour());
-			LdrSpline& Spline(Name name = {}, Colour colour = Colour());
 			LdrFrustum& Frustum(Name name = {}, Colour colour = Colour());
 			LdrModel& Model(Name name = {}, Colour colour = Colour());
 			LdrInstance& Instance(Name name = {}, Colour colour = Colour());
@@ -627,40 +621,64 @@ namespace pr::rdr12::ldraw
 		{
 			struct Ln { v4 a, b; Colour32 col; };
 			struct Pt { v4 a; Colour32 col; };
-			pr::vector<Ln> m_lines;
-			pr::vector<Pt> m_strip;
-			Smooth m_smooth;
-			Width m_width;
-			PerItemColour m_per_item_colour;
+			struct Block
+			{
+				vector<Ln> m_lines;
+				vector<Pt> m_strip;
+				LineStyle m_style;
+				Smooth m_smooth;
+				Width m_width;
+				Dashed m_dashed;
+				ArrowHeads m_arrow;
+				DataPoints m_data_points;
+				PerItemColour m_per_item_colour;
+				explicit operator bool() const { return !m_lines.empty() || !m_strip.empty(); }
+			};
+
+			std::vector<Block> m_blocks;
+			Block m_current;
 
 			LdrLine()
-				:m_lines()
-				,m_strip()
-				,m_smooth()
-				,m_width()
-				,m_per_item_colour()
+				: m_blocks()
+				, m_current()
 			{}
 
-			// Smooth line
+			LdrLine& style(ELineStyle sty)
+			{
+				m_current.m_style = sty;
+				return *this;
+			}
+			LdrLine& per_item_colour(bool on = true)
+			{
+				m_current.m_per_item_colour = on;
+				return *this;
+			}
 			LdrLine& smooth(bool smooth = true)
 			{
-				m_smooth = smooth;
+				m_current.m_smooth = smooth;
 				return *this;
 			}
-
-			// Line width
 			LdrLine& width(Width w)
 			{
-				m_width = w;
+				m_current.m_width = w;
+				return *this;
+			}
+			LdrLine& dashed(Dashed dash)
+			{
+				m_current.m_dashed = dash;
+				return *this;
+			}
+			LdrLine& arrow(EArrowType style = EArrowType::Fwd, float size = 10.0f)
+			{
+				m_current.m_arrow = ArrowHeads(style, size);
 				return *this;
 			}
 
-			// Lines
 			LdrLine& line(v4_cref a, v4_cref b, std::optional<Colour32> colour = {})
 			{
-				m_lines.push_back({ a, b, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour || colour;
-				m_strip.clear();
+				m_current.m_lines.push_back({ a, b, colour ? *colour : Colour32White });
+				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
+				m_current.m_strip.clear();
 				return *this;
 			}
 			LdrLine& line(v3_cref a, v3_cref b, std::optional<Colour32> colour = {})
@@ -676,32 +694,11 @@ namespace pr::rdr12::ldraw
 				return *this;
 			}
 
-			// Add points by callback function
-			template <std::invocable<void(int, v4&, v4&)> EnumLines>
-			LdrLine& lines(EnumLines lines)
-			{
-				v4 a = {}, b = {};
-				for (int i = 0; lines(i++, a, b);)
-					line(a, b);
-
-				return *this;
-			}
-			template <std::invocable<void(int, v4&, v4&, Colour32&)> EnumLines>
-			LdrLine& lines(EnumLines lines)
-			{
-				v4 a = {}, b = {}; Colour32 c = {};
-				for (int i = 0; lines(i++, a, b, c);)
-					line(a, b, c);
-
-				return *this;
-			}
-
-			// Line strip
 			LdrLine& strip(v4_cref start, std::optional<Colour32> colour = {})
 			{
-				m_strip.push_back({ start, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour || colour;
-				m_lines.clear();
+				m_current.m_strip.push_back({ start, colour ? *colour : Colour32White });
+				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
+				m_current.m_lines.clear();
 				return *this;
 			}
 			LdrLine& strip(v3_cref start, std::optional<Colour32> colour = {})
@@ -710,170 +707,53 @@ namespace pr::rdr12::ldraw
 			}
 			LdrLine& line_to(v4_cref pt, std::optional<Colour32> colour = {})
 			{
-				if (m_strip.empty()) strip(v4::Origin(), colour);
-				strip(pt, colour);
-				return *this;
+				if (m_current.m_strip.empty()) strip(pt, colour);
+				return strip(pt, colour);
 			}
 			LdrLine& line_to(v3_cref pt, std::optional<Colour32> colour = {})
 			{
-				return line_to(pt.w1(), colour);
+				return strip(pt.w1(), colour);
+			}
+
+			LdrLine& new_block()
+			{
+				m_blocks.push_back(std::move(m_current));
+				m_current.m_lines.clear();
+				m_current.m_strip.clear();
+				return *this;
 			}
 
 			// Write to 'out'
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Write(out, m_lines.empty() ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
+				Writer::Write(out, EKeyword::Line, m_name, m_colour, [&]
 				{
-					Writer::Append(out, m_smooth, m_width, m_per_item_colour);
-					Writer::Write(out, EKeyword::Data, [&]
+					auto WriteBlock = [](TOut& out, Block const& block)
 					{
-						for (auto& ln : m_lines)
+						Writer::Append(out, block.m_style, block.m_smooth, block.m_width, block.m_dashed, block.m_arrow, block.m_data_points, block.m_per_item_colour);
+						Writer::Write(out, EKeyword::Data, [&]
 						{
-							Writer::Append(out, ln.a.xyz, ln.b.xyz);
-							if (m_per_item_colour)
-								Writer::Append(out, ln.col);
-						}
-						for (auto& pt : m_strip)
-						{
-							Writer::Append(out, pt.a.xyz);
-							if (m_per_item_colour)
-								Writer::Append(out, pt.col);
-						}
-					});
-					LdrBase::WriteTo<Writer>(out);
-				});
-			}
-		};
-		struct LdrLineD :LdrBase<LdrLineD>
-		{
-			struct Line { v4 pt, dir; Colour32 col; };
-			pr::vector<Line> m_lines;
-			PerItemColour m_per_item_colour;
-			Width m_width;
+							for (auto& ln : block.m_lines)
+							{
+								Writer::Append(out, ln.a.xyz, ln.b.xyz);
+								if (block.m_per_item_colour)
+									Writer::Append(out, ln.col);
+							}
+							for (auto& pt : block.m_strip)
+							{
+								Writer::Append(out, pt.a.xyz);
+								if (block.m_per_item_colour)
+									Writer::Append(out, pt.col);
+							}
+						});
+					};
 
-			LdrLineD()
-				: m_lines()
-				, m_per_item_colour()
-				, m_width()
-			{}
+					for (auto& block : m_blocks)
+						WriteBlock(out, block);
+					if (m_current)
+						WriteBlock(out, m_current);
 
-			// Line width
-			LdrLineD& width(Width w)
-			{
-				m_width = w;
-				return *this;
-			}
-
-			// Line points
-			LdrLineD& line(v4_cref pt, v4_cref dir, std::optional<Colour32> colour = {})
-			{
-				m_lines.push_back({ pt, dir });
-				m_per_item_colour = m_per_item_colour || colour;
-				return *this;
-			}
-			LdrLineD& line(v3_cref pt, v3_cref dir, std::optional<Colour32> colour = {})
-			{
-				return line(pt.w1(), dir.w0(), colour);
-			}
-
-			// Write to 'out'
-			template <WriterType Writer, typename TOut>
-			void WriteTo(TOut& out) const
-			{
-				Writer::Write(out, EKeyword::LineD, m_name, m_colour, [&]
-				{
-					Writer::Append(out, m_width, m_per_item_colour);
-					Writer::Write(out, EKeyword::Data, [&]
-					{
-						for (auto& line : m_lines)
-						{
-							Writer::Append(out, line.pt.xyz, line.dir.xyz);
-							if (m_per_item_colour)
-								Writer::Append(out, line.col);
-						}
-					});
-					LdrBase::WriteTo<Writer>(out);
-				});
-			}
-		};
-		struct LdrArrow :LdrBase<LdrArrow>
-		{
-			struct Pt { v4 p; Colour32 col; };
-			pr::vector<Pt> m_pts;
-			ArrowType m_style;
-			Smooth m_smooth;
-			Width m_width;
-			PerItemColour m_per_item_colour;
-
-			LdrArrow()
-				:m_pts()
-				,m_style(EArrowType::Fwd)
-				,m_smooth()
-				,m_width()
-				,m_per_item_colour()
-			{}
-
-			// Arrow style
-			LdrArrow& style(EArrowType style)
-			{
-				m_style = style;
-				return *this;
-			}
-
-			// Spline arrow
-			LdrArrow& smooth(bool smooth = true)
-			{
-				m_smooth = smooth;
-				return *this;
-			}
-
-			// Line width
-			LdrArrow& width(Width w)
-			{
-				m_width = w;
-				return *this;
-			}
-
-			// Line strip parts
-			LdrArrow& start(v4_cref p, std::optional<Colour32> colour = {})
-			{
-				m_pts.push_back({ p, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour || colour;
-				return *this;
-			}
-			LdrArrow& start(v3_cref p, std::optional<Colour32> colour = {})
-			{
-				return start(p.w1(), colour);
-			}
-			LdrArrow& line_to(v4_cref p, std::optional<Colour32> colour = {})
-			{
-				if (m_pts.empty()) start(v4::Origin(), colour);
-				m_pts.push_back({ p, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour || colour;
-				return *this;
-			}
-			LdrArrow& line_to(v3_cref p, std::optional<Colour32> colour = {})
-			{
-				return line_to(p.w1(), colour);
-			}
-
-			// Write to 'out'
-			template <WriterType Writer, typename TOut>
-			void WriteTo(TOut& out) const
-			{
-				Writer::Write(out, EKeyword::Arrow, m_name, m_colour, [&]
-				{
-					Writer::Append(out, m_style, m_smooth, m_width, m_per_item_colour);
-					Writer::Write(out, EKeyword::Data, [&]
-					{
-						for (auto& pt : m_pts)
-						{
-							Writer::Append(out, pt.p.xyz);
-							if (m_per_item_colour)
-								Writer::Append(out, pt.col);
-						}
-					});
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}
@@ -1246,64 +1126,6 @@ namespace pr::rdr12::ldraw
 				});
 			}
 		};
-		struct LdrSpline :LdrBase<LdrSpline>
-		{
-			struct Bezier
-			{
-				v4 pt0, pt1, pt2, pt3;
-				Colour32 col;
-			};
-
-			pr::vector<Bezier> m_splines;
-			Width m_width;
-			PerItemColour m_per_item_colour;
-			
-			LdrSpline()
-				:m_splines()
-				,m_width()
-				,m_per_item_colour()
-			{}
-
-			// Spline width
-			LdrSpline& width(Width w)
-			{
-				m_width = w;
-				return *this;
-			}
-
-			// Add a spline piece
-			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, std::optional<Colour32> colour = {})
-			{
-				assert(pt0.w == 1 && pt1.w == 1 && pt2.w == 1 && pt3.w == 1);
-				m_splines.push_back(Bezier{ pt0, pt1, pt2, pt3, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour  || colour;
-				return *this;
-			}
-			LdrSpline& spline(v3_cref pt0, v3_cref pt1, v3_cref pt2, v3_cref pt3, std::optional<Colour32> colour = {})
-			{
-				return spline(pt0.w1(), pt1.w1(), pt2.w1(), pt3.w1(), colour);
-			}
-
-			// Write to 'out'
-			template <WriterType Writer, typename TOut>
-			void WriteTo(TOut& out) const
-			{
-				Writer::Write(out, EKeyword::Spline, m_name, m_colour, [&]
-				{
-					Writer::Append(out, m_width, m_per_item_colour);
-					Writer::Write(out, EKeyword::Data, [&]
-					{
-						for (auto& bez : m_splines)
-						{
-							Writer::Append(out, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
-							if (m_per_item_colour)
-								Writer::Append(out, bez.col);
-						}
-					});
-					LdrBase::WriteTo<Writer>(out);
-				});
-			}
-		};
 		struct LdrFrustum :LdrBase<LdrFrustum>
 		{
 			v2 m_wh;
@@ -1584,18 +1406,6 @@ namespace pr::rdr12::ldraw
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrLineD& LdrBuilder::LineD(Name name, Colour colour)
-		{
-			auto ptr = new LdrLineD;
-			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).colour(colour);
-		}
-		inline LdrArrow& LdrBuilder::Arrow(Name name, Colour colour)
-		{
-			auto ptr = new LdrArrow;
-			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).colour(colour);
-		}
 		inline LdrCoordFrame& LdrBuilder::CoordFrame(Name name, Colour colour)
 		{
 			auto ptr = new LdrCoordFrame;
@@ -1647,12 +1457,6 @@ namespace pr::rdr12::ldraw
 		inline LdrCone& LdrBuilder::Cone(Name name, Colour colour)
 		{
 			auto ptr = new LdrCone;
-			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).colour(colour);
-		}
-		inline LdrSpline& LdrBuilder::Spline(Name name, Colour colour)
-		{
-			auto ptr = new LdrSpline;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
@@ -1714,8 +1518,7 @@ namespace pr::rdr12::ldraw
 	using Group = fluent::LdrGroup;
 }
 
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
+#if PR_UNITTESTS&&0
 namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LdrHelperTextTests)

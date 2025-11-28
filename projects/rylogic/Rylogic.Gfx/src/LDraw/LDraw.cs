@@ -83,10 +83,8 @@ namespace Rylogic.LDraw
 		Layers = unchecked((int)2411172191),
 		LeftHanded = unchecked((int)1992685208),
 		LightSource = unchecked((int)2597226090),
-		LineNew = unchecked((int)2239024967),
 		Line = unchecked((int)400234023),
 		LineBox = unchecked((int)3297263992),
-		LineD = unchecked((int)3504606073),
 		LineList = unchecked((int)419493935),
 		Lines = unchecked((int)3789825596),
 		LineStrip = unchecked((int)4082781759),
@@ -149,7 +147,6 @@ namespace Rylogic.LDraw
 		Source = unchecked((int)466561496),
 		Specular = unchecked((int)3195258592),
 		Sphere = unchecked((int)2950268184),
-		Spline = unchecked((int)1222691708),
 		Square = unchecked((int)3031831110),
 		Step = unchecked((int)3343129103),
 		Stretch = unchecked((int)3542801962),
@@ -199,16 +196,6 @@ namespace Rylogic.LDraw
 		// AUTO-GENERATED-COMMANDS-END
 	}
 
-	/// <summary>Arrow styles</summary>
-	[Flags]
-	public enum EArrowType : byte
-	{
-		Line = 0,
-		Fwd = 1 << 0,
-		Back = 1 << 1,
-		FwdBack = Fwd | Back,
-	}
-
 	/// <summary>Point styles</summary>
 	public enum EPointStyle : byte
 	{
@@ -217,5 +204,27 @@ namespace Rylogic.LDraw
 		Triangle,
 		Star,
 		Annulus,
+	}
+
+	/// <summary>Line styles</summary>
+	public enum ELineStyle : byte
+	{
+		LineSegments,
+		LineStrip,
+		Direction,
+		BezierSpline,
+		HermiteSpline,
+		BSplineSpline,
+		CatmullRom,
+	}
+
+	/// <summary>Arrow styles</summary>
+	[Flags]
+	public enum EArrowType : byte
+	{
+		Line = 0,
+		Fwd = 1 << 0,
+		Back = 1 << 1,
+		FwdBack = Fwd | Back,
 	}
 }

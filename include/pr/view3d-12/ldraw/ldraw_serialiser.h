@@ -46,13 +46,6 @@ namespace pr::rdr12::ldraw
 		Size2(v2 size) : m_size(size) {}
 		Size2(iv2 size) : m_size(static_cast<float>(size.x), static_cast<float>(size.y)) {}
 	};
-	struct Width
-	{
-		float m_width;
-		Width() :m_width(0) {}
-		Width(float w) :m_width(w) {}
-		Width(int w) :m_width(float(w)) {}
-	};
 	struct Scale
 	{
 		float m_scale;
@@ -74,70 +67,126 @@ namespace pr::rdr12::ldraw
 	struct PerItemColour
 	{
 		bool m_per_item_colour;
-		PerItemColour() : m_per_item_colour() {}
-		PerItemColour(bool has_colours) : m_per_item_colour(has_colours) {}
-		operator bool() const { return m_per_item_colour; }
+		bool m_is_default;
+		PerItemColour() : m_per_item_colour(), m_is_default(true) {}
+		PerItemColour(bool has_colours) : m_per_item_colour(has_colours), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_per_item_colour; }
+	};
+	struct Width
+	{
+		float m_width;
+		bool m_is_default;
+		Width() :m_width(0), m_is_default(true) {}
+		Width(float w) :m_width(w), m_is_default(false) {}
+		Width(int w) :m_width(float(w)), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_width != 0.0f; }
 	};
 	struct Depth
 	{
 		bool m_depth;
-		Depth() :m_depth(false) {}
-		Depth(bool d) : m_depth(d) {}
+		bool m_is_default;
+		Depth() :m_depth(false), m_is_default(true) {}
+		Depth(bool d) : m_depth(d), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_depth; }
 	};
 	struct Hidden
 	{
 		bool m_hide;
-		Hidden() :m_hide(false) {}
-		Hidden(bool h) :m_hide(h) {}
+		bool m_is_default;
+		Hidden() :m_hide(false), m_is_default(true) {}
+		Hidden(bool h) :m_hide(h), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_hide; }
 	};
 	struct Wireframe
 	{
 		bool m_wire;
-		Wireframe() :m_wire(false) {}
-		Wireframe(bool w) :m_wire(w) {}
+		bool m_is_default;
+		Wireframe() :m_wire(false), m_is_default(true) {}
+		Wireframe(bool w) :m_wire(w), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_wire; }
 	};
 	struct Alpha
 	{
 		bool m_has_alpha;
-		Alpha() :m_has_alpha(false) {}
-		Alpha(bool a) : m_has_alpha(a) {}
+		bool m_is_default;
+		Alpha() :m_has_alpha(false), m_is_default(true) {}
+		Alpha(bool a) : m_has_alpha(a), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_has_alpha; }
 	};
 	struct Solid
 	{
 		bool m_solid;
-		Solid() :m_solid(false) {}
-		Solid(bool s) : m_solid(s) {}
+		bool m_is_default;
+		Solid() :m_solid(false), m_is_default(true) {}
+		Solid(bool s) : m_solid(s), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_solid; }
 	};
 	struct Smooth
 	{
 		bool m_smooth;
-		Smooth() :m_smooth(false) {}
-		Smooth(bool s) : m_smooth(s) {}
+		bool m_is_default;
+		Smooth() :m_smooth(false), m_is_default(true) {}
+		Smooth(bool s) : m_smooth(s), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_smooth; }
+	};
+	struct Dashed
+	{
+		v2 m_dash;
+		bool m_is_default;
+		Dashed() : m_dash(v2::Zero()), m_is_default(true) {}
+		Dashed(v2 dash) : m_dash(dash), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_dash != v2::Zero(); }
+	};
+	struct DataPoints
+	{
+		v2 m_size;
+		Colour32 m_colour;
+		EPointStyle m_style;
+		bool m_is_default;
+		DataPoints() : m_size(v2::Zero()), m_colour(Colour32White), m_style(EPointStyle::Square), m_is_default(true) {}
+		DataPoints(v2 size, Colour32 colour, EPointStyle style) : m_size(size), m_colour(colour), m_style(style), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_size != v2::Zero() || m_colour != Colour32White || m_style != EPointStyle::Square; }
 	};
 	struct LeftHanded
 	{
 		bool m_lh;
-		LeftHanded() :m_lh(false) {}
-		LeftHanded(bool lh) : m_lh(lh) {}
+		bool m_is_default;
+		LeftHanded() :m_lh(false), m_is_default(true) {}
+		LeftHanded(bool lh) : m_lh(lh), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_lh; }
 	};
 	struct AxisId
 	{
 		pr::AxisId m_axis;
-		AxisId() : m_axis(pr::AxisId::None) {}
-		AxisId(pr::AxisId axis) : m_axis(axis) {}
-		bool IsDefault() const { return m_axis == pr::AxisId::None; }
+		bool m_is_default;
+		AxisId() : m_axis(pr::AxisId::None), m_is_default(true) {}
+		AxisId(pr::AxisId axis) : m_axis(axis), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_axis != pr::AxisId::None; }
 	};
 	struct PointStyle
 	{
 		EPointStyle m_style;
-		PointStyle() : m_style(EPointStyle::Square) {}
-		PointStyle(EPointStyle style) : m_style(style) {}
+		bool m_is_default;
+		PointStyle() : m_style(EPointStyle::Square), m_is_default(true) {}
+		PointStyle(EPointStyle style) : m_style(style), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_style != EPointStyle::Square; }
 	};
-	struct ArrowType
+	struct LineStyle
+	{
+		ELineStyle m_style;
+		bool m_is_default;
+		LineStyle() : m_style(ELineStyle::LineSegments), m_is_default(true) {}
+		LineStyle(ELineStyle style) : m_style(style), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_style != ELineStyle::LineSegments; }
+	};
+	struct ArrowHeads
 	{
 		EArrowType m_type;
-		ArrowType() : m_type(EArrowType::Fwd) {}
-		ArrowType(EArrowType type) : m_type(type) {}
+		float m_size;
+		bool m_is_default;
+		ArrowHeads() : m_type(EArrowType::Line), m_size(), m_is_default(true) {}
+		ArrowHeads(EArrowType type, float size = 10) : m_type(type), m_size(size), m_is_default(false) {}
+		explicit operator bool() const { return !m_is_default || m_type != EArrowType::Line; }
 	};
 	struct Pos
 	{

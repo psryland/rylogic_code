@@ -49,11 +49,6 @@ namespace Rylogic.LDraw.Serialiser
 		public v2 m_size = size ?? v2.Zero;
 		public static implicit operator Size2(v2? size) => new(size);
 	}
-	public class Width(float? width = null)
-	{
-		public float m_width = width ?? 0f;
-		public static implicit operator Width(float? width) => new(width);
-	}
 	public class Scale(float? scale = null)
 	{
 		public float m_scale = scale ?? 1f;
@@ -69,63 +64,191 @@ namespace Rylogic.LDraw.Serialiser
 		public v3 m_scale = scale ?? v3.One;
 		public static implicit operator Scale3(v3? scale) => new(scale);
 	}
-	public class PerItemColour(bool? pic = null)
+	public class PerItemColour
 	{
-		public bool m_per_item_colour = pic ?? false;
-		public static implicit operator PerItemColour(bool? pic) => new(pic);
-		public static implicit operator bool(PerItemColour pic) => pic.m_per_item_colour;
+		public bool m_per_item_colour = false;
+		public bool m_is_default = true;
+		public PerItemColour() { }
+		public PerItemColour(bool pic)
+		{
+			m_per_item_colour = pic;
+			m_is_default = false;
+		}
+		public static implicit operator bool(PerItemColour pic) => !pic.m_is_default || pic.m_per_item_colour;
 	}
-	public class Depth(bool? depth = null)
+	public class Width
 	{
-		public bool m_depth = depth ?? false;
-		public static implicit operator Depth(bool? depth) => new(depth);
-		public static implicit operator bool(Depth d) => d.m_depth;
+		public float m_width = 0f;
+		public bool m_is_default = true;
+		public Width() { }
+		public Width(float width)
+		{
+			m_width = width;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Width w) => !w.m_is_default || w.m_width != 0f;
 	}
-	public class Hidden(bool? hide = null)
+	public class Depth
 	{
-		public bool m_hide = hide ?? false;
-		public static implicit operator Hidden(bool? hide) => new(hide);
-		public static implicit operator bool(Hidden h) => h.m_hide;
+		public bool m_depth = false;
+		public bool m_is_default = true;
+		public Depth() { }
+		public Depth(bool depth)
+		{
+			m_depth = depth;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Depth d) => !d.m_is_default || d.m_depth;
 	}
-	public class Wireframe(bool? wire = null)
+	public class Hidden
 	{
-		public bool m_wire = wire ?? false;
-		public static implicit operator Wireframe(bool? wire) => new(wire);
-		public static implicit operator bool(Wireframe w) => w.m_wire;
+		public bool m_hide = false;
+		public bool m_is_default = true;
+		public Hidden() { }
+		public Hidden(bool hide)
+		{
+			m_hide = hide;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Hidden h) => !h.m_is_default || h.m_hide;
 	}
-	public class Alpha(bool? alpha = null)
+	public class Wireframe
 	{
-		public bool m_has_alpha = alpha ?? false;
-		public static implicit operator Alpha(bool? alpha) => new(alpha);
-		public static implicit operator bool(Alpha a) => a.m_has_alpha;
+		public bool m_wire = false;
+		public bool m_is_default = true;
+		public Wireframe() { }
+		public Wireframe(bool wire)
+		{
+			m_wire = wire;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Wireframe w) => !w.m_is_default || w.m_wire;
 	}
-	public class Solid(bool? solid = null)
+	public class Alpha
 	{
-		public bool m_solid = solid ?? false;
-		public static implicit operator Solid(bool? solid) => new(solid);
-		public static implicit operator bool(Solid s) => s.m_solid;
-	}	
-	public class Smooth(bool? smooth = null)
-	{
-		public bool m_smooth = smooth ?? false;
-		public static implicit operator Smooth(bool? smooth) => new(smooth);
-		public static implicit operator bool(Smooth s) => s.m_smooth;
+		public bool m_has_alpha = false;
+		public bool m_is_default = true;
+		public Alpha() { }
+		public Alpha(bool alpha)
+		{
+			m_has_alpha = alpha;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Alpha a) => !a.m_is_default || a.m_has_alpha;
 	}
-	public class LeftHanded(bool? lh = null)
+	public class Solid
 	{
-		public bool m_lh = lh ?? false;
-		public static implicit operator LeftHanded(bool? lh) => new(lh);
-		public static implicit operator bool(LeftHanded x) => x.m_lh;
+		public bool m_solid = false;
+		public bool m_is_default = true;
+		public Solid() { }
+		public Solid(bool solid)
+		{
+			m_solid = solid;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Solid s) => !s.m_is_default || s.m_solid;
 	}
-	public class AxisId(Maths.AxisId? axis = null)
+	public class Smooth
 	{
-		public Maths.AxisId m_axis = axis ?? EAxisId.None;
-		public static implicit operator AxisId(Maths.AxisId? axis) => new(axis);
+		public bool m_smooth = false;
+		public bool m_is_default = true;
+		public Smooth() { }
+		public Smooth(bool smooth)
+		{
+			m_smooth = smooth;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Smooth s) => !s.m_is_default || s.m_smooth;
 	}
-	public class ArrowType(EArrowType? type = null)
+	public class Dashed
 	{
-		public EArrowType m_type = type ?? EArrowType.Fwd;
-		public static implicit operator ArrowType(EArrowType? type) => new(type);
+		public v2 m_dash = v2.Zero;
+		public bool m_is_default = true;
+		public Dashed() { }
+		public Dashed(v2 dash)
+		{
+			m_dash = dash;
+			m_is_default = false;
+		}
+		public static implicit operator bool(Dashed d) => !d.m_is_default || d.m_dash != v2.Zero;
+	}
+	public class DataPoints
+	{
+		public v2 m_size = v2.Zero;
+		public Colour32 m_colour = Colour32.White;
+		public EPointStyle m_style = EPointStyle.Square;
+		public bool m_is_default = true;
+		public DataPoints() { }
+		public DataPoints(v2 size, Colour32? colour, EPointStyle? style)
+		{
+			m_size = size;
+			m_colour = colour ?? Colour32.White;
+			m_style = style ?? EPointStyle.Square;
+			m_is_default = false;
+		}
+		public static implicit operator bool(DataPoints dp) => !dp.m_is_default || dp.m_size != v2.Zero || dp.m_colour != Colour32.White || dp.m_style != EPointStyle.Square;
+	}
+	public class LeftHanded
+	{
+		public bool m_lh = false;
+		public bool m_is_default = true;
+		public LeftHanded() { }
+		public LeftHanded(bool lh)
+		{
+			m_lh = lh;
+			m_is_default = false;
+		}
+		public static implicit operator bool(LeftHanded lh) => !lh.m_is_default || lh.m_lh;
+	}
+	public class AxisId
+	{
+		public Maths.AxisId m_axis = EAxisId.None;
+		public bool m_is_default = true;
+		public AxisId() { }
+		public AxisId(Maths.AxisId axis)
+		{
+			m_axis = axis;
+			m_is_default = false;
+		}
+		public static implicit operator bool(AxisId ax) => !ax.m_is_default || ax.m_axis != EAxisId.None;
+	}
+	public class PointStyle
+	{
+		public EPointStyle m_style = EPointStyle.Square;
+		public bool m_is_default = true;
+		public PointStyle() { }
+		public PointStyle(EPointStyle style)
+		{
+			m_style = style;
+			m_is_default = false;
+		}
+		public static implicit operator bool(PointStyle ps) => !ps.m_is_default || ps.m_style != EPointStyle.Square;
+	}
+	public class LineStyle
+	{
+		public EPointStyle m_style = EPointStyle.Square;
+		public bool m_is_default = true;
+		public LineStyle() { }
+		public LineStyle(EPointStyle style)
+		{
+			m_style = style;
+			m_is_default = false;
+		}
+		public static implicit operator bool(LineStyle ls) => !ls.m_is_default || ls.m_style != EPointStyle.Square;
+	}
+	public class ArrowHeads
+	{
+		public EArrowType m_type = EArrowType.Line;
+		public float m_size = 10f;
+		public bool m_is_default = true;
+		public ArrowHeads() { }
+		public ArrowHeads(EArrowType type, float size = 10f)
+		{
+			m_type = EArrowType.Line;
+			m_size = size;
+			m_is_default = false;
+		}
+		public static implicit operator bool(ArrowHeads ah) => !ah.m_is_default || ah.m_type != EArrowType.Line || ah.m_size != 10f;
 	}
 	public class Pos(v4? pos = null)
 	{

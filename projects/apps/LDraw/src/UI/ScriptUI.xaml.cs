@@ -96,7 +96,8 @@ namespace LDraw.UI
 			m_cancel_load.Cancel();
 
 			// Remove this script UI from the model
-			Model.Scripts.Remove(this);
+			if (Model != null)
+				Model.Scripts.Remove(this);
 
 			Editor = null!;
 			Source = null!;

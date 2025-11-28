@@ -1062,7 +1062,6 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
-
 namespace pr::maths
 {
 	PRUnitTestClass(SplineTests)
@@ -1098,7 +1097,7 @@ namespace pr::maths
 		
 		void DumpToLDraw(CubicCurve3 const& curve)
 		{
-			using namespace rdr12::ldraw;
+			using namespace pr::rdr12::ldraw;
 
 			Builder builder;
 

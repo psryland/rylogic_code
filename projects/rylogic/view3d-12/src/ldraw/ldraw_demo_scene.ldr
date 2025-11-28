@@ -414,80 +414,66 @@
 //   *Dashed {on off} - Convert the line to a dashed line with dashes of length 'on' and gaps of length 'off'.
 //   For objects that support optional colours, all or none of the points/lines/segments must have colours.
 
-// A model containing an arbitrary list of line segments
 *Line lines
 {
-	// Optional. Each line segment can have a different colour
-	*PerItemColour {}
-	*Data
+	// Lines support multiple data blocks.
+	// Attributes and modifiers are processed in declaration order and apply to any following data blocks
+	*Style {LineSegments} // One of LineSegments (default), LineStrip, Direction, BezierSpline, HermiteSpline, BSplineSpline, CatmullRom
+	*Data                 // A block of start/end point pairs forming line segments
 	{
-		// {x0 y0 z0  x1 y1 z1 [colour]}. Start and end points for a line followed by optional colour
-		0 1 0 -1 10 -1 FFFF0000
-		0 1 0 -1 10  0 FF00FF00
-		0 1 0 -1 10 +1 FF0000FF
-		0 1 0  0 10 -1 FFFFFF00
-		0 1 0  0 10  0 FFFF00FF
-		0 1 0  0 10 +1 FF00FFFF
-		0 1 0 +1 10 -1 FFF00FFF
-		0 1 0 +1 10  0 FFFF00FF
-		0 1 0 +1 10 +1 FFFFF00F
+		0 0 0.0  +1 +0 0.0
+		0 0 0.1  +0 +1 0.1
+		0 0 0.2  -1 +0 0.2
+		0 0 0.3  +0 -1 0.3
 	}
-	*o2w{*pos{-15 0 -10}}
-}
 
-// A list of line segments given point and direction
-*LineD directions
-{
-	*PerItemColour {}
-	*PerItemParametrics {} // Optional. Each line segment has parametric values
+	*Style {Direction}      // Lines are given as start points and directions
+	*Arrow                  // Optional. One of Line (default), Fwd, Back, FwdBack
+	{
+		*Style {FwdBack}
+		*Colour {FFA0FFA0}
+		*Size {0.05}        // Size is in world units when depth is enabled
+		*Depth {}
+	}
+	*Width {10}             // Optional. Line width in pixels
+	*PerItemColour {true}   // Signals that the following lines include a colour-per-line. Can be {}, {true} or {false}. Defaults to true
 	*Data
 	{
-		// {x y z dx dy dz [colour]}. Start and direction for a line followed by optional colour
-		#define P  0.2 0.6 // Optional. Parametric values for each line
-		0 1 0 -1 1 -1 FFFF0000 P
-		0 1 0 -1 1  0 FF00FF00 P
-		0 1 0 -1 1 +1 FF0000FF P
-		0 1 0  0 1 -1 FFFFFF00 P
-		0 1 0  0 1  0 FFFF00FF P
-		0 1 0  0 1 +1 FF00FFFF P
-		0 1 0 +1 1 -1 FFF00FFF P
-		0 1 0 +1 1  0 FFFF00FF P
-		0 1 0 +1 1 +1 FFFFF00F P
-		#undef P
+		+1 +0 0.0  0 0 0.2  FFFFA000
+		+0 +1 0.1  0 0 0.2  FFFFA000
+		-1 +0 0.2  0 0 0.2  FFFFA000
+		+0 -1 0.3  0 0 0.2  FFFFA000
 	}
-	*Parametrics
-	{
-		// {line index, t0, t1}. Parametric values for numbered line segments
-		0 0.1 0.9
-		8 0.1 0.9
-	}
-	*o2w{*pos{-15 0 -5}}
-}
 
-// A model containing a sequence of line segments given by a list of points
-*LineStrip linestrip
-{
-	*PerItemColour {}
+	*Style {LineStrip}    // Lines are given as a sequence of points
+	*Arrow                // Optional. Arrow heads can also include an optional size
+	{
+		*Style {Fwd}
+		*Size {40}
+	}
+	*Width {10}           // Optional. Line width
+	*PerItemColour {true} // Signals that the following lines include a colour-per-line. Can be {}, {true} or {false}. Defaults to true
+	*Dashed {0.2 0.1}     // Optional. Make the line dashed. Given as {<on-length> <off-length>}
+	*Smooth {}            // Optional. Convert the line into a smooth spline. Can be {}, {true} or {false}. Defaults to true
+	*DataPoints           // Optional. Add a point sprite to each point indicating data points
+	{
+		*Size {30 30}      // Optional. The size of the data point. Disable data points by setting size to 0 or using an empty block
+		*Colour {FFFFFF00} // Optional. The colour of the data point
+		*Style {Circle}    // Optional. The shape of the data poit. One of Square (default), Circle, Triangle, Star, Annulus
+	}
 	*Data
 	{
-		// {x y z [colour]}. A vertex in the line strip followed by an optional colour
-		0 0 0 FF00FF00
-		-1 -1 1 FF0000FF
-		0 1 4 FFFF00FF
-		1 1 2 FFFFFF00
-		1 1 4 FF00FFFF
-		1 0 3 FFFFFFFF
-		0 0 5 FFFFFFFF
+		+1 +0 0.5   FF00FFFF
+		+0 +1 0.6   FF0000FF
+		-1 +0 0.7   FF00FF00
+		+0 -1 0.8   FFFF0000
 	}
-	*Parametrics
+
+	*o2w
 	{
-		// {line index, t0, t1}. Note, line count equals vertex count - 1
-		2 0.2 0.8
+		*euler {90 0 0}
+		*pos{-15 3 -5}
 	}
-	*Dashed {0.1 0.05}
-	*Width {7}
-	*Smooth {} // Optional. Turns the line segments into a smooth spline
-	*o2w{*pos{-15 1 -10}}
 }
 
 // A cuboid made from lines
@@ -505,39 +491,6 @@
 	*Data {4 5 8 10}
 	*AxisId {+2}
 	*o2w{*pos{-15 1 -10}}
-}
-
-// A curve described by a start and end point and two control points.
-*Spline spline
-{
-	*PerItemColour {}
-	*Data
-	{
-		// {p0 p1 p2 p3 [colour]} - all points are positions.
-		// Tangents infered from p1-p0, p3-p2.
-		// each spline is a separate spline segment
-		0 0 0  -1 1 0  -1 2 0  0 1.5 0 FF00FF00
-		0 0 0  +1 1 0  +1 2 0  0 1.5 0 FFFF0000
-	}
-	*Width {4} // Optional line width
-	*o2w {*pos{-15 1 0}}
-}
-
-// A line with pointy ends
-*Arrow arrow
-{
-	*Style {Fwd}      // Type of  arrow. One of Line, Fwd, Back, or FwdBack
-	*PerItemColour {} // Optional. Each line segment can have a different colour
-	*Data
-	{
-		-0.8 +0.2  0.0 FF00FF00      // Corner points forming a line strip of connected lines, followed by optional colour
-		+0.3  0.7  0.2 FFFF0000      // Note, colour blends smoothly between each vertex
-		-0.3  1.2 -0.2 FFFF0000      // Note, colour blends smoothly between each vertex
-		+1.0 +1.7  0.0 FFFFFF00
-	}
-	*Smooth {}    // Optional. Turns the line segments into a smooth spline
-	*Width { 10 } // Optional line width and arrow head size
-	*o2w {*pos{-15 1 0}}
 }
 
 // A set of basis vectors
@@ -1131,7 +1084,8 @@
 		*YAxis {"abs(C2 - C1)"}  // Expression for the Y values
 		*Width {7}               // Optional. A width for the lines
 		*Dashed {0.1 0.1}        // Optional. Dashed line pattern
-		*DataPoints {
+		*DataPoints
+		{
 			*Size {30}          // Optional. The size of data points on the graph
 			*Colour {FFFF00FF}  // Optional. The colour of the data points
 			*Style {Circle}     // Optional. Data point marker shape

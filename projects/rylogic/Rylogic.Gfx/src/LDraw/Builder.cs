@@ -59,18 +59,6 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrLineD LineD(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
-		{
-			var child = new LdrLineD();
-			m_objects.Add(child);
-			return child.name(name ?? new()).colour(colour ?? new());
-		}
-		public LdrArrow Arrow(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
-		{
-			var child = new LdrArrow();
-			m_objects.Add(child);
-			return child.name(name ?? new()).colour(colour ?? new());
-		}
 		public LdrCoordFrame CoordFrame(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCoordFrame();
@@ -122,12 +110,6 @@ namespace Rylogic.LDraw
 		public LdrCone Cone(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCone();
-			m_objects.Add(child);
-			return child.name(name ?? new()).colour(colour ?? new());
-		}
-		public LdrSpline Spline(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
-		{
-			var child = new LdrSpline();
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
@@ -385,28 +367,28 @@ namespace Rylogic.LDraw
 		/// <summary>Wire frame</summary>
 		public TDerived wireframe(bool w = true)
 		{
-			m_wire = w;
+			m_wire = new(w);
 			return (TDerived)this;
 		}
 
 		/// <summary>Axis Id</summary>
 		public TDerived axis(AxisId axis_id)
 		{
-			m_axis_id = axis_id;
+			m_axis_id = new(axis_id);
 			return (TDerived)this;
 		}
 
 		/// <summary>Solid</summary>
 		public TDerived solid(bool solid = true)
 		{
-			m_solid = solid;
+			m_solid = new(solid);
 			return (TDerived)this;
 		}
 
 		/// <summary>Solid</summary>
 		public TDerived hide(bool hidden = true)
 		{
-			m_hidden = hidden;
+			m_hidden = new(hidden);
 			return (TDerived)this;
 		}
 
@@ -544,7 +526,7 @@ namespace Rylogic.LDraw
 		public LdrPoint pt(v4 point, Colour32? colour = null)
 		{
 			m_points.Add(new Pt { pt = point, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
+			m_per_item_colour = new(m_per_item_colour || colour != null);
 			return this;
 		}
 		public LdrPoint pt(v3 point, Colour32? colour = null)
@@ -567,7 +549,7 @@ namespace Rylogic.LDraw
 		// Points have depth
 		public LdrPoint depth(bool d = true)
 		{
-			m_depth = d;
+			m_depth = new(d);
 			return this;
 		}
 
@@ -602,34 +584,60 @@ namespace Rylogic.LDraw
 	{
 		private class Pt { public v4 a; public Colour32 col; };
 		private class Ln { public v4 a, b; public Colour32 col; };
-		private readonly List<Ln> m_lines = [];
-		private readonly List<Pt> m_strip = [];
-		private Serialiser.Smooth m_smooth = new();
-		private Serialiser.Width m_width = new();
-		private Serialiser.PerItemColour m_per_item_colour = new();
-
-		public delegate bool EnumLines(int i, out v4 a, out v4 b, out Colour32? c);
-
-		// Smooth line
-		public LdrLine smooth(bool smooth = true)
+		private class Block
 		{
-			m_smooth = smooth;
-			return this;
+			public ELineStyle m_style = ELineStyle.LineSegments;
+			public readonly List<Ln> m_lines = [];
+			public readonly List<Pt> m_strip = [];
+			public Serialiser.Smooth m_smooth = new();
+			public Serialiser.Width m_width = new();
+			public Serialiser.Dashed m_dashed = new();
+			public Serialiser.ArrowHeads m_arrow = new();
+			public Serialiser.DataPoints m_data_points = new();
+			public Serialiser.PerItemColour m_per_item_colour = new();
+			public static implicit operator bool(Block? b) => b != null && (b.m_lines.Count > 0 || b.m_strip.Count > 0);
 		}
 
-		// Line width
+		private readonly List<Block> m_blocks = [];
+		private Block m_current = new();
+
+		public LdrLine style(ELineStyle sty)
+		{
+			m_current.m_style = sty;
+			return this;
+		}
+		public LdrLine per_item_colour(bool on = true)
+		{
+			m_current.m_per_item_colour = new(on);
+			return this;
+		}
+		public LdrLine smooth(bool smooth = true)
+		{
+			m_current.m_smooth = new(smooth);
+			return this;
+		}
 		public LdrLine width(Serialiser.Width w)
 		{
-			m_width = w;
+			m_current.m_width = w;
+			return this;
+		}
+		public LdrLine dashed(v2 dash)
+		{
+			m_current.m_dashed = new Serialiser.Dashed(dash);
+			return this;
+		}
+		public LdrLine arrow(EArrowType style = EArrowType.Fwd, float size = 10f)
+		{
+			m_current.m_arrow = new Serialiser.ArrowHeads(style, size);
 			return this;
 		}
 
 		// Lines
 		public LdrLine line(v4 a, v4 b, Colour32? colour = null)
 		{
-			m_lines.Add(new Ln{ a = a, b = b, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			m_strip.Clear();
+			m_current.m_lines.Add(new Ln{ a = a, b = b, col = colour ?? Colour32.White });
+			m_current.m_per_item_colour = new(m_current.m_per_item_colour || colour != null);
+			m_current.m_strip.Clear();
 			return this;
 		}
 		public LdrLine line(v3 a, v3 b, Colour32? colour = null)
@@ -645,172 +653,65 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
-		// Add points by callback function
-		public LdrLine lines(EnumLines lines)
-		{
-			for (var i = 0; lines(i++, out var a, out var b, out var c);)
-				line(a, b);
-
-			return this;
-		}
-
 		// Line strip
 		public LdrLine strip(v4 start, Colour32? colour = null)
 		{
-			m_strip.Add(new Pt { a = start, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			m_lines.Clear();
+			m_current.m_strip.Add(new Pt { a = start, col = colour ?? Colour32.White });
+			m_current.m_per_item_colour = new(m_current.m_per_item_colour || colour != null);
+			m_current.m_lines.Clear();
 			return this;
+		}
+		public LdrLine strip(v3 start, Colour32? colour = null)
+		{
+			return strip(start.w1, colour);
 		}
 		public LdrLine line_to(v4 pt, Colour32? colour = null)
 		{
-			if (m_strip.Count == 0) strip(v4.Origin, colour);
-			strip(pt, colour);
-			return this;
+			if (m_current.m_strip.Count == 0) strip(pt, colour);
+			return strip(pt, colour);
 		}
 		public LdrLine line_to(v3 pt, Colour32? colour = null)
 		{
 			return line_to(pt.w1, colour);
 		}
 
-		/// <inheritdoc/>
-		public override void WriteTo(IWriter res)
+		public LdrLine new_block()
 		{
-			res.Write(m_lines.Count == 0 ? EKeyword.LineStrip : EKeyword.Line, m_name, m_colour, () =>
-			{
-				res.Append(m_smooth, m_width, m_per_item_colour);
-				res.Write(EKeyword.Data, () =>
-				{
-					foreach (var line in m_lines)
-					{
-						res.Append(line.a.xyz, line.b.xyz);
-						if (m_per_item_colour)
-							res.Append(line.col);
-					}
-					foreach (var pt in m_strip)
-					{
-						res.Append(pt.a.xyz);
-						if (m_per_item_colour)
-							res.Append(pt.col);
-					}
-				});
-				base.WriteTo(res);
-			});
-		}
-	}
-	public class LdrLineD : LdrBase<LdrLineD>
-	{
-		private struct Ln { public v4 pt, dir; public Colour32 col; };
-		private readonly List<Ln> m_lines = [];
-		private Serialiser.PerItemColour m_per_item_colour = new();
-		private Serialiser.Width m_width = new();
-
-		// Line width
-		public LdrLineD width(Serialiser.Width w)
-		{
-			m_width = w;
+			m_blocks.Add(m_current);
+			m_current = new();
 			return this;
-		}
-
-		// Line points
-		public LdrLineD line(v4 pt, v4 dir, Colour32? colour = null)
-		{
-			m_lines.Add(new Ln{ pt = pt, dir = dir, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			return this;
-		}
-		public LdrLineD line(v3 pt, v3 dir, Colour32? colour = null)
-		{
-			return line(pt.w1, dir.w0, colour);
 		}
 
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
-			res.Write(EKeyword.LineD, m_name, m_colour, () =>
+			res.Write(EKeyword.Line, m_name, m_colour, () =>
 			{
-				res.Append(m_width, m_per_item_colour);
-				res.Write(EKeyword.Data, () =>
+				void WriteBlock(Block block)
 				{
-					foreach (var line in m_lines)
+					res.Append(block.m_style, block.m_smooth, block.m_width, block.m_dashed, block.m_arrow, block.m_data_points, block.m_per_item_colour);
+					res.Write(EKeyword.Data, () =>
 					{
-						res.Append(line.pt.xyz, line.dir.xyz);
-						if (m_per_item_colour)
-							res.Append(line.col);
-					}
-				});
-				base.WriteTo(res);
-			});
-		}
-	}
-	public class LdrArrow: LdrBase<LdrArrow>
-	{
-		private struct Pt { public v4 pt; public Colour32 col; };
-		private readonly List<Pt> m_pts = [];
-		private Serialiser.ArrowType m_style = EArrowType.Fwd;
-		private Serialiser.PerItemColour m_per_item_colour = new();
-		private Serialiser.Width m_width = new();
-		private Serialiser.Smooth m_smooth = new();
+						foreach (var line in block.m_lines)
+						{
+							res.Append(line.a.xyz, line.b.xyz);
+							if (block.m_per_item_colour)
+								res.Append(line.col);
+						}
+						foreach (var pt in block.m_strip)
+						{
+							res.Append(pt.a.xyz);
+							if (block.m_per_item_colour)
+								res.Append(pt.col);
+						}
+					});
+				}
 
-		// Arrow style
-		public LdrArrow style(EArrowType style)
-		{
-			m_style = style;
-			return this;
-		}
+				foreach (var block in m_blocks)
+					WriteBlock(block);
+				if (m_current)
+					WriteBlock(m_current);
 
-		// Spline arrow
-		public LdrArrow smooth(bool smooth = true)
-		{
-			m_smooth = smooth;
-			return this;
-		}
-
-		// Line width
-		public LdrArrow width(Serialiser.Width w)
-		{
-			m_width = w;
-			return this;
-		}
-
-		// Line strip parts
-		public LdrArrow start(v4 p, Colour32? colour = null)
-		{
-			m_pts.Add(new Pt { pt = p, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			return this;
-		}
-		public LdrArrow start(v3 p, Colour32? colour = null)
-		{
-			return start(p.w1, colour);
-		}
-		public LdrArrow line_to(v4 p, Colour32? colour = null)
-		{
-			if (m_pts.Count == 0) start(v4.Origin, colour);
-			m_pts.Add(new Pt { pt = p, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			return this;
-		}
-		public LdrArrow line_to(v3 p, Colour32? colour = null)
-		{
-			return line_to(p.w1, colour);
-		}
-
-		/// <inheritdoc/>
-		public override void WriteTo(IWriter res)
-		{
-			res.Write(EKeyword.Arrow, m_name, m_colour, () =>
-			{
-				res.Append(m_style, m_smooth, m_width, m_per_item_colour);
-				res.Write(EKeyword.Data, () =>
-				{
-					foreach (var pt in m_pts)
-					{
-						res.Append(pt.pt.xyz);
-						if (m_per_item_colour)
-							res.Append(pt.col);
-					}
-				});
 				base.WriteTo(res);
 			});
 		}
@@ -830,7 +731,7 @@ namespace Rylogic.LDraw
 		// Left handed axis
 		public LdrCoordFrame left_handed(bool lh = true)
 		{
-			m_lh = lh;
+			m_lh = new(lh);
 			return this;
 		}
 
@@ -853,7 +754,7 @@ namespace Rylogic.LDraw
 		public LdrTriangle tri(v4 a, v4 b, v4 c, Colour32? colour = null)
 		{
 			m_tris.Add(new Tri{ a = a, b = b, c = c, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
+			m_per_item_colour = new(m_per_item_colour || colour != null);
 			return this;
 		}
 		public LdrTriangle tris(Span<v4> verts, Span<int> faces)
@@ -1126,57 +1027,6 @@ namespace Rylogic.LDraw
 			{
 				res.Write(EKeyword.Data, m_angle, m_distance.x, m_distance.y);
 				res.Append(m_scale);
-				base.WriteTo(res);
-			});
-		}
-	}
-	public class LdrSpline : LdrBase<LdrSpline>
-	{
-		private struct Bezier
-		{
-			public v4 pt0, pt1, pt2, pt3;
-			public Colour32 col;
-		};
-
-		private readonly List<Bezier> m_splines = [];
-		private Serialiser.Width m_width = new();
-		private Serialiser.PerItemColour m_per_item_colour = new();
-			
-		// Spline width
-		public LdrSpline width(Serialiser.Width w)
-		{
-			m_width = w;
-			return this;
-		}
-
-		// Add a spline piece
-		public LdrSpline spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Colour32? colour = null)
-		{
-			Debug.Assert(pt0.w == 1 && pt1.w == 1 && pt2.w == 1 && pt3.w == 1);
-			m_splines.Add(new Bezier{ pt0 = pt0, pt1 = pt1, pt2 = pt2, pt3 = pt3, col = colour ?? Colour32.White });
-			m_per_item_colour |= colour != null;
-			return this;
-		}
-		public LdrSpline spline(v3 pt0, v3 pt1, v3 pt2, v3 pt3, Colour32? colour = null)
-		{
-			return spline(pt0.w1, pt1.w1, pt2.w1, pt3.w1, colour);
-		}
-
-		/// <inheritdoc/>
-		public override void WriteTo(IWriter res)
-		{
-			res.Write(EKeyword.Spline, m_name, m_colour, () =>
-			{
-				res.Append(m_width, m_per_item_colour);
-				res.Write(EKeyword.Data, () =>
-				{
-					foreach (var bez in m_splines)
-					{
-						res.Append(bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
-						if (m_per_item_colour)
-							res.Append(bez.col);
-					}
-				});
 				base.WriteTo(res);
 			});
 		}
@@ -2161,7 +2011,7 @@ namespace Rylogic.UnitTests
 		public void TestArrow()
 		{
 			var builder = new LDraw.Builder();
-			builder.Arrow("a", 0xFF00FF00).start(v4.Origin).line_to(v4.ZAxis.w1);
+			builder.Line("a", 0xFF00FF00).arrow(LDraw.EArrowType.Fwd).strip(v4.Origin).line_to(v4.ZAxis.w1);
 			//builder.Save("E://Dump//arrow.bdr", LDraw.ESaveFlags.Binary);
 			var mem = builder.ToBinary().ToArray();
 		}

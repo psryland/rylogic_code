@@ -191,6 +191,7 @@ namespace pr::rdr12
 		NuggetDesc& tint(Colour32 tint)
 		{
 			m_tint = tint;
+			alpha_tint(HasAlpha(tint));
 			return *this;
 		}
 

@@ -305,7 +305,6 @@ namespace pr::unittests
 
 			int passed = 0, failed = 0;
 			auto T0 = high_resolution_clock::now();
-			std::mutex m;
 
 			// Run the tests
 			for (auto const& test : TestFramework::Tests)
@@ -314,10 +313,9 @@ namespace pr::unittests
 				{
 					if (wordy)
 					{
-						std::lock_guard<std::mutex> lock(m);
+						auto name_width = 80;
 						auto test_name = std::format("{}.{}", test.m_class->name() + 7, test.m_name);
-						auto dots = std::string(60 - std::min<size_t>(60, test_name.size()), '.');
-						TestFramework::out() << std::format("{}{}", test_name, dots);
+						TestFramework::out() << std::format("{:.<{}}", test_name, name_width);
 					}
 
 					TestFramework::TestCount = 0;
@@ -327,16 +325,12 @@ namespace pr::unittests
 					test.m_func();
 					auto t1 = high_resolution_clock::now();
 
-					{
-						std::lock_guard<std::mutex> lock(m);
-						++passed;
-						if (wordy)
-							TestFramework::out() << std::format("success. ({:10} tests in {:10.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1 - t0).count());
-					}
+					++passed;
+					if (wordy)
+						TestFramework::out() << std::format("success. ({:8} tests in {:4.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1 - t0).count());
 				}
 				catch (std::exception const& e)
 				{
-					std::lock_guard<std::mutex> lock(m);
 					TestFramework::out() << std::format("{}\n   {}({}): {} failed\n", e.what(), test.m_file, test.m_line, test.m_class->name());
 					++failed;
 				}
