@@ -66,30 +66,28 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The size of each step per second. Set to 0 for real time</summary>
 		public double StepSize
 		{
-			get => m_step_size;
+			get;
 			set
 			{
 				if (StepSize == value) return;
-				m_step_size = value;
+				field = value;
 				if (Animating) Play.Execute();
 				NotifyPropertyChanged(nameof(StepSize));
 			}
-		}
-		private double m_step_size;
+		} = 0;
 
 		/// <summary>The assumed frame rate of all animation</summary>
 		public double FrameRate
 		{
-			get => m_frame_rate;
+			get;
 			set
 			{
 				if (FrameRate == value) return;
-				m_frame_rate = value;
+				field = value;
 				NotifyPropertyChanged(nameof(FrameRate));
 				NotifyPropertyChanged(nameof(Frame));
 			}
-		}
-		private double m_frame_rate = 24.0;
+		} = 24.0;
 
 		/// <summary>True if the animation is running</summary>
 		public bool Animating => ViewWindow?.Animating ?? false;
@@ -97,28 +95,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>If true, animations play relative to their start frame</summary>
 		public bool RelativeTime
 		{
-			get => m_relative_time;
+			get;
 			set
 			{
 				if (RelativeTime == value) return;
-				m_relative_time = value;
+				field = value;
 				NotifyPropertyChanged(nameof(RelativeTime));
 			}
 		}
-		private bool m_relative_time;
 
 		/// <summary>The start frame</summary>
 		public int Frame0
 		{
-			get => m_frame0;
+			get;
 			set
 			{
 				if (Frame0 == value) return;
-				m_frame0 = value;
+				field = value;
 				NotifyPropertyChanged(nameof(Frame0));
 			}
-		}
-		private int m_frame0 = 0;
+		} = 0;
 
 		/// <summary>The current frame</summary>
 		public int Frame
@@ -134,15 +130,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The end frame</summary>
 		public int FrameN
 		{
-			get => m_frameN;
+			get;
 			set
 			{
 				if (FrameN == value) return;
-				m_frameN = value;
+				field = value;
 				NotifyPropertyChanged(nameof(FrameN));
 			}
-		}
-		private int m_frameN = 100;
+		} = 100;
 
 		/// <summary>Reset the anim clock to 0</summary>
 		public Command Reset { get; }

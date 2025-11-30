@@ -35,6 +35,7 @@ namespace Rylogic.Gui.WPF
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
 			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
 			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
+			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
 
 			// Camera Menu
@@ -48,7 +49,6 @@ namespace Rylogic.Gui.WPF
 			// Renderering Menu
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
-			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
 
 			// Diagnostics
@@ -137,11 +137,11 @@ namespace Rylogic.Gui.WPF
 		/// <inheritdoc/>
 		public View3d.ESceneBounds AutoRangeBounds
 		{
-			get => m_AutoRangeBounds;
+			get;
 			set
 			{
-				if (m_AutoRangeBounds == value) return;
-				m_AutoRangeBounds = value;
+				if (AutoRangeBounds == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(AutoRangeBounds));
 			}
 		}
@@ -152,7 +152,6 @@ namespace Rylogic.Gui.WPF
 			Camera.ResetView(Window.SceneBounds(bounds));
 			Invalidate();
 		}
-		private View3d.ESceneBounds m_AutoRangeBounds;
 
 		/// <inheritdoc/>
 		public bool Orthographic
@@ -175,37 +174,35 @@ namespace Rylogic.Gui.WPF
 		/// <inheritdoc/>
 		public EAlignDirection AlignDirection
 		{
-			get => m_align_direction;
+			get;
 			set
 			{
 				if (AlignDirection == value) return;
-				m_align_direction = value;
-				Camera.AlignAxis = AlignDirection_.ToAxis(m_align_direction);
+				field = value;
+				Camera.AlignAxis = AlignDirection_.ToAxis(field);
 				NotifyPropertyChanged(nameof(AlignDirection));
 				Invalidate();
 			}
 		}
-		private EAlignDirection m_align_direction;
 
 		/// <inheritdoc/>
 		public EViewPreset ViewPreset
 		{
-			get => m_view_preset;
+			get;
 			set
 			{
 				if (ViewPreset == value) return;
-				m_view_preset = value;
-				if (m_view_preset != EViewPreset.Current)
+				field = value;
+				if (field != EViewPreset.Current)
 				{
 					var pos = Camera.FocusPoint;
-					Camera.ResetView(ViewPreset_.ToForward(m_view_preset));
+					Camera.ResetView(ViewPreset_.ToForward(field));
 					Camera.FocusPoint = pos;
 					Invalidate();
 				}
 				NotifyPropertyChanged(nameof(ViewPreset));
 			}
 		}
-		private EViewPreset m_view_preset;
 
 		/// <inheritdoc/>
 		public ICollectionView SavedViews { get; private set; } = new ListCollectionView(new ObservableCollection<SavedView>());

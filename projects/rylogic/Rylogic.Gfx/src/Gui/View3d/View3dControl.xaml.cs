@@ -50,6 +50,7 @@ namespace Rylogic.Gui.WPF
 				// Set defaults
 				BackgroundColour = Window.BackgroundColour;
 				DesiredPixelAspect = 1;
+				ResolutionScale = 1;
 				ClickTimeMS = 180;
 				MouseNavigation = true;
 				DefaultKeyboardShortcuts = true;
@@ -118,34 +119,33 @@ namespace Rylogic.Gui.WPF
 		/// <summary>View3d context reference</summary>
 		public View3d View3d
 		{
-			get => m_view3d;
+			get;
 			private set
 			{
-				if (m_view3d == value) return;
-				Util.Dispose(ref m_view3d!);
-				m_view3d = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d m_view3d = null!;
+		} = null!;
 
 		/// <summary>View3d window instance</summary>
 		public View3d.Window Window
 		{
-			get => m_window;
+			get;
 			private set
 			{
-				if (m_window == value) return;
-				if (m_window != null)
+				if (Window == value) return;
+				if (field != null)
 				{
-					m_window.OnInvalidated -= HandleInvalidated;
-					m_window.OnSettingsChanged -= HandleSettingsChanged;
-					Util.Dispose(ref m_window!);
+					field.OnInvalidated -= HandleInvalidated;
+					field.OnSettingsChanged -= HandleSettingsChanged;
+					Util.Dispose(ref field!);
 				}
-				m_window = value;
-				if (m_window != null)
+				field = value;
+				if (field != null)
 				{
-					m_window.OnSettingsChanged += HandleSettingsChanged;
-					m_window.OnInvalidated += HandleInvalidated;
+					field.OnSettingsChanged += HandleSettingsChanged;
+					field.OnInvalidated += HandleInvalidated;
 				
 					// We might have missed the first invalidate message
 					m_render_pending = true;
@@ -216,8 +216,7 @@ namespace Rylogic.Gui.WPF
 					InvalidateVisual();
 				}
 			}
-		}
-		private View3d.Window m_window = null!;
+		} = null!;
 
 		/// <summary>The camera used to view the scene</summary>
 		public View3d.Camera Camera => Window.Camera;
@@ -228,23 +227,23 @@ namespace Rylogic.Gui.WPF
 		/// <summary>An interop object providing an off-screen render target</summary>
 		private Gfx.D3DImage D3DImage
 		{
-			get => m_d3d_image;
+			get;
 			set
 			{
-				if (m_d3d_image == value) return;
-				if (m_d3d_image != null)
+				if (D3DImage == value) return;
+				if (field != null)
 				{
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
-					m_d3d_image.FrontBufferChanged -= HandleFrontBufferChanged;
-					Util.Dispose(ref m_d3d_image!);
+					field.FrontBufferChanged -= HandleFrontBufferChanged;
+					Util.Dispose(ref field!);
 				}
-				m_d3d_image = value;
-				if (m_d3d_image != null)
+				field = value;
+				if (field != null)
 				{
-					Loaded += OnLoaded;
+					field.FrontBufferChanged += HandleFrontBufferChanged;
 					Unloaded += OnUnloaded;
-					m_d3d_image.FrontBufferChanged += HandleFrontBufferChanged;
+					Loaded += OnLoaded;
 				}
 
 				void OnLoaded(object? sender, EventArgs arg)
@@ -261,10 +260,10 @@ namespace Rylogic.Gui.WPF
 				}
 				void HandleFrontBufferChanged(object? sender, EventArgs arg)
 				{
-					if (m_d3d_image.FrontBuffer != null)
+					if (field.FrontBuffer != null)
 					{
-						var bb_size = m_d3d_image.RequiredBackBufferSize;
-						Window.CustomSwapChain([m_d3d_image.FrontBuffer]); // This updates the MSAA buffer too
+						var bb_size = field.RequiredBackBufferSize;
+						Window.CustomSwapChain([field.FrontBuffer]); // This updates the MSAA buffer too
 					}
 					else
 					{
@@ -274,8 +273,7 @@ namespace Rylogic.Gui.WPF
 					OnRenderTargetChanged();
 				}
 			}
-		}
-		private Gfx.D3DImage m_d3d_image = null!;
+		} = null!;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
 		public void Invalidate()
@@ -303,32 +301,31 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
 		public int ClickTimeMS
 		{
-			get => m_click_time_ms;
+			get;
 			set
 			{
-				if (m_click_time_ms == value) return;
-				m_click_time_ms = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(ClickTimeMS));
 			}
 		}
-		private int m_click_time_ms;
 
 		/// <summary>Enable/Disable default keyboard shortcuts</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get => m_default_keyshortcuts;
+			get;
 			set
 			{
 				if (DefaultKeyboardShortcuts == value)
 					return;
 
-				if (m_default_keyshortcuts)
+				if (field)
 				{
 					KeyDown -= HandleKeyDown;
 					PreviewKeyDown -= HandlePreviewKeyDown;
 				}
-				m_default_keyshortcuts = value;
-				if (m_default_keyshortcuts)
+				field = value;
+				if (field)
 				{
 					KeyDown += HandleKeyDown;
 					PreviewKeyDown += HandlePreviewKeyDown;
@@ -346,26 +343,25 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private bool m_default_keyshortcuts;
 
 		/// <summary>Hook up mouse navigation</summary>
 		public bool MouseNavigation
 		{
-			get => m_mouse_navigation;
+			get;
 			set
 			{
 				if (MouseNavigation == value)
 					return;
 
-				if (m_mouse_navigation)
+				if (field)
 				{
 					MouseDown -= OnMouseDown;
 					MouseUp -= OnMouseUp;
 					MouseMove -= OnMouseMove;
 					MouseWheel -= OnMouseWheel;
 				}
-				m_mouse_navigation = value;
-				if (m_mouse_navigation)
+				field = value;
+				if (field)
 				{
 					MouseWheel += OnMouseWheel;
 					MouseMove += OnMouseMove;
@@ -376,26 +372,27 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(MouseNavigation));
 			}
 		}
-		private bool m_mouse_navigation;
 
 		/// <summary>The desired aspect ratio of pixels in the view</summary>
 		public double DesiredPixelAspect
 		{
-			get => m_desired_pixel_aspect;
+			get;
 			set
 			{
-				if (DesiredPixelAspect == value) return;
+				if (DesiredPixelAspect == value)
+					return;
+
 				if (double.IsNaN(value))
 					throw new ArgumentException("The desired pixel aspect cannot be NaN");
 				if (double.IsInfinity(value))
 					throw new ArgumentException("The desired pixel aspect cannot be infinite");
 				if (value == 0)
 					throw new ArgumentException("The desired pixel aspect cannot be 0");
-				m_desired_pixel_aspect = value;
+
+				field = value;
 				NotifyPropertyChanged(nameof(DesiredPixelAspect));
 			}
 		}
-		private double m_desired_pixel_aspect = 1.0;
 
 		/// <summary>The current pixel aspect ratio</summary>
 		public double ActualPixelAspect
@@ -420,17 +417,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The ratio of the back buffer resolution to the window resolution</summary>
 		public double ResolutionScale
 		{
-			get => m_resolution_scale;
+			get;
 			set
 			{
-				if (m_resolution_scale == value) return;
-				m_resolution_scale = value;
+				if (ResolutionScale == value)
+					return;
+
+				field = value;
 				m_resized = true;
 				Invalidate();
 				NotifyPropertyChanged(nameof(ResolutionScale));
 			}
 		}
-		private double m_resolution_scale = 1.0;
 
 		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -526,7 +524,7 @@ namespace Rylogic.Gui.WPF
 			using var render_pending = Scope.Create(null, () => m_render_pending = false);
 
 			// Ignore renders until we have a non-zero size, and the D3DImage has a render target
-			if (RenderSize == Size.Empty || D3DImage.FrontBuffer == null || !D3DImage.IsFrontBufferAvailable)
+			if (!IsVisible || RenderSize == Size.Empty || D3DImage.FrontBuffer == null || !D3DImage.IsFrontBufferAvailable)
 			{
 				// 'Validate' the window so that future Invalidate() calls trigger the call back.
 				Window?.Validate();

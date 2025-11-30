@@ -496,6 +496,7 @@
 			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
 			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
 			<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
+			<StaticResource ResourceKey="View3dMenuItem_Animation"/>
 			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 		</MenuItem>
 		<MenuItem Header="Camera">
@@ -511,7 +512,6 @@
 			<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
-			<StaticResource ResourceKey="View3dMenuItem_Animation"/>
 			<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
 		</MenuItem>
 		<MenuItem Header="Diagnostics">

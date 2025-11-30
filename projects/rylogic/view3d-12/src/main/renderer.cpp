@@ -36,8 +36,16 @@ namespace pr::rdr12
 				rdr.RunTasks();
 				break;
 			}
-			case WM_TIMER:
+			case WM_PollTasks:
 			{
+				// Ensure mouse events are processed at a higher priority
+				MSG msg;
+				if (PeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_NOREMOVE))
+				{
+					PostMessageW(hwnd, WM_PollTasks, wparam, lparam);
+					return 0;
+				}
+
 				auto& rdr = *reinterpret_cast<Renderer*>(wparam);
 				rdr.Poll();
 				break;
@@ -254,6 +262,7 @@ namespace pr::rdr12
 		,m_last_task()
 		,m_poll_callbacks()
 		,m_dummy_hwnd()
+		,m_poll_timer()
 		,m_id32_src()
 		,m_res_store(rdr())
 	{
@@ -435,7 +444,7 @@ namespace pr::rdr12
 	{
 		AssertMainThread();
 		m_poll_callbacks.push_back({ cb, period_ms, {} });
-		if (m_poll_callbacks.size() == 1)
+		if (m_poll_timer == nullptr)
 			Poll(); // Start the timer 
 	}
 	void Renderer::RemovePollCB(pr::StaticCB<void> cb)
@@ -447,12 +456,31 @@ namespace pr::rdr12
 	// Call all registered poll event callbacks
 	void Renderer::Poll()
 	{
+		AssertMainThread();
 		for (auto& cb : m_poll_callbacks)
 			cb();
 
 		// Keep polling while 'm_poll_callbacks' is not empty
-		if (!m_poll_callbacks.empty() && m_dummy_hwnd != nullptr)
-			::SetTimer(m_dummy_hwnd, UINT_PTR(this), 0, nullptr);
+		if (m_poll_callbacks.empty() || m_dummy_hwnd == nullptr)
+		{
+			m_poll_timer = nullptr;
+			return;
+		}
+
+		// Create the poll timer if not already created
+		if (m_poll_timer == nullptr)
+		{
+			auto PollTimerCallback = [](PVOID lpParameter, BOOLEAN)
+			{
+				auto& me = *static_cast<Renderer*>(lpParameter);
+				::PostMessageW(me.m_dummy_hwnd, WM_PollTasks, WPARAM(&me), LPARAM());
+			};
+			
+			HANDLE timer = nullptr;
+			constexpr int interval = 1000 / 30;
+			CreateTimerQueueTimer(&timer, nullptr, PollTimerCallback, this, interval, interval, WT_EXECUTEINTIMERTHREAD);
+			m_poll_timer = TimerHandle(timer, [](HANDLE h) { (void)DeleteTimerQueueTimer(nullptr, h, nullptr); });
+		}
 	}
 
 	// Check the current thread is the main thread

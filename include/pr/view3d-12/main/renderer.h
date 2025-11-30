@@ -12,8 +12,9 @@
 
 namespace pr::rdr12
 {
-	// Registered windows message for BeginInvoke
+	// Registered windows message for BeginInvoke/Tasks
 	inline static constexpr UINT WM_BeginInvoke = WM_USER + 0x1976;
+	inline static constexpr UINT WM_PollTasks = WM_BeginInvoke + 1;
 
 	// Render main object
 	struct Renderer
@@ -42,6 +43,7 @@ namespace pr::rdr12
 		using TaskQueue = std::vector<std::future<void>>;
 		using PollCBList = std::vector<PollCallback>;
 		using AllocationsTracker = AllocationsTracker<void>;
+		using TimerHandle = std::shared_ptr<void>;
 
 		// Renderer state
 		struct RdrState
@@ -71,6 +73,7 @@ namespace pr::rdr12
 		bool                 m_last_task;
 		PollCBList           m_poll_callbacks;
 		HWND                 m_dummy_hwnd;
+		TimerHandle          m_poll_timer;
 		std::atomic_int      m_id32_src;
 		AllocationsTracker   m_mem_tracker;
 
