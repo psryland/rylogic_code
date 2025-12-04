@@ -3956,7 +3956,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::PerItemColour:
 				{
-					m_per_item_colour = true;
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				default:

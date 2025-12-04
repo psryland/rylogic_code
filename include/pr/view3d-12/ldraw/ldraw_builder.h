@@ -265,7 +265,7 @@ namespace pr::rdr12::ldraw
 				, m_colour()
 				, m_o2w()
 				, m_wire()
-				, m_axis_id(pr::AxisId::None)
+				, m_axis_id()
 				, m_solid()
 			{}
 			Derived* me()
@@ -676,6 +676,7 @@ namespace pr::rdr12::ldraw
 
 			LdrLine& line(v4_cref a, v4_cref b, std::optional<Colour32> colour = {})
 			{
+				style(ELineStyle::LineSegments);
 				m_current.m_lines.push_back({ a, b, colour ? *colour : Colour32White });
 				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
 				m_current.m_strip.clear();
@@ -696,6 +697,7 @@ namespace pr::rdr12::ldraw
 
 			LdrLine& strip(v4_cref start, std::optional<Colour32> colour = {})
 			{
+				style(ELineStyle::LineStrip);
 				m_current.m_strip.push_back({ start, colour ? *colour : Colour32White });
 				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
 				m_current.m_lines.clear();
