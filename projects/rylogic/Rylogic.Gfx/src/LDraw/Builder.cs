@@ -526,7 +526,7 @@ namespace Rylogic.LDraw
 		public LdrPoint pt(v4 point, Colour32? colour = null)
 		{
 			m_points.Add(new Pt { pt = point, col = colour ?? Colour32.White });
-			m_per_item_colour = new(m_per_item_colour || colour != null);
+			if (colour != null) m_per_item_colour.m_per_item_colour = true;
 			return this;
 		}
 		public LdrPoint pt(v3 point, Colour32? colour = null)
@@ -572,7 +572,7 @@ namespace Rylogic.LDraw
 					foreach (var point in m_points)
 					{
 						res.Append(point.pt.xyz);
-						if (m_per_item_colour)
+						if (m_per_item_colour.m_per_item_colour)
 							res.Append(point.col);
 					}
 				});
@@ -636,7 +636,7 @@ namespace Rylogic.LDraw
 		public LdrLine line(v4 a, v4 b, Colour32? colour = null)
 		{
 			m_current.m_lines.Add(new Ln{ a = a, b = b, col = colour ?? Colour32.White });
-			m_current.m_per_item_colour = new(m_current.m_per_item_colour || colour != null);
+			if (colour != null) m_current.m_per_item_colour.m_per_item_colour = true;
 			m_current.m_strip.Clear();
 			return this;
 		}
@@ -657,7 +657,7 @@ namespace Rylogic.LDraw
 		public LdrLine strip(v4 start, Colour32? colour = null)
 		{
 			m_current.m_strip.Add(new Pt { a = start, col = colour ?? Colour32.White });
-			m_current.m_per_item_colour = new(m_current.m_per_item_colour || colour != null);
+			if (colour != null) m_current.m_per_item_colour.m_per_item_colour = true;
 			m_current.m_lines.Clear();
 			return this;
 		}
@@ -754,7 +754,7 @@ namespace Rylogic.LDraw
 		public LdrTriangle tri(v4 a, v4 b, v4 c, Colour32? colour = null)
 		{
 			m_tris.Add(new Tri{ a = a, b = b, c = c, col = colour ?? Colour32.White });
-			m_per_item_colour = new(m_per_item_colour || colour != null);
+			if (colour != null) m_per_item_colour.m_per_item_colour = true;
 			return this;
 		}
 		public LdrTriangle tris(Span<v4> verts, Span<int> faces)
@@ -776,7 +776,7 @@ namespace Rylogic.LDraw
 					foreach (var tri in m_tris)
 					{
 						res.Append(tri.a.xyz, tri.b.xyz, tri.c.xyz);
-						if (m_per_item_colour)
+						if (m_per_item_colour.m_per_item_colour)
 							res.Append(tri.col);
 					}
 				});

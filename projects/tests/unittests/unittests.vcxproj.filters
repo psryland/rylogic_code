@@ -1089,6 +1089,12 @@
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h">
       <Filter>pr\algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
@@ -1101,9 +1107,6 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
-    <ClInclude Include="..\..\..\include\pr\algorithm\algorithm.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

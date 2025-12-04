@@ -556,7 +556,7 @@ namespace pr::rdr12::ldraw
 			LdrPoint& pt(v4_cref point, std::optional<Colour32> colour = {})
 			{
 				m_points.push_back({ point, colour ? *colour : Colour32White });
-				m_per_item_colour = m_per_item_colour || colour;
+				if (colour) m_per_item_colour = true;
 				return *this;
 			}
 			LdrPoint& pt(v3_cref point, std::optional<Colour32> colour = {})
@@ -608,7 +608,7 @@ namespace pr::rdr12::ldraw
 						for (auto& point : m_points)
 						{
 							Writer::Append(out, point.pt.xyz);
-							if (m_per_item_colour)
+							if (m_per_item_colour.m_per_item_colour)
 								Writer::Append(out, point.col);
 						}
 					});
@@ -678,7 +678,7 @@ namespace pr::rdr12::ldraw
 			{
 				style(ELineStyle::LineSegments);
 				m_current.m_lines.push_back({ a, b, colour ? *colour : Colour32White });
-				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
+				if (colour) m_current.m_per_item_colour = true;
 				m_current.m_strip.clear();
 				return *this;
 			}
@@ -699,7 +699,7 @@ namespace pr::rdr12::ldraw
 			{
 				style(ELineStyle::LineStrip);
 				m_current.m_strip.push_back({ start, colour ? *colour : Colour32White });
-				m_current.m_per_item_colour = m_current.m_per_item_colour || colour;
+				if (colour) m_current.m_per_item_colour = true;
 				m_current.m_lines.clear();
 				return *this;
 			}
@@ -833,7 +833,7 @@ namespace pr::rdr12::ldraw
 						for (auto& tri : m_tris)
 						{
 							Writer::Append(out, tri.a.xyz, tri.b.xyz, tri.c.xyz);
-							if (m_per_item_colour)
+							if (m_per_item_colour.m_per_item_colour)
 								Writer::Append(out, tri.col);
 						}
 					});

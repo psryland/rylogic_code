@@ -129,6 +129,7 @@
 #include "pr/container/tri_table.h"
 #include "pr/container/vector_map.h"
 #include "pr/container/vector.h"
+#include "pr/container/vp_tree.h"
 #include "pr/crypt/blake2b.h"
 #include "pr/crypt/md5.h"
 #include "pr/crypt/monocypher.h"

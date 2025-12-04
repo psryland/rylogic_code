@@ -109,6 +109,7 @@ namespace pr::vp_tree
 
 					// Choose an item to be the vantage point and swap this to the front of the range.
 					auto vp_idx = m_choose_vp(items);
+					assert(vp_idx >= 0 && vp_idx < items.size());
 					std::swap(items[0], items[vp_idx]);
 
 					// Split the range. This ensures all values < mid are nearer to the VP than all values > mid.
@@ -704,9 +705,12 @@ namespace pr::container
 			std::vector<VPTree::Neighbour> nearest;
 			std::vector<VPTree::Pair> pairs;
 
-			for (int i = 0; i != 2; ++i)
+			for (int i = 0; ; ++i)
 			{
 				points.resize(100);
+
+				// Degenerate cases
+				bool done = false;
 				switch (i)
 				{
 					case 0: // All points the same
@@ -734,7 +738,13 @@ namespace pr::container
 						}
 						break;
 					}
+					default:
+					{
+						done = true;
+						break;
+					}
 				}
+				if (done) break;
 
 				results.clear();
 				nearest.resize(std::uniform_int_distribution<size_t>(1, 20)(m_rng));

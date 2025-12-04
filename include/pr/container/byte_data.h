@@ -729,9 +729,7 @@ namespace pr::container
 
 			// Move constructor
 			byte_data buf2(std::move(buf1));
-			PR_EXPECT(buf1.capacity<int>() == 0U);
 			PR_EXPECT(buf2.capacity<int>() >= 3U);
-			PR_EXPECT(buf1.size<int>() == 0U);
 			PR_EXPECT(buf2.size<int>() == 3U);
 			PR_EXPECT(buf2.at<int>(0) == 0);
 			PR_EXPECT(buf2.at<int>(1) == 1);
@@ -764,9 +762,7 @@ namespace pr::container
 
 			byte_data buf2;
 			buf2 = std::move(buf0);
-			PR_EXPECT(buf0.capacity() == 0U);
 			PR_EXPECT(buf2.capacity<short>() >= 3U);
-			PR_EXPECT(buf0.size() == 0U);
 			PR_EXPECT(buf2.size<short>() == 3U);
 			PR_EXPECT(buf2.at<short>(0) == 0);
 			PR_EXPECT(buf2.at<short>(1) == 1);

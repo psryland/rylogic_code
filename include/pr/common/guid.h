@@ -142,13 +142,13 @@ namespace pr
 				if constexpr (std::is_same_v<Char, char>)
 				{
 					RPC_CSTR str = nullptr;
-					auto s = Scope<void>([&] { ::UuidToStringA(static_cast<UUID const*>(&guid), &str); }, [&] { ::RpcStringFreeA(&str); });
+					auto s = Scope<void>([&] { (void)::UuidToStringA(static_cast<UUID const*>(&guid), &str); }, [&] { ::RpcStringFreeA(&str); });
 					return Str(reinterpret_cast<char const*>(str));
 				}
 				if constexpr (std::is_same_v<Char, wchar_t>)
 				{
 					RPC_WSTR str = nullptr;
-					auto s = Scope<void>([&]{ ::UuidToStringW(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeW(&str); });
+					auto s = Scope<void>([&]{ (void)::UuidToStringW(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeW(&str); });
 					return Str(reinterpret_cast<wchar_t const*>(str));
 				}
 			}

@@ -49,6 +49,7 @@ namespace pr::unittests
 #include <chrono>
 #include <cstdarg>
 #include <cmath>
+#include <bitset>
 #include <locale>
 #include <format>
 #include <Windows.h>

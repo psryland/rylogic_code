@@ -52,6 +52,7 @@
   <!-- Files -->
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\savitzky_golay_filter.h" />
@@ -158,6 +159,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h" />
     <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
@@ -382,7 +384,6 @@
     </ClCompile>
     <ClCompile Include="src\dependecy_check_math.cpp" />
     <ClCompile Include="src\unittests.cpp" />
-    <ClInclude Include="..\..\..\include\pr\algorithm\algorithm.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />

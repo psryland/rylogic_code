@@ -184,7 +184,7 @@ namespace pr::collision
 			//builder.Write(L"collision_unittests.ldr");
 			if (BoxVsBox(lhs, l2w, rhs, r2w, c))
 			{
-				builder.LineD("sep_axis", Colour32Yellow).line(c.m_point, c.m_axis);
+				builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
 				builder.Box("pt0", Colour32Yellow).dim(0.01f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
 				builder.Box("pt1", Colour32Yellow).dim(0.01f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
 			}
