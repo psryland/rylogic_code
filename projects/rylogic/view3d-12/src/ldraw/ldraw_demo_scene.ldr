@@ -496,6 +496,14 @@
 // A set of basis vectors
 *CoordFrame a2b
 {
+	// Optional, Can add multiple coord frames. Empty implies a basis at the origin.
+	// Format is the same as *o2w
+	*Data { *pos{+0.1 +0.2 0} *euler{+90, 25, 123} }
+	*Data { *pos{-0.2 -0.1 0} *euler{-32, 14, -91} }
+	*Data { *pos{+0.4 +0.2 0} *euler{-42, 10, 312} }
+	*Data { *pos{-0.3 +0.1 0} *euler{+99, 84, 256} }
+	*Data { *pos{-0.1 -0.3 0} *euler{-52, 35, +23} }
+	*Data { *pos{+0.5 +0.4 0} *euler{-17, 42, 183} }
 	*Scale {0.5}   // Optional, scale (not recursive like in *o2w)
 	*LeftHanded {} // Optional, create a left handed coordinate frame
 	*o2w {*pos{15 3 3}}

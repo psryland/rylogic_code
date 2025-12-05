@@ -130,7 +130,7 @@ namespace pr::geometry
 			return Boxes(num_boxes, points, colours, vout, iout);
 
 		// An iterator wrapper for applying a transform to 'points'
-		Transformer<VertCIter> tx(points, o2w);
+		Transformer<v4 const*> tx(points, o2w);
 		auto props = Boxes(num_boxes, tx, colours, vout, iout);
 		return props;
 	}

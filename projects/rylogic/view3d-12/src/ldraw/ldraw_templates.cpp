@@ -270,6 +270,7 @@ namespace pr::rdr12::ldraw
 			"}\n"
 			"*CoordFrame [<name>] [<colour>]\n"
 			"{\n"
+			"	[(*Data {[$o2w]})]\n"
 			"	[*LeftHanded {[true|false]}]\n"
 			"	[*Scale {<scale>}]\n"
 			"	[@Width]\n"

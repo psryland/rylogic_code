@@ -2406,24 +2406,29 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::CoordFrame
 	template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreator
 	{
+		vector<m4x4> m_basis;
 		creation::ThickLine m_thick;
 		float m_scale;
 		bool m_lh;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_basis()
 			, m_thick()
 			, m_scale(1.0f)
 			, m_lh(false)
-		{
-			m_verts = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
-			m_colours = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-			m_indices = { 0, 1, 2, 3, 4, 5 };
-		}
+		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					auto o2w = m4x4::Identity();
+					reader.Transform(o2w);
+					m_basis.push_back(o2w);
+					return true;
+				}
 				case EKeyword::Scale:
 				{
 					m_scale = reader.Real<float>();
@@ -2444,15 +2449,28 @@ namespace pr::rdr12::ldraw
 		}
 		void CreateModel(LdrObject* obj, Location const&) override
 		{
-			// Scale doesn't use the *o2w scale because that is recursive
-			if (m_scale != 1.0f)
+			if (m_basis.empty())
+				m_basis.push_back(m4x4::Identity());
+			
+			for (auto const& o2w : m_basis)
 			{
-				for (auto& pt : m_verts)
-					pt.xyz *= m_scale;
-			}
-			if (m_lh)
-			{
-				m_verts[3].xyz = -m_verts[3].xyz;
+				// Scale doesn't use the *o2w scale because that is recursive
+				auto origin = o2w * v4::Origin();
+				auto xaxis = o2w * v4{ m_scale, 0, 0, 1 };
+				auto yaxis = o2w * v4{ 0, m_scale, 0, 1 };
+				auto zaxis = o2w * v4{ 0, 0, (m_lh ? -1 : +1) * m_scale, 1 };
+				m_verts.push_back(origin);
+				m_verts.push_back(xaxis);
+				m_verts.push_back(origin);
+				m_verts.push_back(yaxis);
+				m_verts.push_back(origin);
+				m_verts.push_back(zaxis);
+				m_colours.push_back(Colour32Red);
+				m_colours.push_back(Colour32Red);
+				m_colours.push_back(Colour32Green);
+				m_colours.push_back(Colour32Green);
+				m_colours.push_back(Colour32Blue);
+				m_colours.push_back(Colour32Blue);
 			}
 
 			// Create the model
@@ -3518,7 +3536,7 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_boxes.empty())
