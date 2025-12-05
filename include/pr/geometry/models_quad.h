@@ -114,7 +114,7 @@ namespace pr::geometry
 		auto norm = [](v4_cref a, v4_cref b, v4_cref c) { return Normalise(Cross3(a - b, c - b), v4::Zero()); };
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours.data(), isize(colours), num_quads * 4, Colour32White);
+		auto col = CreateRepeater(colours, num_quads * 4, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -286,7 +286,7 @@ namespace pr::geometry
 		auto num_verts = num_quads + 1;
 
 		// Colour iterator wrapper
-		auto col = CreateLerpRepeater(colours.data(), isize(colours), num_verts, Colour32White);
+		auto col = CreateLerpRepeater(colours, num_verts, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Normal iterator wrapper

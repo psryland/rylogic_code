@@ -3453,7 +3453,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					m_dim.x = reader.Real<float>();
+					m_dim.x = reader.IsSectionEnd() ? 1.0f : reader.Real<float>();
 					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
 					m_dim.z = reader.IsSectionEnd() ? m_dim.y : reader.Real<float>();
 					m_dim *= 0.5f;
@@ -3476,84 +3476,38 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
-	// ELdrObject::Bar
-	template <> struct ObjectCreator<ELdrObject::Bar> :IObjectCreator
-	{
-		creation::Textured m_tex;
-		v4 m_pt0, m_pt1, m_up;
-		float m_width, m_height;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_tex(SamDesc::AnisotropicClamp())
-			, m_pt0()
-			, m_pt1()
-			, m_up(v4::YAxis())
-			, m_width(0.1f)
-			, m_height(0.1f)
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					m_pt0 = reader.Vector3f().w1();
-					m_pt1 = reader.Vector3f().w1();
-					m_width = reader.Real<float>();
-					m_height = reader.IsSectionEnd() ? m_width : reader.Real<float>();
-					return true;
-				}
-				case EKeyword::Up:
-				{
-					m_up = reader.Vector3f().w0();
-					return true;
-				}
-				default:
-				{
-					return
-						m_tex.ParseKeyword(reader, m_pp, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const&) override
-		{
-			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
-			auto b2w = OriFromDir(m_pt1 - m_pt0, pr::AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(b2w).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Box(m_pp.m_factory, dim, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
 	// ELdrObject::BoxList
 	template <> struct ObjectCreator<ELdrObject::BoxList> :IObjectCreator
 	{
 		creation::Textured m_tex;
-		pr::vector<v4,16> m_location;
-		v4 m_dim;
+		vector<BBox, 4> m_boxes;
+		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_tex(SamDesc::AnisotropicClamp())
-			, m_location()
-			, m_dim(1.0f)
+			, m_boxes()
+			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Dim:
+				case EKeyword::PerItemColour:
 				{
-					m_dim = reader.Vector3f().w0();
+					m_per_item_colour = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				case EKeyword::Data:
 				{
 					for (; !reader.IsSectionEnd(); )
-						m_location.push_back(reader.Vector3f().w1());
-
+					{
+						auto dim = reader.Vector3f().w0();
+						auto xyz = reader.Vector3f().w1();
+						m_boxes.push_back(BBox(xyz, Abs(dim) * 0.5f));
+						if (m_per_item_colour)
+							m_colours.push_back(reader.Int<uint32_t>(16));
+					}
 					return true;
 				}
 				default:
@@ -3567,20 +3521,12 @@ namespace pr::rdr12::ldraw
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// Validate
-			if (m_dim == v4::Zero() || m_location.empty())
+			if (m_boxes.empty())
 				return;
-
-			if (Abs(m_dim) != m_dim)
-			{
-				m_pp.ReportError(EParseError::InvalidValue, loc, "BoxList box dimensions contain a negative value");
-				m_dim = Abs(m_dim);
-			}
-
-			m_dim *= 0.5f;
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::BoxList(m_pp.m_factory, isize(m_location), m_location, m_dim, &opts);
+			obj->m_model = ModelGenerator::BoxList(m_pp.m_factory, m_boxes, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};

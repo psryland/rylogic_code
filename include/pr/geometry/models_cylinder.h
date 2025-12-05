@@ -46,7 +46,7 @@ namespace pr::geometry
 		Grow(props.m_bbox, v4(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours.data(), isize(colours), vcount, Colour32White);
+		auto col = CreateRepeater(colours, vcount, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		auto z  = -height * 0.5f;

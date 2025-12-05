@@ -40,7 +40,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours.data(), isize(colours), 2*num_lines, Colour32White);
+		auto col = CreateRepeater(colours, 2*num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -67,7 +67,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours.data(), isize(colours), 2*num_lines, Colour32White);
+		auto col = CreateRepeater(colours, 2*num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -93,7 +93,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateLerpRepeater(colours.data(), isize(colours), 1+num_lines, Colour32White);
+		auto col = CreateLerpRepeater(colours, 1+num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box

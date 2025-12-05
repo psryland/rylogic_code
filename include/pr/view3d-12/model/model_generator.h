@@ -191,6 +191,7 @@ namespace pr::rdr12
 		static ModelPtr Box(ResourceFactory& factory, v4_cref rad, CreateOptions const* opts = nullptr);
 		static ModelPtr Boxes(ResourceFactory& factory, int num_boxes, std::span<v4 const> points, CreateOptions const* opts = nullptr);
 		static ModelPtr BoxList(ResourceFactory& factory, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts = nullptr);
+		static ModelPtr BoxList(ResourceFactory& factory, std::span<BBox const> boxes, CreateOptions const* opts = nullptr);
 
 		// Sphere *****************************************************************************
 		static ModelPtr Geosphere(ResourceFactory& factory, float radius, int divisions = 3, CreateOptions const* opts = nullptr);

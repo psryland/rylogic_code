@@ -53,7 +53,6 @@ namespace pr::rdr12::ldraw
 		x(AxisId            )\
 		x(BackColour        )\
 		x(BakeTransform     )\
-		x(Bar               )\
 		x(Billboard         )\
 		x(Billboard3D       )\
 		x(BinaryStream      )\
@@ -218,7 +217,6 @@ namespace pr::rdr12::ldraw
 	enum class ELdrObject : int
 	{
 		#define PR_LDRAW_OBJECTS(x)\
-		x(Bar        )\
 		x(Box        )\
 		x(BoxList    )\
 		x(Chart      )\

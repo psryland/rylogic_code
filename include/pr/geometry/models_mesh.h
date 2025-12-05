@@ -40,14 +40,14 @@ namespace pr::geometry
 			(!tex_coords.empty() ? EGeom::Tex0 : EGeom::None);
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours.data(), isize(colours), isize(verts), Colour32White);
+		auto col = CreateRepeater(colours, isize(verts), Colour32White);
 		auto cc = [&props](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Normal iterator wrapper
-		auto norm = CreateRepeater(normals.data(), isize(normals), isize(verts), v4::Zero());
+		auto norm = CreateRepeater(normals, isize(verts), v4::Zero());
 
 		// UV iterator wrapper
-		auto uv = CreateRepeater(tex_coords.data(), isize(tex_coords), isize(verts), v2::Zero());
+		auto uv = CreateRepeater(tex_coords, isize(verts), v2::Zero());
 
 		// Bounding box
 		auto bb = [&props](v4 const& v) { Grow(props.m_bbox, v); return v; };

@@ -253,7 +253,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours.data(), isize(colours), isize(points)-1, Colour32White);
+		auto col = CreateRepeater(colours, isize(points)-1, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box

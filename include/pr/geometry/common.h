@@ -84,6 +84,7 @@ namespace pr::geometry
 	};
 
 	// Generator function signatures
+	template <typename T> concept VertCIter = requires (T t) { { *t++ } -> std::convertible_to<v4>; };
 	template <typename T> concept VertOutputFn = std::invocable<T, v4 const&, Colour32, v4 const&, v2 const&>;
 	template <typename T> concept IndexOutputFn = std::is_invocable_v<T, int>;
 	template <typename T> concept GetVertFn = std::is_invocable_r_v<v4 const&, T, int>;

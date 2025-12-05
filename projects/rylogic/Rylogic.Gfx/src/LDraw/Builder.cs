@@ -95,12 +95,6 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
-		public LdrBar Bar(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
-		{
-			var child = new LdrBar();
-			m_objects.Add(child);
-			return child.name(name ?? new()).colour(colour ?? new());
-		}
 		public LdrCylinder Cylinder(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrCylinder();
@@ -917,39 +911,6 @@ namespace Rylogic.LDraw
 			res.Write(EKeyword.Box, m_name, m_colour, () =>
 			{
 				res.Write(EKeyword.Data, m_dim.xyz);
-				base.WriteTo(res);
-			});
-		}
-	}
-	public class LdrBar : LdrBase<LdrBar>
-	{
-		private v4 m_p0 = new();
-		private v4 m_p1 = new();
-		private v2 m_wh = new(1f, 1f);
-
-		// Bar dimensions
-		public LdrBar bar(v4 p0, v4 p1)
-		{
-			m_p0 = p0;
-			m_p1 = p1;
-			return this;
-		}
-		public LdrBar wh(v2 wh)
-		{
-			m_wh = wh;
-			return this;
-		}
-		public LdrBar wh(float w, float h)
-		{
-			return wh(new v2(w, h));
-		}
-
-		/// <inheritdoc/>
-		public override void WriteTo(IWriter res)
-		{
-			res.Write(EKeyword.Bar, m_name, m_colour, () =>
-			{
-				res.Write(EKeyword.Data, m_p0.xyz, m_p1.xyz, m_wh);
 				base.WriteTo(res);
 			});
 		}

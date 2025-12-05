@@ -31,7 +31,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Tex0; // UVs are added in the geometry shader
 
 		// Colour iterator
-		auto col = CreateRepeater(colours.data(), isize(colours), isize(points), Colour32White);
+		auto col = CreateRepeater(colours, isize(points), Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box

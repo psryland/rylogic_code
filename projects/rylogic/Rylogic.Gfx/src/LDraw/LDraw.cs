@@ -26,7 +26,6 @@ namespace Rylogic.LDraw
 		AxisId = unchecked((int)1558262649),
 		BackColour = unchecked((int)1583172070),
 		BakeTransform = unchecked((int)3697187404),
-		Bar = unchecked((int)1991736602),
 		Billboard = unchecked((int)3842439780),
 		Billboard3D = unchecked((int)3185018435),
 		BinaryStream = unchecked((int)1110191492),

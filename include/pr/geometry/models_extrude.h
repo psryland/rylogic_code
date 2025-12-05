@@ -55,7 +55,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours.data(), isize(colours), path_count, !colours.empty() ? colours.back() : Colour32White);
+		auto col = CreateRepeater(colours, path_count, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box

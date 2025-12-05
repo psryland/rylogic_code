@@ -565,7 +565,30 @@ namespace pr::rdr12
 		Cache cache{ vcount, icount, 0, idx_stride };
 		auto vptr = cache.m_vcont.data();
 		auto iptr = cache.m_icont.begin<int>();
-		auto props = geometry::BoxList(num_boxes, positions.data(), rad, colours,
+		auto props = geometry::BoxList(num_boxes, positions, rad, colours,
+			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
+			[&](int idx) { *iptr++ = idx; }
+		);
+
+		// Create a nugget
+		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
+		cache.m_bbox = props.m_bbox;
+
+		// Create the model
+		return Create(factory, cache, opts);
+	}
+	ModelPtr ModelGenerator::BoxList(ResourceFactory& factory, std::span<BBox const> boxes, CreateOptions const* opts)
+	{
+		// Calculate the required buffer sizes
+		auto [vcount, icount] = geometry::BoxSize(isize(boxes));
+		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto idx_stride = vcount > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
+
+		// Generate the geometry
+		Cache cache{ vcount, icount, 0, idx_stride };
+		auto vptr = cache.m_vcont.data();
+		auto iptr = cache.m_icont.begin<int>();
+		auto props = geometry::BoxList(boxes, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 			[&](int idx) { *iptr++ = idx; }
 		);

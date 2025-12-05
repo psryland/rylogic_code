@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -38,8 +38,8 @@ namespace pr::geometry
 	// The normals are outward facing
 	// The texture coordinates set on the box have the 'walls' with Y as up.
 	// On top (-x,+y,-z) is the top left corner, on the bottom (-x,-y,+z) is the top left corner
-	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
-	Props Boxes(int num_boxes, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	template <VertOutputFn VOut, IndexOutputFn IOut>
+	Props Boxes(int num_boxes, VertCIter auto points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		int const vidx[] =
 		{
@@ -75,7 +75,7 @@ namespace pr::geometry
 		auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise(Cross3(c - b, a - b), v4Zero); };
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours.data(), isize(colours), 8*num_boxes, Colour32White);
+		auto col = CreateRepeater(colours, 8*num_boxes, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -123,14 +123,14 @@ namespace pr::geometry
 	}
 
 	// Create a transformed box
-	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
-	Props Boxes(int num_boxes, TVertCIter points, m4x4 const& o2w, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	template <VertOutputFn VOut, IndexOutputFn IOut>
+	Props Boxes(int num_boxes, VertCIter auto points, m4x4 const& o2w, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		if (o2w == m4x4::Identity())
 			return Boxes(num_boxes, points, colours, vout, iout);
 
 		// An iterator wrapper for applying a transform to 'points'
-		Transformer<TVertCIter> tx(points, o2w);
+		Transformer<VertCIter> tx(points, o2w);
 		auto props = Boxes(num_boxes, tx, colours, vout, iout);
 		return props;
 	}
@@ -155,12 +155,13 @@ namespace pr::geometry
 	}
 
 	// Create boxes at each point in 'positions' with side half lengths = rad.x,rad.y,rad.z
-	template <typename TVertCIter, VertOutputFn VOut, IndexOutputFn IOut>
-	Props BoxList(int num_boxes, TVertCIter positions, v4 const& rad, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	template <VertOutputFn VOut, IndexOutputFn IOut>
+	Props BoxList(int num_boxes, std::span<v4 const> positions, v4 const& rad, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
-		auto pos = positions;
 		pr::vector<v4,64> points(8*num_boxes);
-		auto pt = &points[0];
+		auto* pt = points.data();
+
+		auto const* pos = positions.data();
 		for (int i = 0; i != num_boxes; ++i, ++pos)
 		{
 			*pt++ = v4(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f);
@@ -173,5 +174,28 @@ namespace pr::geometry
 			*pt++ = v4(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f);
 		}
 		return Boxes(num_boxes, &points[0], colours, vout, iout);
+	}
+
+	// Create the AABB boxes in 'boxes'
+	template <VertOutputFn VOut, IndexOutputFn IOut>
+	Props BoxList(std::span<BBox const> boxes, std::span<Colour32 const> colours, VOut vout, IOut iout)
+	{
+		vector<v4,64> points(8 * boxes.size());
+		auto* pt = points.data();
+
+		for (auto const& bbox : boxes)
+		{
+			auto lwr = bbox.Lower();
+			auto upr = bbox.Upper();
+			*pt++ = v4(lwr.x, lwr.y, lwr.z, 1.0f);
+			*pt++ = v4(upr.x, lwr.y, lwr.z, 1.0f);
+			*pt++ = v4(lwr.x, upr.y, lwr.z, 1.0f);
+			*pt++ = v4(upr.x, upr.y, lwr.z, 1.0f);
+			*pt++ = v4(lwr.x, lwr.y, upr.z, 1.0f);
+			*pt++ = v4(upr.x, lwr.y, upr.z, 1.0f);
+			*pt++ = v4(lwr.x, upr.y, upr.z, 1.0f);
+			*pt++ = v4(upr.x, upr.y, upr.z, 1.0f);
+		}
+		return Boxes(isize(boxes), points.data(), colours, vout, iout);
 	}
 }

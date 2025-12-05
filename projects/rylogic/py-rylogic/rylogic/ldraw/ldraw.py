@@ -143,7 +143,6 @@ class EKeyword(Enum):
 	AxisId = 1558262649
 	BackColour = 1583172070
 	BakeTransform = 3697187404
-	Bar = 1991736602
 	Billboard = 3842439780
 	Billboard3D = 3185018435
 	BinaryStream = 1110191492
