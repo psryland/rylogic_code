@@ -483,12 +483,12 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Underline:
 				{
-					font.m_underline = true;
+					font.m_underline = reader.IsSectionEnd() ? true : reader.Bool();
 					break;
 				}
 				case EKeyword::Strikeout:
 				{
-					font.m_strikeout = true;
+					font.m_strikeout = reader.IsSectionEnd() ? true : reader.Bool();
 					break;
 				}
 				default:
@@ -1328,7 +1328,7 @@ namespace pr::rdr12::ldraw
 				{
 					case EKeyword::PerItemParametrics:
 					{
-						m_per_item_parametrics = true;
+						m_per_item_parametrics = reader.IsSectionEnd() ? true : reader.Bool();
 						return true;
 					}
 					case EKeyword::Parametrics:
@@ -3915,7 +3915,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Closed:
 				{
-					m_closed = true;
+					m_closed = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -4381,7 +4381,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::NoMaterials:
 				{
-					m_ignore_materials = true;
+					m_ignore_materials = reader.IsSectionEnd() ? true : reader.Bool();
 					return true;
 				}
 				case EKeyword::Parts:
