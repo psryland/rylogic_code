@@ -195,6 +195,7 @@ namespace pr::rdr12::ldraw
 			"}\n"
 			"*Instance [<name>] [<colour>]\n"
 			"{\n"
+			"	*Data {<object_to_instance>}\n"
 			"	[@Animation]\n"
 			"	$ObjectModifiers\n"
 			"}\n"

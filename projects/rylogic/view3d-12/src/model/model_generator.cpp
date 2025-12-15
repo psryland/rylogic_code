@@ -1400,7 +1400,7 @@ namespace pr::rdr12
 			virtual bool CreateAnimation(fbx::Animation const& fbxanim)
 			{
 				// Create an animation for 'fbxanim'
-				KeyFrameAnimationPtr anim(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, EAnimFlags::None, fbxanim.m_duration, fbxanim.m_frame_rate), true);
+				KeyFrameAnimationPtr anim(rdr12::New<KeyFrameAnimation>(fbxanim.m_skel_id, fbxanim.m_duration, fbxanim.m_frame_rate), true);
 
 				// Read the key frame data
 				anim->m_bone_map = fbxanim.m_bone_map;

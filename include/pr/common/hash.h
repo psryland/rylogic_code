@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <iterator>
 #include <concepts>
+#include <string_view>
 #include <type_traits>
 #include <cassert>
 
@@ -220,6 +221,16 @@ namespace pr::hash
 	{
 		for (; *str != term; ++str) h = Hash32CT(static_cast<uint32_t>(impl::Lower(*str)), h);
 		return h;
+	}
+
+	// Hash a string_view
+	inline HashValue32 Hash(std::string_view str, uint32_t h = FNV_offset_basis32)
+	{
+		return Hash(str.data(), str.data() + str.size(), h);
+	}
+	inline HashValue32 Hash(std::wstring_view str, uint32_t h = FNV_offset_basis32)
+	{
+		return Hash(str.data(), str.data() + str.size(), h);
 	}
 
 	// Hash a range of bytes

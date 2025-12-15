@@ -104,7 +104,7 @@ namespace pr::rdr12::ldraw
 		}
 		
 		// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 IdentifierImpl() override
+		virtual string32 IdentifierImpl(bool) override
 		{
 			auto length = ReadLengthBytes();
 

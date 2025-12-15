@@ -4490,9 +4490,6 @@ namespace pr::rdr12::ldraw
 			if (!m_anim_info)
 				return EResult::Stop;
 
-			// Copy behaviour flags
-			anim->m_flags = m_anim_info.m_flags;
-
 			// Find the associated skeleton
 			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
 
@@ -4501,7 +4498,7 @@ namespace pr::rdr12::ldraw
 
 			// Create an animator that uses the animation and a pose for it to animate
 			AnimatorPtr animator{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
-			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, time_range, m_anim_info.m_stretch), true };
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch), true };
 
 			// Set the pose for each model in the hierarchy.
 			m_obj->Apply([&](LdrObject* obj)
@@ -5354,6 +5351,7 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Instance
 	template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
 	{
+		string32 m_source;
 		creation::KeyFrameAnimInfo m_anim_info;
 		std::unordered_map<Pose const*, PosePtr> m_pose_map;
 
@@ -5366,6 +5364,12 @@ namespace pr::rdr12::ldraw
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					// The object name of the source to instance
+					m_source = reader.Identifier<string32>(true);
+					return true;
+				}
 				case EKeyword::Animation:
 				{
 					m_anim_info.Parse(reader, m_pp);
@@ -5380,14 +5384,46 @@ namespace pr::rdr12::ldraw
 		}
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
-			// Locate the object to instance
-			auto key = hash::Hash(obj->m_name.c_str());
-			if (!m_pp.m_lookup.contains(key))
+			// Ignore empty instances
+			if (m_source.empty())
+				return;
+
+			std::string_view addr{ m_source };
+
+			// Construct the full name of the object to instance.
+			// If 'addr' starts with a '.' then it's a relative address.
+			if (addr.front() == '.')
+			{
+				string32 path = obj->FullName(); // Start with the current object's full name
+				for (; !path.empty(); )
+				{
+					// Remove the last segment
+					for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
+
+					// No more parent navigation
+					if (addr.empty() || addr.front() != '.')
+						break;
+
+					// Remove the '.' character
+					if (!path.empty())
+						path.pop_back();
+
+					// Remove the leading '.'
+					addr = addr.substr(1);
+				}
+
+				// Construct the full address
+				addr = path.append(addr);
+			}
+
+			// Find the source object in the lookup
+			auto it = m_pp.m_lookup.find(hash::Hash(addr));
+			if (it == std::end(m_pp.m_lookup))
 			{
 				m_pp.ReportError(EParseError::NotFound, loc, "Object not found. Can't create an instance.");
 				return;
 			}
-			auto source = m_pp.m_lookup[key];
+			LdrObject* source = it->second;
 
 			// Create an LdrObject instance for each nested object
 			RecursiveCreate(obj, source, false);
@@ -5400,7 +5436,7 @@ namespace pr::rdr12::ldraw
 				time_range = Intersect(time_range, source->m_pose->m_time_range);
 				time_range = Intersect(time_range, m_anim_info.m_time_range);
 
-				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, source->m_pose->m_animator, m_anim_info.m_style, time_range, m_anim_info.m_stretch), true };
+				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, source->m_pose->m_animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch), true };
 
 				// Set the pose for each model in the hierarchy.
 				obj->Apply([&](LdrObject* obj)
@@ -5415,7 +5451,6 @@ namespace pr::rdr12::ldraw
 		}
 		void RecursiveCreate(LdrObject* obj, LdrObject const* source, bool copy_props)
 		{
-			obj->m_name = source->m_name;
 			obj->m_model = source->m_model;
 			if (copy_props)
 			{
@@ -5432,6 +5467,7 @@ namespace pr::rdr12::ldraw
 			{
 				LdrObjectPtr child(new LdrObject(ELdrObject::Instance, obj, obj->m_context_id), true);
 				RecursiveCreate(child.get(), source_child.get(), true);
+				child->m_name = source_child->m_name;
 				obj->m_child.push_back(std::move(child));
 			}
 		}
@@ -5488,9 +5524,8 @@ namespace pr::rdr12::ldraw
 			// This is done after objects are parsed so that recursive properties can be applied
 			ApplyObjectState(obj.get());
 
-			// Add to the lookup if not an instance
-			if (obj->m_type != ELdrObject::Instance)
-				pp.m_lookup[hash::Hash(obj->m_name.c_str())] = obj.get();
+			// Add to the lookup
+			pp.m_lookup[hash::Hash(obj->FullName())] = obj.get();
 
 			// Add the object to the container
 			pp.m_objects.push_back(obj);

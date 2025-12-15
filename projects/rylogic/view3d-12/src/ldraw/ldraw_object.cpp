@@ -119,6 +119,13 @@ namespace pr::rdr12::ldraw
 		return string32(ELdrObject_::ToStringA(m_type)) + " " + m_name;
 	}
 
+	// Return the full name (address) of this object
+	string32 LdrObject::FullName() const
+	{
+		string32 parent = m_parent ? m_parent->FullName() : "";
+		return parent.append(parent.empty() ? "" : ".").append(m_name);
+	}
+
 	// Recursively add this object and its children to a viewport
 	void LdrObject::AddToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{

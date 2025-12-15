@@ -192,9 +192,9 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read an identifier from the current section
-		template <typename StrType> StrType Identifier()
+		template <typename StrType> StrType Identifier(bool incl_dot = false)
 		{
-			auto s = IdentifierImpl();
+			auto s = IdentifierImpl(incl_dot);
 			if constexpr (std::is_same_v<StrType, string32>)
 				return s;
 			else
@@ -289,7 +289,7 @@ namespace pr::rdr12::ldraw
 		virtual bool NextKeywordImpl(int& kw) = 0;
 
 		// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 IdentifierImpl() = 0;
+		virtual string32 IdentifierImpl(bool incl_dot) = 0;
 
 		// Read a utf8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
 		virtual string32 StringImpl(char escape_char = 0) = 0;

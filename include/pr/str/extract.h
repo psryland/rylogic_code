@@ -370,7 +370,7 @@ namespace pr::str
 
 	// Extract a contiguous block of identifier characters from 'src' incrementing 'src'
 	template <StringType Str, typename Ptr, CharType Char = char_type_t<Ptr>>
-	bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr)
+	bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr, bool incl_dot = false)
 	{
 		delim = Delim(delim);
 
@@ -379,19 +379,19 @@ namespace pr::str
 			return false;
 
 		// If the first non-delimiter is not a valid identifier character, then we can't extract an identifier
-		if (!IsIdentifier(*src, true))
+		if (!IsIdentifier(*src, true, incl_dot))
 			return false;
 
 		// Copy up to the first non-identifier character
 		size_t len = Size(id);
 
-		for (Append(id, *src, len), ++src; *src && IsIdentifier(*src, false); Append(id, *src, len), ++src) {}
+		for (Append(id, *src, len), ++src; *src && IsIdentifier(*src, false, incl_dot); Append(id, *src, len), ++src) {}
 		return true;
 	}
 	template <StringType Str, typename Ptr, CharType Char = char_type_t<Ptr>>
-	inline bool ExtractIdentifierC(Str& id, Ptr src, Char const* delim = nullptr)
+	inline bool ExtractIdentifierC(Str& id, Ptr src, Char const* delim = nullptr, bool incl_dot = false)
 	{
-		return ExtractIdentifier(id, src, delim);
+		return ExtractIdentifier(id, src, delim, incl_dot);
 	}
 
 	#pragma endregion

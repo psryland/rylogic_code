@@ -18,7 +18,7 @@
 
 // Example use:
 #if 0
-{
+{ // Write
 	json::Document doc;
 
 	doc.root()["key0"] = 123;
@@ -42,6 +42,18 @@
 	root["key4"] = std::move(key4);
 
 	std::string str = json::Write(doc, {});
+}
+{ // Read
+	auto doc = json::Read(filepath);
+
+	// root is an object {}
+	auto root = doc.to_object();
+	auto k0 = root["key0"].to<std::string>();
+
+	// root is an array []
+	for (auto& jitem : doc.to_array())
+	{
+	}
 }
 #endif
 
@@ -1140,7 +1152,13 @@ namespace pr::json
 
 		std::string data(static_cast<size_t>(size), '\0');
 		file.read(data.data(), data.size());
-		return Read(std::string_view{ data }, opts);
+		auto src = std::string_view{ data };
+
+		// Skip the BOM if present
+		if (str::utf8::IsBOM(src))
+			src.remove_prefix(3);
+
+		return Read(src, opts);
 	}
 }
 

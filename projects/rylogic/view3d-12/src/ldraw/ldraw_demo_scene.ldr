@@ -218,19 +218,33 @@
 	*AxisId {+2}
 	*RandColour {} // Note: this will not be inherited by the instances
 	*Hidden {}     // Don't show this instance
+
+	*Sphere child FF0000FF
+	{
+		*Data {0.5}
+		*o2w{*pos{1.0 -0.5 0}}
+	}
+	*Instance child_instance FF00FF00
+	{
+		*Data {.child} // Instance of the 'child' sphere defined above (relative path)
+		*o2w{*pos{-1.0 -0.5 0}}
+	} 
 }
-*Instance instancing_example FFFF0000 // The name indicates which model to instance
+*Instance instancing0 FFFF0000 // The name indicates which model to instance
 {
+	*Data {instancing_example} // No leading '.' means the root scope
 	//*Animation {...}      // Model animation data can be overridden
 	*o2w {*Pos {15 1 -10}}
 }
-*Instance instancing_example FF0000FF
+*Instance instancing1 FF0000FF
 {
-	*o2w {*Pos {15 3 -10}}
+	*Data {instancing_example.child}
+	*o2w {*Pos {15 4 -10}}
 }
-*Instance instancing_example FF00FF00
+*Instance instancing2 FF00FF00
 {
-	*o2w {*Pos {15 5 -10}}
+	*Data {instancing_example.child_instance}
+	*o2w {*Pos {15 6 -10}}
 }
 
 // Text.

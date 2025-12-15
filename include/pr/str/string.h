@@ -441,6 +441,29 @@ namespace pr
 		{
 			assert(!empty());
 			--m_count;
+			m_ptr[size()] = 0;
+		}
+
+		// front / back access
+		const_reference front() const
+		{
+			assert(!empty());
+			return *begin();
+		}
+		reference front()
+		{
+			assert(!empty());
+			return *begin();
+		}
+		const_reference back() const
+		{
+			assert(!empty());
+			return *(end() - 1);
+		}
+		reference back()
+		{
+			assert(!empty());
+			return *(end() - 1);
 		}
 
 		// The last character in the string (or the terminator for empty strings)
@@ -818,6 +841,12 @@ namespace pr
 			m_count += count;
 			m_ptr[size()] = 0;
 			return *this;
+		}
+
+		// append string_view
+		string& append(std::basic_string_view<Type> sv)
+		{
+			return append(sv.data(), sv.size());
 		}
 
 		//// append right

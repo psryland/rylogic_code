@@ -40,9 +40,9 @@ namespace pr::rdr12
 	}
 
 	// Apply an animation to the given bones
-	void Animator_KeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s)
+	void Animator_KeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags)
 	{
-		m_anim->EvaluateAtTime(time_s, bones);
+		m_anim->EvaluateAtTime(time_s, flags, bones);
 	}
 
 	// -----------------------------------------------------------------------------------------------
@@ -66,9 +66,9 @@ namespace pr::rdr12
 	}
 
 	// Apply an animation to the given bones
-	void Animator_InterpolatedAnimation::Animate(std::span<m4x4> bones, float time_s)
+	void Animator_InterpolatedAnimation::Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags)
 	{
-		(void)bones, time_s;
+		(void)bones, time_s, flags;
 		throw std::runtime_error("not implemented");
 		//m_anim->EvaluateAtTime(time_s, bones);
 	}

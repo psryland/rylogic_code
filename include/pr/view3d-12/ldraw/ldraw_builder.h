@@ -1208,10 +1208,12 @@ namespace pr::rdr12::ldraw
 		{
 			std::filesystem::path m_filepath;
 			std::optional<LdrAnimation> m_anim;
+			bool m_no_materials;
 
 			LdrModel()
 				: m_filepath()
 				, m_anim()
+				, m_no_materials()
 			{}
 
 			// Model filepath
@@ -1228,6 +1230,12 @@ namespace pr::rdr12::ldraw
 				return *m_anim;
 			}
 
+			LdrModel& no_materials(bool on = true)
+			{
+				m_no_materials = on;
+				return *this;
+			}
+
 			// Write to 'out'
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
@@ -1236,18 +1244,38 @@ namespace pr::rdr12::ldraw
 				{
 					Writer::Write(out, EKeyword::FilePath, std::format("\"{}\"", m_filepath.string()));
 					if (m_anim) m_anim->WriteTo<Writer>(out);
+					if (m_no_materials) Writer::Write(out, EKeyword::NoMaterials);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}
 		};
 		struct LdrInstance :LdrBase<LdrInstance>
 		{
+			std::string m_address = {};
+			std::optional<LdrAnimation> m_anim = {};
+
+			/// <summary>Set the object address that this is an instance of</summary>
+			LdrInstance& inst(std::string_view address)
+			{
+				m_address = address;
+				return *this;
+			}
+
+			/// <summary>Add animation to the instance</summary>
+			LdrAnimation& anim()
+			{
+				if (!m_anim) m_anim = LdrAnimation{};
+				return *m_anim;
+			}
+
 			// Write to 'out'
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
 				Writer::Write(out, EKeyword::Instance, m_name, m_colour, [&]
 				{
+					Writer::Write(out, EKeyword::Data, m_address);
+					if (m_anim) m_anim->WriteTo<Writer>(out);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}

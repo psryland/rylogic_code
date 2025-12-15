@@ -23,8 +23,9 @@ namespace pr::rdr12
 		double m_time1;               // The animation time to display next
 		double m_stretch;             // Playback speed multiplier
 		EAnimStyle m_style;           // The style of animation
+		EAnimFlags m_flags;           // Behaviour flags
 
-		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, TimeRange time_range, double stretch);
+		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch);
 
 		// Set the animation time
 		void AnimTime(double time_s);

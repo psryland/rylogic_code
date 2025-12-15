@@ -176,14 +176,14 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-	string32 TextReader::IdentifierImpl()
+	string32 TextReader::IdentifierImpl(bool incl_dot)
 	{
 		auto& pp = as<script::Preprocessor>(m_pp);
 		m_nest_level += *pp == '{';
 		pp += *pp == '{';
 
 		wstring32 str = {};
-		if (!str::ExtractIdentifier(str, pp, m_delim.c_str()))
+		if (!str::ExtractIdentifier(str, pp, m_delim.c_str(), incl_dot))
 		{
 			ReportError(EParseError::InvalidValue, Loc(), "identifier expected");
 			str::AdvanceToDelim(pp, m_delim.c_str());

@@ -57,16 +57,27 @@
 #pragma once
 #include <cstdint>
 #include <numbers>
+#include <compare>
+#include <limits>
 #include <cassert>
 
 namespace pr::tri_table
 {
-	constexpr int64_t MaxIndex = 1'518'500'250LL; // Exclusive max. Ensure index < MaxIndex
-	enum class EType : int { Inclusive = +1, Exclusive = -1 };
-	struct indexes_t
+	// Exclusive max. Ensure index < MaxIndex
+	constexpr int64_t MaxIndex = 1'518'500'250LL;
+	
+	// Table types,
+	enum class EType : int
+	{
+		Inclusive = +1, // Table includes i-vs-i
+		Exclusive = -1, // Table excludes i-vs-i
+	};
+
+	// The index for each table dimension
+	struct index_pair_t
 	{
 		int64_t indexA, indexB;
-		friend std::strong_ordering operator <=>(indexes_t, indexes_t) = default;
+		friend std::strong_ordering operator <=>(index_pair_t, index_pair_t) = default;
 	};
 
 	namespace impl
@@ -83,7 +94,10 @@ namespace pr::tri_table
 					if (curr != prev && curr != pprev)
 						return NewtonRaphson(x, (curr + x / curr) >> 1, curr, prev);
 
-					return abs(x - curr * curr) < abs(x - prev * prev) ? curr : prev;
+					return Abs(x - curr * curr) < Abs(x - prev * prev) ? curr : prev;
+				}
+				constexpr static int64_t Abs(int64_t x) {
+					return x >= 0 ? x : -x;
 				}
 			};
 			return x >= 0 ? L::NewtonRaphson(x, x, 0, 0) : std::numeric_limits<int64_t>::quiet_NaN();
@@ -113,14 +127,14 @@ namespace pr::tri_table
 		//'   => n = sqrt(2)*sqrt(S) - t/2. Since n must be positive
 
 		// Remember this is the number of full rows that fit into 'array_size'
-		static constexpr int64_t small_sizes[] = {
+		constexpr int64_t small_sizes[] = {
 			0,
 			1, 1,
 			2, 2, 2,
 			3, 3, 3, 3,
 			4, 4, 4, 4, 4,
 		};
-		if (array_size < _countof(small_sizes) - 1)
+		if (array_size + 1 < sizeof(small_sizes)/sizeof(small_sizes[0]))
 			return small_sizes[array_size] + int(type == EType::Exclusive);
 
 		auto sqrt_array_size = impl::ISqrt(array_size);
@@ -143,7 +157,7 @@ namespace pr::tri_table
 	}
 
 	// Inverse of the 'Index' function. Get the indices A and B for a given table index
-	constexpr indexes_t FromIndex(EType type, int64_t tri_index)
+	constexpr index_pair_t FromIndex(EType type, int64_t tri_index)
 	{
 		// If 'tri_index' is valid, then the array must have at least 'tri_index+1' elements.
 		// The dimension of a table with 'tri_index+1' elements is the length of each side of the table, N.
@@ -177,7 +191,7 @@ namespace pr::tri_table
 			return tri_table::Index(Type, indexA, indexB);
 		}
 
-		static constexpr indexes_t FromIndex(int64_t index)
+		static constexpr index_pair_t FromIndex(int64_t index)
 		{
 			return tri_table::FromIndex(Type, index);
 		}
@@ -226,11 +240,11 @@ namespace pr::common
 
 		PR_EXPECT(IT::Dimension(IT::Size(371890)) == 371890);
 
-		PR_EXPECT(IT::FromIndex(IT::Index(0, 5)) == indexes_t(0, 5));
-		PR_EXPECT(IT::FromIndex(IT::Index(2, 2)) == indexes_t(2, 2));
+		PR_EXPECT(IT::FromIndex(IT::Index(0, 5)) == index_pair_t(0, 5));
+		PR_EXPECT(IT::FromIndex(IT::Index(2, 2)) == index_pair_t(2, 2));
 
-		PR_EXPECT(ET::FromIndex(ET::Index(0, 2)) == indexes_t(0, 2));
-		PR_EXPECT(ET::FromIndex(ET::Index(1, 2)) == indexes_t(1, 2));
+		PR_EXPECT(ET::FromIndex(ET::Index(0, 2)) == index_pair_t(0, 2));
+		PR_EXPECT(ET::FromIndex(ET::Index(1, 2)) == index_pair_t(1, 2));
 
 		// Round-trip Size and Dimension
 		for (double f = 2.0; f < 1'000'000'000.0; f = 1.2 * f + 0.7)
@@ -246,8 +260,8 @@ namespace pr::common
 		PR_EXPECT(IT::Index(big_index, big_index) == 1152921505384281374LL);
 		PR_EXPECT(ET::Index(big_index, big_index - 1) == 1152921503865781124LL);
 		
-		PR_EXPECT(IT::FromIndex(1152921505384281374LL) == indexes_t(big_index, big_index));
-		PR_EXPECT(ET::FromIndex(1152921503865781124LL) == indexes_t(big_index - 1, big_index));
+		PR_EXPECT(IT::FromIndex(1152921505384281374LL) == index_pair_t(big_index, big_index));
+		PR_EXPECT(ET::FromIndex(1152921503865781124LL) == index_pair_t(big_index - 1, big_index));
 
 		// Round-trip Index and A/B
 		for (int a = 0; a != 1000; ++a)

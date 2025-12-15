@@ -597,16 +597,46 @@ namespace pr
 
 		#pragma region Character classes
 
-		template <CharType Char> inline bool IsNewLine(Char ch)                 { return ch == '\n'; }
-		template <CharType Char> inline bool IsLineSpace(Char ch)               { return ch == ' ' || ch == '\t' || ch == '\r'; }
-		template <CharType Char> inline bool IsWhiteSpace(Char ch)              { return IsLineSpace(ch) || IsNewLine(ch) || ch == '\v' || ch == '\f'; }
-		template <CharType Char> inline bool IsDecDigit(Char ch)                { return (ch >= '0' && ch <= '9'); }
-		template <CharType Char> inline bool IsBinDigit(Char ch)                { return (ch >= '0' && ch <= '1'); }
-		template <CharType Char> inline bool IsOctDigit(Char ch)                { return (ch >= '0' && ch <= '7'); }
-		template <CharType Char> inline bool IsHexDigit(Char ch)                { return IsDecDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
-		template <CharType Char> inline bool IsDigit(Char ch)                   { return IsDecDigit(ch); }
-		template <CharType Char> inline bool IsAlpha(Char ch)                   { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
-		template <CharType Char> inline bool IsIdentifier(Char ch, bool first)  { return ch == '_' || IsAlpha(ch) || (!first && IsDigit(ch)); }
+		template <CharType Char> inline bool IsNewLine(Char ch)
+		{
+			return ch == '\n';
+		}
+		template <CharType Char> inline bool IsLineSpace(Char ch)
+		{
+			return ch == ' ' || ch == '\t' || ch == '\r';
+		}
+		template <CharType Char> inline bool IsWhiteSpace(Char ch)
+		{
+			return IsLineSpace(ch) || IsNewLine(ch) || ch == '\v' || ch == '\f';
+		}
+		template <CharType Char> inline bool IsDecDigit(Char ch)
+		{
+			return (ch >= '0' && ch <= '9');
+		}
+		template <CharType Char> inline bool IsBinDigit(Char ch)
+		{
+			return (ch >= '0' && ch <= '1');
+		}
+		template <CharType Char> inline bool IsOctDigit(Char ch)
+		{
+			return (ch >= '0' && ch <= '7');
+		}
+		template <CharType Char> inline bool IsHexDigit(Char ch)
+		{
+			return IsDecDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+		}
+		template <CharType Char> inline bool IsDigit(Char ch)
+		{
+			return IsDecDigit(ch);
+		}
+		template <CharType Char> inline bool IsAlpha(Char ch)
+		{
+			return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+		}
+		template <CharType Char> inline bool IsIdentifier(Char ch, bool first, bool incl_dot = false)
+		{
+			return ch == '_' || IsAlpha(ch) || (!first && IsDigit(ch)) || (incl_dot && ch == '.');
+		}
 
 		// Return a pointer to delimiters, either the ones provided or the default ones
 		template <CharType Char>

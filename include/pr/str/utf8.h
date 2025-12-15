@@ -171,6 +171,16 @@ namespace pr::str::utf8
 
 		return code;
 	}
+
+	// True if the first 3 bytes of 'str' are the UTF-8 BOM bytes
+	inline bool IsBOM(std::string_view str)
+	{
+		return
+			str.size() >= 3 &&
+			static_cast<uint8_t>(str[0]) == 0xEF &&
+			static_cast<uint8_t>(str[1]) == 0xBB &&
+			static_cast<uint8_t>(str[2]) == 0xBF;
+	}
 }
 
 #if PR_UNITTESTS

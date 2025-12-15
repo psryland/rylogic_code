@@ -204,7 +204,7 @@ namespace Rylogic.LDraw
 				var pretty = flags.HasFlag(ESaveFlags.Pretty);
 
 				if (Path.GetDirectoryName(tmp_path) is string directory)
-					Directory.CreateDirectory(tmp_path);
+					Directory.CreateDirectory(directory);
 
 				{
 					using var file = File.Open(tmp_path, append ? FileMode.Append : FileMode.Create);
@@ -1105,6 +1105,7 @@ namespace Rylogic.LDraw
 	{
 		private string m_filepath = string.Empty;
 		private LdrAnimation? m_anim = null;
+		private bool m_no_materials = false;
 
 		/// <summary>Model filepath</summary>
 		public LdrModel filepath(string filepath)
@@ -1120,6 +1121,12 @@ namespace Rylogic.LDraw
 			return m_anim;
 		}
 
+		public LdrModel no_materials(bool on = true)
+		{
+			m_no_materials = on;
+			return this;
+		}
+
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
@@ -1127,13 +1134,22 @@ namespace Rylogic.LDraw
 			{
 				res.Write(EKeyword.FilePath, $"\"{m_filepath}\"");
 				m_anim?.WriteTo(res);
+				if (m_no_materials) res.Write(EKeyword.NoMaterials);
 				base.WriteTo(res);
 			});
 		}
 	}
 	public class LdrInstance : LdrBase<LdrInstance>
 	{
+		private string m_address = string.Empty;
 		private LdrAnimation? m_anim = null;
+
+		/// <summary>Set the object address that this is an instance of</summary>
+		public LdrInstance inst(string address)
+		{
+			m_address = address;
+			return this;
+		}
 
 		/// <summary>Add animation to the instance</summary>
 		public LdrAnimation anim()
@@ -1147,6 +1163,7 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Instance, m_name, m_colour, () =>
 			{
+				res.Write(EKeyword.Data, m_address);
 				m_anim?.WriteTo(res);
 				base.WriteTo(res);
 			});

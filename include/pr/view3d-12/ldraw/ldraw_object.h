@@ -111,6 +111,9 @@ namespace pr::rdr12::ldraw
 		// Return the type and name of this object
 		string32 TypeAndName() const;
 
+		// Return the full name (address) of this object
+		string32 FullName() const;
+
 		// Called just prior to this object being added to a scene.
 		// Allows handlers to change the object's 'i2w' transform, visibility, etc.
 		EventHandler<LdrObject&, Scene const&, true> OnAddToScene;

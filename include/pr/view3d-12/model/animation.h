@@ -219,7 +219,6 @@ namespace pr::rdr12
 		using Sample = vector<BoneKey, 0>;
 
 		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
-		EAnimFlags m_flags;         // Behaviour flags
 		double m_duration;          // The length (in seconds) of this animation
 		double m_native_frame_rate; // The native frame rate of the animation (for reference. frame rate is implied key_count and duration)
 
@@ -229,7 +228,7 @@ namespace pr::rdr12
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
 
-		KeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, double duration, double native_frame_rate);
+		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
 
 		// Number of bone tracks in this animation
 		int bone_count() const;
@@ -244,9 +243,9 @@ namespace pr::rdr12
 		std::tuple<BoneKey, BoneKey> Key(float time_s, int bone_index) const;
 
 		// Returns the interpolated key frames a 'time_s'
-		void EvaluateAtTime(float time_s, std::span<m4x4> out) const;
-		void EvaluateAtTime(float time_s, Sample& out) const;
-		Sample EvaluateAtTime(float time_s) const;
+		void EvaluateAtTime(float time_s, EAnimFlags flags, std::span<m4x4> out) const;
+		void EvaluateAtTime(float time_s, EAnimFlags flags, Sample& out) const;
+		Sample EvaluateAtTime(float time_s, EAnimFlags flags) const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KeyFrameAnimation>* doomed);

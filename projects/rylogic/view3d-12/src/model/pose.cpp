@@ -12,7 +12,7 @@
 
 namespace pr::rdr12
 {
-	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, TimeRange time_range, double stretch)
+	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch)
 		: m_animator(animator)
 		, m_skeleton(skeleton)
 		, m_res()
@@ -22,6 +22,7 @@ namespace pr::rdr12
 		, m_time1(0.0)
 		, m_stretch(stretch)
 		, m_style(style)
+		, m_flags(flags)
 	{
 		ResourceStore::Access store(factory.rdr());
 
@@ -95,7 +96,7 @@ namespace pr::rdr12
 
 			// Read the deformed bone transforms into the buffer to start with.
 			// These are bone-to-parent transforms for each bone.
-			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, static_cast<float>(time));
+			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, static_cast<float>(time), m_flags);
 			m_time0 = m_time1;
 
 			// Convert the pose into object space transforms

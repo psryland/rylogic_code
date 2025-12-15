@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/animation.h"
 
 namespace pr::rdr12
 {
@@ -28,7 +29,7 @@ namespace pr::rdr12
 		virtual double FrameRate() const = 0;
 
 		// Apply an animation to the given bones
-		virtual void Animate(std::span<m4x4> bones, float time_s) = 0;
+		virtual void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) = 0;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<Animator>* doomed);
@@ -50,7 +51,7 @@ namespace pr::rdr12
 		double FrameRate() const override;
 
 		// Apply an animation to the given bones
-		void Animate(std::span<m4x4> bones, float time_s) override;
+		void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) override;
 	};
 
 	struct Animator_InterpolatedAnimation : Animator
@@ -69,6 +70,6 @@ namespace pr::rdr12
 		double FrameRate() const override;
 
 		// Apply an animation to the given bones
-		void Animate(std::span<m4x4> bones, float time_s) override;
+		void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) override;
 	};
 }

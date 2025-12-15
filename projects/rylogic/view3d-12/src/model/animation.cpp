@@ -35,9 +35,8 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, double duration, double native_frame_rate)
+	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_flags(flags)
 		, m_duration(duration)
 		, m_native_frame_rate(native_frame_rate)
 		, m_bone_map()
@@ -117,7 +116,7 @@ namespace pr::rdr12
 
 	// Sample each track at 'time_s'
 	template <typename Key> requires (std::is_assignable_v<Key, BoneKey>)
-	static void EvaluateAtTime(float time_s, KeyFrameAnimation const& anim, std::span<Key> out)
+	static void EvaluateAtTime(float time_s, EAnimFlags flags, KeyFrameAnimation const& anim, std::span<Key> out)
 	{
 		// For each bone...
 		assert(anim.bone_count() == isize(out));
@@ -135,9 +134,9 @@ namespace pr::rdr12
 
 			auto k = Interp(key0, key1, frac, key0.m_interp);
 
-			if (bone_index == 0 && AllSet(anim.m_flags, EAnimFlags::NoRootTranslation))
+			if (bone_index == 0 && AllSet(flags, EAnimFlags::NoRootTranslation))
 				k.m_pos = v3::Zero();
-			if (bone_index == 0 && AllSet(anim.m_flags, EAnimFlags::NoRootRotation))
+			if (bone_index == 0 && AllSet(flags, EAnimFlags::NoRootRotation))
 				k.m_rot = quat::Identity();
 
 			key = k;
@@ -146,19 +145,19 @@ namespace pr::rdr12
 	}
 
 	// Returns the linearly interpolated key frames a 'time_s'
-	void KeyFrameAnimation::EvaluateAtTime(float time_s, std::span<m4x4> out) const
+	void KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags, std::span<m4x4> out) const
 	{
-		rdr12::EvaluateAtTime(time_s, *this, out);
+		rdr12::EvaluateAtTime(time_s, flags, *this, out);
 	}
-	void KeyFrameAnimation::EvaluateAtTime(float time_s, KeyFrameAnimation::Sample& out) const
+	void KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags, KeyFrameAnimation::Sample& out) const
 	{
 		out.resize(bone_count());
-		rdr12::EvaluateAtTime(time_s, *this, out.span());
+		rdr12::EvaluateAtTime(time_s, flags, *this, out.span());
 	}
-	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(float time_s) const
+	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags) const
 	{
 		Sample sample(bone_count());
-		rdr12::EvaluateAtTime(time_s, *this, sample.span());
+		rdr12::EvaluateAtTime(time_s, flags, *this, sample.span());
 		return sample;
 	}
 
