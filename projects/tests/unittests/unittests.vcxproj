@@ -117,6 +117,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\min_max_fix.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\msgbox.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\event_handler.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\common\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\number.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\objectpool.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\common\observe.h" />

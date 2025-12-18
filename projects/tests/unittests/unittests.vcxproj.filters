@@ -1107,6 +1107,9 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\ldraw.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

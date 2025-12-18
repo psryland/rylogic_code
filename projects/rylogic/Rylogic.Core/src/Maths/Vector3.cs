@@ -120,6 +120,7 @@ namespace Rylogic.Maths
 		public readonly static v3 XAxis = new(1f, 0f, 0f);
 		public readonly static v3 YAxis = new(0f, 1f, 0f);
 		public readonly static v3 ZAxis = new(0f, 0f, 1f);
+		public readonly static v3 Origin = new(0f, 0f, 0f);
 		public readonly static v3 One = new(1f, 1f, 1f);
 		public readonly static v3 NaN = new(float.NaN, float.NaN, float.NaN);
 		public readonly static v3 MinValue = new(float.MinValue, float.MinValue, float.MinValue);

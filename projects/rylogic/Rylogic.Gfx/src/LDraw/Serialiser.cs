@@ -36,7 +36,9 @@ namespace Rylogic.LDraw.Serialiser
 	{
 		public uint m_colour = colour ?? 0xFFFFFFFF;
 		public EKeyword m_kw = kw ?? EKeyword.Colour;
+		public static implicit operator Colour(uint colour) => new(colour);
 		public static implicit operator Colour(uint? colour) => new(colour);
+		public static implicit operator Colour(Colour32 colour) => new(colour);
 		public static implicit operator Colour(Colour32? colour) => new(colour);
 	}
 	public class Size(float? size = null)

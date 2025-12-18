@@ -79,6 +79,7 @@
 #include "pr/common/interpolate.h"
 #include "pr/common/ireport.h"
 #include "pr/common/keystate.h"
+#include "pr/common/ldraw.h"
 #include "pr/common/linq.h"
 #include "pr/common/log.h"
 #include "pr/common/mempool.h"

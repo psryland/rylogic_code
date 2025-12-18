@@ -217,7 +217,10 @@ namespace Rylogic.LDraw
 				if (Path.GetExtension(outpath) == string.Empty)
 					outpath = Path.ChangeExtension(outpath, binary ? ".bdr" : ".ldr");
 
-				File.Replace(tmp_path, outpath, null);
+				if (File.Exists(outpath))
+					File.Replace(tmp_path, outpath, null);
+				else
+					File.Move(tmp_path, outpath);
 			}
 			catch (Exception ex)
 			{
@@ -281,6 +284,7 @@ namespace Rylogic.LDraw
 		protected Serialiser.AxisId m_axis_id = new();
 		protected Serialiser.Solid m_solid = new();
 		protected Serialiser.Hidden m_hidden = new();
+		private LdrTransform? m_bake = null;
 
 		/// <summary>Object name</summary>
 		public TDerived name(Serialiser.Name name)
@@ -386,15 +390,87 @@ namespace Rylogic.LDraw
 			return (TDerived)this;
 		}
 
+		/// <summary>Bake a transform into the object</summary>
+		public LdrTransform bake()
+		{
+			m_bake ??= new(EKeyword.BakeTransform);
+			return m_bake;
+		}
+
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter writer)
 		{
 			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_group_colour, m_o2w);
+			if (m_bake != null) m_bake.WriteTo(writer);
 			base.WriteTo(writer);
 		}
 	}
 
 	// Modifiers
+	public class LdrTransform(EKeyword kw)
+	{
+		private EKeyword m_kw = kw;
+		private Serialiser.O2W m_o2w = new();
+
+		public LdrTransform o2w(m4x4 o2w)
+		{
+			m_o2w.m_mat = o2w * m_o2w.m_mat;
+			return this;
+		}
+		public LdrTransform o2w(m3x4 rot, v4 pos)
+		{
+			return o2w(new m4x4(rot, pos));
+		}
+		public LdrTransform ori(v4 dir, AxisId axis)
+		{
+			return ori(m3x4.Rotation(axis.Axis, dir));
+		}
+		public LdrTransform ori(m3x4 rot)
+		{
+			return o2w(rot, v4.Origin);
+		}
+		public LdrTransform ori(Quat q)
+		{
+			return o2w(m4x4.Transform(q, v4.Origin));
+		}
+		public LdrTransform pos(float x, float y, float z)
+		{
+			return o2w(m4x4.Translation(x, y, z));
+		}
+		public LdrTransform pos(v4 pos)
+		{
+			return o2w(m4x4.Translation(pos));
+		}
+		public LdrTransform pos(v3 pos)
+		{
+			return this.pos(pos.w1);
+		}
+		public LdrTransform scale(float s)
+		{
+			return scale(s, s, s);
+		}
+		public LdrTransform scale(float sx, float sy, float sz)
+		{
+			return ori(m3x4.Scale(sx, sy, sz));
+		}
+		public LdrTransform scale(v4 s)
+		{
+			return ori(m3x4.Scale(s.x, s.y, s.z));
+		}
+		public LdrTransform euler(float pitch_deg, float yaw_deg, float roll_deg)
+		{
+			return ori(m3x4.Rotation(
+				Math_.DegreesToRadians(pitch_deg),
+				Math_.DegreesToRadians(yaw_deg),
+				Math_.DegreesToRadians(roll_deg)));
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			res.Write(m_kw, m_o2w);
+		}
+	}
 	public class LdrTexture
 	{
 		private string m_filepath = string.Empty;
@@ -610,9 +686,9 @@ namespace Rylogic.LDraw
 			m_current.m_smooth = new(smooth);
 			return this;
 		}
-		public LdrLine width(Serialiser.Width w)
+		public LdrLine width(float w)
 		{
-			m_current.m_width = w;
+			m_current.m_width = new(w);
 			return this;
 		}
 		public LdrLine dashed(v2 dash)
@@ -1967,7 +2043,7 @@ namespace Rylogic.UnitTests
 		public void TestTextBox()
 		{
 			var builder = new LDraw.Builder();
-			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
+			builder.Box("b", new Colour32(0xFF00FF00)).dim(1).o2w(m4x4.Identity);
 			var str = builder.ToString();
 			Assert.Equal(str, "*Box b FF00FF00 {*Data {1 1 1}}");
 		}

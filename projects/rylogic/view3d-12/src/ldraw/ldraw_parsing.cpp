@@ -761,7 +761,7 @@ namespace pr::rdr12::ldraw
 				return tex;
 			};
 
-			iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
+			iv2 sz(256,256);
 			switch (style)
 			{
 				case EPointStyle::Square:
@@ -1005,6 +1005,7 @@ namespace pr::rdr12::ldraw
 				{
 					case EKeyword::BakeTransform:
 					{
+						m_o2w = m4x4::Identity();
 						reader.Transform(m_o2w);
 						return true;
 					}

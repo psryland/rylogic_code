@@ -78,6 +78,7 @@ namespace Rylogic.Gfx
 				Window.EnumObjects(objects.Add, x => !Exclude.Contains(x));
 				Objects.Sync(objects);
 				SelectedObjects.RemoveWhere(x => !objects.Contains(x));
+				Objects.Sort((l,r) => l.Name.CompareTo(r.Name));
 				NotifyPropertyChanged(nameof(Objects));
 			}
 

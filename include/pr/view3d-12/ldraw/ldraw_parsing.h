@@ -143,8 +143,8 @@ namespace pr::rdr12::ldraw
 		//        case rdr12::ldraw::HashI("Depth"): depth = reader.Int<int>() != 0; break;
 		//    }
 		IReader(ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
-			: ReportError(!!report_error_cb ? report_error_cb : ReportErrorCB{ &ReportErrorDefaultCB, nullptr })
-			, Progress(!!progress_cb ? progress_cb : ParseProgressCB{ &ParseProgressDefaultCB, nullptr })
+			: ReportError(!!report_error_cb ? report_error_cb : ReportErrorCB{ nullptr, &ReportErrorDefaultCB })
+			, Progress(!!progress_cb ? progress_cb : ParseProgressCB{ nullptr , &ParseProgressDefaultCB })
 			, PathResolver(resolver)
 		{
 		}

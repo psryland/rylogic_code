@@ -4,12 +4,14 @@
 //*********************************************
 #pragma once
 #include <type_traits>
+#include <filesystem>
 
 #ifndef PR_PIX_ENABLED
 #define PR_PIX_ENABLED 0
 #endif
 
 #if PR_PIX_ENABLED
+#include <cassert>
 #include <windows.h>
 #include <pix3.h>
 #endif
@@ -18,6 +20,14 @@ namespace pr::rdr12::pix
 {
 	// Return the PIX dll module handle if it can be loaded
 	HMODULE LoadDll();
+
+	inline void LoadLatestWinPixGpuCapturer()
+	{
+		#if PR_PIX_ENABLED
+		auto h = PIXLoadLatestWinPixGpuCapturerLibrary();
+		assert(h != nullptr && "Failed to load 'WinPixGpuCapturer.dll'");
+		#endif
+	}
 
 	inline bool IsAttachedForGpuCapture()
 	{
@@ -28,11 +38,12 @@ namespace pr::rdr12::pix
 		#endif
 	}
 
-	inline void BeginCapture(wchar_t const* wpix_filepath)
+	inline void BeginCapture(std::filesystem::path const& wpix_filepath)
 	{
 		#if PR_PIX_ENABLED
-		PIXCaptureParameters parameters = { .GpuCaptureParameters = {.FileName = wpix_filepath} };
-		PIXBeginCapture2(PIX_CAPTURE_GPU, &parameters);
+		PIXCaptureParameters parameters = { .GpuCaptureParameters = {.FileName = wpix_filepath.c_str()} };
+		auto r = PIXBeginCapture2(PIX_CAPTURE_GPU, &parameters);
+		assert(r == S_OK && "PIX Capture error"); // Cannot load the WinPixGpuCapturer dll here. It needs to happen before the D3D device is created.
 		#else
 		(void)wpix_filepath;
 		#endif
@@ -46,12 +57,12 @@ namespace pr::rdr12::pix
 	}
 
 	template<typename CONTEXT, typename... ARGS>
-	inline void BeginEvent(CONTEXT* context, unsigned long colour, char const* formatString, ARGS... args)
+	inline void BeginEvent(CONTEXT* context, unsigned long colour, char const* format_string, ARGS... args)
 	{
 		#if PR_PIX_ENABLED
-		PIXBeginEvent(context, colour, formatString, args...);
+		PIXBeginEvent(context, colour, format_string, std::forward<ARGS>(args)...);
 		#else
-		(void)context, colour, formatString;
+		(void)context, colour, format_string;
 		#endif
 	}
 
@@ -69,7 +80,7 @@ namespace pr::rdr12::pix
 	{
 		bool m_active;
 
-		CaptureScope(wchar_t const* wpix_filepath, bool active)
+		CaptureScope(std::filesystem::path const& wpix_filepath, bool active)
 			: m_active(active)
 		{
 			if (m_active) BeginCapture(wpix_filepath);
@@ -99,6 +110,9 @@ namespace pr::rdr12::pix
 		EventScope(EventScope const&) = delete;
 		EventScope& operator=(EventScope&&) = delete;
 		EventScope& operator=(EventScope const&) = delete;
-		~EventScope() { EndEvent(m_context); }
+		~EventScope()
+		{
+			EndEvent(m_context);
+		}
 	};
 }

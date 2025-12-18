@@ -574,6 +574,12 @@ namespace pr::rdr12
 		frame.m_resolve.Close();
 		frame.m_present.Close();
 
+		#if PR_PIX_ENABLED
+		static bool capture = false;
+		pix::CaptureScope pix_capture("E:/Dump/PIXCaptures/View3d.wpix", capture);
+		capture = false;
+		#endif
+
 		// Submit the command lists to the GPU
 		rdr().ExecuteGfxCommandLists({
 			frame.m_prepare,
