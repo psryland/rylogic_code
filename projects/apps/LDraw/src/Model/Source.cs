@@ -123,6 +123,9 @@ namespace LDraw
 		/// <summary>True if this source has a file that can be edited</summary>
 		public bool CanEdit => View3dSource?.Info is View3d.SourceInfo info && Path_.FileExists(info.FilePath) && info.TextFormat;
 
+		/// <summary>True if the source exists</summary>
+		public bool Exists => FilePath.Length == 0 || Path_.FileExists(FilePath); // Has no associated file, or it does and the file exists
+
 		/// <summary>The names of the scenes to add this source to</summary>
 		public void ShowInScenes(IEnumerable<SceneUI> scenes, bool show)
 		{

@@ -3,15 +3,12 @@
 //  Copyright (c) Rylogic Ltd 2010
 //****************************************************************
 #pragma once
-
-#include <vector>
 #include <mutex>
 #include <filesystem>
 #include "pr/common/guid.h"
 #include "pr/common/event_handler.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/container/vector.h"
-#include "pr/str/string.h"
 #include "pr/threads/synchronise.h"
 
 namespace pr
@@ -48,37 +45,40 @@ namespace pr
 		// File time stamp info
 		struct File
 		{
-			path                 m_filepath;  // The file to watch
-			file_time_type       m_time;      // The last modified time stats
-			IFileChangedHandler* m_onchanged; // The client to callback when a changed file is found
-			pr::Guid             m_id;        // A user provided id used to identify groups of watched files
-			void*                m_user_data; // User data to provide in the callback
+			path                 m_filepath;   // The file to watch
+			std::error_code      m_last_error; // Last error on 'm_filepath'
+			file_time_type       m_time;       // The last modified time stats
+			IFileChangedHandler* m_onchanged;  // The client to callback when a changed file is found
+			pr::Guid             m_id;         // A user provided id used to identify groups of watched files
+			void*                m_user_data;  // User data to provide in the callback
 		
 			File()
-				:m_filepath()
-				,m_time()
-				,m_onchanged()
-				,m_id()
-				,m_user_data()
+				: m_filepath()
+				, m_last_error()
+				, m_time()
+				, m_onchanged()
+				, m_id()
+				, m_user_data()
 			{}
 			File(path const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
-				:m_filepath(filepath)
-				,m_time(std::filesystem::last_write_time(filepath))
-				,m_onchanged(onchanged)
-				,m_id(id)
-				,m_user_data(user_data)
+				: m_filepath(filepath.lexically_normal())
+				, m_last_error()
+				, m_time(std::filesystem::last_write_time(filepath, m_last_error))
+				, m_onchanged(onchanged)
+				, m_id(id)
+				, m_user_data(user_data)
 			{}
 
-			bool operator == (path const& filepath) const
+			friend bool operator == (File const& lhs, path const& rhs)
 			{
-				return std::filesystem::equivalent(m_filepath, filepath); 
+				return lhs.m_filepath == rhs.lexically_normal();
 			}
-			bool operator == (pr::Guid const& id) const
+			friend bool operator == (File const& lhs, Guid const& rhs)
 			{
-				return m_id == id; 
+				return lhs.m_id == rhs; 
 			}
 		};
-		struct FileCont :pr::vector<File>
+		struct FileCont :vector<File>
 		{};
 
 	private:
@@ -123,22 +123,18 @@ namespace pr
 		// Return the Guid associated with the given filepath (or GuidZero, if not being watched)
 		pr::Guid FindId(path const& filepath) const
 		{
-			auto fpath = std::filesystem::canonical(filepath);
-			
 			Lock lock(*this);
 			auto& files = lock.files();
-			auto iter = pr::find(files, fpath);
+			auto iter = pr::find(files, filepath.lexically_normal());
 			return iter != std::end(files) ? iter->m_id : pr::GuidZero;
 		}
 
 		// Mark a file as changed, to be caught on the next 'CheckForChangedFiles' call
 		void MarkAsChanged(path const& filepath)
 		{
-			auto fpath = std::filesystem::canonical(filepath);
-			
 			Lock lock(*this);
 			auto& files = lock.files();
-			auto iter = pr::find(files, fpath);
+			auto iter = pr::find(files, filepath.lexically_normal());
 			if (iter != std::end(files))
 				iter->m_time -= std::chrono::seconds(10);
 		}
@@ -151,16 +147,14 @@ namespace pr
 
 			// Add to the files collection
 			Lock lock(*this);
-			auto fpath = std::filesystem::canonical(filepath);
-			lock.files().emplace_back(fpath, onchanged, id, user_data);
+			lock.files().emplace_back(filepath.lexically_normal(), onchanged, id, user_data);
 		}
 
 		// Remove a watched file
 		void Remove(std::filesystem::path const& filepath)
 		{
 			Lock lock(*this);
-			auto fpath = std::filesystem::canonical(filepath);
-			pr::erase_first(lock.files(), [&](File const& f){ return f == fpath; });
+			erase_first(lock.files(), [fpath = filepath.lexically_normal()](File const& f){ return f == fpath; });
 		}
 
 		// Remove all watches where 'm_id == id'
@@ -186,8 +180,15 @@ namespace pr
 				Lock lock(*this);
 				for (auto& file : lock.files())
 				{
-					auto stamp = std::filesystem::last_write_time(file.m_filepath);
-					if (file.m_time != stamp) changed_files.push_back(file);
+					// Ignore files with issues
+					std::error_code ec;
+					auto stamp = std::filesystem::last_write_time(file.m_filepath, ec);
+					if (ec)
+						continue;
+
+					if (file.m_time != stamp)
+						changed_files.push_back(file);
+
 					file.m_time = stamp;
 				}
 			}

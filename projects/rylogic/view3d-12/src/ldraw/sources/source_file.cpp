@@ -30,11 +30,14 @@ namespace pr::rdr12::ldraw
 	// Regenerate the output from the source
 	ParseResult SourceFile::ReadSource(Renderer& rdr)
 	{
-		if (!std::filesystem::exists(m_filepath))
-			return {};
-
 		m_errors.resize(0);
 		m_filepaths.resize(0);
+
+		if (!std::filesystem::exists(m_filepath))
+		{
+			m_errors.push_back(ParseErrorEventArgs{ std::format("File '{}' not found", m_filepath.string()), EParseError::DataMissing, {} });
+			return {};
+		}
 
 		m_includes.LocalDir("");
 		m_includes.FileOpened(m_includes, m_filepath);
