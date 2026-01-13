@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using Rylogic.Extn.Windows;
+using Rylogic.Windows.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Interop.Win32;
 using Rylogic.Utility;

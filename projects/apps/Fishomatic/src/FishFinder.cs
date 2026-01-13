@@ -3,12 +3,11 @@ using System.ComponentModel;
 using System.Drawing.Imaging;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Rylogic.Common;
-using Rylogic.Extn.Windows;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
-using Color = System.Drawing.Color;
+using Rylogic.Windows.Extn;
 using Bitmap = System.Drawing.Bitmap;
+using Color = System.Drawing.Color;
 using Graphics = System.Drawing.Graphics;
 using Point = System.Drawing.Point;
 using Rectangle = System.Drawing.Rectangle;
@@ -117,13 +116,13 @@ namespace Fishomatic
 				// The WoW Window can appear or disappear at any time
 				if (m_wow != null)
 				{
-					if (!Win32.IsWindow(m_wow) || m_wow.WindowRectangle.Width < 50 || m_wow.WindowRectangle.Height < 50)
+					if (!User32.IsWindow(m_wow) || m_wow.WindowRectangle.Width < 50 || m_wow.WindowRectangle.Height < 50)
 						m_wow = null;
 				}
 				if (m_wow == null)
 				{
 					// Find the window by name, if there are multiple windows, choose the largest
-					foreach (var win in Windows.GetWindowsByName(Settings.TargetWindowName, false))
+					foreach (var win in Rylogic.Interop.Win32.Windows.GetWindowsByName(Settings.TargetWindowName, false))
 					{
 						// Find the largest window with WindowName as a title
 						if (m_wow != null)
@@ -207,11 +206,11 @@ namespace Fishomatic
 				case EState.Idle:
 				{
 					// While idle (paused), allow the sample colour to be set
-					var sampling = Win32.KeyDown(EKeyCodes.LControlKey) && Win32.GetForegroundWindow() == wow.Hwnd;
+					var sampling = Win32.KeyDown(EKeyCodes.LControlKey) && User32.GetForegroundWindow() == wow.Hwnd;
 					if (sampling)
 					{
 						// Read the colour of the pixel under the mouse
-						var mouse_pt = Win32.GetCursorPos().ToPoint().ToPointD();
+						var mouse_pt = User32.GetCursorPos().ToPoint().ToPointD();
 						var search_area = Settings.SmallSearchArea(mouse_pt).ToRectI();
 						m_small_grab = CaptureScreen(ref m_small_grab, search_area);
 						Settings.TargetColour = m_small_grab.GetPixel(search_area.Width / 2, search_area.Height / 2);
