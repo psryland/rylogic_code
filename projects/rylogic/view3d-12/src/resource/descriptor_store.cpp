@@ -9,6 +9,7 @@ namespace pr::rdr12
 	DescriptorStore::DescriptorStore(ID3D12Device* device)
 		: m_device(device)
 		, m_store_cpu()
+		, m_hint_free()
 	{}
 
 	// Create a CBV descriptor
@@ -150,7 +151,12 @@ namespace pr::rdr12
 		
 		// Find a block with a free slot.
 		int i = 0, iend = s_cast<int>(store.size());
-		for (; i != iend && store[i].free != 0; ++i) {}
+		if (m_hint_free[type] != iend && store[m_hint_free[type]].free != 0)
+			i = m_hint_free[type];
+		else
+			for (; i != iend && store[i].free == 0; ++i) {}
+
+		// If all blocks are full, allocate a new one
 		if (i == iend)
 		{
 			// Add a new block to the store
@@ -165,6 +171,8 @@ namespace pr::rdr12
 			store.push_back(block);
 			i = iend;
 		}
+
+		m_hint_free[type] = i;
 		return store[i];
 	}
 }
