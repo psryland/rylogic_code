@@ -135,12 +135,13 @@
 				Margin="8"
 				>
 				<TextBlock
-					Text="Snap Distance: "
+					Text="Snap Distance:"
+					Margin="0,0,6,0"
 					/>
 				<TextBox
-					Text="{Binding SnapDistance, Mode=TwoWay}"
+					Text="{Binding SnapDistance, StringFormat={}{0:N3}, Mode=TwoWay}"
 					KeyUp="UpdateBindingOnEnterPressed"
-					MinWidth="50"
+					Width="80"
 					/>
 				<gui:SliderFunction
 					Minimum="-5"

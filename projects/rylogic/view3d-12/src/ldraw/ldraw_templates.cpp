@@ -203,7 +203,7 @@ namespace pr::rdr12::ldraw
 			"{\n"
 			"	[*ScreenSpace {}]\n"
 			"	[*Billboard {}]\n"
-			"	[*Billboard3D]\n"
+			"	[*Billboard3D {}]\n"
 			"	(*Data {<text>})\n"
 			"	([*CString {<c_style_string>}])\n"
 			"	([*NewLine {}])\n"

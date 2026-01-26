@@ -9,7 +9,6 @@
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_ray_cast.h"
-#include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/pipe_state.h"
@@ -17,7 +16,7 @@
 #include "pr/view3d-12/utility/pix.h"
 #include "view3d-12/src/shaders/common.h"
 
-#define PR_RDR12_DEBUG_RAYCAST 0
+#define PR_RDR12_DEBUG_RAYCAST 1
 #if PR_RDR12_DEBUG_RAYCAST
 #pragma message(PR_LINK "warning : **************************************************** PR_RDR12_DEBUG_RAYCAST defined")
 #endif
@@ -45,8 +44,8 @@ namespace pr::rdr12
 	RenderRayCast::RenderRayCast(Scene& scene, bool continuous)
 		: RenderStep(Id, scene)
 		, m_rays()
-		, m_snap_distance(1.0f)
-		, m_snap_mode(ESnapMode::Vert | ESnapMode::Edge | ESnapMode::Face)
+		, m_snap_distance()
+		, m_snap_mode(ESnapMode::Vert | ESnapMode::Edge | ESnapMode::Face | ESnapMode::Perspective)
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
 		, m_gsync(scene.d3d())
@@ -199,10 +198,11 @@ namespace pr::rdr12
 				// Cases:
 				//  - If either intercept is a face snap, then sort by distance
 				//    because faces should occlude any intercepts behind them.
-				//  - Otherwise, sort by distance if the difference is greater
-				//    than the snap distance.
+				//  - Otherwise, sort by distance if the difference in depth
+				//    is greater than the snap distance.
 				//  - If two intercepts are within the snap distance:
 				//    - Sort by closest to the ray.
+				auto average_depth = 0.5f * (l.ws_intercept.w + r.ws_intercept.w);
 
 				// If one of the intercepts is a face snap
 				if ((ESnapType)l.snap_type == ESnapType::Face ||
@@ -217,8 +217,10 @@ namespace pr::rdr12
 					return l.snap_type < r.snap_type;
 				}
 
-				// Neither intercept is a face snap. Sort roughly by distance first
-				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > m_snap_distance)
+				// Neither intercept is a face snap then sort by distance if
+				// the difference in distance is larger than the snap distance.
+				auto snap_dist = AllSet(m_snap_mode, ESnapMode::Perspective) ? m_snap_distance * average_depth : m_snap_distance;
+				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > snap_dist)
 					return l.ws_intercept.w < r.ws_intercept.w;
 
 				// If one of the intercepts is an edge snap

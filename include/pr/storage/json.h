@@ -364,6 +364,21 @@ namespace pr::json
 			throw std::runtime_error(std::format("Index {} is not with this array", index));
 		}
 
+		// A string representation of the value
+		std::string str() const
+		{
+			switch (value.index())
+			{
+				case TypeIndex::Null: return "";
+				case TypeIndex::Bool: return to<bool>() ? "1" : "0";
+				case TypeIndex::String: return to<std::string>();
+				case TypeIndex::Number: return std::format("{}", to<double>());
+				case TypeIndex::ChildArray: return "JsonArray";
+				case TypeIndex::ChildObject: return "JsonObject";
+				default: throw std::runtime_error("Unknown value type");
+			}
+		}
+
 		// Comparison operators
 		friend bool operator == (Value const& lhs, nullptr_t)
 		{
@@ -573,18 +588,62 @@ namespace pr::json
 			Colon,
 			Comma,
 		};
+		enum class EEatFlags
+		{
+			None = 0,
+			Comments = 1 << 0,
+			AllowEndOfString = 1 << 1,
+		};
 		struct Token
 		{
 			EToken token;
 			std::string_view data;
 		};
-
-		// Advance the string pointer to the next non-whitespace character
-		inline bool EatWS(std::string_view& src, bool allow_eos)
+		template <typename T> requires (std::is_enum_v<T>)
+		inline bool HasFlag(T bits, T flag)
 		{
-			for (; !src.empty() && std::isspace(src[0]); )
-				src.remove_prefix(1);
-			if (src.empty() && !allow_eos)
+			using UT = std::underlying_type_t<T>;
+			return (static_cast<UT>(bits) & static_cast<UT>(flag)) != 0;
+		}
+
+		// Remove whitespace characters (or comments) from the start of 'src'
+		inline bool EatWS(std::string_view& src, EEatFlags eat_flags)
+		{
+			auto Eat = [](std::string_view& src, int eat_initial, int eat_final, auto pred)
+			{
+				src.remove_prefix(eat_initial);
+				for (; !src.empty() && pred(src); src.remove_prefix(1)) {}
+				if (!src.empty()) src.remove_prefix(eat_final);
+			};
+
+			for (; !src.empty(); )
+			{
+				// Eat whitespace
+				if (std::isspace(static_cast<unsigned char>(src[0])))
+				{
+					Eat(src, 1, 0, [](auto& sv) { return std::isspace(static_cast<unsigned char>(sv[0])); });
+					continue;
+				}
+
+				// Line comments
+				if (HasFlag(eat_flags, EEatFlags::Comments) && src.compare(0, 2, "//") == 0)
+				{
+					Eat(src, 2, 1, [](auto& sv) { return sv[0] != '\n'; });
+					continue;
+				}
+
+				// Block comments
+				if (HasFlag(eat_flags, EEatFlags::Comments) && src.compare(0, 2, "/*") == 0)
+				{
+					Eat(src, 2, 2, [](auto& sv) { return sv.compare(0, 2, "*/") == 0; });
+					continue;
+				}
+
+				// No more whitespace or comments
+				break;
+			}
+
+			if (src.empty() && !HasFlag(eat_flags, EEatFlags::AllowEndOfString))
 				throw std::runtime_error("Unexpected end of string");
 
 			// Always return true to allow if chaining
@@ -594,7 +653,7 @@ namespace pr::json
 		// Return the next token in the json string
 		inline Token NextToken(std::string_view& src, Options const& opts)
 		{
-			EatWS(src, true);
+			EatWS(src, EEatFlags::AllowEndOfString);
 			if (src.empty())
 				return { EToken::EndOfString, {} };
 
@@ -747,6 +806,7 @@ namespace pr::json
 		// Return the next value in the json string
 		inline Value NextValue(std::string_view& src, Options const& opts)
 		{
+			auto eat_flags = opts.AllowComments ? EEatFlags::Comments : EEatFlags::None;
 			auto tok = NextToken(src, opts);
 			switch (tok.token)
 			{
@@ -785,7 +845,7 @@ namespace pr::json
 					auto require_comma = false;
 					for (;;)
 					{
-						if (EatWS(src, false) && src[0] == ']')
+						if (EatWS(src, eat_flags) && src[0] == ']')
 						{
 							std::ignore = NextToken(src, opts);
 							break;
@@ -794,7 +854,7 @@ namespace pr::json
 						{
 							throw std::runtime_error("Expected comma");
 						}
-						if (opts.AllowTrailingCommas && EatWS(src, false) && src[0] == ']')
+						if (opts.AllowTrailingCommas && EatWS(src, eat_flags) && src[0] == ']')
 						{
 							std::ignore = NextToken(src, opts);
 							break;
@@ -812,7 +872,7 @@ namespace pr::json
 					auto require_comma = false;
 					for (;;)
 					{
-						if (EatWS(src, false) && src[0] == '}')
+						if (EatWS(src, eat_flags) && src[0] == '}')
 						{
 							std::ignore = NextToken(src, opts);
 							break;
@@ -821,7 +881,7 @@ namespace pr::json
 						{
 							throw std::runtime_error("Expected comma");
 						}
-						if (opts.AllowTrailingCommas && EatWS(src, false) && src[0] == '}')
+						if (opts.AllowTrailingCommas && EatWS(src, eat_flags) && src[0] == '}')
 						{
 							std::ignore = NextToken(src, opts);
 							break;

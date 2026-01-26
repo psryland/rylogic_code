@@ -399,7 +399,7 @@ namespace pr::rdr12
 			return *this;
 		}
 
-		// The aspect ratio of the viewport
+		// The aspect ratio (width/height) of the viewport
 		float Aspect() const
 		{
 			return 1.0f * Width / Height;
@@ -417,6 +417,14 @@ namespace pr::rdr12
 		RECT AsRECT() const
 		{
 			return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)};
+		}
+
+		// Convert a length in pixels into a length in normalised screen space
+		float PixelsToNSS(float pixels) const
+		{
+			// Use the ScreenH. Users can always multiply by aspect to get X-nss
+			// Remember: NSS = [-1, +1] so if pixels == ScreenH, the the range should be 2
+			return ScreenH != 0 ? 2.0f * pixels / ScreenH : 0;
 		}
 
 		// Convert a screen space point to normalised screen space

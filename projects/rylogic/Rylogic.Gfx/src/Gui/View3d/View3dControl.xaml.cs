@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -322,21 +322,15 @@ namespace Rylogic.Gui.WPF
 				if (field)
 				{
 					KeyDown -= HandleKeyDown;
-					PreviewKeyDown -= HandlePreviewKeyDown;
 				}
 				field = value;
 				if (field)
 				{
 					KeyDown += HandleKeyDown;
-					PreviewKeyDown += HandlePreviewKeyDown;
 				}
 				
 				NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts));
-				
-				void HandlePreviewKeyDown(object sender, KeyEventArgs args)
-				{
-					args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
-				}
+
 				void HandleKeyDown(object sender, KeyEventArgs args)
 				{
 					var key = args.Key.ToKeyCode(include_modifier_keys: true);

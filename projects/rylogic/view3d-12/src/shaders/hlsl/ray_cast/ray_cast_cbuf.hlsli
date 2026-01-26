@@ -23,10 +23,12 @@ static const int ESnapType_Face = 5;
 static const int ESnapMode_Vert = 1 << 0;
 static const int ESnapMode_Edge = 1 << 1;
 static const int ESnapMode_Face = 1 << 2;
+static const int ESnapMode_Perspective = 1 << 8; // If set, then snap distance scales with distance from the origin
 
 #define TrySnapToFace ((m_snap_mode & ESnapMode_Face) != 0)
 #define TrySnapToEdge ((m_snap_mode & ESnapMode_Edge) != 0)
 #define TrySnapToVert ((m_snap_mode & ESnapMode_Vert) != 0)
+#define PerspectiveSnap ((m_snap_mode & ESnapMode_Perspective) != 0)
 
 // A single ray to cast
 struct Ray
@@ -56,8 +58,12 @@ cbuffer CBufFrame :reg(b0, 0)
 	// Combination of 'ESnapMode'. What sort of snapping to perform
 	int m_snap_mode;
 
-	// The snap distance
-	float m_snap_dist;
+	// The snap distance. If 'snap_mode' is perspective, then this should be the ratio of
+	// 'distance-in-nss / near-plane-distance' or, equivalently, the snap distance at 1 unit from the ray origin.
+	// If 'snap_mode' is not perspective, then this is the distance in world space units
+	float m_snap_distance;
+	
+	float pad;
 };
 
 // Per-nugget constants

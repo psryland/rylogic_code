@@ -30,12 +30,10 @@ namespace Rylogic.Gfx
 			ReferenceFrame = EReferenceFrame.WorldSpace;
 			SnapMode = View3d.ESnapMode.Verts | View3d.ESnapMode.Edges | View3d.ESnapMode.Faces;
 			CtxId = Guid.NewGuid();
-			SnapDistance = 0.1;
+			SnapDistance = 5f; // pixels
 			BegSpotColour = Colour32.Aqua;
 			EndSpotColour = Colour32.Salmon;
 			Results = new BindingDict<EQuantity, Result>(Enum<EQuantity>.Values.ToDictionary(x => x, x => new Result(x, "---")));
-			m_hit0 = new Hit();
-			m_hit1 = new Hit();
 
 			Window = window;
 		}
@@ -129,74 +127,69 @@ namespace Rylogic.Gfx
 		/// <summary>The colour of the starting hot spot</summary>
 		public Colour32 BegSpotColour
 		{
-			get => m_beg_spot_colour;
+			get => field;
 			set
 			{
 				if (BegSpotColour == value) return;
-				m_beg_spot_colour = value;
+				field = value;
 				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(BegSpotColour));
 			}
 		}
-		private Colour32 m_beg_spot_colour;
 
 		/// <summary>The colour of the ending hot spot</summary>
 		public Colour32 EndSpotColour
 		{
-			get => m_end_spot_colour;
+			get => field;
 			set
 			{
 				if (EndSpotColour == value) return;
-				m_end_spot_colour = value;
+				field = value;
 				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(EndSpotColour));
 			}
 		}
-		private Colour32 m_end_spot_colour;
 		
-		/// <summary>The snap distance</summary>
+		/// <summary>The snap distance (in pixels)</summary>
 		public double SnapDistance
 		{
-			get => m_snap_distance;
+			get => field;
 			set
 			{
 				if (SnapDistance == value) return;
-				m_snap_distance = value;
+				field = value;
 				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(SnapDistance));
 			}
 		}
-		private double m_snap_distance;
 
 		/// <summary>The snap-to flags</summary>
 		public View3d.ESnapMode SnapMode
 		{
-			get => m_flags;
+			get => field;
 			set
 			{
 				if (SnapMode == value) return;
-				m_flags = value;
+				field = value;
 				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(SnapMode));
 			}
 		}
-		private View3d.ESnapMode m_flags;
 
 		/// <summary>The reference frame to display the measurements in</summary>
 		public EReferenceFrame ReferenceFrame
 		{
-			get => m_reference_frame;
+			get => field;
 			set
 			{
 				if (ReferenceFrame == value) return;
-				m_reference_frame = value;
+				field = value;
 				InvalidateGfxMeasure();
 				UpdateResults();
 				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(ReferenceFrame));
 			}
 		}
-		private EReferenceFrame m_reference_frame;
 
 		/// <summary>The starting point in reference space</summary>
 		public v4 BegPoint
@@ -225,44 +218,41 @@ namespace Rylogic.Gfx
 		/// <summary>The start point to measure from</summary>
 		public Hit Hit0
 		{
-			get => m_hit0;
+			get => field;
 			set
 			{
-				if (m_hit0 == value) return;
-				m_hit0 = value;
+				if (Hit0 == value) return;
+				field = value;
 				UpdateResults();
 				InvalidateGfxMeasure();
 			}
-		}
-		private Hit m_hit0;
+		} = new();
 
 		/// <summary>The start point to measure from</summary>
 		public Hit Hit1
 		{
-			get => m_hit1;
+			get => field;
 			set
 			{
-				if (m_hit1 == value) return;
-				m_hit1 = value;
+				if (field == value) return;
+				Hit1 = value;
 				UpdateResults();
 				InvalidateGfxMeasure();
 			}
-		}
-		private Hit m_hit1;
+		} = new();
 
 		/// <summary>Get/Set the Hit point that is being set</summary>
 		public Hit? ActiveHit
 		{
-			get => m_active_hit;
+			get => field;
 			set
 			{
 				if (ActiveHit == value) return;
 				Debug.Assert(value == null || value == Hit0 || value == Hit1, "ActiveHit must be either Hit0 or Hit1");
-				m_active_hit = value;
+				field = value;
 				NotifyPropertyChanged(nameof(ActiveHit));
 			}
 		}
-		private Hit? m_active_hit;
 
 		/// <summary>True when we can measure between 'Hit0' and 'Hit1'</summary>
 		public bool MeasurementValid => Hit0.IsValid && Hit1.IsValid;
@@ -302,7 +292,12 @@ namespace Rylogic.Gfx
 
 			// Perform a hit test to update the position of the active hit
 			var ray = Window.Camera.RaySS(point_cs);
-			var result = Window.HitTest(ray, SnapMode, (float)SnapDistance, x => x != CtxId && ContextPredicate(x));
+			var mode = SnapMode | View3d.ESnapMode.Perspective;
+			var dist_nss = Window.Camera.PixelsToNSS((float)SnapDistance);
+
+			var dist_nss2 = 2.0f * (float)SnapDistance / Math.Min(Window.Viewport.Width, Window.Viewport.Height);
+			var dist = dist_nss / Window.Camera.NearPlane;
+			var result = Window.HitTest(ray, mode, dist, x => x != CtxId && ContextPredicate(x));
 
 			// Update the current hit point
 			ActiveHit.PointWS = result.m_ws_intercept;

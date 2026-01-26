@@ -1489,6 +1489,19 @@ VIEW3D_API view3d::ENavOp __stdcall View3D_MouseBtnToNavOp(int mk)
 {
 	return static_cast<view3d::ENavOp>(camera::MouseBtnToNavOp(mk));
 }
+	
+// Convert a length in pixels into a length in normalised screen space
+VIEW3D_API float __stdcall View3D_PixelsToNSS(view3d::Window window, float pixels)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		return window->m_scene.m_viewport.PixelsToNSS(pixels);
+	}
+	CatchAndReport(View3d_PixelsToNSS, window, {});
+}
 
 // Convert a point between 'window' screen space and normalised screen space
 VIEW3D_API view3d::Vec2 __stdcall View3D_SSPointToNSSPoint(view3d::Window window, view3d::Vec2 screen)

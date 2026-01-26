@@ -228,6 +228,12 @@ namespace Rylogic.Gfx
 				set { View3D_CameraLockMaskSet(m_window.Handle, value); }
 			}
 
+			/// <summary>Convert a length in pixels into a length in normalised screen space</summary>
+			public float PixelsToNSS(float pixels)
+			{
+				return m_window.PixelsToNSS(pixels);
+			}
+
 			/// <summary>
 			/// Return a point in world space corresponding to a normalised screen space point.
 			/// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)

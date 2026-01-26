@@ -124,7 +124,8 @@ namespace Rylogic.Gui.WPF
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
 			base.OnPreviewKeyDown(e);
-			if (e.Key.ToKeyCode() == EKeyCodes.End && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+			var key = e.Key.ToKeyCode(include_modifier_keys: false);
+			if (key == EKeyCodes.End && (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)))
 			{
 				TailScroll = true;
 				e.Handled = true;

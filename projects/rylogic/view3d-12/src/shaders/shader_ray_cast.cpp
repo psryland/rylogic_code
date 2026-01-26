@@ -47,7 +47,7 @@ namespace pr::rdr12::shaders
 		}
 		cb0.m_ray_count = s_cast<int>(rays.size());
 		cb0.m_snap_mode = s_cast<int>(snap_mode);
-		cb0.m_snap_dist = snap_distance;
+		cb0.m_snap_distance = snap_distance;
 		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 	}

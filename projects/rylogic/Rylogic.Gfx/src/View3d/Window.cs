@@ -628,6 +628,12 @@ namespace Rylogic.Gfx
 				set => View3D_DepthBufferEnabledSet(Handle, value);
 			}
 
+			/// <summary>Convert a length in pixels into a length in normalised screen space</summary>
+			public float PixelsToNSS(float pixels)
+			{
+				return View3D_PixelsToNSS(Handle, pixels);
+			}
+
 			/// <summary>Convert a screen space point to a normalised point</summary>
 			public v2 SSPointToNSSPoint(v2 screen)
 			{

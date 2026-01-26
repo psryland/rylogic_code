@@ -85,9 +85,19 @@ namespace pr::rdr12::pix
 		{
 			if (m_active) BeginCapture(wpix_filepath);
 		}
-		CaptureScope(CaptureScope&&) = delete;
+		CaptureScope(CaptureScope&& rhs) noexcept
+			: m_active(rhs.m_active)
+		{
+			rhs.m_active = false;
+		}
 		CaptureScope(CaptureScope const&) = delete;
-		CaptureScope& operator=(CaptureScope&&) = delete;
+		CaptureScope& operator=(CaptureScope&& rhs) noexcept
+		{
+			if (&rhs == this) return *this;
+			m_active = rhs.m_active;
+			rhs.m_active = false;
+			return *this;
+		}
 		CaptureScope& operator=(CaptureScope const&) = delete;
 		~CaptureScope()
 		{

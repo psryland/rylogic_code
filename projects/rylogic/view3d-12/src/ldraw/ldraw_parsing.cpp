@@ -733,7 +733,7 @@ namespace pr::rdr12::ldraw
 		//  - Prefer these 'creation' objects. Many of the 'ParseXYZ' functions above could be objects in here
 
 		// Get/Create a texture for a 2D Point sprite
-		static Texture2DPtr PointStyleTexture(EPointStyle style, iv2 size, ParseParams& pp)
+		static Texture2DPtr PointStyleTexture(EPointStyle style, ParseParams& pp)
 		{
 			using TDrawOnIt = std::function<void(D2D1Context&, ID2D1SolidColorBrush*, ID2D1SolidColorBrush*)>;
 			auto CreatePointStyleTexture = [&](ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw) -> Texture2DPtr
@@ -1200,7 +1200,7 @@ namespace pr::rdr12::ldraw
 				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, m_depth);
 				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 					.use_shader(ERenderStep::RenderForward, shdr)
-					.tex_diffuse(PointStyleTexture(m_style, To<iv2>(m_size), pp))
+					.tex_diffuse(PointStyleTexture(m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.vrange(vrange)
 				);
@@ -2243,7 +2243,7 @@ namespace pr::rdr12::ldraw
 					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 						.use_shader(ERenderStep::RenderForward, pt_shdr)
-						.tex_diffuse(creation::PointStyleTexture(style, iv2{ 256, 256 }, m_pp))
+						.tex_diffuse(creation::PointStyleTexture(style, m_pp))
 						.vrange(vcount + beg, vcount + end)
 						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
 					);
@@ -2860,7 +2860,7 @@ namespace pr::rdr12::ldraw
 				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_data_points.m_size, m_data_points.m_depth);
 				data_points->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 					.use_shader(ERenderStep::RenderForward, shdr)
-					.tex_diffuse(creation::PointStyleTexture(m_data_points.m_style, iv2{ 256, 256 }, pp))
+					.tex_diffuse(creation::PointStyleTexture(m_data_points.m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.tint(m_data_points.m_colour)
 				);

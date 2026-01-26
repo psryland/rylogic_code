@@ -322,6 +322,7 @@ namespace Rylogic.Gfx
 			Verts = 1 << 0,
 			Edges = 1 << 1,
 			Faces = 1 << 2,
+			Perspective = 1 << 8,
 		}
 		public enum ESnapType : int
 		{
@@ -1758,6 +1759,9 @@ namespace Rylogic.Gfx
 
 		// Convert an MK_ macro to a default navigation operation
 		[DllImport(Dll)] private static extern ENavOp View3D_MouseBtnToNavOp(EMouseBtns mk);
+
+		// Convert a length in pixels into a length in normalised screen space
+		[DllImport(Dll)] private static extern float View3D_PixelsToNSS(HWindow window, float pixels);
 
 		// Convert a point between 'window' screen space and normalised screen space
 		[DllImport(Dll)] private static extern v2 View3D_SSPointToNSSPoint(HWindow window, v2 screen);

@@ -125,6 +125,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrText Text(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrText();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrGroup Group(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
 		{
 			var child = new LdrGroup();
@@ -578,6 +584,82 @@ namespace Rylogic.LDraw
 				{
 					res.Write(EKeyword.NoRootRotation);
 				}
+			});
+		}
+	}
+	public class LdrFont
+	{
+		private string? m_name = null;
+		private float? m_size = null;
+		private Colour32? m_colour = null;
+		private int? m_weight = null;
+		private string? m_style = null;
+		private int? m_stretch = null;
+		private bool? m_underline = null;
+		private bool? m_strikeout = null;
+
+		public LdrFont name(string name)
+		{
+			m_name = !string.IsNullOrEmpty(name) ? name : null;
+			return this;
+		}
+		public LdrFont size(float sz)
+		{
+			m_size = sz != 0 ? sz : null;
+			return this;
+		}
+		public LdrFont colour(Colour32 col)
+		{
+			m_colour = col != Colour32.Zero ? col : null;
+			return this;
+		}
+		public LdrFont weight(int w)
+		{
+			m_weight = w != 0 ? w : null;
+			return this;
+		}
+		public LdrFont style(string s)
+		{
+			m_style = !string.IsNullOrEmpty(s) ? s : null;
+			return this;
+		}
+		public LdrFont stretch(int s)
+		{
+			m_stretch = s != 0 ? s : null;
+			return this;
+		}
+		public LdrFont underline(bool on = true)
+		{
+			m_underline = on ? true : null;
+			return this;
+		}
+		public LdrFont strikeout(bool on = true)
+		{
+			m_strikeout = on ? true : null;
+			return this;
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Font, () =>
+			{
+				if (m_name != null)
+					res.Write(EKeyword.Name, "\"", m_name, "\"");
+				if (m_size != null)
+					res.Write(EKeyword.Size, m_size.Value);
+				if (m_colour != null)
+					res.Write(EKeyword.Colour, m_colour.Value);
+				if (m_weight != null)
+					res.Write(EKeyword.Weight, m_weight.Value);
+				if (m_style != null)
+					res.Write(EKeyword.Style, m_style);
+				if (m_stretch != null)
+					res.Write(EKeyword.Stretch, m_stretch.Value);
+				if (m_underline != null)
+					res.Write(EKeyword.Underline, m_underline.Value);
+				if (m_strikeout != null)
+					res.Write(EKeyword.Strikeout, m_strikeout.Value);
 			});
 		}
 	}
@@ -1244,6 +1326,103 @@ namespace Rylogic.LDraw
 				base.WriteTo(res);
 			});
 		}
+	}
+	public class LdrText : LdrBase<LdrText>
+	{
+		private class Block
+		{
+			public readonly StringBuilder m_text = new();
+			public LdrFont? m_font = null;
+			public bool m_screen_space = false;
+			public bool m_billboard = false;
+			public bool m_billboard_3d = false;
+			public Colour32? m_back_colour = null;
+			public static implicit operator bool(Block? b) => b != null && b.m_text.Length != 0;
+		}
+		private readonly List<Block> m_blocks = [];
+		private Block m_current = new();
+
+		/// <summary>Direct access to the string builder for the current block</summary>
+		public new StringBuilder Text => m_current.m_text;
+
+		/// <summary>Append text to the current block</summary>
+		public LdrText text(string s)
+		{
+			m_current.m_text.Append(s);
+			return this;
+		}
+
+		/// <summary>Screen space text</summary>
+		public LdrText screen_space(bool on = true)
+		{
+			m_current.m_screen_space = on;
+			return this;
+		}
+
+		/// <summary>Billboard text</summary>
+		public LdrText billboard(bool on = true)
+		{
+			m_current.m_billboard = on;
+			return this;
+		}
+
+		/// <summary>3D Billboard text</summary>
+		public LdrText billboard_3d(bool on = true)
+		{
+			m_current.m_billboard_3d = on;
+			return this;
+		}
+
+		/// <summary>Background colour</summary>
+		public LdrText back_colour(Colour32 col)
+		{
+			m_current.m_back_colour = col;
+			return this;
+		}
+
+		/// <summary>The text font</summary>
+		public LdrFont font()
+		{
+			m_current.m_font ??= new();
+			return m_current.m_font;
+		}
+
+		// 
+		public LdrText new_block()
+		{
+			m_blocks.Add(m_current);
+			m_current = new();
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Text, m_name, m_colour, () =>
+			{
+				void WriteBlock(Block block)
+				{
+					if (block.m_screen_space)
+						res.Write(EKeyword.ScreenSpace);
+					if (block.m_billboard)
+						res.Write(EKeyword.Billboard);
+					if (block.m_billboard_3d)
+						res.Write(EKeyword.Billboard3D);
+					if (block.m_back_colour != null)
+						res.Write(EKeyword.BackColour, block.m_back_colour.Value);
+
+					res.Write(EKeyword.Data, $"\"{block.m_text.ToString()}\"");
+				}
+
+				foreach (var block in m_blocks)
+					WriteBlock(block);
+				if (m_current)
+					WriteBlock(m_current);
+
+				base.WriteTo(res);
+			});
+		}
+
 	}
 	public class LdrGroup : LdrBase<LdrGroup>
 	{

@@ -16,7 +16,7 @@ namespace pr::rdr12
 	{
 	private:
 		pr::vector<HitTestRay> m_rays;          // Rays to cast
-		float                  m_snap_distance; // Snap distance (in world space units)
+		float                  m_snap_distance; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
 		ESnapMode              m_snap_mode;     // Snap behaviour
 		RayCastFilter          m_include;       // A filter for instances to include for hit testing
 		GfxCmdList             m_cmd_list;      // Command buffer
@@ -36,7 +36,8 @@ namespace pr::rdr12
 		inline static constexpr ERenderStep Id = ERenderStep::RayCast;
 
 		// Set the rays to cast.
-		// 'snap_distance' is the distance (in world space) for point snapping.
+		// 'snap_mode' controls how point snapping is applied.
+		// 'snap_distance', if the mode is 'perspective' then this is the ratio proportional to depth, otherwise it's in world units.
 		// 'flags' controls what primitives snapping applies to.
 		// 'filter' filters instances added to the render step (i.e. decides what's hit-able)
 		void SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include);

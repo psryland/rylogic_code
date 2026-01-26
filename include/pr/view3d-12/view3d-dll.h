@@ -369,6 +369,7 @@ namespace pr
 			Verts = 1 << 0,
 			Edges = 1 << 1,
 			Faces = 1 << 2,
+			Perspective = 1 << 8,
 			_flags_enum = 0,
 		};
 		enum class ESnapType :int
@@ -1027,6 +1028,9 @@ extern "C"
 
 	// Convert an MK_ macro to a default navigation operation
 	VIEW3D_API pr::view3d::ENavOp __stdcall View3D_MouseBtnToNavOp(int mk);
+	
+	// Convert a length in pixels into a length in normalised screen space
+	VIEW3D_API float __stdcall View3D_PixelsToNSS(pr::view3d::Window window, float pixels);
 
 	// Convert a point between 'window' screen space and normalised screen space
 	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_SSPointToNSSPoint(pr::view3d::Window window, pr::view3d::Vec2 screen);
