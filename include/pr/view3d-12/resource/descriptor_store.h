@@ -33,15 +33,15 @@ namespace pr::rdr12
 		//  the GPU is done processing the commands using them. And last, if many shaders share some common tables, from similar root signature,
 		//  you can save on processing by factorizing the updates."
 
-		// Each block of descriptors is 64 long, so that I can use a u64 mask to tell which slots are used.
+		// Each block of descriptors is 64 long, so that a u64 mask can be used to tell which slots are used.
 		// The block index = 'index >> 6' and the index within the block = 'index & 0x3F'
 		enum { ShftBlk = 6, MaskIdx = 0x3F, NoIndex = -1 };
 		struct Block { D3DPtr<ID3D12DescriptorHeap> heap; uint64_t free; };
-		using Store = pr::vector<Block, 16, false>; // A collection of pointers to blocks of descriptors
+		using Store = vector<Block, 16, false>; // A collection of pointers to blocks of descriptors
 
-		// The store of descriptors
 		ID3D12Device* m_device;
-		Store m_store_cpu[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+		Store m_store_cpu[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]; // A store for each descriptor type
+		int m_hint_free[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES]; // Record the index of block last returned that had free slots.
 
 		explicit DescriptorStore(ID3D12Device* device);
 

@@ -1621,9 +1621,9 @@ namespace pr::rdr12
 				auto forward = up.z > up.y ? v4::YAxis() : -v4::ZAxis();
 
 				auto bounds =
+					AllSet(modifiers, EKeyCodes::Control) ? view3d::ESceneBounds::All :
 					AllSet(modifiers, EKeyCodes::Shift) ? view3d::ESceneBounds::Selected :
-					AllSet(modifiers, EKeyCodes::Control) ? view3d::ESceneBounds::Visible :
-					view3d::ESceneBounds::All;
+					view3d::ESceneBounds::Visible;
 
 				ResetView(SceneBounds(bounds, 0, nullptr), forward, up, 0, true, true);
 				Invalidate();

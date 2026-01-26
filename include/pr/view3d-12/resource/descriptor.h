@@ -9,8 +9,8 @@ namespace pr::rdr12
 {
 	struct Descriptor
 	{
-		int                         m_index; // Descriptor index for lookup in the store
-		D3D12_DESCRIPTOR_HEAP_TYPE  m_type; // The type of descriptor this is
+		int m_index;                       // Descriptor index for lookup in the store
+		D3D12_DESCRIPTOR_HEAP_TYPE m_type; // The type of descriptor this is
 		D3D12_CPU_DESCRIPTOR_HANDLE m_cpu; // Handle in CPU memory
 
 		Descriptor()

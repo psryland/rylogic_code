@@ -276,7 +276,7 @@ namespace Rylogic.Gui.WPF
 					// Forward navigation keys to the native control.
 					// This cannot be done in WndProc because navigation keys never make
 					// it to the native control.
-					var vk = (int)e.Key.ToKeyCode();
+					var vk = (int)e.Key.ToKeyCode(include_modifier_keys: true);
 					User32.SendMessage(Hwnd, (uint)Win32.WM_KEYDOWN, vk, 1);
 					e.Handled = true;
 					break;

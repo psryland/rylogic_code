@@ -126,13 +126,23 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Convert to native win32 VK_ value</summary>
-		public static EKeyCodes ToKeyCode(this Key key)
+		public static EKeyCodes ToKeyCode(this Key key, bool include_modifier_keys)
 		{
-			return (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
+			var vkey = (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
+			if (include_modifier_keys)
+			{
+				if (Keyboard.IsKeyDown(Key.LeftShift)) vkey |= EKeyCodes.Shift | EKeyCodes.LShiftKey;
+				if (Keyboard.IsKeyDown(Key.RightShift)) vkey |= EKeyCodes.Shift | EKeyCodes.RShiftKey;
+				if (Keyboard.IsKeyDown(Key.LeftCtrl)) vkey |= EKeyCodes.Control | EKeyCodes.LControlKey;
+				if (Keyboard.IsKeyDown(Key.RightCtrl)) vkey |= EKeyCodes.Control | EKeyCodes.RControlKey;
+				if (Keyboard.IsKeyDown(Key.LeftAlt)) vkey |= EKeyCodes.Menu | EKeyCodes.LMenu;
+				if (Keyboard.IsKeyDown(Key.RightAlt)) vkey |= EKeyCodes.Menu | EKeyCodes.RMenu;
+			}
+			return vkey;
 		}
 		public static bool TryToChar(this Key key, out char ch)
 		{
-			return Win32.CharFromVKey(ToKeyCode(key), out ch);
+			return Win32.CharFromVKey(ToKeyCode(key, include_modifier_keys: false), out ch);
 		}
 
 		///// <summary>Returns true if 'point' is more than the drag size from 'ref_point'</summary>

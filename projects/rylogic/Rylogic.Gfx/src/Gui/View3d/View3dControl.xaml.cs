@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -339,7 +339,8 @@ namespace Rylogic.Gui.WPF
 				}
 				void HandleKeyDown(object sender, KeyEventArgs args)
 				{
-					args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
+					var key = args.Key.ToKeyCode(include_modifier_keys: true);
+					args.Handled = Window.TranslateKey(key);
 				}
 			}
 		}
