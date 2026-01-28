@@ -269,6 +269,13 @@ namespace Rylogic.Gfx
 			/// <summary>Doesn't cast a shadow</summary>
 			ShadowCastExclude = 1 << 12,
 		}
+		[Flags] public enum EBBoxFlags
+		{
+			None = 0,
+
+			/// <summary>Include child objects when calculating the bounding box</summary>
+			IncludeChildren = 1 << 0,
+		}
 		[Flags] public enum EUpdateObject :int // Flags for partial update of a model
 		{
 			None         = 0,
@@ -1760,8 +1767,8 @@ namespace Rylogic.Gfx
 		// Convert an MK_ macro to a default navigation operation
 		[DllImport(Dll)] private static extern ENavOp View3D_MouseBtnToNavOp(EMouseBtns mk);
 
-		// Convert a length in pixels into a length in normalised screen space
-		[DllImport(Dll)] private static extern float View3D_PixelsToNSS(HWindow window, float pixels);
+		// Convert lengths in pixels (X and Y) into lengths in normalised screen space
+		[DllImport(Dll)] private static extern v2 View3D_PixelsToNSS(HWindow window, v2 pixels);
 
 		// Convert a point between 'window' screen space and normalised screen space
 		[DllImport(Dll)] private static extern v2 View3D_SSPointToNSSPoint(HWindow window, v2 screen);
@@ -1864,7 +1871,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
 
 		// Return the model space bounding box for 'object'
-		[DllImport(Dll)] private static extern BBox View3D_ObjectBBoxMS(HObject obj, bool include_children);
+		[DllImport(Dll)] private static extern BBox View3D_ObjectBBoxMS(HObject obj, EBBoxFlags bbox_flags);
 
 		// Get/Set the object visibility. See LdrObject::Apply for docs on the format of 'name'
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern bool View3D_ObjectVisibilityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
@@ -2060,7 +2067,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ParseLdrTransform([MarshalAs(UnmanagedType.LPStr)] string ldr_script);
 
 		// Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
-		[DllImport(Dll)] private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code);
+		[DllImport(Dll)] private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code, v2 ss_point);
 
 		// Return the reference count of a COM interface
 		[DllImport(Dll)] private static extern ulong View3D_RefCount(IntPtr pointer);

@@ -313,6 +313,16 @@ namespace pr
 			// Bitwise operators
 			_flags_enum = 0,
 		};
+		enum class EBBoxFlags :int // sync with 'EBBoxFlags'
+		{
+			None = 0,
+
+			// Include child objects when calculating the bounding box
+			IncludeChildren = 1 << 0,
+
+			// Bitwise operators
+			_flags_enum = 0,
+		};
 		enum class EUpdateObject :int // Flags for partial update of a model
 		{
 			None         = 0,
@@ -1029,8 +1039,8 @@ extern "C"
 	// Convert an MK_ macro to a default navigation operation
 	VIEW3D_API pr::view3d::ENavOp __stdcall View3D_MouseBtnToNavOp(int mk);
 	
-	// Convert a length in pixels into a length in normalised screen space
-	VIEW3D_API float __stdcall View3D_PixelsToNSS(pr::view3d::Window window, float pixels);
+	// Convert lengths in pixels (X and Y) into lengths in normalised screen space
+	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_PixelsToNSS(pr::view3d::Window window, pr::view3d::Vec2 pixels);
 
 	// Convert a point between 'window' screen space and normalised screen space
 	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_SSPointToNSSPoint(pr::view3d::Window window, pr::view3d::Vec2 screen);
@@ -1143,7 +1153,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name);
 
 	// Return the model space bounding box for 'object'
-	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, int include_children);
+	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, pr::view3d::EBBoxFlags bbox_flags);
 
 	// Get/Set the object visibility. See LdrObject::Apply for docs on the format of 'name'
 	VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(pr::view3d::Object object, char const* name);
@@ -1340,8 +1350,8 @@ extern "C"
 	// Parse a transform description using the Ldr script syntax
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script);
 
-	// Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
-	VIEW3D_API BOOL __stdcall View3D_TranslateKey(pr::view3d::Window window, int key_code);
+	// Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'. 'ss_point' is the mouse position in screen space (pixels)
+	VIEW3D_API BOOL __stdcall View3D_TranslateKey(pr::view3d::Window window, int key_code, pr::view3d::Vec2 ss_point);
 
 	// Return the reference count of a COM interface
 	VIEW3D_API ULONG __stdcall View3D_RefCount(IUnknown* pointer);

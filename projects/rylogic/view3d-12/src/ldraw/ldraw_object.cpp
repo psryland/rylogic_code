@@ -129,10 +129,16 @@ namespace pr::rdr12::ldraw
 	// Recursively add this object and its children to a viewport
 	void LdrObject::AddToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
+		// Notes:
+		//  - The 'OnAddToScene' event can change 'm_i2w'. The local 'i2w' variable is used so that parenting is unaffected.
+		//  - The decision to include or remove root motion for animated models is handled in the pose/animator. The 'i2w' is
+		//    always the animation origin from the instance's point of view. That's why there is no 'if (m_pose) ...'
+		//  - Simple root animation is just a modification to the 'i2w' transform, it's orthogonal to animation.
+		//  - A model can have a 'm_m2root' transform that locates the model in root space. This is mainly for multi-part models.
+
 		// Set the instance to world.
-		// Take a copy in case the 'OnAddToScene' event changes it.
-		// We want parenting to be unaffected by the event handlers.
-		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
+		auto i2w = *p2w * m_o2p;
+		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
 		if (m_model) i2w *= m_model->m_m2root;
 		m_i2w = i2w;
 
@@ -160,12 +166,14 @@ namespace pr::rdr12::ldraw
 	void LdrObject::AddBBoxToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world for this object
-		auto i2w = *p2w * m_o2p * m_root_anim.RootToWorld();
+		auto i2w = *p2w * m_o2p;
+		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
+		if (m_pose) i2w *= m_pose->RootToAnim(); // Apply the animation's root offset to the bounding box
 		if (m_model) i2w *= m_model->m_m2root;
 
 		// Combine recursive flags
 		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(i2w), "Invalid instance transform");
 
 		// Add the bbox instance to the scene draw list
 		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
@@ -210,12 +218,14 @@ namespace pr::rdr12::ldraw
 	{
 		auto obj = Child(name);
 		if (obj == nullptr)
-			return m4x4Identity;
+			return m4x4::Identity();
 
 		// Combine parent transforms back to the root
 		auto o2w = obj->m_o2p;
 		for (auto p = obj->m_parent; p != nullptr; p = p->m_parent)
+		{
 			o2w = p->m_o2p * o2w;
+		}
 
 		return o2w;
 	}
@@ -233,14 +243,14 @@ namespace pr::rdr12::ldraw
 	m4x4 LdrObject::O2P(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? obj->m_o2p : m4x4Identity;
+		return obj ? obj->m_o2p : m4x4::Identity();
 	}
 	void LdrObject::O2P(m4x4 const& o2p, char const* name)
 	{
+		assert(FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
+		assert(IsFinite(o2p) && "Invalid instance transform");
 		Apply([&](LdrObject* o)
 		{
-			assert(FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
-			assert(IsFinite(o2p) && "Invalid instance transform");
 			o->m_o2p = o2p;
 			return true;
 		}, name);
@@ -671,18 +681,21 @@ namespace pr::rdr12::ldraw
 	// Return the bounding box for this object in model space
 	// To convert this to parent space multiply by 'm_o2p'
 	// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-	BBox LdrObject::BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w_, ELdrFlags parent_flags) const
+	BBox LdrObject::BBoxMS(EBBoxFlags bbox_flags, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w_, ELdrFlags parent_flags) const
 	{
 		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
-		auto i2w = p2w * m_root_anim.RootToWorld();
+		
+		auto i2w = p2w;
+		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
+		if (m_pose) i2w *= m_pose->RootToAnim();
 		if (m_model) i2w = i2w * m_model->m_m2root;
 
 		// Combine recursive flags
-		auto flags = Flags() | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
+		auto ldr_flags = Flags() | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
 
 		// Start with the bbox for this object
 		auto bbox = BBox::Reset();
-		if (m_model != nullptr && !AnySet(flags, ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
+		if (m_model != nullptr && !AnySet(ldr_flags, ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 		{
 			if (m_model->m_bbox.valid())
 			{
@@ -692,37 +705,43 @@ namespace pr::rdr12::ldraw
 					Grow(bbox, MulNonAffine(i2w, m_model->m_bbox));
 			}
 		}
-		if (include_children) // Add the bounding boxes of the children
+		if (AllSet(bbox_flags, EBBoxFlags::IncludeChildren)) // Add the bounding boxes of the children
 		{
 			for (auto& child : m_child)
 			{
 				auto c2w = i2w * child->m_o2p;
-				auto cbbox = child->BBoxMS(include_children, pred, &c2w, flags);
-				if (cbbox.valid()) Grow(bbox, cbbox);
+				auto cbbox = child->BBoxMS(bbox_flags, pred, &c2w, ldr_flags);
+				if (cbbox.valid())
+					Grow(bbox, cbbox);
 			}
 		}
 		return bbox;
 	}
-	BBox LdrObject::BBoxMS(bool include_children) const
+	BBox LdrObject::BBoxMS(EBBoxFlags flags) const
 	{
-		return BBoxMS(include_children, [](LdrObject const&){ return true; });
+		return BBoxMS(flags, [](LdrObject const&){ return true; });
 	}
 
 	// Return the bounding box for this object in world space.
 	// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 	// If not then, then the returned bbox will be transformed to the top level object space
-	BBox LdrObject::BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred) const
+	BBox LdrObject::BBoxWS(EBBoxFlags flags, std::function<bool(LdrObject const&)> pred) const
 	{
-		// Get the combined o2w transform;
+		// Get the o2w for this object
 		m4x4 o2w = m_o2p;
 		for (LdrObject* parent = m_parent; parent; parent = parent->m_parent)
-			o2w = parent->m_o2p * parent->m_root_anim.RootToWorld() * o2w;
+		{
+			auto o2p = parent->m_o2p;
+			if (parent->m_root_anim) o2p *= parent->m_root_anim.RootToAnim();
+			if (parent->m_pose) o2p *= parent->m_pose->RootToAnim();
+			o2w = o2p * o2w; //??
+		}
 
-		return BBoxMS(include_children, pred, &o2w);
+		return BBoxMS(flags, pred, &o2w);
 	}
-	BBox LdrObject::BBoxWS(bool include_children) const
+	BBox LdrObject::BBoxWS(EBBoxFlags flags) const
 	{
-		return BBoxWS(include_children, [](LdrObject const&){ return true; });
+		return BBoxWS(flags, [](LdrObject const&){ return true; });
 	}
 
 	// Add/Remove 'child' as a child of this object

@@ -629,7 +629,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Convert a length in pixels into a length in normalised screen space</summary>
-			public float PixelsToNSS(float pixels)
+			public v2 PixelsToNSS(v2 pixels)
 			{
 				return View3D_PixelsToNSS(Handle, pixels);
 			}
@@ -658,10 +658,10 @@ namespace Rylogic.Gfx
 					(1f - pt.y) * da.Height / (2f * dpi_scale.Y));
 			}
 
-			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>
-			public bool TranslateKey(EKeyCodes key_code)
+			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY. 'ss_point' is the screen space mouse position (in pixels)</summary>
+			public bool TranslateKey(EKeyCodes key_code, v2 ss_point)
 			{
-				return View3D_TranslateKey(Handle, key_code);
+				return View3D_TranslateKey(Handle, key_code, ss_point);
 			}
 
 			/// <summary>Handy method for creating random objects</summary>

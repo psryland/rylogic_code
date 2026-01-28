@@ -229,7 +229,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Convert a length in pixels into a length in normalised screen space</summary>
-			public float PixelsToNSS(float pixels)
+			public v2 PixelsToNSS(v2 pixels)
 			{
 				return m_window.PixelsToNSS(pixels);
 			}

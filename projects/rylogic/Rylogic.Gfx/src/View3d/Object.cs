@@ -234,9 +234,9 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
-			public BBox BBoxMS(bool include_children)
+			public BBox BBoxMS(EBBoxFlags bbox_flags)
 			{
-				return View3D_ObjectBBoxMS(Handle, include_children);
+				return View3D_ObjectBBoxMS(Handle, bbox_flags);
 			}
 
 			/// <summary>Return the object that is the root parent of this object (possibly itself)</summary>

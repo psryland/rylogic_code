@@ -1491,14 +1491,14 @@ VIEW3D_API view3d::ENavOp __stdcall View3D_MouseBtnToNavOp(int mk)
 }
 	
 // Convert a length in pixels into a length in normalised screen space
-VIEW3D_API float __stdcall View3D_PixelsToNSS(view3d::Window window, float pixels)
+VIEW3D_API view3d::Vec2 __stdcall View3D_PixelsToNSS(view3d::Window window, view3d::Vec2 pixels)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		return window->m_scene.m_viewport.PixelsToNSS(pixels);
+		return To<view3d::Vec2>(window->m_scene.m_viewport.PixelsToNSS(To<v2>(pixels)));
 	}
 	CatchAndReport(View3d_PixelsToNSS, window, {});
 }
@@ -2068,14 +2068,14 @@ VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(view3d::Object object, float 
 }
 
 // Return the model space bounding box for 'object'
-VIEW3D_API view3d::BBox __stdcall View3D_ObjectBBoxMS(view3d::Object object, int include_children)
+VIEW3D_API view3d::BBox __stdcall View3D_ObjectBBoxMS(view3d::Object object, view3d::EBBoxFlags bbox_flags)
 {
 	try
 	{
 		Validate(object);
 
 		DllLockGuard;
-		return To<view3d::BBox>(object->BBoxMS(include_children != 0));
+		return To<view3d::BBox>(object->BBoxMS(static_cast<ldraw::EBBoxFlags>(bbox_flags)));
 	}
 	CatchAndReport(View3D_ObjectBBoxMS, , {});
 }
@@ -3278,14 +3278,14 @@ VIEW3D_API view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_scr
 }
 
 // Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
-VIEW3D_API BOOL __stdcall View3D_TranslateKey(view3d::Window window, int key_code)
+VIEW3D_API BOOL __stdcall View3D_TranslateKey(view3d::Window window, int key_code, view3d::Vec2 ss_point)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		return window->TranslateKey(static_cast<EKeyCodes>(key_code)) ? TRUE : FALSE;
+		return window->TranslateKey(static_cast<EKeyCodes>(key_code), To<v2>(ss_point)) ? TRUE : FALSE;
 	}
 	CatchAndReport(View3D_TranslateKey, window, FALSE);
 }

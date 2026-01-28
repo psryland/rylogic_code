@@ -27,6 +27,10 @@ namespace pr::rdr12
 
 		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch);
 
+		// The root bone transform in animation space at 'time'
+		m4x4 RootToAnim(double time, EAnimFlags flags) const;
+		m4x4 RootToAnim() const;
+
 		// Set the animation time
 		void AnimTime(double time_s);
 

@@ -101,7 +101,8 @@ namespace pr::gui
 			Panel::OnKey(args);
 			if (args.m_handled) return;
 
-			if (View3D_TranslateKey(m_win, args.m_vk_key))
+			auto mouse_position = To<view3d::Vec2>(args.point());
+			if (View3D_TranslateKey(m_win, args.m_vk_key, mouse_position))
 				args.m_handled = true;
 		}
 

@@ -68,10 +68,14 @@ namespace pr::rdr12::ldraw
 			m_time_s = time_s;
 		}
 
-		// Returns the root motion at the current time
-		m4x4 RootToWorld() const
+		// Returns the root relative to the origin (i.e., the root motion) at the given time
+		m4x4 RootToAnim(double time_s) const
 		{
-			return m_simple ? m_simple->EvaluateAtTime(m_time_s) : m4x4::Identity();
+			return m_simple ? m_simple->EvaluateAtTime(time_s) : m4x4::Identity();
+		}
+		m4x4 RootToAnim() const
+		{
+			return RootToAnim(m_time_s);
 		}
 
 		// Has animation?
@@ -181,8 +185,14 @@ namespace pr::rdr12::ldraw
 		LdrObject const* Child(int index) const;
 		LdrObject* Child(int index);
 
+		// Notes:
+		//  - O2W,O2P are for unanimated object positions. This is because get/set should be symmetric.
+		//  - To find the animated O2W/O2P at an animation time, access the 'm_root_anim' and 'm_pose' members.
+		//    'm_root_anim' can be simply applied to the o2p transform, (see AddToScene() for reference).
+		//    Use 'O2W() * m_root_anim.RootToWorld() * m_pose->RootToAnim()' to find the animated root bone position.
+
 		// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
-		// Note, it is more efficient to set O2P.
+		// Notes: It is more efficient to set O2P.
 		m4x4 O2W(char const* name = nullptr) const;
 		void O2W(m4x4 const& o2w, char const* name = nullptr);
 
@@ -256,14 +266,14 @@ namespace pr::rdr12::ldraw
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
 		// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-		BBox BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
-		BBox BBoxMS(bool include_children) const;
+		BBox BBoxMS(EBBoxFlags bbox_flags, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w = nullptr, ELdrFlags parent_flags = ELdrFlags::None) const;
+		BBox BBoxMS(EBBoxFlags bbox_flags) const;
 
 		// Return the bounding box for this object in world space.
 		// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 		// If not then, then the returned bbox will be transformed to the top level object space
-		BBox BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred) const;
-		BBox BBoxWS(bool include_children) const;
+		BBox BBoxWS(EBBoxFlags bbox_flags, std::function<bool(LdrObject const&)> pred) const;
+		BBox BBoxWS(EBBoxFlags bbox_flags) const;
 
 		// Add/Remove 'child' as a child of this object
 		void AddChild(LdrObjectPtr& child);

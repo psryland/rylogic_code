@@ -118,9 +118,9 @@ namespace pr::rdr12
 	template <typename Key> requires (std::is_assignable_v<Key, BoneKey>)
 	static void EvaluateAtTime(float time_s, EAnimFlags flags, KeyFrameAnimation const& anim, std::span<Key> out)
 	{
-		// For each bone...
-		assert(anim.bone_count() == isize(out));
-		std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), [&](Key& key)
+		// Can evaluate a subset of the bones
+		assert(isize(out) <= anim.bone_count());
+		auto EvaluateKey = [time_s, flags, &anim, &out](Key& key)
 		{
 			// Get the keys to interpolate between
 			auto bone_index = s_cast<int>(&key - out.data());
@@ -140,8 +140,14 @@ namespace pr::rdr12
 				k.m_rot = quat::Identity();
 
 			key = k;
-		});
+		};
 
+		// Evaluate each bone
+		constexpr size_t ParallelizeCount = 10;
+		if (out.size() >= ParallelizeCount)
+			std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), EvaluateKey);
+		else
+			std::for_each(std::execution::seq, std::begin(out), std::end(out), EvaluateKey);
 	}
 
 	// Returns the linearly interpolated key frames a 'time_s'

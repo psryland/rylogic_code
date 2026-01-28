@@ -37,7 +37,7 @@ namespace pr::rdr12
 
 		// Set the rays to cast.
 		// 'snap_mode' controls how point snapping is applied.
-		// 'snap_distance', if the mode is 'perspective' then this is the ratio proportional to depth, otherwise it's in world units.
+		// 'snap_distance', if the mode is 'perspective' then this is the ratio proportional to depth from the ray origin, otherwise it's in world units.
 		// 'flags' controls what primitives snapping applies to.
 		// 'filter' filters instances added to the render step (i.e. decides what's hit-able)
 		void SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include);

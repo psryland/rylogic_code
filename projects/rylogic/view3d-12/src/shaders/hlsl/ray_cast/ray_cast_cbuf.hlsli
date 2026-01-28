@@ -50,6 +50,7 @@ struct Intercept
 // Per-frame constants
 cbuffer CBufFrame :reg(b0, 0)
 {
+	// The rays to cast
 	Ray m_rays[MaxRays];
 
 	// The number of rays to cast
@@ -58,11 +59,10 @@ cbuffer CBufFrame :reg(b0, 0)
 	// Combination of 'ESnapMode'. What sort of snapping to perform
 	int m_snap_mode;
 
-	// The snap distance. If 'snap_mode' is perspective, then this should be the ratio of
-	// 'distance-in-nss / near-plane-distance' or, equivalently, the snap distance at 1 unit from the ray origin.
-	// If 'snap_mode' is not perspective, then this is the distance in world space units
+	// The snap distance.
+	// If 'snap_mode' is not perspective, then this is the distance in world space units.
+	// If 'snap_mode' is perspective, then distance is calculated from 'distance-from-ray-origin * snap_distance'.
 	float m_snap_distance;
-	
 	float pad;
 };
 

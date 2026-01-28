@@ -48,20 +48,20 @@ namespace Rylogic.Gfx
 		/// <summary>The 3D scene to do the measuring in</summary>
 		public View3d.Window Window
 		{
-			get => m_window;
+			get => field;
 			set
 			{
-				if (m_window == value) return;
-				if (m_window != null!)
+				if (field == value) return;
+				if (field != null!)
 				{
-					m_window.OnRendering -= HandleRendering;
-					m_window.OnSceneChanged -= HandleSceneChanged;
+					field.OnRendering -= HandleRendering;
+					field.OnSceneChanged -= HandleSceneChanged;
 				}
-				m_window = value;
-				if (m_window != null!)
+				field = value;
+				if (field != null!)
 				{
-					m_window.OnSceneChanged += HandleSceneChanged;
-					m_window.OnRendering += HandleRendering;
+					field.OnSceneChanged += HandleSceneChanged;
+					field.OnRendering += HandleRendering;
 				}
 
 				// Handlers
@@ -116,7 +116,6 @@ namespace Rylogic.Gfx
 				}
 			}
 		}
-		private View3d.Window m_window = null!;
 
 		/// <summary>The context Id to use for the measurement graphics</summary>
 		public Guid CtxId { get; }
@@ -264,21 +263,23 @@ namespace Rylogic.Gfx
 			{
 				switch (ReferenceFrame)
 				{
-				default:
-					throw new Exception($"Unknown reference frame: {ReferenceFrame}");
-				case EReferenceFrame.WorldSpace:
+					case EReferenceFrame.WorldSpace:
 					{
 						return m4x4.Identity;
 					}
-				case EReferenceFrame.Object1Space:
+					case EReferenceFrame.Object1Space:
 					{
 						if (!Hit0.IsValid || Hit0.Obj == null) return m4x4.Identity;
 						return Math_.Orthonormalise(Hit0.Obj.O2P);
 					}
-				case EReferenceFrame.Object2Space:
+					case EReferenceFrame.Object2Space:
 					{
 						if (!Hit1.IsValid || Hit1.Obj == null) return m4x4.Identity;
 						return Math_.Orthonormalise(Hit1.Obj.O2P);
+					}
+					default:
+					{
+						throw new Exception($"Unknown reference frame: {ReferenceFrame}");
 					}
 				}
 			}
@@ -293,10 +294,8 @@ namespace Rylogic.Gfx
 			// Perform a hit test to update the position of the active hit
 			var ray = Window.Camera.RaySS(point_cs);
 			var mode = SnapMode | View3d.ESnapMode.Perspective;
-			var dist_nss = Window.Camera.PixelsToNSS((float)SnapDistance);
-
-			var dist_nss2 = 2.0f * (float)SnapDistance / Math.Min(Window.Viewport.Width, Window.Viewport.Height);
-			var dist = dist_nss / Window.Camera.NearPlane;
+			var dist_nss = Window.Camera.PixelsToNSS(new v2((float)SnapDistance, (float)SnapDistance));
+			var dist = Math.Max(dist_nss.x, dist_nss.y);
 			var result = Window.HitTest(ray, mode, dist, x => x != CtxId && ContextPredicate(x));
 
 			// Update the current hit point
@@ -348,49 +347,47 @@ namespace Rylogic.Gfx
 		{
 			get
 			{
-				if (m_gfx_hotspot0 == null)
+				if (field == null)
 				{
 					var ldr = "*Point hotspot0 FF00FFFF { *Data{0 0 0} *Size{20} *Style{Circle} *NoZTest{} *NoZWrite{} }";
 					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
-				return m_gfx_hotspot0;
+				return field;
 			}
 			set
 			{
-				if (m_gfx_hotspot0 == value) return;
-				Util.Dispose(ref m_gfx_hotspot0);
-				m_gfx_hotspot0 = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object? m_gfx_hotspot0;
 
 		/// <summary>Graphics for the hotspot that follows the mouse around</summary>
 		private View3d.Object? GfxHotSpot1
 		{
 			get
 			{
-				if (m_gfx_hotspot1 == null)
+				if (field == null)
 				{
 					var ldr = "*Point hotspot1 FF00FFFF { 0 0 0 *Size{20} *Style{Circle}, *NoZTest }";
 					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
-				return m_gfx_hotspot1;
+				return field;
 			}
 			set
 			{
-				if (m_gfx_hotspot1 == value) return;
-				Util.Dispose(ref m_gfx_hotspot1);
-				m_gfx_hotspot1 = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object? m_gfx_hotspot1;
 
 		/// <summary>Measurement graphics</summary>
 		private View3d.Object? GfxMeasure
 		{
 			get
 			{
-				if (m_gfx_measure == null && MeasurementValid)
+				if (field == null && MeasurementValid)
 				{
 					var r2w = RefSpaceToWorld;
 					var w2r = Math_.InvertAffine(r2w);
@@ -437,16 +434,15 @@ namespace Rylogic.Gfx
 
 					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
-				return m_gfx_measure;
+				return field;
 			}
 			set
 			{
-				if (m_gfx_measure == value) return;
-				Util.Dispose(ref m_gfx_measure);
-				m_gfx_measure = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object? m_gfx_measure;
 
 		/// <summary>Update the measurement graphics</summary>
 		private void InvalidateGfxMeasure(object? sender = null, EventArgs? args = null)

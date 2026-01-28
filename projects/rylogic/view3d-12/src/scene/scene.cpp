@@ -152,8 +152,10 @@ namespace pr::rdr12
 	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances, RayCastResultsOut const& out)
 	{
 		// Notes:
-		//  - The immediate ray cast should be completely separate from the continuous ray cast. It should be
-		//    possible to have both used within a single frame.
+		//  - The immediate ray cast should be completely separate from the continuous ray cast.
+		//    It should be possible to have both used within a single frame.
+		//  - 'snap_mode' defines the features that the ray can hit. It shouldn't be zero.
+		assert(snap_mode != ESnapMode::NoSnap && "HitTest will not hit anything because no snap mode is set");
 
 		if (rays.empty())
 			return {};

@@ -5,6 +5,7 @@
 #ifndef PR_HLSL_CORE_HLSLI
 #define PR_HLSL_CORE_HLSLI
 
+static const float float_max = 3.402823466e+38f;
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
 static const float tau = 6.28318530717958647693f;

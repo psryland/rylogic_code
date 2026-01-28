@@ -419,12 +419,14 @@ namespace pr::rdr12
 			return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)};
 		}
 
-		// Convert a length in pixels into a length in normalised screen space
-		float PixelsToNSS(float pixels) const
+		// Convert lengths in pixels (X and Y) into lengths in normalised screen space
+		v2 PixelsToNSS(v2 pixels) const
 		{
-			// Use the ScreenH. Users can always multiply by aspect to get X-nss
-			// Remember: NSS = [-1, +1] so if pixels == ScreenH, the the range should be 2
-			return ScreenH != 0 ? 2.0f * pixels / ScreenH : 0;
+			// Remember: NSS = [-1, +1] so if pixels == (ScreenW, ScreenH), then the lengths should be (2, 2)
+			return v2 {
+				ScreenW != 0 ? 2.0f * pixels.x / ScreenW : 0,
+				ScreenH != 0 ? 2.0f * pixels.y / ScreenH : 0,
+			};
 		}
 
 		// Convert a screen space point to normalised screen space

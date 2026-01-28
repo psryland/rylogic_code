@@ -6,6 +6,7 @@
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_reader_text.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/dll/context.h"
@@ -288,7 +289,7 @@ namespace pr::rdr12
 					{
 						if (!pred(*obj)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
-						Grow(bbox, obj->BBoxWS(true, pred));
+						Grow(bbox, obj->BBoxWS(ldraw::EBBoxFlags::IncludeChildren, pred));
 					}
 					m_bbox_scene = bbox;
 				}
@@ -303,7 +304,7 @@ namespace pr::rdr12
 					if (!pred(*obj)) continue;
 					if (!AllSet(obj->Flags(), ldraw::ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					Grow(bbox, obj->BBoxWS(true, pred));
+					Grow(bbox, obj->BBoxWS(ldraw::EBBoxFlags::IncludeChildren, pred));
 				}
 				break;
 			}
@@ -315,7 +316,7 @@ namespace pr::rdr12
 					if (!pred(*obj)) continue;
 					if (AllSet(obj->Flags(), ldraw::ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					Grow(bbox, obj->BBoxWS(true, pred));
+					Grow(bbox, obj->BBoxWS(ldraw::EBBoxFlags::IncludeChildren, pred));
 				}
 				break;
 			}
@@ -873,6 +874,8 @@ namespace pr::rdr12
 			return;
 
 		m_scene.m_cam.FocusDist(dist);
+		m_scene.m_cam.Commit();
+
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
 		Invalidate();
 	}
@@ -888,6 +891,8 @@ namespace pr::rdr12
 			return;
 
 		m_scene.m_cam.FocusPoint(position);
+		m_scene.m_cam.Commit();
+
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
 		Invalidate();
 	}
@@ -903,6 +908,8 @@ namespace pr::rdr12
 			return;
 
 		m_scene.m_cam.FocusBounds(bounds);
+		m_scene.m_cam.Commit();
+
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
 		Invalidate();
 	}
@@ -1129,7 +1136,7 @@ namespace pr::rdr12
 				if (!AllSet(c->Flags(), ldraw::ELdrFlags::Selected) || AllSet(c->Flags(), ldraw::ELdrFlags::SceneBoundsExclude))
 					return true;
 
-				auto bb = c->BBoxWS(true);
+				auto bb = c->BBoxWS(ldraw::EBBoxFlags::IncludeChildren);
 				Grow(bbox, bb);
 				return false;
 			}, "");
@@ -1335,6 +1342,54 @@ namespace pr::rdr12
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_mode, snap_distance, instances);
+	}
+
+	// Move the focus point to the hit target
+	void V3dWindow::CentreOnHitTarget(view3d::HitTestRay const& ray_)
+	{
+		auto beg = std::begin(m_scene.m_instances);
+		auto end = std::end(m_scene.m_instances);
+		auto instances = [&]() -> BaseInstance const*
+		{
+			//for (; beg != end && beg->m_context_id != ray.m_hit_context_id; ++beg) {}
+			return beg != end ? *beg++ : nullptr;
+		};
+
+		HitTestRay ray = {
+			.m_ws_origin = To<v4>(ray_.m_ws_origin),
+			.m_ws_direction = To<v4>(ray_.m_ws_direction),
+		};
+		HitTestResult target = {};
+
+		// Cast 'ray' into the scene
+		m_scene.HitTest({ &ray, 1ULL }, ESnapMode::All, 0, instances, [&](HitTestResult const& hit)
+		{
+			// Check that 'hit.m_instance' is a valid instance in this scene.
+			// It could be a child instance, we need to search recursively for a match
+			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
+
+			// Not an object in this scene, keep looking
+			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
+			if (!Has(ldr_obj, true))
+				return true;
+
+			// Not visible to hit tests, keep looking
+			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
+				return true;
+
+			// The intercepts are already sorted from nearest to furtherest.
+			// So we can just accept the first intercept as the hit test.
+			target = hit;
+			return false;
+		}).wait();
+
+		// Move the focus point to the centre of the bbox of the hit object
+		if (target.IsHit())
+		{
+			auto ldr_obj = cast<ldraw::LdrObject>(target.m_instance);
+			auto bbox = ldr_obj->BBoxWS(ldraw::EBBoxFlags::IncludeChildren);
+			FocusPoint(bbox.m_centre);
+		}
 	}
 
 	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
@@ -1604,7 +1659,7 @@ namespace pr::rdr12
 	}
 
 	// Implements standard key bindings. Returns true if handled
-	bool V3dWindow::TranslateKey(EKeyCodes key)
+	bool V3dWindow::TranslateKey(EKeyCodes key, v2 ss_point)
 	{
 		// Notes:
 		//  - This method is intended as a simple default for key bindings. Applications should
@@ -1649,6 +1704,18 @@ namespace pr::rdr12
 					}
 					Invalidate();
 				}
+				return true;
+			}
+			case EKeyCodes::Decimal:
+			case EKeyCodes::OemPeriod:
+			{
+				auto z = static_cast<float>(m_scene.m_cam.FocusDist());
+				auto nss_pt = m_scene.m_viewport.SSPointToNSSPoint(ss_point);
+				auto [pt, dir] = m_scene.m_cam.NSSPointToWSRay(v4{ nss_pt, z, 1 });
+				CentreOnHitTarget(view3d::HitTestRay{
+					.m_ws_origin = To<view3d::Vec4>(pt),
+					.m_ws_direction = To<view3d::Vec4>(dir),
+				});
 				return true;
 			}
 		}

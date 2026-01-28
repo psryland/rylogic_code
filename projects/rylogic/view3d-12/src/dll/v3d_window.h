@@ -310,7 +310,10 @@ namespace pr::rdr12
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, ldraw::LdrObject const* const* objects, int object_count);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred, int);
-	
+
+		// Move the focus point to the hit target
+		void CentreOnHitTarget(view3d::HitTestRay const& ray);
+
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 		bool StockObjectVisible(view3d::EStockObject stock_objects) const;
 		void StockObjectVisible(view3d::EStockObject stock_objects, bool vis);
@@ -365,8 +368,8 @@ namespace pr::rdr12
 		bool AngleToolVisible() const;
 		void AngleToolVisible(bool show);
 
-		// Implements standard key bindings. Returns true if handled
-		bool TranslateKey(EKeyCodes key);
+		// Implements standard key bindings. 'ss_point' is the screen space mouse position (pixels). Returns true if handled.
+		bool TranslateKey(EKeyCodes key, v2 ss_point);
 
 	private:
 

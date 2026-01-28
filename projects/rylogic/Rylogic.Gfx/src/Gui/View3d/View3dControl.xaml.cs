@@ -334,7 +334,9 @@ namespace Rylogic.Gui.WPF
 				void HandleKeyDown(object sender, KeyEventArgs args)
 				{
 					var key = args.Key.ToKeyCode(include_modifier_keys: true);
-					args.Handled = Window.TranslateKey(key);
+					var mouse = Mouse.GetPosition(this);
+
+					args.Handled = Window.TranslateKey(key, mouse.ToV2());
 				}
 			}
 		}

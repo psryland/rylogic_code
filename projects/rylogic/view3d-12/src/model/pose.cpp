@@ -44,6 +44,19 @@ namespace pr::rdr12
 		};
 		m_srv = store.Descriptors().Create(m_res.get(), srv_desc);
 	}
+	
+	// The root bone transform in animation space at 'time'
+	m4x4 Pose::RootToAnim(double time, EAnimFlags flags) const
+	{
+		// Use the same 'm_flags' that are used for 'Update' because this will give the current root bone position
+		m4x4 root;
+		m_animator->Animate({ &root, 1ULL }, static_cast<float>(time), flags);
+		return root;
+	}
+	m4x4 Pose::RootToAnim() const
+	{
+		return RootToAnim(m_time1, m_flags);
+	}
 
 	// Set the animation time
 	void Pose::AnimTime(double time_s)

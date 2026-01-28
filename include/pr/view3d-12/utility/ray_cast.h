@@ -19,6 +19,7 @@ namespace pr::rdr12
 		Vert = 1 << 0,
 		Edge = 1 << 1,
 		Face = 1 << 2,
+		All  = Face | Edge | Vert,
 		Perspective = 1 << 8, // If set, then snap distance scales with distance from the origin
 		_flags_enum = 0,
 	};

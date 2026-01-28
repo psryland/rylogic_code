@@ -404,6 +404,13 @@ namespace pr::rdr12::ldraw
 		_flags_enum = 0,
 	};
 
+	// Flags for calculating bounding boxes
+	enum class EBBoxFlags
+	{
+		None = 0,
+		IncludeChildren = 1 << 0,
+	};
+
 	// Colour blend operations
 	enum class EColourOp
 	{

@@ -48,6 +48,7 @@
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
 #include "pr/win32/win32.h"
+// No ufbx types here
 
 namespace pr::geometry::fbx
 {

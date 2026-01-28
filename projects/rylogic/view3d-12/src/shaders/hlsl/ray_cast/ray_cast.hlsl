@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -79,13 +79,24 @@ GSIn_RayCast VSDefault(VSIn In)
 	return Out;
 }
 
+// Check if 'pt_ws' is within snap distance of 'target_ws'
+bool DoesSnap(float4 pt_ws, float depth, float4 target_ws)
+{
+	float4 sep = pt_ws - target_ws;
+	float snap_distance = select(PerspectiveSnap, depth * m_snap_distance, m_snap_distance);
+	return length(sep) < snap_distance;
+}
+
 void RayCastFace(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStream)
 {
+	if (!TrySnapToVert && !TrySnapToEdge && !TrySnapToFace)
+		return;
+
 	// Triangle verts
 	float4 v0 = In[0].ws_vert;
 	float4 v1 = In[1].ws_vert;
 	float4 v2 = In[2].ws_vert;
-
+	
 	static const int SnapPointCount = 7;
 	SnapPoint points[SnapPointCount] = {
 		{v0, ESnapType_Vert},
@@ -109,75 +120,86 @@ void RayCastFace(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> O
 		float4 direction = m_rays[i].ws_direction;
 		
 		// Perform a ray vs. triangle intersection test to get the closest point to the triangle
-		float4 para = Intersect_RayVsTriangle(origin, direction, v0, v1, v2);
-		if (AllZero(para) || any(saturate(para) != para))
-			continue; // no intersection, co-planar
+		// Note, don't quick reject rays that miss the face, because we still want to test for snaps to verts/edges.
+		float4 para_unclamped = Intersect_RayVsTriangle(origin, direction, v0, v1, v2);
+		float4 para = saturate(para_unclamped);
+		if (AllZero(para))
+			continue; // Ignore co-planar with ray
+
+		// Find the closet point on the face
+		bool intersects_face = all(para == para_unclamped);
+		float4 face_pt = float4((v0 * para.x + v1 * para.y + v2 * para.z).xyz, 1);
 
 		// Find the nearest point on the ray
-		float4 pt = float4((v0*para.x + v1*para.y + v2*para.z).xyz, 1);
+		float4 pt = origin + ClosestPoint_PointVsRay(face_pt, origin, direction) * direction;
 		float depth = dot(pt - origin, direction);
 		if (depth <= 0)
 			continue; // too close, or behind the ray origin
 
-		// Variables for finding the nearest snap-to point
-		float4 intercept = pt;
-		float4 normal = NormaliseOrZero(float4(cross(v1.xyz - v0.xyz, v2.xyz - v0.xyz), 0));
-		float dist = select(PerspectiveSnap, depth * m_snap_distance, m_snap_distance);
-		int snap_type = ESnapType_None;
 		int j, jend;
-
-		// Snap to verts within 'snap_dist'
+		float4 intercept;
+		float dist = float_max;
+		int snap_type = ESnapType_None;
+		
+		// See if we should snap to verts before snapping to edges or faces
 		jend = select(TrySnapToVert, SnapPointCount, 0);
 		for (j = 0; j != jend; ++j)
 		{
-			float4 p = points[j].vert;
-			float  d = distance(pt, p);
-
-			// Select based on distance
-			bool snap = d < dist;
-			snap_type = select(snap, points[j].snap_type, snap_type);
-			intercept = select(snap, p, intercept);
-			dist      = select(snap, d, dist);
-			normal    = select(snap, float4(0, 0, 0, 0), normal);
+			float4 target = points[j].vert;
+			float d = distance(pt.xyz, target.xyz);
+			if (d < dist && DoesSnap(pt, depth, target))
+			{
+				intercept = target;
+				snap_type = points[j].snap_type;
+				dist = d;
+			}
 		}
-		
-		// Only test edges if there are no vert snaps
+
+		// If not snapped to a vert, try snapping to the edge
 		jend = select(TrySnapToEdge && snap_type == ESnapType_None, SnapEdgeCount, 0);
 		for (j = 0; j != jend; ++j)
 		{
-			float  t = ClosestPoint_PointVsRay(pt, edges[j].vert, edges[j].edge);
-			float4 p = edges[j].vert + saturate(t) * edges[j].edge;
-			float  d = distance(pt, p);
-
-			// Select based on distance
-			bool snap = d < dist;
-			snap_type = select(snap, edges[j].snap_type, snap_type);
-			intercept = select(snap, p, intercept);
-			dist      = select(snap, d, dist);
-			normal    = select(snap, float4(0, 0, 0, 0), normal);
+			float4 target = edges[j].vert + saturate(ClosestPoint_PointVsRay(pt, edges[j].vert, edges[j].edge)) * edges[j].edge;
+			float d = distance(pt.xyz, target.xyz);
+			if (d < dist && DoesSnap(pt, depth, target))
+			{
+				intercept = target;
+				snap_type = edges[j].snap_type;
+				dist = d;
+			}
 		}
 
-		// Only test faces if there are no edge or vert snaps
-		jend = select(TrySnapToFace && snap_type == ESnapType_None, 1, 0);
-		for (j = 0; j != jend; ++j)
+		// If not snapped to a vert or edge, try snapping to the face
+		if (snap_type == ESnapType_None && TrySnapToFace)
 		{
-			snap_type = ESnapType_Face;
-			intercept = pt;
+			// If the point is within the triangle, snap to the face
+			if (intersects_face)
+			{
+				intercept = pt;
+				snap_type = ESnapType_Face;
+			}
 		}
 
 		// Output an intercept
-		// The 'ws_intercept.w' value is used to depth-sort the intercepts
-		GSOut_RayCast Out = (GSOut_RayCast) 0;
-		Out.ws_intercept = float4(intercept.xyz, depth);
-		Out.ws_normal = normal;
-		Out.snap_type = snap_type;
-		Out.ray_index = i;
-		Out.inst_ptr = m_inst_ptr;
-		OutStream.Append(Out);
+		if (snap_type != ESnapType_None)
+		{
+			float4 normal = NormaliseOrZero(float4(cross(v1.xyz - v0.xyz, v2.xyz - v0.xyz), 0));
+
+			GSOut_RayCast Out = (GSOut_RayCast) 0;
+			Out.ws_intercept = float4(intercept.xyz, depth);
+			Out.ws_normal = select(snap_type == ESnapType_Face, normal, float4(0, 0, 0, 0));
+			Out.snap_type = snap_type;
+			Out.ray_index = i;
+			Out.inst_ptr = m_inst_ptr;
+			OutStream.Append(Out);
+		}
 	}
 }
 void RayCastEdge(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 {
+	if (!TrySnapToVert && !TrySnapToEdge)
+		return;
+
 	float4 v0 = In[0].ws_vert;
 	float4 v1 = In[1].ws_vert;
 	float4 edge = v1 - v0;
@@ -203,54 +225,54 @@ void RayCastEdge(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutSt
 		if (depth <= 0)
 			continue; // too close, or behind the ray origin
 
-		// Variables for finding the nearest snap-to point
-		float4 intercept = pt;
-		float dist = select(PerspectiveSnap, depth * m_snap_distance, m_snap_distance);
-		int snap_type = ESnapType_None;
 		int j, jend;
+		float4 intercept;
+		float dist = float_max;
+		int snap_type = ESnapType_None;
 
-		// Snap to points within 'snap_dist'
+		// See if we should snap to verts before snapping to the edge
 		jend = select(TrySnapToVert, SnapPointCount, 0);
 		for (j = 0; j != jend; ++j)
 		{
-			float4 p = points[j].vert;
-			float d = distance(pt, p);
-
-			// Select based on distance
-			bool snap = d < dist;
-			snap_type = select(snap, points[j].snap_type, snap_type);
-			intercept = select(snap, p, intercept);
-			dist = select(snap, d, dist);
+			float4 target = points[j].vert;
+			float d = distance(pt.xyz, target.xyz);
+			if (d < dist && DoesSnap(pt, depth, target) )
+			{
+				intercept = target;
+				snap_type = points[j].snap_type;
+				dist = d;
+			}
 		}
 
-		// Only test edges if there are no vert snaps
-		jend = select(TrySnapToEdge && snap_type == ESnapType_None, 1, 0);
-		for (j = 0; j != jend; ++j)
+		// If not snapped to a vert, try snapping to the edge
+		if (snap_type == ESnapType_None && TrySnapToEdge)
 		{
-			float4 p = v0 + para.x * edge;
-			float d = distance(pt, p);
-
-			bool snap = d < dist;
-			snap_type = select(snap, ESnapType_Edge, snap_type);
-			intercept = select(snap, p, intercept);
+			float4 target = v0 + para.x * edge;
+			if (DoesSnap(pt, depth, target))
+			{
+				intercept = target;
+				snap_type = ESnapType_Edge;
+			}
 		}
-
-		// No intercept? try the next ray
-		if (snap_type == ESnapType_None)
-			continue;
-
+		
 		// Output an intercept
-		GSOut_RayCast Out = (GSOut_RayCast) 0;
-		Out.ws_intercept = float4(intercept.xyz, depth);
-		Out.ws_normal = float4(0, 0, 0, 0);
-		Out.snap_type = snap_type;
-		Out.ray_index = i;
-		Out.inst_ptr = m_inst_ptr;
-		OutStream.Append(Out);
+		if (snap_type != ESnapType_None)
+		{
+			GSOut_RayCast Out = (GSOut_RayCast) 0;
+			Out.ws_intercept = float4(intercept.xyz, depth);
+			Out.ws_normal = float4(0, 0, 0, 0);
+			Out.snap_type = snap_type;
+			Out.ray_index = i;
+			Out.inst_ptr = m_inst_ptr;
+			OutStream.Append(Out);
+		}
 	}
 }
 void RayCastVert(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 {
+	if (!TrySnapToVert)
+		return;
+	
 	float4 v0 = In[0].ws_vert;
 
 	for (int i = 0; i != m_ray_count; ++i)
@@ -267,25 +289,19 @@ void RayCastVert(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutS
 		if (depth <= 0)
 			continue; // too close, or behind the ray origin
 
-		// Variables for finding the nearest snap-to point
-		float d = distance(pt, v0);
-		float dist = select(PerspectiveSnap, depth * m_snap_distance, m_snap_distance);
-		bool snap = TrySnapToVert && d < dist;
-		float4 intercept = select(snap, v0, float4(0, 0, 0, 0));
-		int snap_type = select(snap, ESnapType_Vert, ESnapType_None);
-
-		// No intercept? try the next ray
-		if (snap_type == ESnapType_None)
-			continue;
-
 		// Output an intercept
-		GSOut_RayCast Out = (GSOut_RayCast) 0;
-		Out.ws_intercept = float4(intercept.xyz, depth);
-		Out.ws_normal = float4(0, 0, 0, 0);
-		Out.snap_type = snap_type;
-		Out.ray_index = i;
-		Out.inst_ptr = m_inst_ptr;
-		OutStream.Append(Out);
+		if (DoesSnap(pt, depth, v0))
+		{
+			float4 intercept = v0;
+
+			GSOut_RayCast Out = (GSOut_RayCast) 0;
+			Out.ws_intercept = float4(intercept.xyz, depth);
+			Out.ws_normal = float4(0, 0, 0, 0);
+			Out.snap_type = ESnapType_Vert;
+			Out.ray_index = i;
+			Out.inst_ptr = m_inst_ptr;
+			OutStream.Append(Out);
+		}
 	}
 }
 

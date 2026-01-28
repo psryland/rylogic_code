@@ -278,7 +278,7 @@ namespace pr::rdr12::ldraw
 			m_list.Item(info.subitem((int)EColumn::Colour   ).text(pr::FmtS(L"%8.8X", object.m_colour.argb)));
 			m_list.Item(info.subitem((int)EColumn::Visible  ).text(object.Visible() ? L"Visible" : L"Hidden"));
 			m_list.Item(info.subitem((int)EColumn::Wireframe).text(object.Wireframe() ? L"Wireframe" : L"Solid"));
-			m_list.Item(info.subitem((int)EColumn::Volume   ).text(pr::FmtS(L"%3.3f", Volume(object.BBoxMS(false)))));
+			m_list.Item(info.subitem((int)EColumn::Volume   ).text(pr::FmtS(L"%3.3f", Volume(object.BBoxMS(EBBoxFlags::None)))));
 			m_list.Item(info.subitem((int)EColumn::CtxtId   ).text(pr::FmtS(L"%d", object.m_context_id)));
 
 			if (!recursive) return;
