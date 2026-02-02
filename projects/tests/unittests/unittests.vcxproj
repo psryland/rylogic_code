@@ -281,6 +281,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spline.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\stat.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\transform.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h" />

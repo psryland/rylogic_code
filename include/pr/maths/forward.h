@@ -134,6 +134,10 @@ namespace pr
 	template <typename A, typename B> using Quatf = Quat<float, A, B>;
 	template <typename A, typename B> using Quatd = Quat<double, A, B>;
 
+	template <Scalar S, typename A, typename B> struct Xform;
+	template <typename A, typename B> using Xformf = Xform<float, A, B>;
+	template <typename A, typename B> using Xformd = Xform<double, A, B>;
+
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -312,6 +316,7 @@ namespace pr
 	using v4 = Vec4<float, void>;
 	using v8 = Vec8<float, void>;
 	using quat = Quat<float, void, void>;
+	using xform = Xform<float, void, void>;
 	using m2x2 = Mat2x2<float, void, void>;
 	using m3x4 = Mat3x4<float, void, void>;
 	using m4x4 = Mat4x4f<void,void>;

@@ -233,6 +233,7 @@
 #include "pr/maths/spatial.h"
 #include "pr/maths/spline.h"
 #include "pr/maths/stat.h"
+#include "pr/maths/transform.h"
 #include "pr/maths/vector2.h"
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"

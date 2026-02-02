@@ -1110,6 +1110,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\ldraw.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\maths\transform.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

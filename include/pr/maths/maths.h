@@ -23,6 +23,7 @@
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/matrix6x8.h"
 #include "pr/maths/matrix.h"
+#include "pr/maths/transform.h"
 #include "pr/maths/bbox.h"
 #include "pr/maths/bsphere.h"
 #include "pr/maths/oriented_box.h"
