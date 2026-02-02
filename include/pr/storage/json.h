@@ -14,7 +14,6 @@
 #include <filesystem>
 #include <type_traits>
 #include <format>
-#include "pr/str/utf8.h"
 
 // Example use:
 #if 0
@@ -60,12 +59,15 @@
 namespace pr::json
 {
 	struct Value;
-	Value const& NullValue();
 
 	using key_t = std::string;
 	using keys_t = std::vector<key_t>;
 	using vals_t = std::vector<Value>;
 	static constexpr int GrowRate = 100;
+
+	Value const& NullValue();
+	std::string EscapeString(std::string_view str);
+	std::string UnescapeString(std::string_view str);
 
 	// Compound types
 	struct Array
@@ -453,124 +455,122 @@ namespace pr::json
 		int ParallelSerialise = 10000;
 	};
 
-	// Static null value returned for non-existent keys/indices
-	inline Value const& NullValue()
-	{
-		static Value s_null_value;
-		return s_null_value;
-	}
-
-	// Convert a normal string to an escaped string
-	inline std::string EscapeString(std::string_view str)
-	{
-		namespace utf8 = str::utf8;
-
-		auto ptr = str.data();
-		auto end = str.data() + str.size();
-
-		std::string out;
-		out.reserve(str.size() * 2);
-
-		for (; ptr != end;)
-		{
-			if (*ptr == '\\' || *ptr == '"' || *ptr == '/' || *ptr == '\b' || *ptr == '\f' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')
-			{
-				out.push_back('\\');
-				out.push_back(*ptr++);
-			}
-			else if (utf8::ByteLength(*ptr) > 1)
-			{
-				auto code = utf8::CodePoint(ptr, end);
-				utf8::Escape(code, out);
-			}
-			else
-			{
-				out.push_back(*ptr++);
-			}
-		}
-		return out;
-	}
-
-	// Convert an escaped string to a normal string
-	inline std::string UnescapeString(std::string_view str)
-	{
-		auto ptr = str.data();
-		auto end = str.data() + str.size();
-
-		std::string result(str.size(), '\0');
-		auto out = result.data();
-
-		for (; ptr != end; ++ptr)
-		{
-			if (*ptr != '\\')
-			{
-				*out++ = *ptr;
-				continue;
-			}
-			switch (*++ptr)
-			{
-				case '\\': *out++ = '\\'; break;
-				case '"': *out++ = '"'; break;
-				case '/': *out++ = '/'; break;
-				case 'b': *out++ = '\b'; break;
-				case 'f': *out++ = '\f'; break;
-				case 'n': *out++ = '\n'; break;
-				case 'r': *out++ = '\r'; break;
-				case 't': *out++ = '\t'; break;
-				case 'u':
-				{
-					if (end - ptr < 5)
-						throw std::runtime_error("Incomplete unicode escape sequence");
-
-					auto code =
-						((ptr[1] - '0') << 12) +
-						((ptr[2] - '0') << 8) +
-						((ptr[3] - '0') << 4) +
-						((ptr[4] - '0') << 0);
-
-					if (code < 0x80)
-					{
-						*out++ = static_cast<char>(code);
-					}
-					else if (code < 0x800)
-					{
-						*out++ = static_cast<char>(0xC0 | (code >> 6));
-						*out++ = static_cast<char>(0x80 | (code & 0x3F));
-					}
-					else
-					{
-						*out++ = static_cast<char>(0xE0 | (code >> 12));
-						*out++ = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
-						*out++ = static_cast<char>(0x80 | (code & 0x3F));
-					}
-					ptr += 4;
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown escape sequence");
-				}
-			}
-		}
-
-		result.resize(out - result.data());
-		return result;
-	}
-
-	// Initializer list constructor for objects
-	inline Object::Object(std::initializer_list<std::pair<std::string_view, Value>> items)
-		: keys()
-		, values()
-	{
-		// Outside the class because we need 'Value' to be defined
-		for (auto& [key, value] : items)
-		{
-			keys.push_back(std::string{ key });
-			values.push_back(value);
-		}
-	}
-
 	// Implementation
+	namespace utf8 // Duplicated from 'pr/str/utf8.h'
+	{
+		using code_point_t = unsigned int;
+
+		// Control bit helpers
+		constexpr bool Continuation(char c)
+		{
+			return (c & 0xC0) == 0x80;
+		}
+		constexpr bool _1Byte(char c)
+		{
+			return (c & 0x80) == 0x00;
+		}
+		constexpr bool _2Byte(char c)
+		{
+			return (c & 0xE0) == 0xC0;
+		}
+		constexpr bool _3Byte(char c)
+		{
+			return (c & 0xF0) == 0xE0;
+		}
+		constexpr bool _4Byte(char c)
+		{
+			return (c & 0xF8) == 0xF0;
+		}
+
+		// Returns the number of bytes expected for a unicode character starting with 'c'
+		constexpr int ByteLength(char c)
+		{
+			return
+				_4Byte(c) ? 4 :
+				_3Byte(c) ? 3 :
+				_2Byte(c) ? 2 :
+				_1Byte(c) ? 1 :
+				0; // Invalid utf-8 character
+		}
+
+		// Convert utf-8 bytes into a code point.
+		inline code_point_t CodePoint(char const*& ptr, char const* end)
+		{
+			int len;
+			if (ptr == end || (len = ByteLength(*ptr)) == 0)
+				throw std::runtime_error("Invalid unicode character");
+			if (end - ptr < len)
+				throw std::runtime_error("Incomplete unicode character");
+			if (len == 1)
+				return *ptr++;
+
+			code_point_t code = *ptr++ & (0x7F >> len);
+			for (--len; len != 0; --len)
+			{
+				if (!Continuation(*ptr)) throw std::runtime_error("Invalid unicode character");
+				code = (code << 6) | (*ptr++ & 0x3F);
+			}
+
+			return code;
+		}
+
+		// Convert a code point into an escaped string using the '\u' or '\U' format
+		inline void Escape(code_point_t code_point, std::string& out)
+		{
+			constexpr char hex[] = "0123456789ABCDEF";
+
+			auto size = out.size();
+			out.resize(size + 2 + (code_point > 0xFFFF ? 8 : 4));
+			auto ptr = out.data() + size;
+
+			*ptr++ = '\\';
+			*ptr++ = code_point > 0xFFFF ? 'U' : 'u';
+
+			auto count = code_point > 0xFFFF ? 8 : 4;
+			for (; count-- != 0; )
+				*ptr++ = hex[(code_point >> (count << 2)) & 0xf];
+		}
+
+		// Convert an escaped unicode code point into a code point
+		inline code_point_t Unescape(std::string_view str)
+		{
+			auto ptr = str.data();
+			auto end = str.data() + str.size();
+
+			if (end - ptr < 2 || ptr[0] != '\\' || (ptr[1] != 'u' && ptr[1] != 'U'))
+				throw std::runtime_error("Invalid unicode escape sequence");
+
+			auto len = ptr[1] == 'U' ? 8 : 4;
+			if (end - ptr < 2 + len)
+				throw std::runtime_error("Incomplete unicode escape sequence");
+
+			ptr += 2;
+
+			constexpr auto Nibble = [](char c)
+			{
+				if (c >= '0' && c <= '9') return c - '0';
+				if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+				if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+				throw std::runtime_error("Invalid hex character");
+			};
+
+			code_point_t code = 0;
+			for (auto pow = 1U << ((len - 1) * 4); len-- != 0; pow >>= 4)
+				code |= Nibble(*ptr++) * pow;
+
+			return code;
+		}
+
+		// True if the first 3 bytes of 'str' are the UTF-8 BOM bytes
+		inline bool IsBOM(std::string_view str)
+		{
+			return
+				str.size() >= 3 &&
+				static_cast<uint8_t>(str[0]) == 0xEF &&
+				static_cast<uint8_t>(str[1]) == 0xBB &&
+				static_cast<uint8_t>(str[2]) == 0xBF;
+		}
+	}
 	namespace impl
 	{
 		enum class EToken
@@ -910,6 +910,121 @@ namespace pr::json
 		}
 	}
 
+	// Static null value returned for non-existent keys/indices
+	inline Value const& NullValue()
+	{
+		static Value s_null_value;
+		return s_null_value;
+	}
+
+	// Convert a normal string to an escaped string
+	inline std::string EscapeString(std::string_view str)
+	{
+		auto ptr = str.data();
+		auto end = str.data() + str.size();
+
+		std::string out;
+		out.reserve(str.size() * 2);
+
+		for (; ptr != end;)
+		{
+			if (*ptr == '\\' || *ptr == '"' || *ptr == '/' || *ptr == '\b' || *ptr == '\f' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')
+			{
+				out.push_back('\\');
+				out.push_back(*ptr++);
+			}
+			else if (utf8::ByteLength(*ptr) > 1)
+			{
+				auto code = utf8::CodePoint(ptr, end);
+				utf8::Escape(code, out);
+			}
+			else
+			{
+				out.push_back(*ptr++);
+			}
+		}
+		return out;
+	}
+
+	// Convert an escaped string to a normal string
+	inline std::string UnescapeString(std::string_view str)
+	{
+		auto ptr = str.data();
+		auto end = str.data() + str.size();
+
+		std::string result(str.size(), '\0');
+		auto out = result.data();
+
+		for (; ptr != end; ++ptr)
+		{
+			if (*ptr != '\\')
+			{
+				*out++ = *ptr;
+				continue;
+			}
+			switch (*++ptr)
+			{
+				case '\\': *out++ = '\\'; break;
+				case '"': *out++ = '"'; break;
+				case '/': *out++ = '/'; break;
+				case 'b': *out++ = '\b'; break;
+				case 'f': *out++ = '\f'; break;
+				case 'n': *out++ = '\n'; break;
+				case 'r': *out++ = '\r'; break;
+				case 't': *out++ = '\t'; break;
+				case 'u':
+				{
+					if (end - ptr < 5)
+						throw std::runtime_error("Incomplete unicode escape sequence");
+
+					auto code =
+						((ptr[1] - '0') << 12) +
+						((ptr[2] - '0') << 8) +
+						((ptr[3] - '0') << 4) +
+						((ptr[4] - '0') << 0);
+
+					if (code < 0x80)
+					{
+						*out++ = static_cast<char>(code);
+					}
+					else if (code < 0x800)
+					{
+						*out++ = static_cast<char>(0xC0 | (code >> 6));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					else
+					{
+						*out++ = static_cast<char>(0xE0 | (code >> 12));
+						*out++ = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					ptr += 4;
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown escape sequence");
+				}
+			}
+		}
+
+		result.resize(out - result.data());
+		return result;
+	}
+
+	// Initializer list constructor for objects
+	inline Object::Object(std::initializer_list<std::pair<std::string_view, Value>> items)
+		: keys()
+		, values()
+	{
+		// Outside the class because we need 'Value' to be defined
+		for (auto& [key, value] : items)
+		{
+			keys.push_back(std::string{ key });
+			values.push_back(value);
+		}
+	}
+
 	// Write a JSON DOM to a string
 	inline std::string Write(Value const& value, Options const& opts = {})
 	{
@@ -1215,7 +1330,7 @@ namespace pr::json
 		auto src = std::string_view{ data };
 
 		// Skip the BOM if present
-		if (str::utf8::IsBOM(src))
+		if (utf8::IsBOM(src))
 			src.remove_prefix(3);
 
 		return Read(src, opts);
