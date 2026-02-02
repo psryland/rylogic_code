@@ -253,6 +253,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\constants_vector.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\conversion.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\convex_hull.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\fibonacci_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\forward.h" />
@@ -392,6 +393,8 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\closest_point.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\collision.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\hlsl\intercept.hlsli" />
     <None Include="cpp.hint" />
   </ItemGroup>
   <!-- Run unit tests -->

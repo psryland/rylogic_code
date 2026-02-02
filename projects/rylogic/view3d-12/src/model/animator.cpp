@@ -62,7 +62,7 @@ namespace pr::rdr12
 	// Return the frame rate of the underlying animation
 	double Animator_InterpolatedAnimation::FrameRate() const
 	{
-		return m_anim->m_frame_rate;
+		return m_anim->m_native_frame_rate;
 	}
 
 	// Apply an animation to the given bones

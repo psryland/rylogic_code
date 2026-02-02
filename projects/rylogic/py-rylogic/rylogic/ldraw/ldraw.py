@@ -196,6 +196,7 @@ class EKeyword(Enum):
 	Hidden = 4128829753
 	Instance = 193386898
 	Inverse = 2986472067
+	KinematicKeyFrames = 1176138231
 	Layers = 2411172191
 	LeftHanded = 1992685208
 	LightSource = 2597226090

@@ -1499,6 +1499,7 @@ namespace pr::rdr12::ldraw
 			EAnimFlags m_flags = EAnimFlags::None;
 			FrameRange m_frame_range = { 0, std::numeric_limits<int>::max() };
 			TimeRange m_time_range = { 0, std::numeric_limits<double>::max() }; // Seconds
+			pr::vector<int> m_kinematic_frames = {};
 			double m_stretch = { 1.0 }; // aka playback speed scale
 
 			void Parse(IReader& reader, ParseParams& pp)
@@ -1549,6 +1550,12 @@ namespace pr::rdr12::ldraw
 						case EKeyword::NoRootRotation:
 						{
 							m_flags = SetBits(m_flags, EAnimFlags::NoRootRotation, reader.IsSectionEnd() ? true : reader.Bool());
+							break;
+						}
+						case EKeyword::KinematicKeyFrames:
+						{
+							for (; !reader.IsSectionEnd(); )
+								m_kinematic_frames.push_back(reader.Int<int>());
 							break;
 						}
 						default:
@@ -4451,6 +4458,12 @@ namespace pr::rdr12::ldraw
 			m_obj = obj;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, *this, &opts);
+
+			// If kinematic key frames are given, switch the animator to the kinematic key frame animator
+			if (m_anim_info && !m_anim_info.m_kinematic_frames.empty())
+			{
+				UseKinematicKeyFrameAnimator();
+			}
 		}
 
 		// IModelOut functions
@@ -4513,6 +4526,22 @@ namespace pr::rdr12::ldraw
 
 			// Only use the first animation
 			return EResult::Stop;
+		}
+
+		// Switch the object's pose animator to a kinematic key frame animator
+		void UseKinematicKeyFrameAnimator()
+		{
+			#if 0 //todo
+				m_obj->Apply([&](LdrObject* obj)
+				{
+					if (obj->m_pose)
+					{
+						auto kfa = rdr12::New<Animator_KinematicKeyFrames>(m_anim_info.m_kinematic_key_frames, obj->m_pose->m_skeleton);
+						obj->m_pose->SetAnimator(kfa);
+					}
+					return true;
+				}, "");
+				#endif
 		}
 	};
 

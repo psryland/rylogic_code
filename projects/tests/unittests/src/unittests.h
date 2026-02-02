@@ -204,6 +204,7 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/conversion.h"
 #include "pr/maths/convex_hull.h"
+#include "pr/maths/dynamics.h"
 #include "pr/maths/fft.h"
 #include "pr/maths/fibonacci_sphere.h"
 #include "pr/maths/float_compare.h"

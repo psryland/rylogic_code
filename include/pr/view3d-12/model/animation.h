@@ -8,14 +8,17 @@
 namespace pr::rdr12
 {
 	// Notes:
+	//  - Bones belong to Skeletons.
+	//  - Tracks belong to Animations.
 	//  - Animation has these parts:
-	//    - KeyFrameAnimation = a buffer of KeyFrames where each KeyFrame contains transforms for each bone in a skeleton.
+	//    - KeyFrameAnimation = a buffer of KeyFrames where each KeyFrame contains transforms for one or more bones in a skeleton.
 	//        KeyFrames can be sparse.
-	//        The transform at each key frame is the *local transform* of that bone — that is: the transform from
-	//        the parent bone’s space to this bone’s space at that time. Therefore, in the rest pose (i.e., bind pose),
+	//        There can be less tracks than bones in the skeleton. In this case, bones without tracks use their rest pose transform.
+	//        The transform at each key is the *local transform* of that bone — that is: the transform from
+	//        the parent bone’s space to bone space at that time. Therefore, in the rest pose (i.e., bind pose),
 	//        these transforms match the skeleton's local bone transforms.
 	//    - Skeleton = Source data describing a hierarchy of bone transforms. Bone transforms are parent relative
-	//        with the root bone in object space.
+	//        with the root bone in animation space.
 	//    - Pose = A runtime skeleton instance, updated by an Animator using interpolated transforms from an Animation.
 	//        The pose transform array is used in the shader to skin the model so the transforms must be from object
 	//        space to deformed object space. They are then transformed using o2w into world space.
@@ -91,6 +94,12 @@ namespace pr::rdr12
 		operator m4x4() const
 		{
 			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scl.x, m_scl.y, m_scl.z), m_pos.w1());
+		}
+
+		// Convert to xform
+		operator xform() const
+		{
+			return xform{m_rot, m_pos.w1(), m_scl.w1()};
 		}
 
 		// Interpolate between two key frames
@@ -210,10 +219,10 @@ namespace pr::rdr12
 		//    Keys ==> 0   1   2   3   4   5   6
 		//  - If the frame rate is 24 fps, then at t == 1sec, key24 is about to start (because key0 is at t = 0).
 		//    Put another way, a 24fps animation clip requires 25 keys in order to last for 1 second.
-		//  - Bone transform data are stored interleaved for each key, e.g.,
-		//      m_rotation: [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
-		//      m_position: [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
-		//      m_scale:    [key0:(bone0,bone1,bone2,..)][key1:(bone0,bone1,bone2,..)][...
+		//  - Track data are stored interleaved for each key, e.g.,
+		//      m_rotation: [key0:(track0,track1,track2,..)][key1:(track0,track1,track2,..)][...
+		//      m_position: [key0:(track0,track1,track2,..)][key1:(track0,track1,track2,..)][...
+		//      m_scale:    [key0:(track0,track1,track2,..)][key1:(track0,track1,track2,..)][...
 		//    This is because it's more cache friendly to have all data for a key local in memory.
 		//  - Any of the tracks can be empty. The lengths will be either equal or zero.
 		using Sample = vector<BoneKey, 0>;
@@ -222,16 +231,24 @@ namespace pr::rdr12
 		double m_duration;          // The length (in seconds) of this animation
 		double m_native_frame_rate; // The native frame rate of the animation (for reference. frame rate is implied key_count and duration)
 
-		// Tracks
-		vector<uint32_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
+		vector<uint16_t, 0> m_bone_map; // The bone id for each track. Length = track count.
+
+		// Any of these tracks can be empty. Length = track count * key count
 		vector<quat, 0> m_rotation;
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
+		vector<float, 0> m_times;   // Time (in seconds) of each key. Empty if a fixed frame rate.
 
 		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
 
-		// Number of bone tracks in this animation
-		int bone_count() const;
+		// Number of tracks in this animation
+		int track_count() const;
+
+		// Number of float curves in this animation
+		int fcurve_count() const;
+
+		// Number of transform curves in this animation
+		int tcurve_count() const;
 
 		// Number of keys in this animation
 		int key_count() const;
@@ -239,8 +256,11 @@ namespace pr::rdr12
 		// The effective frame rate implied by the duration and number of keys
 		double frame_rate() const;
 
+		// Get the key at 'frame' for 'track_index'
+		BoneKey Key(int frame, int track_index) const;
+
 		// Get the keys on either side of 'time_s' (to interpolate between)
-		std::tuple<BoneKey, BoneKey> Key(float time_s, int bone_index) const;
+		std::tuple<BoneKey, BoneKey> Key(float time_s, int track_index) const;
 
 		// Returns the interpolated key frames a 'time_s'
 		void EvaluateAtTime(float time_s, EAnimFlags flags, std::span<m4x4> out) const;
@@ -254,22 +274,69 @@ namespace pr::rdr12
 	// Animation data where each key frame also contains velocities and accelerations
 	struct KinematicKeyFrameAnimation : RefCounted<KinematicKeyFrameAnimation>
 	{
-		using Vec3Track = pr::vector<v3,0>;
+		// Notes:
+		//  - See "KeyFrameAnimation", however, keys != frames + 1 here because keys are sparse.
 
-		// Any of these tracks can be empty
-		uint32_t m_skel_id;     // The skeleton that this animation is intended for (mainly for debugging)
-		EAnimFlags m_flags;     // Behaviour flags
-		Vec3Track m_rotation;   // Rotation data per frame. Compressed normalised quaternion
-		Vec3Track m_position;   // Bone position data per frame.
-		Vec3Track m_scale;      // Bone scale data per frame.
-		Vec3Track m_velocity;   // Linear velocity per frame.
-		Vec3Track m_ang_vel;    // Angular velocity per frame.
-		Vec3Track m_accel;      // Acceleration per frame.
-		Vec3Track m_ang_accel;  // Angular acceleration per frame.
-		TimeRange m_time_range; // The time range spanned by this animation
-		double m_frame_rate;    // The native frame rate of the animation, so we can convert from frames <-> seconds
+		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
+		double m_duration;          // The length (in seconds) of this animation
+		double m_native_frame_rate; // The native frame rate of the animation, so we can convert from frames <-> seconds
 
-		KinematicKeyFrameAnimation(uint32_t skel_id, EAnimFlags flags, TimeRange time_range, double frame_rate);
+		vector<uint16_t, 0> m_bone_map;  // The bone id for each track. Length = track count.
+		vector<uint8_t, 0> m_fcurve_ids; // Identifiers for the float curves. Length = fcurve count
+		vector<uint8_t, 0> m_tcurve_ids; // Identifiers for the transform curves. Length = tcurve count
+
+		// Any of these tracks can be empty. Length = track count * key count
+		vector<quat, 0> m_rotation;   // Bone rotation data per frame.
+		vector<v3, 0> m_ang_vel;    // Angular velocity per track, per frame.
+		vector<v3, 0> m_ang_acc;    // Angular acceleration per track, per frame.
+		vector<v3, 0> m_position;   // Bone position data per track, per frame.
+		vector<v3, 0> m_lin_vel;    // Linear velocity per track, per frame.
+		vector<v3, 0> m_lin_acc;    // Linear Acceleration per track, per frame.
+		vector<v3, 0> m_scale;      // Bone scale data per track, per frame.
+		vector<float, 0> m_fcurves; // Float curve data per fcurve id, per frame.
+		vector<xform, 0> m_tcurves; // Transform curve data per tcurve id, per frame.
+		vector<float, 0> m_times;   // Time (in seconds) of each key. Empty if a fixed frame rate.
+		vector<int, 0> m_fidxs;     // Frame index of each key frame. Empty if one key per frame.
+
+		KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
+		KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames);
+
+		// Number of tracks in this animation
+		int track_count() const;
+
+		// Number of float curves in this animation
+		int fcurve_count() const;
+
+		// Number of transform curves in this animation
+		int tcurve_count() const;
+
+		// Number of keys in this animation
+		int key_count() const;
+
+		// Get the original frame number for the given key index
+		int src_frame(int key_index) const;
+
+		// The effective frame rate implied by the duration and number of keys
+		double frame_rate() const;
+
+		// Ref-counting clean up function
+		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);
+	};
+
+	// Interface for reading animation data from various sources
+	struct IAnimSource
+	{
+		virtual ~IAnimSource() = default;
+		virtual int key_count() const noexcept = 0;
+		virtual int track_count() const noexcept = 0;
+		virtual int fcurve_count() const noexcept = 0;
+		virtual int tcurve_count() const noexcept = 0;
+		virtual double frame_rate() const noexcept = 0;
+		virtual int key_to_frame(int key_index) const = 0;
+		virtual uint16_t track_to_bone(int track_index) const = 0;
+		virtual void ReadTrackValues(int track_index, int iframe, std::span<xform> samples) const = 0;
+		virtual void ReadFCurveValues(int track_index, int iframe, std::span<float> samples) const = 0;
+		virtual void ReadTCurveValues(int track_index, int iframe, std::span<xform> samples) const = 0;
 	};
 
 	// Use 'style' to adjust 'time_s' so that it is within the given time range

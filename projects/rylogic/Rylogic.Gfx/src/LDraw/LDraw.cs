@@ -79,6 +79,7 @@ namespace Rylogic.LDraw
 		Hidden = unchecked((int)4128829753),
 		Instance = unchecked((int)193386898),
 		Inverse = unchecked((int)2986472067),
+		KinematicKeyFrames = unchecked((int)1176138231),
 		Layers = unchecked((int)2411172191),
 		LeftHanded = unchecked((int)1992685208),
 		LightSource = unchecked((int)2597226090),

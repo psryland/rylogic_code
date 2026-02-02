@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -112,8 +112,9 @@
 #include "pr/gfx/colour.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/macros/enum.h"
-#include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/bit_fields.h"
+#include "pr/maths/dynamics.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/meta/nameof.h"
 #include "pr/network/winsock.h"

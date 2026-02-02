@@ -699,7 +699,7 @@ namespace pr::geometry::fbx
 		double m_duration = 0;          // The length (in seconds) of the animation
 		double m_frame_rate = 24.0;     // The native frame rate of the animation
 		std::string m_name;             // Animation "Take" name
-		vector<uint32_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
+		vector<uint16_t, 0> m_bone_map; // The bone id for each track. Length = bone count.
 		vector<quat, 0> m_rotation;     // Frames of bone rotations
 		vector<v3, 0> m_position;       // Frames of bone positions
 		vector<v3, 0> m_scale;          // Frames of bone scales
@@ -1317,7 +1317,7 @@ namespace pr::geometry::fbx
 
 						// Store the 'node_id' in the bone map initially.
 						// This is replaced later with the actual bone id.
-						anim.m_bone_map.push_back(node->typed_id);
+						anim.m_bone_map.push_back(s_cast<uint16_t>(node->typed_id));
 						return true;
 					});
 
@@ -1340,7 +1340,7 @@ namespace pr::geometry::fbx
 						auto bone_count = ssize(anim.m_bone_map);
 
 						// Replace the node id with the actual bone id
-						anim.m_bone_map[bone_idx] = node->bone->typed_id;
+						anim.m_bone_map[bone_idx] = s_cast<uint16_t>(node->bone->typed_id);
 
 						quat prev = quat::Identity();
 						bool actv[3] = { false, false, false };

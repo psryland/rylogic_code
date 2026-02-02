@@ -686,6 +686,20 @@ namespace Rylogic.Extn
 			int index = 0;
 			return source.Select(x => (x, index++));
 		}
+		public static SpanIndexEnumerator<T> WithIndex<T>(this ReadOnlySpan<T> source)
+		{
+			return new SpanIndexEnumerator<T>(source);
+		}
+		public ref struct SpanIndexEnumerator<T>
+		{
+			private ReadOnlySpan<T> m_span;
+			private int m_index;
+
+			public SpanIndexEnumerator(ReadOnlySpan<T> span) { m_span = span; m_index = -1; }
+			public bool MoveNext() { m_index++; return m_index < m_span.Length; }
+			public (T item, int index) Current => (m_span[m_index], m_index);
+			public SpanIndexEnumerator<T> GetEnumerator() => this;
+		}
 
 		/// <summary>Batches items in a collection in groups >= 'batch_size'.</summary>
 		public static IEnumerable<IList<TSource>> Batch<TSource>(this IEnumerable<TSource> source, int batch_size, Func<TSource, bool>? filter = null, bool auto_clear = true)

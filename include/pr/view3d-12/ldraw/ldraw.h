@@ -106,6 +106,7 @@ namespace pr::rdr12::ldraw
 		x(Hidden            )\
 		x(Instance          )\
 		x(Inverse           )\
+		x(KinematicKeyFrames)\
 		x(Layers            )\
 		x(LeftHanded        )\
 		x(LightSource       )\

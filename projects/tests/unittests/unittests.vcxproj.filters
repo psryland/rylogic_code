@@ -1113,6 +1113,9 @@
     <ClInclude Include="..\..\..\include\pr\maths\transform.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\maths\dynamics.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
