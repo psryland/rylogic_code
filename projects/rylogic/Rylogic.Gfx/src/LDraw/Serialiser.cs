@@ -228,15 +228,15 @@ namespace Rylogic.LDraw.Serialiser
 	}
 	public class LineStyle
 	{
-		public EPointStyle m_style = EPointStyle.Square;
+		public ELineStyle m_style = ELineStyle.LineSegments;
 		public bool m_is_default = true;
 		public LineStyle() { }
-		public LineStyle(EPointStyle style)
+		public LineStyle(ELineStyle style)
 		{
 			m_style = style;
 			m_is_default = false;
 		}
-		public static implicit operator bool(LineStyle ls) => !ls.m_is_default || ls.m_style != EPointStyle.Square;
+		public static implicit operator bool(LineStyle ls) => !ls.m_is_default || ls.m_style != ELineStyle.LineSegments;
 	}
 	public class ArrowHeads
 	{

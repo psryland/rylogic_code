@@ -113,7 +113,7 @@ namespace Rylogic.Maths
 			};
 		}
 
-		/// <summary>Implicit conversion to System.Numerics</summary>
+		/// <summary>Implicit conversion to System.Numerics. Note: a2c = b2c * a2b == Matrix4x4.Multiply(A2B, B2C) == (A2B * B2C)</summary>
 		public static implicit operator m4x4(Matrix4x4 m)
 		{
 			return new m4x4(
@@ -407,7 +407,7 @@ namespace Rylogic.Maths
 		#region Random
 
 		// Create a random 4x4 matrix
-		public static m4x4 Random4x4(float min, float max, Random r)
+		public static m4x4 Random(float min, float max, Random r)
 		{
 			return new(
 				v4.Random4(min, max, r),
@@ -416,26 +416,30 @@ namespace Rylogic.Maths
 				v4.Random4(min, max, r));
 		}
 
-		// Create a random affine transform matrix
-		public static m4x4 Random4x4(v4 axis, float min_angle, float max_angle, v4 position, Random r)
+		// Create a random orthonormal transform matrix
+		public static m4x4 Random(Random r)
+		{
+			return Random(v4.Origin, 1.0f, r);
+		}
+		public static m4x4 Random(v4 axis, float min_angle, float max_angle, v4 position, Random r)
 		{
 			return Transform(axis, r.Float(min_angle, max_angle), position);
 		}
-		public static m4x4 Random4x4(float min_angle, float max_angle, v4 position, Random r)
+		public static m4x4 Random(float min_angle, float max_angle, v4 position, Random r)
 		{
-			return Random4x4(v4.Random3N(0.0f, r), min_angle, max_angle, position, r);
+			return Random(v4.Random3N(0.0f, r), min_angle, max_angle, position, r);
 		}
-		public static m4x4 Random4x4(v4 axis, float min_angle, float max_angle, v4 centre, float radius, Random r)
+		public static m4x4 Random(v4 axis, float min_angle, float max_angle, v4 centre, float radius, Random r)
 		{
-			return Random4x4(axis, min_angle, max_angle, centre + v4.Random3(0.0f, radius, 0.0f, r), r);
+			return Random(axis, min_angle, max_angle, centre + v4.Random3(0.0f, radius, 0.0f, r), r);
 		}
-		public static m4x4 Random4x4(float min_angle, float max_angle, v4 centre, float radius, Random r)
+		public static m4x4 Random(float min_angle, float max_angle, v4 centre, float radius, Random r)
 		{
-			return Random4x4(v4.Random3N(0.0f, r), min_angle, max_angle, centre, radius, r);
+			return Random(v4.Random3N(0.0f, r), min_angle, max_angle, centre, radius, r);
 		}
-		public static m4x4 Random4x4(v4 centre, float radius, Random r)
+		public static m4x4 Random(v4 centre, float radius, Random r)
 		{
-			return Random4x4(v4.Random3N(0.0f, r), 0.0f, (float)Math_.Tau, centre, radius, r);
+			return Random(v4.Random3N(0.0f, r), 0.0f, (float)Math_.Tau, centre, radius, r);
 		}
 
 		#endregion
@@ -803,7 +807,7 @@ namespace Rylogic.UnitTests
 		public void Basic()
 		{
 			var rng = new Random(1);
-			var m = m4x4.Random4x4(-5, +5, rng);
+			var m = m4x4.Random(-5, +5, rng);
 
 			Assert.True(m.x.x == m[0][0]);
 			Assert.True(m.z.y == m[2][1]);

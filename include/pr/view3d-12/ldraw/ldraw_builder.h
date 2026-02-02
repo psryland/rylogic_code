@@ -674,7 +674,7 @@ namespace pr::rdr12::ldraw
 
 			LdrLine& line(v4_cref a, v4_cref b, std::optional<Colour32> colour = {})
 			{
-				style(ELineStyle::LineSegments);
+				// Don't overwrite style here, it could be direction or segments
 				m_current.m_lines.push_back({ a, b, colour ? *colour : Colour32White });
 				if (colour) m_current.m_per_item_colour = true;
 				m_current.m_strip.clear();
@@ -695,7 +695,6 @@ namespace pr::rdr12::ldraw
 
 			LdrLine& strip(v4_cref start, std::optional<Colour32> colour = {})
 			{
-				style(ELineStyle::LineStrip);
 				m_current.m_strip.push_back({ start, colour ? *colour : Colour32White });
 				if (colour) m_current.m_per_item_colour = true;
 				m_current.m_lines.clear();

@@ -299,7 +299,7 @@ namespace Rylogic.LDraw
 		private void Append(Serialiser.DataPoints dp)
 		{
 			if (!dp) return;
-			Write(EKeyword.Arrow, () =>
+			Write(EKeyword.DataPoints, () =>
 			{
 				Write(EKeyword.Size, dp.m_size);
 				if (dp.m_style != EPointStyle.Square)

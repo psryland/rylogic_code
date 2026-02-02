@@ -923,7 +923,7 @@ namespace Rylogic.UnitTests
 		public void Basic()
 		{
 			var rng = new Random(1);
-			var M = m4x4.Random4x4(-5, +5, rng);
+			var M = m4x4.Random(-5, +5, rng);
 
 			// Compare with m4x4
 			var m = new Matrix(4, 4);
@@ -968,8 +968,8 @@ namespace Rylogic.UnitTests
 			var rng = new Random(1);
 
 			var V0 = v4.Random4(-5, +5, rng);
-			var M0 = m4x4.Random4x4(-5, +5, rng);
-			var M1 = m4x4.Random4x4(-5, +5, rng);
+			var M0 = m4x4.Random(-5, +5, rng);
+			var M1 = m4x4.Random(-5, +5, rng);
 
 			var v0 = new Matrix(1, 4, V0.ToArray());
 			var m0 = new Matrix(4, 4, M0.ToArray());

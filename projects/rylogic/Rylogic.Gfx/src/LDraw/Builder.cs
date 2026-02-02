@@ -671,8 +671,14 @@ namespace Rylogic.LDraw
 		private readonly List<Pt> m_points = [];
 		private Serialiser.Size2 m_size = new();
 		private Serialiser.Depth m_depth = new();
-		private EPointStyle m_style = EPointStyle.Square;
+		private Serialiser.PointStyle m_style = new();
 		private Serialiser.PerItemColour m_per_item_colour = new();
+
+		public LdrPoint style(EPointStyle s)
+		{
+			m_style = new(s);
+			return this;
+		}
 
 		// Points
 		public LdrPoint pt(v4 point, Colour32? colour = null)
@@ -705,13 +711,6 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
-		// Point style
-		public LdrPoint style(EPointStyle s)
-		{
-			m_style = s;
-			return this;
-		}
-
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
@@ -738,9 +737,9 @@ namespace Rylogic.LDraw
 		private class Ln { public v4 a, b; public Colour32 col; };
 		private class Block
 		{
-			public ELineStyle m_style = ELineStyle.LineSegments;
 			public readonly List<Ln> m_lines = [];
 			public readonly List<Pt> m_strip = [];
+			public Serialiser.LineStyle m_style = new();
 			public Serialiser.Smooth m_smooth = new();
 			public Serialiser.Width m_width = new();
 			public Serialiser.Dashed m_dashed = new();
@@ -755,7 +754,7 @@ namespace Rylogic.LDraw
 
 		public LdrLine style(ELineStyle sty)
 		{
-			m_current.m_style = sty;
+			m_current.m_style = new(sty);
 			return this;
 		}
 		public LdrLine per_item_colour(bool on = true)
@@ -771,6 +770,15 @@ namespace Rylogic.LDraw
 		public LdrLine width(float w)
 		{
 			m_current.m_width = new(w);
+			return this;
+		}
+		public LdrLine data_points(float size, Colour32? colour = null, EPointStyle? style = null)
+		{
+			return data_points(new v2(size, size), colour, style);
+		}
+		public LdrLine data_points(v2 size, Colour32? colour = null, EPointStyle? style = null)
+		{
+			m_current.m_data_points = new Serialiser.DataPoints(size, colour, style);
 			return this;
 		}
 		public LdrLine dashed(v2 dash)
@@ -2226,6 +2234,15 @@ namespace Rylogic.UnitTests
 			var str = builder.ToString();
 			Assert.Equal(str, "*Box b FF00FF00 {*Data {1 1 1}}");
 		}
+
+		[Test]
+		public void TestLine()
+		{
+			var builder = new LDraw.Builder();
+			builder.Line("a", 0xFF00FF00).style(LDraw.ELineStyle.LineStrip).line_to(v4.ZAxis.w1);
+			var str = builder.ToString();
+			Assert.Equal(str, "*Line a FF00FF00 {*Style {LineStrip} *Data {0 0 1 0 0 1}}");
+		}
 	}
 
 	[TestFixture]
@@ -2238,6 +2255,15 @@ namespace Rylogic.UnitTests
 			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
 			var mem = builder.ToBinary().ToArray();
 			Assert.Equal(mem.Length, 49);
+		}
+
+		[Test]
+		public void TestLine()
+		{
+			var builder = new LDraw.Builder();
+			builder.Line("a", 0xFF00FF00).style(LDraw.ELineStyle.LineStrip).line_to(v4.ZAxis.w1);
+			//builder.Save("E://Dump//line.bdr", LDraw.ESaveFlags.Binary);
+			var mem = builder.ToBinary().ToArray();
 		}
 
 		[Test]

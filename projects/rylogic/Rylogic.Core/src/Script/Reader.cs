@@ -775,7 +775,7 @@ namespace Rylogic.Script
 						var centre = Vector3(1.0f);
 						var radius = (float)Real();
 						SectionEnd();
-						p2w = m4x4.Random4x4(centre, radius, m_rng) * p2w;
+						p2w = m4x4.Random(centre, radius, m_rng) * p2w;
 						break;
 					}
 				case "randpos":
