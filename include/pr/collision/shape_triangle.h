@@ -80,7 +80,8 @@ namespace pr::collision
 	template <typename>
 	void pr_vectorcall ClosestPoint(ShapeTriangle const& shape, v4_cref point, float& distance, v4& closest)
 	{
-		closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
+		using namespace pr::geometry;
+		closest = closest_point::PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
 		distance = Length(point - closest);
 	}
 }

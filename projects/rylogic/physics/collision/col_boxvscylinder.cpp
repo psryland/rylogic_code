@@ -17,6 +17,7 @@
 
 using namespace pr;
 using namespace pr::ph;
+using namespace pr::geometry;
 
 namespace pr
 {
@@ -235,7 +236,7 @@ namespace pr
 				v4 b1 = box_point + box_r;
 				v4 c0 = data.m_cyl_pos - cyl_r;
 				v4 c1 = data.m_cyl_pos + cyl_r;
-				ClosestPoint_LineSegmentToLineSegment(b0, b1, c0, c1, t0, t1);
+				closest_point::LineToLine(b0, b1, c0, c1, t0, t1);
 
 				// Use the vector between the nearest points as the separating axis (but retain the direction)
 				v4 b = b0 + t0 * (b1 - b0);

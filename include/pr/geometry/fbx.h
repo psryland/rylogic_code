@@ -622,7 +622,7 @@ namespace pr::geometry::fbx
 		double m_duration;                    // The length (in seconds) of the animation
 		double m_frame_rate;                  // The native frame rate of the animation
 		std::string_view m_name;              // Animation "Take" name
-		std::span<uint32_t const> m_bone_map; // The bone id for each track. Length = bone count.
+		std::span<uint16_t const> m_bone_map; // The bone id for each track. Length = bone count.
 		std::span<quat const> m_rotation;     // Frames of bone rotations
 		std::span<v3 const> m_position;       // Frames of bone positions
 		std::span<v3 const> m_scale;          // Frames of bone scales

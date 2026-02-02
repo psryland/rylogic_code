@@ -9,6 +9,7 @@
 using namespace pr;
 using namespace pr::ph;
 using namespace pr::ph::mesh_vs_mesh;
+using namespace pr::geometry;
 
 inline void Swap(float& lhs, float& rhs)                           { float t = lhs; lhs = rhs; rhs = t; }
 inline void Swap(mesh_vs_mesh::Vert& lhs, mesh_vs_mesh::Vert& rhs) { mesh_vs_mesh::Vert t = lhs; lhs = rhs; rhs = t; }
@@ -45,9 +46,7 @@ v4 Simplex::FindNearestPoint(v4 const& point)
 	case 2: // Line
 		// When the simplex contains two points, the nearest point
 		// must be somewhere along the line seqment. 
-		m_nearest_point = ClosestPoint_PointToLineSegment(point,	m_vertex[0].m_r,
-																	m_vertex[1].m_r,
-																	m_bary_coords[0]);
+		m_nearest_point = closest_point::PointToLine(point, m_vertex[0].m_r, m_vertex[1].m_r, m_bary_coords[0]);
 		if( m_bary_coords[0] == 0.0f )
 		{
 			m_num_vertices		= 1;
@@ -68,10 +67,7 @@ v4 Simplex::FindNearestPoint(v4 const& point)
 	case 3: // Triangle
 		// When the simplex contains three points, the nearest point
 		// must be somewhere on face of the triangle
-		m_nearest_point = ClosestPoint_PointToTriangle(point,	m_vertex[0].m_r,
-																m_vertex[1].m_r,
-																m_vertex[2].m_r,
-																m_bary_coords);
+		m_nearest_point = geometry::closest_point::PointToTriangle(point, m_vertex[0].m_r, m_vertex[1].m_r, m_vertex[2].m_r, m_bary_coords);
 		for( int i = 2; i >= 0; --i )
 		{
 			// If this vert is not needed in the simplex,
@@ -91,7 +87,7 @@ v4 Simplex::FindNearestPoint(v4 const& point)
 		// the tetrahedron has positive volume
 		if( PointInFrontOfPlane(m_vertex[0].m_r, m_vertex[1].m_r, m_vertex[2].m_r, m_vertex[3].m_r) )
 		{
-			m_nearest_point = ClosestPoint_PointToTetrahedron(point,	m_vertex[0].m_r,
+			m_nearest_point = closest_point::PointToTetrahedron(point,	m_vertex[0].m_r,
 																		m_vertex[1].m_r,
 																		m_vertex[2].m_r,
 																		m_vertex[3].m_r,
@@ -99,7 +95,7 @@ v4 Simplex::FindNearestPoint(v4 const& point)
 		}
 		else
 		{
-			m_nearest_point = ClosestPoint_PointToTetrahedron(point,	m_vertex[0].m_r,
+			m_nearest_point = closest_point::PointToTetrahedron(point,	m_vertex[0].m_r,
 																		m_vertex[1].m_r,
 																		m_vertex[3].m_r,
 																		m_vertex[2].m_r,

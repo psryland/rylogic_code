@@ -5,18 +5,8 @@
 #pragma once
 #include "pr/geometry/common.h"
 
-namespace pr
+namespace pr::geometry
 {
-	// Forwards
-	float pr_vectorcall Distance_PointToPlane(v4_cref point, Plane const& plane);
-
-	// Returns true if 'point' lies in front of the plane described by 'abc' (Cross3(b-a, c-a))
-	inline bool pr_vectorcall PointInFrontOfPlane(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
-	{
-		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
-		return Triple(point - a, b - a, c - a) >= 0.0f;
-	}
-
 	// Return a point that is the weighted result of verts 'a','b','c' and 'bary'
 	inline v4 pr_vectorcall BaryPoint(v4_cref a, v4_cref b, v4_cref c, v4_cref bary)
 	{
@@ -24,9 +14,13 @@ namespace pr
 		auto pt = bary.x * a + bary.y * b + bary.z * c;
 		return pt / pt.w;
 	}
+	inline v4 pr_vectorcall BaryPoint(v4_cref a, v4_cref b, v4_cref c, v3 bary)
+	{
+		return BaryPoint(a, b, c, bary.w0());
+	}
 
 	// Return the 'Bary-Centric' coordinates for 'point' with respect to triangle a,b,c
-	inline v4 pr_vectorcall BaryCentric(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
+	inline v4 pr_vectorcall Barycentric(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
 	{
 		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		v4 ab = b - a, ac = c - a, ap = point - a;
@@ -48,10 +42,11 @@ namespace pr
 	// Returns true if a point projects within a triangle using the triangle normal
 	inline bool pr_vectorcall PointWithinTriangle(v4_cref point, v4_cref a, v4_cref b, v4_cref c, float tol)
 	{
-		v4 bary = BaryCentric(point, a, b, c);
-		return	bary.x >= -tol && bary.x <= 1.0f + tol &&
-				bary.y >= -tol && bary.y <= 1.0f + tol &&
-				bary.z >= -tol && bary.z <= 1.0f + tol;
+		v4 bary = Barycentric(point, a, b, c);
+		return
+			bary.x >= -tol && bary.x <= 1.0f + tol &&
+			bary.y >= -tol && bary.y <= 1.0f + tol &&
+			bary.z >= -tol && bary.z <= 1.0f + tol;
 	}
 
 	// Returns true if a point projects within a triangle using the triangle normal
@@ -66,11 +61,12 @@ namespace pr
 	// Returns true if a point projects within a triangle using the triangle normal. Also returns the point
 	inline bool pr_vectorcall PointWithinTriangle(v4_cref point, v4_cref a, v4_cref b, v4_cref c, v4& pt)
 	{
-		v4 bary = BaryCentric(point, a, b, c);
-		pt = a * bary.x + b * bary.y + c * bary.z; pt.w = 1.0f;
-		return	bary.x >= 0.0f && bary.x <= 1.0f &&
-				bary.y >= 0.0f && bary.y <= 1.0f &&
-				bary.z >= 0.0f && bary.z <= 1.0f;
+		v4 bary = Barycentric(point, a, b, c);
+		pt = BaryPoint(a, b, c, bary).w1();
+		return
+			bary.x >= 0.0f && bary.x <= 1.0f &&
+			bary.y >= 0.0f && bary.y <= 1.0f &&
+			bary.z >= 0.0f && bary.z <= 1.0f;
 	}
 
 	// Returns true if 'point' lies on or within the tetrahedron described by 'abcd' (i.e. behind all of it's planes)
@@ -134,9 +130,16 @@ namespace pr
 	{
 		for (auto i = 0; i != count; ++i)
 		{
-			if (Distance_PointToPlane(point, planes[i]) < -tol)
+			if (distance::PointToPlane(point, planes[i]) < -tol)
 				return false;
 		}
 		return true;
+	}
+
+	// Returns true if 'point' lies in front of the plane described by 'abc' (Cross3(b-a, c-a))
+	inline bool pr_vectorcall PointInFrontOfPlane(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
+	{
+		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
+		return Triple(point - a, b - a, c - a) >= 0.0f;
 	}
 }

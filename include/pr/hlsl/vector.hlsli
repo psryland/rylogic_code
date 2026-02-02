@@ -7,18 +7,42 @@
 #include "pr/hlsl/core.hlsli"
 
 // Returns true if all vector elements are 0
+bool AllZero(float2 a)
+{
+	return !any(a);
+}
+bool AllZero(float3 a)
+{
+	return !any(a);
+}
 bool AllZero(float4 a)
 {
 	return !any(a);
 }
 
 // Returns true if all vector elements are >= 0
+bool AllZeroOrPositive(float2 a)
+{
+	return !any(abs(a) - a);
+}
+bool AllZeroOrPositive(float3 a)
+{
+	return !any(abs(a) - a);
+}
 bool AllZeroOrPositive(float4 a)
 {
 	return !any(abs(a) - a);
 }
 
 // Return the sum of the components of 'vec'
+float SumComponents(float2 vec)
+{
+	return dot(vec, float2(1, 1));
+}
+float SumComponents(float3 vec)
+{
+	return dot(vec, float3(1, 1, 1));
+}
 float SumComponents(float4 vec)
 {
 	return dot(vec, float4(1,1,1,1));

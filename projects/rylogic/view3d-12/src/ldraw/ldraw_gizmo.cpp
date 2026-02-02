@@ -12,6 +12,8 @@
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 
+using namespace pr::geometry;
+
 namespace pr::rdr12::ldraw
 {
 	#pragma region Gizmo Model Data
@@ -948,19 +950,19 @@ namespace pr::rdr12::ldraw
 
 				// Close to the X axis? Closest pt in the range [0.25,1] on the XAxis
 				// and within the threshold distance. Also, on the positive side of the ray
-				ClosestPoint_LineSegmentToInfiniteLine(v4Origin, v4XAxis.w1(), p, d, t0, t1, dist_sq);
+				closest_point::LineToRay(v4::Origin(), v4::XAxis().w1(), p, d, t0, t1, dist_sq);
 				if (t0 > t_min && t0 <= t_max && dist_sq < min_dist_sq && t1 > 0.0f)
 				{
 					hit = EComponent::X;
 					min_dist_sq = dist_sq;
 				}
-				ClosestPoint_LineSegmentToInfiniteLine(v4Origin, v4YAxis.w1(), p, d, t0, t1, dist_sq);
+				closest_point::LineToRay(v4::Origin(), v4YAxis.w1(), p, d, t0, t1, dist_sq);
 				if (t0 > t_min && t0 <= t_max && dist_sq < min_dist_sq && t1 > 0.0f)
 				{
 					hit = EComponent::Y;
 					min_dist_sq = dist_sq;
 				}
-				ClosestPoint_LineSegmentToInfiniteLine(v4Origin, v4ZAxis.w1(), p, d, t0, t1, dist_sq);
+				closest_point::LineToRay(v4::Origin(), v4ZAxis.w1(), p, d, t0, t1, dist_sq);
 				if (t0 > t_min && t0 <= t_max && dist_sq < min_dist_sq && t1 > 0.0f)
 				{
 					hit = EComponent::Z;
@@ -974,17 +976,17 @@ namespace pr::rdr12::ldraw
 
 				// Intersect YZ plane for rotation about X? Closest pt in the range [0.25,1] on the XAxis
 				// and within the threshold distance. Also, on the positive side of the ray
-				if (Intersect_LineToTriangle(p, p + d, v4Origin, v4YAxis * 1.2f, v4ZAxis * 1.2f, &t) && t > 0 && t < t_min)
+				if (intersect::RayVsTriangle(p, d, 0, v4::Origin(), v4::YAxis() * 1.2f, v4::ZAxis() * 1.2f, &t) && t > 0 && t < t_min)
 				{
 					hit = EComponent::X;
 					t_min = t;
 				}
-				if (Intersect_LineToTriangle(p, p + d, v4Origin, v4ZAxis * 1.2f, v4XAxis * 1.2f, &t) && t > 0 && t < t_min)
+				if (intersect::RayVsTriangle(p, d, 0, v4::Origin(), v4::ZAxis() * 1.2f, v4::XAxis() * 1.2f, &t) && t > 0 && t < t_min)
 				{
 					hit = EComponent::Y;
 					t_min = t;
 				}
-				if (Intersect_LineToTriangle(p, p + d, v4Origin, v4XAxis * 1.2f, v4YAxis * 1.2f, &t) && t > 0 && t < t_min)
+				if (intersect::RayVsTriangle(p, d, 0, v4::Origin(), v4::XAxis() * 1.2f, v4::YAxis() * 1.2f, &t) && t > 0 && t < t_min)
 				{
 					hit = EComponent::Z;
 					t_min = t;
@@ -1051,12 +1053,11 @@ namespace pr::rdr12::ldraw
 		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
-		float t0, t1, tdummy;
-		ClosestPoint_InfiniteLineToInfiniteLine(p, d, p0, dir0, t0, tdummy);
-		ClosestPoint_InfiniteLineToInfiniteLine(p, d, p1, dir1, t1, tdummy);
+		auto t0 = closest_point::RayToRay(p, d, p0, dir0);
+		auto t1 = closest_point::RayToRay(p, d, p1, dir1);
 
 		// Move to the nearest point
-		m_offset = m4x4::Translation(((t1 - t0)*d).w1()); // world space translation (since axis is in world space)
+		m_offset = m4x4::Translation(((t1.x - t0.x)*d).w1()); // world space translation (since axis is in world space)
 
 		// Translate attached objects by d * the component axis
 		for (int i = 0, iend = int(m_attached_ptr.size()); i != iend; ++i)
@@ -1114,15 +1115,14 @@ namespace pr::rdr12::ldraw
 		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
-		float t0, t1, tdummy;
-		ClosestPoint_InfiniteLineToInfiniteLine(p, d, p0, dir0, t0, tdummy);
-		ClosestPoint_InfiniteLineToInfiniteLine(p, d, p1, dir1, t1, tdummy);
-		if (FEql(t0, 0.0f))
+		auto t0 = closest_point::RayToRay(p, d, p0, dir0);
+		auto t1 = closest_point::RayToRay(p, d, p1, dir1);
+		if (FEql(t0.x, 0.0f))
 			return;
 
 		// Scale
 		float t[3] = {1.0f, 1.0f, 1.0f};
-		t[k] = t1 / t0;
+		t[k] = t1.x / t0.x;
 
 		auto& giz2w = m_attached_ref[0];
 		auto  w2giz = Invert(giz2w);

@@ -7,12 +7,15 @@
 
 #include "pr/hlsl/core.hlsli"
 #include "pr/hlsl/geometry.hlsli"
+#include "pr/hlsl/intercept.hlsli"
+#include "pr/hlsl/closest_point.hlsli"
 
 // Notes:
 //  - All calculations are all performed in primitive space because it makes
-//    the code much simpler. 'pos' and 'ray' must be transformed to primitive space.
-//  - Closest point calculations return a point that is on the surface, even it 'pos'
-//    is inside the primitive. 2D primitives are double-sided.
+//    the code much simpler. 'pos' and 'ray' must be transformed into primitive space.
+//  - Closest point calculations return a point that is on the surface, even if 'pos'
+//    is inside the primitive.
+//  - 2D primitives are double-sided.
 //  - Intercept calculations return the parametric value of the intercept point and
 //    the surface normal at that point.
 
@@ -20,7 +23,7 @@ struct Prim
 {
 	// Notes:
 	//  - Primitives should be positioned using rotations and translations only (no scaling).
-	//  - Alignment matters. These are an array in 'm_collision' so need to be a multiple of 16 bytes.
+	//  - Alignment matters. These are provided in an array so need to be a multiple of 16 bytes.
 	
 	// The object to world space transform for the primitive.
 	row_major float4x4 o2w;

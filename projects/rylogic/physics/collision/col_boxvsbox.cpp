@@ -16,6 +16,7 @@
 using namespace pr;
 using namespace pr::ph;
 using namespace pr::ph::collision;
+using namespace pr::geometry;
 
 namespace pr
 {
@@ -84,7 +85,7 @@ namespace pr
 						v4 e0 = overlap.m_pointA.m_point - overlap.m_boxA[overlap.m_pointA.m_dof_info[0]];
 						v4 s1 = overlap.m_pointB.m_point + overlap.m_boxB[overlap.m_pointB.m_dof_info[0]];
 						v4 e1 = overlap.m_pointB.m_point - overlap.m_boxB[overlap.m_pointB.m_dof_info[0]];
-						ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, pointA, pointB);
+						closest_point::LineToLine(s0, e0, s1, e1, pointA, pointB);
 					}break;
 				case (EPointType_Edge<<2)|EPointType_Face:
 					{
@@ -96,7 +97,7 @@ namespace pr
 							int const& axis = overlap.m_pointB.m_dof_info[i];
 							float const& r  = overlap.m_shapeB.m_radius[axis];
 							float distB = Dot3(overlap.m_b2w[axis], overlap.m_b2w.pos);
-							Intersect_LineToSlab(overlap.m_b2w[axis], distB - r, distB + r, s, e, s, e);
+							intersect::LineVsSlab(overlap.m_b2w[axis], distB - r, distB + r, s, e, s, e);
 						}
 						v4 avr = (s + e) / 2.0f;
 						pointA = avr;
@@ -112,7 +113,7 @@ namespace pr
 							int const& axis = overlap.m_pointA.m_dof_info[i];
 							float const& r  = overlap.m_shapeA.m_radius[axis];
 							float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-							Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e);
+							intersect::LineVsSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e);
 						}
 						v4 avr = (s + e) / 2.0f;
 						pointA = avr + overlap.m_penetration * overlap.m_axis;
@@ -151,12 +152,12 @@ namespace pr
 								auto& axis0  = ptB.m_dof_info[0];
 								auto& rad0   = shapeB.m_radius[axis0];
 								float distB0 = Dot3(b2w[axis0], b2w.pos);
-								if (Intersect_LineToSlab(b2w[axis0], distB0 - rad0, distB0 + rad0, s, e, s, e))
+								if (intersect::LineVsSlab(b2w[axis0], distB0 - rad0, distB0 + rad0, s, e, s, e))
 								{
 									auto& axis1  = ptB.m_dof_info[1];
 									auto& rad1   = shapeB.m_radius[axis1];
 									float distB1 = Dot3(b2w[axis1], b2w.pos);
-									if (Intersect_LineToSlab(b2w[axis1], distB1 - rad1, distB1 + rad1, s, e, s, e))
+									if (intersect::LineVsSlab(b2w[axis1], distB1 - rad1, distB1 + rad1, s, e, s, e))
 									{
 										avr += s + e;
 										count += 2.0f;

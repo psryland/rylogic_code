@@ -42,7 +42,7 @@ namespace pr::physics::broadphase
 					auto& objB = *m_entity[j];
 					auto bboxA = BBoxWS(objA);
 					auto bboxB = BBoxWS(objB);
-					if (!Intersect_BBoxToBBox(bboxA, bboxB)) continue;
+					if (!geometry::intersect::BBoxVsBBox(bboxA, bboxB)) continue;
 					pairs_cb(ctx, objA, objB);
 				}
 			}

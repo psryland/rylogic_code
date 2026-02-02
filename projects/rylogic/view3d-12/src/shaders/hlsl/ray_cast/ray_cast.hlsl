@@ -23,6 +23,8 @@
 
 #include "pr/hlsl/core.hlsli"
 #include "pr/hlsl/geometry.hlsli"
+#include "pr/hlsl/intercept.hlsli"
+#include "pr/hlsl/closest_point.hlsli"
 #include "view3d-12/src/shaders/hlsl/types.hlsli"
 #include "view3d-12/src/shaders/hlsl/ray_cast/ray_cast_cbuf.hlsli"
 
@@ -119,22 +121,15 @@ void RayCastFace(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> O
 		float4 origin    = m_rays[i].ws_origin;
 		float4 direction = m_rays[i].ws_direction;
 		
-		// Perform a ray vs. triangle intersection test to get the closest point to the triangle
-		// Note, don't quick reject rays that miss the face, because we still want to test for snaps to verts/edges.
-		float4 para_unclamped = Intersect_RayVsTriangle(origin, direction, v0, v1, v2);
-		float4 para = saturate(para_unclamped);
-		if (AllZero(para))
-			continue; // Ignore co-planar with ray
-
-		// Find the closet point on the face
-		bool intersects_face = all(para == para_unclamped);
-		float4 face_pt = float4((v0 * para.x + v1 * para.y + v2 * para.z).xyz, 1);
-
-		// Find the nearest point on the ray
-		float4 pt = origin + ClosestPoint_PointVsRay(face_pt, origin, direction) * direction;
+		// Find the closest point on the triangle to the ray
+		bool face_intercept;
+		float4 para = ClosestPoint_RayToTriangle(origin, direction, v0, v1, v2, face_intercept);
+		
+		// Find the closest point
+		float4 pt = origin + para.w * direction;
 		float depth = dot(pt - origin, direction);
 		if (depth <= 0)
-			continue; // too close, or behind the ray origin
+			continue; // behind the ray origin
 
 		int j, jend;
 		float4 intercept;
@@ -173,7 +168,7 @@ void RayCastFace(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> O
 		if (snap_type == ESnapType_None && TrySnapToFace)
 		{
 			// If the point is within the triangle, snap to the face
-			if (intersects_face)
+			if (face_intercept)
 			{
 				intercept = pt;
 				snap_type = ESnapType_Face;
@@ -217,13 +212,14 @@ void RayCastEdge(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutSt
 		float4 direction = m_rays[i].ws_direction;
 
 		// Perform a ray vs. line segment test to get the closest point to the edge
-		float2 para = ClosestPoint_LineSegmentVsRay(v0, edge, origin, direction);
+		float2 para = ClosestPoint_RayToRay(v0, edge, origin, direction);
+		para.x = saturate(para.x); // Clamp to edge segment
 
-		// Find the nearest point on the ray and the edge
+		// Find the closest point
 		float4 pt = origin + para.y * direction;
 		float depth = dot(pt - origin, direction);
 		if (depth <= 0)
-			continue; // too close, or behind the ray origin
+			continue; // behind the ray origin
 
 		int j, jend;
 		float4 intercept;
@@ -283,11 +279,11 @@ void RayCastVert(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutS
 		// Perform a ray vs. point test
 		float para = ClosestPoint_PointVsRay(v0, origin, direction);
 
-		// Find the nearest point on the ray and the point
+		// Find the closest point
 		float4 pt = origin + para * direction;
 		float depth = dot(pt - origin, direction);
 		if (depth <= 0)
-			continue; // too close, or behind the ray origin
+			continue; // behind the ray origin
 
 		// Output an intercept
 		if (DoesSnap(pt, depth, v0))

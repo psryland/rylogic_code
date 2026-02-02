@@ -16,10 +16,12 @@
 #include "pr/view3d-12/utility/pix.h"
 #include "view3d-12/src/shaders/common.h"
 
-#define PR_RDR12_DEBUG_RAYCAST 1
+#define PR_RDR12_DEBUG_RAYCAST 0
 #if PR_RDR12_DEBUG_RAYCAST
 #pragma message(PR_LINK "warning : **************************************************** PR_RDR12_DEBUG_RAYCAST defined")
 #endif
+
+using namespace pr::geometry;
 
 namespace pr::rdr12
 {
@@ -181,7 +183,7 @@ namespace pr::rdr12
 			// Returns the squared distance from the ray
 			auto DistSqFromRay = [](HitTestRay const& ray, Intercept const& intercept)
 			{
-				return DistanceSq_PointToInfiniteLine(intercept.ws_intercept.w1(), ray.m_ws_origin, ray.m_ws_direction);
+				return distance::PointToRaySq(intercept.ws_intercept.w1(), ray.m_ws_origin, ray.m_ws_direction);
 			};
 			constexpr auto Eql = [](Intercept const& l, Intercept const& r)
 			{

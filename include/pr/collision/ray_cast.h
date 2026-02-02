@@ -131,10 +131,10 @@ namespace pr::collision
 		auto r = impl::ShiftTowardOrigin(ray);
 
 		v4 bary; float f2b;
-		if (!Intersect_LineToTriangle(r.m_point, r.m_point + r.m_direction, shape.m_v.x, shape.m_v.y, shape.m_v.z, f2b, bary))
+		if (!geometry::intersect::RayVsTriangle(r.m_point, r.m_direction, 0, shape.m_v.x, shape.m_v.y, shape.m_v.z, f2b, bary))
 			return result;
 
-		auto intercept = BaryPoint(shape.m_v.x, shape.m_v.y, shape.m_v.z, bary);
+		auto intercept = geometry::BaryPoint(shape.m_v.x, shape.m_v.y, shape.m_v.z, bary);
 		auto t = Sqrt(LengthSq(intercept - r.m_point) / LengthSq(r.m_direction));
 
 		result.m_t0 = t;
@@ -181,10 +181,10 @@ namespace pr::collision
 			bool AddVertex(v4 const& vert, std::size_t id, v4 const& lineS, v4 const& lineE)
 			{
 				PR_ASSERT(PR_DBG_PHYSICS, m_num_verts < 4, "");
-				for( std::size_t i = 0; i != m_num_verts; ++i )
-					if( m_vert[i].m_id == id ) return false;
+				for (std::size_t i = 0; i != m_num_verts; ++i)
+					if (m_vert[i].m_id == id) return false;
 
-				if( m_num_verts < 3 )
+				if (m_num_verts < 3)
 				{
 					m_vert[m_num_verts++].set(vert, id);
 				}
@@ -199,14 +199,16 @@ namespace pr::collision
 					// of the three triangles created between this fourth vertex and the edges of the triangle
 					// Find the triangle that the line penetrates and replace the simplex vertex that isn't needed
 					int a = 0, b = 1;
-					if( !PointInFrontOfPlane(vert, m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert) )
-					{	a = 1; b = 0; }
+					if (!PointInFrontOfPlane(vert, m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert))
+					{
+						a = 1; b = 0;
+					}
 					v4 bary; float f2b;
-					for( int v = 0; v != 3; ++v )
+					for (int v = 0; v != 3; ++v)
 					{
 						int j = (v + a) % 3;
 						int k = (v + b) % 3;
-						if( Intersect_LineToTriangle(lineS, lineE, vert, m_vert[j].m_vert, m_vert[k].m_vert, f2b, bary) )
+						if (geometry::intersect::LineVsTriangle(lineS, lineE, vert, m_vert[j].m_vert, m_vert[k].m_vert, f2b, bary))
 						{
 							// Remove the vert that isn't needed
 							int i = (v + 2) % 3;
@@ -214,7 +216,7 @@ namespace pr::collision
 
 							// Calculate the nearest and normal since we have the barycoords
 							m_nearest = BaryPoint(m_vert[i].m_vert, m_vert[j].m_vert, m_vert[k].m_vert, bary);
-							m_normal  = Cross3(m_vert[j].m_vert - m_vert[i].m_vert, m_vert[k].m_vert - m_vert[j].m_vert);
+							m_normal = Cross3(m_vert[j].m_vert - m_vert[i].m_vert, m_vert[k].m_vert - m_vert[j].m_vert);
 							return true;
 						}
 					}
@@ -237,7 +239,7 @@ namespace pr::collision
 				case 2:
 					{
 						v4 line = lineE - lineS;
-						ClosestPoint_LineSegmentToInfiniteLine(m_vert[0].m_vert, m_vert[1].m_vert, lineS, line, t0, t1);
+						ClosestPoint_LineSegmentToRay(m_vert[0].m_vert, m_vert[1].m_vert, lineS, line, t0, t1);
 						if( t0 == 1.0f )	{ m_vert[0] = m_vert[1]; t0 = 0.0f; } // careful here, using t0 to pass into the next if
 						if( t0 == 0.0f )	{ m_nearest = m_vert[0].m_vert; m_num_verts = 1; }
 						else				{ m_nearest = (1.0f - t0)*m_vert[0].m_vert + t0*m_vert[1].m_vert; }

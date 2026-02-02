@@ -14,6 +14,7 @@
 using namespace pr;
 using namespace pr::ph;
 using namespace pr::ph::support;
+using namespace pr::geometry;
 
 // Return the rigid body that contains 'support'
 inline Rigidbody& GetRB(Support& support)

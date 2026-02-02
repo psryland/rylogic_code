@@ -12,6 +12,7 @@
 
 using namespace pr;
 using namespace pr::ph;
+using namespace pr::geometry;
 
 BPBruteForce::BPBruteForce()
 {
@@ -68,7 +69,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 	{
 		for (BPEntityCont::const_iterator j = i + 1, j_end = m_entity.end(); j != j_end; ++j)
 		{
-			if (Intersect_BBoxToBBox(*(*i)->m_bbox, *(*j)->m_bbox))
+			if (intersect::BBoxVsBBox(*(*i)->m_bbox, *(*j)->m_bbox))
 			{
 				BPPair pair;
 				pair.m_objectA = *i;
@@ -88,7 +89,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* c
 
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{	
-		if (Intersect_BBoxToBBox(*(*i)->m_bbox, *entity.m_bbox))
+		if (intersect::BBoxVsBBox(*(*i)->m_bbox, *entity.m_bbox))
 		{
 			BPPair pair;
 			pair.m_objectA = *i;
@@ -107,7 +108,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, Ray const& ray, void* context)
 
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{	
-		if (Intersect_LineSegmentToBoundingBox(ray.m_point, ray.m_point + ray.m_direction, *(*i)->m_bbox))
+		if (intersect::LineVsBoundingBox(ray.m_point, ray.m_point + ray.m_direction, *(*i)->m_bbox))
 		{
 			BPPair pair;
 			pair.m_objectA   = *i;

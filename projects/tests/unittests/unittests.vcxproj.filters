@@ -1113,6 +1113,15 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+    <None Include="..\..\..\include\pr\hlsl\closest_point.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\collision.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\intercept.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">

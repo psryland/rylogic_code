@@ -27,7 +27,7 @@ void pr::ph::SphereVsTriangle(Shape const& sphere, m4x4 const& a2w, Shape const&
 	v4 a = triangle_shape.m_v.x; a.w = 1.0f;
 	v4 b = triangle_shape.m_v.y; b.w = 1.0f;
 	v4 c = triangle_shape.m_v.z; c.w = 1.0f;
-	v4 closest_point = ClosestPoint_PointToTriangle(pos, a, b, c);
+	v4 closest_point = geometry::closest_point::PointToTriangle(pos, a, b, c);
 	v4 sep = pos - closest_point;
 	float dist = Length(sep);
 	if( dist < sphere_shape.m_radius )

@@ -11,6 +11,7 @@
 
 using namespace pr;
 using namespace pr::ph;
+using namespace pr::geometry;
 
 // Construct a shape triangle
 ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
@@ -99,6 +100,6 @@ v4 pr::ph::SupportVertex(ShapeTriangle const& shape, v4 const& direction, std::s
 // 'shape' and 'point' are in the same space
 void pr::ph::ClosestPoint(ShapeTriangle const& shape, v4 const& point, float& distance, v4& closest)
 {
-	closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
+	closest = closest_point::PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
 	distance = Length(point - closest);
 }

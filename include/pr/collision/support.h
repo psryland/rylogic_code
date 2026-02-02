@@ -197,7 +197,7 @@ namespace pr::collision
 		if (featA == EFeature::Edge && featB == EFeature::Edge)
 		{
 			v4 pt0, pt1;
-			ClosestPoint_LineSegmentToLineSegment(pointA[0], pointA[1], pointB[0], pointB[1], pt0, pt1);
+			geometry::closest_point::LineToLine(pointA[0], pointA[1], pointB[0], pointB[1], pt0, pt1);
 			return (pt0 + pt1) * 0.5f;
 		}
 
@@ -230,7 +230,7 @@ namespace pr::collision
 
 					auto& bs = point1[ j          ];
 					auto& be = point1[(j+1)%count1];
-					if (!Intersect_LineSegmentToPlane(n, bs - as.w0(), be - as.w0(), edge.t0, edge.t1))
+					if (!geometry::intersect::LineVsPlane(n, bs - as.w0(), be - as.w0(), edge.t0, edge.t1))
 						edge.t1 = edge.t0;
 				}
 			}

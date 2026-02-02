@@ -14,6 +14,7 @@
 
 using namespace pr;
 using namespace pr::ph;
+using namespace pr::geometry;
 
 // Shift the ray toward the centre of a shape to simulate the ray having a thickness
 // The ray is in shape space so we're shifting it toward the origin
@@ -149,7 +150,7 @@ struct Simplex
 			{
 				int j = (v + a) % 3;
 				int k = (v + b) % 3;
-				if( Intersect_LineToTriangle(lineS, lineE, vert, m_vert[j].m_vert, m_vert[k].m_vert, f2b, bary) )
+				if( intersect::RayVsTriangle(lineS, lineE - lineS, 0, vert, m_vert[j].m_vert, m_vert[k].m_vert, f2b, bary) )
 				{
 					// Remove the vert that isn't needed
 					int i = (v + 2) % 3;
@@ -175,12 +176,12 @@ struct Simplex
 		{
 		case 1: 
 			m_nearest = m_vert[0].m_vert;
-			m_normal  = ClosestPoint_PointToInfiniteLine(m_nearest, lineS, lineE, t0) - m_nearest;
+			m_normal  = closest_point::PointToRay(m_nearest, lineS, lineE, t0) - m_nearest;
 			return m_normal;
 		case 2:
 			{
 				v4 line = lineE - lineS;
-				ClosestPoint_LineSegmentToInfiniteLine(m_vert[0].m_vert, m_vert[1].m_vert, lineS, line, t0, t1);
+				closest_point::LineToRay(m_vert[0].m_vert, m_vert[1].m_vert, lineS, line, t0, t1);
 				if( t0 == 1.0f )	{ m_vert[0] = m_vert[1]; t0 = 0.0f; } // careful here, using t0 to pass into the next if
 				if( t0 == 0.0f )	{ m_nearest = m_vert[0].m_vert; m_num_verts = 1; }
 				else				{ m_nearest = (1.0f - t0)*m_vert[0].m_vert + t0*m_vert[1].m_vert; }
@@ -196,7 +197,7 @@ struct Simplex
 				// If the line intersects the triangle then the closest point is the
 				// intercept and the normal is the triangle normal (opposing the line)
 				v4 bary; float f2b;
-				m_intersects = Intersect_LineToTriangle(lineS, lineE, m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert, f2b, bary);
+				m_intersects = intersect::RayVsTriangle(lineS, lineE - lineS, 0, m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert, f2b, bary);
 				if( m_intersects )
 				{
 					m_nearest = BaryPoint(m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert, bary);
@@ -221,7 +222,7 @@ struct Simplex
 						Vert const& vert0 = m_vert[ i     ];
 						Vert const& vert1 = m_vert[(i+1)%3];
 						float dist_sq;
-						ClosestPoint_LineSegmentToInfiniteLine(vert0.m_vert, vert1.m_vert, lineS, line, t0, t1, dist_sq);
+						closest_point::LineToRay(vert0.m_vert, vert1.m_vert, lineS, line, t0, t1, dist_sq);
 						if( dist_sq < closest_dist_sq )
 						{
 							closest_dist_sq = dist_sq;
@@ -233,7 +234,7 @@ struct Simplex
 					if     ( closest_t == 1.0f )	{ m_num_verts = 1; m_vert[0] = closest[1];						   m_nearest = m_vert[0].m_vert; }
 					else if( closest_t == 0.0f )	{ m_num_verts = 1; m_vert[0] = closest[0];						   m_nearest = m_vert[0].m_vert; }
 					else							{ m_num_verts = 2; m_vert[0] = closest[0]; m_vert[1] = closest[1]; m_nearest = (1.0f - closest_t)*m_vert[0].m_vert + closest_t*m_vert[1].m_vert; }
-					m_normal  = ClosestPoint_PointToInfiniteLine(m_nearest, lineS, lineE, t0) - m_nearest;
+					m_normal  = closest_point::PointToRay(m_nearest, lineS, lineE, t0) - m_nearest;
 					return m_normal;
 				}
 			}break;
@@ -294,8 +295,8 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	// Attempt a quick out for the line vs. polyyope test. If the distance to the most extreme vert
 	// in the direction from the centre of 'shape' to the line is less that the distance to the line
 	// then the line cannot penetrate the polytope
-	v4 dir = ClosestPoint_PointToInfiniteLine(v4Origin, lineS, lineE, t) - v4Origin;
-	//dir = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
+	v4 dir = closest_point::PointToRay(v4Origin, lineS, lineE, t) - v4Origin;
+	//dir = closest_point::PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
 	if( !FEql(dir,pr::v4Zero) )
 	{
 		start_vert = SupportVertex(shape, dir, id, id);
@@ -390,7 +391,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapeTriangle const& shape, RayCastResult& 
 {
 	Ray r = ShiftRay(ray);
 	v4 bary; float f2b;
-	if( !Intersect_LineToTriangle(r.m_point, r.m_point + r.m_direction, shape.m_v.x, shape.m_v.y, shape.m_v.z, f2b, bary) )
+	if( !intersect::RayVsTriangle(r.m_point, r.m_direction, 0, shape.m_v.x, shape.m_v.y, shape.m_v.z, f2b, bary) )
 		return false;
 
 	v4 intercept = BaryPoint(shape.m_v.x, shape.m_v.y, shape.m_v.z, bary);
@@ -429,7 +430,7 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 
 	// Attempt a quick out for the line vs. shape test
 	float t; std::size_t id = 0;
-	v4 nearest = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
+	v4 nearest = closest_point::PointToLine(v4Origin, lineS, lineE, t) - v4Origin;
 	if( !FEql(nearest,pr::v4Zero) )
 	{
 		v4 support = SupportVertex(shape, nearest, id, id);
@@ -446,7 +447,7 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 		auto c = shape.vertex(face.m_index[2]);
 		auto plane = plane::make(a, c, b);	// Outward facing plane
 		float t_min = result.m_t0;
-		if (!Intersect_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1))
+		if (!intersect::LineVsPlane(plane, lineS, lineE, result.m_t0, result.m_t1))
 			return false;
 
 		// Record the plane normal of the last plane to clip the line

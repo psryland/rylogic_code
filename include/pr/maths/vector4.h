@@ -60,6 +60,13 @@ namespace pr
 			, w(w_)
 		{
 		}
+		constexpr Vec4(Vec3<S, void> xyz, S w_)
+			: x(xyz.x)
+			, y(xyz.y)
+			, z(xyz.z)
+			, w(w_)
+		{
+		}
 		constexpr explicit Vec4(S const* v)
 			:Vec4(v[0], v[1], v[2], v[3])
 		{

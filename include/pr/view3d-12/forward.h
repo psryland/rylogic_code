@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -88,7 +88,7 @@
 #include "pr/filesys/filewatch.h"
 #include "pr/filesys/lock_file.h"
 #include "pr/filesys/resolve_path.h"
-#include "pr/geometry/common.h"
+#include "pr/geometry/geometry.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/index_buffer.h"
 #include "pr/geometry/intersect.h"
