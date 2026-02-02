@@ -14,15 +14,11 @@ namespace pr
 		v4 m_x1;
 		float m_interval;
 
+		InterpolateVector()
+			:InterpolateVector(v4::Origin(), v4::Zero(), v4::Origin(), v4::Zero(), 1.0f)
+		{}
 		InterpolateVector(v4_cref x0, v4_cref v0, v4_cref x1, v4_cref v1, float interval)
-			: m_p
-			(
-				x0 - x1,
-				v0 * interval,
-				v4::Zero(),
-				v1 * interval,
-				CurveType::Hermite
-			)
+			: m_p(x0 - x1, v0 * interval, v4::Zero(), v1 * interval, CurveType::Hermite)
 			, m_x1(x1)
 			, m_interval(interval)
 		{
@@ -61,15 +57,16 @@ namespace pr
 		quat m_q1;
 		float m_interval;
 		
+		InterpolateRotation()
+			:InterpolateRotation(quat::Identity(), v4::Zero(), quat::Identity(), v4::Zero(), 1.0f)
+		{}
 		InterpolateRotation(quat_cref q0, v4_cref w0, quat_cref q1, v4_cref w1, float interval)
-			: m_p
-			(
+			: m_p(
 				LogMap(~q1 * q0),
 				Tangent(~q1 * q0, Rotate(~q1, w0)) * interval,
 				v4::Zero(),
 				Tangent(quat::Identity(), Rotate(~q1, w1)) * interval,
-				CurveType::Hermite
-			)
+				CurveType::Hermite)
 			, m_q1(q1)
 			, m_interval(interval)
 		{
@@ -83,7 +80,7 @@ namespace pr
 		}
 		v4 EvalDerivative(float t) const
 		{
-			// To calculate 'W' from log_q and log_q`:
+			// To calculate 'W' from log(q) and log(q)`:   (x` means derivative of x)
 			// Say:
 			//   u = log(q), r = |u| = angle / 2
 			//   q = [qv, qw] = [(u/r) * sin(r), cos(r)] = [u*f(r), cos(r)]
@@ -121,8 +118,8 @@ namespace pr
 			auto cos_r = Cos(r);
 
 			// Derivative of axis
-			auto f     = r > SmallAngle ? (sin_r / r)                   : (1.f - r * r / 6);
-			auto f_dot = r > SmallAngle ? (r * cos_r - sin_r) / (r * r) : (-r / 3);
+			auto f     = r > SmallAngle ? (sin_r / r) : (1 - r * r / 6.0f);
+			auto f_dot = r > SmallAngle ? (r * cos_r - sin_r) / (r * r) : (-r / 3.0f);
 
 			// q
 			auto qv = u * f; // vector part
@@ -145,7 +142,7 @@ namespace pr
 			// convention that lengths in log space are angle/2.
 
 			// 'u' = axis * full_angle (radians)
-			// 'r' = |u| = angle
+			// 'r' = |u| = angle / 2
 			auto u = 2.0f * LogMap(q);
 			auto r = Length(u);
 

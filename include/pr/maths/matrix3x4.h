@@ -272,7 +272,7 @@ namespace pr
 			mat.z.z = sz;
 			return mat;
 		}
-		static Mat3x4 Scale(Vec4_cref<S, void> scale)
+		static Mat3x4 Scale(Vec3_cref<S, void> scale)
 		{
 			Mat3x4 mat = {};
 			mat.x.x = scale.x;

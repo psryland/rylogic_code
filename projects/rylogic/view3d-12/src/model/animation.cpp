@@ -8,7 +8,7 @@
 namespace pr::rdr12
 {
 	// Read a value from 'data' at 'index', or return 'def' if 'data.empty()'
-	template <typename T> T Get(RangeOf<T> auto data, int index, T const& def)
+	template <typename T> T Get(RangeOf<T> auto const& data, int index, T const& def)
 	{
 		assert(data.empty() || (index >= 0 && index < isize(data)));
 		return data.empty() ? def : data[index];
@@ -81,18 +81,21 @@ namespace pr::rdr12
 		// Copy the frame indices and times to 'm_out'
 		void CopyFrames(std::span<int const> frames)
 		{
+			// If no kinematic frames are given, then assume all frames from 'm_src' are kinematic frames
 			if (frames.empty())
 			{
 				m_out.m_times.clear();
 				m_out.m_fidxs.clear();
+				m_out.m_key_count = m_src.key_count();
 				return;
 			}
 
-			auto count = isize(frames);
 			auto fps = s_cast<float>(m_src.frame_rate());
-			m_out.m_times.resize(count);
-			m_out.m_fidxs.resize(count);
-			for (int i = 0; i != count; ++i)
+
+			m_out.m_key_count = isize(frames);
+			m_out.m_times.resize(m_out.m_key_count);
+			m_out.m_fidxs.resize(m_out.m_key_count);
+			for (int i = 0; i != m_out.m_key_count; ++i)
 			{
 				auto fidx = frames[i];
 				m_out.m_times[i] = fidx / fps;
@@ -103,8 +106,13 @@ namespace pr::rdr12
 		// Calculate positions, velocities, and accelerations for bones (linear and rotational)
 		void CalcBoneDynamics()
 		{
+			auto key_count = m_src.key_count();
+			auto track_count = m_src.track_count();
+			auto kinematic_key_count = m_out.key_count();
+			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
+
 			// Pre-allocate for parallel for
-			auto count = m_src.key_count() * m_src.track_count();
+			auto count = key_count * track_count;
 			m_out.m_rotation.resize(count);
 			m_out.m_ang_vel.resize(count);
 			m_out.m_ang_acc.resize(count);
@@ -116,17 +124,13 @@ namespace pr::rdr12
 			// Detect unused channels
 			std::atomic_int active_channels = 0;
 
-			auto key_count = m_src.key_count();
-			auto track_count = m_src.track_count();
-			auto track_range = std::ranges::views::iota(0, track_count);
-			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
-
 			// Generate the frames for each bone
+			auto track_range = std::ranges::views::iota(0, track_count);
 			std::for_each(std::execution::par, track_range.begin(), track_range.end(), [&, this](int track_index)
 			{
 				auto q0 = quat::Identity();
 				auto active = EDynamicsChannels::None;
-				for (int k = 0, kend = key_count; k != kend; ++k)
+				for (int k = 0; k != kinematic_key_count; ++k)
 				{
 					auto iframe = m_out.src_frame(k);
 
@@ -178,23 +182,24 @@ namespace pr::rdr12
 		// Calculate values, derivatives, 2nd derivatives for float curves
 		void CalcFCurveDynamics()
 		{
+			auto key_count = m_src.key_count();
+			auto fcurve_count = m_src.fcurve_count();
+			auto kinematic_key_count = m_out.key_count();
+			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
+
 			// Pre-allocate for parallel for
-			auto count = m_src.key_count() * m_src.fcurve_count();
+			auto count = key_count * fcurve_count;
 			m_out.m_fcurves.resize(count);
 
 			// Detect unused channels
 			std::atomic_int active_channels = 0;
 
-			auto key_count = m_src.key_count();
-			auto fcurve_count = m_src.fcurve_count();
-			auto fcurve_range = std::ranges::views::iota(0, fcurve_count);
-			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
-
 			// Generate the frames for each float curve
+			auto fcurve_range = std::ranges::views::iota(0, fcurve_count);
 			std::for_each(std::execution::par, fcurve_range.begin(), fcurve_range.end(), [&, this](int curve_index)
 			{
 				auto active = EDynamicsChannels::None;
-				for (int k = 0, kend = key_count; k != kend; ++k)
+				for (int k = 0; k != kinematic_key_count; ++k)
 				{
 					auto iframe = m_out.src_frame(k);
 
@@ -223,23 +228,24 @@ namespace pr::rdr12
 		// Calculate values, derivatives, 2nd derivatives for transform curves
 		void CalcTCurveDynamics()
 		{
+			auto key_count = m_src.key_count();
+			auto tcurve_count = m_src.tcurve_count();
+			auto kinematic_key_count = m_out.key_count();
+			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
+
 			// Pre-allocate for parallel for
-			auto count = m_src.key_count() * m_src.tcurve_count();
+			auto count = key_count * tcurve_count;
 			m_out.m_tcurves.resize(count);
 
 			// Detect unused channels
 			std::atomic_int active_channels = 0;
 
-			auto key_count = m_src.key_count();
-			auto tcurve_count = m_src.tcurve_count();
-			auto tcurve_range = std::ranges::views::iota(0, tcurve_count);
-			auto dt = s_cast<float>(1.0 / m_src.frame_rate());
-
 			// Generate the frames for each transform curve
+			auto tcurve_range = std::ranges::views::iota(0, tcurve_count);
 			std::for_each(std::execution::par, tcurve_range.begin(), tcurve_range.end(), [&, this](int curve_index)
 			{
 				auto active = EDynamicsChannels::None;
-				for (int k = 0, kend = key_count; k != kend; ++k)
+				for (int k = 0; k != kinematic_key_count; ++k)
 				{
 					auto iframe = m_out.src_frame(k);
 
@@ -272,7 +278,6 @@ namespace pr::rdr12
 		// Determine the dynamics values for 'samples[2]' because on the surrounding values
 		static TransformDynamics DynamicsFromFiniteDifference(std::span<xform const> samples, float dt)
 		{
-			assert(ssize(samples) >= 5);
 			auto [rot0, rot1, rot2] = CalculateRotationalDynamics(samples, dt);
 			auto [pos0, pos1, pos2] = CalculateTranslationalDynamics(samples, dt);
 			auto [scl0, scl1, scl2] = CalculateScaleDynamics(samples, dt);
@@ -304,7 +309,6 @@ namespace pr::rdr12
 		// Determine the dynamics values for 'samples[2]' based on the surrounding values
 		static ScalarDynamics DynamicsFromFiniteDifference(std::span<float const> samples, float dt)
 		{
-			assert(ssize(samples) >= 5);
 			auto [val0, val1, val2] = CalculateScalarDynamics(samples, dt);
 
 			constexpr auto tol0 = 0.0001f;
@@ -365,7 +369,49 @@ namespace pr::rdr12
 	};
 
 	// --------------------------------------------------------------------------------------------
+	
+	// Interpolate between two key frames
+	BoneKey Interp(BoneKey const& lhs, BoneKey const& rhs, float frac, EAnimInterpolation interp)
+	{
+		switch (interp)
+		{
+			case EAnimInterpolation::Constant: frac = 0; break;
+			case EAnimInterpolation::Linear: frac = frac; break;
+			case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
+			default: throw std::runtime_error("Unknown interpolation style");
+		}
+		return BoneKey{
+			.m_rot = Slerp(lhs.m_rot, rhs.m_rot, frac),
+			.m_pos = Lerp(lhs.m_pos, rhs.m_pos, frac),
+			.m_scl = Lerp(lhs.m_scl, rhs.m_scl, frac),
+			.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
+		};
+	}
 
+	// Interpolate between two key frames
+	KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac, EAnimInterpolation interp)
+	{
+		switch (interp)
+		{
+			case EAnimInterpolation::Constant: frac = 0; break;
+			case EAnimInterpolation::Linear: frac = frac; break;
+			case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
+			default: throw std::runtime_error("Unknown interpolation style");
+		}
+		return KinematicKey{
+			.m_rot = Slerp(lhs.m_rot, rhs.m_rot, frac),
+			.m_pos = Lerp(lhs.m_pos, rhs.m_pos, frac),
+			.m_scl = Lerp(lhs.m_scl, rhs.m_scl, frac),
+			.m_lin_vel = Lerp(lhs.m_lin_vel, rhs.m_lin_vel, frac),
+			.m_ang_vel = Slerp(lhs.m_ang_vel, rhs.m_ang_vel, frac),
+			.m_lin_acc = Lerp(lhs.m_lin_acc, rhs.m_lin_acc, frac),
+			.m_ang_acc = Slerp(lhs.m_ang_acc, rhs.m_ang_acc, frac),
+			.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
+		};
+	}
+
+	// --------------------------------------------------------------------------------------------
+	
 	RootAnimation::RootAnimation()
 		: m_vel(v4::Zero())
 		, m_acc(v4::Zero())
@@ -396,13 +442,12 @@ namespace pr::rdr12
 
 	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_duration(duration)
+		, m_native_duration(duration)
 		, m_native_frame_rate(native_frame_rate)
 		, m_bone_map()
 		, m_rotation()
 		, m_position()
 		, m_scale()
-		, m_times()
 	{}
 	
 	// Number of tracks in this animation
@@ -435,128 +480,121 @@ namespace pr::rdr12
 		assert(count % track_count() == 0 && "Expect track length to be a multiple of the track count");
 		return count / track_count();
 	}
+	
+	// The length (in seconds) of this animation
+	double KeyFrameAnimation::duration() const
+	{
+		return m_native_duration;
+	}
 
 	// The effective frame rate implied by the duration and number of keys
 	double KeyFrameAnimation::frame_rate() const
 	{
-		auto kcount = key_count();
-		return kcount > 1 ? (kcount - 1.0) / m_duration : m_native_frame_rate;
-	}
-	
-	// Get the key at 'frame' for 'track_index'
-	BoneKey KeyFrameAnimation::Key(int frame, int track_index) const
-	{
-		auto tcount = track_count();
-		auto period = s_cast<float>(1.0 / frame_rate());
-		auto kidx = Clamp(frame, 0, key_count() - 1);
-		auto idx = kidx * tcount + track_index;
-		return BoneKey {
-			.m_rot = Get(m_rotation, idx, quat::Identity()),
-			.m_pos = Get(m_position, idx, v3::Zero()),
-			.m_scl = Get(m_scale, idx, v3::One()),
-			.m_time = Get(m_times, kidx, kidx * period),
-			.m_idx = kidx,
-		};
+		return m_native_frame_rate;
 	}
 
-	// Get the keys on either side of 'time_s' (to interpolate between)
-	std::tuple<BoneKey, BoneKey> KeyFrameAnimation::Key(float time_s, int track_index) const
+	// Convert a time in seconds to a key index. Returns the key with time just less that 'time_s'
+	int KeyFrameAnimation::TimeToKeyIndex(float time_s) const
 	{
 		auto kcount = key_count();
-		if (kcount == 0)
-		{
-			BoneKey key = { quat::Identity(), v3::Zero(), v3::One() };
-			return { key, key };
-		}
-		if (kcount == 1)
-		{
-			BoneKey key = {
-				.m_rot = Get(m_rotation, track_index, quat::Identity()),
-				.m_pos = Get(m_position, track_index, v3::Zero()),
-				.m_scl = Get(m_scale, track_index, v3::One()),
-			};
-			return { key, key };
-		}
+		if (kcount == 0 || duration() == 0)
+			return 0;
 
-		auto tcount = track_count();
-		auto period = s_cast<float>(1.0 / frame_rate());
-
-		// Convert the time into a frame number. Note, by scaling 'm_duration' or 'time_s' the playback rate of the animation can be changed.
-		auto kidx0 = Lerp(0, kcount - 1, Frac<double>(0.0, time_s, m_duration));
-		auto kidx1 = kidx0 + 1; // Note: +1 before clamping
-		kidx0 = Clamp(kidx0, 0, kcount - 1);
-		kidx1 = Clamp(kidx1, 0, kcount - 1);
-		auto idx0 = kidx0 * tcount + track_index;
-		auto idx1 = kidx1 * tcount + track_index;
-
-		BoneKey key0 = {
-			.m_rot = Get(m_rotation, idx0, quat::Identity()),
-			.m_pos = Get(m_position, idx0, v3::Zero()),
-			.m_scl = Get(m_scale, idx0, v3::One()),
-			.m_time = Get(m_times, kidx0, std::floor(time_s / period) * period),
-			.m_idx = kidx0,
-		};
-		BoneKey key1 = {
-			.m_rot = Get(m_rotation, idx1, quat::Identity()),
-			.m_pos = Get(m_position, idx1, v3::Zero()),
-			.m_scl = Get(m_scale, idx1, v3::One()),
-			.m_time = Get(m_times, kidx1, key0.m_time + period),
-			.m_idx = kidx1,
-		};
-		return { key0, key1 };
+		// Convert the time into a key number.
+		// Note, by scaling 'm_duration' or 'time_s' the playback rate of the animation can be changed.
+		auto tfrac = Frac<double>(0.0, time_s, duration());
+		auto kidx = Lerp(0, kcount - 1, tfrac);
+		return Clamp(kidx, 0, kcount - 1);
 	}
 
-	// Sample each track at 'time_s'
+	// Converts a key index to a time in seconds
+	float KeyFrameAnimation::KeyIndexToTime(int key_index) const
+	{
+		auto kcount = key_count();
+		auto period = s_cast<float>(1.0 / frame_rate());
+
+		if (kcount == 0 || duration() == 0)
+			return 0.0f;
+
+		// Convert the key index to a time
+		return std::clamp(key_index, 0, kcount - 1) * period;
+	}
+
+	// Read keys starting at 'frame' for all tracks. 'out' should be a multiple of the track count
 	template <typename Key> requires (std::is_assignable_v<Key, BoneKey>)
-	static void EvaluateAtTime(float time_s, EAnimFlags flags, KeyFrameAnimation const& anim, std::span<Key> out)
+	static void ReadKeysImpl(KeyFrameAnimation const& kfa, int key_idx, std::span<Key> out) 
 	{
-		// Can evaluate a subset of the bones
-		assert(isize(out) <= anim.track_count());
-		auto EvaluateKey = [time_s, flags, &anim, &out](Key& key)
+		auto tcount = kfa.track_count();
+		auto kcount = kfa.key_count();
+		auto period = s_cast<float>(1.0 / kfa.frame_rate());
+		int i = 0;
+
+		// Read in the same order as the keys are stored
+		assert((isize(out) % tcount) == 0 && "Output size must be a multiple of the track count");
+		for (int f = 0, fend = isize(out) / tcount; f != fend; ++f)
 		{
-			// Get the keys to interpolate between
-			auto bone_index = s_cast<int>(&key - out.data());
-			auto [key0, key1] = anim.Key(time_s, bone_index);
+			auto kidx = Clamp(key_idx + f, 0, kcount - 1);
+			auto idx = kidx * tcount;
 
-			// Interpolate between key frames
-			auto frac =
-				time_s <= key0.m_time ? 0.0f :
-				time_s >= key1.m_time ? 1.0f :
-				Frac(key0.m_time, time_s, key1.m_time);
-
-			auto k = Interp(key0, key1, frac, key0.m_interp);
-
-			if (bone_index == 0 && AllSet(flags, EAnimFlags::NoRootTranslation))
-				k.m_pos = v3::Zero();
-			if (bone_index == 0 && AllSet(flags, EAnimFlags::NoRootRotation))
-				k.m_rot = quat::Identity();
-
-			key = k;
-		};
-
-		// Evaluate each bone
-		constexpr size_t ParallelizeCount = 10;
-		if (out.size() >= ParallelizeCount)
-			std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), EvaluateKey);
-		else
-			std::for_each(std::execution::seq, std::begin(out), std::end(out), EvaluateKey);
+			for (int t = 0; t != tcount; ++t, ++idx)
+			{
+				out[i++] = BoneKey{
+					.m_rot = Get(kfa.m_rotation, idx, quat::Identity()),
+					.m_pos = Get(kfa.m_position, idx, v3::Zero()),
+					.m_scl = Get(kfa.m_scale, idx, v3::One()),
+					.m_time = kidx * period,
+					.m_idx = kidx,
+				};
+			}
+		}
+	}
+	void KeyFrameAnimation::ReadKeys(int key_idx, std::span<BoneKey> out) const
+	{
+		ReadKeysImpl<BoneKey>(*this, key_idx, out);
+	}
+	void KeyFrameAnimation::ReadKeys(int key_idx, std::span<xform> out) const
+	{
+		ReadKeysImpl<xform>(*this, key_idx, out);
+	}
+	void KeyFrameAnimation::ReadKeys(int key_idx, std::span<m4x4> out) const
+	{
+		ReadKeysImpl<m4x4>(*this, key_idx, out);
 	}
 
-	// Returns the linearly interpolated key frames a 'time_s'
-	void KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags, std::span<m4x4> out) const
+	// Read keys starting at 'frame' for the given 'track_index'. 'out.size()' is the number of keys to read
+	template <typename Key> requires (std::is_assignable_v<Key, BoneKey>)
+	static void ReadKeysImpl(KeyFrameAnimation const& kfa, int key_idx, int track_index, std::span<Key> out) 
 	{
-		rdr12::EvaluateAtTime(time_s, flags, *this, out);
+		auto tcount = kfa.track_count();
+		auto kcount = kfa.key_count();
+		auto period = s_cast<float>(1.0 / kfa.frame_rate());
+		int i = 0;
+
+		for (int f = 0, fend = isize(out); f != fend; ++f)
+		{
+			auto kidx = Clamp(key_idx + f, 0, kcount - 1);
+			auto idx = kidx * tcount + track_index;
+
+			out[i++] = BoneKey{
+				.m_rot = Get(kfa.m_rotation, idx, quat::Identity()),
+				.m_pos = Get(kfa.m_position, idx, v3::Zero()),
+				.m_scl = Get(kfa.m_scale, idx, v3::One()),
+				.m_time = kidx * period,
+				.m_idx = kidx,
+			};
+		}
 	}
-	void KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags, KeyFrameAnimation::Sample& out) const
+	void KeyFrameAnimation::ReadKeys(int key_idx, int track_index, std::span<BoneKey> out) const
 	{
-		out.resize(track_count());
-		rdr12::EvaluateAtTime(time_s, flags, *this, out.span());
+		ReadKeysImpl<BoneKey>(*this, key_idx, track_index, out);
 	}
-	KeyFrameAnimation::Sample KeyFrameAnimation::EvaluateAtTime(float time_s, EAnimFlags flags) const
+	void KeyFrameAnimation::ReadKeys(int key_idx, int track_index, std::span<xform> out) const
 	{
-		Sample sample(track_count());
-		rdr12::EvaluateAtTime(time_s, flags, *this, sample.span());
-		return sample;
+		ReadKeysImpl<xform>(*this, key_idx, track_index, out);
+	}
+	void KeyFrameAnimation::ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const
+	{
+		ReadKeysImpl<m4x4>(*this, key_idx, track_index, out);
 	}
 
 	// Ref-counting clean up function
@@ -570,8 +608,9 @@ namespace pr::rdr12
 
 	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_duration(duration)
+		, m_native_duration(duration)
 		, m_native_frame_rate(native_frame_rate)
+		, m_key_count()
 		, m_bone_map()
 		, m_rotation()
 		, m_ang_vel()
@@ -584,7 +623,7 @@ namespace pr::rdr12
 		, m_fidxs()
 	{}
 	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames)
-		:KinematicKeyFrameAnimation(kfa.m_skel_id, kfa.m_duration, kfa.m_native_frame_rate)
+		:KinematicKeyFrameAnimation(kfa.m_skel_id, kfa.duration(), kfa.m_native_frame_rate)
 	{
 		struct AnimSource : IAnimSource
 		{
@@ -599,11 +638,7 @@ namespace pr::rdr12
 			uint16_t track_to_bone(int track_index) const { return m_kfa.m_bone_map[track_index]; }
 			void ReadTrackValues(int track_index, int iframe, std::span<xform> samples) const
 			{
-				samples[0] = m_kfa.Key(iframe - 2, track_index);
-				samples[1] = m_kfa.Key(iframe - 1, track_index);
-				samples[2] = m_kfa.Key(iframe + 0, track_index);
-				samples[3] = m_kfa.Key(iframe + 1, track_index);
-				samples[4] = m_kfa.Key(iframe + 2, track_index);
+				m_kfa.ReadKeys(iframe - 2, track_index, samples.subspan(0, 5));
 			}
 			void ReadFCurveValues(int track_index, int iframe, std::span<float> samples) const
 			{
@@ -614,7 +649,7 @@ namespace pr::rdr12
 				(void)track_index, iframe, samples; // todo
 			}
 		};
-		
+
 		AnimSource src = { kfa };
 		CalcDynamics calc(src, *this);
 		calc.Run(frames);
@@ -641,17 +676,7 @@ namespace pr::rdr12
 	// Number of keys in this animation
 	int KinematicKeyFrameAnimation::key_count() const
 	{
-		if (!m_fidxs.empty())
-			return isize(m_fidxs);
-
-		auto count = s_cast<int>(
-			!m_rotation.empty() ? isize(m_rotation) :
-			!m_position.empty() ? isize(m_position) :
-			!m_scale   .empty() ? isize(m_scale   ) :
-			track_count());
-
-		assert(count % track_count() == 0 && "Expect track length to be a multiple of the track count");
-		return count / track_count();
+		return m_key_count;
 	}
 
 	// Get the original frame number for the given key index
@@ -660,11 +685,142 @@ namespace pr::rdr12
 		assert(key_index >= 0 && key_index < key_count());
 		return Get(m_fidxs, key_index, key_index);
 	}
-	
+
+	// The length (in seconds) of this animation
+	double KinematicKeyFrameAnimation::duration() const
+	{
+		return m_native_duration;
+	}
+
 	// The effective frame rate implied by the duration and number of keys
 	double KinematicKeyFrameAnimation::frame_rate() const
 	{
 		return m_native_frame_rate;
+	}
+
+	// Convert a time in seconds to a key index. Returns the key with time just less that 'time_s'
+	int KinematicKeyFrameAnimation::TimeToKeyIndex(float time_s) const
+	{
+		auto kcount = key_count();
+		if (kcount <= 1 || duration() == 0)
+			return 0;
+
+		// If using a fixed frame rate, we can directly compute the key index.
+		// If the kinematic keys are sparce, we need to binary search for the surrounding keys
+		// Note, by scaling 'm_duration' or 'time_s' the playback rate of the animation can be changed.
+		if (m_times.empty())
+		{
+			auto tfrac = Frac<double>(0.0, time_s, duration());
+			auto kidx = Lerp(0, kcount - 1, tfrac);
+			return Clamp(kidx, 0, kcount - 1);
+		}
+		else
+		{
+			auto it = std::ranges::upper_bound(m_times, time_s);
+			auto kidx = s_cast<int>(std::distance(m_times.begin(), it) - 1);
+			return Clamp(kidx, 0, kcount - 1);
+		}
+	}
+
+	// Converts a key index to a time in seconds
+	float KinematicKeyFrameAnimation::KeyIndexToTime(int key_index) const
+	{
+		auto kcount = key_count();
+		if (kcount == 0 || duration() == 0)
+			return 0.0f;
+
+		key_index = Clamp(key_index, 0, kcount - 1);
+
+		// If using a fixed frame rate, we can directly compute the key time
+		if (m_times.empty())
+		{
+			// Convert the key index to a time
+			auto period = s_cast<float>(1.0 / frame_rate());
+			return key_index * period;
+		}
+		else
+		{
+			return m_times[key_index];
+		}
+	}
+
+	// Read keys starting at 'frame' for all tracks. 'out' should be a multiple of the track count
+	template <typename Key> requires (std::is_assignable_v<Key, KinematicKey>)
+	static void ReadKeysImpl(KinematicKeyFrameAnimation const& kkfa, int key_idx, std::span<Key> out) 
+	{
+		auto tcount = kkfa.track_count();
+		auto kcount = kkfa.key_count();
+		auto period = s_cast<float>(1.0 / kkfa.frame_rate());
+		int i = 0;
+
+		// Read in the same order as the keys are stored
+		assert((isize(out) % tcount) == 0 && "Output size must be a multiple of the track count");
+		for (int f = 0, fend = isize(out) / tcount; f != fend; ++f)
+		{
+			auto kidx = Clamp(key_idx + f, 0, kcount - 1);
+			auto idx = kidx * tcount;
+
+			for (int t = 0; t != tcount; ++t, ++idx)
+			{
+				out[i++] =  KinematicKey {
+					.m_rot = Get(kkfa.m_rotation, idx, quat::Identity()),
+					.m_pos = Get(kkfa.m_position, idx, v3::Zero()),
+					.m_scl = Get(kkfa.m_scale, idx, v3::One()),
+					.m_lin_vel = Get(kkfa.m_lin_vel, idx, v3::Zero()),
+					.m_ang_vel = Get(kkfa.m_ang_vel, idx, v3::Zero()),
+					.m_lin_acc = Get(kkfa.m_lin_acc, idx, v3::Zero()),
+					.m_ang_acc = Get(kkfa.m_ang_acc, idx, v3::Zero()),
+					.m_time = Get(kkfa.m_times, kidx, kidx * period),
+					.m_idx = kidx,
+				};
+			}
+		}
+	}
+	void KinematicKeyFrameAnimation::ReadKeys(int key_idx, std::span<KinematicKey> out) const
+	{
+		ReadKeysImpl<KinematicKey>(*this, key_idx, out);
+	}
+	void KinematicKeyFrameAnimation::ReadKeys(int key_idx, std::span<xform> out) const
+	{
+		ReadKeysImpl<xform>(*this, key_idx, out);
+	}
+
+	// Read keys starting at 'frame' for all tracks. 'out' should be a multiple of the track count
+	template <typename Key> requires (std::is_assignable_v<Key, KinematicKey>)
+	static void ReadKeysImpl(KinematicKeyFrameAnimation const& kkfa, int key_idx, int track_index, std::span<Key> out) 
+	{
+		auto tcount = kkfa.track_count();
+		auto kcount = kkfa.key_count();
+		auto period = s_cast<float>(1.0 / kkfa.frame_rate());
+		int i = 0;
+
+		// Read in the same order as the keys are stored
+		assert((isize(out) % tcount) == 0 && "Output size must be a multiple of the track count");
+		for (int f = 0, fend = isize(out) / tcount; f != fend; ++f)
+		{
+			auto kidx = Clamp(key_idx + f, 0, kcount - 1);
+			auto idx = kidx * tcount + track_index;
+
+			out[i++] =  KinematicKey {
+				.m_rot = Get(kkfa.m_rotation, idx, quat::Identity()),
+				.m_pos = Get(kkfa.m_position, idx, v3::Zero()),
+				.m_scl = Get(kkfa.m_scale, idx, v3::One()),
+				.m_lin_vel = Get(kkfa.m_lin_vel, idx, v3::Zero()),
+				.m_ang_vel = Get(kkfa.m_ang_vel, idx, v3::Zero()),
+				.m_lin_acc = Get(kkfa.m_lin_acc, idx, v3::Zero()),
+				.m_ang_acc = Get(kkfa.m_ang_acc, idx, v3::Zero()),
+				.m_time = Get(kkfa.m_times, kidx, kidx * period),
+				.m_idx = kidx,
+			};
+		}
+	}
+	void KinematicKeyFrameAnimation::ReadKeys(int key_idx, int track_index, std::span<KinematicKey> out) const
+	{
+		ReadKeysImpl<KinematicKey>(*this, key_idx, track_index, out);
+	}
+	void KinematicKeyFrameAnimation::ReadKeys(int key_idx, int track_index, std::span<xform> out) const
+	{
+		ReadKeysImpl<xform>(*this, key_idx, track_index, out);
 	}
 
 	// Ref-counting clean up function

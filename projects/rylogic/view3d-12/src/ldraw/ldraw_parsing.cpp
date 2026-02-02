@@ -4458,12 +4458,6 @@ namespace pr::rdr12::ldraw
 			m_obj = obj;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, *this, &opts);
-
-			// If kinematic key frames are given, switch the animator to the kinematic key frame animator
-			if (m_anim_info && !m_anim_info.m_kinematic_frames.empty())
-			{
-				UseKinematicKeyFrameAnimator();
-			}
 		}
 
 		// IModelOut functions
@@ -4508,10 +4502,24 @@ namespace pr::rdr12::ldraw
 			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
 
 			// The time/frame range in the anim info is the portion of the animation to use during playback
-			auto time_range = TimeRange{ 0, anim->m_duration };
+			auto time_range = TimeRange{ 0, anim->duration() };
+
+			// The animator to run the animation
+			AnimatorPtr animator = {};
+
+			// If kinematric key frames are given, create a kinematic key frame animation
+			if (!m_anim_info.m_kinematic_frames.empty())
+			{
+				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(*anim.get(), m_anim_info.m_kinematic_frames), true };
+				animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
+			}
+			// Otherwise, create a standard key frame animation
+			else
+			{
+				animator = AnimatorPtr{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
+			}
 
 			// Create an animator that uses the animation and a pose for it to animate
-			AnimatorPtr animator{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
 			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch), true };
 
 			// Set the pose for each model in the hierarchy.
@@ -4526,22 +4534,6 @@ namespace pr::rdr12::ldraw
 
 			// Only use the first animation
 			return EResult::Stop;
-		}
-
-		// Switch the object's pose animator to a kinematic key frame animator
-		void UseKinematicKeyFrameAnimator()
-		{
-			#if 0 //todo
-				m_obj->Apply([&](LdrObject* obj)
-				{
-					if (obj->m_pose)
-					{
-						auto kfa = rdr12::New<Animator_KinematicKeyFrames>(m_anim_info.m_kinematic_key_frames, obj->m_pose->m_skeleton);
-						obj->m_pose->SetAnimator(kfa);
-					}
-					return true;
-				}, "");
-				#endif
 		}
 	};
 

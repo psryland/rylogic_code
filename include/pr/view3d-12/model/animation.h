@@ -93,7 +93,7 @@ namespace pr::rdr12
 		// Convert to an affine transform
 		operator m4x4() const
 		{
-			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scl.x, m_scl.y, m_scl.z), m_pos.w1());
+			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scl), m_pos.w1());
 		}
 
 		// Convert to xform
@@ -103,91 +103,42 @@ namespace pr::rdr12
 		}
 
 		// Interpolate between two key frames
-		friend BoneKey Interp(BoneKey const& lhs, BoneKey const& rhs, float frac, EAnimInterpolation interp)
-		{
-			switch (interp)
-			{
-				case EAnimInterpolation::Constant: frac = 0; break;
-				case EAnimInterpolation::Linear: frac = frac; break;
-				case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
-				default: throw std::runtime_error("Unknown interpolation style");
-			}
-			return BoneKey{
-				.m_rot = Slerp(lhs.m_rot, rhs.m_rot, frac),
-				.m_pos = Lerp(lhs.m_pos, rhs.m_pos, frac),
-				.m_scl = Lerp(lhs.m_scl, rhs.m_scl, frac),
-				.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
-			};
-		}
+		friend BoneKey Interp(BoneKey const& lhs, BoneKey const& rhs, float frac, EAnimInterpolation interp);
 	};
 
 	// A single key frame that includes kinematic data
 	struct KinematicKey
 	{
-		quat m_rotation;
-		v3 m_translation;
-		v3 m_scale;
-		v3 m_velocity;
-		v3 m_ang_velocity;
-		v3 m_acceleration;
-		v3 m_ang_accel;
-		double m_time;
-		uint64_t m_flags;
+		quat m_rot = quat::Identity();
+		v3 m_pos = v3::Zero();
+		v3 m_scl = v3::Zero();
+		v3 m_lin_vel = v3::Zero();
+		v3 m_ang_vel = v3::Zero();
+		v3 m_lin_acc = v3::Zero();
+		v3 m_ang_acc = v3::Zero();
+		float m_time = 0; // seconds
+		int m_idx = 0;
 
 		// Convert to an affine transform
 		operator m4x4() const
 		{
-			return m4x4(m3x4(m_rotation) * m3x4::Scale(m_scale.x, m_scale.y, m_scale.z), m_translation.w1());
+			return m4x4(m3x4(m_rot) * m3x4::Scale(m_scl), m_pos.w1());
 		}
 
-		// Get/Set the interpolation style of this key frame
-		EAnimInterpolation Interpolation() const
+		// Convert to xform
+		operator xform() const
 		{
-			return static_cast<EAnimInterpolation>(GrabBits<int, uint64_t>(m_flags, 2, 0));
-		}
-		void Interpolation(EAnimInterpolation interp)
-		{
-			m_flags = PackBits<int>(m_flags, static_cast<int>(interp), 2, 0);
+			return xform{m_rot, m_pos.w1(), m_scl.w1()};
 		}
 
-		// Identity key frame
-		static KinematicKey Identity()
+		// Convert to a BoneKey
+		operator BoneKey() const
 		{
-			return KinematicKey {
-				.m_rotation = quat::Identity(),
-				.m_translation = v3::Zero(),
-				.m_scale = v3::One(),
-				.m_velocity = v3::One(),
-				.m_ang_velocity = v3::One(),
-				.m_acceleration = v3::One(),
-				.m_ang_accel = v3::One(),
-				.m_time = 0.0,
-				.m_flags = 0,
-			};
+			return BoneKey{ m_rot, m_pos, m_scl, m_time, EAnimInterpolation::Linear, m_idx };
 		}
 
-		// Linearly interpolate between two key frames
-		friend KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac)
-		{
-			switch (lhs.Interpolation())
-			{
-				case EAnimInterpolation::Constant: frac = 0; break;
-				case EAnimInterpolation::Linear: frac = frac; break;
-				case EAnimInterpolation::Cubic: frac = SmoothStep(0.0f, 1.0f, frac); break;
-				default: throw std::runtime_error("Unknown interpolation style");
-			}
-			return KinematicKey{
-				.m_rotation = Slerp(lhs.m_rotation, rhs.m_rotation, frac),
-				.m_translation = Lerp(lhs.m_translation, rhs.m_translation, frac),
-				.m_scale = Lerp(lhs.m_scale, rhs.m_scale, frac),
-				.m_velocity = Lerp(lhs.m_velocity, rhs.m_velocity, frac),
-				.m_ang_velocity = Lerp(lhs.m_velocity, rhs.m_velocity, frac),
-				.m_acceleration = Lerp(lhs.m_velocity, rhs.m_velocity, frac),
-				.m_ang_accel = Lerp(lhs.m_velocity, rhs.m_velocity, frac),
-				.m_time = Lerp(lhs.m_time, rhs.m_time, frac),
-				.m_flags = 0,
-			};
-		}
+		// Interpolate between two key frames
+		friend KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac, EAnimInterpolation interp);
 	};
 
 	// Simple root motion polynomial animation
@@ -228,7 +179,7 @@ namespace pr::rdr12
 		using Sample = vector<BoneKey, 0>;
 
 		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
-		double m_duration;          // The length (in seconds) of this animation
+		double m_native_duration;   // The length (in seconds) of this animation
 		double m_native_frame_rate; // The native frame rate of the animation (for reference. frame rate is implied key_count and duration)
 
 		vector<uint16_t, 0> m_bone_map; // The bone id for each track. Length = track count.
@@ -237,7 +188,6 @@ namespace pr::rdr12
 		vector<quat, 0> m_rotation;
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
-		vector<float, 0> m_times;   // Time (in seconds) of each key. Empty if a fixed frame rate.
 
 		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
 
@@ -253,19 +203,27 @@ namespace pr::rdr12
 		// Number of keys in this animation
 		int key_count() const;
 
-		// The effective frame rate implied by the duration and number of keys
+		// The length (in seconds) of this animation
+		double duration() const;
+
+		// The frame rate of this animation
 		double frame_rate() const;
 
-		// Get the key at 'frame' for 'track_index'
-		BoneKey Key(int frame, int track_index) const;
+		// Convert a time in seconds to a key index. Returns the key with time just less that 'time_s'
+		int TimeToKeyIndex(float time_s) const;
 
-		// Get the keys on either side of 'time_s' (to interpolate between)
-		std::tuple<BoneKey, BoneKey> Key(float time_s, int track_index) const;
+		// Converts a key index to a time in seconds
+		float KeyIndexToTime(int key_index) const;
 
-		// Returns the interpolated key frames a 'time_s'
-		void EvaluateAtTime(float time_s, EAnimFlags flags, std::span<m4x4> out) const;
-		void EvaluateAtTime(float time_s, EAnimFlags flags, Sample& out) const;
-		Sample EvaluateAtTime(float time_s, EAnimFlags flags) const;
+		// Read keys starting at 'key_idx' for all tracks. 'out.size()' should be a multiple of the track count
+		void ReadKeys(int key_idx, std::span<BoneKey> out) const;
+		void ReadKeys(int key_idx, std::span<xform> out) const;
+		void ReadKeys(int key_idx, std::span<m4x4> out) const;
+
+		// Read keys starting at 'key_idx' for the given 'track_index'. 'out.size()' is the number of keys to read
+		void ReadKeys(int key_idx, int track_index, std::span<BoneKey> out) const;
+		void ReadKeys(int key_idx, int track_index, std::span<xform> out) const;
+		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KeyFrameAnimation>* doomed);
@@ -276,10 +234,12 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - See "KeyFrameAnimation", however, keys != frames + 1 here because keys are sparse.
+		using Sample = vector<KinematicKey, 0>;
 
 		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
-		double m_duration;          // The length (in seconds) of this animation
-		double m_native_frame_rate; // The native frame rate of the animation, so we can convert from frames <-> seconds
+		double m_native_duration;   // The length (in seconds) of this animation
+		double m_native_frame_rate; // The native frame rate of the animation
+		int m_key_count;            // The number of kinematic frames. Track lengths should match this or be empty
 
 		vector<uint16_t, 0> m_bone_map;  // The bone id for each track. Length = track count.
 		vector<uint8_t, 0> m_fcurve_ids; // Identifiers for the float curves. Length = fcurve count
@@ -316,8 +276,27 @@ namespace pr::rdr12
 		// Get the original frame number for the given key index
 		int src_frame(int key_index) const;
 
+		// The length (in seconds) of this animation
+		double duration() const;
+
 		// The effective frame rate implied by the duration and number of keys
 		double frame_rate() const;
+
+		// Convert a time in seconds to a key index. Returns the key with time just less that 'time_s'
+		int TimeToKeyIndex(float time_s) const;
+
+		// Converts a key index to a time in seconds
+		float KeyIndexToTime(int key_index) const;
+
+		// Read keys starting at 'key_idx' for all tracks. 'out.size()' should be a multiple of the track count
+		void ReadKeys(int key_idx, std::span<KinematicKey> out) const;
+		void ReadKeys(int key_idx, std::span<xform> out) const;
+		void ReadKeys(int key_idx, std::span<m4x4> out) const;
+
+		// Read keys starting at 'key_idx' for the given 'track_index'. 'out.size()' is the number of keys to read
+		void ReadKeys(int key_idx, int track_index, std::span<KinematicKey> out) const;
+		void ReadKeys(int key_idx, int track_index, std::span<xform> out) const;
+		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);
