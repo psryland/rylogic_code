@@ -16,7 +16,7 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	struct CalcDynamics
+	struct PopulateKinematicAnimation
 	{
 		// A bitmask indicating the active channels
 		enum class EDynamicsChannels : uint32_t
@@ -53,18 +53,16 @@ namespace pr::rdr12
 		IAnimSource const& m_src;
 		KinematicKeyFrameAnimation& m_out;
 
-		CalcDynamics(IAnimSource const& src, KinematicKeyFrameAnimation& out)
+		PopulateKinematicAnimation(IAnimSource const& src, KinematicKeyFrameAnimation& out)
 			: m_src(src)
 			, m_out(out)
 		{}
 
 		// Calculate the dynamics data for the given frame numbers
-		void Run(std::span<int const> frames)
+		void Run(std::span<int const> frames, std::span<float const> durations)
 		{
-			m_out.m_native_frame_rate = m_src.frame_rate();
-
 			InitBoneMap();
-			CopyFrames(frames);
+			CopyFrames(frames, durations);
 			CalcBoneDynamics();
 			CalcFCurveDynamics();
 			CalcTCurveDynamics();
@@ -79,9 +77,9 @@ namespace pr::rdr12
 		}
 
 		// Copy the frame indices and times to 'm_out'
-		void CopyFrames(std::span<int const> frames)
+		void CopyFrames(std::span<int const> frames, std::span<float const> durations)
 		{
-			// If no kinematic frames are given, then assume all frames from 'm_src' are kinematic frames
+			// If no frame indices are given, then assume all frames from 'm_src' are kinematic frames
 			if (frames.empty())
 			{
 				m_out.m_times.clear();
@@ -90,17 +88,25 @@ namespace pr::rdr12
 				return;
 			}
 
-			auto fps = s_cast<float>(m_src.frame_rate());
+			auto spf = 1.f / s_cast<float>(m_src.frame_rate());
+			auto time = 0.f;
+			auto fidx = 0;
 
 			m_out.m_key_count = isize(frames);
 			m_out.m_times.resize(m_out.m_key_count);
 			m_out.m_fidxs.resize(m_out.m_key_count);
-			for (int i = 0; i != m_out.m_key_count; ++i)
+			for (int i = 0, iend = isize(frames); i != iend; ++i)
 			{
-				auto fidx = frames[i];
-				m_out.m_times[i] = fidx / fps;
+				// The frame indices can be any frames from the source animation.
+				// The duration of the last frame is meaningless because the sequence stops on that frame.
+				// I think this is better than inserting a dummy frame after. That can be done manually if needed.
+				fidx = frames[i];
+				m_out.m_times[i] = time;
 				m_out.m_fidxs[i] = fidx;
+				time += Get(durations, i, spf);
 			}
+
+			m_out.m_native_duration = time;
 		}
 
 		// Calculate positions, velocities, and accelerations for bones (linear and rotational)
@@ -440,9 +446,9 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
+	KeyFrameAnimation::KeyFrameAnimation(uint32_t skel_id, double native_duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_native_duration(duration)
+		, m_native_duration(native_duration)
 		, m_native_frame_rate(native_frame_rate)
 		, m_bone_map()
 		, m_rotation()
@@ -606,9 +612,9 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate)
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, double native_duration, double native_frame_rate)
 		: m_skel_id(skel_id)
-		, m_native_duration(duration)
+		, m_native_duration(native_duration)
 		, m_native_frame_rate(native_frame_rate)
 		, m_key_count()
 		, m_bone_map()
@@ -622,8 +628,8 @@ namespace pr::rdr12
 		, m_times()
 		, m_fidxs()
 	{}
-	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames)
-		:KinematicKeyFrameAnimation(kfa.m_skel_id, kfa.duration(), kfa.m_native_frame_rate)
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations)
+		:KinematicKeyFrameAnimation(kfa.m_skel_id, kfa.duration(), kfa.frame_rate())
 	{
 		struct AnimSource : IAnimSource
 		{
@@ -651,8 +657,8 @@ namespace pr::rdr12
 		};
 
 		AnimSource src = { kfa };
-		CalcDynamics calc(src, *this);
-		calc.Run(frames);
+		PopulateKinematicAnimation calc(src, *this);
+		calc.Run(frames, durations);
 	}
 	
 	// Number of tracks in this animation

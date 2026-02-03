@@ -1499,8 +1499,11 @@ namespace pr::rdr12::ldraw
 			EAnimFlags m_flags = EAnimFlags::None;
 			FrameRange m_frame_range = { 0, std::numeric_limits<int>::max() };
 			TimeRange m_time_range = { 0, std::numeric_limits<double>::max() }; // Seconds
-			pr::vector<int> m_kinematic_frames = {};
+			vector<int> m_frames = {};
+			vector<float> m_durations = {};
+			std::optional<float> m_frame_rate = {};
 			double m_stretch = { 1.0 }; // aka playback speed scale
+			bool m_per_frame_durations = false;
 
 			void Parse(IReader& reader, ParseParams& pp)
 			{
@@ -1523,6 +1526,24 @@ namespace pr::rdr12::ldraw
 							m_frame_range = { frame, frame };
 							break;
 						}
+						case EKeyword::Frames:
+						{
+							for (; !reader.IsSectionEnd(); )
+							{
+								m_frames.push_back(reader.Int<int>());
+								if (m_per_frame_durations)
+								{
+									auto dur = reader.Real<float>();
+									m_durations.push_back(dur);
+								}
+							}
+							break;
+						}
+						case EKeyword::FrameRate:
+						{
+							m_frame_rate = reader.Real<float>();
+							break;
+						}
 						case EKeyword::FrameRange:
 						{
 							auto beg = reader.Int<int>();
@@ -1542,6 +1563,11 @@ namespace pr::rdr12::ldraw
 							m_stretch = reader.Real<double>();
 							break;
 						}
+						case EKeyword::PerFrameDurations:
+						{
+							m_per_frame_durations = reader.IsSectionEnd() ? true : reader.Bool();
+							break;
+						}
 						case EKeyword::NoRootTranslation:
 						{
 							m_flags = SetBits(m_flags, EAnimFlags::NoRootTranslation, reader.IsSectionEnd() ? true : reader.Bool());
@@ -1550,12 +1576,6 @@ namespace pr::rdr12::ldraw
 						case EKeyword::NoRootRotation:
 						{
 							m_flags = SetBits(m_flags, EAnimFlags::NoRootRotation, reader.IsSectionEnd() ? true : reader.Bool());
-							break;
-						}
-						case EKeyword::KinematicKeyFrames:
-						{
-							for (; !reader.IsSectionEnd(); )
-								m_kinematic_frames.push_back(reader.Int<int>());
 							break;
 						}
 						default:
@@ -4501,16 +4521,23 @@ namespace pr::rdr12::ldraw
 			// Find the associated skeleton
 			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
 
+			// Overrite the frame rate if given
+			if (m_anim_info.m_frame_rate)
+			{
+				anim->m_native_frame_rate = *m_anim_info.m_frame_rate;
+				anim->m_native_duration = (anim->key_count() - 1) / anim->m_native_frame_rate;
+			}
+
 			// The time/frame range in the anim info is the portion of the animation to use during playback
 			auto time_range = TimeRange{ 0, anim->duration() };
 
 			// The animator to run the animation
 			AnimatorPtr animator = {};
 
-			// If kinematric key frames are given, create a kinematic key frame animation
-			if (!m_anim_info.m_kinematic_frames.empty())
+			// If specific key frames are given, create a kinematic key frame animation
+			if (!m_anim_info.m_frames.empty())
 			{
-				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(*anim.get(), m_anim_info.m_kinematic_frames), true };
+				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(*anim.get(), m_anim_info.m_frames, m_anim_info.m_durations), true };
 				animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
 			}
 			// Otherwise, create a standard key frame animation

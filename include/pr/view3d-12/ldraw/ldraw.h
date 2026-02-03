@@ -96,7 +96,9 @@ namespace pr::rdr12::ldraw
 		x(FovX              )\
 		x(FovY              )\
 		x(Frame             )\
+		x(Frames            )\
 		x(FrameRange        )\
+		x(FrameRate         )\
 		x(FrustumFA         )\
 		x(FrustumWH         )\
 		x(GenerateNormals   )\
@@ -106,7 +108,6 @@ namespace pr::rdr12::ldraw
 		x(Hidden            )\
 		x(Instance          )\
 		x(Inverse           )\
-		x(KinematicKeyFrames)\
 		x(Layers            )\
 		x(LeftHanded        )\
 		x(LightSource       )\
@@ -140,6 +141,7 @@ namespace pr::rdr12::ldraw
 		x(Part              )\
 		x(Parts             )\
 		x(Period            )\
+		x(PerFrameDurations )\
 		x(PerItemColour     )\
 		x(PerItemParametrics)\
 		x(Pie               )\

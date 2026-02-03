@@ -186,7 +186,9 @@ class EKeyword(Enum):
 	FovX = 862039340
 	FovY = 878816959
 	Frame = 3523899814
+	Frames = 2071016015
 	FrameRange = 1562558803
+	FrameRate = 2601589476
 	FrustumFA = 3281884904
 	FrustumWH = 3334630522
 	GenerateNormals = 750341558
@@ -196,7 +198,6 @@ class EKeyword(Enum):
 	Hidden = 4128829753
 	Instance = 193386898
 	Inverse = 2986472067
-	KinematicKeyFrames = 1176138231
 	Layers = 2411172191
 	LeftHanded = 1992685208
 	LightSource = 2597226090
@@ -230,6 +231,7 @@ class EKeyword(Enum):
 	Part = 2088252948
 	Parts = 1480434725
 	Period = 2580104964
+	PerFrameDurations = 3890502406
 	PerItemColour = 1734234667
 	PerItemParametrics = 2079701142
 	Pie = 1782644405

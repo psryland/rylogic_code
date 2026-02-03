@@ -189,7 +189,7 @@ namespace pr::rdr12
 		vector<v3, 0> m_position;
 		vector<v3, 0> m_scale;
 
-		KeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
+		KeyFrameAnimation(uint32_t skel_id, double native_duration, double native_frame_rate);
 
 		// Number of tracks in this animation
 		int track_count() const;
@@ -259,7 +259,7 @@ namespace pr::rdr12
 		vector<int, 0> m_fidxs;     // Frame index of each key frame. Empty if one key per frame.
 
 		KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
-		KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames);
+		KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
 
 		// Number of tracks in this animation
 		int track_count() const;

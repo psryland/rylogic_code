@@ -56,8 +56,9 @@ namespace pr::rdr12
 			kfa.ReadKeys(kfa.TimeToKeyIndex(time_s), track_index, keys);
 
 			// Interpolate between key frames
+			auto dt = keys[1].m_time - keys[0].m_time;
 			auto time = Clamp(time_s, keys[0].m_time, keys[1].m_time);
-			auto frac = Frac(keys[0].m_time, time, keys[1].m_time);
+			auto frac = dt != 0 ? Frac(keys[0].m_time, time, keys[1].m_time) : 0.f;
 
 			// Interpolate the key
 			auto interp_key = Interp(keys[0], keys[1], frac, keys[0].m_interp);
@@ -117,6 +118,7 @@ namespace pr::rdr12
 		{
 			auto kidx = m_anim->TimeToKeyIndex(time_s);
 			auto tcount = m_anim->track_count();
+			auto kcount = m_anim->key_count();
 			assert(m_keys.size() >= 2 * tcount && "Need 2 keys per track");
 
 			// Read the keys that span the time 'time_s'
@@ -130,14 +132,17 @@ namespace pr::rdr12
 			int i0 = 0, i1 = tcount;
 			for (auto& interp : m_interp)
 			{
+				auto first = m_keys[i0].m_idx == 0;
+				auto last = m_keys[i1].m_idx == kcount - 1;
+
 				interp.rot = InterpolateRotation(
-					m_keys[i0].m_rot, m_keys[i0].m_ang_vel.w0(),
-					m_keys[i1].m_rot, m_keys[i1].m_ang_vel.w0(),
+					m_keys[i0].m_rot, !first ? m_keys[i0].m_ang_vel.w0() : v4::Zero(),
+					m_keys[i1].m_rot, !last ? m_keys[i1].m_ang_vel.w0() : v4::Zero(),
 					interval
 				);
 				interp.pos = InterpolateVector(
-					m_keys[i0].m_pos.w1(), m_keys[i0].m_lin_vel.w0(),
-					m_keys[i1].m_pos.w1(), m_keys[i1].m_lin_vel.w0(),
+					m_keys[i0].m_pos.w1(), !first ? m_keys[i0].m_lin_vel.w0() : v4::Zero(),
+					m_keys[i1].m_pos.w1(), !last ? m_keys[i1].m_lin_vel.w0() : v4::Zero(),
 					interval
 				);
 				++i0;
