@@ -3,14 +3,13 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "view3d-12/src/dll/v3d_window.h"
-#include "view3d-12/src/dll/conversion.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_reader_text.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/resource/resource_factory.h"
-#include "view3d-12/src/dll/context.h"
+#include "pr/view3d-12/utility/conversion.h"
 
 namespace pr::rdr12
 {
@@ -610,11 +609,11 @@ namespace pr::rdr12
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)
 		{
-			AddToScene(*obj);
+			obj->AddToScene(m_scene);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
 			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->Flags(), ldraw::ELdrFlags::SceneBoundsExclude))
-				AddBBoxToScene(*obj);
+				obj->AddBBoxToScene(m_scene);
 
 #if 0 // todo, global pso?
 			// Apply the fill mode and cull mode to user models
@@ -639,11 +638,11 @@ namespace pr::rdr12
 
 		// Add the measure tool objects if the window is visible
 		if (m_ui_measure_tool != nullptr && m_ui_measure_tool->Visible() && m_ui_measure_tool->Gfx())
-			AddToScene(*m_ui_measure_tool->Gfx().get());
+			m_ui_measure_tool->Gfx()->AddToScene(m_scene);
 
 		// Add the angle tool objects if the window is visible
 		if (m_ui_angle_tool != nullptr && m_ui_angle_tool->Visible() && m_ui_angle_tool->Gfx())
-			AddToScene(*m_ui_angle_tool->Gfx().get());
+			m_ui_angle_tool->Gfx()->AddToScene(m_scene);
 
 		// Render the scene
 		auto& frame = m_wnd.NewFrame();
@@ -1762,79 +1761,6 @@ namespace pr::rdr12
 			}
 		}
 		return false;
-	}
-	
-	// Add 'obj' recursively to the scene for renderering
-	void V3dWindow::AddToScene(ldraw::LdrObject& obj, m4x4 const& p2w, ldraw::ELdrFlags parent_flags)
-	{
-		// Notes:
-		//  - The 'obj->OnAddToScene' event can change 'm_i2w'. The local 'i2w' variable is used so that parenting is unaffected.
-		//  - The decision to include or remove root motion for animated models is handled in the pose/animator. The 'i2w' is
-		//    always the animation origin from the instance's point of view. That's why there is no 'if (m_pose) ...'
-		//  - Simple root animation is just a modification to the 'i2w' transform, it's orthogonal to animation.
-		//  - A model can have a 'm_m2root' transform that locates the model in root space. This is mainly for multi-part models.
-
-		// Set the instance to world.
-		auto i2w = p2w * obj.m_o2p;
-		if (obj.m_root_anim) i2w *= obj.m_root_anim.RootToAnim();
-		if (obj.m_model) i2w *= obj.m_model->m_m2root;
-		obj.m_i2w = i2w;
-
-		// Combine recursive flags
-		auto flags = obj.Flags() | (parent_flags & (ldraw::ELdrFlags::Hidden | ldraw::ELdrFlags::Wireframe | ldraw::ELdrFlags::NonAffine | ldraw::ELdrFlags::HideWhenNotAnimating));
-		PR_ASSERT(PR_DBG, AllSet(flags, ldraw::ELdrFlags::NonAffine) || IsAffine(obj.m_i2w), "Invalid instance transform");
-
-		// Allow the object to change it's transform just before rendering
-		obj.OnAddToScene(obj, m_scene);
-
-		// Decide if this object should be added to the scene
-		auto is_hidden =
-			AllSet(flags, ldraw::ELdrFlags::Hidden) ||
-			(AllSet(flags, ldraw::ELdrFlags::Animated | ldraw::ELdrFlags::HideWhenNotAnimating) && !obj.IsAnimating());
-
-		// Add the instance to the scene draw list
-		if (obj.m_model && !is_hidden)
-		{
-			// Could add occlusion culling here...
-			m_scene.AddInstance(obj);
-		}
-
-		// Rinse and repeat for all children
-		for (auto& child : obj.m_child)
-			AddToScene(*child.get(), i2w, flags);
-	}
-
-	// Recursively add this object using 'bbox_model' instead of its
-	// actual model, located and scaled to the transform and bbox of this object
-	void V3dWindow::AddBBoxToScene(ldraw::LdrObject& obj, m4x4 const& p2w, ldraw::ELdrFlags parent_flags)
-	{
-		// Set the instance to world for this object
-		auto i2w = p2w * obj.m_o2p;
-		if (obj.m_root_anim) i2w *= obj.m_root_anim.RootToAnim();
-		if (obj.m_pose) i2w *= obj.m_pose->RootToAnim(); // Apply the animation's root offset to the bounding box
-		if (obj.m_model) i2w *= obj.m_model->m_m2root;
-
-		// Combine recursive flags
-		auto flags = obj.Flags() | (parent_flags & (ldraw::ELdrFlags::Hidden | ldraw::ELdrFlags::Wireframe | ldraw::ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ldraw::ELdrFlags::NonAffine) || IsAffine(i2w), "Invalid instance transform");
-
-		auto is_hidden =
-			AnySet(flags, ldraw::ELdrFlags::Hidden | ldraw::ELdrFlags::SceneBoundsExclude) ||
-			(AllSet(flags, ldraw::ELdrFlags::Animated | ldraw::ELdrFlags::HideWhenNotAnimating) && !obj.IsAnimating());
-
-		// Add the bbox instance to the scene draw list
-		if (obj.m_model && !is_hidden)
-		{
-			// Find the object to world for the bbox
-			ResourceFactory factory(m_scene.rdr());
-			obj.m_bbox_instance.m_model = factory.CreateModel(EStockModel::BBoxModel);
-			obj.m_bbox_instance.m_i2w = i2w * BBoxTransform(obj.m_model->m_bbox);
-			m_scene.AddInstance(obj.m_bbox_instance);
-		}
-
-		// Rinse and repeat for all children
-		for (auto& child : obj.m_child)
-			AddBBoxToScene(*child.get(), i2w, flags);
 	}
 
 	// Called when objects are added/removed from this window

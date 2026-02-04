@@ -127,6 +127,80 @@ namespace pr::rdr12::ldraw
 		return parent.append(parent.empty() ? "" : ".").append(m_name);
 	}
 
+	
+	// Add 'obj' recursively to the scene for renderering
+	void LdrObject::AddToScene(Scene& scene, m4x4 const& p2w, ELdrFlags parent_flags)
+	{
+		// Notes:
+		//  - The 'OnAddToScene' event can change 'm_i2w'. The local 'i2w' variable is used so that parenting is unaffected.
+		//  - The decision to include or remove root motion for animated models is handled in the pose/animator. The 'i2w' is
+		//    always the animation origin from the instance's point of view. That's why there is no 'if (m_pose) ...'
+		//  - Simple root animation is just a modification to the 'i2w' transform, it's orthogonal to animation.
+		//  - A model can have a 'm_m2root' transform that locates the model in root space. This is mainly for multi-part models.
+
+		// Set the instance to world.
+		auto i2w = p2w * m_o2p;
+		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
+		if (m_model) i2w *= m_model->m_m2root;
+		m_i2w = i2w;
+
+		// Combine recursive flags
+		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden | ELdrFlags::Wireframe | ELdrFlags::NonAffine | ELdrFlags::HideWhenNotAnimating));
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
+
+		// Allow the object to change it's transform just before rendering
+		OnAddToScene(*this, scene);
+
+		// Decide if this object should be added to the scene
+		auto is_hidden =
+			AllSet(flags, ELdrFlags::Hidden) ||
+			(AllSet(flags, ELdrFlags::Animated | ELdrFlags::HideWhenNotAnimating) && !IsAnimating());
+
+		// Add the instance to the scene draw list
+		if (m_model && !is_hidden)
+		{
+			// Could add occlusion culling here...
+			scene.AddInstance(*this);
+		}
+
+		// Rinse and repeat for all children
+		for (auto& child : m_child)
+			child->AddToScene(scene, i2w, flags);
+	}
+
+	// Recursively add this object using 'bbox_model' instead of its
+	// actual model, located and scaled to the transform and bbox of this object
+	void LdrObject::AddBBoxToScene(Scene& scene, m4x4 const& p2w, ELdrFlags parent_flags)
+	{
+		// Set the instance to world for this object
+		auto i2w = p2w * m_o2p;
+		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
+		if (m_pose) i2w *= m_pose->RootToAnim(); // Apply the animation's root offset to the bounding box
+		if (m_model) i2w *= m_model->m_m2root;
+
+		// Combine recursive flags
+		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden | ELdrFlags::Wireframe | ELdrFlags::NonAffine));
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(i2w), "Invalid instance transform");
+
+		auto is_hidden =
+			AnySet(flags, ELdrFlags::Hidden | ELdrFlags::SceneBoundsExclude) ||
+			(AllSet(flags, ELdrFlags::Animated | ELdrFlags::HideWhenNotAnimating) && !IsAnimating());
+
+		// Add the bbox instance to the scene draw list
+		if (m_model && !is_hidden)
+		{
+			// Find the object to world for the bbox
+			ResourceFactory factory(scene.rdr());
+			m_bbox_instance.m_model = factory.CreateModel(EStockModel::BBoxModel);
+			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
+			scene.AddInstance(m_bbox_instance);
+		}
+
+		// Rinse and repeat for all children
+		for (auto& child : m_child)
+			child->AddBBoxToScene(scene, i2w, flags);
+	}
+
 	// Get the first child object of this object that matches 'name' (see Apply)
 	LdrObject const* LdrObject::Child(char const* name) const
 	{

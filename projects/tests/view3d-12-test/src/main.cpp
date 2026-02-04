@@ -318,11 +318,11 @@ struct Main :Form
 		auto c2w = View3D_CameraToWorldGet(m_win3d);
 		view3d::Vec4 ws_pos, ws_dir; View3D_SSPointToWSRay(m_win3d, screen, ws_pos, ws_dir);
 		view3d::HitTestRay rays[1] = {
-			{ws_pos, ws_dir},
+			{ws_pos, ws_dir, view3d::ESnapMode::Faces, 0.001f},
 		//	{c2w.w, {-c2w.z.x, -c2w.z.y, -c2w.z.z, 0}},
 		};
 		view3d::HitTestResult results[2] = {};
-		View3D_WindowHitTestByCtx(m_win3d, &rays[0], &results[0], _countof(rays), view3d::ESnapMode::Faces, 0.001f, {});
+		View3D_WindowHitTestByCtx(m_win3d, &rays[0], &results[0], _countof(rays), {});
 
 		for (auto const& hit : results)
 		{

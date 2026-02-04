@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
 #pragma once
-#include <string>
 #include <type_traits>
 
 namespace pr

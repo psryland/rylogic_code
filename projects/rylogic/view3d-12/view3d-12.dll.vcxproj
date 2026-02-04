@@ -52,7 +52,6 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d-dll.h" />
     <ClInclude Include="src\dll\context.h" />
-    <ClInclude Include="src\dll\conversion.h" />
     <ClInclude Include="src\dll\dll_forward.h" />
     <ClInclude Include="src\dll\v3d_window.h" />
   </ItemGroup>

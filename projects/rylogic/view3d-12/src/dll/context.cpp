@@ -11,11 +11,11 @@
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/resource/resource_factory.h"
+#include "pr/view3d-12/utility/conversion.h"
 #include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_file.h"
 #include "view3d-12/src/ldraw/sources/source_string.h"
 #include "view3d-12/src/dll/context.h"
-#include "view3d-12/src/dll/conversion.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
 namespace pr::rdr12

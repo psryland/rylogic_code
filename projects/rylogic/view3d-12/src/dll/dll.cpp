@@ -22,6 +22,7 @@
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/dx9_context.h"
+#include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
@@ -31,7 +32,6 @@
 #include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_stream.h"
 #include "view3d-12/src/dll/dll_forward.h"
-#include "view3d-12/src/dll/conversion.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
