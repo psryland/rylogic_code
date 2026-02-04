@@ -118,7 +118,6 @@ namespace pr::rdr12
 	// Set the render steps to use for rendering the scene
 	void Scene::SetRenderSteps(std::span<ERenderStep const> rsteps)
 	{
-		// Can't use unique_ptr without #including 'render_step' in the header
 		m_render_steps.clear();
 
 		for (auto rs : rsteps)
@@ -126,8 +125,6 @@ namespace pr::rdr12
 			switch (rs)
 			{
 				case ERenderStep::RenderForward: m_render_steps.emplace_back(new RenderForward(*this)); break;
-				//case ERenderStep::GBuffer:       m_render_steps.emplace_back(new GBuffer(*this)); break;
-				//case ERenderStep::DSLighting:    m_render_steps.emplace_back(new DSLighting(*this)); break;
 				case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new RenderSmap(*this, m_global_light)); break;
 				case ERenderStep::RayCast:       m_render_steps.emplace_back(new RenderRayCast(*this, true)); break;
 				default: throw std::runtime_error("Unknown render step");
@@ -149,14 +146,12 @@ namespace pr::rdr12
 	}
 
 	// Perform an immediate hit test
-	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances, RayCastResultsOut const& out)
+	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, RayCastInstancesCB instances, RayCastResultsOut const& out)
 	{
 		// Notes:
 		//  - The immediate ray cast should be completely separate from the continuous ray cast.
 		//    It should be possible to have both used within a single frame.
 		//  - 'snap_mode' defines the features that the ray can hit. It shouldn't be zero.
-		assert(snap_mode != ESnapMode::NoSnap && "HitTest will not hit anything because no snap mode is set");
-
 		if (rays.empty())
 			return {};
 
@@ -167,7 +162,7 @@ namespace pr::rdr12
 		auto& rs = *m_raycast_immed.get();
 
 		// Set the rays to cast
-		rs.SetRays(rays, snap_mode, snap_distance, [=](auto) { return true; });
+		rs.SetRays(rays, [=](auto) { return true; });
 
 		// Populate the draw list.
 		if (instances != nullptr)
@@ -191,7 +186,7 @@ namespace pr::rdr12
 	}
 
 	// Set the collection of rays to cast into the scene for continuous hit testing.
-	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter const& include)
+	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, RayCastFilter const& include)
 	{
 		// Look for an existing RayCast render step
 		if (rays.empty())
@@ -200,15 +195,14 @@ namespace pr::rdr12
 			auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
 			if (rs == nullptr)
 			{
-				// Add the ray cast step first so that 'CopyResource' can happen while we render the rest of the scene
 				RenderRayCastPtr step(new RenderRayCast(*this, true));
-				auto iter = m_render_steps.insert(begin(m_render_steps), std::move(step));
-				rs = static_cast<RenderRayCast*>(iter->get());
+				m_render_steps.push_back(std::move(step));
+				rs = static_cast<RenderRayCast*>(m_render_steps.back().get());
 			}
 
 			// Set the rays to cast.
 			// Results will be available in 'm_ht_results' after Render() has been called a few times (due to multi-buffering)
-			rs->SetRays(rays, snap_mode, snap_distance, include);
+			rs->SetRays(rays, include);
 		}
 		else
 		{

@@ -380,6 +380,8 @@ namespace pr
 			Edges = 1 << 1,
 			Faces = 1 << 2,
 			Perspective = 1 << 8,
+			All = Faces | Edges | Verts,
+			AllPerspective = All | Perspective,
 			_flags_enum = 0,
 		};
 		enum class ESnapType :int
@@ -390,6 +392,10 @@ namespace pr
 			FaceCentre,
 			Edge,
 			Face,
+		};
+		enum class HitTestRayId : int
+		{
+			None = 0,
 		};
 		enum class EStreamingState :int
 		{
@@ -648,6 +654,14 @@ namespace pr
 			// The world space origin and direction of the ray (normalisation not required)
 			Vec4 m_ws_origin;
 			Vec4 m_ws_direction;
+
+			// Snap mode and distance. If snap_mode includes ESnapMode::Perspective, then the snap distance scales with distance from the origin
+			ESnapMode m_snap_mode = ESnapMode::AllPerspective; // Snap behaviour
+			float m_snap_distance = 0; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
+
+			// User provided id for the ray
+			int m_id = 0;
+			int pad = 0;
 		};
 		struct HitTestResult
 		{
@@ -757,6 +771,7 @@ namespace pr
 		using RenderingCB = Callback<void(__stdcall *)(void* ctx, Window window)>;
 		using SceneChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, SceneChanged const&)>;
 		using AnimationCB = Callback<void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock)>;
+		using PeriodicHitTestCB = Callback<void(__stdcall*)(void* ctx, Window window, HitTestResult const* results, int count)>;
 		using GizmoMovedCB = Callback<void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state)>;
 		using AddNuggetCB = Callback<void(__stdcall*)(void* ctx, Nugget const& nugget)>;
 		using EditObjectCB = Callback<VICount(__stdcall*)(void* ctx,
@@ -956,8 +971,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(pr::view3d::Window window, BOOL enabled);
 
 	// Cast a ray into the scene, returning information about what it hit.
-	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::ESnapMode snap_mode, float snap_distance, pr::view3d::Object const* objects, int object_count);
-	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::ESnapMode snap_mode, float snap_distance, pr::view3d::GuidPredCB pred);
+	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::Object const* objects, int object_count);
+	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::GuidPredCB pred);
 
 	// Camera *********************************
 
@@ -1329,6 +1344,15 @@ extern "C"
 
 	// Set the selection box to encompass all selected objects
 	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
+
+	// Add/Remove a callback for receiving periodic hit test results
+	VIEW3D_API void __stdcall View3D_PeriodicHitTestCBSet(pr::view3d::Window window, pr::view3d::PeriodicHitTestCB cb, BOOL add);
+
+	// Add/Update/Remove a periodic hit test ray.
+	// Returns 'HitTestRayId::None' if no more rays can be added.
+	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
+	// Use ws_direction = v4::Zero() to remove a ray.
+	VIEW3D_API pr::view3d::HitTestRayId __stdcall View3D_PeriodicHitTestSet(pr::view3d::Window window, pr::view3d::HitTestRayId id, pr::view3d::HitTestRay ray);
 
 	// Create/Delete the demo scene in the given window
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(pr::view3d::Window window);

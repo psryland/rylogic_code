@@ -209,6 +209,16 @@ inline int max_component_index(float4 v)
 	return select(v[xy] > v[zw], xy, zw);
 }
 
+// Bit flag test
+bool HasFlag(int mask, int flag)
+{
+	return (mask & flag) != 0;
+}
+bool HasFlag(uint mask, uint flag)
+{
+	return (mask & flag) != 0;
+}
+
 // Return the parametric position of 'x' on the range [mn, mx]
 float Frac(float mn, float x, float mx)
 {

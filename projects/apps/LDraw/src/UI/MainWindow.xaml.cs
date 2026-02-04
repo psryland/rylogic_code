@@ -90,6 +90,11 @@ namespace LDraw
 			base.OnPreviewDrop(e);
 		}
 
+		private void PreviewMouseDoubleClick_ShowObjectInfo(object sender, MouseButtonEventArgs e)
+		{
+			// Todo: Show a UI containing information about the object under the mouse pointer
+		}
+
 		/// <summary>App logic</summary>
 		public Model Model
 		{
@@ -197,15 +202,14 @@ namespace LDraw
 		/// <summary>Status bar text</summary>
 		public string StatusMessage
 		{
-			get => m_status_message ?? string.Empty;
+			get => field ?? string.Empty;
 			set
 			{
-				if (m_status_message == value) return;
-				m_status_message = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(StatusMessage));
 			}
 		}
-		private string? m_status_message;
 
 		/// <summary>The text description of the streaming state</summary>
 		public View3d.EStreamingState StreamingState => Model.View3d.StreamingState;
@@ -213,21 +217,27 @@ namespace LDraw
 		/// <summary>Non-null while script parsing is in progress</summary>
 		public ParsingProgressData? ParsingProgress => Model.ParsingProgress;
 
+		/// <summary>A text description of the object under the mouse pointer</summary>
+		public string HoveredObjectInfo
+		{
+			get => string.Empty;
+		}
+
 		/// <summary>The available profiles</summary>
 		public ICollectionView Profiles
 		{
-			get => m_profiles;
+			get => field;
 			set
 			{
-				if (m_profiles == value) return;
-				if (m_profiles != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_profiles.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_profiles = value;
-				if (m_profiles != null)
+				field = value;
+				if (field != null)
 				{
-					m_profiles.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 				}
 
 				// Handlers
@@ -239,8 +249,7 @@ namespace LDraw
 					}
 				}
 			}
-		}
-		private ICollectionView m_profiles = null!;
+		} = null!;
 
 		/// <summary>Set the initial state of the dock container</summary>
 		private void InitDockContainer()

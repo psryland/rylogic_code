@@ -57,6 +57,7 @@ namespace pr::rdr12
 		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
 		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
 		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
+		using HitTestRays = std::vector<rdr12::HitTestRay>;
 
 		// Renderer window/scene
 		Renderer* m_rdr; // The main renderer
@@ -79,6 +80,7 @@ namespace pr::rdr12
 		// Misc
 		mutable std::string m_settings;       // Window settings
 		AnimData            m_anim_data;      // Animation time in seconds
+		HitTestRays         m_hit_tests;      // The set of periodic hit tests to perform each frame
 		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
 		PipeStates          m_global_pso;     // Global pipe state overrides
 		std::thread::id     m_main_thread_id; // The thread that created this window
@@ -118,6 +120,9 @@ namespace pr::rdr12
 
 		// Animation event
 		MultiCast<view3d::AnimationCB, true> OnAnimationEvent;
+
+		// Periodic hit test results
+		MultiCast<view3d::PeriodicHitTestCB, true> OnPeriodicHitTestResults;
 
 		// Get/Set the settings
 		char const* Settings() const;
@@ -307,9 +312,15 @@ namespace pr::rdr12
 		void AnimationStep(view3d::EAnimCommand command, seconds_t anim_time);
 
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, ldraw::LdrObject const* const* objects, int object_count);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred, int);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, RayCastInstancesCB instances);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, ldraw::LdrObject const* const* objects, int object_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::GuidPredCB pred, int);
+
+		// Add/Update/Remove a periodic hit test ray.
+		// Returns 'HitTestRayId::None' if no more rays can be added.
+		// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
+		// Use ws_direction = v4::Zero() to remove a ray.
+		view3d::HitTestRayId PeriodicHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray);
 
 		// Move the focus point to the hit target
 		void CentreOnHitTarget(view3d::HitTestRay const& ray);

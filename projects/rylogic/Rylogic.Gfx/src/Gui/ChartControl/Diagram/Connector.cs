@@ -322,8 +322,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			var snap = (chart.SceneToChart(scene_point) - chart.SceneToChart(scene_point + sz)).xy.Length;
 
 			// Hit test the element
-			var ray = cam.RaySS(scene_point);
-			var results = chart.Scene.Window.HitTest(ray, View3d.ESnapMode.Edges, snap, new[] { Gfx });
+			var ray = cam.RaySS(scene_point, View3d.ESnapMode.Edges, snap);
+			var results = chart.Scene.Window.HitTest(ray, new[] { Gfx });
 			if (!results.IsHit)
 				return null;
 

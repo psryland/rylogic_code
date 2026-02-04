@@ -263,11 +263,11 @@ namespace Rylogic.Gfx
 			public event EventHandler<MouseNavigateEventArgs>? MouseNavigating;
 
 			/// <summary>Perform a hit test in the scene</summary>
-			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance)
+			public HitTestResult HitTest(HitTestRay ray)
 			{
-				return HitTest(ray, snap_mode, snap_distance, x => true);
+				return HitTest(ray, x => true);
 			}
-			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance, Func<Guid, bool> context_pred)
+			public HitTestResult HitTest(HitTestRay ray, Func<Guid, bool> context_pred)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
@@ -276,11 +276,11 @@ namespace Rylogic.Gfx
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
 
 				bool CB(IntPtr ctx, ref Guid context_id) => context_pred(context_id);
-				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_mode, snap_distance, new GuidPredCB { m_cb = CB });
+				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, new GuidPredCB { m_cb = CB });
 
 				return hits[0];
 			}
-			public HitTestResult HitTest(HitTestRay ray, ESnapMode snap_mode, float snap_distance, IEnumerable<Object> objects)
+			public HitTestResult HitTest(HitTestRay ray, IEnumerable<Object> objects)
 			{
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
@@ -289,7 +289,7 @@ namespace Rylogic.Gfx
 				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
 				using var insts_buf = Marshal_.Pin(insts, GCHandleType.Pinned);
-				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_mode, snap_distance, insts, insts.Length);
+				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, insts, insts.Length);
 
 				return hits[0];
 			}

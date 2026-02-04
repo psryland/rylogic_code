@@ -330,6 +330,8 @@ namespace Rylogic.Gfx
 			Edges = 1 << 1,
 			Faces = 1 << 2,
 			Perspective = 1 << 8,
+			All = Faces | Edges | Verts,
+			AllPerspective = All | Perspective,
 		}
 		public enum ESnapType : int
 		{
@@ -339,6 +341,10 @@ namespace Rylogic.Gfx
 			FaceCentre,
 			Edge,
 			Face,
+		}
+		public enum HitTestRayId : int
+		{
+
 		}
 		public enum EStreamingState : int
 		{
@@ -696,6 +702,15 @@ namespace Rylogic.Gfx
 			public FuncCB m_cb;
 		}
 
+		/// <summary>Callback with results of the periodic hit tests</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct PeriodicHitTestCB
+		{
+			public delegate void FuncCB(IntPtr ctx, HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] HitTestResult[] results, int count);
+			public IntPtr m_ctx;
+			public FuncCB m_cb;
+		}		
+
 		/// <summary>Callback notification of gizmo moved</summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct GizmoMovedCB
@@ -1015,6 +1030,26 @@ namespace Rylogic.Gfx
 			// The world space origin and direction of the ray (normalisation not required)
 			public v4 m_ws_origin;
 			public v4 m_ws_direction;
+
+			// Snap mode and distance. If snap_mode includes ESnapMode::Perspective, then the snap distance scales with distance from the origin
+			public ESnapMode m_snap_mode; // Snap behaviour
+			public float m_snap_distance; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
+
+			// User provided id for the ray
+			public int m_id;
+			public int pad;
+
+			public static HitTestRay New(v4 origin, v4 direction, ESnapMode snap_mode = ESnapMode.AllPerspective, float snap_distance = 0, int id = 0)
+			{
+				return new HitTestRay
+				{
+					m_ws_origin = origin,
+					m_ws_direction = direction,
+					m_snap_mode = snap_mode,
+					m_snap_distance = snap_distance,
+					m_id = id,
+				};
+			}
 		}
 
 		/// <summary>The result of a ray cast hit test in a 3d scene</summary>
@@ -1252,16 +1287,16 @@ namespace Rylogic.Gfx
 		private SourcesChangedCB m_sources_changed_cb;      // Reference to callback
 		private List<AddCompleteCB> m_add_complete_cb; // Reference to callbacks
 
-#if PR_VIEW3D_CREATE_STACKTRACE
+		#if PR_VIEW3D_CREATE_STACKTRACE
 		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
-#endif
+		#endif
 
 		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
 		public static View3d Create()
 		{
-#if PR_VIEW3D_CREATE_STACKTRACE
+			#if PR_VIEW3D_CREATE_STACKTRACE
 			m_create_stacktraces.Add(new StackTrace(true));
-#endif
+			#endif
 
 			++m_ref_count;
 			return m_singleton ??= new View3d();
@@ -1684,8 +1719,8 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_DepthBufferEnabledSet(HWindow window, bool enabled);
 
 		// Cast a ray into the scene, returning information about what it hit.
-		[DllImport(Dll)] private static extern void View3D_WindowHitTestObjects(HWindow window, IntPtr rays, IntPtr hits, int ray_count, ESnapMode snap_mode, float snap_distance, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] HObject[] objects, int object_count);
-		[DllImport(Dll)] private static extern void View3D_WindowHitTestByCtx(HWindow window, IntPtr rays, IntPtr hits, int ray_count, ESnapMode snap_mode, float snap_distance, GuidPredCB pred);
+		[DllImport(Dll)] private static extern void View3D_WindowHitTestObjects(HWindow window, IntPtr rays, IntPtr hits, int ray_count, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] HObject[] objects, int object_count);
+		[DllImport(Dll)] private static extern void View3D_WindowHitTestByCtx(HWindow window, IntPtr rays, IntPtr hits, int ray_count, GuidPredCB pred);
 
 		// Camera *********************************
 
@@ -2045,6 +2080,14 @@ namespace Rylogic.Gfx
 
 		// Set the selection box to encompass all selected objects
 		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
+
+		// Add/Remove a callback for receiving periodic hit test results
+		[DllImport(Dll)] private static extern void View3D_PeriodicHitTestCBSet(HWindow window, PeriodicHitTestCB cb, bool add);
+
+		// Add/Update/Remove a periodic hit test ray.
+		// Returns view3d::HitTestRayId::None if no more rays can be added.
+		// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
+		[DllImport(Dll)] private static extern HitTestRayId View3D_PeriodicHitTestSet(HWindow window, HitTestRayId id, v4 ws_position, v4 ws_direction, ESnapMode snap_mode, float snap_distance);
 
 		// Create/Delete the demo scene in the given window
 		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateText(HWindow window);

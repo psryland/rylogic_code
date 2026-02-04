@@ -292,11 +292,9 @@ namespace Rylogic.Gfx
 				return;
 
 			// Perform a hit test to update the position of the active hit
-			var ray = Window.Camera.RaySS(point_cs);
-			var mode = SnapMode | View3d.ESnapMode.Perspective;
 			var dist_nss = Window.Camera.PixelsToNSS(new v2((float)SnapDistance, (float)SnapDistance));
-			var dist = Math.Max(dist_nss.x, dist_nss.y);
-			var result = Window.HitTest(ray, mode, dist, x => x != CtxId && ContextPredicate(x));
+			var ray = Window.Camera.RaySS(point_cs, SnapMode | View3d.ESnapMode.Perspective, Math.Max(dist_nss.x, dist_nss.y));
+			var result = Window.HitTest(ray, x => x != CtxId && ContextPredicate(x));
 
 			// Update the current hit point
 			ActiveHit.PointWS = result.m_ws_intercept;

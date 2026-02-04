@@ -294,26 +294,26 @@ namespace Rylogic.Gfx
 			/// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 			/// 'ws_point' will be the camera position in world space.
 			/// 'ws_direction' will be the world space direction vector that passes through 'screen' at the depth 'screen.z'.</summary>
-			public void NSSPointToWSRay(v4 screen, out v4 ws_point, out v4 ws_direction)
+			public (v4 ws_point, v4 ws_direction) NSSPointToWSRay(v4 screen)
 			{
-				View3D_NSSPointToWSRay(m_window.Handle, screen, out ws_point, out ws_direction);
+				View3D_NSSPointToWSRay(m_window.Handle, screen, out var ws_point, out var ws_direction);
+				return (ws_point, ws_direction);
 			}
 
 			/// <summary>
 			/// Convert a screen space point into a world space ray from the camera.
 			/// The ray will pass though the screen space point at the focus distance of the camera.</summary>
-			public void SSPointToWSRay(PointF screen, out v4 ws_point, out v4 ws_direction)
+			public (v4 ws_point, v4 ws_direction) SSPointToWSRay(PointF screen)
 			{
 				var nss = SSPointToNSSPoint(screen);
-				NSSPointToWSRay(new v4(nss.x, nss.y, FocusDist, 1.0f), out ws_point, out ws_direction);
+				return NSSPointToWSRay(new v4(nss.x, nss.y, FocusDist, 1.0f));
 			}
 
 			/// <summary>A ray cast from the camera into the scene through client space point 'point_cs'</summary>
-			public HitTestRay RaySS(v2 point_ss)
+			public HitTestRay RaySS(v2 point_ss, ESnapMode snap_mode = ESnapMode.AllPerspective, float snap_distance = 0f)
 			{
-				var ray = new HitTestRay();
-				SSPointToWSRay(point_ss, out ray.m_ws_origin, out ray.m_ws_direction);
-				return ray;
+				var (ws_origin, ws_direction) = SSPointToWSRay(point_ss);
+				return HitTestRay.New(ws_origin, ws_direction, snap_mode, snap_distance);
 			}
 
 			/// <summary>Convert a mouse button to the default navigation operation</summary>

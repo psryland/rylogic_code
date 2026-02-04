@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "view3d-12/src/dll/v3d_window.h"
+#include "view3d-12/src/dll/conversion.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_reader_text.h"
@@ -49,6 +50,7 @@ namespace pr::rdr12
 		, m_visible_objects()
 		, m_settings()
 		, m_anim_data()
+		, m_hit_tests()
 		, m_bbox_scene(BBox::Reset())
 		, m_global_pso()
 		, m_main_thread_id(std::this_thread::get_id())
@@ -1267,7 +1269,7 @@ namespace pr::rdr12
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, RayCastInstancesCB instances)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, RayCastInstancesCB instances)
 	{
 		if (rays.size() != hits.size())
 			throw std::runtime_error("There should be a hit object for each ray");
@@ -1275,12 +1277,7 @@ namespace pr::rdr12
 		// Set up the ray cast
 		auto ray_casts = pr::vector<HitTestRay>{};
 		for (auto& ray : rays)
-		{
-			ray_casts.push_back(HitTestRay {
-				.m_ws_origin = To<v4>(ray.m_ws_origin),
-				.m_ws_direction = To<v4>(ray.m_ws_direction),
-			});
-		}
+			ray_casts.push_back(To<HitTestRay>(ray));
 
 		// Initialise the results
 		auto const invalid = view3d::HitTestResult{.m_distance = maths::float_max};
@@ -1288,7 +1285,7 @@ namespace pr::rdr12
 			r = invalid;
 
 		// Do the ray casts into the scene and save the results
-		m_scene.HitTest(ray_casts, static_cast<ESnapMode>(snap_mode), snap_distance, instances, [=](HitTestResult const& hit)
+		m_scene.HitTest(ray_casts, instances, [=](HitTestResult const& hit)
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
@@ -1317,7 +1314,7 @@ namespace pr::rdr12
 			return false;
 		}).wait();
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, ldraw::LdrObject const* const* objects, int object_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, ldraw::LdrObject const* const* objects, int object_count)
 	{
 		// Create an instances function based on the given list of objects
 		auto beg = &objects[0];
@@ -1328,9 +1325,9 @@ namespace pr::rdr12
 			auto* inst = *beg++;
 			return &inst->m_base;
 		};
-		HitTest(rays, hits, snap_mode, snap_distance, instances);
+		HitTest(rays, hits, instances);
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred, int)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::GuidPredCB pred, int)
 	{
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
@@ -1340,12 +1337,61 @@ namespace pr::rdr12
 			for (; beg != end && pred && !pred(cast<ldraw::LdrObject>(*beg)->m_context_id); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
-		HitTest(rays, hits, snap_mode, snap_distance, instances);
+		HitTest(rays, hits, instances);
+	}
+	
+	// Add/Update/Remove a periodic hit test ray.
+	// Returns 'HitTestRayId::None' if no more rays can be added.
+	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
+	// Use ws_direction = v4::Zero() to remove a ray.
+	view3d::HitTestRayId V3dWindow::PeriodicHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray_)
+	{
+		static int new_id = static_cast<int>(view3d::HitTestRayId::None);
+		auto ID = s_cast<int>(id);
+		auto ray = To<HitTestRay>(ray_);
+
+		// Add a new ray
+		if (id == view3d::HitTestRayId::None)
+		{
+			if (m_hit_tests.size() == rdr12::MaxRays)
+				return view3d::HitTestRayId::None;
+
+			ray.m_id = ++new_id;
+			m_hit_tests.push_back(ray);
+			id = s_cast<view3d::HitTestRayId>(ray.m_id);
+		}
+
+		// Remove a ray
+		else if (ray.m_ws_direction == v4::Zero())
+		{
+			auto num = std::erase_if(m_hit_tests, [ID](HitTestRay const& r) { return r.m_id == ID; });
+			id = num != 0 ? id : view3d::HitTestRayId::None;
+		}
+
+		// Update a ray
+		else
+		{
+			auto it = std::ranges::find_if(m_hit_tests, [ID](HitTestRay const& r) { return r.m_id == ID; });
+			if (it == std::end(m_hit_tests))
+			{
+				id = view3d::HitTestRayId::None;
+			}
+			else
+			{
+				*it = ray;
+			}
+		}
+
+		m_scene.HitTestContinuous(m_hit_tests, [](BaseInstance const*) { return true; });
+		return id;
 	}
 
 	// Move the focus point to the hit target
 	void V3dWindow::CentreOnHitTarget(view3d::HitTestRay const& ray_)
 	{
+		HitTestRay ray = To<HitTestRay>(ray_);
+		HitTestResult target = {};
+
 		auto beg = std::begin(m_scene.m_instances);
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
@@ -1354,14 +1400,8 @@ namespace pr::rdr12
 			return beg != end ? *beg++ : nullptr;
 		};
 
-		HitTestRay ray = {
-			.m_ws_origin = To<v4>(ray_.m_ws_origin),
-			.m_ws_direction = To<v4>(ray_.m_ws_direction),
-		};
-		HitTestResult target = {};
-
 		// Cast 'ray' into the scene
-		m_scene.HitTest({ &ray, 1ULL }, ESnapMode::All, 0, instances, [&](HitTestResult const& hit)
+		m_scene.HitTest({ &ray, 1ULL }, instances, [&](HitTestResult const& hit)
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
@@ -1714,6 +1754,9 @@ namespace pr::rdr12
 				CentreOnHitTarget(view3d::HitTestRay{
 					.m_ws_origin = To<view3d::Vec4>(pt),
 					.m_ws_direction = To<view3d::Vec4>(dir),
+					.m_snap_mode = view3d::ESnapMode::All,
+					.m_snap_distance = 0,
+					.m_id = 0,
 				});
 				return true;
 			}

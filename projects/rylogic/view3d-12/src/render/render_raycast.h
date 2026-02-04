@@ -15,18 +15,18 @@ namespace pr::rdr12
 	struct RenderRayCast :RenderStep
 	{
 	private:
-		pr::vector<HitTestRay> m_rays;          // Rays to cast
-		float                  m_snap_distance; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
-		ESnapMode              m_snap_mode;     // Snap behaviour
-		RayCastFilter          m_include;       // A filter for instances to include for hit testing
-		GfxCmdList             m_cmd_list;      // Command buffer
-		GpuSync                m_gsync;         //
-		shaders::RayCast       m_shader;        // The ray cast shader
-		D3DPtr<ID3D12Resource> m_zero;          // A buffer of zeros used to reset the output counter
-		D3DPtr<ID3D12Resource> m_out;           // An unstructured buffer for the number of intercepts and the intercept data
-		GpuReadbackBuffer      m_readback;      // A read back buffer for reading intercept data
-		GpuTransferAllocation  m_output;        // The CPU copy of the results from the last ray cast
-		bool                   m_continuous;    // Whether this step is used as a one-shot or for every frame render
+		pr::vector<HitTestRay> m_rays;            // Rays to cast
+		RayCastFilter          m_include;         // A filter for instances to include for hit testing
+		GfxCmdList             m_cmd_list;        // Command buffer
+		GpuSync                m_gsync;           //
+		shaders::RayCast       m_shader;          // The ray cast shader
+		D3DPtr<ID3D12Resource> m_zero;            // A buffer of zeros used to reset the output counter
+		D3DPtr<ID3D12Resource> m_out;             // An unstructured buffer for the number of intercepts and the intercept data
+		GpuReadbackBuffer      m_readback;        // A read back buffer for reading intercept data
+		GpuTransferAllocation  m_output;          // The CPU copy of the results from the last ray cast
+		Sub                    m_sync_completed;  // Subscription to the GPU sync completed event
+		uint64_t               m_pending_results; // Sync point for the last periodic ray cast
+		bool                   m_continuous;      // Whether this step is used as a one-shot or for every frame render
 
 	public:
 
@@ -40,7 +40,7 @@ namespace pr::rdr12
 		// 'snap_distance', if the mode is 'perspective' then this is the ratio proportional to depth from the ray origin, otherwise it's in world units.
 		// 'flags' controls what primitives snapping applies to.
 		// 'filter' filters instances added to the render step (i.e. decides what's hit-able)
-		void SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include);
+		void SetRays(std::span<HitTestRay const> rays, RayCastFilter include);
 
 		// Perform the ray cast and read the results
 		std::future<void> ExecuteImmediate(RayCastResultsOut out);

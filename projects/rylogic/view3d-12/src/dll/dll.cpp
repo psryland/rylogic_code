@@ -22,7 +22,6 @@
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/dx9_context.h"
-#include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
@@ -32,6 +31,7 @@
 #include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_stream.h"
 #include "view3d-12/src/dll/dll_forward.h"
+#include "view3d-12/src/dll/conversion.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
@@ -1034,14 +1034,14 @@ VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(view3d::Window window, BO
 // 'flags' - what can be hit.
 // 'objects' - An array of objects to hit test
 // 'object_count' - The length of the 'objects' array.
-VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::ESnapMode snap_mode, float snap_distance, view3d::Object const* objects, int object_count)
+VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::Object const* objects, int object_count)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_mode, snap_distance, objects, object_count);
+		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, objects, object_count);
 	}
 	CatchAndReport(View3D_WindowHitTestObjects, window, );
 }
@@ -1056,7 +1056,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, vie
 // 'include_count' - the number of context ids that should be included
 // 'exclude_count' - the number of context ids that should be excluded
 // 'include_count+exclude_count' = the length of the 'context_ids' array. If 0, then all context ids are included for hit testing
-VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::ESnapMode snap_mode, float snap_distance, view3d::GuidPredCB pred)
+VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, view3d::GuidPredCB pred)
 {
 	try
 	{
@@ -1065,7 +1065,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3
 		DllLockGuard;
 		auto ray_span = std::span<view3d::HitTestRay const>{ rays, s_cast<size_t>(ray_count) };
 		auto hit_results = std::span<view3d::HitTestResult>{ hits, s_cast<size_t>(ray_count) };
-		window->HitTest(ray_span, hit_results, snap_mode, snap_distance, pred, 0);
+		window->HitTest(ray_span, hit_results, pred, 0);
 	}
 	CatchAndReport(View3D_WindowHitTestByCtx, window, );
 }
@@ -3104,6 +3104,36 @@ VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(view3d::Window window
 		window->SelectionBoxFitToSelected();
 	}
 	CatchAndReport(View3D_SelectionBoxFitToSelected, window, );
+}
+
+// Add/Remove a callback for receiving periodic hit test results
+VIEW3D_API void __stdcall View3D_PeriodicHitTestCBSet(view3d::Window window, view3d::PeriodicHitTestCB cb, BOOL add)
+{
+	try
+	{
+		Validate(window);
+		if (!cb) throw std::runtime_error("Callback function is null");
+
+		DllLockGuard;
+		if (add)
+			window->OnPeriodicHitTestResults += cb;
+		else
+			window->OnPeriodicHitTestResults -= cb;
+	}
+	CatchAndReport(View3D_PeriodicHitTestCBSet, ,);
+}
+
+// Add/Update/Remove a periodic hit test ray.
+VIEW3D_API view3d::HitTestRayId __stdcall View3D_PeriodicHitTestSet(view3d::Window window, view3d::HitTestRayId id, view3d::HitTestRay ray)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		return window->PeriodicHitTest(id, ray);
+	}
+	CatchAndReport(View3D_PeriodicHitTestSet, window, {});
 }
 
 // Create/Delete the demo scene in the given window

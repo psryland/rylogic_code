@@ -33,7 +33,7 @@ namespace pr::rdr12::shaders
 	}
 
 	// Config the shader
-	void RayCast::SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance)
+	void RayCast::SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, std::span<HitTestRay const> rays)
 	{
 		if (rays.size() > _countof(CBufFrame::m_rays))
 			throw std::runtime_error("Too many rays provided");
@@ -41,13 +41,15 @@ namespace pr::rdr12::shaders
 		CBufFrame cb0 = {};
 		for (auto const& r : rays)
 		{
+			assert(r.m_snap_mode != ESnapMode::NoSnap && "HitTest will not hit anything because no snap mode is set");
+
 			auto& ray = cb0.m_rays[&r - rays.data()];
-			ray.ws_direction = r.m_ws_direction;
-			ray.ws_origin = r.m_ws_origin;
+			ray.ws_direction = r.m_ws_direction.w0();
+			ray.ws_origin = r.m_ws_origin.w1();
+			ray.m_snap_mode = s_cast<int>(r.m_snap_mode);
+			ray.m_snap_distance = r.m_snap_distance;
 		}
 		cb0.m_ray_count = s_cast<int>(rays.size());
-		cb0.m_snap_mode = s_cast<int>(snap_mode);
-		cb0.m_snap_distance = snap_distance;
 
 		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);

@@ -11,16 +11,20 @@ namespace pr::rdr12
 	//  - The geometry shader used for hit testing (face, edge, or vert) depends on the model topology.
 	//  - ESnapMode controls what sort of snapping is allowed.
 	//  - ESnapType is an output value that indicates how a hit result was snapped.
+	static constexpr int MaxRays = 16;
+	static constexpr int MaxIntercepts = 256;
+
 
 	// Point snapping mode. How rays should snap to nearby features (Keep in sync with 'SnapMode_' in 'ray_cast_cbuf.hlsli')
 	enum class ESnapMode :int
 	{
 		NoSnap = 0,
-		Vert = 1 << 0,
-		Edge = 1 << 1,
-		Face = 1 << 2,
-		All  = Face | Edge | Vert,
+		Verts = 1 << 0,
+		Edges = 1 << 1,
+		Faces = 1 << 2,
 		Perspective = 1 << 8, // If set, then snap distance scales with distance from the origin
+		All  = Faces | Edges | Verts,
+		AllPerspective = All | Perspective,
 		_flags_enum = 0,
 	};
 
@@ -39,8 +43,16 @@ namespace pr::rdr12
 	struct HitTestRay
 	{
 		// The world space origin and direction of the ray (normalisation not required)
-		v4 m_ws_origin;
-		v4 m_ws_direction;
+		v4 m_ws_origin = v4::Origin();
+		v4 m_ws_direction = v4::Zero();
+
+		// Snap mode and distance. If snap_mode includes ESnapMode::Perspective, then the snap distance scales with distance from the origin
+		ESnapMode m_snap_mode = ESnapMode::Verts | ESnapMode::Edges | ESnapMode::Faces | ESnapMode::Perspective; // Snap behaviour
+		float m_snap_distance = 0; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
+
+		// User provided id for the ray
+		int m_id = 0;
+		int pad = 0;
 	};
 
 	// The output of a ray cast into the scene

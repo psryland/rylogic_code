@@ -38,16 +38,14 @@ namespace pr::rdr12
 	}
 
 	using Intercept = shaders::ray_cast::Intercept;
-	constexpr int MaxRays = shaders::ray_cast::MaxRays;
-	constexpr int MaxIntercepts = shaders::ray_cast::MaxIntercepts;
 	constexpr int SOBufferCount = MaxRays * MaxIntercepts + 1; // +1 for space to store the buffer size counter
 	static_assert(sizeof(Intercept) >= sizeof(uint64_t));
+	static_assert(MaxRays == shaders::ray_cast::MaxRays);
+	static_assert(MaxIntercepts == shaders::ray_cast::MaxIntercepts);
 
 	RenderRayCast::RenderRayCast(Scene& scene, bool continuous)
 		: RenderStep(Id, scene)
 		, m_rays()
-		, m_snap_distance()
-		, m_snap_mode(ESnapMode::Vert | ESnapMode::Edge | ESnapMode::Face | ESnapMode::Perspective)
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
 		, m_gsync(scene.d3d())
@@ -56,6 +54,8 @@ namespace pr::rdr12
 		, m_out()
 		, m_readback(m_gsync, SOBufferCount * sizeof(Intercept))
 		, m_output()
+		, m_sync_completed()
+		, m_pending_results()
 		, m_continuous(continuous)
 	{
 		// Stream output stage buffer format
@@ -106,15 +106,28 @@ namespace pr::rdr12
 			ResDesc rdesc = ResDesc::Buf<Intercept>(SOBufferCount, {}).usage(EUsage::UnorderedAccess).def_state(D3D12_RESOURCE_STATE_STREAM_OUT);
 			m_out = factory.CreateResource(rdesc, "RayCast-Intercepts");
 		}
+
+		// Attach a handler to watch for completed periodic ray casts
+		if (continuous)
+		{
+			m_sync_completed = m_gsync.SyncPointCompleted += [this](GpuSync&, EmptyArgs const&)
+			{
+				if (m_pending_results == 0 || m_gsync.CompletedSyncPoint() < m_pending_results)
+					return;
+					
+				m_pending_results = 0;
+
+				// Notify that new results are available
+				throw std::runtime_error("not implemented"); //todo
+			};
+		}
 	}
 
 	// Set the rays to cast.
-	void RenderRayCast::SetRays(std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance, RayCastFilter include)
+	void RenderRayCast::SetRays(std::span<HitTestRay const> rays, RayCastFilter include)
 	{
 		// Save the rays so we can match ray indices to the actual ray.
 		m_rays = rays.subspan(0, std::min<size_t>(rays.size(), MaxRays));
-		m_snap_mode = snap_mode;
-		m_snap_distance = snap_distance;
 		m_include = include;
 	}
 
@@ -208,8 +221,8 @@ namespace pr::rdr12
 				auto average_depth = 0.5f * (l.ws_intercept.w + r.ws_intercept.w);
 
 				// If one of the intercepts is a face snap
-				if ((ESnapType)l.snap_type == ESnapType::Face ||
-					(ESnapType)r.snap_type == ESnapType::Face)
+				if (s_cast<ESnapType>(l.snap_type) == ESnapType::Face ||
+					s_cast<ESnapType>(r.snap_type) == ESnapType::Face)
 				{
 					// At least one of the intercepts is a face, sort by distance
 					if (Abs(l.ws_intercept.w - r.ws_intercept.w) > maths::tinyf)
@@ -219,10 +232,15 @@ namespace pr::rdr12
 					// (Remember face snap have zero distance from the ray)
 					return l.snap_type < r.snap_type;
 				}
+				auto const& ray_l = m_rays[l.ray_index];
+				auto const& ray_r = m_rays[r.ray_index];
+
+				auto l_snap_dist = AllSet(ray_l.m_snap_mode, ESnapMode::Perspective) ? ray_l.m_snap_distance * average_depth : ray_l.m_snap_distance;
+				auto r_snap_dist = AllSet(ray_r.m_snap_mode, ESnapMode::Perspective) ? ray_r.m_snap_distance * average_depth : ray_r.m_snap_distance;
+				auto snap_dist = std::max(l_snap_dist, r_snap_dist);
 
 				// Neither intercept is a face snap then sort by distance if
-				// the difference in distance is larger than the snap distance.
-				auto snap_dist = AllSet(m_snap_mode, ESnapMode::Perspective) ? m_snap_distance * average_depth : m_snap_distance;
+				// the difference in distance is larger than the snap distances.
 				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > snap_dist)
 					return l.ws_intercept.w < r.ws_intercept.w;
 
@@ -235,14 +253,14 @@ namespace pr::rdr12
 						return l.snap_type < r.snap_type;
 
 					// Sort by distance of the intercepts from the ray
-					auto dist_l = DistSqFromRay(m_rays[l.ray_index], l);
-					auto dist_r = DistSqFromRay(m_rays[r.ray_index], r);
+					auto dist_l = DistSqFromRay(ray_l, l);
+					auto dist_r = DistSqFromRay(ray_r, r);
 					return dist_l < dist_r;
 				}
 
 				// The intercepts are point snaps. Sort by distance from the ray
-				auto dist_l = DistSqFromRay(m_rays[l.ray_index], l);
-				auto dist_r = DistSqFromRay(m_rays[r.ray_index], r);
+				auto dist_l = DistSqFromRay(ray_l, l);
+				auto dist_r = DistSqFromRay(ray_r, r);
 				return dist_l < dist_r;
 			});
 
@@ -290,8 +308,9 @@ namespace pr::rdr12
 		// Commands complete
 		m_cmd_list.Close();
 
-		// need to process the 'output' like in ExecuteImmediate
-		throw std::runtime_error("not implemented");
+		// Add a sync point and wait for it
+		m_pending_results = m_gsync.AddSyncPoint(rdr().GfxQueue());
+		m_cmd_list.SyncPoint(m_pending_results);
 	}
 
 	// Step up the GPU call for the ray cast
@@ -324,7 +343,7 @@ namespace pr::rdr12
 		m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 		// Configure the shader constants
-		m_shader.SetupFrame(m_cmd_list.get(), m_upload_buffer, m_rays, m_snap_mode, m_snap_distance);
+		m_shader.SetupFrame(m_cmd_list.get(), m_upload_buffer, m_rays);
 
 		BarrierBatch barriers(m_cmd_list);
 

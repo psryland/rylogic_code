@@ -27,7 +27,7 @@ namespace pr::rdr12::shaders
 	struct RayCast :Shader
 	{
 		explicit RayCast(ID3D12Device* device);
-		void SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, std::span<HitTestRay const> rays, ESnapMode snap_mode, float snap_distance);
+		void SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, std::span<HitTestRay const> rays);
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, DrawListElement const* dle);
 	};
 }

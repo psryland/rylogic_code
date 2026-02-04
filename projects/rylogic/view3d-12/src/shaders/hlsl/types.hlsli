@@ -61,6 +61,7 @@ static const int AlphaFlags_HasAlpha            = (1 << 0);
 	using int3     = pr::iv3;
 	using int4     = pr::iv4;
 	using uint4    = pr::iv4;
+	using uint     = uint32_t;
 	using voidp    = void const*;
 
 	#define cbuffer struct
