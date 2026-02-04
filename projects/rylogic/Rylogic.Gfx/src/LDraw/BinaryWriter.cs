@@ -239,6 +239,16 @@ namespace Rylogic.LDraw
 			if (!h) return;
 			Write(EKeyword.Hidden, h.m_hide);
 		}
+		private void Append(Serialiser.ZTest z)
+		{
+			if (!z) return;
+			Write(EKeyword.NoZTest, !z.m_ztest);
+		}
+		private void Append(Serialiser.ZWrite z)
+		{
+			if (!z) return;
+			Write(EKeyword.NoZWrite, !z.m_zwrite);
+		}
 		private void Append(Serialiser.Wireframe w)
 		{
 			if (!w) return;

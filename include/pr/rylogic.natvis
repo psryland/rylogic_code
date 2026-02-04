@@ -228,6 +228,12 @@ old:
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_Quaternion"></DisplayString>
 		-->
 	</Type>
+	<Type Name="pr::Xform&lt;*&gt;">
+		<DisplayString>P:[{pos.xyz}]  R:[{rot}]  S:[{scl.xyz}]</DisplayString> 
+		<!--
+		<DisplayString>new Xform(&#10;	new v4({pos.x}f, {pos.y}f, {pos.z}f, {pos.w}f),&#10;	new Quat({rot.x}f, {rot.y}f, {rot.z}f, {rot.w}f),&#10;	new v4({scl.x}f, {scl.y}f, {scl.z}f, {scl.w}f)&#10;);</DisplayString>
+		-->
+	</Type>
 	<Type Name="pr::Mat2x2&lt;*&gt;">
 		<DisplayString>{x}  {y}</DisplayString> 
 		<!--

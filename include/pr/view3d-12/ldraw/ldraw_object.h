@@ -122,24 +122,12 @@ namespace pr::rdr12::ldraw
 		// Allows handlers to change the object's 'i2w' transform, visibility, etc.
 		EventHandler<LdrObject&, Scene const&, true> OnAddToScene;
 
-		// Recursively add this object and its children to a scene
-		void AddToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
-
-		// Recursively add the bounding box instance for this object using 'bbox_model'
-		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(Scene& scene, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
-
-		// Notes:
-		//  - Methods with a 'name' parameter apply an operation on this object
-		//    or any of its child objects that match 'name'. If 'name' is null,
-		//    then the change is applied to this object only. If 'name' is "",
-		//    then the change is applied to this object and all children recursively.
-		//	  Otherwise, the change is applied to all child objects that match name.
-		//  - If 'name' begins with '#' then the name parameter is treated as a regular
-		//    expression.
-
 		// Apply an operation on this object or any of its child objects that match 'name'.
 		// 'func' should have a signature: 'bool func(LdrObject* obj);' returning false to 'quick-out'.
+		// 'name' == nullptr: apply to this object only,
+		// 'name' == "": apply to this object and all children recursively.
+		// 'name' == "foo": apply to all child objects named 'foo'.
+		// 'name' == "#regex": apply to all child objects whose name matches the regex.
 		// 'obj' is a recursion parameter, callers should use 'nullptr'
 		// Returns 'true' if 'func' always returns 'true'.
 		template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
@@ -280,6 +268,9 @@ namespace pr::rdr12::ldraw
 		LdrObjectPtr RemoveChild(LdrObjectPtr& child);
 		LdrObjectPtr RemoveChild(size_t i);
 		void RemoveAllChildren();
+
+		// True if this object or any child objects are currently animating
+		bool IsAnimating() const;
 
 		// Predicate for matching this object by context id
 		struct MatchId

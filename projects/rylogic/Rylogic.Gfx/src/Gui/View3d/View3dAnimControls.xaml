@@ -115,7 +115,7 @@
 				VerticalAlignment="Center"
 				/>
 			<TextBox
-				Text="{Binding AnimClock, StringFormat={}{0:N1}, FallbackValue='0.0'}"
+				Text="{Binding AnimClock, StringFormat={}{0:N3}, FallbackValue='0.0'}"
 				ToolTip="Animation clock value."
 				HorizontalContentAlignment="Center"
 				MinWidth="60"
@@ -144,7 +144,7 @@
 				/>
 				<gui:SliderFunction
 					Minimum="0"
-					Maximum="3.162277660168379332"
+					Maximum="1.0"
 					FunctionExpr="sqr(x)"
 					InverseExpr="sqrt(x)"
 					ValueFn="{Binding StepSize}"
@@ -170,11 +170,11 @@
 				<TextBox
 					Grid.Row="1"
 					Grid.Column="1"
-					HorizontalAlignment="Center"
 					VerticalAlignment="Center"
-					Text="{Binding Frame, StringFormat={}{0:N0}}"
-					MinWidth="40"
-					Margin="2"
+					HorizontalContentAlignment="Center"
+					Text="{Binding Frame, StringFormat={}{0:N2}}"
+					MinWidth="60"
+					Margin="0,2,2,2"
 				/>
 
 				<!-- Frame Rate -->
@@ -183,7 +183,8 @@
 					Text="{Binding FrameRate, StringFormat={}{0:N1} fps}"
 					IsEditable="True"
 					SelectedIndex="0"
-					Background="#EEE"
+					BorderThickness="1"
+					BorderBrush="#DDD"
 					Margin="1,1,20,1"
 					MinWidth="60"
 				>
@@ -192,15 +193,6 @@
 				</ComboBox>
 			</StackPanel>
 		</StackPanel>
-
-		
-		<!-- Relative / Absolute time
-		<CheckBox
-			Content="Relative Time"
-			IsChecked="{Binding RelativeTime}"
-			VerticalAlignment="Center"
-		/>
-		-->
 	</WrapPanel>
 	<Grid
 		Grid.Row="1"
@@ -231,10 +223,12 @@
 		<Slider
 			Grid.Row="0"
 			Grid.Column="1"
+			PreviewMouseWheel="Slider_PreviewMouseWheel"
 			Value="{Binding Frame}"
 			Minimum="{Binding Frame0}"
 			Maximum="{Binding FrameN}"
-			Interval="1"
+			SmallChange="0.01"
+			LargeChange="1"
 			Margin="3"
 		/>
 

@@ -226,11 +226,15 @@ namespace Rylogic.Maths
 		/// <summary>Create a scale matrix</summary>
 		public static m3x4 Scale(float s)
 		{
-			return new(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis);
+			return Scale(s, s, s);
+		}
+		public static m3x4 Scale(v3 s)
+		{
+			return Scale(s.x, s.y, s.z);
 		}
 		public static m3x4 Scale(float sx, float sy, float sz)
 		{
-			return new(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
+			return new(sx * v4.XAxis, sy * v4.YAxis, sz * v4.ZAxis);
 		}
 
 		/// <summary>Create a shear matrix</summary>
@@ -681,6 +685,16 @@ namespace Rylogic.Maths
 				Cross(m.x, m.y) / det);
 
 			return Transpose(tmp);
+		}
+
+		/// <summary>Normalise the columns of 'm' returning the lengths prior to renormalising</summary>
+		public static (m3x4, v3) Normalise(m3x4 m)
+		{
+			var scale = new v3(m.x.Length, m.y.Length, m.z.Length);
+			m.x /= scale.x;
+			m.y /= scale.y;
+			m.z /= scale.z;
+			return (m, scale);
 		}
 
 		/// <summary>Orthonormalise 'm' in-place</summary>

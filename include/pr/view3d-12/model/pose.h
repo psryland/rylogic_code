@@ -22,10 +22,11 @@ namespace pr::rdr12
 		double m_time0;               // The animation time last applied
 		double m_time1;               // The animation time to display next
 		double m_stretch;             // Playback speed multiplier
+		double m_bias;                // Time offset bias
 		EAnimStyle m_style;           // The style of animation
 		EAnimFlags m_flags;           // Behaviour flags
 
-		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch);
+		Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch, double bias);
 
 		// The root bone transform in animation space at 'time'
 		m4x4 RootToAnim(double time, EAnimFlags flags) const;
@@ -36,6 +37,12 @@ namespace pr::rdr12
 
 		// Number of bones in this pose
 		int BoneCount() const;
+
+		// True if the current animation time is within the time range of this animation
+		bool IsAnimating() const;
+
+		// Return the time value relative to 'm_time_range' from the source animatino
+		double SrcAnimTime(double time) const;
 
 		// Reset to the rest pose
 		void ResetPose(GfxCmdList& cmd_list, GpuUploadBuffer& upload_buffer);

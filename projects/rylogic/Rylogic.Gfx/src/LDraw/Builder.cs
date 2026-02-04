@@ -290,7 +290,10 @@ namespace Rylogic.LDraw
 		protected Serialiser.AxisId m_axis_id = new();
 		protected Serialiser.Solid m_solid = new();
 		protected Serialiser.Hidden m_hidden = new();
+		protected Serialiser.ZTest m_ztest = new();
+		protected Serialiser.ZWrite m_zwrite = new();
 		private LdrTransform? m_bake = null;
+		private LdrFont? m_font = null;
 
 		/// <summary>Object name</summary>
 		public TDerived name(Serialiser.Name name)
@@ -396,6 +399,20 @@ namespace Rylogic.LDraw
 			return (TDerived)this;
 		}
 
+		/// <summary>NoZTest</summary>
+		public TDerived ztest(bool on = true)
+		{
+			m_ztest = new(on);
+			return (TDerived)this;
+		}
+		
+		/// <summary>NoZWrite</summary>
+		public TDerived zwrite(bool on = true)
+		{
+			m_zwrite = new(on);
+			return (TDerived)this;
+		}
+
 		/// <summary>Bake a transform into the object</summary>
 		public LdrTransform bake()
 		{
@@ -403,10 +420,18 @@ namespace Rylogic.LDraw
 			return m_bake;
 		}
 
+		/// <summary>The text font</summary>
+		public LdrFont font()
+		{
+			m_font ??= new();
+			return m_font;
+		}
+
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter writer)
 		{
-			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_group_colour, m_o2w);
+			writer.Append(m_axis_id, m_wire, m_solid, m_hidden, m_group_colour, m_ztest, m_zwrite, m_o2w);
+			if (m_font != null) m_font.WriteTo(writer);
 			if (m_bake != null) m_bake.WriteTo(writer);
 			base.WriteTo(writer);
 		}
@@ -1389,7 +1414,7 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>The text font</summary>
-		public LdrFont font()
+		public new LdrFont font()
 		{
 			m_current.m_font ??= new();
 			return m_current.m_font;
@@ -1410,6 +1435,8 @@ namespace Rylogic.LDraw
 			{
 				void WriteBlock(Block block)
 				{
+					if (block.m_font != null)
+						block.m_font.WriteTo(res);
 					if (block.m_screen_space)
 						res.Write(EKeyword.ScreenSpace);
 					if (block.m_billboard)

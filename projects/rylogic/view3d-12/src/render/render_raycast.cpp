@@ -154,6 +154,7 @@ namespace pr::rdr12
 		pix::BeginCapture(L"E:/Dump/LDraw/HitTest.wpix");
 		#endif
 
+		// Build the command list
 		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
 		auto output = ExecuteCore();
 		m_cmd_list.Close();
@@ -344,10 +345,19 @@ namespace pr::rdr12
 		{
 			auto const& nugget = *dle.m_nugget;
 			auto const& instance = *dle.m_instance;
-			(void)instance; // todo: Skinned instances?
-
-			// Set the PSO
 			auto desc = m_default_pipe_state;
+
+			// Add skinning data for skinned meshes
+			if (PosePtr pose = FindPose(instance); pose && nugget.m_model->m_skin)
+			{
+				pose->Update(m_cmd_list, m_upload_buffer);
+				auto srv_pose = wnd().m_heap_view.Add(pose->m_srv);
+				auto srv_skin = wnd().m_heap_view.Add(nugget.m_model->m_skin.m_srv);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::ray_cast::ERootParam::Pose, srv_pose);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::ray_cast::ERootParam::Skin, srv_skin);
+			}
+
+			// Select the appropriate geometry shader based on topology
 			switch (nugget.m_topo)
 			{
 				case ETopo::PointList:

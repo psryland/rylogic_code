@@ -181,6 +181,7 @@ namespace pr::rdr12
 				rs.AddInstance(*inst);
 		}
 
+		// Run the hit test
 		auto result = m_raycast_immed->ExecuteImmediate(out);
 
 		// Reset ready for next time

@@ -219,6 +219,14 @@ namespace Rylogic.Maths
 		{
 			return lhs / (float)rhs;
 		}
+		public static v4 operator /(float lhs, v4 rhs)
+		{
+			return new(lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w);
+		}
+		public static v4 operator /(double lhs, v4 rhs)
+		{
+			return (float)lhs / rhs;
+		}
 		public static v4 operator /(v4 lhs, v4 rhs)
 		{
 			return new(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);

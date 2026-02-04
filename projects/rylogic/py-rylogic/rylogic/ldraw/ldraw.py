@@ -196,6 +196,7 @@ class EKeyword(Enum):
 	Group = 1605967500
 	GroupColour = 2738848320
 	Hidden = 4128829753
+	HideWhenNotAnimating = 2975106646
 	Instance = 193386898
 	Inverse = 2986472067
 	Layers = 2411172191
@@ -277,6 +278,7 @@ class EKeyword(Enum):
 	TextLayout = 2881593448
 	TextStream = 998584670
 	Texture = 1013213428
+	TimeBias = 2748914857
 	TimeRange = 1138166793
 	Transpose = 3224470464
 	Triangle = 84037765

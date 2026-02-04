@@ -28,8 +28,14 @@ namespace pr::rdr12
 		// Return the frame rate of the underlying animation
 		virtual double FrameRate() const = 0;
 
+		// The length of the underlying animation
+		virtual double Duration() const = 0;
+
 		// Apply an animation to the given bones
 		virtual void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) = 0;
+
+		// Clone this animator
+		virtual AnimatorPtr Clone() const = 0;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<Animator>* doomed);
@@ -49,9 +55,15 @@ namespace pr::rdr12
 
 		// Return the frame rate of the underlying animation
 		double FrameRate() const override;
+		
+		// The length of the underlying animation
+		double Duration() const override;
 
 		// Apply an animation to the given bones
 		void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) override;
+
+		// Clone this animator
+		AnimatorPtr Clone() const override;
 	};
 
 	struct Animator_InterpolatedAnimation : Animator
@@ -67,7 +79,7 @@ namespace pr::rdr12
 		KinematicKeyFrameAnimationPtr m_anim; // The animation sequence to read from
 		vector<Interpolators, 0> m_interp; // Interpolators for each track
 		vector<KinematicKey, 0> m_keys; // A recycling buffer for reading key frames into
-		TimeRange m_time_range; // The time range of the current interpolation period
+		TimeRange m_interp_time_range; // The time range of the current interpolation period
 
 		Animator_InterpolatedAnimation(KinematicKeyFrameAnimationPtr anim);
 
@@ -77,7 +89,12 @@ namespace pr::rdr12
 		// Return the frame rate of the underlying animation
 		double FrameRate() const override;
 
+		// The length of the underlying animation
+		double Duration() const override;
+
 		// Apply an animation to the given bones
 		void Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags) override;
-	};
+
+		// Clone this animator
+		AnimatorPtr Clone() const override;	};
 }

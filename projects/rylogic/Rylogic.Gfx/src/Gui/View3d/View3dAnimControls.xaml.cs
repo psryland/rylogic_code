@@ -49,6 +49,20 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty ViewWindowProperty = Gui_.DPRegister<View3dAnimControls>(nameof(ViewWindow), null, Gui_.EDPFlags.None);
 
+		/// <summary>Mouse wheel causes the slider to move</summary>
+		private void Slider_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+		{
+			if (ViewWindow == null)
+				return;
+
+			// Step by one frame
+			var step = StepSize != 0 ? StepSize : (1 / FrameRate);
+			AnimClock += e.Delta > 0 ? +step : -step;
+			
+			// Mark as handled to prevent bubbling
+			e.Handled = true;
+		}
+
 		/// <summary>Animation time</summary>
 		public double AnimClock
 		{
@@ -56,7 +70,7 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				if (AnimClock == value || ViewWindow == null) return;
-				ViewWindow.AnimTime = value;
+				ViewWindow.AnimTime = Math.Max(value, 0);
 				ViewWindow.AnimControl(View3d.EAnimCommand.Step);
 				NotifyPropertyChanged(nameof(AnimClock));
 				NotifyPropertyChanged(nameof(Frame));
@@ -117,9 +131,9 @@ namespace Rylogic.Gui.WPF
 		} = 0;
 
 		/// <summary>The current frame</summary>
-		public int Frame
+		public double Frame
 		{
-			get => (int)Math.Floor(AnimClock * FrameRate);
+			get => AnimClock * FrameRate;
 			set
 			{
 				if (Frame == value) return;

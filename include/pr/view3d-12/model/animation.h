@@ -44,6 +44,9 @@ namespace pr::rdr12
 	//  - Model hierarchies need to include a transform from child model to root model space, because the pose transforms
 	//    are the same for all models in the hierarchy, i.e., in object space.
 
+	// The root bone is always track 0
+	static constexpr int RootBoneTrack = 0;
+
 	// Simple animation styles
 	enum class EAnimStyle : uint8_t
 	{
@@ -80,6 +83,30 @@ namespace pr::rdr12
 		_flags_enum = 0,
 	};
 
+	// Interface for reading animation data from various sources
+	struct IAnimSource
+	{
+		virtual ~IAnimSource() = default;
+		virtual int key_count() const noexcept = 0;
+		virtual int track_count() const noexcept = 0;
+		virtual int fcurve_count() const noexcept = 0;
+		virtual int tcurve_count() const noexcept = 0;
+		virtual double frame_rate() const noexcept = 0;
+		virtual int key_to_frame(int key_index) const = 0;
+		virtual uint16_t track_to_bone(int track_index) const = 0;
+		virtual void ReadTrackValues(int frame_index, int track_index, std::span<xform> samples) const = 0;
+		virtual void ReadFCurveValues(int frame_index, int track_index, std::span<float> samples) const = 0;
+		virtual void ReadTCurveValues(int frame_index, int track_index, std::span<xform> samples) const = 0;
+	};
+
+	// A clip within an animation
+	struct Clip
+	{
+		float m_start = 0; // The time offset to start the clip from
+		float m_duration = std::numeric_limits<float>::max(); // The length of the clip
+		float m_bias = 0; // The offset to apply when playing the clip
+	};
+
 	// Transient type for a bone transform
 	struct BoneKey
 	{
@@ -99,7 +126,7 @@ namespace pr::rdr12
 		// Convert to xform
 		operator xform() const
 		{
-			return xform{m_rot, m_pos.w1(), m_scl.w1()};
+			return xform{m_pos.w1(), m_rot, m_scl.w1()};
 		}
 
 		// Interpolate between two key frames
@@ -128,7 +155,7 @@ namespace pr::rdr12
 		// Convert to xform
 		operator xform() const
 		{
-			return xform{m_rot, m_pos.w1(), m_scl.w1()};
+			return xform{m_pos.w1(), m_rot, m_scl.w1()};
 		}
 
 		// Convert to a BoneKey
@@ -259,7 +286,6 @@ namespace pr::rdr12
 		vector<int, 0> m_fidxs;     // Frame index of each key frame. Empty if one key per frame.
 
 		KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
-		KinematicKeyFrameAnimation(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
 
 		// Number of tracks in this animation
 		int track_count() const;
@@ -273,14 +299,20 @@ namespace pr::rdr12
 		// Number of keys in this animation
 		int key_count() const;
 
-		// Get the original frame number for the given key index
+		// Get the frame number in the source animation for the given key index
 		int src_frame(int key_index) const;
+
+		// Ranged for helper. Returns pairs of src frame number and animaion time for that frame
+		auto src_frames() const;
 
 		// The length (in seconds) of this animation
 		double duration() const;
 
 		// The effective frame rate implied by the duration and number of keys
 		double frame_rate() const;
+
+		// Get the root to animation space transform for 'key_index'
+		xform root_to_anim(int key_index) const;
 
 		// Convert a time in seconds to a key index. Returns the key with time just less that 'time_s'
 		int TimeToKeyIndex(float time_s) const;
@@ -298,24 +330,12 @@ namespace pr::rdr12
 		void ReadKeys(int key_idx, int track_index, std::span<xform> out) const;
 		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
+		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'
+		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations);
+		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
+
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);
-	};
-
-	// Interface for reading animation data from various sources
-	struct IAnimSource
-	{
-		virtual ~IAnimSource() = default;
-		virtual int key_count() const noexcept = 0;
-		virtual int track_count() const noexcept = 0;
-		virtual int fcurve_count() const noexcept = 0;
-		virtual int tcurve_count() const noexcept = 0;
-		virtual double frame_rate() const noexcept = 0;
-		virtual int key_to_frame(int key_index) const = 0;
-		virtual uint16_t track_to_bone(int track_index) const = 0;
-		virtual void ReadTrackValues(int track_index, int iframe, std::span<xform> samples) const = 0;
-		virtual void ReadFCurveValues(int track_index, int iframe, std::span<float> samples) const = 0;
-		virtual void ReadTCurveValues(int track_index, int iframe, std::span<xform> samples) const = 0;
 	};
 
 	// Use 'style' to adjust 'time_s' so that it is within the given time range

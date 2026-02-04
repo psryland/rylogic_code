@@ -537,9 +537,9 @@ namespace pr
 	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthogonal(Mat3x4_cref<S,A,B> mat)
 	{
 		return
-			FEql(Dot(mat.x, mat.y), 0) &&
-			FEql(Dot(mat.x, mat.z), 0) &&
-			FEql(Dot(mat.y, mat.z), 0);
+			FEql(Dot(mat.x, mat.y), S(0)) &&
+			FEql(Dot(mat.x, mat.z), S(0)) &&
+			FEql(Dot(mat.y, mat.z), S(0));
 	}
 
 	// Return true if 'mat' is orthonormal
@@ -638,6 +638,17 @@ namespace pr
 			b = b_next;
 		}
 		return a;
+	}
+	
+	// Normalise the columns of 'm' returning the lengths prior to renormalising
+	template <Scalar S, typename A, typename B> inline std::tuple<Mat3x4<S,A,B>, Vec3<S,void>> Normalise(Mat3x4_cref<S,A,B> mat)
+	{
+		auto m = mat;
+		Vec3<S, void> scale = { Length(m.x), Length(m.y), Length(m.z) };
+		m.x /= scale.x;
+		m.y /= scale.y;
+		m.z /= scale.z;
+		return { m, scale };
 	}
 
 	// Orthonormalise the rotation component of 'mat'

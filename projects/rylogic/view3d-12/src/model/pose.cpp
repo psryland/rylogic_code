@@ -12,7 +12,7 @@
 
 namespace pr::rdr12
 {
-	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch)
+	Pose::Pose(ResourceFactory& factory, SkeletonPtr skeleton, AnimatorPtr animator, EAnimStyle style, EAnimFlags flags, TimeRange time_range, double stretch, double bias)
 		: m_animator(animator)
 		, m_skeleton(skeleton)
 		, m_res()
@@ -21,6 +21,7 @@ namespace pr::rdr12
 		, m_time0(-1.0)
 		, m_time1(0.0)
 		, m_stretch(stretch)
+		, m_bias(bias)
 		, m_style(style)
 		, m_flags(flags)
 	{
@@ -50,7 +51,7 @@ namespace pr::rdr12
 	{
 		// Use the same 'm_flags' that are used for 'Update' because this will give the current root bone position
 		m4x4 root;
-		m_animator->Animate({ &root, 1ULL }, static_cast<float>(time), flags);
+		m_animator->Animate({ &root, 1ULL }, static_cast<float>(SrcAnimTime(time)), flags);
 		return root;
 	}
 	m4x4 Pose::RootToAnim() const
@@ -68,6 +69,45 @@ namespace pr::rdr12
 	int Pose::BoneCount() const
 	{
 		return m_skeleton->BoneCount();
+	}
+
+	// True if the current animation time is within the time range of this animation
+	bool Pose::IsAnimating() const
+	{
+		switch (m_style)
+		{
+			// Never animating
+			case EAnimStyle::NoAnimation:
+			{
+				return false;
+			}
+
+			// Only animating if the time is within the time range
+			case EAnimStyle::Once:
+			{
+				auto time_s = (m_time1 - m_bias) * m_stretch + m_time_range.begin();
+				return m_time_range.contains(time_s);
+			}
+
+			// This are all periodic so are always animating
+			case EAnimStyle::Repeat:
+			case EAnimStyle::Continuous:
+			case EAnimStyle::PingPong:
+			{
+				return true;
+			}
+
+			default:
+			{
+				throw std::runtime_error("Unknown animation style");
+			}
+		}
+	}
+	
+	// Return the time value relative to 'm_time_range' from the source animatino
+	double Pose::SrcAnimTime(double time) const
+	{
+		return AdjTime((time - m_bias) * m_stretch + m_time_range.begin(), m_time_range, m_style);
 	}
 
 	// Reset to the rest pose
@@ -104,12 +144,9 @@ namespace pr::rdr12
 		auto update = UpdateSubresourceScope(cmd_list, upload_buffer, m_res.get(), alignof(m4x4), 0, BoneCount() * sizeof(m4x4));
 		auto ptr = update.ptr<m4x4>();
 		{
-			// Make the time relative to 'm_time_range'
-			auto time = AdjTime(m_time1 * m_stretch + m_time_range.begin(), m_time_range, m_style);
-
 			// Read the deformed bone transforms into the buffer to start with.
 			// These are bone-to-parent transforms for each bone.
-			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, static_cast<float>(time), m_flags);
+			m_animator->Animate({ ptr, s_cast<size_t>(BoneCount()) }, static_cast<float>(SrcAnimTime(m_time1)), m_flags);
 			m_time0 = m_time1;
 
 			// Convert the pose into object space transforms

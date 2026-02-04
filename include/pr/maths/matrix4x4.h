@@ -54,6 +54,7 @@ namespace pr
 		{
 			// Don't assert 'pos.w == 1' here. Not all m4x4's are affine transforms
 		}
+		Mat4x4(Xform<S, void, void> const& xform) requires (std::floating_point<S>);
 		//#if PR_MATHS_USE_INTRINSICS
 		//Mat4x4(__m128 const (&mat)[4])
 		//{
@@ -616,12 +617,12 @@ namespace pr
 	template <Scalar S, typename A, typename B> inline bool pr_vectorcall IsOrthogonal(Mat4x4_cref<S,A,B> mat)
 	{
 		return
-			FEql(Dot(mat.x, mat.y), 0) &&
-			FEql(Dot(mat.x, mat.z), 0) &&
-			FEql(Dot(mat.x, mat.w), 0) &&
-			FEql(Dot(mat.y, mat.z), 0) &&
-			FEql(Dot(mat.y, mat.w), 0) &&
-			FEql(Dot(mat.z, mat.w), 0);
+			FEql(Dot(mat.x, mat.y), S(0)) &&
+			FEql(Dot(mat.x, mat.z), S(0)) &&
+			FEql(Dot(mat.x, mat.w), S(0)) &&
+			FEql(Dot(mat.y, mat.z), S(0)) &&
+			FEql(Dot(mat.y, mat.w), S(0)) &&
+			FEql(Dot(mat.z, mat.w), S(0));
 	}
 
 	// Return true if this matrix is orthonormal

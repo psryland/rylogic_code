@@ -23,11 +23,12 @@ namespace pr::rdr12::ldraw
 		std::deque<RecentlyDeceased> m_obituaries;
 		std::string m_call_stacks;
 		std::mutex m_mutex;
-			
+
 		LeakedLdrObjects()
 			:m_ldr_objects()
-			,m_mutex()
-		{}
+			, m_mutex()
+		{
+		}
 		~LeakedLdrObjects()
 		{
 			if (m_ldr_objects.empty()) return;
@@ -57,7 +58,7 @@ namespace pr::rdr12::ldraw
 			#if PR_LDR_CALLSTACKS
 			#pragma message(PR_LINK "WARNING: ************************************************** PR_LDR_CALLSTACKS enabled")
 			m_call_stacks.append(FmtS("[%p] %s\n", ldr, ldr->TypeAndName().c_str()));
-			pr::DumpStack([&](auto& sym, auto& file, int line){ m_call_stacks.append(FmtS("%s(%d): %s\n", file.c_str(), line, sym.c_str()));}, 2U, 50U);
+			pr::DumpStack([&](auto& sym, auto& file, int line) { m_call_stacks.append(FmtS("%s(%d): %s\n", file.c_str(), line, sym.c_str())); }, 2U, 50U);
 			m_call_stacks.append("\n");
 			#endif
 
@@ -126,75 +127,11 @@ namespace pr::rdr12::ldraw
 		return parent.append(parent.empty() ? "" : ".").append(m_name);
 	}
 
-	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
-	{
-		// Notes:
-		//  - The 'OnAddToScene' event can change 'm_i2w'. The local 'i2w' variable is used so that parenting is unaffected.
-		//  - The decision to include or remove root motion for animated models is handled in the pose/animator. The 'i2w' is
-		//    always the animation origin from the instance's point of view. That's why there is no 'if (m_pose) ...'
-		//  - Simple root animation is just a modification to the 'i2w' transform, it's orthogonal to animation.
-		//  - A model can have a 'm_m2root' transform that locates the model in root space. This is mainly for multi-part models.
-
-		// Set the instance to world.
-		auto i2w = *p2w * m_o2p;
-		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
-		if (m_model) i2w *= m_model->m_m2root;
-		m_i2w = i2w;
-
-		// Combine recursive flags
-		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
-
-		// Allow the object to change it's transform just before rendering
-		OnAddToScene(*this, scene);
-
-		// Add the instance to the scene draw list
-		if (m_model && !AllSet(flags, ELdrFlags::Hidden))
-		{
-			// Could add occlusion culling here...
-			scene.AddInstance(*this);
-		}
-
-		// Rinse and repeat for all children
-		for (auto& child : m_child)
-			child->AddToScene(scene, &i2w, flags);
-	}
-
-	// Recursively add this object using 'bbox_model' instead of its
-	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, m4x4 const* p2w, ELdrFlags parent_flags)
-	{
-		// Set the instance to world for this object
-		auto i2w = *p2w * m_o2p;
-		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
-		if (m_pose) i2w *= m_pose->RootToAnim(); // Apply the animation's root offset to the bounding box
-		if (m_model) i2w *= m_model->m_m2root;
-
-		// Combine recursive flags
-		auto flags = Flags() | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(i2w), "Invalid instance transform");
-
-		// Add the bbox instance to the scene draw list
-		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
-		{
-			// Find the object to world for the bbox
-			ResourceFactory factory(scene.rdr());
-			m_bbox_instance.m_model = factory.CreateModel(EStockModel::BBoxModel);
-			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
-			scene.AddInstance(m_bbox_instance);
-		}
-
-		// Rinse and repeat for all children
-		for (auto& child : m_child)
-			child->AddBBoxToScene(scene, &i2w, flags);
-	}
-
 	// Get the first child object of this object that matches 'name' (see Apply)
 	LdrObject const* LdrObject::Child(char const* name) const
 	{
 		LdrObject const* obj = nullptr;
-		Apply([&](LdrObject const* o){ obj = o; return false; }, name);
+		Apply([&](LdrObject const* o) { obj = o; return false; }, name);
 		return obj;
 	}
 	LdrObject* LdrObject::Child(char const* name)
@@ -298,7 +235,7 @@ namespace pr::rdr12::ldraw
 	{
 		Flags(ELdrFlags::Wireframe, wireframe, name);
 	}
-	
+
 	// Get/Set the visibility of normals for this object or child objects matching 'name' (see Apply)
 	bool LdrObject::Normals(char const* name) const
 	{
@@ -309,7 +246,7 @@ namespace pr::rdr12::ldraw
 	{
 		Flags(ELdrFlags::Normals, show, name);
 	}
-	
+
 	// Get/Set screen space rendering mode for this object and all child objects
 	bool LdrObject::ScreenSpace() const
 	{
@@ -345,13 +282,13 @@ namespace pr::rdr12::ldraw
 
 					// Scale the object to normalised screen space
 					auto scale = w >= h
-						? m4x4::Scale(0.5f * ViewPortSize * (w/h), 0.5f * ViewPortSize, 1, v4Origin)
-						: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h/w), 1, v4Origin);
+						? m4x4::Scale(0.5f * ViewPortSize * (w / h), 0.5f * ViewPortSize, 1, v4Origin)
+						: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h / w), 1, v4Origin);
 
 					// Scale the X,Y position so that positions are still in normalised screen space
-					ob.m_i2w.pos.x *= w >= h ? (w/h) : 1.0f;
-					ob.m_i2w.pos.y *= w >= h ? 1.0f : (h/w);
-			
+					ob.m_i2w.pos.x *= w >= h ? (w / h) : 1.0f;
+					ob.m_i2w.pos.y *= w >= h ? 1.0f : (h / w);
+
 					// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
 					ob.m_i2w = c2w * ob.m_i2w * scale;
 				};
@@ -565,44 +502,44 @@ namespace pr::rdr12::ldraw
 	void LdrObject::Colour(bool base_colour, Colour32 colour, char const* name, EColourOp op, float op_value)
 	{
 		Apply([=](LdrObject* o)
+		{
+			auto& obj_colour = base_colour ? o->m_base_colour : o->m_colour;
+			switch (op)
 			{
-				auto& obj_colour = base_colour ? o->m_base_colour : o->m_colour;
-				switch (op)
+				case EColourOp::Overwrite:
+					obj_colour = colour;
+					break;
+				case EColourOp::Add:
+					obj_colour = o->m_base_colour + colour;
+					break;
+				case EColourOp::Subtract:
+					obj_colour = o->m_base_colour - colour;
+					break;
+				case EColourOp::Multiply:
+					obj_colour = o->m_base_colour * colour;
+					break;
+				case EColourOp::Lerp:
+					obj_colour = Lerp(o->m_base_colour, colour, op_value);
+					break;
+			}
+
+			// If the base colour was updated, update the instance colour as well
+			if (base_colour)
+				o->m_colour = o->m_base_colour;
+
+			// Update the nugget alpha states
+			if (o->m_model != nullptr)
+			{
+				auto tint_has_alpha = HasAlpha(o->m_colour);
+				for (auto& nug : o->m_model->m_nuggets)
 				{
-					case EColourOp::Overwrite:
-						obj_colour = colour;
-						break;
-					case EColourOp::Add:
-						obj_colour = o->m_base_colour + colour;
-						break;
-					case EColourOp::Subtract:
-						obj_colour = o->m_base_colour - colour;
-						break;
-					case EColourOp::Multiply:
-						obj_colour = o->m_base_colour * colour;
-						break;
-					case EColourOp::Lerp:
-						obj_colour = Lerp(o->m_base_colour, colour, op_value);
-						break;
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
+					nug.UpdateAlphaStates();
 				}
+			}
 
-				// If the base colour was updated, update the instance colour as well
-				if (base_colour)
-					o->m_colour = o->m_base_colour;
-
-				// Update the nugget alpha states
-				if (o->m_model != nullptr)
-				{
-					auto tint_has_alpha = HasAlpha(o->m_colour);
-					for (auto& nug : o->m_model->m_nuggets)
-					{
-						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-						nug.UpdateAlphaStates();
-					}
-				}
-
-				return true;
-			}, name);
+			return true;
+		}, name);
 	}
 
 	// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
@@ -684,14 +621,14 @@ namespace pr::rdr12::ldraw
 	BBox LdrObject::BBoxMS(EBBoxFlags bbox_flags, std::function<bool(LdrObject const&)> pred, m4x4 const* p2w_, ELdrFlags parent_flags) const
 	{
 		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
-		
+
 		auto i2w = p2w;
 		if (m_root_anim) i2w *= m_root_anim.RootToAnim();
 		if (m_pose) i2w *= m_pose->RootToAnim();
 		if (m_model) i2w = i2w * m_model->m_m2root;
 
 		// Combine recursive flags
-		auto ldr_flags = Flags() | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
+		auto ldr_flags = Flags() | (parent_flags & (ELdrFlags::BBoxExclude | ELdrFlags::NonAffine));
 
 		// Start with the bbox for this object
 		auto bbox = BBox::Reset();
@@ -719,7 +656,7 @@ namespace pr::rdr12::ldraw
 	}
 	BBox LdrObject::BBoxMS(EBBoxFlags flags) const
 	{
-		return BBoxMS(flags, [](LdrObject const&){ return true; });
+		return BBoxMS(flags, [](LdrObject const&) { return true; });
 	}
 
 	// Return the bounding box for this object in world space.
@@ -741,7 +678,7 @@ namespace pr::rdr12::ldraw
 	}
 	BBox LdrObject::BBoxWS(EBBoxFlags flags) const
 	{
-		return BBoxWS(flags, [](LdrObject const&){ return true; });
+		return BBoxWS(flags, [](LdrObject const&) { return true; });
 	}
 
 	// Add/Remove 'child' as a child of this object
@@ -770,6 +707,24 @@ namespace pr::rdr12::ldraw
 	{
 		while (!m_child.empty())
 			RemoveChild(0);
+	}
+
+	// True if this object or any child objects are currently animating
+	bool LdrObject::IsAnimating() const
+	{
+		if (!AllSet(RecursiveFlags(), ELdrFlags::Animated))
+			return false;
+		
+		return Apply([](LdrObject const* obj)
+		{
+			if (obj->m_root_anim)
+				return false; // stop, found an animating object
+
+			if (obj->m_pose && obj->m_pose->IsAnimating())
+				return false; // stop, found an animating object
+
+			return true; // continue
+		}, "") == false;
 	}
 
 	// Called when there are no more references to this object

@@ -8,8 +8,6 @@
 
 namespace pr::rdr12
 {
-	static constexpr int RootBoneTrack = 0;
-
 	Animator::Animator()
 	{
 	}
@@ -41,15 +39,22 @@ namespace pr::rdr12
 		return m_anim->frame_rate();
 	}
 
-	// Returns the interpolated key frame a 'time_s'
-	template <typename Key> requires (std::is_assignable_v<Key, BoneKey>)
-	static void EvaluateAtTime(KeyFrameAnimation const& kfa, float time_s, EAnimFlags flags, std::span<Key> out)
+	// The length of the underlying animation
+	double Animator_KeyFrameAnimation::Duration() const
 	{
+		return m_anim->duration();
+	}
+
+	// Apply an animation to the given bones
+	void Animator_KeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags)
+	{
+		auto const& kfa = *m_anim.get();
+
 		// Can evaluate a subset of the bones
-		assert(isize(out) <= kfa.track_count());
-		auto EvaluateKey = [&kfa, time_s, flags, &out](Key& key)
+		assert(isize(bones) <= kfa.track_count());
+		auto EvaluateKey = [&kfa, time_s, flags, &bones](m4x4& key)
 		{
-			auto track_index = s_cast<int>(&key - out.data());
+			auto track_index = s_cast<int>(&key - bones.data());
 
 			// Get the keys to interpolate between
 			BoneKey keys[2];
@@ -73,16 +78,16 @@ namespace pr::rdr12
 
 		// Evaluate each bone
 		constexpr size_t ParallelizeCount = 10;
-		if (out.size() >= ParallelizeCount)
-			std::for_each(std::execution::par_unseq, std::begin(out), std::end(out), EvaluateKey);
+		if (bones.size() >= ParallelizeCount)
+			std::for_each(std::execution::par_unseq, std::begin(bones), std::end(bones), EvaluateKey);
 		else
-			std::for_each(std::execution::seq, std::begin(out), std::end(out), EvaluateKey);
+			std::for_each(std::execution::seq, std::begin(bones), std::end(bones), EvaluateKey);
 	}
 
-	// Apply an animation to the given bones
-	void Animator_KeyFrameAnimation::Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags)
+	// Clone this animator
+	AnimatorPtr Animator_KeyFrameAnimation::Clone() const
 	{
-		EvaluateAtTime(*m_anim.get(), time_s, flags, bones);
+		return AnimatorPtr{ rdr12::New<Animator_KeyFrameAnimation>(m_anim), true };
 	}
 
 	// -----------------------------------------------------------------------------------------------
@@ -92,7 +97,7 @@ namespace pr::rdr12
 		, m_anim(anim)
 		, m_interp(anim->track_count())
 		, m_keys(2 * anim->track_count())
-		, m_time_range(1.f, 1.f)
+		, m_interp_time_range(1.f, 1.f)
 	{
 		Animate({}, 0.f, EAnimFlags::None);
 	}
@@ -109,24 +114,31 @@ namespace pr::rdr12
 		return m_anim->m_native_frame_rate;
 	}
 
+	// The length of the underlying animation
+	double Animator_InterpolatedAnimation::Duration() const
+	{
+		return m_anim->duration();
+	}
+
 	// Apply an animation to the given bones
 	void Animator_InterpolatedAnimation::Animate(std::span<m4x4> bones, float time_s, EAnimFlags flags)
 	{
+		auto const& kkfa = *m_anim.get();
+
 		// If 'time_s' is outside the current interpolation interval, update the interpolators
-		// Unless, the time is beyond the end of the animation and the interpolators are already updated.
-		if (!m_time_range.contains(time_s) && TimeRange(0, m_anim->duration()).contains(time_s))
+		if (!m_interp_time_range.contains(time_s) && TimeRange(0, kkfa.duration()).contains(time_s))
 		{
-			auto kidx = m_anim->TimeToKeyIndex(time_s);
-			auto tcount = m_anim->track_count();
-			auto kcount = m_anim->key_count();
+			auto kidx = kkfa.TimeToKeyIndex(time_s);
+			auto tcount = kkfa.track_count();
+			auto kcount = kkfa.key_count();
 			assert(m_keys.size() >= 2 * tcount && "Need 2 keys per track");
 
 			// Read the keys that span the time 'time_s'
-			m_anim->ReadKeys(kidx, m_keys);
+			kkfa.ReadKeys(kidx, m_keys);
 
 			// Record the time range
-			m_time_range.set(m_keys[0].m_time, m_keys[tcount].m_time);
-			auto interval = !m_time_range.empty() ? s_cast<float>(m_time_range.size()) : 1.f;
+			m_interp_time_range.set(m_keys[0].m_time, m_keys[tcount].m_time);
+			auto interval = !m_interp_time_range.empty() ? s_cast<float>(m_interp_time_range.size()) : 1.f;
 
 			// Update the interpolators
 			int i0 = 0, i1 = tcount;
@@ -157,7 +169,7 @@ namespace pr::rdr12
 			auto& interp = m_interp[track_index];
 
 			// Evaluate the interpolators
-			auto time0 = s_cast<float>(m_time_range.begin());
+			auto time0 = s_cast<float>(m_interp_time_range.begin());
 			auto rot = interp.rot.Eval(time_s - time0);
 			auto pos = interp.pos.Eval(time_s - time0);
 
@@ -170,6 +182,12 @@ namespace pr::rdr12
 			// Update the bone
 			bone = m4x4(m3x4(rot), pos);
 		}
+	}
+
+	// Clone this animator
+	AnimatorPtr Animator_InterpolatedAnimation::Clone() const
+	{
+		return AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(m_anim), true };
 	}
 }
 

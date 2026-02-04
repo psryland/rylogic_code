@@ -19,6 +19,15 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Description,nq}")]
 	public struct m4x4
 	{
+		// Notes:
+		//  - Xform cannot represent shear, but if 'scl' is non-uniform then mathematically, multiplication should result
+		//    in a transform containing shear. The standard way to handle this is to silently discard shear, so:
+		//     - Scale multiplies component-wise
+		//     - Rotation multiplies normally
+		//     - Position is scaled, then rotated
+		// - This means that:
+		//       Mat4x4 * Mat4x4 != Xform * Xform, if scale is not uniform
+
 		[FieldOffset( 0)] public v4   x;
 		[FieldOffset(16)] public v4   y;
 		[FieldOffset(32)] public v4   z;
@@ -44,6 +53,11 @@ namespace Rylogic.Maths
 		{
 			this.rot = new m3x4(q);
 			this.pos = pos;
+		}
+		public m4x4(Xform xform) :this()
+		{
+			this.rot = new m3x4(xform.rot) * m3x4.Scale(xform.scl.xyz);
+			this.pos = xform.pos;
 		}
 		public m4x4(float[] arr, int start = 0)
 			:this(new v4(arr, 0), new v4(arr, 4), new v4(arr, 8), new v4(arr, 12))
@@ -177,11 +191,15 @@ namespace Rylogic.Maths
 		/// <summary>Create a scale matrix</summary>
 		public static m4x4 Scale(float s, v4 translation)
 		{
-			return new(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis, translation);
+			return Scale(s, s, s, translation);
+		}
+		public static m4x4 Scale(v3 s, v4 translation)
+		{
+			return Scale(s.x, s.y, s.z, translation);
 		}
 		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
 		{
-			return new(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
+			return new(sx * v4.XAxis, sy * v4.YAxis, sz * v4.ZAxis, translation);
 		}
 
 		// Create a shear matrix

@@ -349,8 +349,9 @@ namespace Rylogic.Gfx
 			{
 				if (field == null)
 				{
-					var ldr = "*Point hotspot0 FF00FFFF { *Data{0 0 0} *Size{20} *Style{Circle} *NoZTest{} *NoZWrite{} }";
-					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
+					var ldr = new LDraw.Builder();
+					ldr.Point("hotspot0", 0xFF00FFFF).pt(new v3(0, 0, 0)).size(20).style(LDraw.EPointStyle.Circle).ztest(false).zwrite(false);
+					field = new View3d.Object(ldr.ToString(), file: false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude | View3d.ELdrFlags.SceneBoundsExclude | View3d.ELdrFlags.ShadowCastExclude };
 				}
 				return field;
 			}
@@ -369,8 +370,9 @@ namespace Rylogic.Gfx
 			{
 				if (field == null)
 				{
-					var ldr = "*Point hotspot1 FF00FFFF { 0 0 0 *Size{20} *Style{Circle}, *NoZTest }";
-					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
+					var ldr = new LDraw.Builder();
+					ldr.Point("hotspot0", 0xFF00FFFF).pt(new v3(0, 0, 0)).size(20).style(LDraw.EPointStyle.Circle).ztest(false).zwrite(false);
+					field = new View3d.Object(ldr.ToString(), file: false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude | View3d.ELdrFlags.SceneBoundsExclude | View3d.ELdrFlags.ShadowCastExclude };
 				}
 				return field;
 			}
@@ -398,41 +400,24 @@ namespace Rylogic.Gfx
 					var dist_z = Math.Abs(pt1.z - pt0.z);
 					var dist = (pt1 - pt0).Length;
 
-					// This is a bit slow, creating this model each frame...
-					var sb = new StringBuilder();
-					sb.Append(
-						$"*Group Measurement \n" +
-						$"{{ \n" +
-						$"	*Font {{*Colour{{FFFFFFFF}}}}\n");
-					if (dist_x != 0) sb.Append(
-						$"	*Line dist_x FFFF0000\n" +
-						$"	{{\n" +
-						$"		{pt0.x} {pt0.y} {pt0.z} {pt1.x} {pt0.y} {pt0.z}\n" +
-						$"		*Text lbl_x {{ \"{dist_x}\" *Billboard *BackColour{{FF800000}} *NoZTest *o2w{{*pos{{{(pt0.x + pt1.x) / 2} {pt0.y} {pt0.z}}}}} }}\n" +
-						$"	}}\n");
-					if (dist_y != 0) sb.Append(
-						$"	*Line dist_y FF00FF00\n" +
-						$"	{{\n" +
-						$"		{pt1.x} {pt0.y} {pt0.z} {pt1.x} {pt1.y} {pt0.z}\n" +
-						$"		*Text lbl_y {{ \"{dist_y}\" *Billboard *BackColour{{FF006000}} *NoZTest *o2w{{*pos{{{pt1.x} {(pt0.y + pt1.y) / 2} {pt0.z}}}}} }}\n" +
-						$"	}}\n");
-					if (dist_z != 0) sb.Append(
-						$"	*Line dist_z FF0000FF\n" +
-						$"	{{\n" +
-						$"		{pt1.x} {pt1.y} {pt0.z} {pt1.xyz}\n" +
-						$"		*Text lbl_z {{ \"{dist_z}\" *Billboard *BackColour{{FF000080}} *NoZTest *o2w{{*pos{{{pt1.x} {pt1.y} {(pt0.z + pt1.z) / 2}}}}} }}\n" +
-						$"	}}\n");
-					if (dist != 0) sb.Append(
-						$"	*Line dist FF000000\n" +
-						$"	{{\n" +
-						$"		{pt0.xyz} {pt1.xyz}\n" +
-						$"		*Text lbl_d {{ \"{dist}\" *Billboard *BackColour{{FF000000}} *NoZTest *o2w{{*pos{{{((pt0 + pt1) / 2).xyz}}}}} }}\n" +
-						$"	}}\n");
-					sb.Append(
-						$"	*o2w{{*m4x4{{{r2w}}}}}\n" +
-						$"}}");
+					var ldr = new LDraw.Builder();
+					var grp = ldr.Group("Measurement");
+					grp.font().colour(0xFFFFFFFF);
+					if (dist_x != 0)
+						grp.Line("dist_x", 0xFFFF0000).line(pt0.xyz, new v3(pt1.x, pt0.y, pt0.z))
+							.Text("lbl_x").text($"{dist_x}").billboard().back_colour(0xFF800000).ztest(false).pos((pt0.x + pt1.x) / 2, pt0.y, pt0.z);
+					if (dist_y != 0)
+						grp.Line("dist_y", 0xFF00FF00).line(new v3(pt1.x, pt0.y, pt0.z), new v3(pt1.x, pt1.y, pt0.z))
+							.Text("lbl_y").text($"{dist_y}").billboard().back_colour(0xFF006000).ztest(false).pos(pt1.x, (pt0.y + pt1.y) / 2, pt0.z);
+					if (dist_z != 0)
+						grp.Line("dist_z", 0xFF0000FF).line(new v3(pt1.x, pt1.y, pt0.z), pt1.xyz)
+							.Text("lbl_z").text($"{dist_z}").billboard().back_colour(0xFF000080).ztest(false).pos(pt1.x, pt1.y, (pt0.z + pt1.z) / 2);
+					if (dist != 0)
+						grp.Line("dist", 0xFF000000).line(pt0.xyz, pt1.xyz)
+							.Text("lbl_d").text($"{dist}").billboard().back_colour(0xFF000000).ztest(false).pos((pt0 + pt1) / 2);
+					grp.o2w(r2w);
 
-					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
+					field = new View3d.Object(ldr.ToString(), file: false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude | View3d.ELdrFlags.SceneBoundsExclude | View3d.ELdrFlags.ShadowCastExclude };
 				}
 				return field;
 			}

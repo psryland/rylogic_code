@@ -373,6 +373,13 @@ namespace pr::rdr12
 
 	private:
 
+		// Add 'obj' recursively to the scene for renderering
+		void AddToScene(ldraw::LdrObject& Obj, m4x4 const& p2w = m4x4Identity, ldraw::ELdrFlags parent_flags = ldraw::ELdrFlags::None);
+
+		// Recursively add this object using 'bbox_model' instead of its
+		// actual model, located and scaled to the transform and bbox of this object
+		void AddBBoxToScene(ldraw::LdrObject& obj, m4x4 const& p2w = m4x4Identity, ldraw::ELdrFlags parent_flags = ldraw::ELdrFlags::None);
+
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object);
 

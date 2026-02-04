@@ -1263,38 +1263,69 @@ namespace pr
 	}
 
 	// Low precision reciprocal square root
-	inline float Rsqrt0(float x)
+	template <std::floating_point T> inline T Rsqrt0(T x)
 	{
-		float r;
-		#if PR_MATHS_USE_INTRINSICS
-		__m128 r0;
-		r0 = _mm_load_ss(&x);
-		r0 = _mm_rsqrt_ss(r0);
-		_mm_store_ss(&r, r0);
-		#else
-		r = 1.0f / Sqrt(x);
-		#endif
+		T r;
+		if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<T, double>)
+		{
+			// todo
+			//__m128d r0;
+			//r0 = _mm_load_sd(&x);
+			//r0 = _mm_rsqrt_sd(r0);
+			//_mm_store_sd(&r, r0);
+			r = T(1) / Sqrt(x);
+		}
+		else if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<T, float>)
+		{
+			__m128 r0;
+			r0 = _mm_load_ss(&x);
+			r0 = _mm_rsqrt_ss(r0);
+			_mm_store_ss(&r, r0);
+		}
+		else
+		{
+			r = T(1) / Sqrt(x);
+		}
 		return r;
 	}
 
 	// High(er) precision reciprocal square root
-	inline float Rsqrt1(float x)
+	template <std::floating_point T> inline T Rsqrt1(T x)
 	{
-		float r;
-		#if PR_MATHS_USE_INTRINSICS
-		static const float c0 = 3.0f, c1 = -0.5f;
-		__m128 r0,r1;
-		r0 = _mm_load_ss(&x);
-		r1 = _mm_rsqrt_ss(r0);
-		r0 = _mm_mul_ss(r0, r1); // The general 'Newton-Raphson' reciprocal square root recurrence:
-		r0 = _mm_mul_ss(r0, r1); // (3 - b * X * X) * (X / 2)
-		r0 = _mm_sub_ss(r0, _mm_load_ss(&c0));
-		r1 = _mm_mul_ss(r1, _mm_load_ss(&c1));
-		r0 = _mm_mul_ss(r0, r1);
-		_mm_store_ss(&r, r0);
-		#else
-		r = 1.0f / Sqrt(x);
-		#endif
+		constexpr T c0 = +3.0;
+		constexpr T c1 = -0.5;
+
+		T r;
+		if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<T, double>)
+		{
+			//todo
+			//__m128d r0, r1;
+			//r0 = _mm_load_sd(&x);
+			//r1 = _mm_rsqrt_sd(r0);
+			//r0 = _mm_mul_sd(r0, r1); // The general 'Newton-Raphson' reciprocal square root recurrence:
+			//r0 = _mm_mul_sd(r0, r1); // (3 - b * X * X) * (X / 2)
+			//r0 = _mm_sub_sd(r0, _mm_load_sd(&c0));
+			//r1 = _mm_mul_sd(r1, _mm_load_sd(&c1));
+			//r0 = _mm_mul_sd(r0, r1);
+			//_mm_store_sd(&r, r0);
+			r = T(1) / Sqrt(x);
+		}
+		else if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<T, float>)
+		{
+			__m128 r0, r1;
+			r0 = _mm_load_ss(&x);
+			r1 = _mm_rsqrt_ss(r0);
+			r0 = _mm_mul_ss(r0, r1); // The general 'Newton-Raphson' reciprocal square root recurrence:
+			r0 = _mm_mul_ss(r0, r1); // (3 - b * X * X) * (X / 2)
+			r0 = _mm_sub_ss(r0, _mm_load_ss(&c0));
+			r1 = _mm_mul_ss(r1, _mm_load_ss(&c1));
+			r0 = _mm_mul_ss(r0, r1);
+			_mm_store_ss(&r, r0);
+		}
+		else
+		{
+			r = T(1) / Sqrt(x);
+		}
 		return r;
 	}
 

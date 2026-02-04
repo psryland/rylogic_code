@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1502,8 +1502,10 @@ namespace pr::rdr12::ldraw
 			vector<int> m_frames = {};
 			vector<float> m_durations = {};
 			std::optional<float> m_frame_rate = {};
-			double m_stretch = { 1.0 }; // aka playback speed scale
+			float m_stretch = {1.0}; // aka playback speed scale
+			float m_bias = {0.0};
 			bool m_per_frame_durations = false;
+			bool m_hide_when_not_animating = false;
 
 			void Parse(IReader& reader, ParseParams& pp)
 			{
@@ -1558,14 +1560,24 @@ namespace pr::rdr12::ldraw
 							m_time_range = { t0, std::max(t1, t0) };
 							break;
 						}
+						case EKeyword::TimeBias:
+						{
+							m_bias = reader.Real<float>();
+							break;
+						}
 						case EKeyword::Stretch:
 						{
-							m_stretch = reader.Real<double>();
+							m_stretch = reader.Real<float>();
 							break;
 						}
 						case EKeyword::PerFrameDurations:
 						{
 							m_per_frame_durations = reader.IsSectionEnd() ? true : reader.Bool();
+							break;
+						}
+						case EKeyword::HideWhenNotAnimating:
+						{
+							m_hide_when_not_animating = reader.IsSectionEnd() ? true : reader.Bool();
 							break;
 						}
 						case EKeyword::NoRootTranslation:
@@ -1580,7 +1592,10 @@ namespace pr::rdr12::ldraw
 						}
 						default:
 						{
-							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *RootAnimation", EKeyword_::ToStringA(kw)));
+							if (auto const* tr = dynamic_cast<TextReader const*>(&reader))
+								pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Animation", tr->m_keyword.c_str()));
+							else
+								pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Animation", EKeyword_::ToStringA(kw)));
 							break;
 						}
 					}
@@ -4528,34 +4543,35 @@ namespace pr::rdr12::ldraw
 				anim->m_native_duration = (anim->key_count() - 1) / anim->m_native_frame_rate;
 			}
 
-			// The time/frame range in the anim info is the portion of the animation to use during playback
-			auto time_range = TimeRange{ 0, anim->duration() };
-
 			// The animator to run the animation
 			AnimatorPtr animator = {};
 
 			// If specific key frames are given, create a kinematic key frame animation
 			if (!m_anim_info.m_frames.empty())
 			{
-				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(*anim.get(), m_anim_info.m_frames, m_anim_info.m_durations), true };
+				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(anim->m_skel_id, anim->duration(), anim->frame_rate()), true };
+				kkfa->Populate(*anim.get(), m_anim_info.m_frames, m_anim_info.m_durations);
+
 				animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
-			}
+		}
 			// Otherwise, create a standard key frame animation
 			else
 			{
 				animator = AnimatorPtr{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
 			}
 
+			// The time/frame range in the anim info is the portion of the animation to use during playback
+			auto time_range = TimeRange{ 0, animator->Duration() };
+
 			// Create an animator that uses the animation and a pose for it to animate
-			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch), true };
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch, m_anim_info.m_bias), true };
 
 			// Set the pose for each model in the hierarchy.
 			m_obj->Apply([&](LdrObject* obj)
 			{
 				obj->m_pose = pose;
-				if (m_anim_info.m_style != EAnimStyle::NoAnimation)
-					obj->Flags(ELdrFlags::Animated, true);
-
+				obj->Flags(ELdrFlags::Animated, m_anim_info.m_style != EAnimStyle::NoAnimation);
+				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_hide_when_not_animating);
 				return true;
 			}, "");
 
@@ -5485,15 +5501,17 @@ namespace pr::rdr12::ldraw
 				time_range = Intersect(time_range, source->m_pose->m_time_range);
 				time_range = Intersect(time_range, m_anim_info.m_time_range);
 
-				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, source->m_pose->m_animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch), true };
+				// Clone the animator because it can have cached state for efficient animation sampling
+				AnimatorPtr animator = source->m_pose->m_animator->Clone();
+
+				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch, m_anim_info.m_bias), true };
 
 				// Set the pose for each model in the hierarchy.
 				obj->Apply([&](LdrObject* obj)
 				{
 					obj->m_pose = pose;
-					if (m_anim_info.m_style != EAnimStyle::NoAnimation)
-						obj->Flags(ELdrFlags::Animated, true);
-
+					obj->Flags(ELdrFlags::Animated, m_anim_info.m_style != EAnimStyle::NoAnimation);
+					obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_hide_when_not_animating);
 					return true;
 				}, "");
 			}

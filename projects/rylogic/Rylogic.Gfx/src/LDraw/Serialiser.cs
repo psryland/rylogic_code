@@ -114,6 +114,30 @@ namespace Rylogic.LDraw.Serialiser
 		}
 		public static implicit operator bool(Hidden h) => !h.m_is_default || h.m_hide;
 	}
+	public class ZTest
+	{
+		public bool m_ztest = false;
+		public bool m_is_default = true;
+		public ZTest() { }
+		public ZTest(bool ztest)
+		{
+			m_ztest = ztest;
+			m_is_default = false;
+		}
+		public static implicit operator bool(ZTest s) => !s.m_is_default || s.m_ztest;
+	}
+	public class ZWrite
+	{
+		public bool m_zwrite = false;
+		public bool m_is_default = true;
+		public ZWrite() { }
+		public ZWrite(bool zwrite)
+		{
+			m_zwrite = zwrite;
+			m_is_default = false;
+		}
+		public static implicit operator bool(ZWrite s) => !s.m_is_default || s.m_zwrite;
+	}
 	public class Wireframe
 	{
 		public bool m_wire = false;
