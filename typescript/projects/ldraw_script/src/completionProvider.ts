@@ -43,7 +43,13 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
         const context = this.getContext(document, position);
         const validKeywords = this.getValidKeywords(context);
         
-        return validKeywords.map(keyword => this.createCompletionItem(keyword));
+        // Check if the character before cursor is '*'
+        const charBefore = position.character > 0 
+            ? document.getText(new vscode.Range(position.translate(0, -1), position))
+            : '';
+        const hasAsterisk = charBefore === '*';
+        
+        return validKeywords.map(keyword => this.createCompletionItem(keyword, hasAsterisk));
     }
 
     /**
@@ -182,16 +188,9 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
             validKeywords.add(child);
         }
         
-        // Resolve @ references and add their content as valid
+        // Resolve @ references - @ref means template 'ref' is valid at this level
         for (const ref of parent.references) {
-            const refTemplate = this.templates.templates[ref];
-            if (refTemplate) {
-                // The reference itself can be used via @ref syntax, but for completion
-                // we show the children of the referenced template
-                for (const child of refTemplate.children) {
-                    validKeywords.add(child);
-                }
-            }
+            validKeywords.add(ref);
         }
         
         // Resolve $ references (children of referenced template)
@@ -202,13 +201,9 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
                     validKeywords.add(child);
                 }
                 // Also include @ references from the $ referenced template
+                // @ref means the template 'ref' itself is valid at this level
                 for (const subRef of refTemplate.references) {
-                    const subRefTemplate = this.templates.templates[subRef];
-                    if (subRefTemplate) {
-                        for (const child of subRefTemplate.children) {
-                            validKeywords.add(child);
-                        }
-                    }
+                    validKeywords.add(subRef);
                 }
             }
         }
@@ -225,16 +220,16 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
 
     /**
      * Creates a completion item for a keyword.
+     * @param keyword The keyword to create a completion for
+     * @param hasAsterisk Whether the user has already typed '*' before the cursor
      */
-    private createCompletionItem(keyword: string): vscode.CompletionItem {
+    private createCompletionItem(keyword: string, hasAsterisk: boolean): vscode.CompletionItem {
         const template = this.templates.templates[keyword];
         
-        // Label shows *Keyword but we insert just the keyword (without *)
-        // because the user already typed the * to trigger completion
         const item = new vscode.CompletionItem(`*${keyword}`, vscode.CompletionItemKind.Keyword);
         
-        // Insert only the keyword (without *) since * was already typed
-        item.insertText = keyword;
+        // If user already typed *, insert just the keyword; otherwise insert *keyword
+        item.insertText = hasAsterisk ? keyword : `*${keyword}`;
         
         // Filter text for matching - include * so typing *B matches *Box
         item.filterText = `*${keyword}`;
