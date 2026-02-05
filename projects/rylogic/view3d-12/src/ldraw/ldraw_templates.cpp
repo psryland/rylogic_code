@@ -24,12 +24,15 @@
 // Templates start with a keyword marked by '*'
 // Templates starting with a single '*' at the top level are called 'Object templates'
 //     because they represent objects created by LDraw.
+// Templates starting with a double '**' are called 'property templates'. They are used
+//     add properties to other templates.
 // '*' templates are visible at the hierarchy level they're declared at.
 // '**' templates are not visible at the current hierarchy level, but can be referenced
 //     using '@' or '$' template references at or below the current hierarchy level.
 // '*!' templates are only allowed at root level and can not recursively include
 //     other root level templates.
-// '@' is a reference to a template. Only valid when used within a template.
+// '@' is a reference to a template. It means the template is valid at this level. These
+//     can only be used within another template.
 // '$' is a reference to the children of a template. Only valid when used within a template.
 //     $ references get expanded by adding each child in the referenced template to the parent
 // '&Recursive' means any object template (e.g. *Box) is valid at the given scope.
