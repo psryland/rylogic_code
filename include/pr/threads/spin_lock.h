@@ -24,7 +24,7 @@ namespace pr
 		class SpinLock
 		{
 			std::atomic_bool m_flag;
-			std::thread::id m_owner;
+			std::atomic<std::thread::id> m_owner; // Must be atomic to avoid data race with concurrent lock/unlock
 			#if PR_STACKTRACE
 			std::string m_stack; // call stack when last locked
 			#endif
@@ -37,7 +37,7 @@ namespace pr
 					return false;
 
 				// Save the lock owner
-				m_owner = std::this_thread::get_id();
+				m_owner.store(std::this_thread::get_id());
 
 				// Record the call stack when the lock is acquired
 				#if PR_STACKTRACE
@@ -63,7 +63,7 @@ namespace pr
 			void lock()
 			{
 				// Already locked by this thread?
-				if (std::this_thread::get_id() == m_owner)
+				if (std::this_thread::get_id() == m_owner.load())
 					return;
 
 				// Spin lock. This works because exchange() returns the previous
@@ -75,7 +75,7 @@ namespace pr
 			bool try_lock()
 			{
 				// Already locked by this thread?
-				if (std::this_thread::get_id() == m_owner)
+				if (std::this_thread::get_id() == m_owner.load())
 					return true;
 
 				// exchange() returns the previous value, so the lock is
@@ -85,7 +85,7 @@ namespace pr
 
 			void unlock()
 			{
-				m_owner = std::thread::id();
+				m_owner.store(std::thread::id());
 				m_flag.exchange(false);
 			}
 		};
