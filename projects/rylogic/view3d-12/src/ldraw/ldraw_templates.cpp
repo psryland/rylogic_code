@@ -22,14 +22,21 @@
 //   }
 // 
 // Templates start with a keyword marked by '*'
+// Templates starting with a single '*' at the top level are called 'Object templates'
+//     because they represent objects created by LDraw.
+// Templates starting with a double '**' are called 'property templates'. They are used
+//     add properties to other templates.
 // '*' templates are visible at the hierarchy level they're declared at.
 // '**' templates are not visible at the current hierarchy level, but can be referenced
 //     using '@' or '$' template references at or below the current hierarchy level.
 // '*!' templates are only allowed at root level and can not recursively include
 //     other root level templates.
-// '@' is a reference to a template. Only valid when used within a template.
+// '@' is a reference to a template. It means the template is valid at this level. These
+//     can only be used within another template.
 // '$' is a reference to the children of a template. Only valid when used within a template.
 //     $ references get expanded by adding each child in the referenced template to the parent
+// '&Recursive' means any object template (e.g. *Box) is valid at the given scope.
+//
 // Literal text is text that is required.
 // Text within <> is a field
 //     <> fields cannot nest and must contain identifiers
@@ -192,12 +199,14 @@ namespace pr::rdr12::ldraw
 			"*Group [<name>] [<colour>]\n"
 			"{\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Instance [<name>] [<colour>]\n"
 			"{\n"
 			"	*Data {<object_to_instance>}\n"
 			"	[@Animation]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Text [<name>] [<colour>]\n"
 			"{\n"
@@ -214,6 +223,7 @@ namespace pr::rdr12::ldraw
 			"	[@Font]\n"
 			"	[@AxisId]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*LightSource [<name>] [<colour>]\n"
 			"{\n"
@@ -225,6 +235,7 @@ namespace pr::rdr12::ldraw
 			"	[*Cone {<inner> <outer>}]\n"
 			"	[*CastShadow {<range>}]\n"
 			"	[@o2w]\n"
+			"	&Recursive\n"
 			"}\n"
 
 			// Point Sprites
@@ -237,6 +248,7 @@ namespace pr::rdr12::ldraw
 			"	[*Depth {[true|false]}]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 
 			// Line geometry
@@ -253,6 +265,7 @@ namespace pr::rdr12::ldraw
 			"	(*Data {(<x0> <y0> <z0>  <x1> <y1> <z1> [<line_colour>] [<t0> <t1>])})\n"
 			"	[@Parametrics]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*LineBox [<name>] [<colour>]\n"
 			"{\n"
@@ -260,6 +273,7 @@ namespace pr::rdr12::ldraw
 			"	[@Width]\n"
 			"	[@Dashed]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Grid [<name>] [<colour>]\n"
 			"{\n"
@@ -268,6 +282,7 @@ namespace pr::rdr12::ldraw
 			"	[@Dashed]\n"
 			"	[@AxisId]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*CoordFrame [<name>] [<colour>]\n"
 			"{\n"
@@ -276,6 +291,7 @@ namespace pr::rdr12::ldraw
 			"	[*Scale {<scale>}]\n"
 			"	[@Width]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 
 			// 2D shapes
@@ -287,6 +303,7 @@ namespace pr::rdr12::ldraw
 			"	[@Solid]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Pie [<name>] [<colour>]\n"
 			"{\n"
@@ -297,6 +314,7 @@ namespace pr::rdr12::ldraw
 			"	[@Solid]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Rect [<name>] [<colour>]\n"
 			"{\n"
@@ -307,6 +325,7 @@ namespace pr::rdr12::ldraw
 			"	[@Solid]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Polygon [<name>] [<colour>]\n"
 			"{\n"
@@ -316,6 +335,7 @@ namespace pr::rdr12::ldraw
 			"	[@Solid]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 
 			// Quad shapes
@@ -326,6 +346,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Quad [<name>] [<colour>]\n"
 			"{\n"
@@ -334,6 +355,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Plane [<name>] [<colour>]\n"
 			"{\n"
@@ -341,6 +363,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Ribbon [<name>] [<colour>]\n"
 			"{\n"
@@ -351,6 +374,7 @@ namespace pr::rdr12::ldraw
 			"	[@Smooth]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 
 			// 3D shapes
@@ -359,6 +383,7 @@ namespace pr::rdr12::ldraw
 			"	*Data {[<width> [<height> [<depth>]]]}\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*BoxList [<name>] [<colour>]\n"
 			"{\n"
@@ -366,6 +391,7 @@ namespace pr::rdr12::ldraw
 			"	*Data {(<width> <height> <depth> <x> <y> <z> [<colour>])}\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*FrustumWH [<name>] [<colour>]\n"
 			"{\n"
@@ -374,6 +400,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*FrustumFA [<name>] [<colour>]\n"
 			"{\n"
@@ -381,6 +408,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Sphere [<name>] [<colour>]\n"
 			"{\n"
@@ -388,6 +416,7 @@ namespace pr::rdr12::ldraw
 			"	[*Facets {<facet_count>}]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Cylinder [<name>] [<colour>]\n"
 			"{\n"
@@ -397,6 +426,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Cone [<name>] [<colour>]\n"
 			"{\n"
@@ -406,6 +436,7 @@ namespace pr::rdr12::ldraw
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Tube [<name>] [<colour>]\n"
 			"{\n"
@@ -422,6 +453,7 @@ namespace pr::rdr12::ldraw
 			"	[*Closed {[true|false]}]\n"
 			"	[@Smooth]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Mesh [<name>] [<colour>]\n"
 			"{\n"
@@ -439,6 +471,7 @@ namespace pr::rdr12::ldraw
 			"	[@GenerateNormals]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*ConvexHull [<name>] [<colour>]\n"
 			"{\n"
@@ -446,6 +479,7 @@ namespace pr::rdr12::ldraw
 			"	[@GenerateNormals]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"**Series [<name>] [<colour>]\n"
 			"{\n"
@@ -463,6 +497,7 @@ namespace pr::rdr12::ldraw
 			"	[*Data {(<val>)}]\n"
 			"	[@Series]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"*Model [<name>] [<colour>]\n"
 			"{\n"
@@ -473,6 +508,7 @@ namespace pr::rdr12::ldraw
 			"	[@GenerateNormals]\n"
 			"	[@BakeTransform]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 			"**EquationAxis\n"
 			"{\n"
@@ -489,6 +525,7 @@ namespace pr::rdr12::ldraw
 			"	[*YAxis {$EquationAxis}]\n"
 			"	[*ZAxis {$EquationAxis}]\n"
 			"	$ObjectModifiers\n"
+			"	&Recursive\n"
 			"}\n"
 		);
 		return str;

@@ -1,14 +1,19 @@
 {
   "name": "ldraw-script",
   "displayName": "LDraw Script",
-  "description": "Language support for LDraw Script",
-  "version": "1.0.0",
+  "description": "Language support for LDraw Script with IntelliSense auto-completion",
+  "version": "1.1.0",
+  "publisher": "Rylogic",
   "engines": {
     "vscode": "^1.97.0"
   },
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:ldr"
+  ],
+  "main": "./out/src/extension.js",
   "contributes": {
     "languages": [
       {
@@ -35,15 +40,17 @@
     "type": "git",
     "url": "https://github.com/psryland/rylogic_code.git"
   },
-  "files": [
-    "syntaxes/ldr.tmLanguage.json",
-    "language-configuration.json",
-    "package.json",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE.md"
-  ],
-  "dependencies": {
-    "npm": "^11.5.2"
+  "scripts": {
+    "parse-templates": "npx ts-node scripts/parse-templates.ts",
+    "compile": "tsc -p ./",
+    "build": "npm run parse-templates && npm run compile",
+    "watch": "tsc -watch -p ./",
+    "package": "npm run build && npx vsce package --out publish/ldraw-script.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.97.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
   }
 }
