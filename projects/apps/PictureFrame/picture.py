@@ -31,6 +31,7 @@ class PictureFrame:
 		self.ui_visible = False
 		self.menu_visible = False
 		self.issue_number = 0
+		self.pending_after_ids = []  # Track scheduled after callbacks to prevent memory leaks
 
 		# Load the config
 		self.config = self._LoadConfig()
@@ -260,6 +261,7 @@ class PictureFrame:
 
 	# Display the next image
 	def _NextImage(self):
+		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
 		fullpath, relpath = self._FindMedia(+1)
 		self._DisplayMedia(fullpath, relpath, self.issue_number)
@@ -267,6 +269,7 @@ class PictureFrame:
 
 	# Display the previous image
 	def _PrevImage(self):
+		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
 		fullpath, relpath = self._FindMedia(-1)
 		self._DisplayMedia(fullpath, relpath, self.issue_number)
@@ -319,17 +322,17 @@ class PictureFrame:
 			elif extn in ['.mp4', '.avi', '.mov']:
 				self._ShowVideo(fullpath, issue_number)
 			else:
-				self.window.after(100, self._NextImage)
+				self._ScheduleAfter(100, self._NextImage)
 		except Exception as e:
 			print(f"Error displaying image {fullpath}: {e}")
-			self.window.after(100, self._NextImage)
+			self._ScheduleAfter(100, self._NextImage)
 		return
 
 	# Display a still image
 	def _ShowImage(self, image_fullpath, issue_number):
 		if self.player is None:
 			print("MPV player not initialized, skipping image display")
-			self.window.after(100, self._NextImage)
+			self._ScheduleAfter(100, self._NextImage)
 			return
 			
 		def Stop():
@@ -340,23 +343,23 @@ class PictureFrame:
 
 		try:
 			self.player.play(str(image_fullpath))
-			self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
+			self._ScheduleAfter(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		except Exception as e:
 			print(f"Error playing image {image_fullpath}: {e}")
-			self.window.after(100, self._NextImage)
+			self._ScheduleAfter(100, self._NextImage)
 		return
 
 	# Display a video
 	def _ShowVideo(self, video_fullpath, issue_number):
 		if self.player is None:
 			print("MPV player not initialized, skipping video display")
-			self.window.after(100, self._NextImage)
+			self._ScheduleAfter(100, self._NextImage)
 			return
 			
 		def Stop():
 			if issue_number != self.issue_number: return
 			if self.player and self.player.eof_reached == False:
-				self.window.after(500, Stop)
+				self._ScheduleAfter(500, Stop)
 				return
 			self._StopMedia()
 			self._NextImage()
@@ -364,10 +367,10 @@ class PictureFrame:
 
 		try:
 			self.player.play(str(video_fullpath))
-			self.window.after(500, Stop)
+			self._ScheduleAfter(500, Stop)
 		except Exception as e:
 			print(f"Error playing video {video_fullpath}: {e}")
-			self.window.after(100, self._NextImage)
+			self._ScheduleAfter(100, self._NextImage)
 		return
 
 	# Stop and clean up any media
@@ -592,6 +595,8 @@ class PictureFrame:
 		return
 
 	def _Shutdown(self):
+		# Cancel all pending after callbacks to prevent leaks
+		self._CancelPendingAfterCallbacks()
 		self._StopMedia()
 		if self.player is not None:
 			try:
@@ -599,6 +604,30 @@ class PictureFrame:
 			except Exception as e:
 				print(f"Error terminating player: {e}")
 		self.window.quit()
+		return
+
+	# Schedule a callback with 'after' and track it for cancellation
+	def _ScheduleAfter(self, delay_ms, callback):
+		after_id = None
+		
+		def wrapped_callback():
+			# Remove this callback's ID from the tracking list when it executes
+			if after_id in self.pending_after_ids:
+				self.pending_after_ids.remove(after_id)
+			callback()
+		
+		after_id = self.window.after(delay_ms, wrapped_callback)
+		self.pending_after_ids.append(after_id)
+		return after_id
+
+	# Cancel all pending after callbacks to prevent memory leaks
+	def _CancelPendingAfterCallbacks(self):
+		for after_id in self.pending_after_ids:
+			try:
+				self.window.after_cancel(after_id)
+			except (ValueError, Tk.TclError):
+				pass  # Ignore errors from already-executed or invalid callbacks
+		self.pending_after_ids.clear()
 		return
 
 if __name__ == "__main__":
