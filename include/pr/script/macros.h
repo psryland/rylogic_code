@@ -183,7 +183,12 @@ namespace pr::script
 					// Do the substitution
 					exp.erase (j, len);
 					exp.insert(j, with);
-					j += with.size() - len;
+					
+					// Advance past the substituted text. Handle case where replacement is shorter.
+					if (with.size() >= len)
+						j += with.size() - len;
+					else
+						j = (j > len - with.size()) ? j - (len - with.size()) : 0;
 				}
 			}
 		}
