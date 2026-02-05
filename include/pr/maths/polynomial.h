@@ -106,7 +106,11 @@ namespace pr::maths
 		// Create a Monic from 2 points
 		static Monic FromPoints(v2 const& a, v2 const& b)
 		{
-			auto A = (b.y - a.y) / (b.x - a.x);
+			auto dx = b.x - a.x;
+			if (Abs(dx) < maths::tinyf)
+				return Monic(0, a.y); // Vertical line - return horizontal through a.y
+			
+			auto A = (b.y - a.y) / dx;
 			auto B = a.y - A * a.x;
 			return Monic(A, B);
 		}
@@ -158,7 +162,7 @@ namespace pr::maths
 			auto B = dy - 2*A*x;
 
 			//' Ax² + Bx + C = y
-			auto C = y - (A*x - B)*x;
+			auto C = y - (A*x + B)*x;
 
 			return Quadratic(A,B,C);
 		}
@@ -319,6 +323,14 @@ namespace pr::maths
 			? -0.5 * (p.B - discriminant)
 			: -0.5 * (p.B + discriminant);
 
+		// Check for zero discriminant to avoid division by zero
+		if (Abs(discriminant) < maths::tinyf)
+		{
+			// Repeated root case: x = -B / (2A)
+			auto root = -p.B / (2 * p.A);
+			return Roots(root, root);
+		}
+
 		return Roots
 		(
 			discriminant / p.A,
@@ -327,6 +339,10 @@ namespace pr::maths
 	}
 	template <typename = void> Roots FindRoots(Cubic const& p)
 	{
+		// Check for degenerate cubic (A == 0)
+		if (Abs(p.A) < maths::tinyf)
+			return FindRoots(Quadratic(p.B, p.C, p.D));
+		
 		// See http://www2.hawaii.edu/suremath/jrootsCubic.html for method
 		auto a0 = p.D / p.A;
 		auto a1 = p.C / p.A;
@@ -342,17 +358,16 @@ namespace pr::maths
 			auto real_s1 = r + temp;
 			auto real_s2 = r - temp;
 
+			// Preserve sign when taking cube root
 			if (Abs(real_s1) > 0.0f)
 			{
-				real_s1 = Cubert(Abs(real_s1));
-				if (real_s1 < 0.0f)
-					real_s1 = -real_s1;
+				auto sign1 = Sign(real_s1);
+				real_s1 = sign1 * Cubert(Abs(real_s1));
 			}
 			if (Abs(real_s2) > 0.0f)
 			{
-				real_s2 = Cubert(Abs(real_s2));
-				if (real_s2 < 0.0f)
-					real_s2 = -real_s2;
+				auto sign2 = Sign(real_s2);
+				real_s2 = sign2 * Cubert(Abs(real_s2));
 			}
 			return Roots(real_s1 + real_s2 - a2 / 3.0f);
 		}
@@ -451,6 +466,10 @@ namespace pr::maths
 	}
 	inline Roots StationaryPoints(Quadratic const& p)
 	{
+		// Check for linear polynomial (A == 0)
+		if (Abs(p.A) < maths::tinyf)
+			return Roots(); // Linear has no stationary points
+		
 		return Roots(-p.B / (2.0f * p.A));
 	}
 	inline Roots StationaryPoints(Cubic const& p)

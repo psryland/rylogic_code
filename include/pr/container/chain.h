@@ -94,10 +94,11 @@ namespace pr::chain
 	{
 		// if 'lhs = a1->a2->a3->a1' and 'rhs = b1->b2->b3->b1'
 		// then Join(lhs, rhs) = 'a1->a2->a3->b1->b2->b3->a1'
+		auto lhs_prev = lhs.m_prev; // Save before modifying
 		lhs.m_prev->m_next = &rhs;
 		rhs.m_prev->m_next = &lhs;
 		lhs.m_prev = rhs.m_prev;
-		rhs.m_prev = lhs.m_prev;
+		rhs.m_prev = lhs_prev;
 	}
 	template <typename Type> inline void Remove(Type& elem)
 	{

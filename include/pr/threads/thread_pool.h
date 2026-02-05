@@ -88,9 +88,17 @@ namespace pr::threads
 				if (!m_tasks.try_pop(task))
 				{
 					std::unique_lock<std::mutex> lock(m_mutex_tasks);
-					m_cv_task_added.wait(lock, [&] { return m_tasks.try_pop(task) || m_shutdown; });
-					if (m_shutdown)
+					
+					// Wait for tasks or shutdown. Don't pop in predicate to avoid losing tasks on shutdown.
+					m_cv_task_added.wait(lock, [&] { return !m_tasks.unsafe_empty() || m_shutdown; });
+					
+					// Check shutdown first, but only exit if no tasks remain
+					if (m_shutdown && !m_tasks.try_pop(task))
 						return;
+					
+					// If we didn't pop above (not shutdown), try to pop now
+					if (!task && !m_tasks.try_pop(task))
+						continue;
 				}
 
 				// Execute the task

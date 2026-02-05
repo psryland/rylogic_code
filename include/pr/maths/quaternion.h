@@ -409,6 +409,11 @@ namespace pr
 		auto a = frac * Acos(w);               // = scaled half angle
 		auto sin_ha = Sin(a);
 		auto cos_ha = Cos(a);
+		
+		// Handle identity quaternion (s near zero) to avoid division by zero
+		if (s < S(0.0001))
+			return Quat<S,A,B>{S(0), S(0), S(0), cos_ha};
+		
 		return Quat<S,A,B>{
 			q.x * sin_ha / s,
 			q.y * sin_ha / s,
