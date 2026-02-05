@@ -3395,7 +3395,8 @@ int unzLocateFile (unzFile file, const TCHAR *szFileName, int iCaseSensitivity)
 #ifdef _UNICODE
 	GetAnsiFileName(szFileName, szFileNameA, MAX_PATH-1);
 #else
-	strcpy(szFileNameA, szFileName);
+	strncpy(szFileNameA, szFileName, MAX_PATH - 1);
+	szFileNameA[MAX_PATH - 1] = '\0';
 #endif
 
 	s=(unz_s*)file;
@@ -3928,7 +3929,8 @@ ZRESULT TUnzip::Get(int index,ZIPENTRY *ze)
   if (lufread(extra,1,(uInt)extralen,uf->file)!=extralen) {delete[] extra; return ZR_READ;}
   //
   ze->index=uf->num_file;
-  strcpy(ze->name,fn);
+  strncpy(ze->name, fn, MAX_PATH - 1);
+  ze->name[MAX_PATH - 1] = '\0';
   // zip has an 'attribute' 32bit value. Its lower half is windows stuff
   // its upper half is standard unix attr.
   unsigned long a = ufi.external_fa;
