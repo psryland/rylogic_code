@@ -144,7 +144,7 @@ namespace pr::physics
 				
 				// Only normalize if impulseT has non-zero length
 				auto impulseT_lenSq = LengthSq(impulseT);
-				if (impulseT_lenSq > maths::tinySq)
+				if (impulseT_lenSq > maths::tiny_sqf)
 					impulseT = Jt * (impulseT / Sqrt(impulseT_lenSq));
 				
 				impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + impulseT;

@@ -88,7 +88,7 @@ namespace pr::collision
 		v4 SeparatingAxis() const
 		{
 			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
-			return m_axis_len_sq > maths::tinySq ? m_axis / Sqrt(m_axis_len_sq) : v4{1,0,0,0};
+			return m_axis_len_sq > maths::tiny_sqf ? m_axis / Sqrt(m_axis_len_sq) : v4{1,0,0,0};
 		}
 
 		// Implemented by derived types.
@@ -127,7 +127,7 @@ namespace pr::collision
 			auto len_sq = LengthSq(axis);
 			
 			// Skip degenerate axes to avoid division by zero
-			if (len_sq < maths::tinySq)
+			if (len_sq < maths::tiny_sqf)
 				return true;
 			
 			auto d_sq = SignedSqr(depth) / len_sq;

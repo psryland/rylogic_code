@@ -90,7 +90,7 @@ namespace pr::threads
 					std::unique_lock<std::mutex> lock(m_mutex_tasks);
 					
 					// Wait for tasks or shutdown. Don't pop in predicate to avoid losing tasks on shutdown.
-					m_cv_task_added.wait(lock, [&] { return !m_tasks.unsafe_empty() || m_shutdown; });
+					m_cv_task_added.wait(lock, [&] { return !m_tasks.empty() || m_shutdown; });
 					
 					// Check shutdown first, but only exit if no tasks remain
 					if (m_shutdown && !m_tasks.try_pop(task))

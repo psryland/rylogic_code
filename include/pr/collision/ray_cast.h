@@ -48,7 +48,7 @@ namespace pr::collision
 
 		// Check for zero-length ray direction
 		auto direction_lenSq = LengthSq(ray.m_direction);
-		if (direction_lenSq < maths::tinySq)
+		if (direction_lenSq < maths::tiny_sqf)
 			return result; // No valid ray direction
 		
 		// Find the closest point to the line
