@@ -2779,9 +2779,14 @@ ZRESULT TZip::Add(const char *odstzn, void *src,unsigned int len, DWORD flags)
 	if (hasputcen) 
 		return ZR_ENDED;
 
+	// Validate input string length to prevent buffer overflow
+	if (odstzn == nullptr || strlen(odstzn) >= MAX_PATH)
+		return ZR_ARGS;
+
 	// zip has its own notion of what its names should look like: i.e. dir/file.stuff
 	char dstzn[MAX_PATH]; 
-	strcpy(dstzn, odstzn);
+	strncpy(dstzn, odstzn, MAX_PATH - 1);
+	dstzn[MAX_PATH - 1] = '\0';
 	if (*dstzn == 0) 
 		return ZR_ARGS;
 	char *d=dstzn; 
