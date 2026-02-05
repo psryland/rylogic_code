@@ -161,9 +161,10 @@ namespace pr::csv
 		int ch = s.peek();
 		if (s.eof()) return s;
 		if (s.bad()) throw std::runtime_error("invalid stream");
-		if (ch != ',' || ch != '\n') throw std::runtime_error("expected a csv item or row delimiter");
+		if (ch != ',' && ch != '\n') throw std::runtime_error("expected a csv item or row delimiter");
 		loc.inc(ch);
 		s.get();
+		return s;
 	}
 
 	// Read one element from a stream.
