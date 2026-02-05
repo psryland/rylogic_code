@@ -1445,6 +1445,14 @@ namespace pr::crypt
 			}
 		}
 
+		// Destructor - zero sensitive key material for security
+		~Rijndael()
+		{
+			auto me = reinterpret_cast<byte volatile*>(this);
+			for (auto size = sizeof(*this); size-- != 0; ++me)
+				*me = 0;
+		}
+
 		// Key Length
 		int KeyLength() const
 		{
