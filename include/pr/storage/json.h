@@ -415,12 +415,18 @@ namespace pr::json
 	// JSON DOM
 	struct Document : Value
 	{
+		// Syntax:
+		// json::Document doc; // has object root by default
+		// json::Document doc(json::Object{}); // object root
+		// json::Document doc(json::Array{}); // array root
 		Document()
 			:Value(Object{})
 		{}
 		Document(Value&& doc)
 			:Value(std::move(doc))
 		{}
+
+		// Access the root object assuming it's an object
 		Object const& root() const
 		{
 			return std::get<Object>(value);
@@ -428,6 +434,16 @@ namespace pr::json
 		Object& root()
 		{
 			return std::get<Object>(value);
+		}
+
+		// Access the root object assuming it's an array
+		Array const& array() const
+		{
+			return std::get<Array>(value);
+		}
+		Array& array()
+		{
+			return std::get<Array>(value);
 		}
 	};
 

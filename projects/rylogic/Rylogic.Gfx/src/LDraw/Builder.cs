@@ -563,18 +563,35 @@ namespace Rylogic.LDraw
 	public class LdrAnimation
 	{
 		private RangeI? m_frame_range = null;
+		private List<(int, float)> m_frames = [];
+		private bool m_per_frame_durations = false;
 		private bool m_no_translation = false;
 		private bool m_no_rotation = false;
 
 		/// <summary>Limit frame range</summary>
-		public LdrAnimation frames(int beg, int end)
+		public LdrAnimation frame_range(int beg, int end)
 		{
 			m_frame_range = new RangeI(beg, end);
 			return this;
 		}
 		public LdrAnimation frame(int frame)
 		{
-			return frames(frame, frame + 1);
+			return frame_range(frame, frame + 1);
+		}
+
+		/// <summary>Construct an animation from specific frames</summary>
+		public LdrAnimation frames(IEnumerable<(int, float)> frames)
+		{
+			m_per_frame_durations = true;
+			m_frames = frames.ToList();
+			return this;
+		}
+		public LdrAnimation frames(IEnumerable<int> frames)
+		{
+			m_per_frame_durations = false;
+			m_frames = frames.Select(x => (x, 0f)).ToList();
+			return this;
+			
 		}
 
 		// Anim flags
@@ -600,6 +617,26 @@ namespace Rylogic.LDraw
 						res.Write(EKeyword.Frame, range.Beg);
 					else
 						res.Write(EKeyword.FrameRange, range.Beg, range.End);
+				}
+				if (m_frames.Count != 0)
+				{
+					if (m_per_frame_durations)
+					{
+						res.Write(EKeyword.PerFrameDurations);
+						res.Write(EKeyword.Frames, () =>
+						{
+							foreach (var (frame, duration) in m_frames)
+								res.Append(frame, duration);
+						});
+					}
+					else
+					{
+						res.Write(EKeyword.Frames, () =>
+						{
+							foreach (var (frame, _) in m_frames)
+								res.Append(frame);
+						});
+					}
 				}
 				if (m_no_translation)
 				{

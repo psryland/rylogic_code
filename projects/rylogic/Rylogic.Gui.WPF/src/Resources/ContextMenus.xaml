@@ -50,6 +50,14 @@
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_SelectionBox"
 		/>
+	<MenuItem x:Key="View3dMenuItem_ObjectInfo" x:Shared="False"
+		Header="Object Info"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding ObjectInfoEnabled, Mode=OneWay}"
+		Command="{Binding ToggleObjectInfo}"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_ObjectInfo"
+		/>
 	<MenuItem x:Key="View3dMenuItem_AutoRangeView" x:Shared="False"
 		Command="{Binding AutoRangeView}"
 		CommandParameter="{Binding AutoRangeBounds}"
