@@ -229,10 +229,15 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
     private createCompletionItem(keyword: string): vscode.CompletionItem {
         const template = this.templates.templates[keyword];
         
+        // Label shows *Keyword but we insert just the keyword (without *)
+        // because the user already typed the * to trigger completion
         const item = new vscode.CompletionItem(`*${keyword}`, vscode.CompletionItemKind.Keyword);
         
-        // Insert only the keyword (with *)
-        item.insertText = `*${keyword}`;
+        // Insert only the keyword (without *) since * was already typed
+        item.insertText = keyword;
+        
+        // Filter text for matching - include * so typing *B matches *Box
+        item.filterText = `*${keyword}`;
         
         // Show the full template in the detail/documentation
         if (template) {
