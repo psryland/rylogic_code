@@ -25,10 +25,18 @@ namespace pr::collision
 				return ray;
 
 			auto direction_len  = Length(ray.m_direction);
+			if (direction_len < maths::tinyf)
+				return ray; // Zero-length ray, cannot shift
+			
 			auto forward        = ray.m_direction / direction_len;
 			auto sideways       = (forward * Dot3(ray.m_point, forward) - ray.m_point).w0();
 			auto sideways_len   = Length(sideways);
-			sideways           /= sideways_len;
+			
+			// If sideways length is zero, ray passes through origin - no shift needed
+			if (sideways_len < maths::tinyf)
+				return Ray(ray.m_point + forward * pr::Min(direction_len, ray.m_thickness), ray.m_direction, 0.0f);
+			
+			sideways /= sideways_len;
 
 			return Ray(
 				ray.m_point +
@@ -44,8 +52,12 @@ namespace pr::collision
 	{
 		RayCastResult result;
 
-		// Find the closest point to the line
+		// Check for zero-length ray direction
 		auto direction_lenSq = LengthSq(ray.m_direction);
+		if (direction_lenSq < maths::tinySq)
+			return result; // No valid ray direction
+		
+		// Find the closest point to the line
 		auto closest_point   = ray.m_point - ray.m_direction * (Dot(ray.m_direction, ray.m_point) / direction_lenSq);
 		auto closest_distSq  = LengthSq(closest_point);
 		auto radius          = shape.m_radius + ray.m_thickness;
