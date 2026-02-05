@@ -608,7 +608,15 @@ class PictureFrame:
 
 	# Schedule a callback with 'after' and track it for cancellation
 	def _ScheduleAfter(self, delay_ms, callback):
-		after_id = self.window.after(delay_ms, callback)
+		after_id = None
+		
+		def wrapped_callback():
+			# Remove this callback's ID from the tracking list when it executes
+			if after_id in self.pending_after_ids:
+				self.pending_after_ids.remove(after_id)
+			callback()
+		
+		after_id = self.window.after(delay_ms, wrapped_callback)
 		self.pending_after_ids.append(after_id)
 		return after_id
 
@@ -617,8 +625,8 @@ class PictureFrame:
 		for after_id in self.pending_after_ids:
 			try:
 				self.window.after_cancel(after_id)
-			except Exception:
-				pass  # Ignore errors from already-executed callbacks
+			except (ValueError, Tk.TclError):
+				pass  # Ignore errors from already-executed or invalid callbacks
 		self.pending_after_ids.clear()
 		return
 
