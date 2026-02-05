@@ -96,7 +96,11 @@ namespace pr::physics
 		auto impulse0 = -(col_I * V_inv);
 
 		// Get the impulse that would reduce the normal component of the relative velocity at 'pt' to zero
-		auto impulseN = -(Dot(c.m_axis, V_inv) / Dot(c.m_axis, col_I_inv * c.m_axis)) * c.m_axis;
+		// Check denominator to avoid division by zero for degenerate collision configurations
+		auto denom = Dot(c.m_axis, col_I_inv * c.m_axis);
+		auto impulseN = Abs(denom) > maths::tinyf 
+			? -(Dot(c.m_axis, V_inv) / denom) * c.m_axis 
+			: v4{};
 
 		// The difference is the impulse that would reduce the tangential component of the relative velocity at 'pt' to zero
 		auto impulseT = impulse0 - impulseN;
@@ -118,23 +122,31 @@ namespace pr::physics
 		// TODO optimise...
 
 		// Calculate the restitution impulse
-		// Apply elasticity to the normal component of the impulse
-		auto impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + (1 + c.m_mat.m_elasticity_norm) * impulseT;
+		// Apply elasticity to the normal component only (tangential handled by friction)
+		auto impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + impulseT;
 
 		// Limit the normal and tangential components of 'impulse' to the friction cone.
 		{
-			// Scale 0->1 to 0->inf, 0.5->1.0f
-			auto static_friction = c.m_mat.m_friction_static / (1.000001f - c.m_mat.m_friction_static);
+			// Scale 0->1 to 0->inf, 0.5->1.0f. Clamp friction to avoid division by zero.
+			auto clamped_friction = pr::Min(c.m_mat.m_friction_static, 0.9999f);
+			auto static_friction = clamped_friction / (1.000001f - clamped_friction);
 
 			// If '|Jt|/|Jn|' (the ratio of tangential to normal magnitudes) is greater than static friction
 			// then the contact 'slips' and the impulse is reduced in the tangential direction.
 			auto Jn = Dot(impulse4, c.m_axis);
-			auto Jt = Sqrt(LengthSq(impulse4) - Sqr(Jn));
+			
+			// Clamp to avoid sqrt of negative value due to floating point errors
+			auto Jt = Sqrt(pr::Max(0.0f, LengthSq(impulse4) - Sqr(Jn)));
 			if (Jt > static_friction * Abs(Jn))
 			{
 				// Reduce the tangential component of the impulse
 				Jt = static_friction * Abs(Jn);
-				impulseT = Jt * Normalise(impulseT);
+				
+				// Only normalize if impulseT has non-zero length
+				auto impulseT_lenSq = LengthSq(impulseT);
+				if (impulseT_lenSq > maths::tinySq)
+					impulseT = Jt * (impulseT / Sqrt(impulseT_lenSq));
+				
 				impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + impulseT;
 			}
 		}
