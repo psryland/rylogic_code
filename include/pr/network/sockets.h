@@ -70,6 +70,10 @@ namespace pr::network
 		if (!SelectToSend(socket, timeout_ms))
 			return false;
 
+		// Check for size overflow when casting to int
+		if (data.size() > static_cast<size_t>(INT_MAX))
+			throw std::runtime_error("Data size exceeds maximum for socket operation");
+
 		auto buf = reinterpret_cast<char const*>(data.data());
 		auto len = static_cast<int>(data.size());
 
@@ -85,6 +89,10 @@ namespace pr::network
 	// Send 'data' as a stream (i.e., repeatedly call send until all data is sent)
 	inline bool SendStream(SOCKET socket, std::span<uint8_t const> data, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
 	{
+		// Check for size overflow when casting to int
+		if (data.size() > static_cast<size_t>(INT_MAX))
+			throw std::runtime_error("Data size exceeds maximum for socket operation");
+		
 		auto buf = reinterpret_cast<char const*>(data.data());
 		auto len = static_cast<int>(data.size());
 
@@ -115,6 +123,10 @@ namespace pr::network
 		if (!SelectToRecv(socket, timeout_ms))
 			return false;
 
+		// Check for size overflow when casting to int
+		if (data.size() > static_cast<size_t>(INT_MAX))
+			throw std::runtime_error("Data size exceeds maximum for socket operation");
+
 		auto buf = reinterpret_cast<char*>(data.data());
 		auto len = static_cast<int>(data.size());
 		auto addrlen = addr ? static_cast<int>(sizeof(*addr)) : 0;
@@ -132,6 +144,10 @@ namespace pr::network
 	// Receive a stream of data (i.e., repeatedly call 'recv' until all data is received)
 	inline bool RecvStream(SOCKET socket, std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
 	{
+		// Check for size overflow when casting to int
+		if (data.size() > static_cast<size_t>(INT_MAX))
+			throw std::runtime_error("Data size exceeds maximum for socket operation");
+		
 		auto buf = reinterpret_cast<char*>(data.data());
 		auto len = static_cast<int>(data.size());
 		auto addrlen = addr ? static_cast<int>(sizeof(*addr)) : 0;
