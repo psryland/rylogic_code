@@ -231,8 +231,8 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
         // If user already typed *, insert just the keyword; otherwise insert *keyword
         item.insertText = hasAsterisk ? keyword : `*${keyword}`;
         
-        // Filter text for matching - include * so typing *B matches *Box
-        item.filterText = `*${keyword}`;
+        // Filter text without * - VS Code filters based on text after the trigger character
+        item.filterText = keyword;
         
         // Show the full template in the detail/documentation
         if (template) {
