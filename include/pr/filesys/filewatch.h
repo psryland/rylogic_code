@@ -201,6 +201,9 @@ namespace pr
 				// Report each changed file
 				for (auto& file : changed_files)
 				{
+					if (file.m_onchanged == nullptr)
+						continue;
+					
 					bool handled = true;
 					file.m_onchanged->FileWatch_OnFileChanged(file.m_filepath.c_str(), file.m_id, file.m_user_data, handled);
 					if (!handled)
