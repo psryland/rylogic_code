@@ -47,7 +47,7 @@ namespace pr::hash
 		{
 			// Reset memory for security reasons
 			auto me = reinterpret_cast<uint8_t volatile*>(this);
-			for (auto size = sizeof(*me); size-- != 0; ++me)
+			for (auto size = sizeof(*this); size-- != 0; ++me)
 				*me = 0;
 		}
 

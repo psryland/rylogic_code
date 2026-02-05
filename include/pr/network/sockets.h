@@ -527,7 +527,7 @@ namespace pr::network
 		// Close the socket
 		void Close()
 		{
-			m_socket == nullptr;
+			m_socket = nullptr;
 		}
 
 		// True if the socket handle "looks" valid
