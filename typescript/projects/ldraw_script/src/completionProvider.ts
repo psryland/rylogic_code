@@ -43,13 +43,22 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
         const context = this.getContext(document, position);
         const validKeywords = this.getValidKeywords(context);
         
-        // Check if the character before cursor is '*'
-        const charBefore = position.character > 0 
-            ? document.getText(new vscode.Range(position.translate(0, -1), position))
-            : '';
-        const hasAsterisk = charBefore === '*';
+        // Find the word being typed, including any * prefix
+        const lineText = document.lineAt(position.line).text;
+
+        let wordStart = position.character;
+        const isKeywordChar = (ch: string): boolean => { return ch === '*' || /[a-zA-Z0-9]/.test(ch); };
+        while (wordStart > 0 && isKeywordChar(lineText[wordStart - 1])) {
+            --wordStart;
+        }
+
+        // Calculate the range to replace (the current word including * if present)
+        const replaceRange = new vscode.Range(
+            position.line, wordStart,
+            position.line, position.character
+        );
         
-        return validKeywords.map(keyword => this.createCompletionItem(keyword, hasAsterisk));
+        return validKeywords.map(keyword => this.createCompletionItem(keyword, replaceRange));
     }
 
     /**
@@ -221,18 +230,16 @@ export class LdrCompletionProvider implements vscode.CompletionItemProvider {
     /**
      * Creates a completion item for a keyword.
      * @param keyword The keyword to create a completion for
-     * @param hasAsterisk Whether the user has already typed '*' before the cursor
+     * @param replaceRange The range of text to replace when completing
      */
-    private createCompletionItem(keyword: string, hasAsterisk: boolean): vscode.CompletionItem {
+    private createCompletionItem(keyword: string, replaceRange: vscode.Range): vscode.CompletionItem {
         const template = this.templates.templates[keyword];
         
         const item = new vscode.CompletionItem(`*${keyword}`, vscode.CompletionItemKind.Keyword);
         
-        // If user already typed *, insert just the keyword; otherwise insert *keyword
-        item.insertText = hasAsterisk ? keyword : `*${keyword}`;
-        
-        // Filter text without * - VS Code filters based on text after the trigger character
-        item.filterText = keyword;
+        // Always insert *keyword, replacing the current word
+        item.insertText = `*${keyword}`;
+        item.range = replaceRange;
         
         // Show the full template in the detail/documentation
         if (template) {
