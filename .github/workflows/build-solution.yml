@@ -1,0 +1,50 @@
+name: Build Solution
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-script
+        run: dotnet tool install -g dotnet-script
+
+      # The repo nuget.config references a local package source that only
+      # exists on the dev machine. Replace it with just nuget.org for CI.
+      - name: Configure NuGet for CI
+        shell: pwsh
+        run: |
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <config>
+              <add key="repositoryPath" value="packages" />
+            </config>
+            <packageRestore>
+              <add key="enabled" value="true" />
+              <add key="automatic" value="true" />
+            </packageRestore>
+            <packageSources>
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          '@ | Set-Content -Path nuget.config
+
+      - name: Restore
+        run: dotnet restore Rylogic.sln
+
+      - name: Build
+        run: dotnet build Rylogic.sln --no-restore -c Release
