@@ -25,6 +25,11 @@ namespace pr::network
 			if (socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 
+			// Allow address reuse to avoid WSAEADDRINUSE when restarting quickly
+			int reuse = 1;
+			if (::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char const*>(&reuse), sizeof(reuse)) == SOCKET_ERROR)
+				Throw(WSAGetLastError());
+
 			// Bind the local address to the socket
 			sockaddr_in my_address = {};
 			my_address.sin_family = AF_INET;
