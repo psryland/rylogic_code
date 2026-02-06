@@ -1111,16 +1111,15 @@ namespace pr::geometry::gltf
 			if (result != cgltf_result_success)
 				throw std::runtime_error("glTF parse error: " + ResultToString(result));
 
-			// Try to load external buffers if a filename hint is provided
-			if (!opts.filename.empty())
+			// Load buffer data. For GLB files this wires up the embedded binary chunk.
+			// For glTF with external .bin files, this needs a path hint to resolve relative URIs.
+			auto path_hint = opts.filename.empty() ? nullptr : std::string(opts.filename).c_str();
+			result = cgltf_load_buffers(&options, m_gltfdata, path_hint);
+			if (result != cgltf_result_success)
 			{
-				result = cgltf_load_buffers(&options, m_gltfdata, std::string(opts.filename).c_str());
-				if (result != cgltf_result_success)
-				{
-					cgltf_free(m_gltfdata);
-					m_gltfdata = nullptr;
-					throw std::runtime_error("glTF buffer load error: " + ResultToString(result));
-				}
+				cgltf_free(m_gltfdata);
+				m_gltfdata = nullptr;
+				throw std::runtime_error("glTF buffer load error: " + ResultToString(result));
 			}
 
 			result = cgltf_validate(m_gltfdata);
