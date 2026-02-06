@@ -16,7 +16,7 @@
 # - python -m cProfile -o profile.out picture.py
 # - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\snakeviz.exe profile.out
 
-import sys, os, json, platform, fnmatch, random, pathspec, threading
+import sys, os, json, platform, fnmatch, random, pathspec, threading, tempfile, shutil, time
 from pathlib import Path
 import tkinter as Tk
 import mpv
@@ -32,6 +32,14 @@ class PictureFrame:
 		self.menu_visible = False
 		self.issue_number = 0
 		self.pending_after_ids = []  # Track scheduled after callbacks to prevent memory leaks
+
+		# Prefetch state for loading next media while current is displaying
+		self.prefetch_cache_dir = Path(tempfile.gettempdir()) / "pictureframe_cache"
+		self.prefetch_cache_dir.mkdir(exist_ok=True)
+		self.prefetch_lock = threading.Lock()
+		self.prefetch_pending_set = set()  # Set of paths currently being prefetched
+		self.prefetch_cache = {}  # Maps source_path -> cached_path for all cached files
+		self._LoadCacheManifest()  # Load existing cache from previous sessions
 
 		# Load the config
 		self.config = self._LoadConfig()
@@ -238,6 +246,9 @@ class PictureFrame:
 		# Init the UI
 		self._UpdateUI()
 
+		# Start periodic cache cleanup (every 10 minutes)
+		self._SchedulePeriodicCacheCleanup()
+
 		# Wait for the window to be viewable
 		def WaitTillShown():
 			if self.bb.winfo_viewable() == 0:
@@ -264,7 +275,7 @@ class PictureFrame:
 		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
 		fullpath, relpath = self._FindMedia(+1)
-		self._DisplayMedia(fullpath, relpath, self.issue_number)
+		self._DisplayMedia(fullpath, relpath, self.issue_number, +1)
 		return
 
 	# Display the previous image
@@ -272,7 +283,7 @@ class PictureFrame:
 		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
 		fullpath, relpath = self._FindMedia(-1)
-		self._DisplayMedia(fullpath, relpath, self.issue_number)
+		self._DisplayMedia(fullpath, relpath, self.issue_number, -1)
 		return
 
 	# Find the next/previous image in the list
@@ -292,7 +303,7 @@ class PictureFrame:
 		return Path(), Path()
 
 	# Display the image/video at 'self.image_index'
-	def _DisplayMedia(self, fullpath, relpath, issue_number):
+	def _DisplayMedia(self, fullpath, relpath, issue_number, direction=1):
 		# Kill any call that doesn't match the issue number
 		if issue_number != self.issue_number:
 			return
@@ -318,9 +329,9 @@ class PictureFrame:
 		# Display image if it is an image file
 		try:
 			if extn in ['.png', '.jpg', '.jpeg', '.bmp']:
-				self._ShowImage(fullpath, issue_number)
+				self._ShowImage(fullpath, issue_number, direction)
 			elif extn in ['.mp4', '.avi', '.mov']:
-				self._ShowVideo(fullpath, issue_number)
+				self._ShowVideo(fullpath, issue_number, direction)
 			else:
 				self._ScheduleAfter(100, self._NextImage)
 		except Exception as e:
@@ -329,7 +340,7 @@ class PictureFrame:
 		return
 
 	# Display a still image
-	def _ShowImage(self, image_fullpath, issue_number):
+	def _ShowImage(self, image_fullpath, issue_number, direction=1):
 		if self.player is None:
 			print("MPV player not initialized, skipping image display")
 			self._ScheduleAfter(100, self._NextImage)
@@ -342,7 +353,13 @@ class PictureFrame:
 			return
 
 		try:
-			self.player.play(str(image_fullpath))
+			# Use cached file if available, otherwise use original path
+			playback_path = self._GetPlaybackPath(image_fullpath)
+			self.player.play(str(playback_path))
+			
+			# Start prefetching the next image in the current navigation direction
+			self._PrefetchNext(direction)
+			
 			self._ScheduleAfter(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		except Exception as e:
 			print(f"Error playing image {image_fullpath}: {e}")
@@ -350,7 +367,7 @@ class PictureFrame:
 		return
 
 	# Display a video
-	def _ShowVideo(self, video_fullpath, issue_number):
+	def _ShowVideo(self, video_fullpath, issue_number, direction=1):
 		if self.player is None:
 			print("MPV player not initialized, skipping video display")
 			self._ScheduleAfter(100, self._NextImage)
@@ -366,7 +383,13 @@ class PictureFrame:
 			return
 
 		try:
-			self.player.play(str(video_fullpath))
+			# Use cached file if available, otherwise use original path
+			playback_path = self._GetPlaybackPath(video_fullpath)
+			self.player.play(str(playback_path))
+			
+			# Start prefetching the next media in the current navigation direction
+			self._PrefetchNext(direction)
+			
 			self._ScheduleAfter(500, Stop)
 		except Exception as e:
 			print(f"Error playing video {video_fullpath}: {e}")
@@ -592,6 +615,150 @@ class PictureFrame:
 				file.write(f"{pattern}\n")
 
 		print(f"done. Ignore list: {ignore_patterns_fullpath}")
+		return
+
+	# Start prefetching multiple media files ahead in the background
+	def _PrefetchNext(self, direction=1):
+		prefetch_count = self.config.get('PrefetchCount', 10)
+		
+		for i in range(1, prefetch_count + 1):
+			increment = direction * i
+			self._PrefetchFile(increment)
+		return
+
+	# Prefetch a single file at the given offset from current index
+	def _PrefetchFile(self, increment):
+		# Calculate what the target image index will be
+		target_index = (self.image_index + len(self.image_list) + increment) % len(self.image_list)
+		if target_index < 0 or target_index >= len(self.image_list):
+			return
+		
+		target_relpath = self.image_list[target_index].strip()
+		target_fullpath = (self.image_dir / target_relpath).resolve()
+		
+		if not target_fullpath.exists():
+			return
+		
+		with self.prefetch_lock:
+			# Already cached?
+			if target_fullpath in self.prefetch_cache:
+				return
+			
+			# Already prefetching this file?
+			if target_fullpath in self.prefetch_pending_set:
+				return
+			
+			self.prefetch_pending_set.add(target_fullpath)
+		
+		# Start background thread to copy the file
+		thread = threading.Thread(
+			target=self._PrefetchWorker,
+			args=(target_fullpath,),
+			daemon=True
+		)
+		thread.start()
+		return
+
+	# Background worker that copies a file to local cache
+	def _PrefetchWorker(self, source_path):
+		try:
+			# Generate a unique cached filename (include hash to handle duplicate names)
+			cache_name = f"{hash(str(source_path)) & 0xFFFFFFFF:08x}_{source_path.name}"
+			cached_path = self.prefetch_cache_dir / cache_name
+			
+			# Copy the file from network to local cache
+			shutil.copy2(source_path, cached_path)
+			
+			with self.prefetch_lock:
+				# Add to cache dictionary and remove from pending set
+				self.prefetch_cache[source_path] = cached_path
+				self.prefetch_pending_set.discard(source_path)
+				print(f"Prefetched: {source_path.name}")
+			
+			# Save manifest after successful prefetch
+			self._SaveCacheManifest()
+		except Exception as e:
+			print(f"Prefetch failed for {source_path}: {e}")
+			with self.prefetch_lock:
+				self.prefetch_pending_set.discard(source_path)
+		return
+
+	# Get the cached path for a media file, or the original if not cached
+	def _GetPlaybackPath(self, fullpath):
+		with self.prefetch_lock:
+			if fullpath in self.prefetch_cache:
+				return self.prefetch_cache[fullpath]
+		return fullpath
+
+	# Load cache manifest from previous session
+	def _LoadCacheManifest(self):
+		manifest_path = self.prefetch_cache_dir / "manifest.json"
+		try:
+			if not manifest_path.exists():
+				return
+			
+			with open(manifest_path, "r", encoding="utf-8") as f:
+				manifest = json.load(f)
+			
+			# Validate that cached files still exist and populate the cache dictionary
+			for source_str, cached_str in manifest.items():
+				source_path = Path(source_str)
+				cached_path = Path(cached_str)
+				if cached_path.exists():
+					self.prefetch_cache[source_path] = cached_path
+			
+			print(f"Loaded {len(self.prefetch_cache)} cached files from previous session")
+		except Exception as e:
+			print(f"Error loading cache manifest: {e}")
+		return
+
+	# Save cache manifest for future sessions
+	def _SaveCacheManifest(self):
+		manifest_path = self.prefetch_cache_dir / "manifest.json"
+		try:
+			with self.prefetch_lock:
+				manifest = {str(k): str(v) for k, v in self.prefetch_cache.items()}
+			
+			with open(manifest_path, "w", encoding="utf-8") as f:
+				json.dump(manifest, f, indent=2)
+		except Exception as e:
+			print(f"Error saving cache manifest: {e}")
+		return
+
+	# Clean up old files in the prefetch cache directory
+	def _CleanupOldCacheFiles(self):
+		try:
+			if not self.prefetch_cache_dir or not self.prefetch_cache_dir.exists():
+				return
+			
+			max_age_seconds = self.config.get('CacheCleanupMinutes', 10) * 60
+			now = time.time()
+			files_removed = False
+			for cached_file in self.prefetch_cache_dir.iterdir():
+				if cached_file.is_file() and cached_file.name != "manifest.json":
+					file_age = now - cached_file.stat().st_mtime
+					if file_age > max_age_seconds:
+						with self.prefetch_lock:
+							# Remove from cache dictionary
+							keys_to_remove = [k for k, v in self.prefetch_cache.items() if v == cached_file]
+							for key in keys_to_remove:
+								del self.prefetch_cache[key]
+						cached_file.unlink()
+						files_removed = True
+						print(f"Cleaned up old cache file: {cached_file.name}")
+			
+			# Save manifest if files were removed
+			if files_removed:
+				self._SaveCacheManifest()
+		except Exception as e:
+			print(f"Error cleaning old cache files: {e}")
+		return
+
+	# Schedule periodic cache cleanup
+	def _SchedulePeriodicCacheCleanup(self):
+		cleanup_interval_ms = self.config.get('CacheCleanupMinutes', 10) * 60 * 1000
+		self._CleanupOldCacheFiles()
+		self._ScheduleAfter(cleanup_interval_ms, self._SchedulePeriodicCacheCleanup)
 		return
 
 	def _Shutdown(self):

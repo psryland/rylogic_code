@@ -12,6 +12,7 @@
 #include <stop_token>
 #include <cstdint>
 #include <cassert>
+#include <iostream>
 #include "winsock.h"
 
 namespace pr::network
@@ -403,8 +404,14 @@ namespace pr::network
 						}
 						case EState::Broken:
 						{
-							// Clean up the broken socket
-							StopConnections();
+							// Clean up the broken socket without calling StopConnections() since
+							// we're running in the listen thread and StopConnections() would try to
+							// join ourselves, causing a deadlock.
+							m_listen_socket = nullptr;
+							{
+								std::unique_lock<std::mutex> lock(m_mutex);
+								m_clients.resize(0);
+							}
 							state = EState::Disconnected;
 							break;
 						}
@@ -416,6 +423,8 @@ namespace pr::network
 				}
 				catch (std::exception const& ex)
 				{
+					// Output the exception message for debugging
+					std::cerr << "Socket exception: " << ex.what() << std::endl;
 					assert(false && ex.what()); (void)ex;
 					state = EState::Broken;
 				}
