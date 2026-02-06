@@ -1,5 +1,8 @@
 name: Build Solution
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
