@@ -1,4 +1,4 @@
-name: Build Solution
+name: Build C# Projects
 
 permissions:
   contents: read
@@ -6,8 +6,24 @@ permissions:
 on:
   push:
     branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'nuget.config'
+      - '.github/workflows/build-csharp-projects.yml'
   pull_request:
     branches: [main]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.sln'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - 'nuget.config'
+      - '.github/workflows/build-csharp-projects.yml'
 
 jobs:
   build:
@@ -21,9 +37,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-
-      - name: Install dotnet-script
-        run: dotnet tool install -g dotnet-script
 
       # The repo nuget.config references a local package source that only
       # exists on the dev machine. Replace it with just nuget.org for CI.
@@ -46,10 +59,15 @@ jobs:
           </configuration>
           '@ | Set-Content -Path nuget.config
 
-      # Exclude VSIX projects that require Visual Studio SDK
+      # Remove C++ projects (need full VS C++ toolset) and VSIX projects (need VS SDK)
       - name: Remove unsupported projects from solution
         shell: pwsh
         run: |
+          $vcxprojs = Select-String -Path Rylogic.sln -Pattern '\.vcxproj"' |
+            ForEach-Object { if ($_ -match '"([^"]+\.vcxproj)"') { $matches[1] } }
+          if ($vcxprojs) {
+            dotnet sln Rylogic.sln remove @vcxprojs
+          }
           dotnet sln Rylogic.sln remove `
             projects\apps\Rylogic.TextAligner\Shared\Rylogic.TextAligner.Shared.csproj `
             projects\apps\Rylogic.TextAligner\2022\Rylogic.TextAligner.2022.csproj `

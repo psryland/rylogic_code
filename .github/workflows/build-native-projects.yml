@@ -1,0 +1,82 @@
+name: Build Native Projects
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '**/*.vcxproj'
+      - '**/*.vcxproj.filters'
+      - '**/*.props'
+      - '**/*.targets'
+      - 'include/**'
+      - 'sdk/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/build-native-projects.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '**/*.vcxproj'
+      - '**/*.vcxproj.filters'
+      - '**/*.props'
+      - '**/*.targets'
+      - 'include/**'
+      - 'sdk/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/build-native-projects.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-script
+        run: dotnet tool install -g dotnet-script
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # Fetch external SDK dependencies that are git-ignored in the repo.
+      # Each _get.csx script clones/downloads its SDK if not already present.
+      - name: Fetch SDK dependencies
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem -Path sdk -Filter _get.csx -Recurse
+          foreach ($script in $scripts) {
+            Write-Host "Running $($script.FullName)..."
+            dotnet-script $script.FullName
+          }
+
+      # Remove C# and VSIX projects, keeping only native (.vcxproj) projects
+      - name: Remove non-native projects from solution
+        shell: pwsh
+        run: |
+          $csprojs = Select-String -Path Rylogic.sln -Pattern '\.csproj"' |
+            ForEach-Object { if ($_ -match '"([^"]+\.csproj)"') { $matches[1] } }
+          if ($csprojs) {
+            dotnet sln Rylogic.sln remove @csprojs
+          }
+
+      - name: Build
+        run: msbuild Rylogic.sln /p:Configuration=Release /p:Platform=x64 /m
