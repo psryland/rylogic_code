@@ -767,6 +767,9 @@
     <ClInclude Include="src\openxr\conversion.h">
       <Filter>src\openxr</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\gltf.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <View3dShaderBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl">

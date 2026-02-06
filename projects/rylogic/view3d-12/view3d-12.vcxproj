@@ -139,6 +139,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\gltf.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />

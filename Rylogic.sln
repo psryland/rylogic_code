@@ -189,6 +189,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gltf", "projects\rylogic\gltf\gltf.vcxproj", "{A7B3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test-cpp", "projects\tests\test_cpp\test_cpp.vcxproj", "{73479052-E286-405D-A4B6-6775373D6646}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fbx-cmd", "projects\tools\fbx-cmd\fbx-cmd.vcxproj", "{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}"
 	ProjectSection(ProjectDependencies) = postProject
