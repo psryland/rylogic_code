@@ -38,6 +38,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Install dotnet-script
+        run: dotnet tool install -g dotnet-script
+
       # The repo nuget.config references a local package source that only
       # exists on the dev machine. Replace it with just nuget.org for CI.
       - name: Configure NuGet for CI

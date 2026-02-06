@@ -57,6 +57,28 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
+      # The repo nuget.config references a local package source that only
+      # exists on the dev machine. Replace it with just nuget.org for CI.
+      # dotnet-script also uses this config when restoring its internal project.
+      - name: Configure NuGet for CI
+        shell: pwsh
+        run: |
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <config>
+              <add key="repositoryPath" value="packages" />
+            </config>
+            <packageRestore>
+              <add key="enabled" value="true" />
+              <add key="automatic" value="true" />
+            </packageRestore>
+            <packageSources>
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          '@ | Set-Content -Path nuget.config
+
       # Fetch external SDK dependencies that are git-ignored in the repo.
       # Each _get.csx script clones/downloads its SDK if not already present.
       - name: Fetch SDK dependencies
