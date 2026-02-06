@@ -117,10 +117,10 @@ namespace pr::geometry::gltf
 	// Model types
 	struct Vert
 	{
-		v4 m_vert = {};
-		Colour m_colr = {};
-		v4 m_norm = {};
-		v2 m_tex0 = {};
+		v4 m_vert = v4::Origin();
+		Colour m_colr = ColourWhite;
+		v4 m_norm = v4::Zero();
+		v2 m_tex0 = v2::Zero();
 		iv2 m_idx0 = {};
 
 		friend bool operator == (Vert const& lhs, Vert const& rhs)

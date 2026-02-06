@@ -35,6 +35,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics", "projects\rylogic\physics\physics.vcxproj", "{8C5E848D-B91C-49E0-8E9C-E47A67731AC2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12", "projects\rylogic\view3d-12\view3d-12.vcxproj", "{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A7B3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D} = {A7B3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12.dll", "projects\rylogic\view3d-12\view3d-12.dll.vcxproj", "{FB13BA51-F847-4804-90A8-61AB789F4061}"
 	ProjectSection(ProjectDependencies) = postProject
