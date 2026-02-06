@@ -34,10 +34,12 @@ class PictureFrame:
 		self.pending_after_ids = []  # Track scheduled after callbacks to prevent memory leaks
 
 		# Prefetch state for loading next media while current is displaying
-		self.prefetch_cache_dir = Path(tempfile.mkdtemp(prefix="pictureframe_"))
+		self.prefetch_cache_dir = Path(tempfile.gettempdir()) / "pictureframe_cache"
+		self.prefetch_cache_dir.mkdir(exist_ok=True)
 		self.prefetch_lock = threading.Lock()
 		self.prefetch_pending_set = set()  # Set of paths currently being prefetched
 		self.prefetch_cache = {}  # Maps source_path -> cached_path for all cached files
+		self._LoadCacheManifest()  # Load existing cache from previous sessions
 
 		# Load the config
 		self.config = self._LoadConfig()
@@ -672,6 +674,9 @@ class PictureFrame:
 				self.prefetch_cache[source_path] = cached_path
 				self.prefetch_pending_set.discard(source_path)
 				print(f"Prefetched: {source_path.name}")
+			
+			# Save manifest after successful prefetch
+			self._SaveCacheManifest()
 		except Exception as e:
 			print(f"Prefetch failed for {source_path}: {e}")
 			with self.prefetch_lock:
@@ -685,6 +690,41 @@ class PictureFrame:
 				return self.prefetch_cache[fullpath]
 		return fullpath
 
+	# Load cache manifest from previous session
+	def _LoadCacheManifest(self):
+		manifest_path = self.prefetch_cache_dir / "manifest.json"
+		try:
+			if not manifest_path.exists():
+				return
+			
+			with open(manifest_path, "r", encoding="utf-8") as f:
+				manifest = json.load(f)
+			
+			# Validate that cached files still exist and populate the cache dictionary
+			for source_str, cached_str in manifest.items():
+				source_path = Path(source_str)
+				cached_path = Path(cached_str)
+				if cached_path.exists():
+					self.prefetch_cache[source_path] = cached_path
+			
+			print(f"Loaded {len(self.prefetch_cache)} cached files from previous session")
+		except Exception as e:
+			print(f"Error loading cache manifest: {e}")
+		return
+
+	# Save cache manifest for future sessions
+	def _SaveCacheManifest(self):
+		manifest_path = self.prefetch_cache_dir / "manifest.json"
+		try:
+			with self.prefetch_lock:
+				manifest = {str(k): str(v) for k, v in self.prefetch_cache.items()}
+			
+			with open(manifest_path, "w", encoding="utf-8") as f:
+				json.dump(manifest, f, indent=2)
+		except Exception as e:
+			print(f"Error saving cache manifest: {e}")
+		return
+
 	# Clean up old files in the prefetch cache directory
 	def _CleanupOldCacheFiles(self):
 		try:
@@ -693,8 +733,9 @@ class PictureFrame:
 			
 			max_age_seconds = self.config.get('CacheCleanupMinutes', 10) * 60
 			now = time.time()
+			files_removed = False
 			for cached_file in self.prefetch_cache_dir.iterdir():
-				if cached_file.is_file():
+				if cached_file.is_file() and cached_file.name != "manifest.json":
 					file_age = now - cached_file.stat().st_mtime
 					if file_age > max_age_seconds:
 						with self.prefetch_lock:
@@ -703,7 +744,12 @@ class PictureFrame:
 							for key in keys_to_remove:
 								del self.prefetch_cache[key]
 						cached_file.unlink()
+						files_removed = True
 						print(f"Cleaned up old cache file: {cached_file.name}")
+			
+			# Save manifest if files were removed
+			if files_removed:
+				self._SaveCacheManifest()
 		except Exception as e:
 			print(f"Error cleaning old cache files: {e}")
 		return
