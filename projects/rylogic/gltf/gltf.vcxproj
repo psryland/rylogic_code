@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ProjectGuid>{A7B3C4D5-E6F7-4A8B-9C0D-1E2F3A4B5C6D}</ProjectGuid>
+    <ProjectName>gltf</ProjectName>
+    <TargetName>gltf</TargetName>
+    <RootNamespace>pr::geometry::gltf</RootNamespace>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)dll.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>5054;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(SDKPath)cgltf
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+      </PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\gltf.cpp" />
+    <ClInclude Include="$(SDKPath)cgltf\cgltf\cgltf.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\gltf.h" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>Application</ConfigurationType>
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{B8C9D0E1-F2A3-4B5C-6D7E-8F9A0B1C2D3E}</ProjectGuid>
+    <RootNamespace>gltf_cmd</RootNamespace>
+    <ProjectName>gltf-cmd</ProjectName>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)app.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>5054;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>
+          ;$(RylogicRoot)lib\$(Platform)\$(Configuration)
+          ;%(AdditionalLibraryDirectories)
+        </AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+          ;gltf.imp
+          ;%(AdditionalDependencies)
+        </AdditionalDependencies>
+      <DelayLoadDLLs>
+        ;%(DelayLoadDLLs)
+      </DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\gltf.h" />
+    <ClInclude Include="src\commands\cmd_dump.h" />
+    <ClInclude Include="src\forward.h" />
+    <ClInclude Include="src\icommand.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\gltf.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\gltf\gltf.vcxproj" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

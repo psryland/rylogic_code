@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{667527c8-b0bf-4c5a-975f-ac90bae4d191}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib">
+      <UniqueIdentifier>{c7b25275-2189-47cb-bbbe-47e387b5a5ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{1aa99b6d-1b7c-47bb-81df-487744c982b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{0c07a33d-982d-47ff-b648-2e17fda1140a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands">
+      <UniqueIdentifier>{8aa465d9-62a8-4df0-b5f9-9d69dc074595}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\gltf.dll">
+      <Filter>lib</Filter>
+    </DependencyLink>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\gltf.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="src\commands\cmd_dump.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\icommand.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

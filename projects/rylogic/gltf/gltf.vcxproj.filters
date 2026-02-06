@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{667527c8-b0bf-4c5a-975f-ac90bae4d191}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cgltf">
+      <UniqueIdentifier>{779e1111-fcc3-4a91-89a9-30ef9681bbab}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\gltf.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClInclude Include="$(SDKPath)cgltf\cgltf\cgltf.h">
+      <Filter>cgltf</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\gltf.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
