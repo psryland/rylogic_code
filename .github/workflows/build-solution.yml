@@ -43,6 +43,15 @@ jobs:
           </configuration>
           '@ | Set-Content -Path nuget.config
 
+      # Exclude VSIX projects that require Visual Studio SDK
+      - name: Remove unsupported projects from solution
+        shell: pwsh
+        run: |
+          dotnet sln Rylogic.sln remove `
+            projects\apps\Rylogic.TextAligner\Shared\Rylogic.TextAligner.Shared.csproj `
+            projects\apps\Rylogic.TextAligner\2022\Rylogic.TextAligner.2022.csproj `
+            projects\apps\Rylogic.TextAligner\2019\Rylogic.TextAligner.2019.csproj
+
       - name: Restore
         run: dotnet restore Rylogic.sln
 
