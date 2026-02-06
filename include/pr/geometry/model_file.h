@@ -20,7 +20,9 @@ namespace pr::geometry
 		x(P3D     , ".p3d",    ) /* PR3D */\
 		x(Max3DS  , ".3ds",    ) /* 3D Studio Max */\
 		x(STL     , ".stl",    ) /* Stereolithography CAD model */\
-		x(FBX     , ".fbx",    ) /* Filmbox Model */
+		x(FBX     , ".fbx",    ) /* Filmbox Model */\
+		x(GLTF    , ".gltf",   ) /* GL Transmission Format */\
+		x(GLB     , ".glb",    ) /* GL Transmission Format Binary */
 		PR_ENUM_MEMBERS3(PR_ENUM)
 	};
 	PR_ENUM_REFLECTION3(EModelFileFormat, PR_ENUM);

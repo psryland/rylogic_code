@@ -1445,6 +1445,174 @@ namespace pr::rdr12
 			.m_progress = std::bind(&IModelOut::Progress, &out, _1, _2, _3, _4),
 		});
 	}
+	void ModelGenerator::LoadGLTFModel(ResourceFactory& factory, std::istream& src, IModelOut& out, CreateOptions const* opts)
+	{
+		using namespace geometry;
+
+		// glTF read output adapter
+		struct ReadOutput :gltf::IReadOutput
+		{
+			ResourceFactory& m_factory;
+			CreateOptions const* m_opts;
+			IModelOut& m_out;
+			Cache<> m_cache;
+			std::unordered_map<uint32_t, ModelPtr> m_models;
+			std::unordered_map<uint32_t, SkeletonPtr> m_skels;
+			
+			ReadOutput(ResourceFactory& factory, IModelOut& out, CreateOptions const* opts)
+				: m_factory(factory)
+				, m_opts(opts)
+				, m_out(out)
+				, m_cache(0, 0, 0, sizeof(uint32_t))
+				, m_models()
+				, m_skels()
+			{}
+
+			// Create a user-side mesh from 'mesh' and return an opaque handle to it (or null)
+			virtual void CreateMesh(gltf::Mesh const& mesh, std::span<gltf::Material const> materials) override
+			{
+				m_cache.Reset();
+
+				// Name/Bounding box
+				m_cache.m_name = mesh.m_name;
+				m_cache.m_bbox = mesh.m_bbox;
+				m_cache.m_m2root = m4x4::Identity();
+
+				// Copy the verts
+				auto vcount = isize(mesh.m_vbuf);
+				m_cache.m_vcont.resize(vcount, {});
+				auto vptr = m_cache.m_vcont.data();
+				for (auto const& v : mesh.m_vbuf)
+				{
+					SetPCNTI(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0, v.m_idx0);
+					++vptr;
+				}
+
+				// Copy indices
+				auto icount = isize(mesh.m_ibuf);
+				auto idx_stride = vcount > 0xFFFF ? isizeof<uint32_t>() : isizeof<uint16_t>();
+				m_cache.m_icont.resize(icount, idx_stride);
+				if (idx_stride == sizeof(uint32_t))
+				{
+					auto iptr = m_cache.m_icont.data<uint32_t>();
+					memcpy(iptr, mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
+				}
+				else
+				{
+					auto isrc = mesh.m_ibuf.data();
+					auto idst = m_cache.m_icont.begin<int>();
+					for (auto count = mesh.m_ibuf.size(); count-- != 0;)
+						*idst++ = *isrc++;
+				}
+
+				// Copy the nuggets
+				m_cache.m_ncont.resize(mesh.m_nbuf.size());
+				auto nptr = m_cache.m_ncont.data();
+				for (auto const& n : mesh.m_nbuf)
+				{
+					auto const& mat = materials[n.m_mat_id];
+					*nptr++ = NuggetDesc{ n.m_topo, n.m_geom }.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
+				}
+
+				// Emit the model
+				auto model = Create(m_factory, m_cache, m_opts);
+
+				// Add skinning data if present and requested
+				if (gltf::Skin skin = mesh.m_skin; skin && AllSet(m_out.Parts(), ESceneParts::Skins))
+				{
+					assert(m_skels.contains(skin.m_skel_id) && m_skels[skin.m_skel_id] != nullptr);
+					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
+
+					auto const& skel = *m_skels[skin.m_skel_id].get();
+					auto id_to_idx16 = [&skel](uint32_t id)
+					{
+						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
+						assert(idx >= 0 && idx < isize(skel.m_bone_ids) && "Bone id not found in skeleton");
+						return idx;
+					};
+					auto norm_to_u16 = [](double w)
+					{
+						return s_cast<uint16_t>(std::clamp(w, 0.0, 1.0) * 65535);
+					};
+
+					// Read the influences per vertex
+					vector<Skinfluence> influences(skin.vert_count());
+					for (int vidx = 0, vidx_count = skin.vert_count(); vidx != vidx_count; ++vidx)
+					{
+						auto const influence_count = skin.influence_count(vidx);
+						if (influence_count > max_influences_per_vertex)
+							OutputDebugStringA(PR_LINK "Unsupported number of bone influences\n");
+
+						auto ibase = skin.m_offsets[vidx];
+						auto& influence = influences[vidx];
+						for (int i = 0; i != influence_count && i != max_influences_per_vertex; ++i)
+						{
+							influence.m_bones[i] = id_to_idx16(skin.m_bones[ibase + i]);
+							influence.m_weights[i] = norm_to_u16(skin.m_weights[ibase + i]);
+						}
+					}
+
+					model->m_skin = Skin(m_factory, influences, skin.m_skel_id);
+				}
+
+				// Store the created mesh
+				m_models[mesh.m_mesh_id] = model;
+			}
+
+			// Create a model from a hierarchy of mesh instances
+			virtual void CreateModel(std::span<gltf::MeshTree const> mesh_tree) override
+			{
+				ModelTree tree;
+				for (auto const& node : mesh_tree)
+				{
+					tree.push_back(ModelTreeNode{
+						.m_o2p = node.m_o2p,
+						.m_name = node.m_name,
+						.m_model = m_models[node.m_mesh_id],
+						.m_level = node.m_level,
+					});
+				}
+				m_out.Model(std::move(tree));
+			}
+
+			// Create a skeleton from a hierarchy of bone instances
+			virtual void CreateSkeleton(gltf::Skeleton const& gltfskel)
+			{
+				constexpr auto ToU8 = [](int x) -> uint8_t { return s_cast<uint8_t>(x); };
+				constexpr auto ToString32 = [](std::string const& x) -> string32 { return static_cast<string32>(x); };
+
+				auto bone_names = transform<Skeleton::Names>(gltfskel.m_bone_names, ToString32);
+				auto hierarchy = transform<Skeleton::Hierarchy>(gltfskel.m_hierarchy, ToU8);
+
+				SkeletonPtr skel(rdr12::New<Skeleton>(gltfskel.m_skel_id, gltfskel.m_bone_ids, bone_names, gltfskel.m_o2bp, hierarchy), true);
+				m_skels[gltfskel.m_skel_id] = skel;
+				m_out.Skeleton(std::move(skel));
+			}
+
+			// Create an animation
+			virtual bool CreateAnimation(gltf::Animation const& gltfanim)
+			{
+				KeyFrameAnimationPtr anim(rdr12::New<KeyFrameAnimation>(gltfanim.m_skel_id, gltfanim.m_duration, gltfanim.m_frame_rate), true);
+
+				anim->m_bone_map = gltfanim.m_bone_map;
+				anim->m_rotation = gltfanim.m_rotation;
+				anim->m_position = gltfanim.m_position;
+				anim->m_scale = gltfanim.m_scale;
+
+				return m_out.Animation(std::move(anim)) == IModelOut::EResult::Continue;
+			}
+		} read_out{ factory, out, opts };
+
+		// Load the glTF scene from stream
+		gltf::Scene scene(src, gltf::LoadOptions{});
+		scene.Read(read_out, gltf::ReadOptions{
+			.m_parts = out.Parts(),
+			.m_mesh_filter = std::bind(&IModelOut::ModelFilter, &out, _1),
+			.m_skel_filter = std::bind(&IModelOut::SkeletonFilter, &out, _1),
+			.m_anim_filter = std::bind(&IModelOut::AnimationFilter, &out, _1),
+			.m_progress = std::bind(&IModelOut::Progress, &out, _1, _2, _3, _4),
+		});
+	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, IModelOut& mout, CreateOptions const* opts)
 	{
 		using namespace geometry;
@@ -1454,6 +1622,8 @@ namespace pr::rdr12
 			case EModelFileFormat::Max3DS: Load3DSModel(factory, src, mout, opts); break;
 			case EModelFileFormat::STL:    LoadSTLModel(factory, src, mout, opts); break;
 			case EModelFileFormat::FBX:    LoadFBXModel(factory, src, mout, opts); break;
+			case EModelFileFormat::GLTF:   LoadGLTFModel(factory, src, mout, opts); break;
+			case EModelFileFormat::GLB:    LoadGLTFModel(factory, src, mout, opts); break;
 			default: throw std::runtime_error("Unsupported model file format");
 		}
 	}

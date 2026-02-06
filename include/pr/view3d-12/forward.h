@@ -107,6 +107,7 @@
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/stl.h"
 #include "pr/geometry/fbx.h"
+#include "pr/geometry/gltf.h"
 #include "pr/geometry/triangle.h"
 #include "pr/geometry/utility.h"
 #include "pr/gfx/colour.h"
