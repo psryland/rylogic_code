@@ -6,8 +6,6 @@
 // Headers to unit test
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
-#include "pr/algorithm/peak_detection.h"
-#include "pr/algorithm/savitzky_golay_filter.h"
 #include "pr/audio/audio.h"
 #include "pr/audio/audio/audio_manager.h"
 #include "pr/audio/config/config.h"
@@ -151,6 +149,7 @@
 #include "pr/geometry/distance.h"
 #include "pr/geometry/fbx.h"
 #include "pr/geometry/geometry.h"
+#include "pr/geometry/gltf.h"
 #include "pr/geometry/index_buffer.h"
 #include "pr/geometry/intersect.h"
 #include "pr/geometry/model_file.h"

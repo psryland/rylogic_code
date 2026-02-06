@@ -747,13 +747,13 @@ namespace pr
 	constexpr float pr_vectorcall w_cp(Colour_cref v) { return a_cp(v); }
 
 	#pragma region Constants
-	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
-	Colour const ColourOne    = {1.0f, 1.0f, 1.0f, 1.0f};
-	Colour const ColourWhite  = {1.0f, 1.0f, 1.0f, 1.0f};
-	Colour const ColourBlack  = {0.0f, 0.0f, 0.0f, 1.0f};
-	Colour const ColourRed    = {1.0f, 0.0f, 0.0f, 1.0f};
-	Colour const ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
-	Colour const ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
+	constexpr Colour ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
+	constexpr Colour ColourOne    = {1.0f, 1.0f, 1.0f, 1.0f};
+	constexpr Colour ColourWhite  = {1.0f, 1.0f, 1.0f, 1.0f};
+	constexpr Colour ColourBlack  = {0.0f, 0.0f, 0.0f, 1.0f};
+	constexpr Colour ColourRed    = {1.0f, 0.0f, 0.0f, 1.0f};
+	constexpr Colour ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
+	constexpr Colour ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
 	#pragma endregion
 
 	#pragma region Functions
