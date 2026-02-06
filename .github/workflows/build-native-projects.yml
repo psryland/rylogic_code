@@ -100,5 +100,7 @@ jobs:
             dotnet sln Rylogic.sln remove @csprojs
           }
 
+      # Override PlatformToolset since CI has VS 2022 (v143) but some
+      # projects target older toolsets not available on the runner.
       - name: Build
-        run: msbuild Rylogic.sln /p:Configuration=Release /p:Platform=x64 /m
+        run: msbuild Rylogic.sln /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /m
