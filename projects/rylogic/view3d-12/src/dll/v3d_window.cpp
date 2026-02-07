@@ -1339,11 +1339,11 @@ namespace pr::rdr12
 		HitTest(rays, hits, instances);
 	}
 	
-	// Add/Update/Remove a periodic hit test ray.
+	// Add/Update/Remove an async hit test ray.
 	// Returns 'HitTestRayId::None' if no more rays can be added.
 	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
 	// Use ws_direction = v4::Zero() to remove a ray.
-	view3d::HitTestRayId V3dWindow::PeriodicHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray_)
+	view3d::HitTestRayId V3dWindow::AsyncHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray_)
 	{
 		static int new_id = static_cast<int>(view3d::HitTestRayId::None);
 		auto ID = s_cast<int>(id);
@@ -1381,8 +1381,42 @@ namespace pr::rdr12
 			}
 		}
 
-		m_scene.HitTestContinuous(m_hit_tests, [](BaseInstance const*) { return true; });
 		return id;
+	}
+
+	// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+	void V3dWindow::InvalidateHitTests()
+	{
+		if (m_hit_tests.empty())
+			return;
+
+		// Run the async hit test, converting results back to view3d types and forwarding to subscribers
+		m_scene.HitTestAsync(m_hit_tests, [this](HitTestResult const& hit)
+		{
+			// Check that 'hit.m_instance' is a valid instance in this scene.
+			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
+
+			// Not an object in this scene, keep looking
+			if (!Has(ldr_obj, true))
+				return true;
+
+			// Not visible to hit tests, keep looking
+			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
+				return true;
+
+			// Build the result
+			view3d::HitTestResult result = {};
+			result.m_ws_ray_origin    = To<view3d::Vec4>(hit.m_ws_origin);
+			result.m_ws_ray_direction = To<view3d::Vec4>(hit.m_ws_direction);
+			result.m_ws_intercept     = To<view3d::Vec4>(hit.m_ws_intercept);
+			result.m_distance         = hit.m_distance;
+			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
+			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
+
+			// Notify subscribers with the first hit
+			OnAsyncHitTestResults(this, &result, 1);
+			return false;
+		});
 	}
 
 	// Move the focus point to the hit target

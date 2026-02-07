@@ -24,8 +24,9 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> m_out;             // An unstructured buffer for the number of intercepts and the intercept data
 		GpuReadbackBuffer      m_readback;        // A read back buffer for reading intercept data
 		GpuTransferAllocation  m_output;          // The CPU copy of the results from the last ray cast
+		RayCastResultsOut      m_async_cb;        // Callback for async results
 		Sub                    m_sync_completed;  // Subscription to the GPU sync completed event
-		uint64_t               m_pending_results; // Sync point for the last periodic ray cast
+		uint64_t               m_pending_results; // Sync point for the last async ray cast
 		bool                   m_continuous;      // Whether this step is used as a one-shot or for every frame render
 
 	public:
@@ -45,7 +46,14 @@ namespace pr::rdr12
 		// Perform the ray cast and read the results
 		std::future<void> ExecuteImmediate(RayCastResultsOut out);
 
+		// Submit the ray cast to the GPU and return immediately.
+		// Results are reported via 'cb' when the GPU completes.
+		void ExecuteAsync(RayCastResultsOut cb);
+
 	private:
+
+		// Process ray cast results from a readback buffer and invoke the callback
+		void ProcessResults(GpuTransferAllocation& output, RayCastResultsOut const& cb);
 
 		// Step up the GPU call for the ray cast
 		GpuTransferAllocation ExecuteCore();

@@ -24,6 +24,7 @@
 					<StaticResource	ResourceKey="View3dMenuItem_Origin"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Focus"/>
 					<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
+					<StaticResource	ResourceKey="View3dMenuItem_ObjectInfo"/>
 					<StaticResource	ResourceKey="ChartMenuItem_CrossHair"/>
 					<StaticResource	ResourceKey="ChartMenuItem_ValueAtPointer"/>
 					<StaticResource	ResourceKey="ChartMenuItem_Axes"/>

@@ -771,7 +771,7 @@ namespace pr
 		using RenderingCB = Callback<void(__stdcall *)(void* ctx, Window window)>;
 		using SceneChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, SceneChanged const&)>;
 		using AnimationCB = Callback<void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock)>;
-		using PeriodicHitTestCB = Callback<void(__stdcall*)(void* ctx, Window window, HitTestResult const* results, int count)>;
+		using AsyncHitTestCB = Callback<void(__stdcall*)(void* ctx, Window window, HitTestResult const* results, int count)>;
 		using GizmoMovedCB = Callback<void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state)>;
 		using AddNuggetCB = Callback<void(__stdcall*)(void* ctx, Nugget const& nugget)>;
 		using EditObjectCB = Callback<VICount(__stdcall*)(void* ctx,
@@ -1345,14 +1345,18 @@ extern "C"
 	// Set the selection box to encompass all selected objects
 	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
 
-	// Add/Remove a callback for receiving periodic hit test results
-	VIEW3D_API void __stdcall View3D_PeriodicHitTestCBSet(pr::view3d::Window window, pr::view3d::PeriodicHitTestCB cb, BOOL add);
+	// Add/Remove a callback for receiving async hit test results
+	VIEW3D_API void __stdcall View3D_AsyncHitTestCBSet(pr::view3d::Window window, pr::view3d::AsyncHitTestCB cb, BOOL add);
 
-	// Add/Update/Remove a periodic hit test ray.
+	// Add/Update/Remove an async hit test ray.
 	// Returns 'HitTestRayId::None' if no more rays can be added.
 	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
 	// Use ws_direction = v4::Zero() to remove a ray.
-	VIEW3D_API pr::view3d::HitTestRayId __stdcall View3D_PeriodicHitTestSet(pr::view3d::Window window, pr::view3d::HitTestRayId id, pr::view3d::HitTestRay ray);
+	VIEW3D_API pr::view3d::HitTestRayId __stdcall View3D_AsyncHitTestSet(pr::view3d::Window window, pr::view3d::HitTestRayId id, pr::view3d::HitTestRay ray);
+
+	// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+	// Results are reported via the callback registered with View3D_AsyncHitTestCBSet.
+	VIEW3D_API void __stdcall View3D_InvalidateHitTests(pr::view3d::Window window);
 
 	// Create/Delete the demo scene in the given window
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(pr::view3d::Window window);

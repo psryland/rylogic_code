@@ -154,6 +154,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Show object manager</summary>
 		ICommand ShowObjectManagerUI { get; }
 
+		/// <summary>Enable/Disable object info display</summary>
+		bool ObjectInfoEnabled { get; set; }
+		ICommand ToggleObjectInfo { get; }
+
 		/// <summary>Allow property changed to be triggered externally</summary>
 		void NotifyPropertyChanged(string prop_name);
 	}

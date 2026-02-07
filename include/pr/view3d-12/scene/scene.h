@@ -44,6 +44,7 @@ namespace pr::rdr12
 		InstCont         m_instances;     // Instances added to this scene for rendering.
 		RenderStepCont   m_render_steps;  // The stages of rendering the scene
 		RenderRayCastPtr m_raycast_immed; // A ray cast render step for performing immediate hit tests
+		RenderRayCastPtr m_raycast_async; // A ray cast render step for performing async hit tests
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
 		PipeStates       m_pso;           // Scene-wide pipe state overrides
@@ -111,6 +112,10 @@ namespace pr::rdr12
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
 		// Snap distance depends on the snap mode. If 'snap_mode' is 'Perspective', then 'snap_distance' is actually the ratio proportional to depth.
 		void HitTestContinuous(std::span<HitTestRay const> rays, RayCastFilter const& include);
+
+		// Perform an asynchronous hit test. Submits GPU work and returns immediately.
+		// Results are reported via 'out' when the GPU completes (may be on a background thread).
+		void HitTestAsync(std::span<HitTestRay const> rays, RayCastResultsOut const& out);
 			
 		// Read the hit test results from the continuous ray cast render step.
 		void HitTestGetResults(RayCastResultsOut const& results);

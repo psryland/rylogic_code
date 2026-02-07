@@ -702,14 +702,14 @@ namespace Rylogic.Gfx
 			public FuncCB m_cb;
 		}
 
-		/// <summary>Callback with results of the periodic hit tests</summary>
+		/// <summary>Callback with results of async hit tests</summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct PeriodicHitTestCB
+		public struct AsyncHitTestCB
 		{
 			public delegate void FuncCB(IntPtr ctx, HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] HitTestResult[] results, int count);
 			public IntPtr m_ctx;
 			public FuncCB m_cb;
-		}		
+		}
 
 		/// <summary>Callback notification of gizmo moved</summary>
 		[StructLayout(LayoutKind.Sequential)]
@@ -2081,13 +2081,16 @@ namespace Rylogic.Gfx
 		// Set the selection box to encompass all selected objects
 		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
 
-		// Add/Remove a callback for receiving periodic hit test results
-		[DllImport(Dll)] private static extern void View3D_PeriodicHitTestCBSet(HWindow window, PeriodicHitTestCB cb, bool add);
+		// Add/Remove a callback for receiving async hit test results
+		[DllImport(Dll)] private static extern void View3D_AsyncHitTestCBSet(HWindow window, AsyncHitTestCB cb, bool add);
 
-		// Add/Update/Remove a periodic hit test ray.
+		// Add/Update/Remove an async hit test ray.
 		// Returns view3d::HitTestRayId::None if no more rays can be added.
 		// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
-		[DllImport(Dll)] private static extern HitTestRayId View3D_PeriodicHitTestSet(HWindow window, HitTestRayId id, v4 ws_position, v4 ws_direction, ESnapMode snap_mode, float snap_distance);
+		[DllImport(Dll)] private static extern HitTestRayId View3D_AsyncHitTestSet(HWindow window, HitTestRayId id, v4 ws_position, v4 ws_direction, ESnapMode snap_mode, float snap_distance);
+
+		// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+		[DllImport(Dll)] private static extern void View3D_InvalidateHitTests(HWindow window);
 
 		// Create/Delete the demo scene in the given window
 		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateText(HWindow window);

@@ -282,6 +282,12 @@ namespace LDraw.UI
 			}
 		}
 
+		/// <summary>Text description of the object under the mouse pointer</summary>
+		public string HoveredObjectInfo => SceneView.HoveredObjectInfo;
+
+		/// <summary>True if object info display is enabled</summary>
+		public bool ObjectInfoEnabled => SceneView.ObjectInfoEnabled;
+
 		/// <summary>The name assigned to this scene UI</summary>
 		public string SceneName
 		{

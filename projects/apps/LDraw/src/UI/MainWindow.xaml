@@ -224,7 +224,7 @@
 			<!-- Hovered object -->
 			<StatusBarItem
 				DockPanel.Dock="Right"
-				Visibility="{Binding ActiveContent, Converter={conv:VisibleIfType}, ConverterParameter={x:Type local:SceneUI}}"
+				Visibility="{Binding ObjectInfoEnabled, Converter={conv:BoolToVisible}}"
 				VerticalAlignment="Center"
 				HorizontalAlignment="Right"
 				>

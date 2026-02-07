@@ -165,12 +165,16 @@ namespace LDraw
 				{
 					if (m_active_content is ScriptUI script)
 						script.PropertyChanged -= HandleScriptPropertyChanged;
+					if (m_active_content is SceneUI prev_scene)
+						prev_scene.PropertyChanged -= HandleScenePropertyChanged;
 				}
 				m_active_content = value;
 				if (m_active_content != null)
 				{
 					if (m_active_content is ScriptUI script)
 						script.PropertyChanged -= HandleScriptPropertyChanged;
+					if (m_active_content is SceneUI new_scene)
+						new_scene.PropertyChanged += HandleScenePropertyChanged;
 				}
 
 				NotifyPropertyChanged(nameof(ActiveScene));
@@ -178,12 +182,21 @@ namespace LDraw
 				NotifyPropertyChanged(nameof(ScriptHasFocus));
 				NotifyPropertyChanged(nameof(ScriptHasFocusAndNeedsSave));
 				NotifyPropertyChanged(nameof(ActiveContent));
+				NotifyPropertyChanged(nameof(HoveredObjectInfo));
+				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
 
 				void HandleScriptPropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
 					if (sender is not ScriptUI script) return;
 					if (e.PropertyName == nameof(ScriptUI.SaveNeeded))
 						NotifyPropertyChanged(nameof(ScriptHasFocusAndNeedsSave));
+				}
+				void HandleScenePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					if (e.PropertyName == nameof(SceneUI.HoveredObjectInfo))
+						NotifyPropertyChanged(nameof(HoveredObjectInfo));
+					else if (e.PropertyName == nameof(SceneUI.ObjectInfoEnabled))
+						NotifyPropertyChanged(nameof(ObjectInfoEnabled));
 				}
 			}
 		}
@@ -218,10 +231,10 @@ namespace LDraw
 		public ParsingProgressData? ParsingProgress => Model.ParsingProgress;
 
 		/// <summary>A text description of the object under the mouse pointer</summary>
-		public string HoveredObjectInfo
-		{
-			get => string.Empty;
-		}
+		public string HoveredObjectInfo => ActiveScene?.HoveredObjectInfo ?? string.Empty;
+
+		/// <summary>True if object info display is enabled on the active scene</summary>
+		public bool ObjectInfoEnabled => ActiveScene?.ObjectInfoEnabled ?? false;
 
 		/// <summary>The available profiles</summary>
 		public ICollectionView Profiles

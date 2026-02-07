@@ -3106,8 +3106,8 @@ VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(view3d::Window window
 	CatchAndReport(View3D_SelectionBoxFitToSelected, window, );
 }
 
-// Add/Remove a callback for receiving periodic hit test results
-VIEW3D_API void __stdcall View3D_PeriodicHitTestCBSet(view3d::Window window, view3d::PeriodicHitTestCB cb, BOOL add)
+// Add/Remove a callback for receiving async hit test results
+VIEW3D_API void __stdcall View3D_AsyncHitTestCBSet(view3d::Window window, view3d::AsyncHitTestCB cb, BOOL add)
 {
 	try
 	{
@@ -3116,24 +3116,37 @@ VIEW3D_API void __stdcall View3D_PeriodicHitTestCBSet(view3d::Window window, vie
 
 		DllLockGuard;
 		if (add)
-			window->OnPeriodicHitTestResults += cb;
+			window->OnAsyncHitTestResults += cb;
 		else
-			window->OnPeriodicHitTestResults -= cb;
+			window->OnAsyncHitTestResults -= cb;
 	}
-	CatchAndReport(View3D_PeriodicHitTestCBSet, ,);
+	CatchAndReport(View3D_AsyncHitTestCBSet, ,);
 }
 
-// Add/Update/Remove a periodic hit test ray.
-VIEW3D_API view3d::HitTestRayId __stdcall View3D_PeriodicHitTestSet(view3d::Window window, view3d::HitTestRayId id, view3d::HitTestRay ray)
+// Add/Update/Remove an async hit test ray.
+VIEW3D_API view3d::HitTestRayId __stdcall View3D_AsyncHitTestSet(view3d::Window window, view3d::HitTestRayId id, view3d::HitTestRay ray)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		return window->PeriodicHitTest(id, ray);
+		return window->AsyncHitTest(id, ray);
 	}
-	CatchAndReport(View3D_PeriodicHitTestSet, window, {});
+	CatchAndReport(View3D_AsyncHitTestSet, window, {});
+}
+
+// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+VIEW3D_API void __stdcall View3D_InvalidateHitTests(view3d::Window window)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		window->InvalidateHitTests();
+	}
+	CatchAndReport(View3D_InvalidateHitTests, window, );
 }
 
 // Create/Delete the demo scene in the given window

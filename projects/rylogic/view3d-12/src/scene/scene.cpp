@@ -22,6 +22,7 @@ namespace pr::rdr12
 		, m_instances()
 		, m_render_steps()
 		, m_raycast_immed()
+		, m_raycast_async()
 		, m_global_light()
 		, m_global_envmap()
 		, m_eh_resize()
@@ -223,6 +224,32 @@ namespace pr::rdr12
 		// Read the hit test results
 		rs->ReadOutput(results);
 		#endif
+	}
+
+	// Perform an asynchronous hit test. Submits GPU work and returns immediately.
+	void Scene::HitTestAsync(std::span<HitTestRay const> rays, RayCastResultsOut const& out)
+	{
+		if (rays.empty())
+			return;
+
+		// Lazy create the async ray cast render step
+		if (m_raycast_async == nullptr)
+			m_raycast_async.reset(new RenderRayCast(*this, true));
+
+		auto& rs = *m_raycast_async.get();
+
+		// Set the rays to cast
+		rs.SetRays(rays, [](auto) { return true; });
+
+		// Populate the draw list
+		for (auto& inst : m_instances)
+			rs.AddInstance(*inst);
+
+		// Submit to GPU and return immediately
+		rs.ExecuteAsync(out);
+
+		// Reset the draw list ready for next time
+		rs.ClearDrawlist();
 	}
 
 	// Render the scene, recording the command lists in 'frame'

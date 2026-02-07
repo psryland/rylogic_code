@@ -37,6 +37,7 @@ namespace Rylogic.Gui.WPF
 			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
 			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
+			ToggleObjectInfo = Command.Create(this, ToggleObjectInfoInternal);
 
 			// Camera Menu
 			AutoRangeView = Command.Create(this, AutoRangeViewInternal);
@@ -528,5 +529,22 @@ namespace Rylogic.Gui.WPF
 			m_object_manager_ui.Focus();
 		}
 		private View3dObjectManagerUI? m_object_manager_ui;
+
+		/// <inheritdoc/>
+		public bool ObjectInfoEnabled
+		{
+			get => Window.AsyncHitTestEnable;
+			set
+			{
+				if (ObjectInfoEnabled == value) return;
+				Window.AsyncHitTestEnable = value;
+				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
+			}
+		}
+		public ICommand ToggleObjectInfo { get; private set; } = null!;
+		private void ToggleObjectInfoInternal()
+		{
+			ObjectInfoEnabled = !ObjectInfoEnabled;
+		}
 	}
 }

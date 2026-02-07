@@ -80,7 +80,7 @@ namespace pr::rdr12
 		// Misc
 		mutable std::string m_settings;       // Window settings
 		AnimData            m_anim_data;      // Animation time in seconds
-		HitTestRays         m_hit_tests;      // The set of periodic hit tests to perform each frame
+		HitTestRays         m_hit_tests;      // The set of async hit test rays
 		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
 		PipeStates          m_global_pso;     // Global pipe state overrides
 		std::thread::id     m_main_thread_id; // The thread that created this window
@@ -121,8 +121,8 @@ namespace pr::rdr12
 		// Animation event
 		MultiCast<view3d::AnimationCB, true> OnAnimationEvent;
 
-		// Periodic hit test results
-		MultiCast<view3d::PeriodicHitTestCB, true> OnPeriodicHitTestResults;
+		// Async hit test results
+		MultiCast<view3d::AsyncHitTestCB, true> OnAsyncHitTestResults;
 
 		// Get/Set the settings
 		char const* Settings() const;
@@ -320,7 +320,10 @@ namespace pr::rdr12
 		// Returns 'HitTestRayId::None' if no more rays can be added.
 		// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
 		// Use ws_direction = v4::Zero() to remove a ray.
-		view3d::HitTestRayId PeriodicHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray);
+		view3d::HitTestRayId AsyncHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray);
+
+		// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+		void InvalidateHitTests();
 
 		// Move the focus point to the hit target
 		void CentreOnHitTarget(view3d::HitTestRay const& ray);

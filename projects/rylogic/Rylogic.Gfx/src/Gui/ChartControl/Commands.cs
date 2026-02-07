@@ -196,21 +196,84 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Enable/Disable object info</summary>
-		public bool ObjectInfoEnable
+		public bool ObjectInfoEnabled
 		{
-			get => Window.ObjectInfoEnable;
+			get => Window.AsyncHitTestEnable;
 			set
 			{
-				if (ObjectInfoEnable == value) return;
-				//Window.ObjectInfoEnable = value;
-				NotifyPropertyChanged(nameof(ObjectInfoEnable));
+				if (ObjectInfoEnabled == value) return;
+				Window.AsyncHitTestEnable = value;
+
+				if (value)
+				{
+					Window.OnAsyncHitTestResult += HandleAsyncHitTestResult;
+					MouseMove += HandleObjectInfoMouseMove;
+					MouseLeave += HandleObjectInfoMouseLeave;
+				}
+				else
+				{
+					MouseLeave -= HandleObjectInfoMouseLeave;
+					MouseMove -= HandleObjectInfoMouseMove;
+					Window.OnAsyncHitTestResult -= HandleAsyncHitTestResult;
+					HoveredObjectInfo = string.Empty;
+				}
+
+				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
 			}
 		}
+
+		/// <summary>Text description of the object under the mouse pointer</summary>
+		public string HoveredObjectInfo
+		{
+			get => m_hovered_object_info;
+			set
+			{
+				if (m_hovered_object_info == value) return;
+				m_hovered_object_info = value;
+				NotifyPropertyChanged(nameof(HoveredObjectInfo));
+			}
+		}
+		private string m_hovered_object_info = string.Empty;
+
 		public ICommand ToggleObjectInfo { get; private set; } = null!;
 		private void ToggleObjectInfoInternal()
 		{
-			ObjectInfoEnable = !ObjectInfoEnable;
-			Invalidate();
+			ObjectInfoEnabled = !ObjectInfoEnabled;
+		}
+
+		/// <summary>Handle async hit test results from the GPU</summary>
+		private void HandleAsyncHitTestResult(object? sender, View3d.AsyncHitTestResultEventArgs e)
+		{
+			// Marshal to the UI thread since the callback may fire on a background thread
+			if (!Dispatcher.CheckAccess())
+			{
+				Dispatcher.BeginInvoke(() => HandleAsyncHitTestResult(sender, e));
+				return;
+			}
+
+			if (e.Results.Length > 0 && e.Results[0].IsHit)
+			{
+				var obj = e.Results[0].HitObject;
+				HoveredObjectInfo = obj != null ? $"{obj.Name} [{obj.Type}]" : string.Empty;
+			}
+			else
+			{
+				HoveredObjectInfo = string.Empty;
+			}
+		}
+
+		/// <summary>Update the async hit test ray on mouse move</summary>
+		private void HandleObjectInfoMouseMove(object sender, MouseEventArgs e)
+		{
+			var pt = e.GetPosition(Scene);
+			var ray = Scene.Camera.RaySS(pt.ToV2());
+			Window.AsyncHitTestUpdateRay(ray.m_ws_origin, ray.m_ws_direction);
+		}
+
+		/// <summary>Clear hovered object info when the mouse leaves the chart</summary>
+		private void HandleObjectInfoMouseLeave(object sender, MouseEventArgs e)
+		{
+			HoveredObjectInfo = string.Empty;
 		}
 
 		/// <inheritdoc/>
