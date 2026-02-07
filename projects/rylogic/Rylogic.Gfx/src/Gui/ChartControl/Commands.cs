@@ -54,6 +54,7 @@ namespace Rylogic.Gui.WPF
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
 			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
 			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
+			ToggleObjectInfo = Command.Create(this, ToggleObjectInfoInternal);
 			ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
 			ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
 			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
@@ -191,6 +192,24 @@ namespace Rylogic.Gui.WPF
 		private void ToggleSelectionBoxInternal()
 		{
 			SelectionBoxVisible = !SelectionBoxVisible;
+			Invalidate();
+		}
+
+		/// <summary>Enable/Disable object info</summary>
+		public bool ObjectInfoEnable
+		{
+			get => Window.ObjectInfoEnable;
+			set
+			{
+				if (ObjectInfoEnable == value) return;
+				//Window.ObjectInfoEnable = value;
+				NotifyPropertyChanged(nameof(ObjectInfoEnable));
+			}
+		}
+		public ICommand ToggleObjectInfo { get; private set; } = null!;
+		private void ToggleObjectInfoInternal()
+		{
+			ObjectInfoEnable = !ObjectInfoEnable;
 			Invalidate();
 		}
 
