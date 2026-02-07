@@ -1,0 +1,114 @@
+name: Build Native Projects
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '**/*.vcxproj'
+      - '**/*.vcxproj.filters'
+      - '**/*.props'
+      - '**/*.targets'
+      - 'include/**'
+      - 'sdk/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/build-native-projects.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '**/*.vcxproj'
+      - '**/*.vcxproj.filters'
+      - '**/*.props'
+      - '**/*.targets'
+      - 'include/**'
+      - 'sdk/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/build-native-projects.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-script
+        run: dotnet tool install -g dotnet-script
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # The repo nuget.config references a local package source that only
+      # exists on the dev machine. Replace it with just nuget.org for CI.
+      # dotnet-script also uses this config when restoring its internal project.
+      - name: Configure NuGet for CI
+        shell: pwsh
+        run: |
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <config>
+              <add key="repositoryPath" value="packages" />
+            </config>
+            <packageRestore>
+              <add key="enabled" value="true" />
+              <add key="automatic" value="true" />
+            </packageRestore>
+            <packageSources>
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          '@ | Set-Content -Path nuget.config
+
+      # Fetch external SDK dependencies that are git-ignored in the repo.
+      # Each _get.csx script clones/downloads its SDK if not already present.
+      - name: Fetch SDK dependencies
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem -Path sdk -Filter _get.csx -Recurse
+          foreach ($script in $scripts) {
+            Write-Host "Running $($script.FullName)..."
+            dotnet-script $script.FullName
+          }
+
+      # Remove C# and VSIX projects, keeping only native (.vcxproj) projects
+      - name: Remove non-native projects from solution
+        shell: pwsh
+        run: |
+          $csprojs = Select-String -Path Rylogic.sln -Pattern '\.csproj"' |
+            ForEach-Object { if ($_ -match '"([^"]+\.csproj)"') { $matches[1] } }
+          if ($csprojs) {
+            dotnet sln Rylogic.sln remove @csprojs
+          }
+
+      # Restore NuGet packages for native projects.
+      # Uses nuget restore for packages.config and msbuild restore for PackageReference.
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          nuget restore Rylogic.sln
+          msbuild Rylogic.sln /t:restore /p:Configuration=Release /p:Platform=x64
+
+      # Override PlatformToolset since CI has VS 2022 (v143) but some
+      # projects target older toolsets not available on the runner.
+      - name: Build
+        run: msbuild Rylogic.sln /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /m
