@@ -62,7 +62,8 @@ jobs:
           </configuration>
           '@ | Set-Content -Path nuget.config
 
-      # Remove C++ projects (need full VS C++ toolset) and VSIX projects (need VS SDK)
+      # Remove C++ projects (need full VS C++ toolset), VSIX projects (need VS SDK),
+      # and C# projects that depend on native DLL build outputs.
       - name: Remove unsupported projects from solution
         shell: pwsh
         run: |
@@ -74,7 +75,9 @@ jobs:
           dotnet sln Rylogic.sln remove `
             projects\apps\Rylogic.TextAligner\Shared\Rylogic.TextAligner.Shared.csproj `
             projects\apps\Rylogic.TextAligner\2022\Rylogic.TextAligner.2022.csproj `
-            projects\apps\Rylogic.TextAligner\2019\Rylogic.TextAligner.2019.csproj
+            projects\apps\Rylogic.TextAligner\2019\Rylogic.TextAligner.2019.csproj `
+            projects\apps\LDraw\LDraw.csproj `
+            projects\tests\TestWPF\TestWPF.csproj
 
       - name: Restore
         run: dotnet restore Rylogic.sln
