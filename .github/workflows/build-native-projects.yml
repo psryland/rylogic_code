@@ -100,6 +100,14 @@ jobs:
             dotnet sln Rylogic.sln remove @csprojs
           }
 
+      # Restore NuGet packages for native projects.
+      # Uses nuget restore for packages.config and msbuild restore for PackageReference.
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          nuget restore Rylogic.sln
+          msbuild Rylogic.sln /t:restore /p:Configuration=Release /p:Platform=x64
+
       # Override PlatformToolset since CI has VS 2022 (v143) but some
       # projects target older toolsets not available on the runner.
       - name: Build
