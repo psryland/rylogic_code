@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 using Rylogic.Windows.Extn;
@@ -223,17 +224,31 @@ namespace Rylogic.Gui.WPF
 					MouseMove += HandleObjectInfoMouseMove;
 					MouseLeave += HandleObjectInfoMouseLeave;
 
+					// Start a timer to throttle hit test updates
+					m_object_info_timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(33) };
+					m_object_info_timer.Tick += HandleObjectInfoTimerTick;
+					m_object_info_timer.Start();
+
 					// Add a ray for the object info
 					UpdateRay();
 				}
 				else
 				{
+					// Stop the throttle timer
+					if (m_object_info_timer != null)
+					{
+						m_object_info_timer.Tick -= HandleObjectInfoTimerTick;
+						m_object_info_timer.Stop();
+						m_object_info_timer = null;
+					}
+
 					MouseLeave -= HandleObjectInfoMouseLeave;
 					MouseMove -= HandleObjectInfoMouseMove;
 					Window.OnHitTestAsyncResult -= HandleAsyncHitTestResult;
 
 					// Remove the ray and clear the info text
 					m_object_info_ray_id = Window.HitTestAsyncRay(m_object_info_ray_id, null, 0);
+					m_object_info_dirty = false;
 					HoveredObjectInfo = string.Empty;
 				}
 
@@ -269,6 +284,12 @@ namespace Rylogic.Gui.WPF
 				}
 				void HandleObjectInfoMouseMove(object sender, MouseEventArgs e)
 				{
+					m_object_info_dirty = true;
+				}
+				void HandleObjectInfoTimerTick(object? sender, EventArgs e)
+				{
+					if (!m_object_info_dirty) return;
+					m_object_info_dirty = false;
 					UpdateRay();
 				}
 				void HandleObjectInfoMouseLeave(object sender, MouseEventArgs e)
@@ -284,6 +305,8 @@ namespace Rylogic.Gui.WPF
 			ObjectInfoEnabled = !ObjectInfoEnabled;
 		}
 		private View3d.HitTestRayId m_object_info_ray_id = View3d.HitTestRayId.None;
+		private DispatcherTimer? m_object_info_timer;
+		private bool m_object_info_dirty;
 
 		/// <inheritdoc/>
 		public bool ShowCrossHair
