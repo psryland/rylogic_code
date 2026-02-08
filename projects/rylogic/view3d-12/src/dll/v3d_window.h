@@ -57,7 +57,8 @@ namespace pr::rdr12
 		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
 		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
 		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
-		using HitTestRays = std::vector<rdr12::HitTestRay>;
+		using HitTestRays = vector<rdr12::HitTestRay, 1>;
+		using HitTestResults = vector<view3d::HitTestResult, 1>;
 
 		// Renderer window/scene
 		Renderer* m_rdr; // The main renderer
@@ -80,11 +81,14 @@ namespace pr::rdr12
 		// Misc
 		mutable std::string m_settings;       // Window settings
 		AnimData            m_anim_data;      // Animation time in seconds
-		HitTestRays         m_hit_tests;      // The set of async hit test rays
+		HitTestRays         m_ht_rays;        // The set of async hit test rays
+		HitTestResults      m_ht_results;     // The results of async hit tests
 		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
 		PipeStates          m_global_pso;     // Global pipe state overrides
 		std::thread::id     m_main_thread_id; // The thread that created this window
+		AutoSub             m_eh_hittests;    // Event handler for async hit test results
 		bool                m_invalidated;    // True after Invalidate has been called but before Render has been called
+		bool                m_ht_invalidated; // True if async hit tests need to be performed
 		
 		// UI Tools
 		LightingUIPtr m_ui_lighting;               // A UI for controlling the lighting of the scene
@@ -122,7 +126,7 @@ namespace pr::rdr12
 		MultiCast<view3d::AnimationCB, true> OnAnimationEvent;
 
 		// Async hit test results
-		MultiCast<view3d::AsyncHitTestCB, true> OnAsyncHitTestResults;
+		MultiCast<view3d::HitTestAsyncCB, true> OnHitTestAsyncResults;
 
 		// Get/Set the settings
 		char const* Settings() const;
@@ -316,14 +320,15 @@ namespace pr::rdr12
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, ldraw::LdrObject const* const* objects, int object_count);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, view3d::GuidPredCB pred, int);
 
-		// Add/Update/Remove a periodic hit test ray.
+		// Trigger execution of the async hit test. Submits GPU work and returns immediately.
+		// Uses rays added with the 'HitTestRayUpdate' function. Results are returned through the 'OnAsyncHitTestResults' event when the GPU work is complete.
+		void HitTestAsync();
+
+		// Add/Update/Remove an async hit test ray.
 		// Returns 'HitTestRayId::None' if no more rays can be added.
 		// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
-		// Use ws_direction = v4::Zero() to remove a ray.
-		view3d::HitTestRayId AsyncHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray);
-
-		// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
-		void InvalidateHitTests();
+		// Use 'ray == nullptr' to remove a ray.
+		view3d::HitTestRayId HitTestRayUpdate(pr::view3d::HitTestRayId id, view3d::HitTestRay const* ray);
 
 		// Move the focus point to the hit target
 		void CentreOnHitTarget(view3d::HitTestRay const& ray);

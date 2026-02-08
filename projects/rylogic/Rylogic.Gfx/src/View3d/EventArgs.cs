@@ -165,11 +165,11 @@ namespace Rylogic.Gfx
 			public bool Handled { get; set; }
 		}
 
-		public class AsyncHitTestResultEventArgs :EventArgs
+		public class HitTestAsyncResultEventArgs :EventArgs
 		{
-			public AsyncHitTestResultEventArgs(HitTestResult[] results)
+			public HitTestAsyncResultEventArgs(HitTestResult[]? results)
 			{
-				Results = results;
+				Results = results ?? Array.Empty<HitTestResult>();
 			}
 
 			/// <summary>The hit test results (nearest first)</summary>

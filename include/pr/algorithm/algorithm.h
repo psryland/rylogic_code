@@ -328,28 +328,38 @@ namespace pr
 	}
 
 	// Erase all elements from 'cont' that match 'pred'
-	template <Container TCont, typename Pred> inline void erase_if(TCont& cont, Pred pred)
+	template <Container TCont, typename Pred> inline size_t erase_if(TCont& cont, Pred pred)
 	{
+		size_t num = 0;
 		if constexpr (container_traits<TCont>::associative)
 		{
 			// 'std::remove_if' does not work on associative containers because they cannot be reordered.
 			for (auto i = std::begin(cont); i != std::end(cont);)
 			{
-				if (!pred(*i)) ++i;
-				else i = cont.erase(i);
+				if (!pred(*i))
+				{
+					++i;
+				}
+				else
+				{
+					i = cont.erase(i);
+					++num;
+				}
 			}
 		}
 		else
 		{
 			auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
+			num = std::distance(end, std::end(cont));
 			cont.erase(end, std::end(cont));
 		}
+		return num;
 	}
-	template <Container TCont, typename Pred> inline void erase_if_unstable(TCont& cont, Pred pred)
+	template <Container TCont, typename Pred> inline size_t erase_if_unstable(TCont& cont, Pred pred)
 	{
 		if constexpr (container_traits<TCont>::associative)
 		{
-			erase_if(cont, pred);
+			return erase_if(cont, pred);
 		}
 		else
 		{
@@ -357,10 +367,18 @@ namespace pr
 			auto end = std::end(cont);
 			for (;beg != end;)
 			{
-				if (!pred(*beg)) ++beg;
-				else *beg = std::move(*(--end));
+				if (!pred(*beg))
+				{
+					++beg;
+				}
+				else
+				{
+					*beg = std::move(*(--end));
+				}
 			}
+			auto num = std::distance(end, std::end(cont));
 			cont.erase(end, std::end(cont));
+			return num;
 		}
 	}
 

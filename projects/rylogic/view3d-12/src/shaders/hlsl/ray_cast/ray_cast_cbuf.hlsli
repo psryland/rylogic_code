@@ -39,8 +39,8 @@ struct Ray
 	// If 'snap_mode' is perspective, then distance is calculated from 'distance-from-ray-origin * snap_distance'.
 	float m_snap_distance;
 
-	float pad0;
-	float pad1;
+	int m_id;
+	int pad0;
 };
 
 // The intercept between a ray and an object

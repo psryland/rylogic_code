@@ -35,9 +35,9 @@ namespace Rylogic.Gui.WPF
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
 			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
 			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
+			ToggleObjectInfo = Command.Create(this, ToggleObjectInfoInternal);
 			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
-			ToggleObjectInfo = Command.Create(this, ToggleObjectInfoInternal);
 
 			// Camera Menu
 			AutoRangeView = Command.Create(this, AutoRangeViewInternal);
@@ -134,6 +134,24 @@ namespace Rylogic.Gui.WPF
 			SelectionBoxVisible = !SelectionBoxVisible;
 			Invalidate();
 		}
+
+		/// <inheritdoc/>
+		public bool ObjectInfoEnabled
+		{
+			get => m_object_info_ray_id != View3d.HitTestRayId.None;
+			set
+			{
+				if (ObjectInfoEnabled == value) return;
+				m_object_info_ray_id = View3d.HitTestRayId.None; // todo
+				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
+			}
+		}
+		public ICommand ToggleObjectInfo { get; private set; } = null!;
+		private void ToggleObjectInfoInternal()
+		{
+			ObjectInfoEnabled = !ObjectInfoEnabled;
+		}
+		private View3d.HitTestRayId m_object_info_ray_id = View3d.HitTestRayId.None;
 
 		/// <inheritdoc/>
 		public View3d.ESceneBounds AutoRangeBounds
@@ -529,22 +547,5 @@ namespace Rylogic.Gui.WPF
 			m_object_manager_ui.Focus();
 		}
 		private View3dObjectManagerUI? m_object_manager_ui;
-
-		/// <inheritdoc/>
-		public bool ObjectInfoEnabled
-		{
-			get => Window.AsyncHitTestEnable;
-			set
-			{
-				if (ObjectInfoEnabled == value) return;
-				Window.AsyncHitTestEnable = value;
-				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
-			}
-		}
-		public ICommand ToggleObjectInfo { get; private set; } = null!;
-		private void ToggleObjectInfoInternal()
-		{
-			ObjectInfoEnabled = !ObjectInfoEnabled;
-		}
 	}
 }

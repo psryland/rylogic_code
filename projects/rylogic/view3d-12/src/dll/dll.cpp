@@ -1070,6 +1070,49 @@ VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3
 	CatchAndReport(View3D_WindowHitTestByCtx, window, );
 }
 
+// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+VIEW3D_API void __stdcall View3D_HitTestAsync(view3d::Window window)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		window->HitTestAsync();
+	}
+	CatchAndReport(View3D_HitTestAsync, window, );
+}
+
+// Add/Remove a callback for receiving async hit test results
+VIEW3D_API void __stdcall View3D_HitTestAsyncCBSet(view3d::Window window, view3d::HitTestAsyncCB cb, BOOL add)
+{
+	try
+	{
+		Validate(window);
+		if (!cb) throw std::runtime_error("Callback function is null");
+
+		DllLockGuard;
+		if (add)
+			window->OnHitTestAsyncResults += cb;
+		else
+			window->OnHitTestAsyncResults -= cb;
+	}
+	CatchAndReport(View3D_HitTestAsyncCBSet, ,);
+}
+
+// Add/Update/Remove an async hit test ray.
+VIEW3D_API view3d::HitTestRayId __stdcall View3D_HitTestRayUpdate(view3d::Window window, view3d::HitTestRayId id, view3d::HitTestRay const* ray)
+{
+	try
+	{
+		Validate(window);
+
+		DllLockGuard;
+		return window->HitTestRayUpdate(id, ray);
+	}
+	CatchAndReport(View3D_HitTestRayUpdate, window, {});
+}
+
 // Camera *********************************
 
 // Position the camera and focus distance
@@ -3104,49 +3147,6 @@ VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(view3d::Window window
 		window->SelectionBoxFitToSelected();
 	}
 	CatchAndReport(View3D_SelectionBoxFitToSelected, window, );
-}
-
-// Add/Remove a callback for receiving async hit test results
-VIEW3D_API void __stdcall View3D_AsyncHitTestCBSet(view3d::Window window, view3d::AsyncHitTestCB cb, BOOL add)
-{
-	try
-	{
-		Validate(window);
-		if (!cb) throw std::runtime_error("Callback function is null");
-
-		DllLockGuard;
-		if (add)
-			window->OnAsyncHitTestResults += cb;
-		else
-			window->OnAsyncHitTestResults -= cb;
-	}
-	CatchAndReport(View3D_AsyncHitTestCBSet, ,);
-}
-
-// Add/Update/Remove an async hit test ray.
-VIEW3D_API view3d::HitTestRayId __stdcall View3D_AsyncHitTestSet(view3d::Window window, view3d::HitTestRayId id, view3d::HitTestRay ray)
-{
-	try
-	{
-		Validate(window);
-
-		DllLockGuard;
-		return window->AsyncHitTest(id, ray);
-	}
-	CatchAndReport(View3D_AsyncHitTestSet, window, {});
-}
-
-// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
-VIEW3D_API void __stdcall View3D_InvalidateHitTests(view3d::Window window)
-{
-	try
-	{
-		Validate(window);
-
-		DllLockGuard;
-		window->InvalidateHitTests();
-	}
-	CatchAndReport(View3D_InvalidateHitTests, window, );
 }
 
 // Create/Delete the demo scene in the given window

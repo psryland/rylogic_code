@@ -127,7 +127,7 @@ namespace pr::rdr12
 			{
 				case ERenderStep::RenderForward: m_render_steps.emplace_back(new RenderForward(*this)); break;
 				case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new RenderSmap(*this, m_global_light)); break;
-				case ERenderStep::RayCast:       m_render_steps.emplace_back(new RenderRayCast(*this, true)); break;
+				case ERenderStep::RayCast:       m_render_steps.emplace_back(new RenderRayCast(*this, std::bind(&Scene::HitTestAsyncResults, this, _1))); break;
 				default: throw std::runtime_error("Unknown render step");
 			}
 		}
@@ -147,7 +147,7 @@ namespace pr::rdr12
 	}
 
 	// Perform an immediate hit test
-	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, RayCastInstancesCB instances, RayCastResultsOut const& out)
+	std::future<void> Scene::HitTest(std::span<HitTestRay const> rays, RayCastInstancesCB instances, RayCastResultsOut out)
 	{
 		// Notes:
 		//  - The immediate ray cast should be completely separate from the continuous ray cast.
@@ -158,14 +158,14 @@ namespace pr::rdr12
 
 		// Lazy create the ray cast render step
 		if (m_raycast_immed == nullptr)
-			m_raycast_immed.reset(new RenderRayCast(*this, false));
+			m_raycast_immed.reset(new RenderRayCast(*this, {}));
 			
 		auto& rs = *m_raycast_immed.get();
 
 		// Set the rays to cast
 		rs.SetRays(rays, [=](auto) { return true; });
 
-		// Populate the draw list.
+		// Populate the draw list with the provided instances, or the instances added to the scene
 		if (instances != nullptr)
 		{
 			for (BaseInstance const* inst; (inst = instances()) != nullptr;)
@@ -178,7 +178,7 @@ namespace pr::rdr12
 		}
 
 		// Run the hit test
-		auto result = m_raycast_immed->ExecuteImmediate(out);
+		auto result = rs.ExecuteImmediate(out);
 
 		// Reset ready for next time
 		rs.ClearDrawlist();
@@ -186,67 +186,28 @@ namespace pr::rdr12
 		return result;
 	}
 
-	// Set the collection of rays to cast into the scene for continuous hit testing.
-	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, RayCastFilter const& include)
-	{
-		// Look for an existing RayCast render step
-		if (rays.empty())
-		{
-			// Ensure there is a ray cast render step, add if not.
-			auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
-			if (rs == nullptr)
-			{
-				RenderRayCastPtr step(new RenderRayCast(*this, true));
-				m_render_steps.push_back(std::move(step));
-				rs = static_cast<RenderRayCast*>(m_render_steps.back().get());
-			}
-
-			// Set the rays to cast.
-			// Results will be available in 'm_ht_results' after Render() has been called a few times (due to multi-buffering)
-			rs->SetRays(rays, include);
-		}
-		else
-		{
-			// Remove the ray cast step if there are no rays to cast
-			pr::erase_if(m_render_steps, [](auto& rs){ return rs->m_step_id == ERenderStep::RayCast; });
-		}
-	}
-
-	// Read the hit test results from the continuous ray cast render step
-	void Scene::HitTestGetResults(RayCastResultsOut const& out)
-	{
-		auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
-		if (rs == nullptr)
-			return;
-
-		(void)out;
-		#if 0
-		// Read the hit test results
-		rs->ReadOutput(results);
-		#endif
-	}
-
 	// Perform an asynchronous hit test. Submits GPU work and returns immediately.
-	void Scene::HitTestAsync(std::span<HitTestRay const> rays, RayCastResultsOut const& out)
+	void Scene::HitTestAsync(std::span<HitTestRay const> rays)
 	{
 		if (rays.empty())
 			return;
 
 		// Lazy create the async ray cast render step
 		if (m_raycast_async == nullptr)
-			m_raycast_async.reset(new RenderRayCast(*this, true));
+			m_raycast_async.reset(new RenderRayCast(*this, {}));
 
 		auto& rs = *m_raycast_async.get();
 
 		// Set the rays to cast
 		rs.SetRays(rays, [](auto) { return true; });
 
-		// Populate the draw list
+		// Populate the draw list with the instances that have been added to this render step.
+		// Typically, only instances that are visible to hit tests should have been added.
 		for (auto& inst : m_instances)
 			rs.AddInstance(*inst);
 
 		// Submit to GPU and return immediately
-		rs.ExecuteAsync(out);
+		rs.ExecuteAsync(std::bind(&Scene::HitTestAsyncResults, this, _1));
 
 		// Reset the draw list ready for next time
 		rs.ClearDrawlist();
@@ -282,5 +243,11 @@ namespace pr::rdr12
 			m_viewport.Width = float(args.m_area.x);
 			m_viewport.Height = float(args.m_area.y);
 		}
+	}
+
+	// Callback for hit test results
+	void Scene::HitTestAsyncResults(std::span<HitTestResult const> results)
+	{
+		OnHitTestAsyncResults(*this, results);
 	}
 }

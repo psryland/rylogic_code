@@ -114,6 +114,7 @@
     <ClCompile Include="src\texture\texture_loader_dds.cpp" />
     <ClCompile Include="src\texture\texture_loader_wic.cpp" />
     <ClCompile Include="src\utility\cmd_list.cpp" />
+    <ClCompile Include="src\utility\conversion.cpp" />
     <ClCompile Include="src\utility\diagnostics.cpp" />
     <ClCompile Include="src\utility\features.cpp" />
     <ClCompile Include="src\utility\pipe_state.cpp" />

@@ -248,15 +248,16 @@ namespace pr
 	// rdr12::HitTestRay / view3d::HitTestRay
 	template <> struct Convert<rdr12::HitTestRay, view3d::HitTestRay>
 	{
-		constexpr static rdr12::HitTestRay Func(view3d::HitTestRay h)
-		{
-			return rdr12::HitTestRay{
-				.m_ws_origin = To<v4>(h.m_ws_origin),
-				.m_ws_direction = To<v4>(h.m_ws_direction),
-				.m_snap_mode = To<rdr12::ESnapMode>(h.m_snap_mode),
-				.m_snap_distance = h.m_snap_distance,
-				.m_id = h.m_id,
-			};
-		}
+		static rdr12::HitTestRay Func(view3d::HitTestRay h);
+	};
+
+	// rdr12::HitTestReset / view3d::HitTestReset
+	template <> struct Convert<rdr12::HitTestResult, view3d::HitTestResult>
+	{
+		static rdr12::HitTestResult Func(view3d::HitTestResult const& hit);
+	};
+	template <> struct Convert<view3d::HitTestResult, rdr12::HitTestResult>
+	{
+		static view3d::HitTestResult Func(rdr12::HitTestResult const& hit);
 	};
 }

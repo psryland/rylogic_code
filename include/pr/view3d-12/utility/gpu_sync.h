@@ -19,7 +19,7 @@ namespace pr::rdr12
 		//  - Call Wait using the number to block until the GPU has reached that point in the command list.
 		// 
 		// Polling/Sweep:
-		//  - Owners of these objects should use 'rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });' to add
+		//  - Owners of these objects should use 'rdr.AddPollCB({ &m_gsync, &GpuSync::Poll });' to add
 		//    Poll() function to the renderer's periodic timer. This should completely automate the notification
 		//    of sync points being reached.
 

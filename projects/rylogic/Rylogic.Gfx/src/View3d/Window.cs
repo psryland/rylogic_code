@@ -25,6 +25,7 @@ namespace Rylogic.Gfx
 			private readonly RenderingCB m_render_cb;           // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
+			private readonly HitTestAsyncCB m_ht_async_cb;      // A local reference to prevent the callback being garbage collected
 
 			public Window(View3d view, HWND hwnd, WindowOptions? opts = null)
 			{
@@ -59,6 +60,10 @@ namespace Rylogic.Gfx
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = new AnimationCB { m_cb = HandleAnimationEvent }, true);
 				void HandleAnimationEvent(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock) => OnAnimationEvent?.Invoke(this, new AnimationEventArgs(command, clock));
 
+				// Set up a callback for async hit tests
+				View3D_HitTestAsyncCBSet(Handle, m_ht_async_cb = new HitTestAsyncCB { m_cb = HandleHitTestAsyncResult }, true);
+				void HandleHitTestAsyncResult(IntPtr ctx, HWindow wnd, HitTestResult[] results, int count) => OnHitTestAsyncResult?.Invoke(this, new HitTestAsyncResultEventArgs(results));
+
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
 
@@ -72,8 +77,9 @@ namespace Rylogic.Gfx
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
-				if (Handle == HWindow.Zero) return;
-				AsyncHitTestEnable = false;
+				if (Handle == HWindow.Zero)
+					return;
+
 				View3D_WindowAnimControl(Handle, EAnimCommand.Stop, 0.0);
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, false);
 				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb, false);
@@ -296,59 +302,26 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Event fired when async hit test results are available (may fire on a background thread)</summary>
-			public event EventHandler<AsyncHitTestResultEventArgs>? OnAsyncHitTestResult;
+			public event EventHandler<HitTestAsyncResultEventArgs>? OnHitTestAsyncResult;
 
-			/// <summary>Enable/disable async hit testing</summary>
-			public bool AsyncHitTestEnable
+			/// <summary>Add/Update/Remove an async hit test ray. Use 'id == none' to add a new ray. Use 'ray == null' to remove a ray</summary>
+			public HitTestRayId HitTestAsyncRay(HitTestRayId id, HitTestRay? ray, int x, bool trigger_hit_test = true)
 			{
-				get => m_async_ht_enabled;
-				set
+				if (ray is HitTestRay r)
 				{
-					if (m_async_ht_enabled == value) return;
-					m_async_ht_enabled = value;
+					id = View3D_HitTestRayUpdate(Handle, id, ref r);
+					if (id == HitTestRayId.None)
+						return HitTestRayId.None;
 
-					if (value)
-					{
-						// Register the callback for receiving async hit test results
-						m_async_ht_cb = new AsyncHitTestCB
-						{
-							m_cb = HandleAsyncHitTestResult,
-							m_ctx = IntPtr.Zero,
-						};
-						View3D_AsyncHitTestCBSet(Handle, m_async_ht_cb.Value, true);
-
-						void HandleAsyncHitTestResult(IntPtr ctx, HWindow window, HitTestResult[] results, int count)
-						{
-							OnAsyncHitTestResult?.Invoke(this, new AsyncHitTestResultEventArgs(results));
-						}
-					}
-					else
-					{
-						// Remove the callback and any active rays
-						if (m_async_ht_cb != null)
-							View3D_AsyncHitTestCBSet(Handle, m_async_ht_cb.Value, false);
-
-						if (m_async_ht_ray_id != default)
-						{
-							View3D_AsyncHitTestSet(Handle, m_async_ht_ray_id, v4.Zero, v4.Zero, ESnapMode.NoSnap, 0);
-							m_async_ht_ray_id = default;
-						}
-
-						m_async_ht_cb = null;
-					}
+					if (trigger_hit_test)
+						View3D_HitTestAsync(Handle);
 				}
-			}
-			private bool m_async_ht_enabled;
-			private AsyncHitTestCB? m_async_ht_cb;
-			private HitTestRayId m_async_ht_ray_id;
+				else
+				{
+					id = View3D_HitTestRayUpdate(Handle, id, IntPtr.Zero);
+				}
 
-			/// <summary>Update the async hit test ray and trigger a GPU hit test</summary>
-			public void AsyncHitTestUpdateRay(v4 ws_origin, v4 ws_direction, ESnapMode snap_mode = ESnapMode.AllPerspective, float snap_distance = 0.02f)
-			{
-				if (!AsyncHitTestEnable) return;
-
-				m_async_ht_ray_id = View3D_AsyncHitTestSet(Handle, m_async_ht_ray_id, ws_origin, ws_direction, snap_mode, snap_distance);
-				View3D_InvalidateHitTests(Handle);
+				return id;
 			}
 
 			/// <summary>Get the render target texture</summary>

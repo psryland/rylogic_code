@@ -96,7 +96,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Remove all objects associated with 'context_ids'
-	void ScriptSources::Remove(view3d::GuidPredCB pred, EDataChangeTrigger trigger)
+	void ScriptSources::Remove(std::function<bool(Guid const&)> pred, EDataChangeTrigger trigger)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -135,7 +135,7 @@ namespace pr::rdr12::ldraw
 	}
 	void ScriptSources::Remove(Guid const& context_id, EDataChangeTrigger trigger)
 	{
-		Remove({ &context_id, MatchContextId }, trigger);
+		Remove([&](Guid const& id) { return context_id == id; }, trigger);
 	}
 
 	// Reload a range of sources

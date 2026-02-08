@@ -9,6 +9,7 @@
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_ray_cast.h"
+#include "pr/view3d-12/resource/gpu_transfer_allocation.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/pipe_state.h"
@@ -43,7 +44,7 @@ namespace pr::rdr12
 	static_assert(MaxRays == shaders::ray_cast::MaxRays);
 	static_assert(MaxIntercepts == shaders::ray_cast::MaxIntercepts);
 
-	RenderRayCast::RenderRayCast(Scene& scene, bool continuous)
+	RenderRayCast::RenderRayCast(Scene& scene, RayCastResultsOut results_cb)
 		: RenderStep(Id, scene)
 		, m_rays()
 		, m_include([](auto){ return true; })
@@ -53,11 +54,9 @@ namespace pr::rdr12
 		, m_zero()
 		, m_out()
 		, m_readback(m_gsync, SOBufferCount * sizeof(Intercept))
-		, m_output()
-		, m_async_cb()
+		, m_pending()
+		, m_cb_results(results_cb)
 		, m_sync_completed()
-		, m_pending_results()
-		, m_continuous(continuous)
 	{
 		// Stream output stage buffer format
 		static StreamOutputDesc so_desc = StreamOutputDesc{}
@@ -108,24 +107,20 @@ namespace pr::rdr12
 			m_out = factory.CreateResource(rdesc, "RayCast-Intercepts");
 		}
 
-		// Attach a handler to watch for completed async ray casts
-		if (continuous)
+		// Register the GpuSync for polling so that SyncPointCompleted fires
+		rdr().AddPollCB({ &m_gsync, &GpuSync::Poll }, seconds_t(0));
+		m_sync_completed = m_gsync.SyncPointCompleted += [this](GpuSync&, EmptyArgs const&)
 		{
-			// Register the GpuSync for polling so that SyncPointCompleted fires
-			rdr().AddPollCB({ &GpuSync::Poll, &m_gsync }, seconds_t(0));
-
-			m_sync_completed = m_gsync.SyncPointCompleted += [this](GpuSync&, EmptyArgs const&)
+			for (auto& pending : m_pending)
 			{
-				if (m_pending_results == 0 || m_gsync.CompletedSyncPoint() < m_pending_results)
-					return;
-					
-				m_pending_results = 0;
+				if (m_gsync.CompletedSyncPoint() < pending.m_sync_point)
+					continue;
 
-				// Process results and invoke the callback
-				if (m_async_cb)
-					ProcessResults(m_output, m_async_cb);
-			};
-		}
+				ProcessResults(pending.m_output, pending.m_cb);
+			}
+
+			erase_if(m_pending, [this](auto& pending) { return m_gsync.CompletedSyncPoint() >= pending.m_sync_point; });
+		};
 	}
 
 	// Set the rays to cast.
@@ -162,109 +157,6 @@ namespace pr::rdr12
 			// Recursively add dependent nuggets
 			if (!nug.m_nuggets.empty())
 				AddNuggets(inst, nug.m_nuggets, drawlist);
-		}
-	}
-
-	// Process ray cast results from a readback buffer and invoke the callback
-	void RenderRayCast::ProcessResults(GpuTransferAllocation& output, RayCastResultsOut const& cb)
-	{
-		// Read the values out of the buffer
-		auto* buffer_write_size = output.ptr<std::byte>((SOBufferCount - 1LL) * sizeof(Intercept));
-		auto count = *type_ptr<uint64_t>(buffer_write_size) / sizeof(Intercept);
-		auto intercepts = output.span<Intercept>(0, count);
-
-		// Returns the squared distance from the ray
-		auto DistSqFromRay = [](HitTestRay const& ray, Intercept const& intercept)
-		{
-			return distance::PointToRaySq(intercept.ws_intercept.w1(), ray.m_ws_origin, ray.m_ws_direction);
-		};
-		constexpr auto Eql = [](Intercept const& l, Intercept const& r)
-		{
-			return
-				l.ws_intercept == r.ws_intercept &&
-				l.inst_ptr == r.inst_ptr &&
-				l.ray_index == r.ray_index;
-		};
-
-		// Sort the intercepts from nearest to furtherest.
-		// This is a bit of a fuzzy ordering because of snapping.
-		sort(intercepts, [&](Intercept const& l, Intercept const& r)
-		{
-			// Cases:
-			//  - If either intercept is a face snap, then sort by distance
-			//    because faces should occlude any intercepts behind them.
-			//  - Otherwise, sort by distance if the difference in depth
-			//    is greater than the snap distance.
-			//  - If two intercepts are within the snap distance:
-			//    - Sort by closest to the ray.
-			auto average_depth = 0.5f * (l.ws_intercept.w + r.ws_intercept.w);
-
-			// If one of the intercepts is a face snap
-			if (s_cast<ESnapType>(l.snap_type) == ESnapType::Face ||
-				s_cast<ESnapType>(r.snap_type) == ESnapType::Face)
-			{
-				// At least one of the intercepts is a face, sort by distance
-				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > maths::tinyf)
-					return l.ws_intercept.w < r.ws_intercept.w;
-
-				// If the intercepts are at the same distance, prioritise by snap type
-				// (Remember face snap have zero distance from the ray)
-				return l.snap_type < r.snap_type;
-			}
-			auto const& ray_l = m_rays[l.ray_index];
-			auto const& ray_r = m_rays[r.ray_index];
-
-			auto l_snap_dist = AllSet(ray_l.m_snap_mode, ESnapMode::Perspective) ? ray_l.m_snap_distance * average_depth : ray_l.m_snap_distance;
-			auto r_snap_dist = AllSet(ray_r.m_snap_mode, ESnapMode::Perspective) ? ray_r.m_snap_distance * average_depth : ray_r.m_snap_distance;
-			auto snap_dist = std::max(l_snap_dist, r_snap_dist);
-
-			// Neither intercept is a face snap then sort by distance if
-			// the difference in distance is larger than the snap distances.
-			if (Abs(l.ws_intercept.w - r.ws_intercept.w) > snap_dist)
-				return l.ws_intercept.w < r.ws_intercept.w;
-
-			// If one of the intercepts is an edge snap
-			if ((ESnapType)l.snap_type == ESnapType::Edge ||
-				(ESnapType)r.snap_type == ESnapType::Edge)
-			{
-				// If one of the intercepts is a point snap, it has priority
-				if (l.snap_type != r.snap_type)
-					return l.snap_type < r.snap_type;
-
-				// Sort by distance of the intercepts from the ray
-				auto dist_l = DistSqFromRay(ray_l, l);
-				auto dist_r = DistSqFromRay(ray_r, r);
-				return dist_l < dist_r;
-			}
-
-			// The intercepts are point snaps. Sort by distance from the ray
-			auto dist_l = DistSqFromRay(ray_l, l);
-			auto dist_r = DistSqFromRay(ray_r, r);
-			return dist_l < dist_r;
-		});
-
-		// Forward each unique intercept to the callback
-		for (int i = 0, iend = isize(intercepts); i != iend; )
-		{
-			auto const& intercept = intercepts[i];
-
-			// Forward the hits to the callback
-			HitTestResult result = {
-				.m_ws_origin = m_rays[intercept.ray_index].m_ws_origin,
-				.m_ws_direction = m_rays[intercept.ray_index].m_ws_direction,
-				.m_ws_intercept = intercept.ws_intercept.w1(),
-				.m_instance = type_ptr<BaseInstance>(intercept.inst_ptr),
-				.m_distance = intercept.ws_intercept.w,
-				.m_ray_index = intercept.ray_index,
-				.m_snap_type = static_cast<ESnapType>(intercept.snap_type),
-			};
-			if (!cb(result))
-			{
-				break;
-			}
-
-			// Skip duplicates
-			for (++i; i != iend && Eql(intercepts[i], intercept); ++i) {}
 		}
 	}
 
@@ -309,38 +201,26 @@ namespace pr::rdr12
 	// Submit the ray cast to the GPU and return immediately.
 	void RenderRayCast::ExecuteAsync(RayCastResultsOut cb)
 	{
-		m_async_cb = std::move(cb);
-
 		// Build the command list
 		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
-		m_output = ExecuteCore();
+		auto output = ExecuteCore();
 		m_cmd_list.Close();
 
 		// Execute the command list
 		rdr().ExecuteGfxCommandLists({ m_cmd_list });
 
 		// Add a sync point. The SyncPointCompleted handler will process results.
-		m_pending_results = m_gsync.AddSyncPoint(rdr().GfxQueue());
-		m_cmd_list.SyncPoint(m_pending_results);
+		auto sp = m_gsync.AddSyncPoint(rdr().GfxQueue());
+		m_cmd_list.SyncPoint(sp);
+
+		// Store the pending results so they can be processed when the GPU completes
+		m_pending.push_back(PendingResults{ std::move(output), sp, std::move(cb) });
 	}
 
-	// Perform the render step
-	void RenderRayCast::Execute(Frame& frame)
+	// Submit the ray cast to the GPU and return immediately.
+	void RenderRayCast::Execute(Frame&)
 	{
-		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-
-		// Add the command lists we're using to the frame.
-		frame.m_main.push_back(m_cmd_list);
-
-		// Run the ray cast commands
-		m_output = ExecuteCore();
-
-		// Commands complete
-		m_cmd_list.Close();
-
-		// Add a sync point and wait for it
-		m_pending_results = m_gsync.AddSyncPoint(rdr().GfxQueue());
-		m_cmd_list.SyncPoint(m_pending_results);
+		return ExecuteAsync(m_cb_results);
 	}
 
 	// Step up the GPU call for the ray cast
@@ -473,6 +353,120 @@ namespace pr::rdr12
 		}
 
 		return output;
+	}
+
+	// Process ray cast results from a readback buffer and invoke the callback
+	void RenderRayCast::ProcessResults(GpuTransferAllocation& output, RayCastResultsOut cb)
+	{
+		// Notes:
+		//  - 'output' is not const because we're sorting the intersepts in place.
+
+		// Read the values out of the buffer
+		auto* buffer_write_size = output.ptr<std::byte>((SOBufferCount - 1LL) * sizeof(Intercept));
+		auto count = *type_ptr<uint64_t>(buffer_write_size) / sizeof(Intercept);
+		auto intercepts = output.span<Intercept>(0, count);
+
+		// Returns the squared distance from the ray
+		auto DistSqFromRay = [](HitTestRay const& ray, Intercept const& intercept)
+		{
+			return distance::PointToRaySq(intercept.ws_intercept.w1(), ray.m_ws_origin, ray.m_ws_direction);
+		};
+		constexpr auto Eql = [](Intercept const& l, Intercept const& r)
+		{
+			return
+				l.ws_intercept == r.ws_intercept &&
+				l.inst_ptr == r.inst_ptr &&
+				l.ray_index == r.ray_index;
+		};
+
+		// Sort the intercepts from nearest to furtherest.
+		// This is a bit of a fuzzy ordering because of snapping.
+		sort(intercepts, [&](Intercept const& l, Intercept const& r)
+		{
+			// Cases:
+			//  - If either intercept is a face snap, then sort by distance
+			//    because faces should occlude any intercepts behind them.
+			//  - Otherwise, sort by distance if the difference in depth
+			//    is greater than the snap distance.
+			//  - If two intercepts are within the snap distance:
+			//    - Sort by closest to the ray.
+			auto average_depth = 0.5f * (l.ws_intercept.w + r.ws_intercept.w);
+
+			// If one of the intercepts is a face snap
+			if (s_cast<ESnapType>(l.snap_type) == ESnapType::Face ||
+				s_cast<ESnapType>(r.snap_type) == ESnapType::Face)
+			{
+				// At least one of the intercepts is a face, sort by distance
+				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > maths::tinyf)
+					return l.ws_intercept.w < r.ws_intercept.w;
+
+				// If the intercepts are at the same distance, prioritise by snap type
+				// (Remember face snap have zero distance from the ray)
+				return l.snap_type < r.snap_type;
+			}
+			auto const& ray_l = m_rays[l.ray_index];
+			auto const& ray_r = m_rays[r.ray_index];
+
+			auto l_snap_dist = AllSet(ray_l.m_snap_mode, ESnapMode::Perspective) ? ray_l.m_snap_distance * average_depth : ray_l.m_snap_distance;
+			auto r_snap_dist = AllSet(ray_r.m_snap_mode, ESnapMode::Perspective) ? ray_r.m_snap_distance * average_depth : ray_r.m_snap_distance;
+			auto snap_dist = std::max(l_snap_dist, r_snap_dist);
+
+			// Neither intercept is a face snap then sort by distance if
+			// the difference in distance is larger than the snap distances.
+			if (Abs(l.ws_intercept.w - r.ws_intercept.w) > snap_dist)
+				return l.ws_intercept.w < r.ws_intercept.w;
+
+			// If one of the intercepts is an edge snap
+			if ((ESnapType)l.snap_type == ESnapType::Edge ||
+				(ESnapType)r.snap_type == ESnapType::Edge)
+			{
+				// If one of the intercepts is a point snap, it has priority
+				if (l.snap_type != r.snap_type)
+					return l.snap_type < r.snap_type;
+
+				// Sort by distance of the intercepts from the ray
+				auto dist_l = DistSqFromRay(ray_l, l);
+				auto dist_r = DistSqFromRay(ray_r, r);
+				return dist_l < dist_r;
+			}
+
+			// The intercepts are point snaps. Sort by distance from the ray
+			auto dist_l = DistSqFromRay(ray_l, l);
+			auto dist_r = DistSqFromRay(ray_r, r);
+			return dist_l < dist_r;
+		});
+
+		// Preallocate the results vector.
+		m_results.resize(0);
+		m_results.reserve(count);
+
+		// Forward each unique intercept to the callback
+		for (int i = 0, iend = isize(intercepts); i != iend; )
+		{
+			auto const& intercept = intercepts[i];
+
+			// Forward the hits to the callback
+			m_results.push_back(HitTestResult{
+				.m_ws_ray_origin = m_rays[intercept.ray_index].m_ws_origin,
+				.m_ws_ray_direction = m_rays[intercept.ray_index].m_ws_direction,
+				.m_ws_intercept = intercept.ws_intercept.w1(),
+				.m_ws_normal = intercept.ws_normal.w0(),
+				.m_instance = type_ptr<BaseInstance>(intercept.inst_ptr),
+				.m_distance = intercept.ws_intercept.w,
+				.m_ray_index = intercept.ray_index,
+				.m_ray_id = m_rays[intercept.ray_index].m_id,
+				.m_snap_type = static_cast<ESnapType>(intercept.snap_type),
+				.pad0 = 0,
+				.pad1 = 0,
+			});
+
+			// Skip duplicates
+			for (++i; i != iend && Eql(intercepts[i], intercept); ++i) {}
+		}
+
+		// Invoke the callback with the results
+		if (cb && !m_results.empty())
+			cb(m_results);
 	}
 
 	// Draw a single nugget

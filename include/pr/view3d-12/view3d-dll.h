@@ -652,15 +652,15 @@ namespace pr
 		struct HitTestRay
 		{
 			// The world space origin and direction of the ray (normalisation not required)
-			Vec4 m_ws_origin;
-			Vec4 m_ws_direction;
+			Vec4 m_ws_origin = {};
+			Vec4 m_ws_direction = {};
 
 			// Snap mode and distance. If snap_mode includes ESnapMode::Perspective, then the snap distance scales with distance from the origin
 			ESnapMode m_snap_mode = ESnapMode::AllPerspective; // Snap behaviour
 			float m_snap_distance = 0; // Snap distance: 'snap_dist = Perspectvie ? snap_distance * depth : snap_distance'
 
 			// User provided id for the ray
-			int m_id = 0;
+			HitTestRayId m_id = HitTestRayId::None;
 			int pad = 0;
 		};
 		struct HitTestResult
@@ -679,8 +679,15 @@ namespace pr
 			// The distance from ray origin to hit point
 			float m_distance;
 
+			// The index/id of the input ray
+			int m_ray_index;
+			int m_ray_id;
+
 			// How the hit point was snapped (if at all)
 			ESnapType m_snap_type;
+
+			int pad0;
+			int pad1;
 
 			// != 0 if this is a hit
 			bool IsHit() const { return m_obj != nullptr; }
@@ -755,7 +762,7 @@ namespace pr
 			int m_object_count;
 
 			// True if the source is a text format, false if binary
-			int m_text_format;
+			int m_text_format;	
 		};
 		#pragma endregion
 
@@ -771,7 +778,7 @@ namespace pr
 		using RenderingCB = Callback<void(__stdcall *)(void* ctx, Window window)>;
 		using SceneChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, SceneChanged const&)>;
 		using AnimationCB = Callback<void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock)>;
-		using AsyncHitTestCB = Callback<void(__stdcall*)(void* ctx, Window window, HitTestResult const* results, int count)>;
+		using HitTestAsyncCB = Callback<void(__stdcall*)(void* ctx, Window window, HitTestResult const* results, int count)>;
 		using GizmoMovedCB = Callback<void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state)>;
 		using AddNuggetCB = Callback<void(__stdcall*)(void* ctx, Nugget const& nugget)>;
 		using EditObjectCB = Callback<VICount(__stdcall*)(void* ctx,
@@ -973,6 +980,19 @@ extern "C"
 	// Cast a ray into the scene, returning information about what it hit.
 	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::Object const* objects, int object_count);
 	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, pr::view3d::GuidPredCB pred);
+
+	// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+	// Results are reported via the callback registered with View3D_HitTestAsyncCBSet.
+	VIEW3D_API void __stdcall View3D_HitTestAsync(pr::view3d::Window window);
+
+	// Add/Remove a callback for receiving async hit test results
+	VIEW3D_API void __stdcall View3D_HitTestAsyncCBSet(pr::view3d::Window window, pr::view3d::HitTestAsyncCB cb, BOOL add);
+
+	// Add/Update/Remove an async hit test ray.
+	// Returns 'HitTestRayId::None' if no more rays can be added.
+	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
+	// Use 'ray == nullptr' to remove a ray.
+	VIEW3D_API pr::view3d::HitTestRayId __stdcall View3D_HitTestRayUpdate(pr::view3d::Window window, pr::view3d::HitTestRayId id, pr::view3d::HitTestRay const* ray);
 
 	// Camera *********************************
 
@@ -1344,19 +1364,6 @@ extern "C"
 
 	// Set the selection box to encompass all selected objects
 	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
-
-	// Add/Remove a callback for receiving async hit test results
-	VIEW3D_API void __stdcall View3D_AsyncHitTestCBSet(pr::view3d::Window window, pr::view3d::AsyncHitTestCB cb, BOOL add);
-
-	// Add/Update/Remove an async hit test ray.
-	// Returns 'HitTestRayId::None' if no more rays can be added.
-	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
-	// Use ws_direction = v4::Zero() to remove a ray.
-	VIEW3D_API pr::view3d::HitTestRayId __stdcall View3D_AsyncHitTestSet(pr::view3d::Window window, pr::view3d::HitTestRayId id, pr::view3d::HitTestRay ray);
-
-	// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
-	// Results are reported via the callback registered with View3D_AsyncHitTestCBSet.
-	VIEW3D_API void __stdcall View3D_InvalidateHitTests(pr::view3d::Window window);
 
 	// Create/Delete the demo scene in the given window
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(pr::view3d::Window window);

@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -106,43 +106,14 @@ namespace pr::rdr12
 		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
 		// Snap distance depends on the snap mode. If 'snap_mode' is 'Perspective', then 'snap_distance' is actually the ratio proportional to depth.
-		std::future<void> HitTest(std::span<HitTestRay const> rays, RayCastInstancesCB instances, RayCastResultsOut const& out);
-
-		// Set the collection of rays to cast into the scene for continuous hit testing.
-		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
-		// Snap distance depends on the snap mode. If 'snap_mode' is 'Perspective', then 'snap_distance' is actually the ratio proportional to depth.
-		void HitTestContinuous(std::span<HitTestRay const> rays, RayCastFilter const& include);
+		std::future<void> HitTest(std::span<HitTestRay const> rays, RayCastInstancesCB instances, RayCastResultsOut out);
 
 		// Perform an asynchronous hit test. Submits GPU work and returns immediately.
 		// Results are reported via 'out' when the GPU completes (may be on a background thread).
-		void HitTestAsync(std::span<HitTestRay const> rays, RayCastResultsOut const& out);
-			
-		// Read the hit test results from the continuous ray cast render step.
-		void HitTestGetResults(RayCastResultsOut const& results);
+		void HitTestAsync(std::span<HitTestRay const> rays);
 
-		#if 0 // todo
-		// Render step specific accessors
-		template <typename TRStep, typename = enable_if_render_step<TRStep>> TRStep* FindRStep() const
-		{
-			return static_cast<TRStep*>(FindRStep(TRStep::Id));
-		}
-		template <typename TRStep> TRStep& RStep() const
-		{
-			auto rs = FindRStep<TRStep>();
-			if (rs != nullptr) return *rs;
-			throw std::runtime_error(Fmt("RenderStep %s is not part of this scene", Enum<ERenderStep>::ToStringA(TRStep::Id)));
-		}
-
-		// Some render step pre-sets
-		static std::vector<ERenderStep> ForwardRendering()
-		{
-			return {ERenderStep::ForwardRender};
-		}
-		static std::vector<ERenderStep> DeferredRendering()
-		{
-			return {ERenderStep::GBuffer, ERenderStep::DSLighting};
-		}
-		#endif
+		// Raised when async hit test results are ready.
+		EventHandler<Scene&, std::span<HitTestResult const>> OnHitTestAsyncResults;
 
 		// Render the scene, recording the command lists in 'frame'
 		void Render(Frame& frame);
@@ -161,6 +132,9 @@ namespace pr::rdr12
 
 		// Resize the viewport on back buffer resize
 		void HandleBackBufferSizeChanged(Window& wnd, BackBufferSizeChangedEventArgs const& evt);
+
+		// Callback for hit test results
+		void HitTestAsyncResults(std::span<HitTestResult const> results);
 	};
 }
 
