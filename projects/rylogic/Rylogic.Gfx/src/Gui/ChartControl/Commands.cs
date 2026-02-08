@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 using Rylogic.Windows.Extn;
@@ -195,23 +197,116 @@ namespace Rylogic.Gui.WPF
 			Invalidate();
 		}
 
-		/// <summary>Enable/Disable object info</summary>
-		public bool ObjectInfoEnable
+		/// <summary>Text description of the object under the mouse pointer</summary>
+		public string HoveredObjectInfo
 		{
-			get => Window.ObjectInfoEnable;
+			get => field;
 			set
 			{
-				if (ObjectInfoEnable == value) return;
-				//Window.ObjectInfoEnable = value;
-				NotifyPropertyChanged(nameof(ObjectInfoEnable));
+				if (field == value) return;
+				field = value;
+				NotifyPropertyChanged(nameof(HoveredObjectInfo));
+			}
+		}  = string.Empty;
+
+		/// <summary>Enable/Disable object info</summary>
+		public bool ObjectInfoEnabled
+		{
+			get => m_object_info_ray_id != View3d.HitTestRayId.None;
+			set
+			{
+				if (ObjectInfoEnabled == value)
+					return;
+
+				if (value)
+				{
+					Window.OnHitTestAsyncResult += HandleAsyncHitTestResult;
+					MouseMove += HandleObjectInfoMouseMove;
+					MouseLeave += HandleObjectInfoMouseLeave;
+
+					// Start a timer to throttle hit test updates
+					m_object_info_timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(33) };
+					m_object_info_timer.Tick += HandleObjectInfoTimerTick;
+					m_object_info_timer.Start();
+
+					// Add a ray for the object info
+					UpdateRay();
+				}
+				else
+				{
+					// Stop the throttle timer
+					if (m_object_info_timer != null)
+					{
+						m_object_info_timer.Tick -= HandleObjectInfoTimerTick;
+						m_object_info_timer.Stop();
+						m_object_info_timer = null;
+					}
+
+					MouseLeave -= HandleObjectInfoMouseLeave;
+					MouseMove -= HandleObjectInfoMouseMove;
+					Window.OnHitTestAsyncResult -= HandleAsyncHitTestResult;
+
+					// Remove the ray and clear the info text
+					m_object_info_ray_id = Window.HitTestAsyncRay(m_object_info_ray_id, null, 0);
+					m_object_info_dirty = false;
+					HoveredObjectInfo = string.Empty;
+				}
+
+				NotifyPropertyChanged(nameof(ObjectInfoEnabled));
+
+				// Handle async hit test results
+				void UpdateRay()
+				{
+					// Update the async hit test ray on mouse move
+					var pt = Mouse.GetPosition(Scene);
+					var ray = Scene.Camera.RaySS(pt.ToV2());
+					var ht_ray = View3d.HitTestRay.New(ray.m_ws_origin, ray.m_ws_direction);
+					m_object_info_ray_id = Window.HitTestAsyncRay(m_object_info_ray_id, ht_ray, 0);
+				}
+				void HandleAsyncHitTestResult(object? sender, View3d.HitTestAsyncResultEventArgs e)
+				{
+					// Marshal to the UI thread since the callback may fire on a background thread
+					if (!Dispatcher.CheckAccess())
+					{
+						Dispatcher.BeginInvoke(() => HandleAsyncHitTestResult(sender, e));
+						return;
+					}
+
+					if (e.Results.Length > 0 && e.Results[0].IsHit)
+					{
+						var obj = e.Results[0].HitObject;
+						HoveredObjectInfo = obj != null ? $"{obj.Name} [{obj.Type}]" : string.Empty;
+					}
+					else
+					{
+						HoveredObjectInfo = string.Empty;
+					}
+				}
+				void HandleObjectInfoMouseMove(object sender, MouseEventArgs e)
+				{
+					m_object_info_dirty = true;
+				}
+				void HandleObjectInfoTimerTick(object? sender, EventArgs e)
+				{
+					if (!m_object_info_dirty) return;
+					m_object_info_dirty = false;
+					UpdateRay();
+				}
+				void HandleObjectInfoMouseLeave(object sender, MouseEventArgs e)
+				{
+					// Clear hovered object info when the mouse leaves the chart
+					HoveredObjectInfo = string.Empty;
+				}
 			}
 		}
 		public ICommand ToggleObjectInfo { get; private set; } = null!;
 		private void ToggleObjectInfoInternal()
 		{
-			ObjectInfoEnable = !ObjectInfoEnable;
-			Invalidate();
+			ObjectInfoEnabled = !ObjectInfoEnabled;
 		}
+		private View3d.HitTestRayId m_object_info_ray_id = View3d.HitTestRayId.None;
+		private DispatcherTimer? m_object_info_timer;
+		private bool m_object_info_dirty;
 
 		/// <inheritdoc/>
 		public bool ShowCrossHair
@@ -260,18 +355,18 @@ namespace Rylogic.Gui.WPF
 		/// <inheritdoc/>
 		public bool ShowValueAtPointer
 		{
-			get => m_show_value_at_pointer;
+			get => field;
 			set
 			{
-				if (m_show_value_at_pointer == value) return;
-				if (m_show_value_at_pointer)
+				if (field == value) return;
+				if (field)
 				{
 					Scene.MouseMove -= HandleMouseMove;
 					Overlay.MouseMove -= HandleMouseMove;
 					m_popup_show_value.IsOpen = false;
 				}
-				m_show_value_at_pointer = value;
-				if (m_show_value_at_pointer)
+				field = value;
+				if (field)
 				{
 					m_popup_show_value.IsOpen = true;
 					Overlay.MouseMove += HandleMouseMove;
@@ -296,7 +391,6 @@ namespace Rylogic.Gui.WPF
 		{
 			ShowValueAtPointer = !ShowValueAtPointer;
 		}
-		private bool m_show_value_at_pointer;
 
 		/// <inheritdoc/>
 		public bool ShowAxes

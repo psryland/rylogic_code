@@ -25,6 +25,7 @@ namespace Rylogic.Gfx
 			private readonly RenderingCB m_render_cb;           // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
+			private readonly HitTestAsyncCB m_ht_async_cb;      // A local reference to prevent the callback being garbage collected
 
 			public Window(View3d view, HWND hwnd, WindowOptions? opts = null)
 			{
@@ -59,6 +60,10 @@ namespace Rylogic.Gfx
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = new AnimationCB { m_cb = HandleAnimationEvent }, true);
 				void HandleAnimationEvent(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock) => OnAnimationEvent?.Invoke(this, new AnimationEventArgs(command, clock));
 
+				// Set up a callback for async hit tests
+				View3D_HitTestAsyncCBSet(Handle, m_ht_async_cb = new HitTestAsyncCB { m_cb = HandleHitTestAsyncResult }, true);
+				void HandleHitTestAsyncResult(IntPtr ctx, HWindow wnd, HitTestResult[] results, int count) => OnHitTestAsyncResult?.Invoke(this, new HitTestAsyncResultEventArgs(results));
+
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
 
@@ -72,7 +77,9 @@ namespace Rylogic.Gfx
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
-				if (Handle == HWindow.Zero) return;
+				if (Handle == HWindow.Zero)
+					return;
+
 				View3D_WindowAnimControl(Handle, EAnimCommand.Stop, 0.0);
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, false);
 				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb, false);
@@ -292,6 +299,29 @@ namespace Rylogic.Gfx
 				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, insts, insts.Length);
 
 				return hits[0];
+			}
+
+			/// <summary>Event fired when async hit test results are available (may fire on a background thread)</summary>
+			public event EventHandler<HitTestAsyncResultEventArgs>? OnHitTestAsyncResult;
+
+			/// <summary>Add/Update/Remove an async hit test ray. Use 'id == none' to add a new ray. Use 'ray == null' to remove a ray</summary>
+			public HitTestRayId HitTestAsyncRay(HitTestRayId id, HitTestRay? ray, int x, bool trigger_hit_test = true)
+			{
+				if (ray is HitTestRay r)
+				{
+					id = View3D_HitTestRayUpdate(Handle, id, ref r);
+					if (id == HitTestRayId.None)
+						return HitTestRayId.None;
+
+					if (trigger_hit_test)
+						View3D_HitTestAsync(Handle);
+				}
+				else
+				{
+					id = View3D_HitTestRayUpdate(Handle, id, IntPtr.Zero);
+				}
+
+				return id;
 			}
 
 			/// <summary>Get the render target texture</summary>

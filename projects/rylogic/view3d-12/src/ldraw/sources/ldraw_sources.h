@@ -133,7 +133,7 @@ namespace pr::rdr12::ldraw
 		void Remove(LdrObject* object, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(view3d::GuidPredCB pred, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
+		void Remove(std::function<bool(Guid const&)> pred, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
 		void Remove(Guid const& context_id, EDataChangeTrigger trigger = EDataChangeTrigger::Removal);
 
 		// Reload a range of sources

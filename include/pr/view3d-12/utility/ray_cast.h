@@ -58,24 +58,42 @@ namespace pr::rdr12
 	// The output of a ray cast into the scene
 	struct HitTestResult
 	{
-		v4                  m_ws_origin;     // The origin of the ray that hit something
-		v4                  m_ws_direction;  // The direction of the ray that hit something
-		v4                  m_ws_intercept;  // Where the intercept is in world space
-		BaseInstance const* m_instance;      // The instance that was hit. (const because it's a pointer from the drawlist. Callers should use this pointer to find in ObjectSets)
-		float               m_distance;      // The distance from the ray origin to the intercept
-		int                 m_ray_index;     // The index of the input ray
-		ESnapType           m_snap_type;     // How the point was snapped (if at all)
-		bool IsHit() const { return m_instance != nullptr; } // True if this was a hit
+		// The origin and direction of the cast ray (in world space)
+		v4 m_ws_ray_origin;
+		v4 m_ws_ray_direction;
+
+		// The intercept point and surface normal (in world space)
+		v4 m_ws_intercept;
+		v4 m_ws_normal;
+
+		// The instance that was hit. (const because it's a pointer from the drawlist. Callers should use this pointer to find in ObjectSets)
+		BaseInstance const* m_instance;
+
+		// The distance from the ray origin to the intercept
+		float m_distance;
+
+		// The index/id of the input ray
+		int m_ray_index;
+		int m_ray_id;
+
+		// How the point was snapped (if at all)
+		ESnapType m_snap_type;
+
+		int pad0;
+		int pad1;
+
+		// True if this was a hit
+		bool IsHit() const
+		{
+			return m_instance != nullptr;
+		}
 	};
 
-	// A buffer of hit test results
-	using HitTestResults = vector<HitTestResult, 0>;
+	// Callback function that return a hit test result
+	using RayCastResultsOut = std::function<void(std::span<HitTestResult const>)>;
 
 	// Coroutine callback function that supplies instances to hit test against
 	using RayCastInstancesCB = std::function<BaseInstance const*()>;
-
-	// Callback function that returns the hit test results
-	using RayCastResultsOut = std::function<bool(HitTestResult const&)>;
 
 	// Callback function to filter instances for hit testing
 	using RayCastFilter = std::function<bool(BaseInstance const*)>;

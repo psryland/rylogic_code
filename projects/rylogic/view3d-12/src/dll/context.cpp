@@ -492,7 +492,7 @@ namespace pr::rdr12
 		// Remove unused sources
 		if (!unused.empty())
 		{
-			m_sources.Remove({ &unused, [](void* ctx, Guid const& id) { return static_cast<GuidSet const*>(ctx)->contains(id); } });
+			m_sources.Remove([&unused](Guid const& id) { return unused.contains(id); });
 		}
 	}
 

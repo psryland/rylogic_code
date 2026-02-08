@@ -164,5 +164,16 @@ namespace Rylogic.Gfx
 			/// <summary>A flag used to prevent this mouse navigation being forwarded to the window</summary>
 			public bool Handled { get; set; }
 		}
+
+		public class HitTestAsyncResultEventArgs :EventArgs
+		{
+			public HitTestAsyncResultEventArgs(HitTestResult[]? results)
+			{
+				Results = results ?? Array.Empty<HitTestResult>();
+			}
+
+			/// <summary>The hit test results (nearest first)</summary>
+			public HitTestResult[] Results { get; }
+		}
 	}
 }

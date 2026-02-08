@@ -49,11 +49,13 @@ namespace pr::rdr12
 		, m_visible_objects()
 		, m_settings()
 		, m_anim_data()
-		, m_hit_tests()
+		, m_ht_rays()
+		, m_ht_results()
 		, m_bbox_scene(BBox::Reset())
 		, m_global_pso()
 		, m_main_thread_id(std::this_thread::get_id())
 		, m_invalidated(false)
+		, m_ht_invalidated(false)
 		, m_ui_lighting()
 		, m_ui_object_manager()
 		, m_ui_script_editor()
@@ -86,6 +88,34 @@ namespace pr::rdr12
 			m_scene.m_global_light.m_direction = -v4ZAxis;
 			m_scene.m_global_light.m_on = true;
 			m_scene.m_global_light.m_cam_relative = true;
+
+			// Forward async hit test results
+			m_eh_hittests = m_scene.OnHitTestAsyncResults += [this](Scene&, std::span<HitTestResult const> results)
+			{
+				// Buffer the type converted results
+				m_ht_results.resize(0);
+				m_ht_results.reserve(results.size());
+
+				for (auto const& hit : results)
+				{
+					// Check that 'hit.m_instance' is a valid instance in this scene.
+					auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
+
+					// Not an object in this scene, keep looking
+					if (!Has(ldr_obj, true))
+						continue;
+
+					// Not visible to hit tests, keep looking
+					if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
+						continue;
+
+					// Build the result
+					m_ht_results.push_back(To<view3d::HitTestResult>(hit));
+				}
+
+				// Notify subscribers with the first hit
+				OnHitTestAsyncResults(this, m_ht_results.data(), isize(m_ht_results));
+			};
 
 			// Create the stock models
 			CreateStockObjects();
@@ -1274,7 +1304,8 @@ namespace pr::rdr12
 			throw std::runtime_error("There should be a hit object for each ray");
 
 		// Set up the ray cast
-		auto ray_casts = pr::vector<HitTestRay>{};
+		vector<HitTestRay, 1> ray_casts = {};
+		ray_casts.reserve(rays.size());
 		for (auto& ray : rays)
 			ray_casts.push_back(To<HitTestRay>(ray));
 
@@ -1284,33 +1315,31 @@ namespace pr::rdr12
 			r = invalid;
 
 		// Do the ray casts into the scene and save the results
-		m_scene.HitTest(ray_casts, instances, [=](HitTestResult const& hit)
+		m_scene.HitTest(ray_casts, instances, [=](std::span<HitTestResult const> results)
 		{
-			// Check that 'hit.m_instance' is a valid instance in this scene.
-			// It could be a child instance, we need to search recursively for a match
-			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
+			for (auto const& hit : results)
+			{
+				// Check that 'hit.m_instance' is a valid instance in this scene.
+				// It could be a child instance, we need to search recursively for a match
+				auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
 
-			// Not an object in this scene, keep looking
-			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
-			if (!Has(ldr_obj, true))
-				return true;
+				// Not an object in this scene, keep looking
+				// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
+				if (!Has(ldr_obj, true))
+					continue;
 
-			// Not visible to hit tests, keep looking
-			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
-				return true;
+				// Not visible to hit tests, keep looking
+				if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
+					continue;
 
-			// The intercepts are already sorted from nearest to furtherest.
-			// So we can just accept the first intercept as the hit test.
+				// The intercepts are already sorted from nearest to furtherest.
+				// So we can just accept the first intercept for each ray.
+				if (hits[hit.m_ray_index].IsHit())
+					continue;
 
-			// Save the hit
-			auto& result = hits[hit.m_ray_index];
-			result.m_ws_ray_origin    = To<view3d::Vec4>(hit.m_ws_origin);
-			result.m_ws_ray_direction = To<view3d::Vec4>(hit.m_ws_direction);
-			result.m_ws_intercept     = To<view3d::Vec4>(hit.m_ws_intercept);
-			result.m_distance         = hit.m_distance;
-			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
-			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
-			return false;
+				// Save the hit
+				hits[hit.m_ray_index] = To<view3d::HitTestResult>(hit);
+			}
 		}).wait();
 	}
 	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, ldraw::LdrObject const* const* objects, int object_count)
@@ -1338,50 +1367,48 @@ namespace pr::rdr12
 		};
 		HitTest(rays, hits, instances);
 	}
-	
-	// Add/Update/Remove a periodic hit test ray.
-	// Returns 'HitTestRayId::None' if no more rays can be added.
-	// Returns 'id' if the ray was updated/removed successfully, otherwise returns HitTestRayId::None.
-	// Use ws_direction = v4::Zero() to remove a ray.
-	view3d::HitTestRayId V3dWindow::PeriodicHitTest(view3d::HitTestRayId id, view3d::HitTestRay const& ray_)
+
+	// Trigger execution of the async hit test rays. Submits GPU work and returns immediately.
+	void V3dWindow::HitTestAsync()
+	{
+		m_scene.HitTestAsync(m_ht_rays);
+	}
+
+	// Add/Update/Remove an async hit test ray.
+	view3d::HitTestRayId V3dWindow::HitTestRayUpdate(pr::view3d::HitTestRayId id, view3d::HitTestRay const* ray)
 	{
 		static int new_id = static_cast<int>(view3d::HitTestRayId::None);
-		auto ID = s_cast<int>(id);
-		auto ray = To<HitTestRay>(ray_);
 
 		// Add a new ray
-		if (id == view3d::HitTestRayId::None)
+		if (id == view3d::HitTestRayId::None && ray != nullptr)
 		{
-			if (m_hit_tests.size() == rdr12::MaxRays)
+			if (m_ht_rays.size() == rdr12::MaxRays)
 				return view3d::HitTestRayId::None;
 
-			ray.m_id = ++new_id;
-			m_hit_tests.push_back(ray);
-			id = s_cast<view3d::HitTestRayId>(ray.m_id);
+			auto ray_ = To<HitTestRay>(*ray);
+			ray_.m_id = ++new_id;
+			m_ht_rays.push_back(ray_);
+			id = s_cast<view3d::HitTestRayId>(ray_.m_id);
 		}
 
 		// Remove a ray
-		else if (ray.m_ws_direction == v4::Zero())
+		else if (ray == nullptr)
 		{
-			auto num = std::erase_if(m_hit_tests, [ID](HitTestRay const& r) { return r.m_id == ID; });
+			auto num = pr::erase_if(m_ht_rays, [ID = s_cast<int>(id)](HitTestRay const& r) { return r.m_id == ID; });
 			id = num != 0 ? id : view3d::HitTestRayId::None;
 		}
 
 		// Update a ray
 		else
 		{
-			auto it = std::ranges::find_if(m_hit_tests, [ID](HitTestRay const& r) { return r.m_id == ID; });
-			if (it == std::end(m_hit_tests))
-			{
-				id = view3d::HitTestRayId::None;
-			}
-			else
-			{
-				*it = ray;
-			}
+			auto it = std::ranges::find_if(m_ht_rays, [ID = s_cast<int>(id)](HitTestRay const& r) { return r.m_id == ID; });
+			if (it == std::end(m_ht_rays))
+				return view3d::HitTestRayId::None;
+
+			*it = To<HitTestRay>(*ray);
+			it->m_id = s_cast<int>(id);
 		}
 
-		m_scene.HitTestContinuous(m_hit_tests, [](BaseInstance const*) { return true; });
 		return id;
 	}
 
@@ -1400,25 +1427,28 @@ namespace pr::rdr12
 		};
 
 		// Cast 'ray' into the scene
-		m_scene.HitTest({ &ray, 1ULL }, instances, [&](HitTestResult const& hit)
+		m_scene.HitTest({ &ray, 1ULL }, instances, [&](std::span<HitTestResult const> results)
 		{
-			// Check that 'hit.m_instance' is a valid instance in this scene.
-			// It could be a child instance, we need to search recursively for a match
-			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
+			for (auto const& hit : results)
+			{
+				// Check that 'hit.m_instance' is a valid instance in this scene.
+				// It could be a child instance, we need to search recursively for a match
+				auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
 
-			// Not an object in this scene, keep looking
-			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
-			if (!Has(ldr_obj, true))
-				return true;
+				// Not an object in this scene, keep looking
+				// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
+				if (!Has(ldr_obj, true))
+					continue;
 
-			// Not visible to hit tests, keep looking
-			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
-				return true;
+				// Not visible to hit tests, keep looking
+				if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
+					continue;
 
-			// The intercepts are already sorted from nearest to furtherest.
-			// So we can just accept the first intercept as the hit test.
-			target = hit;
-			return false;
+				// The intercepts are already sorted from nearest to furtherest.
+				// So we can just accept the first intercept as the hit test.
+				target = hit;
+				break;
+			}
 		}).wait();
 
 		// Move the focus point to the centre of the bbox of the hit object
@@ -1755,7 +1785,7 @@ namespace pr::rdr12
 					.m_ws_direction = To<view3d::Vec4>(dir),
 					.m_snap_mode = view3d::ESnapMode::All,
 					.m_snap_distance = 0,
-					.m_id = 0,
+					.m_id = view3d::HitTestRayId::None,
 				});
 				return true;
 			}
