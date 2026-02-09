@@ -5453,42 +5453,47 @@ namespace pr::rdr12::ldraw
 			if (m_source.empty())
 				return;
 
+			LdrObject* source = nullptr;
 			std::string_view addr{ m_source };
+			string32 path;
 
-			// Construct the full name of the object to instance.
 			// If 'addr' starts with a '.' then it's a relative address.
 			if (addr.front() == '.')
 			{
-				string32 path = obj->FullName(); // Start with the current object's full name
-				for (; !path.empty(); )
-				{
-					// Remove the last segment
-					for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
+				// Navigate up through parents...
+				LdrObject* src = obj;
+				for (; src != nullptr && !addr.empty() && addr.front() == '.'; addr.remove_prefix(1))
+					src = src->m_parent;
 
-					// No more parent navigation
-					if (addr.empty() || addr.front() != '.')
+				//... and down through children
+				for (; src != nullptr && !addr.empty(); )
+				{
+					// Find the child matching 'segment'
+					auto segment = addr.substr(0, index_of(addr, '.'));
+					auto it = find_if(src->m_child, [=](LdrObjectPtr& c) { return std::string_view{ c->m_name } == segment; });
+					src = it != std::end(src->m_child) ? it->get() : nullptr;
+					if (src == nullptr)
 						break;
 
-					// Remove the '.' character
-					if (!path.empty())
-						path.pop_back();
-
-					// Remove the leading '.'
-					addr = addr.substr(1);
+					// Advance to the next segment
+					addr = addr.substr(segment.size());
+					if (!addr.empty()) addr.remove_prefix(1);
 				}
-
-				// Construct the full address
-				addr = path.append(addr);
+				source = src;
+			}
+			else
+			{
+				// Find the source object in the lookup
+				if (auto it = m_pp.m_lookup.find(hash::Hash(addr)); it != std::end(m_pp.m_lookup))
+					source = it->second;
 			}
 
-			// Find the source object in the lookup
-			auto it = m_pp.m_lookup.find(hash::Hash(addr));
-			if (it == std::end(m_pp.m_lookup))
+			// Instance source not found?
+			if (source == nullptr)
 			{
 				m_pp.ReportError(EParseError::NotFound, loc, "Object not found. Can't create an instance.");
 				return;
 			}
-			LdrObject* source = it->second;
 
 			// Create an LdrObject instance for each nested object
 			RecursiveCreate(obj, source, false);
