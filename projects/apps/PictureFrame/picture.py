@@ -17,15 +17,85 @@
 # - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\snakeviz.exe profile.out
 
 import sys, os, json, platform, fnmatch, random, pathspec, threading, tempfile, shutil, time
+import logging, logging.handlers, traceback
 from pathlib import Path
 import tkinter as Tk
 import mpv
+
+try:
+	import psutil
+	HAS_PSUTIL = True
+except ImportError:
+	HAS_PSUTIL = False
+
+def _SetupLogging(log_dir):
+	"""Configure logging with rotating file handler and console handler."""
+	log_dir.mkdir(parents=True, exist_ok=True)
+	log_file = log_dir / "pictureframe.log"
+
+	logger = logging.getLogger("PictureFrame")
+	logger.setLevel(logging.DEBUG)
+
+	# Rotating file handler: 5MB per file, keep 5 backups
+	file_handler = logging.handlers.RotatingFileHandler(
+		log_file, maxBytes=5*1024*1024, backupCount=5, encoding="utf-8")
+	file_handler.setLevel(logging.DEBUG)
+	file_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+	file_handler.setFormatter(file_fmt)
+
+	# Console handler
+	console_handler = logging.StreamHandler(sys.stdout)
+	console_handler.setLevel(logging.INFO)
+	console_fmt = logging.Formatter("[%(levelname)s] %(message)s")
+	console_handler.setFormatter(console_fmt)
+
+	logger.addHandler(file_handler)
+	logger.addHandler(console_handler)
+	return logger
+
+def _GetResourceInfo():
+	"""Collect current process resource usage."""
+	info = {}
+	info["thread_count"] = threading.active_count()
+	info["thread_names"] = [t.name for t in threading.enumerate()]
+	if HAS_PSUTIL:
+		try:
+			proc = psutil.Process(os.getpid())
+			mem = proc.memory_info()
+			info["memory_rss_mb"] = round(mem.rss / (1024 * 1024), 1)
+			info["memory_vms_mb"] = round(mem.vms / (1024 * 1024), 1)
+			info["open_files"] = len(proc.open_files())
+			info["num_fds"] = proc.num_handles() if platform.system() == "Windows" else proc.num_fds()
+			info["cpu_percent"] = proc.cpu_percent(interval=0)
+		except Exception as e:
+			info["psutil_error"] = str(e)
+	return info
 
 class PictureFrame:
 	def __init__(self):
 		# Get the current directory
 		project_dir = Path(__file__).resolve().parent
 		self.root_dir = project_dir
+
+		# Set up logging first so everything else can use it
+		self.log = _SetupLogging(project_dir / "logs")
+		self.log.info("=" * 60)
+		self.log.info("PictureFrame starting up")
+		self.log.info(f"Platform: {platform.system()} {platform.release()}")
+		self.log.info(f"Python: {sys.version}")
+		self.log.info(f"psutil available: {HAS_PSUTIL}")
+		self.log.info(f"Project dir: {project_dir}")
+		self._images_displayed = 0
+		self._start_time = time.time()
+
+		# Install global exception hook to catch unhandled exceptions
+		def _unhandled_exception(exc_type, exc_value, exc_tb):
+			self.log.critical("UNHANDLED EXCEPTION - this is likely the crash cause:")
+			self.log.critical("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+			self.log.critical(f"Resource state at crash: {_GetResourceInfo()}")
+			sys.__excepthook__(exc_type, exc_value, exc_tb)
+		sys.excepthook = _unhandled_exception
+
 		self.image_list = []
 		self.image_index = -1
 		self.ui_visible = False
@@ -40,12 +110,15 @@ class PictureFrame:
 		self.prefetch_pending_set = set()  # Set of paths currently being prefetched
 		self.prefetch_cache = {}  # Maps source_path -> cached_path for all cached files
 		self._LoadCacheManifest()  # Load existing cache from previous sessions
+		self.log.info(f"Cache dir: {self.prefetch_cache_dir}")
 
 		# Load the config
 		self.config = self._LoadConfig()
+		self.log.info(f"Config loaded: DisplayPeriod={self.config['DisplayPeriodSeconds']}s, PrefetchCount={self.config.get('PrefetchCount', 10)}")
 
 		# Get the image root path
 		self.image_dir = Path(self.config[f"ImageRoot-{platform.system()}"])
+		self.log.info(f"Image dir: {self.image_dir}")
 		if not self.image_dir.exists():
 			raise FileNotFoundError(f"Image root path {self.image_dir} does not exist")
 
@@ -113,6 +186,8 @@ class PictureFrame:
 		self.window.bind("<Escape>", lambda e: self._Shutdown())  # Exit on ESC key
 		self.window.bind("<Configure>", lambda e: self._UpdateUI())
 		self.bb.bind("<Button-1>", self._ShowOverlays)
+
+		self.log.info("PictureFrame initialized successfully")
 		return
 
 	# Initialize the MPV player when the window is ready
@@ -120,7 +195,7 @@ class PictureFrame:
 		if self.player is not None:
 			return
 		
-		print("Attempting to initialize MPV player...")
+		self.log.info("Attempting to initialize MPV player...")
 		
 		# Force the frame to be displayed and get its actual window ID
 		try:
@@ -129,12 +204,12 @@ class PictureFrame:
 			
 			# Get the window ID after everything is properly realized
 			wid = self.bb.winfo_id()
-			print(f"Window ID obtained: {wid}")
-			print(f"Frame geometry: {self.bb.winfo_width()}x{self.bb.winfo_height()}")
-			print(f"Frame is viewable: {self.bb.winfo_viewable()}")
+			self.log.info(f"Window ID obtained: {wid}")
+			self.log.info(f"Frame geometry: {self.bb.winfo_width()}x{self.bb.winfo_height()}")
+			self.log.info(f"Frame is viewable: {self.bb.winfo_viewable()}")
 			
 		except Exception as e:
-			print(f"Error getting window information: {e}")
+			self.log.error(f"Error getting window information: {e}", exc_info=True)
 			wid = None
 		
 		# Try different MPV configurations in order of preference
@@ -183,41 +258,41 @@ class PictureFrame:
 		
 		for i, attempt in enumerate(configs):
 			if wid is None and "wid" in attempt["config"]:
-				print(f"Skipping {attempt['name']} - no window ID available")
+				self.log.debug(f"Skipping {attempt['name']} - no window ID available")
 				continue
 				
 			try:
-				print(f"Trying configuration {i+1}: {attempt['name']}")
+				self.log.info(f"Trying configuration {i+1}: {attempt['name']}")
 				
 				# Filter out None values
 				config = {k: v for k, v in attempt["config"].items() if v is not None}
-				print(f"MPV config: {config}")
+				self.log.debug(f"MPV config: {config}")
 				
 				self.player = mpv.MPV(**config)
-				print(f"MPV player initialized successfully with {attempt['name']}")
+				self.log.info(f"MPV player initialized successfully with {attempt['name']}")
 				return
 				
 			except Exception as e:
-				print(f"Failed with {attempt['name']}: {e}")
+				self.log.warning(f"Failed with {attempt['name']}: {e}", exc_info=True)
 				if i < len(configs) - 1:
-					print("Trying next configuration...")
+					self.log.info("Trying next configuration...")
 				continue
 		
-		print("All MPV configurations failed!")
+		self.log.error("All MPV configurations failed!")
 		self.player = None
 
 	# Scan for images and videos
 	def Scan(self):
 		patterns = self.config['ImagePatterns'] + self.config['VideoPatterns']
 
-		print(f"Image root path: {self.image_dir}")
-		print(f"Include patterns: {patterns}")
+		self.log.info(f"Image root path: {self.image_dir}")
+		self.log.info(f"Include patterns: {patterns}")
 
-		print("Loading ignore list...")
+		self.log.info("Loading ignore list...")
 		ignore_patterns = self._LoadIgnorePatterns()
 		ignore_spec = pathspec.PathSpec.from_lines('gitwildmatch', ignore_patterns)
 
-		print("Scanning...")
+		self.log.info("Scanning...")
 
 		# Generate an image list
 		image_list = []
@@ -241,6 +316,7 @@ class PictureFrame:
 	def Run(self):
 		# Load the image list
 		self.image_list = self._LoadImageList()
+		self.log.info(f"Loaded {len(self.image_list)} images")
 		self._Shuffle()
 
 		# Init the UI
@@ -248,6 +324,9 @@ class PictureFrame:
 
 		# Start periodic cache cleanup (every 10 minutes)
 		self._SchedulePeriodicCacheCleanup()
+
+		# Start periodic resource monitoring (every 60 seconds)
+		self._ScheduleResourceMonitor()
 
 		# Wait for the window to be viewable
 		def WaitTillShown():
@@ -308,6 +387,8 @@ class PictureFrame:
 		if issue_number != self.issue_number:
 			return
 
+		self._images_displayed += 1
+
 		# Stop any existing media
 		self._StopMedia()
 
@@ -317,6 +398,7 @@ class PictureFrame:
 		# Display a no images message if there are no images
 		self.no_images_label.place_forget()
 		if not fullpath or fullpath == Path():
+			self.log.warning("No valid image found to display")
 			self.no_images_label.place(anchor="center", relx=0.5, rely=0.5)
 			return
 
@@ -333,16 +415,17 @@ class PictureFrame:
 			elif extn in ['.mp4', '.avi', '.mov']:
 				self._ShowVideo(fullpath, issue_number, direction)
 			else:
+				self.log.warning(f"Unsupported file type: {extn} for {fullpath}")
 				self._ScheduleAfter(100, self._NextImage)
 		except Exception as e:
-			print(f"Error displaying image {fullpath}: {e}")
+			self.log.error(f"Error displaying media {fullpath}: {e}", exc_info=True)
 			self._ScheduleAfter(100, self._NextImage)
 		return
 
 	# Display a still image
 	def _ShowImage(self, image_fullpath, issue_number, direction=1):
 		if self.player is None:
-			print("MPV player not initialized, skipping image display")
+			self.log.warning("MPV player not initialized, skipping image display")
 			self._ScheduleAfter(100, self._NextImage)
 			return
 			
@@ -362,14 +445,14 @@ class PictureFrame:
 			
 			self._ScheduleAfter(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		except Exception as e:
-			print(f"Error playing image {image_fullpath}: {e}")
+			self.log.error(f"Error playing image {image_fullpath}: {e}", exc_info=True)
 			self._ScheduleAfter(100, self._NextImage)
 		return
 
 	# Display a video
 	def _ShowVideo(self, video_fullpath, issue_number, direction=1):
 		if self.player is None:
-			print("MPV player not initialized, skipping video display")
+			self.log.warning("MPV player not initialized, skipping video display")
 			self._ScheduleAfter(100, self._NextImage)
 			return
 			
@@ -392,7 +475,7 @@ class PictureFrame:
 			
 			self._ScheduleAfter(500, Stop)
 		except Exception as e:
-			print(f"Error playing video {video_fullpath}: {e}")
+			self.log.error(f"Error playing video {video_fullpath}: {e}", exc_info=True)
 			self._ScheduleAfter(100, self._NextImage)
 		return
 
@@ -405,7 +488,7 @@ class PictureFrame:
 			try:
 				self.player.stop()
 			except Exception as e:
-				print(f"Error stopping player: {e}")
+				self.log.error(f"Error stopping player: {e}", exc_info=True)
 		return
 
 	# Show/Hide UI elements
@@ -476,7 +559,7 @@ class PictureFrame:
 
 		# Show displayed images in the terminal
 		if bool(self.config["LogToTerminal"]):
-			print(f"   {fullpath}")
+			self.log.info(f"Displaying: {fullpath}")
 
 		# If the log file is larger than 1MB, keep the last 1000 lines
 		if os.path.exists(log_filepath) and os.path.getsize(log_filepath) > 1024 * 1024:
@@ -572,7 +655,7 @@ class PictureFrame:
 
 	# Save the image list to file
 	def _SaveImageList(self, image_list):
-		print("Saving image list...", end="")
+		self.log.info(f"Saving image list ({len(image_list)} images)...")
 
 		# Stable order
 		image_list.sort()
@@ -583,7 +666,7 @@ class PictureFrame:
 			for relpath in image_list:
 				file.write(f"{relpath}\n")
 
-		print(f"done. Image list: {image_list_fullpath}")
+		self.log.info(f"Image list saved: {image_list_fullpath}")
 		return
 
 	# Read the list of ignore patterns
@@ -603,7 +686,7 @@ class PictureFrame:
 
 	# Save the list of images to ignore
 	def _SaveIgnorePatterns(self, ignore_patterns):
-		print("Saving ignore patterns...", end="")
+		self.log.info(f"Saving ignore patterns ({len(ignore_patterns)} patterns)...")
 
 		# Stable order
 		ignore_patterns.sort()
@@ -614,7 +697,7 @@ class PictureFrame:
 			for pattern in ignore_patterns:
 				file.write(f"{pattern}\n")
 
-		print(f"done. Ignore list: {ignore_patterns_fullpath}")
+		self.log.info(f"Ignore list saved: {ignore_patterns_fullpath}")
 		return
 
 	# Start prefetching multiple media files ahead in the background
@@ -673,12 +756,12 @@ class PictureFrame:
 				# Add to cache dictionary and remove from pending set
 				self.prefetch_cache[source_path] = cached_path
 				self.prefetch_pending_set.discard(source_path)
-				print(f"Prefetched: {source_path.name}")
+				self.log.debug(f"Prefetched: {source_path.name} (cache size: {len(self.prefetch_cache)})")
 			
 			# Save manifest after successful prefetch
 			self._SaveCacheManifest()
 		except Exception as e:
-			print(f"Prefetch failed for {source_path}: {e}")
+			self.log.error(f"Prefetch failed for {source_path}: {e}", exc_info=True)
 			with self.prefetch_lock:
 				self.prefetch_pending_set.discard(source_path)
 		return
@@ -707,9 +790,18 @@ class PictureFrame:
 				if cached_path.exists():
 					self.prefetch_cache[source_path] = cached_path
 			
-			print(f"Loaded {len(self.prefetch_cache)} cached files from previous session")
+			# log may not be set up yet during __init__, use print as fallback
+			msg = f"Loaded {len(self.prefetch_cache)} cached files from previous session"
+			if hasattr(self, 'log'):
+				self.log.info(msg)
+			else:
+				print(msg)
 		except Exception as e:
-			print(f"Error loading cache manifest: {e}")
+			msg = f"Error loading cache manifest: {e}"
+			if hasattr(self, 'log'):
+				self.log.error(msg, exc_info=True)
+			else:
+				print(msg)
 		return
 
 	# Save cache manifest for future sessions
@@ -722,7 +814,7 @@ class PictureFrame:
 			with open(manifest_path, "w", encoding="utf-8") as f:
 				json.dump(manifest, f, indent=2)
 		except Exception as e:
-			print(f"Error saving cache manifest: {e}")
+			self.log.error(f"Error saving cache manifest: {e}", exc_info=True)
 		return
 
 	# Clean up old files in the prefetch cache directory
@@ -733,7 +825,7 @@ class PictureFrame:
 			
 			max_age_seconds = self.config.get('CacheCleanupMinutes', 10) * 60
 			now = time.time()
-			files_removed = False
+			files_removed = 0
 			for cached_file in self.prefetch_cache_dir.iterdir():
 				if cached_file.is_file() and cached_file.name != "manifest.json":
 					file_age = now - cached_file.stat().st_mtime
@@ -744,14 +836,13 @@ class PictureFrame:
 							for key in keys_to_remove:
 								del self.prefetch_cache[key]
 						cached_file.unlink()
-						files_removed = True
-						print(f"Cleaned up old cache file: {cached_file.name}")
+						files_removed += 1
 			
-			# Save manifest if files were removed
-			if files_removed:
+			if files_removed > 0:
+				self.log.info(f"Cache cleanup: removed {files_removed} old files (cache size: {len(self.prefetch_cache)})")
 				self._SaveCacheManifest()
 		except Exception as e:
-			print(f"Error cleaning old cache files: {e}")
+			self.log.error(f"Error cleaning old cache files: {e}", exc_info=True)
 		return
 
 	# Schedule periodic cache cleanup
@@ -761,7 +852,75 @@ class PictureFrame:
 		self._ScheduleAfter(cleanup_interval_ms, self._SchedulePeriodicCacheCleanup)
 		return
 
+	# Periodic resource monitoring - logs process health every 60 seconds
+	def _ScheduleResourceMonitor(self):
+		self._LogResourceStatus()
+		self._ScheduleAfter(60_000, self._ScheduleResourceMonitor)
+		return
+
+	def _LogResourceStatus(self):
+		try:
+			res = _GetResourceInfo()
+			uptime = time.time() - self._start_time
+
+			# Calculate cache disk usage
+			cache_disk_mb = 0.0
+			try:
+				if self.prefetch_cache_dir.exists():
+					cache_disk_mb = sum(
+						f.stat().st_size for f in self.prefetch_cache_dir.iterdir() if f.is_file()
+					) / (1024 * 1024)
+			except Exception:
+				pass
+
+			with self.prefetch_lock:
+				cache_entries = len(self.prefetch_cache)
+				pending_prefetches = len(self.prefetch_pending_set)
+			pending_afters = len(self.pending_after_ids)
+
+			parts = [
+				f"uptime={uptime/3600:.1f}h",
+				f"displayed={self._images_displayed}",
+				f"threads={res.get('thread_count', '?')}",
+				f"pending_afters={pending_afters}",
+				f"cache_entries={cache_entries}",
+				f"cache_disk={cache_disk_mb:.1f}MB",
+				f"pending_prefetch={pending_prefetches}",
+			]
+			if "memory_rss_mb" in res:
+				parts.append(f"rss={res['memory_rss_mb']}MB")
+				parts.append(f"vms={res['memory_vms_mb']}MB")
+			if "num_fds" in res:
+				parts.append(f"handles={res['num_fds']}")
+			if "open_files" in res:
+				parts.append(f"open_files={res['open_files']}")
+			if "cpu_percent" in res:
+				parts.append(f"cpu={res['cpu_percent']}%")
+
+			self.log.info(f"RESOURCE MONITOR: {', '.join(parts)}")
+
+			# Log thread names at debug level for diagnostics
+			self.log.debug(f"Active threads: {res.get('thread_names', [])}")
+
+			# Warn if resources look concerning
+			if res.get("memory_rss_mb", 0) > 500:
+				self.log.warning(f"HIGH MEMORY: RSS={res['memory_rss_mb']}MB")
+			if res.get("thread_count", 0) > 50:
+				self.log.warning(f"HIGH THREAD COUNT: {res['thread_count']}")
+			if res.get("num_fds", 0) > 500:
+				self.log.warning(f"HIGH HANDLE COUNT: {res['num_fds']}")
+			if cache_disk_mb > 1024:
+				self.log.warning(f"LARGE CACHE: {cache_disk_mb:.0f}MB on disk")
+		except Exception as e:
+			self.log.error(f"Error in resource monitor: {e}", exc_info=True)
+		return
+
 	def _Shutdown(self):
+		self.log.info("Shutting down...")
+		self.log.info(f"Final resource state: {_GetResourceInfo()}")
+		uptime = time.time() - self._start_time
+		self.log.info(f"Uptime: {uptime/3600:.1f} hours, images displayed: {self._images_displayed}")
+
 		# Cancel all pending after callbacks to prevent leaks
 		self._CancelPendingAfterCallbacks()
 		self._StopMedia()
@@ -769,7 +928,8 @@ class PictureFrame:
 			try:
 				self.player.terminate()
 			except Exception as e:
-				print(f"Error terminating player: {e}")
+				self.log.error(f"Error terminating player: {e}", exc_info=True)
+		self.log.info("Shutdown complete")
 		self.window.quit()
 		return
 
@@ -799,8 +959,23 @@ class PictureFrame:
 
 if __name__ == "__main__":
 	#sys.argv = [sys.argv[0], "--scan"]  # For testing only
-	pic = PictureFrame()
-	if len(sys.argv) > 1 and sys.argv[1] == "--scan":
-		pic.Scan()
-	else:
-		pic.Run()
+	pic = None
+	try:
+		pic = PictureFrame()
+		if len(sys.argv) > 1 and sys.argv[1] == "--scan":
+			pic.Scan()
+		else:
+			pic.Run()
+	except Exception:
+		# Ensure the crash is captured in the log file
+		if pic and hasattr(pic, 'log'):
+			pic.log.critical(f"FATAL CRASH:\n{traceback.format_exc()}")
+			pic.log.critical(f"Resource state at crash: {_GetResourceInfo()}")
+		else:
+			# Logging not yet initialized, write a crash file as a last resort
+			crash_path = Path(__file__).resolve().parent / "logs" / "crash.log"
+			crash_path.parent.mkdir(parents=True, exist_ok=True)
+			with open(crash_path, "a", encoding="utf-8") as f:
+				f.write(f"\n{'='*60}\n{time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+				f.write(traceback.format_exc())
+		raise
