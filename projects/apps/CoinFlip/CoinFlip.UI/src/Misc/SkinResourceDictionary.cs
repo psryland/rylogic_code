@@ -8,26 +8,24 @@ namespace CoinFlip.UI
 		/// <summary>Default skin</summary>
 		public Uri SourceDefault
 		{
-			get => m_source_default;
+			get;
 			set
 			{
-				m_source_default = value;
+				field = value;
 				UpdateSource();
 			}
-		}
-		private Uri m_source_default = null!;
+		} = null!;
 
 		/// <summary>Dark skin</summary>
 		public Uri SourceDark
 		{
-			get => m_source_dark;
+			get;
 			set
 			{
-				m_source_dark = value;
+				field = value;
 				UpdateSource();
 			}
-		}
-		private Uri m_source_dark = null!;
+		} = null!;
 
 		/// <summary>Called to</summary>
 		internal void UpdateSource()

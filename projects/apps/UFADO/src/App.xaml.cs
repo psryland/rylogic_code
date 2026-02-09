@@ -51,13 +51,12 @@ public partial class App :Application
 	/// <summary>Application logic</summary>
 	private Model Model
 	{
-		get => m_model;
+		get;
 		set
 		{
-			if (m_model == value) return;
-			Util.Dispose(ref m_model!);
-			m_model = value;
+			if (field == value) return;
+			Util.Dispose(ref field!);
+			field = value;
 		}
-	}
-	private Model m_model = null!;
+	} = null!;
 }

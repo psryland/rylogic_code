@@ -31,18 +31,18 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The owning chart</summary>
 			private ChartControl Chart
 			{
-				get => m_chart;
+				get;
 				set
 				{
-					if (m_chart == value) return;
-					if (m_chart != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_chart.ChartMoved -= HandleMoved;
+						field.ChartMoved -= HandleMoved;
 					}
-					m_chart = value;
-					if (m_chart != null)
+					field = value;
+					if (field != null)
 					{
-						m_chart.ChartMoved += HandleMoved;
+						field.ChartMoved += HandleMoved;
 					}
 
 					// Handlers
@@ -51,8 +51,7 @@ namespace Rylogic.Gui.WPF
 						UpdateGfx();
 					}
 				}
-			}
-			private ChartControl m_chart = null!;
+			} = null!;
 
 			/// <summary>The selection area graphic</summary>
 			public Rectangle Area { get; }
@@ -60,15 +59,14 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The chart-space selection volume</summary>
 			public BBox Selection
 			{
-				get => m_selection;
+				get;
 				set
 				{
-					if (m_selection == value) return;
-					m_selection = value;
+					if (field == value) return;
+					field = value;
 					UpdateGfx();
 				}
 			}
-			private BBox m_selection;
 
 			/// <summary>Scale and position the selection rectangle</summary>
 			private void UpdateGfx()

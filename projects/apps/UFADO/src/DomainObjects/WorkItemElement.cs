@@ -31,28 +31,26 @@ public abstract class WorkItemElement : Node
 	/// <summary>The work item source data</summary>
 	public WorkItem Item
 	{
-		get => m_src;
+		get;
 		set
 		{
-			if (m_src == value) return;
-			m_src = value;
+			if (field == value) return;
+			field = value;
 			// Generate?
 		}
-	}
-	private WorkItem m_src = null!;
+	} = null!;
 
 	/// <summary>Graphics for the node</summary>
 	public View3d.Object Gfx
 	{
-		get => m_gfx;
+		get;
 		protected set
 		{
-			if (m_gfx == value) return;
-			Util.Dispose(ref m_gfx!);
-			m_gfx = value;
+			if (field == value) return;
+			Util.Dispose(ref field!);
+			field = value;
 		}
-	}
-	private View3d.Object m_gfx = null!;
+	} = null!;
 
 	///// <summary>The style for all work streams</summary>
 	//public static NodeStyle DefaultStyle { get; } = new NodeStyle

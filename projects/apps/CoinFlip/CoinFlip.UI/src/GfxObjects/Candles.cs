@@ -31,33 +31,31 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>The instrument for which candles are being created</summary>
 		public Instrument Instrument
 		{
-			get => m_instrument;
+			get;
 			private set
 			{
-				if (m_instrument == value) return;
-				if (m_instrument != null)
+				if (field == value) return;
+				if (field != null)
 				{
 				}
-				m_instrument = value;
-				if (m_instrument != null)
+				field = value;
+				if (field != null)
 				{
 				}
 			}
-		}
-		private Instrument m_instrument = null!;
+		} = null!;
 
 		/// <summary>A cache of candle graphics objects</summary>
 		private ChartGfxCache Cache
 		{
-			get => m_cache;
+			get;
 			set
 			{
-				if (m_cache == value) return;
-				Util.Dispose(ref m_cache!);
-				m_cache = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private ChartGfxCache m_cache = null!;
+		} = null!;
 
 		/// <summary>Add candles to the scene</summary>
 		public void BuildScene(ChartControl chart)

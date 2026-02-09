@@ -24,15 +24,14 @@ namespace TimeTracker
 		/// <summary>The task done in this time period</summary>
 		public string TaskName
 		{
-			get => m_task_name;
+			get;
 			set
 			{
-				if (m_task_name == value) return;
-				m_task_name = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(TaskName));
 			}
-		}
-		private string m_task_name = String.Empty;
+		} = String.Empty;
 
 		/// <summary>When the time period started</summary>
 		public DateTimeOffset Start

@@ -145,17 +145,16 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The tab name of this control</summary>
 		public string Title
 		{
-			get { return m_title; }
+			get;
 			set
 			{
-				if (m_title == value) return;
-				m_title = value;
+				if (field == value) return;
+				field = value;
 				Name = value;
 				if (DockControl != null)
 					DockControl.TabText = value;
 			}
 		}
-		private string m_title;
 
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages { get; set; }

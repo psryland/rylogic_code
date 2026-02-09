@@ -41,31 +41,31 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The View3d Control that contains the 3d scene</summary>
 		public View3dControl View3dCtrl
 		{
-			get => m_view3d_ctrl;
+			get;
 			private set
 			{
-				if (m_view3d_ctrl == value) return;
-				if (m_view3d_ctrl != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_view3d_ctrl.MouseDown -= HandleMouseDown;
-					m_view3d_ctrl.MouseMove -= HandleMouseMove;
-					m_view3d_ctrl.MouseUp -= HandleMouseUp;
+					field.MouseDown -= HandleMouseDown;
+					field.MouseMove -= HandleMouseMove;
+					field.MouseUp -= HandleMouseUp;
 				}
-				m_view3d_ctrl = value;
-				if (m_view3d_ctrl != null)
+				field = value;
+				if (field != null)
 				{
-					m_view3d_ctrl.MouseUp += HandleMouseUp;
-					m_view3d_ctrl.MouseMove += HandleMouseMove;
-					m_view3d_ctrl.MouseDown += HandleMouseDown;
+					field.MouseUp += HandleMouseUp;
+					field.MouseMove += HandleMouseMove;
+					field.MouseDown += HandleMouseDown;
 				}
 				void HandleMouseDown(object sender, MouseButtonEventArgs e)
 				{
 					if (e.ChangedButton == MouseButton.Left && e.LeftButton == MouseButtonState.Pressed)
-						Measurement.MouseDown(e.GetPosition(m_view3d_ctrl).ToV2());
+						Measurement.MouseDown(e.GetPosition(field).ToV2());
 				}
 				void HandleMouseMove(object sender, MouseEventArgs e)
 				{
-					Measurement.MouseMove(e.GetPosition(m_view3d_ctrl).ToV2());
+					Measurement.MouseMove(e.GetPosition(field).ToV2());
 				}
 				void HandleMouseUp(object sender, MouseButtonEventArgs e)
 				{
@@ -73,25 +73,24 @@ namespace Rylogic.Gui.WPF
 						Measurement.MouseUp();
 				}
 			}
-		}
-		private View3dControl m_view3d_ctrl = null!;
+		} = null!;
 
 		/// <summary>The view model for the measurement behaviour</summary>
 		public Measurement Measurement
 		{
-			get => m_measurement;
+			get;
 			private set
 			{
-				if (m_measurement == value) return;
-				if (m_measurement != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_measurement.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_measurement!);
+					field.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_measurement = value;
-				if (m_measurement != null)
+				field = value;
+				if (field != null)
 				{
-					m_measurement.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -142,21 +141,19 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private Measurement m_measurement = null!;
+		} = null!;
 
 		/// <summary>Pinned window support</summary>
 		private PinData? PinState
 		{
-			get => m_pin_state;
+			get;
 			set
 			{
-				if (m_pin_state == value) return;
-				Util.Dispose(ref m_pin_state);
-				m_pin_state = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private PinData? m_pin_state;
 
 		/// <summary>Snap to distance</summary>
 		public double SnapDistance
@@ -221,19 +218,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The available measurement reference frames</summary>
 		public ICollectionView ReferenceFrames
 		{
-			get => m_reference_frames;
+			get;
 			private set
 			{
-				if (m_reference_frames == value) return;
-				if (m_reference_frames != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_reference_frames.CurrentChanged -= HandleReferenceFrameChanged;
+					field.CurrentChanged -= HandleReferenceFrameChanged;
 				}
-				m_reference_frames = value;
-				if (m_reference_frames != null)
+				field = value;
+				if (field != null)
 				{
 					ReferenceFrames.MoveCurrentTo(Measurement.ReferenceFrame);
-					m_reference_frames.CurrentChanged += HandleReferenceFrameChanged;
+					field.CurrentChanged += HandleReferenceFrameChanged;
 				}
 
 				// Handlers
@@ -242,8 +239,7 @@ namespace Rylogic.Gui.WPF
 					Measurement.ReferenceFrame = (Measurement.EReferenceFrame)ReferenceFrames.CurrentItem;
 				}
 			}
-		}
-		private ICollectionView m_reference_frames = null!;
+		} = null!;
 
 		/// <summary>The measurement results</summary>
 		public IBindingList Results => Measurement.Results;

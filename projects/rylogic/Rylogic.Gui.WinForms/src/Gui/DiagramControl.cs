@@ -386,22 +386,21 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Enable/Disable default keyboard shortcuts</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get { return m_default_keyboard_shortcuts; }
+			get;
 			set
 			{
-				if (m_default_keyboard_shortcuts == value) return;
-				if (m_default_keyboard_shortcuts)
+				if (field == value) return;
+				if (field)
 				{
 					KeyDown -= TranslateKey;
 				}
-				m_default_keyboard_shortcuts = value;
-				if (m_default_keyboard_shortcuts)
+				field = value;
+				if (field)
 				{
 					KeyDown += TranslateKey;
 				}
 			}
 		}
-		private bool m_default_keyboard_shortcuts;
 
 		/// <summary>Enable/Disable default mouse control</summary>
 		public bool DefaultMouseControl { get; set; }
@@ -421,26 +420,24 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>True if users are allowed to resize/move nodes around on the diagram</summary>
 		public bool AllowArranging
 		{
-			get { return m_allow_arranging; }
+			get;
 			set
 			{
-				m_allow_arranging = value;
+				field = value;
 				UpdateEditToolbar();
 			}
 		}
-		private bool m_allow_arranging;
 
 		/// <summary>True if users are allowed to add/remove/re-link nodes on the diagram</summary>
 		public bool AllowChanges
 		{
-			get { return m_allow_changes; }
+			get;
 			set
 			{
-				m_allow_changes = value;
+				field = value;
 				UpdateEditToolbar();
 			}
 		}
-		private bool m_allow_changes;
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
@@ -2031,15 +2028,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Only one graphics object for a box node</summary>
 			protected TexturedShape<QuadShape> Gfx
 			{
-				get { return m_impl_gfx; }
+				get;
 				private set
 				{
-					if (m_impl_gfx == value) return;
-					Util.Dispose(ref m_impl_gfx);
-					m_impl_gfx = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
-			private TexturedShape<QuadShape> m_impl_gfx;
 
 			/// <summary>The radius of the box node corners</summary>
 			public float CornerRadius
@@ -2633,15 +2629,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The connector type</summary>
 			public EType Type
 			{
-				get { return m_impl_type; }
+				get;
 				set
 				{
-					if (m_impl_type == value) return;
-					m_impl_type = value;
+					if (field == value) return;
+					field = value;
 					Invalidate();
 				}
 			}
-			private EType m_impl_type;
 
 			///// <summary>A label graphic for the connector</summary>
 			//public virtual Label Label
@@ -3192,26 +3187,23 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>True if the node's size is determined automatically from its content</summary>
 			public bool AutoSize
 			{
-				get { return m_impl_autosize; }
-				set { Set(ref m_impl_autosize, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private bool m_impl_autosize;
 
 			/// <summary>The colour of the node border</summary>
 			public Color Border
 			{
-				get { return m_impl_border; }
-				set { Set(ref m_impl_border, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_border;
 
 			/// <summary>The node background colour</summary>
 			public Color Fill
 			{
-				get { return m_impl_fill; }
-				set { Set(ref m_impl_fill, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_fill;
 
 			/// <summary>The colour of the node when selected</summary>
 			public Color Selected
@@ -3224,50 +3216,44 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The colour of the node when disabled</summary>
 			public Color Disabled
 			{
-				get { return m_impl_disabled; }
-				set { Set(ref m_impl_disabled, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_disabled;
 
 			/// <summary>The node text colour</summary>
 			public Color Text
 			{
-				get { return m_impl_text; }
-				set { Set(ref m_impl_text, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_text;
 
 			/// <summary>The node text colour when disabled</summary>
 			public Color TextDisabled
 			{
-				get { return m_impl_text_disabled; }
-				set { Set(ref m_impl_text_disabled, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_text_disabled;
 
 			/// <summary>The alignment of the text within the node</summary>
 			public ContentAlignment TextAlign
 			{
-				get { return m_impl_align; }
-				set { Set(ref m_impl_align, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private ContentAlignment m_impl_align;
 
 			/// <summary>The font to use for the node text</summary>
 			public Font Font
 			{
-				get { return m_impl_font; }
-				set { Set(ref m_impl_font, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Font m_impl_font;
 
 			/// <summary>The padding surrounding the text in the node</summary>
 			public Padding Padding
 			{
-				get { return m_impl_padding; }
-				set { Set(ref m_impl_padding, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Padding m_impl_padding;
 
 			/// <summary>Raised whenever a style property is changed. Note: Weak event</summary>
 			public event EventHandler StyleChanged
@@ -3345,10 +3331,9 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The colour of the line portion of the connector</summary>
 			public Color Line
 			{
-				get { return m_impl_line; }
-				set { Set(ref m_impl_line, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_line;
 
 			/// <summary>The colour of the line when selected</summary>
 			public Color Selected
@@ -3361,26 +3346,23 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The colour of dangling connectors</summary>
 			public Color Dangling
 			{
-				get { return m_impl_dangling; }
-				set { Set(ref m_impl_dangling, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private Color m_impl_dangling;
 
 			/// <summary>The width of the connector line</summary>
 			public float Width
 			{
-				get { return m_impl_width; }
-				set { Set(ref m_impl_width, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private float m_impl_width;
 
 			/// <summary>True for a smooth connector, false for a straight edged connector</summary>
 			public bool Smooth
 			{
-				get { return m_impl_smooth; }
-				set { Set(ref m_impl_smooth, value); }
+				get;
+				set { Set(ref field, value); }
 			}
-			private bool m_impl_smooth;
 
 			/// <summary>Raised whenever a style property is changed. Note: Weak event</summary>
 			public event EventHandler StyleChanged
@@ -5158,14 +5140,13 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The texture surface</summary>
 			public View3d.Texture Surf
 			{
-				get { return m_impl_surf; }
+				get;
 				private set
 				{
-					if (m_impl_surf != null) m_impl_surf.Dispose();
-					m_impl_surf = value;
+					if (field != null) field.Dispose();
+					field = value;
 				}
 			}
-			private View3d.Texture m_impl_surf;
 
 			/// <summary>
 			/// Lock the texture for drawing on.

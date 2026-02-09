@@ -74,19 +74,19 @@ namespace SolarHotWater.UI
 		/// <summary>App model</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_model!);
+					field.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -162,8 +162,7 @@ namespace SolarHotWater.UI
 					}
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary></summary>
 		public SettingsData Settings => Model.Settings;
@@ -183,15 +182,14 @@ namespace SolarHotWater.UI
 		/// <summary>The currently selected consumer</summary>
 		public Consumer? SelectedConsumer
 		{
-			get => m_selected_consumer;
+			get;
 			set
 			{
-				if (m_selected_consumer == value) return;
-				m_selected_consumer = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(SelectedConsumer));
 			}
 		}
-		private Consumer? m_selected_consumer;
 
 		/// <summary>The available ewelink devices</summary>
 		public ICollectionView EweDevices { get; }

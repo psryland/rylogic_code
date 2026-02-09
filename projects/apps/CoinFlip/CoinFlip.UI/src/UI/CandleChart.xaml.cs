@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -73,38 +73,38 @@ namespace CoinFlip.UI
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.EditingTrade -= EditingTrade;
-					m_model.OrdersChanging -= RefreshChart;
-					m_model.HistoryChanging -= RefreshChart;
-					m_model.SelectedOpenOrders.CollectionChanged -= RefreshChart;
-					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
-					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
-					m_model.Indicators.CollectionChanged -= HandleIndicatorCollectionChanged;
+					field.EditingTrade -= EditingTrade;
+					field.OrdersChanging -= RefreshChart;
+					field.HistoryChanging -= RefreshChart;
+					field.SelectedOpenOrders.CollectionChanged -= RefreshChart;
+					field.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
+					field.Charts.CollectionChanged -= HandleChartsCollectionChanged;
+					field.Indicators.CollectionChanged -= HandleIndicatorCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
 					CoinData.LivePriceChanged -= HandleLivePricesChanged;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
-					m_model.Charts.Remove(this);
+					field.Charts.Remove(this);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.Charts.Add(this);
+					field.Charts.Add(this);
 					CoinData.BalanceChanged += HandleBalanceChanged;
 					CoinData.LivePriceChanged += HandleLivePricesChanged;
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
-					m_model.Indicators.CollectionChanged += HandleIndicatorCollectionChanged;
-					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
-					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
-					m_model.SelectedOpenOrders.CollectionChanged += RefreshChart;
-					m_model.HistoryChanging += RefreshChart;
-					m_model.OrdersChanging += RefreshChart;
-					m_model.EditingTrade += EditingTrade;
+					field.Indicators.CollectionChanged += HandleIndicatorCollectionChanged;
+					field.Charts.CollectionChanged += HandleChartsCollectionChanged;
+					field.SelectedCompletedOrders.CollectionChanged += RefreshChart;
+					field.SelectedOpenOrders.CollectionChanged += RefreshChart;
+					field.HistoryChanging += RefreshChart;
+					field.OrdersChanging += RefreshChart;
+					field.EditingTrade += EditingTrade;
 				}
 				HandleChartsCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 
@@ -212,38 +212,36 @@ namespace CoinFlip.UI
 					};
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>Selects exchange/pair/timeframe</summary>
 		public ExchPairTimeFrame ChartSelector
 		{
-			get => m_chart_selector;
+			get;
 			private set
 			{
-				if (m_chart_selector == value) return;
-				if (m_chart_selector != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart_selector.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_chart_selector!);
+					field.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_chart_selector = value;
-				if (m_chart_selector != null)
+				field = value;
+				if (field != null)
 				{
-					m_chart_selector.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -254,8 +252,7 @@ namespace CoinFlip.UI
 						SettingsData.Settings.LastChart = $"{Instrument.Exchange.Name}-{Instrument.Pair.Name}-{Instrument.TimeFrame}";
 				}
 			}
-		}
-		private ExchPairTimeFrame m_chart_selector = null!;
+		} = null!;
 
 		/// <summary>The chart control</summary>
 		public ChartControl Chart
@@ -503,20 +500,20 @@ namespace CoinFlip.UI
 		/// <summary>The indicator legend</summary>
 		public IndicatorLegend Legend
 		{
-			get => m_legend;
+			get;
 			private set
 			{
-				if (m_legend == value) return;
-				if (m_legend != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_legend.IndicatorsReordered -= HandleReordred;
-					m_legend.PreviewKeyDown -= HandleKey;
+					field.IndicatorsReordered -= HandleReordred;
+					field.PreviewKeyDown -= HandleKey;
 				}
-				m_legend = value;
-				if (m_legend != null)
+				field = value;
+				if (field != null)
 				{
-					m_legend.PreviewKeyDown += HandleKey;
-					m_legend.IndicatorsReordered += HandleReordred;
+					field.PreviewKeyDown += HandleKey;
+					field.IndicatorsReordered += HandleReordred;
 				}
 
 				// Handlers
@@ -549,8 +546,7 @@ namespace CoinFlip.UI
 					PopulateIndicators();
 				}
 			}
-		}
-		private IndicatorLegend m_legend = null!;
+		} = null!;
 
 		/// <summary>The data displayed on the chart</summary>
 		public Instrument? Instrument
@@ -668,7 +664,7 @@ namespace CoinFlip.UI
 		/// <summary>Indicators on this chart</summary>
 		public ObservableCollection<IIndicatorView> IndicatorViews
 		{
-			get => m_indicator_views;
+			get;
 			private set
 			{
 				// Notes:
@@ -678,21 +674,20 @@ namespace CoinFlip.UI
 				//    the Model.Indicators then update this collection.
 				//  - This collection is observable so that the DataGrid updates in the UI automatically.
 
-				if (m_indicator_views == value) return;
-				if (m_indicator_views != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					m_indicator_legend.Indicators = null!;
-					Util.DisposeRange(m_indicator_views);
-					m_indicator_views.Clear();
+					Util.DisposeRange(field);
+					field.Clear();
 				}
-				m_indicator_views = value;
-				if (m_indicator_views != null)
+				field = value;
+				if (field != null)
 				{
-					m_indicator_legend.Indicators = CollectionViewSource.GetDefaultView(m_indicator_views);
+					m_indicator_legend.Indicators = CollectionViewSource.GetDefaultView(field);
 				}
 			}
-		}
-		private ObservableCollection<IIndicatorView> m_indicator_views = null!;
+		} = null!;
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -755,11 +750,11 @@ namespace CoinFlip.UI
 		/// <summary>The style of candles to use</summary>
 		public ECandleStyle CandleStyle
 		{
-			get => m_candle_style;
+			get;
 			set
 			{
-				if (m_candle_style == value) return;
-				m_candle_style = value;
+				if (field == value) return;
+				field = value;
 
 				// Update the current instrument
 				if (Instrument != null)
@@ -770,7 +765,6 @@ namespace CoinFlip.UI
 				}
 			}
 		}
-		private ECandleStyle m_candle_style;
 
 		/// <summary>Show currently open orders on the chart</summary>
 		public EShowItems ShowOpenOrders
@@ -960,73 +954,69 @@ namespace CoinFlip.UI
 		/// <summary>Graphics objects for the candle data</summary>
 		private GfxObjects.Candles GfxCandles
 		{
-			get => m_gfx_candles;
+			get;
 			set
 			{
-				if (m_gfx_candles == value) return;
-				Util.Dispose(ref m_gfx_candles!);
-				m_gfx_candles = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.Candles m_gfx_candles = null!;
+		} = null!;
 
 		/// <summary>Graphics for the quote->base price line</summary>
 		private GfxObjects.SpotPrices GfxSpotPrices
 		{
-			get => m_gfx_spot_price;
+			get;
 			set
 			{
-				if (m_gfx_spot_price == value) return;
-				Util.Dispose(ref m_gfx_spot_price!);
-				m_gfx_spot_price = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.SpotPrices m_gfx_spot_price = null!;
+		} = null!;
 
 		/// <summary>The time remaining on the current latest candle</summary>
 		private GfxObjects.RemainingTime GfxRemaingCandleTime
 		{
-			get => m_gfx_remaining_time;
+			get;
 			set
 			{
-				if (m_gfx_remaining_time == value) return;
-				Util.Dispose(ref m_gfx_remaining_time!);
-				m_gfx_remaining_time = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.RemainingTime m_gfx_remaining_time = null!;
+		} = null!;
 
 		/// <summary>A message to indicate the chart is updating</summary>
 		private GfxObjects.UpdatingText GfxUpdatingText
 		{
-			get => m_gfx_updating_text;
+			get;
 			set
 			{
-				if (m_gfx_updating_text == value) return;
-				Util.Dispose(ref m_gfx_updating_text!);
-				m_gfx_updating_text = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.UpdatingText m_gfx_updating_text = null!;
+		} = null!;
 
 		/// <summary>Graphics for open orders</summary>
 		private GfxObjects.Confetti GfxOpenOrders
 		{
-			get => m_gfx_open_orders;
+			get;
 			set
 			{
-				if (m_gfx_open_orders == value) return;
-				if (m_gfx_open_orders != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_gfx_open_orders.ItemSelected -= HandleOrderSelected;
-					m_gfx_open_orders.EditItem -= HandleEditOrder;
-					Util.Dispose(ref m_gfx_open_orders!);
+					field.ItemSelected -= HandleOrderSelected;
+					field.EditItem -= HandleEditOrder;
+					Util.Dispose(ref field!);
 				}
-				m_gfx_open_orders = value;
-				if (m_gfx_open_orders != null)
+				field = value;
+				if (field != null)
 				{
-					m_gfx_open_orders.ItemSelected += HandleOrderSelected;
-					m_gfx_open_orders.EditItem += HandleEditOrder;
+					field.ItemSelected += HandleOrderSelected;
+					field.EditItem += HandleEditOrder;
 				}
 
 				// Handlers
@@ -1044,25 +1034,24 @@ namespace CoinFlip.UI
 					}
 				}
 			}
-		}
-		private GfxObjects.Confetti m_gfx_open_orders = null!;
+		} = null!;
 
 		/// <summary>Graphics for completed orders</summary>
 		private GfxObjects.Confetti GfxCompletedOrders
 		{
-			get => m_gfx_completed_orders;
+			get;
 			set
 			{
-				if (m_gfx_completed_orders == value) return;
-				if (m_gfx_completed_orders != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_gfx_completed_orders.ItemSelected -= HandleOrderSelected;
-					Util.Dispose(ref m_gfx_completed_orders!);
+					field.ItemSelected -= HandleOrderSelected;
+					Util.Dispose(ref field!);
 				}
-				m_gfx_completed_orders = value;
-				if (m_gfx_completed_orders != null)
+				field = value;
+				if (field != null)
 				{
-					m_gfx_completed_orders.ItemSelected += HandleOrderSelected;
+					field.ItemSelected += HandleOrderSelected;
 				}
 
 				// Handler
@@ -1075,34 +1064,31 @@ namespace CoinFlip.UI
 					}
 				}
 			}
-		}
-		private GfxObjects.Confetti m_gfx_completed_orders = null!;
+		} = null!;
 
 		/// <summary>Graphics for trade volume</summary>
 		private GfxObjects.Volume GfxVolume
 		{
-			get => m_gfx_volume;
+			get;
 			set
 			{
-				if (m_gfx_volume == value) return;
-				Util.Dispose(ref m_gfx_volume!);
-				m_gfx_volume = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.Volume m_gfx_volume = null!;
+		} = null!;
 
 		/// <summary>Graphics for market depth</summary>
 		private GfxObjects.MarketDepth GfxMarketDepth
 		{
-			get => m_gfx_market_depth;
+			get;
 			set
 			{
-				if (m_gfx_market_depth == value) return;
-				Util.Dispose(ref m_gfx_market_depth!);
-				m_gfx_market_depth = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.MarketDepth m_gfx_market_depth = null!;
+		} = null!;
 
 		/// <summary>Add an ordinal to the chart name based on it's position in the model's chart view collection</summary>
 		public string ChartName => Model != null && Model.Charts.Count != 1 ? $"Chart:{Model.Charts.IndexOf(this)+1}" : $"Chart";

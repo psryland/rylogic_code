@@ -53,48 +53,47 @@ namespace EweLink
 		/// <summary>The Http client for REST requests</summary>
 		private HttpClient Client
 		{
-			get => m_client;
+			get;
 			set
 			{
-				if (m_client == value) return;
-				if (m_client != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_client!);
+					Util.Dispose(ref field!);
 				}
-				m_client = value;
-				if (m_client != null)
+				field = value;
+				if (field != null)
 				{
-					m_client.BaseAddress = new Uri(Url);
-					m_client.Timeout = TimeSpan.FromSeconds(10);
+					field.BaseAddress = new Uri(Url);
+					field.Timeout = TimeSpan.FromSeconds(10);
 				}
 			}
-		}
-		private HttpClient m_client = null!;
+		} = null!;
 
 		/// <summary>Web socket connection to EweLink</summary>
 		private WebSocket WebSocket
 		{
-			get => m_socket;
+			get;
 			set
 			{
-				if (m_socket == value) return;
-				if (m_socket != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_socket.OnClose -= HandleClosed;
-					m_socket.OnError -= HandleError;
-					m_socket.OnHeartbeat -= HandleHeartbeat;
-					m_socket.OnMessage -= HandleMessage;
-					m_socket.OnOpen -= HandleOpened;
-					Util.Dispose(ref m_socket!);
+					field.OnClose -= HandleClosed;
+					field.OnError -= HandleError;
+					field.OnHeartbeat -= HandleHeartbeat;
+					field.OnMessage -= HandleMessage;
+					field.OnOpen -= HandleOpened;
+					Util.Dispose(ref field!);
 				}
-				m_socket = value;
-				if (m_socket != null)
+				field = value;
+				if (field != null)
 				{
-					m_socket.OnOpen += HandleOpened;
-					m_socket.OnMessage += HandleMessage;
-					m_socket.OnHeartbeat += HandleHeartbeat;
-					m_socket.OnError += HandleError;
-					m_socket.OnClose += HandleClosed;
+					field.OnOpen += HandleOpened;
+					field.OnMessage += HandleMessage;
+					field.OnHeartbeat += HandleHeartbeat;
+					field.OnError += HandleError;
+					field.OnClose += HandleClosed;
 				}
 
 				// Handlers
@@ -225,8 +224,7 @@ namespace EweLink
 					}
 				}
 			}
-		}
-		private WebSocket m_socket = null!;
+		} = null!;
 
 		/// <summary></summary>
 		private HMACSHA256 Hasher { get; }

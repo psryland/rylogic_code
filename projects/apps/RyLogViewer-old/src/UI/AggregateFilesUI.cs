@@ -52,14 +52,13 @@ namespace RyLogViewer
 		/// <summary>The main app</summary>
 		private Main Main
 		{
-			get { return m_main; }
+			get;
 			set
 			{
-				if (m_main == value) return;
-				m_main = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private Main m_main;
 
 		/// <summary>The selected filepaths</summary>
 		public IEnumerable<string> Filepaths
@@ -70,22 +69,21 @@ namespace RyLogViewer
 		/// <summary>The filepaths that make up the aggregate file</summary>
 		private BindingSource<FileInfo> FileInfos
 		{
-			get { return m_fileinfo; }
+			get;
 			set
 			{
-				if (m_fileinfo == value) return;
-				if (m_fileinfo != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_fileinfo.ListChanging -= HandleFileInfosListChanging;
+					field.ListChanging -= HandleFileInfosListChanging;
 				}
-				m_fileinfo = value;
-				if (m_fileinfo != null)
+				field = value;
+				if (field != null)
 				{
-					m_fileinfo.ListChanging += HandleFileInfosListChanging;
+					field.ListChanging += HandleFileInfosListChanging;
 				}
 			}
 		}
-		private BindingSource<FileInfo> m_fileinfo;
 		private void HandleFileInfosListChanging(object sender, ListChgEventArgs<FileInfo> e)
 		{
 			m_btn_ok.Enabled = FileInfos.Count != 0;

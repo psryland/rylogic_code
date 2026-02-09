@@ -64,18 +64,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The tab buttons in this tab strip</summary>
 		public ObservableCollection<TabButton> Buttons
 		{
-			get => m_buttons;
+			get;
 			private set
 			{
-				if (m_buttons == value) return;
-				if (m_buttons != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_buttons.CollectionChanged -= HandleCollectionChanged;
+					field.CollectionChanged -= HandleCollectionChanged;
 				}
-				m_buttons = value;
-				if (m_buttons != null)
+				field = value;
+				if (field != null)
 				{
-					m_buttons.CollectionChanged += HandleCollectionChanged;
+					field.CollectionChanged += HandleCollectionChanged;
 				}
 
 				// Handle buttons added or removed from this tab strip
@@ -87,7 +87,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						{
 							// Ensure the order of children matches the order of the buttons
 							m_tabs.Children.Clear();
-							foreach (var btn in m_buttons)
+							foreach (var btn in field)
 								m_tabs.Children.Add(btn);
 
 							break;
@@ -108,8 +108,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						? Visibility.Visible : Visibility.Collapsed;
 				}
 			}
-		}
-		private ObservableCollection<TabButton> m_buttons = null!;
+		} = null!;
 
 		/// <summary>Hit test the tab strip, returning the dockable associated with a hit tab button, or null. 'pt' is in TabStrip space</summary>
 		private DockControl? HitTestTabButton(Point pt)

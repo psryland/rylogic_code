@@ -42,14 +42,13 @@ namespace RyLogViewer
 		/// <summary>The collection of bookmarks</summary>
 		private BindingSource<Bookmark> Marks
 		{
-			get { return m_marks; }
+			get;
 			set
 			{
-				if (m_marks == value) return;
-				m_marks = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private BindingSource<Bookmark> m_marks;
 
 		/// <summary>An event called whenever the dialog gets a NextBookmark command</summary>
 		public event Action NextBookmark;

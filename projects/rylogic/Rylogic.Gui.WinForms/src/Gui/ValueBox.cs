@@ -1,4 +1,4 @@
-//#define PR_VB_TRACE
+﻿//#define PR_VB_TRACE
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -459,14 +459,13 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Set to true to have the text selection preserved while the control doesn't have focus</summary>
 		public bool PreserveSelectionThruFocusChange
 		{
-			get { return m_preserve_selection; }
+			get;
 			set
 			{
-				if (m_preserve_selection == value) return;
-				m_preserve_selection = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private bool m_preserve_selection;
 		private RangeI m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
 
 		/// <summary>Preserve the selection in the control</summary>

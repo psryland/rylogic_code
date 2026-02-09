@@ -136,18 +136,18 @@ namespace CoinFlip
 		/// <summary>Settings for this exchange</summary>
 		public IExchangeSettings ExchSettings
 		{
-			get => m_exch_settings;
+			get;
 			private set
 			{
-				if (m_exch_settings == value) return;
-				if (m_exch_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exch_settings.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_exch_settings = value;
-				if (m_exch_settings != null)
+				field = value;
+				if (field != null)
 				{
-					m_exch_settings.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 
 				// Handler
@@ -179,21 +179,19 @@ namespace CoinFlip
 					}
 				}
 			}
-		}
-		private IExchangeSettings m_exch_settings = null!;
+		} = null!;
 
 		/// <summary>A cancellation token for graceful shutdown</summary>
 		public CancellationTokenSource Shutdown
 		{
-			get => m_shutdown;
+			get;
 			private set
 			{
-				if (m_shutdown == value) return;
-				m_shutdown?.Cancel();
-				m_shutdown = value;
+				if (field == value) return;
+				field?.Cancel();
+				field = value;
 			}
-		}
-		private CancellationTokenSource m_shutdown = null!;
+		} = null!;
 		private CancellationToken m_main_shutdown;
 
 		/// <summary>The common interface for all exchange API objects</summary>
@@ -220,11 +218,11 @@ namespace CoinFlip
 		/// <summary>Get/Set the simulation. A non-null simulation implies 'BackTesting'</summary>
 		public SimExchange? Sim
 		{
-			get => m_sim;
+			get;
 			set
 			{
-				if (m_sim == value) return;
-				m_sim = value;
+				if (field == value) return;
+				field = value;
 
 				// Reconnect to the appropriate trade history database
 				InitTradeHistoryTables();
@@ -234,7 +232,6 @@ namespace CoinFlip
 				NotifyPropertyChanged(nameof(Status));
 			}
 		}
-		private SimExchange? m_sim;
 
 		/// <summary>Enable/Disable the exchange update thread</summary>
 		public bool UpdateThreadActive
@@ -823,36 +820,34 @@ namespace CoinFlip
 		/// <summary>True when an error occurs with an API request</summary>
 		private bool LastRequestFailed
 		{
-			get => m_last_request_failed;
+			get;
 			set
 			{
-				if (m_last_request_failed == value) return;
-				m_last_request_failed = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Status));
 			}
 		}
-		private bool m_last_request_failed;
 
 		/// <summary>Database connection</summary>
 		private SQLiteConnection DB
 		{
-			get => m_db;
+			get;
 			set
 			{
-				if (m_db == value) return;
-				if (m_db != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_db.Close();
-					Util.Dispose(ref m_db!);
+					field.Close();
+					Util.Dispose(ref field!);
 				}
-				m_db = value;
-				if (m_db != null)
+				field = value;
+				if (field != null)
 				{
-					m_db.Open();
+					field.Open();
 				}
 			}
-		}
-		private SQLiteConnection m_db = null!;
+		} = null!;
 
 		/// <summary>The table name for the trade history</summary>
 		private string DBFilepath => Model.BackTesting

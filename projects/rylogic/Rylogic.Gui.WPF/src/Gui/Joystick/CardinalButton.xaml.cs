@@ -76,15 +76,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public Vector Direction
 		{
-			get => m_direction;
+			get;
 			set
 			{
-				if (m_direction == value) return;
-				m_direction = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Direction));
 			}
 		}
-		private Vector m_direction;
 
 		/// <summary>Handle mouse clicks</summary>
 		private void HandleMouseDown(object sender, MouseButtonEventArgs e)

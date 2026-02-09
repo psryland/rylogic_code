@@ -351,17 +351,16 @@ namespace Rylogic.Common
 			/// <summary>The unique remainder of the key. The full key is found by concatenating all keys down to this node</summary>
 			public TKey[] Key
 			{
-				get => m_key;
+				get;
 				set
 				{
 					// Except for the root node
 					if (value.Length == 0)
 						throw new ArgumentException("Key length must have at least one element");
 
-					m_key = value.ToArray();
+					field = value.ToArray();
 				}
-			}
-			private TKey[] m_key = Array.Empty<TKey>();
+			} = Array.Empty<TKey>();
 
 			/// <summary>The value associated with this node. Only valid if 'Children' is empty</summary>
 			public TValue Value { get; private set; } = default!;

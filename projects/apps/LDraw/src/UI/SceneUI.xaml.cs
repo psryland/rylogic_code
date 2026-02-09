@@ -89,23 +89,23 @@ namespace LDraw.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				if (m_dock_control != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_dock_control.ActiveChanged -= HandleSceneActive;
-					m_dock_control.SavingLayout -= HandleSavingLayout;
-					m_dock_control.LoadingLayout -= HandleLoadingLayout;
-					Util.Dispose(ref m_dock_control!);
+					field.ActiveChanged -= HandleSceneActive;
+					field.SavingLayout -= HandleSavingLayout;
+					field.LoadingLayout -= HandleLoadingLayout;
+					Util.Dispose(ref field!);
 				}
-				m_dock_control = value;
-				if (m_dock_control != null)
+				field = value;
+				if (field != null)
 				{
-					m_dock_control.LoadingLayout += HandleLoadingLayout;
-					m_dock_control.SavingLayout += HandleSavingLayout;
-					m_dock_control.ActiveChanged += HandleSceneActive;
+					field.LoadingLayout += HandleLoadingLayout;
+					field.SavingLayout += HandleSavingLayout;
+					field.ActiveChanged += HandleSceneActive;
 				}
 
 				// Handlers
@@ -119,28 +119,27 @@ namespace LDraw.UI
 				{
 				}
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.PropertyChanged -= HandlePropertyChanged;
-					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
-					m_model.Scenes.Remove(this);
+					field.PropertyChanged -= HandlePropertyChanged;
+					field.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
+					field.Scenes.Remove(this);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					// Don't add to m_model.Scenes, that's the caller's choice
-					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
-					m_model.PropertyChanged += HandlePropertyChanged;
+					// Don't add to field.Scenes, that's the caller's choice
+					field.Scenes.CollectionChanged += HandleScenesCollectionChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -165,29 +164,28 @@ namespace LDraw.UI
 					}
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 		
 		/// <summary>Scene state settings</summary>
 		public SceneStateData SceneState
 		{
-			get => m_scene_state;
+			get;
 			private set
 			{
-				if (m_scene_state == value) return;
-				if (m_scene_state != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					SceneView.Scene.Window.OnSettingsChanged -= HandleSceneSettingChanged;
-					m_scene_state.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 					SceneView.Options = new ChartControl.OptionsData();
 				}
-				m_scene_state = value;
-				if (m_scene_state != null)
+				field = value;
+				if (field != null)
 				{
-					SceneView.Options = m_scene_state.Chart;
-					m_scene_state.SettingChange += HandleSettingChange;
+					SceneView.Options = field.Chart;
+					field.SettingChange += HandleSettingChange;
 					SceneView.Scene.Window.OnSettingsChanged += HandleSceneSettingChanged;
-					m_scene_state.NotifyAllSettingsChanged();
+					field.NotifyAllSettingsChanged();
 				}
 
 				// Handlers
@@ -237,24 +235,23 @@ namespace LDraw.UI
 					}
 				}
 			}
-		}
-		private SceneStateData m_scene_state = null!;
+		} = null!;
 
 		/// <summary>The 3d part of the scene (i.e. the chart control)</summary>
 		public ChartControl SceneView
 		{
-			get => m_scene_view;
+			get;
 			private set
 			{
-				if (m_scene_view == value) return;
-				if (m_scene_view != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_scene_view.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_scene_view = value;
-				if (m_scene_view != null)
+				field = value;
+				if (field != null)
 				{
-					m_scene_view.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -266,8 +263,7 @@ namespace LDraw.UI
 						NotifyPropertyChanged(prop_name);
 				}
 			}
-		}
-		private ChartControl m_scene_view = null!;
+		} = null!;
 
 		/// <summary>The camera focus point</summary>
 		public v4 FocusPoint
@@ -291,16 +287,15 @@ namespace LDraw.UI
 		/// <summary>The name assigned to this scene UI</summary>
 		public string SceneName
 		{
-			get => m_scene_name;
+			get;
 			set
 			{
-				if (m_scene_name == value) return;
-				m_scene_name = value;
-				DockControl.TabText = m_scene_name;
+				if (field == value) return;
+				field = value;
+				DockControl.TabText = field;
 				NotifyPropertyChanged(nameof(SceneName));
 			}
-		}
-		private string m_scene_name = null!;
+		} = null!;
 
 		/// <summary>Other available scenes</summary>
 		public ICollectionView OtherScenesView { get; }
@@ -331,15 +326,14 @@ namespace LDraw.UI
 		/// <summary>True if the animation UI is visible</summary>
 		public bool AnimationUI
 		{
-			get => m_show_anim_ui;
+			get;
 			set
 			{
-				if (m_show_anim_ui == value) return;
-				m_show_anim_ui = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(AnimationUI));
 			}
 		}
-		private bool m_show_anim_ui;
 
 		/// <summary>Remove all objects from the scene</summary>
 		public Command ClearScene { get; }

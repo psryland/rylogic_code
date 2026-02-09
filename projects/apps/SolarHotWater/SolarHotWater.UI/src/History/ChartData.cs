@@ -50,18 +50,18 @@ namespace SolarHotWater
 		/// <summary>The chart to draw the series' on</summary>
 		private ChartControl Chart
 		{
-			get => m_chart;
+			get;
 			set
 			{
-				if (m_chart == value) return;
-				if (m_chart != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart.BuildScene -= HandleBuildScene;
+					field.BuildScene -= HandleBuildScene;
 				}
-				m_chart = value;
-				if (m_chart != null)
+				field = value;
+				if (field != null)
 				{
-					m_chart.BuildScene += HandleBuildScene;
+					field.BuildScene += HandleBuildScene;
 				}
 
 				// Handlers
@@ -86,24 +86,23 @@ namespace SolarHotWater
 					}
 				}
 			}
-		}
-		private ChartControl m_chart = null!;
+		} = null!;
 
 		/// <summary>Access to the history database</summary>
 		private History History
 		{
-			get => m_history;
+			get;
 			set
 			{
-				if (m_history == value) return;
-				if (m_history != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_history.DataAdded -= HandleDataAdded;
+					field.DataAdded -= HandleDataAdded;
 				}
-				m_history = value;
-				if (m_history != null)
+				field = value;
+				if (field != null)
 				{
-					m_history.DataAdded += HandleDataAdded;
+					field.DataAdded += HandleDataAdded;
 				}
 
 				// Handlers
@@ -150,25 +149,24 @@ namespace SolarHotWater
 					Chart.Invalidate();
 				}
 			}
-		}
-		private History m_history = null!;
+		} = null!;
 
 		/// <summary>Chart data for the solar output</summary>
 		public ChartDataSeries Solar
 		{
-			get => m_solar;
+			get;
 			private set
 			{
-				if (m_solar == value) return;
-				if (m_solar != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_solar!);
+					Util.Dispose(ref field!);
 				}
-				m_solar = value;
-				if (m_solar != null)
+				field = value;
+				if (field != null)
 				{
 					// Initialise from the history
-					using var lk = m_solar.Lock();
+					using var lk = field.Lock();
 					foreach (var record in History.Solar())
 					{
 						var x = (DateTimeOffset.FromUnixTimeSeconds(record.Timestamp) - History.Epoch).TotalHours;
@@ -177,25 +175,24 @@ namespace SolarHotWater
 					AddNowPoint(lk);
 				}
 			}
-		}
-		private ChartDataSeries m_solar = null!;
+		} = null!;
 
 		/// <summary>Nett consumed by all active consumers</summary>
 		public ChartDataSeries Consumption
 		{
-			get => m_consumption;
+			get;
 			private set
 			{
-				if (m_consumption == value) return;
-				if (m_consumption != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_consumption!);
+					Util.Dispose(ref field!);
 				}
-				m_consumption = value;
-				if (m_consumption != null)
+				field = value;
+				if (field != null)
 				{
 					// Initialise from the history
-					using var lk = m_consumption.Lock();
+					using var lk = field.Lock();
 					foreach (var record in History.Consumption())
 					{
 						var x = (DateTimeOffset.FromUnixTimeSeconds(record.Timestamp) - History.Epoch).TotalHours;
@@ -204,23 +201,22 @@ namespace SolarHotWater
 					AddNowPoint(lk);
 				}
 			}
-		}
-		private ChartDataSeries m_consumption = null!;
+		} = null!;
 
 		/// <summary>Chart data for each consumer</summary>
 		public List<ChartDataSeries> Consumers
 		{
-			get => m_consumers;
+			get;
 			private set
 			{
-				if (m_consumers == value) return;
-				if (m_consumers != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Consumer.Genesis -= HandleConsumerGenesis;
-					Util.DisposeRange(m_consumers);
+					Util.DisposeRange(field);
 				}
-				m_consumers = value;
-				if (m_consumers != null)
+				field = value;
+				if (field != null)
 				{
 					Consumer.Genesis += HandleConsumerGenesis;
 				}
@@ -239,8 +235,7 @@ namespace SolarHotWater
 					}
 				}
 			}
-		}
-		private List<ChartDataSeries> m_consumers = null!;
+		} = null!;
 
 		/// <summary>Create a data series for a consumer</summary>
 		private ChartDataSeries CreateSeriesForConsumer(Consumer consumer)

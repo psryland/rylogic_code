@@ -100,82 +100,78 @@ namespace RyLogViewer
 		/// <summary>The collection of highlighting patterns</summary>
 		public PatternCollection<Highlight> Highlights
 		{
-			get { return m_highlights; }
+			get;
 			private set
 			{
-				if (m_highlights == value) return;
-				if (m_highlights != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_highlights.ListChanging -= HandleCollectionChanged;
+					field.ListChanging -= HandleCollectionChanged;
 				}
-				m_highlights = value;
-				if (m_highlights != null)
+				field = value;
+				if (field != null)
 				{
-					m_highlights.ListChanging += HandleCollectionChanged;
+					field.ListChanging += HandleCollectionChanged;
 				}
 			}
 		}
-		private PatternCollection<Highlight> m_highlights;
 
 		/// <summary>The collection of filtering patterns</summary>
 		public PatternCollection<Filter> Filters
 		{
-			get { return m_filters; }
+			get;
 			private set
 			{
-				if (m_filters == value) return;
-				if (m_filters != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_filters.ListChanging -= HandleCollectionChanged;
+					field.ListChanging -= HandleCollectionChanged;
 				}
-				m_filters = value;
-				if (m_filters != null)
+				field = value;
+				if (field != null)
 				{
-					m_filters.ListChanging += HandleCollectionChanged;
+					field.ListChanging += HandleCollectionChanged;
 				}
 			}
 		}
-		private PatternCollection<Filter> m_filters;
 
 		/// <summary>The collection of transform patterns</summary>
 		public PatternCollection<Transform> Transforms
 		{
-			get { return m_transforms; }
+			get;
 			private set
 			{
-				if (m_transforms == value) return;
-				if (m_transforms != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_transforms.ListChanging -= HandleCollectionChanged;
+					field.ListChanging -= HandleCollectionChanged;
 				}
-				m_transforms = value;
-				if (m_transforms != null)
+				field = value;
+				if (field != null)
 				{
-					m_transforms.ListChanging += HandleCollectionChanged;
+					field.ListChanging += HandleCollectionChanged;
 				}
 			}
 		}
-		private PatternCollection<Transform> m_transforms;
 
 		/// <summary>The collection of transform patterns</summary>
 		public PatternCollection<ClkAction> Actions
 		{
-			get { return m_actions; }
+			get;
 			private set
 			{
-				if (m_actions == value) return;
-				if (m_actions != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_actions.ListChanging -= HandleCollectionChanged;
+					field.ListChanging -= HandleCollectionChanged;
 				}
-				m_actions = value;
-				if (m_actions != null)
+				field = value;
+				if (field != null)
 				{
-					m_actions.ListChanging += HandleCollectionChanged;
+					field.ListChanging += HandleCollectionChanged;
 				}
 			}
 		}
-		private PatternCollection<ClkAction> m_actions;
 
 		/// <summary>Raised when a pattern is added/removed</summary>
 		public event EventHandler Changed;

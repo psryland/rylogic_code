@@ -119,22 +119,22 @@ namespace Rylogic.Gfx
 		/// <summary>The Dx9 render target that matches the area on screen</summary>
 		public View3d.Texture? FrontBuffer
 		{
-			get => m_front_buffer;
+			get;
 			private set
 			{
-				if (m_front_buffer == value) return;
-				if (m_front_buffer != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					// Remove the render target
 					using (LockScope())
 						SetBackBuffer(D3DResourceType.IDirect3DSurface9, IntPtr.Zero);
 
-					Util.Dispose(ref m_front_buffer);
+					Util.Dispose(ref field);
 				}
-				m_front_buffer = value;
-				if (m_front_buffer != null)
+				field = value;
+				if (field != null)
 				{
-					var ptr = m_front_buffer.PrivateDataPointer[View3d.Texture.UserData.Surface0Pointer];
+					var ptr = field.PrivateDataPointer[View3d.Texture.UserData.Surface0Pointer];
 
 					// Set the render target as the Dx9 surface
 					using (LockScope())
@@ -145,7 +145,6 @@ namespace Rylogic.Gfx
 				FrontBufferChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
-		private View3d.Texture? m_front_buffer;
 
 		/// <summary>Raised when the front buffer is changed</summary>
 		public event EventHandler? FrontBufferChanged;

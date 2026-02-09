@@ -104,54 +104,50 @@ namespace Binance.API
 		/// <summary>A local cache of the last 24hr ticker data</summary>
 		public TickerDataCache TickerData
 		{
-			get => m_ticker_data;
+			get;
 			private set
 			{
-				if (m_ticker_data == value) return;
-				Util.Dispose(ref m_ticker_data!);
-				m_ticker_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private TickerDataCache m_ticker_data = null!;
+		} = null!;
 
 		/// <summary>A local copy of the state of the markets</summary>
 		public MarketDataCache MarketData
 		{
-			get => m_market_data;
+			get;
 			private set
 			{
-				if (m_market_data == value) return;
-				Util.Dispose(ref m_market_data!);
-				m_market_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private MarketDataCache m_market_data = null!;
+		} = null!;
 		
 		/// <summary>A local mirror of the candle data</summary>
 		public CandleDataCache CandleData
 		{
-			get => m_candle_data;
+			get;
 			set
 			{
-				if (m_candle_data == value) return;
-				Util.Dispose(ref m_candle_data!);
-				m_candle_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private CandleDataCache m_candle_data = null!;
+		} = null!;
 
 		/// <summary>A local mirror of the users trade history and orders</summary>
 		public UserDataCache UserData
 		{
-			get => m_user_data;
+			get;
 			set
 			{
-				if (m_user_data == value) return;
-				Util.Dispose(ref m_user_data!);
-				m_user_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private UserDataCache m_user_data = null!;
+		} = null!;
 
 		#endregion
 

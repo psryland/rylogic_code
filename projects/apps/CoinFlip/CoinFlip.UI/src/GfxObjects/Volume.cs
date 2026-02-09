@@ -59,18 +59,18 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>The chart this indicator is displayed on</summary>
 		private ChartControl Chart
 		{
-			get => m_chart;
+			get;
 			set
 			{
-				if (m_chart == value) return;
-				if (m_chart != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart.ChartMoved -= HandleChartMoved;
+					field.ChartMoved -= HandleChartMoved;
 				}
-				m_chart = value;
-				if (m_chart != null)
+				field = value;
+				if (field != null)
 				{
-					m_chart.ChartMoved += HandleChartMoved;
+					field.ChartMoved += HandleChartMoved;
 				}
 
 				void HandleChartMoved(object? sender, ChartControl.ChartMovedEventArgs e)
@@ -79,8 +79,7 @@ namespace CoinFlip.UI.GfxObjects
 						UpdateScale();
 				}
 			}
-		}
-		private ChartControl m_chart = null!;
+		} = null!;
 
 		/// <summary></summary>
 		private Instrument Instrument { get; }
@@ -88,28 +87,26 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>A cache of graphics objects than span X-axis ranges</summary>
 		private ChartGfxCache Cache
 		{
-			get => m_cache;
+			get;
 			set
 			{
-				if (m_cache == value) return;
-				Util.Dispose(ref m_cache!);
-				m_cache = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private ChartGfxCache m_cache = null!;
+		} = null!;
 
 		/// <summary>The position of the indicator as a fraction of the chart width. 0 = Far right, 0.5 = middle, 1 = Far left</summary>
 		private double IndicatorPosition
 		{
-			get => m_indicator_position;
+			get;
 			set
 			{
-				if (m_indicator_position == value) return;
-				m_indicator_position = Math_.Clamp(value, 0.05, 0.95);
+				if (field == value) return;
+				field = Math_.Clamp(value, 0.05, 0.95);
 				UpdateScale();
 			}
 		}
-		private double m_indicator_position;
 
 		/// <summary>Size scaler for the volume graphics</summary>
 		private double Scale { get; set; }
@@ -255,15 +252,14 @@ namespace CoinFlip.UI.GfxObjects
 			/// <summary>The graphics object</summary>
 			public View3d.Object Gfx
 			{
-				get => m_gfx;
+				get;
 				private set
 				{
-					if (m_gfx == value) return;
-					Util.Dispose(ref m_gfx!);
-					m_gfx = value;
+					if (field == value) return;
+					Util.Dispose(ref field!);
+					field = value;
 				}
-			}
-			private View3d.Object m_gfx = null!;
+			} = null!;
 		}
 
 		/// <summary>Mouse op for dragging the scale indicator</summary>

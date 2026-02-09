@@ -38,41 +38,38 @@ public partial class AdoWorkItemUI : Window, INotifyPropertyChanged
     /// <summary>Delimited list of work item its to lookup</summary>
     public string WorkItemIds
     {
-        get => m_work_item_ids;
+        get;
         set
         {
-            if (m_work_item_ids == value) return;
-            m_work_item_ids = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(WorkItemIds));
         }
-    }
-    private string m_work_item_ids = string.Empty;
+    } = string.Empty;
 
     /// <summary>The result of the query</summary>
     public string QueryResult
     {
-        get => m_query_result;
+        get;
         set
         {
-            if (m_query_result == value) return;
-            m_query_result = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(QueryResult));
         }
-    }
-    private string m_query_result = string.Empty;
+    } = string.Empty;
 
     /// <summary></summary>
     public Color ResultColor
     {
-        get => m_color;
+        get;
         set
         {
-            if (m_color == value) return;
-            m_color = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(ResultColor));
         }
     }
-    private Color m_color;
 
     /// <summary></summary>
     public Command RunQuery { get; }

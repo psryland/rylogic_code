@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -26,16 +26,15 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Set to true to only display enum member that have the 'Desc' attribute</summary>
 		public bool RequireDescAttribute
 		{
-			get { return m_require_desc; }
+			get;
 			set
 			{
-				if (m_require_desc == value) return;
-				m_require_desc = value;
+				if (field == value) return;
+				field = value;
 				if (EnumValue != null)
 					FillEnumMembers();
 			}
 		}
-		private bool m_require_desc;
 
 		/// <summary>Gets the current bit value corresponding to all checked items</summary>
 		public int Bitmask
@@ -247,43 +246,40 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The bitmask value of this flag</summary>
 		public int Value
 		{
-			get { return m_value; }
+			get;
 			set
 			{
-				if (m_value == value) return;
-				m_value = value;
+				if (field == value) return;
+				field = value;
 				Owner.Invalidate();
 			}
 		}
-		private int m_value;
 
 		/// <summary>The string name corresponding to the flag</summary>
 		public string Caption
 		{
-			get { return m_caption; }
+			get;
 			set
 			{
-				if (m_caption == value) return;
-				m_caption = value;
+				if (field == value) return;
+				field = value;
 				Owner.Invalidate();
 			}
 		}
-		private string m_caption;
 
 		/// <summary>True if the flag can be set or cleared via the UI</summary>
 		public bool Enabled
 		{
-			get { return m_enabled; }
+			get;
 			set
 			{
-				if (m_enabled == value) return;
-				m_enabled = value;
+				if (field == value) return;
+				field = value;
 				var idx = Owner.Items.IndexOf(this);
 				if (idx != -1) Owner.SetItemCheckState(idx, CheckState.Indeterminate);
 				Owner.Invalidate();
 			}
 		}
-		private bool m_enabled;
 
 		/// <summary>True if the value corresponds to a single bit being set</summary>
 		public bool IsFlag

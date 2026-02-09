@@ -129,40 +129,37 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Validation function for allowed value text</summary>
 		public Func<string, ValidationResult>? Validate
 		{
-			get => m_validate;
+			get;
 			set
 			{
-				m_validate = value;
+				field = value;
 				Value_Changed();
 			}
 		}
-		private Func<string, ValidationResult>? m_validate;
 
 		/// <summary>True if the user input is valid</summary>
 		public bool IsValid
 		{
-			get => m_is_valid;
+			get;
 			private set
 			{
-				if (m_is_valid == value) return;
-				m_is_valid = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(IsValid));
 			}
 		}
-		private bool m_is_valid;
 
 		/// <summary>Make the "wrap" checkbox vislble</summary>
 		public bool ShowWrapCheckbox
 		{
-			get => m_show_wrap_checkbox;
+			get;
 			set
 			{
-				if (m_show_wrap_checkbox == value) return;
-				m_show_wrap_checkbox = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(ShowWrapCheckbox));
 			}
 		}
-		private bool m_show_wrap_checkbox;
 
 		/// <summary>Show/Hide the cancel button</summary>
 		public bool ShowCancel

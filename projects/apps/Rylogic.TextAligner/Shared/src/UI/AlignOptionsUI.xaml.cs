@@ -94,18 +94,18 @@ namespace Rylogic.TextAligner
 		/// <summary>Binding view of the alignment patterns within the current group</summary>
 		public ICollectionView PatternsView
 		{
-			get => m_patterns_view;
+			get;
 			private set
 			{
-				if (m_patterns_view == value) return;
-				if (m_patterns_view != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_patterns_view.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_patterns_view = value;
-				if (m_patterns_view != null)
+				field = value;
+				if (field != null)
 				{
-					m_patterns_view.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 				}
 				NotifyPropertyChanged(nameof(PatternsView));
 				HandleCurrentChanged(null, null);
@@ -117,8 +117,7 @@ namespace Rylogic.TextAligner
 					MovePatternDown?.NotifyCanExecuteChanged();
 				}
 			}
-		}
-		private ICollectionView m_patterns_view = null!;
+		} = null!;
 
 		/// <summary>Alignment style</summary>
 		public EAlignCharacters AlignStyle

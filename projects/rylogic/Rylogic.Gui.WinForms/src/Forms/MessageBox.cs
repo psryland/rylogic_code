@@ -393,18 +393,16 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Set to true to have the dialog automatically line wrap text. False to honour message new lines</summary>
 		public bool Reflow
 		{
-			get { return m_reflow; }
-			set { m_reflow = value; }
+			get;
+			set { field = value; }
 		}
-		private bool m_reflow;
 
 		/// <summary>The ratio of width to height used to decide where to wrap text</summary>
 		public float ReflowAspectRatio
 		{
-			get { return m_reflow_aspect; }
-			set { m_reflow_aspect = value; }
+			get;
+			set { field = value; }
 		}
-		private float m_reflow_aspect;
 
 		/// <summary>
 		/// Get/Set the text on the positive button.<para/>

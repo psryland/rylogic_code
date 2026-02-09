@@ -33,15 +33,14 @@ public class Model : IDisposable, INotifyPropertyChanged
 	/// <summary>Access to ADO</summary>
 	public AdoInterface? Ado
 	{
-		get => m_ado;
+		get;
 		set
 		{
-			if (m_ado == value) return;
-			m_ado = value;
+			if (field == value) return;
+			field = value;
 			NotifyPropertyChanged(nameof(Ado));
 		}
 	}
-	private AdoInterface? m_ado;
 
 	/// <summary>Reload the data from ADO</summary>
 	public async Task Refresh(ChartControl chart)

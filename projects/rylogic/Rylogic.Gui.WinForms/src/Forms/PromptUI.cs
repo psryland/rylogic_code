@@ -241,10 +241,9 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>A predicate for validating the input text in the value box</summary>
 		public Func<string,bool> ValidateValue
 		{
-			get { return m_validate_value; }
-			set { m_validate_value = value; }
+			get;
+			set { field = value; }
 		}
-		private Func<string, bool> m_validate_value;
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()

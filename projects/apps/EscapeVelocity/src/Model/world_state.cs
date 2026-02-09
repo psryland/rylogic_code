@@ -11,10 +11,9 @@ namespace EscapeVelocity
 		/// <summary>The time remaining till the star goes nova (s)</summary>
 		public double TimeTillNova
 		{
-			get { return m_time_till_nova; }
-			private set { m_time_till_nova = value; OnPropertyChanged(nameof(TimeTillNova)); }
+			get;
+			private set { field = value; OnPropertyChanged(nameof(TimeTillNova)); }
 		}
-		private double m_time_till_nova;
 
 		// The distance to the star
 		public ResearchEffort m_star_distance_research;

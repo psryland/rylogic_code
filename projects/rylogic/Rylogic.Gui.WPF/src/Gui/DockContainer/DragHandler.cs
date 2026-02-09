@@ -236,93 +236,86 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>A form used as graphics to show dragged items</summary>
 		private GhostPane Ghost
 		{
-			get => m_ghost;
+			get;
 			set
 			{
-				if (m_ghost == value) return;
-				m_ghost?.Close();
-				m_ghost = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private GhostPane m_ghost = null!;
+		} = null!;
 
 		/// <summary>The cross of dock site locations displayed within the centre of a pane</summary>
 		private Indicator IndCrossLg
 		{
-			get { return m_cross_lg; }
+			get;
 			set
 			{
-				if (m_cross_lg == value) return;
-				m_cross_lg?.Close();
-				m_cross_lg = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_cross_lg = null!;
+		} = null!;
 
 		/// <summary>The small cross of dock site locations displayed within the centre of a pane</summary>
 		private Indicator IndCrossSm
 		{
-			get { return m_cross_sm; }
+			get;
 			set
 			{
-				if (m_cross_sm == value) return;
-				m_cross_sm?.Close();
-				m_cross_sm = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_cross_sm = null!;
+		} = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndLeft
 		{
-			get { return m_left; }
+			get;
 			set
 			{
-				if (m_left == value) return;
-				m_left?.Close();
-				m_left = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_left = null!;
+		} = null!;
 
 		/// <summary>The top edge dock site indicator</summary>
 		private Indicator IndTop
 		{
-			get { return m_top; }
+			get;
 			set
 			{
-				if (m_top == value) return;
-				m_top?.Close();
-				m_top = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_top = null!;
+		} = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndRight
 		{
-			get { return m_right; }
+			get;
 			set
 			{
-				if (m_right == value) return;
-				m_right?.Close();
-				m_right = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_right = null!;
+		} = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndBottom
 		{
-			get { return m_bottom; }
+			get;
 			set
 			{
-				if (m_bottom == value) return;
-				m_bottom?.Close();
-				m_bottom = value;
+				if (field == value) return;
+				field?.Close();
+				field = value;
 			}
-		}
-		private Indicator m_bottom = null!;
+		} = null!;
 
 		/// <summary>Enumerate all indicators</summary>
 		private IEnumerable<Indicator> Indicators

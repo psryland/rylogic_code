@@ -153,34 +153,30 @@ namespace RyLogViewer
 		/// <summary>The name of the licence holder</summary>
 		public string LicenceHolder
 		{
-			get { return m_licence_holder; }
-			set { SetProp(ref m_licence_holder, value); }
+			get;
+			set { SetProp(ref field, value); }
 		}
-		private string m_licence_holder;
 
 		/// <summary>The email address associated with the licence</summary>
 		public string EmailAddress
 		{
-			get { return m_email_address; }
-			set { SetProp(ref m_email_address, value); }
+			get;
+			set { SetProp(ref field, value); }
 		}
-		private string m_email_address;
 
 		/// <summary>The optional associated company name</summary>
 		public string Company
 		{
-			get { return m_company; }
-			set { SetProp(ref m_company, value); }
+			get;
+			set { SetProp(ref field, value); }
 		}
-		private string m_company;
 
 		/// <summary>The application version that the licence was issued for</summary>
 		public string VersionMask
 		{
-			get { return m_app_version; }
-			set { SetProp(ref m_app_version, value); }
+			get;
+			set { SetProp(ref field, value); }
 		}
-		private string m_app_version;
 
 		/// <summary>The code provided by the RyLogViewer web site</summary>
 		public string ActivationCode

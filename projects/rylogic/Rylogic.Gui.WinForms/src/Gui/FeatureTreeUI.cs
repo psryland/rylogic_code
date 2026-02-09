@@ -67,28 +67,26 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The root tree item</summary>
 		public IFeatureTreeItem Root
 		{
-			get { return m_root; }
+			get;
 			set
 			{
-				if (m_root == value) return;
-				m_root = value;
+				if (field == value) return;
+				field = value;
 				PopulateFeatureTree();
 			}
 		}
-		private IFeatureTreeItem m_root;
 
 		/// <summary>Include the root feature in the tree</summary>
 		public bool ShowRoot
 		{
-			get { return m_show_root; }
+			get;
 			set
 			{
-				if (m_show_root == value) return;
-				m_show_root = value;
+				if (field == value) return;
+				field = value;
 				PopulateFeatureTree();
 			}
 		}
-		private bool m_show_root;
 
 		/// <summary>Populate the tree control from the root features</summary>
 		public void PopulateFeatureTree()
@@ -191,16 +189,15 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The checked state of the node</summary>
 		public FeatureTree.ETriState TriState
 		{
-			get { return m_tristate; }
+			get;
 			set
 			{
-				m_tristate = value;
-				ImageIndex = (int)m_tristate - 1;
-				SelectedImageIndex = (int)m_tristate - 1;
+				field = value;
+				ImageIndex = (int)field - 1;
+				SelectedImageIndex = (int)field - 1;
 				Checked = TriState == FeatureTree.ETriState.Checked || TriState == FeatureTree.ETriState.Indeterminate;
 			}
 		}
-		private FeatureTree.ETriState m_tristate;
 
 		/// <summary>Hide the 'Checked' property, use 'TriState' instead</summary>
 		protected new bool Checked

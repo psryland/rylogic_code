@@ -123,15 +123,14 @@ namespace Rylogic.Common
 		[Browsable(false)]
 		public ISettingsSet? Parent
 		{
-			get => m_parent;
+			get;
 			set
 			{
-				if (m_parent == value) return;
-				m_parent = value;
+				if (field == value) return;
+				field = value;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parent)));
 			}
 		}
-		private ISettingsSet? m_parent;
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
 		public IReadOnlyDictionary<string, object?> Data => m_data;
@@ -589,16 +588,16 @@ namespace Rylogic.Common
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
 		public bool AutoSaveOnChanges
 		{
-			get => m_auto_save;
+			get;
 			set
 			{
-				if (m_auto_save == value) return;
-				if (m_auto_save)
+				if (field == value) return;
+				if (field)
 				{
 					SettingChange -= HandleSettingChange;
 				}
-				m_auto_save = value;
-				if (m_auto_save)
+				field = value;
+				if (field)
 				{
 					SettingChange += HandleSettingChange;
 				}
@@ -611,7 +610,6 @@ namespace Rylogic.Common
 				}
 			}
 		}
-		private bool m_auto_save;
 
 		/// <summary>Backup old settings before upgrades</summary>
 		public bool BackupOldSettings { get; set; }

@@ -35,23 +35,22 @@ namespace Rylogic.Gui.Native
 		/// <summary>The window handle</summary>
 		public IntPtr Handle
 		{
-			get => m_hwnd;
+			get;
 			set
 			{
-				if (m_hwnd == value) return;
-				if (m_hwnd != IntPtr.Zero)
+				if (field == value) return;
+				if (field != IntPtr.Zero)
 				{
-					User32.DestroyWindow(m_hwnd);
-					m_wnd.Remove(m_hwnd);
+					User32.DestroyWindow(field);
+					m_wnd.Remove(field);
 				}
-				m_hwnd = value;
-				if (m_hwnd != IntPtr.Zero)
+				field = value;
+				if (field != IntPtr.Zero)
 				{
-					m_wnd[m_hwnd] = this;
+					m_wnd[field] = this;
 				}
 			}
 		}
-		private IntPtr m_hwnd;
 
 		/// <summary>WndProc hook</summary>
 		public event EventHandler<WndProcEventArgs>? Message;

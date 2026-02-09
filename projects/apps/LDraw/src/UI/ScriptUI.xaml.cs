@@ -108,21 +108,21 @@ namespace LDraw.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				if (m_dock_control != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_dock_control.ActiveChanged -= HandleActiveChanged;
-					m_dock_control.SavingLayout -= HandleSavingLayout;
-					Util.Dispose(ref m_dock_control!);
+					field.ActiveChanged -= HandleActiveChanged;
+					field.SavingLayout -= HandleSavingLayout;
+					Util.Dispose(ref field!);
 				}
-				m_dock_control = value;
-				if (m_dock_control != null)
+				field = value;
+				if (field != null)
 				{
-					m_dock_control.SavingLayout += HandleSavingLayout;
-					m_dock_control.ActiveChanged += HandleActiveChanged;
+					field.SavingLayout += HandleSavingLayout;
+					field.ActiveChanged += HandleActiveChanged;
 				}
 
 				// Handlers
@@ -141,28 +141,27 @@ namespace LDraw.UI
 					//	e.Node.Add2(nameof(Filepath), Filepath, false);
 				}
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>The Ldraw source this script represents</summary>
 		public Source Source
 		{
-			get => m_source;
+			get;
 			private set
 			{
-				if (m_source == value) return;
-				if (m_source != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Log.EntriesChanged -= HandleLogEntriesChanged;
-					m_source.PropertyChanged -= HandlePropertyChanged;
-					m_source.SourceChanged -= HandleSourceChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
+					field.SourceChanged -= HandleSourceChanged;
 					// Don't dispose Source, we don't own it.
 				}
-				m_source = value;
-				if (m_source != null)
+				field = value;
+				if (field != null)
 				{
-					m_source.SourceChanged += HandleSourceChanged;
-					m_source.PropertyChanged += HandlePropertyChanged;
+					field.SourceChanged += HandleSourceChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 					Log.EntriesChanged += HandleLogEntriesChanged;
 				}
 
@@ -190,8 +189,7 @@ namespace LDraw.UI
 					RefreshErrorMarkers();
 				}
 			}
-		}
-		private Source m_source = null!;
+		} = null!;
 
 		/// <summary>Auto complete provider for LDraw script</summary>
 		private View3d.AutoComplete LdrAutoComplete { get; }
@@ -735,20 +733,19 @@ namespace LDraw.UI
 		/// <summary>True if the script has been edited without being saved</summary>
 		public bool SaveNeeded
 		{
-			get => m_save_needed;
+			get;
 			set
 			{
-				if (m_save_needed == value) return;
-				m_save_needed = value;
+				if (field == value) return;
+				field = value;
 
 				// Add/Remove a '*' from the tab
-				DockControl.TabText = DockControl.TabText.TrimEnd('*') + (m_save_needed ? "*" : string.Empty);
+				DockControl.TabText = DockControl.TabText.TrimEnd('*') + (field ? "*" : string.Empty);
 
 				// Notify
 				NotifyPropertyChanged(nameof(SaveNeeded));
 			}
 		}
-		private bool m_save_needed;
 
 		/// <summary>Render the contents of this script file in the selected scene</summary>
 		public Command Render { get; }

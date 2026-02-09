@@ -38,20 +38,19 @@ namespace LDraw
 		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>Handle a log entry being double clicked in the log view</summary>
 		private void HandleLogEntryDoubleClick(object? sender, LogControl.LogEntryDoubleClickEventArgs e)

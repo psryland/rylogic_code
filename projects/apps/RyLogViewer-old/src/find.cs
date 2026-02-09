@@ -15,27 +15,25 @@ namespace RyLogViewer
 		/// <summary>The find dialog</summary>
 		private FindUI FindUI
 		{
-			get { return m_find_ui; }
+			get;
 			set
 			{
-				if (m_find_ui == value) return;
-				Util.Dispose(ref m_find_ui);
-				m_find_ui = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private FindUI m_find_ui;
 
 		/// <summary>The history of find patterns</summary>
 		private BindingSource<Pattern> FindHistory
 		{
-			get { return m_find_history; }
+			get;
 			set
 			{
-				if (m_find_history == value) return;
-				m_find_history = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private BindingSource<Pattern> m_find_history;
 
 		/// <summary>Set up the app's find search support</summary>
 		private void SetupFind()

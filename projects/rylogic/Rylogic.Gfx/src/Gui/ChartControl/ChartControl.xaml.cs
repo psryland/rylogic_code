@@ -332,21 +332,21 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The current X/Y axis range of the chart</summary>
 		public RangeData Range
 		{
-			get => m_range;
+			get;
 			private set
 			{
-				if (value == m_range) return;
-				if (m_range != null)
+				if (value == field) return;
+				if (field != null)
 				{
-					m_range.XAxis.PropertyChanged -= HandleAxisPropertyChanged;
-					m_range.YAxis.PropertyChanged -= HandleAxisPropertyChanged;
-					Util.Dispose(ref m_range!);
+					field.XAxis.PropertyChanged -= HandleAxisPropertyChanged;
+					field.YAxis.PropertyChanged -= HandleAxisPropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_range = value;
-				if (m_range != null)
+				field = value;
+				if (field != null)
 				{
-					m_range.XAxis.PropertyChanged += HandleAxisPropertyChanged;
-					m_range.YAxis.PropertyChanged += HandleAxisPropertyChanged;
+					field.XAxis.PropertyChanged += HandleAxisPropertyChanged;
+					field.YAxis.PropertyChanged += HandleAxisPropertyChanged;
 
 					NotifyPropertyChanged(nameof(Range));
 					NotifyPropertyChanged(nameof(XAxis));
@@ -367,8 +367,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private RangeData m_range = null!;
+		} = null!;
 
 		/// <summary>Access to the current X axis</summary>
 		public RangeData.Axis XAxis => Range.XAxis;
@@ -415,30 +414,29 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A control to use as the legend.</summary>
 		public FrameworkElement? Legend
 		{
-			get => m_legend;
+			get;
 			set
 			{
-				if (m_legend == value) return;
-				if (m_legend != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Overlay.Children.Remove(m_legend);
+					Overlay.Children.Remove(field);
 				}
-				m_legend = value;
-				if (m_legend != null)
+				field = value;
+				if (field != null)
 				{
-					Overlay.Children.Add(m_legend);
+					Overlay.Children.Add(field);
 
 					// If the legend is 'ChartLegend' (i.e. not some custom thing),
 					// then default the ItemsSource to the chart elements.
-					if (m_legend is ChartLegend legend)
+					if (field is ChartLegend legend)
 					{
 						legend.ItemsSource ??= Elements;
 						legend.PositionBasedOnAlignment();
 					}
 				}
 			}
-		}
-		private FrameworkElement? m_legend = null;
+		} = null;
 
 		/// <summary>A control to use as overlay graphics in client space</summary>
 		public FrameworkElement? OverlayContent
@@ -456,22 +454,21 @@ namespace Rylogic.Gui.WPF
 			//          </StackPanel>
 			//      </view3d:ChartControl.OverlayContent>
 
-			get => m_overlay_content;
+			get;
 			set
 			{
-				if (m_overlay_content == value) return;
-				if (m_overlay_content != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Overlay.Children.Remove(m_overlay_content);
+					Overlay.Children.Remove(field);
 				}
-				m_overlay_content = value;
-				if (m_overlay_content != null)
+				field = value;
+				if (field != null)
 				{
-					Overlay.Children.Add(m_overlay_content);
+					Overlay.Children.Add(field);
 				}
 			}
-		}
-		private FrameworkElement? m_overlay_content = null;
+		} = null;
 
 		/// <summary>A control to use as overlay graphics in chart space</summary>
 		public System.Windows.Shapes.Path? OverlayContentChartSpace
@@ -529,15 +526,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>View3d context reference</summary>
 		private View3d View3d
 		{
-			get => m_view3d;
+			get;
 			set
 			{
-				if (m_view3d == value) return;
-				Util.Dispose(ref m_view3d!);
-				m_view3d = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d m_view3d = null!;
+		} = null!;
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
 		public event EventHandler<View3dControl.BuildSceneEventArgs>? BuildScene;
@@ -1270,15 +1266,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Per button current mouse operation</summary>
 		public MouseOps MouseOperations
 		{
-			get => m_mouse_ops;
+			get;
 			private set
 			{
-				if (m_mouse_ops == value) return;
-				Util.Dispose(ref m_mouse_ops!);
-				m_mouse_ops = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private MouseOps m_mouse_ops = null!;
+		} = null!;
 
 		/// <summary>
 		/// Select elements that are wholly within 'chart_bbox'. (chart_bbox is axis aligned in chart space)

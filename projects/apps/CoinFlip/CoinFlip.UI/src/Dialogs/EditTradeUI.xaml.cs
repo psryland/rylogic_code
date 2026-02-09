@@ -70,20 +70,20 @@ namespace CoinFlip.UI.Dialogs
 		/// <summary>Model</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.DataChanging -= HandleDataChanging;
+					field.DataChanging -= HandleDataChanging;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 					CoinData.BalanceChanged += HandleBalanceChanged;
-					m_model.DataChanging += HandleDataChanging;
+					field.DataChanging += HandleDataChanging;
 				}
 
 				// Handler
@@ -109,8 +109,7 @@ namespace CoinFlip.UI.Dialogs
 					}
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The trade being modified</summary>
 		public Trade Trade
@@ -229,19 +228,19 @@ namespace CoinFlip.UI.Dialogs
 		/// <summary>The exchanges that allow trades of 'Pair'</summary>
 		public ICollectionView ExchangesOfferingPair
 		{
-			get => m_exchanges;
+			get;
 			private set
 			{
-				if (m_exchanges == value) return;
-				if (m_exchanges != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged -= HandleSelectedExchangeChanged;
+					field.CurrentChanged -= HandleSelectedExchangeChanged;
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged += HandleSelectedExchangeChanged;
-					m_exchanges.MoveCurrentTo(Trade.Pair.Exchange);
+					field.CurrentChanged += HandleSelectedExchangeChanged;
+					field.MoveCurrentTo(Trade.Pair.Exchange);
 				}
 
 				// Handlers
@@ -252,25 +251,24 @@ namespace CoinFlip.UI.Dialogs
 					NotifyPropertyChanged(string.Empty);
 				}
 			}
-		}
-		private ICollectionView m_exchanges = null!;
+		} = null!;
 
 		/// <summary>The available funds</summary>
 		public ICollectionView Funds
 		{
-			get => m_funds;
+			get;
 			private set
 			{
-				if (m_funds == value) return;
-				if (m_funds != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_funds.CurrentChanged -= HandleCurrentFundChanged;
+					field.CurrentChanged -= HandleCurrentFundChanged;
 				}
-				m_funds = value;
-				if (m_funds != null)
+				field = value;
+				if (field != null)
 				{
-					m_funds.MoveCurrentTo(Trade.Fund);
-					m_funds.CurrentChanged += HandleCurrentFundChanged;
+					field.MoveCurrentTo(Trade.Fund);
+					field.CurrentChanged += HandleCurrentFundChanged;
 				}
 
 				// Handlers
@@ -279,8 +277,7 @@ namespace CoinFlip.UI.Dialogs
 					Trade.Fund = (Fund)Funds.CurrentItem;
 				}
 			}
-		}
-		private ICollectionView m_funds = null!;
+		} = null!;
 
 		/// <summary>The pair being traded</summary>
 		public TradePair Pair => Trade.Pair;

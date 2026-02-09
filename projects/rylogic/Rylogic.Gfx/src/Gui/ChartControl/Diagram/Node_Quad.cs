@@ -37,28 +37,26 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Graphics for the node</summary>
 		protected View3d.Object Gfx
 		{
-			get => m_gfx;
+			get;
 			set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx!);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Object m_gfx = null!;
+		} = null!;
 
 		/// <summary>Texture surface</summary>
 		protected Surface Surf
 		{
-			get => m_surf;
+			get;
 			private set
 			{
-				if (m_surf == value) return;
-				Util.Dispose(ref m_surf!);
-				m_surf = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private Surface m_surf = null!;
+		} = null!;
 
 		/// <summary>The current node text colour given the hovering/selection state</summary>
 		public Colour32 TextColour

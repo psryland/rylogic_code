@@ -39,31 +39,30 @@ namespace LDraw.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>App logic</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.SourcesChanged -= HandleSourcesChanged;
+					field.SourcesChanged -= HandleSourcesChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.SourcesChanged += HandleSourcesChanged;
+					field.SourcesChanged += HandleSourcesChanged;
 				}
 
 				void HandleSourcesChanged(object? sender, EventArgs args)
@@ -74,24 +73,23 @@ namespace LDraw.UI
 					Sources.Refresh();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The loaded sources</summary>
 		public ICollectionView Sources
 		{
-			get => m_sources;
+			get;
 			set
 			{
-				if (m_sources == value) return;
-				if (m_sources != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_sources.CurrentChanged -= HandleCurrentSelectionChanged;
+					field.CurrentChanged -= HandleCurrentSelectionChanged;
 				}
-				m_sources = value;
-				if (m_sources != null)
+				field = value;
+				if (field != null)
 				{
-					m_sources.CurrentChanged += HandleCurrentSelectionChanged;
+					field.CurrentChanged += HandleCurrentSelectionChanged;
 				}
 				
 				void HandleCurrentSelectionChanged(object? sender, EventArgs e)
@@ -99,8 +97,7 @@ namespace LDraw.UI
 					OpenInEditor.NotifyCanExecuteChanged();
 				}
 			}
-		}
-		private ICollectionView m_sources = null!;
+		} = null!;
 
 		/// <summary></summary>
 		public Command AddSource { get; }

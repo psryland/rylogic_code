@@ -112,12 +112,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The pattern being edited</summary>
 		public IPattern Pattern
 		{
-			get => m_pattern;
+			get;
 			private set
 			{
-				if (m_pattern == value) return;
-				m_pattern = value ?? new Pattern();
-				m_pattern.PropertyChanged += WeakRef.MakeWeak(HandlePatternPropertyChanged, h => m_pattern.PropertyChanged -= h);
+				if (field == value) return;
+				field = value ?? new Pattern();
+				field.PropertyChanged += WeakRef.MakeWeak(HandlePatternPropertyChanged, h => field.PropertyChanged -= h);
 				NotifyPropertyChanged(string.Empty);
 				
 				// Handler
@@ -127,29 +127,27 @@ namespace Rylogic.Gui.WPF
 					Dirty = true;
 				}
 			}
-		}
-		private IPattern m_pattern = null!;
+		} = null!;
 
 		/// <summary>The pattern before any changes</summary>
 		public IPattern? Original
 		{
-			get => m_original;
+			get;
 			private set
 			{
-				if (m_original == value) return;
-				m_original = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private IPattern? m_original;
 
 		/// <summary>Test text for trying output patterns</summary>
 		public string TestText
 		{
-			get => m_test_text;
+			get;
 			set
 			{
 				if (TestText == value) return;
-				m_test_text = value;
+				field = value;
 
 				// Update the highlighting
 				if (Pattern != null)
@@ -157,8 +155,7 @@ namespace Rylogic.Gui.WPF
 
 				NotifyPropertyChanged(nameof(TestText));
 			}
-		}
-		private string m_test_text = string.Empty;
+		} = string.Empty;
 
 		/// <summary>The capture groups</summary>
 		public ObservableCollection<CaptureGroup> CaptureGroups { get; }
@@ -166,16 +163,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True when user activity has changed something in the UI</summary>
 		public bool Dirty
 		{
-			get => m_dirty;
+			get;
 			set
 			{
-				if (m_dirty == value) return;
-				m_dirty = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Dirty));
 				NotifyPropertyChanged(nameof(HasUnsavedChanges));
 			}
 		}
-		private bool m_dirty;
 
 		/// <summary>True if the pattern currently contained is a new instance, vs editing an existing pattern</summary>
 		public bool IsNew => Original is null;

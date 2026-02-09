@@ -112,28 +112,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The fraction complete that the task is</summary>
 		public double FractionComplete
 		{
-			get => m_fraction_complete;
+			get;
 			set
 			{
-				if (m_fraction_complete == value) return;
-				m_fraction_complete = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(FractionComplete));
 			}
 		}
-		private double m_fraction_complete;
 
 		/// <summary>True if the task can be cancelled</summary>
 		public bool AllowCancel
 		{
-			get => m_allow_cancel;
+			get;
 			set
 			{
-				if (m_allow_cancel == value) return;
-				m_allow_cancel = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(AllowCancel));
 			}
 		}
-		private bool m_allow_cancel;
 
 		/// <summary>The prompt text</summary>
 		public string Description

@@ -16,26 +16,23 @@ namespace CoinFlip.UI
 		/// <summary>True if coins should be filtered</summary>
 		public bool Enabled
 		{
-			get => m_enabled;
-			set => SetProp(ref m_enabled, value, nameof(Enabled));
+			get;
+			set => SetProp(ref field, value, nameof(Enabled));
 		}
-		private bool m_enabled;
 
 		/// <summary>Filter balances with a value or amount less than this threshold</summary>
 		public decimal Threshold
 		{
-			get => m_threshold;
-			set => SetProp(ref m_threshold, value, nameof(Threshold));
+			get;
+			set => SetProp(ref field, value, nameof(Threshold));
 		}
-		private decimal m_threshold;
 
 		/// <summary>What to filter on</summary>
 		public ECoinFilterType Type
 		{
-			get => m_type;
-			set => SetProp(ref m_type, value, nameof(Type));
+			get;
+			set => SetProp(ref field, value, nameof(Type));
 		}
-		private ECoinFilterType m_type;
 
 		/// <summary>Filter for the 'Coins' collection view</summary>
 		public bool Predicate(object obj)

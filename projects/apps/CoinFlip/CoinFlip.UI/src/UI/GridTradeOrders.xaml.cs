@@ -118,31 +118,30 @@ namespace CoinFlip.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>The global exchanges view. Provides the source of the "Current" exchange </summary>
 		private ICollectionView Exchanges
 		{
-			get => m_exchanges;
+			get;
 			set
 			{
-				if (m_exchanges == value) return;
-				if (m_exchanges != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 				}
 				HandleCurrentChanged(null, EventArgs.Empty);
 
@@ -162,8 +161,7 @@ namespace CoinFlip.UI
 					}
 				}
 			}
-		}
-		private ICollectionView m_exchanges = null!;
+		} = null!;
 
 		/// <summary>The view of the current live orders</summary>
 		public ICollectionView Orders { get; private set; }

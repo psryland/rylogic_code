@@ -32,29 +32,27 @@ namespace LDraw
 		/// <summary>The length of the data being parsed</summary>
 		public long DataLength
 		{
-			get => m_data_length;
+			get;
 			set
 			{
-				if (m_data_length == value) return;
-				m_data_length = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Percentage));
 				NotifyPropertyChanged(nameof(IsIndeterminate));
 			}
 		}
-		private long m_data_length;
 
 		/// <summary>Current position within the file</summary>
 		public long DataOffset
 		{
-			get => m_file_offset;
+			get;
 			set
 			{
-				if (m_file_offset == value) return;
-				m_file_offset = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Percentage));
 			}
 		}
-		private long m_file_offset;
 
 		/// <summary>Percentage progress through the file</summary>
 		public double Percentage => DataLength != 0 ? 100.0 * DataOffset / DataLength : 100.0 * (DataOffset % 0x1000) / 0x1000;

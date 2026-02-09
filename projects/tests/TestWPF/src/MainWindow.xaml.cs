@@ -260,15 +260,14 @@ namespace TestWPF
 		/// <summary>Some enum value</summary>
 		public EEnum EnumValue
 		{
-			get => m_enum_value;
+			get;
 			set
 			{
-				if (m_enum_value == value) return;
-				m_enum_value = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(EnumValue));
 			}
 		}
-		private EEnum m_enum_value;
 
 		/// <summary>Comma separated list of selected things</summary>
 		public string SelectedDescription => string.Join(", ", Things.Where(x => x.IsChecked).Select(x => x.Name));

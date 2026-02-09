@@ -44,29 +44,29 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 		public DockPane? ActivePane
 		{
-			get => m_active_pane;
+			get;
 			set
 			{
-				if (m_active_pane == value) return;
-				var old_pane = m_active_pane;
+				if (field == value) return;
+				var old_pane = field;
 				var old_content = ActiveContent;
 
 				// Change the pane
-				if (m_active_pane != null)
+				if (field != null)
 				{
-					m_active_pane.VisibleContentChanged -= HandleActiveContentChanged;
-					m_active_pane.VisibleContent?.SaveFocus();
+					field.VisibleContentChanged -= HandleActiveContentChanged;
+					field.VisibleContent?.SaveFocus();
 				}
-				PrevPane = m_active_pane;
-				m_active_pane = value;
-				if (m_active_pane != null)
+				PrevPane = field;
+				field = value;
+				if (field != null)
 				{
 					// Ensure the containing window is visible
-					if (PresentationSource.FromVisual(m_active_pane)?.RootVisual is Window wnd)
+					if (PresentationSource.FromVisual(field)?.RootVisual is Window wnd)
 						wnd.Visibility = Visibility.Visible;
 
-					m_active_pane.VisibleContent?.RestoreFocus();
-					m_active_pane.VisibleContentChanged += HandleActiveContentChanged;
+					field.VisibleContent?.RestoreFocus();
+					field.VisibleContentChanged += HandleActiveContentChanged;
 				}
 
 				// Notify observers of each pane about activation changed
@@ -86,7 +86,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		private DockPane? m_active_pane;
 		
 		/// <summary>The previously active dock pane</summary>
 		public DockPane? PrevPane

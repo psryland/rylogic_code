@@ -116,9 +116,8 @@ namespace EscapeVelocity
 		[Description("The material from which to build the main hull containing the passengers")]
 		public Compound HullCompound
 		{
-			get => m_hull_compound;
-			set => m_hull_compound = Fuel[0].TankCompound = Fuel[1].TankCompound = value;
-		}
-		private Compound m_hull_compound = null!;
+			get;
+			set => field = Fuel[0].TankCompound = Fuel[1].TankCompound = value;
+		} = null!;
 	}
 }

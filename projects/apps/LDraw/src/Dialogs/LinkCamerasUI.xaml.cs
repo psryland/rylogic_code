@@ -41,18 +41,18 @@ namespace LDraw.Dialogs
 		/// <summary>The scene we're setting links for</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
+					field.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
+					field.Scenes.CollectionChanged += HandleScenesCollectionChanged;
 				}
 
 				// Handlers
@@ -61,8 +61,7 @@ namespace LDraw.Dialogs
 					PopulateAvavailableScenes();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The scene to get navigation events from</summary>
 		public SceneWrapper? Source

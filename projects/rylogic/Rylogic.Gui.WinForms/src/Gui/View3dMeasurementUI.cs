@@ -74,22 +74,22 @@ namespace Rylogic.Gui.WinForms
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public View3d.Window Window
 		{
-			get { return m_window; }
+			get;
 			set
 			{
-				if (m_window == value) return;
-				if (m_window != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_window.OnRendering -= HandleRendering;
-					m_window.OnSceneChanged -= HandleSceneChanged;
+					field.OnRendering -= HandleRendering;
+					field.OnSceneChanged -= HandleSceneChanged;
 					Control = null;
 				}
-				m_window = value;
-				if (m_window != null)
+				field = value;
+				if (field != null)
 				{
-					Control = FromHandle(m_window.Hwnd);
-					m_window.OnSceneChanged += HandleSceneChanged;
-					m_window.OnRendering += HandleRendering;
+					Control = FromHandle(field.Hwnd);
+					field.OnSceneChanged += HandleSceneChanged;
+					field.OnRendering += HandleRendering;
 				}
 
 				// Handlers
@@ -146,7 +146,6 @@ namespace Rylogic.Gui.WinForms
 				}
 			}
 		}
-		private View3d.Window m_window;
 
 		/// <summary>The WinForms control associated with 'Window'</summary>
 		[Browsable(false)]

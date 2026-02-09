@@ -19,43 +19,40 @@ public partial class ConnectUI : Window, INotifyPropertyChanged
     /// <summary>The ADO organisation</summary>
     public string Organization
     {
-        get => m_organization;
+        get;
         set
         {
-            if (m_organization == value) return;
-            m_organization = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(Organization));
             NotifyPropertyChanged(nameof(AdoUrl));
         }
-    }
-    private string m_organization = string.Empty;
+    } = string.Empty;
 
     /// <summary>The ADO project</summary>
     public string Project
     {
-        get => m_project;
+        get;
         set
         {
-            if (m_project == value) return;
-            m_project = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(Project));
             NotifyPropertyChanged(nameof(AdoUrl));
         }
-    }
-    private string m_project = string.Empty;
+    } = string.Empty;
 
     /// <summary>The access token for ADO</summary>
     public string PersonalAccessToken
     {
-        get => m_personal_access_token;
+        get;
         set
         {
-            if (m_personal_access_token == value) return;
-            m_personal_access_token = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(PersonalAccessToken));
         }
-    }
-    private string m_personal_access_token = string.Empty;
+    } = string.Empty;
 
     /// <summary>The ADO URL</summary>
     public string AdoUrl => $"https://dev.azure.com/{Organization}/{Project}";

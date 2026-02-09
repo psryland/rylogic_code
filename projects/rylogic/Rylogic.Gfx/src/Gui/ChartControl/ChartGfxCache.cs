@@ -82,15 +82,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The collection of cached graphics models</summary>
 		public List<IChartGfxPiece> Pieces
 		{
-			get => m_pieces;
+			get;
 			private set
 			{
-				if (m_pieces == value) return;
-				Util.DisposeRange(m_pieces);
-				m_pieces = value;
+				if (field == value) return;
+				Util.DisposeRange(field);
+				field = value;
 			}
-		}
-		private List<IChartGfxPiece> m_pieces = null!;
+		} = null!;
 
 		/// <summary>
 		/// Get the series data graphics that spans the given x range.
@@ -169,15 +168,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The model for the piece of the series data graphics</summary>
 		public View3d.Object? Gfx
 		{
-			get => m_gfx;
+			get;
 			private set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object? m_gfx;
 
 		/// <summary>The X-Axis span covered by this piece</summary>
 		public RangeF Range { get; }

@@ -39,18 +39,18 @@ namespace CoinFlip.Bots
 		/// <summary>The model we're registered with</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.MainLoopTick -= HandleLoopTick;
+					field.MainLoopTick -= HandleLoopTick;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.MainLoopTick += HandleLoopTick;
+					field.MainLoopTick += HandleLoopTick;
 				}
 
 				// Handle notification that the History or Orders collections on an exchange has changed
@@ -59,8 +59,7 @@ namespace CoinFlip.Bots
 					CheckForCompletedOrders();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The number of orders not known to be filled</summary>
 		public int Count => Orders.Length;

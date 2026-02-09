@@ -115,22 +115,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The content hosted by this pane</summary>
 		public ObservableCollection<DockControl> AllContent
 		{
-			get => m_content;
+			get;
 			private set
 			{
-				if (m_content == value) return;
-				if (m_content != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					// Note: The DockPane does not own the content
 					ContentView = null!;
-					m_content.Clear();
-					m_content.CollectionChanged -= HandleCollectionChanged;
+					field.Clear();
+					field.CollectionChanged -= HandleCollectionChanged;
 				}
-				m_content = value;
-				if (m_content != null)
+				field = value;
+				if (field != null)
 				{
-					ContentView = CollectionViewSource.GetDefaultView(m_content);
-					m_content.CollectionChanged += HandleCollectionChanged;
+					ContentView = CollectionViewSource.GetDefaultView(field);
+					field.CollectionChanged += HandleCollectionChanged;
 				}
 
 				/// <summary>Handle the list of content in this pane changing</summary>
@@ -199,24 +199,23 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					}
 				}
 			}
-		}
-		private ObservableCollection<DockControl> m_content = null!;
+		} = null!;
 
 		/// <summary>The view of the content in this pane</summary>
 		public ICollectionView ContentView
 		{
-			get => m_content_view;
+			get;
 			private set
 			{
-				if (m_content_view == value) return;
-				if (m_content_view != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_content_view.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_content_view = value;
-				if (m_content_view != null)
+				field = value;
+				if (field != null)
 				{
-					m_content_view.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 				}
 
 				// When the current position changes, update the active content
@@ -225,8 +224,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					VisibleContent = (DockControl)ContentView.CurrentItem;
 				}
 			}
-		}
-		private ICollectionView m_content_view = null!;
+		} = null!;
 
 		/// <summary>
 		/// The content in this pane that was last active (Not necessarily the active content for the dock container)

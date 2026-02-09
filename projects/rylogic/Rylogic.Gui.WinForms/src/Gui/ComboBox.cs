@@ -1,4 +1,4 @@
-//#define PR_CB_TRACE
+﻿//#define PR_CB_TRACE
 using System;
 using System.Collections;
 using System.ComponentModel;
@@ -631,14 +631,13 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The dynamically created drop down list control</summary>
 		internal DropDownListControl DropDownListCtrl
 		{
-			get { return m_dd_list_ctrl; }
+			get;
 			private set
 			{
-				if (m_dd_list_ctrl == value) return;
-				m_dd_list_ctrl = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		[NonSerialized] private DropDownListControl m_dd_list_ctrl;
 
 		/// <summary>Preserves the selected index in the combo</summary>
 		public Scope PreserveSelectedIndex()

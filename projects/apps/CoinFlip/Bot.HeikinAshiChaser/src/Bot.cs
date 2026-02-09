@@ -35,19 +35,19 @@ namespace Bot.HeikinAshiChaser
 		/// <summary>Bot settings</summary>
 		public SettingsData Settings
 		{
-			get => m_settings;
+			get;
 			set
 			{
-				if (m_settings == value) return;
-				if (m_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_settings.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_settings = value;
-				if (m_settings != null)
+				field = value;
+				if (field != null)
 				{
 					SetInstrument();
-					m_settings.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 
 				// Handle setting change
@@ -67,7 +67,6 @@ namespace Bot.HeikinAshiChaser
 				}
 			}
 		}
-		private SettingsData m_settings;
 
 		/// <summary></summary>
 		public Exchange Exchange => !string.IsNullOrEmpty(Settings.Exchange) ? Model.Exchanges[Settings.Exchange] : null;
@@ -81,19 +80,19 @@ namespace Bot.HeikinAshiChaser
 		/// <summary></summary>
 		public Instrument Instrument
 		{
-			get => m_instrument;
+			get;
 			set
 			{
-				if (m_instrument == value) return;
-				if (m_instrument != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					//	m_instrument.DataChanged -= HandleDataChanged;
+					//	field.DataChanged -= HandleDataChanged;
 				}
-				m_instrument = value;
-				if (m_instrument != null)
+				field = value;
+				if (field != null)
 				{
-					m_instrument.CandleStyle = ECandleStyle.HeikinAshi;
-					//	m_instrument.DataChanged += HandleDataChanged;
+					field.CandleStyle = ECandleStyle.HeikinAshi;
+					//	field.DataChanged += HandleDataChanged;
 				}
 
 				// Handler
@@ -103,7 +102,6 @@ namespace Bot.HeikinAshiChaser
 				//}
 			}
 		}
-		private Instrument m_instrument;
 		private void SetInstrument()
 		{
 			Instrument = Pair != null && TimeFrame != ETimeFrame.None

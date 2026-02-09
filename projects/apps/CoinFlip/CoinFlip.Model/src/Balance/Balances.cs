@@ -320,18 +320,18 @@ namespace CoinFlip
 			/// <summary>Holds on this fund balance</summary>
 			public FundHoldContainer Holds
 			{
-				get => m_holds;
+				get;
 				set
 				{
-					if (m_holds == value) return;
-					if (m_holds != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_holds.HoldsChanged -= HandleHoldsChanged;
+						field.HoldsChanged -= HandleHoldsChanged;
 					}
-					m_holds = value;
-					if (m_holds != null)
+					field = value;
+					if (field != null)
 					{
-						m_holds.HoldsChanged += HandleHoldsChanged;
+						field.HoldsChanged += HandleHoldsChanged;
 					}
 
 					// Handler
@@ -342,8 +342,7 @@ namespace CoinFlip
 						CoinData.NotifyBalanceChanged(Coin);
 					}
 				}
-			}
-			private FundHoldContainer m_holds = null!;
+			} = null!;
 
 			/// <summary>Notify property changed for 'Total', 'Available', and 'Held'</summary>
 			public void Invalidate()

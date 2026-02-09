@@ -30,22 +30,21 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The control being resized</summary>
 		public Control Target
 		{
-			get { return m_target; }
+			get;
 			set
 			{
-				if (m_target == value) return;
-				if (m_target != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Application.RemoveMessageFilter(this);
 				}
-				m_target = value;
-				if (m_target != null)
+				field = value;
+				if (field != null)
 				{
 					Application.AddMessageFilter(this);
 				}
 			}
 		}
-		private Control m_target;
 
 		/// <summary>The size of the region around the edge of the control that triggers resizing</summary>
 		public int BorderWidth

@@ -153,18 +153,17 @@ namespace RyLogViewer
 		/// <summary>The main app</summary>
 		public Main Main
 		{
-			get { return m_impl_main; }
+			get;
 			private set
 			{
-				if (m_impl_main == value) return;
-				if (m_impl_main != null)
+				if (field == value) return;
+				if (field != null)
 				{ }
-				m_impl_main = value;
-				if (m_impl_main != null)
+				field = value;
+				if (field != null)
 				{ }
 			}
 		}
-		private Main m_impl_main;
 
 		/// <summary>Get/Set the currently displayed tip. If the index supplied doesn't exist, the TotD0 is displayed</summary>
 		public int TipIndex

@@ -85,38 +85,36 @@ public abstract class Node :ChartControl.Element, IHasStyle
 	/// <summary>Text to display in this node</summary>
 	public virtual string Text
 	{
-		get => m_text;
+		get;
 		set
 		{
 			if (Text == value) return;
-			m_text = value;
+			field = value;
 
 			if (Style.AutoSize) PerformAutoSize();
 			NotifyDataChanged();
 			Invalidate();
 		}
-	}
-	private string m_text = string.Empty;
+	} = string.Empty;
 
 	/// <summary>How to layout the text in the node</summary>
 	public StringFormat TextFormat
 	{
-		get => m_text_fmt;
+		get;
 		set
 		{
-			if (m_text_fmt == value) return;
-			m_text_fmt = value;
+			if (field == value) return;
+			field = value;
 
 			if (Style.AutoSize) PerformAutoSize();
 			Invalidate();
 		}
-	}
-	private StringFormat m_text_fmt = null!;
+	} = null!;
 
 	/// <summary>The diagram space width/height/depth of the element</summary>
 	public v4 Size
 	{
-		get => m_size;
+		get;
 		set
 		{
 			// Clamp 'value' to the size limits
@@ -124,43 +122,40 @@ public abstract class Node :ChartControl.Element, IHasStyle
 			if (Size == value)
 				return;
 
-			m_size = value;
+			field = value;
 			NotifySizeChanged();
 			NotifyPropertyChanged(nameof(Size));
 			Invalidate();
 		}
 	}
-	private v4 m_size;
 
 	/// <summary>Get/Set minimum size limit for auto size</summary>
 	public v4 SizeMin
 	{
-		get => m_size_min;
+		get;
 		set
 		{
 			if (SizeMin == value) return;
-			m_size_min = value;
+			field = value;
 			SizeMax = Math_.Max(value, SizeMax);
 			Size = Size;
 			NotifyPropertyChanged(nameof(SizeMin));
 		}
 	}
-	private v4 m_size_min;
 
 	/// <summary>Get/Set maximum size limit for auto size</summary>
 	public v4 SizeMax
 	{
-		get => m_size_max;
+		get;
 		set
 		{
 			if (SizeMax == value) return;
-			m_size_max = value;
+			field = value;
 			SizeMin = Math_.Min(value, SizeMin);
 			Size = Size;
 			NotifyPropertyChanged(nameof(SizeMax));
 		}
 	}
-	private v4 m_size_max;
 
 	/// <summary>Resize the node if AutoSize is enabled, otherwise no-op</summary>
 	public void PerformAutoSize()
@@ -191,18 +186,18 @@ public abstract class Node :ChartControl.Element, IHasStyle
 	/// <summary>Style attributes for the node</summary>
 	public NodeStyle Style
 	{
-		get => m_style;
+		get;
 		set
 		{
 			if (Style == value) return;
-			if (m_style != null)
+			if (field != null)
 			{
-				m_style.PropertyChanged -= HandleStyleChanged;
+				field.PropertyChanged -= HandleStyleChanged;
 			}
-			m_style = value ?? new();
-			if (m_style != null)
+			field = value ?? new();
+			if (field != null)
 			{
-				m_style.PropertyChanged += HandleStyleChanged;
+				field.PropertyChanged += HandleStyleChanged;
 			}
 			HandleStyleChanged(null, new PropertyChangedEventArgs(string.Empty));
 
@@ -214,9 +209,8 @@ public abstract class Node :ChartControl.Element, IHasStyle
 				Invalidate();
 			}
 		}
-	}
+	} = new();
 	IStyle IHasStyle.Style => Style;
-	private NodeStyle m_style = new();
 
 	/// <inheritdoc/>
 	public override BBox Bounds => new(O2W.pos, Size / 2);

@@ -44,34 +44,33 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Pinned window support</summary>
 		private PinData? PinState
 		{
-			get => m_pin_state;
+			get;
 			set
 			{
-				if (m_pin_state == value) return;
-				Util.Dispose(ref m_pin_state);
-				m_pin_state = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private PinData? m_pin_state;
 
 		/// <summary>The view model for the object manager behaviour</summary>
 		public View3d.ObjectManager ObjectManager
 		{
-			get => m_object_manager;
+			get;
 			private set
 			{
-				if (m_object_manager == value) return;
-				if (m_object_manager != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_object_manager.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 					View3d.Object.ObjectChanged -= HandleObjectPropertyChanged;
-					Util.Dispose(ref m_object_manager!);
+					Util.Dispose(ref field!);
 				}
-				m_object_manager = value;
-				if (m_object_manager != null)
+				field = value;
+				if (field != null)
 				{
 					View3d.Object.ObjectChanged += HandleObjectPropertyChanged;
-					m_object_manager.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -105,8 +104,7 @@ namespace Rylogic.Gui.WPF
 						ObjectManager.Window.Invalidate();
 				}
 			}
-		}
-		private View3d.ObjectManager m_object_manager = null!;
+		} = null!;
 
 		/// <summary>Access to the object container</summary>
 		public IList<View3d.Object> RootObjects => ObjectManager.Objects;

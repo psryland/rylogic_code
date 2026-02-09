@@ -57,18 +57,18 @@ namespace RyLogViewer
 		/// <summary>Application logic</summary>
 		private Main Main
 		{
-			get => m_main;
+			get;
 			set
 			{
-				if (m_main == value) return;
-				if (m_main != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_main.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_main = value;
-				if (m_main != null)
+				field = value;
+				if (field != null)
 				{
-					m_main.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -78,8 +78,7 @@ namespace RyLogViewer
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StatusLogDataSource)));
 				}
 			}
-		}
-		private Main m_main = null!;
+		} = null!;
 
 		/// <summary>Settings</summary>
 		private Settings Settings { get; }

@@ -22,15 +22,14 @@ namespace TestWPF
 		/// <summary></summary>
 		public string Path
 		{
-			get => m_path;
+			get;
 			set
 			{
-				if (m_path == value) return;
-				m_path = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Path));
 			}
-		}
-		private string m_path = string.Empty;
+		} = string.Empty;
 
 		/// <summary></summary>
 		public ObservableCollection<string> PathHistory { get; }
@@ -38,28 +37,26 @@ namespace TestWPF
 		/// <summary></summary>
 		public bool MustExist
 		{
-			get => m_must_exist;
+			get;
 			set
 			{
-				if (m_must_exist == value) return;
-				m_must_exist = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(MustExist));
 			}
 		}
-		private bool m_must_exist;
 
 		/// <summary></summary>
 		public bool RequireRoot
 		{
-			get => m_require_root;
+			get;
 			set
 			{
-				if (m_require_root == value) return;
-				m_require_root = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(RequireRoot));
 			}
 		}
-		private bool m_require_root;
 
 		/// <summary>Close the dialog</summary>
 		public Command Accept { get; }

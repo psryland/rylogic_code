@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -37,22 +37,21 @@ namespace CoinFlip.UI.Indicators
 		/// <summary>The indicator this view is based on</summary>
 		public IIndicator Indicator
 		{
-			get => m_indicator;
+			get;
 			private set
 			{
-				if (m_indicator == value) return;
-				if (m_indicator != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_indicator.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_indicator = value;
-				if (m_indicator != null)
+				field = value;
+				if (field != null)
 				{
-					m_indicator.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 			}
-		}
-		private IIndicator m_indicator = null!;
+		} = null!;
 
 		/// <summary>The string description of the indicator</summary>
 		public string Label => Indicator.Label;

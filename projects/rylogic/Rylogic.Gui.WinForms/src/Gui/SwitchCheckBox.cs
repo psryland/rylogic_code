@@ -56,15 +56,14 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Check state of the button</summary>
 		public bool Checked
 		{
-			get { return m_checked; }
+			get;
 			set
 			{
-				if (m_checked == value) return;
-				m_checked = value;
+				if (field == value) return;
+				field = value;
 				OnCheckedChanged();
 			}
 		}
-		private bool m_checked;
 
 		/// <summary>True if 'Checked' is automatically toggled on click</summary>
 		public bool AutoCheck

@@ -93,29 +93,27 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The bluetooth radio to use.</summary>
 		public Bluetooth.Radio Radio
 		{
-			get { return m_radio; }
+			get;
 			private set
 			{
-				if (m_radio == value) return;
-				m_radio = value;
+				if (field == value) return;
+				field = value;
 				PopulateDevices();
 				UpdateUI();
 			}
 		}
-		private Bluetooth.Radio m_radio;
 
 		/// <summary>The selected device</summary>
 		public Bluetooth.Device Device
 		{
-			get { return m_device; }
+			get;
 			private set
 			{
-				if (m_device == value) return;
-				m_device = value;
+				if (field == value) return;
+				field = value;
 				UpdateUI();
 			}
 		}
-		private Bluetooth.Device m_device;
 
 		/// <summary>The image list for devices (too allow users at add custom ones)</summary>
 		public ImageList DeviceImageList { get; private set; }

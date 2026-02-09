@@ -94,16 +94,15 @@ namespace TestWPF
 		/// <summary>Flip X/Y Labels</summary>
 		public bool FlipLabels
 		{
-			get => m_flip_labels;
+			get;
 			set
 			{
-				if (m_flip_labels == value) return;
-				m_flip_labels = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(XAxisLabel));
 				NotifyPropertyChanged(nameof(YAxisLabel));
 			}
 		}
-		private bool m_flip_labels;
 
 		/// <summary>Custom CMenu option</summary>
 		public Command ShowBoobs { get; }

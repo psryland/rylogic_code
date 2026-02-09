@@ -59,7 +59,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Gets or sets the name for the credentials.</summary>
 		public string Name
 		{
-			get { return m_name; }
+			get;
 			set
 			{
 				if (value != null && value.Length > CREDUI.MAX_USERNAME_LENGTH)
@@ -67,15 +67,14 @@ namespace Rylogic.Gui.WinForms
 					string message = String.Format(Thread.CurrentThread.CurrentUICulture, "The name has a maximum length of {0} characters.", CREDUI.MAX_USERNAME_LENGTH);
 					throw new ArgumentException(message, "value");
 				}
-				m_name = value;
+				field = value;
 			}
-		}
-		private string m_name = String.Empty;
+		} = String.Empty;
 
 		/// <summary>Gets or sets the password for the credentials.</summary>
 		public string Password
 		{
-			get { return m_password; }
+			get;
 			set
 			{
 				if (value != null && value.Length > CREDUI.MAX_PASSWORD_LENGTH)
@@ -83,10 +82,9 @@ namespace Rylogic.Gui.WinForms
 					string message = String.Format(Thread.CurrentThread.CurrentUICulture, "The password has a maximum length of {0} characters.", CREDUI.MAX_PASSWORD_LENGTH);
 					throw new ArgumentException(message, "value");
 				}
-				m_password = value;
+				field = value;
 			}
-		}
-		private string m_password = String.Empty;
+		} = String.Empty;
 
 		/// <summary>Gets or sets if the save check box status.</summary>
 		public bool SaveChecked { get; set; }
@@ -98,7 +96,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Gets or sets the name of the target for the credentials, typically a server name.</summary>
 		public string Target
 		{
-			get { return m_target; }
+			get;
 			set
 			{
 				if (value == null) throw new ArgumentException("The target cannot be a null value.", "value");
@@ -107,16 +105,15 @@ namespace Rylogic.Gui.WinForms
 					string message = String.Format(Thread.CurrentThread.CurrentUICulture, "The target has a maximum length of {0} characters.", CREDUI.MAX_GENERIC_TARGET_LENGTH);
 					throw new ArgumentException(message, "value");
 				}
-				m_target = value;
+				field = value;
 			}
-		}
-		private string m_target = String.Empty;
+		} = String.Empty;
 
 		/// <summary>Gets or sets the caption of the dialog.</summary>
 		/// <remarks>A null value will cause a system default caption to be used.</remarks>
 		public string Caption
 		{
-			get { return m_caption; }
+			get;
 			set
 			{
 				if (value != null && value.Length > CREDUI.MAX_CAPTION_LENGTH)
@@ -124,16 +121,15 @@ namespace Rylogic.Gui.WinForms
 					string message = String.Format(Thread.CurrentThread.CurrentUICulture, "The caption has a maximum length of {0} characters.", CREDUI.MAX_CAPTION_LENGTH);
 					throw new ArgumentException(message, "value");
 				}
-				m_caption = value;
+				field = value;
 			}
-		}
-		private string m_caption = String.Empty;
+		} = String.Empty;
 
 		/// <summary>Gets or sets the message of the dialog.</summary>
 		/// <remarks>A null value will cause a system default message to be used.</remarks>
 		public string Message
 		{
-			get { return m_message; }
+			get;
 			set
 			{
 				if (value != null && value.Length > CREDUI.MAX_MESSAGE_LENGTH)
@@ -141,16 +137,15 @@ namespace Rylogic.Gui.WinForms
 					string message = String.Format(Thread.CurrentThread.CurrentUICulture, "The message has a maximum length of {0} characters.", CREDUI.MAX_MESSAGE_LENGTH);
 					throw new ArgumentException(message, "value");
 				}
-				m_message = value;
+				field = value;
 			}
-		}
-		private string m_message = String.Empty;
+		} = String.Empty;
 
 		/// <summary>Gets or sets the image to display on the dialog.</summary>
 		/// <remarks>A null value will cause a system default image to be used.</remarks>
 		public Image Banner
 		{
-			get { return m_banner; }
+			get;
 			set
 			{
 				if (value != null)
@@ -158,10 +153,9 @@ namespace Rylogic.Gui.WinForms
 					if (value.Width  != ValidBannerWidth ) throw new ArgumentException("The banner image width must be 320 pixels.", "value");
 					if (value.Height != ValidBannerHeight) throw new ArgumentException("The banner image height must be 60 pixels.", "value");
 				}
-				m_banner = value;
+				field = value;
 			}
 		}
-		private Image m_banner;
 
 		/// <summary>Shows the credentials dialog.</summary>
 		/// <returns>Returns a DialogResult indicating the user action.</returns>

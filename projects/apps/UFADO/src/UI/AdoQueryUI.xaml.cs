@@ -37,41 +37,38 @@ public partial class AdoQueryUI : Window, INotifyPropertyChanged
     /// <summary>Test Query String</summary>
     public string QueryString
     {
-        get => m_query_string;
+        get;
         set
         {
             if (QueryString == value) return;
-            m_query_string = value;
+            field = value;
             NotifyPropertyChanged(nameof(QueryString));
         }
-    }
-    private string m_query_string = string.Empty;
+    } = string.Empty;
 
     /// <summary>The result of the query</summary>
     public string QueryResult
     {
-        get => m_query_result;
+        get;
         set
         {
-            if (m_query_result == value) return;
-            m_query_result = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(QueryResult));
         }
-    }
-    private string m_query_result = string.Empty;
+    } = string.Empty;
 
     /// <summary></summary>
     public Color ResultColor
     {
-        get => m_color;
+        get;
         set
         {
-            if (m_color == value) return;
-            m_color = value;
+            if (field == value) return;
+            field = value;
             NotifyPropertyChanged(nameof(ResultColor));
         }
     }
-    private Color m_color;
 
     /// <summary></summary>
     public Command RunQuery { get; }

@@ -61,15 +61,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Graphics for the connector line</summary>
 		private View3d.Object Gfx
 		{
-			get => m_gfx;
+			get;
 			set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx!);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Object m_gfx = null!;
+		} = null!;
 
 		/// <summary>The position of the mid-point relative to the average of Anc0.LocationWS and Anc1.LocationWS</summary>
 		private v4 CentreOffset { get; set; }
@@ -95,15 +94,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>The connector type</summary>
 		public EType Type
 		{
-			get => m_connector_type;
+			get;
 			set
 			{
-				if (m_connector_type == value) return;
-				m_connector_type = value;
+				if (field == value) return;
+				field = value;
 				Invalidate();
 			}
 		}
-		private EType m_connector_type;
 
 		/// <summary>The connector end type at Anc0 (on Node0)</summary>
 		public EEnd End0 => Type.HasFlag(EType.Back) ? EEnd.Arrow : EEnd.Line;
@@ -274,18 +272,18 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Style attributes for the connector</summary>
 		public ConnectorStyle Style
 		{
-			get => m_style;
+			get;
 			set
 			{
 				if (Style == value) return;
-				if (m_style != null)
+				if (field != null)
 				{
-					m_style.PropertyChanged -= HandleStyleChanged;
+					field.PropertyChanged -= HandleStyleChanged;
 				}
-				m_style = value ?? new ConnectorStyle();
-				if (m_style != null)
+				field = value ?? new ConnectorStyle();
+				if (field != null)
 				{
-					m_style.PropertyChanged += HandleStyleChanged;
+					field.PropertyChanged += HandleStyleChanged;
 				}
 				Invalidate();
 
@@ -295,9 +293,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 					Invalidate();
 				}
 			}
-		}
+		} = new();
 		IStyle IHasStyle.Style => Style;
-		private ConnectorStyle m_style = new();
 
 		/// <inheritdoc/>
 		public override BBox Bounds

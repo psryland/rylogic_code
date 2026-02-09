@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Graph Control
 // Copyright (C) Rylogic Ltd 2008
 //***************************************************
@@ -113,30 +113,28 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The graph title</summary>
 		public string Title
 		{
-			get { return m_impl_title; }
+			get;
 			set
 			{
-				if (m_impl_title == value) return;
-				m_impl_title = value;
+				if (field == value) return;
+				field = value;
 				Dirty = true;
 			}
 		}
-		private string m_impl_title;
 
 		/// <summary>The current X/Y axis range of the chart</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RangeData Range
 		{
-			get { return m_range; }
+			get;
 			private set
 			{
-				if (value == m_range) return;
-				Util.Dispose(ref m_range);
-				m_range = value;
+				if (value == field) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private RangeData m_range;
 
 		/// <summary>Accessor to the current X axis</summary>
 		[Browsable(false)]
@@ -743,26 +741,23 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The fill colour of the background of the chart</summary>
 			public Color BkColour
 			{
-				get { return m_BkColour; }
-				set { SetProp(ref m_BkColour, value, nameof(BkColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(BkColour)); }
 			}
-			private Color m_BkColour;
 
 			/// <summary>The fill colour of the chart background</summary>
 			public Color PlotBkColour
 			{
-				get { return m_PlotBkColour; }
-				set { SetProp(ref m_PlotBkColour, value, nameof(PlotBkColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(PlotBkColour)); }
 			}
-			private Color m_PlotBkColour;
 
 			/// <summary>The colour of the title text</summary>
 			public Color TitleColour
 			{
-				get { return m_TitleColour; }
-				set { SetProp(ref m_TitleColour, value, nameof(TitleColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleColour)); }
 			}
-			private Color m_TitleColour;
 
 			/// <summary>The colour of the axes</summary>
 			public Color AxisColour
@@ -775,64 +770,57 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The colour of the grid lines</summary>
 			public Color GridColour
 			{
-				get { return m_GridColour; }
-				set { SetProp(ref m_GridColour, value, nameof(GridColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(GridColour)); }
 			}
-			private Color m_GridColour;
 
 			/// <summary>Font to use for the title text</summary>
 			public Font TitleFont
 			{
-				get { return m_TitleFont; }
-				set { SetProp(ref m_TitleFont, value, nameof(TitleFont)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleFont)); }
 			}
-			private Font m_TitleFont;
 
 			/// <summary>Transform for position the graph title, offset from top centre</summary>
 			public Matrix TitleTransform
 			{
-				get { return m_TitleTransform; }
-				set { SetProp(ref m_TitleTransform, value, nameof(TitleTransform)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleTransform)); }
 			}
-			private Matrix m_TitleTransform;
 
 			/// <summary>The distances from the edge of the control to the graph area</summary>
 			public Padding Margin
 			{
-				get { return m_Margin; }
-				set { SetProp(ref m_Margin, value, nameof(Margin)); }
+				get;
+				set { SetProp(ref field, value, nameof(Margin)); }
 			}
-			private Padding m_Margin;
 
 			/// <summary>Font to use for graph notes</summary>
 			public Font NoteFont
 			{
-				get { return m_NoteFont; }
-				set { SetProp(ref m_NoteFont, value, nameof(NoteFont)); }
+				get;
+				set { SetProp(ref field, value, nameof(NoteFont)); }
 			}
-			private Font m_NoteFont;
 
 			/// <summary>Area selection colour</summary>
 			public Color SelectionColour
 			{
-				get { return m_SelectionColour; }
-				set { SetProp(ref m_SelectionColour, value, nameof(SelectionColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(SelectionColour)); }
 			}
-			private Color m_SelectionColour;
 
 			/// <summary>XAxis rendering options</summary>
 			public Axis XAxis 
 			{
-				get { return m_XAxis; }
+				get;
 				private set
 				{
-					if (m_XAxis == value) return;
-					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
-					m_XAxis = value;
-					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
+					if (field == value) return;
+					if (field != null) field.PropertyChanged -= HandleXAxisPropertyChanged;
+					field = value;
+					if (field != null) field.PropertyChanged -= HandleXAxisPropertyChanged;
 				}
 			}
-			private Axis m_XAxis;
 			private void HandleXAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
 			{
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(XAxis)));
@@ -841,16 +829,15 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>YAxis rendering options</summary>
 			public Axis YAxis
 			{
-				get { return m_YAxis; }
+				get;
 				private set
 				{
-					if (m_YAxis == value) return;
-					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
-					m_YAxis = value;
-					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
+					if (field == value) return;
+					if (field != null) field.PropertyChanged -= HandleYAxisPropertyChanged;
+					field = value;
+					if (field != null) field.PropertyChanged -= HandleYAxisPropertyChanged;
 				}
 			}
-			private Axis m_YAxis;
 			private void HandleYAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
 			{
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(YAxis)));
@@ -932,18 +919,16 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The font to use for the axis label</summary>
 				public Font LabelFont
 				{
-					get { return m_LabelFont; }
-					set { SetProp(ref m_LabelFont, value, nameof(LabelFont)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelFont)); }
 				}
-				private Font m_LabelFont;
 
 				/// <summary>The font to use for tick labels</summary>
 				public Font TickFont
 				{
-					get { return m_TickFont; }
-					set { SetProp(ref m_TickFont, value, nameof(TickFont)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickFont)); }
 				}
-				private Font m_TickFont;
 
 				/// <summary>The colour of the main axes</summary>
 				public Color AxisColour
@@ -956,66 +941,58 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The colour of the label text</summary>
 				public Color LabelColour
 				{
-					get { return m_LabelColour; }
-					set { SetProp(ref m_LabelColour, value, nameof(LabelColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelColour)); }
 				}
-				private Color m_LabelColour;
 
 				/// <summary>The colour of the tick text</summary>
 				public Color TickColour
 				{
-					get { return m_TickColour; }
-					set { SetProp(ref m_TickColour, value, nameof(TickColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickColour)); }
 				}
-				private Color m_TickColour;
 
 				/// <summary>The length of the tick marks</summary>
 				public int TickLength
 				{
-					get { return m_TickLength; }
-					set { SetProp(ref m_TickLength, value, nameof(TickLength)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickLength)); }
 				}
-				private int m_TickLength;
 
 				/// <summary>The minimum space reserved for tick marks and labels</summary>
 				public float MinTickSize
 				{
-					get { return m_MinTickSize; }
-					set { SetProp(ref m_MinTickSize, value, nameof(MinTickSize)); }
+					get;
+					set { SetProp(ref field, value, nameof(MinTickSize)); }
 				}
-				private float m_MinTickSize;
 
 				/// <summary>True if tick marks should be drawn</summary>
 				public bool DrawTickMarks
 				{
-					get { return m_DrawTickMarks; }
-					set { SetProp(ref m_DrawTickMarks, value, nameof(DrawTickMarks)); }
+					get;
+					set { SetProp(ref field, value, nameof(DrawTickMarks)); }
 				}
-				private bool m_DrawTickMarks;
 
 				/// <summary>True if tick labels should be drawn</summary>
 				public bool DrawTickLabels
 				{
-					get { return m_DrawTickLabels; }
-					set { SetProp(ref m_DrawTickLabels, value, nameof(DrawTickLabels)); }
+					get;
+					set { SetProp(ref field, value, nameof(DrawTickLabels)); }
 				}
-				private bool m_DrawTickLabels;
 
 				/// <summary>Offset transform from default label position</summary>
 				public Matrix LabelTransform
 				{
-					get { return m_LabelTransform; }
-					set { SetProp(ref m_LabelTransform, value, nameof(LabelTransform)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelTransform)); }
 				}
-				private Matrix m_LabelTransform;
 
 				/// <summary>The preferred number of pixels between each grid line</summary>
 				public double PixelsPerTick
 				{
-					get { return m_PixelsPerTick; }
-					set { SetProp(ref m_PixelsPerTick, value, nameof(PixelsPerTick)); }
+					get;
+					set { SetProp(ref field, value, nameof(PixelsPerTick)); }
 				}
-				private double m_PixelsPerTick;
 			}
 		}
 
@@ -1077,38 +1054,36 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The graph X axis</summary>
 			public Axis XAxis
 			{
-				get { return m_xaxis; }
+				get;
 				internal set
 				{
-					if (m_xaxis == value) return;
-					if (m_xaxis != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						Util.Dispose(ref m_xaxis);
+						Util.Dispose(ref field);
 					}
-					m_xaxis = value;
-					if (m_xaxis != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Axis m_xaxis;
 
 			/// <summary>The chart Y axis</summary>
 			public Axis YAxis
 			{
-				get { return m_yaxis; }
+				get;
 				internal set
 				{
-					if (m_yaxis == value) return;
-					if (m_yaxis != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						Util.Dispose(ref m_yaxis);
+						Util.Dispose(ref field);
 					}
-					m_yaxis = value;
-					if (m_yaxis != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Axis m_yaxis;
 
 			/// <summary>Graph axis data</summary>
 			[DebuggerDisplay("lbl={Label} rng=[{Min} : {Max}]")]

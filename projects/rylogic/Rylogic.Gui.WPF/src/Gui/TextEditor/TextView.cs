@@ -78,15 +78,14 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary></summary>
 		public TextFormatter? Formatter
 		{
-			get => m_formatter;
+			get;
 			set
 			{
-				if (m_formatter == value) return;
-				Util.Dispose(ref m_formatter);
-				m_formatter = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private TextFormatter? m_formatter;
 
 		/// <summary>Returns the first visible document line for the given scroll Y position</summary>
 		public Line? FirstVisibleLine(double Y)

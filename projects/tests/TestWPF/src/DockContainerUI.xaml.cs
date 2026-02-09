@@ -94,15 +94,14 @@ namespace TestWPF
 		public DockControl DockControl
 		{
 			[DebuggerStepThrough]
-			get { return m_dock_control; }
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>Human friendly name</summary>
 		public override string ToString()

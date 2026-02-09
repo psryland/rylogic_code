@@ -41,18 +41,18 @@ namespace SolarHotWater.UI
 		/// <summary></summary>
 		public EweDevice Device
 		{
-			get => m_device;
+			get;
 			set
 			{
-				if (m_device == value) return;
-				if (m_device != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_device.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_device = value;
-				if (m_device != null)
+				field = value;
+				if (field != null)
 				{
-					m_device.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -67,8 +67,7 @@ namespace SolarHotWater.UI
 					NotifyPropertyChanged(nameof(Body));
 				}
 			}
-		}
-		private EweDevice m_device = null!;
+		} = null!;
 
 		/// <summary>Access the device as a switch (or null if not a switch)</summary>
 		public EweSwitch? Switch => Device as EweSwitch;

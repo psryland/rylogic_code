@@ -39,22 +39,21 @@ namespace CoinFlip
 		/// <summary>The API interface</summary>
 		private BinanceApi Api
 		{
-			get => m_api;
+			get;
 			set
 			{
-				if (m_api == value) return;
-				if (m_api != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_api!);
+					Util.Dispose(ref field!);
 				}
-				m_api = value;
-				if (m_api != null)
+				field = value;
+				if (field != null)
 				{
-					m_api.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
+					field.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
 				}
 			}
-		}
-		private BinanceApi m_api = null!;
+		} = null!;
 		
 		/// <inheritdoc/>
 		protected override IExchangeApi ExchangeApi => Api;

@@ -186,19 +186,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The root of the tree in this dock container</summary>
 		internal Branch Root
 		{
-			get => m_root;
+			get;
 			set
 			{
-				if (m_root == value) return;
-				if (m_root != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_root.TreeChanged -= HandleTreeChanged;
-					Util.Dispose(ref m_root!);
+					field.TreeChanged -= HandleTreeChanged;
+					Util.Dispose(ref field!);
 				}
-				m_root = value;
-				if (m_root != null)
+				field = value;
+				if (field != null)
 				{
-					m_root.TreeChanged += HandleTreeChanged;
+					field.TreeChanged += HandleTreeChanged;
 				}
 
 				/// <summary>Handler for when panes/branches are added/removed from the tree</summary>
@@ -235,8 +235,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private Branch m_root = null!;
+		} = null!;
 		Branch ITreeHost.Root => Root;
 
 		// Tip: to add auto hide dockables use:
@@ -379,28 +378,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The floating windows associated with this dock container</summary>
 		public FloatingWindowCollection FloatingWindows
 		{
-			get => m_floating_windows;
+			get;
 			set
 			{
-				if (m_floating_windows == value) return;
-				Util.Dispose(ref m_floating_windows!);
-				m_floating_windows = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private FloatingWindowCollection m_floating_windows = null!;
+		} = null!;
 
 		/// <summary>Panels that auto hide when their contained tree does not contain the active pane</summary>
 		public AutoHidePanelCollection AutoHidePanels
 		{
-			get => m_auto_hide_panels;
+			get;
 			private set
 			{
-				if (m_auto_hide_panels == value) return;
-				Util.Dispose(ref m_auto_hide_panels!);
-				m_auto_hide_panels = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private AutoHidePanelCollection m_auto_hide_panels = null!;
+		} = null!;
 
 		/// <summary>A command to load a UI layout</summary>
 		public ICommand CmdLoadLayout { get; }

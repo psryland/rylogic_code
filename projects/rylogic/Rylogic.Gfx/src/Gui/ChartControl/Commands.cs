@@ -497,11 +497,11 @@ namespace Rylogic.Gui.WPF
 		/// <inheritdoc/>
 		public View3d.ESceneBounds AutoRangeBounds
 		{
-			get => m_AutoRangeBounds;
+			get;
 			set
 			{
-				if (m_AutoRangeBounds == value) return;
-				m_AutoRangeBounds = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(AutoRangeBounds));
 			}
 		}
@@ -511,7 +511,6 @@ namespace Rylogic.Gui.WPF
 			var bounds = parameter is View3d.ESceneBounds b ? b : View3d.ESceneBounds.All;
 			AutoRange(who: bounds);
 		}
-		private View3d.ESceneBounds m_AutoRangeBounds;
 
 		/// <inheritdoc/>
 		public ICommand DoAspect11 { get; private set; } = null!;

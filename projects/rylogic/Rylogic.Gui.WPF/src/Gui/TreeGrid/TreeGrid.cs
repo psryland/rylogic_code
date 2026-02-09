@@ -602,7 +602,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>True if this node is expanded</summary>
 			public bool IsExpanded
 			{
-				get => m_is_expanded;
+				get;
 				set
 				{
 					if (IsExpanded == value) return;
@@ -613,7 +613,7 @@ namespace Rylogic.Gui.WPF
 					if (expand)
 					{
 						// Ensure the node knows it's expanded
-						m_is_expanded = true;
+						field = true;
 
 						// Add each child to the flat list
 						int child_index = 0;
@@ -627,12 +627,11 @@ namespace Rylogic.Gui.WPF
 							List.Remove(child);
 
 						// Ensure the node knows it's collapsed
-						m_is_expanded = false;
+						field = false;
 					}
 					NotifyPropertyChanged(nameof(IsExpanded));
 				}
 			}
-			private bool m_is_expanded;
 
 			/// <summary>True if the node has child nodes</summary>
 			public bool HasChildren => ChildItems.Any();

@@ -73,20 +73,20 @@ namespace Bot.Rebalance
 		/// <summary>Trading instrument selector</summary>
 		public ExchPairTimeFrame ChartSelector
 		{
-			get { return m_chart_selector; }
+			get;
 			private set
 			{
-				if (m_chart_selector == value) return;
-				if (m_chart_selector != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart_selector.PropertyChanged -= HandleInstrumentChanged;
+					field.PropertyChanged -= HandleInstrumentChanged;
 				}
-				m_chart_selector = value;
-				if (m_chart_selector != null)
+				field = value;
+				if (field != null)
 				{
-					m_chart_selector.Exchange = Model.Exchanges[Settings.Exchange];
-					m_chart_selector.Pair = m_chart_selector.Exchange?.Pairs[Settings.Pair];
-					m_chart_selector.PropertyChanged += HandleInstrumentChanged;
+					field.Exchange = Model.Exchanges[Settings.Exchange];
+					field.Pair = field.Exchange?.Pairs[Settings.Pair];
+					field.PropertyChanged += HandleInstrumentChanged;
 				}
 
 				// Handler
@@ -108,7 +108,6 @@ namespace Bot.Rebalance
 				}
 			}
 		}
-		private ExchPairTimeFrame m_chart_selector;
 
 		/// <summary>Validate the current settings</summary>
 		public Exception Validate
@@ -167,14 +166,13 @@ namespace Bot.Rebalance
 		/// <summary>Graphics object for showing the price range</summary>
 		private GfxPriceRange GfxPriceRange
 		{
-			get { return m_gfx_price_range; }
+			get;
 			set
 			{
-				if (m_gfx_price_range == value) return;
-				Util.Dispose(ref m_gfx_price_range);
-				m_gfx_price_range = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private GfxPriceRange m_gfx_price_range;
 	}
 }

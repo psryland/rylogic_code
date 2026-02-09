@@ -70,18 +70,18 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>The market whose depth we're drawing</summary>
 		private CoinFlip.MarketDepth Market
 		{
-			get => m_market;
+			get;
 			set
 			{
-				if (m_market == value) return;
-				if (m_market != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_market.OrderBookChanged -= HandleOrderBookChanged;
+					field.OrderBookChanged -= HandleOrderBookChanged;
 				}
-				m_market = value;
-				if (m_market != null)
+				field = value;
+				if (field != null)
 				{
-					m_market.OrderBookChanged += HandleOrderBookChanged;
+					field.OrderBookChanged += HandleOrderBookChanged;
 				}
 
 				// Handler
@@ -90,19 +90,18 @@ namespace CoinFlip.UI.GfxObjects
 					Invalidate();
 				}
 			}
-		}
-		private CoinFlip.MarketDepth m_market = null!;
+		} = null!;
 
 		/// <summary>The position of the indicator as a fraction of the chart width. 0 = Far right, 0.5 = middle, 1 = Far left</summary>
 		private double IndicatorPosition
 		{
-			get => m_indicator_position;
+			get;
 			set
 			{
-				if (m_indicator_position == value) return;
-				m_indicator_position = Math_.Clamp(value, 0.05, 0.95);
+				if (field == value) return;
+				field = Math_.Clamp(value, 0.05, 0.95);
 
-				var pt = new Point(Chart.SceneBounds.Width * (1.0 - m_indicator_position), 0.0);
+				var pt = new Point(Chart.SceneBounds.Width * (1.0 - field), 0.0);
 				Canvas.SetLeft(Icon, pt.X);
 				Canvas.SetTop(Icon, pt.Y);
 
@@ -113,20 +112,18 @@ namespace CoinFlip.UI.GfxObjects
 				Invalidate();
 			}
 		}
-		private double m_indicator_position;
 
 		/// <summary>The graphics object</summary>
 		private View3d.Object? Gfx
 		{
-			get => m_gfx;
+			get;
 			set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx!);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
 		}
-		private View3d.Object? m_gfx;
 
 		/// <summary>The indicator showing the scale amount</summary>
 		private Polygon Icon { get; }

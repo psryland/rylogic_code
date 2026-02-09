@@ -93,12 +93,12 @@ namespace CoinFlip
 		/// <summary>The logged on user</summary>
 		public User User
 		{
-			get => m_user;
+			get;
 			set
 			{
-				if (m_user == value) return;
+				if (field == value) return;
 				UserChange?.Invoke(this, new PrePostEventArgs(after: false));
-				if (m_user != null)
+				if (field != null)
 				{
 					// Run the internal loop
 					MainLoopRunning = false;
@@ -107,15 +107,15 @@ namespace CoinFlip
 					Util.DisposeAll(Exchanges!);
 					Exchanges.Clear();
 				}
-				m_user = value;
-				if (m_user != null)
+				field = value;
+				if (field != null)
 				{
 					// Ensure the keys file exists
-					if (!Path_.FileExists(m_user.KeysFilepath))
-						m_user.NewKeys();
+					if (!Path_.FileExists(field.KeysFilepath))
+						field.NewKeys();
 
 					// Save the last user name
-					SettingsData.Settings.LastUser = m_user.Name;
+					SettingsData.Settings.LastUser = field.Name;
 
 					// Create Exchange instances with this user's API keys
 					CreateExchanges();
@@ -128,8 +128,7 @@ namespace CoinFlip
 				}
 				UserChange?.Invoke(this, new PrePostEventArgs(after: true));
 			}
-		}
-		private User m_user = null!;
+		} = null!;
 		public event EventHandler<PrePostEventArgs>? UserChange;
 
 		/// <summary>A main thread timer that simply updates the 'UtcNow' time to the current time (or back-testing clock)</summary>
@@ -331,35 +330,34 @@ namespace CoinFlip
 		/// <summary>A cancellation token for graceful shutdown</summary>
 		public CancellationTokenSource Shutdown
 		{
-			get => m_shutdown;
+			get;
 			private set
 			{
-				if (m_shutdown == value) return;
-				if (m_shutdown != null && !m_shutdown.IsCancellationRequested)
+				if (field == value) return;
+				if (field != null && !field.IsCancellationRequested)
 					throw new Exception("Shouldn't dispose a cancellation token before cancelling it");
 
-				Util.Dispose(ref m_shutdown!);
-				m_shutdown = value;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private CancellationTokenSource m_shutdown = null!;
+		} = null!;
 
 		/// <summary>The supported exchanges</summary>
 		public ExchangeContainer Exchanges
 		{
-			get => m_exchanges;
+			get;
 			private set
 			{
-				if (m_exchanges == value) return;
-				if (m_exchanges != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchanges.CollectionChanged -= HandleExchangeCollectionChanged;
-					Util.DisposeAll(m_exchanges!);
+					field.CollectionChanged -= HandleExchangeCollectionChanged;
+					Util.DisposeAll(field!);
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.CollectionChanged += HandleExchangeCollectionChanged;
+					field.CollectionChanged += HandleExchangeCollectionChanged;
 				}
 
 				// Handlers
@@ -412,24 +410,23 @@ namespace CoinFlip
 					HistoryChanging?.Invoke(oc.Exchange, e);
 				}
 			}
-		}
-		private ExchangeContainer m_exchanges = null!;
+		} = null!;
 
 		/// <summary>Data for each supported currency</summary>
 		public CoinDataList Coins
 		{
-			get => m_coins;
+			get;
 			private set
 			{
-				if (m_coins == value) return;
-				if (m_coins != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_coins.CollectionChanged -= HandleCollectionChanged;
+					field.CollectionChanged -= HandleCollectionChanged;
 				}
-				m_coins = value;
-				if (m_coins != null)
+				field = value;
+				if (field != null)
 				{
-					m_coins.CollectionChanged += HandleCollectionChanged;
+					field.CollectionChanged += HandleCollectionChanged;
 				}
 
 				// Handlers
@@ -440,8 +437,7 @@ namespace CoinFlip
 						exch.PairsUpdateRequired = true;
 				}
 			}
-		}
-		private CoinDataList m_coins = null!;
+		} = null!;
 
 		/// <summary>The sub-accounts used to partition balances on each exchange</summary>
 		public FundContainer Funds { get; }
@@ -452,32 +448,31 @@ namespace CoinFlip
 		/// <summary>The repository of candle data for all pairs and time frames</summary>
 		public PriceDataMap PriceData
 		{
-			get => m_price_data;
+			get;
 			private set
 			{
-				if (m_price_data == value) return;
-				Util.Dispose(ref m_price_data!);
-				m_price_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private PriceDataMap m_price_data = null!;
+		} = null!;
 
 		/// <summary>The simulation manager. Not null while 'BackTesting' is enabled</summary>
 		public Simulation? Simulation
 		{
-			get => m_simulation;
+			get;
 			private set
 			{
-				if (m_simulation == value) return;
-				if (m_simulation != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_simulation.SimPropertyChanged -= HandleSimPropertyChanged;
-					Util.Dispose(ref m_simulation);
+					field.SimPropertyChanged -= HandleSimPropertyChanged;
+					Util.Dispose(ref field);
 				}
-				m_simulation = value;
-				if (m_simulation != null)
+				field = value;
+				if (field != null)
 				{
-					m_simulation.SimPropertyChanged += HandleSimPropertyChanged;
+					field.SimPropertyChanged += HandleSimPropertyChanged;
 				}
 
 				// Handler
@@ -487,7 +482,6 @@ namespace CoinFlip
 				}
 			}
 		}
-		private Simulation? m_simulation;
 
 		/// <summary>The available charts</summary>
 		public ChartContainer Charts { get; }
@@ -537,16 +531,15 @@ namespace CoinFlip
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public Unit<decimal> NettWorth
 		{
-			get => m_nett_worth;
+			get;
 			set
 			{
-				if (m_nett_worth == value) return;
-				var args = new ValueChangedEventArgs<Unit<decimal>>(value, m_nett_worth);
-				m_nett_worth = value;
+				if (field == value) return;
+				var args = new ValueChangedEventArgs<Unit<decimal>>(value, field);
+				field = value;
 				NettWorthChanged?.Invoke(this, args);
 			}
 		}
-		private Unit<decimal> m_nett_worth;
 
 		/// <summary>Persist the current fund balances to settings</summary>
 		public void SaveFundBalances()

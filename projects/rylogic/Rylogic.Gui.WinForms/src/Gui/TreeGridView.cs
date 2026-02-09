@@ -142,10 +142,9 @@ namespace Rylogic.Gui.WinForms
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Func<object, ITreeItem> DataBinder
 		{
-			get { return m_data_binder; }
-			set { m_data_binder = value ?? (x => x as ITreeItem); }
+			get;
+			set { field = value ?? (x => x as ITreeItem); }
 		}
-		private Func<object, ITreeItem> m_data_binder;
 
 		/// <summary>Data binding source.</summary>
 		[Browsable(false)]
@@ -287,16 +286,15 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Get/Set the associated image list</summary>
 		public ImageList ImageList
 		{
-			get { return m_image_list; }
+			get;
 			set
 			{
-				if (m_image_list == value) return;
-				Util.Dispose(ref m_image_list);
-				m_image_list = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 				Invalidate();
 			}
 		}
-		private ImageList m_image_list;
 
 		/// <summary>Recursively expand all nodes in the tree</summary>
 		public void ExpandAll()
@@ -966,18 +964,17 @@ namespace Rylogic.Gui.WinForms
 		[Editor("System.Windows.Forms.Design.ImageIndexEditor", typeof(UITypeEditor))]
 		public int ImageIndex
 		{
-			get { return m_impl_image_index; }
+			get;
 			set
 			{
-				if (m_impl_image_index == value) return;
-				m_impl_image_index = value;
+				if (field == value) return;
+				field = value;
 				if (IsInGrid && !IsRoot)
 				{
 					Grid.InvalidateRow(base.Index);
 				}
 			}
 		}
-		private int m_impl_image_index;
 
 		/// <summary>
 		/// True if this node has no parent.

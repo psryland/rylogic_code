@@ -29,25 +29,24 @@ namespace Rylogic.Net
 		/// <summary>The socket</summary>
 		private ClientWebSocket Socket
 		{
-			get => m_socket;
+			get;
 			set
 			{
-				if (m_socket == value) return;
-				if (m_socket != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_socket!);
+					Util.Dispose(ref field!);
 				}
-				m_socket = value;
-				if (m_socket != null)
+				field = value;
+				if (field != null)
 				{
-					m_socket.Options.AddSubProtocol("Tls");
-					m_socket.Options.AddSubProtocol("Tls11");
-					m_socket.Options.AddSubProtocol("Tls12");
-					m_socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+					field.Options.AddSubProtocol("Tls");
+					field.Options.AddSubProtocol("Tls11");
+					field.Options.AddSubProtocol("Tls12");
+					field.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
 				}
 			}
-		}
-		private ClientWebSocket m_socket = null!;
+		} = null!;
 
 		/// <summary>Shutdown signal</summary>
 		private CancellationToken Shutdown { get; }
@@ -123,25 +122,24 @@ namespace Rylogic.Net
 		/// <summary>Heartbeat timer. Set to zero to disable. If enabled, calls 'OnHeartbeat' periodically</summary>
 		public TimeSpan Heartbeat
 		{
-			get => m_heartbeat;
+			get;
 			set
 			{
-				if (m_heartbeat == value) return;
-				m_heartbeat = value;
+				if (field == value) return;
+				field = value;
 				HeartbeatTimer();
 
 				// Handler
 				async void HeartbeatTimer()
 				{
-					for (;m_heartbeat != TimeSpan.Zero && !Shutdown.IsCancellationRequested;)
+					for (;field != TimeSpan.Zero && !Shutdown.IsCancellationRequested;)
 					{
 						OnHeartbeat?.Invoke(this, EventArgs.Empty);
-						await Task.Delay(m_heartbeat, Shutdown);
+						await Task.Delay(field, Shutdown);
 					}
 				}
 			}
 		}
-		private TimeSpan m_heartbeat;
 
 		/// <summary>Start/Stop listening for data</summary>
 		public bool Listening

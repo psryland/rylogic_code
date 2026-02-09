@@ -22,26 +22,23 @@ namespace TestWPF
 		/// <summary></summary>
 		public double Minimum
 		{
-			get => m_minimum;
-			set => SetProp(ref m_minimum, value, nameof(Minimum));
+			get;
+			set => SetProp(ref field, value, nameof(Minimum));
 		}
-		private double m_minimum;
 
 		/// <summary></summary>
 		public double Maximum
 		{
-			get => m_maximum;
-			set => SetProp(ref m_maximum, value, nameof(Maximum));
+			get;
+			set => SetProp(ref field, value, nameof(Maximum));
 		}
-		private double m_maximum;
 
 		/// <summary></summary>
 		public double Value
 		{
-			get => m_value;
-			set => SetProp(ref m_value, value, nameof(Value));
+			get;
+			set => SetProp(ref field, value, nameof(Value));
 		}
-		private double m_value;
 
 		/// <summary></summary>
 		public bool Go

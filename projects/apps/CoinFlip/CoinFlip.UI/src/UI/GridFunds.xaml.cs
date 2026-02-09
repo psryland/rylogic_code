@@ -55,28 +55,28 @@ namespace CoinFlip.UI
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.Exchanges.CollectionChanged -= HandleFundsChanged;
-					m_model.Coins.CollectionChanged -= HandleFundsChanged;
-					m_model.Funds.CollectionChanged -= HandleFundsChanged;
+					field.Exchanges.CollectionChanged -= HandleFundsChanged;
+					field.Coins.CollectionChanged -= HandleFundsChanged;
+					field.Funds.CollectionChanged -= HandleFundsChanged;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
 					Model.BackTestingChange -= HandleBackTestingChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 					Model.BackTestingChange += HandleBackTestingChanged;
 					SettingsData.Settings.SettingChange += HandleSettingChange;
 					CoinData.BalanceChanged += HandleBalanceChanged;
-					m_model.Funds.CollectionChanged += HandleFundsChanged;
-					m_model.Coins.CollectionChanged += HandleFundsChanged;
-					m_model.Exchanges.CollectionChanged += HandleFundsChanged;
+					field.Funds.CollectionChanged += HandleFundsChanged;
+					field.Coins.CollectionChanged += HandleFundsChanged;
+					field.Exchanges.CollectionChanged += HandleFundsChanged;
 				}
 
 				// Handle funds being created or destroyed
@@ -101,37 +101,35 @@ namespace CoinFlip.UI
 					coin?.Invalidate();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get { return m_dock_control; }
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView Exchanges
 		{
-			get => m_exchanges;
+			get;
 			private set
 			{
-				if (m_exchanges == value) return;
-				if (m_exchanges != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged -= HandleCurrentExchangeChanged;
+					field.CurrentChanged -= HandleCurrentExchangeChanged;
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged += HandleCurrentExchangeChanged;
+					field.CurrentChanged += HandleCurrentExchangeChanged;
 				}
 
 				// Handler
@@ -140,24 +138,23 @@ namespace CoinFlip.UI
 					Exchange = (Exchange)Exchanges.CurrentItem;
 				}
 			}
-		}
-		private ICollectionView m_exchanges = null!;
+		} = null!;
 
 		/// <summary>The selected exchange to show the funds of</summary>
 		public Exchange? Exchange
 		{
-			get => m_exchange;
+			get;
 			private set
 			{
-				if (m_exchange == value) return;
-				if (m_exchange != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchange.Balance.CollectionChanged -= HandleBalanceCollectionChanged;
+					field.Balance.CollectionChanged -= HandleBalanceCollectionChanged;
 				}
-				m_exchange = value;
-				if (m_exchange != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchange.Balance.CollectionChanged += HandleBalanceCollectionChanged;
+					field.Balance.CollectionChanged += HandleBalanceCollectionChanged;
 				}
 
 				// Handler
@@ -167,7 +164,6 @@ namespace CoinFlip.UI
 				}
 			}
 		}
-		private Exchange? m_exchange;
 
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView CoinsView { get; }

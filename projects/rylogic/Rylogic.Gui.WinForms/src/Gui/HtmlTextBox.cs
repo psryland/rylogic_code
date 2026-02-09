@@ -113,14 +113,13 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Get/Set the text to display in the control</summary>
 		public string Html
 		{
-			get { return m_impl_html; }
+			get;
 			set
 			{
-				m_impl_html = value;
+				field = value;
 				ResetView();
 			}
 		}
-		private string m_impl_html;
 
 		/// <summary>Clear the view</summary>
 		public void ResetView()

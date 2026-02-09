@@ -61,54 +61,50 @@ namespace ICSharpCode.AvalonEdit.AddIn
 		/// <summary></summary>
 		public Color? BackgroundColor
 		{
-			get => m_background_color;
+			get;
 			set
 			{
-				if (m_background_color == value) return;
-				m_background_color = value;
+				if (field == value) return;
+				field = value;
 				Redraw();
 			}
 		}
-		private Color? m_background_color;
 
 		/// <summary></summary>
 		public Color? ForegroundColor
 		{
-			get => m_foreground_color;
+			get;
 			set
 			{
-				if (m_foreground_color == value) return;
-				m_foreground_color = value;
+				if (field == value) return;
+				field = value;
 				Redraw();
 			}
 		}
-		private Color? m_foreground_color;
 
 		/// <summary></summary>
 		public FontWeight? FontWeight
 		{
-			get => m_font_weight;
+			get;
 			set
 			{
-				if (m_font_weight == value) return;
-				m_font_weight = value;
+				if (field == value) return;
+				field = value;
 				Redraw();
 			}
 		}
-		private FontWeight? m_font_weight;
 
 		/// <summary></summary>
 		public FontStyle? FontStyle
 		{
-			get => m_font_style;
+			get;
 			set
 			{
-				if (m_font_style == value) return;
-				m_font_style = value;
+				if (field == value) return;
+				field = value;
 				Redraw();
 			}
 		}
-		private FontStyle? m_font_style;
 
 		/// <summary></summary>
 		public ETextMarkerTypes MarkerTypes
@@ -126,15 +122,14 @@ namespace ICSharpCode.AvalonEdit.AddIn
 		/// <summary></summary>
 		public Color MarkerColor
 		{
-			get => m_marker_color;
+			get;
 			set
 			{
-				if (m_marker_color == value) return;
-				m_marker_color = value;
+				if (field == value) return;
+				field = value;
 				Redraw();
 			}
 		}
-		private Color m_marker_color;
 
 		/// <summary></summary>
 		public object? ToolTip { get; set; }

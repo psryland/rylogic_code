@@ -135,18 +135,18 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>The moving average this context is based on</summary>
 			private StopAndReverse Options
 			{
-				get => m_options;
+				get;
 				set
 				{
-					if (m_options == value) return;
-					if (m_options != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_options.SettingChange -= HandleSettingChange;
+						field.SettingChange -= HandleSettingChange;
 					}
-					m_options = value;
-					if (m_options != null)
+					field = value;
+					if (field != null)
 					{
-						m_options.SettingChange += HandleSettingChange;
+						field.SettingChange += HandleSettingChange;
 					}
 
 					// Handler
@@ -166,24 +166,23 @@ namespace CoinFlip.UI.Indicators
 						}
 					}
 				}
-			}
-			private StopAndReverse m_options = null!;
+			} = null!;
 
 			/// <summary>The instrument to calculate the moving average over</summary>
 			public Instrument Instrument
 			{
-				get => m_instrument;
+				get;
 				set
 				{
-					if (m_instrument == value) return;
-					if (m_instrument != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_instrument.DataChanged -= HandleDataChanged;
+						field.DataChanged -= HandleDataChanged;
 					}
-					m_instrument = value;
-					if (m_instrument != null)
+					field = value;
+					if (field != null)
 					{
-						m_instrument.DataChanged += HandleDataChanged;
+						field.DataChanged += HandleDataChanged;
 					}
 
 					// Handler
@@ -192,8 +191,7 @@ namespace CoinFlip.UI.Indicators
 						Update();
 					}
 				}
-			}
-			private Instrument m_instrument = null!;
+			} = null!;
 
 			/// <summary>The number of points in the MA</summary>
 			public int Count => m_data.Count;
@@ -376,15 +374,14 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>A cache of graphics objects than span X-axis ranges</summary>
 			private ChartGfxCache Cache
 			{
-				get => m_cache;
+				get;
 				set
 				{
-					if (m_cache == value) return;
-					Util.Dispose(ref m_cache!);
-					m_cache = value;
+					if (field == value) return;
+					Util.Dispose(ref field!);
+					field = value;
 				}
-			}
-			private ChartGfxCache m_cache = null!;
+			} = null!;
 
 			/// <summary>Create graphics for an X-range spanning 'x'</summary>
 			private SARPiece CreatePiece(double x, RangeF missing)
@@ -563,15 +560,14 @@ namespace CoinFlip.UI.Indicators
 				/// <summary>The point to draw at the SAR value</summary>
 				public View3d.Object Points
 				{
-					get => m_points;
+					get;
 					set
 					{
-						if (m_points == value) return;
-						Util.Dispose(ref m_points!);
-						m_points = value;
+						if (field == value) return;
+						Util.Dispose(ref field!);
+						field = value;
 					}
-				}
-				private View3d.Object m_points = null!;
+				} = null!;
 			}
 		}
 

@@ -29,18 +29,17 @@ namespace Rylogic.Gui.WinForms
 		/// MinData, MaxDate, and Value properties</summary>
 		public DateTimeKind Kind
 		{
-			get { return m_kind; }
+			get;
 			set
 			{
-				if (m_kind == value) return;
+				if (field == value) return;
 				var min = DateTime.SpecifyKind(MinDate, value);
 				var max = DateTime.SpecifyKind(MaxDate, value);
 				var val = DateTime.SpecifyKind(Value  , value);
-				m_kind = value;
+				field = value;
 				this.Set(val, min, max);
 			}
 		}
-		private DateTimeKind m_kind;
 
 		///<summary>
 		/// Gets or sets the minimum date and time that can be selected in the control.

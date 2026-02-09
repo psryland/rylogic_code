@@ -26,18 +26,18 @@ namespace Rylogic.TextAligner
 		/// <summary>The editor control</summary>
 		public PatternEditor Editor
 		{
-			get => m_editor;
+			get;
 			set
 			{
-				if (m_editor == value) return;
-				if (m_editor != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_editor.Commit -= HandleCommit;
+					field.Commit -= HandleCommit;
 				}
-				m_editor = value;
-				if (m_editor != null)
+				field = value;
+				if (field != null)
 				{
-					m_editor.Commit += HandleCommit;
+					field.Commit += HandleCommit;
 				}
 
 				// Handler
@@ -46,8 +46,7 @@ namespace Rylogic.TextAligner
 					Accept.Execute();
 				}
 			}
-		}
-		private PatternEditor m_editor = null!;
+		} = null!;
 
 		/// <summary>The pattern comment text</summary>
 		public string Comment

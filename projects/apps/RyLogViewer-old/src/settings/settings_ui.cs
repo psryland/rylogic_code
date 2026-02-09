@@ -201,18 +201,18 @@ namespace RyLogViewer
 		/// <summary>The main UI</summary>
 		private Main Main
 		{
-			get { return m_main; }
+			get;
 			set
 			{
-				if (m_main == value) return;
-				if (m_main != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_main.Settings.SettingChange -= HandleSettingChange;
+					field.Settings.SettingChange -= HandleSettingChange;
 				}
-				m_main = value;
-				if (m_main != null)
+				field = value;
+				if (field != null)
 				{
-					m_main.Settings.SettingChange += HandleSettingChange;
+					field.Settings.SettingChange += HandleSettingChange;
 				}
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
@@ -221,7 +221,6 @@ namespace RyLogViewer
 				}
 			}
 		}
-		private Main m_main;
 
 		/// <summary>App settings</summary>
 		public Settings Settings

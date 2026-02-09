@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -50,22 +50,22 @@ namespace CoinFlip.UI.Dialogs
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					//m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
-					//m_model.Coins.CollectionChanged -= HandleCoinsChanged;
-					//m_model.Funds.CollectionChanged -= HandleFundsChanged;
+					//field.Exchanges.CollectionChanged -= HandleExchangesChanged;
+					//field.Coins.CollectionChanged -= HandleCoinsChanged;
+					//field.Funds.CollectionChanged -= HandleFundsChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					//m_model.Funds.CollectionChanged += HandleFundsChanged;
-					//m_model.Coins.CollectionChanged += HandleCoinsChanged;
-					//m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
+					//field.Funds.CollectionChanged += HandleFundsChanged;
+					//field.Coins.CollectionChanged += HandleCoinsChanged;
+					//field.Exchanges.CollectionChanged += HandleExchangesChanged;
 				}
 
 				//// Handle funds being created or destroyed
@@ -87,8 +87,7 @@ namespace CoinFlip.UI.Dialogs
 				//	Coins.Refresh();
 				//}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The available exchanges</summary>
 		public ICollectionView Exchanges { get; }

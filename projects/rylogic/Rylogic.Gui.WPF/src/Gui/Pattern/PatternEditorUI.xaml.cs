@@ -18,18 +18,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The contained pattern editor</summary>
 		public PatternEditor Editor
 		{
-			get => m_editor;
+			get;
 			private set
 			{
-				if (m_editor == value) return;
-				if (m_editor != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_editor.Commit -= HandleCommit;
+					field.Commit -= HandleCommit;
 				}
-				m_editor = value;
-				if (m_editor != null)
+				field = value;
+				if (field != null)
 				{
-					m_editor.Commit += HandleCommit;
+					field.Commit += HandleCommit;
 				}
 
 				// Handle Commit
@@ -39,8 +39,7 @@ namespace Rylogic.Gui.WPF
 					Accept.Execute();
 				}
 			}
-		}
-		private PatternEditor m_editor = null!;
+		} = null!;
 
 		/// <summary>Stay open when the commit button is clicked</summary>
 		public bool StayOpen

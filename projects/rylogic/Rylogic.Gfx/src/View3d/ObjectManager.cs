@@ -34,18 +34,18 @@ namespace Rylogic.Gfx
 			/// <summary>The scene that this manager is associated with</summary>
 			public Window Window
 			{
-				get => m_window;
+				get;
 				private set
 				{
-					if (m_window == value) return;
-					if (m_window != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_window.OnSceneChanged -= HandleSceneChanged;
+						field.OnSceneChanged -= HandleSceneChanged;
 					}
-					m_window = value;
-					if (m_window != null)
+					field = value;
+					if (field != null)
 					{
-						m_window.OnSceneChanged += HandleSceneChanged;
+						field.OnSceneChanged += HandleSceneChanged;
 					}
 
 					// Handlers
@@ -58,8 +58,7 @@ namespace Rylogic.Gfx
 						SyncObjectsWithScene();
 					}
 				}
-			}
-			private Window m_window = null!;
+			} = null!;
 
 			/// <summary>Context Ids of objects not to show in the object manager</summary>
 			public HashSet<Guid> Exclude { get; }

@@ -94,18 +94,18 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The owning chart</summary>
 			private ChartControl Chart
 			{
-				get => m_chart;
+				get;
 				set
 				{
-					if (m_chart == value) return;
-					if (m_chart != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_chart.ChartMoved -= HandleMoved;
+						field.ChartMoved -= HandleMoved;
 					}
-					m_chart = value;
-					if (m_chart != null)
+					field = value;
+					if (field != null)
 					{
-						m_chart.ChartMoved += HandleMoved;
+						field.ChartMoved += HandleMoved;
 					}
 
 					// Handlers
@@ -115,18 +115,17 @@ namespace Rylogic.Gui.WPF
 							UpdateGfx();
 					}
 				}
-			}
-			private ChartControl m_chart = null!;
+			} = null!;
 
 			/// <summary>The grab point of the tape measure</summary>
 			private v4? Beg
 			{
-				get => m_beg;
+				get;
 				set
 				{
-					if (m_beg == value) return;
-					m_beg = value;
-					if (m_beg == null)
+					if (field == value) return;
+					field = value;
+					if (field == null)
 					{
 						End = null;
 						Detach();
@@ -141,17 +140,16 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private v4? m_beg;
 
 			/// <summary>The drop point of the tape measure</summary>
 			private v4? End
 			{
-				get => m_end;
+				get;
 				set
 				{
-					if (m_end == value) return;
-					m_end = value;
-					if (m_end == null)
+					if (field == value) return;
+					field = value;
+					if (field == null)
 					{
 						Beg = null;
 						Detach();
@@ -166,7 +164,6 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private v4? m_end;
 
 			/// <summary>The measurement area</summary>
 			private Rectangle Area { get; }

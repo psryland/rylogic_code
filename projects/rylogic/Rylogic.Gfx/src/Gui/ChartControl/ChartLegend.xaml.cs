@@ -126,15 +126,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The selected element</summary>
 		public IChartLegendItem? SelectedItem
 		{
-			get => m_selected_item;
+			get;
 			set
 			{
-				if (m_selected_item == value) return;
-				m_selected_item = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(SelectedItem));
 			}
 		}
-		private IChartLegendItem? m_selected_item;
 
 		/// <summary>Show/Hide the current item</summary>
 		public Command ToggleVisibility { get; }
