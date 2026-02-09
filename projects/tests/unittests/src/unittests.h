@@ -6,6 +6,7 @@
 // Headers to unit test
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
+#include "pr/algorithm/peak_detection.h"
 #include "pr/audio/audio.h"
 #include "pr/audio/audio/audio_manager.h"
 #include "pr/audio/config/config.h"
