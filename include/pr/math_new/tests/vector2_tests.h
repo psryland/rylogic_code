@@ -11,7 +11,7 @@ namespace pr::math
 {
 	PRUnitTestClass(Vector2)
 	{
-		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
+		PRUnitTestMethod(Construction, float, double, int32_t, int64_t)
 		{
 			using vec2_t = Vec2<T>;
 
@@ -26,19 +26,19 @@ namespace pr::math
 			constexpr auto V2 = vec2_t({ T(3), T(4) });
 			static_assert(V2.x == T(3));
 			static_assert(V2.y == T(4));
-		}
-		#if 0 // todo
-		PRUnitTestMethod(Normal, float, double)
-		{
-			using S = T;
-			using vec2_t = Vec2<S, void>;
 
-			auto V4 = vec2_t::Normal(T(3), T(4));
-			auto V4_expected = vec2_t(T(0.6), T(0.8));
-			PR_EXPECT(FEql(V4, V4_expected));
-			PR_EXPECT(FEql(V4[0], T(0.6)));
-			PR_EXPECT(FEql(V4[1], T(0.8)));
+			if constexpr (std::floating_point<T>)
+			{
+				constexpr auto V3 = vec2_t::Normal(T(3), T(4));
+				static_assert(FEql(V3.x, T(0.6)));
+				static_assert(FEql(V3.y, T(0.8)));
+			}
 		}
+
+
+
+
+		#if 0 // todo
 		PRUnitTestMethod(Operators, float, double, int32_t, int64_t)
 		{
 			using S = T;

@@ -4,7 +4,9 @@
 //*****************************************************************************
 #pragma once
 #include "../core/forward.h"
-#include "../core/vector_traits.h"
+#include "../core/traits.h"
+#include "../core/constants.h"
+#include "../core/functions.h"
 
 namespace pr::math
 {
@@ -14,6 +16,7 @@ namespace pr::math
 		// Notes:
 		//  - Can't use __m64 because it has an alignment of 8.
 		//    v2 is a member of the union in v3 which needs alignment of 4, or the size of v3 becomes 16.
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
@@ -61,6 +64,30 @@ namespace pr::math
 		{
 			return Vec2{1, 1};
 		}
+		static constexpr Vec2 Tiny() noexcept
+		{
+			return Vec2(tiny<S>, tiny<S>);
+		}
+		static constexpr Vec2 Min() noexcept
+		{
+			return Vec2(limits<S>::min(), limits<S>::min());
+		}
+		static constexpr Vec2 Max() noexcept
+		{
+			return Vec2(limits<S>::max(), limits<S>::max());
+		}
+		static constexpr Vec2 Lowest() noexcept
+		{
+			return Vec2(limits<S>::lowest(), limits<S>::lowest());
+		}
+		static constexpr Vec2 Epsilon() noexcept
+		{
+			return Vec2(limits<S>::epsilon(), limits<S>::epsilon());
+		}
+		static constexpr Vec2 Infinity() noexcept
+		{
+			return Vec2(limits<S>::infinity(), limits<S>::infinity());
+		}
 		static constexpr Vec2 XAxis() noexcept
 		{
 			return Vec2{1, 0};
@@ -72,6 +99,12 @@ namespace pr::math
 		static constexpr Vec2 Origin() noexcept
 		{
 			return Vec2{0, 0};
+		}
+
+		// Construct normalised
+		static constexpr Vec2 Normal(S x, S y) requires std::floating_point<S>
+		{
+			return Normalise(Vec2(x, y));
 		}
 	};
 

@@ -4,7 +4,7 @@
 //*****************************************************************************
 #pragma once
 #include "../core/forward.h"
-#include "../vector/vector2.h"
+#include "../types/vector2.h"
 
 namespace pr::math
 {
