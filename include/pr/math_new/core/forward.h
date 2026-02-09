@@ -6,6 +6,7 @@
 #include <concepts>
 #include <type_traits>
 #include <span>
+#include <ranges>
 #include <limits>
 #include <memory>
 #include <random>

@@ -25,6 +25,10 @@ namespace pr::math
 	template <typename T>
 	concept VectorType = vector_traits<std::remove_cv_t<T>>::is_vector_v;
 
+	// Concept for vector-like type with dimension N
+	template <typename T, int N>
+	concept VectorTypeN = VectorType<T> && (vector_traits<std::remove_cv_t<T>>::dimension == N);
+
 	// Concept for quaternion-like types
 	template <typename T>
 	concept QuaternionType = vector_traits<std::remove_cv_t<T>>::is_quaternion_v;

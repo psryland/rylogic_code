@@ -3,15 +3,15 @@
 //  Copyright (c) Rylogic Ltd 2011
 //************************************************************************
 // Usage:
-//   struct Thing :pr::RefCount<Thing> {};
+//   struct Thing :RefCount<Thing> {};
 //   Thing* thing = new Thing();
 //   thing->AddRef();
 //   thing->Release(); // thing deleted here
 //
-//   Typically this would be used with pr::RefPtr<Thing>.
+//   Typically this would be used with ComPtr<Thing>.
 //   e.g.
 //   {
-//       RefPtr<Thing> ptr(new Thing()); // thing deleted when last reference goes out of scope
+//       ComPtr<Thing> ptr(new Thing()); // thing deleted when last reference goes out of scope
 //   }
 //
 #pragma once
@@ -50,7 +50,7 @@ namespace pr
 			:m_ref_count(0)
 		{}
 		RefCount(RefCount&& rhs) noexcept
-			:m_ref_count(std::exchange(rhs.m_ref_count, 0))
+			:m_ref_count(Shared ? rhs.m_ref_count.exchange(0) : std::exchange(rhs.m_ref_count, 0))
 		{}
 		RefCount(RefCount const& rhs) = delete;
 		RefCount& operator = (RefCount&& rhs) noexcept
@@ -95,12 +95,31 @@ namespace pr
 		{
 			delete doomed;
 		}
+
+		// ADL swap
+		friend void swap(RefCount& lhs, RefCount& rhs)
+		{
+			// Note: This swap is NOT atomic as a whole operation. Other threads may observe
+			// intermediate states during the swap. This is acceptable because:
+			// 1. Swapping ref-counted objects while other threads are actively AddRef/Release-ing
+			//    is inherently racy at a higher level - the caller must ensure synchronization.
+			// 2. The individual atomic operations ensure no torn reads/writes occur.
+			// 3. Reference counts are typically only swapped during move operations where
+			//    exclusive access is already guaranteed by ownership semantics.
+			if constexpr (Shared)
+			{
+				// Three-step atomic swap using exchange operations (evaluated right-to-left):
+				// Step 1: rhs.exchange(lhs) - puts lhs's value into rhs, returns old rhs value
+				// Step 2: lhs.exchange(<old_rhs>) - puts old rhs value into lhs, returns old lhs value
+				// Step 3: Store old lhs value in temp (but rhs now incorrectly holds original lhs value)
+				// Step 4: Fix rhs by storing the original lhs value (captured in temp)
+				long temp = lhs.m_ref_count.exchange(rhs.m_ref_count.exchange(lhs.m_ref_count));
+				rhs.m_ref_count.exchange(temp);
+			}
+			else
+			{
+				std::swap(lhs.m_ref_count, rhs.m_ref_count);
+			}
+		}
 	};
-}
-namespace std
-{
-	template <typename T> void swap(pr::RefCount<T>& lhs, pr::RefCount<T>& rhs)
-	{
-		swap(lhs.m_ref_count, rhs.m_ref_count);
-	}
 }

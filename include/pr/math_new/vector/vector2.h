@@ -33,6 +33,24 @@ namespace pr::math
 			: x(x_)
 			, y(y_)
 		{}
+		constexpr explicit Vec2(std::ranges::range<S> auto const& v)
+			:Vec2(v[0], v[1])
+		{}
+		template <ScalarType T> constexpr explicit Vec2(VectorTypeN<T, 2> auto v)
+			:Vec2(vec(v).x, vec(v).y)
+		{}
+
+		// Array access
+		S operator [] (int i) const
+		{
+			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
+			return arr[i];
+		}
+		S& operator [] (int i)
+		{
+			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
+			return arr[i];
+		}
 
 		// Constants
 		static constexpr Vec2 Zero() noexcept
