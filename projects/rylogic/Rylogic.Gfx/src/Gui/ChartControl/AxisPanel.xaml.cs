@@ -28,6 +28,10 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			base.OnRenderSizeChanged(sizeInfo);
 			Axis?.Gfx.Invalidate();
+
+			// Also redraw the axis labels/tick marks since the tick spacing
+			// depends on the pixel dimensions (via GridLines → PixelsPerTick).
+			Invalidate();
 		}
 		public void Dispose()
 		{

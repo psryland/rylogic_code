@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -79,6 +80,7 @@ namespace Rylogic.Gui.WPF
 		protected virtual void Dispose(bool _)
 		{
 			Disposing?.Invoke(this, EventArgs.Empty);
+			m_resize_timer?.Stop();
 			Source = null;
 			D3DImage = null!;
 			Window = null!;
@@ -87,12 +89,33 @@ namespace Rylogic.Gui.WPF
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
 			base.OnRenderSizeChanged(size_info);
-			m_resized =
+
+			var size_changed =
 				Math.Abs(size_info.NewSize.Width - D3DImage.Width) > 1 ||
 				Math.Abs(size_info.NewSize.Height - D3DImage.Height) > 1;
 
+			if (size_changed)
+			{
+				// Defer render target recreation until resize stabilizes. During resize,
+				// render at the current RT size and let WPF stretch the D3DImage to fill.
+				if (m_resize_timer == null)
+				{
+					m_resize_timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+					m_resize_timer.Tick += HandleResizeCompleted;
+				}
+				m_resize_timer.Stop();
+				m_resize_timer.Start();
+			}
+
 			Invalidate();
 		}
+		private void HandleResizeCompleted(object? sender, EventArgs e)
+		{
+			m_resize_timer?.Stop();
+			m_resized = true;
+			Invalidate();
+		}
+		private DispatcherTimer? m_resize_timer;
 		protected override Size MeasureOverride(Size constraint)
 		{
 			var sz = base.MeasureOverride(constraint);
