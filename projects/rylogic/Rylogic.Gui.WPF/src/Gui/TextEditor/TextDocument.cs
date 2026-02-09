@@ -105,21 +105,21 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary>Implicit new line character(s) for the end of each line</summary>
 		public string LineEnd
 		{
-			get => m_lineend;
+			get;
 			set
 			{
-				if (m_lineend == value)
+				if (field == value)
 					return;
 
 				// Record an undo action for changing the line end
-				UndoStack.Push(new LineEndChange(this, m_lineend, value));
+				UndoStack.Push(new LineEndChange(this, field, value));
 				
 				// If the length of the line ending changes, the text lengths
 				// in the tree will need updating.
-				var length_changed = m_lineend.Length != value.Length;
+				var length_changed = field.Length != value.Length;
 
 				// Set the new line ending
-				m_lineend = value;
+				field = value;
 
 				// Refresh the text lengths if the length of 'LineEnd' has changed
 				if (length_changed)
@@ -128,8 +128,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 				// Notify LineEnd changed.
 				NotifyPropertyChanged(nameof(LineEnd));
 			}
-		}
-		private string m_lineend = DefaultLineEnd;
+		} = DefaultLineEnd;
 
 		/// <summary>Iterate through the lines of the document in order from first to last</summary>
 		public IEnumerable<Line> Lines
@@ -644,20 +643,19 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary>Get/Set the undo stack.</summary>
 		public UndoStack UndoStack
 		{
-			get => m_undo_stack;
+			get;
 			set
 			{
 				// Notes:
 				//  - Setting the undo stack allows multiple TextDocuments to share a common undo stack.
 				//  - The outgoing undo stack is cleared to drop references to this TextDocument
-				if (m_undo_stack == value) return;
+				if (field == value) return;
 				VerifyAccess();
-				m_undo_stack.Clear();
-				m_undo_stack = value;
+				field.Clear();
+				field = value;
 				NotifyPropertyChanged(nameof(UndoStack));
 			}
-		}
-		private UndoStack m_undo_stack = new();
+		} = new();
 
 		#endregion
 

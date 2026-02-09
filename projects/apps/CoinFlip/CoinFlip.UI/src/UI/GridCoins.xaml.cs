@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -59,11 +59,11 @@ namespace CoinFlip.UI
 		/// <summary></summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Model.Exchanges.CollectionChanged -= HandleExchangesChanged;
 					Model.Coins.CollectionChanged -= HandleCoinsChanged;
@@ -74,8 +74,8 @@ namespace CoinFlip.UI
 					Coins.Clear();
 					CoinsView.Refresh();
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 					CoinData.LivePriceChanged += HandleBalanceChanged;
 					CoinData.BalanceChanged += HandleBalanceChanged;
@@ -120,21 +120,19 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(nameof(AllowTrades));
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>A mirror of 'Model.Coins' for data binding</summary>
 		private List<CoinDataAdapter> Coins { get; }
@@ -173,18 +171,18 @@ namespace CoinFlip.UI
 		/// <summary>Filter support for 'Coins'</summary>
 		public CoinFilter? Filter
 		{
-			get => m_filter;
+			get;
 			set
 			{
-				if (m_filter == value) return;
-				if (m_filter != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_filter.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_filter = value;
-				if (m_filter != null)
+				field = value;
+				if (field != null)
 				{
-					m_filter.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handler
@@ -196,7 +194,6 @@ namespace CoinFlip.UI
 				}
 			}
 		}
-		private CoinFilter? m_filter;
 
 		/// <summary>Add a coin to the collection</summary>
 		public Command AddCoin { get; }

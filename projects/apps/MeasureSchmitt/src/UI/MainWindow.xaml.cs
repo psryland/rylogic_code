@@ -44,11 +44,11 @@ namespace MeasureSchmitt
 		/// <summary>Measurement mode</summary>
 		public EMeasureMode MeasureMode
 		{
-			get => m_measure_mode;
+			get;
 			set
 			{
-				if (m_measure_mode == value) return;
-				m_measure_mode = value;
+				if (field == value) return;
+				field = value;
 				
 				// Set defaults
 				PeriodicRefresh = false;
@@ -87,7 +87,6 @@ namespace MeasureSchmitt
 				NotifyPropertyChanged(nameof(MeasureMode));
 			}
 		}
-		private EMeasureMode m_measure_mode;
 
 		/// <summary>True if the measured data is updating</summary>
 		private bool PeriodicRefresh
@@ -112,29 +111,27 @@ namespace MeasureSchmitt
 		/// <summary>The area of interest</summary>
 		public BitmapImage View
 		{
-			get => m_view;
+			get;
 			private set
 			{
-				if (m_view == value) return;
-				m_view = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(View));
 			}
-		}
-		private BitmapImage m_view = null!;
+		} = null!;
 		private Bitmap m_bmp = null!;
 
 		/// <summary>First point of interest</summary>
 		public Vector Position0
 		{
-			get => m_position0;
+			get;
 			set
 			{
-				if (m_position0 == value) return;
-				m_position0 = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Position0));
 			}
 		}
-		private Vector m_position0;
 
 		/// <summary>The area to capture</summary>
 		public Rectangle Area
@@ -201,44 +198,41 @@ namespace MeasureSchmitt
 		/// <summary>Zoom for the captured screen area</summary>
 		public double Zoom
 		{
-			get => m_zoom;
+			get;
 			set
 			{
-				if (m_zoom == value) return;
-				m_zoom = Math_.Clamp(value, 0.01, 100.0);
+				if (field == value) return;
+				field = Math_.Clamp(value, 0.01, 100.0);
 				SignalMeasure();
 				NotifyPropertyChanged(nameof(Zoom));
 			}
 		}
-		private double m_zoom;
 
 		/// <summary>Whether to smooth the displayed screen capture</summary>
 		public bool Smooth
 		{
-			get => m_smooth;
+			get;
 			set
 			{
-				if (m_smooth == value) return;
-				m_smooth = value;
+				if (field == value) return;
+				field = value;
 				SignalMeasure();
 				NotifyPropertyChanged(nameof(Smooth));
 			}
 		}
-		private bool m_smooth;
 
 		/// <summary>Include the mouse in the screen capture</summary>
 		public bool MouseVisible
 		{
-			get => m_mouse_visible;
+			get;
 			set
 			{
-				if (m_mouse_visible == value) return;
-				m_mouse_visible = value;
+				if (field == value) return;
+				field = value;
 				SignalMeasure();
 				NotifyPropertyChanged(nameof(MouseVisible));
 			}
 		}
-		private bool m_mouse_visible;
 
 		/// <summary>Perform a capture and screen position measurement</summary>
 		private void DoMeasure()
@@ -304,20 +298,20 @@ namespace MeasureSchmitt
 		/// <summary>The target graphic</summary>
 		public Target TargetGfx
 		{
-			get => m_target_gfx;
+			get;
 			set
 			{
-				if (m_target_gfx == value) return;
-				if (m_target_gfx != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_target_gfx.LocationChanged -= HandleLocationChanged;
-					m_target_gfx.Close();
+					field.LocationChanged -= HandleLocationChanged;
+					field.Close();
 				}
-				m_target_gfx = value;
-				if (m_target_gfx != null)
+				field = value;
+				if (field != null)
 				{
-					m_target_gfx.Show();
-					m_target_gfx.LocationChanged += HandleLocationChanged;
+					field.Show();
+					field.LocationChanged += HandleLocationChanged;
 				}
 
 				// Handlers
@@ -327,8 +321,7 @@ namespace MeasureSchmitt
 					SignalMeasure();
 				}
 			}
-		}
-		private Target m_target_gfx = null!;
+		} = null!;
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

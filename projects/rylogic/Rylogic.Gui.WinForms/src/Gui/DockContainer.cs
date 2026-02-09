@@ -1142,31 +1142,31 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>A dock pane or branch</summary>
 				public Control Ctrl
 				{
-					get { return m_ctrl; }
+					get;
 					set
 					{
 						Debug.Assert(value == null || value is DockPane || value is Branch);
 
-						if (m_ctrl == value) return;
+						if (field == value) return;
 						using (This.SuspendLayout(layout_on_resume:false))
 						{
-							if (m_ctrl != null)
+							if (field != null)
 							{
 								// Remove the child control and associated splitter
-								// Do not dispose 'm_ctrl', 'Ctrl' is a reference to a pane or branch
+								// Do not dispose 'field', 'Ctrl' is a reference to a pane or branch
 								// either can be assigned or unassigned here when manipulating the tree.
-								This.Controls.Remove(m_ctrl);
+								This.Controls.Remove(field);
 								Split = null;
 
 								// Notify of the tree change
-								This.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane:m_ctrl as DockPane, branch:m_ctrl as Branch));
+								This.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane:field as DockPane, branch:field as Branch));
 							}
-							m_ctrl = value;
-							if (m_ctrl != null)
+							field = value;
+							if (field != null)
 							{
 								// Add the child control and associated splitter
-								This.Controls.Add(m_ctrl);
-								This.Controls.SetChildIndex(m_ctrl, 100 + (int)DockSite);
+								This.Controls.Add(field);
+								This.Controls.SetChildIndex(field, 100 + (int)DockSite);
 								switch (DockSite) {
 								case EDockSite.Left  : Split = new Splitter(Orientation.Vertical); break;
 								case EDockSite.Right : Split = new Splitter(Orientation.Vertical); break;
@@ -1175,13 +1175,12 @@ namespace Rylogic.Gui.WinForms
 								}
 
 								// Notify of the tree change
-								This.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane:m_ctrl as DockPane, branch:m_ctrl as Branch));
+								This.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane:field as DockPane, branch:field as Branch));
 							}
 							This.TriggerLayout();
 						}
 					}
 				}
-				private Control m_ctrl;
 
 				/// <summary>Get 'Ctrl' as a branch, or null</summary>
 				public Branch Branch
@@ -1784,55 +1783,53 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>A control that draws the caption title bar for the pane</summary>
 			public PaneTitleControl TitleCtrl
 			{
-				get { return m_impl_caption_ctrl; }
+				get;
 				set
 				{
-					if (m_impl_caption_ctrl == value) return;
+					if (field == value) return;
 					using (this.SuspendLayout(layout_on_resume:false))
 					{
-						if (m_impl_caption_ctrl != null)
+						if (field != null)
 						{
-							Controls.Remove(m_impl_caption_ctrl);
-							Util.Dispose(ref m_impl_caption_ctrl);
+							Controls.Remove(field);
+							Util.Dispose(ref field);
 						}
-						m_impl_caption_ctrl = value;
-						if (m_impl_caption_ctrl != null)
+						field = value;
+						if (field != null)
 						{
-							Controls.Add(m_impl_caption_ctrl);
-							Controls.SetChildIndex(m_impl_caption_ctrl, 100);
+							Controls.Add(field);
+							Controls.SetChildIndex(field, 100);
 						}
 
 						TriggerLayout();
 					}
 				}
 			}
-			private PaneTitleControl m_impl_caption_ctrl;
 
 			/// <summary>A control that draws the tabs for this pane</summary>
 			public TabStripControl TabStripCtrl
 			{
-				get { return m_impl_tab_strip_ctrl; }
+				get;
 				set
 				{
-					if (m_impl_tab_strip_ctrl == value) return;
+					if (field == value) return;
 					using (this.SuspendLayout(layout_on_resume:false))
 					{
-						if (m_impl_tab_strip_ctrl != null)
+						if (field != null)
 						{
-							Controls.Remove(m_impl_tab_strip_ctrl);
-							Util.Dispose(ref m_impl_tab_strip_ctrl);
+							Controls.Remove(field);
+							Util.Dispose(ref field);
 						}
-						m_impl_tab_strip_ctrl = value;
-						if (m_impl_tab_strip_ctrl != null)
+						field = value;
+						if (field != null)
 						{
-							Controls.Add(m_impl_tab_strip_ctrl);
-							Controls.SetChildIndex(m_impl_tab_strip_ctrl, 100);
+							Controls.Add(field);
+							Controls.SetChildIndex(field, 100);
 						}
 						TriggerLayout();
 					}
 				}
 			}
-			private TabStripControl m_impl_tab_strip_ctrl;
 
 			/// <summary>Raised whenever the visible content for this dock pane changes</summary>
 			public event EventHandler<ActiveContentChangedEventArgs> VisibleContentChanged;
@@ -2174,71 +2171,68 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The close button</summary>
 				public CaptionButton ButtonClose
 				{
-					get { return m_impl_btn_close; }
+					get;
 					private set
 					{
-						if (m_impl_btn_close == value) return;
-						if (m_impl_btn_close != null)
+						if (field == value) return;
+						if (field != null)
 						{
-							m_impl_btn_close.Click -= HandleClose;
-							Controls.Remove(m_impl_btn_close);
-							Util.Dispose(ref m_impl_btn_close);
+							field.Click -= HandleClose;
+							Controls.Remove(field);
+							Util.Dispose(ref field);
 						}
-						m_impl_btn_close = value;
-						if (m_impl_btn_close != null)
+						field = value;
+						if (field != null)
 						{
-							Controls.Add(m_impl_btn_close);
-							m_impl_btn_close.Click += HandleClose;
+							Controls.Add(field);
+							field.Click += HandleClose;
 						}
 					}
 				}
-				private CaptionButton m_impl_btn_close;
 
 				/// <summary>The auto hide button</summary>
 				public CaptionButton ButtonAutoHide
 				{
-					get { return m_impl_btn_auto_hide; }
+					get;
 					private set
 					{
-						if (m_impl_btn_auto_hide == value) return;
-						if (m_impl_btn_auto_hide != null)
+						if (field == value) return;
+						if (field != null)
 						{
-							m_impl_btn_auto_hide.Click -= HandleAutoHide;
-							Controls.Remove(m_impl_btn_auto_hide);
-							Util.Dispose(ref m_impl_btn_auto_hide);
+							field.Click -= HandleAutoHide;
+							Controls.Remove(field);
+							Util.Dispose(ref field);
 						}
-						m_impl_btn_auto_hide = value;
-						if (m_impl_btn_auto_hide != null)
+						field = value;
+						if (field != null)
 						{
-							Controls.Add(m_impl_btn_auto_hide);
-							m_impl_btn_auto_hide.Click += HandleAutoHide;
+							Controls.Add(field);
+							field.Click += HandleAutoHide;
 						}
 					}
 				}
-				private CaptionButton m_impl_btn_auto_hide;
 
 				/// <summary>The drop down menu for the pane</summary>
 				public CaptionButton ButtonMenu
 				{
-					get { return m_impl_btn_menu; }
+					get;
 					private set
 					{
-						if (m_impl_btn_menu == value) return;
-						if (m_impl_btn_menu != null)
+						if (field == value) return;
+						if (field != null)
 						{
-							m_impl_btn_menu.Click -= HandleMenu;
-							Controls.Remove(m_impl_btn_menu);
-							Util.Dispose(ref m_impl_btn_menu);
+							field.Click -= HandleMenu;
+							Controls.Remove(field);
+							Util.Dispose(ref field);
 						}
-						m_impl_btn_menu = value;
-						if (m_impl_btn_menu != null)
+						field = value;
+						if (field != null)
 						{
-							Controls.Add(m_impl_btn_menu);
-							m_impl_btn_menu.Click += HandleMenu;
+							Controls.Add(field);
+							field.Click += HandleMenu;
 						}
 					}
 				}
-				private CaptionButton m_impl_btn_menu;
 
 				/// <summary>Hide the Control's normal context menu</summary>
 				#if NET472
@@ -2525,15 +2519,14 @@ namespace Rylogic.Gui.WinForms
 					/// <summary>Get/Set when the mouse is over the button</summary>
 					private bool IsMouseOver
 					{
-						get { return m_mouse_over; }
+						get;
 						set
 						{
-							if (m_mouse_over == value) return;
-							m_mouse_over = value;
+							if (field == value) return;
+							field = value;
 							Invalidate();
 						}
 					}
-					private bool m_mouse_over;
 
 					/// <summary>The default size of the control</summary>
 					protected override Size DefaultSize
@@ -2624,16 +2617,15 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>Content this is about to be added to this tab strip</summary>
 				public DockControl GhostTabContent
 				{
-					get { return m_ghost_tab; }
+					get;
 					set
 					{
-						if (m_ghost_tab == value) return;
-						m_ghost_tab = value;
+						if (field == value) return;
+						field = value;
 						Invalidate();
 						Update();
 					}
 				}
-				private DockControl m_ghost_tab;
 
 				/// <summary>The index position in which 'GhostTab' would be added. Used when a dockable is about to be inserted into the tab strip</summary>
 				public int GhostTabIndex
@@ -3125,60 +3117,56 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
 			public OptionData.ColourSet TabColoursActive
 			{
-				get { return m_tab_colours_active; }
+				get;
 				set
 				{
-					if (m_tab_colours_active == value) return;
-					m_tab_colours_active = value;
+					if (field == value) return;
+					field = value;
 					InvalidateTab();
 				}
 			}
-			private OptionData.ColourSet m_tab_colours_active;
 
 			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
 			public OptionData.ColourSet TabColoursInactive
 			{
-				get { return m_tab_colours_inactive; }
+				get;
 				set
 				{
-					if (m_tab_colours_inactive == value) return;
-					m_tab_colours_inactive = value;
+					if (field == value) return;
+					field = value;
 					InvalidateTab();
 				}
 			}
-			private OptionData.ColourSet m_tab_colours_inactive;
 
 			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
 			public Font TabFontActive
 			{
-				get { return m_tab_font_active; }
+				get;
 				set
 				{
-					if (m_tab_font_active == value) return;
+					if (field == value) return;
 
 					// Changing the font can effect the size of the tab, and therefore
 					// the layout of the whole tab strip
-					m_tab_font_active = value;
+					field = value;
 					InvalidateTabStrip();
 				}
 			}
-			private Font m_tab_font_active;
 
 			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
 			public Font TabFontInactive
 			{
-				get { return m_tab_font_inactive; }
+				get;
 				set
 				{
-					if (m_tab_font_inactive == value) return;
+					if (field == value) return;
 
 					// Changing the font can effect the size of the tab, and therefore
 					// the layout of the whole tab strip
-					m_tab_font_inactive = value;
+					field = value;
 					InvalidateTabStrip();
 				}
 			}
-			private Font m_tab_font_inactive;
 
 			/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
 			public string TabToolTip
@@ -3191,10 +3179,9 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>A context menu to display when the tab for this content is right clicked</summary>
 			public ContextMenuStrip TabCMenu
 			{
-				get { return m_impl_tab_cmenu; }
-				set { m_impl_tab_cmenu = value; }
+				get;
+				set { field = value; }
 			}
-			private ContextMenuStrip m_impl_tab_cmenu;
 
 			/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
 			public ContextMenuStrip DefaultTabCMenu()
@@ -3823,15 +3810,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The orientation of the splitter</summary>
 			public Orientation Orientation
 			{
-				get { return m_impl_ori; }
+				get;
 				set
 				{
-					m_impl_ori = value;
+					field = value;
 					Cursor = value ==  Orientation.Vertical ? Cursors.VSplit : Cursors.HSplit;
 					UpdateSplitterBounds();
 				}
 			}
-			private Orientation m_impl_ori;
 
 			/// <summary>The position of the splitter within the Parent control (in pixels) relative to Area</summary>
 			public virtual int Position
@@ -4098,31 +4084,29 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The location of the tab strip within the dock pane, Only L,T,R,B are valid</summary>
 			public virtual EDockSite StripLocation
 			{
-				get { return m_impl_strip_loc; }
+				get;
 				set
 				{
-					if (m_impl_strip_loc == value) return;
+					if (field == value) return;
 					if (value != EDockSite.Left && value != EDockSite.Top && value != EDockSite.Right && value != EDockSite.Bottom)
 						throw new Exception("Invalid tab strip location");
 
-					m_impl_strip_loc = value;
+					field = value;
 					((DockPane)Parent)?.TriggerLayout();
 				}
 			}
-			private EDockSite m_impl_strip_loc;
 
 			/// <summary>The size of the tab strip</summary>
 			public virtual int StripSize
 			{
-				get { return m_impl_strip_size; }
+				get;
 				set
 				{
-					if (m_impl_strip_size == value) return;
-					m_impl_strip_size = value;
+					if (field == value) return;
+					field = value;
 					Invalidate();
 				}
 			}
-			private int m_impl_strip_size;
 
 			/// <summary>Measure the size required by this tab strip based on the user settings</summary>
 			public int PreferredStripSize
@@ -4818,135 +4802,128 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>A form used as graphics to show dragged items</summary>
 			private GhostPane Ghost
 			{
-				get { return m_impl_ghost; }
+				get;
 				set
 				{
-					if (m_impl_ghost == value) return;
-					if (m_impl_ghost != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_ghost.Close();
-						Util.Dispose(ref m_impl_ghost);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_ghost = value;
-					if (m_impl_ghost != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private GhostPane m_impl_ghost;
 
 			/// <summary>The cross of dock site locations displayed within the centre of a pane</summary>
 			private Indicator IndCrossLg
 			{
-				get { return m_impl_cross_lg; }
+				get;
 				set
 				{
-					if (m_impl_cross_lg == value) return;
-					if (m_impl_cross_lg != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_cross_lg.Close();
-						Util.Dispose(ref m_impl_cross_lg);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_cross_lg = value;
-					if (m_impl_cross_lg != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_cross_lg;
 
 			/// <summary>The small cross of dock site locations displayed within the centre of a pane</summary>
 			private Indicator IndCrossSm
 			{
-				get { return m_impl_cross_sm; }
+				get;
 				set
 				{
-					if (m_impl_cross_sm == value) return;
-					if (m_impl_cross_sm != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_cross_sm.Close();
-						Util.Dispose(ref m_impl_cross_sm);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_cross_sm = value;
-					if (m_impl_cross_sm != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_cross_sm;
 
 			/// <summary>The left edge dock site indicator</summary>
 			private Indicator IndLeft
 			{
-				get { return m_impl_left; }
+				get;
 				set
 				{
-					if (m_impl_left == value) return;
-					if (m_impl_left != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_left.Close();
-						Util.Dispose(ref m_impl_left);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_left = value;
-					if (m_impl_left != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_left;
 
 			/// <summary>The top edge dock site indicator</summary>
 			private Indicator IndTop
 			{
-				get { return m_impl_top; }
+				get;
 				set
 				{
-					if (m_impl_top == value) return;
-					if (m_impl_top != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_top.Close();
-						Util.Dispose(ref m_impl_top);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_top = value;
-					if (m_impl_top != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_top;
 
 			/// <summary>The left edge dock site indicator</summary>
 			private Indicator IndRight
 			{
-				get { return m_impl_right; }
+				get;
 				set
 				{
-					if (m_impl_right == value) return;
-					if (m_impl_right != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_right.Close();
-						Util.Dispose(ref m_impl_right);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_right = value;
-					if (m_impl_right != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_right;
 
 			/// <summary>The left edge dock site indicator</summary>
 			private Indicator IndBottom
 			{
-				get { return m_impl_bottom; }
+				get;
 				set
 				{
-					if (m_impl_bottom == value) return;
-					if (m_impl_bottom != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_impl_bottom.Close();
-						Util.Dispose(ref m_impl_bottom);
+						field.Close();
+						Util.Dispose(ref field);
 					}
-					m_impl_bottom = value;
-					if (m_impl_bottom != null)
+					field = value;
+					if (field != null)
 					{}
 				}
 			}
-			private Indicator m_impl_bottom;
 
 			/// <summary>Enumerate all indicators</summary>
 			private IEnumerable<Indicator> Indicators
@@ -5225,16 +5202,15 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The index within the pane that the dropped item should dock to</summary>
 			private int HoveredPaneTabIndex
 			{
-				get { return m_impl_tab_index; }
+				get;
 				set
 				{
-					if (m_impl_tab_index == value) return;
-					m_impl_tab_index = value;
+					if (field == value) return;
+					field = value;
 					if (HoveredPane != null)
 						HoveredPane.TabStripCtrl.GhostTabIndex = value;
 				}
 			}
-			private int m_impl_tab_index;
 
 			/// <summary>Base class for forms used as indicator graphics</summary>
 			private class GhostBase :Form
@@ -5804,21 +5780,20 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Get/Set the popped out state of the auto hide panel</summary>
 			public bool PoppedOut
 			{
-				get { return m_impl_popped_out; }
+				get;
 				set
 				{
-					if (m_impl_popped_out == value) return;
-					m_impl_popped_out = value;
+					if (field == value) return;
+					field = value;
 
 					// Force a layout of the dock container
 					((DockContainer)Parent)?.TriggerLayout();
 
 					// When no longer popped out, make the last active content active again
-					if (!m_impl_popped_out)
+					if (!field)
 						DockContainer.ActivatePrevious();
 				}
 			}
-			private bool m_impl_popped_out;
 
 			/// <summary>The size of the panel part of the auto hide panel when popped out (in pixels).</summary>
 			public int PoppedOutSizePx
@@ -5838,16 +5813,15 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The size of the panel part of the auto hide panel when popped out. If >= 1, interpreted as pixels, otherwise as a fraction of the dock container size</summary>
 			public float PoppedOutSize
 			{
-				get { return m_impl_popped_out_size; }
+				get;
 				set
 				{
-					if (m_impl_popped_out_size == value) return;
-					m_impl_popped_out_size = value;
+					if (field == value) return;
+					field = value;
 					if (PoppedOut)
 						((DockContainer)Parent)?.TriggerLayout();
 				}
 			}
-			private float m_impl_popped_out_size;
 
 			/// <summary>Add a dockable instance to this auto hide panel. 'location' is ignored, all content is added to the centre site within an auto hide panel.</summary>
 			public DockPane Add(IDockable dockable, int index, params EDockSite[] location)
@@ -6317,15 +6291,14 @@ namespace Rylogic.Gui.WinForms
 		[Browsable(false)]
 		public DockControl DockControl
 		{
-			get { return m_impl_dock_control; }
+			get;
 			private set
 			{
-				if (m_impl_dock_control == value) return;
-				if (m_impl_dock_control != null) Util.Dispose(ref m_impl_dock_control);
-				m_impl_dock_control = value;
+				if (field == value) return;
+				if (field != null) Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private DockControl m_impl_dock_control;
 	}
 
 	#region Event Args

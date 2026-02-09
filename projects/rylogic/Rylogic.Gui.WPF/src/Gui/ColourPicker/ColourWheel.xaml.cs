@@ -153,58 +153,54 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Control orientation</summary>
 		public Orientation Orientation
 		{
-			get => m_orientation;
+			get;
 			set
 			{
-				if (m_orientation == value) return;
-				m_orientation = value;
+				if (field == value) return;
+				field = value;
 				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orientation)));
 			}
 		}
-		private Orientation m_orientation;
 
 		/// <summary>The parts of the control to draw</summary>
 		public EParts Parts
 		{
-			get => m_parts;
+			get;
 			set
 			{
-				if (m_parts == value) return;
-				m_parts = value;
+				if (field == value) return;
+				field = value;
 				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
 			}
 		}
-		private EParts m_parts;
 
 		/// <summary>The width of the slider bars</summary>
 		public double SliderWidth
 		{
-			get => m_slider_width;
+			get;
 			set
 			{
-				if (m_slider_width == value) return;
-				m_slider_width = value;
+				if (field == value) return;
+				field = value;
 				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SliderWidth)));
 			}
 		}
-		private double m_slider_width;
 
 		/// <summary>The radius of the selector dot</summary>
 		public double SelectionIndicatorSize
 		{
-			get => m_selection_indicator_size;
+			get;
 			set
 			{
-				if (m_selection_indicator_size == value) return;
-				m_selection_indicator_size = value;
+				if (field == value) return;
+				field = value;
 				InvalidateVisual();
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectionIndicatorSize)));
 			}
 		}
-		private double m_selection_indicator_size;
 
 		/// <summary>The currently selected colour (RGB)</summary>
 		public Colour32 Colour

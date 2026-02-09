@@ -141,15 +141,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Binding view of the history</summary>
 		public ICollectionView HistoryView
 		{
-			get => m_history_view;
+			get;
 			private set
 			{
-				if (m_history_view == value) return;
-				m_history_view = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(HistoryView));
 			}
-		}
-		private ICollectionView m_history_view = null!;
+		} = null!;
 
 		/// <summary>The maximum length of the stored history</summary>
 		public int MaxHistoryLength

@@ -61,23 +61,22 @@ namespace ExchApi.Common
 		/// <summary>The Http client for REST requests</summary>
 		protected HttpClient Client
 		{
-			get => m_client;
+			get;
 			private set
 			{
-				if (m_client == value) return;
-				if (m_client != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_client!);
+					Util.Dispose(ref field!);
 				}
-				m_client = value;
-				if (m_client != null)
+				field = value;
+				if (field != null)
 				{
-					m_client.BaseAddress = new Uri(UrlRestAddress);
-					m_client.Timeout = TimeSpan.FromSeconds(10);
+					field.BaseAddress = new Uri(UrlRestAddress);
+					field.Timeout = TimeSpan.FromSeconds(10);
 				}
 			}
-		}
-		private HttpClient m_client = null!;
+		} = null!;
 
 		/// <summary>For marshalling to the main thread</summary>
 		public SynchronizationContext Sync { get; }

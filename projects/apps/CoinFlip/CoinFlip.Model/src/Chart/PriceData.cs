@@ -97,23 +97,22 @@ namespace CoinFlip
 		/// <summary>Database access</summary>
 		private SQLiteConnection DB
 		{
-			get => m_db;
+			get;
 			set
 			{
-				if (m_db == value) return;
-				if (m_db != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_db.Close();
-					Util.Dispose(ref m_db!);
+					field.Close();
+					Util.Dispose(ref field!);
 				}
-				m_db = value;
-				if (m_db != null)
+				field = value;
+				if (field != null)
 				{
-					m_db.Open();
+					field.Open();
 				}
 			}
-		}
-		private SQLiteConnection m_db = null!;
+		} = null!;
 
 		/// <summary>Create a reference to this price data. When the RefCount != 0, this object collects price data</summary>
 		public Scope RefToken(object who)

@@ -2631,15 +2631,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Contains a BindingSource<> (created from the given DGV) and creates 'Views' of the binding source based on filter predicates</summary>
 			private BindingSourceFilter? BSFilter
 			{
-				get { return m_impl_bs_filter; }
+				get;
 				set
 				{
-					if (m_impl_bs_filter == value) return;
-					Util.Dispose(ref m_impl_bs_filter!);
-					m_impl_bs_filter = value;
+					if (field == value) return;
+					Util.Dispose(ref field!);
+					field = value;
 				}
 			}
-			private BindingSourceFilter? m_impl_bs_filter;
 			private class BindingSourceFilter :IDisposable
 			{
 				/// <summary>The bound data properties for the columns</summary>
@@ -2685,15 +2684,14 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The filtered view of the binding source</summary>
 				public object FilteredView
 				{
-					get { return m_impl_view; }
+					get;
 					set
 					{
-						if (m_impl_view == value) return;
-						if (m_impl_view != null) Util.Dispose((IDisposable)m_impl_view);
-						m_impl_view = value;
+						if (field == value) return;
+						if (field != null) Util.Dispose((IDisposable)field);
+						field = value;
 					}
-				}
-				private object m_impl_view = null!;
+				} = null!;
 
 				/// <summary>Get the element type from 'original_src'</summary>
 				private Type GetElementType(object original_src)
@@ -2955,18 +2953,18 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The search text for this column</summary>
 				public Pattern Pattern
 				{
-					get { return m_pattern; }
+					get;
 					set
 					{
-						if (m_pattern == value) return;
-						if (m_pattern != null)
+						if (field == value) return;
+						if (field != null)
 						{
-							m_pattern.PropertyChanged -= HandlePatternChanged;
+							field.PropertyChanged -= HandlePatternChanged;
 						}
-						m_pattern = value;
-						if (m_pattern != null)
+						field = value;
+						if (field != null)
 						{
-							m_pattern.PropertyChanged += HandlePatternChanged;
+							field.PropertyChanged += HandlePatternChanged;
 						}
 						HandlePatternChanged();
 
@@ -2976,8 +2974,7 @@ namespace Rylogic.Gui.WinForms
 							ToolTipText = (Pattern != null && !Pattern.IsValid) ? Pattern.ValidateExpr()?.Message : null;
 						}
 					}
-				}
-				private Pattern m_pattern = null!;
+				} = null!;
 
 				/// <summary>Raised when the pattern expression changes</summary>
 				public event EventHandler? PatternChanged;
@@ -3032,30 +3029,29 @@ namespace Rylogic.Gui.WinForms
 					/// <summary>The cell being edited</summary>
 					public FilterHeaderCell? Cell
 					{
-						get { return m_cell; }
+						get;
 						set
 						{
-							if (m_cell == value) return;
-							if (m_cell != null)
+							if (field == value) return;
+							if (field != null)
 							{
 								TextBox.TextChanged -= HandleTextChanged;
 								TextBox.Text = string.Empty;
 								PinTarget = null;
 							}
-							m_cell = value;
-							if (m_cell != null)
+							field = value;
+							if (field != null)
 							{
-								TextBox.Text = m_cell.Pattern?.Expr ?? string.Empty;
+								TextBox.Text = field.Pattern?.Expr ?? string.Empty;
 								TextBox.TextChanged += HandleTextChanged;
 
 								// Position the control over the cell
 								PinTarget = DGV;
-								var cell_bounds = m_cell.CellBounds(false);
-								Bounds = DGV.RectangleToScreen(m_cell.FieldBounds.Shifted(cell_bounds.TopLeft()));
+								var cell_bounds = field.CellBounds(false);
+								Bounds = DGV.RectangleToScreen(field.FieldBounds.Shifted(cell_bounds.TopLeft()));
 							}
 						}
 					}
-					private FilterHeaderCell? m_cell;
 
 					/// <summary>The data grid view that 'Cell' belongs to</summary>
 					public System.Windows.Forms.DataGridView? DGV => Cell?.DataGridView;

@@ -31,15 +31,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The current pattern</summary>
 		public Pattern Pattern
 		{
-			get => m_pattern;
+			get;
 			set
 			{
-				if (m_pattern == value) return;
-				m_pattern = value ?? new Pattern(EPattern.Substring, string.Empty);
+				if (field == value) return;
+				field = value ?? new Pattern(EPattern.Substring, string.Empty);
 				NotifyPropertyChanged(nameof(Pattern));
 			}
-		}
-		private Pattern m_pattern = null!;
+		} = null!;
 
 		/// <summary>The history of filters</summary>
 		public ICollectionView History { get;  }

@@ -34,15 +34,14 @@ namespace RyLogViewer
 		/// <summary>The formatter to use to interpret lines</summary>
 		public ILineFormatter Formatter
 		{
-			get => m_formatter;
+			get;
 			set
 			{
-				if (m_formatter == value) return;
-				m_formatter = value;
+				if (field == value) return;
+				field = value;
 				InvalidateCache();
 			}
-		}
-		private ILineFormatter m_formatter = null!;
+		} = null!;
 
 		/// <summary>The line index that provides the byte ranges of log data lines</summary>
 		public LineIndex LineIndex

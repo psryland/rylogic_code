@@ -56,18 +56,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Text editor options</summary>
 		public OptionsData Options
 		{
-			get => m_options;
+			get;
 			private set
 			{
-				if (m_options == value) return;
-				if (m_options != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_options.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_options = value;
-				if (m_options != null)
+				field = value;
+				if (field != null)
 				{
-					m_options.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 
 				// Handlers
@@ -75,24 +75,22 @@ namespace Rylogic.Gui.WPF
 				{
 				}
 			}
-		}
-		private OptionsData m_options = null!;
+		} = null!;
 
 		/// <summary>Renderering and user input</summary>
 		public TextArea TextArea
 		{
-			get => m_text_area;
+			get;
 			private set
 			{
-				if (m_text_area == value) return;
-				if (m_text_area != null)
+				if (field == value) return;
+				if (field != null)
 				{}
-				m_text_area = value;
-				if (m_text_area != null)
+				field = value;
+				if (field != null)
 				{}
 			}
-		}
-		private TextArea m_text_area = null!;
+		} = null!;
 
 		/// <summary>Gets/Sets the document displayed by the text editor.</summary>
 		public TextDocument Document

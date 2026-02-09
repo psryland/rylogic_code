@@ -91,25 +91,25 @@ namespace CoinFlip.UI
 		/// <summary>App logic</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
-					m_model.NettWorthChanged -= HandleNettWorthChanged;
-					m_model.EditingTrade -= HandleEditingTrade;
+					field.NettWorthChanged -= HandleNettWorthChanged;
+					field.EditingTrade -= HandleEditingTrade;
 					Simulation = null!;
-					Util.Dispose(ref m_model!);
+					Util.Dispose(ref field!);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					Simulation = new SimulationView(GetWindow(this), m_model);
-					m_model.EditingTrade += HandleEditingTrade;
-					m_model.NettWorthChanged += HandleNettWorthChanged;
+					Simulation = new SimulationView(GetWindow(this), field);
+					field.EditingTrade += HandleEditingTrade;
+					field.NettWorthChanged += HandleNettWorthChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
@@ -158,8 +158,7 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(nameof(BackTesting));
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The current state of live trading</summary>
 		public bool AllowTrades
@@ -178,16 +177,15 @@ namespace CoinFlip.UI
 		/// <summary>Access the main simulation model</summary>
 		public SimulationView Simulation
 		{
-			get => m_simulation_view;
+			get;
 			set
 			{
-				if (m_simulation_view == value) return;
-				Util.Dispose(ref m_simulation_view!);
-				m_simulation_view = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 				NotifyPropertyChanged(nameof(Simulation));
 			}
-		}
-		private SimulationView m_simulation_view = null!;
+		} = null!;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public decimal NettWorth => Model.NettWorth;

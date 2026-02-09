@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -180,32 +180,31 @@ namespace SolarHotWater
 		/// <summary>A store of historic consumer data</summary>
 		public History History
 		{
-			get => m_history;
+			get;
 			private set
 			{
-				if (m_history == value) return;
-				Util.Dispose(ref m_history!);
-				m_history = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private History m_history = null!;
+		} = null!;
 
 		/// <summary>Access to the REST API of eWeLink</summary>
 		public EweLinkAPI Ewe
 		{
-			get => m_ewe;
+			get;
 			private set
 			{
-				if (m_ewe == value) return;
-				if (m_ewe != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_ewe.Devices.CollectionChanged -= HandleDeviceListChanged;
-					Util.Dispose(ref m_ewe!);
+					field.Devices.CollectionChanged -= HandleDeviceListChanged;
+					Util.Dispose(ref field!);
 				}
-				m_ewe = value;
-				if (m_ewe != null)
+				field = value;
+				if (field != null)
 				{
-					m_ewe.Devices.CollectionChanged += HandleDeviceListChanged;
+					field.Devices.CollectionChanged += HandleDeviceListChanged;
 				}
 
 				// Handler
@@ -219,21 +218,19 @@ namespace SolarHotWater
 						consumer.EweSwitch = devices.TryGetValue(consumer.DeviceID, out var sw) ? sw : null;
 				}
 			}
-		}
-		private EweLinkAPI m_ewe = null!;
+		} = null!;
 
 		/// <summary>Access to the REST API of the fronius inverter</summary>
 		private FroniusAPI Fronius
 		{
-			get => m_fronius;
+			get;
 			set
 			{
-				if (m_fronius == value) return;
-				Util.Dispose(ref m_fronius!);
-				m_fronius = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private FroniusAPI m_fronius = null!;
+		} = null!;
 
 		/// <summary>EweDevices</summary>
 		public EweLinkAPI.IEweDeviceList EweDevices => Ewe.Devices;
@@ -248,16 +245,15 @@ namespace SolarHotWater
 		/// <summary>Current solar output</summary>
 		public SolarData Solar
 		{
-			get => m_solar;
+			get;
 			private set
 			{
-				if (m_solar == value) return;
-				m_solar = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Solar));
 				NotifyPropertyChanged(nameof(PowerSurplus));
 			}
-		}
-		private SolarData m_solar = null!;
+		} = null!;
 
 		/// <summary>Enable/Disable controlling the power consumer switches</summary>
 		public bool EnableMonitor
@@ -448,15 +444,14 @@ namespace SolarHotWater
 		/// <summary>True while a login is being attempted</summary>
 		public bool LoginInProgress
 		{
-			get => m_login_in_progress;
+			get;
 			set
 			{
-				if (m_login_in_progress == value) return;
-				m_login_in_progress = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(LoginInProgress));
 			}
 		}
-		private bool m_login_in_progress;
 
 		/// <summary>True if log on to EweLink was successfull</summary>
 		public bool IsLoggedOn => Ewe.Cred != null;
@@ -464,15 +459,14 @@ namespace SolarHotWater
 		/// <summary>The last error</summary>
 		public Exception? LastError
 		{
-			get => m_last_error;
+			get;
 			set
 			{
-				if (m_last_error == value) return;
-				m_last_error = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(LastError));
 			}
 		}
-		private Exception? m_last_error;
 
 		/// <summary>Login on the the EweLink service</summary>
 		public async Task Login(string username, string password)

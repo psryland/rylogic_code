@@ -59,21 +59,21 @@ namespace Bot.HeikinAshiChaser
 		/// <summary>Trading instrument selector</summary>
 		public ExchPairTimeFrame ChartSelector
 		{
-			get => m_chart_selector;
+			get;
 			private set
 			{
-				if (m_chart_selector == value) return;
-				if (m_chart_selector != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart_selector.PropertyChanged -= HandleInstrumentChanged;
+					field.PropertyChanged -= HandleInstrumentChanged;
 				}
-				m_chart_selector = value;
-				if (m_chart_selector != null)
+				field = value;
+				if (field != null)
 				{
-					m_chart_selector.Exchange = Model.Exchanges[Settings.Exchange];
-					m_chart_selector.Pair = m_chart_selector.Exchange?.Pairs[Settings.Pair];
-					m_chart_selector.TimeFrame = Settings.TimeFrame;
-					m_chart_selector.PropertyChanged += HandleInstrumentChanged;
+					field.Exchange = Model.Exchanges[Settings.Exchange];
+					field.Pair = field.Exchange?.Pairs[Settings.Pair];
+					field.TimeFrame = Settings.TimeFrame;
+					field.PropertyChanged += HandleInstrumentChanged;
 				}
 
 				// Handler
@@ -100,7 +100,6 @@ namespace Bot.HeikinAshiChaser
 				}
 			}
 		}
-		private ExchPairTimeFrame m_chart_selector;
 
 		/// <summary>Validate the current settings</summary>
 		public Exception Validate

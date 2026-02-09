@@ -56,22 +56,21 @@ namespace CoinFlip
 		/// <summary>The quote currency</summary>
 		public Coin Quote
 		{
-			get => m_quote;
+			get;
 			private set
 			{
-				if (m_quote == value) return;
-				if (m_quote != null!)
+				if (field == value) return;
+				if (field != null!)
 				{
-					m_quote.Pairs.Remove(this);
+					field.Pairs.Remove(this);
 				}
-				m_quote = value;
-				if (m_quote != null!)
+				field = value;
+				if (field != null!)
 				{
-					m_quote.Pairs.Add(this);
+					field.Pairs.Add(this);
 				}
 			}
-		}
-		private Coin m_quote = null!;
+		} = null!;
 
 		/// <summary>The base currency</summary>
 		public Coin Base
@@ -123,18 +122,18 @@ namespace CoinFlip
 		/// <summary>The order books for this pair</summary>
 		public MarketDepth MarketDepth
 		{
-			get => m_market_depth;
+			get;
 			private set
 			{
-				if (m_market_depth == value) return;
-				if (m_market_depth != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_market_depth.OrderBookChanged -= HandleOrderBookChanged;
+					field.OrderBookChanged -= HandleOrderBookChanged;
 				}
-				m_market_depth = value;
-				if (m_market_depth != null)
+				field = value;
+				if (field != null)
 				{
-					m_market_depth.OrderBookChanged += HandleOrderBookChanged;
+					field.OrderBookChanged += HandleOrderBookChanged;
 				}
 
 				// Handler
@@ -144,8 +143,7 @@ namespace CoinFlip
 					CoinData.NotifyLivePriceChanged(Quote);
 				}
 			}
-		}
-		private MarketDepth m_market_depth = null!;
+		} = null!;
 
 		/// <summary>The allowable range of amounts for trading the base currency</summary>
 		public RangeF<Unit<decimal>> AmountRangeBase { get; private set; }

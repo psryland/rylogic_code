@@ -76,18 +76,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 	/// <summary>Application logic</summary>
 	private Model Model
 	{
-		get => m_model;
+		get;
 		set
 		{
-			if (m_model == value) return;
-			if (m_model != null)
+			if (field == value) return;
+			if (field != null)
 			{
-				m_model.PropertyChanged -= HandlePropertyChanged;
+				field.PropertyChanged -= HandlePropertyChanged;
 			}
-			m_model = value;
-			if (m_model != null)
+			field = value;
+			if (field != null)
 			{
-				m_model.PropertyChanged += HandlePropertyChanged;
+				field.PropertyChanged += HandlePropertyChanged;
 			}
 
 			// Handler
@@ -103,8 +103,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 				}
 			}
 		}
-	}
-	private Model m_model = null!;
+	} = null!;
 
 	/// <summary>The diagram UI element</summary>
 	private Diagram Diagram { get; }

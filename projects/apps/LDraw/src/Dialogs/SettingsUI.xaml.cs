@@ -39,18 +39,18 @@ namespace LDraw.Dialogs
 		/// <summary>The app model</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
 				if (Model == value) return;
-				if (m_model != null)
+				if (field != null)
 				{
-					m_model.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -72,8 +72,7 @@ namespace LDraw.Dialogs
 					}
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The settings data</summary>
 		public SettingsData Settings => Model.Settings;
@@ -87,18 +86,18 @@ namespace LDraw.Dialogs
 		/// <summary>The available profiles</summary>
 		public ICollectionView Profiles
 		{
-			get => m_profiles;
+			get;
 			set
 			{
 				if (Profiles == value) return;
-				if (m_profiles != null)
+				if (field != null)
 				{
-					m_profiles.CurrentChanged -= HandleCurrentProfileChanged;
+					field.CurrentChanged -= HandleCurrentProfileChanged;
 				}
-				m_profiles = value;
-				if (m_profiles != null)
+				field = value;
+				if (field != null)
 				{
-					m_profiles.CurrentChanged += HandleCurrentProfileChanged;
+					field.CurrentChanged += HandleCurrentProfileChanged;
 				}
 				NotifyPropertyChanged(nameof(Profiles));
 
@@ -111,8 +110,7 @@ namespace LDraw.Dialogs
 					}
 				}
 			}
-		}
-		private ICollectionView m_profiles = null!;
+		} = null!;
 
 		/// <summary>Close the dialog</summary>
 		public Command Accept { get; }

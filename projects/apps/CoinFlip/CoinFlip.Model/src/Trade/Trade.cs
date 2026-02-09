@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
@@ -70,15 +70,14 @@ namespace CoinFlip
 		/// <summary>The fund associated with this trade</summary>
 		public Fund Fund
 		{
-			get => m_fund;
+			get;
 			set
 			{
-				if (m_fund == value) return;
-				m_fund = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Fund));
 			}
-		}
-		private Fund m_fund = null!;
+		} = null!;
 
 		/// <summary>The exchange that this trade is/would be on</summary>
 		public Exchange Exchange => Pair.Exchange;
@@ -123,11 +122,11 @@ namespace CoinFlip
 		/// <summary>Given the current spot price, return the order type</summary>
 		public EOrderType OrderType
 		{
-			get => m_order_type;
+			get;
 			set
 			{
-				if (m_order_type == value) return;
-				m_order_type = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(OrderType));
 
 				// Note: Don't try to make this adjust other properties when changed,
@@ -135,7 +134,6 @@ namespace CoinFlip
 				// and use validate to check for correctness
 			}
 		}
-		private EOrderType m_order_type;
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType
@@ -190,12 +188,12 @@ namespace CoinFlip
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B
 		{
-			get => m_price_q2b;
+			get;
 			set
 			{
 				Debug.Assert(value >= 0m._(Pair.RateUnits));
-				if (m_price_q2b != 0 && m_price_q2b == value) return;
-				m_price_q2b = value;
+				if (field != 0 && field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(PriceQ2B));
 				
 				// Note: Don't try to make this adjust other properties when changed,
@@ -203,7 +201,6 @@ namespace CoinFlip
 				// and use validate to check for correctness
 			}
 		}
-		private Unit<decimal> m_price_q2b;
 
 		/// <summary>The price (in CoinOut/CoinIn)</summary>
 		public Unit<decimal> Price

@@ -28,22 +28,22 @@ namespace CoinFlip
 		/// <summary>The app logic</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.NettWorthChanged -= HandleNettWorthChanged;
+					field.NettWorthChanged -= HandleNettWorthChanged;
 					Model.BackTestingChange -= HandleBackTestingChanged;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 					SettingsData.Settings.SettingChange += HandleSettingChange;
 					Model.BackTestingChange += HandleBackTestingChanged;
-					m_model.NettWorthChanged += HandleNettWorthChanged;
+					field.NettWorthChanged += HandleNettWorthChanged;
 				}
 
 				// Handler
@@ -71,21 +71,19 @@ namespace CoinFlip
 					}
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The order to display currencies in</summary>
 		public EOrderBy Order
 		{
-			get => m_order;
+			get;
 			set
 			{
-				if (m_order == value) return;
-				m_order = value;
-				OrderCoins(m_order);
+				if (field == value) return;
+				field = value;
+				OrderCoins(field);
 			}
 		}
-		private EOrderBy m_order;
 
 		/// <summary>Return the time range (in ticks) spanned by the given index range</summary>
 		public RangeI TimeRange(RangeF index_range)

@@ -103,29 +103,27 @@ namespace EDTradeAdvisor
 		/// <summary>The player's ship cargo space</summary>
 		public int? CargoCapacity
 		{
-			get { return m_cargo_capacity; }
+			get;
 			private set
 			{
-				if (m_cargo_capacity == value) return;
-				m_cargo_capacity = value;
+				if (field == value) return;
+				field = value;
 				CargoCapacityChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
-		private int? m_cargo_capacity;
 		public event EventHandler CargoCapacityChanged;
 
 		/// <summary>The max jump range (unladen)</summary>
 		public double? MaxJumpRange
 		{
-			get { return m_max_jump_range; }
+			get;
 			private set
 			{
-				if (m_max_jump_range == value) return;
-				m_max_jump_range = value;
+				if (field == value) return;
+				field = value;
 				MaxJumpRangeChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
-		public double? m_max_jump_range;
 		public event EventHandler MaxJumpRangeChanged;
 
 		/// <summary>Raised when the Market.json file is created or changed</summary>
@@ -134,27 +132,25 @@ namespace EDTradeAdvisor
 		/// <summary>The latest journal name, currently being watched</summary>
 		private string JournalFilepath
 		{
-			get { return m_journal_filename; }
+			get;
 			set
 			{
-				if (m_journal_filename == value) return;
-				m_journal_filename = value;
+				if (field == value) return;
+				field = value;
 				Log.Write(ELogLevel.Info, $"Reading ED Journal file: {value}");
 			}
 		}
-		private string m_journal_filename;
 
 		/// <summary>The offset into the journal that has been successfully parsed</summary>
 		private long JournalOffset
 		{
-			get { return m_journal_offset; }
+			get;
 			set
 			{
 				if (value < 0) throw new ArgumentOutOfRangeException();
-				m_journal_offset = value;
+				field = value;
 			}
 		}
-		private long m_journal_offset;
 
 		/// <summary>Parse events in a journal file, reading from 'fileofs'</summary>
 		private long Parse(string filepath, long fileofs)

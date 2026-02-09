@@ -118,27 +118,27 @@ namespace Binance.API
 			/// <summary></summary>
 			public WebSocket Socket
 			{
-				get => m_socket;
+				get;
 				private set
 				{
-					if (m_socket == value) return;
-					if (m_socket != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_socket.OnClose -= HandleClosed;
-						m_socket.OnError -= HandleError;
-						m_socket.OnMessage -= HandleMessage;
-						m_socket.OnOpen -= HandleOpened;
-						Util.Dispose(ref m_socket!);
+						field.OnClose -= HandleClosed;
+						field.OnError -= HandleError;
+						field.OnMessage -= HandleMessage;
+						field.OnOpen -= HandleOpened;
+						Util.Dispose(ref field!);
 					}
-					m_socket = value;
-					if (m_socket != null)
+					field = value;
+					if (field != null)
 					{
-						m_socket.OnOpen += HandleOpened;
-						m_socket.OnMessage += HandleMessage;
-						m_socket.OnError += HandleError;
-						m_socket.OnClose += HandleClosed;
+						field.OnOpen += HandleOpened;
+						field.OnMessage += HandleMessage;
+						field.OnError += HandleError;
+						field.OnClose += HandleClosed;
 						using (Task_.NoSyncContext())
-							m_socket.Connect(EndPoint).Wait();
+							field.Connect(EndPoint).Wait();
 					}
 
 					// Handlers
@@ -174,8 +174,7 @@ namespace Binance.API
 						}
 					}
 				}
-			}
-			private WebSocket m_socket = null!;
+			} = null!;
 
 			/// <summary></summary>
 			private void ApplyUpdate(List<TickerUpdate> updates)

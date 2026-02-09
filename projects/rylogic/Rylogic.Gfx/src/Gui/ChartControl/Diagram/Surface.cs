@@ -69,15 +69,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>The texture surface</summary>
 		public View3d.Texture Surf
 		{
-			get => m_surf;
+			get;
 			private set
 			{
-				if (m_surf == value) return;
-				Util.Dispose(ref m_surf!);
-				m_surf = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Texture m_surf = null!;
+		} = null!;
 
 		/// <summary>Lock the texture for drawing on.</summary>
 		public View3d.Texture.Lock LockSurface(bool discard)

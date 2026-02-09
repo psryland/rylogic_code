@@ -83,23 +83,22 @@ namespace Rylogic.Common
 		/// <summary>The object that is the source of the value</summary>
 		public TSrc? DataSource
 		{
-			get => m_data_source;
+			get;
 			set
 			{
-				if (m_data_source == value) return;
-				if (m_data_source is INotifyPropertyChanged npc0)
+				if (field == value) return;
+				if (field is INotifyPropertyChanged npc0)
 				{
 					npc0.PropertyChanged -= ResetBindings;
 				}
-				m_data_source = value;
-				if (m_data_source is INotifyPropertyChanged npc1)
+				field = value;
+				if (field is INotifyPropertyChanged npc1)
 				{
 					npc1.PropertyChanged += ResetBindings;
 				}
 				ResetBindings();
 			}
 		}
-		private TSrc? m_data_source;
 
 		/// <summary>The value to use when 'DataSource' is null</summary>
 		public TValue DefaultValue { get; set; }
@@ -204,16 +203,15 @@ namespace Rylogic.UnitTests
 		{
 			public string? Value
 			{
-				get => m_value;
+				get;
 				set
 				{
-					if (m_value == value) return;
-					m_value = value;
+					if (field == value) return;
+					field = value;
 					if (PropertyChanged != null)
 						PropertyChanged(this, new PropertyChangedEventArgs(nameof(Value)));
 				}
 			}
-			private string? m_value;
 			public event PropertyChangedEventHandler? PropertyChanged;
 		}
 		private class TextBox

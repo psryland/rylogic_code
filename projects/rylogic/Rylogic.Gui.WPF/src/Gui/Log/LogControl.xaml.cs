@@ -135,25 +135,25 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				if (m_dock_control != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_dock_control.ActiveChanged -= HandleActiveChanged;
-					m_dock_control.DockContainerChanged -= HandleDockContainerChanged;
-					m_dock_control.SavingLayout -= HandleSavingLayout;
-					m_dock_control.LoadingLayout -= HandleLoadingLayout;
-					Util.Dispose(ref m_dock_control!);
+					field.ActiveChanged -= HandleActiveChanged;
+					field.DockContainerChanged -= HandleDockContainerChanged;
+					field.SavingLayout -= HandleSavingLayout;
+					field.LoadingLayout -= HandleLoadingLayout;
+					Util.Dispose(ref field!);
 				}
-				m_dock_control = value;
-				if (m_dock_control != null)
+				field = value;
+				if (field != null)
 				{
-					m_dock_control.LoadingLayout += HandleLoadingLayout;
-					m_dock_control.SavingLayout += HandleSavingLayout;
-					m_dock_control.DockContainerChanged += HandleDockContainerChanged;
-					m_dock_control.ActiveChanged += HandleActiveChanged;
+					field.LoadingLayout += HandleLoadingLayout;
+					field.SavingLayout += HandleSavingLayout;
+					field.DockContainerChanged += HandleDockContainerChanged;
+					field.ActiveChanged += HandleActiveChanged;
 				}
 
 				// Handlers
@@ -178,8 +178,7 @@ namespace Rylogic.Gui.WPF
 					OnDockContainerChanged(e);
 				}
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
 		{ }
 
@@ -421,24 +420,24 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A buffer of the log entries</summary>
 		public ObservableCollection<LogEntry> LogEntries
 		{
-			get => m_log_entries;
+			get;
 			set
 			{
 				// Notes:
 				//  - Allow public set so that the observable collection can be provided externally.
 				//  - Log entry collections can be made thread safe using: 'BindingOperations.EnableCollectionSynchronization(Entries, new object())';
 
-				if (m_log_entries == value) return;
-				if (m_log_entries != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_log_entries.CollectionChanged -= HandleLogEntriesChanged;
+					field.CollectionChanged -= HandleLogEntriesChanged;
 					LogEntriesView = new ListCollectionView(Array.Empty<LogEntry>());
 				}
-				m_log_entries = value;
-				if (m_log_entries != null)
+				field = value;
+				if (field != null)
 				{
-					LogEntriesView = new ListCollectionView(m_log_entries);
-					m_log_entries.CollectionChanged += HandleLogEntriesChanged;
+					LogEntriesView = new ListCollectionView(field);
+					field.CollectionChanged += HandleLogEntriesChanged;
 				}
 
 				// Notify properties changed
@@ -483,21 +482,19 @@ namespace Rylogic.Gui.WPF
 						Dispatcher.BeginInvoke(new Action(ScrollToEnd));
 				}
 			}
-		}
-		private ObservableCollection<LogEntry> m_log_entries = null!;
+		} = null!;
 
 		/// <summary>Binding view of the log entries</summary>
 		public ICollectionView LogEntriesView
 		{
-			get => m_log_entries_view;
+			get;
 			private set
 			{
-				if (m_log_entries_view == value) return;
-				m_log_entries_view = value;
-				m_log_entries_view.Filter = obj => obj is LogEntry le && le.Level >= FilterLevel;
+				if (field == value) return;
+				field = value;
+				field.Filter = obj => obj is LogEntry le && le.Level >= FilterLevel;
 			}
-		}
-		private ICollectionView m_log_entries_view = null!;
+		} = null!;
 
 		/// <summary>Trigger a refresh</summary>
 		private void SignalRefresh()
@@ -515,18 +512,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Highlighting patterns (in priority order)</summary>
 		public ObservableCollection<HLPattern> Highlighting
 		{
-			get => m_highlighting;
+			get;
 			set
 			{
-				if (m_highlighting == value) return;
-				if (m_highlighting != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_highlighting.CollectionChanged -= HandleCollectionChanged;
+					field.CollectionChanged -= HandleCollectionChanged;
 				}
-				m_highlighting = value;
-				if (m_highlighting != null)
+				field = value;
+				if (field != null)
 				{
-					m_highlighting.CollectionChanged += HandleCollectionChanged;
+					field.CollectionChanged += HandleCollectionChanged;
 				}
 
 				// Handler
@@ -539,8 +536,7 @@ namespace Rylogic.Gui.WPF
 					SignalRefresh();
 				}
 			}
-		}
-		public ObservableCollection<HLPattern> m_highlighting = null!;
+		} = null!;
 		IEnumerable<HLPattern> ILogEntryPatternProvider.Highlighting => Highlighting;
 
 		/// <summary>Access to the columns of the log grid</summary>

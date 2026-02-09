@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -120,15 +120,14 @@ namespace Rylogic.Interop.Win32
 		// Sets this Window Object's visibility
 		public bool Visible
 		{
-			get => m_visible;
+			get;
 			set
 			{
-				if (value == m_visible) return;
+				if (value == field) return;
 				User32.ShowWindowAsync(Hwnd, value ? Win32.SW_SHOW : Win32.SW_HIDE);
-				m_visible = value;
+				field = value;
 			}
-		}
-		private bool m_visible = true;
+		} = true;
 
 		// Return the client rectangle for the window
 		public Rectangle ClientRectangle => User32.GetClientRect(Hwnd).ToRectangle();

@@ -57,18 +57,18 @@ namespace RyLogViewer
 		/// <summary>The collection of bookmarks</summary>
 		private BindingSource<Bookmark> Bookmarks
 		{
-			get { return m_bookmarks; }
+			get;
 			set
 			{
-				if (m_bookmarks == value) return;
-				if (m_bookmarks != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_bookmarks.PositionChanged -= HandleBookmarkPositionChanged;
+					field.PositionChanged -= HandleBookmarkPositionChanged;
 				}
-				m_bookmarks = value;
-				if (m_bookmarks != null)
+				field = value;
+				if (field != null)
 				{
-					m_bookmarks.PositionChanged += HandleBookmarkPositionChanged;
+					field.PositionChanged += HandleBookmarkPositionChanged;
 				}
 
 				// Handlers
@@ -78,7 +78,6 @@ namespace RyLogViewer
 				}
 			}
 		}
-		private BindingSource<Bookmark> m_bookmarks;
 
 		/// <summary>Set up the app's bookmark support</summary>
 		private void SetupBookmarks()

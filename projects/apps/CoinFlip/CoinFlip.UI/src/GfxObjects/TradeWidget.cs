@@ -47,18 +47,18 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>The Trade being 'indicated'</summary>
 		public Trade Trade
 		{
-			get => m_trade;
+			get;
 			private set
 			{
-				if (m_trade == value) return;
-				if (m_trade != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_trade.PropertyChanged -= HandlePropertyChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_trade = value;
-				if (m_trade != null)
+				field = value;
+				if (field != null)
 				{
-					m_trade.PropertyChanged += HandlePropertyChanged;
+					field.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
@@ -67,8 +67,7 @@ namespace CoinFlip.UI.GfxObjects
 					Invalidate();
 				}
 			}
-		}
-		private Trade m_trade = null!;
+		} = null!;
 
 		/// <summary>The candle chart that this widget is on</summary>
 		private CandleChart CandleChart { get; }

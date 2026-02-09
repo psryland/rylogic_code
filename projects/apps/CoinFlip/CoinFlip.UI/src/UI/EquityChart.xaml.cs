@@ -70,26 +70,26 @@ namespace CoinFlip.UI
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.OrdersChanging -= RefreshChart;
-					m_model.HistoryChanging -= RefreshChart;
-					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
+					field.OrdersChanging -= RefreshChart;
+					field.HistoryChanging -= RefreshChart;
+					field.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
 					Exchanges = CollectionViewSource.GetDefaultView(null);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
+					Exchanges = CollectionViewSource.GetDefaultView(field.Exchanges);
 					SettingsData.Settings.SettingChange += HandleSettingChange;
-					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
-					m_model.HistoryChanging += RefreshChart;
-					m_model.OrdersChanging += RefreshChart;
+					field.SelectedCompletedOrders.CollectionChanged += RefreshChart;
+					field.HistoryChanging += RefreshChart;
+					field.OrdersChanging += RefreshChart;
 				}
 
 				// Handler
@@ -137,8 +137,7 @@ namespace CoinFlip.UI
 					Chart?.Invalidate();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The source equity data</summary>
 		public Equity Equity
@@ -176,52 +175,51 @@ namespace CoinFlip.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>The chart control</summary>
 		public ChartControl Chart
 		{
-			get => m_chart;
+			get;
 			private set
 			{
-				if (m_chart == value) return;
-				if (m_chart != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_chart.ChartMoved -= HandleMoved;
-					m_chart.BuildScene -= HandleBuildScene;
-					//m_chart.MouseDown -= HandleMouseDown;
-					m_chart.AutoRanging -= HandleAutoRanging;
-					m_chart.XAxis.TickText = m_chart.XAxis.DefaultTickText;
-					m_chart.YAxis.TickText = m_chart.YAxis.DefaultTickText;
-					Util.Dispose(ref m_chart!);
+					field.ChartMoved -= HandleMoved;
+					field.BuildScene -= HandleBuildScene;
+					//field.MouseDown -= HandleMouseDown;
+					field.AutoRanging -= HandleAutoRanging;
+					field.XAxis.TickText = field.XAxis.DefaultTickText;
+					field.YAxis.TickText = field.YAxis.DefaultTickText;
+					Util.Dispose(ref field!);
 				}
-				m_chart = value;
-				if (m_chart != null)
+				field = value;
+				if (field != null)
 				{
 					// Customise the chart for candles
-					m_chart.Options.Antialiasing = true;
-					m_chart.Options.Orthographic = true;
-					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);
-					//m_chart.Options.CrossHairZOffset = ZOrder.Cursors;
-					m_chart.XAxis.Options.PixelsPerTick = 50.0;
-					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
-					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
-					m_chart.XAxis.TickText = HandleChartXAxisTickText;
-					//m_chart.YAxis.TickText = HandleChartYAxisTickText;
-					//m_chart.YAxis.Options.Side = Dock.Right;
-					m_chart.AutoRanging += HandleAutoRanging;
-					//m_chart.MouseDown += HandleMouseDown;
-					m_chart.BuildScene += HandleBuildScene;
-					m_chart.ChartMoved += HandleMoved;
-					m_chart.PreviewKeyDown += (s, a) =>
+					field.Options.Antialiasing = true;
+					field.Options.Orthographic = true;
+					field.Options.SelectionColour = new Colour32(0x8092A1B1);
+					//field.Options.CrossHairZOffset = ZOrder.Cursors;
+					field.XAxis.Options.PixelsPerTick = 50.0;
+					field.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
+					field.YAxis.Options.TickTextTemplate = "X.XXXX";
+					field.XAxis.TickText = HandleChartXAxisTickText;
+					//field.YAxis.TickText = HandleChartYAxisTickText;
+					//field.YAxis.Options.Side = Dock.Right;
+					field.AutoRanging += HandleAutoRanging;
+					//field.MouseDown += HandleMouseDown;
+					field.BuildScene += HandleBuildScene;
+					field.ChartMoved += HandleMoved;
+					field.PreviewKeyDown += (s, a) =>
 					{
 						if (a.Key == Key.F5)
 							Equity.Invalidate();
@@ -303,24 +301,23 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(nameof(VisibleTimeSpan));
 				}
 			}
-		}
-		private ChartControl m_chart = null!;
+		} = null!;
 
 		/// <summary>The global exchanges view. Provides the source of the "Current" exchange </summary>
 		private ICollectionView Exchanges
 		{
-			get => m_exchanges;
+			get;
 			set
 			{
-				if (m_exchanges == value) return;
-				if (m_exchanges != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 				}
 				HandleCurrentChanged(null, EventArgs.Empty);
 
@@ -332,8 +329,7 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(nameof(History));
 				}
 			}
-		}
-		private ICollectionView m_exchanges = null!;
+		} = null!;
 
 		/// <summary>The view of the trade history</summary>
 		public ICollectionView History { get; private set; }
@@ -522,41 +518,38 @@ namespace CoinFlip.UI
 		/// <summary>Graphics objects for the candle data</summary>
 		private GfxObjects.Equity GfxEquity
 		{
-			get => m_gfx_equity;
+			get;
 			set
 			{
-				if (m_gfx_equity == value) return;
-				Util.Dispose(ref m_gfx_equity!);
-				m_gfx_equity = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.Equity m_gfx_equity = null!;
+		} = null!;
 
 		/// <summary>Graphics for completed orders</summary>
 		private GfxObjects.Confetti GfxCompletedOrders
 		{
-			get => m_gfx_completed_orders;
+			get;
 			set
 			{
-				if (m_gfx_completed_orders == value) return;
-				Util.Dispose(ref m_gfx_completed_orders!);
-				m_gfx_completed_orders = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.Confetti m_gfx_completed_orders = null!;
+		} = null!;
 
 		/// <summary>Graphics for transfers</summary>
 		private GfxObjects.Confetti GfxTransfers
 		{
-			get => m_gfx_transfers;
+			get;
 			set
 			{
-				if (m_gfx_transfers == value) return;
-				Util.Dispose(ref m_gfx_transfers!);
-				m_gfx_transfers = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxObjects.Confetti m_gfx_transfers = null!;
+		} = null!;
 
 		/// <summary>Auto range the chart if not spanning the data</summary>
 		private void AutoRangeIfNeeded()

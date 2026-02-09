@@ -45,11 +45,11 @@ namespace Rylogic.DB
 			/// <summary>The db connection handle</summary>
 			internal sqlite3 Handle
 			{
-				get => m_handle;
+				get;
 				private set
 				{
-					if (m_handle == value) return;
-					if (m_handle != null)
+					if (field == value) return;
+					if (field != null)
 					{
 						if (IsOpen)
 						{
@@ -59,16 +59,15 @@ namespace Rylogic.DB
 							if (Handle.CloseResult != EResult.OK)
 								throw new SqliteException(Handle.CloseResult, "Failed to close database connection", string.Empty);
 						}
-						Util.Dispose(m_handle!);
+						Util.Dispose(field!);
 					}
-					m_handle = (NativeSqlite3Handle)value;
-					if (m_handle != null)
+					field = (NativeSqlite3Handle)value;
+					if (field != null)
 					{
-						m_handle.Label = Label;
+						((NativeSqlite3Handle)field).Label = Label;
 					}
 				}
-			}
-			private NativeSqlite3Handle m_handle = null!;
+			} = null!;
 
 			///<summary>The Id of the thread that created this DB handle.</summary>
 			public int OwnerThreadId { get; }
@@ -76,14 +75,13 @@ namespace Rylogic.DB
 			/// <summary>Connection string</summary>
 			public string ConnectionString
 			{
-				get => m_connection_string;
+				get;
 				set
 				{
 					if (IsOpen) throw new SqliteException(EResult.Misuse, "Can't change the connection string while the connection is open", string.Empty);
-					m_connection_string = value;
+					field = value;
 				}
-			}
-			private string m_connection_string = string.Empty;
+			} = string.Empty;
 
 			/// <summary>Debugging label for the connection</summary>
 			public string Label { get; set; }

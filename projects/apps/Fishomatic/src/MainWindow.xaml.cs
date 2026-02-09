@@ -46,18 +46,18 @@ namespace Fishomatic
 		/// <summary></summary>
 		public FishFinder FishFinder
 		{
-			get => m_fish_finder;
+			get;
 			set
 			{
 				if (FishFinder == value) return;
-				if (m_fish_finder != null)
+				if (field != null)
 				{
-					m_fish_finder.BobberUpdate -= HandleBobberPositionChanged;
+					field.BobberUpdate -= HandleBobberPositionChanged;
 				}
-				m_fish_finder = value;
-				if (m_fish_finder != null)
+				field = value;
+				if (field != null)
 				{
-					m_fish_finder.BobberUpdate += HandleBobberPositionChanged;
+					field.BobberUpdate += HandleBobberPositionChanged;
 				}
 
 				// Handler
@@ -72,8 +72,7 @@ namespace Fishomatic
 					}
 				}
 			}
-		}
-		private FishFinder m_fish_finder = null!;
+		} = null!;
 
 		/// <summary></summary>
 		private Window TargetGraphic { get; }

@@ -149,19 +149,19 @@ namespace RyLogViewer
 		/// <summary>The cache of lines for the current log data source</summary>
 		private LineCache Lines
 		{
-			get => m_lines;
+			get;
 			set
 			{
-				if (m_lines == value) return;
-				if (m_lines != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_lines.CollectionChanged -= HandleCollectionChanged;
-					Util.Dispose(ref m_lines!);
+					field.CollectionChanged -= HandleCollectionChanged;
+					Util.Dispose(ref field!);
 				}
-				m_lines = value;
-				if (m_lines != null)
+				field = value;
+				if (field != null)
 				{
-					m_lines.CollectionChanged += HandleCollectionChanged;
+					field.CollectionChanged += HandleCollectionChanged;
 				}
 
 				// Handlers
@@ -170,8 +170,7 @@ namespace RyLogViewer
 					CollectionChanged?.Invoke(this, e);
 				}
 			}
-		}
-		private LineCache m_lines = null!;
+		} = null!;
 
 		/// <summary>Trigger an update of the line index</summary>
 		private void Build(long filepos, bool reload)

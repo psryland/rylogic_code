@@ -45,28 +45,26 @@ namespace Rylogic.TextAligner
 		/// <summary>The position of matching text is offset from the ideal alignment column by this amount</summary>
 		public int Offset
 		{
-			get => m_offset;
+			get;
 			set
 			{
-				if (m_offset == value) return;
-				m_offset = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Offset));
 			}
 		}
-		private int m_offset;
 
 		/// <summary>Matched text is padded to be at least this wide</summary>
 		public int MinWidth
 		{
-			get => m_min_width;
+			get;
 			set
 			{
-				if (m_min_width == value) return;
-				m_min_width = Math.Max(value, 0);
+				if (field == value) return;
+				field = Math.Max(value, 0);
 				NotifyPropertyChanged(nameof(MinWidth));
 			}
 		}
-		private int m_min_width;
 
 		/// <summary>A comment to go with the pattern to remember what it is</summary>
 		public string Comment

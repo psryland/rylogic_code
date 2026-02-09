@@ -43,15 +43,14 @@ namespace Bot.Rebalance
 		/// <summary>The graphics object</summary>
 		public View3d.Object Gfx
 		{
-			get { return m_gfx; }
+			get;
 			private set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object m_gfx;
 
 		protected override void UpdateGfxCore()
 		{

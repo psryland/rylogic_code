@@ -162,20 +162,20 @@ namespace CoinFlip
 		/// <summary>The currency pair this instrument represents</summary>
 		public TradePair Pair
 		{
-			get => m_pair;
+			get;
 			private set
 			{
-				if (m_pair == value) return;
-				if (m_pair != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_pair.MarketDepth.Needed -= HandleMDNeeded;
-					m_pair.MarketDepth.OrderBookChanged -= HandlePairOrderBookChanged;
+					field.MarketDepth.Needed -= HandleMDNeeded;
+					field.MarketDepth.OrderBookChanged -= HandlePairOrderBookChanged;
 				}
-				m_pair = value;
-				if (m_pair != null)
+				field = value;
+				if (field != null)
 				{
-					m_pair.MarketDepth.OrderBookChanged += HandlePairOrderBookChanged;
-					m_pair.MarketDepth.Needed += HandleMDNeeded;
+					field.MarketDepth.OrderBookChanged += HandlePairOrderBookChanged;
+					field.MarketDepth.Needed += HandleMDNeeded;
 				}
 
 				// Handlers
@@ -190,8 +190,7 @@ namespace CoinFlip
 					e.Handled = true;
 				}
 			}
-		}
-		private TradePair m_pair = null!;
+		} = null!;
 
 		/// <summary>The exchange hosting this instrument</summary>
 		public Exchange Exchange => Pair.Exchange;
@@ -214,15 +213,14 @@ namespace CoinFlip
 		/// <summary>The type of candles to return</summary>
 		public ECandleStyle CandleStyle
 		{
-			get => m_candle_style;
+			get;
 			set
 			{
-				if (m_candle_style == value) return;
-				m_candle_style = value;
+				if (field == value) return;
+				field = value;
 				InvalidateCachedData();
 			}
 		}
-		private ECandleStyle m_candle_style;
 
 		/// <summary>The number of candles available up to the current time</summary>
 		public int Count

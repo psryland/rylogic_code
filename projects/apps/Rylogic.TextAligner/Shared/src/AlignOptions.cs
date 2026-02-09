@@ -52,28 +52,26 @@ namespace Rylogic.TextAligner
 		/// <summary>The method to use for aligning</summary>
 		public EAlignCharacters AlignStyle
 		{
-			get => m_align_style;
+			get;
 			set
 			{
 				if (AlignStyle == value) return;
-				m_align_style = value;
+				field = value;
 				NotifyPropertyChanged(nameof(AlignStyle));
 			}
-		}
-		private EAlignCharacters m_align_style = EAlignCharacters.Spaces;
+		} = EAlignCharacters.Spaces;
 
 		/// <summary>Pattern for lines that should be ignored when aligning</summary>
 		public AlignPattern LineIgnorePattern
 		{
-			get => m_line_ignore_pattern;
+			get;
 			set
 			{
 				if (LineIgnorePattern == value) return;
-				m_line_ignore_pattern = value;
+				field = value;
 				NotifyPropertyChanged(nameof(LineIgnorePattern));
 			}
-		}
-		private AlignPattern m_line_ignore_pattern = new();
+		} = new();
 
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()

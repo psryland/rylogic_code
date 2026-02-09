@@ -59,28 +59,26 @@ namespace TestWPF
 			/// <summary></summary>
 			public double Value
 			{
-				get => m_value;
+				get;
 				set
 				{
 					if (Value == value) return;
-					m_value = value;
+					field = value;
 					NotifyPropertyChanged(nameof(Value));
 				}
 			}
-			private double m_value;
 
 			/// <summary></summary>
 			public bool IsChecked
 			{
-				get => m_is_checked;
+				get;
 				set
 				{
 					if (IsChecked == value) return;
-					m_is_checked = value;
+					field = value;
 					NotifyPropertyChanged(nameof(IsChecked));
 				}
 			}
-			private bool m_is_checked;
 
 			/// <inheritdoc/>
 			public event PropertyChangedEventHandler? PropertyChanged;

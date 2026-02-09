@@ -92,21 +92,21 @@ namespace EDTradeAdvisor.UI
 		/// <summary>The app logic instance</summary>
 		private Advisor Advisor
 		{
-			get { return m_advisor; }
+			get;
 			set
 			{
-				if (m_advisor == value) return;
-				if (m_advisor != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_advisor.TradeRoutesChanged -= HandleTradeRoutesChanged;
-					m_advisor.RunChanged -= HandleRunChanged;
-					Util.Dispose(ref m_advisor!);
+					field.TradeRoutesChanged -= HandleTradeRoutesChanged;
+					field.RunChanged -= HandleRunChanged;
+					Util.Dispose(ref field!);
 				}
-				m_advisor = value;
-				if (m_advisor != null)
+				field = value;
+				if (field != null)
 				{
-					m_advisor.RunChanged += HandleRunChanged;
-					m_advisor.TradeRoutesChanged += HandleTradeRoutesChanged;
+					field.RunChanged += HandleRunChanged;
+					field.TradeRoutesChanged += HandleTradeRoutesChanged;
 				}
 
 				// Handlers
@@ -119,8 +119,7 @@ namespace EDTradeAdvisor.UI
 					TradeRoutes.Refresh();
 				}
 			}
-		}
-		private Advisor m_advisor = null!;
+		} = null!;
 
 		/// <summary>Show the settings dialog</summary>
 		public Command ShowSettings { get; }
@@ -186,18 +185,18 @@ namespace EDTradeAdvisor.UI
 		/// <summary>The short-list of star systems selected by the origin location combo box</summary>
 		public ICollectionView OriginStarSystemsShortList
 		{
-			get { return m_star_systems_origin; }
+			get;
 			private set
 			{
-				if (m_star_systems_origin == value) return;
-				if (m_star_systems_origin != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_star_systems_origin.CurrentChanged -= HandleCurrentSystemChanged;
+					field.CurrentChanged -= HandleCurrentSystemChanged;
 				}
-				m_star_systems_origin = value;
-				if (m_star_systems_origin != null)
+				field = value;
+				if (field != null)
 				{
-					m_star_systems_origin.CurrentChanged += HandleCurrentSystemChanged;
+					field.CurrentChanged += HandleCurrentSystemChanged;
 				}
 
 				// Handlers
@@ -208,24 +207,23 @@ namespace EDTradeAdvisor.UI
 					Settings.Instance.Origin = new LocationID(current?.ID, Settings.Instance.Origin.StationID);
 				}
 			}
-		}
-		private ICollectionView m_star_systems_origin = null!;
+		} = null!;
 
 		/// <summary>The short-list of star systems selected by the destination location combo box</summary>
 		public ICollectionView DestStarSystemsShortList
 		{
-			get { return m_star_systems_dest; }
+			get;
 			private set
 			{
-				if (m_star_systems_dest == value) return;
-				if (m_star_systems_dest != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_star_systems_dest.CurrentChanged -= HandleCurrentSystemChanged;
+					field.CurrentChanged -= HandleCurrentSystemChanged;
 				}
-				m_star_systems_dest = value;
-				if (m_star_systems_dest != null)
+				field = value;
+				if (field != null)
 				{
-					m_star_systems_dest.CurrentChanged += HandleCurrentSystemChanged;
+					field.CurrentChanged += HandleCurrentSystemChanged;
 				}
 
 				// Handlers
@@ -236,24 +234,23 @@ namespace EDTradeAdvisor.UI
 					Settings.Instance.Destination = new LocationID(current?.ID, Settings.Instance.Destination.StationID);
 				}
 			}
-		}
-		private ICollectionView m_star_systems_dest = null!;
+		} = null!;
 
 		/// <summary>The stations associated with the selection origin system</summary>
 		public ICollectionView OriginStations
 		{
-			get { return m_stations_origin; }
+			get;
 			private set
 			{
-				if (m_stations_origin == value) return;
-				if (m_stations_origin != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_stations_origin.CurrentChanged -= HandleCurrentStationChanged;
+					field.CurrentChanged -= HandleCurrentStationChanged;
 				}
-				m_stations_origin = value;
-				if (m_stations_origin != null)
+				field = value;
+				if (field != null)
 				{
-					m_stations_origin.CurrentChanged += HandleCurrentStationChanged;
+					field.CurrentChanged += HandleCurrentStationChanged;
 				}
 
 				// Handlers
@@ -264,24 +261,23 @@ namespace EDTradeAdvisor.UI
 					Settings.Instance.Origin = new LocationID(Settings.Instance.Origin.StarSystemID, current?.ID);
 				}
 			}
-		}
-		private ICollectionView m_stations_origin = null!;
+		} = null!;
 
 		/// <summary>The stations associated with the selection destination system</summary>
 		public ICollectionView DestStations
 		{
-			get { return m_stations_dest; }
+			get;
 			private set
 			{
-				if (m_stations_dest == value) return;
-				if (m_stations_dest != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_stations_dest.CurrentChanged -= HandleCurrentStationChanged;
+					field.CurrentChanged -= HandleCurrentStationChanged;
 				}
-				m_stations_dest = value;
-				if (m_stations_dest != null)
+				field = value;
+				if (field != null)
 				{
-					m_stations_dest.CurrentChanged += HandleCurrentStationChanged;
+					field.CurrentChanged += HandleCurrentStationChanged;
 				}
 
 				// Handlers
@@ -292,8 +288,7 @@ namespace EDTradeAdvisor.UI
 					Settings.Instance.Destination = new LocationID(Settings.Instance.Destination.StarSystemID, current?.ID);
 				}
 			}
-		}
-		private ICollectionView m_stations_dest = null!;
+		} = null!;
 
 		/// <summary>Read the current location from the journal file</summary>
 		public bool UseCurrentLocation

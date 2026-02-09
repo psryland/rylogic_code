@@ -54,15 +54,14 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		/// <summary>The containing chart control</summary>
 		internal ChartControl Chart
 		{
-			get => m_chart;
+			get;
 			set
 			{
-				if (m_chart == value) return;
-				m_chart = value;
-				DataContext = m_chart;
+				if (field == value) return;
+				field = value;
+				DataContext = field;
 			}
-		}
-		private ChartControl m_chart = null!;
+		} = null!;
 
 		/// <summary>Add an object to the scene</summary>
 		public void AddObject(View3d.Object obj)

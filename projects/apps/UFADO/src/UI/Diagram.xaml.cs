@@ -35,34 +35,33 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 	/// <summary>Provides support for the DockContainer</summary>
 	public DockControl DockControl
 	{
-		get => m_dock_control;
+		get;
 		private set
 		{
-			if (m_dock_control == value) return;
-			Util.Dispose(ref m_dock_control!);
-			m_dock_control = value;
+			if (field == value) return;
+			Util.Dispose(ref field!);
+			field = value;
 		}
-	}
-	private DockControl m_dock_control = null!;
+	} = null!;
 
 	/// <summary>The diagram control</summary>
 	public ChartControl Chart
 	{
-		get => m_diagram;
+		get;
 		private set
 		{
-			if (m_diagram == value) return;
-			if (m_diagram != null)
+			if (field == value) return;
+			if (field != null)
 			{
-				m_diagram.Selected.ListChanging -= HandleSelectedChanging;
+				field.Selected.ListChanging -= HandleSelectedChanging;
 			}
-			m_diagram = value;
-			if (m_diagram != null)
+			field = value;
+			if (field != null)
 			{
-				m_diagram.Camera.AlignAxis = v4.YAxis;
-				m_diagram.Scene.ContextMenu.DataContext = this;
-				m_diagram.Scene.Window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, specular: 0xFF000000, spec_power: 0, camera_relative: true);
-				m_diagram.Selected.ListChanging += HandleSelectedChanging;
+				field.Camera.AlignAxis = v4.YAxis;
+				field.Scene.ContextMenu.DataContext = this;
+				field.Scene.Window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, specular: 0xFF000000, spec_power: 0, camera_relative: true);
+				field.Selected.ListChanging += HandleSelectedChanging;
 			}
 
 			// Handlers
@@ -78,8 +77,7 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 				}
 			}
 		}
-	}
-	private ChartControl m_diagram = null!;
+	} = null!;
 
 	/// <summary>Remove all nodes and connectors from the chart</summary>
 	private void ClearDiagram(bool recycle)

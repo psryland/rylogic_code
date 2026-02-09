@@ -77,15 +77,14 @@ namespace Rylogic.Gui.WPF
 			/// <summary>View3d context reference (needed because Elements can out-live the chart)</summary>
 			private View3d View3d
 			{
-				get => m_view3d;
+				get;
 				set
 				{
-					if (m_view3d == value) return;
-					Util.Dispose(ref m_view3d!);
-					m_view3d = value;
+					if (field == value) return;
+					Util.Dispose(ref field!);
+					field = value;
 				}
-			}
-			private View3d m_view3d = null!;
+			} = null!;
 
 			/// <summary>Non-null when the element has been added to a chart. Not virtual, override 'SetChartCore' instead</summary>
 			public ChartControl? Chart

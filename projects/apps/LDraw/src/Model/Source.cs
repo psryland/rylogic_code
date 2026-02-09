@@ -38,20 +38,20 @@ namespace LDraw
 		/// <summary>Access to the app data</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
-					m_model.PropertyChanged -= HandlePropertyChanged;
+					field.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.PropertyChanged += HandlePropertyChanged;
-					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
+					field.PropertyChanged += HandlePropertyChanged;
+					field.Scenes.CollectionChanged += HandleScenesCollectionChanged;
 				}
 
 				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -71,25 +71,24 @@ namespace LDraw
 					NotifyPropertyChanged(nameof(AvailableScenes));
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The native LDraw source</summary>
 		private View3d.Source View3dSource
 		{
-			get => m_source;
+			get;
 			set
 			{
-				if (m_source == value) return;
-				if (m_source != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_source.PropertyChanged -= HandleSourcePropertyChanged;
-					Util.Dispose(ref m_source!);
+					field.PropertyChanged -= HandleSourcePropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_source = value;
-				if (m_source != null)
+				field = value;
+				if (field != null)
 				{
-					m_source.PropertyChanged += HandleSourcePropertyChanged;
+					field.PropertyChanged += HandleSourcePropertyChanged;
 				}
 			
 				void HandleSourcePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -98,8 +97,7 @@ namespace LDraw
 						NotifyPropertyChanged(e.PropertyName);
 				}
 			}
-		}
-		private View3d.Source m_source = null!;
+		} = null!;
 
 		/// <summary>The context id associated with the source</summary>
 		public Guid ContextId => View3dSource.ContextId;

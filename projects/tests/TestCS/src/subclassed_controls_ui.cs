@@ -169,10 +169,9 @@ namespace TestCS
 
 			public string Name
 			{
-				get { return m_name; }
-				set { m_name = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Name")); }
+				get;
+				set { field = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Name")); }
 			}
-			private string m_name;
 
 			public override string ToString() { return $"Thing: {Name}"; }
 		}

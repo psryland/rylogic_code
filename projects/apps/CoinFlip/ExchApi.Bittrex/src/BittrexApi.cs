@@ -57,28 +57,26 @@ namespace Bittrex.API
 		/// <summary></summary>
 		public BittrexWebSocket WebSocket
 		{
-			get { return m_web_socket; }
+			get;
 			private set
 			{
-				if (m_web_socket == value) return;
-				Util.Dispose(ref m_web_socket);
-				m_web_socket = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private BittrexWebSocket m_web_socket;
 
 		/// <summary>A local copy of the state of markets</summary>
 		public MarketDataCache MarketData
 		{
-			get { return m_market_data; }
+			get;
 			private set
 			{
-				if (m_market_data == value) return;
-				Util.Dispose(ref m_market_data);
-				m_market_data = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private MarketDataCache m_market_data;
 
 		#endregion
 

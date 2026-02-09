@@ -201,67 +201,62 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The (optional) control that the balloon is pinned to</summary>
 		public Control PinTo
 		{
-			get { return m_pin_to; }
+			get;
 			set
 			{
-				if (m_pin_to == value) return;
-				m_pin_to = value;
+				if (field == value) return;
+				field = value;
 				Invalidate();
 			}
 		}
-		private Control m_pin_to;
 
 		/// <summary>The position to point the tool tip at (relative to the associated control)</summary>
 		public Point Target
 		{
-			get { return m_target; }
+			get;
 			set
 			{
-				if (m_target == value) return;
-				m_target = value;
+				if (field == value) return;
+				field = value;
 				Invalidate();
 			}
 		}
-		private Point m_target;
 
 		/// <summary>The radius of the corners of the balloon</summary>
 		public int CornerRadius
 		{
-			get { return m_corner_radius; }
+			get;
 			set
 			{
-				if (m_corner_radius == value) return;
-				m_corner_radius = value;
+				if (field == value) return;
+				field = value;
 				InvalidateSize();
 			}
 		}
-		private int m_corner_radius;
 
 		/// <summary>The width of the fat end of the pointer</summary>
 		public int TipBaseWidth
 		{
-			get { return m_tip_base_width; }
+			get;
 			set
 			{
-				if (m_tip_base_width == value) return;
-				m_tip_base_width = value;
+				if (field == value) return;
+				field = value;
 				InvalidateSize();
 			}
 		}
-		private int m_tip_base_width;
 
 		/// <summary>The vertical length of the tip</summary>
 		public int TipLength
 		{
-			get { return m_tip_length; }
+			get;
 			set
 			{
-				if (m_tip_length == value) return;
-				m_tip_length = value;
+				if (field == value) return;
+				field = value;
 				InvalidateSize();
 			}
 		}
-		private int m_tip_length;
 
 		/// <summary>The preferred orientation of the balloon tip</summary>
 		public ETipCorner PreferredTipCorner { get; set; }

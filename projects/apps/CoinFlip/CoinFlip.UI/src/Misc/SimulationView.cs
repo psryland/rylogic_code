@@ -31,19 +31,19 @@ namespace CoinFlip.UI
 		/// <summary>App logic</summary>
 		private Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Model.BackTestingChange -= HandleBackTestingChange;
-					m_model.SimPropertyChanged -= HandleSimEvent;
+					field.SimPropertyChanged -= HandleSimEvent;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.SimPropertyChanged += HandleSimEvent;
+					field.SimPropertyChanged += HandleSimEvent;
 					Model.BackTestingChange += HandleBackTestingChange;
 				}
 
@@ -69,8 +69,7 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(string.Empty);
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The owner window</summary>
 		private Window Owner { get; }

@@ -103,35 +103,33 @@ namespace RyLogViewer
 		/// <summary>The current find pattern</summary>
 		public Pattern Pattern
 		{
-			get { return m_pattern; }
+			get;
 			set
 			{
-				if (m_pattern == value) return;
-				m_pattern = value;
+				if (field == value) return;
+				field = value;
 				UpdateUI();
 			}
 		}
-		private Pattern m_pattern;
 
 		/// <summary>The history of search patterns</summary>
 		private BindingSource<Pattern> History
 		{
-			get { return m_history; }
+			get;
 			set
 			{
-				if (m_history == value) return;
-				if (m_history != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_history.CurrentItemChanged -= HandleCurrentItemChanged;
+					field.CurrentItemChanged -= HandleCurrentItemChanged;
 				}
-				m_history = value;
-				if (m_history != null)
+				field = value;
+				if (field != null)
 				{
-					m_history.CurrentItemChanged += HandleCurrentItemChanged;
+					field.CurrentItemChanged += HandleCurrentItemChanged;
 				}
 			}
 		}
-		private BindingSource<Pattern> m_history;
 		private void HandleCurrentItemChanged(object sender, EventArgs e)
 		{
 			var pattern = History.Current as Pattern;
@@ -142,15 +140,14 @@ namespace RyLogViewer
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
 		private HelpUI RegexHelpUI
 		{
-			get { return m_dlg_help; }
+			get;
 			set
 			{
-				if (m_dlg_help == value) return;
-				Util.Dispose(m_dlg_help);
-				m_dlg_help = value;
+				if (field == value) return;
+				Util.Dispose(field);
+				field = value;
 			}
 		}
-		private HelpUI m_dlg_help;
 
 		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
 		public event Action<bool> FindNext;

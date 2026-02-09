@@ -1356,15 +1356,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The filter function</summary>
 			public Func<TItem,bool> Predicate
 			{
-				get { return m_predicate; }
+				get;
 				set
 				{
-					if (m_predicate == value) return;
-					m_predicate = value ?? (x => true);
+					if (field == value) return;
+					field = value ?? (x => true);
 					UpdateView();
 				}
 			}
-			private Func<TItem,bool> m_predicate;
 
 			/// <summary>The binding source that this is a view of</summary>
 			public BindingSource<TItem> BindingSource

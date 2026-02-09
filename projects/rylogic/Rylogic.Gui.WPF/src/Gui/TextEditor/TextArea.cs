@@ -45,20 +45,19 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary>The view implementation</summary>
 		public TextView TextView
 		{
-			get => m_textview;
+			get;
 			private set
 			{
-				if (m_textview == value) return;
-				if (m_textview != null)
+				if (field == value) return;
+				if (field != null)
 				{ }
-				m_textview = value;
-				if (m_textview != null)
+				field = value;
+				if (field != null)
 				{
 				}
 				NotifyPropertyChanged(nameof(TextView));
 			}
-		}
-		private TextView m_textview = null!;
+		} = null!;
 
 		/// <summary>Gets/Sets the document displayed by the text editor.</summary>
 		public TextDocument Document

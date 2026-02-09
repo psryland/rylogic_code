@@ -37,14 +37,13 @@ namespace CoinFlip
 		/// <summary>The time when data in this collection was last updated. Note: *NOT* when collection changed, when the elements in the collection changed</summary>
 		public DateTimeOffset LastUpdated
 		{
-			get => m_last_updated;
+			get;
 			set
 			{
-				m_last_updated = value;
+				field = value;
 				Updated.NotifyAll(value);
 			}
 		}
-		private DateTimeOffset m_last_updated;
 
 		/// <summary></summary>
 		public event NotifyCollectionChangedEventHandler? CollectionChanged;

@@ -273,20 +273,20 @@ namespace RyLogViewer
 		/// <summary>App settings</summary>
 		public Settings Settings
 		{
-			get { return m_impl_settings; }
+			get;
 			set
 			{
-				if (m_impl_settings == value) return;
-				if (m_impl_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_impl_settings.SettingChange -= HandleSettingsChange;
-					m_impl_settings.SettingsSaving -= HandleSettingsSaved;
+					field.SettingChange -= HandleSettingsChange;
+					field.SettingsSaving -= HandleSettingsSaved;
 				}
-				m_impl_settings = value;
-				if (m_impl_settings != null)
+				field = value;
+				if (field != null)
 				{
-					m_impl_settings.SettingsSaving += HandleSettingsSaved;
-					m_impl_settings.SettingChange += HandleSettingsChange;
+					field.SettingsSaving += HandleSettingsSaved;
+					field.SettingChange += HandleSettingsChange;
 					ApplySettings();
 				}
 
@@ -302,7 +302,6 @@ namespace RyLogViewer
 				}
 			}
 		}
-		private Settings m_impl_settings;
 
 		/// <summary>The options provided at startup</summary>
 		public StartupOptions StartupOptions
@@ -395,35 +394,33 @@ namespace RyLogViewer
 		/// <summary>A helper for watching files</summary>
 		private FileWatch Watch
 		{
-			get { return m_watch; }
+			get;
 			set
 			{
-				if (m_watch == value) return;
-				m_watch = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private FileWatch m_watch;
 		
 		/// <summary>A timer for polling the file watcher</summary>
 		private Timer WatchTimer
 		{
-			get { return m_watch_timer; }
+			get;
 			set
 			{
-				if (m_watch_timer == value) return;
-				if (m_watch_timer != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_watch_timer.Tick -= HandleWatchTimerTick;
+					field.Tick -= HandleWatchTimerTick;
 				}
-				m_watch_timer = value;
-				if (m_watch_timer != null)
+				field = value;
+				if (field != null)
 				{
-					m_watch_timer.Interval = Constants.FilePollingRate;
-					m_watch_timer.Tick += HandleWatchTimerTick;
+					field.Interval = Constants.FilePollingRate;
+					field.Tick += HandleWatchTimerTick;
 				}
 			}
 		}
-		private Timer m_watch_timer;
 		private void HandleWatchTimerTick(object sender, EventArgs e)
 		{
 			if (ReloadInProgress) return;
@@ -438,18 +435,17 @@ namespace RyLogViewer
 		/// <summary>Licence data</summary>
 		public Licence Licence
 		{
-			get { return m_lic; }
+			get;
 			set
 			{
-				if (m_lic == value) return;
-				if (m_lic != null)
+				if (field == value) return;
+				if (field != null)
 				{}
-				m_lic = value;
-				if (m_lic != null)
+				field = value;
+				if (field != null)
 				{}
 			}
 		}
-		private Licence m_lic;
 
 		/// <summary>Set up the UI Elements</summary>
 		private void SetupUI()

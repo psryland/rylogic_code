@@ -37,21 +37,21 @@ namespace RyLogViewer
 		/// <summary>Application settings</summary>
 		public Settings Settings
 		{
-			get => m_settings;
+			get;
 			set
 			{
-				if (m_settings == value) return;
-				if (m_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_settings.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_settings = value;
-				if (m_settings != null)
+				field = value;
+				if (field != null)
 				{
-					m_settings.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 
 					// Apply settings
-					ColumnCount = m_settings.Format.ColumnCount;
+					ColumnCount = field.Format.ColumnCount;
 				}
 
 				// Handlers
@@ -62,8 +62,7 @@ namespace RyLogViewer
 						ColumnCount = column_count;
 				}
 			}
-		}
-		private Settings m_settings = null!;
+		} = null!;
 
 		/// <summary>The data source for the grid</summary>
 		public IReadOnlyList<ILine> Source

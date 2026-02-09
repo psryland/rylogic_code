@@ -710,15 +710,14 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>True if users are allowed to add/remove/edit elements on the diagram</summary>
 		public bool AllowEditing
 		{
-			get { return m_impl_allow_editing; }
+			get;
 			set
 			{
-				if (m_impl_allow_editing == value) return;
-				m_impl_allow_editing = value;
+				if (field == value) return;
+				field = value;
 				//UpdateEditToolbar();
 			}
 		}
-		private bool m_impl_allow_editing;
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
@@ -1352,82 +1351,72 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The control method used for shifting the camera</summary>
 			public ENavMode NavigationMode
 			{
-				get { return m_NavigationMode; }
-				set { SetProp(ref m_NavigationMode, value, nameof(NavigationMode)); }
+				get;
+				set { SetProp(ref field, value, nameof(NavigationMode)); }
 			}
-			private ENavMode m_NavigationMode;
 
 			/// <summary>Lock the aspect ratio for the chart (null means unlocked)</summary>
 			public double? LockAspect
 			{
-				get { return m_LockAspect; }
-				set { SetProp(ref m_LockAspect, value, nameof(LockAspect)); }
+				get;
+				set { SetProp(ref field, value, nameof(LockAspect)); }
 			}
-			private double? m_LockAspect;
 
 			/// <summary>The fill colour of the non-chart area of the control (e.g. behind the axis labels)</summary>
 			public Color BkColour
 			{
-				get { return m_BkColour; }
-				set { SetProp(ref m_BkColour, value, nameof(BkColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(BkColour)); }
 			}
-			private Color m_BkColour;
 
 			/// <summary>The fill colour of the chart plot area</summary>
 			public Color ChartBkColour
 			{
-				get { return m_ChartBkColour; }
-				set { SetProp(ref m_ChartBkColour, value, nameof(ChartBkColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(ChartBkColour)); }
 			}
-			private Color m_ChartBkColour;
 
 			/// <summary>The colour of the title text</summary>
 			public Color TitleColour
 			{
-				get { return m_TitleColour; }
-				set { SetProp(ref m_TitleColour, value, nameof(TitleColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleColour)); }
 			}
-			private Color m_TitleColour;
 
 			/// <summary>Transform for position the chart title, offset from top centre</summary>
 			public Matrix TitleTransform
 			{
-				get { return m_TitleTransform; }
-				set { SetProp(ref m_TitleTransform, value, nameof(TitleTransform)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleTransform)); }
 			}
-			private Matrix m_TitleTransform;
 
 			/// <summary>The distances from the edge of the control to the chart area</summary>
 			public Padding Margin
 			{
-				get { return m_Margin; }
-				set { SetProp(ref m_Margin, value, nameof(Margin)); }
+				get;
+				set { SetProp(ref field, value, nameof(Margin)); }
 			}
-			private Padding m_Margin;
 
 			/// <summary>Font to use for the title text</summary>
 			public Font TitleFont
 			{
-				get { return m_TitleFont; }
-				set { SetProp(ref m_TitleFont, value, nameof(TitleFont)); }
+				get;
+				set { SetProp(ref field, value, nameof(TitleFont)); }
 			}
-			private Font m_TitleFont;
 
 			/// <summary>Font to use for chart notes</summary>
 			public Font NoteFont
 			{
-				get { return m_NoteFont; }
-				set { SetProp(ref m_NoteFont, value, nameof(NoteFont)); }
+				get;
+				set { SetProp(ref field, value, nameof(NoteFont)); }
 			}
-			private Font m_NoteFont;
 
 			/// <summary>Area selection colour</summary>
 			public Color SelectionColour
 			{
-				get { return m_SelectionColour; }
-				set { SetProp(ref m_SelectionColour, value, nameof(SelectionColour)); }
+				get;
+				set { SetProp(ref field, value, nameof(SelectionColour)); }
 			}
-			private Color m_SelectionColour;
 
 			/// <summary>Show grid lines (False overrides per-axis options)</summary>
 			public bool ShowGridLines
@@ -1440,101 +1429,90 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The offset from the origin for the grid, in the forward direction of the camera</summary>
 			public float GridZOffset
 			{
-				get { return m_GridZOffset; }
-				set { SetProp(ref m_GridZOffset, value, nameof(GridZOffset)); }
+				get;
+				set { SetProp(ref field, value, nameof(GridZOffset)); }
 			}
-			private float m_GridZOffset;
 
 			/// <summary>Show/Hide the chart axes</summary>
 			public bool ShowAxes
 			{
-				get { return m_ShowAxes; }
-				set { SetProp(ref m_ShowAxes, value, nameof(ShowAxes)); }
+				get;
+				set { SetProp(ref field, value, nameof(ShowAxes)); }
 			}
-			private bool m_ShowAxes;
 
 			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
 			public bool AntiAliasing
 			{
-				get { return m_AntiAliasing; }
-				set { SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing)); }
+				get;
+				set { SetProp(ref field, value, nameof(AntiAliasing)); }
 			}
-			private bool m_AntiAliasing;
 
 			/// <summary>Fill mode, solid, wire, or both</summary>
 			public View3d.EFillMode FillMode
 			{
-				get { return m_FillMode; }
-				set { SetProp(ref m_FillMode, value, nameof(FillMode)); }
+				get;
+				set { SetProp(ref field, value, nameof(FillMode)); }
 			}
-			private View3d.EFillMode m_FillMode;
 
 			/// <summary>Fill mode, solid, wire, or both</summary>
 			public View3d.ECullMode CullMode
 			{
-				get { return m_CullMode; }
-				set { SetProp(ref m_CullMode, value, nameof(CullMode)); }
+				get;
+				set { SetProp(ref field, value, nameof(CullMode)); }
 			}
-			private View3d.ECullMode m_CullMode;
 
 			/// <summary>Get/Set orthographic camera projection</summary>
 			public bool Orthographic
 			{
-				get { return m_Orthographic; }
-				set { SetProp(ref m_Orthographic, value, nameof(Orthographic)); }
+				get;
+				set { SetProp(ref field, value, nameof(Orthographic)); }
 			}
-			private bool m_Orthographic;
 
 			/// <summary>How close a click has to be for selection to occur (in client space)</summary>
 			public float MinSelectionDistance
 			{
-				get { return m_MinSelectionDistance; }
-				set { SetProp(ref m_MinSelectionDistance, value, nameof(MinSelectionDistance)); }
+				get;
+				set { SetProp(ref field, value, nameof(MinSelectionDistance)); }
 			}
-			private float m_MinSelectionDistance;
 
 			/// <summary>Minimum distance in pixels before the chart starts dragging</summary>
 			public float MinDragPixelDistance
 			{
-				get { return m_MinDragPixelDistance; }
-				set { SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance)); }
+				get;
+				set { SetProp(ref field, value, nameof(MinDragPixelDistance)); }
 			}
-			private float m_MinDragPixelDistance;
 
 			/// <summary>True if the camera should move along a ray cast through the mouse point</summary>
 			public bool PerpendicularZTranslation
 			{
-				get { return m_PerpendicularZTranslation; }
-				set { SetProp(ref m_PerpendicularZTranslation, value, nameof(PerpendicularZTranslation)); }
+				get;
+				set { SetProp(ref field, value, nameof(PerpendicularZTranslation)); }
 			}
-			private bool m_PerpendicularZTranslation;
 
 			/// <summary>The forward direction of the camera when reset</summary>
 			public v4 ResetForward
 			{
-				get { return m_ResetForward; }
-				set { SetProp(ref m_ResetForward, value, nameof(ResetForward)); }
+				get;
+				set { SetProp(ref field, value, nameof(ResetForward)); }
 			}
-			public v4 m_ResetForward;
 
 			/// <summary>The up direction of the camera when reset</summary>
 			public v4 ResetUp
 			{
-				get { return m_ResetUp; }
-				set { SetProp(ref m_ResetUp, value, nameof(ResetUp)); }
+				get;
+				set { SetProp(ref field, value, nameof(ResetUp)); }
 			}
-			public v4 m_ResetUp;
 
 			/// <summary>XAxis rendering options</summary>
 			public Axis XAxis 
 			{
-				get { return m_XAxis; }
+				get;
 				private set
 				{
-					if (m_XAxis == value) return;
-					if (m_XAxis != null) m_XAxis.PropertyChanged -= HandleXAxisPropertyChanged;
-					m_XAxis = value;
-					if (m_XAxis != null) m_XAxis.PropertyChanged += HandleXAxisPropertyChanged;
+					if (field == value) return;
+					if (field != null) field.PropertyChanged -= HandleXAxisPropertyChanged;
+					field = value;
+					if (field != null) field.PropertyChanged += HandleXAxisPropertyChanged;
 
 					// Handler
 					void HandleXAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -1543,18 +1521,17 @@ namespace Rylogic.Gui.WinForms
 					}
 				}
 			}
-			private Axis m_XAxis;
 
 			/// <summary>YAxis rendering options</summary>
 			public Axis YAxis
 			{
-				get { return m_YAxis; }
+				get;
 				private set
 				{
-					if (m_YAxis == value) return;
-					if (m_YAxis != null) m_YAxis.PropertyChanged -= HandleYAxisPropertyChanged;
-					m_YAxis = value;
-					if (m_YAxis != null) m_YAxis.PropertyChanged += HandleYAxisPropertyChanged;
+					if (field == value) return;
+					if (field != null) field.PropertyChanged -= HandleYAxisPropertyChanged;
+					field = value;
+					if (field != null) field.PropertyChanged += HandleYAxisPropertyChanged;
 
 					// Handler
 					void HandleYAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -1563,7 +1540,6 @@ namespace Rylogic.Gui.WinForms
 					}
 				}
 			}
-			private Axis m_YAxis;
 
 			[TypeConverter(typeof(TyConv))]
 			public class Axis :INotifyPropertyChanged
@@ -1658,106 +1634,93 @@ namespace Rylogic.Gui.WinForms
 				/// <summary>The colour of the main axes</summary>
 				public Color AxisColour
 				{
-					get { return m_AxisColour; }
-					set { SetProp(ref m_AxisColour, value, nameof(AxisColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(AxisColour)); }
 				}
-				private Color m_AxisColour;
 
 				/// <summary>The colour of the label text</summary>
 				public Color LabelColour
 				{
-					get { return m_LabelColour; }
-					set { SetProp(ref m_LabelColour, value, nameof(LabelColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelColour)); }
 				}
-				private Color m_LabelColour;
 
 				/// <summary>The colour of the grid lines</summary>
 				public Color GridColour
 				{
-					get { return m_GridColour; }
-					set { SetProp(ref m_GridColour, value, nameof(GridColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(GridColour)); }
 				}
-				private Color m_GridColour;
 
 				/// <summary>The colour of the tick text</summary>
 				public Color TickColour
 				{
-					get { return m_TickColour; }
-					set { SetProp(ref m_TickColour, value, nameof(TickColour)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickColour)); }
 				}
-				private Color m_TickColour;
 
 				/// <summary>The font to use for the axis label</summary>
 				public Font LabelFont
 				{
-					get { return m_LabelFont; }
-					set { SetProp(ref m_LabelFont, value, nameof(LabelFont)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelFont)); }
 				}
-				private Font m_LabelFont;
 
 				/// <summary>The font to use for tick labels</summary>
 				public Font TickFont
 				{
-					get { return m_TickFont; }
-					set { SetProp(ref m_TickFont, value, nameof(TickFont)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickFont)); }
 				}
-				private Font m_TickFont;
 
 				/// <summary>True if tick marks should be drawn</summary>
 				public bool DrawTickMarks
 				{
-					get { return m_DrawTickMarks; }
-					set { SetProp(ref m_DrawTickMarks, value, nameof(DrawTickMarks)); }
+					get;
+					set { SetProp(ref field, value, nameof(DrawTickMarks)); }
 				}
-				private bool m_DrawTickMarks;
 
 				/// <summary>True if tick labels should be drawn</summary>
 				public bool DrawTickLabels
 				{
-					get { return m_DrawTickLabels; }
-					set { SetProp(ref m_DrawTickLabels, value, nameof(DrawTickLabels)); }
+					get;
+					set { SetProp(ref field, value, nameof(DrawTickLabels)); }
 				}
-				private bool m_DrawTickLabels;
 
 				/// <summary>The length of the tick marks</summary>
 				public int TickLength
 				{
-					get { return m_TickLength; }
-					set { SetProp(ref m_TickLength, value, nameof(TickLength)); }
+					get;
+					set { SetProp(ref field, value, nameof(TickLength)); }
 				}
-				private int m_TickLength;
 
 				/// <summary>The minimum space reserved for tick marks and labels</summary>
 				public float MinTickSize
 				{
-					get { return m_MinTickSize; }
-					set { SetProp(ref m_MinTickSize, value, nameof(MinTickSize)); }
+					get;
+					set { SetProp(ref field, value, nameof(MinTickSize)); }
 				}
-				private float m_MinTickSize;
 
 				/// <summary>Offset transform from default label position</summary>
 				public Matrix LabelTransform
 				{
-					get { return m_LabelTransform; }
-					set { SetProp(ref m_LabelTransform, value, nameof(LabelTransform)); }
+					get;
+					set { SetProp(ref field, value, nameof(LabelTransform)); }
 				}
-				private Matrix m_LabelTransform;
 
 				/// <summary>The thickness of the axis line</summary>
 				public float AxisThickness
 				{
-					get { return m_AxisThickness; }
-					set { SetProp(ref m_AxisThickness, value, nameof(AxisThickness)); }
+					get;
+					set { SetProp(ref field, value, nameof(AxisThickness)); }
 				}
-				private float m_AxisThickness;
 
 				/// <summary>The preferred number of pixels between each grid line</summary>
 				public double PixelsPerTick
 				{
-					get { return m_PixelsPerTick; }
-					set { SetProp(ref m_PixelsPerTick, value, nameof(PixelsPerTick)); }
+					get;
+					set { SetProp(ref field, value, nameof(PixelsPerTick)); }
 				}
-				private double m_PixelsPerTick;
 
 				/// <summary>Show grid lines for this axis. (This settings is overruled by the main chart options)</summary>
 				public bool ShowGridLines
@@ -2351,26 +2314,24 @@ namespace Rylogic.Gui.WinForms
 		[Browsable(false)]
 		public bool DefaultMouseControl
 		{
-			get { return m_default_mouse_control; }
+			get;
 			set
 			{
-				if (m_default_mouse_control == value) return;
-				m_default_mouse_control = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private bool m_default_mouse_control;
 
 		/// <summary>Enable/Disable keyboard shortcuts for navigation</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get { return m_default_keyboard_shortcuts; }
+			get;
 			set
 			{
-				if (m_default_keyboard_shortcuts == value) return;
-				m_default_keyboard_shortcuts = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private bool m_default_keyboard_shortcuts;
 
 		/// <summary>The default behaviour of area select mode</summary>
 		public EAreaSelectMode AreaSelectMode { get; set; }
@@ -4299,15 +4260,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Graphic for area selection</summary>
 			public View3d.Object AreaSelect
 			{
-				get { return m_area_select; }
+				get;
 				private set
 				{
-					if (m_area_select == value) return;
-					Util.Dispose(ref m_area_select);
-					m_area_select = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
-			private View3d.Object m_area_select;
 			private View3d.Object CreateAreaSelect()
 			{
 				var ldr = new LdrBuilder().Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, v4.Origin).ToString();
@@ -4319,15 +4279,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Graphics for the resizing grab zones</summary>
 			public ResizeGrabber[] Resizer
 			{
-				get { return m_resizer; }
+				get;
 				private set
 				{
-					if (m_resizer == value) return;
-					Util.DisposeAll(m_resizer);
-					m_resizer = value;
+					if (field == value) return;
+					Util.DisposeAll(field);
+					field = value;
 				}
 			}
-			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber : View3d.Object
 			{
 				public ResizeGrabber(int corner) :base($"*Box resize_{corner} {{5}}", false, Id, null)
@@ -4391,26 +4350,24 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>A vertical and horizontal line</summary>
 			public View3d.Object CrossHairH
 			{
-				get { return m_cross_hair_h; }
+				get;
 				private set
 				{
-					if (m_cross_hair_h == value) return;
-					Util.Dispose(ref m_cross_hair_h);
-					m_cross_hair_h = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
 			public View3d.Object CrossHairV
 			{
-				get { return m_cross_hair_v; }
+				get;
 				private set
 				{
-					if (m_cross_hair_v == value) return;
-					Util.Dispose(ref m_cross_hair_v);
-					m_cross_hair_v = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
-			private View3d.Object m_cross_hair_h;
-			private View3d.Object m_cross_hair_v;
 			private View3d.Object CreateCrossHair(bool horiz)
 			{
 				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
@@ -4425,15 +4382,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>A line for measuring distances</summary>
 			public View3d.Object TapeMeasure
 			{
-				get { return m_tape_measure; }
+				get;
 				private set
 				{
-					if (m_tape_measure == value) return;
-					Util.Dispose(ref m_tape_measure);
-					m_tape_measure = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
-			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
 				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
@@ -5369,41 +5325,38 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>A cache of graphics pieces for this data series</summary>
 		private GfxCache Cache
 		{
-			get { return m_impl_cache; }
+			get;
 			set
 			{
-				if (m_impl_cache == value) return;
-				Util.Dispose(ref m_impl_cache!);
-				m_impl_cache = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private GfxCache m_impl_cache = null!;
+		} = null!;
 
 		/// <summary>Point sprite shader</summary>
 		private View3d.Shader PointSprite
 		{
-			get => m_point_sprite;
+			get;
 			set
 			{
-				if (m_point_sprite == value) return;
-				Util.Dispose(ref m_point_sprite!);
-				m_point_sprite = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Shader m_point_sprite = null!;
+		} = null!;
 
 		/// <summary>Thick Line-List shader</summary>
 		private View3d.Shader ThickLineList
 		{
-			get => m_thick_line_list;
+			get;
 			set
 			{
-				if (m_thick_line_list == value) return;
-				Util.Dispose(ref m_thick_line_list!);
-				m_thick_line_list = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Shader m_thick_line_list = null!;
+		} = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString()
@@ -5474,15 +5427,14 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>The collection of cached graphics models</summary>
 			private List<GfxPiece> Pieces
 			{
-				get { return m_pieces; }
+				get;
 				set
 				{
-					if (m_pieces == value) return;
-					Util.DisposeRange(m_pieces);
-					m_pieces = value;
+					if (field == value) return;
+					Util.DisposeRange(field);
+					field = value;
 				}
 			}
-			private List<GfxPiece> m_pieces;
 
 			/// <summary>Get the series data graphics that spans the given x range</summary>
 			public IEnumerable<GfxPiece> Get(RangeF range)

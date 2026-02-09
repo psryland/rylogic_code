@@ -98,25 +98,25 @@ namespace LDraw
 		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_model.FileOpening -= HandleFileOpened;
-					m_model.ParsingProgressChanged -= HandleParsingProgressChanged;
-					m_model.SourcesChanged -= HandleSourcesChanged;
-					m_model.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_model!);
+					field.FileOpening -= HandleFileOpened;
+					field.ParsingProgressChanged -= HandleParsingProgressChanged;
+					field.SourcesChanged -= HandleSourcesChanged;
+					field.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref field!);
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					m_model.PropertyChanged += HandlePropertyChanged;
-					m_model.SourcesChanged += HandleSourcesChanged;
-					m_model.ParsingProgressChanged += HandleParsingProgressChanged;
-					m_model.FileOpening += HandleFileOpened;
+					field.PropertyChanged += HandlePropertyChanged;
+					field.SourcesChanged += HandleSourcesChanged;
+					field.ParsingProgressChanged += HandleParsingProgressChanged;
+					field.FileOpening += HandleFileOpened;
 				}
 
 				// Handlers
@@ -151,29 +151,28 @@ namespace LDraw
 					NotifyPropertyChanged(nameof(StreamingState));
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>The current active content in the dock container</summary>
 		public IDockable? ActiveContent
 		{
-			get => m_active_content;
+			get;
 			set
 			{
-				if (m_active_content == value) return;
-				if (m_active_content != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					if (m_active_content is ScriptUI script)
+					if (field is ScriptUI script)
 						script.PropertyChanged -= HandleScriptPropertyChanged;
-					if (m_active_content is SceneUI prev_scene)
+					if (field is SceneUI prev_scene)
 						prev_scene.PropertyChanged -= HandleScenePropertyChanged;
 				}
-				m_active_content = value;
-				if (m_active_content != null)
+				field = value;
+				if (field != null)
 				{
-					if (m_active_content is ScriptUI script)
+					if (field is ScriptUI script)
 						script.PropertyChanged -= HandleScriptPropertyChanged;
-					if (m_active_content is SceneUI new_scene)
+					if (field is SceneUI new_scene)
 						new_scene.PropertyChanged += HandleScenePropertyChanged;
 				}
 
@@ -200,7 +199,6 @@ namespace LDraw
 				}
 			}
 		}
-		private IDockable? m_active_content;
 
 		/// <summary>The active content cast to specific types for binding</summary>
 		public SceneUI? ActiveScene => ActiveContent as SceneUI;

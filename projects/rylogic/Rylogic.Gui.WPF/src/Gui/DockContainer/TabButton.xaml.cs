@@ -224,15 +224,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>True if this button is the active one</summary>
 		public ETabState TabState
 		{
-			get => m_tab_state;
+			get;
 			set
 			{
-				if (m_tab_state == value) return;
-				m_tab_state = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(TabState));
 			}
 		}
-		private ETabState m_tab_state;
 
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

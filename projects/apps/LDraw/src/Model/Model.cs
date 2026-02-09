@@ -49,23 +49,23 @@ namespace LDraw
 		/// <summary>The view3d DLL context </summary>
 		public View3d View3d
 		{
-			get => m_view3d;
+			get;
 			set
 			{
-				if (m_view3d == value) return;
-				if (m_view3d != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_view3d.ParsingProgress -= HandleParsingProgress;
-					m_view3d.OnSourcesChanged -= HandleSourcesChanged;
-					m_view3d.Error -= ReportError;
-					Util.Dispose(ref m_view3d!);
+					field.ParsingProgress -= HandleParsingProgress;
+					field.OnSourcesChanged -= HandleSourcesChanged;
+					field.Error -= ReportError;
+					Util.Dispose(ref field!);
 				}
-				m_view3d = value;
-				if (m_view3d != null)
+				field = value;
+				if (field != null)
 				{
-					m_view3d.Error += ReportError;
-					m_view3d.OnSourcesChanged += HandleSourcesChanged;
-					m_view3d.ParsingProgress += HandleParsingProgress;
+					field.Error += ReportError;
+					field.OnSourcesChanged += HandleSourcesChanged;
+					field.ParsingProgress += HandleParsingProgress;
 				}
 
 				// Handlers
@@ -83,7 +83,7 @@ namespace LDraw
 
 						// Get the native code to tell us what sources exist
 						Dictionary<Guid, Source> nue = [];
-						m_view3d.EnumSources(src =>
+						field.EnumSources(src =>
 						{
 							// Ignore special objects used by the ChartControl
 							if (src.ContextId == ChartControl.CtxId)
@@ -146,31 +146,30 @@ namespace LDraw
 					}, e);
 				}
 			}
-		}
-		private View3d m_view3d = null!;
+		} = null!;
 
 		/// <summary>Application settings</summary>
 		public SettingsData Settings
 		{
-			get => m_settings;
+			get;
 			set
 			{
-				if (m_settings == value) return;
-				if (m_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_settings.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_settings = value;
-				if (m_settings != null)
+				field = value;
+				if (field != null)
 				{
-					m_settings.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 
 					// Ensure there is a default profile
-					if (m_settings.Profiles.Count == 0)
-						m_settings.Profiles.Add(new SettingsProfile { Name = SettingsProfile.DefaultProfileName });
+					if (field.Profiles.Count == 0)
+						field.Profiles.Add(new SettingsProfile { Name = SettingsProfile.DefaultProfileName });
 
 					// Start with the first profile at startup
-					Profile = m_settings.Profiles[0];
+					Profile = field.Profiles[0];
 				}
 
 				// Handlers
@@ -192,29 +191,28 @@ namespace LDraw
 					}
 				}
 			}
-		}
-		private SettingsData m_settings = null!;
+		} = null!;
 
 		/// <summary>The active profile</summary>
 		public SettingsProfile Profile
 		{
-			get => m_profile;
+			get;
 			set
 			{
 				if (Profile == value) return;
-				if (m_profile != null)
+				if (field != null)
 				{
 					Settings.Save();
 				}
-				m_profile = value;
-				if (m_profile != null)
+				field = value;
+				if (field != null)
 				{
 					// When the profile changes, delete and recreate the scenes
 					Util.DisposeRange(Scenes);
 					Scenes.Clear();
 
 					// Create scenes
-					foreach (var ss in m_profile.SceneState)
+					foreach (var ss in field.SceneState)
 					{
 						Scenes.Add(new SceneUI(this, ss.Name));
 					}
@@ -225,8 +223,7 @@ namespace LDraw
 				}
 				NotifyPropertyChanged(nameof(Profile));
 			}
-		}
-		private SettingsProfile m_profile = null!;
+		} = null!;
 
 		/// <summary>The collection of current Ldraw object sources</summary>
 		public List<Source> Sources { get; }
@@ -245,15 +242,14 @@ namespace LDraw
 		/// <summary>Progress updates for parsing. Null while not parsing</summary>
 		public ParsingProgressData? ParsingProgress
 		{
-			get => m_parsing_progress;
+			get;
 			private set
 			{
-				if (m_parsing_progress == value) return;
-				m_parsing_progress = value;
+				if (field == value) return;
+				field = value;
 				ParsingProgressChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
-		private ParsingProgressData? m_parsing_progress;
 		public event EventHandler? ParsingProgressChanged;
 
 		/// <summary>Timer used to watch for file changes</summary>

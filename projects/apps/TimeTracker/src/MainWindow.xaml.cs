@@ -189,42 +189,39 @@ namespace TimeTracker
 		/// <summary>Expand the view</summary>
 		public bool Expanded
 		{
-			get => m_expanded;
+			get;
 			set
 			{
-				if (m_expanded == value) return;
-				m_expanded = value;
+				if (field == value) return;
+				field = value;
 				SizeToContent = SizeToContent.Height;
 				NotifyPropertyChanged(nameof(Expanded));
 			}
 		}
-		private bool m_expanded;
 
 		/// <summary>True if the app periodically flashes</summary>
 		public bool EnableReminder
 		{
-			get => m_enable_reminder;
+			get;
 			set
 			{
-				if (m_enable_reminder == value) return;
-				m_enable_reminder = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(EnableReminder));
 			}
 		}
-		private bool m_enable_reminder;
 
 		/// <summary>The name of the current task</summary>
 		public string CurrentTaskName
 		{
-			get => m_current_task;
+			get;
 			set
 			{
-				if (m_current_task == value) return;
-				m_current_task = value ?? string.Empty;
+				if (field == value) return;
+				field = value ?? string.Empty;
 				NotifyPropertyChanged(nameof(CurrentTaskName));
 			}
-		}
-		private string m_current_task = string.Empty;
+		} = string.Empty;
 
 		/// <summary>True if the reminder is active</summary>
 		public bool Reminding

@@ -33,28 +33,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable mouse navigation</summary>
 		public bool DefaultMouseControl
 		{
-			get => m_default_mouse_control;
+			get;
 			set
 			{
-				if (m_default_mouse_control == value) return;
-				m_default_mouse_control = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(DefaultMouseControl));
 			}
 		}
-		private bool m_default_mouse_control;
 
 		/// <summary>Enable/Disable keyboard shortcuts for navigation</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get => m_default_keyshortcuts;
+			get;
 			set
 			{
-				if (m_default_keyshortcuts == value) return;
-				m_default_keyshortcuts = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts));
 			}
 		}
-		private bool m_default_keyshortcuts;
 
 		/// <summary>Mouse/key events on the chart</summary>
 		protected override void OnMouseDown(MouseButtonEventArgs args)

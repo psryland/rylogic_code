@@ -44,16 +44,16 @@ namespace CoinFlip.UI
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Model.BackTestingChange -= HandleBackTestingChanged;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
 					Model.BackTestingChange += HandleBackTestingChanged;
 				}
@@ -65,21 +65,19 @@ namespace CoinFlip.UI
 					Bots.Refresh();
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 
 		/// <summary>The data source for bots</summary>
 		public ICollectionView Bots { get; }

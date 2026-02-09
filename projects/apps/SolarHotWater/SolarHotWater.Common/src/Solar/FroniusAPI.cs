@@ -29,22 +29,21 @@ namespace SolarHotWater.Common
 		/// <summary>The Http client for REST requests</summary>
 		private HttpClient Client
 		{
-			get => m_client;
+			get;
 			set
 			{
-				if (m_client == value) return;
-				if (m_client != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					Util.Dispose(ref m_client!);
+					Util.Dispose(ref field!);
 				}
-				m_client = value;
-				if (m_client != null)
+				field = value;
+				if (field != null)
 				{
-					m_client.Timeout = TimeSpan.FromSeconds(10);
+					field.Timeout = TimeSpan.FromSeconds(10);
 				}
 			}
-		}
-		private HttpClient m_client = null!;
+		} = null!;
 
 		/// <summary>Get the real time data from the solar inverter</summary>
 		public async Task<SolarData> RealTimeData(CancellationToken? cancel = null)

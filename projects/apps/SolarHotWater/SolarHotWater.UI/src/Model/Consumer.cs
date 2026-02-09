@@ -30,18 +30,18 @@ namespace SolarHotWater
 		/// <summary></summary>
 		public SettingsData.Consumer Settings
 		{
-			get => m_settings;
+			get;
 			set
 			{
-				if (m_settings == value) return;
-				if (m_settings != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_settings.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_settings = value;
-				if (m_settings != null)
+				field = value;
+				if (field != null)
 				{
-					m_settings.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 
 				// Handler
@@ -65,28 +65,27 @@ namespace SolarHotWater
 					}
 				}
 			}
-		}
-		private SettingsData.Consumer m_settings = null!;
+		} = null!;
 
 		/// <summary>The switch that controls this consumer</summary>
 		public EweSwitch? EweSwitch
 		{
-			get => m_ewe_switch;
+			get;
 			set
 			{
-				if (m_ewe_switch == value) return;
-				if (m_ewe_switch != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_ewe_switch.PropertyChanged -= HandlePropChanged;
-					m_ewe_switch.Updated -= HandleSwitchUpdated;
+					field.PropertyChanged -= HandlePropChanged;
+					field.Updated -= HandleSwitchUpdated;
 				}
-				m_ewe_switch = value;
-				if (m_ewe_switch != null)
+				field = value;
+				if (field != null)
 				{
-					DeviceID = m_ewe_switch.DeviceID;
-					SwitchName = m_ewe_switch.Name;
-					m_ewe_switch.Updated += HandleSwitchUpdated;
-					m_ewe_switch.PropertyChanged += HandlePropChanged;
+					DeviceID = field.DeviceID;
+					SwitchName = field.Name;
+					field.Updated += HandleSwitchUpdated;
+					field.PropertyChanged += HandlePropChanged;
 				}
 				NotifyPropertyChanged(nameof(EweSwitch));
 				NotifyPropertyChanged(nameof(On));
@@ -145,7 +144,6 @@ namespace SolarHotWater
 				}
 			}
 		}
-		private EweSwitch? m_ewe_switch;
 
 		/// <summary>Consumer name</summary>
 		public string Name
@@ -215,16 +213,15 @@ namespace SolarHotWater
 		/// <summary>Timestamp of when a state change is first pending</summary>
 		public DateTimeOffset? StateChangePending
 		{
-			get => m_state_change_pending;
+			get;
 			set
 			{
-				if (m_state_change_pending == value) return;
-				m_state_change_pending = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(StateChangePending));
 				NotifyPropertyChanged(nameof(StateChangeFrac));
 			}
 		}
-		private DateTimeOffset? m_state_change_pending;
 
 		/// <summary>Timestamp of when the switch was last turned on/off</summary>
 		public DateTimeOffset LastStateChange { get; private set; }

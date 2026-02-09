@@ -74,15 +74,14 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>A data series for the overall nett worth vs. time</summary>
 		private ChartDataSeries NettWorthPlot
 		{
-			get => m_plot_nett_worth;
+			get;
 			set
 			{
-				if (m_plot_nett_worth == value) return;
-				Util.Dispose(ref m_plot_nett_worth!);
-				m_plot_nett_worth = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private ChartDataSeries m_plot_nett_worth = null!;
+		} = null!;
 
 		/// <summary>Data series for 'worth' plots of each coin</summary>
 		private List<CoinPlot> CoinPlots { get; }
@@ -137,15 +136,14 @@ namespace CoinFlip.UI.GfxObjects
 			/// <summary>Plot colour</summary>
 			public override Colour32 Colour
 			{
-				get => m_colour;
+				get;
 				set
 				{
-					if (m_colour == value) return;
-					m_colour = value;
-					Options.Colour = m_colour.Alpha(1.0f).Darken(0.25f);
+					if (field == value) return;
+					field = value;
+					Options.Colour = field.Alpha(1.0f).Darken(0.25f);
 				}
 			}
-			private Colour32 m_colour;
 
 			/// <summary>Update the data series for the given coin</summary>
 			public void UpdateCoinPlot(CoinFlip.Equity data)
@@ -176,15 +174,14 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary></summary>
 		private View3d.Object Gfx
 		{
-			get => m_gfx;
+			get;
 			set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private View3d.Object m_gfx;
 
 		/// <summary>Create the graphics for the equity</summary>
 		private View3d.Object CreateGfx()

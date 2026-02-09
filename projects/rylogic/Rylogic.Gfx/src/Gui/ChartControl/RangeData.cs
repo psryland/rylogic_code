@@ -39,52 +39,50 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The chart X axis</summary>
 			public Axis XAxis
 			{
-				get => m_xaxis;
+				get;
 				internal set
 				{
-					if (m_xaxis == value) return;
-					if (m_xaxis != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_xaxis.Scroll -= HandleAxisScrolled;
-						m_xaxis.Zoomed -= HandleAxisZoomed;
-						m_xaxis.PropertyChanged -= HandlePropertyChanged;
-						Util.Dispose(ref m_xaxis!);
+						field.Scroll -= HandleAxisScrolled;
+						field.Zoomed -= HandleAxisZoomed;
+						field.PropertyChanged -= HandlePropertyChanged;
+						Util.Dispose(ref field!);
 					}
-					m_xaxis = value;
-					if (m_xaxis != null)
+					field = value;
+					if (field != null)
 					{
-						m_xaxis.PropertyChanged += HandlePropertyChanged;
-						m_xaxis.Zoomed += HandleAxisZoomed;
-						m_xaxis.Scroll += HandleAxisScrolled;
+						field.PropertyChanged += HandlePropertyChanged;
+						field.Zoomed += HandleAxisZoomed;
+						field.Scroll += HandleAxisScrolled;
 					}
 				}
-			}
-			private Axis m_xaxis = null!;
+			} = null!;
 
 			/// <summary>The chart Y axis</summary>
 			public Axis YAxis
 			{
-				get => m_yaxis;
+				get;
 				internal set
 				{
-					if (m_yaxis == value) return;
-					if (m_yaxis != null)
+					if (field == value) return;
+					if (field != null)
 					{
-						m_yaxis.Scroll -= HandleAxisScrolled;
-						m_yaxis.Zoomed -= HandleAxisZoomed;
-						m_yaxis.PropertyChanged -= HandlePropertyChanged;
-						Util.Dispose(ref m_yaxis!);
+						field.Scroll -= HandleAxisScrolled;
+						field.Zoomed -= HandleAxisZoomed;
+						field.PropertyChanged -= HandlePropertyChanged;
+						Util.Dispose(ref field!);
 					}
-					m_yaxis = value;
-					if (m_yaxis != null)
+					field = value;
+					if (field != null)
 					{
-						m_yaxis.PropertyChanged += HandlePropertyChanged;
-						m_yaxis.Zoomed += HandleAxisZoomed;
-						m_yaxis.Scroll += HandleAxisScrolled;
+						field.PropertyChanged += HandlePropertyChanged;
+						field.Zoomed += HandleAxisZoomed;
+						field.Scroll += HandleAxisScrolled;
 					}
 				}
-			}
-			private Axis m_yaxis = null!;
+			} = null!;
 
 			/// <summary>The aspect ratio of the axes</summary>
 			public double Aspect
@@ -214,15 +212,14 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The axis label</summary>
 				public string Label
 				{
-					get => m_label;
+					get;
 					set
 					{
-						if (m_label == value) return;
-						m_label = value;
+						if (field == value) return;
+						field = value;
 						NotifyPropertyChanged(nameof(Label));
 					}
-				}
-				private string m_label = null!;
+				} = null!;
 
 				/// <summary>The minimum axis value</summary>
 				public double Min
@@ -285,15 +282,14 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The min/max value that the axis can scroll to</summary>
 				public RangeF RangeLimits
 				{
-					get => m_range_limits;
+					get;
 					set
 					{
-						if (m_range_limits == value) return;
-						m_range_limits = value;
+						if (field == value) return;
+						field = value;
 						Set(value.Beg, value.End);
 					}
 				}
-				private RangeF m_range_limits;
 
 				/// <summary>Allow scrolling on this axis</summary>
 				public bool AllowScroll { get; set; }
@@ -425,15 +421,14 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The graphics object used for grid lines</summary>
 				internal GridLines Gfx
 				{
-					get => m_gridlines;
+					get;
 					private set
 					{
-						if (m_gridlines == value) return;
-						Util.Dispose(ref m_gridlines!);
-						m_gridlines = value;
+						if (field == value) return;
+						Util.Dispose(ref field!);
+						field = value;
 					}
-				}
-				private GridLines m_gridlines = null!;
+				} = null!;
 
 				/// <summary>Default value to text conversion</summary>
 				public string DefaultTickText(double x, double? step = null)

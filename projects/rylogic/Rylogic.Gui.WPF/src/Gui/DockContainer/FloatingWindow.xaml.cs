@@ -49,19 +49,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The dock container that owns this floating window</summary>
 		public DockContainer DockContainer
 		{
-			get => m_dc;
+			get;
 			private set
 			{
-				if (m_dc == value) return;
-				if (m_dc != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
-					m_dc.FloatingWindows?.Remove(this);
+					field.ActiveContentChanged -= HandleActiveContentChanged;
+					field.FloatingWindows?.Remove(this);
 				}
-				m_dc = value;
-				if (m_dc != null)
+				field = value;
+				if (field != null)
 				{
-					m_dc.ActiveContentChanged += HandleActiveContentChanged;
+					field.ActiveContentChanged += HandleActiveContentChanged;
 				}
 
 				/// <summary>Handler for when the active content changes</summary>
@@ -79,8 +79,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					}
 				}
 			}
-		}
-		private DockContainer m_dc = null!;
+		} = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
 
 		/// <summary>The window content as a control container</summary>
@@ -92,21 +91,21 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The root level branch of the tree in this floating window</summary>
 		internal Branch Root
 		{
-			get => m_root;
+			get;
 			set
 			{
-				if (m_root == value) return;
-				if (m_root != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_root.TreeChanged -= HandleTreeChanged;
-					ContentPanel.Children.Remove(m_root);
-					Util.Dispose(ref m_root!);
+					field.TreeChanged -= HandleTreeChanged;
+					ContentPanel.Children.Remove(field);
+					Util.Dispose(ref field!);
 				}
-				m_root = value;
-				if (m_root != null)
+				field = value;
+				if (field != null)
 				{
-					ContentPanel.Children.Add(m_root);
-					m_root.TreeChanged += HandleTreeChanged;
+					ContentPanel.Children.Add(field);
+					field.TreeChanged += HandleTreeChanged;
 				}
 
 				/// <summary>Handler for when panes are added/removed from the tree</summary>
@@ -132,8 +131,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					}
 				}
 			}
-		}
-		private Branch m_root = null!;
+		} = null!;
 		Branch ITreeHost.Root => Root;
 
 		/// <summary>Manages events and changing of active pane/content</summary>

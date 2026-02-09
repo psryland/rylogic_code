@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -138,7 +138,7 @@ namespace Rylogic.Gui.WinForms
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool MouseNavigation
 		{
-			get { return m_mouse_navigation; }
+			get;
 			set
 			{
 				// Remove first to prevent duplicate handlers
@@ -155,10 +155,9 @@ namespace Rylogic.Gui.WinForms
 					MouseWheel       += OnMouseWheel;
 					MouseDoubleClick += OnMouseDblClick;
 				}
-				m_mouse_navigation = value;
+				field = value;
 			}
 		}
-		private bool m_mouse_navigation;
 
 		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseEventArgs e)

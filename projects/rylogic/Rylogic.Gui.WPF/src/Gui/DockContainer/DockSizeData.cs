@@ -47,34 +47,30 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The size of the left pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client width</summary>
 		public double Left
 		{
-			get => m_left;
-			set => SetProp(ref m_left, value);
+			get;
+			set => SetProp(ref field, value);
 		}
-		private double m_left;
 
 		/// <summary>The size of the top pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client height</summary>
 		public double Top
 		{
-			get => m_top;
-			set => SetProp(ref m_top, value);
+			get;
+			set => SetProp(ref field, value);
 		}
-		private double m_top;
 
 		/// <summary>The size of the right pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client width</summary>
 		public double Right
 		{
-			get => m_right;
-			set => SetProp(ref m_right, value);
+			get;
+			set => SetProp(ref field, value);
 		}
-		private double m_right;
 
 		/// <summary>The size of the bottom pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client height</summary>
 		public double Bottom
 		{
-			get => m_bottom;
-			set => SetProp(ref m_bottom, value);
+			get;
+			set => SetProp(ref field, value);
 		}
-		private double m_bottom;
 
 		/// <summary>Update a property and raise an event if different</summary>
 		private void SetProp(ref double prop, double value)

@@ -35,15 +35,14 @@ namespace Rylogic.Common
 		/// <summary>The maximum length of the history</summary>
 		public int Capacity
 		{
-			get => m_capacity;
+			get;
 			set
 			{
-				if (m_capacity == value) return;
-				m_capacity = value;
+				if (field == value) return;
+				field = value;
 				LimitHistoryLength();
 			}
 		}
-		private int m_capacity;
 
 		/// <summary>The number of values in the history</summary>
 		public int Count => Math.Max(0, History.Count - Capacity);

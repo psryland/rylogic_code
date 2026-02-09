@@ -55,23 +55,22 @@ namespace EDTradeAdvisor.DataProviders
 		private SQLiteConnection DB
 		{
 			[DebuggerStepThrough]
-			get { return m_db; }
+			get;
 			set
 			{
-				if (m_db == value) return;
-				if (m_db != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_db.Close();
-					Util.Dispose(ref m_db);
+					field.Close();
+					Util.Dispose(ref field);
 				}
-				m_db = value;
-				if (m_db != null)
+				field = value;
+				if (field != null)
 				{
-					m_db.Open();
+					field.Open();
 				}
 			}
 		}
-		private SQLiteConnection m_db;
 
 		/// <summary>App shutdown token</summary>
 		private CancellationToken Shutdown { get; }

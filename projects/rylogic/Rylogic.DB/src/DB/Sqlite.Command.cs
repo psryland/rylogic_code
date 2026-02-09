@@ -42,28 +42,27 @@ namespace Rylogic.DB
 			/// <summary>The current prepared statements</summary>
 			internal sqlite3_stmt? Stmt
 			{
-				get => m_stmt;
+				get;
 				set
 				{
-					if (m_stmt == value) return;
-					if (m_stmt != null)
+					if (field == value) return;
+					if (field != null)
 					{
 						// Reset the statement to release any locks
-						NativeAPI.Reset(m_stmt);
+						NativeAPI.Reset(field);
 
 						// Try to return the statement to the pool. Returns false if 'stmt' should be disposed instead.
-						if (!Connection.ReturnToCache(m_stmt))
+						if (!Connection.ReturnToCache(field))
 						{
 							// Close instead
-							m_stmt.Close(); // After 'sqlite3_finalize()', it is illegal to use 'm_stmt'.
-							if (m_stmt.CloseResult != EResult.OK)
-								throw new SqliteException(m_stmt.CloseResult, string.Empty, ErrorMsg);
+							field.Close(); // After 'sqlite3_finalize()', it is illegal to use 'field'.
+							if (field.CloseResult != EResult.OK)
+								throw new SqliteException(field.CloseResult, string.Empty, ErrorMsg);
 						}
 					}
-					m_stmt = value;
+					field = value;
 				}
-			}
-			private sqlite3_stmt? m_stmt = null;
+			} = null;
 
 			/// <summary>Last error message</summary>
 			private string ErrorMsg => Connection.ErrorMsg;
@@ -112,16 +111,15 @@ namespace Rylogic.DB
 			/// <summary>The transaction scope for the command</summary>
 			public Transaction? Transaction
 			{
-				get => m_transaction;
+				get;
 				set
 				{
 					if (value != null && !ReferenceEquals(Connection, value.Connection))
 						throw new SqliteException(EResult.Misuse, "This Transaction belongs to a diffent DB connection", string.Empty);
 					
-					m_transaction = value;
+					field = value;
 				}
 			}
-			public Transaction? m_transaction;
 
 			/// <summary>Returns the number of rows changed as a result of the last 'step()'</summary>
 			public int RowsChanged => NativeAPI.Changes(Connection.Handle);

@@ -30,15 +30,14 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The view 3D model</summary>
 			private View3d.Object? Gfx
 			{
-				get => m_gfx;
+				get;
 				set
 				{
-					if (m_gfx == value) return;
-					Util.Dispose(ref m_gfx);
-					m_gfx = value;
+					if (field == value) return;
+					Util.Dispose(ref field);
+					field = value;
 				}
 			}
-			private View3d.Object? m_gfx;
 
 			/// <summary>Debugging name for this graphics object</summary>
 			public string Name =>
@@ -101,16 +100,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The maximum number of grid lines</summary>
 			private int MaxLines
 			{
-				get => m_max_lines;
+				get;
 				set
 				{
 					// If the max number of grid lines changes we'll need to reallocate the model buffer
-					if (m_max_lines == value) return;
-					m_max_lines = value;
+					if (field == value) return;
+					field = value;
 					Gfx = null;
 				}
 			}
-			private int m_max_lines;
 
 			/// <summary>Create a dynamic view3d model for the axis graphics</summary>
 			private View3d.Object CreateGfx()

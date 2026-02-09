@@ -69,38 +69,35 @@ namespace RyLogViewer
 		/// <summary>The file to create</summary>
 		public string OutputFilepath
 		{
-			get { return m_output_filepath; }
+			get;
 			set
 			{
-				if (m_output_filepath == value) return;
-				m_output_filepath = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private string m_output_filepath;
 
 		/// <summary>The row delimiter string</summary>
 		public string RowDelim
 		{
-			get { return m_row_delim; }
+			get;
 			set
 			{
-				if (m_row_delim == value) return;
-				m_row_delim = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private string m_row_delim;
 
 		/// <summary>The column delimiter string</summary>
 		public string ColDelim
 		{
-			get { return m_col_delim; }
+			get;
 			set
 			{
-				if (m_col_delim == value) return;
-				m_col_delim = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private string m_col_delim;
 
 		/// <summary>What to export</summary>
 		public ERangeToExport RangeToExport
@@ -122,28 +119,26 @@ namespace RyLogViewer
 		/// <summary>The maximum range limits</summary>
 		public RangeI ByteRangeLimits
 		{
-			get { return m_range_limit; }
+			get;
 			private set
 			{
-				if (m_range_limit == value) return;
-				m_range_limit = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private RangeI m_range_limit;
 
 		/// <summary>If RangeToExport is byte range, export this range</summary>
 		public RangeI ByteRange
 		{
-			get { return m_range; }
+			get;
 			set
 			{
-				if (m_range == value) return;
-				m_range = new RangeI(
+				if (field == value) return;
+				field = new RangeI(
 					Math.Max(ByteRangeLimits.Beg, value.Beg),
 					Math.Min(ByteRangeLimits.End, value.End));
 			}
 		}
-		private RangeI m_range;
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()

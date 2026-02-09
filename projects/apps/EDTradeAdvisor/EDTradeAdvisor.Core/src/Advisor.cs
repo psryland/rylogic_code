@@ -214,28 +214,26 @@ namespace EDTradeAdvisor
 		/// <summary>Helper for accessing data from web sources</summary>
 		private Web Web
 		{
-			get { return m_web; }
+			get;
 			set
 			{
-				if (m_web == value) return;
-				Util.Dispose(ref m_web);
-				m_web = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private Web m_web;
 
 		/// <summary>The source of systems, stations, and market data</summary>
 		public IEliteDataProvider Src
 		{
-			get { return m_src; }
+			get;
 			private set
 			{
-				if (m_src == value) return;
-				Util.Dispose(ref m_src);
-				m_src = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private IEliteDataProvider m_src;
 
 		/// <summary>Check settings are valid before trying to find trade routes</summary>
 		private bool CanFindTradeRoutes(Settings settings) // worker thread context

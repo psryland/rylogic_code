@@ -61,18 +61,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Options for rendering this series</summary>
 		public OptionsData Options
 		{
-			get => m_options;
+			get;
 			set
 			{
-				if (m_options == value) return;
-				if (m_options != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_options.SettingChange -= HandleSettingChange;
+					field.SettingChange -= HandleSettingChange;
 				}
-				m_options = value;
-				if (m_options != null)
+				field = value;
+				if (field != null)
 				{
-					m_options.SettingChange += HandleSettingChange;
+					field.SettingChange += HandleSettingChange;
 				}
 
 				// Handler
@@ -94,8 +94,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private OptionsData m_options = null!;
+		} = null!;
 
 		/// <summary>Gain access to the underlying data</summary>
 		public LockData Lock() => new(this);
@@ -511,41 +510,38 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A cache of graphics pieces for this data series</summary>
 		private ChartGfxCache Cache
 		{
-			get => m_impl_cache;
+			get;
 			set
 			{
-				if (m_impl_cache == value) return;
-				Util.Dispose(ref m_impl_cache!);
-				m_impl_cache = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private ChartGfxCache m_impl_cache = null!;
+		} = null!;
 
 		/// <summary>Point sprite shader</summary>
 		private View3d.Shader PointSprite
 		{
-			get => m_point_sprite;
+			get;
 			set
 			{
-				if (m_point_sprite == value) return;
-				Util.Dispose(ref m_point_sprite!);
-				m_point_sprite = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Shader m_point_sprite = null!;
+		} = null!;
 
 		/// <summary>Thick Line-List shader</summary>
 		private View3d.Shader ThickLineList
 		{
-			get => m_thick_line_list;
+			get;
 			set
 			{
-				if (m_thick_line_list == value) return;
-				Util.Dispose(ref m_thick_line_list!);
-				m_thick_line_list = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private View3d.Shader m_thick_line_list = null!;
+		} = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString() => $"{Name} count={m_data.Count}";

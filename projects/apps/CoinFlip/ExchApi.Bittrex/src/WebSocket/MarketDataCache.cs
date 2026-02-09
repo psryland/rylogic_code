@@ -46,18 +46,18 @@ namespace Bittrex.API
 		/// <summary>The socket connection to the exchange</summary>
 		private BittrexWebSocket Socket
 		{
-			get { return m_socket; }
+			get;
 			set
 			{
-				if (m_socket == value) return;
-				if (m_socket != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_socket.MarketDataUpdate -= HandleMarketUpdate;
+					field.MarketDataUpdate -= HandleMarketUpdate;
 				}
-				m_socket = value;
-				if (m_socket != null)
+				field = value;
+				if (field != null)
 				{
-					m_socket.MarketDataUpdate += HandleMarketUpdate;
+					field.MarketDataUpdate += HandleMarketUpdate;
 				}
 
 				// Handlers
@@ -83,7 +83,6 @@ namespace Bittrex.API
 				}
 			}
 		}
-		private BittrexWebSocket m_socket;
 
 		/// <summary>The owning API instance</summary>
 		private BittrexApi Api { get; }

@@ -41,15 +41,14 @@ namespace EDTradeAdvisor
 		/// <summary></summary>
 		public OAuth2 OAuth
 		{
-			get { return m_oauth; }
+			get;
 			private set
 			{
-				if (m_oauth == value) return;
-				Util.Dispose(ref m_oauth);
-				m_oauth = value;
+				if (field == value) return;
+				Util.Dispose(ref field);
+				field = value;
 			}
 		}
-		private OAuth2 m_oauth;
 
 		/// <summary>True when one or more downloads are active</summary>
 		public bool Downloading

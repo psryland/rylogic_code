@@ -68,15 +68,14 @@ namespace Fishomatic
 		/// <summary>The string describing what's going on right now</summary>
 		public string Status
 		{
-			get => m_status;
+			get;
 			private set
 			{
 				if (Status == value) return;
-				m_status = value;
+				field = value;
 				NotifyPropertyChanged(nameof(Status));
 			}
-		}
-		private string m_status = string.Empty;
+		} = string.Empty;
 
 		/// <summary>Time until the next state change</summary>
 		public TimeSpan Remaining => TimeSpan.FromMilliseconds(Math.Max(0, m_state_next_when - Environment.TickCount));
@@ -84,29 +83,27 @@ namespace Fishomatic
 		/// <summary>Fractional time until state change</summary>
 		public double ProgressFrac
 		{
-			get => m_progress;
+			get;
 			private set
 			{
-				if (m_progress == value) return;
-				m_progress = Math_.Clamp(value, 0.0, 1.0);
+				if (field == value) return;
+				field = Math_.Clamp(value, 0.0, 1.0);
 				NotifyPropertyChanged(nameof(ProgressFrac));
 
 			}
 		}
-		private double m_progress;
 
 		/// <summary>Max bobber move distance</summary>
 		public double MaxDelta
 		{
-			get => m_max_delta;
+			get;
 			private set
 			{
-				if (m_max_delta == value) return;
-				m_max_delta = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(MaxDelta));
 			}
 		}
-		private double m_max_delta;
 
 		/// <summary>WoW main window</summary>
 		public CWindow? TargetWnd

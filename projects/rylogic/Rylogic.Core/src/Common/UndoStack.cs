@@ -33,7 +33,7 @@ namespace Rylogic.Common
 		/// <summary>The maximum length of the undo history</summary>
 		public int HistoryLength
 		{
-			get => m_history_length;
+			get;
 			set
 			{
 				if (value < 0)
@@ -41,15 +41,14 @@ namespace Rylogic.Common
 				if (GroupInScope)
 					throw new InvalidOperationException($"Cannot change the undo history length within a change group");
 
-				if (m_history_length == value)
+				if (field == value)
 					return;
 
-				m_history_length = value;
+				field = value;
 				NotifyPropertyChanged(nameof(HistoryLength));
 				EnforceLimits();
 			}
 		}
-		private int m_history_length;
 
 		/// <summary>Clear the entire stack</summary>
 		public void Clear()

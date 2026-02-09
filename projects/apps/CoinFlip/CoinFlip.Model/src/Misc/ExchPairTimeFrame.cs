@@ -29,22 +29,21 @@ namespace CoinFlip
 		/// <summary></summary>
 		public Model Model
 		{
-			get => m_model;
+			get;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					Exchanges = null!;
 				}
-				m_model = value;
-				if (m_model != null)
+				field = value;
+				if (field != null)
 				{
-					Exchanges = new ListCollectionView(m_model.Exchanges);
+					Exchanges = new ListCollectionView(field.Exchanges);
 				}
 			}
-		}
-		private Model m_model = null!;
+		} = null!;
 
 		/// <summary></summary>
 		public string Address => $"{Exchange?.Name}-{Pair?.Name}-{TimeFrame}";
@@ -52,26 +51,26 @@ namespace CoinFlip
 		/// <summary>The available exchanges</summary>
 		public ICollectionView Exchanges
 		{
-			get => m_exchanges;
+			get;
 			private set
 			{
-				if (m_exchanges == value) return;
+				if (field == value) return;
 
 				// Preserve the exchange by name if possible
 				var exch_name = Exchange?.Name;
 
-				if (m_exchanges != null)
+				if (field != null)
 				{
-					m_exchanges.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_exchanges = value;
-				if (m_exchanges != null)
+				field = value;
+				if (field != null)
 				{
-					m_exchanges.Filter = exch => exch is not CrossExchange;
-					var match = m_exchanges.Cast<Exchange>().FirstOrDefault(x => x.Name == exch_name);
-					if (match != null) m_exchanges.MoveCurrentTo(match);
+					field.Filter = exch => exch is not CrossExchange;
+					var match = field.Cast<Exchange>().FirstOrDefault(x => x.Name == exch_name);
+					if (match != null) field.MoveCurrentTo(match);
 
-					m_exchanges.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 					HandleCurrentChanged(null, EventArgs.Empty);
 				}
 
@@ -86,35 +85,34 @@ namespace CoinFlip
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Exchange)));
 				}
 			}
-		}
-		private ICollectionView m_exchanges = null!;
+		} = null!;
 
 		/// <summary>The pairs available on the current exchange</summary>
 		public ICollectionView Pairs
 		{
-			get => m_pairs;
+			get;
 			private set
 			{
-				if (m_pairs == value) return;
+				if (field == value) return;
 
 				// Preserve the pair by name if possible
 				var pair_name = Pair?.Name;
 
-				if (m_pairs != null)
+				if (field != null)
 				{
-					// Shouldn't need to subscribe to ((PairCollection)m_pairs.SourceCollection).CollectionChanged
+					// Shouldn't need to subscribe to ((PairCollection)field.SourceCollection).CollectionChanged
 					// because ICollectionView already does that automatically
-					m_pairs.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_pairs = value;
-				if (m_pairs != null)
+				field = value;
+				if (field != null)
 				{
-					m_pairs.SortDescriptions.Add(new SortDescription(nameof(TradePair.Base), ListSortDirection.Ascending));
-					m_pairs.SortDescriptions.Add(new SortDescription(nameof(TradePair.Quote), ListSortDirection.Ascending));
-					var match = m_pairs.Cast<TradePair>().FirstOrDefault(x => x.Name == pair_name);
-					if (match != null) m_pairs.MoveCurrentTo(match);
+					field.SortDescriptions.Add(new SortDescription(nameof(TradePair.Base), ListSortDirection.Ascending));
+					field.SortDescriptions.Add(new SortDescription(nameof(TradePair.Quote), ListSortDirection.Ascending));
+					var match = field.Cast<TradePair>().FirstOrDefault(x => x.Name == pair_name);
+					if (match != null) field.MoveCurrentTo(match);
 
-					m_pairs.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 					HandleCurrentChanged(null, EventArgs.Empty);
 				}
 
@@ -129,31 +127,30 @@ namespace CoinFlip
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pair)));
 				}
 			}
-		}
-		private ICollectionView m_pairs = null!;
+		} = null!;
 
 		/// <summary>The available time frames for the selected pair on the selected exchange</summary>
 		public ICollectionView TimeFrames
 		{
-			get => m_time_frames;
+			get;
 			private set
 			{
-				if (m_time_frames == value) return;
+				if (field == value) return;
 
 				// Preserve the time frame
 				var tf = TimeFrame;
 
-				if (m_time_frames != null)
+				if (field != null)
 				{
-					m_time_frames.CurrentChanged -= HandleCurrentChanged;
+					field.CurrentChanged -= HandleCurrentChanged;
 				}
-				m_time_frames = value;
-				if (m_time_frames != null)
+				field = value;
+				if (field != null)
 				{
-					var match = m_time_frames.Cast<ETimeFrame>().FirstOrDefault(x => x == tf);
-					if (match != ETimeFrame.None) m_time_frames.MoveCurrentTo(match);
+					var match = field.Cast<ETimeFrame>().FirstOrDefault(x => x == tf);
+					if (match != ETimeFrame.None) field.MoveCurrentTo(match);
 
-					m_time_frames.CurrentChanged += HandleCurrentChanged;
+					field.CurrentChanged += HandleCurrentChanged;
 					HandleCurrentChanged(null, EventArgs.Empty);
 				}
 
@@ -166,8 +163,7 @@ namespace CoinFlip
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TimeFrame)));
 				}
 			}
-		}
-		private ICollectionView m_time_frames = null!;
+		} = null!;
 
 		/// <summary>Current exchange</summary>
 		public Exchange? Exchange

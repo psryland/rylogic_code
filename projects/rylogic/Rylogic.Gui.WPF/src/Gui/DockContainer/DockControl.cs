@@ -83,22 +83,22 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set the dock container that manages this content.</summary>
 		public DockContainer? DockContainer
 		{
-			get => m_dc;
+			get;
 			set
 			{
-				if (m_dc == value) return;
-				var old = m_dc;
+				if (field == value) return;
+				var old = field;
 				var nue = value;
-				if (m_dc != null)
+				if (field != null)
 				{
-					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
-					m_dc.Forget(this);
+					field.ActiveContentChanged -= HandleActiveContentChanged;
+					field.Forget(this);
 				}
-				m_dc = value;
-				if (m_dc != null)
+				field = value;
+				if (field != null)
 				{
-					m_dc.Remember(this);
-					m_dc.ActiveContentChanged += HandleActiveContentChanged;
+					field.Remember(this);
+					field.ActiveContentChanged += HandleActiveContentChanged;
 				}
 				DockContainerChanged?.Invoke(this, new DockContainerChangedEventArgs(old, nue));
 
@@ -116,7 +116,6 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private DockContainer? m_dc;
 
 		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
 		public event EventHandler? PaneChanged;
@@ -160,16 +159,16 @@ namespace Rylogic.Gui.WPF
 		/// <summary>If true, the instance is removed and disposed when closed</summary>
 		public bool DestroyOnClose
 		{
-			get => m_destroy_on_close;
+			get;
 			set
 			{
-				if (m_destroy_on_close == value) return;
-				if (m_destroy_on_close)
+				if (field == value) return;
+				if (field)
 				{
 					Closed -= HandleClose;
 				}
-				m_destroy_on_close = value;
-				if (m_destroy_on_close)
+				field = value;
+				if (field)
 				{
 					Closed += HandleClose;
 				}
@@ -179,7 +178,7 @@ namespace Rylogic.Gui.WPF
 				void HandleClose(object? sender, EventArgs args)
 				{
 					Closed -= HandleClose;
-					if (m_destroy_on_close)
+					if (field)
 					{
 						Remove();
 						if (Owner is IDisposable disposable)
@@ -187,8 +186,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private bool m_destroy_on_close = false;
+		} = false;
 
 		/// <summary>True if the dockable can be 'closed'</summary>
 		public bool AllowClose
@@ -512,28 +510,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The current state of the tab button associated with this content</summary>
 		public ETabState TabState
 		{
-			get => m_tab_state;
+			get;
 			set
 			{
-				if (m_tab_state == value) return;
-				m_tab_state = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(TabState));
 			}
 		}
-		private ETabState m_tab_state;
 
 		/// <summary>The preferred sizing mode when this content it the visible content within a Pane</summary>
 		public EDockResizeMode ResizeMode
 		{
-			get => m_resize_mode;
+			get;
 			set
 			{
-				if (m_resize_mode == value) return;
-				m_resize_mode = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(ResizeMode));
 			}
 		}
-		private EDockResizeMode m_resize_mode;
 
 		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
 		public ContextMenu? DefaultTabCMenu()
@@ -643,14 +639,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get => m_dock_control;
+			get;
 			private set
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control!);
-				m_dock_control = value;
+				if (field == value) return;
+				Util.Dispose(ref field!);
+				field = value;
 			}
-		}
-		private DockControl m_dock_control = null!;
+		} = null!;
 	}
 }

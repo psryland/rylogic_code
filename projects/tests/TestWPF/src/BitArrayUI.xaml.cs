@@ -14,15 +14,14 @@ namespace TestWPF
 
 		public ulong Bitmask
 		{
-			get => m_bitmask;
+			get;
 			set
 			{
-				if (m_bitmask == value) return;
-				m_bitmask = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Bitmask));
 			}
 		}
-		private ulong m_bitmask;
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

@@ -222,28 +222,26 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The default button</summary>
 		public EButtons DefaultButton
 		{
-			get => m_default_button;
+			get;
 			set
 			{
-				if (m_default_button == value) return;
-				m_default_button = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(DefaultButton));
 			}
 		}
-		private EButtons m_default_button;
 
 		/// <summary>Make the "always" checkbox visible</summary>
 		public bool ShowAlwaysCheckbox
 		{
-			get => m_show_always_checkbox;
+			get;
 			set
 			{
-				if (m_show_always_checkbox == value) return;
-				m_show_always_checkbox = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(ShowAlwaysCheckbox));
 			}
 		}
-		private bool m_show_always_checkbox;
 
 		/// <summary>Positive result</summary>
 		public Command Accept { get; }

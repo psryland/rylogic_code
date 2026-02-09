@@ -64,14 +64,13 @@ namespace RyLogViewer
 		/// <summary>The main app</summary>
 		public Main Main
 		{
-			get { return m_main; }
+			get;
 			private set
 			{
-				if (m_main == value) return;
-				m_main = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private Main m_main;
 
 		/// <summary>Always above other windows</summary>
 		public bool AlwaysOnTop

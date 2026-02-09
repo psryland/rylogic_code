@@ -100,19 +100,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The dock container that owns this auto hide window</summary>
 		public DockContainer DockContainer
 		{
-			get => m_dc;
+			get;
 			private set
 			{
-				if (m_dc == value) return;
-				if (m_dc != null)
+				if (field == value) return;
+				if (field != null)
 				{
 					ActiveContentManager.ActiveContentChanged -= HandleActiveContentChanged;
-					m_dc.PreviewMouseDown -= HandlePreviewMouseDown;
+					field.PreviewMouseDown -= HandlePreviewMouseDown;
 				}
-				m_dc = value;
-				if (m_dc != null)
+				field = value;
+				if (field != null)
 				{
-					m_dc.PreviewMouseDown += HandlePreviewMouseDown;
+					field.PreviewMouseDown += HandlePreviewMouseDown;
 					ActiveContentManager.ActiveContentChanged += HandleActiveContentChanged;
 				}
 
@@ -134,7 +134,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					bool WithinThisAHP(DependencyObject ob) => ob == this || ob == TabStrip;
 
 					// Check if the click is within this auto-hide panel or its tab strip
-					var within_panel = Gui_.FindVisualParent<DependencyObject>(dp, WithinThisAHP, root: m_dc) != null;
+					var within_panel = Gui_.FindVisualParent<DependencyObject>(dp, WithinThisAHP, root: field) != null;
 
 					// If not directly within the panel, check if it's within a popup owned by a control in the panel
 					if (!within_panel)
@@ -142,32 +142,31 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						// Find any popup that contains the clicked element
 						var root = Gui_.FindVisualRoot(dp);
 						if (root is FrameworkElement froot && froot.Parent is not null)
-							within_panel = Gui_.FindVisualParent<DependencyObject>(froot.Parent, WithinThisAHP, root: m_dc) != null;
+							within_panel = Gui_.FindVisualParent<DependencyObject>(froot.Parent, WithinThisAHP, root: field) != null;
 					}
 
 					PoppedOut = within_panel;
 				}
 			}
-		}
-		private DockContainer m_dc = null!;
+		} = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
 
 		/// <summary>The root level branch of the tree in this auto hide window</summary>
 		internal Branch Root
 		{
-			get => m_root;
+			get;
 			private set
 			{
-				if (m_root == value) return;
-				if (m_root != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_root.TreeChanged -= HandleTreeChanged;
-					Util.Dispose(ref m_root!);
+					field.TreeChanged -= HandleTreeChanged;
+					Util.Dispose(ref field!);
 				}
-				m_root = value;
-				if (m_root != null)
+				field = value;
+				if (field != null)
 				{
-					m_root.TreeChanged += HandleTreeChanged;
+					field.TreeChanged += HandleTreeChanged;
 				}
 
 				/// <summary>Handler for when the tree in this auto hide panel changes</summary>
@@ -213,8 +212,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					}
 				}
 			}
-		}
-		private Branch m_root = null!;
+		} = null!;
 		Branch ITreeHost.Root
 		{
 			get { return Root; }

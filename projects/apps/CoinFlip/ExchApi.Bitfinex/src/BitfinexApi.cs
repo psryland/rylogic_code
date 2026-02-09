@@ -138,16 +138,15 @@ namespace Bitfinex.API
 		/// <summary>True while the Bitfinex server is in maintenance mode</summary>
 		public bool MaintenanceMode
 		{
-			get { return m_maintenance_mode; }
+			get;
 			private set
 			{
-				if (m_maintenance_mode == value) return;
-				m_maintenance_mode = value;
+				if (field == value) return;
+				field = value;
 				MaintenanceModeChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
 		public event EventHandler MaintenanceModeChanged;
-		private bool m_maintenance_mode;
 
 		#region WebSocket API
 

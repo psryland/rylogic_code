@@ -81,18 +81,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set whether the tray icon is created in the shell</summary>
 		public bool IsIconCreated
 		{
-			get => m_icon_created;
+			get;
 			set
 			{
 				value &= !WPFUtil.IsDesignMode;
-				if (m_icon_created == value) return;
-				if (m_icon_created)
+				if (field == value) return;
+				if (field)
 				{
 					lock (m_lock)
 					{
 						IconData.uFlags = Win32.ENotifyIconDataMembers.Message;
 						Shell32.NotifyIcon(Win32.ENotifyCommand.Delete, ref IconData);
-						m_icon_created = false;
+						field = false;
 					}
 				}
 				if (value)
@@ -128,31 +128,30 @@ namespace Rylogic.Gui.WPF
 
 						// Set the version in the message sink
 						MessageSink.Version = (Win32.ENotifyIconVersion)IconData.VersionOrTimeout;
-						m_icon_created = true;
+						field = true;
 					}
 				}
 			}
 		}
-		private bool m_icon_created;
 
 		/// <summary>Window message handler for messages from the notification icon</summary>
 		private WindowMessageSink MessageSink
 		{
-			get => m_message_sink;
+			get;
 			set
 			{
-				if (m_message_sink == value) return;
-				if (m_message_sink != null)
+				if (field == value) return;
+				if (field != null)
 				{
-					m_message_sink.MouseButton -= HandleMouseButton;
-					m_message_sink.TaskbarCreated -= HandleTaskbarCreated;
-					Util.Dispose(ref m_message_sink!);
+					field.MouseButton -= HandleMouseButton;
+					field.TaskbarCreated -= HandleTaskbarCreated;
+					Util.Dispose(ref field!);
 				}
-				m_message_sink = value;
-				if (m_message_sink != null)
+				field = value;
+				if (field != null)
 				{
-					m_message_sink.TaskbarCreated += HandleTaskbarCreated;
-					m_message_sink.MouseButton += HandleMouseButton;
+					field.TaskbarCreated += HandleTaskbarCreated;
+					field.MouseButton += HandleMouseButton;
 				}
 
 				// Handlers
@@ -193,8 +192,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-		}
-		private WindowMessageSink m_message_sink = null!;
+		} = null!;
 
 		/// <summary>Represents the current icon data.</summary>
 		private Win32.NOTIFYICONDATA IconData;
@@ -205,17 +203,16 @@ namespace Rylogic.Gui.WPF
 		[Browsable(false)]
 		public System.Drawing.Icon? Icon
 		{
-			get => m_icon;
+			get;
 			set
 			{
-				if (m_icon == value) return;
-				m_icon = value;
-				IconData.hIcon = m_icon?.Handle ?? IntPtr.Zero;
+				if (field == value) return;
+				field = value;
+				IconData.hIcon = field?.Handle ?? IntPtr.Zero;
 				IconData.uFlags = Win32.ENotifyIconDataMembers.Icon;
 				Shell32.NotifyIcon(Win32.ENotifyCommand.Modify, ref IconData);
 			}
 		}
-		private System.Drawing.Icon? m_icon;
 
 		/// <summary>Open the context menu</summary>
 		public ICommand ShowCMenu { get; }

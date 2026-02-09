@@ -25,43 +25,40 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The binding for the content to display in the cell</summary>
 		public BindingBase? Binding
 		{
-			get => m_binding;
+			get;
 			set
 			{
-				if (m_binding == value) return;
-				m_binding = value;
+				if (field == value) return;
+				field = value;
 				CoerceValue(IsReadOnlyProperty);
 				CoerceValue(SortMemberPathProperty);
 				NotifyPropertyChanged(nameof(Binding));
 			}
 		}
-		private BindingBase? m_binding;
 
 		/// <summary>The binding for the optional image to display in the cell</summary>
 		public BindingBase? Image
 		{
-			get => m_image;
+			get;
 			set
 			{
-				if (m_image == value) return;
-				m_image = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Image));
 			}
 		}
-		private BindingBase? m_image;
 
 		/// <summary>The binding for accessing the child elements of the node</summary>
 		public BindingBase? Children
 		{
-			get => m_children;
+			get;
 			set
 			{
-				if (m_children == value) return;
-				m_children = value;
+				if (field == value) return;
+				field = value;
 				NotifyPropertyChanged(nameof(Children));
 			}
 		}
-		private BindingBase? m_children;
 
 		/// <summary>The size of the indent amount (can be a binding or int)</summary>
 		public int IndentSize

@@ -87,14 +87,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The point on the target window that we move relative to</summary>
 		public EPin PinSite
 		{
-			get => m_pin_site;
+			get;
 			set
 			{
-				if (m_pin_site == value) return;
-				m_pin_site = value;
+				if (field == value) return;
+				field = value;
 			}
 		}
-		private EPin m_pin_site;
 
 		/// <summary>The window whose position is being controlled</summary>
 		private Window PinWindow
@@ -209,16 +208,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The offset from the PinTarget to the desired location of the PinWindow</summary>
 		public Vector? PinOffset
 		{
-			get => m_pin_offset;
+			get;
 			set
 			{
-				if (m_pin_offset == value) return;
-				m_pin_offset = value;
+				if (field == value) return;
+				field = value;
 				UpdatePinMenuCheckState();
 				UpdateLocation();
 			}
 		}
-		private Vector? m_pin_offset;
 
 		/// <summary>True if actually pinned</summary>
 		private bool ActuallyPinned => Pinned && PinTarget != null && PinOffset != null;
