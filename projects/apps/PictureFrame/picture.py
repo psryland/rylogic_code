@@ -120,7 +120,7 @@ class PictureFrame:
 		self.image_dir = Path(self.config[f"ImageRoot-{platform.system()}"])
 		self.log.info(f"Image dir: {self.image_dir}")
 		if not self.image_dir.exists():
-			raise FileNotFoundError(f"Image root path {self.image_dir} does not exist")
+			self.log.warning(f"Image root path not available: {self.image_dir}")
 
 		# Create a tk window
 		self.window = Tk.Tk()
@@ -314,10 +314,6 @@ class PictureFrame:
 
 	# Run the main loop
 	def Run(self):
-		# Load the image list
-		self.image_list = self._LoadImageList()
-		self.log.info(f"Loaded {len(self.image_list)} images")
-		self._Shuffle()
 
 		# Init the UI
 		self._UpdateUI()
@@ -328,7 +324,28 @@ class PictureFrame:
 		# Start periodic resource monitoring (every 60 seconds)
 		self._ScheduleResourceMonitor()
 
-		# Wait for the window to be viewable
+		# Wait for the image directory to become available (e.g. network share mounted)
+		self._WaitForImageDir()
+		self.window.mainloop()
+
+	# Poll until the image directory is accessible, then start displaying
+	def _WaitForImageDir(self):
+		if not self.image_dir.exists():
+			self.log.warning(f"Waiting for image directory: {self.image_dir}")
+			self.no_images_label.configure(text=f"Waiting for:\n{self.image_dir}")
+			self.no_images_label.place(anchor="center", relx=0.5, rely=0.5)
+			self._ScheduleAfter(5000, self._WaitForImageDir)
+			return
+
+		self.no_images_label.place_forget()
+		self.log.info(f"Image directory available: {self.image_dir}")
+
+		# Load the image list
+		self.image_list = self._LoadImageList()
+		self.log.info(f"Loaded {len(self.image_list)} images")
+		self._Shuffle()
+
+		# Wait for the window to be viewable before starting playback
 		def WaitTillShown():
 			if self.bb.winfo_viewable() == 0:
 				self.window.after(500, WaitTillShown)
@@ -342,7 +359,6 @@ class PictureFrame:
 			return
 
 		WaitTillShown()
-		self.window.mainloop()
 
 	# Current image relative path (or None)
 	@property
@@ -645,7 +661,8 @@ class PictureFrame:
 		# Get the image list full path
 		image_list_fullpath = self.root_dir / self.config['ImageList']
 		if not image_list_fullpath.exists():
-			raise FileNotFoundError(f"Image list {image_list_fullpath} does not exist")
+			self.log.warning(f"Image list not found: {image_list_fullpath}")
+			return image_list
 
 		# Load the image list
 		with open(image_list_fullpath, "r", encoding="utf-8") as file:
