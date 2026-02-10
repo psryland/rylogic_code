@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using BorderOfPeace.Model;
 using BorderOfPeace.Services;
@@ -20,10 +22,49 @@ namespace BorderOfPeace.UI
 		// Track which windows we've colored so we can reset them
 		private readonly Dictionary<IntPtr, Colour32> m_colored_windows = new();
 
+		// The last foreground window that isn't ours
+		private IntPtr m_last_foreground_hwnd;
+		private string m_last_foreground_title = string.Empty;
+
+		// WinEvent hook handle and delegate (prevent GC collection of delegate)
+		private IntPtr m_hook_handle;
+		private User32.WinEventDelegate? m_win_event_delegate;
+
 		public TrayHost(Settings settings)
 		{
 			m_settings = settings;
 			InitializeComponent();
+			StartForegroundTracking();
+		}
+
+		/// <summary>Install a WinEvent hook to track foreground window changes</summary>
+		private void StartForegroundTracking()
+		{
+			m_win_event_delegate = OnForegroundChanged;
+			m_hook_handle = User32.SetWinEventHook(
+				Win32.EVENT_SYSTEM_FOREGROUND,
+				Win32.EVENT_SYSTEM_FOREGROUND,
+				IntPtr.Zero,
+				m_win_event_delegate,
+				0, 0,
+				Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+		}
+
+		/// <summary>Called when the foreground window changes</summary>
+		private void OnForegroundChanged(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+		{
+			if (hwnd == IntPtr.Zero)
+				return;
+
+			// Skip our own windows
+			var our_pid = (IntPtr)Environment.ProcessId;
+			var foreign_pid = IntPtr.Zero;
+			User32.GetWindowThreadProcessId(hwnd, ref foreign_pid);
+			if (foreign_pid == our_pid)
+				return;
+
+			m_last_foreground_hwnd = hwnd;
+			m_last_foreground_title = GetWindowTitle(hwnd);
 		}
 
 		/// <summary>Dynamically populate the tray context menu when opened</summary>
@@ -34,10 +75,8 @@ namespace BorderOfPeace.UI
 
 			menu.Items.Clear();
 
-			// Get the foreground window info
-			var hwnd = User32.GetForegroundWindow();
-			var title = GetWindowTitle(hwnd);
-			var display_title = string.IsNullOrWhiteSpace(title) ? "(No Window)" : title;
+			var hwnd = m_last_foreground_hwnd;
+			var display_title = string.IsNullOrWhiteSpace(m_last_foreground_title) ? "(No Window)" : m_last_foreground_title;
 			if (display_title.Length > 40)
 				display_title = display_title[..37] + "...";
 
@@ -151,6 +190,13 @@ namespace BorderOfPeace.UI
 		/// <summary>Exit the application</summary>
 		private void HandleExit()
 		{
+			// Unhook the foreground tracker
+			if (m_hook_handle != IntPtr.Zero)
+			{
+				User32.UnhookWinEvent(m_hook_handle);
+				m_hook_handle = IntPtr.Zero;
+			}
+
 			// Reset all colored windows before exiting
 			foreach (var hwnd in m_colored_windows.Keys)
 				WindowColorizer.ResetColors(hwnd);

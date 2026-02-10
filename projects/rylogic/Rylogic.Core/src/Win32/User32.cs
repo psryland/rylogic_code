@@ -444,6 +444,15 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")]
 		public static extern int SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
 
+		/// <summary>Installs an event hook to receive notifications for a range of events.</summary>
+		public delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+		[DllImport("user32.dll")]
+		public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+		/// <summary>Removes an event hook installed by SetWinEventHook.</summary>
+		[DllImport("user32.dll")]
+		public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
 		[DllImport("user32.dll")]
 		public static extern int SetWindowsHookEx(int idHook, Win32.HookProc lpfn, IntPtr hMod, int dwThreadId);
 

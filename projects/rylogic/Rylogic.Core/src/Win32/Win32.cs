@@ -1791,6 +1791,12 @@ namespace Rylogic.Interop.Win32
 		public const int WH_KEYBOARD = 2;
 		#endregion
 
+		#region WinEvent constants
+		public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+		public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+		public const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
+		#endregion
+
 		#region Window Styles WS_
 		public const int WS_POPUP                         = unchecked((int)0x80000000); // The windows is a pop-up window. This style cannot be used with the WS_CHILD style.
 		public const int WS_CHILD                         = unchecked(0x40000000); // The window is a child window. A window with this style cannot have a menu bar. This style cannot be used with the WS_POPUP style.
