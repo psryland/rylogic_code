@@ -24,6 +24,9 @@ namespace BorderOfPeace.UI
 		// Track which windows we've colored so we can reset them
 		private readonly Dictionary<IntPtr, Colour32> m_colored_windows = new();
 
+		// Border overlay windows for tracked windows
+		private readonly Dictionary<IntPtr, BorderOverlay> m_overlays = new();
+
 		// The last foreground window that isn't ours
 		private IntPtr m_last_foreground_hwnd;
 		private string m_last_foreground_title = string.Empty;
@@ -59,11 +62,36 @@ namespace BorderOfPeace.UI
 				Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 		}
 
-		/// <summary>Periodically re-apply colors to tracked windows (handles Electron-style resets)</summary>
+		/// <summary>Periodically re-apply colors and sync overlay positions</summary>
 		private void OnReapplyColors(object? sender, EventArgs e)
 		{
+			var dead = new List<IntPtr>();
 			foreach (var (hwnd, colour) in m_colored_windows)
+			{
+				// Check if target window is still alive
+				if (!User32.IsWindowVisible(hwnd) && User32.GetWindowLong(hwnd, Win32.GWL_STYLE) == 0)
+				{
+					dead.Add(hwnd);
+					continue;
+				}
+
 				WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
+
+				// Sync overlay position
+				if (m_overlays.TryGetValue(hwnd, out var overlay))
+				{
+					overlay.SyncPosition();
+					overlay.EnsureZOrder();
+				}
+			}
+
+			// Clean up dead windows
+			foreach (var hwnd in dead)
+			{
+				m_colored_windows.Remove(hwnd);
+				if (m_overlays.Remove(hwnd, out var overlay))
+					overlay.Close();
+			}
 		}
 
 		/// <summary>Called when the foreground window changes</summary>
@@ -153,11 +181,7 @@ namespace BorderOfPeace.UI
 			// Reset option
 			var reset_item = new MenuItem { Header = "Reset" };
 			var reset_hwnd = hwnd;
-			reset_item.Click += (s, args) =>
-			{
-				WindowColorizer.ResetColors(reset_hwnd);
-				m_colored_windows.Remove(reset_hwnd);
-			};
+			reset_item.Click += (s, args) => ResetWindow(reset_hwnd);
 			menu.Items.Add(reset_item);
 
 			menu.Items.Add(new Separator());
@@ -197,13 +221,40 @@ namespace BorderOfPeace.UI
 
 			var capture_hwnd = hwnd;
 			var capture_colour = colour;
-			item.Click += (s, args) =>
-			{
-				WindowColorizer.ApplyColor(capture_hwnd, capture_colour, m_settings.BorderThickness);
-				m_colored_windows[capture_hwnd] = capture_colour;
-			};
+			item.Click += (s, args) => ApplyColorToWindow(capture_hwnd, capture_colour);
 
 			return item;
+		}
+
+		/// <summary>Apply color to a window and manage the border overlay</summary>
+		private void ApplyColorToWindow(IntPtr hwnd, Colour32 colour)
+		{
+			WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
+			m_colored_windows[hwnd] = colour;
+
+			// Create or update the border overlay
+			var thickness = m_settings.BorderThickness;
+			if (thickness > 0)
+			{
+				if (m_overlays.TryGetValue(hwnd, out var existing))
+				{
+					existing.UpdateBorder(colour, thickness);
+					existing.SyncPosition();
+				}
+				else
+				{
+					m_overlays[hwnd] = new BorderOverlay(hwnd, colour, thickness);
+				}
+			}
+		}
+
+		/// <summary>Reset a window's colors and remove its overlay</summary>
+		private void ResetWindow(IntPtr hwnd)
+		{
+			WindowColorizer.ResetColors(hwnd);
+			m_colored_windows.Remove(hwnd);
+			if (m_overlays.Remove(hwnd, out var overlay))
+				overlay.Close();
 		}
 
 		/// <summary>Show the colour picker for custom color</summary>
@@ -214,11 +265,7 @@ namespace BorderOfPeace.UI
 
 			var dlg = new ColourPickerUI(null, initial) { Width = 440, Height = 400 };
 			if (dlg.ShowDialog() == true)
-			{
-				var colour = dlg.Colour;
-				WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
-				m_colored_windows[hwnd] = colour;
-			}
+				ApplyColorToWindow(hwnd, dlg.Colour);
 		}
 
 		/// <summary>Show the settings window</summary>
@@ -246,8 +293,8 @@ namespace BorderOfPeace.UI
 			}
 
 			// Reset all colored windows before exiting
-			foreach (var hwnd in m_colored_windows.Keys)
-				WindowColorizer.ResetColors(hwnd);
+			foreach (var hwnd in new List<IntPtr>(m_colored_windows.Keys))
+				ResetWindow(hwnd);
 
 			m_colored_windows.Clear();
 			Gui_.DisposeChildren(this);
