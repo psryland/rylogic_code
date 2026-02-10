@@ -9,28 +9,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\fbx.cpp">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
       <Filter>src</Filter>
-    </ClCompile>
+    </ClInclude>
     <ClCompile Include="$(SDKPath)ufbx\ufbx\ufbx.c">
       <Filter>ufbx</Filter>
     </ClCompile>
     <ClInclude Include="$(SDKPath)ufbx\ufbx\ufbx.h">
       <Filter>ufbx</Filter>
     </ClInclude>
+    <ClCompile Include="src\fbx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClInclude Include="src\ufbx_compat.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbx.natvis">
       <Filter>ufbx</Filter>
     </Natvis>
     <Natvis Include="$(SDKPath)ufbx\ufbx\misc\ufbxi.natvis">
       <Filter>ufbx</Filter>
     </Natvis>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
-      <Filter>src</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\ufbx_compat.h">
-      <Filter>src</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

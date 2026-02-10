@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Properties -->
   <PropertyGroup Label="Globals">
@@ -401,6 +401,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector3.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector4.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector8.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\forward.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />

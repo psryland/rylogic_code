@@ -25,26 +25,20 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\space_invaders.h">
-      <Filter>src</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h">
+      <Filter>pr\app</Filter>
     </ClInclude>
+    <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
+      <Filter>pr\app</Filter>
+    </ClCompile>
     <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
       <Filter>pr\app</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h">
       <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ace_inspaders.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
-      <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\audio\waves\wave_file.h">
       <Filter>pr\audio\waves</Filter>
@@ -52,10 +46,14 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gfx\onebit.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
-      <Filter>pr\app</Filter>
-    </ClCompile>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ace_inspaders.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\space_invaders.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -16,12 +16,7 @@
 //	 finding the overlap between objects.
 // * Shapes for rigid bodies should be in centre of mass frame
 #pragma once
-#include <cassert>
-#include <type_traits>
-#include <concepts>
-#include "pr/maths/maths.h"
-#include "pr/common/cast.h"
-#include "pr/common/scope.h"
+#include "pr/collision/forward.h"
 
 namespace pr::collision
 {
@@ -34,7 +29,7 @@ namespace pr::collision
 
 	// Primitive shape types: x(Name, Composite)
 	// These are trivially copyable types that have 'Shape' as the first member.
-	// Order is affects the collision detection tri-table.
+	// Order is important because it affects the collision detection tri-table.
 	#define PR_COLLISION_SHAPES(x)\
 		x(Sphere  , false)\
 		x(Box     , false)\
@@ -67,7 +62,7 @@ namespace pr::collision
 		}
 	}
 
-	// Physics material
+	// Physics material id
 	using MaterialId = unsigned int;
 
 	// Shape base. All shapes must have this as their first member.
@@ -92,7 +87,7 @@ namespace pr::collision
 		// The physics material that this shape is made out of
 		MaterialId m_material_id;
 
-		// Flags for the shape. Bitwise OR of EShapeFlags
+		// Flags for the shape. Bitwise OR of Shape::EFlags
 		EFlags m_flags;
 
 		// The size in bytes of this shape and its data
