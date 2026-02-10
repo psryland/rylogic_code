@@ -273,8 +273,40 @@ namespace BorderOfPeace.UI
 			var dlg = new SettingsWindow(m_settings);
 			if (dlg.ShowDialog() == true)
 			{
+				var old_thickness = m_settings.BorderThickness;
 				m_settings = dlg.ResultSettings;
 				m_settings.Save();
+
+				// If border thickness changed, update all tracked windows
+				if (old_thickness != m_settings.BorderThickness)
+					RefreshAllOverlays();
+			}
+		}
+
+		/// <summary>Update or remove overlays for all tracked windows based on current settings</summary>
+		private void RefreshAllOverlays()
+		{
+			var thickness = m_settings.BorderThickness;
+			foreach (var (hwnd, colour) in m_colored_windows)
+			{
+				if (thickness > 0)
+				{
+					if (m_overlays.TryGetValue(hwnd, out var existing))
+					{
+						existing.UpdateBorder(colour, thickness);
+						existing.SyncPosition();
+					}
+					else
+					{
+						m_overlays[hwnd] = new BorderOverlay(hwnd, colour, thickness);
+					}
+				}
+				else
+				{
+					// Remove overlay when thickness is 0
+					if (m_overlays.Remove(hwnd, out var overlay))
+						overlay.Close();
+				}
 			}
 		}
 
