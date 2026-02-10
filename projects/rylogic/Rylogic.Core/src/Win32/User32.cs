@@ -244,6 +244,10 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", CharSet = CharSet.Unicode, SetLastError = true)]
 		public static extern long GetWindowLongPtr(HWND hWnd, int nIndex); // This is only defined in 64bit builds, otherwise it's a #define to GetWindowLong
 
+		/// <summary>Retrieves a handle to a window that has the specified relationship to the specified window.</summary>
+		[DllImport("user32.dll", SetLastError = true)]
+		public static extern HWND GetWindow(HWND hWnd, uint uCmd);
+
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
 

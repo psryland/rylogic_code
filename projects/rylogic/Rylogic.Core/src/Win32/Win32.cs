@@ -416,6 +416,10 @@ namespace Rylogic.Interop.Win32
 		public const int GWLP_ID         = -12;
 		#endregion
 
+		#region GetWindow uCmd GW_
+		public const uint GW_OWNER = 4;
+		#endregion
+
 		#region Graphics modes GM_
 		public const int GM_COMPATIBLE                    = 1;
 		public const int GM_ADVANCED                      = 2;

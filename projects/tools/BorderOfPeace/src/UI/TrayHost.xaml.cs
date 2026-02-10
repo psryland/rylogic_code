@@ -63,8 +63,34 @@ namespace BorderOfPeace.UI
 			if (foreign_pid == our_pid)
 				return;
 
+			// Only track windows that appear in the taskbar
+			if (!IsTaskbarWindow(hwnd))
+				return;
+
 			m_last_foreground_hwnd = hwnd;
 			m_last_foreground_title = GetWindowTitle(hwnd);
+		}
+
+		/// <summary>True if 'hwnd' is the kind of window that has a taskbar entry</summary>
+		private static bool IsTaskbarWindow(IntPtr hwnd)
+		{
+			// Must be visible
+			if (!User32.IsWindowVisible(hwnd))
+				return false;
+
+			var ex_style = (int)User32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
+
+			// WS_EX_APPWINDOW forces a taskbar entry
+			if ((ex_style & Win32.WS_EX_APPWINDOW) != 0)
+				return true;
+
+			// WS_EX_TOOLWINDOW never gets a taskbar entry
+			if ((ex_style & Win32.WS_EX_TOOLWINDOW) != 0)
+				return false;
+
+			// Unowned top-level windows get a taskbar entry by default
+			var owner = User32.GetWindow(hwnd, Win32.GW_OWNER);
+			return owner == IntPtr.Zero;
 		}
 
 		/// <summary>Dynamically populate the tray context menu when opened</summary>
