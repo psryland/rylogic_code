@@ -17,6 +17,7 @@
 	<gui:NotificationIcon
 		x:Name="m_tray_icon"
 		ToolTipText="Border Of Peace"
+		IconSource="/icon.ico"
 		ContextMenu="{StaticResource TrayMenu}"
 		/>
 </Window>

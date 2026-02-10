@@ -23,6 +23,7 @@
 
 	<!-- Resources -->
 	<ItemGroup>
+		<Resource Include="icon.ico" />
 		<Resource Include="res\*" />
 	</ItemGroup>
 
