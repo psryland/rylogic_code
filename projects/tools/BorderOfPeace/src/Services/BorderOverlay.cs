@@ -77,12 +77,13 @@ namespace BorderOfPeace.Services
 			var w_dip = w * dpi_x;
 			var h_dip = h * dpi_y;
 
-			// Extend outward by border thickness (already in DIPs)
+			// Extend outward by border thickness, plus 5px inward overlap to cover any gap
 			var t = m_border.BorderThickness.Left;
-			Left = left_dip - t;
-			Top = top_dip - t;
-			Width = w_dip + t * 2;
-			Height = h_dip + t * 2;
+			const double inset = 5;
+			Left = left_dip - t + inset;
+			Top = top_dip - t + inset;
+			Width = w_dip + (t - inset) * 2;
+			Height = h_dip + (t - inset) * 2;
 
 			if (!IsVisible)
 				Show();
