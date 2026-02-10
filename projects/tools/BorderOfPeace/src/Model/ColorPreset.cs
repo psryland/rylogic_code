@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Rylogic.Gfx;
 
 namespace BorderOfPeace.Model
@@ -25,9 +26,11 @@ namespace BorderOfPeace.Model
 		}
 
 		/// <summary>Get as a Colour32</summary>
+		[JsonIgnore]
 		public Colour32 Colour => new(Argb);
 
 		/// <summary>Convert to COLORREF (0x00BBGGRR) for DWM APIs</summary>
+		[JsonIgnore]
 		public uint ColorRef
 		{
 			get
