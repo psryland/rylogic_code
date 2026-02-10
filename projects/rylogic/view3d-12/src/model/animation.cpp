@@ -575,9 +575,9 @@ namespace pr::rdr12
 				m_out.m_fidxs.resize(m_out.m_key_count);
 				for (int i = 0, iend = isize(frames); i != iend; ++i)
 				{
-					// The frame indices can be any frames from the source animation.
+					// The frame indices can be any frames from the source animation, not necessarily in order!
 					// The duration of the last frame is meaningless because the sequence stops on that frame.
-					// I think this is better than inserting a dummy frame after. That can be done manually if needed.
+					// I think this is better than inserting a dummy frame after. That can be done manually in the script if needed.
 					fidx = frames[i];
 					m_out.m_times[i] = time;
 					m_out.m_fidxs[i] = fidx;
@@ -608,7 +608,7 @@ namespace pr::rdr12
 				// Detect unused channels
 				std::atomic_int active_channels = 0;
 
-				// Generate the frames for each bone
+				// Generate the frames for each track
 				auto track_range = std::ranges::views::iota(0, track_count);
 				std::for_each(std::execution::par, track_range.begin(), track_range.end(), [&, this](int track_index)
 				{
@@ -807,21 +807,13 @@ namespace pr::rdr12
 			void ApplyXform(int kidx, xform const& r2a) const
 			{
 				auto idx = kidx * m_out.track_count(); // Root is always track 0
-
-				if (!m_out.m_rotation.empty())
-					m_out.m_rotation[idx] = r2a * m_out.m_rotation[idx];
-				if (!m_out.m_ang_vel.empty())
-					m_out.m_ang_vel[idx] = (r2a * m_out.m_ang_vel[idx].w0()).xyz;
-				if (!m_out.m_ang_acc.empty())
-					m_out.m_ang_acc[idx] = (r2a * m_out.m_ang_acc[idx].w0()).xyz;
-				if (!m_out.m_position.empty())
-					m_out.m_position[idx] = (r2a * m_out.m_position[idx].w1()).xyz;
-				if (!m_out.m_lin_vel.empty())
-					m_out.m_lin_vel[idx] = (r2a * m_out.m_lin_vel[idx].w0()).xyz;
-				if (!m_out.m_lin_acc.empty())
-					m_out.m_lin_acc[idx] = (r2a * m_out.m_lin_acc[idx].w0()).xyz;
-				if (!m_out.m_tcurves.empty())
-					m_out.m_tcurves[idx] = r2a * m_out.m_tcurves[idx];
+				Set(m_out.m_rotation, idx, (r2a * Get(m_out.m_rotation, idx, quat::Identity())));
+				Set(m_out.m_ang_vel , idx, (r2a * Get(m_out.m_ang_vel , idx, v3::Zero()).w0()).xyz);
+				Set(m_out.m_ang_acc , idx, (r2a * Get(m_out.m_ang_acc , idx, v3::Zero()).w0()).xyz);
+				Set(m_out.m_position, idx, (r2a * Get(m_out.m_position, idx, v3::Zero()).w1()).xyz);
+				Set(m_out.m_lin_vel , idx, (r2a * Get(m_out.m_lin_vel , idx, v3::Zero()).w0()).xyz);
+				Set(m_out.m_lin_acc , idx, (r2a * Get(m_out.m_lin_acc , idx, v3::Zero()).w0()).xyz);
+				Set(m_out.m_tcurves , idx, (r2a * Get(m_out.m_tcurves , idx, xform::Identity())));
 			}
 
 			// Determine the dynamics values for 'samples[2]' because on the surrounding values
