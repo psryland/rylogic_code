@@ -23,7 +23,6 @@ namespace BorderOfPeace.Services
 			AllowsTransparency = true;
 			Background = Brushes.Transparent;
 			ShowInTaskbar = false;
-			Topmost = true;
 			ResizeMode = ResizeMode.NoResize;
 			IsHitTestVisible = false;
 
@@ -35,8 +34,9 @@ namespace BorderOfPeace.Services
 			SyncPosition();
 			Show();
 
-			// Make click-through (WS_EX_TRANSPARENT) after the window handle exists
+			// Make click-through and position in z-order behind target
 			MakeClickThrough();
+			EnsureZOrder();
 		}
 
 		/// <summary>Update the border color and thickness</summary>
@@ -54,7 +54,7 @@ namespace BorderOfPeace.Services
 			if (!User32.IsWindowVisible(m_target_hwnd))
 			{
 				Hide();
-				return true; // Target still exists, just hidden
+				return true;
 			}
 
 			var rect = User32.GetWindowRect(m_target_hwnd);
@@ -67,17 +67,22 @@ namespace BorderOfPeace.Services
 				return true;
 			}
 
-			// Convert from screen pixels to WPF device-independent units
+			// Convert from screen pixels to WPF device-independent units first
 			var source = PresentationSource.FromVisual(this);
 			var dpi_x = source?.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
 			var dpi_y = source?.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
 
-			// Extend outward by border thickness so border is visible around the window
-			var t = (int)m_border.BorderThickness.Left;
-			Left = (rect.left - t) * dpi_x;
-			Top = (rect.top - t) * dpi_y;
-			Width = (w + t * 2) * dpi_x;
-			Height = (h + t * 2) * dpi_y;
+			var left_dip = rect.left * dpi_x;
+			var top_dip = rect.top * dpi_y;
+			var w_dip = w * dpi_x;
+			var h_dip = h * dpi_y;
+
+			// Extend outward by border thickness (already in DIPs)
+			var t = m_border.BorderThickness.Left;
+			Left = left_dip - t;
+			Top = top_dip - t;
+			Width = w_dip + t * 2;
+			Height = h_dip + t * 2;
 
 			if (!IsVisible)
 				Show();
@@ -97,13 +102,13 @@ namespace BorderOfPeace.Services
 				ex_style | (uint)Win32.WS_EX_TRANSPARENT | (uint)Win32.WS_EX_TOOLWINDOW);
 		}
 
-		/// <summary>Keep the overlay topmost but just above the target window</summary>
+		/// <summary>Place overlay just behind the target window in z-order</summary>
 		public void EnsureZOrder()
 		{
 			var hwnd = new WindowInteropHelper(this).Handle;
 			if (hwnd == IntPtr.Zero) return;
 
-			// Place just above the target window
+			// hWndInsertAfter = target places us right behind the target
 			User32.SetWindowPos(hwnd, m_target_hwnd,
 				0, 0, 0, 0,
 				(uint)(Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE));

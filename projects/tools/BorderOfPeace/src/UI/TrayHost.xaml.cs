@@ -87,7 +87,10 @@ namespace BorderOfPeace.UI
 		private void OnSyncOverlays(object? sender, EventArgs e)
 		{
 			foreach (var (hwnd, overlay) in m_overlays)
+			{
 				overlay.SyncPosition();
+				overlay.EnsureZOrder();
+			}
 		}
 
 		/// <summary>Called when the foreground window changes</summary>
