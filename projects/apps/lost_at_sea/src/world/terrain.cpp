@@ -11,8 +11,7 @@ namespace las
 		:m_height_field(&hf)
 		,m_inst()
 		,m_factory(rdr)
-		,m_cpu_verts()
-		,m_indices()
+		,m_cpu_data()
 		,m_dirty(false)
 	{
 		BuildMesh();
@@ -32,7 +31,7 @@ namespace las
 				auto h = m_height_field->HeightAt(wx, wy);
 				auto normal = m_height_field->NormalAt(wx, wy);
 
-				auto& v = m_cpu_verts[idx];
+				auto& v = m_cpu_data.m_vcont[idx];
 				v.m_vert = v4(wx - camera_world_pos.x, wy - camera_world_pos.y, h, 1.0f);
 				v.m_norm = normal;
 				v.m_diff = TerrainColour(h, normal.z);
@@ -52,7 +51,7 @@ namespace las
 			auto& upload = m_factory.UploadBuffer();
 			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
 			auto* dst = update.ptr<Vert>();
-			std::memcpy(dst, m_cpu_verts.data(), m_cpu_verts.size() * sizeof(Vert));
+			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
 			update.Commit();
 			m_factory.FlushToGpu(EGpuFlush::Block);
 			m_dirty = false;
@@ -84,7 +83,8 @@ namespace las
 	void Terrain::BuildMesh()
 	{
 		auto vcount = GridDim * GridDim;
-		m_cpu_verts.resize(vcount);
+		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
+		m_cpu_data.Reset(vcount, icount, 1, sizeof(uint16_t));
 
 		// Initialise with a flat grid
 		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
@@ -93,7 +93,7 @@ namespace las
 			for (int ix = 0; ix < GridDim; ++ix)
 			{
 				auto idx = iy * GridDim + ix;
-				auto& v = m_cpu_verts[idx];
+				auto& v = m_cpu_data.m_vcont[idx];
 				v.m_vert = v4((ix - GridDim / 2) * cell_size, (iy - GridDim / 2) * cell_size, 0, 1);
 				v.m_diff = Colour(0.23f, 0.50f, 0.12f, 1.0f); // Default green
 				v.m_norm = v4(0, 0, 1, 0);
@@ -103,7 +103,6 @@ namespace las
 		}
 
 		// Build index buffer
-		m_indices.reserve((GridDim - 1) * (GridDim - 1) * 6);
 		for (int iy = 0; iy < GridDim - 1; ++iy)
 		{
 			for (int ix = 0; ix < GridDim - 1; ++ix)
@@ -112,26 +111,26 @@ namespace las
 				auto i1 = static_cast<uint16_t>(i0 + 1);
 				auto i2 = static_cast<uint16_t>(i0 + GridDim);
 				auto i3 = static_cast<uint16_t>(i2 + 1);
-				m_indices.push_back(i0); m_indices.push_back(i2); m_indices.push_back(i1);
-				m_indices.push_back(i1); m_indices.push_back(i2); m_indices.push_back(i3);
+				m_cpu_data.m_icont.push_back(i0);
+				m_cpu_data.m_icont.push_back(i2);
+				m_cpu_data.m_icont.push_back(i1);
+				m_cpu_data.m_icont.push_back(i1);
+				m_cpu_data.m_icont.push_back(i2);
+				m_cpu_data.m_icont.push_back(i3);
 			}
 		}
 
 		// Create the GPU model once
 		NuggetDesc nugget(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm);
 		nugget.m_vrange = rdr12::Range(0, vcount);
-		nugget.m_irange = rdr12::Range(0, isize(m_indices));
+		nugget.m_irange = rdr12::Range(0, icount);
 		auto nug_span = std::span<NuggetDesc const>(&nugget, 1);
 
-		// Use the MeshCreationData with the Vert positions as v4 spans
-		MeshCreationData cdata;
-		cdata.verts(std::span<v4 const>(reinterpret_cast<v4 const*>(&m_cpu_verts[0].m_vert), vcount))
-			.indices(std::span<uint16_t const>(m_indices))
-			.normals(std::span<v4 const>(reinterpret_cast<v4 const*>(&m_cpu_verts[0].m_norm), vcount))
-			.nuggets(nug_span);
+		auto terrain_colour = Colour32Green;
+		auto opts = ModelGenerator::CreateOptions().colours({ &terrain_colour, 1 });
 
-		auto opts = ModelGenerator::CreateOptions().colours({ &Colour32Green, 1 });
-		m_inst.m_model = ModelGenerator::Mesh(m_factory, cdata, &opts);
+		ModelGenerator::Cache cache{m_cpu_data};
+		m_inst.m_model = ModelGenerator::Create<Vert>(m_factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
 	}
 }
