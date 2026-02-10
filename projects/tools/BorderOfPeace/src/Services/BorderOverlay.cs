@@ -31,10 +31,14 @@ namespace BorderOfPeace.Services
 			Content = m_border;
 
 			UpdateBorder(colour, thickness);
-			SyncPosition();
+
+			// Show first so PresentationSource is available for DPI conversion
+			Left = -10000;
+			Top = -10000;
 			Show();
 
-			// Make click-through and position in z-order behind target
+			// Now sync to the correct position with accurate DPI
+			SyncPosition();
 			MakeClickThrough();
 			EnsureZOrder();
 		}
@@ -77,9 +81,9 @@ namespace BorderOfPeace.Services
 			var w_dip = w * dpi_x;
 			var h_dip = h * dpi_y;
 
-			// Extend outward by border thickness, plus 5px inward overlap to cover any gap
+			// Extend outward by border thickness, plus 8px inward overlap to cover any gap
 			var t = m_border.BorderThickness.Left;
-			const double inset = 5;
+			const double inset = 8;
 			Left = left_dip - t + inset;
 			Top = top_dip - t + inset;
 			Width = w_dip + (t - inset) * 2;
