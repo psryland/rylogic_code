@@ -197,7 +197,7 @@ namespace BorderOfPeace.UI
 			// Use existing color if window was previously colored
 			Colour32? initial = m_colored_windows.TryGetValue(hwnd, out var existing) ? existing : null;
 
-			var dlg = new ColourPickerUI(null, initial);
+			var dlg = new ColourPickerUI(null, initial) { Width = 440, Height = 400 };
 			if (dlg.ShowDialog() == true)
 			{
 				var colour = dlg.Colour;

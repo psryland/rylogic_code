@@ -51,7 +51,7 @@ namespace BorderOfPeace.UI
 
 		private void HandleAdd(object sender, RoutedEventArgs e)
 		{
-			var dlg = new ColourPickerUI(this, new Colour32(0xFF, 0x80, 0x80, 0x80));
+			var dlg = new ColourPickerUI(this, new Colour32(0xFF, 0x80, 0x80, 0x80)) { Width = 440, Height = 400 };
 			if (dlg.ShowDialog() == true)
 			{
 				var colour = dlg.Colour;
@@ -65,7 +65,7 @@ namespace BorderOfPeace.UI
 			if (m_list_presets.SelectedItem is not PresetVM vm)
 				return;
 
-			var dlg = new ColourPickerUI(this, new Colour32(vm.Argb));
+			var dlg = new ColourPickerUI(this, new Colour32(vm.Argb)) { Width = 440, Height = 400 };
 			if (dlg.ShowDialog() == true)
 			{
 				var colour = dlg.Colour;
