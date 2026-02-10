@@ -193,7 +193,7 @@ namespace BorderOfPeace.UI
 			// Use existing color if window was previously colored
 			Colour32? initial = m_colored_windows.TryGetValue(hwnd, out var existing) ? existing : null;
 
-			var dlg = new ColourPickerUI(this, initial);
+			var dlg = new ColourPickerUI(null, initial);
 			if (dlg.ShowDialog() == true)
 			{
 				var colour = dlg.Colour;
@@ -205,7 +205,7 @@ namespace BorderOfPeace.UI
 		/// <summary>Show the settings window</summary>
 		private void HandleShowSettings()
 		{
-			var dlg = new SettingsWindow(m_settings) { Owner = this };
+			var dlg = new SettingsWindow(m_settings);
 			if (dlg.ShowDialog() == true)
 			{
 				m_settings = dlg.ResultSettings;
