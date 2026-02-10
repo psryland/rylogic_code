@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Properties -->
   <PropertyGroup Label="Globals">
@@ -387,6 +387,21 @@
     </ClCompile>
     <ClCompile Include="src\dependecy_check_math.cpp" />
     <ClCompile Include="src\unittests.cpp" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\vector_traits.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\math.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\tests\vector2_tests.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix2x2.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix3x4.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix4x4.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\quaternion.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\transform.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector2.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector3.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector4.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector8.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\forward.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />

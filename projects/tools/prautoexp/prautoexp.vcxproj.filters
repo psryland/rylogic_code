@@ -13,19 +13,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\expansions.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
+      <Filter>pr\lua</Filter>
+    </ClInclude>
     <ClInclude Include="src\dbg_helper.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\expansions.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\reentry_guard.h">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
-      <Filter>pr\lua</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

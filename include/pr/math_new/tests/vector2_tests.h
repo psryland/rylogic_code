@@ -11,46 +11,41 @@ namespace pr::math
 {
 	PRUnitTestClass(Vector2)
 	{
+		PRUnitTestMethod(Construction, float, double, int32_t, int64_t)
+		{
+			using vec2_t = Vec2<T>;
+
+			constexpr auto V0 = vec2_t(T(1));
+			static_assert(V0.x == T(1));
+			static_assert(V0.y == T(1));
+
+			constexpr auto V1 = vec2_t(T(1), T(2));
+			static_assert(V1.x == T(1));
+			static_assert(V1.y == T(2));
+
+			constexpr auto V2 = vec2_t({ T(3), T(4) });
+			static_assert(V2.x == T(3));
+			static_assert(V2.y == T(4));
+
+			if constexpr (std::floating_point<T>)
+			{
+				constexpr auto V3 = vec2_t::Normal(T(3), T(4));
+				static_assert(FEql(V3.x, T(0.6)));
+				static_assert(FEql(V3.y, T(0.8)));
+			}
+		}
+
+
+
+
 		#if 0 // todo
-		PRUnitTestMethod(Create, float, double, int32_t, int64_t)
-		{
-			using S = T;
-			using vec2_t = Vec2<S, void>;
-
-			auto V0 = vec2_t(S(1));
-			PR_EXPECT(V0.x == S(1));
-			PR_EXPECT(V0.y == S(1));
-
-			auto V1 = vec2_t(S(1), S(2));
-			PR_EXPECT(V1.x == S(1));
-			PR_EXPECT(V1.y == S(2));
-
-			auto V2 = vec2_t({ S(3), S(4) });
-			PR_EXPECT(V2.x == S(3));
-			PR_EXPECT(V2.y == S(4));
-
-			vec2_t V3 = { S(4), S(5) };
-			PR_EXPECT(V3.x == S(4));
-			PR_EXPECT(V3.y == S(5));
-		}
-		PRUnitTestMethod(Normal, float, double)
-		{
-			using S = T;
-			using vec2_t = Vec2<S, void>;
-
-			auto V4 = vec2_t::Normal(S(3), S(4));
-			auto V4_expected = vec2_t(S(0.6), S(0.8));
-			PR_EXPECT(FEql(V4, V4_expected));
-			PR_EXPECT(FEql(V4[0], S(0.6)));
-			PR_EXPECT(FEql(V4[1], S(0.8)));
-		}
 		PRUnitTestMethod(Operators, float, double, int32_t, int64_t)
 		{
 			using S = T;
 			using vec2_t = Vec2<S, void>;
 
-			auto V0 = vec2_t(S(10), S(8));
-			auto V1 = vec2_t(S(2), S(12));
+			auto V0 = vec2_t(T(10), T(8));
+			auto V1 = vec2_t(T(2), T(12));
 			auto eql = [](auto lhs, auto rhs)
 			{
 				if constexpr (std::floating_point<S>)
@@ -58,26 +53,26 @@ namespace pr::math
 				else
 					return lhs == rhs;
 			};
-			PR_EXPECT(eql(V0 + V1, vec2_t(S(+12), S(+20))));
-			PR_EXPECT(eql(V0 - V1, vec2_t(S(+8), S(-4))));
-			PR_EXPECT(eql(V0 * V1, vec2_t(S(+20), S(+96))));
-			PR_EXPECT(eql(V0 / V1, vec2_t(S(+5), S(8) / S(12))));
-			PR_EXPECT(eql(V0 % V1, vec2_t(S(+0), S(8))));
+			PR_EXPECT(eql(V0 + V1, vec2_t(T(+12), T(+20))));
+			PR_EXPECT(eql(V0 - V1, vec2_t(T(+8), T(-4))));
+			PR_EXPECT(eql(V0 * V1, vec2_t(T(+20), T(+96))));
+			PR_EXPECT(eql(V0 / V1, vec2_t(T(+5), T(8) / T(12))));
+			PR_EXPECT(eql(V0 % V1, vec2_t(T(+0), T(8))));
 
-			PR_EXPECT(eql(V0 * S(3), vec2_t(S(30), S(24))));
-			PR_EXPECT(eql(V0 / S(2), vec2_t(S(5), S(4))));
-			PR_EXPECT(eql(V0 % S(2), vec2_t(S(0), S(0))));
+			PR_EXPECT(eql(V0 * T(3), vec2_t(T(30), T(24))));
+			PR_EXPECT(eql(V0 / T(2), vec2_t(T(5), T(4))));
+			PR_EXPECT(eql(V0 % T(2), vec2_t(T(0), T(0))));
 
-			PR_EXPECT(eql(S(3) * V0, vec2_t(S(30), S(24))));
+			PR_EXPECT(eql(T(3) * V0, vec2_t(T(30), T(24))));
 
-			PR_EXPECT(eql(+V0, vec2_t(S(+10), S(+8))));
-			PR_EXPECT(eql(-V0, vec2_t(S(-10), S(-8))));
+			PR_EXPECT(eql(+V0, vec2_t(T(+10), T(+8))));
+			PR_EXPECT(eql(-V0, vec2_t(T(-10), T(-8))));
 
-			PR_EXPECT(V0 == vec2_t(S(10), S(8)));
-			PR_EXPECT(V0 != vec2_t(S(2), S(1)));
+			PR_EXPECT(V0 == vec2_t(T(10), T(8)));
+			PR_EXPECT(V0 != vec2_t(T(2), T(1)));
 
 			// Implicit conversion to T==void
-			vec2_t V2 = Vec2<S, int>(S(1));
+			vec2_t V2 = Vec2<S, int>(T(1));
 
 			// Explicit cast to T!=void
 			Vec2<S, int> V3 = static_cast<Vec2<S, int>>(V2);
@@ -87,24 +82,24 @@ namespace pr::math
 			using S = T;
 			using vec2_t = Vec2<S, void>;
 
-			auto V0 = vec2_t(S(+1), S(+2));
-			auto V1 = vec2_t(S(-1), S(-2));
-			auto V2 = vec2_t(S(+2), S(+4));
+			auto V0 = vec2_t(T(+1), T(+2));
+			auto V1 = vec2_t(T(-1), T(-2));
+			auto V2 = vec2_t(T(+2), T(+4));
 
-			PR_EXPECT(Min(V0, V1, V2) == vec2_t(S(-1), S(-2)));
-			PR_EXPECT(Max(V0, V1, V2) == vec2_t(S(+2), S(+4)));
-			PR_EXPECT(Clamp(V0, V1, V2) == vec2_t(S(1), S(2)));
-			PR_EXPECT(Clamp(V0, S(0), S(1)) == vec2_t(S(1), S(1)));
+			PR_EXPECT(Min(V0, V1, V2) == vec2_t(T(-1), T(-2)));
+			PR_EXPECT(Max(V0, V1, V2) == vec2_t(T(+2), T(+4)));
+			PR_EXPECT(Clamp(V0, V1, V2) == vec2_t(T(1), T(2)));
+			PR_EXPECT(Clamp(V0, T(0), T(1)) == vec2_t(T(1), T(1)));
 		}
 		PRUnitTestMethod(Normalise, float, double)
 		{
 			using S = T;
 			using vec2_t = Vec2<S, void>;
 
-			auto arr0 = vec2_t(S(1), S(2));
+			auto arr0 = vec2_t(T(1), T(2));
 			auto len = Length(arr0);
 			PR_EXPECT(FEql(Normalise(vec2_t::Zero(), arr0), arr0));
-			PR_EXPECT(FEql(Normalise(arr0), vec2_t(S(1) / len, S(2) / len)));
+			PR_EXPECT(FEql(Normalise(arr0), vec2_t(T(1) / len, T(2) / len)));
 			PR_EXPECT(IsNormal(Normalise(arr0)));
 		}
 		PRUnitTestMethod(CosAngle, float, double)
@@ -112,10 +107,10 @@ namespace pr::math
 			using S = T;
 			using vec2_t = Vec2<S, void>;
 
-			vec2_t arr0(S(1), S(0));
-			vec2_t arr1(S(0), S(1));
-			PR_EXPECT(FEql(CosAngle(arr0, arr1) - Cos(DegreesToRadians(S(90))), S(0)));
-			PR_EXPECT(FEql(Angle(arr0, arr1), DegreesToRadians(S(90))));
+			vec2_t arr0(T(1), T(0));
+			vec2_t arr1(T(0), T(1));
+			PR_EXPECT(FEql(CosAngle(arr0, arr1) - CoT(DegreesToRadianT(T(90))), T(0)));
+			PR_EXPECT(FEql(Angle(arr0, arr1), DegreesToRadianT(T(90))));
 		}
 		#endif
 	};

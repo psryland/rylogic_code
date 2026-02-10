@@ -4,7 +4,8 @@
 //*****************************************************************************
 #pragma once
 #include "../core/forward.h"
-#include "../vector/vector4.h"
+#include "../core/traits.h"
+#include "../types/vector4.h"
 
 namespace pr::math
 {

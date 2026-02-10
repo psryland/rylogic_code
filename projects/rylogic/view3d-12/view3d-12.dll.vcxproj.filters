@@ -12,25 +12,23 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d-dll.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\dll\context.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-    <ClInclude Include="src\dll\dll_forward.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-    <ClInclude Include="src\dll\v3d_window.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="src\dll\context.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
+    <ClInclude Include="src\dll\context.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
     <ClCompile Include="src\dll\dll.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
+    <ClInclude Include="src\dll\dll_forward.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
     <ClCompile Include="src\dll\v3d_window.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
+    <ClInclude Include="src\dll\v3d_window.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -13,13 +13,19 @@
 //  - Always pass vectors by value, not by const&. Even if intrinsics are not used
 //    the optimiser will pack the float[] into a vector register to pass it to a function call.
 //  - Pass matrix types by const&. Basically if the type is larger than 2 registers, pass by const&.
+//  - Functions are implemented for vector concepts, not specific types. So that they can be used on
+//    any type that conforms to the vector concept
 
 #include "core/forward.h"
-#include "core/vector_traits.h"
-#include "vector/vector2.h"
-#include "vector/vector3.h"
-#include "vector/vector4.h"
-#include "vector/vector8.h"
+#include "core/traits.h"
+#include "core/constants.h"
+#include "core/functions.h"
+#include "types/vector2.h"
+#include "types/vector3.h"
+#include "types/vector4.h"
+#include "types/vector8.h"
+#include "types/quaternion.h"
+#include "types/transform.h"
 // No non-standard dependencies outside of './'
 
 // #include "pr/maths/forward.h"

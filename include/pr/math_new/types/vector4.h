@@ -4,8 +4,8 @@
 //*****************************************************************************
 #pragma once
 #include "../core/forward.h"
-#include "../vector/vector2.h"
-#include "../vector/vector3.h"
+#include "../types/vector2.h"
+#include "../types/vector3.h"
 // No non-standard dependencies outside of './'
 
 namespace pr::math

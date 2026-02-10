@@ -1145,7 +1145,7 @@ namespace pr::ldraw
 					for (auto& point : m_points)
 					{
 						Append(out, point.pt);
-						if (*m_per_item_colour.m_active)
+						if (m_per_item_colour && *m_per_item_colour.m_active)
 							Append(out, point.col ? *point.col.m_colour : seri::Colour::Default);
 					}
 				}

@@ -416,6 +416,10 @@ namespace Rylogic.Interop.Win32
 		public const int GWLP_ID         = -12;
 		#endregion
 
+		#region GetWindow uCmd GW_
+		public const uint GW_OWNER = 4;
+		#endregion
+
 		#region Graphics modes GM_
 		public const int GM_COMPATIBLE                    = 1;
 		public const int GM_ADVANCED                      = 2;
@@ -1789,6 +1793,12 @@ namespace Rylogic.Interop.Win32
 		public const int WH_KEYBOARD_LL = 13;
 		public const int WH_MOUSE = 7;
 		public const int WH_KEYBOARD = 2;
+		#endregion
+
+		#region WinEvent constants
+		public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+		public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+		public const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
 		#endregion
 
 		#region Window Styles WS_
