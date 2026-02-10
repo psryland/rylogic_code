@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BorderOfPeace.Model;
 using BorderOfPeace.Services;
 using Rylogic.Gfx;
@@ -112,6 +113,9 @@ namespace BorderOfPeace.UI
 				Header = display_title,
 				IsEnabled = false,
 				FontWeight = FontWeights.Bold,
+				Icon = GetWindowIcon(hwnd) is ImageSource icon_src
+					? new Image { Source = icon_src, Width = 16, Height = 16 }
+					: null,
 			};
 			menu.Items.Add(header);
 			menu.Items.Add(new Separator());
@@ -238,6 +242,35 @@ namespace BorderOfPeace.UI
 			var sb = new StringBuilder(256);
 			User32.GetWindowText(hwnd, sb, 256);
 			return sb.ToString();
+		}
+
+		/// <summary>Get the icon of a window as an ImageSource</summary>
+		private static ImageSource? GetWindowIcon(IntPtr hwnd)
+		{
+			try
+			{
+				const int ICON_SMALL = 0;
+				const int ICON_BIG = 1;
+
+				// Try WM_GETICON (small, then big)
+				var h_icon = User32.SendMessage(hwnd, (uint)Win32.WM_GETICON, ICON_SMALL, 0);
+				if (h_icon == IntPtr.Zero)
+					h_icon = User32.SendMessage(hwnd, (uint)Win32.WM_GETICON, ICON_BIG, 0);
+
+				// Fall back to the window class icon
+				if (h_icon == IntPtr.Zero)
+					h_icon = User32.GetClassLongPtr(hwnd, Win32.GCLP_HICONSM);
+				if (h_icon == IntPtr.Zero)
+					h_icon = User32.GetClassLongPtr(hwnd, Win32.GCLP_HICON);
+
+				if (h_icon != IntPtr.Zero)
+					return Imaging.CreateBitmapSourceFromHIcon(h_icon, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+			}
+			catch
+			{
+				// Best effort — some windows may not have accessible icons
+			}
+			return null;
 		}
 
 		protected override void OnClosing(CancelEventArgs e)
