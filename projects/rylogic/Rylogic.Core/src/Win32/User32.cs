@@ -244,6 +244,10 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", CharSet = CharSet.Unicode, SetLastError = true)]
 		public static extern long GetWindowLongPtr(HWND hWnd, int nIndex); // This is only defined in 64bit builds, otherwise it's a #define to GetWindowLong
 
+		/// <summary>Retrieves a handle to a window that has the specified relationship to the specified window.</summary>
+		[DllImport("user32.dll", SetLastError = true)]
+		public static extern HWND GetWindow(HWND hWnd, uint uCmd);
+
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
 
@@ -443,6 +447,15 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("user32.dll")]
 		public static extern int SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
+
+		/// <summary>Installs an event hook to receive notifications for a range of events.</summary>
+		public delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+		[DllImport("user32.dll")]
+		public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+		/// <summary>Removes an event hook installed by SetWinEventHook.</summary>
+		[DllImport("user32.dll")]
+		public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
 		[DllImport("user32.dll")]
 		public static extern int SetWindowsHookEx(int idHook, Win32.HookProc lpfn, IntPtr hMod, int dwThreadId);
