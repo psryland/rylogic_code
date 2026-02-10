@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="sqlite3">
@@ -136,34 +136,89 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
-      <Filter>sqlite3</Filter>
-    </ClCompile>
-    <ClCompile Include="src\unittests.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c">
-      <Filter>pr\crypt</Filter>
-    </ClCompile>
-    <ClCompile Include="src\dependecy_check_math.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h">
-      <Filter>pr\geometry</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h">
+      <Filter>pr\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\scatter.h">
-      <Filter>pr\geometry</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h">
+      <Filter>pr\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
-      <Filter>pr\meta</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h">
+      <Filter>pr\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h">
-      <Filter>pr\meta</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\savitzky_golay_filter.h">
+      <Filter>pr\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\align.h">
-      <Filter>pr\macros</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\audio\synth\note.h">
+      <Filter>pr\audio\synth</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\audio\synth\synth.h">
+      <Filter>pr\audio\synth</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
+      <Filter>pr\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\forward.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\penetration.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shapes.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_array.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_polytope.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_triangle.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\support.h">
+      <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\alloca.h">
       <Filter>pr\common</Filter>
@@ -171,80 +226,47 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\allocator.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\and.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\archiver.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\arena_allocator.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\assert.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\atlgdix.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\auto_do.h">
-      <Filter>pr\macros</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\async_wrap.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\base64.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\axis_id.h">
-      <Filter>pr\maths</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\bit_data.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\bit_array.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\byte_data.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
-      <Filter>pr\camera</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\cancel_token.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\cast.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\clipboard.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\hardware\comm_port_io.h">
-      <Filter>pr\hardware</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\command_line.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\concurrent_queue.h">
-      <Filter>pr\threads</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\compress.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\console.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\constants.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\constants.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\context_menu.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\conversion.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\count_of.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\hardware\cpuinfo.h">
-      <Filter>pr\hardware</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\coroutine.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\crc.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\csv.h">
-      <Filter>pr\storage</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\d3dptr.h">
       <Filter>pr\common</Filter>
@@ -252,11 +274,218 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\datetime.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\enumerable.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\event_handler.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\exception.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\expr_eval.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\flags_enum.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\fmt.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\guid.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\hash.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\hresult.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\inplacealloc.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\interpolate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\ireport.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\keystate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\ldraw.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\linq.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\log.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\mempool.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\memstream.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\min_max_fix.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\msgbox.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\number.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\objectpool.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\observe.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\pe_file.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\pollingtoevent.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\profile.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\profile_manager.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\range.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\refcount.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\refptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\registrykey.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\repeater.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\resource.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\scope.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\singleton.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\si_units.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\space_filling.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\static_callback.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\stop_watch.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\stride_ptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\to.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\tstring.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\tweakables.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\unittests.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\user_data.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\common\value_ptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\bit_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\byte_data.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\container\deque.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\enumerable.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\quadtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\queue.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\ring_buffer.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\segmented_list.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\span.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\stack.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c">
+      <Filter>pr\crypt</Filter>
+    </ClCompile>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\monocypher.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\rijndael.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\sha1.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\crypt\sha512.h">
+      <Filter>pr\crypt</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\filesys.h">
       <Filter>pr\filesys</Filter>
@@ -279,329 +508,11 @@
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\resolve_path.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\expr_eval.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\exception.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\font_helper.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\fmt.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\forward.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\frustum.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\function_arity.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\gcf.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\gdiplus.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\graph_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\join.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\grid_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\hresult.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\guid.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\if.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\interpolate.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\inplacealloc.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\line3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix2x2.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\quaternion.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\keystate.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\ireport.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\link.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\log.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
-      <Filter>pr\lua</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\memstream.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\mempool.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\mfc_helper.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\min_max.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\min_max_fix.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\misc.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\primes.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\msgbox.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\name_thread.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\no_copy.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\not.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\on_exit.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\or.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\observe.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\objectpool.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\pause_thread.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\rand_mt19937.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\polynomial.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\pr_to_ode.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\process.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\pollingtoevent.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\profile.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\profile_manager.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\quadtree.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\queue.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\recent_files.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\remove_parenthesis.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\remove_pointer.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\repeat.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\resource.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\repeater.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\registrykey.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\refptr.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\refcount.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\range.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\stack.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\segmented_list.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\richedit.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\rijndael.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\round_button_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\scaled_dc.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\settings.h">
-      <Filter>pr\storage</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\sqlite.h">
-      <Filter>pr\storage</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\stringise.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\singleton.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\si_units.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\scope.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\spin_lock.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\spline.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\stat.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\tcpip.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\unittests.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\tstring.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\to.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\stop_watch.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\static_callback.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\closest_point.h">
       <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\wait_state.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\web_get.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\xml.h">
-      <Filter>pr\storage</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\wtl_tab_view_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\user_data.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\constexpr.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\macros\noexcept.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\bluetooth.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\sockets.h">
-      <Filter>pr\network</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h">
       <Filter>pr\geometry</Filter>
@@ -609,259 +520,31 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\deformablemesh.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\tetramesh.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\distance.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\closest_point.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\intersect.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\triangle.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\volume.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\geometry.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\penetration.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\support.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_box.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_sphere.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shapes.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_box.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\flags_enum.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\pe_file.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\string_core.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\extract.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\string.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\to_string.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\string_util.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\reader.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\script_core.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\token.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\location.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\preprocessor.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\macros.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\includes.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\forward.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\tokeniser.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\menu_list.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\script.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h">
-      <Filter>pr\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\hardware\find_bt_device.h">
-      <Filter>pr\hardware</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\sim_message_loop.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\colour_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\progress_ui.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths_core.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\interpolate.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\bbox.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\bsphere.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\rectangle.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\oriented_box.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\perlin_noise.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\large_int.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\convex_hull.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\bit_fields.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\windows_com.h">
-      <Filter>pr\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\forward.h">
-      <Filter>pr\physics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\rigid_body\rigid_body.h">
-      <Filter>pr\physics\rigid_body</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\linq.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\mass.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\constants.h">
-      <Filter>pr\physics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\physics.h">
-      <Filter>pr\physics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_line.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_array.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_polytope.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_triangle.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_mass.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_builder.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_line.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\bluetooth_ui.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\number.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\synchronise.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\sha1.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_line.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_cylinder.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\intersect.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_cylinder.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_extrude.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_line.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_point.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_quad.h">
@@ -870,269 +553,301 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_shape2d.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_point.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\point.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\reflect.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\scatter.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\tetramesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\triangle.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\unit_tests.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\volume.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gfx\colour.h">
+      <Filter>pr\gfx</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gfx\dpi.h">
+      <Filter>pr\gfx</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gfx\onebit.h">
+      <Filter>pr\gfx</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\atlgdix.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\colour_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\context_menu.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\font_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\gdiplus.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\graph_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\grid_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\menu_list.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\messagemap_dbg.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\mfc_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\misc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\progress_ui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\recent_files.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\richedit.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\round_button_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\scaled_dc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\sim_message_loop.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100_colours.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wtl_tab_view_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\hardware\comm_port_io.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\hardware\cpuinfo.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\hardware\find_bt_device.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h">
+      <Filter>pr\input</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
+      <Filter>pr\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\align.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\auto_do.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\constexpr.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\count_of.h">
+      <Filter>pr\macros</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\macros\enum.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\join.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\link.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\noexcept.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\no_copy.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\on_exit.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\remove_parenthesis.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\repeat.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\stringise.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\axis_id.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="src\unittests.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\limits.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\bbox.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\bit_fields.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\bsphere.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\constants.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\constants_vector.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\compress.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix6x8.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\conversion.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector8.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\convex_hull.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\span.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\impulse.h">
-      <Filter>pr\physics\integrater</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\zip_file.h">
-      <Filter>pr\storage</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\email.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\winsock.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\sha512.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\monocypher.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\hash.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\src_stack.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\string_filter.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\messagemap_dbg.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\encoding.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\stackdump.h">
-      <Filter>pr\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\key_codes.h">
-      <Filter>pr\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\event_handler.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\network\socket_stream.h">
-      <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gfx\onebit.h">
-      <Filter>pr\gfx</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h">
-      <Filter>pr\input</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\audio\synth\note.h">
-      <Filter>pr\audio\synth</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\audio\synth\synth.h">
-      <Filter>pr\audio\synth</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d\textures\projected_texture.h">
-      <Filter>pr\view3d\textures</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gfx\colour.h">
-      <Filter>pr\gfx</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\value_ptr.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\plane.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\point.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\buf.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d\renderer.h">
-      <Filter>pr\view3d</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\half.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\dummy_window.h">
-      <Filter>pr\win32</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\fibonacci_sphere.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\char8.h">
-      <Filter>pr\str</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\forward.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\string2.h">
-      <Filter>pr\str</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\frustum.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\convert_utf.h">
-      <Filter>pr\str</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\half.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\meta\dep_constants.h">
-      <Filter>pr\meta</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\interpolate.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\unit_tests.h">
-      <Filter>pr\str</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\large_int.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\unit_tests.h">
-      <Filter>pr\geometry</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\limits.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\unit_tests.h">
-      <Filter>pr\script</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\line3.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\stride_ptr.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gfx\dpi.h">
-      <Filter>pr\gfx</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths_core.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\reflect.h">
-      <Filter>pr\geometry</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\space_filling.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix2x2.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\field.h">
-      <Filter>pr\physics\utility</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h">
-      <Filter>pr\container</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\json.h">
-      <Filter>pr\storage</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix6x8.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\user_directories.h">
-      <Filter>pr\win32</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\oriented_box.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\win32\mem_checks.h">
-      <Filter>pr\win32</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\perlin_noise.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\threads\thread_pool.h">
-      <Filter>pr\threads</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\plane.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\bit_data.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\polynomial.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\async_wrap.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\primes.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\storage\ini_file.h">
-      <Filter>pr\storage</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\pr_to_ode.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100_colours.h">
-      <Filter>pr\gui</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\quaternion.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\str\utf8.h">
-      <Filter>pr\str</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\rand_mt19937.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\tweakables.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\rectangle.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\coroutine.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h">
-      <Filter>pr\container</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\spline.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\arena_allocator.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\stat.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\cancel_token.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\transform.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h">
-      <Filter>pr\container</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\ring_buffer.h">
-      <Filter>pr\container</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
-      <Filter>sqlite3</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
-      <Filter>pr\view3d-12</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\astar_search.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\savitzky_golay_filter.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\peak_detection.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h">
-      <Filter>pr\algorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
-      <Filter>pr\hlsl</Filter>
-    </None>
-    <ClInclude Include="$(RylogicRoot)include\pr\common\ldraw.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\math.h">
-      <Filter>pr\math_new</Filter>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector8.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\forward.h">
       <Filter>pr\math_new\core</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\vector_traits.h">
       <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\math_new\math.h">
+      <Filter>pr\math_new</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\tests\vector2_tests.h">
       <Filter>pr\math_new\tests</Filter>
@@ -1167,8 +882,296 @@
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector8.h">
       <Filter>pr\math_new\vector</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\transform.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\and.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\constants.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\dep_constants.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\function_arity.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\gcf.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\if.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\min_max.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\not.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\or.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\remove_pointer.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\bluetooth.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\bluetooth_ui.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\email.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\sockets.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\socket_stream.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\tcpip.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\web_get.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\winsock.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\constants.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\forward.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\impulse.h">
+      <Filter>pr\physics\integrater</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\physics.h">
+      <Filter>pr\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\rigid_body\rigid_body.h">
+      <Filter>pr\physics\rigid_body</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\mass.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_builder.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_mass.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\field.h">
+      <Filter>pr\physics\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\buf.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\forward.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\includes.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\location.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\macros.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\preprocessor.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script_core.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\src_stack.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\token.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\tokeniser.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\unit_tests.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\csv.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\ini_file.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\json.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\settings.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\sqlite.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\xml.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\zip_file.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\char8.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\convert_utf.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\encoding.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\extract.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\string.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\string2.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\string_core.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\string_filter.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\string_util.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\to_string.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\unit_tests.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\utf8.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\concurrent_queue.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\name_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\pause_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\process.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\spin_lock.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\synchronise.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\thread_pool.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\wait_state.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+      <Filter>pr\view3d-12</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d\renderer.h">
+      <Filter>pr\view3d</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d\textures\projected_texture.h">
+      <Filter>pr\view3d\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\dummy_window.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\key_codes.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\mem_checks.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\stackdump.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\user_directories.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\windows_com.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
+      <Filter>sqlite3</Filter>
+    </ClInclude>
+    <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
+      <Filter>sqlite3</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dependecy_check_math.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\unittests.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClInclude Include="src\unittests.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

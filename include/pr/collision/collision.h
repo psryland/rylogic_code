@@ -3,8 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/container/tri_table.h"
+#include "pr/collision/forward.h"
 #include "pr/collision/shapes.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
@@ -14,8 +13,9 @@
 
 namespace pr::collision
 {
-	// Function type for collection detection
 	using Detect = bool (pr_vectorcall *)(Shape const& lhs, m4_cref l2w, Shape const& rhs, m4_cref r2w, Contact& c);
+
+	// Function type for collection detection
 	inline bool pr_vectorcall CollisionNotImplemented(Shape const&, m4_cref, Shape const&, m4_cref, Contact&)
 	{
 		throw std::runtime_error("Collision not implemented");

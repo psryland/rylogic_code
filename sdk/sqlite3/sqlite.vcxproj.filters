@@ -7,20 +7,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\sqlite3.c">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="deploy.py" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="include\sqlite3.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="include\sqlite3ext.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\sqlite3.c">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="deploy.py" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
