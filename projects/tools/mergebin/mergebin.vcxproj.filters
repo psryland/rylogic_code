@@ -7,26 +7,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src/mergebin.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src/meta_data_tables.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src/table_data.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src/forward.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src/mergebin.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src/meta_data.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src/meta_data_tables.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src/meta_data_tables.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src/table_data.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src/table_data.h">
       <Filter>src</Filter>
     </ClInclude>

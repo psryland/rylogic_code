@@ -30,6 +30,7 @@
 #include "pr/collision/col_sphere_vs_box.h"
 #include "pr/collision/col_sphere_vs_sphere.h"
 #include "pr/collision/collision.h"
+#include "pr/collision/forward.h"
 #include "pr/collision/ldraw.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/ray_cast_result.h"

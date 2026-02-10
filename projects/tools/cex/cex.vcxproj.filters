@@ -9,6 +9,9 @@
     <ClInclude Include="src\clip.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\data_header_gen.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\data_header_gen.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -36,15 +39,24 @@
     <ClInclude Include="src\lower.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\msg_box.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\new_lines.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\open_vs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\open_vs.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClCompile Include="src\shell_file_op.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\shell_file_op.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -54,20 +66,6 @@
     <ClInclude Include="src\wait.h">
       <Filter>src</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\data_header_gen.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\open_vs.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\shell_file_op.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\wait2.ixx">
       <Filter>src</Filter>
     </ClCompile>

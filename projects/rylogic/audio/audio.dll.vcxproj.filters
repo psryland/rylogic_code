@@ -10,15 +10,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\audio\dll\audio.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
     <ClCompile Include="dll\audio.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="dll\context.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\audio\dll\audio.h">
       <Filter>src\dll</Filter>
     </ClInclude>
   </ItemGroup>

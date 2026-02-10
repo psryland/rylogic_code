@@ -24,23 +24,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ui\main_ui.cpp">
-      <Filter>src\ui</Filter>
-    </ClCompile>
-    <ClCompile Include="src\index.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\forward.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ui\main_ui.h">
-      <Filter>src\ui</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\hresult.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -50,21 +33,36 @@
     <ClInclude Include="$(RylogicRoot)include\pr\storage\json.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
-    <ClInclude Include="src\settings.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="res\resource.h" />
-    <ClInclude Include="src\index.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\threads\thread_pool.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
+    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="src\dir_scanner.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClCompile Include="src\index.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClInclude Include="src\index.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClInclude Include="src\ntfs.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\dir_scanner.h">
+    <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClCompile Include="src\ui\main_ui.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClInclude Include="src\ui\main_ui.h">
+      <Filter>src\ui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

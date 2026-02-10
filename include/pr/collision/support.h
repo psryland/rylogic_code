@@ -2,8 +2,6 @@
 // Collision
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
-// Support vertices/features
-
 #pragma once
 
 #include <cassert>
