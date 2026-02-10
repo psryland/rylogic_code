@@ -102,6 +102,7 @@ class PictureFrame:
 		self.menu_visible = False
 		self.issue_number = 0
 		self.pending_after_ids = []  # Track scheduled after callbacks to prevent memory leaks
+		self.cleanup_after_id = None  # Separate timer for periodic cache cleanup (not cancelled by image transitions)
 
 		# Prefetch state for loading next media while current is displaying
 		self.prefetch_cache_dir = Path(tempfile.gettempdir()) / "pictureframe_cache"
@@ -775,8 +776,9 @@ class PictureFrame:
 				self.prefetch_pending_set.discard(source_path)
 				self.log.debug(f"Prefetched: {source_path.name} (cache size: {len(self.prefetch_cache)})")
 			
-			# Save manifest after successful prefetch
+			# Save manifest after successful prefetch and enforce size limit
 			self._SaveCacheManifest()
+			self._EnforceCacheSizeLimit()
 		except Exception as e:
 			self.log.error(f"Prefetch failed for {source_path}: {e}", exc_info=True)
 			with self.prefetch_lock:
@@ -845,10 +847,11 @@ class PictureFrame:
 			files_removed = 0
 			for cached_file in self.prefetch_cache_dir.iterdir():
 				if cached_file.is_file() and cached_file.name != "manifest.json":
-					file_age = now - cached_file.stat().st_mtime
+
+					# Use creation time, not mtime which shutil.copy2 preserves from the source
+					file_age = now - cached_file.stat().st_ctime
 					if file_age > max_age_seconds:
 						with self.prefetch_lock:
-							# Remove from cache dictionary
 							keys_to_remove = [k for k, v in self.prefetch_cache.items() if v == cached_file]
 							for key in keys_to_remove:
 								del self.prefetch_cache[key]
@@ -858,15 +861,63 @@ class PictureFrame:
 			if files_removed > 0:
 				self.log.info(f"Cache cleanup: removed {files_removed} old files (cache size: {len(self.prefetch_cache)})")
 				self._SaveCacheManifest()
+
+			# Also enforce the cache size limit
+			self._EnforceCacheSizeLimit()
 		except Exception as e:
 			self.log.error(f"Error cleaning old cache files: {e}", exc_info=True)
 		return
 
-	# Schedule periodic cache cleanup
+	# Enforce the maximum cache size limit by evicting oldest files first
+	def _EnforceCacheSizeLimit(self):
+		max_size_bytes = self.config.get('CacheMaxSizeMB', 1024) * 1024 * 1024
+		try:
+			# Collect all cached files with size and creation time
+			cached_files = []
+			for cached_file in self.prefetch_cache_dir.iterdir():
+				if cached_file.is_file() and cached_file.name != "manifest.json":
+					stat = cached_file.stat()
+					cached_files.append((cached_file, stat.st_size, stat.st_ctime))
+
+			total_size = sum(size for _, size, _ in cached_files)
+			if total_size <= max_size_bytes:
+				return
+
+			# Evict oldest files first (by creation time)
+			cached_files.sort(key=lambda x: x[2])
+			remaining_count = len(cached_files)
+			files_removed = False
+			for cached_file, file_size, _ in cached_files:
+				if total_size <= max_size_bytes:
+					break
+
+				# Allow a single file to exceed the limit
+				if remaining_count <= 1:
+					break
+
+				with self.prefetch_lock:
+					keys_to_remove = [k for k, v in self.prefetch_cache.items() if v == cached_file]
+					for key in keys_to_remove:
+						del self.prefetch_cache[key]
+
+				cached_file.unlink()
+				total_size -= file_size
+				remaining_count -= 1
+				files_removed = True
+				print(f"Evicted from cache (size limit): {cached_file.name}")
+
+			if files_removed:
+				self._SaveCacheManifest()
+				print(f"Cache size after eviction: {total_size / (1024*1024):.1f} MB")
+		except Exception as e:
+			print(f"Error enforcing cache size limit: {e}")
+		return
+
+	# Schedule periodic cache cleanup (uses a separate timer so image transitions don't cancel it)
 	def _SchedulePeriodicCacheCleanup(self):
 		cleanup_interval_ms = self.config.get('CacheCleanupMinutes', 10) * 60 * 1000
 		self._CleanupOldCacheFiles()
-		self._ScheduleAfter(cleanup_interval_ms, self._SchedulePeriodicCacheCleanup)
+		self.cleanup_after_id = self.window.after(cleanup_interval_ms, self._SchedulePeriodicCacheCleanup)
 		return
 
 	# Periodic resource monitoring - logs process health every 60 seconds
@@ -940,6 +991,11 @@ class PictureFrame:
 
 		# Cancel all pending after callbacks to prevent leaks
 		self._CancelPendingAfterCallbacks()
+		if self.cleanup_after_id is not None:
+			try:
+				self.window.after_cancel(self.cleanup_after_id)
+			except (ValueError, Tk.TclError):
+				pass
 		self._StopMedia()
 		if self.player is not None:
 			try:
