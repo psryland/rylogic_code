@@ -17,10 +17,6 @@
 <!-- Build Options -->
 <ItemDefinitionGroup>
 <ClCompile>
-<PreprocessorDefinitions>
-;%(PreprocessorDefinitions)
-;PR_APP_MAIN_INCLUDE="src/main.h"
-</PreprocessorDefinitions>
 <AdditionalIncludeDirectories>
 ;$(ProjectDir)
 ;$(RylogicRoot)include
@@ -43,11 +39,10 @@
 <!-- Files -->
 <ItemGroup>
 <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
-<ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h" />
-<ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
-<ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
-<ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h" />
-<ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h" />
+<ClCompile Include="src\main.cpp" />
+<ClCompile Include="src\world\ocean.cpp" />
+<ClCompile Include="src\world\height_field.cpp" />
+<ClCompile Include="src\world\terrain.cpp" />
 <ClInclude Include="src\forward.h" />
 <ClInclude Include="src\main.h" />
 <ClInclude Include="src\settings.h" />

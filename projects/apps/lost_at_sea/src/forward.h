@@ -21,12 +21,12 @@
 
 namespace las
 {
-using namespace pr;
-using namespace pr::rdr12;
-using namespace pr::gui;
-using namespace pr::app;
+	using namespace pr;
+	using namespace pr::rdr12;
+	using namespace pr::gui;
+	using namespace pr::app;
 
-struct Main;
-struct MainUI;
-struct Settings;
+	struct Main;
+	struct MainUI;
+	struct Settings;
 }
