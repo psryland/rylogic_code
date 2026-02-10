@@ -35,7 +35,7 @@ namespace BorderOfPeace.UI
 		private IntPtr m_hook_handle;
 		private User32.WinEventDelegate? m_win_event_delegate;
 
-		// Timer for periodically re-applying colors (handles Electron-style apps)
+		// Timer for periodically re-applying DWM colors (handles Electron-style resets)
 		private readonly DispatcherTimer m_reapply_timer;
 
 		public TrayHost(Settings settings)
@@ -44,9 +44,13 @@ namespace BorderOfPeace.UI
 			InitializeComponent();
 			StartForegroundTracking();
 
-			m_reapply_timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-			m_reapply_timer.Tick += OnReapplyColors;
+			// Slow timer for DWM color re-application (Electron workaround)
+			m_reapply_timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+			m_reapply_timer.Tick += OnReapplyDwmColors;
 			m_reapply_timer.Start();
+
+			// Fast render-frame callback for smooth overlay tracking
+			CompositionTarget.Rendering += OnSyncOverlays;
 		}
 
 		/// <summary>Install a WinEvent hook to track foreground window changes</summary>
@@ -62,36 +66,28 @@ namespace BorderOfPeace.UI
 				Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 		}
 
-		/// <summary>Periodically re-apply colors and sync overlay positions</summary>
-		private void OnReapplyColors(object? sender, EventArgs e)
+		/// <summary>Re-apply DWM colors periodically (handles Electron-style resets)</summary>
+		private void OnReapplyDwmColors(object? sender, EventArgs e)
 		{
 			var dead = new List<IntPtr>();
 			foreach (var (hwnd, colour) in m_colored_windows)
 			{
-				// Check if target window is still alive
 				if (!User32.IsWindowVisible(hwnd) && User32.GetWindowLong(hwnd, Win32.GWL_STYLE) == 0)
 				{
 					dead.Add(hwnd);
 					continue;
 				}
-
 				WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
-
-				// Sync overlay position
-				if (m_overlays.TryGetValue(hwnd, out var overlay))
-				{
-					overlay.SyncPosition();
-					overlay.EnsureZOrder();
-				}
 			}
-
-			// Clean up dead windows
 			foreach (var hwnd in dead)
-			{
-				m_colored_windows.Remove(hwnd);
-				if (m_overlays.Remove(hwnd, out var overlay))
-					overlay.Close();
-			}
+				ResetWindow(hwnd);
+		}
+
+		/// <summary>Sync overlay positions every render frame for smooth tracking</summary>
+		private void OnSyncOverlays(object? sender, EventArgs e)
+		{
+			foreach (var (hwnd, overlay) in m_overlays)
+				overlay.SyncPosition();
 		}
 
 		/// <summary>Called when the foreground window changes</summary>
@@ -282,8 +278,9 @@ namespace BorderOfPeace.UI
 		/// <summary>Exit the application</summary>
 		private void HandleExit()
 		{
-			// Stop the re-apply timer
+			// Stop timers and hooks
 			m_reapply_timer.Stop();
+			CompositionTarget.Rendering -= OnSyncOverlays;
 
 			// Unhook the foreground tracker
 			if (m_hook_handle != IntPtr.Zero)

@@ -48,7 +48,7 @@ namespace BorderOfPeace.Services
 			m_border.Background = Brushes.Transparent;
 		}
 
-		/// <summary>Sync overlay position/size to the target window</summary>
+		/// <summary>Sync overlay position/size to the target window, extending outward</summary>
 		public bool SyncPosition()
 		{
 			if (!User32.IsWindowVisible(m_target_hwnd))
@@ -72,10 +72,12 @@ namespace BorderOfPeace.Services
 			var dpi_x = source?.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
 			var dpi_y = source?.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
 
-			Left = rect.left * dpi_x;
-			Top = rect.top * dpi_y;
-			Width = w * dpi_x;
-			Height = h * dpi_y;
+			// Extend outward by border thickness so border is visible around the window
+			var t = (int)m_border.BorderThickness.Left;
+			Left = (rect.left - t) * dpi_x;
+			Top = (rect.top - t) * dpi_y;
+			Width = (w + t * 2) * dpi_x;
+			Height = (h + t * 2) * dpi_y;
 
 			if (!IsVisible)
 				Show();
