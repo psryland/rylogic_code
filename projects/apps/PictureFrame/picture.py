@@ -103,6 +103,7 @@ class PictureFrame:
 		self.issue_number = 0
 		self.pending_after_ids = []  # Track scheduled after callbacks to prevent memory leaks
 		self.cleanup_after_id = None  # Separate timer for periodic cache cleanup (not cancelled by image transitions)
+		self.resource_monitor_after_id = None  # Separate timer for resource monitoring
 
 		# Prefetch state for loading next media while current is displaying
 		self.prefetch_cache_dir = Path(tempfile.gettempdir()) / "pictureframe_cache"
@@ -923,7 +924,7 @@ class PictureFrame:
 	# Periodic resource monitoring - logs process health every 60 seconds
 	def _ScheduleResourceMonitor(self):
 		self._LogResourceStatus()
-		self._ScheduleAfter(60_000, self._ScheduleResourceMonitor)
+		self.resource_monitor_after_id = self.window.after(60_000, self._ScheduleResourceMonitor)
 		return
 
 	def _LogResourceStatus(self):
@@ -994,6 +995,11 @@ class PictureFrame:
 		if self.cleanup_after_id is not None:
 			try:
 				self.window.after_cancel(self.cleanup_after_id)
+			except (ValueError, Tk.TclError):
+				pass
+		if self.resource_monitor_after_id is not None:
+			try:
+				self.window.after_cancel(self.resource_monitor_after_id)
 			except (ValueError, Tk.TclError):
 				pass
 		self._StopMedia()
