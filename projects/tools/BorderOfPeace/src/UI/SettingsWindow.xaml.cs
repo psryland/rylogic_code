@@ -47,6 +47,7 @@ namespace BorderOfPeace.UI
 				Presets.Add(new PresetVM(p));
 
 			m_list_presets.ItemsSource = Presets;
+			m_txt_border_thickness.Text = settings.BorderThickness.ToString();
 		}
 
 		private void HandleAdd(object sender, RoutedEventArgs e)
@@ -95,9 +96,11 @@ namespace BorderOfPeace.UI
 
 		private void HandleOK(object sender, RoutedEventArgs e)
 		{
+			uint.TryParse(m_txt_border_thickness.Text, out var thickness);
 			ResultSettings = new Settings
 			{
 				Presets = Presets.Select(vm => vm.ToPreset()).ToList(),
+				BorderThickness = thickness,
 			};
 			DialogResult = true;
 		}

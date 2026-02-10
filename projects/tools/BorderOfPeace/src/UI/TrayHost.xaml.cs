@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using BorderOfPeace.Model;
 using BorderOfPeace.Services;
 using Rylogic.Gfx;
@@ -31,11 +32,18 @@ namespace BorderOfPeace.UI
 		private IntPtr m_hook_handle;
 		private User32.WinEventDelegate? m_win_event_delegate;
 
+		// Timer for periodically re-applying colors (handles Electron-style apps)
+		private readonly DispatcherTimer m_reapply_timer;
+
 		public TrayHost(Settings settings)
 		{
 			m_settings = settings;
 			InitializeComponent();
 			StartForegroundTracking();
+
+			m_reapply_timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+			m_reapply_timer.Tick += OnReapplyColors;
+			m_reapply_timer.Start();
 		}
 
 		/// <summary>Install a WinEvent hook to track foreground window changes</summary>
@@ -49,6 +57,13 @@ namespace BorderOfPeace.UI
 				m_win_event_delegate,
 				0, 0,
 				Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
+		}
+
+		/// <summary>Periodically re-apply colors to tracked windows (handles Electron-style resets)</summary>
+		private void OnReapplyColors(object? sender, EventArgs e)
+		{
+			foreach (var (hwnd, colour) in m_colored_windows)
+				WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
 		}
 
 		/// <summary>Called when the foreground window changes</summary>
@@ -184,7 +199,7 @@ namespace BorderOfPeace.UI
 			var capture_colour = colour;
 			item.Click += (s, args) =>
 			{
-				WindowColorizer.ApplyColor(capture_hwnd, capture_colour);
+				WindowColorizer.ApplyColor(capture_hwnd, capture_colour, m_settings.BorderThickness);
 				m_colored_windows[capture_hwnd] = capture_colour;
 			};
 
@@ -201,7 +216,7 @@ namespace BorderOfPeace.UI
 			if (dlg.ShowDialog() == true)
 			{
 				var colour = dlg.Colour;
-				WindowColorizer.ApplyColor(hwnd, colour);
+				WindowColorizer.ApplyColor(hwnd, colour, m_settings.BorderThickness);
 				m_colored_windows[hwnd] = colour;
 			}
 		}
@@ -220,6 +235,9 @@ namespace BorderOfPeace.UI
 		/// <summary>Exit the application</summary>
 		private void HandleExit()
 		{
+			// Stop the re-apply timer
+			m_reapply_timer.Stop();
+
 			// Unhook the foreground tracker
 			if (m_hook_handle != IntPtr.Zero)
 			{
