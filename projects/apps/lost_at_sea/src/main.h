@@ -6,6 +6,8 @@
 #include "src/forward.h"
 #include "src/settings.h"
 #include "src/world/ocean.h"
+#include "src/world/height_field.h"
+#include "src/world/terrain.h"
 
 namespace las
 {
@@ -18,7 +20,9 @@ using Skybox = pr::app::Skybox;
 static char const* AppName() { return "LostAtSea"; }
 
 Skybox m_skybox;
+HeightField m_height_field;
 Ocean m_ocean;
+Terrain m_terrain;
 
 // Simulation clock (seconds since start)
 double m_sim_time;
@@ -29,10 +33,7 @@ v4 m_camera_world_pos;
 Main(MainUI& ui);
 ~Main();
 
-// Advance the game by one frame
 void Step(double elapsed_seconds);
-
-// Add instances to the scene
 void UpdateScene(Scene& scene);
 };
 
@@ -50,18 +51,20 @@ MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 inline Main::Main(MainUI& ui)
 :base(pr::app::DefaultSetup(), ui)
 ,m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 100.0f)
+,m_height_field(42) // Seed for reproducible terrain
 ,m_ocean(m_rdr)
+,m_terrain(m_rdr, m_height_field)
 ,m_sim_time(0.0)
-,m_camera_world_pos(v4(0, 0, 10, 1)) // Start 10m above water
+,m_camera_world_pos(v4(0, 0, 15, 1)) // Start 15m above water
 {
-// Position camera looking down at ocean
-m_cam.LookAt(v4(0, 0, 10, 1), v4(10, 0, 0, 1), v4(0, 0, 1, 0));
+// Position the camera: looking forward (+X) from above the ocean
+m_cam.LookAt(v4(0, 0, 15, 1), v4(50, 0, 0, 1), v4(0, 0, 1, 0));
 
-// Watch for scene drawlist updates
 m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1);
 
-// Build the initial ocean mesh
+// Build initial meshes
 m_ocean.Update(0.0f, m_camera_world_pos);
+m_terrain.Update(m_camera_world_pos);
 }
 inline Main::~Main()
 {
@@ -72,6 +75,10 @@ inline void Main::Step(double elapsed_seconds)
 {
 m_sim_time += elapsed_seconds;
 m_ocean.Update(static_cast<float>(m_sim_time), m_camera_world_pos);
+
+// Terrain only needs update when camera moves significantly (skip for now, update every frame)
+m_terrain.Update(m_camera_world_pos);
+
 RenderNeeded();
 }
 
@@ -79,6 +86,7 @@ inline void Main::UpdateScene(Scene& scene)
 {
 m_skybox.AddToScene(scene);
 m_ocean.AddToScene(scene);
+m_terrain.AddToScene(scene);
 }
 
 inline MainUI::MainUI(wchar_t const*, int)

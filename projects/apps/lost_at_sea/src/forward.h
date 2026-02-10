@@ -16,6 +16,7 @@
 #include "pr/app/skybox.h"
 #include "pr/gui/sim_message_loop.h"
 #include "pr/storage/json.h"
+#include "pr/maths/perlin_noise.h"
 #include "pr/win32/win32.h"
 
 namespace las
