@@ -5,6 +5,7 @@
 #pragma once
 #include "src/forward.h"
 #include "src/settings.h"
+#include "src/world/ocean.h"
 
 namespace las
 {
@@ -17,6 +18,13 @@ using Skybox = pr::app::Skybox;
 static char const* AppName() { return "LostAtSea"; }
 
 Skybox m_skybox;
+Ocean m_ocean;
+
+// Simulation clock (seconds since start)
+double m_sim_time;
+
+// Camera world position (for the camera-at-origin pattern)
+v4 m_camera_world_pos;
 
 Main(MainUI& ui);
 ~Main();
@@ -42,9 +50,18 @@ MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 inline Main::Main(MainUI& ui)
 :base(pr::app::DefaultSetup(), ui)
 ,m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 100.0f)
+,m_ocean(m_rdr)
+,m_sim_time(0.0)
+,m_camera_world_pos(v4(0, 0, 10, 1)) // Start 10m above water
 {
+// Position camera looking down at ocean
+m_cam.LookAt(v4(0, 0, 10, 1), v4(10, 0, 0, 1), v4(0, 0, 1, 0));
+
 // Watch for scene drawlist updates
 m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1);
+
+// Build the initial ocean mesh
+m_ocean.Update(0.0f, m_camera_world_pos);
 }
 inline Main::~Main()
 {
@@ -53,12 +70,15 @@ m_scene.ClearDrawlists();
 
 inline void Main::Step(double elapsed_seconds)
 {
-(void)elapsed_seconds;
+m_sim_time += elapsed_seconds;
+m_ocean.Update(static_cast<float>(m_sim_time), m_camera_world_pos);
+RenderNeeded();
 }
 
 inline void Main::UpdateScene(Scene& scene)
 {
 m_skybox.AddToScene(scene);
+m_ocean.AddToScene(scene);
 }
 
 inline MainUI::MainUI(wchar_t const*, int)

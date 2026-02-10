@@ -51,6 +51,7 @@
 <ClInclude Include="src\forward.h" />
 <ClInclude Include="src\main.h" />
 <ClInclude Include="src\settings.h" />
+<ClInclude Include="src\world\ocean.h" />
 </ItemGroup>
 
 <!-- Custom Target for Data Directory -->
