@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -174,6 +174,20 @@ namespace pr
 			return m_data[vec * m_cmps + cmp];
 		}
 
+		// Access this matrix assuming is a 1xN or Nx1 vector
+		Real operator()(int cmp) const
+		{
+			if (vecs() == 1) return operator()(0, cmp);
+			if (cmps() == 1) return operator()(cmp, 0);
+			throw std::logic_error("Matrix is not a vector");
+		}
+		Real& operator()(int cmp)
+		{
+			if (vecs() == 1) return operator()(0, cmp);
+			if (cmps() == 1) return operator()(cmp, 0);
+			throw std::logic_error("Matrix is not a vector");
+		}
+
 		// The number of vectors in the matrix (i.e. Y dimension, aka row count in row-major matrix)
 		int vecs() const
 		{
@@ -193,13 +207,13 @@ namespace pr
 		}
 
 		// Access to the linear underlying matrix data
-		Real const* data() const
+		std::span<Real const> data() const
 		{
-			return m_data;
+			return { m_data, static_cast<size_t>(size()) };
 		}
-		Real* data()
+		std::span<Real> data()
 		{
-			return m_data;
+			return { m_data, static_cast<size_t>(size()) };
 		}
 
 		// Access this matrix by vector
@@ -238,6 +252,14 @@ namespace pr
 			Real& operator[](int i)
 			{
 				return (*m_mat)(m_idx, i);
+			}
+			std::span<Real const> data() const
+			{
+				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
+			}
+			std::span<Real> data()
+			{
+				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
 			}
 		};
 		VecProxy vec(int i) const
@@ -298,6 +320,13 @@ namespace pr
 		Matrix& zero()
 		{
 			memset(m_data, 0, sizeof(Real) * size());
+			return *this;
+		}
+
+		// Set this matrix to all 'value'
+		Matrix& fill(Real value)
+		{
+			std::fill(m_data, m_data + sizeof(Real) * size(), value);
 			return *this;
 		}
 
@@ -377,13 +406,24 @@ namespace pr
 		}
 
 		// Return an identity matrix of the given dimensions
+		static Matrix Zero(int vecs, int cmps)
+		{
+			Matrix m(vecs, cmps);
+			return m.zero();
+		}
+
+		// Return an identity matrix of the given dimensions
+		static Matrix Fill(int vecs, int cmps, Real value)
+		{
+			Matrix m(vecs, cmps);
+			return m.fill(value);
+		}
+
+		// Return an identity matrix of the given dimensions
 		static Matrix Identity(int vecs, int cmps)
 		{
 			Matrix m(vecs, cmps);
-			for (int i = 0, iend = std::min(vecs, cmps); i != iend; ++i)
-				m(i, i) = 1;
-
-			return m;
+			return m.identity();
 		}
 
 		// Generates the random matrix
@@ -1184,6 +1224,24 @@ namespace pr::maths
 			: rng(1)
 		{}
 
+		PRUnitTestMethod(ZeroFillIdentity)
+		{
+			auto m = Matrix<double>(2, 3);
+
+			m.fill(42);
+			for (auto v : m.data())
+				PR_EXPECT(v == 42);
+
+			m.zero();
+			for (auto v : m.data())
+				PR_EXPECT(v == 0);
+			
+			auto id = Matrix<float>(5, 5);
+			id.identity();
+			for (int i = 0; i != 5; ++i)
+				for (int j = 0; j != 5; ++j)
+					PR_EXPECT(id(i, j) == (i == j ? 1 : 0));
+		}
 		PRUnitTestMethod(LUDecomposition)
 		{
 			auto m = MatrixLU<double>(4, 4, 
