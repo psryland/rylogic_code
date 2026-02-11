@@ -1158,6 +1158,12 @@
     <ClInclude Include="src\unittests.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
