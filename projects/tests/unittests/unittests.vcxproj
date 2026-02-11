@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Properties -->
   <PropertyGroup Label="Globals">
@@ -409,6 +409,8 @@
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector3.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector4.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector8.h" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />

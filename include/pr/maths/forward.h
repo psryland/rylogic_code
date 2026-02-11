@@ -11,6 +11,7 @@
 #include <thread>
 #include <span>
 #include <array>
+#include <numeric>
 #include <limits>
 #include <stdexcept>
 #include <intrin.h>
