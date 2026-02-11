@@ -16,7 +16,7 @@
 #include <cassert>
 #include "pr/maths/forward.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/eigenvalue.h"
+#include "pr/maths/matrix.h"
 
 namespace pr::algorithm::mds
 {
@@ -83,22 +83,23 @@ namespace pr::algorithm::mds
 		}
 		grand_mean /= static_cast<float>(n);
 
-		auto B = std::vector<float>(n * n);
+		// Step 3: Build the inner-product matrix B as a Matrix<float> and eigendecompose.
+		// Use EigenTopK for the top 'dim' eigenpairs, which is much faster than full decomposition for large N.
+		auto B = Matrix<float>(n, n, D2.data());
 		for (int i = 0; i != n; ++i)
 			for (int j = 0; j != n; ++j)
-				B[i * n + j] = -0.5f * (D2[i * n + j] - row_mean[i] - row_mean[j] + grand_mean);
+				B(i, j) = -0.5f * (D2[i * n + j] - row_mean[i] - row_mean[j] + grand_mean);
 
-		// Step 3: Eigendecompose B (symmetric, so Jacobi works)
-		auto eigen = maths::EigenSymmetric(B, n);
+		auto eigen = EigenTopK(B, dim);
 
 		// Step 4: Build output coordinates from top 'dim' eigenvectors scaled by sqrt(eigenvalue)
 		for (int i = 0; i != n; ++i)
 		{
 			// Clamp negative eigenvalues to zero (numerical noise from non-Euclidean distances)
 			auto pt = v4{
-				dim >= 1 ? std::sqrt((std::max)(0.0f, eigen.values[0])) * eigen.vectors[0 * n + i] : 0,
-				dim >= 2 ? std::sqrt((std::max)(0.0f, eigen.values[1])) * eigen.vectors[1 * n + i] : 0,
-				dim >= 3 ? std::sqrt((std::max)(0.0f, eigen.values[2])) * eigen.vectors[2 * n + i] : 0,
+				dim >= 1 ? std::sqrt((std::max)(0.0f, eigen.values(0))) * eigen.vectors(i, 0) : 0,
+				dim >= 2 ? std::sqrt((std::max)(0.0f, eigen.values(1))) * eigen.vectors(i, 1) : 0,
+				dim >= 3 ? std::sqrt((std::max)(0.0f, eigen.values(2))) * eigen.vectors(i, 2) : 0,
 				1,
 			};
 			out[i] = pt;
