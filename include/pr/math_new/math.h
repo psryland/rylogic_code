@@ -16,16 +16,16 @@
 //  - Functions are implemented for vector concepts, not specific types. So that they can be used on
 //    any type that conforms to the vector concept
 
-#include "core/forward.h"
-#include "core/traits.h"
-#include "core/constants.h"
-#include "core/functions.h"
-#include "types/vector2.h"
-#include "types/vector3.h"
-#include "types/vector4.h"
-#include "types/vector8.h"
-#include "types/quaternion.h"
-#include "types/transform.h"
+#include "pr/math_new/core/forward.h"
+#include "pr/math_new/core/traits.h"
+#include "pr/math_new/core/constants.h"
+#include "pr/math_new/core/functions.h"
+#include "pr/math_new/types/vector2.h"
+#include "pr/math_new/types/vector3.h"
+#include "pr/math_new/types/vector4.h"
+#include "pr/math_new/types/vector8.h"
+#include "pr/math_new/types/quaternion.h"
+#include "pr/math_new/types/transform.h"
 // No non-standard dependencies outside of './'
 
 // #include "pr/maths/forward.h"

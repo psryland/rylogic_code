@@ -68,6 +68,22 @@
 #  endif
 #endif
 
-namespace pr
+namespace pr::math
 {
+	// Concept for scalar types
+	template <typename T>
+	concept ScalarType = std::floating_point<T> || std::integral<T>;
+
+	// Forward declarations
+	template <ScalarType S> struct Vec2;
+	template <ScalarType S> struct Vec3;
+	template <ScalarType S> struct Vec4;
+	template <ScalarType S> struct Vec8;
+	template <ScalarType S> struct Quat;
+	template <ScalarType S> struct Mat2x2;
+	template <ScalarType S> struct Mat3x4;
+	template <ScalarType S> struct Mat4x4;
+	template <ScalarType S> struct Xform;
+
+	enum class ETruncate { TowardZero, ToNearest };
 }

@@ -203,6 +203,7 @@
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/math.h"
 #include "pr/math_new/tests/all_tests.h"
+#include "pr/math_new/tests/matrix_tests.h"
 #include "pr/math_new/tests/quaternion_tests.h"
 #include "pr/math_new/tests/vector_tests.h"
 #include "pr/math_new/tests/vector2_tests.h"

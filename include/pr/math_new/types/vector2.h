@@ -3,10 +3,10 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-#include "../core/forward.h"
-#include "../core/traits.h"
-#include "../core/constants.h"
-#include "../core/functions.h"
+#include "pr/math_new/core/forward.h"
+#include "pr/math_new/core/traits.h"
+#include "pr/math_new/core/constants.h"
+#include "pr/math_new/core/functions.h"
 
 namespace pr::math
 {
@@ -36,10 +36,10 @@ namespace pr::math
 			: x(x_)
 			, y(y_)
 		{}
-		constexpr explicit Vec2(std::ranges::range<S> auto const& v)
+		constexpr explicit Vec2(std::ranges::random_access_range auto&& v)
 			:Vec2(v[0], v[1])
 		{}
-		template <ScalarType T> constexpr explicit Vec2(VectorTypeN<T, 2> auto v)
+		constexpr explicit Vec2(VectorTypeN<S, 2> auto v)
 			:Vec2(vec(v).x, vec(v).y)
 		{}
 
