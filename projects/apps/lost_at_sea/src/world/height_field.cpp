@@ -1,0 +1,54 @@
+//************************************
+// Lost at Sea
+//  Copyright (c) Rylogic Ltd 2024
+//************************************
+#include "src/forward.h"
+#include "src/world/height_field.h"
+
+namespace las
+{
+	HeightField::HeightField(uint32_t seed)
+		:m_octaves(6)
+		,m_base_frequency(0.001f)  // ~1000m feature scale
+		,m_persistence(0.5f)
+		,m_amplitude(80.0f)        // Max mountain height ~80m
+		,m_sea_level_bias(-0.3f)   // Ensures ~60-70% water coverage
+		,m_rng(seed)
+		,m_noise(m_rng)
+	{}
+
+	float HeightField::HeightAt(float world_x, float world_y) const
+	{
+		auto value = 0.0f;
+		auto freq = m_base_frequency;
+		auto amp = 1.0f;
+		auto max_amp = 0.0f;
+
+		for (int i = 0; i < m_octaves; ++i)
+		{
+			value += m_noise.Noise(world_x * freq, world_y * freq, 0.0f) * amp;
+			max_amp += amp;
+			amp *= m_persistence;
+			freq *= 2.0f;
+		}
+
+		// Normalise to [-1, 1] and apply amplitude + bias
+		value = value / max_amp;
+		return (value + m_sea_level_bias) * m_amplitude;
+	}
+
+	v4 HeightField::NormalAt(float world_x, float world_y) const
+	{
+		auto eps = 1.0f; // 1m sample spacing
+		auto hL = HeightAt(world_x - eps, world_y);
+		auto hR = HeightAt(world_x + eps, world_y);
+		auto hD = HeightAt(world_x, world_y - eps);
+		auto hU = HeightAt(world_x, world_y + eps);
+		return Normalise(v4(hL - hR, hD - hU, 2.0f * eps, 0.0f));
+	}
+
+	bool HeightField::IsLand(float world_x, float world_y) const
+	{
+		return HeightAt(world_x, world_y) > 0.0f;
+	}
+}

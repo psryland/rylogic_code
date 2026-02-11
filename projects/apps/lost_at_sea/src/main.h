@@ -1,17 +1,17 @@
-﻿//************************************
+//************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2015
+//  Copyright (c) Rylogic Ltd 2024
 //************************************
 #pragma once
 #include "src/forward.h"
 #include "src/settings.h"
-//#include "cam/cam.h"
-//#include "world/terrain.h"
-//#include "ship/ship.h"
+#include "src/world/ocean.h"
+#include "src/world/height_field.h"
+#include "src/world/terrain.h"
 
 namespace las
 {
-	// Main application logic container
+	// Main application logic
 	struct Main :pr::app::Main<Main, MainUI, Settings>
 	{
 		using base = pr::app::Main<Main, MainUI, Settings>;
@@ -19,18 +19,19 @@ namespace las
 
 		static char const* AppName() { return "LostAtSea"; }
 
-		Skybox     m_skybox;
-		//Ship       m_ship;
-		//Terrain    m_terrain;
+		Skybox m_skybox;
+		HeightField m_height_field;
+		Ocean m_ocean;
+		Terrain m_terrain;
 
-		Main(MainUI& gui);
+		double m_sim_time;
+		v4 m_camera_world_pos;
+
+		Main(MainUI& ui);
 		~Main();
 
-		// Advance the game by one frame
 		void Step(double elapsed_seconds);
-
-		// Add instances to the scene
-		void AddToScene(Scene& scene);
+		void UpdateScene(Scene& scene, UpdateSceneArgs const& args);
 	};
 
 	// Main app window
@@ -41,4 +42,9 @@ namespace las
 
 		MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 	};
+}
+
+namespace pr::app
+{
+	std::unique_ptr<IAppMainUI> CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 }

@@ -1,128 +1,51 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="src">
-      <UniqueIdentifier>{42f2d922-cbc7-48c4-ae0a-b581220dfb93}</UniqueIdentifier>
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
     </Filter>
-    <Filter Include="res">
-      <UniqueIdentifier>{80e60689-fba2-48b3-aa45-106b7694b0ae}</UniqueIdentifier>
+    <Filter Include="framework">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\sound">
-      <UniqueIdentifier>{8a7f67af-16c9-4c18-a276-0e7b3a01acb6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\cam">
-      <UniqueIdentifier>{79b45db1-f0c0-44d5-8b60-113ff181fb40}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\ship">
-      <UniqueIdentifier>{ded86c9b-dca5-4eae-bbed-e5d358636766}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\world">
-      <UniqueIdentifier>{fa7456de-a3ea-4e6a-a94d-cbbeebd6553c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="data">
-      <UniqueIdentifier>{7da4005e-95d9-4cdd-92fa-8b1878c2805f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="data\skybox">
-      <UniqueIdentifier>{56f6b981-618d-43ec-a01e-359b442c7bcd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="pr">
-      <UniqueIdentifier>{b1511dfe-5c80-453b-a989-689e7affd512}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="pr\input">
-      <UniqueIdentifier>{7bc1d740-d413-4008-a159-19949b7f3df2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="pr\camera">
-      <UniqueIdentifier>{88a5a454-6308-4a95-9ab7-493cef8c75a9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="pr\app">
-      <UniqueIdentifier>{4cbf820e-2eea-411c-889b-e6e20498cba3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="sdk">
-      <UniqueIdentifier>{f8cd39a5-7c7a-489d-80e5-72deaa1f2831}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="sdk\ogg">
-      <UniqueIdentifier>{f9f46de5-4d5b-4c65-b4dc-a189b0abdf31}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="pr\audio">
-      <UniqueIdentifier>{465e9658-f9ef-4212-bb73-04a1c05649b6}</UniqueIdentifier>
+    <Filter Include="src\environment">
+      <UniqueIdentifier>{d7b0d6fe-14e6-4f12-96f4-b81c3998b8e0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
-      <Filter>pr\app</Filter>
+      <Filter>framework</Filter>
     </ClCompile>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\audio\ogg\ogg_stream.h">
-      <Filter>pr\audio</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\camera\camctrl_dinput_wasd.h">
-      <Filter>pr\camera</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
-      <Filter>pr\camera</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h">
-      <Filter>pr\input</Filter>
-    </ClInclude>
-    <ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c">
-      <Filter>sdk\ogg</Filter>
-    </ClCompile>
-    <ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c">
-      <Filter>sdk</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cam\cam.cpp">
-      <Filter>src\cam</Filter>
-    </ClCompile>
-    <ClInclude Include="src\cam\cam.h">
-      <Filter>src\cam</Filter>
-    </ClInclude>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClInclude Include="src\main.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClCompile Include="src\ship\ship.cpp">
-      <Filter>src\ship</Filter>
-    </ClCompile>
-    <ClInclude Include="src\ship\ship.h">
-      <Filter>src\ship</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util.h">
+    <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClCompile Include="src\world\terrain.cpp">
-      <Filter>src\world</Filter>
     </ClCompile>
-    <ClInclude Include="src\world\terrain.h">
-      <Filter>src\world</Filter>
+    <ClCompile Include="src\world\height_field.cpp">
+      <Filter>src\environment</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean.cpp">
+      <Filter>src\environment</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain.cpp">
+      <Filter>src\environment</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\world\ocean.h">
+      <Filter>src\environment</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="script\menu.ldr">
-      <Filter>data/menu</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="data\skybox\SkyBox-Clouds-Few-Noon.png">
-      <Filter>data\skybox</Filter>
-    </Image>
+    <ClInclude Include="src\world\terrain.h">
+      <Filter>src\environment</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\height_field.h">
+      <Filter>src\environment</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
