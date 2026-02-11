@@ -326,7 +326,7 @@ namespace pr
 		// Set this matrix to all 'value'
 		Matrix& fill(Real value)
 		{
-			std::fill(m_data, m_data + sizeof(Real) * size(), value);
+			std::fill(m_data, m_data + size(), value);
 			return *this;
 		}
 
@@ -1160,7 +1160,7 @@ namespace pr
 	{
 		auto const N = m.vecs();
 		assert(diag.vecs() == 1 && diag.cmps() == N);
-		assert(sub.vecs() == 1 && sub.cmps() == N);
+		assert(sub.vecs() == 1 && sub.cmps() >= N);
 		assert(Q.vecs() == N && Q.cmps() == N);
 
 		auto A = Matrix<Real>(m);
@@ -1184,7 +1184,7 @@ namespace pr
 			auto beta = (alpha >= 0) ? alpha + norm : alpha - norm;
 
 			// v = [1, A[k+2][k]/beta, ..., A[N-1][k]/beta]
-			v.resize(1, N - k - 1, false);// .zero();			//auto v = std::vector<Real>(N - k - 1, Real(0));
+			v.resize(1, N - k - 1, false);
 			v(0) = Real(1);
 			for (int i = 1; i != N - k - 1; ++i)
 				v(i) = A(k + 1 + i, k) / beta;
@@ -1192,7 +1192,7 @@ namespace pr
 			auto tau = Real(2) / Dot(v, v);
 
 			// p = tau * A_sub * v, where A_sub = A[k+1:N-1, k+1:N-1]
-			p.resize(1, N - k - 1, false);// .zero();				// auto p = std::vector<Real>(N - k - 1, Real(0));
+			p.resize(1, N - k - 1, false);
 			for (int i = 0; i != N - k - 1; ++i)
 				for (int j = 0; j != N - k - 1; ++j)
 					p(i) += A(k + 1 + i, k + 1 + j) * v(j);
@@ -1221,7 +1221,7 @@ namespace pr
 
 			// Accumulate Q: Q_new = Q * H, where H = I - tau*v*v^T
 			// w[i] = sum_j Q[i][k+1+j] * v[j]
-			w.resize(1, N, false);// auto w = std::vector<Real>(N, Real(0));
+			w.resize(1, N, false);
 			for (int i = 0; i != N; ++i)
 				for (int j = 0; j != N - k - 1; ++j)
 					w(i) += Q(i, j + k + 1) * v(j);
@@ -1343,7 +1343,7 @@ namespace pr
 		// Phase 1: Householder tridiagonalization
 		// Reduce symmetric matrix to tridiagonal form: Q^T * A * Q = T
 		auto diag = Matrix<Real>::Zero(1, N);
-		auto sub = Matrix<Real>::Zero(1, N);
+		auto sub = Matrix<Real>::Zero(1, N + 1); // +1: QL iteration may access e(N) as scratch
 		auto Q = Matrix<Real>::Identity(N, N);
 		Tridiagonalize(m, diag, sub, Q);
 
@@ -1433,7 +1433,7 @@ namespace pr
 			}
 
 			// Lanczos iteration
-			q_prev.zero();  //auto q_prev = std::vector<Real>(N, Real(0));
+			q_prev.zero();
 			for (int j = 0; j != lanczos_dim; ++j)
 			{
 				// Store basis vector
@@ -1441,7 +1441,7 @@ namespace pr
 					V(j, i) = q(i);
 
 				// w = A * q (A is symmetric, so A(i,j) = A(j,i))
-				//auto w = std::vector<Real>(N, Real(0));
+				w.zero();
 				for (int i = 0; i != N; ++i)
 					for (int jj = 0; jj != N; ++jj)
 						w(i) += m(i, jj) * q(jj);
@@ -1970,210 +1970,3 @@ namespace pr::maths
 	};
 }
 #endif
-
-
-
-
-#if 0
-		struct Impl
-		{
-			Matrix<Real> const& m_input;
-			int m_k;
-			int m_max_iterations;
-
-			Impl(Matrix<Real> const& input, int k, int max_iter)
-				: m_input(input)
-				, m_k(k)
-				, m_max_iterations(max_iter)
-			{}
-
-			EigenResult<Real> Run()
-			{
-				auto const N = m_input.vecs();
-				if (!m_input.IsSquare())
-					throw std::runtime_error("EigenTopK requires a square matrix");
-
-				auto const k = (std::min)(m_k, N);
-				if (N == 0 || k == 0)
-					return { Matrix<Real>(1, 0), Matrix<Real>(0, 0) };
-
-				// For small matrices or when k is close to N, fall back to full decomposition
-				if (N <= 32 || k * 4 >= N * 3)
-					return TruncateResult(EigenSymmetric(m_input), k);
-
-				// Lanczos iteration dimension: must be >= k, use min(2k+10, N) for good convergence
-				auto const lanczos_dim = (std::min)(2 * k + 10, N);
-				auto const max_iter = m_max_iterations > 0 ? m_max_iterations : 3;
-
-				// Run Lanczos with restarts for better convergence
-				auto alpha = std::vector<Real>(lanczos_dim);     // diagonal of tridiagonal T
-				auto beta = std::vector<Real>(lanczos_dim, Real(0)); // sub-diagonal of tridiagonal T
-				auto V = Matrix<Real>(lanczos_dim, N);            // Lanczos basis vectors (rows)
-
-				EigenResult<Real> best_result = { Matrix<Real>(1, 0), Matrix<Real>(0, 0) };
-				auto best_residual = std::numeric_limits<Real>::max();
-
-				for (int restart = 0; restart != max_iter; ++restart)
-				{
-					// Starting vector: use the first Ritz vector from previous run, or [1,1,...,1]/sqrt(N)
-					auto q = std::vector<Real>(N);
-					if (restart == 0)
-					{
-						auto inv_sqrt_n = Real(1) / std::sqrt(static_cast<Real>(N));
-						for (int i = 0; i != N; ++i)
-							q[i] = inv_sqrt_n;
-					}
-					else
-					{
-						// Use the first Ritz vector from the previous result as starting vector
-						for (int i = 0; i != N; ++i)
-							q[i] = best_result.vectors(i, 0);
-					}
-
-					// Lanczos iteration
-					auto q_prev = std::vector<Real>(N, Real(0));
-
-					for (int j = 0; j != lanczos_dim; ++j)
-					{
-						// Store basis vector
-						for (int i = 0; i != N; ++i)
-							V(j, i) = q[i];
-
-						// w = A * q (A is symmetric, so A(i,j) = A(j,i))
-						auto w = std::vector<Real>(N, Real(0));
-						for (int i = 0; i != N; ++i)
-							for (int jj = 0; jj != N; ++jj)
-								w[i] += m_input(i, jj) * q[jj];
-
-						// alpha[j] = q^T * w
-						alpha[j] = Real(0);
-						for (int i = 0; i != N; ++i)
-							alpha[j] += q[i] * w[i];
-
-						// w = w - alpha[j]*q - beta[j]*q_prev
-						for (int i = 0; i != N; ++i)
-							w[i] -= alpha[j] * q[i] + (j > 0 ? beta[j] * q_prev[i] : Real(0));
-
-						// Full reorthogonalization against all previous Lanczos vectors
-						for (int jj = 0; jj <= j; ++jj)
-						{
-							auto dot = Real(0);
-							for (int i = 0; i != N; ++i)
-								dot += w[i] * V(jj, i);
-							for (int i = 0; i != N; ++i)
-								w[i] -= dot * V(jj, i);
-						}
-
-						// beta[j+1] = ||w||
-						auto norm_w = Real(0);
-						for (int i = 0; i != N; ++i)
-							norm_w += w[i] * w[i];
-						norm_w = std::sqrt(norm_w);
-
-						if (j + 1 < lanczos_dim)
-						{
-							beta[j + 1] = norm_w;
-
-							// Prepare next q
-							q_prev = q;
-							if (norm_w > std::numeric_limits<Real>::epsilon() * Real(100))
-							{
-								for (int i = 0; i != N; ++i)
-									q[i] = w[i] / norm_w;
-							}
-							else
-							{
-								break; // Invariant subspace found
-							}
-						}
-					}
-
-					// Build the tridiagonal matrix T and solve its eigenproblem (small: lanczos_dim × lanczos_dim)
-					auto T = Matrix<Real>(lanczos_dim, lanczos_dim);
-					T.zero();
-					for (int i = 0; i != lanczos_dim; ++i)
-					{
-						T(i, i) = alpha[i];
-						if (i + 1 < lanczos_dim)
-						{
-							T(i, i + 1) = beta[i + 1];
-							T(i + 1, i) = beta[i + 1];
-						}
-					}
-
-					// Full eigendecomposition of small tridiagonal matrix
-					auto t_eigen = EigenSymmetric(T);
-
-					// Compute Ritz vectors: eigenvectors in original space = V^T * (T's eigenvectors)
-					// t_eigen.vectors(j, i) = j-th component of eigenvector i of T
-					// V(j, r) = r-th component of basis vector j
-					// ritz_i[r] = sum_j eigvec_i[j] * basis_j[r]
-					auto result = EigenResult<Real>{};
-					result.values = Matrix<Real>(1, k);
-					result.vectors = Matrix<Real>(N, k);
-
-					for (int i = 0; i != k; ++i)
-					{
-						result.values(0, i) = t_eigen.values(0, i);
-						for (int r = 0; r != N; ++r)
-						{
-							auto val = Real(0);
-							for (int j = 0; j != lanczos_dim; ++j)
-								val += t_eigen.vectors(j, i) * V(j, r);
-							result.vectors(r, i) = val;
-						}
-					}
-
-					// Check convergence via residual norm of the k-th Ritz pair
-					auto residual = Real(0);
-					for (int i = 0; i != k; ++i)
-					{
-						// Residual for Ritz pair i: ||A*v - lambda*v||
-						auto max_res = Real(0);
-						for (int r = 0; r != N; ++r)
-						{
-							auto av = Real(0);
-							for (int c = 0; c != N; ++c)
-								av += m_input(r, c) * result.vectors(c, i);
-							auto diff = std::abs(av - result.values(0, i) * result.vectors(r, i));
-							max_res = (std::max)(max_res, diff);
-						}
-						residual = (std::max)(residual, max_res);
-					}
-
-					if (residual < best_residual)
-					{
-						best_residual = residual;
-						best_result = std::move(result);
-					}
-
-					// Converged if residual is small enough
-					auto scale = Real(0);
-					for (int i = 0; i != k; ++i)
-						scale = (std::max)(scale, std::abs(best_result.values(0, i)));
-					if (best_residual < std::numeric_limits<Real>::epsilon() * scale * Real(100))
-						break;
-				}
-
-				return best_result;
-			}
-
-		private:
-
-			// Truncate a full EigenResult to the top-k eigenpairs
-			static EigenResult<Real> TruncateResult(EigenResult<Real>&& full, int k)
-			{
-				auto const N = full.vectors.vecs();
-				auto vals = Matrix<Real>(1, k);
-				auto vecs = Matrix<Real>(N, k);
-				for (int i = 0; i != k; ++i)
-				{
-					vals(0, i) = full.values(0, i);
-					for (int r = 0; r != N; ++r)
-						vecs(r, i) = full.vectors(r, i);
-				}
-				return { std::move(vals), std::move(vecs) };
-			}
-		};
-		return Impl(m, k, max_iterations).Run();
-		#endif

@@ -80,7 +80,7 @@ namespace pr::unittests
 #endif
 
 // Enable this to turn on dumping to linedrawer
-#define PR_UNITTESTS_VISUALISE 1
+#define PR_UNITTESTS_VISUALISE 0
 #if PR_UNITTESTS_VISUALISE
 #include "pr/common/ldraw.h"
 #include "pr/macros/link.h"
