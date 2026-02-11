@@ -41,9 +41,10 @@ dotnet-script ./script/Build.csx -project RylogicCore -deploy -publish
 ## Testing
 
 ### C# Unit Tests
-Tests are **embedded inline in source files** (not in separate test files) using NUnit attributes:
+Tests are **embedded inline in source files** (not in separate test files), guarded by `#if PR_UNITTESTS`. Each assembly includes a `Program.Main()` entry point that discovers and runs all embedded tests. Tests run automatically as a post-build step in Debug configuration.
 ```csharp
 // At the bottom of a source file, e.g. Rylogic.Core/src/Common/Base64.cs:
+#if PR_UNITTESTS
 [TestFixture] public class TestBase64
 {
     [Test] public void Base64()
@@ -51,15 +52,20 @@ Tests are **embedded inline in source files** (not in separate test files) using
         // assertions...
     }
 }
+#endif
 ```
 Run tests via:
 ```powershell
-# Run unit tests on a compiled assembly
+# Run all tests in a compiled assembly
 dotnet-script ./script/RunUnitTests.csx <TargetPath> <is_managed> [dependencies...]
 
 # Example:
 dotnet-script ./script/RunUnitTests.csx "projects/rylogic/Rylogic.Core/bin/Debug/net9.0-windows/Rylogic.Core.dll" true
+
+# Build + run tests in one step (tests auto-run on Debug build)
+dotnet build projects/rylogic/Rylogic.Core/Rylogic.Core.csproj -c Debug
 ```
+Individual test filtering is not supported — tests run as a batch per assembly.
 
 ### C++ Unit Tests
 Tests use a lightweight custom framework (`include/pr/common/unittests.h`), also inline:
@@ -122,6 +128,23 @@ All C++ code lives under `/include/pr/` as a header-heavy library. All `#include
 #include "pr/view3d-12/view3d-dll.h"
 ```
 
+### C++ forward.h Convention
+Each C++ library has a `forward.h` that acts as a **pseudo-precompiled header**. It includes all external/foreign dependencies, forward declarations, type aliases, and configuration for that library. **All other headers within a library only include sibling headers** — never headers from outside the library directly. This keeps compile-time dependencies manageable.
+```
+include/pr/maths/forward.h     → STL, concepts, forward decls for all math types
+include/pr/view3d-12/forward.h → STL, DirectX, 200+ forward decls for rendering types
+include/pr/physics2/forward.h  → STL, spatial algebra types, forward decls
+```
+
+### C++ Library Dependency Layers
+```
+Layer 0: common, macros, meta, str, container (no pr/ dependencies)
+Layer 1: maths (depends on common)
+Layer 2: collision, geometry, camera (depend on maths)
+Layer 3: physics2 (depends on collision + maths)
+Layer 4: view3d-12 (depends on most lower layers — camera, geometry, gfx, maths, etc.)
+```
+
 ## Conventions
 
 ### Naming (applies to both C++ and C#)
@@ -136,6 +159,8 @@ All C++ code lives under `/include/pr/` as a header-heavy library. All `#include
 - **Tabs** for indentation in both C++ and C#
 - **Allman braces** (opening brace on its own line) in C#
 - Prefer `var` in C# and `auto` in C++ unless the type change is deliberate
+- **East const** (postfix): `Type const&` not `const Type&`
+- **For loops**: use `!=` and pre-increment: `for (int i = 0; i != 10; ++i)` — `!=` is less defensive, `++i` is more optimal for non-trivial iterators
 - File-scoped namespaces in C#
 - Comments should explain "why", not "what" — add a blank line before comment blocks
 - C# nullable references enabled (`<Nullable>Enable</Nullable>`)
@@ -170,3 +195,8 @@ Any comment containing `@copilot` is an instruction, question, or context direct
 - `Directory.Packages.props` — Centralized NuGet package versions
 - `.editorconfig` — Code style and formatting rules
 - `/script/UserVars.csx` or `/script/UserVars.json` — Local build path customization
+
+### CI (GitHub Actions)
+- **C# builds** (`build-csharp-projects.yml`): Builds all C# projects on `windows-latest`. Removes `.vcxproj` (C++) and VSIX projects since the runner lacks the full VS C++ toolset.
+- **Native builds** (`build-native-projects.yml`): Builds C++ projects with MSBuild (v143 toolset). Removes C# projects first.
+- Both workflows trigger on push/PR to `main` with path filters.

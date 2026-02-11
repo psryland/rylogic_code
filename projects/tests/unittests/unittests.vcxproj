@@ -402,6 +402,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector4.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector8.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\forward.h" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
