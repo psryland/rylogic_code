@@ -15,8 +15,10 @@
 #include "pr/app/default_setup.h"
 #include "pr/app/skybox.h"
 #include "pr/gui/sim_message_loop.h"
+#include "pr/geometry/p3d.h"
 #include "pr/storage/json.h"
 #include "pr/maths/perlin_noise.h"
+#include "pr/view3d-12/view3d.h"
 #include "pr/win32/win32.h"
 
 namespace las

@@ -15,21 +15,6 @@
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
       <Filter>framework</Filter>
     </ClCompile>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h">
-      <Filter>framework</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
-      <Filter>framework</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
-      <Filter>framework</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h">
-      <Filter>framework</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h">
-      <Filter>framework</Filter>
-    </ClInclude>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -41,6 +26,15 @@
     </ClInclude>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\height_field.cpp">
+      <Filter>src\environment</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean.cpp">
+      <Filter>src\environment</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain.cpp">
+      <Filter>src\environment</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

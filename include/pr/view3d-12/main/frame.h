@@ -18,6 +18,9 @@ namespace pr::rdr12
 	{
 		using GfxCmdLists = pr::vector<ID3D12GraphicsCommandList*, 4, false>;
 
+		GpuSync m_gsync;          // The GPU sync object used to track GPU progress and manage resources
+		GpuUploadBuffer m_upload; // A GPU buffer for the global light data
+
 		GfxCmdList m_prepare; // Commands before the first scene is rendered
 		GfxCmdList m_resolve; // Commands used to resolve the MSAA buffer into the swap chain buffer
 		GfxCmdList m_present; // Commands after the last scene is rendered
@@ -30,8 +33,11 @@ namespace pr::rdr12
 		
 		GfxCmdAllocPool& m_cmd_alloc_pool; // The command allocator pool to create allocators from
 
+
 		Frame(ID3D12Device4* device, BackBuffer const& bb_main, BackBuffer const& bb_post, GfxCmdAllocPool& cmd_alloc_pool)
-			: m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
+			: m_gsync(device)
+			, m_upload(m_gsync, 1ULL * 1024 * 1024)
+			, m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
 			, m_resolve(device, cmd_alloc_pool.Get(), nullptr, "Resolve", EColours::Orange)
 			, m_present(device, cmd_alloc_pool.Get(), nullptr, "Present", EColours::Orange)
 			, m_main()

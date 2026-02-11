@@ -11,40 +11,40 @@
 
 namespace las
 {
-// Main application logic
-struct Main :pr::app::Main<Main, MainUI, Settings>
-{
-using base = pr::app::Main<Main, MainUI, Settings>;
-using Skybox = pr::app::Skybox;
+	// Main application logic
+	struct Main :pr::app::Main<Main, MainUI, Settings>
+	{
+		using base = pr::app::Main<Main, MainUI, Settings>;
+		using Skybox = pr::app::Skybox;
 
-static char const* AppName() { return "LostAtSea"; }
+		static char const* AppName() { return "LostAtSea"; }
 
-Skybox m_skybox;
-HeightField m_height_field;
-Ocean m_ocean;
-Terrain m_terrain;
+		Skybox m_skybox;
+		HeightField m_height_field;
+		Ocean m_ocean;
+		Terrain m_terrain;
 
-double m_sim_time;
-v4 m_camera_world_pos;
+		double m_sim_time;
+		v4 m_camera_world_pos;
 
-Main(MainUI& ui);
-~Main();
+		Main(MainUI& ui);
+		~Main();
 
-void Step(double elapsed_seconds);
-void UpdateScene(Scene& scene);
-};
+		void Step(double elapsed_seconds);
+		void UpdateScene(Scene& scene, UpdateSceneArgs const& args);
+	};
 
-// Main app window
-struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>
-{
-using base = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
-static wchar_t const* AppTitle() { return L"Lost at Sea"; }
+	// Main app window
+	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>
+	{
+		using base = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
+		static wchar_t const* AppTitle() { return L"Lost at Sea"; }
 
-MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);
-};
+		MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);
+	};
 }
 
 namespace pr::app
 {
-std::unique_ptr<IAppMainUI> CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow);
+	std::unique_ptr<IAppMainUI> CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 }

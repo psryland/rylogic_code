@@ -9,62 +9,68 @@
 
 namespace las
 {
-// Parameters for a single Gerstner wave component
-struct GerstnerWave
-{
-v4 m_direction;     // Normalised wave travel direction (XY plane, Z=0, w=0)
-float m_amplitude;  // Wave height (peak to mean), in metres
-float m_wavelength; // Distance between crests, in metres
-float m_speed;      // Phase speed, in m/s
-float m_steepness;  // Gerstner steepness Q [0..1], controls sharpness of peaks
+	// Parameters for a single Gerstner wave component
+	struct GerstnerWave
+	{
+		v4 m_direction;     // Normalised wave travel direction (XY plane, Z=0, w=0)
+		float m_amplitude;  // Wave height (peak to mean), in metres
+		float m_wavelength; // Distance between crests, in metres
+		float m_speed;      // Phase speed, in m/s
+		float m_steepness;  // Gerstner steepness Q [0..1], controls sharpness of peaks
 
-float Frequency() const;
-float WaveNumber() const;
-};
+		float Frequency() const;
+		float WaveNumber() const;
+	};
 
-// Ocean simulation and rendering
-struct Ocean
-{
-// Grid resolution and extent. 128x128 = 16k verts, fits in uint16 indices.
-static constexpr int GridDim = 128;
-static constexpr float GridExtent = 500.0f; // Half-extent in metres
-static constexpr float WaterDensity = 1025.0f; // kg/m^3 (seawater)
+	// Ocean simulation and rendering
+	struct Ocean
+	{
+		// Grid resolution and extent. 128x128 = 16k verts, fits in uint16 indices.
+		static constexpr int GridDim = 128;
+		static constexpr float GridExtent = 500.0f; // Half-extent in metres
+		static constexpr float WaterDensity = 1025.0f; // kg/m^3 (seawater)
 
-struct Instance
-{
-#define PR_RDR_INST(x)\
-x(m4x4     , m_i2w  , EInstComp::I2WTransform)\
-x(ModelPtr , m_model, EInstComp::ModelPtr)
-PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST);
-#undef PR_RDR_INST
-};
+		struct Instance
+		{
+			#define PR_RDR_INST(x)\
+			x(m4x4     , m_i2w  , EInstComp::I2WTransform)\
+			x(ModelPtr , m_model, EInstComp::ModelPtr)
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST);
+			#undef PR_RDR_INST
+		};
 
-std::vector<GerstnerWave> m_waves;
-Instance m_inst;
-ResourceFactory m_factory;
+		std::vector<GerstnerWave> m_waves;
+		Instance m_inst;
+		ResourceFactory m_factory;
 
-// CPU-side vertex data (simulation writes here, render reads from here)
-std::vector<Vert> m_cpu_verts;
-std::vector<uint16_t> m_indices;
-bool m_dirty; // True when CPU verts have been updated but not yet uploaded to GPU
+		// CPU-side vertex data (simulation writes here, render reads from here)
+		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
+		bool m_dirty; // True when CPU verts have been updated but not yet uploaded to GPU
 
-explicit Ocean(Renderer& rdr);
+		explicit Ocean(Renderer& rdr);
 
-// Physics queries (read-only, no rendering side effects)
-float HeightAt(float world_x, float world_y, float time) const;
-v4 DisplacedPosition(float world_x, float world_y, float time) const;
-v4 NormalAt(float world_x, float world_y, float time) const;
+		// Physics queries (read-only, no rendering side effects)
+		float HeightAt(float world_x, float world_y, float time) const;
 
-// Simulation step: recompute CPU vertex positions for the current time and camera position.
-// This only modifies simulation state (m_cpu_verts), not GPU resources.
-void Update(float time, v4 camera_world_pos);
+		// Query the displaced position of the ocean surface at a world position and time, including horizontal displacement from the Gerstner wave formula.
+		v4 DisplacedPosition(float world_x, float world_y, float time) const;
 
-// Rendering: upload dirty verts to GPU and add to the scene.
-void AddToScene(Scene& scene);
+		// Query the normal of the ocean surface at a world position and time, including contributions from all wave components.
+		v4 NormalAt(float world_x, float world_y, float time) const;
 
-private:
+		// Simulation step: recompute CPU vertex positions for the current time and camera position.
+		// This only modifies simulation state (m_cpu_verts), not GPU resources.
+		void Update(float time, v4 camera_world_pos);
 
-void InitDefaultWaves();
-void BuildMesh();
-};
+		// Rendering: upload dirty verts to GPU and add to the scene.
+		void AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
+
+	private:
+
+		// Initialise the ocean with a set of default wave components. These are arbitrary values that look good, but could be tweaked or made user-configurable.
+		void InitDefaultWaves();
+
+		// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
+		void BuildMesh();
+	};
 }

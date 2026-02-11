@@ -225,7 +225,7 @@ namespace pr::rdr12
 		//    to the frame from the main thread before starting.
 
 		// Make sure the scene is up to date
-		OnUpdateScene(*this);
+		OnUpdateScene(*this, { frame.m_prepare, frame.m_upload });
 
 		// Invoke each render step in order
 		for (auto& rs : m_render_steps)
