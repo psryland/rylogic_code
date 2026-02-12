@@ -26,6 +26,7 @@ namespace las
 
 		double m_sim_time;
 		v4 m_camera_world_pos;
+		float m_move_speed; // World units per second
 
 		Main(MainUI& ui);
 		~Main();

@@ -15,12 +15,11 @@ namespace las
 	Ocean::Ocean(Renderer& rdr)
 		:m_waves()
 		,m_inst()
-		,m_factory(rdr)
 		,m_cpu_data()
 		,m_dirty(false)
 	{
 		InitDefaultWaves();
-		BuildMesh();
+		BuildMesh(rdr);
 	}
 
 	// Initialise the ocean with a set of default wave components. These are arbitrary values that look good, but could be tweaked or made user-configurable.
@@ -35,7 +34,7 @@ namespace las
 	}
 
 	// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
-	void Ocean::BuildMesh()
+	void Ocean::BuildMesh(Renderer& rdr)
 	{
 		auto vcount = GridDim * GridDim;
 		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
@@ -90,10 +89,11 @@ namespace las
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
 		
+		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{m_cpu_data};
-		m_inst.m_model = ModelGenerator::Create<Vert>(m_factory, cache, &opts);
+		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
-		m_factory.FlushToGpu(EGpuFlush::Block);
+		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
 	// Query the height of the ocean surface at a world position and time, without computing the full displacement or normal.

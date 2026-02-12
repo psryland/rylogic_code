@@ -20,6 +20,7 @@
 #include "pr/maths/perlin_noise.h"
 #include "pr/view3d-12/view3d.h"
 #include "pr/win32/win32.h"
+#include "pr/common/keystate.h"
 
 namespace las
 {

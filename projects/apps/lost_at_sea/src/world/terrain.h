@@ -25,7 +25,6 @@ namespace las
 
 		HeightField const* m_height_field;
 		Instance m_inst;
-		ResourceFactory m_factory;
 
 		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
 		bool m_dirty;
@@ -41,6 +40,6 @@ namespace las
 	private:
 
 		static Colour TerrainColour(float height, float flatness);
-		void BuildMesh();
+		void BuildMesh(Renderer& rdr);
 	};
 }

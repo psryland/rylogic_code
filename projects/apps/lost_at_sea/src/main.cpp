@@ -15,6 +15,7 @@ namespace las
 		, m_terrain(m_rdr, m_height_field)
 		, m_sim_time(0.0)
 		, m_camera_world_pos(v4(0, 0, 15, 1))
+		, m_move_speed(20.0f)
 	{
 		// Position the camera: looking forward (+X) from above the ocean
 		m_cam.LookAt(v4(0, 0, 15, 1), v4(50, 0, 0, 1), v4(0, 0, 1, 0));
@@ -35,6 +36,14 @@ namespace las
 	void Main::Step(double elapsed_seconds)
 	{
 		m_sim_time += elapsed_seconds;
+		auto dt = static_cast<float>(elapsed_seconds);
+
+		// WASD movement: move the camera world position (X=forward, Y=right, Z=up)
+		auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
+		if (KeyDown('W')) m_camera_world_pos.x += speed * dt;
+		if (KeyDown('S')) m_camera_world_pos.x -= speed * dt;
+		if (KeyDown('A')) m_camera_world_pos.y -= speed * dt;
+		if (KeyDown('D')) m_camera_world_pos.y += speed * dt;
 
 		// Simulation: compute new vertex positions on CPU
 		m_ocean.Update(static_cast<float>(m_sim_time), m_camera_world_pos);
@@ -54,8 +63,8 @@ namespace las
 	MainUI::MainUI(wchar_t const*, int)
 		:base(Params().title(AppTitle()))
 	{
-		m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 60.0f, false);
 		m_msg_loop.AddStepContext("step", [this](double s) { m_main->Step(s); }, 60.0f, true);
+		m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 60.0f, false);
 	}
 }
 
