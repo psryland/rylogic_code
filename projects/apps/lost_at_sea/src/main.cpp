@@ -57,14 +57,18 @@ namespace las
 		// Rendering: upload dirty data to GPU and add instances
 		m_skybox.AddToScene(scene);
 		m_ocean.AddToScene(scene, args.m_cmd_list, args.m_upload);
-		m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
+		//m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
 	}
 
 	MainUI::MainUI(wchar_t const*, int)
 		:base(Params().title(AppTitle()))
 	{
+		// Set Windows timer resolution to 1ms for accurate sleep intervals
+		::timeBeginPeriod(1);
+
+		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
 		m_msg_loop.AddStepContext("step", [this](double s) { m_main->Step(s); }, 60.0f, true);
-		m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 60.0f, false);
+		m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 1000.0f, false);
 	}
 }
 

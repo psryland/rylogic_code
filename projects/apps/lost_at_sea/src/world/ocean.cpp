@@ -93,6 +93,10 @@ namespace las
 		ModelGenerator::Cache cache{m_cpu_data};
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
+
+		// Wireframe for debugging wave geometry
+		m_inst.m_model->m_nuggets.front().FillMode(EFillMode::Wireframe);
+
 		factory.FlushToGpu(EGpuFlush::Block);
 	}
 

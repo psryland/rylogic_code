@@ -8,6 +8,11 @@
 #include <string>
 #include <filesystem>
 
+// Windows
+#include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+
 // pr - app framework (includes windows, view3d-12, gui, camera, etc.)
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
