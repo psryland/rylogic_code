@@ -224,8 +224,12 @@ namespace pr::rdr12
 			m_used.push_back(std::move(block));
 
 			// Sanity check for unchecked growth
-			if (m_used.size() > 1000)
-				throw std::runtime_error("GPU transfer buffer memory growing. There is probably a reference count leak");
+			if (m_used.size() > 500)
+			{
+				// Can put a breakpoint here before it throws
+				if (m_used.size() > 1000)
+					throw std::runtime_error("GPU transfer buffer memory growing. There is probably a reference count leak");
+			}
 		}
 
 		// Ref-counting clean up function

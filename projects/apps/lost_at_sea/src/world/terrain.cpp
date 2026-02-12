@@ -10,81 +10,17 @@ namespace las
 	Terrain::Terrain(Renderer& rdr, HeightField const& hf)
 		:m_height_field(&hf)
 		,m_inst()
-		,m_factory(rdr)
 		,m_cpu_data()
 		,m_dirty(false)
 	{
-		BuildMesh();
+		BuildMesh(rdr);
 	}
 
-	void Terrain::Update(v4 camera_world_pos)
-	{
-		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
-
-		for (int iy = 0; iy < GridDim; ++iy)
-		{
-			for (int ix = 0; ix < GridDim; ++ix)
-			{
-				auto idx = iy * GridDim + ix;
-				auto wx = camera_world_pos.x + (ix - GridDim / 2) * cell_size;
-				auto wy = camera_world_pos.y + (iy - GridDim / 2) * cell_size;
-				auto h = m_height_field->HeightAt(wx, wy);
-				auto normal = m_height_field->NormalAt(wx, wy);
-
-				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4(wx - camera_world_pos.x, wy - camera_world_pos.y, h, 1.0f);
-				v.m_norm = normal;
-				v.m_diff = TerrainColour(h, normal.z);
-			}
-		}
-		m_dirty = true;
-	}
-
-	void Terrain::AddToScene(Scene& scene)
-	{
-		if (!m_inst.m_model)
-			return;
-
-		if (m_dirty)
-		{
-			auto& cmd_list = m_factory.CmdList();
-			auto& upload = m_factory.UploadBuffer();
-			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
-			auto* dst = update.ptr<Vert>();
-			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
-			update.Commit();
-			m_factory.FlushToGpu(EGpuFlush::Block);
-			m_dirty = false;
-		}
-
-		m_inst.m_i2w = m4x4::Identity();
-		scene.AddInstance(m_inst);
-	}
-
-	Colour Terrain::TerrainColour(float height, float flatness)
-	{
-		if (height < 0.0f)
-			return Colour(0.13f, 0.25f, 0.50f, 1.0f); // Underwater: dark blue-grey
-
-		if (height < 2.0f)
-			return Colour(0.82f, 0.75f, 0.37f, 1.0f); // Beach: sandy yellow
-
-		if (flatness < 0.7f)
-			return Colour(0.38f, 0.38f, 0.38f, 1.0f); // Steep slope: rocky grey
-
-		if (height > 40.0f)
-			return Colour(0.50f, 0.50f, 0.50f, 1.0f); // High altitude: grey rock
-
-		// Green vegetation, getting browner at higher elevations
-		auto t = std::clamp((height - 2.0f) / 38.0f, 0.0f, 1.0f);
-		return Colour(0.23f + t * 0.15f, 0.50f - t * 0.20f, 0.12f + t * 0.10f, 1.0f);
-	}
-
-	void Terrain::BuildMesh()
+	void Terrain::BuildMesh(Renderer& rdr)
 	{
 		auto vcount = GridDim * GridDim;
 		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
-		m_cpu_data.Reset(vcount, icount, 1, sizeof(uint16_t));
+		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
 
 		// Initialise with a flat grid
 		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
@@ -120,17 +56,85 @@ namespace las
 			}
 		}
 
-		// Create the GPU model once
-		NuggetDesc nugget(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm);
+		// Compute bounding box from vertices
+		m_cpu_data.m_bbox = BBox::Reset();
+		for (auto const& v : m_cpu_data.m_vcont)
+			Grow(m_cpu_data.m_bbox, v.m_vert);
+
+		// Configure the nugget (created by Reset with default values)
+		auto& nugget = m_cpu_data.m_ncont[0];
+		nugget.m_topo = ETopo::TriList;
+		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
 		nugget.m_irange = rdr12::Range(0, icount);
-		auto nug_span = std::span<NuggetDesc const>(&nugget, 1);
 
 		auto terrain_colour = Colour32Green;
 		auto opts = ModelGenerator::CreateOptions().colours({ &terrain_colour, 1 });
 
+		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{m_cpu_data};
-		m_inst.m_model = ModelGenerator::Create<Vert>(m_factory, cache, &opts);
+		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
+		factory.FlushToGpu(EGpuFlush::Block);
+	}
+
+	void Terrain::Update(v4 camera_world_pos)
+	{
+		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
+
+		for (int iy = 0; iy < GridDim; ++iy)
+		{
+			for (int ix = 0; ix < GridDim; ++ix)
+			{
+				auto idx = iy * GridDim + ix;
+				auto wx = camera_world_pos.x + (ix - GridDim / 2) * cell_size;
+				auto wy = camera_world_pos.y + (iy - GridDim / 2) * cell_size;
+				auto h = m_height_field->HeightAt(wx, wy);
+				auto normal = m_height_field->NormalAt(wx, wy);
+
+				auto& v = m_cpu_data.m_vcont[idx];
+				v.m_vert = v4(wx - camera_world_pos.x, wy - camera_world_pos.y, h, 1.0f);
+				v.m_norm = normal;
+				v.m_diff = TerrainColour(h, normal.z);
+			}
+		}
+		m_dirty = true;
+	}
+
+	void Terrain::AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
+	{
+		if (!m_inst.m_model)
+			return;
+
+		if (m_dirty)
+		{
+			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
+			auto* dst = update.ptr<Vert>();
+			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
+			update.Commit();
+			m_dirty = false;
+		}
+
+		m_inst.m_i2w = m4x4::Identity();
+		scene.AddInstance(m_inst);
+	}
+
+	Colour Terrain::TerrainColour(float height, float flatness)
+	{
+		if (height < 0.0f)
+			return Colour(0.13f, 0.25f, 0.50f, 1.0f); // Underwater: dark blue-grey
+
+		if (height < 2.0f)
+			return Colour(0.82f, 0.75f, 0.37f, 1.0f); // Beach: sandy yellow
+
+		if (flatness < 0.7f)
+			return Colour(0.38f, 0.38f, 0.38f, 1.0f); // Steep slope: rocky grey
+
+		if (height > 40.0f)
+			return Colour(0.50f, 0.50f, 0.50f, 1.0f); // High altitude: grey rock
+
+		// Green vegetation, getting browner at higher elevations
+		auto t = std::clamp((height - 2.0f) / 38.0f, 0.0f, 1.0f);
+		return Colour(0.23f + t * 0.15f, 0.50f - t * 0.20f, 0.12f + t * 0.10f, 1.0f);
 	}
 }

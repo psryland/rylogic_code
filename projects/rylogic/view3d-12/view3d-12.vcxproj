@@ -268,6 +268,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
+    <ClInclude Include="..\..\..\include\pr\view3d-12\imgui\imgui.h" />
     <ClInclude Include="src\ldraw\sources\source_binary.h" />
     <ClInclude Include="src\ldraw\sources\source_file.h" />
     <ClInclude Include="src\ldraw\sources\ldraw_sources.h" />

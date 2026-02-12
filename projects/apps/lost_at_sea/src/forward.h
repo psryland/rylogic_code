@@ -8,6 +8,11 @@
 #include <string>
 #include <filesystem>
 
+// Windows
+#include <windows.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+
 // pr - app framework (includes windows, view3d-12, gui, camera, etc.)
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
@@ -20,6 +25,7 @@
 #include "pr/maths/perlin_noise.h"
 #include "pr/view3d-12/view3d.h"
 #include "pr/win32/win32.h"
+#include "pr/common/keystate.h"
 
 namespace las
 {

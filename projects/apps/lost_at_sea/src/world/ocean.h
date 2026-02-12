@@ -41,7 +41,6 @@ namespace las
 
 		std::vector<GerstnerWave> m_waves;
 		Instance m_inst;
-		ResourceFactory m_factory;
 
 		// CPU-side vertex data (simulation writes here, render reads from here)
 		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
@@ -71,6 +70,6 @@ namespace las
 		void InitDefaultWaves();
 
 		// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
-		void BuildMesh();
+		void BuildMesh(Renderer& rdr);
 	};
 }

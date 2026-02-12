@@ -15,12 +15,11 @@ namespace las
 	Ocean::Ocean(Renderer& rdr)
 		:m_waves()
 		,m_inst()
-		,m_factory(rdr)
 		,m_cpu_data()
 		,m_dirty(false)
 	{
 		InitDefaultWaves();
-		BuildMesh();
+		BuildMesh(rdr);
 	}
 
 	// Initialise the ocean with a set of default wave components. These are arbitrary values that look good, but could be tweaked or made user-configurable.
@@ -35,11 +34,11 @@ namespace las
 	}
 
 	// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
-	void Ocean::BuildMesh()
+	void Ocean::BuildMesh(Renderer& rdr)
 	{
 		auto vcount = GridDim * GridDim;
 		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
-		m_cpu_data.Reset(vcount, icount, 1, sizeof(uint16_t));
+		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
 
 		// Initialise vertex data with a flat grid and ocean colour
 		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
@@ -75,18 +74,30 @@ namespace las
 			}
 		}
 
-		// Create the GPU model
-		NuggetDesc nugget(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm);
+		// Compute bounding box from vertices
+		m_cpu_data.m_bbox = BBox::Reset();
+		for (auto const& v : m_cpu_data.m_vcont)
+			Grow(m_cpu_data.m_bbox, v.m_vert);
+
+		// Configure the nugget (created by Reset with default values)
+		auto& nugget = m_cpu_data.m_ncont[0];
+		nugget.m_topo = ETopo::TriList;
+		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
 		nugget.m_irange = rdr12::Range(0, icount);
-		auto nug_span = std::span<NuggetDesc const>(&nugget, 1);
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
 		
+		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{m_cpu_data};
-		m_inst.m_model = ModelGenerator::Create<Vert>(m_factory, cache, &opts);
+		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
+
+		// Wireframe for debugging wave geometry
+		m_inst.m_model->m_nuggets.front().FillMode(EFillMode::Wireframe);
+
+		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
 	// Query the height of the ocean surface at a world position and time, without computing the full displacement or normal.

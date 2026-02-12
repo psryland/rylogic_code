@@ -25,7 +25,6 @@ namespace las
 
 		HeightField const* m_height_field;
 		Instance m_inst;
-		ResourceFactory m_factory;
 
 		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
 		bool m_dirty;
@@ -36,11 +35,11 @@ namespace las
 		void Update(v4 camera_world_pos);
 
 		// Rendering: upload dirty verts to GPU and add to scene
-		void AddToScene(Scene& scene);
+		void AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
 
 	private:
 
 		static Colour TerrainColour(float height, float flatness);
-		void BuildMesh();
+		void BuildMesh(Renderer& rdr);
 	};
 }
