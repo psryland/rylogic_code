@@ -75,11 +75,12 @@ namespace las
 			}
 		}
 
-		// Create the GPU model
-		NuggetDesc nugget(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm);
+		// Configure the nugget (created by Reset with default values)
+		auto& nugget = m_cpu_data.m_ncont[0];
+		nugget.m_topo = ETopo::TriList;
+		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
 		nugget.m_irange = rdr12::Range(0, icount);
-		auto nug_span = std::span<NuggetDesc const>(&nugget, 1);
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });

@@ -36,7 +36,7 @@ namespace las
 		void Update(v4 camera_world_pos);
 
 		// Rendering: upload dirty verts to GPU and add to scene
-		void AddToScene(Scene& scene);
+		void AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
 
 	private:
 

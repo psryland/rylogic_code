@@ -40,20 +40,17 @@ namespace las
 		m_dirty = true;
 	}
 
-	void Terrain::AddToScene(Scene& scene)
+	void Terrain::AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
 	{
 		if (!m_inst.m_model)
 			return;
 
 		if (m_dirty)
 		{
-			auto& cmd_list = m_factory.CmdList();
-			auto& upload = m_factory.UploadBuffer();
 			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
 			auto* dst = update.ptr<Vert>();
 			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
 			update.Commit();
-			m_factory.FlushToGpu(EGpuFlush::Block);
 			m_dirty = false;
 		}
 
@@ -120,11 +117,12 @@ namespace las
 			}
 		}
 
-		// Create the GPU model once
-		NuggetDesc nugget(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm);
+		// Configure the nugget (created by Reset with default values)
+		auto& nugget = m_cpu_data.m_ncont[0];
+		nugget.m_topo = ETopo::TriList;
+		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
 		nugget.m_irange = rdr12::Range(0, icount);
-		auto nug_span = std::span<NuggetDesc const>(&nugget, 1);
 
 		auto terrain_colour = Colour32Green;
 		auto opts = ModelGenerator::CreateOptions().colours({ &terrain_colour, 1 });

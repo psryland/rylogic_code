@@ -48,7 +48,7 @@ namespace las
 		// Rendering: upload dirty data to GPU and add instances
 		m_skybox.AddToScene(scene);
 		m_ocean.AddToScene(scene, args.m_cmd_list, args.m_upload);
-		//m_terrain.AddToScene(scene);
+		m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
 	}
 
 	MainUI::MainUI(wchar_t const*, int)
