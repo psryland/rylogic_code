@@ -16,6 +16,7 @@ namespace las
 	struct Main :pr::app::Main<Main, MainUI, Settings>
 	{
 		using base = pr::app::Main<Main, MainUI, Settings>;
+		using ImGuiUI = pr::rdr12::imgui::ImGuiUI;
 		using Skybox = pr::app::Skybox;
 
 		static char const* AppName() { return "LostAtSea"; }
@@ -31,19 +32,15 @@ namespace las
 		int64_t m_render_frame;
 
 		// ImGui overlay
-		pr::rdr12::imgui::ImGuiUI m_imgui;
-		GfxCmdList m_imgui_cmd_list;
+		ImGuiUI m_imgui;
 
 		Main(MainUI& ui);
 		~Main();
 
 		void Step(double elapsed_seconds);
 		void DoRender(bool force = false);
+		void RenderUI(Frame& frame);
 		void UpdateScene(Scene& scene, UpdateSceneArgs const& args);
-		void RenderImGui(Frame& frame);
-
-		// Forward WndProc to imgui for input handling
-		bool ImGuiWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 	};
 
 	// Main app window

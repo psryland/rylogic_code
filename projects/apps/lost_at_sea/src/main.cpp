@@ -17,26 +17,25 @@ namespace las
 		, m_camera_world_pos(v4(0, 0, 15, 1))
 		, m_move_speed(20.0f)
 		, m_render_frame(0)
-		, m_imgui()
-		, m_imgui_cmd_list(m_rdr.D3DDevice(), nullptr, "ImGui", Colour32(0xFF00FF00))
+		, m_imgui({
+			.m_device = m_rdr.D3DDevice(),
+			.m_cmd_queue = m_rdr.GfxQueue(),
+			.m_hwnd = HWND(ui),
+			.m_rtv_format = m_window.m_rt_props.Format,
+			.m_num_frames_in_flight = m_window.BBCount(),
+			.m_font_scale = 1.5f,
+		})
 	{
 		// Position the camera: looking forward (+X) from above the ocean
 		m_cam.LookAt(v4(0, 0, 15, 1), v4(50, 0, 0, 1), v4(0, 0, 1, 0));
 		m_cam.Align(v4ZAxis);
 
+		// Watch for scene renders
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
 
 		// Build initial meshes
 		m_ocean.Update(0.0f, m_camera_world_pos);
 		m_terrain.Update(m_camera_world_pos);
-
-		// Initialise imgui
-		pr::rdr12::imgui::InitArgs imgui_args = {};
-		imgui_args.m_device = m_rdr.D3DDevice();
-		imgui_args.m_hwnd = HWND(ui);
-		imgui_args.m_rtv_format = m_window.m_rt_props.Format;
-		imgui_args.m_num_frames_in_flight = m_window.BBCount();
-		m_imgui = pr::rdr12::imgui::ImGuiUI(imgui_args);
 	}
 
 	Main::~Main()
@@ -44,6 +43,7 @@ namespace las
 		m_scene.ClearDrawlists();
 	}
 
+	// Simulation step
 	void Main::Step(double elapsed_seconds)
 	{
 		m_sim_time += elapsed_seconds;
@@ -71,25 +71,21 @@ namespace las
 		m_rdr_pending = false;
 		++m_render_frame;
 
+		// Reset the scene drawlist
 		m_scene.ClearDrawlists();
+
+		// Render a frame
 		auto& frame = m_window.NewFrame();
 		m_scene.Render(frame);
 
 		// Render imgui overlay into the post-resolve back buffer
-		RenderImGui(frame);
+		RenderUI(frame);
 
-		m_window.Present(frame, pr::rdr12::EGpuFlush::Block);
+		m_window.Present(frame);
 	}
 
-	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
-	{
-		// Rendering: upload dirty data to GPU and add instances
-		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, args.m_cmd_list, args.m_upload);
-		//m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
-	}
-
-	void Main::RenderImGui(Frame& frame)
+	// Add UI components
+	void Main::RenderUI(Frame& frame)
 	{
 		if (!m_imgui)
 			return;
@@ -100,9 +96,9 @@ namespace las
 		// Build the debug overlay
 		m_imgui.SetNextWindowPos(10, 10, 1 /*ImGuiCond_Once*/);
 		m_imgui.SetNextWindowBgAlpha(0.5f);
-		if (m_imgui.BeginWindow("Debug Info", nullptr, (1 << 0) | (1 << 1) | (1 << 5)))
+		if (m_imgui.BeginWindow("Debug Info", nullptr, (1 << 0) | (1 << 1) | (1 << 6)))
 		{
-			// ImGuiWindowFlags_NoTitleBar=1<<0, NoResize=1<<1, AlwaysAutoResize=1<<5
+			// ImGuiWindowFlags_NoTitleBar=1<<0, NoResize=1<<1, AlwaysAutoResize=1<<6
 			char buf[128];
 			snprintf(buf, sizeof(buf), "Sim Time: %.2f s", m_sim_time);
 			m_imgui.Text(buf);
@@ -115,28 +111,24 @@ namespace las
 		}
 		m_imgui.EndWindow();
 
-		// Record imgui draw commands into a command list for the post-resolve phase
-		m_imgui_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-
 		// Set the swap chain back buffer as the render target
-		auto& bb = frame.bb_post();
-		m_imgui_cmd_list.OMSetRenderTargets({ &bb.m_rtv, 1 }, FALSE, nullptr);
+		frame.m_resolve.OMSetRenderTargets({ &frame.bb_post().m_rtv, 1 }, FALSE, nullptr);
 
 		// Set viewport and scissor
 		auto const& vp = m_scene.m_viewport;
-		m_imgui_cmd_list.RSSetViewports({ &vp, 1 });
-		m_imgui_cmd_list.RSSetScissorRects(vp.m_clip);
+		frame.m_resolve.RSSetViewports({ &vp, 1 });
+		frame.m_resolve.RSSetScissorRects(vp.m_clip);
 
 		// Render imgui draw data
-		m_imgui.Render(m_imgui_cmd_list.get());
-
-		m_imgui_cmd_list.Close();
-		frame.m_post.push_back(m_imgui_cmd_list);
+		m_imgui.Render(frame.m_resolve.get());
 	}
 
-	bool Main::ImGuiWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
+	// Update the scene with things to render
+	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
 	{
-		return m_imgui.WndProc(hwnd, msg, wparam, lparam);
+		m_skybox.AddToScene(scene);
+		m_ocean.AddToScene(scene, args.m_cmd_list, args.m_upload);
+		//m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
 	}
 
 	MainUI::MainUI(wchar_t const*, int)
@@ -153,7 +145,7 @@ namespace las
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
 		// Forward to imgui first
-		if (m_main && m_main->ImGuiWndProc(parent_hwnd, message, wparam, lparam))
+		if (m_main && m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam))
 		{
 			result = 0;
 			return true;

@@ -127,6 +127,9 @@
     <Filter Include="src\openxr">
       <UniqueIdentifier>{2b8da540-474d-4518-954d-73baf3b0c608}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\imgui">
+      <UniqueIdentifier>{fbcc4191-917c-43ee-a6b6-71c70a44bf81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
@@ -769,6 +772,9 @@
     <ClCompile Include="src\utility\utility.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
+    <ClInclude Include="..\..\..\include\pr\view3d-12\imgui\imgui.h">
+      <Filter>src\imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <View3dShaderBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl">

@@ -10,11 +10,12 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include "pr/common/assert.h"
+#include <cassert>
 #include "pr/win32/win32.h"
 
 // Forward declarations for D3D12 types (no d3d12.h dependency here)
 struct ID3D12Device;
+struct ID3D12CommandQueue;
 struct ID3D12GraphicsCommandList;
 
 namespace pr::rdr12::imgui
@@ -26,9 +27,11 @@ namespace pr::rdr12::imgui
 	struct InitArgs
 	{
 		ID3D12Device* m_device;          // D3D12 device
+		ID3D12CommandQueue* m_cmd_queue; // Graphics command queue (used for texture uploads)
 		HWND m_hwnd;                     // Window handle for input
 		DXGI_FORMAT m_rtv_format;        // Render target format
 		int m_num_frames_in_flight;      // Number of buffered frames (typically 2-3)
+		float m_font_scale;              // Global font scale (default 1.0)
 	};
 
 	// Error handling callback
@@ -94,10 +97,12 @@ namespace pr::rdr12::imgui
 
 		ImGuiUI()
 			: m_ctx()
-		{}
+		{
+		}
 		ImGuiUI(InitArgs const& args, ErrorHandler error_cb = {})
 			: m_ctx(ImGuiDll::get().Initialise(args, error_cb))
-		{}
+		{
+		}
 		ImGuiUI(ImGuiUI&& rhs) noexcept
 			: m_ctx()
 		{
@@ -116,19 +121,23 @@ namespace pr::rdr12::imgui
 				ImGuiDll::get().Shutdown(m_ctx);
 		}
 
-		explicit operator bool() const { return m_ctx != nullptr; }
+		// True if the context is valid and ready for use
+		explicit operator bool() const
+		{
+			return m_ctx != nullptr;
+		}
 
 		// Start a new imgui frame. Call before any imgui widget functions.
 		void NewFrame()
 		{
-			PR_ASSERT(PR_DBG, m_ctx != nullptr, "ImGuiUI not initialised");
+			assert(m_ctx != nullptr && "ImGuiUI not initialised");
 			ImGuiDll::get().NewFrame(*m_ctx);
 		}
 
 		// Render the imgui draw data into the command list
 		void Render(ID3D12GraphicsCommandList* cmd_list)
 		{
-			PR_ASSERT(PR_DBG, m_ctx != nullptr, "ImGuiUI not initialised");
+			assert(m_ctx != nullptr && "ImGuiUI not initialised");
 			ImGuiDll::get().Render(*m_ctx, cmd_list);
 		}
 
@@ -140,16 +149,49 @@ namespace pr::rdr12::imgui
 		}
 
 		// Widget helpers
-		void Text(char const* text) { ImGuiDll::get().Text(*m_ctx, text); }
-		bool BeginWindow(char const* name, bool* p_open = nullptr, int flags = 0) { return ImGuiDll::get().BeginWindow(*m_ctx, name, p_open, flags); }
-		void EndWindow() { ImGuiDll::get().EndWindow(*m_ctx); }
-		void SetNextWindowPos(float x, float y, int cond = 0) { ImGuiDll::get().SetNextWindowPos(*m_ctx, x, y, cond); }
-		void SetNextWindowSize(float w, float h, int cond = 0) { ImGuiDll::get().SetNextWindowSize(*m_ctx, w, h, cond); }
-		void SetNextWindowBgAlpha(float alpha) { ImGuiDll::get().SetNextWindowBgAlpha(*m_ctx, alpha); }
-		bool Checkbox(char const* label, bool* v) { return ImGuiDll::get().Checkbox(*m_ctx, label, v); }
-		bool SliderFloat(char const* label, float* v, float v_min, float v_max) { return ImGuiDll::get().SliderFloat(*m_ctx, label, v, v_min, v_max); }
-		bool Button(char const* label) { return ImGuiDll::get().Button(*m_ctx, label); }
-		void SameLine(float offset_from_start_x = 0.0f, float spacing = -1.0f) { ImGuiDll::get().SameLine(*m_ctx, offset_from_start_x, spacing); }
-		void Separator() { ImGuiDll::get().Separator(*m_ctx); }
+		void Text(char const* text)
+		{
+			ImGuiDll::get().Text(*m_ctx, text);
+		}
+		bool BeginWindow(char const* name, bool* p_open = nullptr, int flags = 0)
+		{
+			return ImGuiDll::get().BeginWindow(*m_ctx, name, p_open, flags);
+		}
+		void EndWindow()
+		{
+			ImGuiDll::get().EndWindow(*m_ctx);
+		}
+		void SetNextWindowPos(float x, float y, int cond = 0)
+		{
+			ImGuiDll::get().SetNextWindowPos(*m_ctx, x, y, cond);
+		}
+		void SetNextWindowSize(float w, float h, int cond = 0)
+		{
+			ImGuiDll::get().SetNextWindowSize(*m_ctx, w, h, cond);
+		}
+		void SetNextWindowBgAlpha(float alpha)
+		{
+			ImGuiDll::get().SetNextWindowBgAlpha(*m_ctx, alpha);
+		}
+		bool Checkbox(char const* label, bool* v)
+		{
+			return ImGuiDll::get().Checkbox(*m_ctx, label, v);
+		}
+		bool SliderFloat(char const* label, float* v, float v_min, float v_max)
+		{
+			return ImGuiDll::get().SliderFloat(*m_ctx, label, v, v_min, v_max);
+		}
+		bool Button(char const* label)
+		{
+			return ImGuiDll::get().Button(*m_ctx, label);
+		}
+		void SameLine(float offset_from_start_x = 0.0f, float spacing = -1.0f)
+		{
+			ImGuiDll::get().SameLine(*m_ctx, offset_from_start_x, spacing);
+		}
+		void Separator()
+		{
+			ImGuiDll::get().Separator(*m_ctx);
+		}
 	};
 }

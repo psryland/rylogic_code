@@ -40,12 +40,6 @@ namespace pr
 			,m_dont(false)
 		{
 		}
-		~Scope()
-		{
-			if (m_dont) return;
-			try { m_undo(m_state); }
-			catch (...) {}
-		}
 		Scope(Scope&& rhs) noexcept
 			:m_state(std::move(rhs.m_state))
 			, m_undo(std::move(rhs.m_undo))
@@ -53,6 +47,7 @@ namespace pr
 		{
 			rhs.m_dont = true;
 		}
+		Scope(Scope const&) = delete;
 		Scope& operator = (Scope&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
@@ -61,8 +56,13 @@ namespace pr
 			std::swap(m_dont, rhs.m_dont);
 			return *this;
 		}
-		Scope(Scope const&) = delete;
 		Scope& operator = (Scope const&) = delete;
+		~Scope()
+		{
+			if (m_dont) return;
+			try { m_undo(m_state); }
+			catch (...) {}
+		}
 	};
 
 	template <>
@@ -84,18 +84,13 @@ namespace pr
 		{
 			doit();
 		}
-		~Scope()
-		{
-			if (m_dont) return;
-			try { m_undo(); }
-			catch (...) {}
-		}
 		Scope(Scope&& rhs) noexcept
 			:m_undo(std::move(rhs.m_undo))
 			,m_dont(rhs.m_dont)
 		{
 			rhs.m_dont = true;
 		}
+		Scope(Scope const&) = delete;
 		Scope& operator = (Scope&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
@@ -103,8 +98,45 @@ namespace pr
 			std::swap(m_dont, rhs.m_dont);
 			return *this;
 		}
-		Scope(Scope const&) = delete;
 		Scope& operator = (Scope const&) = delete;
+		~Scope()
+		{
+			if (m_dont) return;
+			try { m_undo(); }
+			catch (...) {}
+		}
+	};
+
+	// Use: pr::Scope<bool&> guard(m_flag);
+	template <>
+	struct Scope<bool&>
+	{
+		bool* m_flag;
+		Scope(bool& flag)
+			: m_flag(&flag)
+		{
+			if (m_flag)
+				*m_flag = true;
+		}
+		Scope(Scope&& rhs) noexcept
+			: m_flag()
+		{
+			std::swap(m_flag, rhs.m_flag);
+		}
+		Scope(Scope const&) = delete;
+		Scope& operator = (Scope&& rhs) noexcept
+		{
+			if (this == &rhs) return *this;
+			std::swap(m_flag, rhs.m_flag);
+			rhs.m_flag = nullptr;
+			return *this;
+		}
+		Scope& operator = (Scope const&) = delete;
+		~Scope()
+		{
+			if (m_flag)
+				*m_flag = false;
+		}
 	};
 }
 

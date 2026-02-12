@@ -41,9 +41,11 @@ namespace dll
 	struct InitArgs
 	{
 		ID3D12Device* m_device;
+		ID3D12CommandQueue* m_cmd_queue;
 		HWND m_hwnd;
 		DXGI_FORMAT m_rtv_format;
 		int m_num_frames_in_flight;
+		float m_font_scale;
 	};
 
 	struct ErrorHandler
@@ -68,6 +70,17 @@ namespace dll
 		ID3D12DescriptorHeap* m_srv_heap;
 		ErrorHandler m_error_cb;
 
+		// SRV descriptor callbacks for ImGui_ImplDX12_InitInfo
+		static void SrvDescriptorAlloc(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
+		{
+			*out_cpu = info->SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+			*out_gpu = info->SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+		}
+		static void SrvDescriptorFree(ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
+		{
+			// Nothing to do — we own the entire heap and release it in Cleanup
+		}
+
 		Context(InitArgs const& args, ErrorHandler error_cb)
 			: m_imgui_ctx(nullptr)
 			, m_device(args.m_device)
@@ -91,17 +104,21 @@ namespace dll
 
 				auto& io = ImGui::GetIO();
 				io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+				io.FontGlobalScale = args.m_font_scale > 0.0f ? args.m_font_scale : 1.0f;
 
-				// Initialise platform/renderer backends
+				// Initialise platform backend
 				ImGui_ImplWin32_Init(args.m_hwnd);
-				ImGui_ImplDX12_Init(
-					m_device,
-					args.m_num_frames_in_flight,
-					args.m_rtv_format,
-					m_srv_heap,
-					m_srv_heap->GetCPUDescriptorHandleForHeapStart(),
-					m_srv_heap->GetGPUDescriptorHandleForHeapStart()
-				);
+
+				// Initialise renderer backend using the new InitInfo struct
+				ImGui_ImplDX12_InitInfo init_info = {};
+				init_info.Device = m_device;
+				init_info.CommandQueue = args.m_cmd_queue;
+				init_info.NumFramesInFlight = args.m_num_frames_in_flight;
+				init_info.RTVFormat = args.m_rtv_format;
+				init_info.SrvDescriptorHeap = m_srv_heap;
+				init_info.SrvDescriptorAllocFn = SrvDescriptorAlloc;
+				init_info.SrvDescriptorFreeFn = SrvDescriptorFree;
+				ImGui_ImplDX12_Init(&init_info);
 			}
 			catch (std::exception const& ex)
 			{
@@ -152,110 +169,231 @@ extern "C"
 
 	using namespace dll;
 
+	// Create a dll context
 	__declspec(dllexport) Context* __stdcall ImGui_Initialise(InitArgs const& args, ErrorHandler error_cb)
 	{
-		std::lock_guard<std::mutex> lock(g_mutex);
-		g_contexts.push_back(std::make_unique<Context>(args, error_cb));
-		return g_contexts.back().get();
+		try
+		{
+			std::lock_guard<std::mutex> lock(g_mutex);
+			g_contexts.push_back(std::make_unique<Context>(args, error_cb));
+			return g_contexts.back().get();
+		}
+		catch (std::exception const& ex)
+		{
+			error_cb(ex.what());
+			return nullptr;
+		}
 	}
 
+	// Release a dll context
 	__declspec(dllexport) void __stdcall ImGui_Shutdown(Context* ctx)
 	{
-		std::lock_guard<std::mutex> lock(g_mutex);
-		auto it = std::remove_if(g_contexts.begin(), g_contexts.end(), [ctx](auto const& p) { return p.get() == ctx; });
-		g_contexts.erase(it, g_contexts.end());
+		try
+		{
+			std::lock_guard<std::mutex> lock(g_mutex);
+			auto it = std::remove_if(g_contexts.begin(), g_contexts.end(), [ctx](auto const& p) { return p.get() == ctx; });
+			g_contexts.erase(it, g_contexts.end());
+		}
+		catch (std::exception const& ex)
+		{
+			ctx->m_error_cb(ex.what());
+		}
 	}
 
+	// Start a new imgui frame
 	__declspec(dllexport) void __stdcall ImGui_NewFrame(Context& ctx)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui_ImplDX12_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_Render(Context& ctx, ID3D12GraphicsCommandList* cmd_list)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::Render();
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::Render();
 
-		// Set the descriptor heap for imgui's font texture
-		ID3D12DescriptorHeap* heaps[] = { ctx.m_srv_heap };
-		cmd_list->SetDescriptorHeaps(1, heaps);
+			// Set the descriptor heap for imgui's font texture
+			ID3D12DescriptorHeap* heaps[] = { ctx.m_srv_heap };
+			cmd_list->SetDescriptorHeaps(1, heaps);
 
-		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmd_list);
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmd_list);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) bool __stdcall ImGui_WndProc(Context& ctx, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		auto result = ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam);
-		return result != 0;
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			auto result = ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam);
+			return result != 0;
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return false;
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_Text(Context& ctx, char const* text)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::TextUnformatted(text);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::TextUnformatted(text);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) bool __stdcall ImGui_BeginWindow(Context& ctx, char const* name, bool* p_open, int flags)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		return ImGui::Begin(name, p_open, static_cast<ImGuiWindowFlags_>(flags));
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			return ImGui::Begin(name, p_open, static_cast<ImGuiWindowFlags_>(flags));
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return false;
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_EndWindow(Context& ctx)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::End();
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::End();
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_SetNextWindowPos(Context& ctx, float x, float y, int cond)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::SetNextWindowPos(ImVec2(x, y), static_cast<ImGuiCond>(cond));
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::SetNextWindowPos(ImVec2(x, y), static_cast<ImGuiCond>(cond));
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_SetNextWindowSize(Context& ctx, float w, float h, int cond)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::SetNextWindowSize(ImVec2(w, h), static_cast<ImGuiCond>(cond));
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::SetNextWindowSize(ImVec2(w, h), static_cast<ImGuiCond>(cond));
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_SetNextWindowBgAlpha(Context& ctx, float alpha)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::SetNextWindowBgAlpha(alpha);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::SetNextWindowBgAlpha(alpha);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) bool __stdcall ImGui_Checkbox(Context& ctx, char const* label, bool* v)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		return ImGui::Checkbox(label, v);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			return ImGui::Checkbox(label, v);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return false;
+		}
 	}
 
 	__declspec(dllexport) bool __stdcall ImGui_SliderFloat(Context& ctx, char const* label, float* v, float v_min, float v_max)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		return ImGui::SliderFloat(label, v, v_min, v_max);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			return ImGui::SliderFloat(label, v, v_min, v_max);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return false;
+		}
 	}
 
 	__declspec(dllexport) bool __stdcall ImGui_Button(Context& ctx, char const* label)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		return ImGui::Button(label);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			return ImGui::Button(label);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+			return false;
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_SameLine(Context& ctx, float offset_from_start_x, float spacing)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::SameLine(offset_from_start_x, spacing);
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::SameLine(offset_from_start_x, spacing);
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 
 	__declspec(dllexport) void __stdcall ImGui_Separator(Context& ctx)
 	{
-		ImGui::SetCurrentContext(ctx.m_imgui_ctx);
-		ImGui::Separator();
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::Separator();
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
 	}
 }
