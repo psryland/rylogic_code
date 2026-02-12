@@ -93,6 +93,7 @@ namespace las
 		ModelGenerator::Cache cache{m_cpu_data};
 		m_inst.m_model = ModelGenerator::Create<Vert>(m_factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
+		m_factory.FlushToGpu(EGpuFlush::Block);
 	}
 
 	// Query the height of the ocean surface at a world position and time, without computing the full displacement or normal.
