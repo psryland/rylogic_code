@@ -63,8 +63,19 @@ ContinueOnError="ErrorAndContinue"
 SkipUnchangedFiles="true"
 />
 </Target>
+
+<!-- Copy DLL dependencies to output -->
+<Target Name="CopyDllDependencies" AfterTargets="Link">
+<Copy
+SourceFiles="$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)\imgui.dll"
+DestinationFolder="$(OutDir)"
+SkipUnchangedFiles="true"
+ContinueOnError="ErrorAndContinue"
+/>
+</Target>
+
 <PropertyGroup>
-<BuildDependsOn>CopyDataDirectory;$(BuildDependsOn)</BuildDependsOn>
+<BuildDependsOn>CopyDataDirectory;CopyDllDependencies;$(BuildDependsOn)</BuildDependsOn>
 </PropertyGroup>
 
 <!-- Targets -->
