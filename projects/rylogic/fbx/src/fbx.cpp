@@ -1661,23 +1661,18 @@ namespace pr::geometry::fbx
 	};
 }
 
+// Dll global state
+static std::mutex g_mutex;
+static std::vector<std::unique_ptr<Context>> g_contexts;
+static HINSTANCE g_instance;
+
 extern "C"
 {
-	std::mutex g_mutex;
-	std::vector<std::unique_ptr<Context>> g_contexts;
-	HINSTANCE g_instance;
-
 	// DLL entry point
 	BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD ul_reason_for_call, LPVOID)
 	{
+		(void)ul_reason_for_call;
 		g_instance = hInstance;
-		switch (ul_reason_for_call)
-		{
-			case DLL_PROCESS_ATTACH: break;
-			case DLL_PROCESS_DETACH: break;
-			case DLL_THREAD_ATTACH: break;
-			case DLL_THREAD_DETACH: break;
-		}
 		return TRUE;
 	}
 

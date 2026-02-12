@@ -77,7 +77,7 @@ namespace pr::rdr12
 		, m_heap_view(HeapCapacityView, m_gsync)
 		, m_heap_samp(HeapCapacitySamp, m_gsync)
 		, m_res_state()
-		, m_frame(rdr.d3d(), m_msaa_bb, BackBuffer::Null(), m_cmd_alloc_pool)
+		, m_frame(rdr.d3d(), m_gsync, m_cmd_alloc_pool, m_msaa_bb, BackBuffer::Null())
 		, m_diag(*this)
 		, m_frame_number()
 		, m_vsync(settings.m_vsync)

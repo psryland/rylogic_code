@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ProjectGuid>{B0A8CA06-0894-4108-B89C-C403FCB9A69A}</ProjectGuid>
+    <ProjectName>imgui</ProjectName>
+    <TargetName>imgui</TargetName>
+    <RootNamespace>pr::rdr12::imgui</RootNamespace>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)dll.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command Condition="!Exists('$(SDKPath)imgui\imgui')">dotnet-script $(SDKPath)imgui\_get.csx</Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(SDKPath)imgui\imgui
+        ;$(SDKPath)imgui\imgui\backends
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+      </PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>
+        ;d3d12.lib
+        ;dxgi.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\imgui_dll.cpp" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\imgui\imgui.h" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
