@@ -367,6 +367,7 @@
 #include "pr/view3d-12/compute/radix_sort/radix_sort.h"
 #include "pr/view3d-12/compute/spatial_partition/spatial_partition.h"
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/imgui/imgui.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
