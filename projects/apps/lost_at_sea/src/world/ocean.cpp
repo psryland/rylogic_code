@@ -39,7 +39,7 @@ namespace las
 	{
 		auto vcount = GridDim * GridDim;
 		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
-		m_cpu_data.Reset(vcount, icount, 1, sizeof(uint16_t));
+		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
 
 		// Initialise vertex data with a flat grid and ocean colour
 		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
@@ -57,8 +57,7 @@ namespace las
 			}
 		}
 
-		// Build index buffer (m_icont is already sized by Reset)
-		int idx = 0;
+		// Build index buffer
 		for (int iy = 0; iy != GridDim - 1; ++iy)
 		{
 			for (int ix = 0; ix != GridDim - 1; ++ix)
@@ -67,12 +66,12 @@ namespace las
 				auto i1 = static_cast<uint16_t>(i0 + 1);
 				auto i2 = static_cast<uint16_t>(i0 + GridDim);
 				auto i3 = static_cast<uint16_t>(i2 + 1);
-				m_cpu_data.m_icont[idx++] = i0;
-				m_cpu_data.m_icont[idx++] = i2;
-				m_cpu_data.m_icont[idx++] = i1;
-				m_cpu_data.m_icont[idx++] = i1;
-				m_cpu_data.m_icont[idx++] = i2;
-				m_cpu_data.m_icont[idx++] = i3;
+				m_cpu_data.m_icont.push_back(i0);
+				m_cpu_data.m_icont.push_back(i2);
+				m_cpu_data.m_icont.push_back(i1);
+				m_cpu_data.m_icont.push_back(i1);
+				m_cpu_data.m_icont.push_back(i2);
+				m_cpu_data.m_icont.push_back(i3);
 			}
 		}
 
