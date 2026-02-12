@@ -99,7 +99,8 @@ namespace las
 			}
 		}
 
-		// Build index buffer
+		// Build index buffer (m_icont is already sized by Reset)
+		int idx = 0;
 		for (int iy = 0; iy < GridDim - 1; ++iy)
 		{
 			for (int ix = 0; ix < GridDim - 1; ++ix)
@@ -108,14 +109,19 @@ namespace las
 				auto i1 = static_cast<uint16_t>(i0 + 1);
 				auto i2 = static_cast<uint16_t>(i0 + GridDim);
 				auto i3 = static_cast<uint16_t>(i2 + 1);
-				m_cpu_data.m_icont.push_back(i0);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i3);
+				m_cpu_data.m_icont[idx++] = i0;
+				m_cpu_data.m_icont[idx++] = i2;
+				m_cpu_data.m_icont[idx++] = i1;
+				m_cpu_data.m_icont[idx++] = i1;
+				m_cpu_data.m_icont[idx++] = i2;
+				m_cpu_data.m_icont[idx++] = i3;
 			}
 		}
+
+		// Compute bounding box from vertices
+		m_cpu_data.m_bbox = BBox::Reset();
+		for (auto const& v : m_cpu_data.m_vcont)
+			Grow(m_cpu_data.m_bbox, v.m_vert);
 
 		// Configure the nugget (created by Reset with default values)
 		auto& nugget = m_cpu_data.m_ncont[0];
