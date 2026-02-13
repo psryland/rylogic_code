@@ -1,4 +1,4 @@
-﻿//*****************************************************************************************
+//*****************************************************************************************
 // Win32 API 
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************************************************************
@@ -2576,247 +2576,240 @@ namespace pr
 		#pragma endregion
 		
 		#pragma region MessageLoop
-
-		// An interface for types that need to handle messages from the message
-		// loop before TranslateMessage is called. Typically these are dialog windows
-		// or windows with keyboard accelerators that need to call 'IsDialogMessage'
-		// or 'TranslateAccelerator'
-		struct IMessageFilter
+		namespace wingui
 		{
-			// Implementers should return true to halt processing of the message.
-			// Typically, if you're just observing messages as they go past, return false.
-			// If you're a dialog return the result of IsDialogMessage()
-			// If you're a window with accelerators, return the result of TranslateAccelerator()
-			virtual bool TranslateMessage(MSG&)
-			{
-				return false;
-			}
-		};
+			// PR_CODE_SYNC_BEGIN(SimMessageLoop)
 
-		// Base class and basic implementation of a message loop
-		struct MessageLoop :IMessageFilter
-		{
-			std::vector<IMessageFilter*> m_filters; // The collection of message filters filtering messages in this loop
-
-			MessageLoop()
-				:m_filters()
+			// An interface for types that need to handle messages from the message loop before TranslateMessage is called.
+			// Typically these are dialog windows or windows with keyboard accelerators that need to call 'IsDialogMessage'
+			// or 'TranslateAccelerator'
+			struct IMessageFilter
 			{
-				m_filters.push_back(this);
-			}
-			virtual ~MessageLoop() {}
+				virtual ~IMessageFilter() = default;
 
-			// Subclasses should replace this method
-			virtual int Run()
-			{
-				MSG msg = {};
-				for (int result; (result = ::GetMessageW(&msg, NULL, 0, 0)) != 0;)
+				// Implementers should return true to halt processing of the message.
+				// Typically, if you're just observing messages as they go past, return false.
+				// If you're a dialog return the result of IsDialogMessage()
+				// If you're a window with accelerators, return the result of TranslateAccelerator()
+				virtual bool TranslateMessage(MSG&)
 				{
-					Check(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
-					HandleMessage(msg);
-				}
-				return static_cast<int>(msg.wParam);
-			}
-
-			// Add an instance that needs to handle messages before TranslateMessage is called
-			virtual void AddMessageFilter(IMessageFilter& filter)
-			{
-				m_filters.insert(--std::end(m_filters), &filter);
-			}
-
-			// Remove a message filter from the chain of filters for this message loop
-			virtual void RemoveMessageFilter(IMessageFilter& filter)
-			{
-				m_filters.erase(std::remove(std::begin(m_filters), std::end(m_filters), &filter), std::end(m_filters));
-			}
-
-		protected:
-
-			// Pass the message to each filter. The last filter is this message loop which always handles the message.
-			void HandleMessage(MSG& msg)
-			{
-				for (auto filter : m_filters)
-					if (filter->TranslateMessage(msg))
-						break;
-			}
-
-			// The message loop is always the last filter in the chain
-			bool TranslateMessage(MSG& msg) override
-			{
-				::TranslateMessage(&msg);
-				::DispatchMessageW(&msg);
-				return true;
-			}
-		};
-
-		// Message loop that also manages and runs a priority queue of simulation loops 
-		struct SimMessageLoop :MessageLoop
-		{
-			// Notes:
-			//  - A message loop designed for simulation applications
-			//    This loop sleeps the thread until the next frame is due or until messages arrive.
-			using step_func_t = std::function<void(int64_t)>;
-
-		private:
-			union buf8
-			{
-				uint64_t u64;
-				uint8_t b[sizeof(uint64_t)];
-				void add(uint8_t v)
-				{
-					u64 <<= 8;
-					b[0] = v;
+					return false;
 				}
 			};
 
-			// A loop represents a process that should be run at a given frame rate
-			struct Loop
+			// Message loop that also manages and runs a priority queue of simulation loops 
+			struct SimMessageLoop :IMessageFilter
 			{
-				step_func_t m_step;
-				int64_t m_clock;    // The time this loop was last stepped (in ms)
-				buf8 m_avr;         // Last 8 execution times of the loop (in ms, capped at 255)
-				int m_step_rate_ms; // (Minimum) step rate
-				bool m_variable;    // Variable step rate
+				// Notes:
+				//  - A message loop designed for simulation applications
+				//    This loop sleeps the thread until the next frame is due or until messages arrive.
+				using step_func_t = std::function<void(int64_t)>;
 
-				Loop(step_func_t step, int step_rate_ms, bool variable)
-					:m_step(step)
-					,m_clock()
-					,m_avr()
-					,m_step_rate_ms(step_rate_ms)
-					,m_variable(variable)
-				{}
-				int64_t next() const
+			private:
+				union buf8
 				{
-					return m_clock + m_step_rate_ms;
-				}
-			};
-			using LoopCont = std::vector<Loop>;
-			using LoopOrder = std::vector<int>;
-
-			LoopCont m_loop;           // The loops to execute
-			LoopOrder m_order;         // A priority queue of loops. The loop at position 0 is the next to be stepped
-			int64_t  m_clock0;         // The time when 'Run' was called.
-			int64_t  m_clock;          // The last time StepLoops was called.
-			int      m_max_loop_steps; // The maximum number of loops to step before checking for messages
-
-		public:
-
-			SimMessageLoop(int max_loop_steps = 10)
-				:m_loop()
-				,m_clock0()
-				,m_clock()
-				,m_max_loop_steps(max_loop_steps)
-			{}
-
-			// Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate
-			void AddLoop(int step_rate_ms, bool variable, step_func_t step)
-			{
-				m_loop.push_back(Loop(step, step_rate_ms, variable));
-				m_order.push_back(static_cast<int>(m_loop.size()) - 1);
-			}
-
-			// Run the thread message pump while maintaining the desired loop rates
-			int Run() override
-			{
-				// Set the start time
-				m_clock0 = Clock();
-				m_clock = 0;
-
-				// Run the message pump loop
-				for (;;)
-				{
-					// Step any pending loops and get the time till the next loop to be stepped.
-					auto timeout = StepLoops();
-
-					// Pump any queued messages
-					auto exit_code = Pump(timeout);
-					if (exit_code)
-						return *exit_code;
-				}
-			}
-
-			// Pump messages. Returns null or an exit code if a WM_QUIT message was pumped
-			std::optional<int> Pump(DWORD timeout_ms = 0)
-			{
-				MSG msg = {};
-
-				// Check for messages and pump any received until
-				::MsgWaitForMultipleObjects(0, nullptr, TRUE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
-				for (int max_messages = 1000; max_messages-- != 0 && ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
-				{
-					// Exit the message pump?
-					if (msg.message == WM_QUIT)
-						return static_cast<int>(msg.wParam);
-
-					// Pump the message
-					HandleMessage(msg);
-				}
-				return std::nullopt;
-			}
-
-			// Return the running time since 'Run()' was called
-			int64_t Clock()
-			{
-				return static_cast<int64_t>(GetTickCount64()) - m_clock0;
-			}
-
-			// Call 'Step' on all loops that are pending
-			// Returns the time in milliseconds until the next loop needs to be stepped
-			DWORD StepLoops()
-			{
-				if (m_loop.empty())
-					return INFINITE;
-
-				auto now = Clock();
-				auto dt = now - m_clock;
-				m_clock = now;
-
-				// Check the StepLoops function is being called frequently enough.
-				// If not, it's probably due to a blocking windows message handler
-				for (auto const& loop : m_loop)
-				{
-					if (dt < static_cast<long long>(loop.m_step_rate_ms) * m_max_loop_steps)
-						continue;
-
-					//OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
-				}
-
-				// Step all loops that are pending
-				for (int i = 0; i != m_max_loop_steps; ++i)
-				{
-					// Sort by soonest to step
-					std::sort(m_order.begin(), m_order.end(), [&](int lhs, int rhs)
+					uint64_t u64;
+					uint8_t b[sizeof(uint64_t)];
+					void add(uint8_t v)
 					{
-						// Smaller values need to be stepped sooner
-						return m_loop[lhs].next() < m_loop[rhs].next();
-					});
+						u64 <<= 8;
+						b[0] = v;
+					}
+				};
 
-					// Get the next due to be stepped
-					auto& loop = m_loop[m_order[0]];
-					auto time_till_step = loop.next() - m_clock;
-					if (time_till_step > 0)
-						return static_cast<DWORD>(time_till_step);
+				// A loop represents a process that should be run at a given frame rate
+				struct Loop
+				{
+					step_func_t m_step; // The function to call to step the loop
+					int64_t m_clock;    // The time this loop was last stepped (in ms)
+					buf8 m_avr;         // Last 8 execution times of the loop (in ms, capped at 255)
+					int m_step_rate_ms; // (Minimum) step rate
+					bool m_variable;    // Variable step rate
 
-					// Elapsed time for the loop step, either a fixed value or the wall time since last stepped
-					auto elapsed_ms = loop.m_variable ? m_clock - loop.m_clock : loop.m_step_rate_ms;
+					Loop(step_func_t step, int step_rate_ms, bool variable)
+						:m_step(step)
+						,m_clock()
+						,m_avr()
+						,m_step_rate_ms(step_rate_ms)
+						,m_variable(variable)
+					{}
+					int64_t next() const
+					{
+						return m_clock + m_step_rate_ms;
+					}
+				};
+				using LoopCont = std::vector<Loop>;
+				using LoopOrder = std::vector<int>;
 
-					// Step the loop
-					auto t0 = Clock();
-					loop.m_step(elapsed_ms);
-					loop.m_clock += elapsed_ms;
-					loop.m_avr.add(static_cast<uint8_t>(std::min(255LL, Clock() - t0)));
+				using Filters = std::vector<IMessageFilter*>;
 
-					//if (loop.m_avr.b[0] > loop.m_step_rate_ms)
-					//	OutputDebugStringA(std::format("SimMessagePump: WARNING - long step: {}% \n", loop.m_avr.b[0] * 100.0 / loop.m_step_rate_ms).c_str());
+				LoopCont  m_loop;           // The loops to execute
+				LoopOrder m_order;          // A priority queue of loops. The loop at position 0 is the next to be stepped
+				Filters   m_filters;        // Message filters to process messages before TranslateMessage is called
+				int64_t   m_clock0;         // The time when 'Run' was called.
+				int64_t   m_clock;          // The last time StepLoops was called.
+				int       m_max_loop_steps; // The maximum number of loops to step before checking for messages
+
+			public:
+
+				SimMessageLoop(int max_loop_steps = 10)
+					:m_loop()
+					,m_order()
+					,m_filters()
+					,m_clock0()
+					,m_clock()
+					,m_max_loop_steps(max_loop_steps)
+				{
+					m_filters.push_back(this);
+				}
+				virtual ~SimMessageLoop() = default;
+
+				// Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate
+				void AddLoop(int step_rate_ms, bool variable, step_func_t step)
+				{
+					m_loop.push_back(Loop(step, step_rate_ms, variable));
+					m_order.push_back(static_cast<int>(m_loop.size()) - 1);
+				}
+				void AddLoop(double fps, bool variable, step_func_t step)
+				{
+					AddLoop(static_cast<int>(1000.0 / fps), variable, step);
 				}
 
-				// If we get here, the loops are taking too long. Return a timeout of 0 to indicate
-				// loops still need stepping. This allows the message queue still to be processed though.
-				// Loop at 'm_avr' to see the last 8 loop execution times in ms.
-				//OutputDebugStringA("SimMessagePump: WARNING - loops are staving the message queue\n");
-				return 0;
-			}
-		};
+				// Add/Remove an instance that needs to handle messages before TranslateMessage is called
+				void AddMessageFilter(IMessageFilter& filter)
+				{
+					m_filters.insert(--std::end(m_filters), &filter);
+				}
+				void RemoveMessageFilter(IMessageFilter& filter)
+				{
+					m_filters.erase(std::remove(std::begin(m_filters), std::end(m_filters), &filter), std::end(m_filters));
+				}
 
+				// Run the thread message pump while maintaining the desired loop rates
+				virtual int Run()
+				{
+					// Set the start time
+					m_clock0 = Clock();
+					m_clock = 0;
+
+					// Run the message pump loop
+					for (;;)
+					{
+						// Step any pending loops and get the time till the next loop to be stepped.
+						auto timeout = StepLoops();
+
+						// Pump any queued messages
+						auto exit_code = Pump(timeout);
+						if (exit_code)
+							return *exit_code;
+					}
+				}
+
+				// Pump messages. Returns null or an exit code if a WM_QUIT message was pumped
+				std::optional<int> Pump(DWORD timeout_ms = 0)
+				{
+					MSG msg = {};
+
+					// Check for messages and pump any received until
+					::MsgWaitForMultipleObjects(0, nullptr, TRUE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
+					for (int max_messages = 1000; max_messages-- != 0 && ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
+					{
+						// Exit the message pump?
+						if (msg.message == WM_QUIT)
+							return static_cast<int>(msg.wParam);
+
+						// Pump the message
+						HandleMessage(msg);
+					}
+					return std::nullopt;
+				}
+
+				// Return the running time since 'Run()' was called
+				int64_t Clock()
+				{
+					return static_cast<int64_t>(GetTickCount64()) - m_clock0;
+				}
+
+				// Call 'Step' on all loops that are pending
+				// Returns the time in milliseconds until the next loop needs to be stepped
+				DWORD StepLoops()
+				{
+					if (m_loop.empty())
+						return INFINITE;
+
+					auto now = Clock();
+					auto dt = now - m_clock;
+					m_clock = now;
+
+					// Check the StepLoops function is being called frequently enough.
+					// If not, it's probably due to a blocking windows message handler
+					for (auto const& loop : m_loop)
+					{
+						if (dt < static_cast<long long>(loop.m_step_rate_ms) * m_max_loop_steps)
+							continue;
+
+						//OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
+					}
+
+					// Step all loops that are pending
+					for (int i = 0; i != m_max_loop_steps; ++i)
+					{
+						// Sort by soonest to step
+						std::sort(m_order.begin(), m_order.end(), [&](int lhs, int rhs)
+						{
+							// Smaller values need to be stepped sooner
+							return m_loop[lhs].next() < m_loop[rhs].next();
+						});
+
+						// Get the next due to be stepped
+						auto& loop = m_loop[m_order[0]];
+						auto time_till_step = loop.next() - m_clock;
+						if (time_till_step > 0)
+							return static_cast<DWORD>(time_till_step);
+
+						// Elapsed time for the loop step, either a fixed value or the wall time since last stepped
+						auto elapsed_ms = loop.m_variable ? m_clock - loop.m_clock : loop.m_step_rate_ms;
+
+						// Step the loop
+						auto t0 = Clock();
+						loop.m_step(elapsed_ms);
+						loop.m_clock += elapsed_ms;
+						loop.m_avr.add(static_cast<uint8_t>(std::min(255LL, Clock() - t0)));
+
+						//if (loop.m_avr.b[0] > loop.m_step_rate_ms)
+						//	OutputDebugStringA(std::format("SimMessagePump: WARNING - long step: {}% \n", loop.m_avr.b[0] * 100.0 / loop.m_step_rate_ms).c_str());
+					}
+
+					// If we get here, the loops are taking too long. Return a timeout of 0 to indicate
+					// loops still need stepping. This allows the message queue still to be processed though.
+					// Loop at 'm_avr' to see the last 8 loop execution times in ms.
+					//OutputDebugStringA("SimMessagePump: WARNING - loops are staving the message queue\n");
+					return 0;
+				}
+
+			protected:
+
+				// Pass the message to each filter. The last filter is this message loop which always handles the message.
+				void HandleMessage(MSG& msg)
+				{
+					for (auto filter : m_filters)
+						if (filter->TranslateMessage(msg))
+							break;
+				}
+
+				// The message loop is always the last filter in the chain
+				virtual bool TranslateMessage(MSG& msg)
+				{
+					::TranslateMessage(&msg);
+					::DispatchMessageW(&msg);
+					return true;
+				}
+			};
+
+			// PR_CODE_SYNC_END()
+		}
+		using MessageLoop = wingui::SimMessageLoop;
+		using IMessageLoopFilter = wingui::IMessageFilter;
 		#pragma endregion
 
 		#pragma region WndRef
@@ -6108,7 +6101,7 @@ namespace pr
 
 		#pragma region Form
 		// A common, non-template, base class for all forms
-		struct Form :Control ,IMessageFilter
+		struct Form :Control, IMessageLoopFilter
 		{
 		protected:
 			// Notes:

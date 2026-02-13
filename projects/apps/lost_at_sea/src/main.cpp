@@ -138,8 +138,8 @@ namespace las
 		::timeBeginPeriod(1);
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddStepContext("step", [this](double s) { m_main->Step(s); }, 60.0f, true);
-		m_msg_loop.AddStepContext("render", [this](double) { m_main->DoRender(true); }, 1000.0f, false);
+		m_msg_loop.AddLoop(60.0, false, [this](int64_t ms) { m_main->Step(ms * 0.001); });
+		m_msg_loop.AddLoop(60.0, true, [this](int64_t) { m_main->DoRender(true); });
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)

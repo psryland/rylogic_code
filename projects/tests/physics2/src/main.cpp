@@ -117,7 +117,7 @@ struct MainUI :Form
 		for (auto& body : m_body)
 			View3D_WindowAddObject(m_view3d.m_win, body.m_gfx);
 
-		Render(0);
+		Render();
 
 		View3D_ResetView(m_view3d.m_win, view3d::Vec4{+0.0f,0,-1,0}, view3d::Vec4{0,1,0,0}, 0, TRUE, TRUE);
 	}
@@ -181,7 +181,7 @@ struct MainUI :Form
 	}
 
 	// Render a frame
-	void Render(double)
+	void Render()
 	{
 		for (auto& body : m_body)
 			body.UpdateGfx();
@@ -227,9 +227,9 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 		MainUI main;
 		main.Show();
 
-		SimMsgLoop loop;
-		loop.AddStepContext("step", std::bind(&MainUI::Step, &main, std::placeholders::_1), 100.0f, true);
-		loop.AddStepContext("rdr" , std::bind(&MainUI::Render, &main, std::placeholders::_1), 60.0f, true);
+		MessageLoop loop;
+		loop.AddLoop(100.0, false, [&](int64_t ms) { main.Step(ms * 0.001); });
+		loop.AddLoop(60.0, true, [&](int64_t) { main.Render(); });
 		loop.AddMessageFilter(main);
 		return loop.Run();
 	}

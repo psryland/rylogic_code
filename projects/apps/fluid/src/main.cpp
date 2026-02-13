@@ -74,7 +74,7 @@ struct Main :Form, IProbeActions
 
 	Probe m_probe;
 	demo_scenes_t m_demo;
-	SimMessageLoop m_loop;
+	MessageLoop m_loop;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 	particles_t m_cpu_particles;

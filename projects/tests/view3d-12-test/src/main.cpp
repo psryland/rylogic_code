@@ -344,7 +344,7 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		Main main(hinstance);
 		main.Show();
 
-		SimMessageLoop loop;
+		MessageLoop loop;
 		loop.AddMessageFilter(main);
 		loop.AddLoop(10, true, [&main](auto dt) { main.Step(dt * 0.001); });
 		return loop.Run();

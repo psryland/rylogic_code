@@ -44,9 +44,9 @@ namespace las
 	};
 
 	// Main app window
-	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>
+	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>
 	{
-		using base = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
+		using base = pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>;
 		static wchar_t const* AppTitle() { return L"Lost at Sea"; }
 
 		MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);

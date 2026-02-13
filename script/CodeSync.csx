@@ -3,7 +3,7 @@
 #load "Tools.csx"
 #nullable enable
 
-// Use: dotnet-script .\CodeSync <directory_root> [--tab-size 4]
+// Use: dotnet-script CodeSync.csx <dir1> [dir2] [...] [--tab-size N]
 
 // Notes:
 //  - This script finds blocks of code within comment sections like this
@@ -47,14 +47,18 @@ public class CodeSync
 	// Tab size in spaces (1 tab == this many spaces)
 	private int m_tab_size;
 
+	// Whether to print diagnostic output
+	private bool m_verbose;
+
 	// A source of truth block. Content lines have indentation stored as a column
 	// count (relative to the BEGIN line) plus the non-whitespace remainder.
 	private record TruthLine(int IndentColumns, string Content);
 	private record TruthBlock(string Name, List<TruthLine> Lines, string FilePath, int LineNumber);
 
-	public CodeSync(int tab_size = 4)
+	public CodeSync(int tab_size = 4, bool verbose = false)
 	{
 		m_tab_size = tab_size;
+		m_verbose = verbose;
 	}
 
 	// Measure the column width of leading whitespace, where '\t' == m_tab_size spaces
@@ -118,23 +122,33 @@ public class CodeSync
 		return MakeIndent(base_columns + tl.IndentColumns, use_tabs) + tl.Content;
 	}
 
-	// Synchronise code blocks
-	public void Run(string root_directory)
+	// Synchronise code blocks across multiple directory trees
+	public void Run(IEnumerable<string> directories)
 	{
-		if (!Directory.Exists(root_directory))
-			throw new Exception($"Directory '{root_directory}' does not exist.");
+		var dirs = directories.ToList();
+		foreach (var dir in dirs)
+		{
+			if (!Directory.Exists(dir))
+				throw new Exception($"Directory '{dir}' does not exist.");
+		}
 
-		Console.WriteLine($"CodeSync: Scanning '{root_directory}'...");
+		if (m_verbose)
+			Console.WriteLine($"CodeSync: Scanning {string.Join(", ", dirs.Select(d => $"'{d}'"))}...");
 
-		// Find all the source of truth blocks in the code
-		FindTruthBlocks(root_directory);
+		// Find all the source of truth blocks in all directories
+		foreach (var dir in dirs)
+			FindTruthBlocks(dir);
 
-		Console.WriteLine($"CodeSync: Found {m_truths.Count} truth block(s): {string.Join(", ", m_truths.Keys)}");
+		if (m_verbose)
+			Console.WriteLine($"CodeSync: Found {m_truths.Count} truth block(s): {string.Join(", ", m_truths.Keys)}");
 
 		// Now replace any ref blocks
-		var replaced = ReplaceRefBlocks(root_directory);
+		int replaced = 0;
+		foreach (var dir in dirs)
+			replaced += ReplaceRefBlocks(dir);
 
-		Console.WriteLine($"CodeSync: Updated {replaced} file(s).");
+		if (replaced > 0 || m_verbose)
+			Console.WriteLine($"CodeSync: Updated {replaced} file(s).");
 	}
 
 	// Enumerate matching files in the directory tree
@@ -313,7 +327,8 @@ public class CodeSync
 
 					lines = new_lines.ToArray();
 					modified = true;
-					Console.WriteLine($"  Updated '{name}' in {filepath}");
+					if (m_verbose)
+						Console.WriteLine($"  Updated '{name}' in {filepath}");
 				}
 			}
 
@@ -384,16 +399,25 @@ public class CodeSync
 
 try
 {
-	var root_directory = "";
+	var directories = new List<string>();
 	int tab_size = 4;
+	string? stamp_path = null;
+	int stamp_max_age_sec = 30;
+	bool verbose = false;
 
 	// Parse command line arguments
 	for (int i = 0; i < Args.Count; ++i)
 	{
 		if (Args[i] == "--tab-size" && i + 1 < Args.Count)
 			tab_size = int.Parse(Args[++i]);
-		else if (root_directory.Length == 0)
-			root_directory = Args[i];
+		else if (Args[i] == "--stamp" && i + 1 < Args.Count)
+			stamp_path = Args[++i];
+		else if (Args[i] == "--stamp-max-age" && i + 1 < Args.Count)
+			stamp_max_age_sec = int.Parse(Args[++i]);
+		else if (Args[i] == "--verbose" || Args[i] == "-v")
+			verbose = true;
+		else
+			directories.Add(Args[i]);
 	}
 
 	// Testing
@@ -417,19 +441,55 @@ try
 				CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
 		}
 
-		root_directory = dest_dir;
+		directories = [dest_dir];
 	}
 	#endif
 
-	if (root_directory.Length == 0)
+	if (directories.Count == 0)
 	{
-		Console.Error.WriteLine("Usage: dotnet-script CodeSync.csx <directory_root> [--tab-size N]");
+		Console.Error.WriteLine("Usage: dotnet-script CodeSync.csx <dir1> [dir2] [...] [--tab-size N] [--stamp <path>] [--stamp-max-age <seconds>] [--verbose|-v]");
+		Environment.Exit(1);
 		return;
 	}
 
-	new CodeSync(tab_size).Run(root_directory);
+	// Normalise paths (handles trailing dots, slashes, etc.)
+	directories = directories.Select(d => Path.GetFullPath(d)).ToList();
+
+	// Use a named mutex to serialize parallel invocations (e.g. from MSBuild parallel builds)
+	using var mutex = new Mutex(false, @"Global\RylogicCodeSync");
+	mutex.WaitOne();
+	try
+	{
+		// If a stamp file is specified, check if a recent stamp exists (another build already ran CodeSync)
+		if (stamp_path != null && File.Exists(stamp_path))
+		{
+			var age = DateTime.Now - File.GetLastWriteTime(stamp_path);
+			if (age.TotalSeconds < stamp_max_age_sec)
+			{
+				if (verbose)
+					Console.WriteLine("CodeSync: Skipped (recent stamp exists).");
+				return;
+			}
+		}
+
+		new CodeSync(tab_size, verbose).Run(directories);
+
+		// Write the stamp file after a successful run
+		if (stamp_path != null)
+		{
+			var stamp_dir = Path.GetDirectoryName(stamp_path);
+			if (stamp_dir != null && !Directory.Exists(stamp_dir))
+				Directory.CreateDirectory(stamp_dir);
+			File.WriteAllText(stamp_path, DateTime.Now.ToString("o"));
+		}
+	}
+	finally
+	{
+		mutex.ReleaseMutex();
+	}
 }
 catch (Exception ex)
 {
-	Console.Error.WriteLine(ex.Message);
+	Console.Error.WriteLine($"CodeSync error: {ex.Message}");
+	Environment.Exit(1);
 }

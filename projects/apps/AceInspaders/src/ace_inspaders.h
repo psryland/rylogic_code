@@ -277,9 +277,9 @@ namespace ace
 	};
 
 	// Derive a GUI class from pr::app::MainGUI
-	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>
+	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>
 	{
-		using base_type = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
+		using base_type = pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>;
 
 		static int const Scale = 2;
 		static wchar_t const* AppTitle() { return L"Ace Inspaders"; };
@@ -287,17 +287,11 @@ namespace ace
 			:base_type(Params()
 			.title(AppTitle())
 			.padding(0)
-			.wh(Scale * pr::SpaceInvaders::ScreenDimX, Scale * pr::SpaceInvaders::ScreenDimY, true)
+			.wh(Scale* pr::SpaceInvaders::ScreenDimX, Scale* pr::SpaceInvaders::ScreenDimY, true)
 			.default_mouse_navigation(false))
 		{
-			m_msg_loop.AddStepContext("render", [this](double)
-			{
-				m_main->DoRender(true);
-			}, 60.0f, false);
-			m_msg_loop.AddStepContext("step", [this](double s)
-			{
-				m_main->Step(s);
-			}, 60.0f, true);
+			m_msg_loop.AddLoop(60.0, false, [this](int64_t ms) { m_main->Step(ms * 0.001); });
+			m_msg_loop.AddLoop(60.0, true, [this](int64_t) { m_main->DoRender(true); });
 		}
 	};
 
