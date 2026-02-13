@@ -16,6 +16,7 @@ namespace las
 		:m_waves()
 		,m_inst()
 		,m_cpu_data()
+		,m_grid_origin(v4::Origin())
 		,m_dirty(false)
 	{
 		InitDefaultWaves();
@@ -150,33 +151,44 @@ namespace las
 	// Simulation step: recompute CPU vertex positions for the current time and camera position.
 	void Ocean::Update(float time, v4 camera_world_pos)
 	{
-		// This only modifies simulation state (m_cpu_verts), not GPU resources.
+		// Vertices are computed in local grid space (centred on the grid origin).
+		// The instance transform (m_i2w) handles the camera-relative offset.
 		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
 
-		for (int iy = 0; iy < GridDim; ++iy)
+		// The grid origin in world space (snapped to camera XY, ocean surface at Z=0)
+		auto grid_origin = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
+
+		for (int iy = 0; iy != GridDim; ++iy)
 		{
-			for (int ix = 0; ix < GridDim; ++ix)
+			for (int ix = 0; ix != GridDim; ++ix)
 			{
 				auto idx = iy * GridDim + ix;
-				auto wx = camera_world_pos.x + (ix - GridDim / 2) * cell_size;
-				auto wy = camera_world_pos.y + (iy - GridDim / 2) * cell_size;
+
+				// Local grid position (relative to grid centre)
+				auto lx = (ix - GridDim / 2) * cell_size;
+				auto ly = (iy - GridDim / 2) * cell_size;
+
+				// World position for wave phase computation
+				auto wx = grid_origin.x + lx;
+				auto wy = grid_origin.y + ly;
 
 				auto displaced = DisplacedPosition(wx, wy, time);
 				auto normal = NormalAt(wx, wy, time);
 
-				// Store in render space (camera at origin)
+				// Store in local grid space (displacement relative to grid vertex position)
 				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = displaced - camera_world_pos;
-				v.m_vert.w = 1.0f;
+				v.m_vert = v4(lx + (displaced.x - wx), ly + (displaced.y - wy), displaced.z, 1.0f);
 				v.m_norm = normal;
-				// m_diff and m_tex0 are set once in BuildMesh
 			}
 		}
+
+		// The instance transform places the grid at the camera position (camera-relative rendering)
+		m_grid_origin = grid_origin;
 		m_dirty = true;
 	}
 
 	// Rendering: upload dirty verts to GPU and add to the scene.
-	void Ocean::AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
+	void Ocean::AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
 	{
 		if (!m_inst.m_model)
 			return;
@@ -192,8 +204,8 @@ namespace las
 			m_dirty = false;
 		}
 
-		// Add the instance to the scene for rendering
-		m_inst.m_i2w = m4x4::Identity();
+		// Camera-relative instance transform: grid origin minus camera position
+		m_inst.m_i2w = m4x4::Translation(m_grid_origin - camera_world_pos);
 		scene.AddInstance(m_inst);
 	}
 }

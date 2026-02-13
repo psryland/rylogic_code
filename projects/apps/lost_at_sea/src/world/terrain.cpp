@@ -11,6 +11,8 @@ namespace las
 		:m_height_field(&hf)
 		,m_inst()
 		,m_cpu_data()
+		,m_grid_origin(v4(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0, 1))
+		,m_cell_size(2.0f * GridExtent / (GridDim - 1))
 		,m_dirty(false)
 	{
 		BuildMesh(rdr);
@@ -80,20 +82,41 @@ namespace las
 
 	void Terrain::Update(v4 camera_world_pos)
 	{
-		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
+		// Snap the grid origin to cell boundaries so that the grid doesn't jitter
+		auto snapped = v4(
+			std::round(camera_world_pos.x / m_cell_size) * m_cell_size,
+			std::round(camera_world_pos.y / m_cell_size) * m_cell_size,
+			0, 1);
 
-		for (int iy = 0; iy < GridDim; ++iy)
+		// Only rebuild vertices when the grid origin has moved to a new cell
+		if (snapped.x == m_grid_origin.x && snapped.y == m_grid_origin.y)
+			return;
+
+		m_grid_origin = snapped;
+		RebuildVertices();
+	}
+
+	void Terrain::RebuildVertices()
+	{
+		for (int iy = 0; iy != GridDim; ++iy)
 		{
-			for (int ix = 0; ix < GridDim; ++ix)
+			for (int ix = 0; ix != GridDim; ++ix)
 			{
 				auto idx = iy * GridDim + ix;
-				auto wx = camera_world_pos.x + (ix - GridDim / 2) * cell_size;
-				auto wy = camera_world_pos.y + (iy - GridDim / 2) * cell_size;
+
+				// Local grid position (relative to grid centre)
+				auto lx = (ix - GridDim / 2) * m_cell_size;
+				auto ly = (iy - GridDim / 2) * m_cell_size;
+
+				// World position for height field lookup
+				auto wx = m_grid_origin.x + lx;
+				auto wy = m_grid_origin.y + ly;
 				auto h = m_height_field->HeightAt(wx, wy);
 				auto normal = m_height_field->NormalAt(wx, wy);
 
+				// Store vertex in local grid space
 				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4(wx - camera_world_pos.x, wy - camera_world_pos.y, h, 1.0f);
+				v.m_vert = v4(lx, ly, h, 1.0f);
 				v.m_norm = normal;
 				v.m_diff = TerrainColour(h, normal.z);
 			}
@@ -101,7 +124,7 @@ namespace las
 		m_dirty = true;
 	}
 
-	void Terrain::AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
+	void Terrain::AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
 	{
 		if (!m_inst.m_model)
 			return;
@@ -115,7 +138,8 @@ namespace las
 			m_dirty = false;
 		}
 
-		m_inst.m_i2w = m4x4::Identity();
+		// Camera-relative instance transform
+		m_inst.m_i2w = m4x4::Translation(m_grid_origin - camera_world_pos);
 		scene.AddInstance(m_inst);
 	}
 

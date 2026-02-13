@@ -27,19 +27,22 @@ namespace las
 		Instance m_inst;
 
 		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
+		v4 m_grid_origin;    // World-space position of the grid centre (snapped to cell boundaries)
+		float m_cell_size;   // Grid cell size in world units
 		bool m_dirty;
 
 		explicit Terrain(Renderer& rdr, HeightField const& hf);
 
-		// Simulation: recompute terrain vertices around the camera
+		// Simulation: recompute terrain vertices when the camera moves far enough to re-centre the grid
 		void Update(v4 camera_world_pos);
 
 		// Rendering: upload dirty verts to GPU and add to scene
-		void AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
+		void AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
 
 	private:
 
 		static Colour TerrainColour(float height, float flatness);
 		void BuildMesh(Renderer& rdr);
+		void RebuildVertices();
 	};
 }

@@ -44,6 +44,7 @@ namespace las
 
 		// CPU-side vertex data (simulation writes here, render reads from here)
 		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
+		v4 m_grid_origin;  // World-space position of the grid centre
 		bool m_dirty; // True when CPU verts have been updated but not yet uploaded to GPU
 
 		explicit Ocean(Renderer& rdr);
@@ -62,7 +63,7 @@ namespace las
 		void Update(float time, v4 camera_world_pos);
 
 		// Rendering: upload dirty verts to GPU and add to the scene.
-		void AddToScene(Scene& scene, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
+		void AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
 
 	private:
 

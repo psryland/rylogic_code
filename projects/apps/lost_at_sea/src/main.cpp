@@ -48,6 +48,7 @@ namespace las
 	{
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
+
 		// WASD movement: move the camera world position (X=forward, Y=right, Z=up)
 		auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
 		if (KeyDown('W')) m_camera_world_pos.x += speed * dt;
@@ -126,8 +127,8 @@ namespace las
 	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
 	{
 		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, args.m_cmd_list, args.m_upload);
-		//m_terrain.AddToScene(scene, args.m_cmd_list, args.m_upload);
+		m_ocean.AddToScene(scene, m_camera_world_pos, args.m_cmd_list, args.m_upload);
+		m_terrain.AddToScene(scene, m_camera_world_pos, args.m_cmd_list, args.m_upload);
 	}
 
 	MainUI::MainUI(wchar_t const*, int)
