@@ -46,24 +46,25 @@ namespace pr
 			return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
 		}
 
-		// Convert a command line string in to argv format, then parse it
+		// Convert a command line string in to argv format by inserting '\0' at delimiters
 		template <typename Char> requires (std::is_same_v<Char, char> || std::is_same_v<Char, wchar_t>)
-		inline std::vector<Char const*> Tokenize(std::basic_string_view<Char> str)
+		inline std::vector<Char const*> Tokenize(Char* str, size_t len)
 		{
 			std::vector<Char const*> argv;
 
-			auto s = str.data();
-			auto e = s + str.size();
-			auto is_delim = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\v'; };
+			auto s = str;
+			auto e = s + len;
+			auto is_delim = [](Char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\v'; };
 			for (; s != e; s += int(s != e))
 			{
 				if (*s == '\"' || *s == '\'')
 				{
-					argv.push_back(s);
+					auto quote = *s;
+					argv.push_back(s + 1);
 
-					auto quote = *s++;
+					++s;
 					for (; s != e && *s != quote; ++s) {}
-					if (s != e) ++s; // Skip closing quote
+					if (s != e) *s = '\0'; // Null-terminate inside the closing quote
 					continue;
 				}
 				if (!is_delim(*s))
@@ -71,6 +72,7 @@ namespace pr
 					argv.push_back(s);
 
 					for (; s != e && !is_delim(*s); ++s) {}
+					if (s != e) *s = '\0'; // Null-terminate at the delimiter
 					continue;
 				}
 			}
@@ -202,7 +204,8 @@ namespace pr
 			: arg0()
 			, args()
 		{
-			auto argv = cmdline::Tokenize(command_line);
+			auto buf = std::string(command_line);
+			auto argv = cmdline::Tokenize(buf.data(), buf.size());
 			*this = CmdLine(int(argv.size()), argv.data());
 		}
 
@@ -314,7 +317,8 @@ namespace pr
 	template <typename Char = char>
 	inline bool EnumCommandLine(Char const* cmd_line, cmdline::IOptionReceiver<Char>& receiver)
 	{
-		auto argv = cmdline::Tokenize(cmd_line);
+		auto buf = std::basic_string<Char>(cmd_line);
+		auto argv = cmdline::Tokenize(buf.data(), buf.size());
 		return EnumCommandLine(int(argv.size()), argv.data(), receiver);
 	}
 

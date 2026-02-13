@@ -40,6 +40,15 @@
     <Filter Include="src\commands\open_vs">
       <UniqueIdentifier>{ed788fbf-535a-4fd1-ab03-adb0b9b086d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands\screenshot">
+      <UniqueIdentifier>{f8a2c3d1-7b4e-4f9a-b6c5-2d1e3f4a5b6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\send_keys">
+      <UniqueIdentifier>{a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\send_mouse">
+      <UniqueIdentifier>{b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\commands\shell_file_op">
       <UniqueIdentifier>{d9ef9f94-b1d2-44d4-871b-1ab8e3e8d6f6}</UniqueIdentifier>
     </Filter>
@@ -55,6 +64,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClInclude Include="src\commands\commands.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="src\commands\process_util.h">
       <Filter>src\commands</Filter>
     </ClInclude>
   </ItemGroup>
@@ -94,6 +106,15 @@
     </ClCompile>
     <ClCompile Include="src\commands\new_lines\new_lines.cpp">
       <Filter>src\commands\new_lines</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\screenshot\screenshot.cpp">
+      <Filter>src\commands\screenshot</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\send_keys\send_keys.cpp">
+      <Filter>src\commands\send_keys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\send_mouse\send_mouse.cpp">
+      <Filter>src\commands\send_mouse</Filter>
     </ClCompile>
     <ClCompile Include="src\commands\wait\wait.cpp">
       <Filter>src\commands\wait</Filter>

@@ -48,6 +48,7 @@ namespace cex
 		}
 		int Run(pr::CmdLine const& args)
 		{
+			(void)args;
 			throw std::runtime_error("Needs debugging, this currently deletes the source dll!");
 #if 0
 

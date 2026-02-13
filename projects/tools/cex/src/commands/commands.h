@@ -22,6 +22,9 @@ namespace cex
 	x("lwr", "Convert a string to lower case", Lower)\
 	x("msgbox", "Display a message box", MsgBox)\
 	x("newlines", "Add or remove new lines from a text file", NewLines)\
+	x("screenshot", "Capture visible windows of a process to PNG", Screenshot)\
+	x("send_keys", "Send key presses to a window", SendKeys)\
+	x("send_mouse", "Send mouse events to a window", SendMouse)\
 	x("wait", "Wait for a specified length of time", Wait)
 
 	// Forward declare command functions

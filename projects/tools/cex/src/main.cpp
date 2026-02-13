@@ -219,7 +219,10 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 	try
 	{
 		//MessageBox(0, "Paws'd", "Cex", MB_OK);
-		CmdLine cmd_line(Narrow(lpCmdLine));
+
+		// lpCmdLine doesn't include the program name, but CmdLine expects argv[0] to be the exe path
+		auto cl = std::format("{} {}", win32::ExePath().string(), Narrow(lpCmdLine));
+		CmdLine cmd_line(cl);
 
 		cex::Main m;
 		return m.Run(cmd_line);

@@ -44,10 +44,14 @@
     <ClCompile Include="src\commands\lower\lower.cpp" />
     <ClCompile Include="src\commands\msg_box\msg_box.cpp" />
     <ClCompile Include="src\commands\new_lines\new_lines.cpp" />
+    <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
+    <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
+    <ClCompile Include="src\commands\send_mouse\send_mouse.cpp" />
     <ClCompile Include="src\commands\open_vs\open_vs.cpp" />
     <ClCompile Include="src\commands\shell_file_op\shell_file_op.cpp" />
     <ClCompile Include="src\commands\wait\wait.cpp" />
     <ClInclude Include="src\commands\commands.h" />
+    <ClInclude Include="src\commands\process_util.h" />
     <ClInclude Include="src\forward.h" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
