@@ -34,38 +34,88 @@ namespace las
 		};
 	}
 
-	// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
+	// Compute the radius of a ring, blending from logarithmic spacing (camera near surface)
+	// to linear spacing (camera far above). At low height, logarithmic spacing makes nearby
+	// triangles small and distant triangles large, matching perspective foreshortening. As the
+	// camera rises, perspective flattens and linear spacing produces more uniform screen-space
+	// triangle sizes.
+	static float RingRadius(int ring, float camera_height)
+	{
+		auto t = static_cast<float>(ring) / (Ocean::NumRings - 1);
+
+		// Logarithmic: r = Inner * exp(log(Outer/Inner) * t)
+		auto log_ratio = std::log(Ocean::OuterRadius / Ocean::InnerRadius);
+		auto r_log = Ocean::InnerRadius * std::exp(log_ratio * t);
+
+		// Linear: r = Inner + (Outer - Inner) * t
+		auto r_lin = Ocean::InnerRadius + (Ocean::OuterRadius - Ocean::InnerRadius) * t;
+
+		// Blend: 0 = fully logarithmic (near surface), 1 = fully linear (high altitude)
+		// Transition height is roughly the outer radius — at that height, the whole mesh
+		// subtends a similar angle regardless of ring distance.
+		auto h = std::abs(camera_height);
+		auto blend = std::min(h / Ocean::OuterRadius, 1.0f);
+
+		return r_log + blend * (r_lin - r_log);
+	}
+
+	// Build a radial mesh with logarithmically spaced rings. Vertex density decreases
+	// with distance so triangles appear approximately the same size on screen.
 	void Ocean::BuildMesh(Renderer& rdr)
 	{
-		auto vcount = GridDim * GridDim;
-		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
+		// Vertex layout: centre vertex (index 0) + NumRings * NumSegments ring vertices
+		auto vcount = 1 + NumRings * NumSegments;
 		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
 
-		// Initialise vertex data with a flat grid and ocean colour
-		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
-		for (int iy = 0; iy < GridDim; ++iy)
+		// Centre vertex
 		{
-			for (int ix = 0; ix < GridDim; ++ix)
+			auto& v = m_cpu_data.m_vcont[0];
+			v.m_vert = v4(0, 0, 0, 1);
+			v.m_diff = Colour(0.06f, 0.25f, 0.50f, 1.0f);
+			v.m_norm = v4(0, 0, 1, 0);
+			v.m_tex0 = v2(0.5f, 0.5f);
+			v.m_idx0 = iv2::Zero();
+		}
+
+		// Ring vertices
+		for (int ring = 0; ring != NumRings; ++ring)
+		{
+			auto t = static_cast<float>(ring) / (NumRings - 1);
+			auto r = RingRadius(ring, 0.0f);
+
+			for (int seg = 0; seg != NumSegments; ++seg)
 			{
-				auto idx = iy * GridDim + ix;
+				auto angle = maths::tauf * seg / NumSegments;
+				auto idx = 1 + ring * NumSegments + seg;
 				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4((ix - GridDim / 2) * cell_size, (iy - GridDim / 2) * cell_size, 0, 1);
-				v.m_diff = Colour(0.06f, 0.25f, 0.50f, 1.0f); // Ocean blue
+				v.m_vert = v4(r * std::cos(angle), r * std::sin(angle), 0, 1);
+				v.m_diff = Colour(0.06f, 0.25f, 0.50f, 1.0f);
 				v.m_norm = v4(0, 0, 1, 0);
-				v.m_tex0 = v2(float(ix) / (GridDim - 1), float(iy) / (GridDim - 1));
+				v.m_tex0 = v2(0.5f + 0.5f * t * std::cos(angle), 0.5f + 0.5f * t * std::sin(angle));
 				v.m_idx0 = iv2::Zero();
 			}
 		}
 
-		// Build index buffer
-		for (int iy = 0; iy != GridDim - 1; ++iy)
+		// Index buffer: triangle fan from centre to first ring
+		for (int seg = 0; seg != NumSegments; ++seg)
 		{
-			for (int ix = 0; ix != GridDim - 1; ++ix)
+			auto s0 = static_cast<uint16_t>(1 + seg);
+			auto s1 = static_cast<uint16_t>(1 + (seg + 1) % NumSegments);
+			m_cpu_data.m_icont.push_back(0);  // centre
+			m_cpu_data.m_icont.push_back(s0);
+			m_cpu_data.m_icont.push_back(s1);
+		}
+
+		// Quad strips between consecutive rings
+		for (int ring = 0; ring != NumRings - 1; ++ring)
+		{
+			for (int seg = 0; seg != NumSegments; ++seg)
 			{
-				auto i0 = static_cast<uint16_t>(iy * GridDim + ix);
-				auto i1 = static_cast<uint16_t>(i0 + 1);
-				auto i2 = static_cast<uint16_t>(i0 + GridDim);
-				auto i3 = static_cast<uint16_t>(i2 + 1);
+				auto next_seg = (seg + 1) % NumSegments;
+				auto i0 = static_cast<uint16_t>(1 + ring * NumSegments + seg);
+				auto i1 = static_cast<uint16_t>(1 + ring * NumSegments + next_seg);
+				auto i2 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + seg);
+				auto i3 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + next_seg);
 				m_cpu_data.m_icont.push_back(i0);
 				m_cpu_data.m_icont.push_back(i2);
 				m_cpu_data.m_icont.push_back(i1);
@@ -80,16 +130,16 @@ namespace las
 		for (auto const& v : m_cpu_data.m_vcont)
 			Grow(m_cpu_data.m_bbox, v.m_vert);
 
-		// Configure the nugget (created by Reset with default values)
+		// Configure the nugget
 		auto& nugget = m_cpu_data.m_ncont[0];
 		nugget.m_topo = ETopo::TriList;
 		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
-		nugget.m_irange = rdr12::Range(0, icount);
+		nugget.m_irange = rdr12::Range(0, static_cast<int>(m_cpu_data.m_icont.size()));
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
-		
+
 		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{m_cpu_data};
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
@@ -151,38 +201,44 @@ namespace las
 	// Simulation step: recompute CPU vertex positions for the current time and camera position.
 	void Ocean::Update(float time, v4 camera_world_pos)
 	{
-		// Vertices are computed in local grid space (centred on the grid origin).
-		// The instance transform (m_i2w) handles the camera-relative offset.
-		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
-
-		// The grid origin in world space (snapped to camera XY, ocean surface at Z=0)
+		// The mesh is centred on the camera (grid_origin = camera XY, Z=0).
+		// Vertices are in local space; the instance transform handles camera-relative offset.
 		auto grid_origin = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
 
-		for (int iy = 0; iy != GridDim; ++iy)
+		// Centre vertex
 		{
-			for (int ix = 0; ix != GridDim; ++ix)
+			auto displaced = DisplacedPosition(grid_origin.x, grid_origin.y, time);
+			auto normal = NormalAt(grid_origin.x, grid_origin.y, time);
+			auto& v = m_cpu_data.m_vcont[0];
+			v.m_vert = v4(displaced.x - grid_origin.x, displaced.y - grid_origin.y, displaced.z, 1.0f);
+			v.m_norm = normal;
+		}
+
+		// Ring vertices
+		auto cam_height = camera_world_pos.z;
+		for (int ring = 0; ring != NumRings; ++ring)
+		{
+			auto r = RingRadius(ring, cam_height);
+
+			for (int seg = 0; seg != NumSegments; ++seg)
 			{
-				auto idx = iy * GridDim + ix;
+				auto angle = maths::tauf * seg / NumSegments;
+				auto lx = r * std::cos(angle);
+				auto ly = r * std::sin(angle);
 
-				// Local grid position (relative to grid centre)
-				auto lx = (ix - GridDim / 2) * cell_size;
-				auto ly = (iy - GridDim / 2) * cell_size;
-
-				// World position for wave phase computation
 				auto wx = grid_origin.x + lx;
 				auto wy = grid_origin.y + ly;
 
 				auto displaced = DisplacedPosition(wx, wy, time);
 				auto normal = NormalAt(wx, wy, time);
 
-				// Store in local grid space (displacement relative to grid vertex position)
+				auto idx = 1 + ring * NumSegments + seg;
 				auto& v = m_cpu_data.m_vcont[idx];
 				v.m_vert = v4(lx + (displaced.x - wx), ly + (displaced.y - wy), displaced.z, 1.0f);
 				v.m_norm = normal;
 			}
 		}
 
-		// The instance transform places the grid at the camera position (camera-relative rendering)
 		m_grid_origin = grid_origin;
 		m_dirty = true;
 	}

@@ -14,7 +14,6 @@ namespace las
 		, m_ocean(m_rdr)
 		, m_terrain(m_rdr, m_height_field)
 		, m_sim_time(0.0)
-		, m_camera_world_pos(v4(0, 0, 15, 1))
 		, m_move_speed(20.0f)
 		, m_render_frame(0)
 		, m_imgui({
@@ -34,8 +33,9 @@ namespace las
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
 
 		// Build initial meshes
-		m_ocean.Update(0.0f, m_camera_world_pos);
-		m_terrain.Update(m_camera_world_pos);
+		auto cam_pos = m_cam.CameraToWorld().pos;
+		m_ocean.Update(0.0f, cam_pos);
+		m_terrain.Update(cam_pos);
 	}
 
 	Main::~Main()
@@ -49,16 +49,28 @@ namespace las
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
 
-		// WASD movement: move the camera world position (X=forward, Y=right, Z=up)
+		// WASD movement: translate the camera along its forward/right directions
 		auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
-		if (KeyDown('W')) m_camera_world_pos.x += speed * dt;
-		if (KeyDown('S')) m_camera_world_pos.x -= speed * dt;
-		if (KeyDown('A')) m_camera_world_pos.y -= speed * dt;
-		if (KeyDown('D')) m_camera_world_pos.y += speed * dt;
+		auto c2w = m_cam.CameraToWorld();
+		auto forward = -c2w.z; // Camera looks down -Z in camera space
+		auto right = c2w.x;
+		auto move = v4::Zero();
+		if (KeyDown('W')) move += forward;
+		if (KeyDown('S')) move -= forward;
+		if (KeyDown('D')) move += right;
+		if (KeyDown('A')) move -= right;
+		if (LengthSq(move) > 0)
+		{
+			move = Normalise(move) * speed * dt;
+			move.z = 0; // Keep movement horizontal
+			c2w.pos += move;
+			m_cam.CameraToWorld(c2w);
+		}
 
 		// Simulation: compute new vertex positions on CPU
-		m_ocean.Update(static_cast<float>(m_sim_time), m_camera_world_pos);
-		m_terrain.Update(m_camera_world_pos);
+		auto cam_pos = m_cam.CameraToWorld().pos;
+		m_ocean.Update(static_cast<float>(m_sim_time), cam_pos);
+		m_terrain.Update(cam_pos);
 
 		RenderNeeded();
 	}
@@ -100,14 +112,26 @@ namespace las
 		{
 			// ImGuiWindowFlags_NoTitleBar=1<<0, NoResize=1<<1, AlwaysAutoResize=1<<6
 			char buf[128];
-			snprintf(buf, sizeof(buf), "Sim Time: %.2f s", m_sim_time);
+			*std::format_to(buf, "Sim Time: {:.2f} s", m_sim_time) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Frame: {}", m_render_frame) = 0;
+			m_imgui.Text(buf);
+			auto cam_pos = m_cam.CameraToWorld().pos;
+			*std::format_to(buf, "Pos: ({:.1f}, {:.1f}, {:.1f}", cam_pos.x, cam_pos.y, cam_pos.z) = 0;
 			m_imgui.Text(buf);
 
-			snprintf(buf, sizeof(buf), "Frame: %lld", m_render_frame);
-			m_imgui.Text(buf);
+			m_imgui.Separator();
 
-			snprintf(buf, sizeof(buf), "Pos: (%.1f, %.1f, %.1f)", m_camera_world_pos.x, m_camera_world_pos.y, m_camera_world_pos.z);
-			m_imgui.Text(buf);
+			// Render loop FPS (loop index 1 = variable-step render loop)
+			float fps_history[WinGuiMsgLoop::FpsHistory::Length];
+			m_ui.m_msg_loop.LoopFps(1).Fps<float>(fps_history);
+			*std::format_to(buf, "Render: {:.0f} fps", fps_history[0]) = 0;
+			m_imgui.PlotLines(buf, &fps_history[0], _countof(fps_history), 0, nullptr, 0.0f, 120.0f, 200, 40);
+
+			// Sim loop FPS (loop index 0 = fixed-step sim loop)
+			m_ui.m_msg_loop.LoopFps(0).Fps<float>(fps_history);
+			*std::format_to(buf, "Sim: {:.0f} fps", fps_history[0]) = 0;
+			m_imgui.PlotLines(buf, &fps_history[0], _countof(fps_history), 0, nullptr, 0.0f, 120.0f, 200, 40);
 		}
 		m_imgui.EndWindow();
 
@@ -126,9 +150,10 @@ namespace las
 	// Update the scene with things to render
 	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
 	{
+		auto cam_pos = m_cam.CameraToWorld().pos;
 		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, m_camera_world_pos, args.m_cmd_list, args.m_upload);
-		m_terrain.AddToScene(scene, m_camera_world_pos, args.m_cmd_list, args.m_upload);
+		m_ocean.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
+		//m_terrain.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
 	}
 
 	MainUI::MainUI(wchar_t const*, int)

@@ -25,9 +25,12 @@ namespace las
 	// Ocean simulation and rendering
 	struct Ocean
 	{
-		// Grid resolution and extent. 128x128 = 16k verts, fits in uint16 indices.
-		static constexpr int GridDim = 128;
-		static constexpr float GridExtent = 500.0f; // Half-extent in metres
+		// Radial mesh parameters. Rings are spaced logarithmically so that triangles
+		// appear roughly the same size on screen regardless of distance from camera.
+		static constexpr int NumRings = 80;       // Number of concentric rings
+		static constexpr int NumSegments = 128;    // Vertices per ring (around 360°)
+		static constexpr float InnerRadius = 2.0f; // Radius of the innermost ring (metres)
+		static constexpr float OuterRadius = 1000.0f; // Radius of the outermost ring (metres)
 		static constexpr float WaterDensity = 1025.0f; // kg/m^3 (seawater)
 
 		struct Instance

@@ -396,4 +396,16 @@ extern "C"
 			ctx.m_error_cb(ex.what());
 		}
 	}
+	__declspec(dllexport) void __stdcall ImGui_PlotLines(Context& ctx, char const* label, float const* values, int values_count, int values_offset, char const* overlay_text, float scale_min, float scale_max, float graph_w, float graph_h)
+	{
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::PlotLines(label, values, values_count, values_offset, overlay_text, scale_min, scale_max, ImVec2(graph_w, graph_h));
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
+	}
 }

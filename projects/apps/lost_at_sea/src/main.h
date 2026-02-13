@@ -27,7 +27,6 @@ namespace las
 		Terrain m_terrain;
 
 		double m_sim_time;
-		v4 m_camera_world_pos;
 		float m_move_speed; // World units per second
 		int64_t m_render_frame;
 

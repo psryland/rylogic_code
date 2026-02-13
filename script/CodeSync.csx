@@ -44,6 +44,9 @@ public class CodeSync
 	// implementation code (with PR_CODE_SYNC_BEGIN/END tags stripped).
 	private Dictionary<string, TruthBlock> m_truths = [];
 
+	// Errors collected during processing (reported at the end)
+	private List<string> m_errors = [];
+
 	// Tab size in spaces (1 tab == this many spaces)
 	private int m_tab_size;
 
@@ -149,6 +152,15 @@ public class CodeSync
 
 		if (replaced > 0 || m_verbose)
 			Console.WriteLine($"CodeSync: Updated {replaced} file(s).");
+
+		// Report any errors (ref blocks newer than their source of truth)
+		if (m_errors.Count > 0)
+		{
+			foreach (var error in m_errors)
+				Console.Error.WriteLine($"CodeSync error: {error}");
+
+			throw new Exception($"CodeSync: {m_errors.Count} ref block(s) are newer than their source of truth. Update the source of truth first.");
+		}
 	}
 
 	// Enumerate matching files in the directory tree
@@ -317,6 +329,21 @@ public class CodeSync
 
 				if (!same)
 				{
+					// Safety check: if the ref file is newer than the truth file, the ref block
+					// may have been modified directly instead of the source of truth. Report an
+					// error rather than silently overwriting the ref block.
+					var ref_modified = File.GetLastWriteTimeUtc(filepath);
+					var truth_modified = File.GetLastWriteTimeUtc(truth.FilePath);
+					if (ref_modified > truth_modified)
+					{
+						// Only flag as an error if the ref block is non-empty (i.e. someone edited it)
+						if (current.Count > 0 && current.Any(l => l.Trim().Length > 0))
+						{
+							m_errors.Add($"{filepath}({begin_line + 1}): Ref block '{name}' code is newer than source of truth in {truth.FilePath}({truth.LineNumber}). Check source of truth implementation is up to date.");
+							continue;
+						}
+					}
+
 					// Build the new lines array
 					var new_lines = new List<string>(lines.Length);
 					for (int i = 0; i < content_start; ++i)

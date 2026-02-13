@@ -71,6 +71,7 @@ Example Use:
 #include <vector>
 #include <string>
 #include <string_view>
+#include <span>
 #include <fstream>
 #include <iterator>
 #include <unordered_map>
@@ -2614,6 +2615,26 @@ namespace pr
 				// The maximum number of fixed-step catch-up iterations before skipping ahead (death spiral protection)
 				static constexpr int MaxCatchUpSteps = 4;
 
+				// Compact history of frame rates 
+				union FpsHistory
+				{
+					enum { Length = sizeof(uint64_t) };
+
+					uint64_t u64;
+					uint8_t ms_per_frame[sizeof(uint64_t)];
+					void Add(double fps)
+					{
+						u64 <<= 8;
+						ms_per_frame[0] = static_cast<uint8_t>(std::clamp(1000.0 / fps, 0.0, 255.0));
+					}
+					template <std::floating_point S> void Fps(std::span<S, Length> out_fps) const
+					{
+						// Output fps from newest to oldest
+						for (size_t i = 0; i != sizeof(u64); ++i)
+							out_fps[i] = ms_per_frame[i] > 0 ? S(1000.0 / ms_per_frame[i]) : S(0.0);
+					}
+				};
+
 			private:
 
 				// A loop represents a process that should be run at a given rate
@@ -2623,6 +2644,7 @@ namespace pr
 					duration_t m_interval;    // The (minimum) time between steps
 					time_point_t m_last_time; // The time this loop was last stepped
 					time_point_t m_next_due;  // When this loop is next due to be stepped
+					FpsHistory m_fps_history; // Ring buffer of recent FPS values
 					bool m_variable;          // Variable step rate (true = run as fast as possible, false = fixed step)
 
 					Loop(step_func_t step, duration_t interval, bool variable)
@@ -2630,6 +2652,7 @@ namespace pr
 						, m_interval(interval)
 						, m_last_time()
 						, m_next_due()
+						, m_fps_history()
 						, m_variable(variable)
 					{}
 				};
@@ -2651,6 +2674,14 @@ namespace pr
 					m_filters.push_back(this);
 				}
 				virtual ~MessageLoop() = default;
+
+				// Access FPS history for a loop by index
+				FpsHistory const& LoopFps(int loop_index) const
+				{
+					static FpsHistory null = {};
+					if (loop_index < 0 || loop_index >= ssize(m_loop)) return null;
+					return m_loop[loop_index].m_fps_history;
+				}
 
 				// Return the running time since 'Run()' was called (in seconds)
 				double Clock() const
@@ -2745,15 +2776,23 @@ namespace pr
 								loop.m_step(elapsed);
 								loop.m_last_time = now;
 								loop.m_next_due = now + loop.m_interval;
+								loop.m_fps_history.Add(elapsed > 0 ? (1.0 / elapsed) : 0.0f);
 							}
 							else
 							{
 								// Fixed step: run at exactly the requested rate, catching up if behind
+								auto stepped = false;
 								for (int catch_up = 0; catch_up != MaxCatchUpSteps && loop.m_next_due <= now; ++catch_up)
 								{
 									auto dt = std::chrono::duration<double>(loop.m_interval).count();
 									loop.m_step(dt);
 									loop.m_next_due += loop.m_interval;
+									stepped = true;
+								}
+								if (stepped)
+								{
+									auto elapsed = max(now - loop.m_last_time, loop.m_interval);
+									loop.m_fps_history.Add(1.0 / std::chrono::duration<double>(elapsed).count());
 								}
 
 								// Death spiral protection: if still behind, skip ahead
