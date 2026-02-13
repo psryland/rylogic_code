@@ -261,7 +261,7 @@ namespace las
 		}
 
 		// Camera-relative instance transform: grid origin minus camera position
-		m_inst.m_i2w = m4x4::Translation(m_grid_origin - camera_world_pos);
+		m_inst.m_i2w = m4x4::Translation(0, 0, -camera_world_pos.z);
 		scene.AddInstance(m_inst);
 	}
 }

@@ -2635,6 +2635,14 @@ namespace pr
 					}
 				};
 
+				// Controls for the message loop behaviour
+				struct Config
+				{
+					// The number of window messages to process between calls to StepLoops.
+					// Simulation apps would typically set this to 1.
+					int msgs_per_loop = 1000;
+				};
+
 			private:
 
 				// A loop represents a process that should be run at a given rate
@@ -2666,10 +2674,14 @@ namespace pr
 
 			public:
 
+				// Configurable parameters for the message loop
+				Config m_config;
+
 				MessageLoop()
 					: m_loop()
 					, m_filters()
 					, m_clock0()
+					, m_config()
 				{
 					m_filters.push_back(this);
 				}
@@ -2739,7 +2751,7 @@ namespace pr
 
 					// Wait for messages or until timeout (efficient idle, no busy-spin)
 					::MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
-					for (int max_messages = 1000; max_messages-- != 0 && ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
+					for (int msgs_per_loop = m_config.msgs_per_loop; msgs_per_loop-- != 0 && ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
 					{
 						if (msg.message == WM_QUIT)
 							return static_cast<int>(msg.wParam);

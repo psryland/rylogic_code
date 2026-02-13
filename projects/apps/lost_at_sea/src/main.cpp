@@ -9,7 +9,7 @@ namespace las
 {
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
-		, m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 1000.0f, m3x4::Rotation(maths::tau_by_4f, 0, 0))
+		, m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 5000.0f, m3x4::Rotation(maths::tau_by_4f, 0, 0))
 		, m_height_field(42)
 		, m_ocean(m_rdr)
 		, m_terrain(m_rdr, m_height_field)
@@ -75,6 +75,16 @@ namespace las
 		RenderNeeded();
 	}
 
+	// Update the scene with things to render
+	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
+	{
+		auto cam_pos = m_cam.CameraToWorld().pos;
+		m_skybox.AddToScene(scene);
+		m_ocean.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
+		//m_terrain.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
+	}
+
+	// Render step
 	void Main::DoRender(bool force)
 	{
 		if (!m_rdr_pending && !force)
@@ -89,14 +99,11 @@ namespace las
 		// Render a frame
 		auto& frame = m_window.NewFrame();
 		m_scene.Render(frame);
-
-		// Render imgui overlay into the post-resolve back buffer
 		RenderUI(frame);
-
 		m_window.Present(frame);
 	}
 
-	// Add UI components
+	// Render imgui overlay into the post-resolve back buffer
 	void Main::RenderUI(Frame& frame)
 	{
 		if (!m_imgui)
@@ -147,20 +154,12 @@ namespace las
 		m_imgui.Render(frame.m_resolve.get());
 	}
 
-	// Update the scene with things to render
-	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
-	{
-		auto cam_pos = m_cam.CameraToWorld().pos;
-		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
-		//m_terrain.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
-	}
+	// --------------------------------------------------------------------------------------------
 
 	MainUI::MainUI(wchar_t const*, int)
 		:base(Params().title(AppTitle()))
 	{
-		// Set Windows timer resolution to 1ms for accurate sleep intervals
-		::timeBeginPeriod(1);
+		m_msg_loop.m_config.msgs_per_loop = 1;
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
 		m_msg_loop.AddLoop(60.0, false, [this](double dt) { m_main->Step(dt); });
