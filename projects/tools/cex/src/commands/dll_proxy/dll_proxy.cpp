@@ -1,5 +1,5 @@
 //**********************************************
-// Command line extensions
+// Console Extensions
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 // nicked from: http://www.codeproject.com/Articles/16541/Create-your-Proxy-DLLs-automatically
@@ -27,31 +27,12 @@
 // }
 
 #include "src/forward.h"
-#include "src/icex.h"
 
 namespace cex
 {
-	struct DllProxy :ICex
+	struct Cmd_DllProxy
 	{
-		std::filesystem::path m_ifile;      // Input dll filepath
-		std::filesystem::path m_ofile;      // Output dll filepath
-		std::filesystem::path m_cppfile;    // CPP filepath
-		std::filesystem::path m_deffile;    // DEF filepath
-		std::string           m_exports;    // The text file of function exports
-		std::string           m_convention; // Calling convention
-		bool                  m_compile;
-		
-		DllProxy()
-			:m_ifile()
-			,m_ofile()
-			,m_cppfile()
-			,m_deffile()
-			,m_exports()
-			,m_convention()
-			,m_compile(false)
-		{}
-
-		void ShowHelp() const override
+		void ShowHelp() const
 		{
 			std::cout <<
 				"Dll Proxy Generator\n"
@@ -65,6 +46,19 @@ namespace cex
 				"  -compile    : attempt to compile the proxy dll using Cl.exe and Link.exe\n (default:false)"
 				"\n";
 		}
+		int Run(pr::CmdLine const& args)
+		{
+			throw std::runtime_error("Needs debugging, this currently deletes the source dll!");
+#if 0
+
+		std::filesystem::path m_ifile;      // Input dll filepath
+		std::filesystem::path m_ofile;      // Output dll filepath
+		std::filesystem::path m_cppfile;    // CPP filepath
+		std::filesystem::path m_deffile;    // DEF filepath
+		std::string           m_exports;    // The text file of function exports
+		std::string           m_convention; // Calling convention
+		bool                  m_compile;
+
 		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
 			if (pr::str::EqualI(option, "-dllproxy"))
@@ -136,10 +130,6 @@ namespace cex
 			}
 		}
 
-		int Run() override
-		{
-			throw std::exception("Needs debugging, this currently deletes the source dll!");
-#if 0
 			// Read exports
 			std::cout << "Parsing " << m_ifile << "...\n";
 			FILE* fp = _tfopen(m_ifile.c_str(), _T("rb"));
@@ -361,4 +351,10 @@ namespace cex
 #endif
 		}
 	};
+
+	int DllProxy(pr::CmdLine const& args)
+	{
+		Cmd_DllProxy cmd;
+		return cmd.Run(args);
+	}
 }

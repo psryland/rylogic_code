@@ -24,55 +24,256 @@
 //	if (!pr::EnumCommandLine(GetCommandLine(), thing)) return false;
 //
 #pragma once
+#include <concepts>
+#include <type_traits>
+#include <string_view>
 #include <string>
 #include <vector>
-#include "pr/str/string_util.h" // for pr::str::Tokenise()
+#include <ranges>
+#include <stdexcept>
 
-namespace pr::cmdline
-{
-	// Helper to test if 'str' is of the form '-xyz'
-	inline bool IsOption(std::string_view str)
-	{
-		return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
-	}
-	inline bool IsOption(std::wstring_view str)
-	{
-		return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
-	}
-
-	// Interface for receiving command line options
-	// Return true for more options
-	template <typename Char = char>
-	struct IOptionReceiver
-	{
-		using OptionString = std::basic_string<Char>;
-		using TArgs        = std::vector<OptionString>;
-		using TArgIter     = typename TArgs::const_iterator;
-
-		virtual ~IOptionReceiver() {}
-
-		// Helper to test if 'str' is of the form '-xyz'
-		virtual bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
-
-		// Called for anything not preceded by '-'.
-		// The caller should advance 'arg' for each argument read.
-		// Return true to continue parsing, false to abort parsing, or
-		// set arg = arg_end to end parsing and have true returned.
-		virtual bool CmdLineData(TArgIter& arg, TArgIter /*arg_end*/) { ++arg; return true; }
-
-		// Called when an option is found. An option is anything preceded by a '-'.
-		// 'option' is the name of the option, including the '-'.
-		// 'arg' is an iterator to the next command line value after 'option'
-		// 'arg_end' is the end of the argument vector
-		// e.g. -Option arg0 arg1 arg2
-		// The caller should advance 'arg' for each argument read.
-		// Return true to continue parsing, false to abort parsing, or
-		// set arg = arg_end to end parsing and have true returned.
-		virtual bool CmdLineOption(OptionString const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
-	};
-}
 namespace pr
 {
+	namespace cmdline
+	{
+		// Helper to test if 'str' is of the form '-xyz'
+		inline bool IsOption(std::string_view str)
+		{
+			return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
+		}
+		inline bool IsOption(std::wstring_view str)
+		{
+			return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
+		}
+
+		// Convert a command line string in to argv format, then parse it
+		template <typename Char> requires (std::is_same_v<Char, char> || std::is_same_v<Char, wchar_t>)
+		inline std::vector<Char const*> Tokenize(std::basic_string_view<Char> str)
+		{
+			std::vector<Char const*> argv;
+
+			auto s = str.data();
+			auto e = s + str.size();
+			auto is_delim = [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\v'; };
+			for (; s != e; s += int(s != e))
+			{
+				if (*s == '\"' || *s == '\'')
+				{
+					argv.push_back(s);
+
+					auto quote = *s++;
+					for (; s != e && *s != quote; ++s) {}
+					if (s != e) ++s; // Skip closing quote
+					continue;
+				}
+				if (!is_delim(*s))
+				{
+					argv.push_back(s);
+
+					for (; s != e && !is_delim(*s); ++s) {}
+					continue;
+				}
+			}
+
+			return argv;
+		}
+	}
+
+	// --------------------------------------------------------------------------------------------
+
+	struct CmdLine
+	{
+		// Expected format:
+		//   arg0 cmd ... --arg value value ... --arg value ... -a value value ...
+		//
+		//  - First argument (arg0) is the program name
+		//  - "cmd ..." are N sequential arguments (commands) stored as 'key' values with no 'values'
+		//  - "--arg value ..." are key to value(s) pairs. After an "--arg", all values that don't start with "-" are part of the argument's data
+		struct Arg
+		{
+			std::string key;
+			std::vector<std::string> values;
+
+			// The number of values associated with this argument
+			int num_values() const
+			{
+				return static_cast<int>(values.size());
+			}
+
+			// Interpret a value as type 'T'
+			template <typename T> T as(int idx = 0) const
+			{
+				if constexpr (std::floating_point<T>)
+				{
+					return static_cast<T>(std::stod(values[idx]));
+				}
+				else if constexpr (std::integral<T>)
+				{
+					return static_cast<T>(std::stoll(values[idx]));
+				}
+				else if constexpr (std::is_convertible_v<T, std::filesystem::path>)
+				{
+					return T(values[idx]);
+				}
+				else
+				{
+					static_assert(std::is_same_v<T, std::false_type>, "Unsupported type conversion");
+					throw std::runtime_error("Unsupported type conversion");
+				}
+			}
+		
+			// Interpret a value as a key=value pair.
+			Arg kv(int idx = 0) const
+			{
+				auto const& value = values[idx];
+				auto const eq = value.find('=');
+				if (eq == std::string::npos)
+					throw std::runtime_error("Key/value pair missing '=' delimiter");
+
+				auto k = value.substr(0, eq);
+				auto v = value.substr(eq + 1);
+				return Arg{ std::move(k), {std::move(v)} };
+			}
+
+			// Ranged-for helper for access to all values as key=value pairs
+			auto kv_pairs() const
+			{
+				struct I
+				{
+					Arg const* m_this;
+					int m_index;
+					I& operator++() { ++m_index; return *this; }
+					Arg operator*() const { return m_this->kv(m_index); }
+					bool operator == (I const& rhs) const { return m_this == rhs.m_this && m_index == rhs.m_index; }
+				};
+				struct R
+				{
+					Arg const* m_this;
+					auto begin() const { return I{m_this, 0}; }
+					auto end() const { return I{ m_this, m_this->num_values() }; }
+				};
+				return R{ this };
+			}
+		};
+
+		std::string arg0;
+		std::vector<Arg> args;
+
+		CmdLine()
+			: arg0()
+			, args()
+		{
+		}
+		CmdLine(int argc, char const* argv[])
+			: arg0(argc > 0 ? argv[0] : "")
+			, args()
+		{
+			for (int i = 1; i < argc; )
+			{
+				Arg arg = {};
+
+				std::string_view token(argv[i++]);
+				if (token.starts_with("-"))
+				{
+					// Trim the '--' from the key
+					for (; token.empty() || token[0] == '-'; token.remove_prefix(1)) {}
+					arg.key = token;
+
+					// Read the next arguments as data, up to the next arg that starts with '-'
+					for (; i < argc; ++i)
+					{
+						std::string_view value(argv[i]);
+						if (value.starts_with("-")) break;
+						arg.values.push_back(std::string(value));
+					}
+				}
+				else
+				{
+					// Otherwise, this is a command argument with no key
+					arg.values.push_back(argv[i++]);
+				}
+				args.push_back(arg);
+			}
+		}
+		CmdLine(int argc, char* argv[])
+			: CmdLine(argc, const_cast<char const**>(argv))
+		{}
+		CmdLine(std::string_view command_line)
+			: arg0()
+			, args()
+		{
+			auto argv = cmdline::Tokenize(command_line);
+			*this = CmdLine(int(argv.size()), argv.data());
+		}
+
+		// Count the number of occurrances of the given key
+		int count(std::string_view key) const
+		{
+			int count = 0;
+			for (auto& a : args) count += a.key == key;
+			return count;
+		}
+
+		// Access an argument by key value
+		Arg const& operator()(std::string_view key, int start_index = 0) const
+		{
+			for (; start_index < ssize(args); ++start_index)
+			{
+				if (std::ranges::equal(args[start_index].key, key, [](char a, char b) { return std::tolower(a) == std::tolower(b); }))
+					return args[start_index];
+			}
+			throw std::runtime_error(std::format("Argument {} not found", key));
+		}
+
+		// Check that 'key' is provided exactly 'occurrances' times
+		bool check(std::string_view key, int min_occurrances = 1, int max_occurrances = 1) const
+		{
+			auto n = count(key);
+			if (n == 0 && min_occurrances != 0)
+				throw std::runtime_error(std::format("Required parameter '--{}' not provided", key));
+			if (n != min_occurrances && min_occurrances == max_occurrances)
+				throw std::runtime_error(std::format("Parameter '--{}' expected {} times", key, min_occurrances));
+			if (n < min_occurrances || n > max_occurrances)
+				throw std::runtime_error(std::format("Parameter '--{}' expected {}-{} times", key, min_occurrances, max_occurrances));
+			return true;
+		}
+	};
+
+	// --------------------------------------------------------------------------------------------
+
+	namespace cmdline
+	{
+		// Interface for receiving command line options
+		template <typename Char = char>
+		struct IOptionReceiver
+		{
+			using OptionString = std::basic_string<Char>;
+			using TArgs        = std::vector<OptionString>;
+			using TArgIter     = typename TArgs::const_iterator;
+
+			virtual ~IOptionReceiver() {}
+
+			// Helper to test if 'str' is of the form '-xyz'
+			virtual bool IsOption(OptionString const& str) const { return cmdline::IsOption(str); }
+
+			// Called for anything not preceded by '-'.
+			// The caller should advance 'arg' for each argument read.
+			// Return true to continue parsing, false to abort parsing, or
+			// set arg = arg_end to end parsing and have true returned.
+			virtual bool CmdLineData(TArgIter& arg, TArgIter /*arg_end*/) { ++arg; return true; }
+
+			// Called when an option is found. An option is anything preceded by a '-'.
+			// 'option' is the name of the option, including the '-'.
+			// 'arg' is an iterator to the next command line value after 'option'
+			// 'arg_end' is the end of the argument vector
+			// e.g. -Option arg0 arg1 arg2
+			// The caller should advance 'arg' for each argument read.
+			// Return true to continue parsing, false to abort parsing, or
+			// set arg = arg_end to end parsing and have true returned.
+			virtual bool CmdLineOption(OptionString const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
+		};
+	}
+
 	// Parse a range of command line arguments
 	// Returns true if all command line parameters were parsed
 	template <typename Char = char, typename TArgIter = cmdline::IOptionReceiver<Char>::TArgIter>
@@ -113,9 +314,9 @@ namespace pr
 	template <typename Char = char>
 	inline bool EnumCommandLine(Char const* cmd_line, cmdline::IOptionReceiver<Char>& receiver)
 	{
-		typename cmdline::IOptionReceiver<Char>::TArgs args;
-		Char const delim[] = {' ','\t','\r','\n','\v',0};
-		pr::str::Tokenise(cmd_line, args, delim);
-		return args.empty() || EnumCommandLine(args.begin(), args.end(), receiver);
+		auto argv = cmdline::Tokenize(cmd_line);
+		return EnumCommandLine(int(argv.size()), argv.data(), receiver);
 	}
+
+	// --------------------------------------------------------------------------------------------
 }

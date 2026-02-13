@@ -1,34 +1,35 @@
 //**********************************************
-// Command line extensions
+// Console Extensions
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 #include "src/forward.h"
-#include "src/icex.h"
+#include "pr/common/clipboard.h"
+#include "pr/str/string_util.h"
 
 namespace cex
 {
-	struct Clip :ICex
+	struct Cmd_Clip
 	{
 		std::string m_text;
-		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr, m_dopaste;
 		std::string m_newline;
+		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr, m_dopaste;
 		
-		Clip()
+		Cmd_Clip()
 			:m_text()
+			,m_newline()
 			,m_lwr(false)
 			,m_upr(false)
 			,m_fwdslash(false)
 			,m_bkslash(false)
 			,m_cstr(false)
 			,m_dopaste(false)
-			,m_newline()
 		{}
 
-		void ShowHelp() const override
+		void ShowHelp() const
 		{
 			std::cout <<
 				"Clip text to the system clipboard\n"
-				" Syntax: Cex -clip [-lwr][-upr][-fwdslash][-bkslash][-cstr] [-crlf|cr|lf] text_to_copy ...\n"
+				" Syntax: Cex -clip \"text to copy\" [-lwr][-upr][-fwdslash][-bkslash][-cstr] [-crlf|cr|lf]\n"
 				"  -lwr : converts copied text to lower case\n"
 				"  -upr : converts copied text to upper case\n"
 				"  -fwdslash : converts any directory marks to forward slashes\n"
@@ -36,35 +37,32 @@ namespace cex
 				"  -cstr : converts the copied text to a C\\C++ style string by adding escape characters\n"
 				"  -crlf|cr|lf : convert newlines to the dos,mac,linux format\n"
 				"\n"
+				"Paste the clipboard contents to stdout\n"
 				" Syntax: Cex -clip -paste\n"
-				"   Paste the clipboard contents to stdout\n"
-				;
+				"   -paste : pastes the clipboard contents to stdout\n"
+				"\n";
 		}
 
-		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
+		int Run(pr::CmdLine const& args)
 		{
-			if (pr::str::EqualI(option, "-clip"    )) { return true; }
-			if (pr::str::EqualI(option, "-lwr"     )) { m_lwr = true; return true; }
-			if (pr::str::EqualI(option, "-upr"     )) { m_upr = true; return true; }
-			if (pr::str::EqualI(option, "-fwdslash")) { m_fwdslash = true; return true; }
-			if (pr::str::EqualI(option, "-bkslash" )) { m_bkslash = true; return true; }
-			if (pr::str::EqualI(option, "-cstr"    )) { m_cstr = true; return true; }
-			if (pr::str::EqualI(option, "-crlf"    )) { m_newline = "\r\n"; return true; }
-			if (pr::str::EqualI(option, "-cr"      )) { m_newline = "\r"; return true; }
-			if (pr::str::EqualI(option, "-lf"      )) { m_newline = "\n"; return true; }
-			if (pr::str::EqualI(option, "-paste"   )) { m_dopaste = true; return true; }
-			return ICex::CmdLineOption(option, arg, arg_end);
-		}
+			if (args.count("help") != 0)
+				return ShowHelp(), 0;
 
-		bool CmdLineData(TArgIter& arg, TArgIter) override
-		{
-			if (!m_text.empty()) m_text += "\r\n";
-			m_text += *arg++;
-			return true;
-		}
+			for (auto const& text : args("clip").values)
+				m_text.append(text);
 
-		int Run() override
-		{
+			m_lwr = args.count("lwr") != 0;
+			m_upr = args.count("upr") != 0;
+			m_fwdslash = args.count("fwdslash") != 0;
+			m_bkslash = args.count("bkslash") != 0;
+			m_cstr = args.count("cstr") != 0;
+			m_dopaste = args.count("paste") != 0;
+			m_newline =
+				args.count("crlf") != 0 ? "\r\n" :
+				args.count("cr") != 0 ? "\r" :
+				args.count("lf") != 0 ? "\n" :
+				"";
+
 			if (m_dopaste)
 			{
 				std::string output;
@@ -83,4 +81,10 @@ namespace cex
 			return pr::SetClipBoardText(GetConsoleWindow(), m_text) ? 0 : -1;
 		}
 	};
+
+	int Clip(pr::CmdLine const& args)
+	{
+		Cmd_Clip cmd;
+		return cmd.Run(args);
+	}
 }
