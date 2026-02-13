@@ -8,7 +8,6 @@
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/view3d_panel.h"
-#include "pr/gui/sim_message_loop.h"
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/win32/win32.h"

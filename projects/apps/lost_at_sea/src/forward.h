@@ -19,7 +19,6 @@
 #include "pr/app/main_ui.h"
 #include "pr/app/default_setup.h"
 #include "pr/app/skybox.h"
-#include "pr/gui/sim_message_loop.h"
 #include "pr/geometry/p3d.h"
 #include "pr/storage/json.h"
 #include "pr/maths/perlin_noise.h"

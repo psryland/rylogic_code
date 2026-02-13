@@ -344,9 +344,9 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		Main main(hinstance);
 		main.Show();
 
-		MessageLoop loop;
+		WinGuiMsgLoop loop;
 		loop.AddMessageFilter(main);
-		loop.AddLoop(10, true, [&main](auto dt) { main.Step(dt * 0.001); });
+		loop.AddLoop(100.0, true, [&main](auto dt) { main.Step(dt); });
 		return loop.Run();
 	}
 	catch (std::exception const& ex)

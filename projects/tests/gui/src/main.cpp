@@ -285,7 +285,7 @@ int __stdcall wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 		//Test test1; auto& main = test1; test1.Show();
 		//Test2 test2; auto& main = test2; test2.Show();
 
-		MessageLoop loop;
+		WinGuiMsgLoop loop;
 		loop.AddMessageFilter(main);
 		return loop.Run();
 	}

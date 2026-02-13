@@ -48,7 +48,6 @@ namespace las
 	{
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
-
 		// WASD movement: move the camera world position (X=forward, Y=right, Z=up)
 		auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
 		if (KeyDown('W')) m_camera_world_pos.x += speed * dt;
@@ -138,8 +137,8 @@ namespace las
 		::timeBeginPeriod(1);
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddLoop(60.0, false, [this](int64_t ms) { m_main->Step(ms * 0.001); });
-		m_msg_loop.AddLoop(60.0, true, [this](int64_t) { m_main->DoRender(true); });
+		m_msg_loop.AddLoop(60.0, false, [this](double dt) { m_main->Step(dt); });
+		m_msg_loop.AddLoop(60.0, true, [this](double) { m_main->DoRender(true); });
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)

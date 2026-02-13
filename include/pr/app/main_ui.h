@@ -4,14 +4,13 @@
 //*****************************************************************************************
 // See pr/app/main.h for usage instructions
 #pragma once
-
 #include "pr/app/forward.h"
 #pragma warning (disable:4355)
 
 namespace pr::app
 {
 	// A base class for a main app window.
-	template<typename DerivedUI, typename Main, typename MessageLoop = gui::MessageLoop>
+	template<typename DerivedUI, typename Main, typename MessageLoop = gui::WinGuiMsgLoop>
 	struct MainUI :gui::Form, IAppMainUI
 	{
 		// Notes:

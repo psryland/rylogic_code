@@ -4,7 +4,6 @@
 #include "pr/app/main.h"
 #include "pr/app/main_ui.h"
 #include "pr/app/default_setup.h"
-#include "pr/gui/sim_message_loop.h"
 #include "pr/container/byte_data.h"
 #include "pr/audio/audio.h"
 #include "pr/audio/synth/note.h"
@@ -277,9 +276,9 @@ namespace ace
 	};
 
 	// Derive a GUI class from pr::app::MainGUI
-	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>
+	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::WinGuiMsgLoop>
 	{
-		using base_type = pr::app::MainUI<MainUI, Main, pr::gui::SimMessageLoop>;
+		using base_type = pr::app::MainUI<MainUI, Main, pr::gui::WinGuiMsgLoop>;
 
 		static int const Scale = 2;
 		static wchar_t const* AppTitle() { return L"Ace Inspaders"; };
@@ -290,8 +289,8 @@ namespace ace
 			.wh(Scale* pr::SpaceInvaders::ScreenDimX, Scale* pr::SpaceInvaders::ScreenDimY, true)
 			.default_mouse_navigation(false))
 		{
-			m_msg_loop.AddLoop(60.0, false, [this](int64_t ms) { m_main->Step(ms * 0.001); });
-			m_msg_loop.AddLoop(60.0, true, [this](int64_t) { m_main->DoRender(true); });
+			m_msg_loop.AddLoop(60.0, false, [this](double dt) { m_main->Step(dt); });
+			m_msg_loop.AddLoop(60.0, true, [this](double) { m_main->DoRender(true); });
 		}
 	};
 

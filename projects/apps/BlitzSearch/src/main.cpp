@@ -27,7 +27,7 @@ int __stdcall wWinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int
 		// Display the main UI
 		MainUI main_ui(main_index);
 		main_ui.Show();
-		return ui::MessageLoop().Run();
+		return ui::WinGuiMsgLoop().Run();
 	}
 	catch (std::exception const& ex)
 	{

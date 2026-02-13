@@ -227,9 +227,9 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 		MainUI main;
 		main.Show();
 
-		MessageLoop loop;
-		loop.AddLoop(100.0, false, [&](int64_t ms) { main.Step(ms * 0.001); });
-		loop.AddLoop(60.0, true, [&](int64_t) { main.Render(); });
+		WinGuiMsgLoop loop;
+		loop.AddLoop(100.0, false, [&](double dt) { main.Step(dt); });
+		loop.AddLoop(60.0, true, [&](double) { main.Render(); });
 		loop.AddMessageFilter(main);
 		return loop.Run();
 	}

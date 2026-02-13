@@ -74,7 +74,7 @@ struct Main :Form, IProbeActions
 
 	Probe m_probe;
 	demo_scenes_t m_demo;
-	MessageLoop m_loop;
+	WinGuiMsgLoop m_loop;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 	particles_t m_cpu_particles;
@@ -123,9 +123,9 @@ struct Main :Form, IProbeActions
 		NextScene();
 
 		m_loop.AddMessageFilter(*this);
-		m_loop.AddLoop(static_cast<int>(SimTimeStepSec * 1000), false, [this](int64_t dt)
+		m_loop.AddLoop(1.0 / SimTimeStepSec, false, [this](double dt)
 		{
-			auto elapsed_s = dt * 0.001f;
+			auto elapsed_s = static_cast<float>(dt);
 
 			//hack
 			//elapsed_s *= 0.1f;
@@ -152,8 +152,8 @@ struct Main :Form, IProbeActions
 				}
 			}
 		});
-		m_loop.AddLoop(50, false, [this](auto) { RenderLoop(); });
-		m_loop.AddLoop(100, false, [this](auto) { ApplyTweakables(); });
+		m_loop.AddLoop(20.0, false, [this](auto) { RenderLoop(); });
+		m_loop.AddLoop(10.0, false, [this](auto) { ApplyTweakables(); });
 	}
 
 	// Run the application
