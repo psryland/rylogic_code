@@ -44,12 +44,12 @@ namespace pr::math
 		{}
 
 		// Array access
-		S operator [] (int i) const
+		constexpr S operator [] (int i) const
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];
 		}
-		S& operator [] (int i)
+		constexpr S& operator [] (int i)
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];

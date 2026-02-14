@@ -76,33 +76,33 @@ namespace pr::math
 		{}
 
 		// Array access
-		S operator [] (int i) const
+		constexpr S operator [] (int i) const
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];
 		}
-		S& operator [] (int i)
+		constexpr S& operator [] (int i)
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];
 		}
 
 		// Create other vector types
-		Vec4 w0() const
+		constexpr Vec4 w0() const
 		{
 			Vec4 r(x, y, z, S(0)); // LValue because of alignment
 			return r;
 		}
-		Vec4 w1() const
+		constexpr Vec4 w1() const
 		{
 			Vec4 r(x, y, z, S(1)); // LValue because of alignment
 			return r;
 		}
-		Vec2<S> vec2(int i0, int i1) const
+		constexpr Vec2<S> vec2(int i0, int i1) const
 		{
 			return Vec2<S>{arr[i0], arr[i1]};
 		}
-		Vec3<S> vec3(int i0, int i1, int i2) const
+		constexpr Vec3<S> vec3(int i0, int i1, int i2) const
 		{
 			return Vec3<S>{arr[i0], arr[i1], arr[i2]};
 		}

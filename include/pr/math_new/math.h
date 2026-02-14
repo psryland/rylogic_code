@@ -54,3 +54,5 @@
 // #include "pr/maths/polynomial.h"
 // #include "pr/maths/constants_vector.h"
 
+// @Copilot, please check this math library for consistency and correctness.
+// Also, look for any missing constexpr, noexcept, or other qualifiers that could be added to improve the code.

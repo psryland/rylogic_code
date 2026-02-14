@@ -12,6 +12,54 @@ namespace pr::math
 	template <ScalarType S>
 	struct Quat
 	{
+		enum
+		{
+			IntrinsicF = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, float>,
+			IntrinsicD = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>,
+			NoIntrinsic = PR_MATHS_USE_INTRINSICS == 0,
+		};
+		using intrinsic_t =
+			std::conditional_t<IntrinsicF, __m128,
+			std::conditional_t<IntrinsicD, __m256d,
+			std::byte[4*sizeof(S)]
+			>>>>;
+
+		#pragma warning(push)
+		#pragma warning(disable:4201) // nameless struct
+		union alignas(4 * sizeof(S))
+		{
+			struct { S x, y, z, w; };
+			struct { Vec2<S> xy, zw; };
+			struct { Vec3<S> xyz; };
+			struct { S arr[4]; };
+			intrinsic_t vec;
+		};
+		#pragma warning(pop)
+
+		// Construct
+		Quat() = default;
+		constexpr explicit Quat(S x_)
+			: x(x_)
+			, y(x_)
+			, z(x_)
+			, w(x_)
+		{
+		}
+		constexpr Quat(S x_, S y_, S z_, S w_)
+			: x(x_)
+			, y(y_)
+			, z(z_)
+			, w(w_)
+		{}
+		constexpr explicit Quat(std::ranges::random_access_range auto&& v)
+			:Quat(v[0], v[1], v[2], v[3])
+		{}
+		constexpr explicit Quat(VectorTypeN<S, 4> auto v)
+			:Quat(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
+		{}
+		constexpr Quat(intrinsic_t vec_) requires (!NoIntrinsic)
+			:vec(vec_)
+		{}
 
 	};
 
