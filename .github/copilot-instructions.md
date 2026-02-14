@@ -98,6 +98,71 @@ cd typescript/projects/Rylogic.TextAligner
 npm install && npm run compile
 ```
 
+## Tools
+
+### CEX — Console Extensions (`projects/tools/cex`)
+The `cex` utility provides GUI automation commands that Copilot can use to interact with and verify Windows GUI applications. The tool is a `/SUBSYSTEM:Windows` app (no console window). Build it with:
+```powershell
+& "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
+    projects/tools/cex/cex.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /nologo /verbosity:minimal
+```
+The built executable is at `projects/tools/cex/obj/x64/Release/cex.exe`.
+
+Because cex is a GUI-subsystem app, always invoke it via `Start-Process` with `-RedirectStandardOutput` to capture output:
+```powershell
+Start-Process -FilePath ".\cex.exe" -ArgumentList "<args>" -NoNewWindow -Wait -PassThru `
+    -RedirectStandardOutput "out.txt" -RedirectStandardError "err.txt"
+```
+
+#### Screenshot — Capture Window Images
+```powershell
+# Capture all visible windows of a process to PNG files
+cex -screenshot -p <process-name> -o <output-directory>
+
+# Use -bitblt for GPU-rendered apps (Electron, Chromium) — captures from screen DC
+cex -screenshot -p <process-name> -o <output-directory> -bitblt
+
+# Use -all to include hidden/minimised windows
+cex -screenshot -p <process-name> -o <output-directory> -all
+```
+Output files are named `<process>.<window-title>.png`. Use the `view` tool on the PNG to visually inspect the result.
+
+#### Send Keys — Keyboard Input Simulation
+```powershell
+# Type text into a GUI application (uses SendInput with KEYEVENTF_UNICODE)
+cex -send_keys "text to type" -p <process-name>
+
+# Target a specific window (default: largest window)
+cex -send_keys "text" -p <process-name> -w <window-name>
+
+# Control typing speed (default: 10 keys/sec)
+cex -send_keys "text" -p <process-name> -rate 20
+```
+Characters are sent as raw unicode — this does not parse key-combo escape sequences like `{CTRL+A}`.
+
+#### Send Mouse — Mouse Input Simulation
+```powershell
+# Send mouse events to a GUI application (coordinates are client-area relative)
+cex -send_mouse 100,100 -b LeftClick  -p <process-name>
+cex -send_mouse 100,100 -b RightClick -p <process-name>
+
+# Drag sequence: button down, move, button up
+cex -send_mouse 100,100 -b LeftDown -p <process-name>
+cex -send_mouse 200,200 -b Move     -p <process-name>
+cex -send_mouse 200,200 -b LeftUp   -p <process-name>
+
+# Target a specific window (default: largest window)
+cex -send_mouse 100,100 -b LeftClick -p <process-name> -w <window-name>
+```
+
+#### Visual Verification Workflow
+Copilot can close the loop on GUI automation by capturing and viewing screenshots:
+1. Perform an action (e.g. `send_keys` to type into Notepad)
+2. Capture a screenshot of the target window (`-screenshot`)
+3. View the PNG with the `view` tool to visually confirm the result
+
+This is useful for debugging GUI interactions without requiring the user to manually verify.
+
 ## Architecture
 
 ### Language Mix

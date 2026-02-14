@@ -1,224 +1,216 @@
+//**********************************************
+// Console Extensions
+//  Copyright (c) Rylogic Ltd 2004
+//**********************************************
 #include "src/forward.h"
-#include "src/icex.h"
-#include "src/dir_path.h"
-#include "src/msg_box.h"
-#include "src/wait.h"
-#include "src/open_vs.h"
-#include "src/lower.h"
-#include "src/exec.h"
-#include "src/shell_file_op.h"
-#include "src/clip.h"
-#include "src/hash.h"
-#include "src/guid.h"
-#include "src/data_header_gen.h"
-#include "src/dll_proxy.h"
-#include "src/new_lines.h"
-//#include "src/NEW_COMMAND.h"
+#include "src/commands/commands.h"
+
+using namespace pr;
 
 namespace cex
 {
-	struct Main :cex::ICex
+	struct Main
 	{
-		pr::InitCom m_com;
-		std::unique_ptr<cex::ICex> m_command;
+		InitCom m_com;
 
 		Main()
 			:m_com(COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)
-			,m_command()
 		{}
 
-		int Run() override
-		{
-			return -1;
-		}
-
-		// Show the main help
-		void ShowHelp() const
-		{
-			std::cout <<
-				ICex::Title() <<
-				"  Syntax: Cex -command [parameters]\n"
-				"    -dirpath  : Read a directory path into an environment variable\n"
-				"    -msgbox   : Display a message box\n"
-				"    -wait     : Wait for a specified length of time\n"
-				"    -openvs   : Open a file in an existing instance of visual studio at a line\n"
-				"    -lower    : Return the lower case version of a given string\n"
-				"    -exec     : Execute another process\n"
-				"    -shcopy   : Copy files using the explorer shell\n"
-				"    -shmove   : Move files using the explorer shell\n"
-				"    -shrename : Rename files using the explorer shell\n"
-				"    -shdelete : Delete files using the explorer shell\n"
-				"    -clip     : Clip text to the system clipboard\n"
-				"    -hash     : Generate a hash of the given text input\n"
-				"    -guid     : Generate a guid\n"
-				"    -hdata    : Convert a file to C/C++ header file data\n"
-				"    -dllproxy : Generate a proxy dll\n"
-				"    -newlines : Add or remove newlines from a text file\n"
-				// NEW_COMMAND - add a help string
-				"\n"
-				"  Type Cex -command -help for help on a particular command\n"
-				"\n"
-				"  Cex can be used as a proxy application. Rename cex.exe to whatever application\n"
-				"  name you like, and create an XML file with the same name in the same directory.\n"
-				"  In the XML file, put:\n"
-				"    <root>\n"
-				"        <process>some process full path</process>\n"
-				"        <startdir>some directory path</startdir>\n"
-				"        <arg>first argument</arg>\n"
-				"        <arg>next argument</arg>\n"
-				"        <arg>...</arg>\n"
-				"    </root>\n"
-				"  When the renamed Cex is run, it will look for the XML file and launch whatever\n"
-				"  process is specified. Note: you must specify the 'startdir' as well as the 'process'.\n"
-				"\n"
-				"  Alternatively, if no XML file is found, Cex runs as though the command line was:\n"
-				"     cex.exe -<name_that_cex_was_renamed_to>\n"
-				"  e.g.\n"
-				"     if the cex.exe is renamed to clip.exe, executing it is the same as executing\n"
-				"     cex.exe -clip\n"
-				;
-		}
-
-		// Main program run
-		int Run(std::wstring args)
+		int Run(CmdLine& cmd_line)
 		{
 			// Get the name of this executable
-			auto exepath = pr::win32::ExePath();
+			auto exepath = win32::ExePath();
 			auto path = exepath.parent_path();
 			auto name = exepath.stem();
 			auto extn = exepath.extension();
 
-			// Look for an XML file with the same name as this program in the local directory
-			auto config = path / name.replace_extension(L".xml");
+			// Look for a JSON file with the same name as this program in the local directory
+			auto config = path / name.replace_extension(L".json");
 			if (std::filesystem::exists(config))
-				return RunFromXml(config, args);
+				return RunFromJson(config, cmd_line);
 
 			// If the name of the exe is not 'cex', assume an implicit -exename as the first command line argument
-			if (name != L"cex")
-				args.insert(0, pr::FmtS(L"-%s", name.c_str()));
+			if (name != "cex")
+				cmd_line.args.insert(begin(cmd_line.args), { std::format("{}", name.string()) });
 
-			//NEW_COMMAND - Test the new command
-			//if (!args.empty()) printf("warning: debugging overriding arguments");
-			//args = R("-input blah -msg "Type a value> ")";
-			//args = R("-shcopy "c:/deleteme/SQ.bin,c:/deleteme/TheList.txt" "c:/deleteme/cexitime/" -title "Testing shcopy")";
-			//args = R"(-clip -lwr -bkslash "C:/blah" "Boris" "F:\\Jef/wan")";
-			//args = R"(-p3d -fi "\dump\test.3ds" -verbosity 5 -remove_degenerates 4096 -gen_normals 40)";
-			//args = R"(-p3d -fi R:\localrepo\PC\vrex\res\pelvis.3ds -verbosity 3 -remove_degenerates 16384 -gen_normals 40)";
-
-			// Parse the command line, show help if invalid
-			try
+			// Parse the command line
+			auto IsOption = [&cmd_line](std::string_view options) -> bool
 			{
-				if (!pr::EnumCommandLine(pr::Narrow(args).c_str(), *this))
+				for (; !options.empty(); )
 				{
-					ShowConsole();
-
-					if (m_command)
-						return m_command->ShowHelp(), -1;
-				
-					ShowHelp();
-					return -1;
+					auto pos = options.find(',');
+					if (cmd_line.count(std::string(options.substr(0, pos))) != 0)
+						return true;
+					if (pos == std::string::npos)
+						break;
+					options = options.substr(pos + 1);
 				}
-				if (m_command)
-					m_command->ValidateInput();
-			}
-			catch (std::exception const& ex)
+				return false;
+			};
+
+			// Forward to the appropriate command
 			{
-				ShowConsole();
-				std::cerr << "Command line error" << std::endl << ex.what() << std::endl;
-				return -1;
+				#define CEX_CMD_OPTIONS(options, description, func) if (IsOption(options)) { return func(cmd_line); }
+				CEX_CMD(CEX_CMD_OPTIONS);
+				#undef CEX_CMD_OPTIONS
 			}
 
-			// Run the command
-			// It's the commands decision whether to display the console or not
-			if (m_command)
-				return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
-
-			// Assume error messages have been displayed already
+			// If no commands given, display the command line help message
+			std::cout << "\n"
+				"-------------------------------------------------------------\n"
+				"  Console EXtensions \n" 
+				"   Copyright (c) Rylogic 2004 \n"
+				"   Version: v1.3\n"
+				"-------------------------------------------------------------\n"
+				"\n"
+				" Syntex is: cex --command [parameters]\n"
+				"\n"
+				"  Cex can be used as a proxy application. Rename cex.exe to whatever application\n"
+				"  name you like, and create a JSON file with the same name in the same directory.\n"
+				"  In the file, put:\n"
+				"    {\n"
+				"        process: \"some process full path\"\n"
+				"        startdir: \"some directory path\"\n"
+				"        args: [\"first argument\", \"next argument\", ...]\n"
+				"    }\n"
+				"  When the renamed Cex is run, it will look for the JSON file and launch whatever\n"
+				"  process is specified. Note: you must specify the 'startdir' as well as the 'process'.\n"
+				"\n"
+				"  Alternatively, if no file is found, Cex runs as though the command line was:\n"
+				"     cex.exe --<name_that_cex_was_renamed_to>\n"
+				"  e.g.\n"
+				"     if the cex.exe is renamed to clip.exe, executing it is the same as executing\n"
+				"     cex.exe --clip\n"
+				"\n"
+				" Options:\n"
+				"\n";
+			{
+				#define CEX_CMD_OPTIONS(options, description, func) std::cout << "   " << options << " : " << description << "\n";
+				CEX_CMD(CEX_CMD_OPTIONS);
+				#undef CEX_CMD_OPTIONS
+			}
+			std::cout << "\n";
 			return 0;
 		}
 
-		// Read the option passed to Cex
-		bool CmdLineOption(std::string const& option, TArgIter& arg ,TArgIter arg_end) override
-		{
-			for (;;)
-			{
-				if (m_command) break;
-				if (pr::str::EqualI(option, "-dirpath"  )) { m_command = std::make_unique<cex::DirPath  >(); break; }
-				if (pr::str::EqualI(option, "-msgbox"   )) { m_command = std::make_unique<cex::MsgBox   >(); break; }
-				if (pr::str::EqualI(option, "-wait"     )) { m_command = std::make_unique<cex::Wait     >(); break; }
-				if (pr::str::EqualI(option, "-openvs"   )) { m_command = std::make_unique<cex::OpenVS   >(); break; }
-				if (pr::str::EqualI(option, "-lower"    )) { m_command = std::make_unique<cex::ToLower  >(); break; }
-				if (pr::str::EqualI(option, "-exec"     )) { m_command = std::make_unique<cex::Exec     >(); break; }
-				if (pr::str::EqualI(option, "-shcopy"   )) { m_command = std::make_unique<cex::ShFileOp >(); break; }
-				if (pr::str::EqualI(option, "-shmove"   )) { m_command = std::make_unique<cex::ShFileOp >(); break; }
-				if (pr::str::EqualI(option, "-shrename" )) { m_command = std::make_unique<cex::ShFileOp >(); break; }
-				if (pr::str::EqualI(option, "-shdelete" )) { m_command = std::make_unique<cex::ShFileOp >(); break; }
-				if (pr::str::EqualI(option, "-clip"     )) { m_command = std::make_unique<cex::Clip     >(); break; }
-				if (pr::str::EqualI(option, "-hash"     )) { m_command = std::make_unique<cex::Hash     >(); break; }
-				if (pr::str::EqualI(option, "-guid"     )) { m_command = std::make_unique<cex::Guid     >(); break; }
-				if (pr::str::EqualI(option, "-hdata"    )) { m_command = std::make_unique<cex::HData    >(); break; }
-				if (pr::str::EqualI(option, "-dllproxy" )) { m_command = std::make_unique<cex::DllProxy >(); break; }
-				if (pr::str::EqualI(option, "-newlines" )) { m_command = std::make_unique<cex::NewLines >(); break; }
-				// NEW_COMMAND - handle the command
-				return ICex::CmdLineOption(option, arg, arg_end);
-			}
-			if (arg != arg_end && pr::str::EqualI(*arg, "-help"))
-			{
-				return false; // no more command line please
-			}
-			return m_command->CmdLineOption(option, arg, arg_end);
-		}
-
-		// Forward arg to the command
-		bool CmdLineData(TArgIter& arg, TArgIter arg_end) override
-		{
-			for (;;)
-			{
-				if (m_command) break;
-				return ICex::CmdLineData(arg, arg_end);
-			}
-			return m_command->CmdLineData(arg, arg_end);
-		}
-
 		// Read 'config' and execute
-		int RunFromXml(std::filesystem::path const& config, std::wstring args)
+		int RunFromJson(std::filesystem::path const& filepath, CmdLine& cmd_line)
 		{
-			// Load the XML file
-			pr::xml::Node root;
-			try { root = pr::xml::Load(config.c_str()); }
-			catch (std::exception const& ex)
+			try
 			{
-				std::wcout << "Failed to load " << config << std::endl << ex.what() << std::endl;
-				return -1;
-			}
+				// Load the file
+				auto doc = json::Read(filepath, json::Options{ .AllowComments = true });
+				auto root = doc.to_object();
 
-			// Read elements from the xml file
-			std::wstring process, startdir;
-			for (auto& child : root.m_child)
-			{
-				if      (child == L"process" ) process  = child.as<std::wstring>();
-				else if (child == L"startdir") startdir = child.as<std::wstring>();
-				else if (child == L"arg"     ) args.append(args.empty() ? L"" : L" ").append(child.as<std::wstring>());
-			}
+				std::wstring process, startdir;
 
-			// If a process name was given, execute it, take that virus scanner :)
-			if (!process.empty())
-			{
-				pr::Process proc;
+				// Read elements from the file
+				if (auto jprocess = root.find("process"))
+				{
+					process = Widen(jprocess->to<std::string>());
+				}
+				if (auto jstartdir = root.find("startdir"))
+				{
+					startdir = Widen(jstartdir->to<std::string>());
+				}
+				if (auto jargs = root.find("args"))
+				{
+					for (auto& arg : jargs->to_array())
+						cmd_line.args.push_back({ arg.to<std::string>() });
+				}
+
+				if (process.empty() || startdir.empty())
+					throw std::runtime_error(std::format("JSON file '{}' must contain 'process' and 'startdir' elements", filepath.string()));
+
+				// If a process name was given, execute it
+				std::wstring args;
+				for (auto& arg : cmd_line.args)
+				{
+					auto warg = str::Quotes<std::wstring>(Widen(arg.key), true);
+					args.append(warg).append(L" ");
+				}
+
+				Process proc;
 				if (proc.Start(process.c_str(), args.c_str(), startdir.c_str()))
 					return proc.BlockTillExit();
 
 				// Copy the error message before any other calls to Succeeded overwrite it
-				auto err = pr::Reason();
+				auto err = Reason();
 
 				ShowConsole();
 				std::wcout << "Failed to start process: " << process.c_str() << "\n" << err.c_str() << "\n";
 				return -1;
 			}
-
-			return -1;
+			catch (std::exception const& ex)
+			{
+				std::wcout << "Failed to load " << filepath << std::endl << ex.what() << std::endl;
+				return -1;
+			}
 		}
 	};
+
+	// Show the console for this process
+	void ShowConsole()
+	{
+		// Attach to the current console
+		if (AttachConsole((DWORD)-1) || AllocConsole())
+		{
+			// Redirect the CRT standard input, output, and error handles to the console
+			freopen("CONIN$", "r", stdin);
+			freopen("CONOUT$", "w", stdout);
+			freopen("CONOUT$", "w", stderr);
+
+			// Clear the error state for each of the C++ standard stream objects. We need to do this, as
+			// attempts to access the standard streams before they refer to a valid target will cause the
+			// 'iostream' objects to enter an error state. In versions of Visual Studio after 2005, this seems
+			// to always occur during startup regardless of whether anything has been read from or written to
+			// the console or not.
+			std::wcout.clear();
+			std::cout.clear();
+			std::wcerr.clear();
+			std::cerr.clear();
+			std::wcin.clear();
+			std::cin.clear();
+
+			//FILE *fp;
+			//int h;
+
+			//// redirect unbuffered STDOUT to the console
+			//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
+			//fp = _fdopen(h, "w");
+			//*stdout = *fp;
+			//setvbuf(stdout, NULL, _IONBF, 0);
+
+			//// redirect unbuffered STDIN to the console
+			//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
+			//fp = _fdopen(h, "r");
+			//*stdin = *fp;
+			//setvbuf(stdin, NULL, _IONBF, 0);
+
+			//// redirect unbuffered STDERR to the console
+			//h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
+			//fp = _fdopen(h, "w");
+			//*stderr = *fp;
+			//setvbuf(stderr, NULL, _IONBF, 0);
+
+			//// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog point to console as well
+			//std::ios::sync_with_stdio();
+		}
+	}
+
+	void SetEnvVar(std::string_view env_var, std::string_view value)
+	{
+		try
+		{
+			std::ofstream file("~cex.bat");
+			file << std::format("@echo off\nset {}={}\n", env_var, value); //"DEL /Q ~cex.bat\n"
+		}
+		catch (std::exception const& ex)
+		{
+			std::cerr << "Failed to create '~cex.bat' file\n" << ex.what();
+		}
+	}
 }
 
 // Run as a windows program so that the console window is not shown
@@ -227,8 +219,13 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 	try
 	{
 		//MessageBox(0, "Paws'd", "Cex", MB_OK);
+
+		// lpCmdLine doesn't include the program name, but CmdLine expects argv[0] to be the exe path
+		auto cl = std::format("{} {}", win32::ExePath().string(), Narrow(lpCmdLine));
+		CmdLine cmd_line(cl);
+
 		cex::Main m;
-		return m.Run(lpCmdLine);
+		return m.Run(cmd_line);
 	}
 	catch (std::exception const& ex)
 	{
@@ -236,11 +233,18 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 		return -1;
 	}
 }
-
-int __cdecl wmain(int argc, wchar_t* argv[])
+int __cdecl main(int argc, char* argv[])
 {
-	cex::Main m;
-	std::wstring args;
-	for (int i = 1; i < argc; ++i) args.append(argv[i]).append(L" ");
-	return m.Run(args);
+	try
+	{
+		CmdLine cmd_line(argc, argv);
+
+		cex::Main m;
+		return m.Run(cmd_line);
+	}
+	catch (std::exception const& ex)
+	{
+		std::cout << ex.what() << std::endl;
+		return -1;
+	}
 }
