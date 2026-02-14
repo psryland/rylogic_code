@@ -34,7 +34,6 @@ namespace las
 
 		// Build initial meshes
 		auto cam_pos = m_cam.CameraToWorld().pos;
-		m_ocean.Update(0.0f, cam_pos);
 		m_terrain.Update(cam_pos);
 	}
 
@@ -67,9 +66,8 @@ namespace las
 			m_cam.CameraToWorld(c2w);
 		}
 
-		// Simulation: compute new vertex positions on CPU
+		// Simulation: ocean physics queries remain on CPU for buoyancy (Phase 2)
 		auto cam_pos = m_cam.CameraToWorld().pos;
-		m_ocean.Update(static_cast<float>(m_sim_time), cam_pos);
 		m_terrain.Update(cam_pos);
 
 		RenderNeeded();
@@ -80,7 +78,7 @@ namespace las
 	{
 		auto cam_pos = m_cam.CameraToWorld().pos;
 		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
+		m_ocean.AddToScene(scene, cam_pos, static_cast<float>(m_sim_time));
 		//m_terrain.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
 	}
 

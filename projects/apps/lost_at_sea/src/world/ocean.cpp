@@ -4,6 +4,7 @@
 //************************************
 #include "src/forward.h"
 #include "src/world/ocean.h"
+#include "src/shaders/ocean_shader.h"
 
 namespace las
 {
@@ -13,17 +14,18 @@ namespace las
 
 	// Ocean
 	Ocean::Ocean(Renderer& rdr)
-		:m_waves()
-		,m_inst()
-		,m_cpu_data()
-		,m_grid_origin(v4::Origin())
-		,m_dirty(false)
+		: m_waves()
+		, m_inst()
+		, m_shader()
 	{
 		InitDefaultWaves();
+
+		// Create the ocean shader. The nugget's RefPtr shares ownership.
+		m_shader = pr::rdr12::New<OceanShader>(rdr);
 		BuildMesh(rdr);
 	}
 
-	// Initialise the ocean with a set of default wave components. These are arbitrary values that look good, but could be tweaked or made user-configurable.
+	// Initialise the ocean with a set of default wave components.
 	void Ocean::InitDefaultWaves()
 	{
 		m_waves = {
@@ -34,62 +36,40 @@ namespace las
 		};
 	}
 
-	// Compute the radius of a ring, blending from logarithmic spacing (camera near surface)
-	// to linear spacing (camera far above). At low height, logarithmic spacing makes nearby
-	// triangles small and distant triangles large, matching perspective foreshortening. As the
-	// camera rises, perspective flattens and linear spacing produces more uniform screen-space
-	// triangle sizes.
-	static float RingRadius(int ring, float camera_height)
-	{
-		auto t = static_cast<float>(ring) / (Ocean::NumRings - 1);
-
-		// Logarithmic: r = Inner * exp(log(Outer/Inner) * t)
-		auto log_ratio = std::log(Ocean::OuterRadius / Ocean::InnerRadius);
-		auto r_log = Ocean::InnerRadius * std::exp(log_ratio * t);
-
-		// Linear: r = Inner + (Outer - Inner) * t
-		auto r_lin = Ocean::InnerRadius + (Ocean::OuterRadius - Ocean::InnerRadius) * t;
-
-		// Blend: 0 = fully logarithmic (near surface), 1 = fully linear (high altitude)
-		// Transition height is roughly the outer radius — at that height, the whole mesh
-		// subtends a similar angle regardless of ring distance.
-		auto h = std::abs(camera_height);
-		auto blend = std::min(h / Ocean::OuterRadius, 1.0f);
-
-		return r_log + blend * (r_lin - r_log);
-	}
-
-	// Build a radial mesh with logarithmically spaced rings. Vertex density decreases
-	// with distance so triangles appear approximately the same size on screen.
+	// Build a flat radial mesh with encoded vertex data for the GPU.
+	// The vertex shader reconstructs world positions from ring/segment encoding.
+	// Vertex layout:
+	//   Centre vertex: m_vert = (0, 0, -1, 1) — sentinel value z=-1
+	//   Ring vertices:  m_vert = (cos θ, sin θ, t, 1) where t = normalised ring index [0,1]
 	void Ocean::BuildMesh(Renderer& rdr)
 	{
-		// Vertex layout: centre vertex (index 0) + NumRings * NumSegments ring vertices
 		auto vcount = 1 + NumRings * NumSegments;
-		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
 
-		// Centre vertex
+		pr::rdr12::ModelGenerator::Buffers<Vert> buf;
+		buf.Reset(vcount, 0, 1, sizeof(uint16_t));
+
+		// Centre vertex — sentinel z = -1
 		{
-			auto& v = m_cpu_data.m_vcont[0];
-			v.m_vert = v4(0, 0, 0, 1);
-			v.m_diff = Colour(0.06f, 0.25f, 0.50f, 1.0f);
+			auto& v = buf.m_vcont[0];
+			v.m_vert = v4(0, 0, -1, 1);
+			v.m_diff = Colour(1.0f, 1.0f, 1.0f, 1.0f);
 			v.m_norm = v4(0, 0, 1, 0);
 			v.m_tex0 = v2(0.5f, 0.5f);
 			v.m_idx0 = iv2::Zero();
 		}
 
-		// Ring vertices
+		// Ring vertices — encode direction and normalised ring index
 		for (int ring = 0; ring != NumRings; ++ring)
 		{
 			auto t = static_cast<float>(ring) / (NumRings - 1);
-			auto r = RingRadius(ring, 0.0f);
 
 			for (int seg = 0; seg != NumSegments; ++seg)
 			{
 				auto angle = maths::tauf * seg / NumSegments;
 				auto idx = 1 + ring * NumSegments + seg;
-				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4(r * std::cos(angle), r * std::sin(angle), 0, 1);
-				v.m_diff = Colour(0.06f, 0.25f, 0.50f, 1.0f);
+				auto& v = buf.m_vcont[idx];
+				v.m_vert = v4(std::cos(angle), std::sin(angle), t, 1);
+				v.m_diff = Colour(1.0f, 1.0f, 1.0f, 1.0f);
 				v.m_norm = v4(0, 0, 1, 0);
 				v.m_tex0 = v2(0.5f + 0.5f * t * std::cos(angle), 0.5f + 0.5f * t * std::sin(angle));
 				v.m_idx0 = iv2::Zero();
@@ -101,9 +81,9 @@ namespace las
 		{
 			auto s0 = static_cast<uint16_t>(1 + seg);
 			auto s1 = static_cast<uint16_t>(1 + (seg + 1) % NumSegments);
-			m_cpu_data.m_icont.push_back(0);  // centre
-			m_cpu_data.m_icont.push_back(s0);
-			m_cpu_data.m_icont.push_back(s1);
+			buf.m_icont.push_back(0);  // centre
+			buf.m_icont.push_back(s0);
+			buf.m_icont.push_back(s1);
 		}
 
 		// Quad strips between consecutive rings
@@ -116,42 +96,43 @@ namespace las
 				auto i1 = static_cast<uint16_t>(1 + ring * NumSegments + next_seg);
 				auto i2 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + seg);
 				auto i3 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + next_seg);
-				m_cpu_data.m_icont.push_back(i0);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i3);
+				buf.m_icont.push_back(i0);
+				buf.m_icont.push_back(i2);
+				buf.m_icont.push_back(i1);
+				buf.m_icont.push_back(i1);
+				buf.m_icont.push_back(i2);
+				buf.m_icont.push_back(i3);
 			}
 		}
 
-		// Compute bounding box from vertices
-		m_cpu_data.m_bbox = BBox::Reset();
-		for (auto const& v : m_cpu_data.m_vcont)
-			Grow(m_cpu_data.m_bbox, v.m_vert);
+		// Set a large bounding box since the VS will displace vertices far from their encoded positions.
+		// The actual rendered extent is [-OuterRadius, +OuterRadius] in XY around the camera.
+		buf.m_bbox = BBox(v4::Origin(), v4(OuterRadius, OuterRadius, 50, 0));
 
-		// Configure the nugget
-		auto& nugget = m_cpu_data.m_ncont[0];
+		// Configure the nugget with the custom ocean shader
+		auto& nugget = buf.m_ncont[0];
 		nugget.m_topo = ETopo::TriList;
 		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
-		nugget.m_irange = rdr12::Range(0, static_cast<int>(m_cpu_data.m_icont.size()));
+		nugget.m_irange = rdr12::Range(0, static_cast<int>(buf.m_icont.size()));
+		nugget.m_shaders.push_back({
+			.m_shader = pr::RefPtr<pr::rdr12::ShaderOverride>(m_shader, true),
+			.m_rdr_step = ERenderStep::RenderForward,
+		});
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
 
 		ResourceFactory factory(rdr);
-		ModelGenerator::Cache cache{m_cpu_data};
+		ModelGenerator::Cache cache{buf};
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
-
-		// Wireframe for debugging wave geometry
-		m_inst.m_model->m_nuggets.front().FillMode(EFillMode::Wireframe);
 
 		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
-	// Query the height of the ocean surface at a world position and time, without computing the full displacement or normal.
+	// Physics queries — kept for buoyancy calculations in Phase 2
+
 	float Ocean::HeightAt(float world_x, float world_y, float time) const
 	{
 		auto h = 0.0f;
@@ -164,7 +145,6 @@ namespace las
 		return h;
 	}
 
-	// Query the displaced position of the ocean surface at a world position and time, including horizontal displacement from the Gerstner wave formula.
 	v4 Ocean::DisplacedPosition(float world_x, float world_y, float time) const
 	{
 		auto dx = 0.0f, dy = 0.0f, dz = 0.0f;
@@ -181,7 +161,6 @@ namespace las
 		return v4(world_x + dx, world_y + dy, dz, 1.0f);
 	}
 
-	// Query the normal of the ocean surface at a world position and time, including contributions from all wave components.
 	v4 Ocean::NormalAt(float world_x, float world_y, float time) const
 	{
 		auto nx = 0.0f, ny = 0.0f, nz = 1.0f;
@@ -198,70 +177,18 @@ namespace las
 		return Normalise(v4(nx, ny, nz, 0.0f));
 	}
 
-	// Simulation step: recompute CPU vertex positions for the current time and camera position.
-	void Ocean::Update(float time, v4 camera_world_pos)
-	{
-		// The mesh is centred on the camera (grid_origin = camera XY, Z=0).
-		// Vertices are in local space; the instance transform handles camera-relative offset.
-		auto grid_origin = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
-
-		// Centre vertex
-		{
-			auto displaced = DisplacedPosition(grid_origin.x, grid_origin.y, time);
-			auto normal = NormalAt(grid_origin.x, grid_origin.y, time);
-			auto& v = m_cpu_data.m_vcont[0];
-			v.m_vert = v4(displaced.x - grid_origin.x, displaced.y - grid_origin.y, displaced.z, 1.0f);
-			v.m_norm = normal;
-		}
-
-		// Ring vertices
-		auto cam_height = camera_world_pos.z;
-		for (int ring = 0; ring != NumRings; ++ring)
-		{
-			auto r = RingRadius(ring, cam_height);
-
-			for (int seg = 0; seg != NumSegments; ++seg)
-			{
-				auto angle = maths::tauf * seg / NumSegments;
-				auto lx = r * std::cos(angle);
-				auto ly = r * std::sin(angle);
-
-				auto wx = grid_origin.x + lx;
-				auto wy = grid_origin.y + ly;
-
-				auto displaced = DisplacedPosition(wx, wy, time);
-				auto normal = NormalAt(wx, wy, time);
-
-				auto idx = 1 + ring * NumSegments + seg;
-				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4(lx + (displaced.x - wx), ly + (displaced.y - wy), displaced.z, 1.0f);
-				v.m_norm = normal;
-			}
-		}
-
-		m_grid_origin = grid_origin;
-		m_dirty = true;
-	}
-
-	// Rendering: upload dirty verts to GPU and add to the scene.
-	void Ocean::AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
+	// Rendering: update shader constants and add to the scene.
+	void Ocean::AddToScene(Scene& scene, v4 camera_world_pos, float time)
 	{
 		if (!m_inst.m_model)
 			return;
 
-		// Upload CPU vertex data to the GPU model if dirty
-		if (m_dirty)
-		{
-			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
-			auto* dst = update.ptr<Vert>();
-			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
-			update.Commit();
+		// Update the ocean shader constant buffer
+		m_shader->UpdateConstants(m_waves, camera_world_pos, time,
+			InnerRadius, OuterRadius, NumRings, NumSegments);
 
-			m_dirty = false;
-		}
-
-		// Camera-relative instance transform: grid origin minus camera position
-		m_inst.m_i2w = m4x4::Translation(0, 0, -camera_world_pos.z);
+		// Instance transform: identity (the VS handles camera-relative positioning)
+		m_inst.m_i2w = m4x4::Identity();
 		scene.AddInstance(m_inst);
 	}
 }

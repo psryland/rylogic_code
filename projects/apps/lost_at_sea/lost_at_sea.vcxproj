@@ -45,12 +45,14 @@
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\shaders\ocean_shader.cpp" />
     <ClCompile Include="src\world\ocean.cpp" />
     <ClCompile Include="src\world\height_field.cpp" />
     <ClCompile Include="src\world\terrain.cpp" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\settings.h" />
+    <ClInclude Include="src\shaders\ocean_shader.h" />
     <ClInclude Include="src\world\ocean.h" />
     <ClInclude Include="src\world\height_field.h" />
     <ClInclude Include="src\world\terrain.h" />
@@ -63,6 +65,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgui.ini" />
+    <None Include="src\shaders\ocean_common.hlsli" />
+    <None Include="src\shaders\ocean_vs.hlsl" />
+    <None Include="src\shaders\ocean_ps.hlsl" />
   </ItemGroup>
   <Target Name="CopyDataDirectory" AfterTargets="Link">
     <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')" ContinueOnError="ErrorAndContinue" SkipUnchangedFiles="true" />

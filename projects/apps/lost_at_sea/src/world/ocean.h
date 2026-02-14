@@ -3,12 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2024
 //************************************
 // Gerstner wave ocean simulation.
-// CPU-side wave displacement for physics queries + mesh generation for rendering.
+// GPU vertex shader handles wave displacement. CPU-side queries for physics.
 #pragma once
 #include "src/forward.h"
 
 namespace las
 {
+	struct OceanShader;
+
 	// Parameters for a single Gerstner wave component
 	struct GerstnerWave
 	{
@@ -44,36 +46,21 @@ namespace las
 
 		std::vector<GerstnerWave> m_waves;
 		Instance m_inst;
-
-		// CPU-side vertex data (simulation writes here, render reads from here)
-		pr::rdr12::ModelGenerator::Buffers<Vert> m_cpu_data;
-		v4 m_grid_origin;  // World-space position of the grid centre
-		bool m_dirty; // True when CPU verts have been updated but not yet uploaded to GPU
+		OceanShader* m_shader; // Owned by the nugget's RefPtr; raw pointer for convenient access
 
 		explicit Ocean(Renderer& rdr);
 
 		// Physics queries (read-only, no rendering side effects)
 		float HeightAt(float world_x, float world_y, float time) const;
-
-		// Query the displaced position of the ocean surface at a world position and time, including horizontal displacement from the Gerstner wave formula.
 		v4 DisplacedPosition(float world_x, float world_y, float time) const;
-
-		// Query the normal of the ocean surface at a world position and time, including contributions from all wave components.
 		v4 NormalAt(float world_x, float world_y, float time) const;
 
-		// Simulation step: recompute CPU vertex positions for the current time and camera position.
-		// This only modifies simulation state (m_cpu_verts), not GPU resources.
-		void Update(float time, v4 camera_world_pos);
-
-		// Rendering: upload dirty verts to GPU and add to the scene.
-		void AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload);
+		// Rendering: update shader constants and add to the scene.
+		void AddToScene(Scene& scene, v4 camera_world_pos, float time);
 
 	private:
 
-		// Initialise the ocean with a set of default wave components. These are arbitrary values that look good, but could be tweaked or made user-configurable.
 		void InitDefaultWaves();
-
-		// Create the ocean mesh as a flat grid, with vertex positions and normals to be displaced by the Gerstner wave formula in the shader.
 		void BuildMesh(Renderer& rdr);
 	};
 }
