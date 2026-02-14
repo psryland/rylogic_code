@@ -22,7 +22,7 @@ namespace pr::math
 			std::conditional_t<IntrinsicF, __m128,
 			std::conditional_t<IntrinsicD, __m256d,
 			std::byte[4*sizeof(S)]
-			>>>>;
+			>>;
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
