@@ -318,8 +318,12 @@ namespace pr
 	inline bool EnumCommandLine(Char const* cmd_line, cmdline::IOptionReceiver<Char>& receiver)
 	{
 		auto buf = std::basic_string<Char>(cmd_line);
-		auto argv = cmdline::Tokenize(buf.data(), buf.size());
-		return EnumCommandLine(int(argv.size()), argv.data(), receiver);
+		auto tokens = cmdline::Tokenize(buf.data(), buf.size());
+
+		// Convert to strings for the IOptionReceiver interface
+		typename cmdline::IOptionReceiver<Char>::TArgs args;
+		for (auto t : tokens) args.push_back(t);
+		return EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 
 	// --------------------------------------------------------------------------------------------
