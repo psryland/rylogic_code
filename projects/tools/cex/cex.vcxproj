@@ -1,64 +1,62 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<!-- Globals -->
-	<PropertyGroup Label="Globals">
-		<ConfigurationType>Application</ConfigurationType>
-		<RootNamespace>cex</RootNamespace>
-		<ProjectGuid>{039B80B4-7A80-4E8D-8928-AA843B89C7EC}</ProjectGuid>
-	</PropertyGroup>
-
-	<!-- Property Sheets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(PropsPath)build_configurations.props" />
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)app.props" />
-
-	<!-- Build Options -->
-	<ItemDefinitionGroup>
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
-			<MultiProcessorCompilation>false</MultiProcessorCompilation>
-			<AdditionalIncludeDirectories>
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>Application</ConfigurationType>
+    <RootNamespace>cex</RootNamespace>
+    <ProjectGuid>{039B80B4-7A80-4E8D-8928-AA843B89C7EC}</ProjectGuid>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)app.props" />
+  <!--
+  Build Options
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
 			</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-		</Link>
-	</ItemDefinitionGroup>
-
-	<!-- Source -->
-	<ItemGroup>
-		<ClInclude Include="src\clip.h" />
-		<ClInclude Include="src\data_header_gen.h" />
-		<ClInclude Include="src\dir_path.h" />
-		<ClInclude Include="src\dll_proxy.h" />
-		<ClInclude Include="src\exec.h" />
-		<ClInclude Include="src\forward.h" />
-		<ClInclude Include="src\guid.h" />
-		<ClInclude Include="src\hash.h" />
-		<ClInclude Include="src\icex.h" />
-		<ClInclude Include="src\lower.h" />
-		<ClInclude Include="src\msg_box.h" />
-		<ClInclude Include="src\new_lines.h" />
-		<ClInclude Include="src\open_vs.h" />
-		<ClInclude Include="src\shell_file_op.h" />
-		<ClInclude Include="src\template.h" />
-		<ClInclude Include="src\wait.h" />
-		<ClCompile Include="src\data_header_gen.cpp" />
-		<ClCompile Include="src\main.cpp">
-			<PrecompiledHeader>Create</PrecompiledHeader>
-		</ClCompile>
-		<ClCompile Include="src\open_vs.cpp" />
-		<ClCompile Include="src\shell_file_op.cpp" />
-		<ClCompile Include="src\wait2.ixx">
-			<ExcludedFromBuild>true</ExcludedFromBuild>
-		</ClCompile>
-	</ItemGroup>
-
-	<!-- Targets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+  Source
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\commands\clip\clip.cpp" />
+    <ClCompile Include="src\commands\data_header_gen\data_header_gen.cpp" />
+    <ClCompile Include="src\commands\dir_path\dir_path.cpp" />
+    <ClCompile Include="src\commands\dll_proxy\dll_proxy.cpp" />
+    <ClCompile Include="src\commands\exec\exec.cpp" />
+    <ClCompile Include="src\commands\guid\guid.cpp" />
+    <ClCompile Include="src\commands\hash\hash.cpp" />
+    <ClCompile Include="src\commands\lower\lower.cpp" />
+    <ClCompile Include="src\commands\msg_box\msg_box.cpp" />
+    <ClCompile Include="src\commands\new_lines\new_lines.cpp" />
+    <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
+    <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
+    <ClCompile Include="src\commands\send_mouse\send_mouse.cpp" />
+    <ClCompile Include="src\commands\open_vs\open_vs.cpp" />
+    <ClCompile Include="src\commands\shell_file_op\shell_file_op.cpp" />
+    <ClCompile Include="src\commands\wait\wait.cpp" />
+    <ClInclude Include="src\commands\commands.h" />
+    <ClInclude Include="src\commands\process_util.h" />
+    <ClInclude Include="src\forward.h" />
+    <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

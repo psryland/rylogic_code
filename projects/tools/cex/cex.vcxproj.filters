@@ -4,73 +4,120 @@
     <Filter Include="src">
       <UniqueIdentifier>{a11fe3b1-8977-45a5-85d0-3a50cc335cde}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands">
+      <UniqueIdentifier>{24ab810e-0182-425d-b4da-a4fd30961115}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\clip">
+      <UniqueIdentifier>{16901708-1bdf-4385-a3a8-6fe87e346b8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\data_header_gen">
+      <UniqueIdentifier>{4fe02c22-063f-4d58-85a0-36ae7e863d6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\dir_path">
+      <UniqueIdentifier>{75e74517-4ea6-4c8c-a565-16ea1d18a4d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\dll_proxy">
+      <UniqueIdentifier>{98d443c8-e91d-4fcf-9426-0de33cfeac2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\exec">
+      <UniqueIdentifier>{3cba7647-b325-4fa5-b5fb-0750baa5a5cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\guid">
+      <UniqueIdentifier>{1195b775-51bb-43cf-b80b-d61ca4e1b300}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\hash">
+      <UniqueIdentifier>{eee10e9e-560f-47ff-be95-9dac340c652b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\lower">
+      <UniqueIdentifier>{55166c4b-a1c8-4e7c-bdb0-1de1228d5f5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\msg_box">
+      <UniqueIdentifier>{acdf429a-b96b-4941-a51f-8c2d4bd692a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\new_lines">
+      <UniqueIdentifier>{84fc9b13-6613-4e5d-bdb4-867ab9b9aeb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\open_vs">
+      <UniqueIdentifier>{ed788fbf-535a-4fd1-ab03-adb0b9b086d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\screenshot">
+      <UniqueIdentifier>{f8a2c3d1-7b4e-4f9a-b6c5-2d1e3f4a5b6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\send_keys">
+      <UniqueIdentifier>{a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\send_mouse">
+      <UniqueIdentifier>{b2c3d4e5-6f7a-8b9c-0d1e-2f3a4b5c6d7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\shell_file_op">
+      <UniqueIdentifier>{d9ef9f94-b1d2-44d4-871b-1ab8e3e8d6f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\wait">
+      <UniqueIdentifier>{2d71d9c7-5ae7-482f-bb47-ccd7e589bef9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\clip.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClCompile Include="src\data_header_gen.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClInclude Include="src\data_header_gen.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\dir_path.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\dll_proxy.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\exec.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\forward.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\guid.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\hash.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\icex.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\lower.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClInclude Include="src\msg_box.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\commands\commands.h">
+      <Filter>src\commands</Filter>
     </ClInclude>
-    <ClInclude Include="src\new_lines.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\commands\process_util.h">
+      <Filter>src\commands</Filter>
     </ClInclude>
-    <ClCompile Include="src\open_vs.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClInclude Include="src\open_vs.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClCompile Include="src\shell_file_op.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClInclude Include="src\shell_file_op.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\template.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\wait.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClCompile Include="src\wait2.ixx">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="deploy_cex.py" />
+    <ClCompile Include="src\commands\data_header_gen\data_header_gen.cpp">
+      <Filter>src\commands\data_header_gen</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\shell_file_op\shell_file_op.cpp">
+      <Filter>src\commands\shell_file_op</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\open_vs\open_vs.cpp">
+      <Filter>src\commands\open_vs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\clip\clip.cpp">
+      <Filter>src\commands\clip</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\dir_path\dir_path.cpp">
+      <Filter>src\commands\dir_path</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\dll_proxy\dll_proxy.cpp">
+      <Filter>src\commands\dll_proxy</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\exec\exec.cpp">
+      <Filter>src\commands\exec</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\guid\guid.cpp">
+      <Filter>src\commands\guid</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\hash\hash.cpp">
+      <Filter>src\commands\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\lower\lower.cpp">
+      <Filter>src\commands\lower</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\msg_box\msg_box.cpp">
+      <Filter>src\commands\msg_box</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\new_lines\new_lines.cpp">
+      <Filter>src\commands\new_lines</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\screenshot\screenshot.cpp">
+      <Filter>src\commands\screenshot</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\send_keys\send_keys.cpp">
+      <Filter>src\commands\send_keys</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\send_mouse\send_mouse.cpp">
+      <Filter>src\commands\send_mouse</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\wait\wait.cpp">
+      <Filter>src\commands\wait</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

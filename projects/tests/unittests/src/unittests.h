@@ -6,6 +6,7 @@
 // Headers to unit test
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
+#include "pr/algorithm/multidimensional_scaling.h"
 #include "pr/algorithm/peak_detection.h"
 #include "pr/audio/audio.h"
 #include "pr/audio/audio/audio_manager.h"
@@ -203,6 +204,7 @@
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/math.h"
 #include "pr/math_new/tests/all_tests.h"
+#include "pr/math_new/tests/matrix_tests.h"
 #include "pr/math_new/tests/quaternion_tests.h"
 #include "pr/math_new/tests/vector_tests.h"
 #include "pr/math_new/tests/vector2_tests.h"
@@ -225,6 +227,7 @@
 #include "pr/maths/conversion.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/maths/dynamics.h"
+#include "pr/maths/eigenvalue.h"
 #include "pr/maths/fft.h"
 #include "pr/maths/fibonacci_sphere.h"
 #include "pr/maths/float_compare.h"

@@ -59,6 +59,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics2", "projects\tests\
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "projects\tests\unittests\unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C08B476-AF59-47F4-8122-2E068D55066E} = {8C08B476-AF59-47F4-8122-2E068D55066E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12-test", "projects\tests\view3d-12-test\view3d-12-test.vcxproj", "{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}"
 	ProjectSection(ProjectDependencies) = postProject

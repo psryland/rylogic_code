@@ -1754,7 +1754,7 @@ namespace pr::ldraw
 	#pragma endregion
 }
 
-#if PR_UNITTESTS
+#if PR_UNITTESTS && !PR_UNITTESTS_VISUALISE
 #include "pr/common/unittests.h"
 namespace pr::ldraw
 {
