@@ -185,6 +185,8 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::EnvMap, gpu);
 		}
 
+		D3D12_GPU_DESCRIPTOR_HANDLE last_tex = {}, last_sam = {};
+
 		// Draw each element in the draw list
 		Lock lock(*this);
 		for (auto& dle : lock.drawlist())
@@ -208,7 +210,11 @@ namespace pr::rdr12
 			if (Texture2DPtr tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex))
 			{
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+				if (srv_descriptor.ptr != last_tex.ptr)
+				{
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+					last_tex = srv_descriptor;
+				}
 				if constexpr (PR_DBG_RDR)
 				{
 					// Ensure the diffuse texture is in the correct state
@@ -221,7 +227,11 @@ namespace pr::rdr12
 			if (SamplerPtr sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam))
 			{
 				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+				if (sam_descriptor.ptr != last_sam.ptr)
+				{
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+					last_sam = sam_descriptor;
+				}
 			}
 
 			// Add skinning data for skinned meshes
