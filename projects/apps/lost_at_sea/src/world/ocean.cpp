@@ -115,8 +115,8 @@ namespace las
 		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 		nugget.m_vrange = rdr12::Range(0, vcount);
 		nugget.m_irange = rdr12::Range(0, static_cast<int>(buf.m_icont.size()));
-		nugget.m_shaders.push_back({
-			.m_shader = pr::RefPtr<pr::rdr12::ShaderOverride>(m_shader, true),
+		nugget.m_shdr_overlays.push_back({
+			.m_overlay = ShaderPtr(m_shader, true),
 			.m_rdr_step = ERenderStep::RenderForward,
 		});
 

@@ -84,7 +84,6 @@ namespace pr::rdr12
 		HitTestRays         m_ht_rays;        // The set of async hit test rays
 		HitTestResults      m_ht_results;     // The results of async hit tests
 		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
-		PipeStates          m_global_pso;     // Global pipe state overrides
 		std::thread::id     m_main_thread_id; // The thread that created this window
 		AutoSub             m_eh_hittests;    // Event handler for async hit test results
 		bool                m_invalidated;    // True after Invalidate has been called but before Render has been called

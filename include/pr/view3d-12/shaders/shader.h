@@ -52,16 +52,13 @@ namespace pr::rdr12
 			return shdr;
 		}
 
+		// Config the shader stages.
+		virtual void SetupFrame(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&) {}
+		virtual void SetupElement(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*) {}
+
 		// Ref counting clean up
 		static void RefCountZero(RefCounted<Shader>* doomed);
 		protected: virtual void Delete();
-	};
-
-	// Interface for shaders that are used as overrides
-	struct ShaderOverride : Shader
-	{
-		// Config the shader.
-		virtual void SetupOverride(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*) {}
 	};
 
 	// Compiler options helper

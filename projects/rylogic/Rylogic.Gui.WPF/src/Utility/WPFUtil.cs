@@ -131,12 +131,11 @@ namespace Rylogic.Gui.WPF
 			var vkey = (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
 			if (include_modifier_keys)
 			{
-				if (Keyboard.IsKeyDown(Key.LeftShift)) vkey |= EKeyCodes.Shift | EKeyCodes.LShiftKey;
-				if (Keyboard.IsKeyDown(Key.RightShift)) vkey |= EKeyCodes.Shift | EKeyCodes.RShiftKey;
-				if (Keyboard.IsKeyDown(Key.LeftCtrl)) vkey |= EKeyCodes.Control | EKeyCodes.LControlKey;
-				if (Keyboard.IsKeyDown(Key.RightCtrl)) vkey |= EKeyCodes.Control | EKeyCodes.RControlKey;
-				if (Keyboard.IsKeyDown(Key.LeftAlt)) vkey |= EKeyCodes.Menu | EKeyCodes.LMenu;
-				if (Keyboard.IsKeyDown(Key.RightAlt)) vkey |= EKeyCodes.Menu | EKeyCodes.RMenu;
+				// Only mask in keys with values > 0xFFFF. These are the modifier bits in the key code
+				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) vkey |= EKeyCodes.Control;
+				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) vkey |= EKeyCodes.Alt;
+				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) vkey |= EKeyCodes.Shift;
+				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)) vkey |= EKeyCodes.Windows;
 			}
 			return vkey;
 		}

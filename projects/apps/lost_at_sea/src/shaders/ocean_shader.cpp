@@ -20,7 +20,7 @@ namespace las
 	}
 
 	OceanShader::OceanShader(Renderer& rdr)
-		: ShaderOverride()
+		: Shader()
 		, m_vs_bytecode()
 		, m_ps_bytecode()
 		, m_cbuf()
@@ -122,7 +122,7 @@ namespace las
 		}
 	}
 
-	void OceanShader::SetupOverride(
+	void OceanShader::SetupElement(
 		ID3D12GraphicsCommandList* cmd_list,
 		pr::rdr12::GpuUploadBuffer& upload,
 		pr::rdr12::Scene const&,

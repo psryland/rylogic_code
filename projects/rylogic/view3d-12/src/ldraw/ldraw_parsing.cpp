@@ -1178,7 +1178,7 @@ namespace pr::rdr12::ldraw
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
 					nug.m_topo = line_style == ELineStyle::LineSegments ? ETopo::LineList : ETopo::LineStripAdj;
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
+					nug.m_shdr_overlays.push_back({ shdr, ERenderStep::RenderForward });
 				}
 			}
 			explicit operator bool() const
@@ -1199,7 +1199,7 @@ namespace pr::rdr12::ldraw
 				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
 				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, m_depth);
 				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, shdr)
+					.use_shader_overlay(ERenderStep::RenderForward, shdr)
 					.tex_diffuse(PointStyleTexture(m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.vrange(vrange)
@@ -2228,7 +2228,7 @@ namespace pr::rdr12::ldraw
 				if (segment.m_thick)
 				{
 					auto shdr = segment.m_thick.CreateShader(segment.m_style);
-					nugget.use_shader(ERenderStep::RenderForward, shdr);
+					nugget.use_shader_overlay(ERenderStep::RenderForward, shdr);
 					if (segment.m_style == ELineStyle::LineStrip)
 						nugget.topo(ETopo::LineStripAdj);
 				}
@@ -2256,7 +2256,7 @@ namespace pr::rdr12::ldraw
 					// Add a nugget for this style
 					auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr)
-						.use_shader(ERenderStep::RenderForward, arw_shdr)
+						.use_shader_overlay(ERenderStep::RenderForward, arw_shdr)
 						.vrange(vcount + beg, vcount + end)
 						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
 					);
@@ -2284,7 +2284,7 @@ namespace pr::rdr12::ldraw
 					// Add a nugget for this style
 					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-						.use_shader(ERenderStep::RenderForward, pt_shdr)
+						.use_shader_overlay(ERenderStep::RenderForward, pt_shdr)
 						.tex_diffuse(creation::PointStyleTexture(style, m_pp))
 						.vrange(vcount + beg, vcount + end)
 						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
@@ -2901,7 +2901,7 @@ namespace pr::rdr12::ldraw
 				// Add a nugget for the data points
 				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_data_points.m_size, m_data_points.m_depth);
 				data_points->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, shdr)
+					.use_shader_overlay(ERenderStep::RenderForward, shdr)
 					.tex_diffuse(creation::PointStyleTexture(m_data_points.m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.tint(m_data_points.m_colour)

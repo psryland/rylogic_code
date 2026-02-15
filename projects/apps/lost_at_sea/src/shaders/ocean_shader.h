@@ -33,7 +33,7 @@ namespace las
 	};
 	static_assert((sizeof(CBufOcean) % 16) == 0);
 
-	struct OceanShader : pr::rdr12::ShaderOverride
+	struct OceanShader : pr::rdr12::Shader
 	{
 		// Compiled shader bytecodes (populated at construction from runtime compilation).
 		// The ByteCode wrappers in m_code point into these vectors, so they must outlive the shader.
@@ -46,7 +46,7 @@ namespace las
 		explicit OceanShader(Renderer& rdr);
 
 		// Called per-nugget during forward rendering to bind the ocean constant buffer
-		void SetupOverride(
+		void SetupElement(
 			ID3D12GraphicsCommandList* cmd_list,
 			pr::rdr12::GpuUploadBuffer& upload,
 			pr::rdr12::Scene const& scene,

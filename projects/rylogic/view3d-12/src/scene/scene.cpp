@@ -25,6 +25,7 @@ namespace pr::rdr12
 		, m_raycast_async()
 		, m_global_light()
 		, m_global_envmap()
+		, m_global_fill_mode(EFillMode::Default)
 		, m_eh_resize()
 	{
 		// Initialise the scene camera to match the full window
@@ -144,6 +145,54 @@ namespace pr::rdr12
 		{
 			pr::erase_if(m_render_steps, [](auto& rs) { return rs->m_step_id == ERenderStep::ShadowMap; });
 		}
+	}
+
+	// Get/Set the scene-wide fill mode default.
+	EFillMode Scene::FillMode() const
+	{
+		return m_global_fill_mode;
+	}
+	void Scene::FillMode(EFillMode fill_mode)
+	{
+		m_global_fill_mode = fill_mode;
+		switch (m_global_fill_mode)
+		{
+			case EFillMode::Default:
+			case EFillMode::Points:
+			case EFillMode::SolidWire:
+			{
+				m_pso.Clear<EPipeState::FillMode>();
+				break;
+			}
+			case EFillMode::Solid:
+			{
+				m_pso.Set<EPipeState::FillMode>(D3D12_FILL_MODE_SOLID);
+				break;
+			}
+			case EFillMode::Wireframe:
+			{
+				m_pso.Set<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME);
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unsupported fill mode");
+			}
+		}
+	}
+
+	// Get/Set the scene-wide cull mode default.
+	ECullMode Scene::CullMode() const
+	{
+		auto cull_mode = m_pso.Find<EPipeState::CullMode>();
+		return cull_mode != nullptr ? s_cast<ECullMode>(*cull_mode) : ECullMode::Default;
+	}
+	void Scene::CullMode(ECullMode cull_mode)
+	{
+		if (cull_mode != ECullMode::Default)
+			m_pso.Set<EPipeState::CullMode>(s_cast<D3D12_CULL_MODE>(cull_mode));
+		else
+			m_pso.Clear<EPipeState::CullMode>();
 	}
 
 	// Perform an immediate hit test

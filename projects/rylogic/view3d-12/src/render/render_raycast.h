@@ -68,19 +68,19 @@ namespace pr::rdr12
 
 	private:
 
+		// Add model nuggets to the draw list for this render step
+		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
+
 		// Submit the ray cast to the GPU and return immediately.
 		void Execute(Frame& frame) override;
 
 		// Step up the GPU call for the ray cast
 		GpuTransferAllocation ExecuteCore();
-
-		// Process ray cast results from a readback buffer and invoke the callback
-		void ProcessResults(GpuTransferAllocation& output, RayCastResultsOut cb);
-
-		// Add model nuggets to the draw list for this render step
-		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
 	
 		// Draw a single nugget
 		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc);
+
+		// Process ray cast results from a readback buffer and invoke the callback
+		void ProcessResults(GpuTransferAllocation& output, RayCastResultsOut cb);
 	};
 }

@@ -431,7 +431,7 @@ namespace Rylogic.Gui.WPF
 			// Fall back to default
 			switch (e.Key)
 			{
-			case Key.Escape:
+				case Key.Escape:
 				{
 					// Deselect all on escape
 					if (Options.AllowSelection)
@@ -442,7 +442,7 @@ namespace Rylogic.Gui.WPF
 					}
 					break;
 				}
-			case Key.Delete:
+				case Key.Delete:
 				{
 					//if (AllowEditing)
 					{
@@ -467,26 +467,26 @@ namespace Rylogic.Gui.WPF
 					}
 					break;
 				}
-			case Key.F5:
+				case Key.F5:
 				{
 					View3d.ReloadScriptSources();
 					Invalidate();
 					e.Handled = true;
 					break;
 				}
-			case Key.F7:
+				case Key.F7:
 				{
 					var bounds =
 						Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Gfx.View3d.ESceneBounds.Selected :
 						Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? Gfx.View3d.ESceneBounds.Visible :
 						Gfx.View3d.ESceneBounds.All;
 
-					AutoRange(who:bounds);
+					AutoRange(who: bounds);
 					Invalidate();
 					e.Handled = true;
 					break;
 				}
-			case Key.A:
+				case Key.A:
 				{
 					if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
 					{

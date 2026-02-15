@@ -81,25 +81,31 @@ namespace pr::rdr12
 	// Nugget initialisation data
 	struct NuggetDesc
 	{
-		using shader_t = struct shader_t
+		// Each overlay can replace stages in the full shader. So, order is important.
+		// If multiple overlays replace the same stage, the last one wins.
+		struct ShdrOverlay
 		{
-			mutable RefPtr<ShaderOverride> m_shader = {};  // The override shader description.
+			// Notes:
+			//  - Normally overlays just replace one stage in the base shader, but it is possible for an overlay to have
+			//    a full signature and replace all stages. As the overlays are on the nugget, however, both the 'SetupFrame'
+			//    and 'SetupElement' method will be called for each nugget.
+			mutable ShaderPtr m_overlay = {};  // Individual stages that replace stages in the full shader
 			ERenderStep m_rdr_step = ERenderStep::Invalid; // The render step that the shader applies to.
 			int pad = {};
 		};
-		using shaders_t = pr::vector<shader_t, 4, false>;
+		using ShdrOverlays = vector<ShdrOverlay, 4, false>;
 
-		ETopo           m_topo;        // The primitive topology for this nugget
-		EGeom           m_geom;        // The valid geometry components within this range
-		Texture2DPtr    m_tex_diffuse; // Diffuse texture
-		SamplerPtr      m_sam_diffuse; // The sampler to use with the diffuse texture
-		shaders_t       m_shaders;     // Override shaders
-		PipeStates      m_pso;         // A collection of modifications to the pipeline state object description
-		RdrId           m_id;          // An id to allow identification of procedurally added nuggets
-		ENuggetFlag     m_nflags;      // Flags for boolean properties of the nugget
-		Colour32        m_tint;        // Per-nugget tint
-		SortKey         m_sort_key;    // A base sort key for this nugget
-		float           m_rel_reflec;  // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
+		ETopo        m_topo;          // The primitive topology for this nugget
+		EGeom        m_geom;          // The valid geometry components within this range
+		Texture2DPtr m_tex_diffuse;   // Diffuse texture
+		SamplerPtr   m_sam_diffuse;   // The sampler to use with the diffuse texture
+		ShdrOverlays m_shdr_overlays; // Shader overlays, applied in order to overlay the base shader
+		PipeStates   m_pso;           // A collection of modifications to the pipeline state object description
+		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
+		ENuggetFlag  m_nflags;        // Flags for boolean properties of the nugget
+		Colour32     m_tint;          // Per-nugget tint
+		SortKey      m_sort_key;      // A base sort key for this nugget
+		float        m_rel_reflec;    // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 		// If the ranges are invalid, they are assumed to mean the entire model.
@@ -111,7 +117,7 @@ namespace pr::rdr12
 			, m_geom(geom)
 			, m_tex_diffuse()
 			, m_sam_diffuse()
-			, m_shaders()
+			, m_shdr_overlays()
 			, m_pso()
 			, m_id(AutoId)
 			, m_nflags(ENuggetFlag::None)
@@ -159,9 +165,9 @@ namespace pr::rdr12
 		}
 
 		// Add/overide a shader for this nugget
-		NuggetDesc& use_shader(ERenderStep step, ShaderPtr shader)
+		NuggetDesc& use_shader_overlay(ERenderStep step, ShaderPtr overlay)
 		{
-			m_shaders.push_back({shader, step});
+			m_shdr_overlays.push_back({overlay, step});
 			return *this;
 		}
 

@@ -153,7 +153,7 @@ namespace pr::rdr12
 			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.pso<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
 			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.pso<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
 			for (auto const& shdr : nugget.shader_span())
-				nug.use_shader(static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true));
+				nug.use_shader_overlay(static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true));
 
 			ngt.push_back(nug);
 
@@ -382,7 +382,7 @@ namespace pr::rdr12
 			n.m_sam_diffuse = SamplerPtr(nug.m_sam_diffuse, true);
 
 			for (auto& shdr : nug.shader_span())
-				n.m_shaders.push_back({ ShaderPtr(shdr.m_shader, true), static_cast<ERenderStep>(shdr.m_rdr_step) });
+				n.m_shdr_overlays.push_back({ ShaderPtr(shdr.m_shader, true), static_cast<ERenderStep>(shdr.m_rdr_step) });
 
 			if (nug.m_cull_mode != view3d::ECullMode::Default)
 				n.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nug.m_cull_mode));

@@ -52,7 +52,6 @@ namespace pr::rdr12
 		, m_ht_rays()
 		, m_ht_results()
 		, m_bbox_scene(BBox::Reset())
-		, m_global_pso()
 		, m_main_thread_id(std::this_thread::get_id())
 		, m_invalidated(false)
 		, m_ht_invalidated(false)
@@ -644,20 +643,6 @@ namespace pr::rdr12
 			// Only show bounding boxes for things that contribute to the scene bounds.
 			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->Flags(), ldraw::ELdrFlags::SceneBoundsExclude))
 				obj->AddBBoxToScene(m_scene);
-
-#if 0 // todo, global pso?
-			// Apply the fill mode and cull mode to user models
-			obj->Apply([=](LdrObject* obj)
-			{
-				if (obj->m_model == nullptr || AllSet(obj->Flags(), ELdrFlags::SceneBoundsExclude)) return true;
-				for (auto& nug : obj->m_model->m_nuggets)
-				{
-					nug.FillMode(m_fill_mode);
-					nug.CullMode(m_cull_mode);
-				}
-				return true;
-			}, "");
-#endif
 		}
 
 		// Add gizmos from the window to the scene
@@ -841,19 +826,14 @@ namespace pr::rdr12
 	// Get/Set the window fill mode
 	EFillMode V3dWindow::FillMode() const
 	{
-		auto fill_mode = m_global_pso.Find<EPipeState::FillMode>();
-		return fill_mode != nullptr ? s_cast<EFillMode>(*fill_mode) : EFillMode::Default;
+		return m_scene.FillMode();
 	}
 	void V3dWindow::FillMode(EFillMode fill_mode)
 	{
 		if (FillMode() == fill_mode)
 			return;
 
-		if (fill_mode != EFillMode::Default)
-			m_global_pso.Set<EPipeState::FillMode>(s_cast<D3D12_FILL_MODE>(fill_mode));
-		else
-			m_global_pso.Clear<EPipeState::FillMode>();
-
+		m_scene.FillMode(fill_mode);
 		OnSettingsChanged(this, view3d::ESettings::Scene_FillMode);
 		Invalidate();
 	}
@@ -861,19 +841,14 @@ namespace pr::rdr12
 	// Get/Set the window cull mode
 	ECullMode V3dWindow::CullMode() const
 	{
-		auto cull_mode = m_global_pso.Find<EPipeState::CullMode>();
-		return cull_mode != nullptr ? s_cast<ECullMode>(*cull_mode) : ECullMode::Default;
+		return m_scene.CullMode();
 	}
 	void V3dWindow::CullMode(ECullMode cull_mode)
 	{
 		if (CullMode() == cull_mode)
 			return;
 
-		if (cull_mode != ECullMode::Default)
-			m_global_pso.Set<EPipeState::CullMode>(s_cast<D3D12_CULL_MODE>(cull_mode));
-		else
-			m_global_pso.Clear<EPipeState::CullMode>();
-
+		m_scene.CullMode(cull_mode);
 		OnSettingsChanged(this, view3d::ESettings::Scene_CullMode);
 		Invalidate();
 	}
@@ -1766,8 +1741,7 @@ namespace pr::rdr12
 						case EFillMode::Default:
 						case EFillMode::Solid:     FillMode(EFillMode::Wireframe); break;
 						case EFillMode::Wireframe: FillMode(EFillMode::SolidWire); break;
-						case EFillMode::SolidWire: FillMode(EFillMode::Points); break;
-						case EFillMode::Points:    FillMode(EFillMode::Solid); break;
+						case EFillMode::SolidWire: FillMode(EFillMode::Default); break;
 						default: throw std::runtime_error("Unknown fill mode");
 					}
 					Invalidate();
