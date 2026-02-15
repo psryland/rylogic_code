@@ -90,11 +90,16 @@
     <ClInclude Include="src\world\terrain\height_field.h" />
     <ClCompile Include="src\world\terrain\terrain.cpp" />
     <ClInclude Include="src\world\terrain\terrain.h" />
+    <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp" />
+    <ClInclude Include="src\world\terrain\shaders\terrain_shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli" />
     <None Include="src\world\ocean\shaders\ocean.hlsl" />
     <View3dShaderBuild Include="src\world\ocean\shaders\ocean.hlsl" />
+    <None Include="src\world\terrain\shaders\terrain_cbuf.hlsli" />
+    <None Include="src\world\terrain\shaders\terrain.hlsl" />
+    <View3dShaderBuild Include="src\world\terrain\shaders\terrain.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <DataFiles Include="$(ProjectDir)data\**\*.*" />
@@ -106,6 +111,7 @@
     <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc" />
     <ResourceCompile Include="src\shaders.rc" />
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc" />
+    <ResourceCompile Include="src\world\terrain\shaders\terrain.rc" />
   </ItemGroup>
   <Target Name="CopyDataDirectory" AfterTargets="Link">
     <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')" ContinueOnError="ErrorAndContinue" SkipUnchangedFiles="true" />

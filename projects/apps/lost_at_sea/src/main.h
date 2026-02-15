@@ -22,9 +22,9 @@ namespace las
 		static char const* AppName() { return "LostAtSea"; }
 
 		Skybox m_skybox;
-		HeightField m_height_field;
 		Ocean m_ocean;
 		Terrain m_terrain;
+		HeightField m_height_field; // CPU-side height queries for future physics
 
 		double m_sim_time;
 		float m_move_speed; // World units per second

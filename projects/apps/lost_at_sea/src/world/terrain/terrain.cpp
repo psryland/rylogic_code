@@ -4,161 +4,121 @@
 //************************************
 #include "src/forward.h"
 #include "src/world/terrain/terrain.h"
+#include "src/world/terrain/shaders/terrain_shader.h"
 
 namespace las
 {
-	Terrain::Terrain(Renderer& rdr, HeightField const& hf)
-		:m_height_field(&hf)
-		,m_inst()
-		,m_cpu_data()
-		,m_grid_origin(v4(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0, 1))
-		,m_cell_size(2.0f * GridExtent / (GridDim - 1))
-		,m_dirty(false)
-	{
-		BuildMesh(rdr);
-	}
+	// Radial mesh parameters — same structure as the ocean mesh
+	static constexpr int NumRings = 80;
+	static constexpr int NumSegments = 128;
+	static constexpr float InnerRadius = 2.0f;
+	static constexpr float OuterRadius = 1000.0f;
 
-	void Terrain::BuildMesh(Renderer& rdr)
+	// Terrain
+	Terrain::Terrain(Renderer& rdr)
+		: m_inst()
+		, m_shader()
 	{
-		auto vcount = GridDim * GridDim;
-		auto icount = (GridDim - 1) * (GridDim - 1) * 6;
-		m_cpu_data.Reset(vcount, 0, 1, sizeof(uint16_t));
+		// Build a flat radial mesh with encoded vertex data for the GPU.
+		// The vertex shader reconstructs world positions from ring/segment encoding
+		// and displaces them vertically using Perlin noise.
+		// Vertex layout (same as ocean):
+		//   Centre vertex: m_vert = (0, 0, -1, 1) — sentinel value z=-1
+		//   Ring vertices:  m_vert = (cos θ, sin θ, t, 1) where t = normalised ring index [0,1]
+		auto vcount = 1 + NumRings * NumSegments;
 
-		// Initialise with a flat grid
-		auto cell_size = 2.0f * GridExtent / (GridDim - 1);
-		for (int iy = 0; iy < GridDim; ++iy)
+		rdr12::ModelGenerator::Buffers<Vert> buf;
+		buf.Reset(vcount, 0, 0, sizeof(uint16_t));
+
+		// Centre vertex — sentinel z = -1
 		{
-			for (int ix = 0; ix < GridDim; ++ix)
+			auto& v = buf.m_vcont[0];
+			v.m_vert = v4(0, 0, -1, 1);
+			v.m_diff = Colour(0.23f, 0.50f, 0.12f, 1.0f);
+			v.m_norm = v4(0, 0, 1, 0);
+			v.m_tex0 = v2(0.5f, 0.5f);
+			v.m_idx0 = iv2::Zero();
+		}
+
+		// Ring vertices — encode direction and normalised ring index
+		for (int ring = 0; ring != NumRings; ++ring)
+		{
+			auto t = static_cast<float>(ring) / (NumRings - 1);
+
+			for (int seg = 0; seg != NumSegments; ++seg)
 			{
-				auto idx = iy * GridDim + ix;
-				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4((ix - GridDim / 2) * cell_size, (iy - GridDim / 2) * cell_size, 0, 1);
-				v.m_diff = Colour(0.23f, 0.50f, 0.12f, 1.0f); // Default green
+				auto angle = maths::tauf * seg / NumSegments;
+				auto idx = 1 + ring * NumSegments + seg;
+				auto& v = buf.m_vcont[idx];
+				v.m_vert = v4(std::cos(angle), std::sin(angle), t, 1);
+				v.m_diff = Colour(0.23f, 0.50f, 0.12f, 1.0f);
 				v.m_norm = v4(0, 0, 1, 0);
-				v.m_tex0 = v2(float(ix) / (GridDim - 1), float(iy) / (GridDim - 1));
+				v.m_tex0 = v2(0.5f + 0.5f * t * std::cos(angle), 0.5f + 0.5f * t * std::sin(angle));
 				v.m_idx0 = iv2::Zero();
 			}
 		}
 
-		// Build index buffer
-		for (int iy = 0; iy < GridDim - 1; ++iy)
+		// Index buffer: triangle fan from centre to first ring
+		for (int seg = 0; seg != NumSegments; ++seg)
 		{
-			for (int ix = 0; ix < GridDim - 1; ++ix)
+			auto s0 = static_cast<uint16_t>(1 + seg);
+			auto s1 = static_cast<uint16_t>(1 + (seg + 1) % NumSegments);
+			buf.m_icont.push_back(0);  // centre
+			buf.m_icont.push_back(s0);
+			buf.m_icont.push_back(s1);
+		}
+
+		// Quad strips between consecutive rings
+		for (int ring = 0; ring != NumRings - 1; ++ring)
+		{
+			for (int seg = 0; seg != NumSegments; ++seg)
 			{
-				auto i0 = static_cast<uint16_t>(iy * GridDim + ix);
-				auto i1 = static_cast<uint16_t>(i0 + 1);
-				auto i2 = static_cast<uint16_t>(i0 + GridDim);
-				auto i3 = static_cast<uint16_t>(i2 + 1);
-				m_cpu_data.m_icont.push_back(i0);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i1);
-				m_cpu_data.m_icont.push_back(i2);
-				m_cpu_data.m_icont.push_back(i3);
+				auto next_seg = (seg + 1) % NumSegments;
+				auto i0 = static_cast<uint16_t>(1 + ring * NumSegments + seg);
+				auto i1 = static_cast<uint16_t>(1 + ring * NumSegments + next_seg);
+				auto i2 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + seg);
+				auto i3 = static_cast<uint16_t>(1 + (ring + 1) * NumSegments + next_seg);
+				buf.m_icont.push_back(i0);
+				buf.m_icont.push_back(i2);
+				buf.m_icont.push_back(i1);
+				buf.m_icont.push_back(i1);
+				buf.m_icont.push_back(i2);
+				buf.m_icont.push_back(i3);
 			}
 		}
 
-		// Compute bounding box from vertices
-		m_cpu_data.m_bbox = BBox::Reset();
-		for (auto const& v : m_cpu_data.m_vcont)
-			Grow(m_cpu_data.m_bbox, v.m_vert);
+		// Set a large bounding box since the VS will displace vertices far from their encoded positions.
+		buf.m_bbox = BBox(v4::Origin(), v4(OuterRadius, OuterRadius, 100, 0));
 
-		// Configure the nugget (created by Reset with default values)
-		auto& nugget = m_cpu_data.m_ncont[0];
-		nugget.m_topo = ETopo::TriList;
-		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
-		nugget.m_vrange = rdr12::Range(0, vcount);
-		nugget.m_irange = rdr12::Range(0, icount);
+		// Create the terrain shader
+		auto shdr = Shader::Create<TerrainShader>(rdr);
+		m_shader = shdr.get();
+
+		// Configure the nugget with the custom terrain shader
+		buf.m_ncont.push_back(NuggetDesc{ ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm }
+			.use_shader_overlay(ERenderStep::RenderForward, shdr));
 
 		auto terrain_colour = Colour32Green;
 		auto opts = ModelGenerator::CreateOptions().colours({ &terrain_colour, 1 });
 
 		ResourceFactory factory(rdr);
-		ModelGenerator::Cache cache{m_cpu_data};
+		ModelGenerator::Cache cache{buf};
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity();
+
 		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
-	void Terrain::Update(v4 camera_world_pos)
-	{
-		// Snap the grid origin to cell boundaries so that the grid doesn't jitter
-		auto snapped = v4(
-			std::round(camera_world_pos.x / m_cell_size) * m_cell_size,
-			std::round(camera_world_pos.y / m_cell_size) * m_cell_size,
-			0, 1);
-
-		// Only rebuild vertices when the grid origin has moved to a new cell
-		if (snapped.x == m_grid_origin.x && snapped.y == m_grid_origin.y)
-			return;
-
-		m_grid_origin = snapped;
-		RebuildVertices();
-	}
-
-	void Terrain::RebuildVertices()
-	{
-		for (int iy = 0; iy != GridDim; ++iy)
-		{
-			for (int ix = 0; ix != GridDim; ++ix)
-			{
-				auto idx = iy * GridDim + ix;
-
-				// Local grid position (relative to grid centre)
-				auto lx = (ix - GridDim / 2) * m_cell_size;
-				auto ly = (iy - GridDim / 2) * m_cell_size;
-
-				// World position for height field lookup
-				auto wx = m_grid_origin.x + lx;
-				auto wy = m_grid_origin.y + ly;
-				auto h = m_height_field->HeightAt(wx, wy);
-				auto normal = m_height_field->NormalAt(wx, wy);
-
-				// Store vertex in local grid space
-				auto& v = m_cpu_data.m_vcont[idx];
-				v.m_vert = v4(lx, ly, h, 1.0f);
-				v.m_norm = normal;
-				v.m_diff = TerrainColour(h, normal.z);
-			}
-		}
-		m_dirty = true;
-	}
-
-	void Terrain::AddToScene(Scene& scene, v4 camera_world_pos, GfxCmdList& cmd_list, GpuUploadBuffer& upload)
+	// Rendering: update shader constants and add to the scene.
+	void Terrain::AddToScene(Scene& scene, v4 camera_world_pos)
 	{
 		if (!m_inst.m_model)
 			return;
 
-		if (m_dirty)
-		{
-			auto update = m_inst.m_model->UpdateVertices(cmd_list, upload);
-			auto* dst = update.ptr<Vert>();
-			std::memcpy(dst, m_cpu_data.m_vcont.data(), m_cpu_data.m_vcont.size() * sizeof(Vert));
-			update.Commit();
-			m_dirty = false;
-		}
+		// Update the terrain shader constant buffer
+		m_shader->SetupFrame(camera_world_pos, InnerRadius, OuterRadius, NumRings, NumSegments);
 
-		// Camera-relative instance transform
-		m_inst.m_i2w = m4x4::Translation(m_grid_origin - camera_world_pos);
+		// Instance transform: identity (the VS handles camera-relative positioning)
 		scene.AddInstance(m_inst);
-	}
-
-	Colour Terrain::TerrainColour(float height, float flatness)
-	{
-		if (height < 0.0f)
-			return Colour(0.13f, 0.25f, 0.50f, 1.0f); // Underwater: dark blue-grey
-
-		if (height < 2.0f)
-			return Colour(0.82f, 0.75f, 0.37f, 1.0f); // Beach: sandy yellow
-
-		if (flatness < 0.7f)
-			return Colour(0.38f, 0.38f, 0.38f, 1.0f); // Steep slope: rocky grey
-
-		if (height > 40.0f)
-			return Colour(0.50f, 0.50f, 0.50f, 1.0f); // High altitude: grey rock
-
-		// Green vegetation, getting browner at higher elevations
-		auto t = std::clamp((height - 2.0f) / 38.0f, 0.0f, 1.0f);
-		return Colour(0.23f + t * 0.15f, 0.50f - t * 0.20f, 0.12f + t * 0.10f, 1.0f);
 	}
 }

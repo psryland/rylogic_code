@@ -120,7 +120,6 @@ float FresnelSchlick(float cos_theta, float f0)
 	return f0 + (1.0 - f0) * pow(saturate(1.0 - cos_theta), 5.0);
 }
 
-
 // Displace verts of the input mesh by the waves
 PSIn VSOcean(VSIn In)
 {
@@ -240,16 +239,3 @@ PSOut PSOcean(PSIn In)
 	Out.diff = float4(colour, 1.0);
 	return Out;
 }
-
-//#ifdef PR_RDR_VSHADER_ocean
-//PSIn main(VSIn In)
-//{
-//	return VSOcean(In);
-//}
-//#endif
-//#ifdef PR_RDR_PSHADER_ocean
-//PSOut main(PSIn In)
-//{
-//	return PSOcean(In);
-//}
-//#endif

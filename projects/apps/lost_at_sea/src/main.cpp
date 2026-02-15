@@ -10,9 +10,9 @@ namespace las
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
 		, m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 5000.0f, m3x4::Rotation(maths::tau_by_4f, 0, 0))
-		, m_height_field(42)
 		, m_ocean(m_rdr)
-		, m_terrain(m_rdr, m_height_field)
+		, m_terrain(m_rdr)
+		, m_height_field(42)
 		, m_sim_time(0.0)
 		, m_move_speed(20.0f)
 		, m_render_frame(0)
@@ -31,10 +31,6 @@ namespace las
 
 		// Watch for scene renders
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
-
-		// Build initial meshes
-		auto cam_pos = m_cam.CameraToWorld().pos;
-		m_terrain.Update(cam_pos);
 	}
 
 	Main::~Main()
@@ -66,20 +62,16 @@ namespace las
 			m_cam.CameraToWorld(c2w);
 		}
 
-		// Simulation: ocean physics queries remain on CPU for buoyancy (Phase 2)
-		auto cam_pos = m_cam.CameraToWorld().pos;
-		m_terrain.Update(cam_pos);
-
 		RenderNeeded();
 	}
 
 	// Update the scene with things to render
-	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const& args)
+	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const&)
 	{
 		auto cam_pos = m_cam.CameraToWorld().pos;
 		m_skybox.AddToScene(scene);
 		m_ocean.AddToScene(scene, cam_pos, static_cast<float>(m_sim_time));
-		//m_terrain.AddToScene(scene, cam_pos, args.m_cmd_list, args.m_upload);
+		m_terrain.AddToScene(scene, cam_pos);
 	}
 
 	// Render step

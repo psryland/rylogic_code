@@ -19,6 +19,9 @@
     <Filter Include="src\world\ocean\shaders">
       <UniqueIdentifier>{8378f362-aa0f-4338-801c-20fca15667f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\world\terrain\shaders">
+      <UniqueIdentifier>{a2b3c4d5-e6f7-4890-ab12-cd34ef567890}</UniqueIdentifier>
+    </Filter>
     <Filter Include="res">
       <UniqueIdentifier>{97b81594-9f7a-4667-883f-1d5f153d5851}</UniqueIdentifier>
     </Filter>
@@ -42,6 +45,9 @@
     <ClCompile Include="src\world\terrain\terrain.cpp">
       <Filter>src\world\terrain</Filter>
     </ClCompile>
+    <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp">
+      <Filter>src\world\terrain\shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli">
@@ -49,6 +55,12 @@
     </None>
     <None Include="src\world\ocean\shaders\ocean.hlsl">
       <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\terrain\shaders\terrain_cbuf.hlsli">
+      <Filter>src\world\terrain\shaders</Filter>
+    </None>
+    <None Include="src\world\terrain\shaders\terrain.hlsl">
+      <Filter>src\world\terrain\shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -73,6 +85,9 @@
     <ClInclude Include="src\world\terrain\terrain.h">
       <Filter>src\world\terrain</Filter>
     </ClInclude>
+    <ClInclude Include="src\world\terrain\shaders\terrain_shader.h">
+      <Filter>src\world\terrain\shaders</Filter>
+    </ClInclude>
     <ClInclude Include="src\world\ocean\gerstner_wave.h">
       <Filter>src\world\ocean</Filter>
     </ClInclude>
@@ -80,6 +95,9 @@
   <ItemGroup>
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc">
       <Filter>src\world\ocean\shaders</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\terrain\shaders\terrain.rc">
+      <Filter>src\world\terrain\shaders</Filter>
     </ResourceCompile>
     <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
       <Filter>res</Filter>
