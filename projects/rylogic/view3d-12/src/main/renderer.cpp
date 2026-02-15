@@ -264,10 +264,16 @@ namespace pr::rdr12
 		,m_dummy_hwnd()
 		,m_poll_timer()
 		,m_id32_src()
+		,m_gsync(d3d())
+		,m_keep_alive(m_gsync)
 		,m_res_store(rdr())
 	{
 		try
 		{
+			// Register the GpuSync poll callback so that KeepAlive resources
+			// are swept automatically when the GPU completes work.
+			AddPollCB({ &m_gsync, &GpuSync::Poll }, seconds_t(0));
+
 			// Register a window class for the dummy window
 			WNDCLASSEXW wc = {sizeof(WNDCLASSEXW)};
 			wc.style         = 0;
@@ -299,6 +305,9 @@ namespace pr::rdr12
 	Renderer::~Renderer()
 	{
 		LastTask();
+
+		// Remove the GpuSync poll callback and flush deferred deletions
+		RemovePollCB({ &m_gsync, &GpuSync::Poll });
 
 		// Release the dummy window
 		if (m_dummy_hwnd != nullptr)

@@ -20,8 +20,8 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 	
-	RayCast::RayCast(ID3D12Device* device)
-		:Shader()
+	RayCast::RayCast(Renderer& rdr)
+		:Shader(rdr)
 	{
 		// Create the root signature
 		m_signature = RootSig(ERootSigFlags::VertGeomPixelOnly)
@@ -29,7 +29,7 @@ namespace pr::rdr12::shaders
 			.CBuf(EReg::CBufNugget)
 			.SRV(EReg::Pose, 1)
 			.SRV(EReg::Skin, 1)
-			.Create(device, "RayCastVertSig");
+			.Create(rdr.d3d(), "RayCastVertSig");
 	}
 
 	// Config the shader

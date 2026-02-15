@@ -50,7 +50,7 @@ namespace pr::rdr12
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
 		, m_gsync(scene.d3d())
-		, m_shader(scene.d3d())
+		, m_shader(scene.rdr())
 		, m_zero()
 		, m_out()
 		, m_readback(m_gsync, SOBufferCount * sizeof(Intercept))

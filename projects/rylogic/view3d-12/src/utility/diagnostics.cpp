@@ -21,7 +21,7 @@ namespace pr::rdr12
 		,m_normal_lengths(0.1f)
 		,m_normal_colour(Colour32Purple)
 		,m_bboxes_visible(false)
-		,m_gs_fillmode_points(Shader::Create<shaders::PointSpriteGS>(v2(5.0f, 5.0f), false))
+		,m_gs_fillmode_points(Shader::Create<shaders::PointSpriteGS>(wnd.rdr(), v2(5.0f, 5.0f), false))
 	{}
 	Window& DiagState::wnd() const
 	{
@@ -42,7 +42,7 @@ namespace pr::rdr12
 		if (show)
 		{
 			// Get or create an instance of the ShowNormals shader
-			auto shdr = Shader::Create<shaders::ShowNormalsGS>();
+			auto shdr = Shader::Create<shaders::ShowNormalsGS>(model->rdr());
 
 			// Add a dependent nugget for each existing nugget that has vertex normals
 			ResourceFactory factory(model->rdr());

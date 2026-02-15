@@ -27,7 +27,7 @@ namespace pr::rdr12::shaders
 
 	struct ShadowMap :Shader
 	{
-		explicit ShadowMap(ID3D12Device* device);
+		explicit ShadowMap(Renderer& rdr);
 
 		// Config the shader.
 		void SetupFrame(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, ShadowCaster const& caster);

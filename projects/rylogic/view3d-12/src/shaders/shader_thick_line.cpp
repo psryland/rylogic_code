@@ -9,8 +9,8 @@
 
 namespace pr::rdr12::shaders
 {
-	ThickLineStripGS::ThickLineStripGS(float width)
-		:Shader()
+	ThickLineStripGS::ThickLineStripGS(Renderer& rdr, float width)
+		:Shader(rdr)
 		,m_width(width)
 	{
 		m_code = ShaderCode
@@ -33,8 +33,8 @@ namespace pr::rdr12::shaders
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);
 	}
 
-	ThickLineListGS::ThickLineListGS(float width)
-		:Shader()
+	ThickLineListGS::ThickLineListGS(Renderer& rdr, float width)
+		:Shader(rdr)
 		,m_width(width)
 	{
 		m_code = ShaderCode

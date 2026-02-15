@@ -11,14 +11,14 @@ namespace pr::rdr12::shaders
 	struct ThickLineStripGS :Shader
 	{
 		float m_width;
-		explicit ThickLineStripGS(float width);
+		ThickLineStripGS(Renderer& rdr, float width);
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 
 	struct ThickLineListGS :Shader
 	{
 		float m_width;
-		explicit ThickLineListGS(float width);
+		ThickLineListGS(Renderer& rdr, float width);
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

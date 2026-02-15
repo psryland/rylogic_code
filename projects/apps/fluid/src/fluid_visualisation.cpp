@@ -10,7 +10,7 @@ namespace pr::fluid
 		, m_scn(&scn)
 		, m_gfx_scene()
 		, m_tex_map()
-		, m_gs_points(Shader::Create<shaders::PointSpriteGS>(v2(0.1f), true))
+		, m_gs_points(Shader::Create<shaders::PointSpriteGS>(rdr, v2(0.1f), true))
 		, m_gfx_fluid()
 		, m_gfx_vector_field()
 		, m_gfx_map()
@@ -55,7 +55,7 @@ namespace pr::fluid
 			auto mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("Fluid:Particles");
 			m_gfx_fluid.m_model = factory.CreateModel(mdesc, particle_buffer, nullptr);
 			m_gfx_fluid.m_model->CreateNugget(factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-				.use_shader(ERenderStep::RenderForward, m_gs_points)
+				.use_shader_overlay(ERenderStep::RenderForward, m_gs_points)
 				.tex_diffuse(m_rdr->store().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
 				.irange(0, 0));
 			m_gfx_fluid.m_i2w = m4x4::Identity();
@@ -164,7 +164,7 @@ namespace pr::fluid
 				}
 				m_gfx_vector_field.m_model->CreateNugget(factory,
 					NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, m_gs_points)
+					.use_shader_overlay(ERenderStep::RenderForward, m_gs_points)
 					.tex_diffuse(m_rdr->store().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
 					.vrange(0, ptr0 - beg)
 					.irange(0, 0));

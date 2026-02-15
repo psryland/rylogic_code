@@ -9,8 +9,8 @@
 
 namespace pr::rdr12::shaders
 {
-	ShowNormalsGS::ShowNormalsGS()
-		:Shader()
+	ShowNormalsGS::ShowNormalsGS(Renderer& rdr)
+		:Shader(rdr)
 	{
 		m_code = ShaderCode
 		{

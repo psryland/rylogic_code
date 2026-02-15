@@ -83,7 +83,7 @@ namespace pr::rdr12
 {
 	RenderSmap::RenderSmap(Scene& scene, Light const& light, int size, DXGI_FORMAT format)
 		: RenderStep(Id, scene)
-		, m_shader(scene.d3d())
+		, m_shader(scene.rdr())
 		, m_cmd_list(scene.d3d(), nullptr, "RenderSmap", EColours::Yellow)
 		, m_default_tex(rdr().store().StockTexture(EStockTexture::White))
 		, m_default_sam(rdr().store().StockSampler(EStockSampler::LinearClamp))

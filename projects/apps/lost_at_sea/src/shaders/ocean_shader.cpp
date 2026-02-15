@@ -20,7 +20,7 @@ namespace las
 	}
 
 	OceanShader::OceanShader(Renderer& rdr)
-		: Shader()
+		: Shader(rdr)
 		, m_vs_bytecode()
 		, m_ps_bytecode()
 		, m_cbuf()

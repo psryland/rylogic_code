@@ -9,6 +9,8 @@
 #include "pr/view3d-12/utility/features.h"
 #include "pr/view3d-12/utility/eventargs.h"
 #include "pr/view3d-12/utility/cmd_list_collection.h"
+#include "pr/view3d-12/utility/gpu_sync.h"
+#include "pr/view3d-12/utility/keep_alive.h"
 
 namespace pr::rdr12
 {
@@ -76,6 +78,8 @@ namespace pr::rdr12
 		TimerHandle          m_poll_timer;
 		std::atomic_int      m_id32_src;
 		AllocationsTracker   m_mem_tracker;
+		GpuSync              m_gsync;
+		KeepAlive            m_keep_alive;
 
 		// Storage of resources
 		ResourceStore m_res_store;
@@ -225,6 +229,26 @@ namespace pr::rdr12
 		void ExecuteComCommandLists(ComCmdListCollection cmd_lists)
 		{
 			ComQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
+		}
+
+		// Defer release of a D3D12 resource until the GPU has finished using it.
+		// Call this before destroying a C++ wrapper that owns a GPU resource.
+		void DeferRelease(D3DPtr<ID3D12Resource> const& res)
+		{
+			if (!res) return;
+			m_keep_alive.Add(D3DPtr<ID3D12Resource>(res));
+		}
+		void DeferRelease(D3DPtr<ID3D12RootSignature> const& res)
+		{
+			if (!res) return;
+			m_keep_alive.Add(D3DPtr<ID3D12RootSignature>(res));
+		}
+
+		// Signal the deferred-deletion fence on the gfx queue.
+		// Call this after submitting GPU work that may reference deferred resources.
+		void AddDeferredSyncPoint()
+		{
+			m_gsync.AddSyncPoint(GfxQueue());
 		}
 
 		// Run the given function on the Main/GUI thread

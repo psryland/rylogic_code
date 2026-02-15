@@ -644,6 +644,9 @@ namespace pr::rdr12
 		frame.bb_post().m_sync_point = sync_point;
 		++m_bb_index %= BBCount();
 
+		// Signal the renderer's deferred-deletion fence on the same queue
+		rdr().AddDeferredSyncPoint();
+
 		if (flush == EGpuFlush::Block)
 			m_gsync.Wait();
 	}

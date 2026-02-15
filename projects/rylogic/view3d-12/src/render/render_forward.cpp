@@ -29,7 +29,7 @@ namespace pr::rdr12
 {
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(Id, scene)
-		, m_shader(scene.d3d())
+		, m_shader(scene.rdr())
 		, m_cmd_list(scene.d3d(), nullptr, "RenderForward", EColours::Blue)
 		, m_default_tex(rdr().store().StockTexture(EStockTexture::White))
 		, m_default_sam(rdr().store().StockSampler(EStockSampler::LinearClamp))

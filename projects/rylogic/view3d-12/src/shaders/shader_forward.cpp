@@ -37,8 +37,8 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto ProjTex = SamDescStatic(ESamReg::s3);
 	};
 
-	Forward::Forward(ID3D12Device* device)
-		:Shader()
+	Forward::Forward(Renderer& rdr)
+		:Shader(rdr)
 	{
 		m_code = ShaderCode
 		{
@@ -66,7 +66,7 @@ namespace pr::rdr12::shaders
 			.Samp(ESamp::EnvMap)
 			.Samp(ESamp::SMap)
 			.Samp(ESamp::ProjTex)
-			.Create(device, "ForwardSig");
+			.Create(rdr.d3d(), "ForwardSig");
 	}
 
 	// Config the shader

@@ -9,8 +9,8 @@
 
 namespace pr::rdr12::shaders
 {
-	ArrowHeadGS::ArrowHeadGS(v2 size, bool depth)
-		: Shader()
+	ArrowHeadGS::ArrowHeadGS(Renderer& rdr, v2 size, bool depth)
+		: Shader(rdr)
 		, m_size(size)
 		, m_depth(depth)
 	{

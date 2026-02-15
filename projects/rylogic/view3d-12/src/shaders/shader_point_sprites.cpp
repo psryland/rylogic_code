@@ -10,8 +10,8 @@
 
 namespace pr::rdr12::shaders
 {
-	PointSpriteGS::PointSpriteGS(v2 size, bool depth)
-		: Shader()
+	PointSpriteGS::PointSpriteGS(Renderer& rdr, v2 size, bool depth)
+		: Shader(rdr)
 		, m_size(size)
 		, m_depth(depth)
 	{
