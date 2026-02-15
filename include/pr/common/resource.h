@@ -1,4 +1,4 @@
-﻿//**********************************************************************************
+//**********************************************************************************
 // Resource
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************************************************
@@ -22,14 +22,10 @@
 // 'IDR_EXAMPLE0' as an int. In this case you need to call:
 //     pr::resource::Read<char>(MAKEINTRESOURCE(IDR_EXAMPLE0), "TEXT");
 //
-
 #pragma once
-
 #include <string>
 #include <string_view>
 #include <windows.h>
-#include <pr/common/fmt.h>
-#include <pr/common/hresult.h>
 
 namespace pr
 {
@@ -63,6 +59,18 @@ namespace pr
 
 	namespace resource
 	{
+		namespace impl
+		{
+			inline std::string Narrow(std::wstring_view ws)
+			{
+				if (ws.empty()) return {};
+				auto len = ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()), nullptr, 0, nullptr, nullptr);
+				std::string out(len, '\0');
+				::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()), out.data(), len, nullptr, nullptr);
+				return out;
+			}
+		}
+
 		// Check for the existence of a resource named 'name'. module = 0 means 'this exe'
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function.
 		// Note: you can use pr::GetCurrentModule() for 'module'
@@ -82,7 +90,7 @@ namespace pr
 				return false;
 
 			// Throw for other errors
-			throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
+			throw std::runtime_error(std::format("Resource '{}' not found. (0x{:08X})", impl::Narrow(name), last_error));
 		}
 
 		// Return const access to an embedded resource
@@ -97,7 +105,7 @@ namespace pr
 			if (!handle)
 			{
 				auto last_error = ::GetLastError();
-				throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
+				throw std::runtime_error(std::format("Resource '{}' not found. (0x{:08X})", impl::Narrow(name), last_error));
 			}
 
 			// Get the size in bytes of the resource
@@ -110,7 +118,7 @@ namespace pr
 			if (!mem)
 			{
 				auto last_error = GetLastError();
-				throw std::runtime_error(Fmt("Loading resource '%S' failed. (0x%08X) %s", name, last_error, pr::HrMsg(last_error).c_str()));
+				throw std::runtime_error(std::format("Loading resource '{}' failed. (0x{:08X})", impl::Narrow(name), last_error));
 			}
 
 			// Get a pointer to the resource.

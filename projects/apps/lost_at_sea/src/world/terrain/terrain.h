@@ -5,7 +5,7 @@
 // Terrain mesh rendering for visible land (height > 0).
 #pragma once
 #include "src/forward.h"
-#include "src/world/height_field.h"
+#include "src/world/terrain/height_field.h"
 
 namespace las
 {

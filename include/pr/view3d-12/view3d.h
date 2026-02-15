@@ -51,6 +51,7 @@
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_loader.h"
 #include "pr/view3d-12/shaders/shader.h"
+#include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_show_normals.h"
 #include "pr/view3d-12/shaders/shader_smap.h"

@@ -7,48 +7,79 @@
     <Filter Include="framework">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\environment">
-      <UniqueIdentifier>{d7b0d6fe-14e6-4f12-96f4-b81c3998b8e0}</UniqueIdentifier>
+    <Filter Include="src\world">
+      <UniqueIdentifier>{22e27867-295e-4948-9754-037b94528343}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\ocean">
+      <UniqueIdentifier>{f7c073b5-9059-4e09-a5cf-49b600f0eb0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\terrain">
+      <UniqueIdentifier>{fe63e748-440a-4dc0-aae9-e64d153b1031}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\ocean\shaders">
+      <UniqueIdentifier>{8378f362-aa0f-4338-801c-20fca15667f5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
       <Filter>framework</Filter>
     </ClCompile>
+    <ClCompile Include="src\world\terrain\height_field.cpp">
+      <Filter>src\world\terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\ocean.cpp">
+      <Filter>src\world\ocean</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\shaders\ocean_shader.cpp">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain\terrain.cpp">
+      <Filter>src\world\terrain</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\ocean.hlsl">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\terrain\height_field.h">
+      <Filter>src\world\terrain</Filter>
     </ClInclude>
     <ClInclude Include="src\main.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\world\ocean\ocean.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\shaders\ocean_shader.h">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClInclude>
     <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClCompile Include="src\main.cpp">
+    <ClInclude Include="src\world\terrain\terrain.h">
+      <Filter>src\world\terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\gerstner_wave.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\shaders.rc">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\height_field.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\ocean.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\terrain.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\world\ocean.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
-    <ClInclude Include="src\world\terrain.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
-    <ClInclude Include="src\world\height_field.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="imgui.ini" />
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\ocean\shaders\ocean.rc">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

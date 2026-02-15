@@ -40,34 +40,71 @@
     </Link>
   </ItemDefinitionGroup>
   <!--
+  Shaders
+  -->
+  <ItemDefinitionGroup>
+    <View3dShaderBuild>
+      <ShaderType>Effect</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </View3dShaderBuild>
+    <FxCompile>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </FxCompile>
+  </ItemDefinitionGroup>
+  <!--
   Files
   -->
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\shaders\ocean_shader.cpp" />
-    <ClCompile Include="src\world\ocean.cpp" />
-    <ClCompile Include="src\world\height_field.cpp" />
-    <ClCompile Include="src\world\terrain.cpp" />
     <ClInclude Include="src\forward.h" />
+    <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\settings.h" />
-    <ClInclude Include="src\shaders\ocean_shader.h" />
-    <ClInclude Include="src\world\ocean.h" />
-    <ClInclude Include="src\world\height_field.h" />
-    <ClInclude Include="src\world\terrain.h" />
+    <ClCompile Include="src\world\ocean\ocean.cpp" />
+    <ClInclude Include="src\world\ocean\gerstner_wave.h" />
+    <ClInclude Include="src\world\ocean\ocean.h" />
+    <ClCompile Include="src\world\ocean\shaders\ocean_shader.cpp" />
+    <ClInclude Include="src\world\ocean\shaders\ocean_shader.h" />
+    <ClCompile Include="src\world\terrain\height_field.cpp" />
+    <ClInclude Include="src\world\terrain\height_field.h" />
+    <ClCompile Include="src\world\terrain\terrain.cpp" />
+    <ClInclude Include="src\world\terrain\terrain.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli" />
+    <None Include="src\world\ocean\shaders\ocean.hlsl" />
+    <View3dShaderBuild Include="src\world\ocean\shaders\ocean.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <DataFiles Include="$(ProjectDir)data\**\*.*" />
   </ItemGroup>
   <!--
   Custom Target for Data Directory
   -->
   <ItemGroup>
-    <DataFiles Include="$(ProjectDir)data\**\*.*" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="imgui.ini" />
-    <None Include="src\shaders\ocean_common.hlsli" />
-    <None Include="src\shaders\ocean_vs.hlsl" />
-    <None Include="src\shaders\ocean_ps.hlsl" />
+    <ResourceCompile Include="src\shaders.rc" />
+    <ResourceCompile Include="src\world\ocean\shaders\ocean.rc" />
   </ItemGroup>
   <Target Name="CopyDataDirectory" AfterTargets="Link">
     <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')" ContinueOnError="ErrorAndContinue" SkipUnchangedFiles="true" />

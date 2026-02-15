@@ -3,50 +3,43 @@
 //  Copyright (c) Rylogic Ltd 2024
 //************************************
 #include "src/forward.h"
-#include "src/world/ocean.h"
-#include "src/shaders/ocean_shader.h"
+#include "src/world/ocean/ocean.h"
+#include "src/world/ocean/gerstner_wave.h"
+#include "src/world/ocean/shaders/ocean_shader.h"
 
 namespace las
 {
-	// GerstnerWave
-	float GerstnerWave::Frequency() const { return maths::tauf / m_wavelength; }
-	float GerstnerWave::WaveNumber() const { return maths::tauf / m_wavelength; }
+	// Radial mesh parameters. Rings are spaced logarithmically so that triangles
+	// appear roughly the same size on screen regardless of distance from camera.
+	static constexpr int NumRings = 80;       // Number of concentric rings
+	static constexpr int NumSegments = 128;    // Vertices per ring (around 360°)
+	static constexpr float InnerRadius = 2.0f; // Radius of the innermost ring (metres)
+	static constexpr float OuterRadius = 1000.0f; // Radius of the outermost ring (metres)
+	static constexpr float WaterDensity = 1025.0f; // kg/m^3 (seawater)
 
 	// Ocean
 	Ocean::Ocean(Renderer& rdr)
-		: m_waves()
-		, m_inst()
+		: m_inst()
+		, m_waves()
 		, m_shader()
 	{
-		InitDefaultWaves();
-
-		// Create the ocean shader. The nugget's RefPtr shares ownership.
-		m_shader = pr::rdr12::New<OceanShader>(rdr);
-		BuildMesh(rdr);
-	}
-
-	// Initialise the ocean with a set of default wave components.
-	void Ocean::InitDefaultWaves()
-	{
+		// Initialise the ocean with a set of default wave components.
 		m_waves = {
 			{ Normalise(v4(1.0f, 0.3f, 0, 0)), 1.2f, 60.0f, 8.0f, 0.5f },  // Primary swell
 			{ Normalise(v4(0.8f, -0.6f, 0, 0)), 0.6f, 30.0f, 5.5f, 0.4f },  // Secondary
 			{ Normalise(v4(-0.3f, 1.0f, 0, 0)), 0.3f, 15.0f, 3.8f, 0.3f },  // Cross chop
 			{ Normalise(v4(0.5f, 0.5f, 0, 0)), 0.15f, 8.0f, 2.8f, 0.2f },   // Small ripple
 		};
-	}
 
-	// Build a flat radial mesh with encoded vertex data for the GPU.
-	// The vertex shader reconstructs world positions from ring/segment encoding.
-	// Vertex layout:
-	//   Centre vertex: m_vert = (0, 0, -1, 1) — sentinel value z=-1
-	//   Ring vertices:  m_vert = (cos θ, sin θ, t, 1) where t = normalised ring index [0,1]
-	void Ocean::BuildMesh(Renderer& rdr)
-	{
+		// Build a flat radial mesh with encoded vertex data for the GPU.
+		// The vertex shader reconstructs world positions from ring/segment encoding.
+		// Vertex layout:
+		//   Centre vertex: m_vert = (0, 0, -1, 1) — sentinel value z=-1
+		//   Ring vertices:  m_vert = (cos θ, sin θ, t, 1) where t = normalised ring index [0,1]
 		auto vcount = 1 + NumRings * NumSegments;
 
-		pr::rdr12::ModelGenerator::Buffers<Vert> buf;
-		buf.Reset(vcount, 0, 1, sizeof(uint16_t));
+		rdr12::ModelGenerator::Buffers<Vert> buf;
+		buf.Reset(vcount, 0, 0, sizeof(uint16_t));
 
 		// Centre vertex — sentinel z = -1
 		{
@@ -109,16 +102,13 @@ namespace las
 		// The actual rendered extent is [-OuterRadius, +OuterRadius] in XY around the camera.
 		buf.m_bbox = BBox(v4::Origin(), v4(OuterRadius, OuterRadius, 50, 0));
 
+		// Create the ocean shader
+		auto shdr = Shader::Create<OceanShader>(rdr);
+		m_shader = shdr.get();
+
 		// Configure the nugget with the custom ocean shader
-		auto& nugget = buf.m_ncont[0];
-		nugget.m_topo = ETopo::TriList;
-		nugget.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
-		nugget.m_vrange = rdr12::Range(0, vcount);
-		nugget.m_irange = rdr12::Range(0, static_cast<int>(buf.m_icont.size()));
-		nugget.m_shdr_overlays.push_back({
-			.m_overlay = ShaderPtr(m_shader, true),
-			.m_rdr_step = ERenderStep::RenderForward,
-		});
+		buf.m_ncont.push_back(NuggetDesc{ ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm }
+			.use_shader_overlay(ERenderStep::RenderForward, shdr));
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
@@ -126,7 +116,7 @@ namespace las
 		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{buf};
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
-		m_inst.m_i2w = m4x4::Identity();
+		m_inst.m_i2w = m4x4::Identity(); // Instance transform: identity (the VS handles camera-relative positioning)
 
 		factory.FlushToGpu(EGpuFlush::Block);
 	}
@@ -184,11 +174,9 @@ namespace las
 			return;
 
 		// Update the ocean shader constant buffer
-		m_shader->UpdateConstants(m_waves, camera_world_pos, time,
-			InnerRadius, OuterRadius, NumRings, NumSegments);
+		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, NumSegments);
 
 		// Instance transform: identity (the VS handles camera-relative positioning)
-		m_inst.m_i2w = m4x4::Identity();
 		scene.AddInstance(m_inst);
 	}
 }

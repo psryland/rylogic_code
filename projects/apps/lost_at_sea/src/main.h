@@ -5,9 +5,9 @@
 #pragma once
 #include "src/forward.h"
 #include "src/settings.h"
-#include "src/world/ocean.h"
-#include "src/world/height_field.h"
-#include "src/world/terrain.h"
+#include "src/world/ocean/ocean.h"
+#include "src/world/terrain/height_field.h"
+#include "src/world/terrain/terrain.h"
 #include "pr/view3d-12/imgui/imgui.h"
 
 namespace las

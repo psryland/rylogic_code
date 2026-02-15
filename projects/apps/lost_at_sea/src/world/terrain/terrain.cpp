@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2024
 //************************************
 #include "src/forward.h"
-#include "src/world/terrain.h"
+#include "src/world/terrain/terrain.h"
 
 namespace las
 {

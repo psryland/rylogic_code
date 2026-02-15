@@ -1,0 +1,7 @@
+// Shader source files for runtime compilation
+// Includes HLSL files that shared across multiple shaders
+CORE_HLSLI         TEXT DISCARDABLE "pr/hlsl/core.hlsli"
+GEOMETRY_HLSLI     TEXT DISCARDABLE "pr/hlsl/geometry.hlsli"
+INTEROP_HLSLI      TEXT DISCARDABLE "pr/hlsl/interop.hlsli"
+TYPES_HLSLI        TEXT DISCARDABLE "view3d-12/src/shaders/hlsl/types.hlsli"
+FORWARD_CBUF_HLSLI TEXT DISCARDABLE "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"

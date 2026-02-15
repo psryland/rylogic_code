@@ -4,10 +4,10 @@
 //************************************
 // Shared types for ocean vertex and pixel shaders.
 // This file is included from both HLSL and C++ source.
-#ifndef LAS_OCEAN_COMMON_HLSLI
-#define LAS_OCEAN_COMMON_HLSLI
+#ifndef LAS_OCEAN_CBUF_HLSLI
+#define LAS_OCEAN_CBUF_HLSLI
 
-#include "view3d-12/src/shaders/hlsl/types.hlsli"
+#include "pr/hlsl/interop.hlsli"
 
 static const int MaxOceanWaves = 4;
 

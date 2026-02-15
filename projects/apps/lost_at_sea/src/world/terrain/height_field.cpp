@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2024
 //************************************
 #include "src/forward.h"
-#include "src/world/height_field.h"
+#include "src/world/terrain/height_field.h"
 
 namespace las
 {

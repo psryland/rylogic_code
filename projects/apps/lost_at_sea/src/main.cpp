@@ -160,8 +160,8 @@ namespace las
 		m_msg_loop.m_config.msgs_per_loop = 1;
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddLoop(60.0, false, [this](double dt) { m_main->Step(dt); });
-		m_msg_loop.AddLoop(60.0, true, [this](double) { m_main->DoRender(true); });
+		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->Step(dt); });
+		m_msg_loop.AddLoop(60.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
@@ -172,6 +172,13 @@ namespace las
 			result = 0;
 			return true;
 		}
+
+		// On WM_CLOSE, tear down the renderer before the HWND is destroyed.
+		// DXGI's swap chain can post internal messages that starve WM_QUIT
+		// (which has the lowest priority). Destroying 'm_main' releases the
+		// swap chain so that PostQuitMessage's WM_QUIT actually gets dequeued.
+		if (message == WM_CLOSE)
+			m_main.reset();
 
 		return base::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 	}
