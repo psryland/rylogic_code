@@ -19,6 +19,9 @@
     <Filter Include="src\world\ocean\shaders">
       <UniqueIdentifier>{8378f362-aa0f-4338-801c-20fca15667f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{97b81594-9f7a-4667-883f-1d5f153d5851}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
@@ -75,11 +78,14 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="src\shaders.rc">
-      <Filter>src</Filter>
-    </ResourceCompile>
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc">
       <Filter>src\world\ocean\shaders</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\shaders.rc">
+      <Filter>res</Filter>
     </ResourceCompile>
   </ItemGroup>
 </Project>

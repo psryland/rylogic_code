@@ -901,5 +901,8 @@
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_shaders.rc">
       <Filter>src\compute</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
+      <Filter>pr\hlsl</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

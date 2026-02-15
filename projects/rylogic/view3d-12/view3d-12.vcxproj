@@ -373,6 +373,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_shaders.rc" />
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc" />
   </ItemGroup>
   <!--
   AutoGen
