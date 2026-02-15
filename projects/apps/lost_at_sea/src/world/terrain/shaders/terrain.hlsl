@@ -177,8 +177,8 @@ PSIn VSTerrain(VSIn In)
 	float3 n = terrain_normal(world_xy.x, world_xy.y);
 	float3 ws_pos = float3(world_xy, h);
 
-	// Terrain colour from height and slope
-	Out.diff = terrain_colour(h, n);
+	// Pass normal through; colour is computed per-pixel to avoid swimming when the camera moves
+	Out.diff = float4(0, 0, 0, 1);
 	Out.ws_norm = float4(n, 0);
 
 	// Camera-relative rendering: subtract camera XY to keep geometry near the origin.
@@ -194,7 +194,7 @@ PSIn VSTerrain(VSIn In)
 	return Out;
 }
 
-// Pixel shader: lit terrain with vertex colours
+// Pixel shader: per-pixel terrain colouring and lighting
 PSOut PSTerrain(PSIn In)
 {
 	PSOut Out = (PSOut)0;
@@ -203,11 +203,15 @@ PSOut PSTerrain(PSIn In)
 	float3 V = normalize(m_cam.m_c2w[3].xyz - In.ws_vert.xyz);
 	float3 L = m_sun_direction.xyz;
 
-	// Discard underwater fragments (ocean surface handles those)
-	// Use ws_vert.z relative to camera-relative origin + camera height to get world z
+	// ws_vert.z is world height (camera-relative rendering only subtracts XY)
 	float world_z = In.ws_vert.z;
+
+	// Discard underwater fragments (ocean surface handles those)
 	if (world_z < -0.5)
 		discard;
+
+	// Compute terrain colour per-pixel from height and slope
+	float4 base_colour = terrain_colour(world_z, N);
 
 	// Diffuse lighting
 	float NdotL = saturate(dot(N, L));
@@ -217,7 +221,7 @@ PSOut PSTerrain(PSIn In)
 	// Soft sky light from above
 	float sky_light = saturate(N.z * 0.5 + 0.5) * 0.15;
 
-	float3 colour = In.diff.rgb * (ambient + diffuse + sky_light) * m_sun_colour.rgb;
+	float3 colour = base_colour.rgb * (ambient + diffuse + sky_light) * m_sun_colour.rgb;
 
 	Out.diff = float4(colour, 1.0);
 	return Out;
