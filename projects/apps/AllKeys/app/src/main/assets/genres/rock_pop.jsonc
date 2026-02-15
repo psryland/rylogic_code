@@ -1,0 +1,239 @@
+{
+	// Style name
+	"name": "Rock/Pop",
+
+	// Scales
+	//  - Scales are chromatic note indices from the root
+	//    e.g. C major: C=0,D=2,E=4,F=5,G=7,A=9,B=11
+	"scales": {
+		"Major": [0, 2, 4, 5, 7, 9, 11],
+		"Natural Minor": [0, 2, 3, 5, 7, 8, 10],
+		"Minor Pentatonic": [0, 3, 5, 7, 10],
+		"Major Pentatonic": [0, 2, 4, 7, 9],
+		"Blues": [0, 3, 5, 6, 7, 10],
+		"Mixolydian": [0, 2, 4, 5, 7, 9, 10]
+	},
+
+	// Chords
+	"chords": {
+		"": {
+			"scales": ["Major:0", "Major Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Triad",
+					"lh": [0, 7],
+					"rh": [12, 16, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 4, 7],
+					"rh": [12, 19]
+				},
+				{
+					"name": "Doubled",
+					"lh": [0, 7, 12],
+					"rh": [16, 19, 24]
+				}
+			]
+		},
+		"m": {
+			"scales": ["Natural Minor:0", "Minor Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Triad",
+					"lh": [0, 7],
+					"rh": [12, 15, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 3, 7],
+					"rh": [12, 19]
+				},
+				{
+					"name": "Doubled",
+					"lh": [0, 7, 12],
+					"rh": [15, 19, 24]
+				}
+			]
+		},
+		"5": {
+			"scales": ["Major:0", "Minor Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Power",
+					"lh": [0, 7],
+					"rh": [12, 19]
+				},
+				{
+					"name": "Octave",
+					"lh": [0, 7],
+					"rh": [12, 19, 24]
+				}
+			]
+		},
+		"7": {
+			"scales": ["Mixolydian:0", "Blues:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [10, 16, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 4, 10],
+					"rh": [12, 19]
+				}
+			]
+		},
+		"m7": {
+			"scales": ["Natural Minor:0", "Minor Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [10, 15, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 3, 10],
+					"rh": [12, 19]
+				}
+			]
+		},
+		"sus4": {
+			"scales": ["Major:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [12, 17, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 5, 7],
+					"rh": [12, 19]
+				}
+			]
+		},
+		"sus2": {
+			"scales": ["Major:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [12, 14, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 2, 7],
+					"rh": [12, 19]
+				}
+			]
+		},
+		"add9": {
+			"scales": ["Major:0", "Major Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [14, 16, 19]
+				},
+				{
+					"name": "Spread",
+					"lh": [0, 4, 7],
+					"rh": [14, 19, 24]
+				}
+			]
+		},
+		"Δ7": {
+			"scales": ["Major:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7],
+					"rh": [11, 16, 19]
+				},
+				{
+					"name": "Open",
+					"lh": [0, 4, 11],
+					"rh": [12, 19]
+				}
+			]
+		}
+	},
+
+	// Walking Bass patterns
+	//  Format: <c|n|_>[bs]<scale-degree>:<note-length>:<velocity>
+	//  Rock/pop bass is root-heavy with octaves and fifths, straight timing
+	"walks": {
+		"1-beat": [
+			["c1:100:80"]
+		],
+		"2-beat": [
+			["c1:100:80", "c1:100:70"],
+			["c1:100:80", "c5:100:70"],
+			["c1:100:80", "c8:100:70"],
+			["c8:100:80", "c5:100:70"],
+			["c1:100:80", "c-4:100:70"],
+			["c1:100:80", "nb2:100:70"]
+		],
+		"3-beat": [
+			["c1:100:80", "c1:100:70", "c5:100:70"],
+			["c1:100:80", "c5:100:70", "c8:100:70"],
+			["c1:100:80", "c8:100:70", "c5:100:70"],
+			["c1:100:80", "c5:100:70", "c-4:100:70"],
+			["c1:100:80", "c1:100:70", "nb2:100:70"]
+		],
+		"4-beat": [
+			["c1:100:80", "c1:100:70", "c5:100:70", "c5:100:70"],
+			["c1:100:80", "c5:100:70", "c8:100:70", "c5:100:70"],
+			["c1:100:80", "c3:100:70", "c5:100:70", "c8:100:70"],
+			["c1:100:80", "c8:100:70", "c5:100:70", "c3:100:70"],
+			["c1:100:80", "c1:100:70", "c5:100:70", "nb2:100:80"],
+			["c1:100:80", "c5:100:70", "c1:100:70", "c-4:100:70"],
+			["c8:100:80", "c5:100:70", "c3:100:70", "c5:100:70"],
+			["c1:100:80", "c5:100:70", "c8:100:70", "nb2:100:80"]
+		]
+	},
+
+	// Comping rhythms
+	//  Format: <c|_>:<chord-length>:<velocity>
+	//  Rock/pop comping is straight and downbeat-heavy
+	"vamps": {
+		"1-beat": [
+			["c:100:60"]
+		],
+		"2-beat": [
+			["c:200:60"],
+			["c:100:60", "c:100:50"],
+			["c:100:60", "_:100:00"],
+			["_:100:00", "c:100:50"]
+		],
+		"3-beat": [
+			["c:300:60"],
+			["c:100:60", "c:100:50", "c:100:50"],
+			["c:100:60", "_:100:00", "c:100:50"],
+			["c:200:60", "c:100:50"]
+		],
+		"4-beat": [
+			["c:400:60"],
+			["c:100:60", "_:100:00", "c:100:50", "_:100:00"],
+			["c:100:60", "c:100:50", "c:100:50", "c:100:50"],
+			["c:200:60", "c:100:50", "c:100:50"],
+			["c:100:60", "_:100:00", "c:200:50"],
+			["c:100:60", "c:100:50", "_:100:00", "c:100:50"]
+		]
+	},
+
+	// Drum patterns
+	"rhythms": [
+		{
+			"name": "Basic Rock",
+			"midi": "rhythms/rock0.mid",
+			"beats-per-bar": 4,
+			"number-of-bars": 4,
+			"swing": false
+		}
+	]
+}
