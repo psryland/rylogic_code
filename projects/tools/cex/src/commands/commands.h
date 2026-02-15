@@ -13,6 +13,7 @@ namespace cex
 	//  3. Command functions should return 0 on success.
 
 	#define CEX_CMD(x)\
+	x("automate", "Execute a script of mouse/keyboard commands", Automate)\
 	x("clip", "Add text to the windows clipboard", Clip)\
 	x("dirpath", "Open a dialog window for finding a path", DirPath)\
 	x("exec", "Exec: execute another process", Exec)\
@@ -25,6 +26,7 @@ namespace cex
 	x("screenshot", "Capture visible windows of a process to PNG", Screenshot)\
 	x("send_keys", "Send key presses to a window", SendKeys)\
 	x("send_mouse", "Send mouse events to a window", SendMouse)\
+	x("shutdown_process", "Gracefully shut down a process", ShutdownProcess)\
 	x("wait", "Wait for a specified length of time", Wait)
 
 	// Forward declare command functions

@@ -34,6 +34,7 @@
   Source
   -->
   <ItemGroup>
+    <ClCompile Include="src\commands\automate\automate.cpp" />
     <ClCompile Include="src\commands\clip\clip.cpp" />
     <ClCompile Include="src\commands\data_header_gen\data_header_gen.cpp" />
     <ClCompile Include="src\commands\dir_path\dir_path.cpp" />
@@ -47,6 +48,7 @@
     <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
     <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
     <ClCompile Include="src\commands\send_mouse\send_mouse.cpp" />
+    <ClCompile Include="src\commands\shutdown_process\shutdown_process.cpp" />
     <ClCompile Include="src\commands\open_vs\open_vs.cpp" />
     <ClCompile Include="src\commands\shell_file_op\shell_file_op.cpp" />
     <ClCompile Include="src\commands\wait\wait.cpp" />
@@ -54,6 +56,7 @@
     <ClInclude Include="src\commands\process_util.h" />
     <ClInclude Include="src\forward.h" />
     <ClCompile Include="src\main.cpp" />
+    <Manifest Include="src\app.manifest" />
   </ItemGroup>
   <!--
   Targets
