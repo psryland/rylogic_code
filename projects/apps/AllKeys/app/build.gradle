@@ -1,17 +1,16 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
 }
 
 android {
     namespace = 'nz.co.rylogic.allkeys'
-    compileSdk = 36 // Add this line
+    compileSdk = 36
     defaultConfig {
         applicationId = "nz.co.rylogic.allkeys"
         minSdk = 35
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.1"
+        versionCode = 7
+        versionName = "1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
@@ -41,9 +40,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = '21'
-    }
     buildFeatures {
         viewBinding = true
     }
@@ -53,19 +49,17 @@ android {
             version = '3.22.1'
         }
     }
-    buildToolsVersion = '35.0.0'
-    ndkVersion = '27.0.12077973'
+    buildToolsVersion = '36.0.0'
+    ndkVersion = '28.2.13676358'
 }
 
 dependencies {
 
-    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.3'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.3'
-    implementation 'androidx.preference:preference-ktx:1.2.1'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.7'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'com.google.code.gson:gson:2.13.1'
