@@ -16,13 +16,14 @@ namespace cex
 		{
 			std::cout <<
 				"Screenshot: Capture windows of a process\n"
-				" Syntax: Cex -screenshot -p <process-name> -o <output-directory> [-all] [-bitblt]\n"
+				" Syntax: Cex -screenshot -p <process-name> -o <output-directory> [-all] [-bitblt] [-scale N]\n"
 				"  -p      : Name (or partial name) of the process to capture\n"
 				"  -o      : Output directory for captured PNG images\n"
 				"  -all    : Also capture hidden/minimised windows\n"
 				"  -bitblt : Capture from the screen DC instead of using PrintWindow.\n"
 				"            Works for GPU-rendered apps (e.g. Electron/Chromium) but\n"
 				"            requires the window to be visible and in the foreground.\n"
+				"  -scale  : Scale factor for the output image (e.g. 0.25 for quarter size)\n"
 				"\n"
 				"  Output files are named <process-name>.<window-title>.png\n"
 				"  Duplicate names are suffixed with -1, -2, etc.\n";
@@ -52,6 +53,7 @@ namespace cex
 
 			auto include_hidden = args.count("all") != 0;
 			auto use_bitblt     = args.count("bitblt") != 0;
+			auto scale          = args.count("scale") != 0 ? args("scale").as<double>() : 1.0;
 
 			// Ensure the output directory exists
 			std::filesystem::create_directories(outdir);
@@ -93,7 +95,7 @@ namespace cex
 				++count;
 
 				auto filepath = outdir / filename;
-				if (CaptureWindow(hwnd, filepath, use_bitblt))
+				if (CaptureWindow(hwnd, filepath, use_bitblt, scale))
 				{
 					std::cout << std::format("Captured: {}\n", filename);
 					++captured;
@@ -132,7 +134,7 @@ namespace cex
 		}
 
 		// Capture a window to a PNG file
-		static bool CaptureWindow(HWND hwnd, std::filesystem::path const& filepath, bool use_bitblt)
+		static bool CaptureWindow(HWND hwnd, std::filesystem::path const& filepath, bool use_bitblt, double scale)
 		{
 			RECT rc;
 			if (!GetWindowRect(hwnd, &rc))
@@ -143,7 +145,7 @@ namespace cex
 			if (w <= 0 || h <= 0)
 				return false;
 
-			// Create a memory DC and bitmap
+			// Create a memory DC and bitmap for the full-size capture
 			auto hdc_screen = GetDC(nullptr);
 			auto hdc_mem = CreateCompatibleDC(hdc_screen);
 			auto hbm = CreateCompatibleBitmap(hdc_screen, w, h);
@@ -173,9 +175,32 @@ namespace cex
 			bool saved = false;
 			if (captured)
 			{
-				// Wrap in a GDI+ Bitmap and save as PNG
-				Gdiplus::Bitmap bmp(hbm, nullptr);
-				saved = Gdiplus::Save(bmp, filepath) == Gdiplus::Status::Ok;
+				// Scale the image if needed
+				if (scale > 0.0 && scale != 1.0)
+				{
+					auto sw = std::max(1, static_cast<int>(w * scale));
+					auto sh = std::max(1, static_cast<int>(h * scale));
+
+					auto hdc_scaled = CreateCompatibleDC(hdc_screen);
+					auto hbm_scaled = CreateCompatibleBitmap(hdc_screen, sw, sh);
+					auto old_scaled = SelectObject(hdc_scaled, hbm_scaled);
+
+					SetStretchBltMode(hdc_scaled, HALFTONE);
+					SetBrushOrgEx(hdc_scaled, 0, 0, nullptr);
+					StretchBlt(hdc_scaled, 0, 0, sw, sh, hdc_mem, 0, 0, w, h, SRCCOPY);
+
+					Gdiplus::Bitmap bmp(hbm_scaled, nullptr);
+					saved = Gdiplus::Save(bmp, filepath) == Gdiplus::Status::Ok;
+
+					SelectObject(hdc_scaled, old_scaled);
+					DeleteObject(hbm_scaled);
+					DeleteDC(hdc_scaled);
+				}
+				else
+				{
+					Gdiplus::Bitmap bmp(hbm, nullptr);
+					saved = Gdiplus::Save(bmp, filepath) == Gdiplus::Status::Ok;
+				}
 			}
 
 			// Clean up GDI resources

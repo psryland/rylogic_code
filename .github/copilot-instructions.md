@@ -124,6 +124,9 @@ cex -screenshot -p <process-name> -o <output-directory> -bitblt
 
 # Use -all to include hidden/minimised windows
 cex -screenshot -p <process-name> -o <output-directory> -all
+
+# Use -scale to reduce image size (e.g. 0.25 for quarter size, saves tokens for AI input)
+cex -screenshot -p <process-name> -o <output-directory> -scale 0.25
 ```
 Output files are named `<process>.<window-title>.png`. Use the `view` tool on the PNG to visually inspect the result.
 
@@ -162,6 +165,69 @@ Copilot can close the loop on GUI automation by capturing and viewing screenshot
 3. View the PNG with the `view` tool to visually confirm the result
 
 This is useful for debugging GUI interactions without requiring the user to manually verify.
+
+#### Automate — Scripted Mouse/Keyboard Commands
+```powershell
+# Execute a script of commands from a file
+cex -automate -p <process-name> -f <script-file>
+
+# Or pipe from stdin
+echo "key ctrl+a" | cex -automate -p <process-name>
+```
+Script commands (one per line, `#` comments):
+- **Mouse:** `move x,y`, `click x,y [button]`, `down x,y [button]`, `up [button]`, `drag x1,y1 x2,y2 [N]`
+- **Drawing:** `line x1,y1 x2,y2`, `circle cx,cy r [N]`, `arc cx,cy r a0 a1 [N]`, `fill_circle cx,cy r [N]`
+- **Keyboard:** `type text...`, `key combo` (e.g. `key ctrl+a`, `key shift+delete`, `key f5`)
+- **Timing:** `delay ms`
+
+All coordinates are client-area relative. Angles are in degrees.
+
+#### Shutdown Process — Graceful Close
+```powershell
+# Gracefully close a process by sending WM_CLOSE
+cex -shutdown_process -p <process-name>
+
+# Wait up to 10 seconds for exit (default: 5000ms)
+cex -shutdown_process -p <process-name> -timeout 10000
+```
+
+#### List Windows — Enumerate Process Windows
+```powershell
+# List all visible windows of a process (HWND, size, title)
+cex -list_windows -p <process-name>
+
+# Include hidden/minimised windows
+cex -list_windows -p <process-name> -all
+```
+
+#### Read Text — UI Automation Text Extraction
+```powershell
+# Read text content from a window's UI element tree
+cex -read_text -p <process-name>
+
+# Limit tree depth (default: 5)
+cex -read_text -p <process-name> -depth 3
+```
+Outputs the element tree with control types, names, and text values. Useful for reading dialog messages, button labels, and text fields without screenshots.
+
+#### Find Element — Locate UI Elements by Name
+```powershell
+# Find a UI element and get its bounding rectangle in client coordinates
+cex -find_element -name "OK" -p <process-name>
+
+# Search deeper (default depth: 8)
+cex -find_element -name "Save" -p <process-name> -depth 12
+```
+Returns the element's control type, name, client-area position, size, and center point. Use the center coordinates with `send_mouse` or `automate` to click elements by name.
+
+#### Wait Window — Wait for Window to Appear
+```powershell
+# Wait for a window to appear (default timeout: 30s)
+cex -wait_window -p <process-name>
+
+# Wait for a specific window title
+cex -wait_window -p <process-name> -w "Save As" -timeout 5000
+```
 
 ## Architecture
 
