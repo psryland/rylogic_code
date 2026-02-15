@@ -23,11 +23,16 @@
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
-			</AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>
+        ;ole32.lib
+        ;oleaut32.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <!--
@@ -40,15 +45,19 @@
     <ClCompile Include="src\commands\dir_path\dir_path.cpp" />
     <ClCompile Include="src\commands\dll_proxy\dll_proxy.cpp" />
     <ClCompile Include="src\commands\exec\exec.cpp" />
+    <ClCompile Include="src\commands\find_element\find_element.cpp" />
     <ClCompile Include="src\commands\guid\guid.cpp" />
     <ClCompile Include="src\commands\hash\hash.cpp" />
     <ClCompile Include="src\commands\lower\lower.cpp" />
+    <ClCompile Include="src\commands\list_windows\list_windows.cpp" />
     <ClCompile Include="src\commands\msg_box\msg_box.cpp" />
     <ClCompile Include="src\commands\new_lines\new_lines.cpp" />
+    <ClCompile Include="src\commands\read_text\read_text.cpp" />
     <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
     <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
     <ClCompile Include="src\commands\send_mouse\send_mouse.cpp" />
     <ClCompile Include="src\commands\shutdown_process\shutdown_process.cpp" />
+    <ClCompile Include="src\commands\wait_window\wait_window.cpp" />
     <ClCompile Include="src\commands\open_vs\open_vs.cpp" />
     <ClCompile Include="src\commands\shell_file_op\shell_file_op.cpp" />
     <ClCompile Include="src\commands\wait\wait.cpp" />

@@ -191,6 +191,44 @@ cex -shutdown_process -p <process-name>
 cex -shutdown_process -p <process-name> -timeout 10000
 ```
 
+#### List Windows — Enumerate Process Windows
+```powershell
+# List all visible windows of a process (HWND, size, title)
+cex -list_windows -p <process-name>
+
+# Include hidden/minimised windows
+cex -list_windows -p <process-name> -all
+```
+
+#### Read Text — UI Automation Text Extraction
+```powershell
+# Read text content from a window's UI element tree
+cex -read_text -p <process-name>
+
+# Limit tree depth (default: 5)
+cex -read_text -p <process-name> -depth 3
+```
+Outputs the element tree with control types, names, and text values. Useful for reading dialog messages, button labels, and text fields without screenshots.
+
+#### Find Element — Locate UI Elements by Name
+```powershell
+# Find a UI element and get its bounding rectangle in client coordinates
+cex -find_element -name "OK" -p <process-name>
+
+# Search deeper (default depth: 8)
+cex -find_element -name "Save" -p <process-name> -depth 12
+```
+Returns the element's control type, name, client-area position, size, and center point. Use the center coordinates with `send_mouse` or `automate` to click elements by name.
+
+#### Wait Window — Wait for Window to Appear
+```powershell
+# Wait for a window to appear (default timeout: 30s)
+cex -wait_window -p <process-name>
+
+# Wait for a specific window title
+cex -wait_window -p <process-name> -w "Save As" -timeout 5000
+```
+
 ## Architecture
 
 ### Language Mix
