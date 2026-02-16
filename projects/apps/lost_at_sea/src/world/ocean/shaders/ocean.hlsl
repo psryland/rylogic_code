@@ -163,17 +163,24 @@ PSIn VSOcean(VSIn In)
 		float2 local_xy = r * dir;
 		float2 world_xy = cam_xy + local_xy;
 
-		// Apply Gerstner displacement
+		// Fade wave displacement to zero near the outer edge so the near ocean
+		// smoothly flattens to z=0, matching the distant ocean patches.
+		float fade_start = outer * 0.7; // Begin fading at 70% of outer radius
+		float wave_fade = 1.0 - saturate((r - fade_start) / (outer - fade_start));
+
+		// Apply Gerstner displacement, scaled by fade factor
 		float4 disp = GerstnerDisplace(world_xy, time);
 		ws_pos = float3(
-			world_xy.x + disp.x,
-			world_xy.y + disp.y,
-			disp.z
+			world_xy.x + disp.x * wave_fade,
+			world_xy.y + disp.y * wave_fade,
+			disp.z * wave_fade
 		);
 
-		float3 n = GerstnerNormal(world_xy, time);
+		float3 n_waves = GerstnerNormal(world_xy, time);
+		float3 n_flat = float3(0, 0, 1);
+		float3 n = normalize(lerp(n_flat, n_waves, wave_fade));
 		Out.ws_norm = float4(n, 0);
-		Out.diff = float4(0, 0, 0, disp.w); // foam factor in alpha
+		Out.diff = float4(0, 0, 0, disp.w * wave_fade); // foam also fades
 	}
 
 	// Camera-relative rendering: subtract camera XY to keep geometry near the origin.

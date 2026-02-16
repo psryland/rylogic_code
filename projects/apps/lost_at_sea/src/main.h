@@ -9,6 +9,7 @@
 #include "src/core/state_snapshot.h"
 #include "src/core/sim_state.h"
 #include "src/world/ocean/ocean.h"
+#include "src/world/ocean/distant_ocean.h"
 #include "src/world/terrain/height_field.h"
 #include "src/world/terrain/terrain.h"
 #include "pr/view3d-12/imgui/imgui.h"
@@ -27,6 +28,7 @@ namespace las
 
 		Skybox m_skybox;
 		Ocean m_ocean;
+		DistantOcean m_distant_ocean;
 		Terrain m_terrain;
 		HeightField m_height_field; // CPU-side height queries for future physics
 

@@ -11,13 +11,15 @@
 
 // Terrain constant buffer. Bound to b3 (reusing the CBufScreenSpace slot since
 // the terrain shader does not use screen-space geometry).
+// Shared parameters set once per frame in SetupFrame.
+// Per-patch morph range updated per instance in SetupElement.
 cbuffer CBufTerrain :reg(b3,0)
 {
 	// Camera world-space position (xyz), w = unused
 	float4 m_camera_pos;
 
-	// Mesh radii: x=inner, y=outer, z=num_rings, w=num_segments
-	float4 m_mesh_config;
+	// Per-patch config: x=morph_start, y=morph_end, z=grid_n (32), w=unused
+	float4 m_patch_config;
 
 	// Noise parameters: x=octaves(int), y=base_frequency, z=persistence, w=amplitude
 	float4 m_noise_params;

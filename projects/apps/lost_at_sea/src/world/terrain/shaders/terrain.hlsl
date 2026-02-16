@@ -2,15 +2,20 @@
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2024
 //************************************
-// Terrain vertex shader.
-// Reconstructs world-space vertex positions from encoded ring/segment data,
-// applies Perlin noise displacement for height, and computes terrain normals.
+// CDLOD terrain vertex shader.
+// Transforms unit-grid patch vertices to world space using the instance i2w (m_o2w),
+// samples Perlin noise height, applies geomorphing for seamless LOD transitions,
+// and projects to screen via m_cam.m_w2s.
 //
-// Vertex encoding (same as ocean):
-//   m_vert.xy = unit-circle direction (cos θ, sin θ) for the segment
-//   m_vert.z  = normalised ring index t ∈ [0, 1]
+// Vertex layout:
+//   m_vert.xy = normalised grid position (i/GridN, j/GridN) ∈ [0, 1]
+//   m_vert.z  = 0 (unused — height comes from Perlin noise)
 //   m_vert.w  = 1
-//   Centre vertex: xy = (0, 0), z = -1 (sentinel)
+//
+// Instance i2w encoding:
+//   m_o2w[0].x = patch_size (world units)
+//   m_o2w[1].y = patch_size
+//   m_o2w[3].xy = patch world origin
 #include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 #include "src/world/terrain/shaders/terrain_cbuf.hlsli"
 
@@ -108,27 +113,6 @@ float3 terrain_normal(float world_x, float world_y)
 	return normalize(float3(hL - hR, hD - hU, 2.0 * eps));
 }
 
-// Compute ring radius with log-to-linear blend based on camera height.
-// Clamps to enforce minimum ring spacing, capping point density near the camera.
-float RingRadius(float t, float camera_height, float inner, float outer)
-{
-	float num_rings = m_mesh_config.z;
-	float min_spacing = m_mesh_config.w;
-
-	float log_ratio = log(outer / inner);
-	float r_log = inner * exp(log_ratio * t);
-	float r_lin = inner + (outer - inner) * t;
-
-	float h = abs(camera_height);
-	float blend = saturate(h / outer);
-	float r = lerp(r_log, r_lin, blend);
-
-	// Enforce minimum ring spacing to cap point density near camera
-	float ring_idx = t * (num_rings - 1);
-	float r_min = inner + min_spacing * ring_idx;
-	return max(r, r_min);
-}
-
 // Terrain colour based on height and normal slope
 float4 terrain_colour(float height, float3 normal)
 {
@@ -155,48 +139,77 @@ float4 terrain_colour(float height, float3 normal)
 	return float4(0.23 + t * 0.15, 0.50 - t * 0.20, 0.12 + t * 0.10, 1.0);
 }
 
-// Vertex shader: reconstruct terrain from encoded radial mesh
+// Vertex shader: CDLOD grid patch with Perlin noise height and geomorphing
 PSIn VSTerrain(VSIn In)
 {
 	PSIn Out = (PSIn)0;
 
-	float inner = m_mesh_config.x;
-	float outer = m_mesh_config.y;
-	float cam_height = m_camera_pos.z;
-	float2 cam_xy = m_camera_pos.xy;
+	float grid_n = m_patch_config.z;
+	float morph_start = m_patch_config.x;
+	float morph_end = m_patch_config.y;
 
-	float2 world_xy;
+	// Transform grid vertex [0,1] to world space via m_o2w (encodes patch origin + scale)
+	float4 world_pos = mul(float4(In.vert.xy, 0, 1), m_o2w);
+	float2 world_xy = world_pos.xy;
 
-	// Centre vertex sentinel: z == -1
-	if (In.vert.z < 0)
-	{
-		world_xy = cam_xy;
-	}
-	else
-	{
-		// Ring vertex: decode direction and ring parameter
-		float2 dir = In.vert.xy;
-		float t = In.vert.z;
-		float r = RingRadius(t, cam_height, inner, outer);
-		world_xy = cam_xy + r * dir;
-	}
+	// Extract cell size from the instance transform
+	float patch_size = m_o2w[0][0];
+	float cell_size = patch_size / grid_n;
 
-	// Compute terrain height and normal
+	// Sample terrain height at this world position
 	float h = terrain_height(world_xy.x, world_xy.y);
+
+	// Geomorphing: odd-indexed vertices morph toward their coarser-LOD neighbours.
+	// This eliminates popping when LOD levels change.
+	int ix = (int)round(In.vert.x * grid_n);
+	int iy = (int)round(In.vert.y * grid_n);
+	bool odd_x = (ix & 1) != 0;
+	bool odd_y = (iy & 1) != 0;
+
+	if (odd_x || odd_y)
+	{
+		float dist = length(world_xy - m_camera_pos.xy);
+		float morph = saturate((dist - morph_start) / max(morph_end - morph_start, 0.001));
+
+		float morph_h = h;
+		if (odd_x && !odd_y)
+		{
+			// Morph to average of X-axis neighbours (even indices)
+			float hL = terrain_height(world_xy.x - cell_size, world_xy.y);
+			float hR = terrain_height(world_xy.x + cell_size, world_xy.y);
+			morph_h = (hL + hR) * 0.5;
+		}
+		else if (!odd_x && odd_y)
+		{
+			// Morph to average of Y-axis neighbours (even indices)
+			float hD = terrain_height(world_xy.x, world_xy.y - cell_size);
+			float hU = terrain_height(world_xy.x, world_xy.y + cell_size);
+			morph_h = (hD + hU) * 0.5;
+		}
+		else
+		{
+			// Both odd: morph to average of 4 diagonal neighbours (all even)
+			float h00 = terrain_height(world_xy.x - cell_size, world_xy.y - cell_size);
+			float h10 = terrain_height(world_xy.x + cell_size, world_xy.y - cell_size);
+			float h01 = terrain_height(world_xy.x - cell_size, world_xy.y + cell_size);
+			float h11 = terrain_height(world_xy.x + cell_size, world_xy.y + cell_size);
+			morph_h = (h00 + h10 + h01 + h11) * 0.25;
+		}
+
+		h = lerp(h, morph_h, morph);
+	}
+
+	// Final world position with terrain height
+	world_pos.z = h;
+
+	// Compute terrain normal from the actual Perlin surface
 	float3 n = terrain_normal(world_xy.x, world_xy.y);
-	float3 ws_pos = float3(world_xy, h);
 
-	// Pass normal through; colour is computed per-pixel to avoid swimming when the camera moves
-	Out.diff = float4(0, 0, 0, 1);
+	// Output
+	Out.ws_vert = world_pos;
 	Out.ws_norm = float4(n, 0);
-
-	// Camera-relative rendering: subtract camera XY to keep geometry near the origin.
-	// The camera Z offset is handled by the view matrix (w2c).
-	float3 cam_rel = ws_pos - float3(cam_xy, 0);
-	float4 os_vert = float4(cam_rel, 1);
-
-	Out.ws_vert = mul(os_vert, m_o2w);
-	Out.ss_vert = mul(os_vert, m_o2s);
+	Out.ss_vert = mul(world_pos, m_cam.m_w2s);
+	Out.diff = float4(0, 0, 0, 1);
 	Out.tex0 = In.tex0;
 	Out.idx0 = In.idx0;
 
@@ -212,12 +225,8 @@ PSOut PSTerrain(PSIn In)
 	float3 V = normalize(m_cam.m_c2w[3].xyz - In.ws_vert.xyz);
 	float3 L = m_sun_direction.xyz;
 
-	// ws_vert.z is world height (camera-relative rendering only subtracts XY)
+	// ws_vert.z is world height
 	float world_z = In.ws_vert.z;
-
-	// Discard underwater fragments (ocean surface handles those)
-	if (world_z < -0.5)
-		discard;
 
 	// Compute terrain colour per-pixel from height and slope
 	float4 base_colour = terrain_colour(world_z, N);

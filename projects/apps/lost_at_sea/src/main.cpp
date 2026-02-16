@@ -11,6 +11,7 @@ namespace las
 		:base(pr::app::DefaultSetup(), ui)
 		, m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 5000.0f, m3x4::Rotation(maths::tau_by_4f, 0, 0))
 		, m_ocean(m_rdr)
+		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
 		, m_sim_state()
@@ -94,6 +95,7 @@ namespace las
 		// AddInstance is not thread-safe, so all scene population happens here serially
 		m_skybox.AddToScene(scene);
 		m_ocean.AddToScene(scene);
+		m_distant_ocean.AddToScene(scene);
 		m_terrain.AddToScene(scene);
 	}
 
@@ -128,6 +130,11 @@ namespace las
 			m_ocean.PrepareRender(cam_pos, time);
 			co_return;
 		});
+		m_render_graph.Add(RenderTaskId::DistantOcean, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::PrepareFrame);
+			m_distant_ocean.PrepareRender(cam_pos);
+			co_return;
+		});
 		m_render_graph.Add(RenderTaskId::Terrain, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
 			m_terrain.PrepareRender(cam_pos);
@@ -138,6 +145,7 @@ namespace las
 		m_render_graph.Add(RenderTaskId::Submit, [&](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::Skybox);
 			co_await ctx.Wait(RenderTaskId::Ocean);
+			co_await ctx.Wait(RenderTaskId::DistantOcean);
 			co_await ctx.Wait(RenderTaskId::Terrain);
 			co_return;
 		});
@@ -182,6 +190,10 @@ namespace las
 			*std::format_to(buf, "Step Threads: {}", m_step_graph.ThreadCount()) = 0;
 			m_imgui.Text(buf);
 			*std::format_to(buf, "Render Threads: {}", m_render_graph.ThreadCount()) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Terrain Patches: {}", m_terrain.PatchCount()) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Ocean Patches: {}", m_distant_ocean.PatchCount()) = 0;
 			m_imgui.Text(buf);
 
 			m_imgui.Separator();

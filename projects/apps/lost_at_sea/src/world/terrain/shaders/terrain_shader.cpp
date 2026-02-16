@@ -4,7 +4,10 @@
 //************************************
 #include "src/forward.h"
 #include "src/world/terrain/terrain.h"
+#include "src/world/terrain/cdlod.h"
 #include "src/world/terrain/shaders/terrain_shader.h"
+#include "pr/view3d-12/render/drawlist_element.h"
+#include "pr/view3d-12/instance/instance.h"
 
 namespace las
 {
@@ -15,7 +18,7 @@ namespace las
 			CBufScene = 0,   // Scene constant buffer (b0)
 			CBufObject = 1,  // Object constant buffer (b1)
 			CBufFrame = 2,   // Frame constant buffer (b2)
-			CBufTerrain = 3, // Reused by terrain shader for terrain params (b3)
+			CBufTerrain = 3, // Terrain params (b3)
 		};
 
 		#include "src/world/terrain/shaders/terrain_cbuf.hlsli"
@@ -46,7 +49,7 @@ namespace las
 		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
 		cbuf = shaders::terrain::CBufTerrain{
 			.m_camera_pos = v4::Zero(),
-			.m_mesh_config = v4::Zero(),
+			.m_patch_config = v4(0, 0, static_cast<float>(cdlod::GridN), 0),
 			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 300.0f), // octaves, base_freq, persistence, amplitude
 			.m_noise_bias = v4(-0.3f, 0, 0, 0),               // sea_level_bias (peaks ~210m, ~65% ocean)
 			.m_sun_direction = Normalise(v4(0.5f, 0.3f, 0.8f, 0.0f)),
@@ -54,22 +57,35 @@ namespace las
 		};
 	}
 
-	// Called per-nugget during forward rendering to bind the terrain constant buffer
+	// Called per-nugget during forward rendering. Copies the shared cbuf,
+	// overrides per-patch morph data from the instance's i2w, then binds.
 	void TerrainShader::SetupElement(ID3D12GraphicsCommandList* cmd_list, rdr12::GpuUploadBuffer& upload, rdr12::Scene const&, rdr12::DrawListElement const* dle)
 	{
 		if (dle == nullptr)
 			return;
 
-		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
-		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		// Start from the shared cbuf (camera_pos, noise, sun set per-frame)
+		auto cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
+
+		// Extract patch size from the instance's i2w (x-axis scale = patch_size)
+		auto const& i2w = GetO2W(*dle->m_instance);
+		auto patch_size = i2w.x.x;
+
+		// Morph range matches LOD level boundaries:
+		// morph=0 at inner edge (where this LOD's children would be used)
+		// morph=1 at outer edge (where the parent LOD takes over)
+		cbuf.m_patch_config.x = patch_size * cdlod::SubdivFactor;         // morph_start (inner edge)
+		cbuf.m_patch_config.y = patch_size * cdlod::SubdivFactor * 2.0f;  // morph_end (outer edge = parent's threshold)
+		cbuf.m_patch_config.z = static_cast<float>(cdlod::GridN);     // grid subdivisions
+
+		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 		cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(shaders::terrain::ERootParam::CBufTerrain), gpu_address);
 	}
 
-	// Update the constant buffer data for this frame
-	void TerrainShader::SetupFrame(v4 camera_world_pos, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing)
+	// Update shared per-frame data (camera position).
+	void TerrainShader::SetupFrame(v4 camera_world_pos)
 	{
 		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
 		cbuf.m_camera_pos = camera_world_pos;
-		cbuf.m_mesh_config = v4(inner_radius, outer_radius, static_cast<float>(num_rings), min_ring_spacing);
 	}
 }

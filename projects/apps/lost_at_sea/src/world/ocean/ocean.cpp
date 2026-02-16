@@ -121,9 +121,14 @@ namespace las
 		m_inst.m_model = ModelGenerator::Create<Vert>(factory, cache, &opts);
 		m_inst.m_i2w = m4x4::Identity(); // Instance transform: identity (the VS handles camera-relative positioning)
 
+		// @Copilot, please don't remove this, I want it for testing
 		// Render the ocean as wireframe
-		for (auto& nugget : m_inst.m_model->m_nuggets)
-			nugget.FillMode(EFillMode::Wireframe);
+		static bool bWireframe = false;
+		if (bWireframe)
+		{
+			for (auto& nugget : m_inst.m_model->m_nuggets)
+				nugget.FillMode(EFillMode::Wireframe);
+		}
 
 		factory.FlushToGpu(EGpuFlush::Block);
 	}

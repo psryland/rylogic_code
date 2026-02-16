@@ -86,6 +86,10 @@
     <ClInclude Include="src\world\ocean\ocean.h" />
     <ClCompile Include="src\world\ocean\shaders\ocean_shader.cpp" />
     <ClInclude Include="src\world\ocean\shaders\ocean_shader.h" />
+    <ClCompile Include="src\world\ocean\distant_ocean.cpp" />
+    <ClInclude Include="src\world\ocean\distant_ocean.h" />
+    <ClCompile Include="src\world\ocean\shaders\distant_ocean_shader.cpp" />
+    <ClInclude Include="src\world\ocean\shaders\distant_ocean_shader.h" />
     <ClCompile Include="src\world\terrain\height_field.cpp" />
     <ClInclude Include="src\world\terrain\height_field.h" />
     <ClCompile Include="src\world\terrain\terrain.cpp" />
@@ -97,6 +101,9 @@
     <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli" />
     <None Include="src\world\ocean\shaders\ocean.hlsl" />
     <View3dShaderBuild Include="src\world\ocean\shaders\ocean.hlsl" />
+    <None Include="src\world\ocean\shaders\distant_ocean_cbuf.hlsli" />
+    <None Include="src\world\ocean\shaders\distant_ocean.hlsl" />
+    <View3dShaderBuild Include="src\world\ocean\shaders\distant_ocean.hlsl" />
     <None Include="src\world\terrain\shaders\terrain_cbuf.hlsli" />
     <None Include="src\world\terrain\shaders\terrain.hlsl" />
     <View3dShaderBuild Include="src\world\terrain\shaders\terrain.hlsl" />
@@ -111,6 +118,7 @@
     <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc" />
     <ResourceCompile Include="src\shaders.rc" />
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc" />
+    <ResourceCompile Include="src\world\ocean\shaders\distant_ocean.rc" />
     <ResourceCompile Include="src\world\terrain\shaders\terrain.rc" />
   </ItemGroup>
   <Target Name="CopyDataDirectory" AfterTargets="Link">

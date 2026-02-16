@@ -24,23 +24,25 @@ namespace las
 
 	// Render phase task graph.
 	// Dependency DAG:
-	//   PrepareFrame → Skybox  ─┐
-	//   PrepareFrame → Ocean   ─┼→ Submit
-	//   PrepareFrame → Terrain ─┘
+	//   PrepareFrame → Skybox        ─┐
+	//   PrepareFrame → Ocean         ─┤
+	//   PrepareFrame → DistantOcean  ─┼→ Submit
+	//   PrepareFrame → Terrain       ─┘
 	//
-	// Skybox, Ocean, and Terrain run in parallel after PrepareFrame.
-	// Submit waits for all three before presenting the frame.
+	// Skybox, Ocean, DistantOcean, and Terrain run in parallel after PrepareFrame.
+	// Submit waits for all before presenting the frame.
 	//
 	// Thread safety: scene.AddInstance() is NOT thread-safe.
 	// Per-system tasks prepare shader constant buffers only.
 	// Submit does the actual AddInstance calls serially.
 	enum class RenderTaskId : int
 	{
-		PrepareFrame,  // NewFrame, ClearDrawlists, read state snapshots
-		Skybox,        // Skybox rendering
-		Ocean,         // Ocean shader CB update + AddToScene
-		Terrain,       // Terrain shader CB update + AddToScene
-		Submit,        // scene.Render + RenderUI + Present
+		PrepareFrame,    // NewFrame, ClearDrawlists, read state snapshots
+		Skybox,          // Skybox rendering
+		Ocean,           // Near ocean shader CB update
+		DistantOcean,    // Distance ocean shader CB update
+		Terrain,         // Terrain shader CB update
+		Submit,          // scene.Render + RenderUI + Present
 		Count,
 	};
 }

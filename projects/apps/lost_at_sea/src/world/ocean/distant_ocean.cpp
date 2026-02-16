@@ -1,25 +1,22 @@
 //************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2024
+//  Copyright (c) Rylogic Ltd 2025
 //************************************
 #include "src/forward.h"
-#include "src/world/terrain/terrain.h"
-#include "src/world/terrain/shaders/terrain_shader.h"
+#include "src/world/ocean/distant_ocean.h"
+#include "src/world/ocean/shaders/distant_ocean_shader.h"
 
 namespace las
 {
 	using namespace cdlod;
 
-	// Terrain
-	Terrain::Terrain(Renderer& rdr)
+	DistantOcean::DistantOcean(Renderer& rdr)
 		: m_grid_mesh()
 		, m_shader()
 		, m_lod_selection()
 		, m_instances()
 	{
-		// Build a flat NxN grid mesh for CDLOD terrain patches.
-		// Vertices at (i/GridN, j/GridN, 0, 1) form a unit-square grid.
-		// All patches share this mesh, positioned via per-instance i2w transforms.
+		// Build a flat NxN grid mesh (same dimensions as terrain patches)
 		rdr12::ModelGenerator::Buffers<Vert> buf;
 		buf.Reset(GridVertCount, 0, 0, sizeof(uint16_t));
 
@@ -33,7 +30,7 @@ namespace las
 					static_cast<float>(ix) / GridN,
 					static_cast<float>(iy) / GridN,
 					0, 1);
-				v.m_diff = Colour(0.23f, 0.50f, 0.12f, 1.0f);
+				v.m_diff = Colour(0.05f, 0.15f, 0.30f, 1.0f);
 				v.m_norm = v4(0, 0, 1, 0);
 				v.m_tex0 = v2(
 					static_cast<float>(ix) / GridN,
@@ -42,7 +39,7 @@ namespace las
 			}
 		}
 
-		// Triangle list index buffer
+		// Triangle list index buffer (CW winding for positive-Z face normal)
 		for (auto iy = 0; iy < GridN; ++iy)
 		{
 			for (auto ix = 0; ix < GridN; ++ix)
@@ -51,7 +48,6 @@ namespace las
 				auto i10 = static_cast<uint16_t>(iy * GridVerts + ix + 1);
 				auto i01 = static_cast<uint16_t>((iy + 1) * GridVerts + ix);
 				auto i11 = static_cast<uint16_t>((iy + 1) * GridVerts + ix + 1);
-				// CW winding for positive-Z face normal (matching D3D12 default front-face)
 				buf.m_icont.push_back(i00);
 				buf.m_icont.push_back(i10);
 				buf.m_icont.push_back(i01);
@@ -61,20 +57,17 @@ namespace las
 			}
 		}
 
-		// Bbox covers the unit grid with generous height range for frustum culling.
-		// When transformed by the instance i2w (scale + translate), this gives world-space bounds.
-		buf.m_bbox = BBox(v4(0.5f, 0.5f, 0, 1), v4(0.5f, 0.5f, 300, 0));
+		// Tight bbox for flat ocean at z=0
+		buf.m_bbox = BBox(v4(0.5f, 0.5f, 0, 1), v4(0.5f, 0.5f, 1, 0));
 
-		// Create the terrain shader
-		auto shdr = Shader::Create<TerrainShader>(rdr);
+		auto shdr = Shader::Create<DistantOceanShader>(rdr);
 		m_shader = shdr.get();
 
-		// Configure the nugget with the custom terrain shader
 		buf.m_ncont.push_back(NuggetDesc{ ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm }
 			.use_shader_overlay(ERenderStep::RenderForward, shdr));
 
-		auto terrain_colour = Colour32Green;
-		auto opts = ModelGenerator::CreateOptions().colours({ &terrain_colour, 1 });
+		auto colour = Colour32(0xFF401005);
+		auto opts = ModelGenerator::CreateOptions().colours({ &colour, 1 });
 
 		ResourceFactory factory(rdr);
 		ModelGenerator::Cache cache{buf};
@@ -91,22 +84,19 @@ namespace las
 		}
 	}
 
-	int Terrain::PatchCount() const
+	int DistantOcean::PatchCount() const
 	{
 		return std::min(static_cast<int>(m_lod_selection.m_patches.size()), MaxPatches);
 	}
 
-	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-	void Terrain::PrepareRender(v4 camera_world_pos)
+	void DistantOcean::PrepareRender(v4 camera_world_pos)
 	{
 		if (!m_grid_mesh)
 			return;
 
-		// Run CDLOD quadtree LOD selection
-		m_lod_selection.Select(camera_world_pos, MaxDrawDist);
+		// CDLOD selection with inner cutout for the near Gerstner ocean
+		m_lod_selection.Select(camera_world_pos, MaxDrawDist, MinDrawDist);
 
-		// Update per-patch instance transforms.
-		// i2w encodes patch origin (translation) and size (scale).
 		auto patch_count = PatchCount();
 		for (auto i = 0; i < patch_count; ++i)
 		{
@@ -121,8 +111,7 @@ namespace las
 		m_shader->SetupFrame(camera_world_pos);
 	}
 
-	// Add instances to the scene drawlist (NOT thread-safe, must be called serially).
-	void Terrain::AddToScene(Scene& scene)
+	void DistantOcean::AddToScene(Scene& scene)
 	{
 		if (!m_grid_mesh)
 			return;
