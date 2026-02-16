@@ -909,14 +909,14 @@ namespace pr::math
 
 		// Handles tests against zero where relative error is meaningless
 		// Tests with 'b == 0' are the most common so do them first
-		if (b == 0) return std::abs(a) < tol;
-		if (a == 0) return std::abs(b) < tol;
+		if (b == 0) return Abs(a) < tol;
+		if (a == 0) return Abs(b) < tol;
 
 		// Handle infinities and exact values
 		if (a == b) return true;
 
 		// Test relative error as a fraction of the largest value
-		auto abs_max_element = std::max(std::abs(a), std::abs(b));
+		auto abs_max_element = std::max(Abs(a), Abs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
 	template <TensorType Vec> constexpr bool pr_vectorcall FEqlRelative(Vec lhs, Vec rhs, auto tol)
@@ -1329,12 +1329,12 @@ namespace pr::math
 	template <std::integral S> constexpr S Length(S x)
 	{
 		// Defined for use in recursive vector functions
-		return std::abs(x);
+		return Abs(x);
 	}
 	template <std::floating_point S> constexpr S Length(S x)
 	{
 		// Defined for use in recursive vector functions
-		return std::abs(x);
+		return Abs(x);
 	}
 	template <TensorType Vec> requires (IsRank1<Vec>)
 	constexpr typename vector_traits<Vec>::element_t Length(Vec v)
