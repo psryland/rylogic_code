@@ -30,7 +30,10 @@ namespace las
 
 		explicit Terrain(Renderer& rdr);
 
-		// Rendering: update shader constants and add to the scene.
-		void AddToScene(Scene& scene, v4 camera_world_pos);
+		// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
+		void PrepareRender(v4 camera_world_pos);
+
+		// Add instance to the scene drawlist (NOT thread-safe, must be called serially).
+		void AddToScene(Scene& scene);
 	};
 }

@@ -13,9 +13,12 @@ namespace las
 		, m_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
+		, m_sim_state()
 		, m_sim_time(0.0)
 		, m_move_speed(20.0f)
 		, m_render_frame(0)
+		, m_step_graph(2)   // Step graph: small thread pool (input-heavy, will grow with physics/AI)
+		, m_render_graph(4) // Render graph: larger pool for parallel CB prep
 		, m_imgui({
 			.m_device = m_rdr.D3DDevice(),
 			.m_cmd_queue = m_rdr.GfxQueue(),
@@ -38,43 +41,59 @@ namespace las
 		m_scene.ClearDrawlists();
 	}
 
-	// Simulation step
+	// Simulation step — builds and runs the step task graph
 	void Main::Step(double elapsed_seconds)
 	{
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
 
-		// WASD movement: translate the camera along its forward/right directions
-		auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
-		auto c2w = m_cam.CameraToWorld();
-		auto forward = -c2w.z; // Camera looks down -Z in camera space
-		auto right = c2w.x;
-		auto move = v4::Zero();
-		if (KeyDown('W')) move += forward;
-		if (KeyDown('S')) move -= forward;
-		if (KeyDown('D')) move += right;
-		if (KeyDown('A')) move -= right;
-		if (LengthSq(move) > 0)
-		{
-			move = Normalise(move) * speed * dt;
-			move.z = 0; // Keep movement horizontal
-			c2w.pos += move;
-			m_cam.CameraToWorld(c2w);
-		}
+		// Input task: process WASD movement
+		m_step_graph.Add(StepTaskId::Input, [&](auto&) -> pr::task_graph::Task {
+			auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
+			auto c2w = m_cam.CameraToWorld();
+			auto forward = -c2w.z;
+			auto right = c2w.x;
+			auto move = v4::Zero();
+			if (KeyDown('W')) move += forward;
+			if (KeyDown('S')) move -= forward;
+			if (KeyDown('D')) move += right;
+			if (KeyDown('A')) move -= right;
+			if (LengthSq(move) > 0)
+			{
+				move = Normalise(move) * speed * dt;
+				move.z = 0;
+				c2w.pos += move;
+				m_cam.CameraToWorld(c2w);
+			}
+			co_return;
+		});
+
+		// Finalise task: commit state snapshot for the render graph
+		m_step_graph.Add(StepTaskId::Finalise, [&](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(StepTaskId::Input);
+
+			auto lock = m_sim_state.Lock();
+			lock->m_camera_pos = m_cam.CameraToWorld().pos;
+			lock->m_sim_time = m_sim_time;
+			co_return;
+		});
+
+		m_step_graph.Run();
+		m_step_graph.Reset();
 
 		RenderNeeded();
 	}
 
-	// Update the scene with things to render
+	// Update the scene with things to render (called from render graph's Submit task)
 	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const&)
 	{
-		auto cam_pos = m_cam.CameraToWorld().pos;
+		// AddInstance is not thread-safe, so all scene population happens here serially
 		m_skybox.AddToScene(scene);
-		m_ocean.AddToScene(scene, cam_pos, static_cast<float>(m_sim_time));
-		m_terrain.AddToScene(scene, cam_pos);
+		m_ocean.AddToScene(scene);
+		m_terrain.AddToScene(scene);
 	}
 
-	// Render step
+	// Render step — builds and runs the render task graph
 	void Main::DoRender(bool force)
 	{
 		if (!m_rdr_pending && !force)
@@ -83,10 +102,46 @@ namespace las
 		m_rdr_pending = false;
 		++m_render_frame;
 
-		// Reset the scene drawlist
-		m_scene.ClearDrawlists();
+		// Read the latest simulation state snapshot
+		auto const& sim = m_sim_state.Read();
+		auto cam_pos = sim.m_camera_pos;
+		auto time = static_cast<float>(sim.m_sim_time);
 
-		// Render a frame
+		// PrepareFrame task: set up the frame (must be serial, touches GPU resources)
+		m_render_graph.Add(RenderTaskId::PrepareFrame, [&](auto&) -> pr::task_graph::Task {
+			m_scene.ClearDrawlists();
+			co_return;
+		});
+
+		// Per-system tasks: prepare shader constant buffers (thread-safe, parallel)
+		m_render_graph.Add(RenderTaskId::Skybox, [&](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::PrepareFrame);
+			// Skybox has no per-frame CB update
+			co_return;
+		});
+		m_render_graph.Add(RenderTaskId::Ocean, [&, cam_pos, time](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::PrepareFrame);
+			m_ocean.PrepareRender(cam_pos, time);
+			co_return;
+		});
+		m_render_graph.Add(RenderTaskId::Terrain, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::PrepareFrame);
+			m_terrain.PrepareRender(cam_pos);
+			co_return;
+		});
+
+		// Submit task: populate scene and present (serial, after all CB prep is done)
+		m_render_graph.Add(RenderTaskId::Submit, [&](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::Skybox);
+			co_await ctx.Wait(RenderTaskId::Ocean);
+			co_await ctx.Wait(RenderTaskId::Terrain);
+			co_return;
+		});
+
+		m_render_graph.Run();
+		m_render_graph.Reset();
+
+		// Scene population and presentation happen on the main thread after the graph completes
 		auto& frame = m_window.NewFrame();
 		m_scene.Render(frame);
 		RenderUI(frame);
@@ -115,6 +170,14 @@ namespace las
 			m_imgui.Text(buf);
 			auto cam_pos = m_cam.CameraToWorld().pos;
 			*std::format_to(buf, "Pos: ({:.1f}, {:.1f}, {:.1f}", cam_pos.x, cam_pos.y, cam_pos.z) = 0;
+			m_imgui.Text(buf);
+
+			m_imgui.Separator();
+
+			// Task graph thread counts
+			*std::format_to(buf, "Step Threads: {}", m_step_graph.ThreadCount()) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Render Threads: {}", m_render_graph.ThreadCount()) = 0;
 			m_imgui.Text(buf);
 
 			m_imgui.Separator();

@@ -167,16 +167,21 @@ namespace las
 		return Normalise(v4(nx, ny, nz, 0.0f));
 	}
 
-	// Rendering: update shader constants and add to the scene.
-	void Ocean::AddToScene(Scene& scene, v4 camera_world_pos, float time)
+	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
+	void Ocean::PrepareRender(v4 camera_world_pos, float time)
 	{
 		if (!m_inst.m_model)
 			return;
 
-		// Update the ocean shader constant buffer
 		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, NumSegments);
+	}
 
-		// Instance transform: identity (the VS handles camera-relative positioning)
+	// Add instance to the scene drawlist (NOT thread-safe, must be called serially).
+	void Ocean::AddToScene(Scene& scene)
+	{
+		if (!m_inst.m_model)
+			return;
+
 		scene.AddInstance(m_inst);
 	}
 }

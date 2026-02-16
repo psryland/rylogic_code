@@ -109,16 +109,21 @@ namespace las
 		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
-	// Rendering: update shader constants and add to the scene.
-	void Terrain::AddToScene(Scene& scene, v4 camera_world_pos)
+	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
+	void Terrain::PrepareRender(v4 camera_world_pos)
 	{
 		if (!m_inst.m_model)
 			return;
 
-		// Update the terrain shader constant buffer
 		m_shader->SetupFrame(camera_world_pos, InnerRadius, OuterRadius, NumRings, NumSegments);
+	}
 
-		// Instance transform: identity (the VS handles camera-relative positioning)
+	// Add instance to the scene drawlist (NOT thread-safe, must be called serially).
+	void Terrain::AddToScene(Scene& scene)
+	{
+		if (!m_inst.m_model)
+			return;
+
 		scene.AddInstance(m_inst);
 	}
 }

@@ -35,7 +35,10 @@ namespace las
 		v4 DisplacedPosition(float world_x, float world_y, float time) const;
 		v4 NormalAt(float world_x, float world_y, float time) const;
 
-		// Rendering: update shader constants and add to the scene.
-		void AddToScene(Scene& scene, v4 camera_world_pos, float time);
+		// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
+		void PrepareRender(v4 camera_world_pos, float time);
+
+		// Add instance to the scene drawlist (NOT thread-safe, must be called serially).
+		void AddToScene(Scene& scene);
 	};
 }

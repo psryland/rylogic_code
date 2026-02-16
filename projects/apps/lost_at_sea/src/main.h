@@ -5,10 +5,14 @@
 #pragma once
 #include "src/forward.h"
 #include "src/settings.h"
+#include "src/core/frame_tasks.h"
+#include "src/core/state_snapshot.h"
+#include "src/core/sim_state.h"
 #include "src/world/ocean/ocean.h"
 #include "src/world/terrain/height_field.h"
 #include "src/world/terrain/terrain.h"
 #include "pr/view3d-12/imgui/imgui.h"
+#include "pr/common/task_graph.h"
 
 namespace las
 {
@@ -26,9 +30,16 @@ namespace las
 		Terrain m_terrain;
 		HeightField m_height_field; // CPU-side height queries for future physics
 
+		// Simulation state snapshot: Step writes, Render reads
+		StateSnapshot<SimState> m_sim_state;
+
 		double m_sim_time;
 		float m_move_speed; // World units per second
 		int64_t m_render_frame;
+
+		// Task graphs for parallel execution
+		pr::task_graph::Graph<StepTaskId> m_step_graph;
+		pr::task_graph::Graph<RenderTaskId> m_render_graph;
 
 		// ImGui overlay
 		ImGuiUI m_imgui;
