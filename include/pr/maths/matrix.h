@@ -174,6 +174,20 @@ namespace pr
 			return m_data[vec * m_cmps + cmp];
 		}
 
+		// Access this matrix assuming is a 1xN or Nx1 vector
+		Real operator()(int cmp) const
+		{
+			if (vecs() == 1) return operator()(0, cmp);
+			if (cmps() == 1) return operator()(cmp, 0);
+			throw std::logic_error("Matrix is not a vector");
+		}
+		Real& operator()(int cmp)
+		{
+			if (vecs() == 1) return operator()(0, cmp);
+			if (cmps() == 1) return operator()(cmp, 0);
+			throw std::logic_error("Matrix is not a vector");
+		}
+
 		// The number of vectors in the matrix (i.e. Y dimension, aka row count in row-major matrix)
 		int vecs() const
 		{
@@ -193,13 +207,13 @@ namespace pr
 		}
 
 		// Access to the linear underlying matrix data
-		Real const* data() const
+		std::span<Real const> data() const
 		{
-			return m_data;
+			return { m_data, static_cast<size_t>(size()) };
 		}
-		Real* data()
+		std::span<Real> data()
 		{
-			return m_data;
+			return { m_data, static_cast<size_t>(size()) };
 		}
 
 		// Access this matrix by vector
@@ -238,6 +252,14 @@ namespace pr
 			Real& operator[](int i)
 			{
 				return (*m_mat)(m_idx, i);
+			}
+			std::span<Real const> data() const
+			{
+				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
+			}
+			std::span<Real> data()
+			{
+				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
 			}
 		};
 		VecProxy vec(int i) const
@@ -298,6 +320,13 @@ namespace pr
 		Matrix& zero()
 		{
 			memset(m_data, 0, sizeof(Real) * size());
+			return *this;
+		}
+
+		// Set this matrix to all 'value'
+		Matrix& fill(Real value)
+		{
+			std::fill(m_data, m_data + size(), value);
 			return *this;
 		}
 
@@ -377,13 +406,24 @@ namespace pr
 		}
 
 		// Return an identity matrix of the given dimensions
+		static Matrix Zero(int vecs, int cmps)
+		{
+			Matrix m(vecs, cmps);
+			return m.zero();
+		}
+
+		// Return an identity matrix of the given dimensions
+		static Matrix Fill(int vecs, int cmps, Real value)
+		{
+			Matrix m(vecs, cmps);
+			return m.fill(value);
+		}
+
+		// Return an identity matrix of the given dimensions
 		static Matrix Identity(int vecs, int cmps)
 		{
 			Matrix m(vecs, cmps);
-			for (int i = 0, iend = std::min(vecs, cmps); i != iend; ++i)
-				m(i, i) = 1;
-
-			return m;
+			return m.identity();
 		}
 
 		// Generates the random matrix
@@ -901,7 +941,7 @@ namespace pr
 			,pi(new int[m.vecs()])
 			,DetOfP(1.0f)
 		{
-			auto const N = m.IsSquare() ? m.vecs() : throw std::exception("LU decomposition is only possible on square matrices");
+			auto const N = m.IsSquare() ? m.vecs() : throw std::logic_error("LU decomposition is only possible on square matrices");
 
 			// We will store both the L and U matrices in 'base' since we know
 			// L has the form: [1 0] and U has the form: [U U]
@@ -980,6 +1020,14 @@ namespace pr
 		{
 			return lu(vec, cmp);
 		}
+	};
+
+	// Result of eigenvalue decomposition
+	template <typename Real>
+	struct EigenResult
+	{
+		Matrix<Real> values;  // 1×N row vector of eigenvalues, sorted descending. Access as values(0, i).
+		Matrix<Real> vectors; // N×N (or N×k) matrix where column i is the eigenvector for values(0, i). Access component r of eigenvector i as vectors(r, i).
 	};
 
 	// Return the transpose of matrix 'm'
@@ -1106,6 +1154,410 @@ namespace pr
 		return ret;
 	}
 
+	// Householder tridiagonalization: Q^T * A * Q = T
+	// Matrix convention: A(i,j) = A[row i][col j] in standard notation.
+	template <typename Real> inline void Tridiagonalize(Matrix<Real> const& m, Matrix<Real>& diag, Matrix<Real>& sub, Matrix<Real>& Q)
+	{
+		auto const N = m.vecs();
+		assert(diag.vecs() == 1 && diag.cmps() == N);
+		assert(sub.vecs() == 1 && sub.cmps() >= N);
+		assert(Q.vecs() == N && Q.cmps() == N);
+
+		auto A = Matrix<Real>(m);
+		auto v = Matrix<Real>();
+		auto p = Matrix<Real>();
+		auto kk = Matrix<Real>();
+		auto w = Matrix<Real>();
+
+		for (int k = 0; k != N - 2; ++k)
+		{
+			// Build Householder vector to zero out A[k+2:N-1][k] (column k, below sub-diagonal)
+			auto sigma = Real(0);
+			for (int i = k + 2; i != N; ++i)
+				sigma += A(i, k) * A(i, k);
+
+			if (sigma < std::numeric_limits<Real>::epsilon() * std::numeric_limits<Real>::epsilon())
+				continue;
+
+			auto alpha = A(k + 1, k);
+			auto norm = std::sqrt(alpha * alpha + sigma);
+			auto beta = (alpha >= 0) ? alpha + norm : alpha - norm;
+
+			// v = [1, A[k+2][k]/beta, ..., A[N-1][k]/beta]
+			v.resize(1, N - k - 1, false);
+			v(0) = Real(1);
+			for (int i = 1; i != N - k - 1; ++i)
+				v(i) = A(k + 1 + i, k) / beta;
+
+			auto tau = Real(2) / Dot(v, v);
+
+			// p = tau * A_sub * v, where A_sub = A[k+1:N-1, k+1:N-1]
+			p.resize(1, N - k - 1, false);
+			for (int i = 0; i != N - k - 1; ++i)
+				for (int j = 0; j != N - k - 1; ++j)
+					p(i) += A(k + 1 + i, k + 1 + j) * v(j);
+			for (auto& pi : p.data())
+				pi *= tau;
+
+			// kk = p - (tau/2)*(p·v)*v
+			auto pv = Dot(p, v);
+			kk.resize(1, N - k - 1, false);//auto kk = std::vector<Real>(N - k - 1);
+			for (int i = 0; i != N - k - 1; ++i)
+				kk(i) = p(0,i) - (tau / Real(2)) * pv * v(i);
+
+			// Update A_sub: A_sub[i][j] -= v[i]*kk[j] + kk[i]*v[j]
+			for (int i = 0; i != N - k - 1; ++i)
+				for (int j = 0; j != N - k - 1; ++j)
+					A(k + 1 + i, k + 1 + j) -= v(i) * kk(j) + kk(i) * v(j);
+
+			// Set the sub-diagonal element
+			A(k + 1, k) = -(alpha >= 0 ? Real(1) : Real(-1)) * norm;
+			A(k, k + 1) = A(k + 1, k);
+			for (int i = k + 2; i != N; ++i)
+			{
+				A(i, k) = Real(0);
+				A(k, i) = Real(0);
+			}
+
+			// Accumulate Q: Q_new = Q * H, where H = I - tau*v*v^T
+			// w[i] = sum_j Q[i][k+1+j] * v[j]
+			w.resize(1, N, false);
+			for (int i = 0; i != N; ++i)
+				for (int j = 0; j != N - k - 1; ++j)
+					w(i) += Q(i, j + k + 1) * v(j);
+
+			// Q[i][k+1+j] -= tau * v[j] * w[i]
+			for (int i = 0; i != N; ++i)
+				for (int j = 0; j != N - k - 1; ++j)
+					Q(i, j + k + 1) -= tau * v(j) * w(i);
+		}
+
+		// Extract diagonal and sub-diagonal
+		for (int i = 0; i != N; ++i)
+			diag(i) = A(i, i);
+		for (int i = 1; i != N; ++i)
+			sub(i) = A(i, i - 1);
+	}
+
+	// Implicit QL iteration with shifts on a symmetric tridiagonal matrix.
+	// Based on the EISPACK tql2 / Numerical Recipes algorithm.
+	// sub[i] = T[i][i-1] for i >= 1, sub[0] = 0.
+	template <typename Real> inline void QLIteration(Matrix<Real>& d, Matrix<Real>& e, Matrix<Real>& Q, int max_iterations)
+	{
+		auto const N = static_cast<int>(d.size());
+
+		for (int l = 0; l != N; ++l)
+		{
+			int iter = 0;
+			while (true)
+			{
+				// Find small sub-diagonal element
+				int m = l;
+				for (; m < N - 1; ++m)
+				{
+					auto dd = std::abs(d(m)) + std::abs(d(m + 1));
+					if (std::abs(e(m + 1)) + dd == dd)
+						break;
+				}
+				if (m == l)
+					break;
+
+				if (++iter > max_iterations)
+					break;
+
+				// QL shift
+				auto g = (d(l + 1) - d(l)) / (Real(2) * e(l + 1));
+				auto r = std::sqrt(g * g + Real(1));
+				g = d(m) - d(l) + e(l + 1) / (g + (g >= 0 ? r : -r));
+
+				auto s = Real(1);
+				auto c = Real(1);
+				auto p = Real(0);
+
+				// Chase the bulge from m-1 down to l
+				for (int i = m - 1; i >= l; --i)
+				{
+					auto f = s * e(i + 1);
+					auto b = c * e(i + 1);
+
+					if (std::abs(f) >= std::abs(g))
+					{
+						c = g / f;
+						r = std::sqrt(c * c + Real(1));
+						e(i + 2) = f * r;
+						s = Real(1) / r;
+						c *= s;
+					}
+					else
+					{
+						s = f / g;
+						r = std::sqrt(s * s + Real(1));
+						e(i + 2) = g * r;
+						c = Real(1) / r;
+						s *= c;
+					}
+
+					g = d(i + 1) - p;
+					r = (d(i) - g) * s + Real(2) * c * b;
+					p = s * r;
+					d(i + 1) = g + p;
+					g = c * r - b;
+
+					// Accumulate eigenvectors: rotate columns i and i+1 of Q
+					for (int k = 0; k != N; ++k)
+					{
+						auto qi1 = Q(k, i + 1);
+						Q(k, i + 1) = s * Q(k, i) + c * qi1;
+						Q(k, i)     = c * Q(k, i) - s * qi1;
+					}
+				}
+
+				d(l) -= p;
+				e(l + 1) = g;
+				e(m + 1) = Real(0);
+			}
+		}
+	}
+
+	// Compute all eigenvalues and eigenvectors of a real symmetric matrix using
+	// Householder tridiagonalization followed by implicit QL iteration with shifts.
+	// The matrix must be square. Only the lower triangle is read (symmetry is assumed).
+	// Returns eigenvalues in descending order with corresponding eigenvectors as columns.
+	// Note: Matrix(i, j) accesses row i, column j in standard notation (row-major storage).
+	template <typename Real> EigenResult<Real> EigenSymmetric(Matrix<Real> const& m, int max_iterations = 200)
+	{
+		auto const N = m.vecs();
+		if (!m.IsSquare())
+			throw std::runtime_error("EigenSymmetric requires a square matrix");
+
+		if (N == 0)
+			return { Matrix<Real>(1, 0), Matrix<Real>(0, 0) };
+
+		if (N == 1)
+		{
+			auto vals = Matrix<Real>(1, 1, { m(0, 0) });
+			auto vecs = Matrix<Real>::Identity(1, 1);
+			return { std::move(vals), std::move(vecs) };
+		}
+
+		// Phase 1: Householder tridiagonalization
+		// Reduce symmetric matrix to tridiagonal form: Q^T * A * Q = T
+		auto diag = Matrix<Real>::Zero(1, N);
+		auto sub = Matrix<Real>::Zero(1, N + 1); // +1: QL iteration may access e(N) as scratch
+		auto Q = Matrix<Real>::Identity(N, N);
+		Tridiagonalize(m, diag, sub, Q);
+
+		// Phase 2: Implicit QL iteration on the tridiagonal matrix
+		QLIteration(diag, sub, Q, max_iterations);
+
+		// Build result sorted by descending eigenvalue
+		auto order = std::vector<int>(N);
+		std::iota(order.begin(), order.end(), 0);
+		std::sort(order.begin(), order.end(), [&](int a, int b) { return diag(a) > diag(b); });
+
+		auto vals = Matrix<Real>(1, N);
+		auto vecs = Matrix<Real>(N, N);
+		for (int i = 0; i != N; ++i)
+		{
+			vals(i) = diag(order[i]);
+
+			// Copy column order[i] of Q into column i of vecs
+			for (int r = 0; r != N; ++r)
+				vecs(r, i) = Q(r, order[i]);
+		}
+		return { std::move(vals), std::move(vecs) };
+	}
+
+	// Compute the top-k eigenvalues and eigenvectors of a real symmetric matrix using the Lanczos algorithm.
+	// Much faster than full decomposition when k << N (e.g., MDS needs only 3 eigenpairs from a 1000×1000 matrix).
+	// Returns eigenvalues in descending order with corresponding eigenvectors as columns.
+	template <typename Real> EigenResult<Real> EigenTopK(Matrix<Real> const& m, int k_, int max_iterations = 0)
+	{
+		auto const N = m.vecs();
+		if (!m.IsSquare())
+			throw std::runtime_error("EigenTopK requires a square matrix");
+
+		auto const k = std::min(k_, N);
+		if (N == 0 || k == 0)
+			return { Matrix<Real>(1, 0), Matrix<Real>(0, 0) };
+
+		// For small matrices or when k is close to N, fall back to full decomposition
+		if (N <= 32 || k * 4 >= N * 3)
+		{
+			EigenResult<Real> full = EigenSymmetric(m);
+
+			// Truncate to top-k
+			auto const NN = full.vectors.vecs();
+			auto vals = Matrix<Real>(1, k);
+			auto vecs = Matrix<Real>(NN, k);
+			for (int i = 0; i != k; ++i)
+			{
+				vals(0, i) = full.values(0, i);
+				for (int r = 0; r != NN; ++r)
+					vecs(r, i) = full.vectors(r, i);
+			}
+			return { std::move(vals), std::move(vecs) };
+		}
+
+		// Lanczos iteration dimension: must be >= k, use min(2k+10, N) for good convergence
+		auto const lanczos_dim = std::min(2 * k + 10, N);
+		auto const max_iter = max_iterations > 0 ? max_iterations : 3;
+
+		// Run Lanczos with restarts for better convergence
+		auto alpha = Matrix<Real>(1, lanczos_dim); // diagonal of tridiagonal T
+		auto beta = Matrix<Real>::Zero(1, lanczos_dim); // sub-diagonal of tridiagonal T
+		auto V = Matrix<Real>(lanczos_dim, N);            // Lanczos basis vectors (rows)
+
+		EigenResult<Real> best_result = { Matrix<Real>(1, 0), Matrix<Real>(0, 0) };
+		auto best_residual = std::numeric_limits<Real>::max();
+
+		auto q = Matrix<Real>(1, N); // Starting vector for Lanczos iteration
+		auto q_prev = Matrix<Real>(1, N); // Previous Lanczos vector for recurrence
+		auto w = Matrix<Real>(1, N); // Temporary vector for A*q
+
+		for (int restart = 0; restart != max_iter; ++restart)
+		{
+			// Starting vector: use the first Ritz vector from previous run, or [1,1,...,1]/sqrt(N)
+			//auto q = std::vector<Real>(N);
+			if (restart == 0)
+			{
+				auto inv_sqrt_n = Real(1) / std::sqrt(static_cast<Real>(N));
+				for (int i = 0; i != N; ++i)
+					q(i) = inv_sqrt_n;
+			}
+			else
+			{
+				// Use the first Ritz vector from the previous result as starting vector
+				for (int i = 0; i != N; ++i)
+					q(i) = best_result.vectors(i, 0);
+			}
+
+			// Lanczos iteration
+			q_prev.zero();
+			for (int j = 0; j != lanczos_dim; ++j)
+			{
+				// Store basis vector
+				for (int i = 0; i != N; ++i)
+					V(j, i) = q(i);
+
+				// w = A * q (A is symmetric, so A(i,j) = A(j,i))
+				w.zero();
+				for (int i = 0; i != N; ++i)
+					for (int jj = 0; jj != N; ++jj)
+						w(i) += m(i, jj) * q(jj);
+
+				// alpha[j] = q^T * w
+				alpha(j) = Real(0);
+				for (int i = 0; i != N; ++i)
+					alpha(j) += q(i) * w(i);
+
+				// w = w - alpha[j]*q - beta[j]*q_prev
+				for (int i = 0; i != N; ++i)
+					w(i) -= alpha(j) * q(i) + (j > 0 ? beta(j) * q_prev(i) : Real(0));
+
+				// Full reorthogonalization against all previous Lanczos vectors
+				for (int jj = 0; jj <= j; ++jj)
+				{
+					auto dot = Real(0);
+					for (int i = 0; i != N; ++i)
+						dot += w(i) * V(jj, i);
+					for (int i = 0; i != N; ++i)
+						w(i) -= dot * V(jj, i);
+				}
+
+				// beta[j+1] = ||w||
+				auto norm_w = Real(0);
+				for (int i = 0; i != N; ++i)
+					norm_w += w(i) * w(i);
+				norm_w = std::sqrt(norm_w);
+
+				if (j + 1 < lanczos_dim)
+				{
+					beta(j + 1) = norm_w;
+
+					// Prepare next q
+					q_prev = q;
+					if (norm_w > std::numeric_limits<Real>::epsilon() * Real(100))
+					{
+						for (int i = 0; i != N; ++i)
+							q(i) = w(i) / norm_w;
+					}
+					else
+					{
+						break; // Invariant subspace found
+					}
+				}
+			}
+
+			// Build the tridiagonal matrix T and solve its eigenproblem (small: lanczos_dim × lanczos_dim)
+			auto T = Matrix<Real>::Zero(lanczos_dim, lanczos_dim);
+			for (int i = 0; i != lanczos_dim; ++i)
+			{
+				T(i, i) = alpha(i);
+				if (i + 1 < lanczos_dim)
+				{
+					T(i, i + 1) = beta(i + 1);
+					T(i + 1, i) = beta(i + 1);
+				}
+			}
+
+			// Full eigendecomposition of small tridiagonal matrix
+			auto t_eigen = EigenSymmetric(T);
+
+			// Compute Ritz vectors: eigenvectors in original space = V^T * (T's eigenvectors)
+			// t_eigen.vectors(j, i) = j-th component of eigenvector i of T
+			// V(j, r) = r-th component of basis vector j
+			// ritz_i[r] = sum_j eigvec_i[j] * basis_j[r]
+			auto result = EigenResult<Real>{};
+			result.values = Matrix<Real>(1, k);
+			result.vectors = Matrix<Real>(N, k);
+
+			for (int i = 0; i != k; ++i)
+			{
+				result.values(0, i) = t_eigen.values(0, i);
+				for (int r = 0; r != N; ++r)
+				{
+					auto val = Real(0);
+					for (int j = 0; j != lanczos_dim; ++j)
+						val += t_eigen.vectors(j, i) * V(j, r);
+					result.vectors(r, i) = val;
+				}
+			}
+
+			// Check convergence via residual norm of the k-th Ritz pair
+			auto residual = Real(0);
+			for (int i = 0; i != k; ++i)
+			{
+				// Residual for Ritz pair i: ||A*v - lambda*v||
+				auto max_res = Real(0);
+				for (int r = 0; r != N; ++r)
+				{
+					auto av = Real(0);
+					for (int c = 0; c != N; ++c)
+						av += m(r, c) * result.vectors(c, i);
+					auto diff = std::abs(av - result.values(0, i) * result.vectors(r, i));
+					max_res = std::max(max_res, diff);
+				}
+				residual = std::max(residual, max_res);
+			}
+
+			if (residual < best_residual)
+			{
+				best_residual = residual;
+				best_result = std::move(result);
+			}
+
+			// Converged if residual is small enough
+			auto scale = Real(0);
+			for (int i = 0; i != k; ++i)
+				scale = std::max(scale, std::abs(best_result.values(0, i)));
+			if (best_residual < std::numeric_limits<Real>::epsilon() * scale * Real(100))
+				break;
+		}
+
+		return best_result;
+	}
+
 	#if 0
 	/// <summary>Parse a matrix from a string</summary>
 	public static Matrix Parse(string s)
@@ -1184,6 +1636,24 @@ namespace pr::maths
 			: rng(1)
 		{}
 
+		PRUnitTestMethod(ZeroFillIdentity)
+		{
+			auto m = Matrix<double>(2, 3);
+
+			m.fill(42);
+			for (auto v : m.data())
+				PR_EXPECT(v == 42);
+
+			m.zero();
+			for (auto v : m.data())
+				PR_EXPECT(v == 0);
+			
+			auto id = Matrix<float>(5, 5);
+			id.identity();
+			for (int i = 0; i != 5; ++i)
+				for (int j = 0; j != 5; ++j)
+					PR_EXPECT(id(i, j) == (i == j ? 1 : 0));
+		}
 		PRUnitTestMethod(LUDecomposition)
 		{
 			auto m = MatrixLU<double>(4, 4, 
@@ -1396,6 +1866,106 @@ namespace pr::maths
 			auto b = Matrix<float>(1, 3, {3.0, 2.0, 1.0});
 			auto r = Dot(a, b);
 			PR_EXPECT(FEql(r, 10.0f));
+		}
+		PRUnitTestMethod(EigenSymmetricIdentity)
+		{
+			// Identity matrix: eigenvalues all 1, eigenvectors are axis-aligned
+			auto I = Matrix<double>::Identity(3, 3);
+			auto result = EigenSymmetric(I);
+
+			PR_EXPECT(result.values.cmps() == 3);
+			for (int i = 0; i != 3; ++i)
+				PR_EXPECT(std::abs(result.values(0, i) - 1.0) < 1e-10);
+		}
+		PRUnitTestMethod(EigenSymmetricDiagonal)
+		{
+			// Diagonal matrix: eigenvalues are the diagonal entries, sorted descending
+			auto D = Matrix<double>(3, 3, { 5,0,0, 0,2,0, 0,0,8 });
+			auto result = EigenSymmetric(D);
+
+			PR_EXPECT(std::abs(result.values(0, 0) - 8.0) < 1e-10);
+			PR_EXPECT(std::abs(result.values(0, 1) - 5.0) < 1e-10);
+			PR_EXPECT(std::abs(result.values(0, 2) - 2.0) < 1e-10);
+		}
+		PRUnitTestMethod(EigenSymmetricKnown3x3)
+		{
+			// M = [2 1 0; 1 3 1; 0 1 2] has eigenvalues 4, 2, 1.
+			auto M = Matrix<double>(3, 3, { 2,1,0, 1,3,1, 0,1,2 });
+			auto result = EigenSymmetric(M);
+
+			PR_EXPECT(std::abs(result.values(0, 0) - 4.0) < 1e-8);
+			PR_EXPECT(std::abs(result.values(0, 1) - 2.0) < 1e-8);
+			PR_EXPECT(std::abs(result.values(0, 2) - 1.0) < 1e-8);
+
+			// Verify eigenvectors: M*v should equal λ*v
+			for (int k = 0; k != 3; ++k)
+			{
+				auto lambda = result.values(0, k);
+				for (int r = 0; r != 3; ++r)
+				{
+					auto mv = 0.0;
+					for (int c = 0; c != 3; ++c)
+						mv += M(r, c) * result.vectors(c, k);
+
+					auto lv = lambda * result.vectors(r, k);
+					PR_EXPECT(std::abs(mv - lv) < 1e-8);
+				}
+			}
+		}
+		PRUnitTestMethod(EigenSymmetricLarger)
+		{
+			// 5×5 symmetric matrix
+			auto M = Matrix<double>(5, 5, {
+				 4, 1, -2,  2, 0,
+				 1, 2,  0,  1, 0,
+				-2, 0,  3, -2, 0,
+				 2, 1, -2,  5, 0,
+				 0, 0,  0,  0, 1,
+			});
+			auto result = EigenSymmetric(M);
+
+			// Verify A*v = lambda*v for each eigenpair
+			for (int k = 0; k != 5; ++k)
+			{
+				auto lambda = result.values(0, k);
+				for (int r = 0; r != 5; ++r)
+				{
+					auto mv = 0.0;
+					for (int c = 0; c != 5; ++c)
+						mv += M(r, c) * result.vectors(c, k);
+
+					auto lv = lambda * result.vectors(r, k);
+					PR_EXPECT(std::abs(mv - lv) < 1e-6);
+				}
+			}
+		}
+		PRUnitTestMethod(EigenTopKSmall)
+		{
+			// Top-2 eigenpairs of a 3×3 matrix
+			auto M = Matrix<double>(3, 3, { 2,1,0, 1,3,1, 0,1,2 });
+			auto result = EigenTopK(M, 2);
+
+			PR_EXPECT(result.values.cmps() == 2);
+			PR_EXPECT(result.vectors.vecs() == 3);
+			PR_EXPECT(result.vectors.cmps() == 2);
+
+			PR_EXPECT(std::abs(result.values(0, 0) - 4.0) < 1e-8);
+			PR_EXPECT(std::abs(result.values(0, 1) - 2.0) < 1e-8);
+
+			// Verify A*v = lambda*v
+			for (int k = 0; k != 2; ++k)
+			{
+				auto lambda = result.values(0, k);
+				for (int r = 0; r != 3; ++r)
+				{
+					auto mv = 0.0;
+					for (int c = 0; c != 3; ++c)
+						mv += M(r, c) * result.vectors(c, k);
+
+					auto lv = lambda * result.vectors(r, k);
+					PR_EXPECT(std::abs(mv - lv) < 1e-8);
+				}
+			}
 		}
 	};
 }

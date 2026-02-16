@@ -843,7 +843,7 @@ namespace pr
 			m_c2w.pos = old_focus + s_cast<float>(m_focus_dist) * m_c2w.z;
 
 			// If an align axis is given, align up to it
-			if (LengthSq(m_align) > maths::tinyf)
+			if (IsAligned())
 			{
 				auto up = Perpendicular(m_c2w.pos - old_focus, m_align);
 				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, up);

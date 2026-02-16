@@ -25,6 +25,7 @@ namespace pr::app
 		MessageLoop m_msg_loop;                  // The message pump
 		MainPtr     m_main;                      // The app logic object
 		bool        m_resizing;                  // True during a resize of the main window
+		bool        m_painting;                  // Blocks reentrancy into OnPaint
 		bool        m_nav_enabled;               // True while a mouse button is down during default mouse navigation
 		bool        m_fullscreen_toggle_enabled; // Allow Alt+Enter to toggle between full screen and windowed
 		LONG        m_click_thres;               // Single click time threshold in ms
@@ -63,6 +64,7 @@ namespace pr::app
 			,m_msg_loop()
 			,m_main(new Main(*static_cast<DerivedUI*>(&CreateHandle())))
 			,m_resizing(false)
+			,m_painting(false)
 			,m_nav_enabled(false)
 			,m_fullscreen_toggle_enabled(true)
 			,m_click_thres(200)
@@ -119,15 +121,15 @@ namespace pr::app
 		{
 			// Render the scene before raising the event, so that handlers
 			// have the option of drawing over the top of the 3D scene
-			if (m_main)
+			if (m_main && !m_painting)
 			{
+				pr::Scope<bool&> paint_guard(m_painting);
 				m_main->DoRender(true); // We've been asked to paint, so paint, regardless of RenderNeeded()
 				args.m_handled = true;
 
 				// Tell windows we've drawn the viewport area
 				gui::Rect cr = m_main->m_scene.m_viewport.AsRECT();
 				Validate(&cr);
-				return;
 			}
 
 			// Call the base to raise the paint event

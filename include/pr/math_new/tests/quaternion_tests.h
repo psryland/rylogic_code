@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-#include "../math.h"
+#include "pr/math_new//math.h"
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -95,6 +95,13 @@ namespace pr::math
 					Quat res = lhs;
 					return res /= rhs;
 				}
+			}
+			
+			template <QuaternionType Quat>
+			constexpr Quat Identity()
+			{
+				using S = typename vector_traits<Quat>::element_t;
+				return { S(0), S(0), S(0), S(1) };
 			}
 			#endif
 		}

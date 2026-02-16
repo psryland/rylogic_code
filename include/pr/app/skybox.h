@@ -42,22 +42,22 @@ namespace pr::app
 		Instance m_inst;  // The sky box instance
 		TexCont  m_tex;   // The textures used in the sky box
 		float    m_scale; // Model scaler
-		m4x4     m_i2w;   // The base orientation transform for the sky box (updated with camera position in OnEvent)
+		m4x4     m_i2w;   // The base orientation transform for the sky box
 
 		// Constructs a sky box model and instance.
 		// 'texpath' should be an unrolled cube texture
-		Skybox(rdr12::Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 100.0f)
+		Skybox(rdr12::Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 100.0f, m3x4 const& ori = m3x4Identity)
 			:m_inst()
 			,m_tex()
 			,m_scale(scale)
-			,m_i2w(m4x4::Scale(scale, pr::v4Origin))
+			,m_i2w(ori, v4Origin)
 		{
 			switch (tex_style)
 			{
 				case EStyle::Geosphere:     InitGeosphere(rdr, texpath); break;
 				case EStyle::FiveSidedCube: InitFiveSidedCube(rdr, texpath); break;
 				case EStyle::SixSidedCube:  InitSixSidedCube(rdr, texpath); break;
-				default: PR_ASSERT(PR_DBG, false, "Unsupported texture style");
+				default: throw std::runtime_error("Unsupported texture style");
 			}
 
 			// Set the sort key so that the sky box draws last
@@ -68,7 +68,7 @@ namespace pr::app
 		// Add the sky box to a viewport
 		void AddToScene(rdr12::Scene& scene)
 		{
-			m_inst.m_i2w = m_i2w;
+			m_inst.m_i2w = m_i2w * m4x4::Scale(m_scale, v4Origin);
 			m_inst.m_i2w.pos = scene.m_cam.CameraToWorld().pos;
 			scene.AddInstance(m_inst);
 		}

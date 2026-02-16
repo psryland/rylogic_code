@@ -17,6 +17,8 @@ namespace pr::rdr12
 		// How to use this:
 		//  - Add a sync point to a command list => get a number
 		//  - Call Wait using the number to block until the GPU has reached that point in the command list.
+		//  - This GpuSync will only get notified about fence values that it has added itself, so you can have multiple GpuSync
+		//    objects in use at the same time without them interfering with each other.
 		// 
 		// Polling/Sweep:
 		//  - Owners of these objects should use 'rdr.AddPollCB({ &m_gsync, &GpuSync::Poll });' to add

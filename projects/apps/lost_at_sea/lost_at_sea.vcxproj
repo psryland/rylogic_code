@@ -1,89 +1,68 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<!-- Properties -->
-	<PropertyGroup Label="Globals">
-		<ProjectGuid>{A96E7D7B-6550-4F4D-A630-80712E25AB13}</ProjectGuid>
-		<RootNamespace>lost_at_sea</RootNamespace>
-		<ConfigurationType>Application</ConfigurationType>
-	</PropertyGroup>
-
-	<!-- Property Sheets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(PropsPath)build_configurations.props" />
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)app.props" />
-
-	<!-- Build Options -->
-	<ItemDefinitionGroup>
-		<ClCompile>
-			<AdditionalIncludeDirectories>
-				;$(ProjectDir)
-				;$(RylogicRoot)include
-				;$(RylogicRoot)sdk\vorbis\include
-				;$(RylogicRoot)sdk\ogg\include
-				;%(AdditionalIncludeDirectories)
-			</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>
-				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
-				;%(AdditionalLibraryDirectories)
-			</AdditionalLibraryDirectories>
-			<AdditionalDependencies>
-				;audio.lib
-				;view3d-12-static.lib
-				;%(AdditionalDependencies)
-			</AdditionalDependencies>
-		</Link>
-	</ItemDefinitionGroup>
-
-	<!-- Files -->
-	<ItemGroup>
-		<ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\camera\camctrl_dinput_wasd.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\audio\ogg\ogg_stream.h" />
-		<ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp"/>
-		<ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c"/>
-		<ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c"/>
-		<ClInclude Include="src\main.h" />
-		<ClCompile Include="src\main.cpp" />
-		<ClInclude Include="src\cam\cam.h" />
-		<ClCompile Include="src\cam\cam.cpp" />
-		<ClInclude Include="src\forward.h" />
-		<ClInclude Include="src\settings.h" />
-		<ClInclude Include="src\ship\ship.h" />
-		<ClCompile Include="src\ship\ship.cpp" />
-		<ClInclude Include="src\world\terrain.h" />
-		<ClCompile Include="src\world\terrain.cpp" />
-		<ClInclude Include="src\util.h" />
-	</ItemGroup>
-
-	<!-- Custom Target for DLL Dependencies -->
-	<ItemGroup>
-		<DataFiles Include="$(ProjectDir)data\**\*.*" />
-	</ItemGroup>
-	<Target Name="CopyDataDirectory" AfterTargets="Link">
-		<!--
-		<Message Importance="high" Text="@( _DependencyLinkWithDest -> '%(FullPath) => %(DestFile)', '&#x0A;')" />
-		-->
-		<Copy
-			SourceFiles="@(DataFiles)"
-			DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')"
-			ContinueOnError="ErrorAndContinue"
-			SkipUnchangedFiles="true"
-		/>
-	</Target>
-	<PropertyGroup>
-		<BuildDependsOn>CopyDataDirectory;$(BuildDependsOn)</BuildDependsOn>
-	</PropertyGroup>
-
-	<!-- Targets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- Properties -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A96E7D7B-6550-4F4D-A630-80712E25AB13}</ProjectGuid>
+    <RootNamespace>lost_at_sea</RootNamespace>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <!-- Property Sheets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)app.props" />
+  <!-- Build Options -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
+;$(ProjectDir)
+;$(RylogicRoot)include
+;%(AdditionalIncludeDirectories)
+</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>
+;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+;%(AdditionalLibraryDirectories)
+</AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+;view3d-12-static.lib
+;%(AdditionalDependencies)
+</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- Files -->
+  <ItemGroup>
+    <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\world\ocean.cpp" />
+    <ClCompile Include="src\world\height_field.cpp" />
+    <ClCompile Include="src\world\terrain.cpp" />
+    <ClInclude Include="src\forward.h" />
+    <ClInclude Include="src\main.h" />
+    <ClInclude Include="src\settings.h" />
+    <ClInclude Include="src\world\ocean.h" />
+    <ClInclude Include="src\world\height_field.h" />
+    <ClInclude Include="src\world\terrain.h" />
+  </ItemGroup>
+  <!-- Custom Target for Data Directory -->
+  <ItemGroup>
+    <DataFiles Include="$(ProjectDir)data\**\*.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="imgui.ini" />
+  </ItemGroup>
+  <Target Name="CopyDataDirectory" AfterTargets="Link">
+    <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')" ContinueOnError="ErrorAndContinue" SkipUnchangedFiles="true" />
+  </Target>
+  <!-- Copy DLL dependencies to output -->
+  <Target Name="CopyDllDependencies" AfterTargets="Link">
+    <Copy SourceFiles="$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)\imgui.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" ContinueOnError="ErrorAndContinue" />
+  </Target>
+  <PropertyGroup>
+    <BuildDependsOn>CopyDataDirectory;CopyDllDependencies;$(BuildDependsOn)</BuildDependsOn>
+  </PropertyGroup>
+  <!-- Targets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

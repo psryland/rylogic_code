@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-#include "../core/forward.h"
+#include "pr/math_new/core/forward.h"
 
 namespace pr::math
 {
@@ -16,10 +16,6 @@ namespace pr::math
 		inline static constexpr bool is_vector_v = false;
 		inline static constexpr bool is_quaternion_v = false;
 	};
-
-	// Concept for scalar types
-	template <typename T>
-	concept ScalarType = std::floating_point<T> || std::integral<T>;
 
 	// Concept for vector-like types
 	template <typename T>

@@ -11,6 +11,7 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/ray_cast.h"
+#include "pr/view3d-12/utility/eventargs.h"
 
 namespace pr::rdr12
 {
@@ -83,7 +84,7 @@ namespace pr::rdr12
 
 		// Raised just before the drawlist is sorted. Handlers should add/remove
 		// instances from the scene, or add/remove render steps as required.
-		EventHandler<Scene&, EmptyArgs const&> OnUpdateScene;
+		EventHandler<Scene&, UpdateSceneArgs const&> OnUpdateScene;
 
 		// Set the render steps to use for rendering the scene
 		void SetRenderSteps(std::span<ERenderStep const> rsteps);

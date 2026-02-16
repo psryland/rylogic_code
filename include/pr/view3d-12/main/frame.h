@@ -18,6 +18,10 @@ namespace pr::rdr12
 	{
 		using GfxCmdLists = pr::vector<ID3D12GraphicsCommandList*, 4, false>;
 
+		GpuSync& m_gsync;         // The GPU sync object used to track GPU progress and manage resources
+		GpuUploadBuffer m_upload; // A GPU buffer for the global light data
+		GfxCmdAllocPool& m_cmd_alloc_pool; // The command allocator pool to create allocators from
+
 		GfxCmdList m_prepare; // Commands before the first scene is rendered
 		GfxCmdList m_resolve; // Commands used to resolve the MSAA buffer into the swap chain buffer
 		GfxCmdList m_present; // Commands after the last scene is rendered
@@ -27,18 +31,18 @@ namespace pr::rdr12
 
 		BackBuffer const* m_bb_main; // The back buffer to render the scene to that will be anti-aliased.
 		BackBuffer const* m_bb_post; // The back buffer for post-processing effects (assume main has been rendered into post).
-		
-		GfxCmdAllocPool& m_cmd_alloc_pool; // The command allocator pool to create allocators from
 
-		Frame(ID3D12Device4* device, BackBuffer const& bb_main, BackBuffer const& bb_post, GfxCmdAllocPool& cmd_alloc_pool)
-			: m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
+		Frame(ID3D12Device4* device, GpuSync& gsync, GfxCmdAllocPool& cmd_alloc_pool, BackBuffer const& bb_main, BackBuffer const& bb_post)
+			: m_gsync(gsync)
+			, m_upload(m_gsync, 1ULL * 1024 * 1024)
+			, m_cmd_alloc_pool(cmd_alloc_pool)
+			, m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
 			, m_resolve(device, cmd_alloc_pool.Get(), nullptr, "Resolve", EColours::Orange)
 			, m_present(device, cmd_alloc_pool.Get(), nullptr, "Present", EColours::Orange)
 			, m_main()
 			, m_post()
 			, m_bb_main(&bb_main)
 			, m_bb_post(&bb_post)
-			, m_cmd_alloc_pool(cmd_alloc_pool)
 		{
 			m_prepare.Close();
 			m_resolve.Close();

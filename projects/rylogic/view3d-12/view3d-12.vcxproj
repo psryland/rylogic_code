@@ -26,17 +26,17 @@
   <!--
   Build options
   -->
-  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+  <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command Condition="!Exists('$(RylogicRoot)sdk\openxr\openxr')">$(RylogicRoot)sdk\openxr\_get.csx</Command>
+    </PreBuildEvent>
     <ClCompile>
       <PreprocessorDefinitions>
         ;%(PreprocessorDefinitions)
-        ;PR_RDR_RUNTIME_SHADERS=0
         ;PR_LOGGING=1
-        ;PR_SUPPORT_D3D11_ERRORS=1
         ;PR_VIEW3D_12=1
-        ;PR_DBG_RDR=1
-        ;PR_PIX_ENABLED=0
-        ;USE_PIX
+        ;PR_RDR_RUNTIME_SHADERS=0
+        ;PR_SUPPORT_D3D11_ERRORS=1
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -44,14 +44,14 @@
       </AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>
         ;%(PreprocessorDefinitions)
-        ;PR_LOGGING=1
-        ;PR_VIEW3D_12=1
         ;PR_RDR_RUNTIME_SHADERS=0
-        ;PR_SUPPORT_D3D11_ERRORS=1
+        ;PR_DBG_RDR=1
+        ;PR_PIX_ENABLED=0
+        ;USE_PIX
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
         ;$(RylogicRoot)projects\rylogic
@@ -268,6 +268,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
+    <ClInclude Include="..\..\..\include\pr\view3d-12\imgui\imgui.h" />
     <ClInclude Include="src\ldraw\sources\source_binary.h" />
     <ClInclude Include="src\ldraw\sources\source_file.h" />
     <ClInclude Include="src\ldraw\sources\ldraw_sources.h" />

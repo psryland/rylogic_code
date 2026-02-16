@@ -385,10 +385,42 @@ namespace pr::rdr12
 
 		// Cache ****************************************************************************************
 
+		// The cached buffers
+		template <typename VertexType = Vert>
+		struct alignas(16) Buffers
+		{
+			using VType = VertexType;
+			using VCont = vector<VType>;
+			using ICont = pr::geometry::IdxBuf;
+			using NCont = vector<NuggetDesc>;
+
+			string32 m_name = {};                 // Model name
+			VCont    m_vcont = {};                // Model verts
+			ICont    m_icont = {};                // Model faces/lines/points/etc
+			NCont    m_ncont = {};                // Model nuggets
+			BBox     m_bbox = BBox::Reset();      // Model bounding box
+			m4x4     m_m2root = m4x4::Identity(); // Model to root transform
+			bool     m_in_use = false;            // True if this buffer is currently in use
+
+			// Resize the buffers to the given sizes.
+			void Reset(int vcount = 0, int icount = 0, int ncount = 0, int idx_stride = sizeof(uint16_t))
+			{
+				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
+
+				m_name.resize(0);
+				m_vcont.resize(vcount, {});
+				m_icont.resize(icount, idx_stride);
+				m_ncont.resize(ncount, {});
+				m_bbox = BBox::Reset();
+				m_m2root = m4x4::Identity();
+			}
+		};
+
 		// Memory pooling for model buffers
 		template <typename VertexType = Vert>
 		struct Cache
 		{
+			using Buffers = Buffers<VertexType>;
 			using VType = VertexType;
 			using VCont = vector<VType>;
 			using ICont = pr::geometry::IdxBuf;
@@ -397,15 +429,6 @@ namespace pr::rdr12
 		private:
 
 			// The cached buffers
-			struct alignas(16) Buffers
-			{
-				string32 m_name = {};                 // Model name
-				VCont    m_vcont = {};                // Model verts
-				ICont    m_icont = {};                // Model faces/lines/points/etc
-				NCont    m_ncont = {};                // Model nuggets
-				BBox     m_bbox = BBox::Reset();      // Model bounding box
-				m4x4     m_m2root = m4x4::Identity(); // Model to root transform
-			};
 			static Buffers& this_thread_instance()
 			{
 				// A static instance for this thread
@@ -413,14 +436,7 @@ namespace pr::rdr12
 				if (!buffers) buffers.reset(new Buffers);
 				return *buffers;
 			}
-			static bool& this_thread_cache_in_use()
-			{
-				thread_local static bool in_use;
-				if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
-				return in_use;
-			}
 			Buffers& m_buffers;
-			bool& m_in_use;
 
 		public:
 
@@ -432,9 +448,8 @@ namespace pr::rdr12
 			m4x4& m_m2root;   // Model to root transform
 
 			Cache() = delete;
-			Cache(int vcount, int icount, int ncount, int idx_stride)
-				: m_buffers(this_thread_instance())
-				, m_in_use(this_thread_cache_in_use())
+			Cache(Buffers& buffers)
+				: m_buffers(buffers)
 				, m_name(m_buffers.m_name)
 				, m_vcont(m_buffers.m_vcont)
 				, m_icont(m_buffers.m_icont)
@@ -442,31 +457,25 @@ namespace pr::rdr12
 				, m_bbox(m_buffers.m_bbox)
 				, m_m2root(m_buffers.m_m2root)
 			{
-				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
-				m_vcont.resize(vcount, {});
-				m_icont.resize(icount, idx_stride);
-				m_ncont.resize(ncount, {});
-				m_in_use = true;
+				m_buffers.m_in_use = true;
+			}
+			Cache(int vcount, int icount, int ncount, int idx_stride)
+				: Cache(this_thread_instance())
+			{
+				m_buffers.Reset(vcount, icount, ncount, idx_stride);
 			}
 			~Cache()
 			{
-				Reset();
-				m_in_use = false;
+				m_buffers.m_in_use = false;
 			}
 			Cache(Cache&& rhs) = delete;
 			Cache(Cache const& rhs) = delete;
 			Cache operator =(Cache&& rhs) = delete;
 			Cache operator =(Cache const& rhs) = delete;
-
-			// Resize all buffers to 0
-			void Reset()
+			
+			void Reset(int vcount = 0, int icount = 0, int ncount = 0, int idx_stride = sizeof(uint16_t))
 			{
-				m_name.resize(0);
-				m_vcont.resize(0);
-				m_icont.resize(0, 1);
-				m_ncont.resize(0);
-				m_bbox = BBox::Reset();
-				m_m2root = m4x4::Identity();
+				m_buffers.Reset(vcount, icount, ncount, idx_stride);
 			}
 
 			// Container item counts

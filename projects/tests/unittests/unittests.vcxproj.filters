@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="sqlite3">
@@ -122,17 +122,14 @@
     <Filter Include="pr\math_new">
       <UniqueIdentifier>{b7648680-d452-49fa-8888-4bc7ea03600a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\math_new\vector">
-      <UniqueIdentifier>{8c56cf7a-9ff9-4884-90ca-60c1278fafd1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\math_new\core">
       <UniqueIdentifier>{c0b9ccec-d509-47ed-9870-f7b4c1b8935f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\math_new\functions">
-      <UniqueIdentifier>{5e6ebe6d-5322-4f7b-a8fe-d53a22001951}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\math_new\tests">
       <UniqueIdentifier>{13efb58e-60f7-4ad1-b858-82408a198e5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\math_new\types">
+      <UniqueIdentifier>{8c56cf7a-9ff9-4884-90ca-60c1278fafd1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -742,7 +739,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\convex_hull.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -827,7 +823,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\stat.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\transform.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -843,44 +838,11 @@
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\forward.h">
       <Filter>pr\math_new\core</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\core\vector_traits.h">
-      <Filter>pr\math_new\core</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\math.h">
       <Filter>pr\math_new</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\math_new\tests\vector2_tests.h">
       <Filter>pr\math_new\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix2x2.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix3x4.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\matrix4x4.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\quaternion.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\transform.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector2.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector3.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector4.h">
-      <Filter>pr\math_new\vector</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\math_new\vector\vector8.h">
-      <Filter>pr\math_new\vector</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
       <Filter>pr\meta</Filter>
@@ -1158,6 +1120,72 @@
     <ClInclude Include="src\unittests.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\transform.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\all_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\quaternion_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\core\constants.h">
+      <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\core\functions.h">
+      <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\core\traits.h">
+      <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\matrix.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\matrix2x2.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\matrix3x4.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\matrix4x4.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\quaternion.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\transform.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\vector2.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\vector3.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\vector4.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\vector8.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\task_graph.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
@@ -1172,16 +1200,27 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\vector.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\closest_point.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\collision.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\hlsl\intercept.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="$(RylogicRoot)include\pr\hlsl\closest_point.hlsli" />
-    <None Include="$(RylogicRoot)include\pr\hlsl\collision.hlsli" />
-    <None Include="$(RylogicRoot)include\pr\hlsl\intercept.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">
       <Filter>pr\collision</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\dependecy_check_new_math.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

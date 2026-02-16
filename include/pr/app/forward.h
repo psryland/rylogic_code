@@ -43,6 +43,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/exception.h"
 #include "pr/common/hresult.h"
+#include "pr/common/scope.h"
 #include "pr/common/fmt.h"
 #include "pr/common/command_line.h"
 #include "pr/common/event_handler.h"
