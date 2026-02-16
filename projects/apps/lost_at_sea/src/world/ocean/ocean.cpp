@@ -182,16 +182,13 @@ namespace las
 	}
 
 	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-	void Ocean::PrepareRender(v4 camera_world_pos, float time, bool has_env_map)
+	void Ocean::PrepareRender(v4 camera_world_pos, float time, bool has_env_map, v4 sun_direction, v4 sun_colour)
 	{
 		if (!m_inst.m_model)
 			return;
 
-		// The vertex shader subtracts cam_xy from world positions (camera-relative rendering).
-		// Compensate via the instance transform so the view matrix doesn't double-subtract XY.
 		m_inst.m_i2w.pos = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
-
-		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, MinRingSpacing, has_env_map);
+		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, MinRingSpacing, has_env_map, sun_direction, sun_colour);
 	}
 
 	// Add instance to the scene drawlist (NOT thread-safe, must be called serially).

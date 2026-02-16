@@ -37,7 +37,7 @@ namespace las
 		int PatchCount() const;
 
 		// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-		void PrepareRender(v4 camera_world_pos);
+		void PrepareRender(v4 camera_world_pos, v4 sun_direction, v4 sun_colour);
 
 		// Add instances to the scene drawlist (NOT thread-safe, must be called serially).
 		void AddToScene(Scene& scene);

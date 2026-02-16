@@ -96,6 +96,11 @@
     <ClInclude Include="src\world\terrain\terrain.h" />
     <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp" />
     <ClInclude Include="src\world\terrain\shaders\terrain_shader.h" />
+    <ClInclude Include="src\core\day_night_cycle.h" />
+    <ClCompile Include="src\world\sky\procedural_sky.cpp" />
+    <ClInclude Include="src\world\sky\procedural_sky.h" />
+    <ClCompile Include="src\world\sky\shaders\procedural_sky_shader.cpp" />
+    <ClInclude Include="src\world\sky\shaders\procedural_sky_shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli" />
@@ -107,6 +112,9 @@
     <None Include="src\world\terrain\shaders\terrain_cbuf.hlsli" />
     <None Include="src\world\terrain\shaders\terrain.hlsl" />
     <View3dShaderBuild Include="src\world\terrain\shaders\terrain.hlsl" />
+    <None Include="src\world\sky\shaders\procedural_sky_cbuf.hlsli" />
+    <None Include="src\world\sky\shaders\procedural_sky.hlsl" />
+    <View3dShaderBuild Include="src\world\sky\shaders\procedural_sky.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <DataFiles Include="$(ProjectDir)data\**\*.*" />
@@ -120,6 +128,7 @@
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc" />
     <ResourceCompile Include="src\world\ocean\shaders\distant_ocean.rc" />
     <ResourceCompile Include="src\world\terrain\shaders\terrain.rc" />
+    <ResourceCompile Include="src\world\sky\shaders\procedural_sky.rc" />
   </ItemGroup>
   <Target Name="CopyDataDirectory" AfterTargets="Link">
     <Copy SourceFiles="@(DataFiles)" DestinationFiles="@(DataFiles -> '$(OutDir)data\%(RecursiveDir)%(Filename)%(Extension)')" ContinueOnError="ErrorAndContinue" SkipUnchangedFiles="true" />

@@ -36,7 +36,7 @@ namespace las
 		v4 NormalAt(float world_x, float world_y, float time) const;
 
 		// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-		void PrepareRender(v4 camera_world_pos, float time, bool has_env_map);
+		void PrepareRender(v4 camera_world_pos, float time, bool has_env_map, v4 sun_direction, v4 sun_colour);
 
 		// Add instance to the scene drawlist (NOT thread-safe, must be called serially).
 		void AddToScene(Scene& scene);

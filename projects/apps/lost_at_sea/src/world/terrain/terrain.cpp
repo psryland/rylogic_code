@@ -174,16 +174,13 @@ namespace las
 	}
 
 	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-	void Terrain::PrepareRender(v4 camera_world_pos)
+	void Terrain::PrepareRender(v4 camera_world_pos, v4 sun_direction, v4 sun_colour)
 	{
 		if (!m_grid_mesh)
 			return;
 
-		// Run CDLOD quadtree LOD selection
 		m_lod_selection.Select(camera_world_pos, MaxDrawDist);
 
-		// Update per-patch instance transforms.
-		// i2w encodes patch origin (translation) and size (scale).
 		auto patch_count = PatchCount();
 		for (auto i = 0; i < patch_count; ++i)
 		{
@@ -195,7 +192,7 @@ namespace las
 			inst.m_i2w.pos = v4(patch.origin_x, patch.origin_y, 0, 1);
 		}
 
-		m_shader->SetupFrame(camera_world_pos);
+		m_shader->SetupFrame(camera_world_pos, sun_direction, sun_colour);
 	}
 
 	// Add instances to the scene drawlist (NOT thread-safe, must be called serially).

@@ -89,12 +89,11 @@ namespace las
 		return std::min(static_cast<int>(m_lod_selection.m_patches.size()), MaxPatches);
 	}
 
-	void DistantOcean::PrepareRender(v4 camera_world_pos, bool has_env_map)
+	void DistantOcean::PrepareRender(v4 camera_world_pos, bool has_env_map, v4 sun_direction, v4 sun_colour)
 	{
 		if (!m_grid_mesh)
 			return;
 
-		// CDLOD selection with inner cutout for the near Gerstner ocean
 		m_lod_selection.Select(camera_world_pos, MaxDrawDist, MinDrawDist);
 
 		auto patch_count = PatchCount();
@@ -108,7 +107,7 @@ namespace las
 			inst.m_i2w.pos = v4(patch.origin_x, patch.origin_y, 0, 1);
 		}
 
-		m_shader->SetupFrame(camera_world_pos, has_env_map);
+		m_shader->SetupFrame(camera_world_pos, has_env_map, sun_direction, sun_colour);
 	}
 
 	void DistantOcean::AddToScene(Scene& scene)

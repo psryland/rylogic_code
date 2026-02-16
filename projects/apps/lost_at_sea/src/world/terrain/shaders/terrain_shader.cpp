@@ -83,9 +83,11 @@ namespace las
 	}
 
 	// Update shared per-frame data (camera position).
-	void TerrainShader::SetupFrame(v4 camera_world_pos)
+	void TerrainShader::SetupFrame(v4 camera_world_pos, v4 sun_direction, v4 sun_colour)
 	{
 		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
 		cbuf.m_camera_pos = camera_world_pos;
+		cbuf.m_sun_direction = sun_direction;
+		cbuf.m_sun_colour = sun_colour;
 	}
 }

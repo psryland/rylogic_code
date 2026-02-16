@@ -25,6 +25,9 @@
     <Filter Include="res">
       <UniqueIdentifier>{97b81594-9f7a-4667-883f-1d5f153d5851}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\world\sky">
+      <UniqueIdentifier>{b7ab1687-26d5-4d82-90ad-e07bf861868f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
@@ -48,6 +51,12 @@
     <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp">
       <Filter>src\world\terrain\shaders</Filter>
     </ClCompile>
+    <ClCompile Include="src\world\ocean\distant_ocean.cpp">
+      <Filter>src\world\ocean</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\shaders\distant_ocean_shader.cpp">
+      <Filter>src\world\ocean</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli">
@@ -61,6 +70,12 @@
     </None>
     <None Include="src\world\terrain\shaders\terrain.hlsl">
       <Filter>src\world\terrain\shaders</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\distant_ocean.hlsl">
+      <Filter>src\world\ocean</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\distant_ocean_cbuf.hlsli">
+      <Filter>src\world\ocean</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -91,6 +106,12 @@
     <ClInclude Include="src\world\ocean\gerstner_wave.h">
       <Filter>src\world\ocean</Filter>
     </ClInclude>
+    <ClInclude Include="src\world\ocean\distant_ocean.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\shaders\distant_ocean_shader.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\world\ocean\shaders\ocean.rc">
@@ -104,6 +125,9 @@
     </ResourceCompile>
     <ResourceCompile Include="src\shaders.rc">
       <Filter>res</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\ocean\shaders\distant_ocean.rc">
+      <Filter>src\world\ocean</Filter>
     </ResourceCompile>
   </ItemGroup>
 </Project>

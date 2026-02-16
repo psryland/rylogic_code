@@ -9,7 +9,8 @@ namespace las
 {
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
-		, m_skybox(m_rdr, L"data\\skybox\\SkyBox-Clouds-Few-Noon.png", Skybox::EStyle::FiveSidedCube, 5000.0f, m3x4::Rotation(maths::tau_by_4f, 0, 0))
+		, m_sky(m_rdr)
+		, m_day_cycle()
 		, m_ocean(m_rdr)
 		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
@@ -77,9 +78,15 @@ namespace las
 		m_step_graph.Add(StepTaskId::Finalise, [&](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(StepTaskId::Input);
 
+			// Update time of day
+			m_day_cycle.Update(dt);
+
 			auto lock = m_sim_state.Lock();
 			lock->m_camera_pos = m_cam.CameraToWorld().pos;
 			lock->m_sim_time = m_sim_time;
+			lock->m_sun_direction = m_day_cycle.SunDirection();
+			lock->m_sun_colour = m_day_cycle.SunColour();
+			lock->m_sun_intensity = m_day_cycle.SunIntensity();
 			co_return;
 		});
 
@@ -93,7 +100,7 @@ namespace las
 	void Main::UpdateScene(Scene& scene, UpdateSceneArgs const&)
 	{
 		// AddInstance is not thread-safe, so all scene population happens here serially
-		m_skybox.AddToScene(scene);
+		m_sky.AddToScene(scene);
 		m_ocean.AddToScene(scene);
 		m_distant_ocean.AddToScene(scene);
 		m_terrain.AddToScene(scene);
@@ -112,6 +119,15 @@ namespace las
 		auto const& sim = m_sim_state.Read();
 		auto cam_pos = sim.m_camera_pos;
 		auto time = static_cast<float>(sim.m_sim_time);
+		auto sun_dir = sim.m_sun_direction;
+		auto sun_col = sim.m_sun_colour;
+		auto sun_int = sim.m_sun_intensity;
+
+		// Update the scene's global light to match the day/night cycle
+		m_scene.m_global_light.m_direction = -sun_dir;
+		m_scene.m_global_light.m_cam_relative = false;
+		m_scene.m_global_light.m_diffuse = Colour(sun_col.x * 0.5f, sun_col.y * 0.5f, sun_col.z * 0.5f, 1.0f);
+		m_scene.m_global_light.m_ambient = Colour(0.15f * sun_int, 0.15f * sun_int, 0.2f * sun_int, 1.0f);
 
 		// PrepareFrame task: set up the frame (must be serial, touches GPU resources)
 		m_render_graph.Add(RenderTaskId::PrepareFrame, [&](auto&) -> pr::task_graph::Task {
@@ -120,24 +136,24 @@ namespace las
 		});
 
 		// Per-system tasks: prepare shader constant buffers (thread-safe, parallel)
-		m_render_graph.Add(RenderTaskId::Skybox, [&](auto ctx) -> pr::task_graph::Task {
+		m_render_graph.Add(RenderTaskId::Skybox, [&, sun_dir, sun_col, sun_int](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			// Skybox has no per-frame CB update
+			m_sky.PrepareRender(sun_dir, sun_col, sun_int);
 			co_return;
 		});
-		m_render_graph.Add(RenderTaskId::Ocean, [&, cam_pos, time](auto ctx) -> pr::task_graph::Task {
+		m_render_graph.Add(RenderTaskId::Ocean, [&, cam_pos, time, sun_dir, sun_col](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			m_ocean.PrepareRender(cam_pos, time, m_scene.m_global_envmap != nullptr);
+			m_ocean.PrepareRender(cam_pos, time, m_scene.m_global_envmap != nullptr, sun_dir, sun_col);
 			co_return;
 		});
-		m_render_graph.Add(RenderTaskId::DistantOcean, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
+		m_render_graph.Add(RenderTaskId::DistantOcean, [&, cam_pos, sun_dir, sun_col](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			m_distant_ocean.PrepareRender(cam_pos, m_scene.m_global_envmap != nullptr);
+			m_distant_ocean.PrepareRender(cam_pos, m_scene.m_global_envmap != nullptr, sun_dir, sun_col);
 			co_return;
 		});
-		m_render_graph.Add(RenderTaskId::Terrain, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
+		m_render_graph.Add(RenderTaskId::Terrain, [&, cam_pos, sun_dir, sun_col](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			m_terrain.PrepareRender(cam_pos);
+			m_terrain.PrepareRender(cam_pos, sun_dir, sun_col);
 			co_return;
 		});
 
@@ -177,6 +193,8 @@ namespace las
 			// ImGuiWindowFlags_NoTitleBar=1<<0, NoResize=1<<1, AlwaysAutoResize=1<<6
 			char buf[128];
 			*std::format_to(buf, "Sim Time: {:.2f} s", m_sim_time) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Time: {:02.0f}:{:02.0f}", std::floor(m_day_cycle.m_time_of_day), std::fmod(m_day_cycle.m_time_of_day, 1.0f) * 60.0f) = 0;
 			m_imgui.Text(buf);
 			*std::format_to(buf, "Frame: {}", m_render_frame) = 0;
 			m_imgui.Text(buf);

@@ -8,6 +8,8 @@
 #include "src/core/frame_tasks.h"
 #include "src/core/state_snapshot.h"
 #include "src/core/sim_state.h"
+#include "src/core/day_night_cycle.h"
+#include "src/world/sky/procedural_sky.h"
 #include "src/world/ocean/ocean.h"
 #include "src/world/ocean/distant_ocean.h"
 #include "src/world/terrain/height_field.h"
@@ -22,11 +24,10 @@ namespace las
 	{
 		using base = pr::app::Main<Main, MainUI, Settings>;
 		using ImGuiUI = pr::rdr12::imgui::ImGuiUI;
-		using Skybox = pr::app::Skybox;
-
 		static char const* AppName() { return "LostAtSea"; }
 
-		Skybox m_skybox;
+		ProceduralSky m_sky;
+		DayNightCycle m_day_cycle;
 		Ocean m_ocean;
 		DistantOcean m_distant_ocean;
 		Terrain m_terrain;
