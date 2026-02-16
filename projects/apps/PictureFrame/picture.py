@@ -371,20 +371,39 @@ class PictureFrame:
 	def _NextImage(self):
 		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
-		fullpath, relpath = self._FindMedia(+1)
-		self._DisplayMedia(fullpath, relpath, self.issue_number, +1)
+		try:
+			fullpath, relpath = self._FindMedia(+1)
+			self._DisplayMedia(fullpath, relpath, self.issue_number, +1)
+		except Exception as e:
+			self.log.error(f"Error in _NextImage: {e}", exc_info=True)
+			self._ScheduleAfter(5000, self._NextImage)
 		return
 
 	# Display the previous image
 	def _PrevImage(self):
 		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
-		fullpath, relpath = self._FindMedia(-1)
-		self._DisplayMedia(fullpath, relpath, self.issue_number, -1)
+		try:
+			fullpath, relpath = self._FindMedia(-1)
+			self._DisplayMedia(fullpath, relpath, self.issue_number, -1)
+		except Exception as e:
+			self.log.error(f"Error in _PrevImage: {e}", exc_info=True)
+			self._ScheduleAfter(5000, self._PrevImage)
 		return
 
 	# Find the next/previous image in the list
 	def _FindMedia(self, increment):
+
+		# Quick check: if the image directory itself is unreachable, don't iterate
+		# all files (each exists() call on a dead CIFS mount blocks for the timeout)
+		try:
+			if not self.image_dir.exists():
+				self.log.warning(f"Image directory not accessible: {self.image_dir}")
+				return Path(), Path()
+		except OSError as e:
+			self.log.warning(f"Image directory check failed: {e}")
+			return Path(), Path()
+
 		# Limit the search to test every image in the list
 		for i in range(len(self.image_list)):
 
@@ -394,8 +413,12 @@ class PictureFrame:
 			relpath = self.CurrentImageRelpath
 			fullpath = (self.image_dir / relpath).resolve()
 
-			if fullpath.exists():
-				return fullpath, relpath
+			try:
+				if fullpath.exists():
+					return fullpath, relpath
+			except OSError:
+				# Network path errors should not block the loop
+				continue
 
 		return Path(), Path()
 
@@ -416,8 +439,10 @@ class PictureFrame:
 		# Display a no images message if there are no images
 		self.no_images_label.place_forget()
 		if not fullpath or fullpath == Path():
-			self.log.warning("No valid image found to display")
+			self.log.warning("No accessible media found, will retry in 5 seconds")
+			self.no_images_label.configure(text=f"Waiting for:\n{self.image_dir}")
 			self.no_images_label.place(anchor="center", relx=0.5, rely=0.5)
+			self._ScheduleAfter(5000, self._NextImage)
 			return
 
 		# Add the image to the displayed image log
@@ -476,9 +501,12 @@ class PictureFrame:
 			
 		def Stop():
 			if issue_number != self.issue_number: return
-			if self.player and self.player.eof_reached == False:
-				self._ScheduleAfter(500, Stop)
-				return
+			try:
+				if self.player and self.player.eof_reached == False:
+					self._ScheduleAfter(500, Stop)
+					return
+			except Exception as e:
+				self.log.error(f"Error checking eof_reached: {e}", exc_info=True)
 			self._StopMedia()
 			self._NextImage()
 			return
