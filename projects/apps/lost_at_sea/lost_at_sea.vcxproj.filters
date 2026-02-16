@@ -123,7 +123,7 @@
     <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
       <Filter>res</Filter>
     </ResourceCompile>
-    <ResourceCompile Include="src\shaders.rc">
+    <ResourceCompile Include="res\shaders.rc">
       <Filter>res</Filter>
     </ResourceCompile>
     <ResourceCompile Include="src\world\ocean\shaders\distant_ocean.rc">
