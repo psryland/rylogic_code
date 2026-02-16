@@ -14,7 +14,7 @@ namespace pr::math
 		// Notes:
 		//  - Tests for arbitrary vector types
 
-		template <VectorType Vec> constexpr bool Eql(Vec lhs, Vec rhs)
+		template <VectorType Vec> static constexpr bool Eql(Vec lhs, Vec rhs)
 		{
 			using vt = vector_traits<Vec>;
 

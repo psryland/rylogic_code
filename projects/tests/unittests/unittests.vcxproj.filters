@@ -1183,6 +1183,9 @@
     <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\task_graph.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">
