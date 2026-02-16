@@ -148,6 +148,9 @@ PSIn VSTerrain(VSIn In)
 	float morph_start = m_patch_config.x;
 	float morph_end = m_patch_config.y;
 
+	// Skirt flag: z=1 means this vertex should drop below the surface to hide LOD cracks
+	float is_skirt = In.vert.z;
+
 	// Transform grid vertex [0,1] to world space via m_o2w (encodes patch origin + scale)
 	float4 world_pos = mul(float4(In.vert.xy, 0, 1), m_o2w);
 	float2 world_xy = world_pos.xy;
@@ -198,6 +201,11 @@ PSIn VSTerrain(VSIn In)
 
 		h = lerp(h, morph_h, morph);
 	}
+
+	// Skirt vertices drop below the surface to fill T-junction cracks between LOD levels.
+	// Depth scales with cell size so finer LODs have smaller skirts.
+	if (is_skirt > 0.5)
+		h -= cell_size * 4.0;
 
 	// Final world position with terrain height
 	world_pos.z = h;

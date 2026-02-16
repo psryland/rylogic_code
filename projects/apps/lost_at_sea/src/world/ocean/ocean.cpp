@@ -109,9 +109,10 @@ namespace las
 		auto shdr = Shader::Create<OceanShader>(rdr);
 		m_shader = shdr.get();
 
-		// Configure the nugget with the custom ocean shader
+		// Configure the nugget with the custom ocean shader and alpha transparency
 		buf.m_ncont.push_back(NuggetDesc{ ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm }
-			.use_shader_overlay(ERenderStep::RenderForward, shdr));
+			.use_shader_overlay(ERenderStep::RenderForward, shdr)
+			.alpha_geom());
 
 		auto ocean_colour = Colour32(0xFF804010);
 		auto opts = ModelGenerator::CreateOptions().colours({ &ocean_colour, 1 });
@@ -135,6 +136,7 @@ namespace las
 
 	// Physics queries — kept for buoyancy calculations in Phase 2
 
+	// 
 	float Ocean::HeightAt(float world_x, float world_y, float time) const
 	{
 		auto h = 0.0f;
@@ -180,7 +182,7 @@ namespace las
 	}
 
 	// Prepare shader constant buffers for rendering (thread-safe, no scene interaction).
-	void Ocean::PrepareRender(v4 camera_world_pos, float time)
+	void Ocean::PrepareRender(v4 camera_world_pos, float time, bool has_env_map)
 	{
 		if (!m_inst.m_model)
 			return;
@@ -189,7 +191,7 @@ namespace las
 		// Compensate via the instance transform so the view matrix doesn't double-subtract XY.
 		m_inst.m_i2w.pos = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
 
-		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, MinRingSpacing);
+		m_shader->SetupFrame(m_waves, camera_world_pos, time, InnerRadius, OuterRadius, NumRings, MinRingSpacing, has_env_map);
 	}
 
 	// Add instance to the scene drawlist (NOT thread-safe, must be called serially).

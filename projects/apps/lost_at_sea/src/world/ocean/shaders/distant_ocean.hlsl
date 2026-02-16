@@ -8,22 +8,28 @@
 #include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 #include "src/world/ocean/shaders/distant_ocean_cbuf.hlsli"
 
+// Environment map cubemap (bound by forward render step when scene env map is set)
+TextureCube<float4> m_envmap_texture :reg(t1, 0);
+SamplerState        m_envmap_sampler :reg(s1, 0);
+
 struct PSOut
 {
 	float4 diff :SV_TARGET;
 };
 
-// Procedural sky colour for reflections (simplified version)
-float3 ProceduralSkyDistant(float3 dir, float3 sun_dir, float3 sun_col)
+// Sample reflection from env map cubemap or fall back to procedural sky
+float3 SampleReflectionDistant(float3 dir, float3 sun_dir, float3 sun_col)
 {
+	if (m_has_env_map)
+		return m_envmap_texture.Sample(m_envmap_sampler, dir).rgb;
+
+	// Fallback procedural sky
 	float3 horizon = float3(0.75, 0.85, 0.95);
 	float3 zenith  = float3(0.25, 0.45, 0.80);
 	float t = saturate(dir.z);
 	float3 sky = lerp(horizon, zenith, t * t);
-
 	float sun_dot = saturate(dot(dir, sun_dir));
 	sky += sun_col * pow(sun_dot, 8.0) * 0.3;
-
 	return sky;
 }
 
@@ -63,7 +69,7 @@ PSOut PSDistantOcean(PSIn In)
 
 	// Reflection
 	float3 R = reflect(-V, N);
-	float3 reflection = ProceduralSkyDistant(R, L, m_sun_colour.rgb);
+	float3 reflection = SampleReflectionDistant(R, L, m_sun_colour.rgb);
 
 	// Water body colour (depth approximation from view angle)
 	float depth_factor = saturate(1.0 - NdotV);

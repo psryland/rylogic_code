@@ -16,6 +16,10 @@ namespace las
 		static constexpr int GridVerts = GridN + 1;                   // Vertices per edge = 33
 		static constexpr int GridVertCount = GridVerts * GridVerts;   // 1089
 		static constexpr int GridIdxCount = GridN * GridN * 6;        // 6144
+		static constexpr int SkirtVertCount = 4 * GridVerts;          // 132 (one strip per edge)
+		static constexpr int SkirtIdxCount = 4 * GridN * 6;           // 768 (quads = 2 tris each)
+		static constexpr int TotalVertCount = GridVertCount + SkirtVertCount; // 1221
+		static constexpr int TotalIdxCount = GridIdxCount + SkirtIdxCount;    // 6912
 		static constexpr float MinPatchSize = 32.0f;                  // Finest patch size (1m cells)
 		static constexpr float MaxDrawDist = 5000.0f;                 // Maximum draw distance
 		static constexpr int MaxPatches = 512;                        // Max visible patches per frame

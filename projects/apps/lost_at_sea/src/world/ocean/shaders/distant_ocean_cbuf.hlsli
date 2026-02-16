@@ -28,6 +28,10 @@ cbuffer CBufDistantOcean :reg(b3,0)
 
 	// Sun colour (RGB intensity)
 	float4 m_sun_colour;
+
+	// Environment map: non-zero if a cubemap is bound at t1
+	int m_has_env_map;
+	int3 distant_ocean_pad0;
 };
 
 #endif

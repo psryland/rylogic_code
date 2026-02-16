@@ -45,6 +45,14 @@ cbuffer CBufOcean :reg(b3,0)
 
 	// Sun colour (RGB intensity)
 	float4 m_sun_colour;
+
+	// Environment map: non-zero if a cubemap is bound at t1
+	int m_has_env_map;
+
+	// Water transparency at normal incidence (0=opaque, 1=fully clear)
+	float m_water_transparency;
+
+	float2 ocean_pad0;
 };
 
 #endif

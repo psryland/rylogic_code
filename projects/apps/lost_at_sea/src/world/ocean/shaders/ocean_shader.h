@@ -19,7 +19,7 @@ namespace las
 		std::vector<uint8_t> m_ps_bytecode;
 
 		// Ocean constant buffer data, updated each frame
-		alignas(16) std::byte m_cbuf[256];
+		alignas(16) std::byte m_cbuf[288];
 
 		explicit OceanShader(Renderer& rdr);
 
@@ -27,6 +27,6 @@ namespace las
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, rdr12::GpuUploadBuffer& upload, rdr12::Scene const& scene, rdr12::DrawListElement const* dle) override;
 
 		// Update the constant buffer data for this frame
-		void SetupFrame(std::span<GerstnerWave const> waves, v4 camera_world_pos, float time, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing);
+		void SetupFrame(std::span<GerstnerWave const> waves, v4 camera_world_pos, float time, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing, bool has_env_map);
 	};
 }

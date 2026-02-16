@@ -63,9 +63,10 @@ namespace las
 		cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(shaders::distant_ocean::ERootParam::CBufDistantOcean), gpu_address);
 	}
 
-	void DistantOceanShader::SetupFrame(v4 camera_world_pos)
+	void DistantOceanShader::SetupFrame(v4 camera_world_pos, bool has_env_map)
 	{
 		auto& cbuf = storage_cast<shaders::distant_ocean::CBufDistantOcean>(m_cbuf);
 		cbuf.m_camera_pos = camera_world_pos;
+		cbuf.m_has_env_map = has_env_map ? 1 : 0;
 	}
 }

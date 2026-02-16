@@ -127,12 +127,12 @@ namespace las
 		});
 		m_render_graph.Add(RenderTaskId::Ocean, [&, cam_pos, time](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			m_ocean.PrepareRender(cam_pos, time);
+			m_ocean.PrepareRender(cam_pos, time, m_scene.m_global_envmap != nullptr);
 			co_return;
 		});
 		m_render_graph.Add(RenderTaskId::DistantOcean, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(RenderTaskId::PrepareFrame);
-			m_distant_ocean.PrepareRender(cam_pos);
+			m_distant_ocean.PrepareRender(cam_pos, m_scene.m_global_envmap != nullptr);
 			co_return;
 		});
 		m_render_graph.Add(RenderTaskId::Terrain, [&, cam_pos](auto ctx) -> pr::task_graph::Task {

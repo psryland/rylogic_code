@@ -36,7 +36,7 @@ namespace las
 		explicit DistantOcean(Renderer& rdr);
 
 		int PatchCount() const;
-		void PrepareRender(v4 camera_world_pos);
+		void PrepareRender(v4 camera_world_pos, bool has_env_map);
 		void AddToScene(Scene& scene);
 	};
 }

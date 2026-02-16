@@ -14,6 +14,10 @@
 #include "view3d-12/src/shaders/hlsl/forward/forward_cbuf.hlsli"
 #include "src/world/ocean/shaders/ocean_cbuf.hlsli"
 
+// Environment map cubemap (bound by forward render step when scene env map is set)
+TextureCube<float4> m_envmap_texture :reg(t1, 0);
+SamplerState        m_envmap_sampler :reg(s1, 0);
+
 struct PSOut
 {
 	float4 diff :SV_TARGET;
@@ -104,23 +108,28 @@ float3 GerstnerNormal(float2 world_xy, float time)
 	return normalize(float3(nx, ny, nz));
 }
 
-// Procedural sky colour based on a direction vector.
-// This is a placeholder until a real skybox/cubemap is available for reflections.
+// Procedural sky colour (fallback when no cubemap is available)
 float3 ProceduralSky(float3 dir)
 {
-	// Blend from horizon colour to zenith based on the z component of the direction
-	float3 horizon = float3(0.75, 0.85, 0.95); // Pale blue-white at horizon
-	float3 zenith  = float3(0.25, 0.45, 0.80); // Deep blue at zenith
+	float3 horizon = float3(0.75, 0.85, 0.95);
+	float3 zenith  = float3(0.25, 0.45, 0.80);
 	float t = saturate(dir.z);
 	float3 sky = lerp(horizon, zenith, t * t);
 
-	// Add sun disc
 	float sun_dot = saturate(dot(dir, m_sun_direction.xyz));
 	float sun_disc = pow(sun_dot, 512.0);
 	float sun_glow = pow(sun_dot, 8.0) * 0.3;
 	sky += m_sun_colour.rgb * (sun_disc + sun_glow);
 
 	return sky;
+}
+
+// Sample reflection from env map cubemap or fall back to procedural sky
+float3 SampleReflection(float3 dir)
+{
+	if (m_has_env_map)
+		return m_envmap_texture.Sample(m_envmap_sampler, dir).rgb;
+	return ProceduralSky(dir);
 }
 
 // Schlick's Fresnel approximation
@@ -217,7 +226,7 @@ PSOut PSOcean(PSIn In)
 
 	// --- Reflection ---
 	float3 R = reflect(-V, N);
-	float3 reflection = ProceduralSky(R);
+	float3 reflection = SampleReflection(R);
 
 	// --- Refraction / water body colour ---
 	// Approximate depth: steeper viewing angles see deeper water
@@ -252,6 +261,11 @@ PSOut PSOcean(PSIn In)
 	float diffuse_light = saturate(dot(N, L)) * 0.5;
 	colour *= (ambient + diffuse_light + 0.5); // Brighten overall to avoid too-dark water
 
-	Out.diff = float4(colour, 1.0);
+	// --- Transparency ---
+	// Fresnel reflection is always visible; water absorption increases with viewing angle.
+	// Looking down: mostly transparent (see terrain below). At horizon: opaque/reflective.
+	float alpha = fresnel + (1.0 - fresnel) * (1.0 - m_water_transparency * NdotV);
+
+	Out.diff = float4(colour, alpha);
 	return Out;
 }

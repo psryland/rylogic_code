@@ -89,7 +89,7 @@ namespace las
 		return std::min(static_cast<int>(m_lod_selection.m_patches.size()), MaxPatches);
 	}
 
-	void DistantOcean::PrepareRender(v4 camera_world_pos)
+	void DistantOcean::PrepareRender(v4 camera_world_pos, bool has_env_map)
 	{
 		if (!m_grid_mesh)
 			return;
@@ -108,7 +108,7 @@ namespace las
 			inst.m_i2w.pos = v4(patch.origin_x, patch.origin_y, 0, 1);
 		}
 
-		m_shader->SetupFrame(camera_world_pos);
+		m_shader->SetupFrame(camera_world_pos, has_env_map);
 	}
 
 	void DistantOcean::AddToScene(Scene& scene)
