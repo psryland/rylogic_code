@@ -9,10 +9,11 @@
 namespace las
 {
 	// Radial mesh parameters — same structure as the ocean mesh
-	static constexpr int NumRings = 80;
-	static constexpr int NumSegments = 128;
+	static constexpr int NumRings = 160;
+	static constexpr int NumSegments = 256;
 	static constexpr float InnerRadius = 2.0f;
 	static constexpr float OuterRadius = 1000.0f;
+	static constexpr float MinRingSpacing = 2.0f; // Minimum radial distance between rings (metres)
 
 	// Terrain
 	Terrain::Terrain(Renderer& rdr)
@@ -115,7 +116,11 @@ namespace las
 		if (!m_inst.m_model)
 			return;
 
-		m_shader->SetupFrame(camera_world_pos, InnerRadius, OuterRadius, NumRings, NumSegments);
+		// The vertex shader subtracts cam_xy from world positions (camera-relative rendering).
+		// Compensate via the instance transform so the view matrix doesn't double-subtract XY.
+		m_inst.m_i2w.pos = v4(camera_world_pos.x, camera_world_pos.y, 0, 1);
+
+		m_shader->SetupFrame(camera_world_pos, InnerRadius, OuterRadius, NumRings, MinRingSpacing);
 	}
 
 	// Add instance to the scene drawlist (NOT thread-safe, must be called serially).

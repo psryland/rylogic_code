@@ -108,16 +108,25 @@ float3 terrain_normal(float world_x, float world_y)
 	return normalize(float3(hL - hR, hD - hU, 2.0 * eps));
 }
 
-// Compute ring radius with log-to-linear blend based on camera height
+// Compute ring radius with log-to-linear blend based on camera height.
+// Clamps to enforce minimum ring spacing, capping point density near the camera.
 float RingRadius(float t, float camera_height, float inner, float outer)
 {
+	float num_rings = m_mesh_config.z;
+	float min_spacing = m_mesh_config.w;
+
 	float log_ratio = log(outer / inner);
 	float r_log = inner * exp(log_ratio * t);
 	float r_lin = inner + (outer - inner) * t;
 
 	float h = abs(camera_height);
 	float blend = saturate(h / outer);
-	return lerp(r_log, r_lin, blend);
+	float r = lerp(r_log, r_lin, blend);
+
+	// Enforce minimum ring spacing to cap point density near camera
+	float ring_idx = t * (num_rings - 1);
+	float r_min = inner + min_spacing * ring_idx;
+	return max(r, r_min);
 }
 
 // Terrain colour based on height and normal slope
@@ -129,20 +138,20 @@ float4 terrain_colour(float height, float3 normal)
 	if (height < 0.0)
 		return float4(0.13, 0.25, 0.50, 1.0);
 
-	// Beach: sandy yellow
-	if (height < 2.0)
+	// Beach: sandy yellow (0–5m)
+	if (height < 5.0)
 		return float4(0.82, 0.75, 0.37, 1.0);
 
 	// Steep slope: rocky grey
 	if (flatness < 0.7)
 		return float4(0.38, 0.38, 0.38, 1.0);
 
-	// High altitude: grey rock
-	if (height > 40.0)
+	// High altitude: grey rock (above 150m)
+	if (height > 150.0)
 		return float4(0.50, 0.50, 0.50, 1.0);
 
-	// Green vegetation, getting browner at higher elevations
-	float t = saturate((height - 2.0) / 38.0);
+	// Green vegetation, getting browner at higher elevations (5–150m)
+	float t = saturate((height - 5.0) / 145.0);
 	return float4(0.23 + t * 0.15, 0.50 - t * 0.20, 0.12 + t * 0.10, 1.0);
 }
 

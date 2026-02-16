@@ -47,8 +47,8 @@ namespace las
 		cbuf = shaders::terrain::CBufTerrain{
 			.m_camera_pos = v4::Zero(),
 			.m_mesh_config = v4::Zero(),
-			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 80.0f), // octaves, base_freq, persistence, amplitude
-			.m_noise_bias = v4(-0.3f, 0, 0, 0),               // sea_level_bias
+			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 300.0f), // octaves, base_freq, persistence, amplitude
+			.m_noise_bias = v4(-0.3f, 0, 0, 0),               // sea_level_bias (peaks ~210m, ~65% ocean)
 			.m_sun_direction = Normalise(v4(0.5f, 0.3f, 0.8f, 0.0f)),
 			.m_sun_colour = v4(1.0f, 0.95f, 0.85f, 1.0f),
 		};
@@ -66,10 +66,10 @@ namespace las
 	}
 
 	// Update the constant buffer data for this frame
-	void TerrainShader::SetupFrame(v4 camera_world_pos, float inner_radius, float outer_radius, int num_rings, int num_segments)
+	void TerrainShader::SetupFrame(v4 camera_world_pos, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing)
 	{
 		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
 		cbuf.m_camera_pos = camera_world_pos;
-		cbuf.m_mesh_config = v4(inner_radius, outer_radius, static_cast<float>(num_rings), static_cast<float>(num_segments));
+		cbuf.m_mesh_config = v4(inner_radius, outer_radius, static_cast<float>(num_rings), min_ring_spacing);
 	}
 }

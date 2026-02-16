@@ -11,8 +11,8 @@ namespace las
 		:m_octaves(6)
 		,m_base_frequency(0.001f)  // ~1000m feature scale
 		,m_persistence(0.5f)
-		,m_amplitude(80.0f)        // Max mountain height ~80m
-		,m_sea_level_bias(-0.3f)   // Ensures ~60-70% water coverage
+		,m_amplitude(300.0f)       // Islands peak ~200m above sea level
+		,m_sea_level_bias(-0.3f)   // Ensures ~65% water coverage
 		,m_rng(seed)
 		,m_noise(m_rng)
 	{}

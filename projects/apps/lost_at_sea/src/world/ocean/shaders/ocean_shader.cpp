@@ -72,7 +72,7 @@ namespace las
 	}
 
 	// Update the constant buffer data for this frame
-	void OceanShader::SetupFrame(std::span<GerstnerWave const> waves, v4 camera_world_pos, float time, float inner_radius, float outer_radius, int num_rings, int num_segments)
+	void OceanShader::SetupFrame(std::span<GerstnerWave const> waves, v4 camera_world_pos, float time, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing)
 	{
 		auto& cbuf = storage_cast<shaders::ocean::CBufOcean>(m_cbuf);
 		
@@ -95,6 +95,6 @@ namespace las
 		}
 
 		cbuf.m_camera_pos_time = v4(camera_world_pos.x, camera_world_pos.y, camera_world_pos.z, time);
-		cbuf.m_mesh_config = v4(inner_radius, outer_radius, static_cast<float>(num_rings), static_cast<float>(num_segments));
+		cbuf.m_mesh_config = v4(inner_radius, outer_radius, static_cast<float>(num_rings), min_ring_spacing);
 	}
 }

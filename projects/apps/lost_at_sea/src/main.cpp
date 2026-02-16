@@ -39,6 +39,10 @@ namespace las
 	Main::~Main()
 	{
 		m_scene.ClearDrawlists();
+
+		// Ensure the GPU has finished all in-flight frames before destroying
+		// pipeline state objects (shaders) owned by ocean/terrain models.
+		m_window.m_gsync.Wait();
 	}
 
 	// Simulation step — builds and runs the step task graph
@@ -216,7 +220,7 @@ namespace las
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
 		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->Step(dt); });
-		m_msg_loop.AddLoop(60.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
+		m_msg_loop.AddLoop(120.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)

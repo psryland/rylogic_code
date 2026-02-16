@@ -19,9 +19,13 @@ struct PSOut
 	float4 diff :SV_TARGET;
 };
 
-// Compute ring radius with log-to-linear blend based on camera height
+// Compute ring radius with log-to-linear blend based on camera height.
+// Clamps to enforce minimum ring spacing, capping point density near the camera.
 float RingRadius(float t, float camera_height, float inner, float outer)
 {
+	float num_rings = m_mesh_config.z;
+	float min_spacing = m_mesh_config.w;
+
 	// Logarithmic: r = inner * exp(log(outer/inner) * t)
 	float log_ratio = log(outer / inner);
 	float r_log = inner * exp(log_ratio * t);
@@ -33,7 +37,12 @@ float RingRadius(float t, float camera_height, float inner, float outer)
 	float h = abs(camera_height);
 	float blend = saturate(h / outer);
 
-	return lerp(r_log, r_lin, blend);
+	float r = lerp(r_log, r_lin, blend);
+
+	// Enforce minimum ring spacing to cap point density near camera
+	float ring_idx = t * (num_rings - 1);
+	float r_min = inner + min_spacing * ring_idx;
+	return max(r, r_min);
 }
 
 // Apply Gerstner wave displacement to a world-space position

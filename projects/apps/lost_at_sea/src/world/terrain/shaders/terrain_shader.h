@@ -25,6 +25,6 @@ namespace las
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, rdr12::GpuUploadBuffer& upload, rdr12::Scene const& scene, rdr12::DrawListElement const* dle) override;
 
 		// Update the constant buffer data for this frame
-		void SetupFrame(v4 camera_world_pos, float inner_radius, float outer_radius, int num_rings, int num_segments);
+		void SetupFrame(v4 camera_world_pos, float inner_radius, float outer_radius, int num_rings, float min_ring_spacing);
 	};
 }
