@@ -36,12 +36,20 @@ def _SetupLogging(log_dir):
 	logger = logging.getLogger("PictureFrame")
 	logger.setLevel(logging.DEBUG)
 
-	# Rotating file handler: 5MB per file, keep 5 backups
+	# Rotating file handler: 1MB per file, keep 10 backups
 	file_handler = logging.handlers.RotatingFileHandler(
-		log_file, maxBytes=5*1024*1024, backupCount=5, encoding="utf-8")
+		log_file, maxBytes=1*1024*1024, backupCount=10, encoding="utf-8")
 	file_handler.setLevel(logging.DEBUG)
 	file_fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 	file_handler.setFormatter(file_fmt)
+
+	# Name rotated files with a timestamp instead of numeric suffixes
+	def timestamped_namer(default_name):
+		base_dir = Path(default_name).parent
+		timestamp = time.strftime("%Y%m%d_%H%M%S")
+		return str(base_dir / f"pictureframe_{timestamp}.log")
+	file_handler.namer = timestamped_namer
+	file_handler.rotator = lambda src, dst: Path(src).rename(dst)
 
 	# Console handler
 	console_handler = logging.StreamHandler(sys.stdout)
@@ -86,6 +94,7 @@ class PictureFrame:
 		self.log.info(f"psutil available: {HAS_PSUTIL}")
 		self.log.info(f"Project dir: {project_dir}")
 		self._images_displayed = 0
+		self._plays_since_recycle = 0
 		self._start_time = time.time()
 
 		# Install global exception hook to catch unhandled exceptions
@@ -283,6 +292,23 @@ class PictureFrame:
 		self.log.error("All MPV configurations failed!")
 		self.player = None
 
+	# Destroy and recreate the MPV player to reclaim leaked memory
+	def _RecyclePlayer(self):
+		recycle_interval = self.config.get('PlayerRecycleInterval', 200)
+		if self._plays_since_recycle < recycle_interval:
+			return
+
+		self.log.info(f"Recycling MPV player after {self._plays_since_recycle} plays to reclaim memory")
+		self._StopMedia()
+		if self.player is not None:
+			try:
+				self.player.terminate()
+			except Exception as e:
+				self.log.error(f"Error terminating player during recycle: {e}", exc_info=True)
+			self.player = None
+		self._plays_since_recycle = 0
+		self._InitPlayer()
+
 	# Scan for images and videos
 	def Scan(self):
 		patterns = self.config['ImagePatterns'] + self.config['VideoPatterns']
@@ -429,9 +455,11 @@ class PictureFrame:
 			return
 
 		self._images_displayed += 1
+		self._plays_since_recycle += 1
 
-		# Stop any existing media
+		# Stop any existing media and recycle MPV if needed to reclaim memory
 		self._StopMedia()
+		self._RecyclePlayer()
 
 		# Set the filepath label text
 		self.label_filepath.configure(text=relpath)
