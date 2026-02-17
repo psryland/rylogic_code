@@ -25,17 +25,13 @@ struct PSOut
 };
 
 // ---- GPU Perlin noise ----
-// Integer hash (good distribution, GPU-friendly)
-int ihash(int n)
-{
-	n = (n << 13) ^ n;
-	return (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
-}
-
-// Hash two integers into a pseudo-random int
+// 2D integer hash with good distribution (breaks axis-aligned correlations)
 int hash2(int x, int y)
 {
-	return ihash(x + ihash(y));
+	int h = x * 374761393 + y * 668265263;
+	h = (h ^ (h >> 13)) * 1274126177;
+	h = h ^ (h >> 16);
+	return h & 0x7fffffff;
 }
 
 // Smooth interpolation curve: 6t^5 - 15t^4 + 10t^3
@@ -44,13 +40,16 @@ float fade(float t)
 	return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
 }
 
-// Gradient function: select from 8 gradient directions
+// 8 gradient directions: 4 axis-aligned + 4 diagonal for isotropic noise
+static const float2 s_grads[8] =
+{
+	float2(1,0), float2(-1,0), float2(0,1), float2(0,-1),
+	float2(1,1), float2(-1,1), float2(1,-1), float2(-1,-1),
+};
 float grad2d(int hash, float x, float y)
 {
-	int h = hash & 7;
-	float u = h < 4 ? x : y;
-	float v = h < 4 ? y : x;
-	return ((h & 1) ? -u : u) + ((h & 2) ? -2.0 * v : 2.0 * v);
+	float2 g = s_grads[hash & 7];
+	return g.x * x + g.y * y;
 }
 
 // Single-octave 2D Perlin noise, returns approximately [-1, 1]
@@ -76,7 +75,10 @@ float noise2d(float x, float y)
 	return lerp(x1, x2, v);
 }
 
-// Multi-octave (fractal) Perlin noise matching HeightField::HeightAt
+// Multi-octave (fractal) Perlin noise with weathering effects.
+// Domain warping creates flowing, erosion-like features.
+// Ridged noise on fine octaves adds sharp ridges and valleys (above sea level only).
+// Beach flattening creates gentle sandy shores near the waterline.
 float terrain_height(float world_x, float world_y)
 {
 	int octaves           = (int)m_noise_params.x;
@@ -85,27 +87,83 @@ float terrain_height(float world_x, float world_y)
 	float amplitude       = m_noise_params.w;
 	float sea_level_bias  = m_noise_bias.x;
 
+	// Domain warping: warp input coords through low-frequency noise.
+	// This bends features into curving valleys and meandering ridges.
+	// Moderate strength keeps coastal areas gentle while still creating
+	// interesting features on peaks.
+	float warp_freq = 0.0004;
+	float warp_strength = 300.0;
+	float warp_x = noise2d(world_x * warp_freq + 5.2, world_y * warp_freq + 1.3) * warp_strength;
+	float warp_y = noise2d(world_x * warp_freq + 8.7, world_y * warp_freq + 2.8) * warp_strength;
+	float wx = world_x + warp_x;
+	float wy = world_y + warp_y;
+
 	float value = 0.0;
 	float freq = base_frequency;
 	float amp = 1.0;
 	float max_amp = 0.0;
+	float ridge_blend = 1.0;
 
 	for (int i = 0; i < octaves; ++i)
 	{
-		value += noise2d(world_x * freq, world_y * freq) * amp;
+		float n = noise2d(wx * freq, wy * freq);
+
+		// After the first 4 (coarse) octaves, estimate the base height to determine
+		// whether we're above or below sea level. Suppress ridging underwater.
+		if (i == 4)
+		{
+			float base_h = (value / max_amp + sea_level_bias) * amplitude;
+			ridge_blend = saturate(base_h / 80.0); // 0 underwater, full ridging above 80m
+		}
+
+		// Ridged noise for fine octaves: sharp ridges where noise crosses zero.
+		// Only applied above sea level to keep coastlines and sea floor smooth.
+		if (i >= 4)
+		{
+			float n_ridged = 1.0 - 2.0 * abs(n);
+			n = lerp(n, n_ridged, ridge_blend);
+		}
+
+		value += n * amp;
 		max_amp += amp;
 		amp *= persistence;
 		freq *= 2.0;
 	}
 
-	value = value / max_amp;
-	return (value + sea_level_bias) * amplitude;
+	float raw_h = (value / max_amp + sea_level_bias) * amplitude;
+
+	// Macro height variation: a very low-frequency noise field modulates above-water
+	// terrain height across the world. Creates a varied archipelago — some regions
+	// have low-lying grassy atolls (scale ~0.15 → peaks ~30m), others have tall
+	// volcanic peaks (scale ~1.0 → peaks ~200m). Only scales positive heights so
+	// the ocean floor remains consistent.
+	float macro_freq = 0.00008;
+	float macro = noise2d(world_x * macro_freq + 100.3, world_y * macro_freq + 200.7);
+	float height_scale = lerp(0.15, 1.0, saturate(macro * 0.5 + 0.5));
+	if (raw_h > 0.0)
+		raw_h *= height_scale;
+
+	// Beach flattening: create gentle sandy beaches and wide grassy coastal slopes.
+	// Uses cubic f(t) = -t³ + 2t² which has:
+	//   f(0)=0, f'(0)=0  → perfectly flat at waterline
+	//   f(1)=1, f'(1)=1  → smooth join to natural terrain slope
+	// An 80m zone creates the wide, gradually-rising coastal areas of tropical islands.
+	float beach_height = 80.0;
+	if (raw_h > 0.0 && raw_h < beach_height)
+	{
+		float t = raw_h / beach_height;
+		raw_h = (-t * t * t + 2.0 * t * t) * beach_height;
+	}
+
+	return raw_h;
 }
 
-// Terrain normal from finite differences (matches HeightField::NormalAt)
-float3 terrain_normal(float world_x, float world_y)
+// Terrain normal from finite differences.
+// Eps scales with cell_size so distant LODs get smoother normals
+// that match their coarser mesh geometry.
+float3 terrain_normal(float world_x, float world_y, float cell_size)
 {
-	float eps = 1.0; // 1m sample spacing
+	float eps = max(1.0, cell_size * 0.5);
 	float hL = terrain_height(world_x - eps, world_y);
 	float hR = terrain_height(world_x + eps, world_y);
 	float hD = terrain_height(world_x, world_y - eps);
@@ -113,7 +171,9 @@ float3 terrain_normal(float world_x, float world_y)
 	return normalize(float3(hL - hR, hD - hU, 2.0 * eps));
 }
 
-// Terrain colour based on height and normal slope
+// Terrain colour based on height and normal slope.
+// Designed for tropical islands: wide sandy beaches, lush green coastal
+// slopes, rock only at steep cliffs and high peaks.
 float4 terrain_colour(float height, float3 normal)
 {
 	float flatness = normal.z; // z-component of normal = cosine of slope angle
@@ -122,21 +182,33 @@ float4 terrain_colour(float height, float3 normal)
 	if (height < 0.0)
 		return float4(0.13, 0.25, 0.50, 1.0);
 
-	// Beach: sandy yellow (0–5m)
-	if (height < 5.0)
-		return float4(0.82, 0.75, 0.37, 1.0);
+	// Beach: sandy yellow (0–8m, wider band to show the flattened coastline)
+	if (height < 8.0)
+	{
+		// Blend from wet sand near waterline to dry sand
+		float t = saturate(height / 8.0);
+		return float4(lerp(0.72, 0.86, t), lerp(0.62, 0.78, t), lerp(0.30, 0.42, t), 1.0);
+	}
 
-	// Steep slope: rocky grey
-	if (flatness < 0.7)
-		return float4(0.38, 0.38, 0.38, 1.0);
+	// Altitude blend factor: 0 at coast → 1 at peaks
+	float alt_t = saturate((height - 8.0) / 200.0);
 
-	// High altitude: grey rock (above 150m)
-	if (height > 150.0)
-		return float4(0.50, 0.50, 0.50, 1.0);
+	// Slope-based vegetation/rock blend.
+	// Low flatness threshold means only truly steep cliffs show as rock.
+	// Higher altitudes require flatter terrain for vegetation (alpine effect).
+	float veg_threshold = lerp(0.35, 0.65, alt_t);
+	float veg_blend = saturate((flatness - veg_threshold) / 0.15);
 
-	// Green vegetation, getting browner at higher elevations (5–150m)
-	float t = saturate((height - 5.0) / 145.0);
-	return float4(0.23 + t * 0.15, 0.50 - t * 0.20, 0.12 + t * 0.10, 1.0);
+	// Rock colour (grey with slight brown tint at lower altitudes)
+	float3 rock = float3(0.40 + alt_t * 0.10, 0.38 + alt_t * 0.08, 0.35 + alt_t * 0.10);
+
+	// Vegetation colour: lush green near coast, browner and sparser higher up
+	float3 veg_low = float3(0.18, 0.52, 0.10);   // lush tropical green
+	float3 veg_high = float3(0.35, 0.40, 0.18);   // sparse alpine scrub
+	float3 veg = lerp(veg_low, veg_high, alt_t);
+
+	float3 colour = lerp(rock, veg, veg_blend);
+	return float4(colour, 1.0);
 }
 
 // Vertex shader: CDLOD grid patch with Perlin noise height and geomorphing
@@ -211,7 +283,7 @@ PSIn VSTerrain(VSIn In)
 	world_pos.z = h;
 
 	// Compute terrain normal from the actual Perlin surface
-	float3 n = terrain_normal(world_xy.x, world_xy.y);
+	float3 n = terrain_normal(world_xy.x, world_xy.y, cell_size);
 
 	// Output
 	Out.ws_vert = world_pos;

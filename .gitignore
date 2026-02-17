@@ -44,3 +44,6 @@ symbol_cache/
 script/UserVars.py
 script/UserVars.json
 build/certs/
+
+projects/apps/lost_at_sea/build_err.txt
+projects/apps/lost_at_sea/build_out.txt

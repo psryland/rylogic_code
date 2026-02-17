@@ -50,8 +50,8 @@ namespace las
 		cbuf = shaders::terrain::CBufTerrain{
 			.m_camera_pos = v4::Zero(),
 			.m_patch_config = v4(0, 0, static_cast<float>(cdlod::GridN), 0),
-			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 300.0f), // octaves, base_freq, persistence, amplitude
-			.m_noise_bias = v4(-0.3f, 0, 0, 0),               // sea_level_bias (peaks ~210m, ~65% ocean)
+			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 1000.0f), // octaves, base_freq, persistence, amplitude
+			.m_noise_bias = v4(-0.3f, 0, 0, 0),                 // sea_level_bias (peaks ~200m, ~65% ocean)
 			.m_sun_direction = Normalise(v4(0.5f, 0.3f, 0.8f, 0.0f)),
 			.m_sun_colour = v4(1.0f, 0.95f, 0.85f, 1.0f),
 		};
