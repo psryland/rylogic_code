@@ -4,6 +4,7 @@
 //************************************
 #include "src/forward.h"
 #include "src/main.h"
+#include "src/world/terrain/shaders/terrain_shader.h"
 
 namespace las
 {
@@ -29,6 +30,7 @@ namespace las
 			.m_num_frames_in_flight = m_window.BBCount(),
 			.m_font_scale = 1.5f,
 		})
+		, m_diag()
 	{
 		// Position the camera: looking forward (+X) from above the ocean
 		m_cam.LookAt(v4(0, 0, 15, 1), v4(50, 0, 0, 1), v4(0, 0, 1, 0));
@@ -36,6 +38,33 @@ namespace las
 
 		// Watch for scene renders
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
+
+		// Register diagnostic panels
+		auto& tuning = m_terrain.m_shader->m_tuning;
+		m_diag.AddPanel("Terrain Tuning", [&tuning](ImGuiUI& ui)
+		{
+			ui.Text("-- Noise --");
+			ui.SliderFloat("Amplitude", &tuning.m_amplitude, 100.0f, 3000.0f);
+			ui.SliderFloat("Base Freq", &tuning.m_base_freq, 0.0001f, 0.01f);
+			ui.SliderFloat("Persistence", &tuning.m_persistence, 0.1f, 0.9f);
+			ui.SliderFloat("Sea Level Bias", &tuning.m_sea_level_bias, -0.8f, 0.2f);
+
+			ui.Separator();
+			ui.Text("-- Weathering --");
+			ui.SliderFloat("Warp Freq", &tuning.m_warp_freq, 0.0001f, 0.002f);
+			ui.SliderFloat("Warp Strength", &tuning.m_warp_strength, 0.0f, 1000.0f);
+			ui.SliderFloat("Ridge Threshold", &tuning.m_ridge_threshold, 10.0f, 200.0f);
+
+			ui.Separator();
+			ui.Text("-- Archipelago --");
+			ui.SliderFloat("Macro Freq", &tuning.m_macro_freq, 0.00001f, 0.001f);
+			ui.SliderFloat("Scale Min", &tuning.m_macro_scale_min, 0.0f, 1.0f);
+			ui.SliderFloat("Scale Max", &tuning.m_macro_scale_max, 0.0f, 1.0f);
+
+			ui.Separator();
+			ui.Text("-- Beach --");
+			ui.SliderFloat("Beach Height", &tuning.m_beach_height, 5.0f, 200.0f);
+		});
 	}
 
 	Main::~Main()
@@ -182,6 +211,10 @@ namespace las
 		if (!m_imgui)
 			return;
 
+		// Override display size to match the actual render target (fixes DPI mismatch)
+		auto const& vp = m_scene.m_viewport;
+		m_imgui.SetDisplaySize(vp.Width, vp.Height);
+
 		// Start a new imgui frame
 		m_imgui.NewFrame();
 
@@ -229,11 +262,13 @@ namespace las
 		}
 		m_imgui.EndWindow();
 
+		// Draw diagnostic panels (if visible)
+		m_diag.Draw(m_imgui);
+
 		// Set the swap chain back buffer as the render target
 		frame.m_resolve.OMSetRenderTargets({ &frame.bb_post().m_rtv, 1 }, FALSE, nullptr);
 
 		// Set viewport and scissor
-		auto const& vp = m_scene.m_viewport;
 		frame.m_resolve.RSSetViewports({ &vp, 1 });
 		frame.m_resolve.RSSetScissorRects(vp.m_clip);
 
@@ -255,6 +290,14 @@ namespace las
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
+		// F3 toggles the diagnostic overlay (before ImGui gets it)
+		if (m_main && message == WM_KEYDOWN && wparam == VK_F3)
+		{
+			m_main->m_diag.Toggle();
+			result = 0;
+			return true;
+		}
+
 		// Forward to imgui first
 		if (m_main && m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam))
 		{

@@ -28,6 +28,9 @@
     <Filter Include="src\world\sky">
       <UniqueIdentifier>{b7ab1687-26d5-4d82-90ad-e07bf861868f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\diag">
+      <UniqueIdentifier>{c8d9e0f1-2345-4678-9abc-def012345678}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
@@ -111,6 +114,9 @@
     </ClInclude>
     <ClInclude Include="src\world\ocean\shaders\distant_ocean_shader.h">
       <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\diag\diag_ui.h">
+      <Filter>src\diag</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

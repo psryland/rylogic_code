@@ -67,6 +67,7 @@ namespace pr::rdr12::imgui
 		x(, SetNextWindowPos   , void (__stdcall*)(Context& ctx, float x, float y, int cond))\
 		x(, SetNextWindowSize  , void (__stdcall*)(Context& ctx, float w, float h, int cond))\
 		x(, SetNextWindowBgAlpha , void (__stdcall*)(Context& ctx, float alpha))\
+		x(, SetDisplaySize     , void (__stdcall*)(Context& ctx, float w, float h))\
 		x(, Checkbox           , bool (__stdcall*)(Context& ctx, char const* label, bool* v))\
 		x(, SliderFloat        , bool (__stdcall*)(Context& ctx, char const* label, float* v, float v_min, float v_max))\
 		x(, Button             , bool (__stdcall*)(Context& ctx, char const* label))\
@@ -173,6 +174,12 @@ namespace pr::rdr12::imgui
 		void SetNextWindowBgAlpha(float alpha)
 		{
 			ImGuiDll::get().SetNextWindowBgAlpha(*m_ctx, alpha);
+		}
+		// Override the display size to match the actual render target dimensions.
+		// Call after NewFrame to fix DPI mismatches between GetClientRect and the swap chain.
+		void SetDisplaySize(float w, float h)
+		{
+			ImGuiDll::get().SetDisplaySize(*m_ctx, w, h);
 		}
 		bool Checkbox(char const* label, bool* v)
 		{

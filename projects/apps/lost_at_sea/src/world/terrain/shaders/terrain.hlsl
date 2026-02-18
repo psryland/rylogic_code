@@ -89,10 +89,8 @@ float terrain_height(float world_x, float world_y)
 
 	// Domain warping: warp input coords through low-frequency noise.
 	// This bends features into curving valleys and meandering ridges.
-	// Moderate strength keeps coastal areas gentle while still creating
-	// interesting features on peaks.
-	float warp_freq = 0.0004;
-	float warp_strength = 300.0;
+	float warp_freq = m_weather_params.x;
+	float warp_strength = m_weather_params.y;
 	float warp_x = noise2d(world_x * warp_freq + 5.2, world_y * warp_freq + 1.3) * warp_strength;
 	float warp_y = noise2d(world_x * warp_freq + 8.7, world_y * warp_freq + 2.8) * warp_strength;
 	float wx = world_x + warp_x;
@@ -113,7 +111,7 @@ float terrain_height(float world_x, float world_y)
 		if (i == 4)
 		{
 			float base_h = (value / max_amp + sea_level_bias) * amplitude;
-			ridge_blend = saturate(base_h / 80.0); // 0 underwater, full ridging above 80m
+			ridge_blend = saturate(base_h / m_weather_params.z);
 		}
 
 		// Ridged noise for fine octaves: sharp ridges where noise crosses zero.
@@ -133,13 +131,10 @@ float terrain_height(float world_x, float world_y)
 	float raw_h = (value / max_amp + sea_level_bias) * amplitude;
 
 	// Macro height variation: a very low-frequency noise field modulates above-water
-	// terrain height across the world. Creates a varied archipelago — some regions
-	// have low-lying grassy atolls (scale ~0.15 → peaks ~30m), others have tall
-	// volcanic peaks (scale ~1.0 → peaks ~200m). Only scales positive heights so
-	// the ocean floor remains consistent.
-	float macro_freq = 0.00008;
+	// terrain height across the world. Creates a varied archipelago.
+	float macro_freq = m_weather_params.w;
 	float macro = noise2d(world_x * macro_freq + 100.3, world_y * macro_freq + 200.7);
-	float height_scale = lerp(0.15, 1.0, saturate(macro * 0.5 + 0.5));
+	float height_scale = lerp(m_beach_params.y, m_beach_params.z, saturate(macro * 0.5 + 0.5));
 	if (raw_h > 0.0)
 		raw_h *= height_scale;
 
@@ -147,8 +142,7 @@ float terrain_height(float world_x, float world_y)
 	// Uses cubic f(t) = -t³ + 2t² which has:
 	//   f(0)=0, f'(0)=0  → perfectly flat at waterline
 	//   f(1)=1, f'(1)=1  → smooth join to natural terrain slope
-	// An 80m zone creates the wide, gradually-rising coastal areas of tropical islands.
-	float beach_height = 80.0;
+	float beach_height = m_beach_params.x;
 	if (raw_h > 0.0 && raw_h < beach_height)
 	{
 		float t = raw_h / beach_height;

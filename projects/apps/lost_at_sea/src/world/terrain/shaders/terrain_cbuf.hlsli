@@ -32,6 +32,12 @@ cbuffer CBufTerrain :reg(b3,0)
 
 	// Sun colour (RGB intensity)
 	float4 m_sun_colour;
+
+	// Weather params: x=warp_freq, y=warp_strength, z=ridge_threshold, w=macro_freq
+	float4 m_weather_params;
+
+	// Beach params: x=beach_height, y=macro_scale_min, z=macro_scale_max, w=unused
+	float4 m_beach_params;
 };
 
 #endif

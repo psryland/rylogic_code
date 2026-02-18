@@ -30,6 +30,7 @@ namespace las
 		, m_vs_bytecode()
 		, m_ps_bytecode()
 		, m_cbuf()
+		, m_tuning()
 	{
 		static_assert(sizeof(shaders::terrain::CBufTerrain) <= sizeof(m_cbuf), "CBufTerrain exceeds m_cbuf storage");
 
@@ -45,15 +46,17 @@ namespace las
 		m_code.VS = { m_vs_bytecode };
 		m_code.PS = { m_ps_bytecode };
 
-		// Initialise default parameters (matching HeightField defaults)
+		// Initialise cbuf from tuning defaults
 		auto& cbuf = storage_cast<shaders::terrain::CBufTerrain>(m_cbuf);
 		cbuf = shaders::terrain::CBufTerrain{
 			.m_camera_pos = v4::Zero(),
 			.m_patch_config = v4(0, 0, static_cast<float>(cdlod::GridN), 0),
-			.m_noise_params = v4(6.0f, 0.001f, 0.5f, 1000.0f), // octaves, base_freq, persistence, amplitude
-			.m_noise_bias = v4(-0.3f, 0, 0, 0),                 // sea_level_bias (peaks ~200m, ~65% ocean)
+			.m_noise_params = v4(m_tuning.m_octaves, m_tuning.m_base_freq, m_tuning.m_persistence, m_tuning.m_amplitude),
+			.m_noise_bias = v4(m_tuning.m_sea_level_bias, 0, 0, 0),
 			.m_sun_direction = Normalise(v4(0.5f, 0.3f, 0.8f, 0.0f)),
 			.m_sun_colour = v4(1.0f, 0.95f, 0.85f, 1.0f),
+			.m_weather_params = v4(m_tuning.m_warp_freq, m_tuning.m_warp_strength, m_tuning.m_ridge_threshold, m_tuning.m_macro_freq),
+			.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, 0),
 		};
 	}
 
@@ -89,5 +92,11 @@ namespace las
 		cbuf.m_camera_pos = camera_world_pos;
 		cbuf.m_sun_direction = sun_direction;
 		cbuf.m_sun_colour = sun_colour;
+
+		// Sync tunable parameters to cbuf each frame
+		cbuf.m_noise_params = v4(m_tuning.m_octaves, m_tuning.m_base_freq, m_tuning.m_persistence, m_tuning.m_amplitude);
+		cbuf.m_noise_bias = v4(m_tuning.m_sea_level_bias, 0, 0, 0);
+		cbuf.m_weather_params = v4(m_tuning.m_warp_freq, m_tuning.m_warp_strength, m_tuning.m_ridge_threshold, m_tuning.m_macro_freq);
+		cbuf.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, 0);
 	}
 }

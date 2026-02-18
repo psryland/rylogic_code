@@ -97,6 +97,7 @@
     <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp" />
     <ClInclude Include="src\world\terrain\shaders\terrain_shader.h" />
     <ClInclude Include="src\core\day_night_cycle.h" />
+    <ClInclude Include="src\diag\diag_ui.h" />
     <ClCompile Include="src\world\sky\procedural_sky.cpp" />
     <ClInclude Include="src\world\sky\procedural_sky.h" />
     <ClCompile Include="src\world\sky\shaders\procedural_sky_shader.cpp" />
@@ -146,4 +147,5 @@
   Targets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(TargetsPath)imgui.targets" />
 </Project>

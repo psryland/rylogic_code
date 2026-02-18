@@ -16,6 +16,7 @@
 #include "src/world/terrain/terrain.h"
 #include "pr/view3d-12/imgui/imgui.h"
 #include "pr/common/task_graph.h"
+#include "src/diag/diag_ui.h"
 
 namespace las
 {
@@ -46,6 +47,9 @@ namespace las
 
 		// ImGui overlay
 		ImGuiUI m_imgui;
+
+		// Diagnostic UI (toggled with F3)
+		DiagUI m_diag;
 
 		Main(MainUI& ui);
 		~Main();
