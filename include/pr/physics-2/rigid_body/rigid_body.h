@@ -233,9 +233,9 @@ namespace pr::physics
 		}
 		void VelocityWS(v4_cref ws_ang, v4_cref ws_lin, v4_cref ws_at = v4{})
 		{
-			// 'ws_ang' and 'ws_lin' are model origin relative
+			// 'ws_ang' and 'ws_lin' describe velocity at 'ws_at'. Shift to model origin.
 			auto spatial_velocity = v8motion{ws_ang, ws_lin};
-			spatial_velocity = Shift(spatial_velocity, CentreOfMassWS() - ws_at);
+			spatial_velocity = Shift(spatial_velocity, -ws_at);
 			VelocityWS(spatial_velocity);
 		}
 		void VelocityOS(v4_cref os_ang, v4_cref os_lin, v4_cref os_at = v4{})
@@ -243,7 +243,7 @@ namespace pr::physics
 			auto ws_ang = O2W() * os_ang;
 			auto ws_lin = O2W() * os_lin;
 			auto ws_at  = O2W() * os_at;
-			VelocityWS(ws_ang, ws_lin);
+			VelocityWS(ws_ang, ws_lin, ws_at);
 		}
 
 		// Get/Set the momentum of the rigid body
@@ -290,7 +290,7 @@ namespace pr::physics
 		{
 			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
 			auto spatial_force = v8force{ws_torque, ws_force};
-			spatial_force = Shift(spatial_force, CentreOfMassWS() - ws_at);
+			spatial_force = Shift(spatial_force, -ws_at);
 			ApplyForceWS(spatial_force);
 		}
 		void ApplyForceWS(v8force const& ws_force)
@@ -325,10 +325,22 @@ namespace pr::physics
 			//    used with spatial vectors. 'os_model_to_com' is the more common case where the inertia has been
 			//    measured at a point that isn't the CoM (typically the model origin). This is recorded so that
 			//    callers can apply forces to the CoM.
-			assert("'os_model_to_com' should be an offset (in world space) from the object origin" && os_model_to_com.w == 0);
+			//  - When CoM is offset from the model origin, we translate the inertia back to the CoM and record
+			//    the offset. This enables the full 6x6 spatial inertia math (with coupling between angular and
+			//    linear components) in the operator* overloads.
+			assert("'os_model_to_com' should be an offset (in object space) from the object origin" && os_model_to_com.w == 0);
 			
+			// Translate the inertia to the CoM and set the CoM offset so that the full
+			// 6x6 spatial inertia is used for operator*(Inertia, v8motion) etc.
+			auto inertia = os_inertia;
+			if (os_model_to_com != v4{})
+			{
+				inertia = Translate(inertia, os_model_to_com, ETranslateInertia::TowardCoM);
+				inertia.CoM(os_model_to_com);
+			}
+
 			// Object space inertia inverse
-			m_os_inertia_inv = Invert(os_inertia);
+			m_os_inertia_inv = Invert(inertia);
 
 			// Position of the centre of mass (in object space)
 			m_os_com = os_model_to_com;

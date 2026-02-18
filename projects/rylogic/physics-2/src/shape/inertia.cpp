@@ -650,14 +650,16 @@ namespace pr::physics
 		// Ib = a2b*Ia*b2a
 		auto b2a = InvertAffine(a2b);
 		auto Ic = a2b * inertia.Ic3x3(1) * b2a;
-		return Inertia{Ic, inertia.Mass(), inertia.CoM()};
+		auto com = a2b * inertia.CoM();
+		return Inertia{Ic, inertia.Mass(), com};
 	}
 	InertiaInv Rotate(InertiaInv const& inertia_inv, m3_cref a2b)
 	{
 		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
 		auto b2a = InvertAffine(a2b);
 		auto Ic_inv = a2b * inertia_inv.Ic3x3(1) * b2a;
-		return InertiaInv{Ic_inv, inertia_inv.InvMass(), inertia_inv.CoM()};
+		auto com = a2b * inertia_inv.CoM();
+		return InertiaInv{Ic_inv, inertia_inv.InvMass(), com};
 	}
 
 	// Returns an inertia translated using the parallel axis theorem.
