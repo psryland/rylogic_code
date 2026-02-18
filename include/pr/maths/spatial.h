@@ -256,8 +256,9 @@ namespace pr::maths::spatial
 	template <> inline Mat6x8f<Motion,Force> Inertia(m3_cref unit_inertia, v4_cref com, float mass)
 	{
 		auto cx = CPM(com);
+		auto mcx = mass * cx;
 		return Mat6x8f<Motion,Force>(
-			mass * unit_inertia - mass * cx * cx, mass * cx,
+			mass * unit_inertia - mass * cx * cx, mcx,
 			-mcx, m3x4::Scale(mass));
 	}
 

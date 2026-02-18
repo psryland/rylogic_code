@@ -454,3 +454,8 @@ struct TestClass_##classname : pr::unittests::UnitTestBase<TestClass_##classname
 #define PR_THROWS(expr, what)\
 	pr::unittests::TestFramework::Throws<what>([&]{ expr; }, L#expr, __FILE__, __LINE__)
 
+// Redefine 'assert' so that failed asserts in tested code are reported as
+// test failures (via cout) rather than triggering an abort dialog.
+#undef assert
+#define assert(expr) pr::unittests::TestFramework::IsTrue(!!(expr), L#expr, __FILE__, __LINE__)
+
