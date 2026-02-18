@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ProjectGuid>{7B2A4D53-E8F1-4A9C-B6D3-8C1F5E9A2B7D}</ProjectGuid>
+    <RootNamespace>Physics</RootNamespace>
+    <ProjectName>physics-2</ProjectName>
+    <TargetName>physics-2-static</TargetName>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)lib.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;PR_DBG_PHYSICS=1
+      </PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <!--
+  Source files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\shape\inertia.cpp" />
+    <ClCompile Include="src\integrator\impulse.cpp" />
+  </ItemGroup>
+  <!--
+  Public headers
+  -->
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\physics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\contact.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\engine.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\impulse.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\integrator.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\jacobian.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material_map.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\rigid_body\rigid_body.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\inertia.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\mass.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\shape_builder.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\shape_mass.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\field.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\ldraw.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\misc.h" />
+  </ItemGroup>
+  <!--
+  Unit test headers
+  -->
+  <ItemGroup>
+    <ClInclude Include="src\unittests\test_field.h" />
+    <ClInclude Include="src\unittests\test_impulse.h" />
+    <ClInclude Include="src\unittests\test_inertia.h" />
+    <ClInclude Include="src\unittests\test_integrator.h" />
+    <ClInclude Include="src\unittests\test_rigid_body.h" />
+    <ClInclude Include="src\unittests\test_shape_builder.h" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

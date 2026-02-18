@@ -13,6 +13,6 @@
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 
-#include "pr/physics2/physics.h"
+#include "pr/physics-2/physics.h"
 
 using namespace pr;
