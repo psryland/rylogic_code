@@ -115,7 +115,10 @@ struct MainUI :Form
 			m_physics.m_broadphase.Add(body);
 
 		for (auto& body : m_body)
+		{
+			if (!body.m_gfx) continue;
 			View3D_WindowAddObject(m_view3d.m_win, body.m_gfx);
+		}
 
 		Render();
 
@@ -220,8 +223,8 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 
 	try
 	{
-		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
-		pr::win32::LoadDll<struct View3d>(L"view3d.dll");
+		//pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
+		pr::win32::LoadDll<struct View3d>(L"view3d-12.dll");
 		InitCtrls();
 
 		MainUI main;

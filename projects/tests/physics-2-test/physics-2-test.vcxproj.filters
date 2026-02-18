@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="src">
@@ -43,6 +43,9 @@
     </Filter>
     <Filter Include="pr\physics\material">
       <UniqueIdentifier>{3b4ef9e9-32e5-44c8-916f-594af63fbeb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps">
+      <UniqueIdentifier>{c90e4abd-930a-45f1-9831-7318b3319c8b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -139,61 +142,61 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\broadphase\brute.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h">
       <Filter>pr\physics\broadphase</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\constants.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\forward.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\forward.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\contact.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\contact.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\engine.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\engine.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\impulse.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\impulse.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\integrator.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\integrator.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\jacobian.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\jacobian.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\material\material.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material.h">
       <Filter>pr\physics\material</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\material\material_map.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material_map.h">
       <Filter>pr\physics\material</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\physics.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\physics.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\rigid_body\rigid_body.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\rigid_body\rigid_body.h">
       <Filter>pr\physics\rigid_body</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\inertia.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia_builder.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\mass.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\shape_builder.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_builder.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\shape\shape_mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_mass.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\ldraw.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\field.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\misc.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\ldraw.h">
+      <Filter>pr\physics\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\misc.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h">
@@ -208,5 +211,10 @@
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">
+      <Filter>deps</Filter>
+    </DependencyLink>
   </ItemGroup>
 </Project>

@@ -22,8 +22,7 @@ namespace pr::rdr12
 			.AllowAltEnter(opts.m_allow_alt_enter != 0)
 			.XrSupport(opts.m_xr_support != 0)
 			.MutliSampling(opts.m_multisampling)
-			.Name(opts.m_dbg_name)
-			;
+			.Name(opts.m_dbg_name ? std::string_view{ opts.m_dbg_name } : std::string_view{});
 	}
 
 	// Validate a window pointer
