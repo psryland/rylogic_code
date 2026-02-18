@@ -16,7 +16,7 @@ namespace las
 		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
-		, m_ship(m_rdr, m_ocean)
+		, m_ship(m_rdr, m_ocean, v4::Origin())
 		, m_sim_state()
 		, m_sim_time(0.0)
 		, m_move_speed(20.0f)
@@ -34,7 +34,11 @@ namespace las
 		, m_diag()
 	{
 		// Position the camera: looking forward (+X) from above the ocean
-		m_cam.LookAt(v4(0, 0, 15, 1), v4(50, 0, 0, 1), v4(0, 0, 1, 0));
+		m_cam.FocusDist(10.0f);
+		m_cam.Near(0.01f, false);
+		m_cam.Far(7000.0f, false);
+		m_cam.LockMask(Camera::ELockMask::FocusDistance);
+		m_cam.LookAt(v4(-5, 0, 3, 1), v4(0, 0, 0, 1), v4(0, 0, 1, 0));
 		m_cam.Align(v4ZAxis);
 
 		// Watch for scene renders
@@ -67,7 +71,6 @@ namespace las
 			ui.SliderFloat("Beach Height", &tuning.m_beach_height, 5.0f, 200.0f);
 		});
 	}
-
 	Main::~Main()
 	{
 		m_scene.ClearDrawlists();

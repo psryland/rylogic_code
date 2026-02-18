@@ -3,7 +3,6 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/collision/shapes.h"
 #include "pr/collision/collision.h"
 #include "pr/physics-2/forward.h"

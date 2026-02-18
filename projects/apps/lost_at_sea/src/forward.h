@@ -25,6 +25,7 @@
 #include "pr/storage/json.h"
 #include "pr/maths/perlin_noise.h"
 #include "pr/view3d-12/view3d.h"
+#include "pr/physics-2/physics.h"
 #include "pr/win32/win32.h"
 
 using namespace pr;
@@ -33,6 +34,8 @@ namespace las
 {
 	using namespace pr;
 	using namespace pr::rdr12;
+	using namespace pr::physics;
+	using namespace pr::collision;
 	using namespace pr::gui;
 	using namespace pr::app;
 

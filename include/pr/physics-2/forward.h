@@ -3,8 +3,9 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-#include <array>
+#include <concepts>
 #include <type_traits>
+#include <array>
 #include <algorithm>
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
@@ -36,6 +37,10 @@ namespace pr::physics
 	template <typename TBroadphase, typename TMaterials>
 	struct Engine;
 
+	// Traits
+	template <typename T>
+	concept RigidBodyType = std::derived_from<T, RigidBody>;
+
 	// Literals
 	constexpr float operator ""_kg(long double mass)
 	{
@@ -45,13 +50,4 @@ namespace pr::physics
 	{
 		return float(dist);
 	}
-
-	// Traits
-	template <typename T> struct is_rb :std::false_type {};
-	template <> struct is_rb<RigidBody> :std::true_type {};
-
-	template <typename T> using enable_if_rb = typename std::enable_if<is_rb<T>::value>::type;
-
-	// Bring functions into the pr::physics namespace
-	using pr::FEql;
 }

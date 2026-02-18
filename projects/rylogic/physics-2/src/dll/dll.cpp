@@ -6,13 +6,8 @@
 // providing a C-linkage API for use from other languages or as
 // a dynamically loaded library.
 #include "pr/physics-2/physics-dll.h"
+#include "physics-2/src/dll/context.h"
 
-// @Copilot, move these to a dll_forward.h header (like view3d-12 has)
-#include <unordered_set>
-#include <mutex>
-#include <format>
-
-using namespace pr;
 using namespace pr::physics;
 
 // DLL entry point
@@ -30,21 +25,15 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD reason, LPVOID)
 }
 
 // Global DLL context
-struct Context// @Copilot, move this to dll/context.cpp/.h files (like view3d-12 has)
-{
-	using InitSet = std::unordered_set<DllHandle>;
-
-	InitSet              m_inits;
-	std::recursive_mutex m_mutex;
-	ReportErrorCB        m_error_cb;
-
-	Context(ReportErrorCB error_cb)
-		: m_inits()
-		, m_mutex()
-		, m_error_cb(error_cb)
-	{}
-};
 static Context* g_ctx = nullptr;
+static Context& Dll()
+{
+	if (g_ctx) return *g_ctx;
+	throw std::runtime_error("Physics not initialised");
+}
+
+// Helper macros for exception trapping in API functions
+#define DllLockGuard LockGuard lock(Dll().m_mutex)
 
 // Initialise calls are reference counted and must be matched with Shutdown calls.
 PHYSICS_API DllHandle __stdcall Physics_Initialise(ReportErrorCB global_error_cb)
@@ -62,7 +51,7 @@ PHYSICS_API DllHandle __stdcall Physics_Initialise(ReportErrorCB global_error_cb
 	}
 	catch (std::exception const& e)
 	{
-		global_error_cb(std::format("Failed to initialise Physics.\nReason: %s\n", e.what()), "", 0, 0);
+		global_error_cb(std::format("Failed to initialise Physics.\nReason: {}\n", e.what()).c_str(), "", 0, 0);
 		return nullptr;
 	}
 	catch (...)

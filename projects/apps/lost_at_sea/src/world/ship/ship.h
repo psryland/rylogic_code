@@ -2,10 +2,6 @@
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2025
 //************************************
-// A rigid body that sits on the ocean surface.
-// For now, the "ship" is a 1x1x1 cube constrained to rest on the ocean
-// as though it were a solid surface (no penetration, orientation matches
-// the local surface normal).
 #pragma once
 #include "src/forward.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
@@ -19,6 +15,12 @@ namespace las
 
 	struct Ship
 	{
+		// Notes:
+		//  - For now: A rigid body that sits on the ocean surface.
+		//    For now, the "ship" is a 1x1x1 cube constrained to rest on the ocean
+		//    as though it were a solid surface (no penetration, orientation matches
+		//    the local surface normal).
+
 		struct Instance
 		{
 			#define PR_RDR_INST(x)\
@@ -29,15 +31,15 @@ namespace las
 		};
 
 		// Collision shape storage (value type, no heap allocation)
-		pr::collision::ShapeBox m_col_shape;
+		ShapeBox m_col_shape;
 
 		// Physics rigid body
-		pr::physics::RigidBody m_body;
+		RigidBody m_body;
 
 		// Graphics
 		Instance m_inst;
 
-		explicit Ship(Renderer& rdr, Ocean const& ocean);
+		Ship(Renderer& rdr, Ocean const& ocean, v4 location);
 
 		// Step the ship's physics: apply gravity, constrain to the ocean surface.
 		void Step(float dt, Ocean const& ocean, float sim_time);

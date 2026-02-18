@@ -8,11 +8,9 @@
 
 namespace las
 {
-	Ship::Ship(Renderer& rdr, Ocean const& ocean)
-		// Collision shape: a 1x1x1 box (dimensions, not half-extents — ShapeBox halves internally)
+	Ship::Ship(Renderer& rdr, Ocean const& ocean, v4 location)
 		:m_col_shape(v4{1, 1, 1, 0})
-		// Rigid body: mass = 100kg, box inertia with half-extents of 0.5
-		,m_body(&m_col_shape, m4x4::Identity(), pr::physics::Inertia::Box(v4{0.5f, 0.5f, 0.5f, 0}, 100.0f))
+		,m_body(&m_col_shape, m4x4::Identity(), Inertia::Box(v4{0.5f, 0.5f, 0.5f, 0}, 100.0f)) // Rigid body: mass = 100kg, box inertia with half-extents of 0.5
 		,m_inst()
 	{
 		// Create a simple box model for visualisation
@@ -23,10 +21,8 @@ namespace las
 
 		// Place the cube near the camera, sitting on the ocean surface.
 		// The box is 1m tall with its origin at the centre, so raise it by 0.5m above the surface.
-		auto x = 10.0f;
-		auto y = 0.0f;
-		auto z = ocean.HeightAt(x, y, 0.0f) + 0.5f;
-		m_body.O2W(m4x4::Translation(x, y, z));
+		location.z = ocean.HeightAt(location.x, location.y, 0.0f) + 0.5f;
+		m_body.O2W(m4x4::Translation(location));
 		m_inst.m_i2w = m_body.O2W();
 	}
 

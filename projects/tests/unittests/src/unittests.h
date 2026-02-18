@@ -308,6 +308,7 @@
 #include "pr/physics-2/integrator/jacobian.h"
 #include "pr/physics-2/material/material_map.h"
 #include "pr/physics-2/material/material.h"
+#include "pr/physics-2/physics-dll.h"
 #include "pr/physics-2/physics.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
 #include "pr/physics-2/shape/inertia.h"

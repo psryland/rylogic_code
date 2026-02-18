@@ -45,6 +45,9 @@
   -->
   <ItemGroup>
     <ClCompile Include="src\dll\dll.cpp" />
+    <ClCompile Include="src\dll\context.cpp" />
+    <ClInclude Include="src\dll\dll_forward.h" />
+    <ClInclude Include="src\dll\context.h" />
   </ItemGroup>
   <!--
   Dependencies

@@ -13,7 +13,6 @@
 #define PR_RDR_RUNTIME_SHADERS 0
 #endif
 
-
 #include <vector>
 #include <string>
 #include <list>
