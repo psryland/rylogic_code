@@ -700,7 +700,8 @@ namespace pr::physics
 		auto inertia1 = Translate(inertia0, offset, direction);
 		auto inertia1_inv = Invert(inertia1);
 		return inertia1_inv;
-	}
+	}
+
 	// Rotate, then translate an inertia
 	Inertia Transform(Inertia const& inertia0, m4_cref a2b, ETranslateInertia direction)
 	{

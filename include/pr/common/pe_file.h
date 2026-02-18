@@ -6,7 +6,7 @@
 
 #pragma once
 #include <winnt.h>
-#include "pr/common/fmt.h"
+#include <format>
 #include "pr/common/cast.h"
 #include "pr/common/hresult.h"
 
@@ -59,7 +59,7 @@ namespace pr
 		{}
 		PEFile(TCHAR const* file, bool read_only = true) :PEFile()
 		{
-			pr::Check(Open(file, read_only), pr::FmtS(_T("Failed to open binary PE file '%s'"), file));
+			pr::Check(Open(file, read_only), std::format("Failed to open binary PE file '{}'", file));
 		}
 		~PEFile()
 		{

@@ -23,6 +23,7 @@
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
+				;$(RylogicRoot)projects\rylogic
 				;$(RylogicRoot)sdk
 				;$(RylogicRoot)sdk\sqlite3\include
 				;$(RylogicRoot)sdk\vorbis\include
@@ -40,6 +41,7 @@
 			</AdditionalLibraryDirectories>
       <AdditionalDependencies>
 				;lua-static.lib
+				;physics-2-static.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
     </Link>

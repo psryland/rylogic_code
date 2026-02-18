@@ -51,7 +51,6 @@ namespace pr::physics
 
 		PRUnitTestMethod(Infinite)
 		{
-			auto mass = 5.0f;
 			auto inf_inv = Invert(Inertia::Infinite());
 			PR_EXPECT(inf_inv == InertiaInv::Zero());
 			auto inf = Invert(inf_inv);

@@ -23,6 +23,7 @@ try
 
 	var srcdirs = (List<string>)[
 		Tools.Path([UserVars.Root, "include"]),
+		Tools.Path([UserVars.Root, "projects/rylogic"]),  // these need a matching include path in the unittests project
 	];
 	var exclude = (List<Regex>)[
 		new Regex(@"pr/app/"),
@@ -43,17 +44,22 @@ try
 	List<string> includes = [];
 	foreach (var sd in srcdirs)
 	{
+		List<string> include_group = [];
 		foreach (var file in Directory.GetFiles(sd, "*.h", SearchOption.AllDirectories))
 		{
 			var filepath = file.Replace('\\', '/');
 			if (exclude.Any(x => x.IsMatch(filepath)))
 				continue;
+				
+			if (!File.ReadAllText(file).Contains("#if PR_UNITTESTS"))
+				continue;
 
 			var relpath = Path.GetRelativePath(sd, filepath).Replace('\\', '/');
-			includes.Add($"#include \"{relpath}\"");
+			include_group.Add($"#include \"{relpath}\"");
 		}
+		include_group.Sort();
+		includes.AddRange(include_group);
 	}
-	includes.Sort();
 
 	// Generate a file that includes all headers
 	var output = new StringBuilder(16384);

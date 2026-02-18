@@ -471,6 +471,21 @@ namespace pr::maths
 				}
 			}
 		}
+		{// Bug test: spatial::Inertia() must include parallel axis term in m00 for non-zero CoM
+			// The m00 block should be Io = Ic - m*S(c)², not just Ic.
+			// The off-diagonal blocks (m01, m10) and m11 are correct, only m00 is missing the correction.
+			auto unit_inertia = m3x4::Scale(0.4f, 0.4f, 0.4f); // sphere radius 1
+			auto com = v4{0, 1, 0, 0};
+			auto mass = 5.0f;
+
+			auto si = Inertia<Motion,Force>(unit_inertia, com, mass);
+
+			// Expected m00: Io = Ic - m*CPM(c)*CPM(c), where Ic = m * unit_inertia
+			auto cx = CPM(com);
+			auto Ic = mass * unit_inertia;
+			auto Io = Ic - mass * cx * cx;
+			PR_EXPECT(FEql(si.m00, Io)); // Bug: si.m00 == Ic, missing the -m*cx*cx term
+		}
 	}
 }
 #endif

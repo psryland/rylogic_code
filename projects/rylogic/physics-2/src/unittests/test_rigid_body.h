@@ -260,6 +260,68 @@ namespace pr::physics
 			auto os_ke = 0.5f * Dot(rb.VelocityOS(), rb.MomentumOS());
 			PR_EXPECT(FEql(ws_ke, os_ke));
 		}
+
+		PRUnitTestMethod(ApplyForceWS_ShiftToOrigin)
+		{
+			// Bug: ApplyForceWS shifts force to CoM instead of model origin.
+			// When applying a pure force at the model origin (ws_at=0), no shift is needed
+			// because the accumulator is already at the model origin. The bug shifts by CoM,
+			// creating a phantom torque from Cross(force, CoM).
+			auto mass = 5.0f;
+			auto rb = RigidBody{};
+			auto model_to_com = v4{0, 1, 0, 0};
+			rb.SetMassProperties(Inertia::Sphere(1, mass, model_to_com), model_to_com);
+
+			// Apply pure force at model origin (ws_at = 0, torque = 0)
+			rb.ApplyForceWS(v4{1, 0, 0, 0}, v4{}, v4{});
+
+			// The spatial force at the model origin should have no torque
+			// because the force is applied AT the origin — zero moment arm.
+			auto ws_force = rb.ForceWS();
+			PR_EXPECT(FEql(ws_force, v8force{0, 0, 0, 1, 0, 0}));
+		}
+
+		PRUnitTestMethod(VelocityOS_PassesOffset)
+		{
+			// Bug: VelocityOS(ang, lin, os_at) computes ws_at from os_at
+			// but then calls VelocityWS(ws_ang, ws_lin) without passing ws_at.
+			// The os_at parameter is silently ignored.
+			auto mass = 5.0f;
+			auto rb = RigidBody{};
+			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
+
+			// Set velocity at an offset point. With angular velocity present,
+			// the shift to origin changes the linear component.
+			auto os_ang = v4{0, 0, 1, 0};
+			auto os_lin = v4{1, 0, 0, 0};
+			auto os_at = v4{0, 1, 0, 0};
+			rb.VelocityOS(os_ang, os_lin, os_at);
+
+			// Shift from os_at to origin: ofs = -os_at = (0,-1,0)
+			// Shift(v8motion{ang, lin}, ofs) = {ang, lin + Cross(ang, ofs)}
+			// Cross((0,0,1), (0,-1,0)) = (1, 0, 0)
+			// shifted_lin = (1,0,0) + (1,0,0) = (2,0,0)
+			auto ws_vel = rb.VelocityWS();
+			PR_EXPECT(FEql(ws_vel, v8motion{0, 0, 1, 2, 0, 0}));
+		}
+
+		PRUnitTestMethod(VelocityWS_ShiftToOrigin)
+		{
+			// Bug: VelocityWS(ang, lin, ws_at) shifts to CoM instead of model origin.
+			// When ws_at=0, the velocity is already at the origin — no shift needed.
+			// The bug shifts by CoM, corrupting the linear component.
+			auto mass = 5.0f;
+			auto rb = RigidBody{};
+			auto model_to_com = v4{0, 1, 0, 0};
+			rb.SetMassProperties(Inertia::Sphere(1, mass, model_to_com), model_to_com);
+
+			// Set velocity at origin
+			rb.VelocityWS(v4{0, 0, 1, 0}, v4{1, 0, 0, 0}, v4{});
+
+			// Read back: should round-trip to the same velocity since ws_at = origin
+			auto ws_vel = rb.VelocityWS();
+			PR_EXPECT(FEql(ws_vel, v8motion{0, 0, 1, 1, 0, 0}));
+		}
 	};
 }
 #endif
