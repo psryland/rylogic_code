@@ -35,6 +35,7 @@
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>
         ;view3d-12-static.lib
+        ;physics-2-static.lib
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
@@ -96,6 +97,8 @@
     <ClInclude Include="src\world\terrain\terrain.h" />
     <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp" />
     <ClInclude Include="src\world\terrain\shaders\terrain_shader.h" />
+    <ClCompile Include="src\world\ship\ship.cpp" />
+    <ClInclude Include="src\world\ship\ship.h" />
     <ClInclude Include="src\core\day_night_cycle.h" />
     <ClInclude Include="src\diag\diag_ui.h" />
     <ClCompile Include="src\world\sky\procedural_sky.cpp" />

@@ -14,6 +14,7 @@
 #include "src/world/ocean/distant_ocean.h"
 #include "src/world/terrain/height_field.h"
 #include "src/world/terrain/terrain.h"
+#include "src/world/ship/ship.h"
 #include "pr/view3d-12/imgui/imgui.h"
 #include "pr/common/task_graph.h"
 #include "src/diag/diag_ui.h"
@@ -33,6 +34,7 @@ namespace las
 		DistantOcean m_distant_ocean;
 		Terrain m_terrain;
 		HeightField m_height_field; // CPU-side height queries for future physics
+		Ship m_ship;
 
 		// Simulation state snapshot: Step writes, Render reads
 		StateSnapshot<SimState> m_sim_state;

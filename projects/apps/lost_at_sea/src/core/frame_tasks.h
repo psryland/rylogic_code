@@ -11,13 +11,13 @@ namespace las
 {
 	// Step phase task graph.
 	// Dependency DAG:
-	//   Input → Finalise
+	//   Input → Physics → Finalise
 	//
-	// Future tasks (Physics, AI, Particles, etc.) will be inserted
-	// between Input and Finalise, with their own dependency edges.
+	// Physics steps the ship (and future rigid bodies) between input and finalise.
 	enum class StepTaskId : int
 	{
 		Input,       // Process player input, update movement intent
+		Physics,     // Step rigid bodies and ocean-surface constraints
 		Finalise,    // Barrier: commit all state snapshots
 		Count,
 	};
@@ -27,9 +27,10 @@ namespace las
 	//   PrepareFrame → Skybox        ─┐
 	//   PrepareFrame → Ocean         ─┤
 	//   PrepareFrame → DistantOcean  ─┼→ Submit
-	//   PrepareFrame → Terrain       ─┘
+	//   PrepareFrame → Terrain       ─┤
+	//   PrepareFrame → Ship          ─┘
 	//
-	// Skybox, Ocean, DistantOcean, and Terrain run in parallel after PrepareFrame.
+	// Skybox, Ocean, DistantOcean, Terrain, and Ship run in parallel after PrepareFrame.
 	// Submit waits for all before presenting the frame.
 	//
 	// Thread safety: scene.AddInstance() is NOT thread-safe.
@@ -42,6 +43,7 @@ namespace las
 		Ocean,           // Near ocean shader CB update
 		DistantOcean,    // Distance ocean shader CB update
 		Terrain,         // Terrain shader CB update
+		Ship,            // Ship instance transform update
 		Submit,          // scene.Render + RenderUI + Present
 		Count,
 	};

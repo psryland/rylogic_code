@@ -16,6 +16,7 @@ namespace las
 		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
+		, m_ship(m_rdr, m_ocean)
 		, m_sim_state()
 		, m_sim_time(0.0)
 		, m_move_speed(20.0f)
@@ -103,9 +104,16 @@ namespace las
 			co_return;
 		});
 
+		// Physics task: step rigid bodies (depends on Input for camera/intent)
+		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(StepTaskId::Input);
+			m_ship.Step(dt, m_ocean, static_cast<float>(m_sim_time));
+			co_return;
+		});
+
 		// Finalise task: commit state snapshot for the render graph
 		m_step_graph.Add(StepTaskId::Finalise, [&](auto ctx) -> pr::task_graph::Task {
-			co_await ctx.Wait(StepTaskId::Input);
+			co_await ctx.Wait(StepTaskId::Physics);
 
 			// Update time of day
 			m_day_cycle.Update(dt);
@@ -133,6 +141,7 @@ namespace las
 		m_ocean.AddToScene(scene);
 		m_distant_ocean.AddToScene(scene);
 		m_terrain.AddToScene(scene);
+		m_ship.AddToScene(scene);
 	}
 
 	// Render step — builds and runs the render task graph
@@ -185,6 +194,11 @@ namespace las
 			m_terrain.PrepareRender(cam_pos, sun_dir, sun_col);
 			co_return;
 		});
+		m_render_graph.Add(RenderTaskId::Ship, [&, cam_pos](auto ctx) -> pr::task_graph::Task {
+			co_await ctx.Wait(RenderTaskId::PrepareFrame);
+			m_ship.PrepareRender(cam_pos);
+			co_return;
+		});
 
 		// Submit task: populate scene and present (serial, after all CB prep is done)
 		m_render_graph.Add(RenderTaskId::Submit, [&](auto ctx) -> pr::task_graph::Task {
@@ -192,6 +206,7 @@ namespace las
 			co_await ctx.Wait(RenderTaskId::Ocean);
 			co_await ctx.Wait(RenderTaskId::DistantOcean);
 			co_await ctx.Wait(RenderTaskId::Terrain);
+			co_await ctx.Wait(RenderTaskId::Ship);
 			co_return;
 		});
 
