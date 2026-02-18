@@ -16,10 +16,9 @@ namespace las
 	struct Ship
 	{
 		// Notes:
-		//  - For now: A rigid body that sits on the ocean surface.
-		//    For now, the "ship" is a 1x1x1 cube constrained to rest on the ocean
-		//    as though it were a solid surface (no penetration, orientation matches
-		//    the local surface normal).
+		//  - A rigid body that floats on the ocean surface.
+		//    The "ship" is a 1x1x1 cube with gravity and buoyancy forces applied.
+		//    Buoyancy is approximated by the submersion depth of the centre of mass.
 
 		struct Instance
 		{

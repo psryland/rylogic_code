@@ -5,9 +5,16 @@
 #include "src/forward.h"
 #include "src/world/ship/ship.h"
 #include "src/world/ocean/ocean.h"
+#include "pr/physics-2/integrator/integrator.h"
 
 namespace las
 {
+	// Gravity acceleration (m/s²)
+	constexpr float Gravity = -9.81f;
+
+	// Water density (kg/m³)
+	constexpr float WaterDensity = 1025.0f;
+
 	Ship::Ship(Renderer& rdr, Ocean const& ocean, v4 location)
 		:m_col_shape(v4{1, 1, 1, 0})
 		,m_body(&m_col_shape, m4x4::Identity(), Inertia::Box(v4{0.5f, 0.5f, 0.5f, 0}, 100.0f)) // Rigid body: mass = 100kg, box inertia with half-extents of 0.5
@@ -26,36 +33,36 @@ namespace las
 		m_inst.m_i2w = m_body.O2W();
 	}
 
-	void Ship::Step(float, Ocean const& ocean, float sim_time)
+	void Ship::Step(float dt, Ocean const& ocean, float sim_time)
 	{
-		// For now, simply constrain the cube to sit on the ocean surface.
-		// No real physics integration yet — the ocean surface is treated as a hard floor.
+		auto mass = m_body.Mass();
 
-		auto o2w = m_body.O2W();
-		auto pos = o2w.pos;
+		// Apply gravity
+		auto gravity_force = v4{0, 0, Gravity * mass, 0};
+		m_body.ApplyForceWS(gravity_force, v4Zero);
 
-		// Query the ocean surface at the body's XY position
-		auto surface_z = ocean.HeightAt(pos.x, pos.y, sim_time);
-		auto surface_normal = ocean.NormalAt(pos.x, pos.y, sim_time);
+		// Apply buoyancy force based on how much of the cube is below the ocean surface.
+		// Submersion is measured from the bottom face of the cube, not the CoM.
+		auto ws_com = m_body.CentreOfMassWS();
+		auto surface_z = ocean.HeightAt(ws_com.x, ws_com.y, sim_time);
+		auto bottom_z = ws_com.z - 0.5f; // bottom face of the 1x1x1 cube
+		auto submerged_height = std::clamp(surface_z - bottom_z, 0.0f, 1.0f);
+		if (submerged_height > 0)
+		{
+			// Buoyancy force = water_density * g * submerged_volume
+			auto buoyancy = WaterDensity * (-Gravity) * submerged_height * 1.0f;
+			auto buoyancy_force = v4{0, 0, buoyancy, 0};
+			m_body.ApplyForceWS(buoyancy_force, v4Zero);
 
-		// The box is 1m tall, origin at centre, so the bottom face is 0.5m below the origin.
-		// Place the origin 0.5m above the surface so the bottom face rests on the wave.
-		pos.z = surface_z + 0.5f;
+			// Linear drag to simulate water resistance and prevent endless oscillation
+			auto velocity = m_body.VelocityWS();
+			auto drag_lin = -200.0f * velocity.lin;
+			auto drag_ang = -50.0f * velocity.ang;
+			m_body.ApplyForceWS(drag_lin, drag_ang);
+		}
 
-		// Orient the cube so its local Z axis aligns with the surface normal.
-		// Build a rotation frame from the surface normal (up = surface_normal).
-		auto up = Normalise(surface_normal);
-		auto forward = Normalise(Cross3(v4{0, 1, 0, 0}, up)); // Arbitrary forward direction
-		if (LengthSq(forward) < 0.01f)
-			forward = Normalise(Cross3(v4{1, 0, 0, 0}, up));
-		auto right = Cross3(up, forward);
-
-		o2w.x = Normalise(forward);
-		o2w.y = Normalise(right);
-		o2w.z = up;
-		o2w.pos = pos;
-
-		m_body.O2W(o2w);
+		// Integrate the rigid body forward in time
+		pr::physics::Evolve(m_body, dt);
 	}
 
 	void Ship::PrepareRender(v4)
