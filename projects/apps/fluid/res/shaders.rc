@@ -1,9 +1,4 @@
-// This file is just an example because resource files are not compiled into static libraries.
-// In any project that wants to include shaders as resources, create a file like this one and
-// list the shaders to be included.
-CORE_HLSLI                 TEXT    DISCARDABLE     "pr/hlsl/core.hlsli"
-GEOMETRY_HLSLI             TEXT    DISCARDABLE     "pr/hlsl/geometry.hlsli"
-
+// HLSL source for runtime compilation
 FLUID_SIMULATION_HLSL      TEXT    DISCARDABLE     "pr/view3d-12/compute/fluid_simulation/fluid_simulation.hlsl"
 
 COLLISION_HLSLI            TEXT    DISCARDABLE     "pr/view3d-12/compute/particle_collision/collision.hlsli"

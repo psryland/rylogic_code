@@ -60,6 +60,55 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <!--
+  Shaders
+  -->
+  <ItemDefinitionGroup>
+    <View3dShaderBuild>
+      <ShaderType>Effect</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </View3dShaderBuild>
+    <FxCompile>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </FxCompile>
+    <!-- HLSL Compiler settings for IntelliSense
+    <HLSLCompiler>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
+    </HLSLCompiler>
+    -->
+  </ItemDefinitionGroup>
+  <!--
   Files
   -->
   <ItemGroup>
@@ -281,48 +330,11 @@
     <ClInclude Include="src\render\render_smap.h" />
     <ClInclude Include="src\shaders\common.h" />
   </ItemGroup>
-  <!--
-  Shaders
-  -->
-  <ItemDefinitionGroup>
-    <View3dShaderBuild>
-      <ShaderType>Effect</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-      <AdditionalIncludeDirectories>
-        ;$(ProjectDir)
-        ;$(RylogicRoot)include\
-        ;$(RylogicRoot)projects\rylogic\
-        ;%(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </View3dShaderBuild>
-    <FxCompile>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-      <AdditionalIncludeDirectories>
-        ;$(ProjectDir)
-        ;$(RylogicRoot)include\
-        ;$(RylogicRoot)projects\rylogic\
-        ;%(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </FxCompile>
-    <!-- HLSL Compiler settings for IntelliSense
-    <HLSLCompiler>
-      <ShaderModel>6.6</ShaderModel>
-      <AdditionalIncludeDirectories>
-        ;$(ProjectDir)
-        ;$(RylogicRoot)include
-        ;$(RylogicRoot)projects\rylogic
-        ;%(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-      <EnableDebuggingInformation>true</EnableDebuggingInformation>
-    </HLSLCompiler>
-    -->
-  </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="..\..\..\include\pr\hlsl\interop.hlsli" />
     <None Include="cpp.hint" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\closest_point.hlsli" />
-    <None Include="$(RylogicRoot)include\pr\hlsl\collision.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\geometry.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\intercept.hlsli" />
@@ -361,6 +373,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_shaders.rc" />
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc" />
   </ItemGroup>
   <!--
   AutoGen

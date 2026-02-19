@@ -8,9 +8,9 @@
 
 namespace pr::rdr12::shaders
 {
-	struct ShowNormalsGS :ShaderOverride
+	struct ShowNormalsGS :Shader
 	{
-		ShowNormalsGS();
-		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
+		explicit ShowNormalsGS(Renderer& rdr);
+		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

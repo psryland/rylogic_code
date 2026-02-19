@@ -1,0 +1,31 @@
+<Project>
+
+	<!--
+	CodeSync: Synchronise PR_CODE_SYNC blocks across the codebase.
+	Runs once per build session. The tool uses a named mutex for parallel-build
+	safety and a stamp file to avoid re-running within the same build session.
+	-->
+	<PropertyGroup>
+		<CodeSyncStamp>$(RylogicRoot)obj\.codesync.stamp</CodeSyncStamp>
+		<CodeSyncTool>$(ToolsPath)code_sync/code_sync.exe</CodeSyncTool>
+		<CodeSyncTabSize>4</CodeSyncTabSize>
+	</PropertyGroup>
+
+	<!-- Determine the correct hook target based on project type -->
+	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
+		<CodeSyncHookTarget>BuildGenerateSources</CodeSyncHookTarget>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+		<CodeSyncHookTarget>BeforeBuild</CodeSyncHookTarget>
+	</PropertyGroup>
+
+	<!-- Run CodeSync. The tool handles serialisation and stamp checking internally. -->
+	<Target Name="CodeSyncTarget" BeforeTargets="$(CodeSyncHookTarget)" Condition="'$(CodeSyncHookTarget)' != ''">
+		<Exec
+			Command="$(CodeSyncTool) &quot;$(RylogicRoot)projects&quot; &quot;$(RylogicRoot)include&quot; --tab-size $(CodeSyncTabSize) --stamp &quot;$(CodeSyncStamp)&quot;"
+			ConsoleToMSBuild="true"
+			IgnoreExitCode="false"
+			StandardOutputImportance="High" />
+	</Target>
+
+</Project>

@@ -214,6 +214,7 @@ namespace pr::rdr12
 	}
 	void TextureBase::Delete()
 	{
+		rdr().DeferRelease(m_res);
 		ResourceStore::Access store(rdr());
 		store.Delete(this);
 	}

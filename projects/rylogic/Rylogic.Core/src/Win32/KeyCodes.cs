@@ -3,7 +3,7 @@
 namespace Rylogic.Interop.Win32
 {
 	[Flags]
-	public enum EKeyCodes
+	public enum EKeyCodes // Sync with pr/win32/key_codes.h
 	{
 		// Notes:
 		// - VK_ constants (mostly)
@@ -588,12 +588,15 @@ namespace Rylogic.Interop.Win32
 		// Modifiers ****
 
 		// The SHIFT modifier key.
-		Shift = 65536,
+		Shift = 1 << 16, // 65536,
 
 		// The CTRL modifier key.
-		Control = 131072,
+		Control = 1 << 17, // 131072,
 
 		// The ALT modifier key.
-		Alt = 262144,
+		Alt = 1 << 18, // 262144,
+
+		// The Windows logo key modifier.
+		Windows = 1 << 19, // 524288,
 	}
 }

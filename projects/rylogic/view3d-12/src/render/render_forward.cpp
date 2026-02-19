@@ -29,7 +29,7 @@ namespace pr::rdr12
 {
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(Id, scene)
-		, m_shader(scene.d3d())
+		, m_shader(scene.rdr())
 		, m_cmd_list(scene.d3d(), nullptr, "RenderForward", EColours::Blue)
 		, m_default_tex(rdr().store().StockTexture(EStockTexture::White))
 		, m_default_sam(rdr().store().StockSampler(EStockSampler::LinearClamp))
@@ -107,14 +107,14 @@ namespace pr::rdr12
 				if (!AnySet(sk, SortKey::ShaderIdMask))
 				{
 					auto shdr_id = 0;
-					for (auto& shdr : nug.m_shaders)
+					for (auto& overlay : nug.m_shdr_overlays)
 					{
-						// Ignore shader overrides for other render steps
-						if (shdr.m_rdr_step != m_step_id)
+						// Ignore shader overlays for other render steps
+						if (overlay.m_rdr_step != m_step_id)
 							continue;
 
 						// hash the sort ids together
-						shdr_id = shdr_id*13 ^ shdr.m_shader->SortId();
+						shdr_id = shdr_id*13 ^ overlay.m_overlay->SortId();
 					}
 					sk = SetBits(sk, SortKey::ShaderIdMask, shdr_id << SortKey::ShaderIdOfs);
 				}
@@ -185,6 +185,8 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::EnvMap, gpu);
 		}
 
+		D3D12_GPU_DESCRIPTOR_HANDLE last_tex = {}, last_sam = {};
+
 		// Draw each element in the draw list
 		Lock lock(*this);
 		for (auto& dle : lock.drawlist())
@@ -208,7 +210,11 @@ namespace pr::rdr12
 			if (Texture2DPtr tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex))
 			{
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+				if (srv_descriptor.ptr != last_tex.ptr)
+				{
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+					last_tex = srv_descriptor;
+				}
 				if constexpr (PR_DBG_RDR)
 				{
 					// Ensure the diffuse texture is in the correct state
@@ -221,7 +227,11 @@ namespace pr::rdr12
 			if (SamplerPtr sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam))
 			{
 				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
-				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+				if (sam_descriptor.ptr != last_sam.ptr)
+				{
+					m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+					last_sam = sam_descriptor;
+				}
 			}
 
 			// Add skinning data for skinned meshes
@@ -248,24 +258,25 @@ namespace pr::rdr12
 			}
 
 			// Apply nugget shader overrides
-			for (auto& shdr : nugget.m_shaders)
+			for (auto& shdr_overlay : nugget.m_shdr_overlays)
 			{
-				// Ignore shader overrides for other render steps
-				if (shdr.m_rdr_step != m_step_id)
+				// Ignore shader overlays for other render steps
+				if (shdr_overlay.m_rdr_step != m_step_id)
 					continue;
 
-				auto& shader = *shdr.m_shader.get();
+				auto& overlay = *shdr_overlay.m_overlay.get();
 
-				// Update the pipe state with the shader byte code
-				if (shader.m_signature) desc.Apply(PSO<EPipeState::RootSignature>(shader.m_signature.get()));
-				if (shader.m_code.VS) desc.Apply(PSO<EPipeState::VS>(shader.m_code.VS));
-				if (shader.m_code.PS) desc.Apply(PSO<EPipeState::PS>(shader.m_code.PS));
-				if (shader.m_code.DS) desc.Apply(PSO<EPipeState::DS>(shader.m_code.DS));
-				if (shader.m_code.HS) desc.Apply(PSO<EPipeState::HS>(shader.m_code.HS));
-				if (shader.m_code.GS) desc.Apply(PSO<EPipeState::GS>(shader.m_code.GS));
+				// Update the pipe state with the non-null stage's byte code
+				if (overlay.m_signature) desc.Apply(PSO<EPipeState::RootSignature>(overlay.m_signature.get()));
+				if (overlay.m_code.VS) desc.Apply(PSO<EPipeState::VS>(overlay.m_code.VS));
+				if (overlay.m_code.PS) desc.Apply(PSO<EPipeState::PS>(overlay.m_code.PS));
+				if (overlay.m_code.DS) desc.Apply(PSO<EPipeState::DS>(overlay.m_code.DS));
+				if (overlay.m_code.HS) desc.Apply(PSO<EPipeState::HS>(overlay.m_code.HS));
+				if (overlay.m_code.GS) desc.Apply(PSO<EPipeState::GS>(overlay.m_code.GS));
 
 				// Set constants for the shader
-				shader.SetupOverride(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
+				overlay.SetupFrame(m_cmd_list.get(), m_upload_buffer, scn());
+				overlay.SetupElement(m_cmd_list.get(), m_upload_buffer, scn(), &dle);
 			}
 
 			// Draw the nugget **** 
@@ -279,13 +290,21 @@ namespace pr::rdr12
 	// Draw a single nugget
 	void RenderForward::DrawNugget(Nugget const& nugget, PipeStateDesc& desc)
 	{
-		// Render solid or wireframe nuggets
-		auto fill_mode = nugget.FillMode();
+		// Resolve the effective fill mode: per-nugget override wins, else scene-level
+		auto fill_mode = nugget.FillMode() != EFillMode::Default
+			? nugget.FillMode()
+			: scn().FillMode();
+
+		// Render with solid or wire fill mode
 		if (fill_mode == EFillMode::Default ||
 			fill_mode == EFillMode::Solid ||
 			fill_mode == EFillMode::Wireframe ||
 			fill_mode == EFillMode::SolidWire)
 		{
+			// Apply the D3D12 fill mode to the PSO when wireframe is requested
+			if (fill_mode == EFillMode::Wireframe)
+				desc.Apply(PSO<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME));
+
 			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
 			if (nugget.m_irange.empty())
 			{
@@ -302,11 +321,12 @@ namespace pr::rdr12
 		}
 
 		// Render wire frame over solid for 'SolidWire' mode
-		if (!nugget.m_irange.empty() && fill_mode == EFillMode::SolidWire && (
+		if (fill_mode == EFillMode::SolidWire && (
 			nugget.m_topo == ETopo::TriList ||
 			nugget.m_topo == ETopo::TriListAdj ||
 			nugget.m_topo == ETopo::TriStrip ||
-			nugget.m_topo == ETopo::TriStripAdj))
+			nugget.m_topo == ETopo::TriStripAdj) &&
+			!nugget.m_irange.empty())
 		{
 			// Change the pipe state to wireframe
 			auto prev_fill_mode = desc.Get<EPipeState::FillMode>();
@@ -325,10 +345,15 @@ namespace pr::rdr12
 		// Render points for 'Points' mode
 		if (fill_mode == EFillMode::Points)
 		{
-			// Change the pipe state to point list
+			// Configure the shader for point sprites
+			// Don't need 'dle' if the points aren't in screen space
+			wnd().m_diag.m_gs_fillmode_points->SetupElement(m_cmd_list.get(), m_upload_buffer, scn(), nullptr);
+
+			// Change the pipe state and IA topology to point list.
+			// Both must agree: PSO topology type and IA primitive topology.
 			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList)));
 			desc.Apply(PSO<EPipeState::GS>(wnd().m_diag.m_gs_fillmode_points->m_code.GS));
-			//todo scn().m_diag.m_gs_fillmode_points->Setup();
+			m_cmd_list.IASetPrimitiveTopology(ETopo::PointList);
 			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
 
 			m_cmd_list.DrawInstanced(

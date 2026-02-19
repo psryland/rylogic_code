@@ -8,17 +8,17 @@
 
 namespace pr::rdr12::shaders
 {
-	struct ThickLineStripGS :ShaderOverride
+	struct ThickLineStripGS :Shader
 	{
 		float m_width;
-		explicit ThickLineStripGS(float width);
-		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
+		ThickLineStripGS(Renderer& rdr, float width);
+		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 
-	struct ThickLineListGS :ShaderOverride
+	struct ThickLineListGS :Shader
 	{
 		float m_width;
-		explicit ThickLineListGS(float width);
-		void SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
+		ThickLineListGS(Renderer& rdr, float width);
+		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

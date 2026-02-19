@@ -12,47 +12,47 @@ namespace pr::rdr12
 	//  - The enum values 'EPipeState' are encoded with (offset, size) pairs, corresponding to the
 	//    parts of the PSO description that can be changed. Add as required.
 
-	// Parts of the pipeline state that can be changed.
-	#define PR_RDR_PIPE_STATE_FIELDS(x)/*(EPipeState::<name>, PipelineStateDesc::<field>) */\
-		x(RootSignature         , pRootSignature                        )\
-		x(VS                    , VS                                    )\
-		x(PS                    , PS                                    )\
-		x(DS                    , DS                                    )\
-		x(HS                    , HS                                    )\
-		x(GS                    , GS                                    )\
-		x(TopologyType          , PrimitiveTopologyType                 )\
-		x(FillMode              , RasterizerState.FillMode              )\
-		x(CullMode              , RasterizerState.CullMode              )\
-		x(DepthEnable           , DepthStencilState.DepthEnable         )\
-		x(DepthWriteMask        , DepthStencilState.DepthWriteMask      )\
-		x(DepthFunc             , DepthStencilState.DepthFunc           )\
-		x(BlendState0           , BlendState.RenderTarget[0]            )\
-		x(RTVFormats            , RTVFormats                            )\
-		x(DSVFormat             , DSVFormat                             )\
-		x(SampleDesc            , SampleDesc                            )\
-		//x(StreamOutput          , StreamOutput                          )\
-		//x(BlendEnable0          , BlendState.RenderTarget[0].BlendEnable)\
-		//x(BlendEnable1          , BlendState.RenderTarget[1].BlendEnable)\
-		//x(BlendEnable2          , BlendState.RenderTarget[2].BlendEnable)\
-		//x(BlendEnable3          , BlendState.RenderTarget[3].BlendEnable)\
-		//x(BlendEnable4          , BlendState.RenderTarget[4].BlendEnable)\
-		//x(BlendEnable5          , BlendState.RenderTarget[5].BlendEnable)\
-		//x(BlendEnable6          , BlendState.RenderTarget[6].BlendEnable)\
-		//x(BlendEnable7          , BlendState.RenderTarget[7].BlendEnable)\
-		//x(SampleMask            , SampleMask                            )\
-		//x(RasterizerState       , RasterizerState                       )\
-		//x(DepthStencilState     , DepthStencilState                     )\
-		//x(InputLayout           , InputLayout                           )\
-		//x(IBStripCutValue       , IBStripCutValue                       )\
-		//x(PrimitiveTopologyType , PrimitiveTopologyType                 )\
-		//x(NumRenderTargets      , NumRenderTargets                      )\
-		//x(NodeMask              , NodeMask                              )\
-		//x(CachedPSO             , CachedPSO                             )\
-		//x(Flags                 , Flags                                 )
-
 	// IDs for the pipeline state description fields
 	enum class EPipeState :uint32_t
 	{
+		// Parts of the pipeline state that can be changed.
+		#define PR_RDR_PIPE_STATE_FIELDS(x)/*(EPipeState::<name>, PipelineStateDesc::<field>) */\
+			x(RootSignature         , pRootSignature                        )\
+			x(VS                    , VS                                    )\
+			x(PS                    , PS                                    )\
+			x(DS                    , DS                                    )\
+			x(HS                    , HS                                    )\
+			x(GS                    , GS                                    )\
+			x(TopologyType          , PrimitiveTopologyType                 )\
+			x(FillMode              , RasterizerState.FillMode              )\
+			x(CullMode              , RasterizerState.CullMode              )\
+			x(DepthEnable           , DepthStencilState.DepthEnable         )\
+			x(DepthWriteMask        , DepthStencilState.DepthWriteMask      )\
+			x(DepthFunc             , DepthStencilState.DepthFunc           )\
+			x(BlendState0           , BlendState.RenderTarget[0]            )\
+			x(RTVFormats            , RTVFormats                            )\
+			x(DSVFormat             , DSVFormat                             )\
+			x(SampleDesc            , SampleDesc                            )\
+			//x(StreamOutput          , StreamOutput                          )\
+			//x(BlendEnable0          , BlendState.RenderTarget[0].BlendEnable)\
+			//x(BlendEnable1          , BlendState.RenderTarget[1].BlendEnable)\
+			//x(BlendEnable2          , BlendState.RenderTarget[2].BlendEnable)\
+			//x(BlendEnable3          , BlendState.RenderTarget[3].BlendEnable)\
+			//x(BlendEnable4          , BlendState.RenderTarget[4].BlendEnable)\
+			//x(BlendEnable5          , BlendState.RenderTarget[5].BlendEnable)\
+			//x(BlendEnable6          , BlendState.RenderTarget[6].BlendEnable)\
+			//x(BlendEnable7          , BlendState.RenderTarget[7].BlendEnable)\
+			//x(SampleMask            , SampleMask                            )\
+			//x(RasterizerState       , RasterizerState                       )\
+			//x(DepthStencilState     , DepthStencilState                     )\
+			//x(InputLayout           , InputLayout                           )\
+			//x(IBStripCutValue       , IBStripCutValue                       )\
+			//x(PrimitiveTopologyType , PrimitiveTopologyType                 )\
+			//x(NumRenderTargets      , NumRenderTargets                      )\
+			//x(NodeMask              , NodeMask                              )\
+			//x(CachedPSO             , CachedPSO                             )\
+			//x(Flags                 , Flags                                 )
+
 		// Encode the byte offset and size into the enum value
 		#define PR_RDR_PIPE_STATE_FIELD(name, member) name = \
 			(((0xFFFF & offsetof(D3D12_GRAPHICS_PIPELINE_STATE_DESC, member)) << 16) | \
@@ -274,7 +274,7 @@ namespace pr::rdr12
 		// Return the current value of a pipeline state member
 		template <EPipeState PS> pipe_state_field_t<PS> const& Get() const
 		{
-			PipeState ps;
+			PipeState ps(PS, pipe_state_field_t<PS>{});
 			return *static_cast<pipe_state_field_t<PS> const*>(ps.ptr(m_desc));
 		}
 

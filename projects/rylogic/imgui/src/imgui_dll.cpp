@@ -70,6 +70,13 @@ namespace dll
 		ID3D12DescriptorHeap* m_srv_heap;
 		ErrorHandler m_error_cb;
 
+		// Display size override: when set, mouse coordinates from WndProc are
+		// rescaled from client-rect space to this target space, and io.DisplaySize
+		// is overridden in NewFrame. Fixes DPI mismatch between GetClientRect
+		// (physical pixels) and the actual render target dimensions.
+		float m_target_display_w;
+		float m_target_display_h;
+
 		// SRV descriptor callbacks for ImGui_ImplDX12_InitInfo
 		static void SrvDescriptorAlloc(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu)
 		{
@@ -86,6 +93,8 @@ namespace dll
 			, m_device(args.m_device)
 			, m_srv_heap(nullptr)
 			, m_error_cb(error_cb)
+			, m_target_display_w(0)
+			, m_target_display_h(0)
 		{
 			try
 			{
@@ -208,6 +217,16 @@ extern "C"
 			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
+
+			// Override display size if a target has been set. This must happen
+			// after Win32 backend (which sets DisplaySize from GetClientRect)
+			// but before ImGui::NewFrame (which processes input events).
+			if (ctx.m_target_display_w > 0 && ctx.m_target_display_h > 0)
+			{
+				auto& io = ImGui::GetIO();
+				io.DisplaySize = ImVec2(ctx.m_target_display_w, ctx.m_target_display_h);
+			}
+
 			ImGui::NewFrame();
 		}
 		catch (std::exception const& ex)
@@ -240,6 +259,27 @@ extern "C"
 		try
 		{
 			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+
+			// Rescale mouse coordinates from client-rect space to target display space
+			if (ctx.m_target_display_w > 0 && ctx.m_target_display_h > 0)
+			{
+				if (msg == WM_MOUSEMOVE || msg == WM_LBUTTONDOWN || msg == WM_LBUTTONUP || msg == WM_LBUTTONDBLCLK ||
+					msg == WM_RBUTTONDOWN || msg == WM_RBUTTONUP || msg == WM_RBUTTONDBLCLK ||
+					msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP || msg == WM_MBUTTONDBLCLK ||
+					msg == WM_XBUTTONDOWN || msg == WM_XBUTTONUP || msg == WM_XBUTTONDBLCLK)
+				{
+					RECT rect;
+					if (::GetClientRect(hwnd, &rect) && rect.right > 0 && rect.bottom > 0)
+					{
+						float sx = ctx.m_target_display_w / (float)(rect.right - rect.left);
+						float sy = ctx.m_target_display_h / (float)(rect.bottom - rect.top);
+						int x = (int)(GET_X_LPARAM(lparam) * sx);
+						int y = (int)(GET_Y_LPARAM(lparam) * sy);
+						lparam = MAKELPARAM(x, y);
+					}
+				}
+			}
+
 			auto result = ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam);
 			return result != 0;
 		}
@@ -329,6 +369,22 @@ extern "C"
 		}
 	}
 
+	// Set the target display size. Mouse coordinates in WndProc will be rescaled
+	// from client-rect space to this target, and io.DisplaySize will be overridden
+	// in NewFrame. Pass (0, 0) to disable the override and use GetClientRect directly.
+	__declspec(dllexport) void __stdcall ImGui_SetDisplaySize(Context& ctx, float w, float h)
+	{
+		try
+		{
+			ctx.m_target_display_w = w;
+			ctx.m_target_display_h = h;
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
+	}
+
 	__declspec(dllexport) bool __stdcall ImGui_Checkbox(Context& ctx, char const* label, bool* v)
 	{
 		try
@@ -390,6 +446,18 @@ extern "C"
 		{
 			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
 			ImGui::Separator();
+		}
+		catch (std::exception const& ex)
+		{
+			ctx.m_error_cb(ex.what());
+		}
+	}
+	__declspec(dllexport) void __stdcall ImGui_PlotLines(Context& ctx, char const* label, float const* values, int values_count, int values_offset, char const* overlay_text, float scale_min, float scale_max, float graph_w, float graph_h)
+	{
+		try
+		{
+			ImGui::SetCurrentContext(ctx.m_imgui_ctx);
+			ImGui::PlotLines(label, values, values_count, values_offset, overlay_text, scale_min, scale_max, ImVec2(graph_w, graph_h));
 		}
 		catch (std::exception const& ex)
 		{

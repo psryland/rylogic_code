@@ -23,6 +23,7 @@
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
+				;$(RylogicRoot)projects\rylogic
 				;$(RylogicRoot)sdk
 				;$(RylogicRoot)sdk\sqlite3\include
 				;$(RylogicRoot)sdk\vorbis\include
@@ -40,6 +41,7 @@
 			</AdditionalLibraryDirectories>
       <AdditionalDependencies>
 				;lua-static.lib
+				;physics-2-static.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
     </Link>
@@ -222,7 +224,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gui\round_button_ctrl.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\scaled_dc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\sim_message_loop.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\message_loop.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100_colours.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />

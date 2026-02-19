@@ -10,8 +10,8 @@
 
 namespace pr::rdr12::shaders
 {
-	PointSpriteGS::PointSpriteGS(v2 size, bool depth)
-		: ShaderOverride()
+	PointSpriteGS::PointSpriteGS(Renderer& rdr, v2 size, bool depth)
+		: Shader(rdr)
 		, m_size(size)
 		, m_depth(depth)
 	{
@@ -25,7 +25,7 @@ namespace pr::rdr12::shaders
 			.CS = shader_code::none,
 		};
 	}
-	void PointSpriteGS::SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle)
+	void PointSpriteGS::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle)
 	{
 		if (dle != nullptr)
 		{

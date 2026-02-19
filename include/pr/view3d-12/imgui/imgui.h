@@ -67,11 +67,13 @@ namespace pr::rdr12::imgui
 		x(, SetNextWindowPos   , void (__stdcall*)(Context& ctx, float x, float y, int cond))\
 		x(, SetNextWindowSize  , void (__stdcall*)(Context& ctx, float w, float h, int cond))\
 		x(, SetNextWindowBgAlpha , void (__stdcall*)(Context& ctx, float alpha))\
+		x(, SetDisplaySize     , void (__stdcall*)(Context& ctx, float w, float h))\
 		x(, Checkbox           , bool (__stdcall*)(Context& ctx, char const* label, bool* v))\
 		x(, SliderFloat        , bool (__stdcall*)(Context& ctx, char const* label, float* v, float v_min, float v_max))\
 		x(, Button             , bool (__stdcall*)(Context& ctx, char const* label))\
 		x(, SameLine           , void (__stdcall*)(Context& ctx, float offset_from_start_x, float spacing))\
-		x(, Separator          , void (__stdcall*)(Context& ctx))
+		x(, Separator          , void (__stdcall*)(Context& ctx))\
+		x(, PlotLines          , void (__stdcall*)(Context& ctx, char const* label, float const* values, int values_count, int values_offset, char const* overlay_text, float scale_min, float scale_max, float graph_w, float graph_h))
 		#define PR_IMGUI_FUNCTION_MEMBERS(prefix, name, function_type) using prefix##name##Fn = function_type; prefix##name##Fn prefix##name = {};
 		PR_IMGUI_API(PR_IMGUI_FUNCTION_MEMBERS)
 		#undef PR_IMGUI_FUNCTION_MEMBERS
@@ -173,6 +175,12 @@ namespace pr::rdr12::imgui
 		{
 			ImGuiDll::get().SetNextWindowBgAlpha(*m_ctx, alpha);
 		}
+		// Override the display size to match the actual render target dimensions.
+		// Call after NewFrame to fix DPI mismatches between GetClientRect and the swap chain.
+		void SetDisplaySize(float w, float h)
+		{
+			ImGuiDll::get().SetDisplaySize(*m_ctx, w, h);
+		}
 		bool Checkbox(char const* label, bool* v)
 		{
 			return ImGuiDll::get().Checkbox(*m_ctx, label, v);
@@ -192,6 +200,10 @@ namespace pr::rdr12::imgui
 		void Separator()
 		{
 			ImGuiDll::get().Separator(*m_ctx);
+		}
+		void PlotLines(char const* label, float const* values, int values_count, int values_offset = 0, char const* overlay_text = nullptr, float scale_min = FLT_MAX, float scale_max = FLT_MAX, float graph_w = 0, float graph_h = 0)
+		{
+			ImGuiDll::get().PlotLines(*m_ctx, label, values, values_count, values_offset, overlay_text, scale_min, scale_max, graph_w, graph_h);
 		}
 	};
 }

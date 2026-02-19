@@ -5,10 +5,19 @@
 #pragma once
 #include "src/forward.h"
 #include "src/settings.h"
-#include "src/world/ocean.h"
-#include "src/world/height_field.h"
-#include "src/world/terrain.h"
+#include "src/core/frame_tasks.h"
+#include "src/core/state_snapshot.h"
+#include "src/core/sim_state.h"
+#include "src/core/day_night_cycle.h"
+#include "src/world/sky/procedural_sky.h"
+#include "src/world/ocean/ocean.h"
+#include "src/world/ocean/distant_ocean.h"
+#include "src/world/terrain/height_field.h"
+#include "src/world/terrain/terrain.h"
+#include "src/world/ship/ship.h"
 #include "pr/view3d-12/imgui/imgui.h"
+#include "pr/common/task_graph.h"
+#include "src/diag/diag_ui.h"
 
 namespace las
 {
@@ -17,22 +26,32 @@ namespace las
 	{
 		using base = pr::app::Main<Main, MainUI, Settings>;
 		using ImGuiUI = pr::rdr12::imgui::ImGuiUI;
-		using Skybox = pr::app::Skybox;
-
 		static char const* AppName() { return "LostAtSea"; }
 
-		Skybox m_skybox;
-		HeightField m_height_field;
+		ProceduralSky m_sky;
+		DayNightCycle m_day_cycle;
 		Ocean m_ocean;
+		DistantOcean m_distant_ocean;
 		Terrain m_terrain;
+		HeightField m_height_field; // CPU-side height queries for future physics
+		Ship m_ship;
+
+		// Simulation state snapshot: Step writes, Render reads
+		StateSnapshot<SimState> m_sim_state;
 
 		double m_sim_time;
-		v4 m_camera_world_pos;
 		float m_move_speed; // World units per second
 		int64_t m_render_frame;
 
+		// Task graphs for parallel execution
+		pr::task_graph::Graph<StepTaskId> m_step_graph;
+		pr::task_graph::Graph<RenderTaskId> m_render_graph;
+
 		// ImGui overlay
 		ImGuiUI m_imgui;
+
+		// Diagnostic UI (toggled with F3)
+		DiagUI m_diag;
 
 		Main(MainUI& ui);
 		~Main();
@@ -44,9 +63,9 @@ namespace las
 	};
 
 	// Main app window
-	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>
+	struct MainUI :pr::app::MainUI<MainUI, Main, pr::gui::WinGuiMsgLoop>
 	{
-		using base = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
+		using base = pr::app::MainUI<MainUI, Main, pr::gui::WinGuiMsgLoop>;
 		static wchar_t const* AppTitle() { return L"Lost at Sea"; }
 
 		MainUI(wchar_t const* lpstrCmdLine, int nCmdShow);

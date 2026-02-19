@@ -37,8 +37,8 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto ProjTex = SamDescStatic(ESamReg::s3);
 	};
 
-	Forward::Forward(ID3D12Device* device)
-		:Shader()
+	Forward::Forward(Renderer& rdr)
+		:Shader(rdr)
 	{
 		m_code = ShaderCode
 		{
@@ -66,7 +66,7 @@ namespace pr::rdr12::shaders
 			.Samp(ESamp::EnvMap)
 			.Samp(ESamp::SMap)
 			.Samp(ESamp::ProjTex)
-			.Create(device, "ForwardSig");
+			.Create(rdr.d3d(), "ForwardSig");
 	}
 
 	// Config the shader
@@ -78,7 +78,7 @@ namespace pr::rdr12::shaders
 		SetLightingConstants(cb0.m_global_light, scene.m_global_light, scene.m_cam);
 		SetShadowMapConstants(cb0.m_shadow, scene.FindRStep<RenderSmap>());
 		SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
-		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 	}
 	void Forward::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const* dle)
@@ -93,7 +93,7 @@ namespace pr::rdr12::shaders
 		SetTint(cb1, inst, nug);
 		SetTex2Surf(cb1, inst, nug);
 		SetReflectivity(cb1, inst, nug);
-		auto gpu_address = upload.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		auto gpu_address = upload.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 	}
 }

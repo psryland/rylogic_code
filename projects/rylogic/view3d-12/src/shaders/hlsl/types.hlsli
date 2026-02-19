@@ -5,6 +5,8 @@
 #ifndef PR_VIEW3D_SHADER_TYPES_HLSLI
 #define PR_VIEW3D_SHADER_TYPES_HLSLI
 
+#include "pr/hlsl/interop.hlsli"
+
 static const float TINY = 0.0001f;
 static const int MaxShadowMaps = 1;
 static const int MaxProjectedTextures = 1;
@@ -34,41 +36,6 @@ static const int AlphaFlags_HasAlpha            = (1 << 0);
 
 // Shadows
 #define ShadowMapCount(shdw) (shdw.m_info.x)
-
-// Notes:
-// - use float4x4 not matrix... they're not the same (don't know why tho)
-// - HLSL float4x4 is column major (by default) but pr::m4x4 is row major.
-//   Remember to transpose matrices or use 'row_major' before any float4x4's.
-// - For efficiency, constant buffers need to be grouped by frequency of update
-
-#ifdef SHADER_BUILD
-
-	#define reg(reg_number, space) register(reg_number)
-	#define voidp uint2
-
-#else
-	
-	// Note:
-	//   This error: "error X3000: syntax error: unexpected token 'enum'"
-	//   means you have an hlsl file somewhere that hasn't been set to 'Custom Build Tool'.
-	//   It will be using the HLSL Compiler build type, which doesn't know about the 'SHADER_BUILD' define
-
-	using float4x4 = pr::m4x4;
-	using float4   = pr::v4;
-	using float3   = pr::v3;
-	using float2   = pr::v2;
-	using int2     = pr::iv2;
-	using int3     = pr::iv3;
-	using int4     = pr::iv4;
-	using uint4    = pr::iv4;
-	using uint     = uint32_t;
-	using voidp    = void const*;
-
-	#define cbuffer struct
-	#define reg(reg_number, space) ShaderReg<decltype(reg_number), reg_number, space>
-	#define row_major
-
-#endif
 
 // Row major matrix for use in structured buffers
 struct Mat4x4
@@ -126,58 +93,58 @@ struct Skinfluence
 	uint4 m_weights; // 8 16-bit bone weights
 };
 
+
+// Vertex shader input format
+struct VSIn
+{
+	float4 vert semantic(POSITION0);
+	float4 diff semantic(COLOR0);
+	float4 norm semantic(NORMAL0);
+	float2 tex0 semantic(TEXCOORD0);
+	int2   idx0 semantic(INDICES0);
+};
+
+// Pixel shader input format
+struct PSIn
+{
+	float4 ss_vert semantic(SV_POSITION);
+	float4 ws_vert semantic(POSITION1);
+	float4 ws_norm semantic(NORMAL0);
+	float4 diff    semantic(COLOR0);
+	float2 tex0    semantic(TEXCOORD0);
+	float2 idx0    semantic(INDICES0);
+};
+
+// Compute shader input
+struct CSIn
+{
+	// Example:
+	//  [numthreads(10,8,3)] = Number of threads in one thread group.
+	//  Dispatch(5,3,2) = Run (5*3*2=30) thread groups.
+	//  The threads in each group execute in parallel.
+
+	// 'group_id' is the 3d address in units of groups.
+	// 'group_id' is the highest level partitioning, with each value representing a block of threads.
+	// e.g. group_id = (0,0,0) = first block of (10*8*3) threads, (1,0,0) is the next block of (10*8*3) threads
+	//      Values in the range [0,0,0] -> [5,3,2]
+	uint3 group_id semantic(SV_GroupID);
+
+	// 'thread_id' is the global address of the thread, equal to 'group_id'*[numthreads] + 'group_thread_id'.
+	//  e.g. Values in the range [0,0,0] -> [5,3,2]*[10,8,3]
+	uint3 thread_id semantic(SV_DispatchThreadID);
+
+	// 'group_thread_id' is the address of a thread within a group.
+	// e.g. group_thread_id = (0,0,0) = first thread in the current block
+	//      Values in the range [0,0,0] -> [10,8,3]
+	uint3 group_thread_id semantic(SV_GroupThreadID);
+
+	// 'group_idx' is the 3d address within a group, converted to a 1d index: Z*width*height + Y*width + X
+	// e.g. group_idx = group_thread_id.z*numthreads.x*numthreads.y + group_thread_id.y*numthreads.x + group_thread_id.x
+	//      Values in the range [0] -> [3*10*8 + 8*10 + 10]
+	uint group_idx semantic(SV_GroupIndex);
+};
+
 #ifdef SHADER_BUILD
-
-	// Vertex shader input format
-	struct VSIn
-	{
-		float4 vert :POSITION0;
-		float4 diff :COLOR0;
-		float4 norm :NORMAL0;
-		float2 tex0 :TEXCOORD0;
-		int2   idx0 :INDICES0;
-	};
-
-	// Pixel shader input format
-	struct PSIn
-	{
-		float4 ss_vert :SV_POSITION;
-		float4 ws_vert :POSITION1;
-		float4 ws_norm :NORMAL0;
-		float4 diff    :COLOR0;
-		float2 tex0    :TEXCOORD0;
-		float2 idx0    :INDICES0;
-	};
-
-	// Compute shader input
-	struct CSIn
-	{
-		// Example:
-		//  [numthreads(10,8,3)] = Number of threads in one thread group.
-		//  Dispatch(5,3,2) = Run (5*3*2=30) thread groups.
-		//  The threads in each group execute in parallel.
-
-		// 'group_id' is the 3d address in units of groups.
-		// 'group_id' is the highest level partitioning, with each value representing a block of threads.
-		// e.g. group_id = (0,0,0) = first block of (10*8*3) threads, (1,0,0) is the next block of (10*8*3) threads
-		//      Values in the range [0,0,0] -> [5,3,2]
-		uint3 group_id :SV_GroupID;
-
-		// 'thread_id' is the global address of the thread, equal to 'group_id'*[numthreads] + 'group_thread_id'.
-		//  e.g. Values in the range [0,0,0] -> [5,3,2]*[10,8,3]
-		uint3 thread_id :SV_DispatchThreadID;
-
-		// 'group_thread_id' is the address of a thread within a group.
-		// e.g. group_thread_id = (0,0,0) = first thread in the current block
-		//      Values in the range [0,0,0] -> [10,8,3]
-		uint3 group_thread_id :SV_GroupThreadID;
-
-		// 'group_idx' is the 3d address within a group, converted to a 1d index: Z*width*height + Y*width + X
-		// e.g. group_idx = group_thread_id.z*numthreads.x*numthreads.y + group_thread_id.y*numthreads.x + group_thread_id.x
-		//      Values in the range [0] -> [3*10*8 + 8*10 + 10]
-		uint group_idx :SV_GroupIndex;
-	};
-
 #endif
 
 #endif

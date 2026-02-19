@@ -6,12 +6,12 @@
 
 namespace pr
 {
-	enum class EKeyCodes
+	enum class EKeyCodes // Sync with Rylogic.Core/src/Win32/KeyCodes.cs
 	{
 		// Notes:
 		// - VK_ constants (mostly)
 		// - Compatible with System.Windows.Forms.Keys and native VK_ constants.
-		// - The VK_ values don't include definitions for Shift/Control/Alt > 0xFFFF
+		// - The VK_ values don't include definitions for Shift/Control/Alt/Windows > 0xFFFF
 
 		// The bitmask to extract a key code from a key value.
 		KeyCode = 65535,
@@ -591,13 +591,16 @@ namespace pr
 		// Modifiers ****
 
 		// The SHIFT modifier key.
-		Shift = 65536,
+		Shift = 1 << 16, // 65536,
 
 		// The CTRL modifier key.
-		Control = 131072,
+		Control = 1 << 17, // 131072,
 
 		// The ALT modifier key.
-		Alt = 262144,
+		Alt = 1 << 18, // 262144,
+
+		// The Windows logo key modifier.
+		Windows = 1 << 19, // 524288,
 
 		_flags_enum = 0,
 	};

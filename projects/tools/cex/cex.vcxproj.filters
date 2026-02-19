@@ -55,6 +55,24 @@
     <Filter Include="src\commands\wait">
       <UniqueIdentifier>{2d71d9c7-5ae7-482f-bb47-ccd7e589bef9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands\automate">
+      <UniqueIdentifier>{ea2c052a-d483-49cd-94a3-e82066435c80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\find_element">
+      <UniqueIdentifier>{cecacfdf-18bb-4f86-ab1e-27f542d0591e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\list_windows">
+      <UniqueIdentifier>{e9aa7e22-2f13-4c24-b660-e1c277a7b817}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\read_test">
+      <UniqueIdentifier>{4cdf0794-ef74-4412-8993-09bb1e228971}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\shutdown_process">
+      <UniqueIdentifier>{d121ec47-c810-4081-8b8a-e4463d6cd073}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\wait_window">
+      <UniqueIdentifier>{2a3a0050-59a5-41db-b14a-fb31259dd1cf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\forward.h">
@@ -119,5 +137,26 @@
     <ClCompile Include="src\commands\wait\wait.cpp">
       <Filter>src\commands\wait</Filter>
     </ClCompile>
+    <ClCompile Include="src\commands\automate\automate.cpp">
+      <Filter>src\commands\automate</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\find_element\find_element.cpp">
+      <Filter>src\commands\find_element</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\list_windows\list_windows.cpp">
+      <Filter>src\commands\list_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\read_text\read_text.cpp">
+      <Filter>src\commands\read_test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\shutdown_process\shutdown_process.cpp">
+      <Filter>src\commands\shutdown_process</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\wait_window\wait_window.cpp">
+      <Filter>src\commands\wait_window</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="src\app.manifest" />
   </ItemGroup>
 </Project>

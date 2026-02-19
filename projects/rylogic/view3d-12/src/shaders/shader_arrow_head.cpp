@@ -9,8 +9,8 @@
 
 namespace pr::rdr12::shaders
 {
-	ArrowHeadGS::ArrowHeadGS(v2 size, bool depth)
-		: ShaderOverride()
+	ArrowHeadGS::ArrowHeadGS(Renderer& rdr, v2 size, bool depth)
+		: Shader(rdr)
 		, m_size(size)
 		, m_depth(depth)
 	{
@@ -24,7 +24,7 @@ namespace pr::rdr12::shaders
 			.CS = shader_code::none,
 		};
 	}
-	void ArrowHeadGS::SetupOverride(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const*)
+	void ArrowHeadGS::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const& scene, DrawListElement const*)
 	{
 		fwd::CBufScreenSpace cb = {
 			.m_screen_dim = To<v2>(scene.wnd().BackBufferSize()),

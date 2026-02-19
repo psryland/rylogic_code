@@ -1164,21 +1164,21 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			ShaderPtr CreateShader(ELineStyle line_style) const
+			ShaderPtr CreateShader(Renderer& rdr, ELineStyle line_style) const
 			{
 				return
-					line_style == ELineStyle::LineSegments ? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_width)) :
-					line_style == ELineStyle::LineStrip ? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_width)) :
+					line_style == ELineStyle::LineSegments ? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(rdr, m_width)) :
+					line_style == ELineStyle::LineStrip ? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(rdr, m_width)) :
 					throw std::runtime_error(std::format("Unsupported line style: {}", ELineStyle_::ToStringA(line_style)));
 
 			}
-			void ConvertNuggets(ELineStyle line_style, LdrObject* obj)
+			void ConvertNuggets(Renderer& rdr, ELineStyle line_style, LdrObject* obj)
 			{
-				auto shdr = CreateShader(line_style);
+				auto shdr = CreateShader(rdr, line_style);
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
 					nug.m_topo = line_style == ELineStyle::LineSegments ? ETopo::LineList : ETopo::LineStripAdj;
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
+					nug.m_shdr_overlays.push_back({ shdr, ERenderStep::RenderForward });
 				}
 			}
 			explicit operator bool() const
@@ -1197,9 +1197,9 @@ namespace pr::rdr12::ldraw
 			void CreateNugget(LdrObject* obj, ParseParams& pp, Range vrange = Range::Reset())
 			{
 				// Remember to 'obj->m_model->DeleteNuggets()' first if you need too
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_size, m_depth);
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(pp.m_rdr, m_size, m_depth);
 				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, shdr)
+					.use_shader_overlay(ERenderStep::RenderForward, shdr)
 					.tex_diffuse(PointStyleTexture(m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.vrange(vrange)
@@ -2227,8 +2227,8 @@ namespace pr::rdr12::ldraw
 				// Use the thick line shader
 				if (segment.m_thick)
 				{
-					auto shdr = segment.m_thick.CreateShader(segment.m_style);
-					nugget.use_shader(ERenderStep::RenderForward, shdr);
+					auto shdr = segment.m_thick.CreateShader(m_pp.m_rdr, segment.m_style);
+					nugget.use_shader_overlay(ERenderStep::RenderForward, shdr);
 					if (segment.m_style == ELineStyle::LineStrip)
 						nugget.topo(ETopo::LineStripAdj);
 				}
@@ -2254,9 +2254,9 @@ namespace pr::rdr12::ldraw
 					auto depth = arrow_heads.m_depth;
 
 					// Add a nugget for this style
-					auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(size, depth);
+					auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(m_pp.m_rdr, size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr)
-						.use_shader(ERenderStep::RenderForward, arw_shdr)
+						.use_shader_overlay(ERenderStep::RenderForward, arw_shdr)
 						.vrange(vcount + beg, vcount + end)
 						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
 					);
@@ -2282,9 +2282,9 @@ namespace pr::rdr12::ldraw
 					auto has_alpha = std::ranges::any_of(m_data_points, [](Vert const& x) { return HasAlpha(x.m_diff); });
 
 					// Add a nugget for this style
-					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(size, depth);
+					auto pt_shdr = Shader::Create<shaders::PointSpriteGS>(m_pp.m_rdr, size, depth);
 					cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-						.use_shader(ERenderStep::RenderForward, pt_shdr)
+						.use_shader_overlay(ERenderStep::RenderForward, pt_shdr)
 						.tex_diffuse(creation::PointStyleTexture(style, m_pp))
 						.vrange(vcount + beg, vcount + end)
 						.flags(ENuggetFlag::GeometryHasAlpha, has_alpha)
@@ -2370,7 +2370,7 @@ namespace pr::rdr12::ldraw
 
 			// Use thick lines
 			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
+				m_thick.ConvertNuggets(m_pp.m_rdr, line_style, obj);
 		}
 	};
 
@@ -2442,7 +2442,7 @@ namespace pr::rdr12::ldraw
 
 			// Use thick lines
 			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
+				m_thick.ConvertNuggets(m_pp.m_rdr, line_style, obj);
 		}
 	};
 
@@ -2523,7 +2523,7 @@ namespace pr::rdr12::ldraw
 
 			// Use thick lines
 			if (m_thick)
-				m_thick.ConvertNuggets(ELineStyle::LineSegments, obj);
+				m_thick.ConvertNuggets(m_pp.m_rdr, ELineStyle::LineSegments, obj);
 		}
 	};
 
@@ -2883,7 +2883,7 @@ namespace pr::rdr12::ldraw
 
 			// Use thick lines
 			if (m_thick)
-				m_thick.ConvertNuggets(line_style, obj);
+				m_thick.ConvertNuggets(m_pp.m_rdr, line_style, obj);
 
 			// Add data points as a child object
 			if (m_data_points)
@@ -2899,9 +2899,9 @@ namespace pr::rdr12::ldraw
 				data_points->m_model->DeleteNuggets();
 
 				// Add a nugget for the data points
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_data_points.m_size, m_data_points.m_depth);
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_pp.m_rdr, m_data_points.m_size, m_data_points.m_depth);
 				data_points->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, shdr)
+					.use_shader_overlay(ERenderStep::RenderForward, shdr)
 					.tex_diffuse(creation::PointStyleTexture(m_data_points.m_style, pp))
 					.flags(ENuggetFlag::RangesCanOverlap)
 					.tint(m_data_points.m_colour)

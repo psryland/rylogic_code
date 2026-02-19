@@ -646,7 +646,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\gui\sim_message_loop.h">
+    <ClInclude Include="..\..\..\include\pr\gui\message_loop.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h">

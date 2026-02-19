@@ -35,33 +35,35 @@ namespace pr::rdr12
 		//  - The shader contains the shader specific parameters.
 		//  - The realised shader is reused by the window/render step.
 		//  - All shaders can share one GpuUploadBuffer
-		ShaderCode m_code;                       // Byte code for the shader parts
+		Renderer*                   m_rdr;       // The renderer that owns this model
+		ShaderCode                  m_code;      // Byte code for the shader parts
 		D3DPtr<ID3D12RootSignature> m_signature; // Signature for shader, null if an overlay
 		
-		Shader();
+		explicit Shader(Renderer& rdr);
 		virtual ~Shader() = default;
+
+		// Renderer access
+		Renderer const& rdr() const;
+		Renderer& rdr();
 
 		// Sort id for the shader
 		SortKeyId SortId() const;
 
 		// Create a shader
 		template <typename TShader, typename... Args> requires (std::is_base_of_v<Shader, TShader> && std::constructible_from<TShader, Args...>)
-		static RefPtr<TShader> Create(Args... args)
+		static RefPtr<TShader> Create(Args&&... args)
 		{
 			RefPtr<TShader> shdr(rdr12::New<TShader>(std::forward<Args>(args)...), true);
 			return shdr;
 		}
 
+		// Config the shader stages.
+		virtual void SetupFrame(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&) {}
+		virtual void SetupElement(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*) {}
+
 		// Ref counting clean up
 		static void RefCountZero(RefCounted<Shader>* doomed);
 		protected: virtual void Delete();
-	};
-
-	// Interface for shaders that are used as overrides
-	struct ShaderOverride : Shader
-	{
-		// Config the shader.
-		virtual void SetupOverride(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*) {}
 	};
 
 	// Compiler options helper

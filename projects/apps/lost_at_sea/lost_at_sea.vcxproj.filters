@@ -7,14 +7,79 @@
     <Filter Include="framework">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\environment">
-      <UniqueIdentifier>{d7b0d6fe-14e6-4f12-96f4-b81c3998b8e0}</UniqueIdentifier>
+    <Filter Include="src\core">
+      <UniqueIdentifier>{d1e2f3a4-b5c6-4d7e-8f90-a1b2c3d4e5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world">
+      <UniqueIdentifier>{22e27867-295e-4948-9754-037b94528343}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\ocean">
+      <UniqueIdentifier>{f7c073b5-9059-4e09-a5cf-49b600f0eb0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\ocean\shaders">
+      <UniqueIdentifier>{8378f362-aa0f-4338-801c-20fca15667f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\terrain">
+      <UniqueIdentifier>{fe63e748-440a-4dc0-aae9-e64d153b1031}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\terrain\shaders">
+      <UniqueIdentifier>{a2b3c4d5-e6f7-4890-ab12-cd34ef567890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\ship">
+      <UniqueIdentifier>{e1f2a3b4-c5d6-4e7f-8901-23456789abcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\sky">
+      <UniqueIdentifier>{b7ab1687-26d5-4d82-90ad-e07bf861868f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\world\sky\shaders">
+      <UniqueIdentifier>{c9da2798-37e6-4e93-91be-f18cf962979f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\diag">
+      <UniqueIdentifier>{c8d9e0f1-2345-4678-9abc-def012345678}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{97b81594-9f7a-4667-883f-1d5f153d5851}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
       <Filter>framework</Filter>
     </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\ocean.cpp">
+      <Filter>src\world\ocean</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\shaders\ocean_shader.cpp">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\distant_ocean.cpp">
+      <Filter>src\world\ocean</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ocean\shaders\distant_ocean_shader.cpp">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain\height_field.cpp">
+      <Filter>src\world\terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain\terrain.cpp">
+      <Filter>src\world\terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\terrain\shaders\terrain_shader.cpp">
+      <Filter>src\world\terrain\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\ship\ship.cpp">
+      <Filter>src\world\ship</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\sky\procedural_sky.cpp">
+      <Filter>src\world\sky</Filter>
+    </ClCompile>
+    <ClCompile Include="src\world\sky\shaders\procedural_sky_shader.cpp">
+      <Filter>src\world\sky\shaders</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -24,31 +89,90 @@
     <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\height_field.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\ocean.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
-    <ClCompile Include="src\world\terrain.cpp">
-      <Filter>src\environment</Filter>
-    </ClCompile>
+    <ClInclude Include="src\core\day_night_cycle.h">
+      <Filter>src\core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\ocean.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\gerstner_wave.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\distant_ocean.h">
+      <Filter>src\world\ocean</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\shaders\ocean_shader.h">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ocean\shaders\distant_ocean_shader.h">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\terrain\height_field.h">
+      <Filter>src\world\terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\terrain\terrain.h">
+      <Filter>src\world\terrain</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\terrain\shaders\terrain_shader.h">
+      <Filter>src\world\terrain\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\ship\ship.h">
+      <Filter>src\world\ship</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\sky\procedural_sky.h">
+      <Filter>src\world\sky</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\sky\shaders\procedural_sky_shader.h">
+      <Filter>src\world\sky\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\diag\diag_ui.h">
+      <Filter>src\diag</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\world\ocean.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
-    <ClInclude Include="src\world\terrain.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
-    <ClInclude Include="src\world\height_field.h">
-      <Filter>src\environment</Filter>
-    </ClInclude>
+    <None Include="src\world\ocean\shaders\ocean_cbuf.hlsli">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\ocean.hlsl">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\distant_ocean_cbuf.hlsli">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\ocean\shaders\distant_ocean.hlsl">
+      <Filter>src\world\ocean\shaders</Filter>
+    </None>
+    <None Include="src\world\terrain\shaders\terrain_cbuf.hlsli">
+      <Filter>src\world\terrain\shaders</Filter>
+    </None>
+    <None Include="src\world\terrain\shaders\terrain.hlsl">
+      <Filter>src\world\terrain\shaders</Filter>
+    </None>
+    <None Include="src\world\sky\shaders\procedural_sky_cbuf.hlsli">
+      <Filter>src\world\sky\shaders</Filter>
+    </None>
+    <None Include="src\world\sky\shaders\procedural_sky.hlsl">
+      <Filter>src\world\sky\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="imgui.ini" />
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="res\shaders.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\ocean\shaders\ocean.rc">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\ocean\shaders\distant_ocean.rc">
+      <Filter>src\world\ocean\shaders</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\terrain\shaders\terrain.rc">
+      <Filter>src\world\terrain\shaders</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="src\world\sky\shaders\procedural_sky.rc">
+      <Filter>src\world\sky\shaders</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

@@ -1202,6 +1202,9 @@ namespace pr::rdr12
 		ByteCode()
 			:D3D12_SHADER_BYTECODE()
 		{}
+		ByteCode(std::span<BYTE const> code)
+			: D3D12_SHADER_BYTECODE(code.data(), code.size())
+		{}
 		template <int Size> ByteCode(BYTE const (&code)[Size])
 			: D3D12_SHADER_BYTECODE(&code[0], Size)
 		{}

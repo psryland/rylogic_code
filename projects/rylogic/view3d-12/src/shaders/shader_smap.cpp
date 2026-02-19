@@ -23,8 +23,8 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 
-	ShadowMap::ShadowMap(ID3D12Device* device)
-		:Shader()
+	ShadowMap::ShadowMap(Renderer& rdr)
+		:Shader(rdr)
 	{
 		m_code = ShaderCode
 		{
@@ -44,7 +44,7 @@ namespace pr::rdr12::shaders
 			.SRV(EReg::Pose, 1)
 			.SRV(EReg::Skin, 1)
 			.Samp(EReg::DiffTextureSampler, 1)
-			.Create(device, "ShadowMapSig");
+			.Create(rdr.d3d(), "ShadowMapSig");
 	}
 
 	// Config the shader

@@ -1,0 +1,8 @@
+// HLSL source for runtime compilation
+CORE_HLSLI                 TEXT    DISCARDABLE     "pr/hlsl/core.hlsli"
+VECTOR_HLSLI               TEXT    DISCARDABLE     "pr/hlsl/vector.hlsli"
+INTEROP_HLSLI              TEXT    DISCARDABLE     "pr/hlsl/interop.hlsli"
+GEOMETRY_HLSLI             TEXT    DISCARDABLE     "pr/hlsl/geometry.hlsli"
+INTERCEPT_HLSLI            TEXT    DISCARDABLE     "pr/hlsl/intercept.hlsli"
+CLOSEST_POINT_HLSLI        TEXT    DISCARDABLE     "pr/hlsl/closest_point.hlsli"
+CAMERA_HLSLI               TEXT    DISCARDABLE     "pr/hlsl/camera.hlsli"

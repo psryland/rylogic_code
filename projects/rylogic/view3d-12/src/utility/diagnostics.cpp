@@ -7,15 +7,10 @@
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/resource/resource_factory.h"
-//#include "pr/view3d-12/shaders/shader.h"
-//#include "pr/view3d-12/shaders/shader_set.h"
-//#include "pr/view3d-12/shaders/shdr_diagnostic.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_show_normals.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
-//#include "pr/view3d-12/util/stock_resources.h"
-//#include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
@@ -26,7 +21,7 @@ namespace pr::rdr12
 		,m_normal_lengths(0.1f)
 		,m_normal_colour(Colour32Purple)
 		,m_bboxes_visible(false)
-		,m_gs_fillmode_points(Shader::Create<shaders::PointSpriteGS>(v2(5.0f, 5.0f), false))
+		,m_gs_fillmode_points(Shader::Create<shaders::PointSpriteGS>(wnd.rdr(), v2(5.0f, 5.0f), false))
 	{}
 	Window& DiagState::wnd() const
 	{
@@ -47,7 +42,7 @@ namespace pr::rdr12
 		if (show)
 		{
 			// Get or create an instance of the ShowNormals shader
-			auto shdr = Shader::Create<shaders::ShowNormalsGS>();
+			auto shdr = Shader::Create<shaders::ShowNormalsGS>(model->rdr());
 
 			// Add a dependent nugget for each existing nugget that has vertex normals
 			ResourceFactory factory(model->rdr());
@@ -60,7 +55,7 @@ namespace pr::rdr12
 				auto ndesc = NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr)
 					.irange(RangeZero)
 					.id(ShowNormalsId)
-					.use_shader(ERenderStep::RenderForward, shdr);
+					.use_shader_overlay(ERenderStep::RenderForward, shdr);
 
 				auto& dep = *factory.CreateNugget(nug, model);
 				nug.m_nuggets.push_back(dep);

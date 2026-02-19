@@ -9,12 +9,24 @@
 
 namespace pr::rdr12
 {
-	Shader::Shader()
-		:RefCounted<Shader>()
-		,m_code()
-		,m_signature()
-	{}
-	
+	Shader::Shader(Renderer& rdr)
+		: RefCounted<Shader>()
+		, m_rdr(&rdr)
+		, m_code()
+		, m_signature()
+	{
+	}
+
+	// Renderer access
+	Renderer const& Shader::rdr() const
+	{
+		return *m_rdr;
+	}
+	Renderer& Shader::rdr()
+	{
+		return *m_rdr;
+	}
+		
 	// Sort id for the shader
 	SortKeyId Shader::SortId() const
 	{
@@ -26,6 +38,7 @@ namespace pr::rdr12
 	void Shader::RefCountZero(RefCounted<Shader>* doomed)
 	{
 		auto shdr = static_cast<Shader*>(doomed);
+		shdr->rdr().DeferRelease(shdr->m_signature);
 		shdr->Delete();
 	}
 	void Shader::Delete()

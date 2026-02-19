@@ -1030,7 +1030,7 @@ namespace pr::rdr12
 						depth = reader.Bool();
 						break;
 				}
-				return Shader::Create<shaders::PointSpriteGS>(radius, depth);
+				return Shader::Create<shaders::PointSpriteGS>(rdr(), radius, depth);
 			}
 
 			// Thick line params: *LineWidth {width}
@@ -1043,7 +1043,7 @@ namespace pr::rdr12
 						line_width = reader.Real<float>();
 						break;
 				}
-				return Shader::Create<shaders::ThickLineListGS>(line_width);
+				return Shader::Create<shaders::ThickLineListGS>(rdr(), line_width);
 			}
 
 			// Thick line params: *LineWidth {width}
@@ -1056,7 +1056,7 @@ namespace pr::rdr12
 						line_width = reader.Real<float>();
 						break;
 				}
-				return Shader::Create<shaders::ThickLineStripGS>(line_width);
+				return Shader::Create<shaders::ThickLineStripGS>(rdr(), line_width);
 			}
 
 			// Arrow params: *Size {size} *Depth {true|false}
@@ -1074,7 +1074,7 @@ namespace pr::rdr12
 						depth = reader.IsSectionEnd() ? true : reader.Bool();
 						break;
 				}
-				return Shader::Create<shaders::ArrowHeadGS>(size, depth);
+				return Shader::Create<shaders::ArrowHeadGS>(rdr(), size, depth);
 			}
 
 			default:

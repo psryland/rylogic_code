@@ -132,6 +132,8 @@ namespace pr::rdr12
 	void Model::RefCountZero(RefCounted<Model>* doomed)
 	{
 		auto mdl = static_cast<Model*>(doomed);
+		mdl->rdr().DeferRelease(mdl->m_vb);
+		mdl->rdr().DeferRelease(mdl->m_ib);
 		ResourceStore::Access store(mdl->rdr());
 		store.Delete(mdl);
 	}

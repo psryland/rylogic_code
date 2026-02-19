@@ -50,7 +50,7 @@ namespace pr::rdr12
 		, m_include([](auto){ return true; })
 		, m_cmd_list(scene.d3d(), nullptr, "RenderRayCast", EColours::BlanchedAlmond)
 		, m_gsync(scene.d3d())
-		, m_shader(scene.d3d())
+		, m_shader(scene.rdr())
 		, m_zero()
 		, m_out()
 		, m_readback(m_gsync, SOBufferCount * sizeof(Intercept))
@@ -355,6 +355,58 @@ namespace pr::rdr12
 		return output;
 	}
 
+	// Draw a single nugget
+	void RenderRayCast::DrawNugget(Nugget const& nugget, PipeStateDesc& desc)
+	{
+		// Resolve the effective fill mode: per-nugget override wins, else scene-level
+		auto fill_mode = nugget.FillMode() != EFillMode::Default
+			? nugget.FillMode()
+			: scn().FillMode();
+
+		// Render with solid or wire fill mode
+		if (fill_mode == EFillMode::Default ||
+			fill_mode == EFillMode::Solid ||
+			fill_mode == EFillMode::Wireframe ||
+			fill_mode == EFillMode::SolidWire)
+		{
+			// Apply the D3D12 fill mode to the PSO when wireframe is requested
+			// For ray casting, we can ignore the second pass for SolidWire.
+			if (fill_mode == EFillMode::Wireframe)
+				desc.Apply(PSO<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME));
+
+			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
+			if (nugget.m_irange.empty())
+			{
+				m_cmd_list.DrawInstanced(
+					s_cast<size_t>(nugget.m_vrange.size()), 1U,
+					s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
+			}
+			else
+			{
+				m_cmd_list.DrawIndexedInstanced(
+					s_cast<size_t>(nugget.m_irange.size()), 1U,
+					s_cast<size_t>(nugget.m_irange.m_beg), 0, 0U);
+			}
+		}
+
+		// Render points for 'Points' mode
+		if (fill_mode == EFillMode::Points)
+		{
+			// Configure the shader for point sprites
+			// Don't need 'dle' if the points aren't in screen space
+			wnd().m_diag.m_gs_fillmode_points->SetupElement(m_cmd_list.get(), m_upload_buffer, scn(), nullptr);
+
+			// Change the pipe state to point list
+			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList)));
+			desc.Apply(PSO<EPipeState::GS>(wnd().m_diag.m_gs_fillmode_points->m_code.GS));
+			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
+
+			m_cmd_list.DrawInstanced(
+				s_cast<size_t>(nugget.m_vrange.size()), 1U,
+				s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
+		}
+	}
+
 	// Process ray cast results from a readback buffer and invoke the callback
 	void RenderRayCast::ProcessResults(GpuTransferAllocation& output, RayCastResultsOut cb)
 	{
@@ -467,66 +519,5 @@ namespace pr::rdr12
 		// Invoke the callback with the results
 		if (cb && !m_results.empty())
 			cb(m_results);
-	}
-
-	// Draw a single nugget
-	void RenderRayCast::DrawNugget(Nugget const& nugget, PipeStateDesc& desc)
-	{
-		// Render solid or wireframe nuggets
-		auto fill_mode = nugget.FillMode();
-		if (fill_mode == EFillMode::Default ||
-			fill_mode == EFillMode::Solid ||
-			fill_mode == EFillMode::Wireframe ||
-			fill_mode == EFillMode::SolidWire)
-		{
-			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
-			if (nugget.m_irange.empty())
-			{
-				m_cmd_list.DrawInstanced(
-					s_cast<size_t>(nugget.m_vrange.size()), 1U,
-					s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
-			}
-			else
-			{
-				m_cmd_list.DrawIndexedInstanced(
-					s_cast<size_t>(nugget.m_irange.size()), 1U,
-					s_cast<size_t>(nugget.m_irange.m_beg), 0, 0U);
-			}
-		}
-
-		// Render wire frame over solid for 'SolidWire' mode
-		if (!nugget.m_irange.empty() && fill_mode == EFillMode::SolidWire && (
-			nugget.m_topo == ETopo::TriList ||
-			nugget.m_topo == ETopo::TriListAdj ||
-			nugget.m_topo == ETopo::TriStrip ||
-			nugget.m_topo == ETopo::TriStripAdj))
-		{
-			// Change the pipe state to wireframe
-			auto prev_fill_mode = desc.Get<EPipeState::FillMode>();
-			desc.Apply(PSO<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME));
-			desc.Apply(PSO<EPipeState::BlendState0>({FALSE}));
-			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
-
-			m_cmd_list.DrawIndexedInstanced(
-				s_cast<size_t>(nugget.m_irange.size()), 1U,
-				s_cast<size_t>(nugget.m_irange.m_beg), 0, 0U);
-
-			// Restore it
-			desc.Apply(PSO<EPipeState::FillMode>(prev_fill_mode));
-		}
-
-		// Render points for 'Points' mode
-		if (fill_mode == EFillMode::Points)
-		{
-			// Change the pipe state to point list
-			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList)));
-			desc.Apply(PSO<EPipeState::GS>(wnd().m_diag.m_gs_fillmode_points->m_code.GS));
-			//todo scn().m_diag.m_gs_fillmode_points->Setup();
-			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
-
-			m_cmd_list.DrawInstanced(
-				s_cast<size_t>(nugget.m_vrange.size()), 1U,
-				s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
-		}
 	}
 }

@@ -7,6 +7,7 @@
 	<PropertyGroup>
 		<RylogicRoot>$(MSBuildThisFileDirectory)</RylogicRoot>
 		<ScriptPath>$(MSBuildThisFileDirectory)script\</ScriptPath>
+		<ToolsPath>$(MSBuildThisFileDirectory)tools\</ToolsPath>
 		<PropsPath>$(MSBuildThisFileDirectory)build\props\</PropsPath>
 		<TargetsPath>$(MSBuildThisFileDirectory)build\targets\</TargetsPath>
 		<PackagesPath>$(MSBuildThisFileDirectory)packages\</PackagesPath>

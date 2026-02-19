@@ -145,5 +145,13 @@ namespace pr
 		assert(uintptr_t(x.data()) % alignof(T) == 0 && "byte span alignment is not valid for 'T'");
 		return std::span<T>(reinterpret_cast<T*>(x.data()), x.size_bytes() / sizeof(T));
 	}
+
+	// Convert from aligned storage to a type 'T'
+	template <typename T> inline T& storage_cast(std::span<std::byte> storage)
+	{
+		assert(storage.size() >= sizeof(T) && "Storage is too small for type 'T'");
+		assert(uintptr_t(storage.data()) % alignof(T) == 0 && "Storage alignment is not valid for type 'T'");
+		return *reinterpret_cast<T*>(storage.data());
+	}
 }
 

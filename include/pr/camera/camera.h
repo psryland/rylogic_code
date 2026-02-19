@@ -93,8 +93,9 @@ namespace pr::camera
 		RotY           = 1 << 4,
 		RotZ           = 1 << 5,
 		Zoom           = 1 << 6,
-		All            = (1 << 7) - 1, // Not including camera relative
-		CameraRelative = 1 << 7,
+		FocusDistance  = 1 << 7,
+		All            = (1 << 8) - 1, // Not including camera relative
+		CameraRelative = 1 << 8,
 		Translation    = TransX | TransY | TransZ,
 		Rotation       = RotX | RotY | RotZ,
 		_flags_enum = 0,
@@ -121,9 +122,11 @@ namespace pr
 	struct Camera
 	{
 		// Note:
-		// The camera does not contain any info about the size of the screen
-		// that the camera view is on. Therefore, there are no screen space to normalised
-		// screen space methods in here. You need the Window for that.
+		//  - The camera does not contain any info about the size of the screen
+		//    that the camera view is on. Therefore, there are no screen space to normalised
+		//    screen space methods in here. You need the Window for that.
+		//  - Don't change member variables directly, use the methods provided. This allows the camera to maintain
+		//    a consistent state and update the 'moved' flag when necessary.
 
 		struct NavState
 		{
@@ -598,6 +601,10 @@ namespace pr
 			if (!IsFinite(dist) || dist < maths::tinyd)
 				throw std::runtime_error("'dist' should not be negative");
 
+			// Ignore if locked
+			if (AllSet(m_lock_mask, ELockMask::FocusDistance))
+				return;
+
 			EnforceBounds();
 			m_moved |= dist != m_focus_dist;
 			m_focus_dist = dist;
@@ -873,8 +880,9 @@ namespace pr
 					zoom *= m_accuracy_scale;
 			}
 
-			m_fovY = (1.0 + zoom) * m_nav.m_fovY0;
-			m_fovY = Clamp(m_fovY, maths::tinyd, maths::tau_by_2 - maths::tinyd);
+			auto fovY = (1.0 + zoom) * m_nav.m_fovY0;
+			fovY = Clamp(m_fovY, maths::tinyd, maths::tau_by_2 - maths::tinyd);
+			FovY(fovY);
 
 			// Set the base values
 			if (commit)
@@ -895,7 +903,7 @@ namespace pr
 		void ResetZoom()
 		{
 			m_moved = true;
-			m_fovY = m_default_fovY;
+			FovY(m_default_fovY);
 		}
 
 		// Set the current position, FOV, and focus distance as the position reference

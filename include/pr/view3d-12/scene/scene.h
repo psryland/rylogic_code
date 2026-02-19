@@ -39,17 +39,18 @@ namespace pr::rdr12
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
 		using RenderRayCastPtr = std::unique_ptr<RenderRayCast>;
 		
-		Window*          m_wnd;           // The controlling window
-		SceneCamera      m_cam;           // Represents the camera properties used to project onto the screen
-		Viewport         m_viewport;      // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
-		InstCont         m_instances;     // Instances added to this scene for rendering.
-		RenderStepCont   m_render_steps;  // The stages of rendering the scene
-		RenderRayCastPtr m_raycast_immed; // A ray cast render step for performing immediate hit tests
-		RenderRayCastPtr m_raycast_async; // A ray cast render step for performing async hit tests
-		Light            m_global_light;  // The global light settings
-		TextureCubePtr   m_global_envmap; // A global environment map
-		PipeStates       m_pso;           // Scene-wide pipe state overrides
-		AutoSub          m_eh_resize;     // RT resize event handler subscription
+		Window*          m_wnd;              // The controlling window
+		SceneCamera      m_cam;              // Represents the camera properties used to project onto the screen
+		Viewport         m_viewport;         // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
+		InstCont         m_instances;        // Instances added to this scene for rendering.
+		RenderStepCont   m_render_steps;     // The stages of rendering the scene
+		RenderRayCastPtr m_raycast_immed;    // A ray cast render step for performing immediate hit tests
+		RenderRayCastPtr m_raycast_async;    // A ray cast render step for performing async hit tests
+		Light            m_global_light;     // The global light settings
+		TextureCubePtr   m_global_envmap;    // A global environment map
+		EFillMode        m_global_fill_mode; // A scene-wide fill mode override. EFillMode::Default means "use the model's default"
+		PipeStates       m_pso;              // Scene-wide pipe state overrides
+		AutoSub          m_eh_resize;        // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::RenderForward}, SceneCamera const& cam = SceneCamera{});
 		~Scene();
@@ -104,6 +105,14 @@ namespace pr::rdr12
 		// Enable/Disable shadow casting
 		void ShadowCasting(bool enable, int shadow_map_size);
 
+		// Get/Set the scene-wide fill mode default.
+		EFillMode FillMode() const;
+		void FillMode(EFillMode fill_mode);
+
+		// Get/Set the scene-wide cull mode default.
+		ECullMode CullMode() const;
+		void CullMode(ECullMode cull_mode);
+
 		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
 		// Snap distance depends on the snap mode. If 'snap_mode' is 'Perspective', then 'snap_distance' is actually the ratio proportional to depth.
@@ -118,7 +127,7 @@ namespace pr::rdr12
 
 		// Render the scene, recording the command lists in 'frame'
 		void Render(Frame& frame);
-
+	
 	private:
 
 		friend struct Window;
