@@ -6,7 +6,6 @@
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/types/vector2.h"
 #include "pr/math_new/types/vector3.h"
-// No non-standard dependencies outside of './'
 
 namespace pr::math
 {
@@ -107,7 +106,7 @@ namespace pr::math
 			return Vec3<S>{arr[i0], arr[i1], arr[i2]};
 		}
 
-		// Basic constants
+		// Constants
 		static constexpr Vec4 Zero()
 		{
 			return Vec4(S(0), S(0), S(0), S(0));

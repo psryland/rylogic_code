@@ -1186,6 +1186,24 @@
     <ClInclude Include="..\..\..\include\pr\common\task_graph.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix2x2_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix3x4_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix4x4_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector3_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector4_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector8_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">

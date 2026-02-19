@@ -397,8 +397,14 @@
     <ClInclude Include="..\..\..\include\pr\math_new\core\functions.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\core\traits.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\all_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix2x2_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix3x4_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix4x4_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\quaternion_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector3_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector4_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector8_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\vector_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\matrix.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\matrix2x2.h" />
