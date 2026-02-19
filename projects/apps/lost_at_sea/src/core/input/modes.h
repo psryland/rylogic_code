@@ -28,35 +28,57 @@ namespace las::input
 		virtual void HandleKeyEvent(KeyEventArgs& args) = 0;
 		virtual void HandleMouseEvent(MouseEventArgs& args) = 0;
 		virtual void HandleWheelEvent(MouseWheelArgs& args) = 0;
+
+		// Per-frame update for continuous actions (called after event processing)
+		virtual void Update(float dt) = 0;
 	};
 
 	struct Mode_FreeCamera : IMode
 	{
 		// Mouse state
-		v2 m_mouse_pos;        // Current normalised mouse position [-1,1]
-		v2 m_mouse_ref;        // Mouse position at the start of a drag
+		v2 m_mouse_pos;        // Current mouse position (client pixels)
+		v2 m_mouse_ref_lb;     // Mouse position at the start of a drag of Left button down
+		v2 m_mouse_ref_rb;     // Mouse position at the start of a drag of Right button down
 		bool m_rmb_down;       // Right mouse button held
 		bool m_lmb_down;       // Left mouse button held
 		bool m_mmb_down;       // Middle mouse button held
 
+		// Key state tracking for continuous movement
+		bool m_key_w;
+		bool m_key_s;
+		bool m_key_a;
+		bool m_key_d;
+		bool m_key_q;
+		bool m_key_e;
+
+		// Mouse look sensitivity (radians per pixel)
+		float m_mouse_sensitivity;
+
 		Mode_FreeCamera(InputHandler& ih);
-		EMode Mode() const;
+		EMode Mode() const override;
 		void HandleKeyEvent(KeyEventArgs& args) override;
 		void HandleMouseEvent(MouseEventArgs& args) override;
 		void HandleWheelEvent(MouseWheelArgs& args) override;
+		void Update(float dt) override;
 	};
 
 	struct Mode_ShipControl : IMode
 	{
-		void HandleKeyEvent(KeyEventArgs& args) override {}
-		void HandleMouseEvent(MouseEventArgs& args) override {}
-		void HandleWheelEvent(MouseWheelArgs& args) override {}
+		using IMode::IMode;
+		EMode Mode() const override { return EMode::ShipControl; }
+		void HandleKeyEvent(KeyEventArgs& args) override { (void)args; }
+		void HandleMouseEvent(MouseEventArgs& args) override { (void)args; }
+		void HandleWheelEvent(MouseWheelArgs& args) override { (void)args; }
+		void Update(float dt) override { (void)dt; }
 	};
 
 	struct Mode_MenuNavigation : IMode
 	{
-		void HandleKeyEvent(KeyEventArgs& args) override {}
-		void HandleMouseEvent(MouseEventArgs& args) override {}
-		void HandleWheelEvent(MouseWheelArgs& args) override {}
+		using IMode::IMode;
+		EMode Mode() const override { return EMode::MenuNavigation; }
+		void HandleKeyEvent(KeyEventArgs& args) override { (void)args; }
+		void HandleMouseEvent(MouseEventArgs& args) override { (void)args; }
+		void HandleWheelEvent(MouseWheelArgs& args) override { (void)args; }
+		void Update(float dt) override { (void)dt; }
 	};
 }

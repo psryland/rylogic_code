@@ -35,9 +35,9 @@ namespace las
 		})
 		, m_diag()
 	{
-		// Position the camera near the ship's spawn point, looking down at it
+		// Position the camera to see the ship at its high-point spawn (peak + 10m)
 		auto ship_pos = m_ship.m_body.O2W().pos;
-		auto eye = v4{ship_pos.x - 15, ship_pos.y, ship_pos.z + 10, 1};
+		auto eye = v4{ship_pos.x - 30, ship_pos.y - 20, ship_pos.z + 20, 1};
 		m_cam.FocusDist(10.0f);
 		m_cam.Near(0.01f, false);
 		m_cam.Far(7000.0f, false);
@@ -89,15 +89,8 @@ namespace las
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
 
-		// Input task: process player input via the input handler
-		m_step_graph.Add(StepTaskId::Input, [&, dt](auto&) -> pr::task_graph::Task {
-			m_input.Step(dt);
-			co_return;
-		});
-
-		// Physics task: step rigid bodies (depends on Input for camera/intent)
-		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto ctx) -> pr::task_graph::Task {
-			co_await ctx.Wait(StepTaskId::Input);
+		// Physics task: step rigid bodies
+		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto&) -> pr::task_graph::Task {
 			m_ship.Step(dt, m_ocean, m_height_field, static_cast<float>(m_sim_time));
 			co_return;
 		});
@@ -110,7 +103,6 @@ namespace las
 			m_day_cycle.Update(dt);
 
 			auto lock = m_sim_state.Lock();
-			lock->m_camera_pos = m_cam.CameraToWorld().pos;
 			lock->m_sim_time = m_sim_time;
 			lock->m_sun_direction = m_day_cycle.SunDirection();
 			lock->m_sun_colour = m_day_cycle.SunColour();
@@ -146,8 +138,8 @@ namespace las
 
 		// Read the latest simulation state snapshot
 		auto const& sim = m_sim_state.Read();
-		auto cam_pos = sim.m_camera_pos;
 		auto time = static_cast<float>(sim.m_sim_time);
+		auto cam_pos = m_cam.CameraToWorld().pos; // Current camera position (updated by input handler in render loop)
 		auto sun_dir = sim.m_sun_direction;
 		auto sun_col = sim.m_sun_colour;
 		auto sun_int = sim.m_sun_intensity;
@@ -243,14 +235,11 @@ namespace las
 
 			m_imgui.Separator();
 
-			// Task graph thread counts
-			*std::format_to(buf, "Step Threads: {}", m_step_graph.ThreadCount()) = 0;
-			m_imgui.Text(buf);
-			*std::format_to(buf, "Render Threads: {}", m_render_graph.ThreadCount()) = 0;
-			m_imgui.Text(buf);
 			*std::format_to(buf, "Terrain Patches: {}", m_terrain.PatchCount()) = 0;
 			m_imgui.Text(buf);
-			*std::format_to(buf, "Ocean Patches: {}", m_distant_ocean.PatchCount()) = 0;
+			*std::format_to(buf, "Input Queue: {}", m_input.EventCount()) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Cam Speed: {:.1f} m/s", m_camera->Speed()) = 0;
 			m_imgui.Text(buf);
 
 			m_imgui.Separator();
@@ -294,11 +283,25 @@ namespace las
 	MainUI::MainUI(wchar_t const*, int)
 		:base(Params().title(AppTitle()))
 	{
-		m_msg_loop.m_config.msgs_per_loop = 1;
+		// Drain all pending messages each frame so input is responsive
+		// (default is 1000, which is fine for real-time games)
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->SimStep(dt); });
-		m_msg_loop.AddLoop(120.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
+		m_msg_loop.AddLoop(60.0, false, [this](double dt)
+		{
+			if (!m_main) return;
+			
+			m_main->SimStep(dt);
+		});
+		m_msg_loop.AddLoop(120.0, true, [this](double dt)
+		{
+			if (!m_main) return;
+
+			// Process input in the render loop so the camera works even when the simulation is paused
+			m_main->m_input.Step(static_cast<float>(dt));
+			m_main->m_camera->Update(static_cast<float>(dt));
+			m_main->DoRender(true);
+		});
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
@@ -311,12 +314,10 @@ namespace las
 			return true;
 		}
 
-		// Forward to imgui first
-		if (m_main && m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam))
-		{
-			result = 0;
-			return true;
-		}
+		// Let imgui see all messages (for hover, panel interaction, etc.)
+		// but don't suppress game input — the game's input handler also needs them.
+		if (m_main)
+			m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam);
 
 		// On WM_CLOSE, tear down the renderer before the HWND is destroyed.
 		// DXGI's swap chain can post internal messages that starve WM_QUIT

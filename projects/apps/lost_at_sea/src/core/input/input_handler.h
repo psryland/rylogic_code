@@ -40,6 +40,9 @@ namespace las
 		input::EMode Mode() const;
 		void Mode(input::EMode mode);
 
+		// Number of buffered input events (for diagnostics)
+		size_t EventCount() const { return m_events.size(); }
+
 		// Sim step: process buffered input events and raise game actions as needed
 		void Step(float dt);
 

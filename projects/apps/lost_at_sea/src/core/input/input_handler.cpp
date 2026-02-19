@@ -56,13 +56,13 @@ namespace las
 				case 1: // MouseEventArgs
 				{
 					auto& args = std::get<MouseEventArgs>(event);
-					(void)args; //todo
+					MouseEventDispatch(args);
 					break;
 				}
 				case 2: // MouseWheelArgs
 				{
 					auto& args = std::get<MouseWheelArgs>(event);
-					(void)args; //todo
+					WheelEventDispatch(args);
 					break;
 				}
 			}
@@ -70,6 +70,9 @@ namespace las
 
 		// Reset the event buffer for the next frame
 		m_events.resize(0);
+
+		// Let the active mode emit continuous actions (held keys, etc.)
+		m_mode->Update(dt);
 	}
 
 	// Process a key events and raise game actions as needed

@@ -13,7 +13,7 @@ namespace las::input
 		CycleCameraMode,
 		ToggleDiagnostics,
 
-		// free camera
+		// Free camera
 		FreeCamera_MoveForward,
 		FreeCamera_MoveBack,
 		FreeCamera_MoveLeft,
@@ -22,6 +22,8 @@ namespace las::input
 		FreeCamera_MoveDown,
 		FreeCamera_SpeedUp,
 		FreeCamera_SlowDown,
+		FreeCamera_Yaw,
+		FreeCamera_Pitch,
 
 		// Ship control (stub)
 		Ship_Accelerate,
@@ -40,6 +42,7 @@ namespace las::input
 	struct Action
 	{
 		EAction m_action; // The action being raised
-		float m_axis; // Normalised axis value. Range [-1, +1]
+		float m_axis;     // Normalised axis value or rotation amount (radians)
+		float m_dt;       // Time step for continuous actions (seconds)
 	};
 }
