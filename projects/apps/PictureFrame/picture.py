@@ -352,6 +352,9 @@ class PictureFrame:
 		# Start periodic resource monitoring (every 60 seconds)
 		self._ScheduleResourceMonitor()
 
+		# Keep the network share alive by periodically touching it
+		self._ScheduleMountKeepalive()
+
 		# Wait for the image directory to become available (e.g. network share mounted)
 		self._WaitForImageDir()
 		self.window.mainloop()
@@ -981,6 +984,25 @@ class PictureFrame:
 	def _ScheduleResourceMonitor(self):
 		self._LogResourceStatus()
 		self.resource_monitor_after_id = self.window.after(60_000, self._ScheduleResourceMonitor)
+		return
+
+	# Periodically touch the network share to prevent CIFS/SMB idle disconnects
+	def _ScheduleMountKeepalive(self):
+		keepalive_interval_ms = self.config.get('MountKeepaliveMinutes', 2) * 60 * 1000
+		thread = threading.Thread(target=self._MountKeepaliveWorker, daemon=True)
+		thread.start()
+		self.window.after(keepalive_interval_ms, self._ScheduleMountKeepalive)
+		return
+
+	def _MountKeepaliveWorker(self):
+		try:
+			if self.image_dir.is_dir():
+				os.listdir(self.image_dir)
+				self.log.debug(f"Mount keepalive: {self.image_dir} OK")
+			else:
+				self.log.debug(f"Mount keepalive: {self.image_dir} not accessible")
+		except Exception as e:
+			self.log.warning(f"Mount keepalive failed: {e}")
 		return
 
 	def _LogResourceStatus(self):
