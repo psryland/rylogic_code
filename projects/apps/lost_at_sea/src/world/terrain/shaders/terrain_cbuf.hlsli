@@ -36,7 +36,7 @@ cbuffer CBufTerrain :reg(b3,0)
 	// Weather params: x=warp_freq, y=warp_strength, z=ridge_threshold, w=macro_freq
 	float4 m_weather_params;
 
-	// Beach params: x=beach_height, y=macro_scale_min, z=macro_scale_max, w=unused
+	// Beach params: x=beach_height, y=macro_scale_min, z=macro_scale_max, w=underwater_smooth_depth
 	float4 m_beach_params;
 };
 

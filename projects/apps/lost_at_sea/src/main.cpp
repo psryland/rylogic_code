@@ -72,6 +72,10 @@ namespace las
 			ui.Separator();
 			ui.Text("-- Beach --");
 			ui.SliderFloat("Beach Height", &tuning.m_beach_height, 5.0f, 200.0f);
+
+			ui.Separator();
+			ui.Text("-- Underwater --");
+			ui.SliderFloat("Smooth Depth", &tuning.m_underwater_smooth_depth, 10.0f, 200.0f);
 		});
 	}
 	Main::~Main()

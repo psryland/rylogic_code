@@ -32,6 +32,9 @@ namespace las
 
 		// Beach flattening
 		float m_beach_height = 80.0f;
+
+		// Underwater smoothing: depth (m below sea level) at which fine detail is fully removed
+		float m_underwater_smooth_depth = 60.0f;
 	};
 
 	struct TerrainShader : rdr12::Shader
