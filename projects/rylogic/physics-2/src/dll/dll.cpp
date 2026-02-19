@@ -46,7 +46,7 @@ PHYSICS_API DllHandle __stdcall Physics_Initialise(ReportErrorCB global_error_cb
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static DllHandle handles = nullptr;
-		g_ctx->m_inits.insert(++handles);
+		Dll().m_inits.insert(++handles);
 		return handles;
 	}
 	catch (std::exception const& e)
@@ -64,8 +64,8 @@ PHYSICS_API void __stdcall Physics_Shutdown(DllHandle context)
 {
 	if (!g_ctx) return;
 
-	g_ctx->m_inits.erase(context);
-	if (!g_ctx->m_inits.empty())
+	Dll().m_inits.erase(context);
+	if (!Dll().m_inits.empty())
 		return;
 
 	delete g_ctx;

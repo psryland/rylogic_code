@@ -12,13 +12,13 @@ namespace pr::camera
 	// A "WASD" camera controller
 	struct WASDCtrller
 	{
-		pr::Camera*          m_cam;      // The camera being controlled
+		pr::Camera* m_cam;      // The camera being controlled
 		pr::dinput::Keyboard m_kb;       // DInput keyboard device
 		pr::dinput::Mouse    m_mouse;    // DInput mouse device
 		pr::IRect            m_area;     // The screen resolution in pixels
 		pr::v4               m_heading;  // The direction of 'forward'
 		pr::v4               m_velocity; // The forward velocity
-			
+
 		// Tuning values
 		float m_max_lvel;     // The maximum linear velocity (m/s)
 		float m_accel_time;   // The time it takes to get to maximum velocity (s)
@@ -26,36 +26,36 @@ namespace pr::camera
 		float m_turn_speed;   // The rate of keyboard turning
 		float m_pan_speed;    // The rate of camera panning
 		float m_zoom_speed;   // The rate of zoom in/out using the wheel
-			
+
 		WASDCtrller(pr::Camera& cam, HINSTANCE app_inst, HWND hwnd, pr::IRect const& area)
-		:m_cam(&cam)
-		,m_kb(pr::dinput::DeviceSettings(app_inst, hwnd, pr::dinput::EDeviceClass::Keyboard))
-		,m_mouse(pr::dinput::DeviceSettings(app_inst, hwnd, pr::dinput::EDeviceClass::Mouse))
-		,m_area(area)
-		,m_heading(pr::v4ZAxis)
-		,m_velocity(pr::v4Zero)
-		,m_max_lvel(10.0f)
-		,m_accel_time(0.5f)
-		,m_drag_time(1.0f)
-		,m_turn_speed(1.0f)
-		,m_pan_speed(0.5f)
-		,m_zoom_speed(0.5f)
+			:m_cam(&cam)
+			, m_kb(pr::dinput::DeviceSettings(app_inst, hwnd, pr::dinput::EDeviceClass::Keyboard))
+			, m_mouse(pr::dinput::DeviceSettings(app_inst, hwnd, pr::dinput::EDeviceClass::Mouse))
+			, m_area(area)
+			, m_heading(pr::v4ZAxis)
+			, m_velocity(pr::v4Zero)
+			, m_max_lvel(10.0f)
+			, m_accel_time(0.5f)
+			, m_drag_time(1.0f)
+			, m_turn_speed(1.0f)
+			, m_pan_speed(0.5f)
+			, m_zoom_speed(0.5f)
 		{
 			m_cam->Align(pr::v4YAxis);
 		}
-			
+
 		void Step(float dt)
 		{
 			// Sample the dinput devices
 			// Not using pr::Failed here as it spams the output window
 			if (m_kb.Sample() != DI_OK || m_mouse.Sample() != DI_OK)
 				return;
-				
+
 			//OutputDebugString(pr::FmtS("mousex: %d  mousey: %d  mousez:  %d\n" ,m_mouse.dx() ,m_mouse.dy() ,m_mouse.dz()));
-				
+
 			// Right mouse controls heading, left controls view direction
-			bool lbtn  = m_mouse.btn(pr::dinput::Mouse::Left );
-			bool rbtn  = m_mouse.btn(pr::dinput::Mouse::Right);
+			bool lbtn = m_mouse.btn(pr::dinput::Mouse::Left);
+			bool rbtn = m_mouse.btn(pr::dinput::Mouse::Right);
 			if (lbtn || rbtn)
 			{
 				pr::v2 mv = pr::v2(
@@ -65,10 +65,10 @@ namespace pr::camera
 				m_cam->MouseControl(mv, ENavOp::Rotate, false);
 				m_cam->MouseControl(mv, ENavOp::None, true);
 			}
-				
+
 			// Mouse wheel controls zoom
 			m_cam->Translate(0.0f, 0.0f, 0.01f * m_zoom_speed * m_mouse.dz(), true);
-				
+
 			// Camera focus point acceleration
 			pr::v4 lin_acc = pr::v4Zero; float rot = 0.0f;
 			float lacc = m_max_lvel / m_accel_time; // The acceleration to use (m/s/s)
@@ -80,7 +80,7 @@ namespace pr::camera
 			if (m_kb.KeyDown(DIK_A)) rot -= turn;       // yaw left
 			if (m_kb.KeyDown(DIK_S)) lin_acc.z += lacc; // backward
 			if (m_kb.KeyDown(DIK_D)) rot += turn;       // yaw right
-				
+
 			// Decelerate if not accelerating
 			if (FEql(lin_acc, pr::v4Zero))
 			{
@@ -88,24 +88,24 @@ namespace pr::camera
 				if (vel < ldec * dt) lin_acc = -m_velocity;
 				else                 lin_acc = -m_velocity * (ldec * dt / vel);
 			}
-				
+
 			// Integrate acceleration
 			m_velocity += lin_acc * dt;
-				
+
 			// Limit velocities
 			float lvel_sq = LengthSq(m_velocity);
-			if      (lvel_sq < pr::maths::tinyf) m_velocity = pr::v4Zero;
+			if (lvel_sq < pr::maths::tinyf) m_velocity = pr::v4Zero;
 			else if (lvel_sq > m_max_lvel)      m_velocity *= m_max_lvel / pr::Sqrt(lvel_sq);
-				
+
 			// Integrate velocity
 			pr::v4 pos = m_cam->FocusPoint();
 			pos += (m_velocity + (0.5f * dt) * lin_acc) * dt;
 			m_cam->FocusPoint(pos);
-				
+
 			// Rotate heading
 			if (rot != 0.0f)
 				m_heading = m3x4::Rotation(v4YAxis, rot) * m_heading;
-				
+
 			//// Integrate the rate of change of orientation implied by m_avel
 			//// Note: rate of change of orientation is not the same as angular velocity
 			//// because integrating angular velocity does not give you orientation.
@@ -129,7 +129,7 @@ namespace pr::camera
 			//// Create the new camera to world transform
 			//c2w = pr::m4x4::make(pr::GetConjugate(w2c), pos);
 			//m_cam->CameraToWorld(pr::Orthonormalise(c2w), true);
-				
+
 			//OutputDebugString(pr::FmtS("pos: %f %f %f  vel: %f %f %f\n", pos.x, pos.y, pos.z, m_lvel.x, m_lvel.y, m_lvel.z));
 			//OutputDebugString(pr::FmtS("mx: %d  my: %d  mz: %d\n", m_mouse.dx() ,m_mouse.dy(), m_mouse.dz()));
 		}

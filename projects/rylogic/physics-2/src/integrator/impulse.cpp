@@ -36,11 +36,11 @@ namespace pr::physics
 		#if PR_DBG
 		auto rel_normal_velocity = Dot(c.m_velocity.LinAt(pt), c.m_axis);
 		assert("Point of contact is moving out of collision" && rel_normal_velocity <= 0);
-		Dump(c);
+		//Dump(c);
 		#endif
 
 		// rA = vector from objA origin to 'p'
-		auto rA = pt - v4Origin;
+		auto rA = pt - v4::Origin();
 
 		// rB = vector from objB origin to 'p'
 		auto rB = pt - c.m_b2a.pos;

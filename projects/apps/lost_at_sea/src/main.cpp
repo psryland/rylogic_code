@@ -4,22 +4,24 @@
 //************************************
 #include "src/forward.h"
 #include "src/main.h"
+#include "src/core/cameras/free_camera.h"
 #include "src/world/terrain/shaders/terrain_shader.h"
 
 namespace las
 {
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
+		, m_input()
+		, m_camera(new camera::FreeCamera(m_cam, m_input))
 		, m_sky(m_rdr)
 		, m_day_cycle()
 		, m_ocean(m_rdr)
 		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
-		, m_ship(m_rdr, m_ocean, v4::Origin())
+		, m_ship(m_rdr, m_height_field, v4::Origin())
 		, m_sim_state()
 		, m_sim_time(0.0)
-		, m_move_speed(20.0f)
 		, m_render_frame(0)
 		, m_step_graph(2)   // Step graph: small thread pool (input-heavy, will grow with physics/AI)
 		, m_render_graph(4) // Render graph: larger pool for parallel CB prep
@@ -33,12 +35,13 @@ namespace las
 		})
 		, m_diag()
 	{
-		// Position the camera: looking forward (+X) from above the ocean
+		// Position the camera near the ship's spawn point, looking down at it
+		auto ship_pos = m_ship.m_body.O2W().pos;
+		auto eye = v4{ship_pos.x - 15, ship_pos.y, ship_pos.z + 10, 1};
 		m_cam.FocusDist(10.0f);
 		m_cam.Near(0.01f, false);
 		m_cam.Far(7000.0f, false);
-		m_cam.LockMask(Camera::ELockMask::FocusDistance);
-		m_cam.LookAt(v4(-5, 0, 3, 1), v4(0, 0, 0, 1), v4(0, 0, 1, 0));
+		m_cam.LookAt(eye, ship_pos, v4(0, 0, 1, 0));
 		m_cam.Align(v4ZAxis);
 
 		// Watch for scene renders
@@ -81,36 +84,21 @@ namespace las
 	}
 
 	// Simulation step — builds and runs the step task graph
-	void Main::Step(double elapsed_seconds)
+	void Main::SimStep(double elapsed_seconds)
 	{
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
 
-		// Input task: process WASD movement
-		m_step_graph.Add(StepTaskId::Input, [&](auto&) -> pr::task_graph::Task {
-			auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
-			auto c2w = m_cam.CameraToWorld();
-			auto forward = -c2w.z;
-			auto right = c2w.x;
-			auto move = v4::Zero();
-			if (KeyDown('W')) move += forward;
-			if (KeyDown('S')) move -= forward;
-			if (KeyDown('D')) move += right;
-			if (KeyDown('A')) move -= right;
-			if (LengthSq(move) > 0)
-			{
-				move = Normalise(move) * speed * dt;
-				move.z = 0;
-				c2w.pos += move;
-				m_cam.CameraToWorld(c2w);
-			}
+		// Input task: process player input via the input handler
+		m_step_graph.Add(StepTaskId::Input, [&, dt](auto&) -> pr::task_graph::Task {
+			m_input.Step(dt);
 			co_return;
 		});
 
 		// Physics task: step rigid bodies (depends on Input for camera/intent)
 		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto ctx) -> pr::task_graph::Task {
 			co_await ctx.Wait(StepTaskId::Input);
-			m_ship.Step(dt, m_ocean, static_cast<float>(m_sim_time));
+			m_ship.Step(dt, m_ocean, m_height_field, static_cast<float>(m_sim_time));
 			co_return;
 		});
 
@@ -267,6 +255,13 @@ namespace las
 
 			m_imgui.Separator();
 
+			// Ship position
+			auto ship_pos = m_ship.m_body.O2W().pos;
+			*std::format_to(buf, "Ship: ({:.1f}, {:.1f}, {:.1f})", ship_pos.x, ship_pos.y, ship_pos.z) = 0;
+			m_imgui.Text(buf);
+
+			m_imgui.Separator();
+
 			// Render loop FPS (loop index 1 = variable-step render loop)
 			float fps_history[WinGuiMsgLoop::FpsHistory::Length];
 			m_ui.m_msg_loop.LoopFps(1).Fps<float>(fps_history);
@@ -302,7 +297,7 @@ namespace las
 		m_msg_loop.m_config.msgs_per_loop = 1;
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->Step(dt); });
+		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->SimStep(dt); });
 		m_msg_loop.AddLoop(120.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
 	}
 

@@ -78,7 +78,16 @@
   -->
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
+    <ClInclude Include="src\core\cameras\free_camera.h" />
+    <ClInclude Include="src\core\cameras\icamera.h" />
+    <ClInclude Include="src\core\input\actions.h" />
+    <ClInclude Include="src\core\input\input_handler.h" />
+    <ClInclude Include="src\core\input\modes.h" />
     <ClInclude Include="src\forward.h" />
+    <ClCompile Include="src\core\cameras\free_camera.cpp" />
+    <ClCompile Include="src\core\cameras\icamera.cpp" />
+    <ClCompile Include="src\core\input\input_handler.cpp" />
+    <ClCompile Include="src\core\input\modes.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\settings.h" />
@@ -92,6 +101,7 @@
     <ClCompile Include="src\world\ocean\shaders\distant_ocean_shader.cpp" />
     <ClInclude Include="src\world\ocean\shaders\distant_ocean_shader.h" />
     <ClCompile Include="src\world\terrain\height_field.cpp" />
+    <ClInclude Include="src\world\sky\day_night_cycle.h" />
     <ClInclude Include="src\world\terrain\height_field.h" />
     <ClCompile Include="src\world\terrain\terrain.cpp" />
     <ClInclude Include="src\world\terrain\terrain.h" />
@@ -99,7 +109,6 @@
     <ClInclude Include="src\world\terrain\shaders\terrain_shader.h" />
     <ClCompile Include="src\world\ship\ship.cpp" />
     <ClInclude Include="src\world\ship\ship.h" />
-    <ClInclude Include="src\core\day_night_cycle.h" />
     <ClInclude Include="src\diag\diag_ui.h" />
     <ClCompile Include="src\world\sky\procedural_sky.cpp" />
     <ClInclude Include="src\world\sky\procedural_sky.h" />

@@ -8,15 +8,15 @@
 #include "src/core/frame_tasks.h"
 #include "src/core/state_snapshot.h"
 #include "src/core/sim_state.h"
-#include "src/core/day_night_cycle.h"
-#include "src/world/sky/procedural_sky.h"
+#include "src/core/cameras/icamera.h"
+#include "src/core/input/input_handler.h"
 #include "src/world/ocean/ocean.h"
 #include "src/world/ocean/distant_ocean.h"
 #include "src/world/terrain/height_field.h"
 #include "src/world/terrain/terrain.h"
+#include "src/world/sky/procedural_sky.h"
+#include "src/world/sky/day_night_cycle.h"
 #include "src/world/ship/ship.h"
-#include "pr/view3d-12/imgui/imgui.h"
-#include "pr/common/task_graph.h"
 #include "src/diag/diag_ui.h"
 
 namespace las
@@ -26,8 +26,11 @@ namespace las
 	{
 		using base = pr::app::Main<Main, MainUI, Settings>;
 		using ImGuiUI = pr::rdr12::imgui::ImGuiUI;
+		using CameraPtr = std::shared_ptr<camera::ICamera>;
 		static char const* AppName() { return "LostAtSea"; }
 
+		InputHandler m_input;
+		CameraPtr m_camera;
 		ProceduralSky m_sky;
 		DayNightCycle m_day_cycle;
 		Ocean m_ocean;
@@ -40,7 +43,6 @@ namespace las
 		StateSnapshot<SimState> m_sim_state;
 
 		double m_sim_time;
-		float m_move_speed; // World units per second
 		int64_t m_render_frame;
 
 		// Task graphs for parallel execution
@@ -56,7 +58,7 @@ namespace las
 		Main(MainUI& ui);
 		~Main();
 
-		void Step(double elapsed_seconds);
+		void SimStep(double elapsed_seconds);
 		void DoRender(bool force = false);
 		void RenderUI(Frame& frame);
 		void UpdateScene(Scene& scene, UpdateSceneArgs const& args);
@@ -72,6 +74,30 @@ namespace las
 
 		// Override WndProc to forward messages to imgui
 		bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override;
+
+		// Override default mouse behaviour
+		void OnMouseButton(gui::MouseEventArgs& args) override
+		{
+			m_main->m_input.OnMouseButton(args);
+		}
+		void OnMouseClick(gui::MouseEventArgs& args) override
+		{
+			m_main->m_input.OnMouseClick(args);
+		}
+		void OnMouseMove(gui::MouseEventArgs& args) override
+		{
+			m_main->m_input.OnMouseMove(args);
+		}
+		void OnMouseWheel(gui::MouseWheelArgs& args) override
+		{
+			m_main->m_input.OnMouseWheel(args);
+		}
+
+		// Override default keyboard behaviour
+		void OnKey(KeyEventArgs& args) override
+		{
+			m_main->m_input.OnKey(args);
+		}
 	};
 }
 

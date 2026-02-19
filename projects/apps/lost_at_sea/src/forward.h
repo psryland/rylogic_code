@@ -5,8 +5,12 @@
 #pragma once
 
 // std
+#include <type_traits>
+#include <concepts>
+#include <string_view>
 #include <string>
 #include <filesystem>
+#include <variant>
 
 // Windows
 #include <windows.h>
@@ -20,13 +24,16 @@
 #include "pr/app/default_setup.h"
 #include "pr/app/skybox.h"
 #include "pr/common/keystate.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/resource.h"
+#include "pr/common/task_graph.h"
 #include "pr/geometry/p3d.h"
 #include "pr/storage/json.h"
 #include "pr/maths/perlin_noise.h"
 #include "pr/view3d-12/view3d.h"
 #include "pr/physics-2/physics.h"
 #include "pr/win32/win32.h"
+#include "pr/view3d-12/imgui/imgui.h"
 
 using namespace pr;
 
@@ -42,4 +49,21 @@ namespace las
 	struct Main;
 	struct MainUI;
 	struct Settings;
+	struct InputHandler;
+
+	namespace input
+	{
+		enum class EMode;
+		enum class EAction;
+
+		struct IMode;
+		struct Mode_FreeCamera;
+		struct Mode_ShipControl;
+		struct Mode_MenuNavigation;
+	}
+	namespace camera
+	{
+		struct ICamera;
+		struct FreeCamera;
+	}
 }
