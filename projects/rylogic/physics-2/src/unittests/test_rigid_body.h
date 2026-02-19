@@ -353,6 +353,67 @@ namespace pr::physics
 			auto ws_vel = rb.VelocityWS();
 			PR_EXPECT(FEql(ws_vel, v8motion{0, 0, 1, 1, 0, 0}));
 		}
+
+		PRUnitTestMethod(DzhanibekovEffect)
+		{
+			// The Dzhanibekov effect (intermediate axis theorem / tennis racket theorem):
+			// Rotation about the intermediate principal axis of inertia is unstable.
+			// A small perturbation causes the body to periodically flip 180°.
+			//
+			// Setup: A box with three distinct principal moments Iz < Iy < Ix,
+			// spinning about the intermediate axis (y), with a small perturbation.
+			// For half-extents (1, 2, 4):
+			//   Ix = (4+16)/3 ≈ 6.67, Iy = (1+16)/3 ≈ 5.67, Iz = (1+4)/3 ≈ 1.67
+			// The instability growth rate σ = ω₀√((Iy-Iz)(Ix-Iy)/(Iz·Ix)) ≈ 0.6·ω₀
+
+			auto mass = 1.0f;
+			auto rb = RigidBody{};
+			rb.SetMassProperties(Inertia::Box(v4{1, 2, 4, 0}, mass), v4{});
+
+			// Initial angular velocity: mainly about the intermediate y-axis,
+			// with a 10% perturbation to seed the instability.
+			auto omega0 = 10.0f;
+			auto perturbation = 0.1f * omega0;
+			rb.VelocityWS(v8motion{perturbation, omega0, perturbation, 0, 0, 0});
+
+			// Record initial conserved quantities
+			auto h0 = rb.MomentumWS();
+			auto ke0 = rb.KineticEnergy();
+
+			// Simulate with small timesteps, no external forces.
+			// With σ ≈ 6 rad/s and 10% perturbation, flips occur every ~0.8s.
+			auto dt = 0.001f;
+			auto total_time = 3.0f;
+			auto steps = static_cast<int>(total_time / dt);
+
+			auto flip_count = 0;
+			auto prev_omega_y = rb.VelocityOS().ang.y;
+
+			for (int i = 0; i < steps; ++i)
+			{
+				Evolve(rb, dt);
+
+				// Get angular velocity in the body frame
+				auto os_omega_y = rb.VelocityOS().ang.y;
+
+				// Check for sign change of intermediate axis component (a "flip")
+				if (prev_omega_y * os_omega_y < 0)
+					++flip_count;
+
+				prev_omega_y = os_omega_y;
+			}
+
+			// The Dzhanibekov effect: multiple flips should occur.
+			PR_EXPECT(flip_count >= 2);
+
+			// Angular momentum is exactly conserved (no forces → h_new = h_old each step)
+			auto h_final = rb.MomentumWS();
+			PR_EXPECT(FEql(h0, h_final));
+
+			// Kinetic energy should be approximately conserved (drift from discrete rotation updates)
+			auto ke_final = rb.KineticEnergy();
+			PR_EXPECT(FEqlRelative(ke0, ke_final, 0.01f));
+		}
 	};
 }
 #endif

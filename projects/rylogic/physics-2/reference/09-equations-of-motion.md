@@ -157,21 +157,24 @@ $$\frac{d\hat{\mathbf{h}}}{dt} = \hat{\mathbf{f}}_{ext}$$
 
 The velocity-dependent terms arise naturally from the fact that $\hat{\mathbf{v}} = \hat{I}^{-1}\hat{\mathbf{h}}$ and $\hat{I}$ changes with orientation. By using the midpoint inertia, these effects are captured implicitly.
 
+**Important**: The equation $\hat{\mathbf{f}} = \hat{I}\hat{\mathbf{a}} + \hat{\mathbf{v}} \times^{*} \hat{I}\hat{\mathbf{v}}$ is the **body-frame** formulation (Featherstone RBDA §2.5). In the **world frame**, where the integrator operates, the equivalent is simply $d\hat{\mathbf{h}}/dt = \hat{\mathbf{f}}$. The gyroscopic/Euler effects are embedded in the time-varying world-space inertia $\hat{I}_{WS}(t)$, not in an explicit correction term.
+
 ## Debug Energy Check
 
-In debug builds, Evolve verifies energy conservation:
+In debug builds, Evolve verifies energy conservation using the power formula:
 
 ```cpp
 #if PR_DBG
 auto ke_before = rb.KineticEnergy();
-auto ke_change = KineticEnergyChange(rb.ForceWS(), rb.MomentumWS(), rb.InertiaInvWS(), elapsed_seconds);
+// ... compute ws_velocity (mid-step), ws_force ...
+auto ke_change = Dot(ws_velocity, ws_force) * elapsed_seconds;
 // ... evolve ...
 auto ke_after = rb.KineticEnergy();
-assert(FEqlRelative(ke_before + ke_change, ke_after, 0.01f * elapsed_seconds));
+assert(FEqlRelative(ke_before + ke_change, ke_after, 0.1f * elapsed_seconds));
 #endif
 ```
 
-This catches integration errors: the kinetic energy after the step should equal the energy before plus the work done by forces.
+This catches integration errors: the kinetic energy after the step should equal the energy before plus the work done by external forces ($P = \hat{\mathbf{v}} \cdot \hat{\mathbf{f}}$). The tolerance accommodates the discrete approximation of the time-varying inertia, which introduces O($\Delta t^2$) error.
 
 ## Summary
 

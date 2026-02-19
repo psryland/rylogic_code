@@ -9,7 +9,9 @@
 
 namespace pr::physics
 {
-	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'
+	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'.
+	// Assumes constant inertia over the timestep. Exact for symmetric bodies (sphere, etc.) at
+	// the model origin. For the general case, KE change ≈ Dot(v_mid, f) * dt (power formula).
 	template <typename = void>
 	float KineticEnergyChange(v8force force, v8force momentum0, InertiaInv const& inertia_inv, float time_s)
 	{
@@ -37,24 +39,16 @@ namespace pr::physics
 	template <typename = void>
 	void Evolve(RigidBody& rb, float elapsed_seconds)
 	{
-		// Equation of Motion:
-		//   f = d(Iv)/dt = I*a + vx*.I.v
+		// World-frame equation of motion:
+		//   dh/dt = f
 		// where:
-		//   f = net spatial force acting
-		//   I = spatial inertia
-		//   v = spatial velocity
-		//   a = spatial acceleration
-		//   Iv = momentum (h)
-		//   x* = cross product for force spatial vectors
-		// So:
-		//   f = I*a + vx*.I.v
-		//   Iinv * f = a + Iinv * (vx*.I.v)
-		//   a = Iinv * f -  Iinv * (vx*.I.v)
-		// where:
-		//   Iinv = inverse inertia
-		// Note: The full equation for momentum at a body-fixed point is dh/dt = f - v×*h
-		// (gyroscopic correction). This is currently not included but should be added for
-		// bodies with CoM offset from the model origin in long-running simulations.
+		//   h = spatial momentum at the model origin (world coordinates)
+		//   f = net external spatial force at the model origin (world coordinates)
+		//
+		// Note: The body-frame equation is dh^B/dt = f^B - v^B ×* h^B (Featherstone RBDA).
+		// In the world frame, the gyroscopic/Euler effects are captured by the time-varying
+		// world-space inertia (which changes as the body rotates). The mid-step inertia
+		// refinement below handles this implicitly.
 
 		#if PR_DBG
 		auto ke_before = rb.KineticEnergy();
@@ -70,7 +64,7 @@ namespace pr::physics
 		auto ws_inertia_inv = rb.InertiaInvWS();
 		auto ws_momentum = rb.MomentumWS() + ws_force * elapsed_seconds * 0.5f;
 
-		// Refine ws_inertia_inv
+		// Refine ws_inertia_inv by estimating mid-step orientation
 		for (int i = 0; i != 1; ++i)
 		{
 			auto ws_velocity = ws_inertia_inv * ws_momentum;
@@ -79,15 +73,15 @@ namespace pr::physics
 			ws_inertia_inv = Rotate(ws_inertia_inv, do2w);
 		}
 
-		#if PR_DBG
-		// Compute KE change using the mid-step inertia for better accuracy
-		// when the 6x6 coupling changes with rotation
-		auto ke_change = KineticEnergyChange(ws_force, rb.MomentumWS(), ws_inertia_inv, elapsed_seconds);
-		#endif
-
-		// Apply the average momentum for the full step using the mid-step I
+		// Mid-step velocity using refined inertia
 		auto ws_velocity = ws_inertia_inv * ws_momentum;
 		auto dpos = ws_velocity * elapsed_seconds;
+
+		#if PR_DBG
+		// KE change ≈ power × time = Dot(v_mid, f) × dt.
+		// This is second-order accurate for the midpoint scheme.
+		auto ke_change = Dot(ws_velocity, ws_force) * elapsed_seconds;
+		#endif
 
 		// Update the position/orientation and momentum
 		// 'dpos' is in world space, but is object relative so it cannot be applied as a single transform
