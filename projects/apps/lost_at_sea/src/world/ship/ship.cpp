@@ -65,10 +65,12 @@ namespace las
 		pr::physics::Evolve(m_body, dt);
 	}
 
-	void Ship::PrepareRender(v4)
+	void Ship::PrepareRender(v4 camera_world_pos)
 	{
-		// Sync the graphics instance transform with the physics body
-		m_inst.m_i2w = m_body.O2W();
+		// Camera-relative rendering: subtract camera position from world position
+		auto o2w = m_body.O2W();
+		o2w.pos.xyz -= camera_world_pos.xyz;
+		m_inst.m_i2w = o2w;
 	}
 
 	void Ship::AddToScene(Scene& scene)

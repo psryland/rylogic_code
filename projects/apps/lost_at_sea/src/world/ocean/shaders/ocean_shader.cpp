@@ -30,7 +30,7 @@ namespace las
 		, m_ps_bytecode()
 		, m_cbuf()
 	{
-		static_assert(sizeof(shaders::ocean::CBufOcean) <= sizeof(m_cbuf), "CBufOcean exceeds m_cbuf storage");
+		static_assert(sizeof(shaders::ocean::CBufOcean) == sizeof(m_cbuf), "CBufOcean exceeds m_cbuf storage");
 
 		// Compile the shader
 		auto compiler = ShaderCompiler{}

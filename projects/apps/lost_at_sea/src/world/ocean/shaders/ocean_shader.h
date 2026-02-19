@@ -19,7 +19,7 @@ namespace las
 		std::vector<uint8_t> m_ps_bytecode;
 
 		// Ocean constant buffer data, updated each frame
-		alignas(16) std::byte m_cbuf[288];
+		alignas(16) std::byte m_cbuf[272];
 
 		explicit OceanShader(Renderer& rdr);
 

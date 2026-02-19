@@ -13,7 +13,7 @@ namespace las
 		std::vector<uint8_t> m_vs_bytecode;
 		std::vector<uint8_t> m_ps_bytecode;
 
-		alignas(16) std::byte m_cbuf[256];
+		alignas(16) std::byte m_cbuf[128];
 
 		explicit DistantOceanShader(Renderer& rdr);
 

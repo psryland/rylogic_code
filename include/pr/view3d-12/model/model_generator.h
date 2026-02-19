@@ -466,6 +466,9 @@ namespace pr::rdr12
 			}
 			~Cache()
 			{
+				// Release resource references (RefPtrs) held by NuggetDescs.
+				// Vertex/index buffers are POD and can stay pooled.
+				m_buffers.m_ncont.clear();
 				m_buffers.m_in_use = false;
 			}
 			Cache(Cache&& rhs) = delete;

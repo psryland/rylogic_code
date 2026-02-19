@@ -39,6 +39,7 @@
 #include <exception>
 #include <cassert>
 #include <type_traits>
+#include <memory>
 #include <format>
 
 namespace pr::task_graph
@@ -235,6 +236,13 @@ namespace pr::task_graph
 			// Exception captured from the coroutine
 			std::exception_ptr m_exception;
 
+			// Extends the lifetime of the lambda closure passed to Graph::Add().
+			// Lambda coroutines access captures through the closure's implicit 'this' pointer,
+			// which is stored in the coroutine frame. Since initial_suspend is suspend_always,
+			// the coroutine body doesn't run during Add(), so the lambda must be kept alive
+			// until the coroutine completes to prevent dangling access to captures.
+			std::shared_ptr<void> m_keep_alive;
+
 			// Get the Task object from the promise
 			Task get_return_object()
 			{
@@ -388,8 +396,14 @@ namespace pr::task_graph
 		template <typename Fn>
 		void Add(TaskId id, Fn&& fn)
 		{
+			// Pin the callable on the heap so it outlives the coroutine.
+			auto pinned = std::make_shared<std::decay_t<Fn>>(std::forward<Fn>(fn));
+
 			auto ctx = Context<TaskId>(this);
-			auto task = fn(ctx);
+			auto task = (*pinned)(ctx);
+
+			// Keep the lambda alive in the promise until the coroutine frame is destroyed
+			task.m_handle.promise().m_keep_alive = pinned;
 
 			// Set the completion callback: collect exceptions, signal the task's ID, and decrement pending count
 			task.m_handle.promise().m_on_complete = [this, id](Task::promise_type& promise)

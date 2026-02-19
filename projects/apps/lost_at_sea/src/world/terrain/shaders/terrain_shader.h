@@ -43,7 +43,7 @@ namespace las
 
 		// Terrain constant buffer data. Shared parameters set in SetupFrame,
 		// per-patch morph range overridden in SetupElement.
-		alignas(16) std::byte m_cbuf[256];
+		alignas(16) std::byte m_cbuf[128];
 
 		// Tunable parameters, modifiable via the diagnostic UI
 		TerrainTuning m_tuning;

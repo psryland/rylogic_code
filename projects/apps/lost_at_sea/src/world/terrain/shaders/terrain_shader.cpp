@@ -32,7 +32,7 @@ namespace las
 		, m_cbuf()
 		, m_tuning()
 	{
-		static_assert(sizeof(shaders::terrain::CBufTerrain) <= sizeof(m_cbuf), "CBufTerrain exceeds m_cbuf storage");
+		static_assert(sizeof(shaders::terrain::CBufTerrain) == sizeof(m_cbuf), "CBufTerrain exceeds m_cbuf storage");
 
 		// Compile the shader
 		auto compiler = ShaderCompiler{}
