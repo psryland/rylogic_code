@@ -239,17 +239,20 @@ int main()
 		std::atomic<bool> response_received = false;
 		std::string response_text;
 
+		struct StimCtx { std::atomic<bool>* received; std::string* text; };
+		StimCtx stim_ctx = { &response_received, &response_text };
+
 		speaker.agent.Stimulate(stimulus.c_str(),
 			[](void* user_ctx, ChatResult const& result)
 			{
-				auto& [received, text] = *static_cast<std::pair<std::atomic<bool>*, std::string*>*>(user_ctx);
+				auto& sc = *static_cast<StimCtx*>(user_ctx);
 				if (result.m_success)
-					*text = std::string(result.m_response, result.m_response_len);
+					*sc.text = std::string(result.m_response, result.m_response_len);
 				else
-					*text = std::format("[Error: {}]", result.m_error ? result.m_error : "unknown");
-				received->store(true);
+					*sc.text = std::format("[Error: {}]", result.m_error ? result.m_error : "unknown");
+				sc.received->store(true);
 			},
-			new std::pair<std::atomic<bool>*, std::string*>(&response_received, &response_text));
+			&stim_ctx);
 
 		// Wait for this response
 		while (!response_received.load())
