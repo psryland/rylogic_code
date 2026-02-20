@@ -106,7 +106,13 @@ The `cex` utility provides GUI automation commands that Copilot can use to inter
 & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe" `
     projects/tools/cex/cex.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /nologo /verbosity:minimal
 ```
-The built executable is at `projects/tools/cex/obj/x64/Release/cex.exe`.
+The built executable is at `projects/tools/cex/obj/x64/Release/cex.exe`. A deployed copy is at `C:\Tools\cex\cex.exe`.
+
+**To discover all available commands and their options**, run:
+```powershell
+Start-Process "C:\Tools\cex\cex.exe" -ArgumentList "-rtfm" -RedirectStandardOutput "dump\cex-manual.md" -Wait -NoNewWindow
+```
+Then read `dump\cex-manual.md` for complete markdown documentation of every command.
 
 Because cex is a GUI-subsystem app, always invoke it via `Start-Process` with `-RedirectStandardOutput` to capture output:
 ```powershell
