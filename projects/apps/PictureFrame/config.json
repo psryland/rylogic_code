@@ -5,6 +5,7 @@
     "DisplayPeriodSeconds": 30,
     "PrefetchCount": 10,
     "CacheCleanupMinutes": 10,
+    "CacheMaxSizeMB": 1024,
     "ImageRoot-Windows": "Z:\\Pictures\\Albums",
     "ImageRoot-Linux": "/mnt/ZDrive/Pictures/Albums",
     "ImageList": "./image_list.txt",
