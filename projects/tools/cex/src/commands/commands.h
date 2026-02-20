@@ -27,6 +27,7 @@ namespace cex
 	x("newlines", "Add or remove new lines from a text file", NewLines)\
 	x("read_dpi", "Report the DPI scaling for a monitor", ReadDpi)\
 	x("read_text", "Read text from a window using UI Automation", ReadText)\
+	x("rtfm", "Output complete command reference in markdown", Rtfm)\
 	x("screenshot", "Capture visible windows of a process to PNG", Screenshot)\
 	x("send_keys", "Send key presses to a window", SendKeys)\
 	x("send_mouse", "Send mouse events to a window", SendMouse)\

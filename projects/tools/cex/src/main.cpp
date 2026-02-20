@@ -9,6 +9,8 @@ using namespace pr;
 
 namespace cex
 {
+	static std::string_view Version = "1.4.0";
+
 	struct Main
 	{
 		InitCom m_com;
@@ -26,7 +28,7 @@ namespace cex
 			auto extn = exepath.extension();
 
 			// Look for a JSON file with the same name as this program in the local directory
-			auto config = path / name.replace_extension(L".json");
+			auto config = path / exepath.filename().replace_extension(L".json");
 			if (std::filesystem::exists(config))
 				return RunFromJson(config, cmd_line);
 
@@ -35,16 +37,19 @@ namespace cex
 				cmd_line.args.insert(begin(cmd_line.args), { std::format("{}", name.string()) });
 
 			// Parse the command line
-			auto IsOption = [&cmd_line](std::string_view options) -> bool
+			auto IsOption = [&cmd_line](std::string_view option) -> bool
 			{
-				for (; !options.empty(); )
+				for (; !option.empty(); )
 				{
-					auto pos = options.find(',');
-					if (cmd_line.count(std::string(options.substr(0, pos))) != 0)
+					auto pos = option.find(',');
+
+					if (cmd_line.count(std::string(option.substr(0, pos))) != 0)
 						return true;
+
 					if (pos == std::string::npos)
 						break;
-					options = options.substr(pos + 1);
+
+					option = option.substr(pos + 1);
 				}
 				return false;
 			};
@@ -58,39 +63,34 @@ namespace cex
 
 			// If no commands given, display the command line help message
 			std::cout << "\n"
-				"-------------------------------------------------------------\n"
-				"  Console EXtensions \n" 
-				"   Copyright (c) Rylogic 2004 \n"
-				"   Version: v1.3\n"
-				"-------------------------------------------------------------\n"
+				"  Console EXtensions (cex) v" << Version << "\n"
+				"  Copyright (c) Rylogic 2004\n"
 				"\n"
-				" Syntex is: cex --command [parameters]\n"
+				"  Usage: cex -<command> [parameters]\n"
 				"\n"
-				"  Cex can be used as a proxy application. Rename cex.exe to whatever application\n"
-				"  name you like, and create a JSON file with the same name in the same directory.\n"
-				"  In the file, put:\n"
-				"    {\n"
-				"        process: \"some process full path\"\n"
-				"        startdir: \"some directory path\"\n"
-				"        args: [\"first argument\", \"next argument\", ...]\n"
-				"    }\n"
-				"  When the renamed Cex is run, it will look for the JSON file and launch whatever\n"
-				"  process is specified. Note: you must specify the 'startdir' as well as the 'process'.\n"
-				"\n"
-				"  Alternatively, if no file is found, Cex runs as though the command line was:\n"
-				"     cex.exe --<name_that_cex_was_renamed_to>\n"
-				"  e.g.\n"
-				"     if the cex.exe is renamed to clip.exe, executing it is the same as executing\n"
-				"     cex.exe --clip\n"
-				"\n"
-				" Options:\n"
+				"  Commands:\n"
 				"\n";
 			{
-				#define CEX_CMD_OPTIONS(options, description, func) std::cout << "   " << options << " : " << description << "\n";
+				// Find the longest command name for alignment
+				size_t max_len = 0;
+				#define CEX_CMD_MEASURE(options, description, func) max_len = (std::max)(max_len, std::string_view(options).size());
+				CEX_CMD(CEX_CMD_MEASURE);
+				#undef CEX_CMD_MEASURE
+
+				#define CEX_CMD_OPTIONS(options, description, func) \
+					std::cout << std::format("    {:<{}}  {}\n", options, max_len, description);
 				CEX_CMD(CEX_CMD_OPTIONS);
 				#undef CEX_CMD_OPTIONS
 			}
-			std::cout << "\n";
+			std::cout <<
+				"\n"
+				"  Use 'cex -<command> -help' for details on a specific command.\n"
+				"\n"
+				"  Proxy Mode:\n"
+				"    Rename cex.exe and place a matching .json file alongside it:\n"
+				"      { \"process\": \"...\", \"startdir\": \"...\", \"args\": [...] }\n"
+				"    Or, without a .json file, the renamed exe acts as: cex -<exe_name>\n"
+				"\n";
 			return 0;
 		}
 
@@ -219,6 +219,38 @@ int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 	try
 	{
 		//MessageBox(0, "Paws'd", "Cex", MB_OK);
+
+		// Connect stdout/stderr for command-line use.
+		// If the parent set up stdout handles (via > redirect or Start-Process -RedirectStandardOutput),
+		// wire the C runtime to those inherited handles. Otherwise, attach to the parent console.
+		auto h_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (h_stdout != NULL && h_stdout != INVALID_HANDLE_VALUE)
+		{
+			// Stdout was redirected by the parent. Connect C runtime to the inherited handles.
+			auto rewire = [](DWORD std_handle, FILE* stream, const char*)
+			{
+				auto h = GetStdHandle(std_handle);
+				if (h == NULL || h == INVALID_HANDLE_VALUE) return;
+				auto fd = _open_osfhandle(reinterpret_cast<intptr_t>(h), _O_TEXT);
+				if (fd >= 0) _dup2(fd, _fileno(stream));
+			};
+			rewire(STD_OUTPUT_HANDLE, stdout, "w");
+			rewire(STD_ERROR_HANDLE, stderr, "w");
+			rewire(STD_INPUT_HANDLE, stdin, "r");
+		}
+		else if (AttachConsole(ATTACH_PARENT_PROCESS))
+		{
+			// No redirected handles. Attach to parent console for interactive use.
+			(void)freopen("CONIN$", "r", stdin);
+			(void)freopen("CONOUT$", "w", stdout);
+			(void)freopen("CONOUT$", "w", stderr);
+		}
+		std::wcout.clear();
+		std::cout.clear();
+		std::wcerr.clear();
+		std::cerr.clear();
+		std::wcin.clear();
+		std::cin.clear();
 
 		// lpCmdLine doesn't include the program name, but CmdLine expects argv[0] to be the exe path
 		auto cl = std::format("{} {}", win32::ExePath().string(), Narrow(lpCmdLine));

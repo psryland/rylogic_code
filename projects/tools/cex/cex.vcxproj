@@ -54,6 +54,7 @@
     <ClCompile Include="src\commands\new_lines\new_lines.cpp" />
     <ClCompile Include="src\commands\read_dpi\read_dpi.cpp" />
     <ClCompile Include="src\commands\read_text\read_text.cpp" />
+    <ClCompile Include="src\commands\rtfm\rtfm.cpp" />
     <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
     <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
     <ClCompile Include="src\commands\send_mouse\send_mouse.cpp" />
