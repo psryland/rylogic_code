@@ -55,6 +55,27 @@
     <Filter Include="src\commands\wait">
       <UniqueIdentifier>{2d71d9c7-5ae7-482f-bb47-ccd7e589bef9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands\find_element">
+      <UniqueIdentifier>{8971867e-4938-4717-9dd6-8c75e17b4f4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\automate">
+      <UniqueIdentifier>{58a7c8aa-c1c1-4ff0-8793-cb3ee5512aef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\list_windows">
+      <UniqueIdentifier>{1b1084d5-c185-4298-b608-284ed383e82e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\read_dpi">
+      <UniqueIdentifier>{e1ac546d-34af-4fc2-967b-03284497c0ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\read_text">
+      <UniqueIdentifier>{aedfa139-4328-4504-bce4-628600c56a95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\shutdown_process">
+      <UniqueIdentifier>{1145994b-4a21-404d-b19a-0aebde79353f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands\wait_window">
+      <UniqueIdentifier>{5498008d-4173-4846-9950-14abe623c9db}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\forward.h">
@@ -119,5 +140,29 @@
     <ClCompile Include="src\commands\wait\wait.cpp">
       <Filter>src\commands\wait</Filter>
     </ClCompile>
+    <ClCompile Include="src\commands\find_element\find_element.cpp">
+      <Filter>src\commands\find_element</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\automate\automate.cpp">
+      <Filter>src\commands\automate</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\list_windows\list_windows.cpp">
+      <Filter>src\commands\list_windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\read_dpi\read_dpi.cpp">
+      <Filter>src\commands\read_dpi</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\read_text\read_text.cpp">
+      <Filter>src\commands\read_text</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\shutdown_process\shutdown_process.cpp">
+      <Filter>src\commands\shutdown_process</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\wait_window\wait_window.cpp">
+      <Filter>src\commands\wait_window</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="src\app.manifest" />
   </ItemGroup>
 </Project>
