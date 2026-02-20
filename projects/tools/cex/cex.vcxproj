@@ -52,6 +52,7 @@
     <ClCompile Include="src\commands\list_windows\list_windows.cpp" />
     <ClCompile Include="src\commands\msg_box\msg_box.cpp" />
     <ClCompile Include="src\commands\new_lines\new_lines.cpp" />
+    <ClCompile Include="src\commands\read_dpi\read_dpi.cpp" />
     <ClCompile Include="src\commands\read_text\read_text.cpp" />
     <ClCompile Include="src\commands\screenshot\screenshot.cpp" />
     <ClCompile Include="src\commands\send_keys\send_keys.cpp" />
