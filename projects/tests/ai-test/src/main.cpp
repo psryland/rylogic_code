@@ -79,11 +79,12 @@ struct AgentState
 
 int main()
 {
-	// Enable ANSI escape sequences in the Windows console
+	// Enable ANSI escape sequences and UTF-8 output in the Windows console
 	auto h_console = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD console_mode = 0;
 	GetConsoleMode(h_console, &console_mode);
 	SetConsoleMode(h_console, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	SetConsoleOutputCP(CP_UTF8);
 
 	// Seed RNG
 	std::mt19937 rng(std::random_device{}());
