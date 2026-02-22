@@ -64,11 +64,17 @@ namespace las::input
 
 	struct Mode_ShipControl : IMode
 	{
-		using IMode::IMode;
+		// Mouse state for orbit control
+		v2 m_mouse_pos;
+		v2 m_mouse_ref_rb;
+		bool m_rmb_down;
+		float m_mouse_sensitivity;
+
+		Mode_ShipControl(InputHandler& ih);
 		EMode Mode() const override { return EMode::ShipControl; }
-		void HandleKeyEvent(KeyEventArgs& args) override { (void)args; }
-		void HandleMouseEvent(MouseEventArgs& args) override { (void)args; }
-		void HandleWheelEvent(MouseWheelArgs& args) override { (void)args; }
+		void HandleKeyEvent(KeyEventArgs& args) override;
+		void HandleMouseEvent(MouseEventArgs& args) override;
+		void HandleWheelEvent(MouseWheelArgs& args) override;
 		void Update(float dt) override { (void)dt; }
 	};
 

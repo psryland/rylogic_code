@@ -24,6 +24,7 @@ namespace las::camera
 		FreeCamera(Camera& cam, InputHandler& input);
 		void OnAction(input::Action action) override;
 		void Update(float dt) override;
+		char const* Name() const override { return "Free Camera"; }
 		float Speed() const override { return m_speed; }
 	};
 }

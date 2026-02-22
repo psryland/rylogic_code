@@ -65,5 +65,6 @@ namespace las
 	{
 		struct ICamera;
 		struct FreeCamera;
+		struct ShipCamera;
 	}
 }

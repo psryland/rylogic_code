@@ -96,6 +96,9 @@
     <ClCompile Include="src\core\input\modes.cpp">
       <Filter>src\core\input</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\cameras\ship_camera.cpp">
+      <Filter>src\core\cameras</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\forward.h">
@@ -160,6 +163,9 @@
     </ClInclude>
     <ClInclude Include="src\core\input\modes.h">
       <Filter>src\core\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\cameras\ship_camera.h">
+      <Filter>src\core\cameras</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

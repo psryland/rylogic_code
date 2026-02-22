@@ -30,6 +30,10 @@ namespace las
 				break;
 			}
 			case input::EMode::ShipControl:
+			{
+				m_mode = std::shared_ptr<input::Mode_ShipControl>{ new input::Mode_ShipControl(*this) };
+				break;
+			}
 			case input::EMode::MenuNavigation:
 			default:
 			{
@@ -78,23 +82,26 @@ namespace las
 	// Process a key events and raise game actions as needed
 	void InputHandler::KeyEventDispatch(KeyEventArgs& args)
 	{
-		// Handle global key bindings (e.g. mode switching)
-		switch (args.m_vk_key)
+		// Handle global key bindings on key-down only (not key-up or repeats)
+		if (args.m_down)
 		{
-			// Cycle camera modes
-			case VK_F1:
+			switch (args.m_vk_key)
 			{
-				Action(*this, { input::EAction::CycleCameraMode });
-				args.m_handled = true;
-				break;
-			}
+				// Cycle camera modes
+				case VK_F1:
+				{
+					Action(*this, { input::EAction::CycleCameraMode });
+					args.m_handled = true;
+					break;
+				}
 
-			// Display diagnostic UIs
-			case VK_F3:
-			{
-				Action(*this, { input::EAction::ToggleDiagnostics });
-				args.m_handled = true;
-				break;
+				// Display diagnostic UIs
+				case VK_F3:
+				{
+					Action(*this, { input::EAction::ToggleDiagnostics });
+					args.m_handled = true;
+					break;
+				}
 			}
 		}
 

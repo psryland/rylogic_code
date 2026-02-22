@@ -31,6 +31,12 @@ namespace las::input
 		Ship_TurnLeft,
 		Ship_TurnRight,
 
+		// Ship camera (third-person orbit)
+		ShipCamera_Yaw,
+		ShipCamera_Pitch,
+		ShipCamera_ZoomIn,
+		ShipCamera_ZoomOut,
+
 		// Menu navigation (stub)
 		Menu_NavigateUp,
 		Menu_NavigateDown,

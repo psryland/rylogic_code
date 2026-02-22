@@ -128,12 +128,12 @@ namespace las
 		pr::physics::Evolve(m_body, dt);
 	}
 
-	void Ship::PrepareRender(v4 camera_world_pos)
+	void Ship::PrepareRender(v4)
 	{
-		// Camera-relative rendering: subtract camera position from world position
-		auto o2w = m_body.O2W();
-		o2w.pos.xyz -= camera_world_pos.xyz;
-		m_inst.m_i2w = o2w;
+		// The standard forward renderer transforms vertices via m_o2s (= c2s * w2c * o2w)
+		// which already handles the camera position via w2c. No manual camera-relative
+		// subtraction needed — that would cause double-subtraction.
+		m_inst.m_i2w = m_body.O2W();
 	}
 
 	void Ship::AddToScene(Scene& scene)

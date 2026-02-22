@@ -98,4 +98,55 @@ namespace las::input
 		if (m_key_q) m_ih.Action(m_ih, {EAction::FreeCamera_MoveDown,    1.0f, dt});
 		if (m_key_e) m_ih.Action(m_ih, {EAction::FreeCamera_MoveUp,      1.0f, dt});
 	}
+
+	// --- Mode_ShipControl ---
+
+	Mode_ShipControl::Mode_ShipControl(InputHandler& ih)
+		: IMode(ih)
+		, m_mouse_pos()
+		, m_mouse_ref_rb()
+		, m_rmb_down(false)
+		, m_mouse_sensitivity(0.003f)
+	{}
+
+	void Mode_ShipControl::HandleKeyEvent(KeyEventArgs& args)
+	{
+		// Ship control keys (stubs for now)
+		(void)args;
+	}
+
+	void Mode_ShipControl::HandleMouseEvent(MouseEventArgs& args)
+	{
+		auto pt = v2{static_cast<float>(args.m_point.x), static_cast<float>(args.m_point.y)};
+
+		auto rmb_held = AllSet(args.m_key_state, EMouseKey::Right);
+
+		if (rmb_held && !m_rmb_down)
+			m_mouse_ref_rb = pt;
+
+		m_rmb_down = rmb_held;
+
+		// RMB drag → orbit around ship
+		if (m_rmb_down)
+		{
+			auto delta = pt - m_mouse_ref_rb;
+
+			if (delta.x != 0)
+				m_ih.Action(m_ih, {EAction::ShipCamera_Yaw, -delta.x * m_mouse_sensitivity, 0});
+			if (delta.y != 0)
+				m_ih.Action(m_ih, {EAction::ShipCamera_Pitch, -delta.y * m_mouse_sensitivity, 0});
+
+			m_mouse_ref_rb = pt;
+		}
+
+		m_mouse_pos = pt;
+	}
+
+	void Mode_ShipControl::HandleWheelEvent(MouseWheelArgs& args)
+	{
+		if (args.m_delta > 0)
+			m_ih.Action(m_ih, {EAction::ShipCamera_ZoomIn, 1.0f, 0});
+		else if (args.m_delta < 0)
+			m_ih.Action(m_ih, {EAction::ShipCamera_ZoomOut, 1.0f, 0});
+	}
 }

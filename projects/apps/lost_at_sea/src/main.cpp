@@ -4,6 +4,7 @@
 //************************************
 #include "src/forward.h"
 #include "src/main.h"
+#include "src/core/cameras/ship_camera.h"
 #include "src/core/cameras/free_camera.h"
 #include "src/world/terrain/shaders/terrain_shader.h"
 
@@ -12,7 +13,8 @@ namespace las
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
 		, m_input()
-		, m_camera(new camera::FreeCamera(m_cam, m_input))
+		, m_camera()
+		, m_camera_mode(0)
 		, m_sky(m_rdr)
 		, m_day_cycle()
 		, m_ocean(m_rdr)
@@ -35,14 +37,15 @@ namespace las
 		})
 		, m_diag()
 	{
-		// Position the camera to see the ship at its high-point spawn (peak + 10m)
-		auto ship_pos = m_ship.m_body.O2W().pos;
-		auto eye = v4{ship_pos.x - 30, ship_pos.y - 20, ship_pos.z + 20, 1};
+		// Camera setup
 		m_cam.FocusDist(10.0f);
-		m_cam.Near(0.01f, false);
+		m_cam.Near(0.5f, false);
 		m_cam.Far(7000.0f, false);
-		m_cam.LookAt(eye, ship_pos, v4(0, 0, 1, 0));
 		m_cam.Align(v4ZAxis);
+
+		// Default camera: ship camera (third-person follow)
+		m_camera = CameraPtr(new camera::ShipCamera(m_cam, m_input, m_ship));
+		m_input.Mode(input::EMode::ShipControl);
 
 		// Watch for scene renders
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
@@ -85,6 +88,25 @@ namespace las
 		// Ensure the GPU has finished all in-flight frames before destroying
 		// pipeline state objects (shaders) owned by ocean/terrain models.
 		m_window.m_gsync.Wait();
+	}
+
+	// Cycle to the next camera mode
+	void Main::CycleCamera()
+	{
+		static constexpr int CameraModeCount = 2;
+		m_camera_mode = (m_camera_mode + 1) % CameraModeCount;
+
+		switch (m_camera_mode)
+		{
+			case 0: // Ship camera (default)
+				m_camera = CameraPtr(new camera::ShipCamera(m_cam, m_input, m_ship));
+				m_input.Mode(input::EMode::ShipControl);
+				break;
+			case 1: // Free camera
+				m_camera = CameraPtr(new camera::FreeCamera(m_cam, m_input));
+				m_input.Mode(input::EMode::FreeCamera);
+				break;
+		}
 	}
 
 	// Simulation step — builds and runs the step task graph
@@ -243,7 +265,7 @@ namespace las
 			m_imgui.Text(buf);
 			*std::format_to(buf, "Input Queue: {}", m_input.EventCount()) = 0;
 			m_imgui.Text(buf);
-			*std::format_to(buf, "Cam Speed: {:.1f} m/s", m_camera->Speed()) = 0;
+			*std::format_to(buf, "Camera: {} [{:.1f} m/s]", m_camera->Name(), m_camera->Speed()) = 0;
 			m_imgui.Text(buf);
 
 			m_imgui.Separator();
@@ -310,12 +332,21 @@ namespace las
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
-		// F3 toggles the diagnostic overlay (before ImGui gets it)
-		if (m_main && message == WM_KEYDOWN && wparam == VK_F3)
+		// F1 cycles camera mode, F3 toggles diagnostics (before ImGui gets them)
+		if (m_main && message == WM_KEYDOWN)
 		{
-			m_main->m_diag.Toggle();
-			result = 0;
-			return true;
+			if (wparam == VK_F1)
+			{
+				m_main->CycleCamera();
+				result = 0;
+				return true;
+			}
+			if (wparam == VK_F3)
+			{
+				m_main->m_diag.Toggle();
+				result = 0;
+				return true;
+			}
 		}
 
 		// Let imgui see all messages (for hover, panel interaction, etc.)

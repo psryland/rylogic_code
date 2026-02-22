@@ -31,6 +31,7 @@ namespace las
 
 		InputHandler m_input;
 		CameraPtr m_camera;
+		int m_camera_mode;  // 0 = Ship, 1 = Free
 		ProceduralSky m_sky;
 		DayNightCycle m_day_cycle;
 		Ocean m_ocean;
@@ -57,6 +58,9 @@ namespace las
 
 		Main(MainUI& ui);
 		~Main();
+
+		// Cycle to the next camera mode
+		void CycleCamera();
 
 		void SimStep(double elapsed_seconds);
 		void DoRender(bool force = false);

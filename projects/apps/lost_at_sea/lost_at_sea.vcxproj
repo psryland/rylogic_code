@@ -79,12 +79,14 @@
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
     <ClInclude Include="src\core\cameras\free_camera.h" />
+    <ClInclude Include="src\core\cameras\ship_camera.h" />
     <ClInclude Include="src\core\cameras\icamera.h" />
     <ClInclude Include="src\core\input\actions.h" />
     <ClInclude Include="src\core\input\input_handler.h" />
     <ClInclude Include="src\core\input\modes.h" />
     <ClInclude Include="src\forward.h" />
     <ClCompile Include="src\core\cameras\free_camera.cpp" />
+    <ClCompile Include="src\core\cameras\ship_camera.cpp" />
     <ClCompile Include="src\core\cameras\icamera.cpp" />
     <ClCompile Include="src\core\input\input_handler.cpp" />
     <ClCompile Include="src\core\input\modes.cpp" />

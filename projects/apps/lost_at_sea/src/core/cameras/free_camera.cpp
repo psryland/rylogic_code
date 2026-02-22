@@ -8,7 +8,7 @@ namespace las::camera
 {
 	FreeCamera::FreeCamera(Camera& cam, InputHandler& input)
 		: ICamera(cam, input)
-		, m_speed(20.0f)
+		, m_speed(400.0f)
 		, m_speed_min(0.5f)
 		, m_speed_max(2000.0f)
 		, m_velocity(v4Zero)

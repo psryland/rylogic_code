@@ -31,6 +31,9 @@ namespace las::camera
 		// Per-frame update for physics-like behaviour (inertia, damping, etc.)
 		virtual void Update(float dt) { (void)dt; }
 
+		// Human-readable name for the debug UI
+		virtual char const* Name() const { return "Camera"; }
+
 		// Current movement speed (for diagnostics). Override in modes that have speed control.
 		virtual float Speed() const { return 0.0f; }
 	};
