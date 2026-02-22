@@ -58,5 +58,5 @@ resource model 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
 output endpoint string = openai.properties.endpoint
 output deployment string = model.name
 
-@description('Run this to get your API key: az cognitiveservices account keys list --name ${openai_name} --resource-group <rg>')
+@description('Run this to get your API key.')
 output key_command string = 'az cognitiveservices account keys list --name ${openai_name} --resource-group rg-rylogic-ai-dll --query key1 -o tsv'
