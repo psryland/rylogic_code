@@ -944,19 +944,28 @@ namespace pr::json
 
 		for (; ptr != end;)
 		{
-			if (*ptr == '\\' || *ptr == '"' || *ptr == '/' || *ptr == '\b' || *ptr == '\f' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')
+			auto ch = *ptr++;
+			switch (ch)
 			{
-				out.push_back('\\');
-				out.push_back(*ptr++);
-			}
-			else if (utf8::ByteLength(*ptr) > 1)
-			{
-				auto code = utf8::CodePoint(ptr, end);
-				utf8::Escape(code, out);
-			}
-			else
-			{
-				out.push_back(*ptr++);
+			case '\\': out.append("\\\\"); break;
+			case '"':  out.append("\\\""); break;
+			case '\b': out.append("\\b"); break;
+			case '\f': out.append("\\f"); break;
+			case '\n': out.append("\\n"); break;
+			case '\r': out.append("\\r"); break;
+			case '\t': out.append("\\t"); break;
+			default:
+				if (utf8::ByteLength(ch) > 1)
+				{
+					--ptr; // back up so CodePoint can read the full sequence
+					auto code = utf8::CodePoint(ptr, end);
+					utf8::Escape(code, out);
+				}
+				else
+				{
+					out.push_back(ch);
+				}
+				break;
 			}
 		}
 		return out;

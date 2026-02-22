@@ -12,16 +12,16 @@ param location string = 'eastus'
 param openai_name string = 'rylogic-ai-dll'
 
 @description('Model to deploy.')
-param model_name string = 'gpt-5.2-chat'
+param model_name string = 'gpt-4o-mini'
 
 @description('Deployment name (used in API calls as the deployment parameter).')
-param deployment_name string = 'gpt-5.2-chat'
+param deployment_name string = 'gpt-4o-mini'
 
 @description('Model version. Use empty string for latest.')
-param model_version string = ''
+param model_version string = '2024-07-18'
 
-@description('Tokens-per-minute capacity (in thousands). 1 = 1K TPM.')
-param capacity int = 1
+@description('Tokens-per-minute capacity (in thousands). 10 = 10K TPM.')
+param capacity int = 10
 
 // Azure OpenAI Cognitive Services account
 resource openai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {

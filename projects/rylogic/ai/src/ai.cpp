@@ -61,9 +61,11 @@ namespace
 		int m_priority;
 		int64_t m_sequence;
 		std::string m_body;          // JSON request body
+		std::string m_user_content;  // The user prompt (for adding to Recent memory)
+		std::string m_user_role;     // The role of the user prompt
 		CompletionCB m_cb;
 		void* m_user_ctx;
-		bool m_add_response_to_recent; // Whether to auto-add the response to agent's Recent memory
+		bool m_add_response_to_recent; // Whether to auto-add the prompt+response to agent's Recent memory
 
 		// Lower priority value = higher priority. On tie, lower sequence wins.
 		bool operator >(PendingRequest const& rhs) const
@@ -80,6 +82,8 @@ namespace
 		void* m_user_ctx;
 		std::string m_response;
 		std::string m_error;
+		std::string m_user_content;
+		std::string m_user_role;
 		int m_prompt_tokens;
 		int m_completion_tokens;
 		bool m_success;
@@ -355,6 +359,8 @@ struct pr::ai::ContextData
 			.m_priority = agent.m_priority,
 			.m_sequence = m_sequence++,
 			.m_body = std::move(body),
+			.m_user_content = content ? content : "",
+			.m_user_role = role ? role : "user",
 			.m_cb = cb,
 			.m_user_ctx = user_ctx,
 			.m_add_response_to_recent = add_to_recent,
@@ -416,6 +422,8 @@ struct pr::ai::ContextData
 		result.m_user_ctx = req.m_user_ctx;
 		result.m_agent = req.m_agent;
 		result.m_add_response_to_recent = req.m_add_response_to_recent;
+		result.m_user_content = req.m_user_content;
+		result.m_user_role = req.m_user_role;
 
 		if (!m_connection)
 		{
@@ -432,6 +440,9 @@ struct pr::ai::ContextData
 			result.m_success = false;
 			return result;
 		}
+
+		// Set timeouts: resolve=5s, connect=10s, send=30s, receive=60s
+		WinHttpSetTimeouts(h_request, 5000, 10000, 30000, 60000);
 
 		// Set headers
 		auto auth_header = std::format(L"api-key: {}", ToWide(m_api_key));
@@ -581,8 +592,8 @@ extern "C"
 
 	__declspec(dllexport) void __stdcall AI_Chat(AgentData& agent, char const* message, CompletionCB cb, void* user_ctx)
 	{
-		// Add the user message to recent memory before sending
-		agent.m_recent.push_back({ "user", message });
+		// Enqueue the request. The user message is passed as the current prompt and
+		// will be auto-added to Recent memory when the response arrives (via add_to_recent).
 		agent.m_ctx.EnqueueRequest(agent, "user", message, cb, user_ctx, true);
 	}
 
@@ -626,9 +637,10 @@ extern "C"
 
 		for (auto& c : to_dispatch)
 		{
-			// Auto-add successful responses to the agent's Recent memory
+			// Auto-add the user prompt and response to the agent's Recent memory
 			if (c.m_success && c.m_add_response_to_recent && c.m_agent)
 			{
+				c.m_agent->m_recent.push_back({ c.m_user_role, c.m_user_content });
 				c.m_agent->m_recent.push_back({ "assistant", c.m_response });
 			}
 

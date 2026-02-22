@@ -17,8 +17,8 @@ param(
 	[string]$ResourceGroup = "rg-rylogic-ai-dll",
 	[string]$Location = "eastus",
 	[string]$OpenAIName = "rylogic-ai-dll",
-	[string]$DeploymentName = "gpt-5.2-chat",
-	[string]$ModelName = "gpt-5.2-chat"
+	[string]$DeploymentName = "gpt-4o-mini",
+	[string]$ModelName = "gpt-4o-mini"
 )
 
 $ErrorActionPreference = "Stop"
