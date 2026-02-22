@@ -48,7 +48,5 @@
   Targets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="CopyAiDll" AfterTargets="Build">
-    <Copy SourceFiles="$(RylogicRoot)lib\$(Platform)\$(Configuration)\ai.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
-  </Target>
+  <Import Project="$(TargetsPath)ai.targets" />
 </Project>
