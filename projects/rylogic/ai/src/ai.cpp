@@ -87,6 +87,7 @@ namespace
 		int m_prompt_tokens;
 		int m_completion_tokens;
 		bool m_success;
+		bool m_filtered;
 		AgentData* m_agent;
 		bool m_add_response_to_recent;
 	};
@@ -489,6 +490,23 @@ struct pr::ai::ContextData
 
 		if (status_code != 200)
 		{
+			// Detect content filter errors (HTTP 400 with content_filter_result or ResponsibleAIPolicyViolation)
+			if (status_code == 400 && (response_body.find("content_filter") != std::string::npos || response_body.find("ResponsibleAI") != std::string::npos))
+			{
+				result.m_filtered = true;
+				result.m_error = "Content filtered by Azure moderation policy";
+				result.m_success = false;
+				return result;
+			}
+
+			// Rate limit errors get a cleaner message
+			if (status_code == 429)
+			{
+				result.m_error = "Rate limited — too many requests";
+				result.m_success = false;
+				return result;
+			}
+
 			result.m_error = std::format("HTTP {}: {}", status_code, response_body);
 			result.m_success = false;
 			return result;
@@ -510,6 +528,17 @@ struct pr::ai::ContextData
 			}
 
 			auto const& first_choice = choices[0].to_object();
+
+			// Check if the response was truncated by content filtering
+			auto const* finish_reason = first_choice.find("finish_reason");
+			if (finish_reason && finish_reason->to<std::string>() == "content_filter")
+			{
+				result.m_filtered = true;
+				result.m_error = "Response blocked by content filter";
+				result.m_success = false;
+				return result;
+			}
+
 			auto const& message = first_choice["message"].to_object();
 			auto const* content = message.find("content");
 			if (content)
@@ -648,6 +677,7 @@ extern "C"
 			{
 				ChatResult result;
 				result.m_success = c.m_success;
+				result.m_filtered = c.m_filtered;
 				result.m_response = c.m_success ? c.m_response.c_str() : nullptr;
 				result.m_response_len = c.m_success ? c.m_response.size() : 0;
 				result.m_error = c.m_success ? nullptr : c.m_error.c_str();

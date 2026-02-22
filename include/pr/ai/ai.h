@@ -111,6 +111,7 @@ namespace pr::ai
 	struct ChatResult
 	{
 		bool m_success;                        // True if the request completed successfully
+		bool m_filtered;                       // True if the response was blocked by the content filter
 		char const* m_response;                // The response text (null on failure)
 		size_t m_response_len;                 // Length of the response text
 		char const* m_error;                   // Error message (null on success)

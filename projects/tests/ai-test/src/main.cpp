@@ -267,6 +267,8 @@ int main()
 				auto& sc = *static_cast<StimCtx*>(user_ctx);
 				if (result.m_success)
 					*sc.text = std::string(result.m_response, result.m_response_len);
+				else if (result.m_filtered)
+					*sc.text = "*stays silent, lost in thought*";
 				else
 					*sc.text = std::format("[Error: {}]", result.m_error ? result.m_error : "unknown");
 				sc.received->store(true);
