@@ -97,12 +97,30 @@ int main()
 	std::iota(personality_indices.begin(), personality_indices.end(), 0);
 	std::shuffle(personality_indices.begin(), personality_indices.end(), rng);
 
-	// Pick a random topic
-	int topic_idx = std::uniform_int_distribution<int>(0, k_num_topics - 1)(rng);
-	auto topic = k_topics[topic_idx];
-
+	// Pick a topic — prompt the user or use a random one
 	std::cout << "\n=== AI Discussion Test ===\n\n";
-	std::cout << "Creating " << agent_count << " agents...\n\n";
+	std::cout << "Enter a topic for discussion (or press Enter for a random one):\n> ";
+	std::string user_topic;
+	std::getline(std::cin, user_topic);
+
+	// Trim whitespace
+	while (!user_topic.empty() && (user_topic.front() == ' ' || user_topic.front() == '\t'))
+		user_topic.erase(user_topic.begin());
+	while (!user_topic.empty() && (user_topic.back() == ' ' || user_topic.back() == '\t'))
+		user_topic.pop_back();
+
+	std::string topic;
+	if (user_topic.empty())
+	{
+		auto topic_idx = std::uniform_int_distribution<int>(0, k_num_topics - 1)(rng);
+		topic = k_topics[topic_idx];
+	}
+	else
+	{
+		topic = std::move(user_topic);
+	}
+
+	std::cout << "\nCreating " << agent_count << " agents...\n\n";
 
 	// Create context (reads API key from AZURE_OPENAI_API_KEY env var)
 	ContextConfig ctx_cfg;
