@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <format>
 #include <cstdlib>
+#include <cstring>
 #include <span>
 #include <atomic>
 #include <deque>
@@ -357,6 +358,9 @@ struct pr::ai::ContextData
 			return;
 		}
 
+		// Suppress llama.cpp's internal logging to keep the console clean
+		llama_log_set([](ggml_log_level, char const*, void*) {}, nullptr);
+
 		llama_backend_init();
 
 		// Load the model
@@ -608,6 +612,7 @@ struct pr::ai::ContextData
 
 			// Generate tokens
 			auto eos = llama_vocab_eos(vocab);
+			auto eot = llama_vocab_eot(vocab);
 			std::string response;
 			int n_generated = 0;
 
@@ -615,16 +620,16 @@ struct pr::ai::ContextData
 			{
 				auto token = llama_sampler_sample(m_llama_sampler, m_llama_ctx, -1);
 
-				// Check for end of sequence
-				if (token == eos || llama_vocab_is_eog(vocab, token))
+				// Check for end of sequence, end of turn, or control tokens
+				if (token == eos || token == eot || llama_vocab_is_eog(vocab, token) || llama_vocab_is_control(vocab, token))
 					break;
 
 				// Accept the token in the sampler
 				llama_sampler_accept(m_llama_sampler, token);
 
-				// Convert token to text
+				// Convert token to text (special=false to skip rendering template markers)
 				char piece[256];
-				auto piece_len = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, true);
+				auto piece_len = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, false);
 				if (piece_len > 0)
 					response.append(piece, piece_len);
 
@@ -635,6 +640,39 @@ struct pr::ai::ContextData
 
 				++n_generated;
 			}
+
+			// Strip any template markers that leaked through (including partial ones)
+			for (auto const& marker : {"<|im_end|>", "<|im_start|>", "<|end|>", "<|assistant|>", "<|user|>"})
+			{
+				for (auto pos = response.find(marker); pos != std::string::npos; pos = response.find(marker))
+					response.erase(pos, std::strlen(marker));
+			}
+
+			// Strip partial template markers (e.g., "<|im" at end of response)
+			auto partial = response.find("<|");
+			if (partial != std::string::npos)
+				response.erase(partial);
+
+			// Truncate at common meta-commentary patterns that instruction-tuned models emit
+			for (auto const& pattern : {"\n**", "\n---", "\nNote:", "\n(Note", "\nFollow-up", "\nYou are now", "\nImagine you", "\n[Narrator]", "\nNow, let"})
+			{
+				auto pos = response.find(pattern);
+				if (pos != std::string::npos)
+					response.erase(pos);
+			}
+
+			// Also truncate at mid-paragraph prompt injection patterns
+			for (auto const& pattern : {"You are now a character", "You are now a ", "Imagine you are", "[Narrator]", "The group has gathered to discuss"})
+			{
+				auto pos = response.find(pattern);
+				if (pos != std::string::npos && pos > 0)
+					response.erase(pos);
+			}
+
+			// Trim leading/trailing whitespace
+			auto const is_ws = [](char c) { return c == ' ' || c == '\n' || c == '\r' || c == '\t'; };
+			while (!response.empty() && is_ws(response.front())) response.erase(response.begin());
+			while (!response.empty() && is_ws(response.back())) response.pop_back();
 
 			result.m_response = std::move(response);
 			result.m_completion_tokens = n_generated;

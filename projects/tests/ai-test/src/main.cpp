@@ -97,6 +97,26 @@ void Trim(std::string& s, bool trim_quotes = false)
 	while (!s.empty() && is_trim_char(s.back())) s.pop_back();
 }
 
+// Sanitise a name response from the LLM — take only the first line and limit length
+void SanitiseName(std::string& name)
+{
+	Trim(name, true);
+
+	// Take only the first line
+	auto nl = name.find('\n');
+	if (nl != std::string::npos)
+		name.erase(nl);
+
+	// Remove any asterisks or markdown formatting
+	std::erase(name, '*');
+
+	// Limit to a reasonable name length (truncate at ~30 chars)
+	if (name.size() > 30)
+		name.resize(30);
+
+	Trim(name);
+}
+
 // Read a line of input from the user
 std::string ReadLine()
 {
@@ -273,8 +293,8 @@ std::vector<AgentState> CreateAgents(Context& ctx, int count, bool use_local, st
 	std::iota(personality_indices.begin(), personality_indices.end(), 0);
 	std::shuffle(personality_indices.begin(), personality_indices.end(), rng);
 
-	// Use shorter max tokens for local models (faster inference)
-	auto max_tokens = use_local ? 80 : 150;
+	// Use shorter max tokens for local models (faster inference, tighter responses)
+	auto max_tokens = use_local ? 60 : 150;
 
 	std::vector<AgentState> agents(count);
 	for (int i = 0; i < count; ++i)
@@ -293,7 +313,10 @@ std::vector<AgentState> CreateAgents(Context& ctx, int count, bool use_local, st
 
 		// Seed world knowledge
 		agents[i].agent.MemoryAdd(EMemoryTier::Permanent, "system",
-			"You are in a medieval fantasy settlement. Keep responses to 1-2 sentences. Stay in character.");
+			"You are a character in a medieval fantasy settlement. "
+			"Keep responses to 1-2 sentences. Stay in character at all times. "
+			"Never add notes, explanations, or commentary outside of your character's speech. "
+			"Do not speak as other characters. Only respond as yourself.");
 	}
 	return agents;
 }
@@ -306,15 +329,15 @@ void ChooseNames(Context& ctx, std::vector<AgentState>& agents)
 	for (auto& a : agents)
 	{
 		a.agent.Chat(
-			"Choose a unique, memorable name for yourself that fits your personality. "
-			"Respond with ONLY the name, nothing else.",
+			"Choose a short, memorable name for yourself that fits your personality. "
+			"Reply with only the name. No explanation, no quotes, no extra text.",
 			[](void* user_ctx, ChatResult const& result)
 			{
 				auto& state = *static_cast<AgentState*>(user_ctx);
 				if (result.m_success)
 				{
 					state.name = std::string(result.m_response, result.m_response_len);
-					Trim(state.name, true);
+					SanitiseName(state.name);
 				}
 				else
 				{
@@ -334,10 +357,14 @@ void ChooseNames(Context& ctx, std::vector<AgentState>& agents)
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	// Display agents
+	// Tell each agent their name so they stay in character
 	std::cout << "\nAgents:\n";
-	for (auto const& a : agents)
+	for (auto& a : agents)
+	{
+		auto identity = std::format("Your name is {}. Always speak as {} and no one else.", a.name, a.name);
+		a.agent.MemoryAdd(EMemoryTier::Permanent, "system", identity.c_str());
 		std::cout << std::format("  {}{:<12}{} ({})\n", k_colours[a.colour_idx], a.name, k_reset, a.personality);
+	}
 	std::cout << "\n";
 }
 
@@ -404,6 +431,14 @@ void RunDiscussion(Context& ctx, std::vector<AgentState>& agents, std::string co
 		{
 			ctx.Update();
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
+		// Strip the speaker's own name from the start of the response (models often echo it)
+		auto name_prefix = speaker.name + ":";
+		if (response_text.starts_with(name_prefix))
+		{
+			response_text.erase(0, name_prefix.size());
+			Trim(response_text);
 		}
 
 		// Print the response
