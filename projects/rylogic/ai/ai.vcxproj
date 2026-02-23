@@ -52,6 +52,8 @@
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-base.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-cpu.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\ggml-vulkan\Release\ggml-vulkan.lib
+        ;$(RylogicRoot)sdk\vulkan\lib\vulkan-1.lib
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
@@ -63,6 +65,8 @@
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-base.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-cpu.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\ggml-vulkan\Debug\ggml-vulkan.lib
+        ;$(RylogicRoot)sdk\vulkan\lib\vulkan-1.lib
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>

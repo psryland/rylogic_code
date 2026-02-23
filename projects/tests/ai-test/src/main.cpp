@@ -16,7 +16,6 @@
 #include <atomic>
 #include <numeric>
 #include <cstdlib>
-
 #include <filesystem>
 
 #include <Windows.h>
@@ -80,14 +79,39 @@ struct AgentState
 	bool name_received = false;
 };
 
-// Path to the models directory relative to the executable
+// Parsed command line options
+struct Options
+{
+	bool use_local = false;
+	std::string model_path;
+	int gpu_layers = -1; // -1 = all layers on GPU (when available)
+};
+
+// Trim leading and trailing whitespace (and optionally quotes)
+void Trim(std::string& s, bool trim_quotes = false)
+{
+	auto is_trim_char = [trim_quotes](char c) {
+		return c == ' ' || c == '\t' || c == '\n' || c == '\r' || (trim_quotes && c == '"');
+	};
+	while (!s.empty() && is_trim_char(s.front())) s.erase(s.begin());
+	while (!s.empty() && is_trim_char(s.back())) s.pop_back();
+}
+
+// Read a line of input from the user
+std::string ReadLine()
+{
+	std::string line;
+	std::getline(std::cin, line);
+	Trim(line);
+	return line;
+}
+
+// Walk up from the exe directory looking for sdk/llama-cpp/models
 std::string FindModelsDir()
 {
-	// Get the exe path
 	char buf[MAX_PATH] = {};
 	GetModuleFileNameA(nullptr, buf, MAX_PATH);
-	
-	// Walk up from the exe directory looking for sdk/llama-cpp/models
+
 	for (auto dir = fs::path(buf).parent_path(); !dir.empty() && dir != dir.root_path(); dir = dir.parent_path())
 	{
 		auto models = dir / "sdk" / "llama-cpp" / "models";
@@ -103,7 +127,7 @@ std::vector<std::string> ListModels(std::string const& models_dir)
 	std::vector<std::string> models;
 	if (models_dir.empty() || !fs::exists(models_dir))
 		return models;
-	
+
 	for (auto const& entry : fs::directory_iterator(models_dir))
 	{
 		if (entry.is_regular_file() && entry.path().extension() == ".gguf")
@@ -113,195 +137,154 @@ std::vector<std::string> ListModels(std::string const& models_dir)
 	return models;
 }
 
-int main(int argc, char* argv[])
+// Parse command-line arguments
+Options ParseArgs(int argc, char* argv[])
 {
-	// Enable ANSI escape sequences and UTF-8 output in the Windows console
-	auto h_console = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD console_mode = 0;
-	GetConsoleMode(h_console, &console_mode);
-	SetConsoleMode(h_console, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-	SetConsoleOutputCP(CP_UTF8);
-
-	// Parse command-line arguments (still supported for scripting)
-	std::string local_model_path;
-	int gpu_layers = 0;
-	bool provider_chosen = false;
-	bool use_local = false;
+	Options opts;
 	for (int i = 1; i < argc; ++i)
 	{
-		if (std::string(argv[i]) == "--local" && i + 1 < argc)
+		auto arg = std::string(argv[i]);
+		if (arg == "--local" && i + 1 < argc)
 		{
-			local_model_path = argv[++i];
-			use_local = true;
-			provider_chosen = true;
+			opts.model_path = argv[++i];
+			opts.use_local = true;
 		}
-		else if (std::string(argv[i]) == "--azure")
+		else if (arg == "--azure")
 		{
-			use_local = false;
-			provider_chosen = true;
+			opts.use_local = false;
 		}
-		else if (std::string(argv[i]) == "--gpu-layers" && i + 1 < argc)
+		else if (arg == "--gpu-layers" && i + 1 < argc)
 		{
-			gpu_layers = std::atoi(argv[++i]);
+			opts.gpu_layers = std::atoi(argv[++i]);
 		}
 	}
+	return opts;
+}
 
-	std::cout << "\n=== AI Discussion Test ===\n\n";
+// Prompt the user to choose between Azure and Local providers
+bool PromptForProvider()
+{
+	std::cout << "Select AI provider:\n";
+	std::cout << "  1. Azure OpenAI (cloud)\n";
+	std::cout << "  2. Local model (llama.cpp)\n";
+	std::cout << "> ";
 
-	// Prompt for provider if not specified on command line
-	if (!provider_chosen)
+	auto input = ReadLine();
+	std::cout << "\n";
+	return input == "2" || input == "local";
+}
+
+// Prompt the user to select a local model file
+std::string PromptForModel()
+{
+	auto models_dir = FindModelsDir();
+	auto available = ListModels(models_dir);
+
+	if (available.empty())
 	{
-		std::cout << "Select AI provider:\n";
-		std::cout << "  1. Azure OpenAI (cloud)\n";
-		std::cout << "  2. Local model (llama.cpp)\n";
-		std::cout << "> ";
-
-		std::string provider_input;
-		std::getline(std::cin, provider_input);
-
-		// Trim
-		while (!provider_input.empty() && provider_input.front() == ' ') provider_input.erase(provider_input.begin());
-		while (!provider_input.empty() && provider_input.back() == ' ') provider_input.pop_back();
-
-		if (provider_input == "2" || provider_input == "local")
-			use_local = true;
-		else
-			use_local = false;
-
-		std::cout << "\n";
+		std::cerr << "No .gguf model files found.\n";
+		if (!models_dir.empty())
+			std::cerr << "  Searched: " << models_dir << "\n";
+		std::cerr << "  Download a model with: dotnet-script sdk/llama-cpp/_get_model.csx\n";
+		std::cerr << "  Or specify: --local <path-to-model.gguf>\n";
+		return {};
 	}
 
-	// If local, prompt for model selection
-	if (use_local && local_model_path.empty())
+	std::cout << "Available models:\n";
+	for (size_t i = 0; i < available.size(); ++i)
 	{
-		auto models_dir = FindModelsDir();
-		auto available = ListModels(models_dir);
-
-		if (available.empty())
-		{
-			std::cerr << "No .gguf model files found.\n";
-			if (!models_dir.empty())
-				std::cerr << "  Searched: " << models_dir << "\n";
-			std::cerr << "  Download a model with: dotnet-script sdk/llama-cpp/_get_model.csx\n";
-			std::cerr << "  Or specify: --local <path-to-model.gguf>\n";
-			return 1;
-		}
-
-		std::cout << "Available models:\n";
-		for (size_t i = 0; i < available.size(); ++i)
-		{
-			auto path = fs::path(available[i]);
-			auto size_mb = fs::file_size(available[i]) / (1024.0 * 1024.0);
-			std::cout << std::format("  {}. {} ({:.0f} MB)\n", i + 1, path.filename().string(), size_mb);
-		}
-
-		if (available.size() == 1)
-		{
-			std::cout << std::format("> Using: {}\n", fs::path(available[0]).filename().string());
-			local_model_path = available[0];
-		}
-		else
-		{
-			std::cout << "> ";
-			std::string model_input;
-			std::getline(std::cin, model_input);
-
-			// Trim
-			while (!model_input.empty() && model_input.front() == ' ') model_input.erase(model_input.begin());
-			while (!model_input.empty() && model_input.back() == ' ') model_input.pop_back();
-
-			int model_idx = 0;
-			if (model_input.empty() || !((model_idx = std::atoi(model_input.c_str())) >= 1 && model_idx <= static_cast<int>(available.size())))
-			{
-				std::cerr << "Invalid selection.\n";
-				return 1;
-			}
-			local_model_path = available[model_idx - 1];
-		}
-		std::cout << "\n";
+		auto size_mb = fs::file_size(available[i]) / (1024.0 * 1024.0);
+		std::cout << std::format("  {}. {} ({:.0f} MB)\n", i + 1, fs::path(available[i]).filename().string(), size_mb);
 	}
 
-	// Seed RNG
-	std::mt19937 rng(std::random_device{}());
+	// Auto-select if there's only one model
+	if (available.size() == 1)
+	{
+		std::cout << std::format("> Using: {}\n\n", fs::path(available[0]).filename().string());
+		return available[0];
+	}
 
-	// Determine agent count (3-8)
-	int agent_count = std::uniform_int_distribution<int>(3, 8)(rng);
+	std::cout << "> ";
+	auto input = ReadLine();
+	std::cout << "\n";
 
+	auto idx = std::atoi(input.c_str());
+	if (idx < 1 || idx > static_cast<int>(available.size()))
+	{
+		std::cerr << "Invalid selection.\n";
+		return {};
+	}
+	return available[idx - 1];
+}
+
+// Prompt the user for a discussion topic
+std::string PromptForTopic(std::mt19937& rng)
+{
+	std::cout << "Enter a topic for discussion (or press Enter for a random one):\n> ";
+	auto input = ReadLine();
+	std::cout << "\n";
+
+	if (input.empty())
+	{
+		auto idx = std::uniform_int_distribution<int>(0, k_num_topics - 1)(rng);
+		return k_topics[idx];
+	}
+	return input;
+}
+
+// Create the AI context based on options
+Context CreateContext(Options const& opts)
+{
+	ContextConfig cfg;
+	if (opts.use_local)
+	{
+		cfg.m_provider = EProvider::LlamaCpp;
+		cfg.m_model_path = opts.model_path.c_str();
+		cfg.m_gpu_layers = opts.gpu_layers;
+		cfg.m_context_length = 4096;
+
+		std::cout << "Using local model: " << fs::path(opts.model_path).filename().string() << "\n";
+		std::cout << "GPU layers: " << (opts.gpu_layers < 0 ? "all" : std::to_string(opts.gpu_layers)) << "\n\n";
+	}
+	else
+	{
+		cfg.m_provider = EProvider::AzureOpenAI;
+		cfg.m_endpoint = std::getenv("AZURE_OPENAI_ENDPOINT");
+		cfg.m_deployment = std::getenv("AZURE_OPENAI_DEPLOYMENT");
+		cfg.m_max_requests_per_minute = 30;
+
+		if (!cfg.m_endpoint || !cfg.m_deployment)
+		{
+			std::cerr << "Error: Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT environment variables.\n";
+			std::cerr << "  e.g. AZURE_OPENAI_ENDPOINT=https://myresource.openai.azure.com\n";
+			std::cerr << "       AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini\n";
+			return {};
+		}
+	}
+
+	return Context(cfg);
+}
+
+// Create agents with random personalities
+std::vector<AgentState> CreateAgents(Context& ctx, int count, bool use_local, std::mt19937& rng)
+{
 	// Pick unique personalities
 	std::vector<int> personality_indices(k_num_personalities);
 	std::iota(personality_indices.begin(), personality_indices.end(), 0);
 	std::shuffle(personality_indices.begin(), personality_indices.end(), rng);
 
-	// Pick a topic — prompt the user or use a random one
-	std::cout << "Enter a topic for discussion (or press Enter for a random one):\n> ";
-	std::string user_topic;
-	std::getline(std::cin, user_topic);
+	// Use shorter max tokens for local models (faster inference)
+	auto max_tokens = use_local ? 80 : 150;
 
-	// Trim whitespace
-	while (!user_topic.empty() && (user_topic.front() == ' ' || user_topic.front() == '\t'))
-		user_topic.erase(user_topic.begin());
-	while (!user_topic.empty() && (user_topic.back() == ' ' || user_topic.back() == '\t'))
-		user_topic.pop_back();
-
-	std::string topic;
-	if (user_topic.empty())
-	{
-		auto topic_idx = std::uniform_int_distribution<int>(0, k_num_topics - 1)(rng);
-		topic = k_topics[topic_idx];
-	}
-	else
-	{
-		topic = std::move(user_topic);
-	}
-
-	std::cout << "\nCreating " << agent_count << " agents...\n\n";
-
-	// Create context
-	ContextConfig ctx_cfg;
-	if (use_local)
-	{
-		ctx_cfg.m_provider = EProvider::LlamaCpp;
-		ctx_cfg.m_model_path = local_model_path.c_str();
-		ctx_cfg.m_gpu_layers = gpu_layers;
-		ctx_cfg.m_context_length = 4096;
-		std::cout << "Using local model: " << local_model_path << "\n";
-		if (gpu_layers > 0)
-			std::cout << "GPU layers: " << gpu_layers << "\n";
-	}
-	else
-	{
-		ctx_cfg.m_provider = EProvider::AzureOpenAI;
-		ctx_cfg.m_endpoint = std::getenv("AZURE_OPENAI_ENDPOINT");
-		ctx_cfg.m_deployment = std::getenv("AZURE_OPENAI_DEPLOYMENT");
-		ctx_cfg.m_max_requests_per_minute = 30;
-
-		if (!ctx_cfg.m_endpoint || !ctx_cfg.m_deployment)
-		{
-			std::cerr << "Error: Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT environment variables.\n";
-			std::cerr << "  e.g. AZURE_OPENAI_ENDPOINT=https://myresource.openai.azure.com\n";
-			std::cerr << "       AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini\n";
-			std::cerr << "  Or use: --local <model.gguf> [--gpu-layers N]\n";
-			return 1;
-		}
-	}
-
-	Context ctx(ctx_cfg);
-	if (!ctx)
-	{
-		std::cerr << "Error: Failed to create AI context.\n";
-		return 1;
-	}
-
-	// Create agents
-	std::vector<AgentState> agents(agent_count);
-	for (int i = 0; i < agent_count; ++i)
+	std::vector<AgentState> agents(count);
+	for (int i = 0; i < count; ++i)
 	{
 		auto personality_desc = k_personalities[personality_indices[i % k_num_personalities]];
 
 		AgentConfig cfg;
 		cfg.m_personality = personality_desc;
 		cfg.m_temperature = 0.9f;
-		cfg.m_max_response_tokens = 150;
+		cfg.m_max_response_tokens = max_tokens;
 		cfg.m_priority = 3;
 
 		agents[i].agent = ctx.CreateAgent(cfg);
@@ -310,16 +293,19 @@ int main(int argc, char* argv[])
 
 		// Seed world knowledge
 		agents[i].agent.MemoryAdd(EMemoryTier::Permanent, "system",
-			"You are in a medieval fantasy settlement. Keep responses to 1-3 sentences. Stay in character.");
+			"You are in a medieval fantasy settlement. Keep responses to 1-2 sentences. Stay in character.");
 	}
+	return agents;
+}
 
-	// Phase 1: Each agent chooses their own name
+// Have each agent choose a name via the LLM
+void ChooseNames(Context& ctx, std::vector<AgentState>& agents)
+{
 	std::cout << "Agents choosing names...\n";
-	std::atomic<int> names_pending = agent_count;
 
-	for (int i = 0; i < agent_count; ++i)
+	for (auto& a : agents)
 	{
-		agents[i].agent.Chat(
+		a.agent.Chat(
 			"Choose a unique, memorable name for yourself that fits your personality. "
 			"Respond with ONLY the name, nothing else.",
 			[](void* user_ctx, ChatResult const& result)
@@ -328,12 +314,7 @@ int main(int argc, char* argv[])
 				if (result.m_success)
 				{
 					state.name = std::string(result.m_response, result.m_response_len);
-
-					// Trim whitespace and quotes
-					while (!state.name.empty() && (state.name.front() == ' ' || state.name.front() == '"' || state.name.front() == '\n'))
-						state.name.erase(state.name.begin());
-					while (!state.name.empty() && (state.name.back() == ' ' || state.name.back() == '"' || state.name.back() == '\n'))
-						state.name.pop_back();
+					Trim(state.name, true);
 				}
 				else
 				{
@@ -341,22 +322,14 @@ int main(int argc, char* argv[])
 				}
 				state.name_received = true;
 			},
-			&agents[i]);
+			&a);
 	}
 
 	// Wait for all names
 	while (true)
 	{
 		ctx.Update();
-		bool all_done = true;
-		for (auto& a : agents)
-		{
-			if (!a.name_received)
-			{
-				all_done = false;
-				break;
-			}
-		}
+		auto all_done = std::all_of(agents.begin(), agents.end(), [](auto& a) { return a.name_received; });
 		if (all_done) break;
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -364,11 +337,14 @@ int main(int argc, char* argv[])
 	// Display agents
 	std::cout << "\nAgents:\n";
 	for (auto const& a : agents)
-	{
 		std::cout << std::format("  {}{:<12}{} ({})\n", k_colours[a.colour_idx], a.name, k_reset, a.personality);
-	}
+	std::cout << "\n";
+}
 
-	std::cout << std::format("\nTopic: \"{}\"\n\n", topic);
+// Run the discussion rounds
+void RunDiscussion(Context& ctx, std::vector<AgentState>& agents, std::string const& topic, int num_rounds, std::mt19937& rng)
+{
+	std::cout << std::format("Topic: \"{}\"\n\n", topic);
 
 	// Add the topic to all agents' memory
 	for (auto& a : agents)
@@ -377,14 +353,13 @@ int main(int argc, char* argv[])
 		a.agent.MemoryAdd(EMemoryTier::Permanent, "system", topic_msg.c_str());
 	}
 
-	// Phase 2: Discussion rounds
-	int num_rounds = std::uniform_int_distribution<int>(5, 10)(rng);
+	auto agent_count = static_cast<int>(agents.size());
 	std::string discussion_log;
 
 	for (int round = 0; round < num_rounds; ++round)
 	{
 		// Pick a random agent to speak
-		int speaker_idx = std::uniform_int_distribution<int>(0, agent_count - 1)(rng);
+		auto speaker_idx = std::uniform_int_distribution<int>(0, agent_count - 1)(rng);
 		auto& speaker = agents[speaker_idx];
 
 		// Build the stimulus
@@ -445,8 +420,11 @@ int main(int argc, char* argv[])
 				agents[i].agent.MemoryAdd(EMemoryTier::Recent, "user", log_entry.c_str());
 		}
 	}
+}
 
-	// Print usage stats
+// Print usage statistics
+void PrintStats(Context& ctx)
+{
 	auto stats = ctx.GetUsageStats();
 	std::cout << std::format(
 		"\n=== Usage Stats ===\n"
@@ -455,6 +433,61 @@ int main(int argc, char* argv[])
 		stats.m_prompt_tokens,
 		stats.m_completion_tokens,
 		stats.m_estimated_cost_usd);
+}
+
+int main(int argc, char* argv[])
+{
+	// Enable ANSI escape sequences and UTF-8 output in the Windows console
+	auto h_console = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD console_mode = 0;
+	GetConsoleMode(h_console, &console_mode);
+	SetConsoleMode(h_console, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	SetConsoleOutputCP(CP_UTF8);
+
+	std::cout << "\n=== AI Discussion Test ===\n\n";
+
+	// Parse CLI args, then prompt for anything not specified
+	auto opts = ParseArgs(argc, argv);
+	if (opts.model_path.empty() && !opts.use_local)
+	{
+		// No provider specified on command line — prompt interactively
+		opts.use_local = PromptForProvider();
+	}
+	if (opts.use_local && opts.model_path.empty())
+	{
+		opts.model_path = PromptForModel();
+		if (opts.model_path.empty())
+			return 1;
+	}
+
+	std::mt19937 rng(std::random_device{}());
+	auto topic = PromptForTopic(rng);
+
+	// Use fewer agents for local inference (CPU is slow)
+	auto agent_count = opts.use_local
+		? std::uniform_int_distribution<int>(2, 3)(rng)
+		: std::uniform_int_distribution<int>(3, 8)(rng);
+
+	std::cout << "Creating " << agent_count << " agents...\n\n";
+
+	// Create context and agents
+	auto ctx = CreateContext(opts);
+	if (!ctx)
+	{
+		std::cerr << "Error: Failed to create AI context.\n";
+		return 1;
+	}
+
+	auto agents = CreateAgents(ctx, agent_count, opts.use_local, rng);
+	ChooseNames(ctx, agents);
+
+	// Run 3-5 rounds for local, 5-10 for cloud
+	auto num_rounds = opts.use_local
+		? std::uniform_int_distribution<int>(3, 5)(rng)
+		: std::uniform_int_distribution<int>(5, 10)(rng);
+
+	RunDiscussion(ctx, agents, topic, num_rounds, rng);
+	PrintStats(ctx);
 
 	return 0;
 }
