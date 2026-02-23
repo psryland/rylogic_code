@@ -83,14 +83,12 @@ struct AgentState
 // Path to the models directory relative to the executable
 std::string FindModelsDir()
 {
-	// Walk up from the exe directory looking for sdk/llama-cpp/models
-	auto exe_path = fs::path(std::string(MAX_PATH, '\0'));
-	GetModuleFileNameA(nullptr, exe_path.string().data(), MAX_PATH);
+	// Get the exe path
+	char buf[MAX_PATH] = {};
+	GetModuleFileNameA(nullptr, buf, MAX_PATH);
 	
-	// Try a few known relative paths from the exe
-	// In development: exe is in projects/tests/ai-test/obj/x64/<Config>/
-	// The repo root contains sdk/llama-cpp/models/
-	for (auto dir = fs::path(exe_path).parent_path(); !dir.empty() && dir != dir.root_path(); dir = dir.parent_path())
+	// Walk up from the exe directory looking for sdk/llama-cpp/models
+	for (auto dir = fs::path(buf).parent_path(); !dir.empty() && dir != dir.root_path(); dir = dir.parent_path())
 	{
 		auto models = dir / "sdk" / "llama-cpp" / "models";
 		if (fs::exists(models))
