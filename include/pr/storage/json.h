@@ -651,7 +651,7 @@ namespace pr::json
 				// Block comments
 				if (HasFlag(eat_flags, EEatFlags::Comments) && src.compare(0, 2, "/*") == 0)
 				{
-					Eat(src, 2, 2, [](auto& sv) { return sv.compare(0, 2, "*/") == 0; });
+					Eat(src, 2, 2, [](auto& sv) { return sv.compare(0, 2, "*/") != 0; });
 					continue;
 				}
 
