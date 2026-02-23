@@ -176,83 +176,135 @@ if (local_files.Count > 0)
 	Console.WriteLine();
 }
 
-// ── Step 1: Fetch model list from Hugging Face ──────────────────────────────
+// ── Step 1: Fetch and browse model list ─────────────────────────────────────
 
-Console.Write("Fetching models from Hugging Face...");
-
-var search_param = string.IsNullOrEmpty(search_filter) ? "" : $"&search={Uri.EscapeDataString(search_filter)}";
-var api_url = $"https://huggingface.co/api/models?filter=gguf&sort=downloads&pipeline_tag=text-generation&limit=200{search_param}";
-
-string json;
-try
+var selected_model = ((string Id, string ShortName, string Params, string Type, long Downloads, string Annotation))default;
+while (true)
 {
-	json = await client.GetStringAsync(api_url);
-}
-catch (Exception ex)
-{
-	Console.WriteLine($"\nError: {ex.Message}");
-	return;
-}
-
-var models = new List<(string Id, string ShortName, string Params, string Type, long Downloads, string Annotation)>();
-using (var doc = JsonDocument.Parse(json))
-{
-	foreach (var model in doc.RootElement.EnumerateArray())
-	{
-		var id = model.GetProperty("id").GetString() ?? "";
-		var downloads = model.TryGetProperty("downloads", out var dl) ? dl.GetInt64() : 0;
-
-		// Must have GGUF in the name (some repos are tagged gguf but aren't GGUF repos)
-		if (!id.Contains("gguf", StringComparison.OrdinalIgnoreCase) &&
-			!id.Contains("GGUF", StringComparison.OrdinalIgnoreCase))
-			continue;
-
-		// Extract the short name (after the owner/ prefix, without -GGUF suffix)
-		var short_name = id.Contains('/') ? id[(id.IndexOf('/') + 1)..] : id;
-		short_name = Regex.Replace(short_name, @"[\-_]?[Gg][Gg][Uu][Ff]$", "");
-
-		var parms = ParseParams(id);
-		var type = ClassifyType(id);
-		var annotation = GetAnnotation(id);
-
-		models.Add((id, short_name, parms, type, downloads, annotation));
-	}
-}
-
-Console.WriteLine($" found {models.Count} models.");
-
-if (models.Count == 0)
-{
-	Console.WriteLine("No models found.");
+	Console.Write("Fetching models from Hugging Face");
 	if (!string.IsNullOrEmpty(search_filter))
-		Console.WriteLine($"  Try a different search: dotnet-script _get_model.csx -- <keyword>");
-	return;
+		Console.Write($" (search: '{search_filter}')");
+	Console.Write("...");
+
+	var search_param = string.IsNullOrEmpty(search_filter) ? "" : $"&search={Uri.EscapeDataString(search_filter)}";
+	var api_url = $"https://huggingface.co/api/models?filter=gguf&sort=downloads&pipeline_tag=text-generation&limit=200{search_param}";
+
+	string json;
+	try
+	{
+		json = await client.GetStringAsync(api_url);
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"\nError: {ex.Message}");
+		return;
+	}
+
+	var models = new List<(string Id, string ShortName, string Params, string Type, long Downloads, string Annotation)>();
+	using (var doc = JsonDocument.Parse(json))
+	{
+		foreach (var model in doc.RootElement.EnumerateArray())
+		{
+			var id = model.GetProperty("id").GetString() ?? "";
+			var downloads = model.TryGetProperty("downloads", out var dl) ? dl.GetInt64() : 0;
+
+			// Must have GGUF in the name (some repos are tagged gguf but aren't GGUF repos)
+			if (!id.Contains("gguf", StringComparison.OrdinalIgnoreCase) &&
+				!id.Contains("GGUF", StringComparison.OrdinalIgnoreCase))
+				continue;
+
+			// Extract the short name (after the owner/ prefix, without -GGUF suffix)
+			var short_name = id.Contains('/') ? id[(id.IndexOf('/') + 1)..] : id;
+			short_name = Regex.Replace(short_name, @"[\-_]?[Gg][Gg][Uu][Ff]$", "");
+
+			var parms = ParseParams(id);
+			var type = ClassifyType(id);
+			var annotation = GetAnnotation(id);
+
+			models.Add((id, short_name, parms, type, downloads, annotation));
+		}
+	}
+
+	Console.WriteLine($" found {models.Count} models.");
+
+	if (models.Count == 0)
+	{
+		Console.WriteLine("No models found.");
+		if (!string.IsNullOrEmpty(search_filter))
+			Console.WriteLine($"  Try 'f' to change the search filter.");
+		return;
+	}
+
+	// ── Display model list (capped at 30 per page) ─────────────────────────────
+
+	var page_size = 30;
+	var page_start = 0;
+	var input = "";
+
+	while (true)
+	{
+		var page_end = Math.Min(page_start + page_size, models.Count);
+
+		Console.WriteLine();
+		if (!string.IsNullOrEmpty(search_filter))
+			Console.WriteLine($"  Search: '{search_filter}'");
+		Console.WriteLine($"  Showing {page_start + 1}-{page_end} of {models.Count} models (sorted by downloads)");
+		Console.WriteLine();
+		Console.WriteLine($"  {"#",-4} {"Model",-45} {"Params",-8} {"Type",-10} {"DLs",-8} Description");
+		Console.WriteLine($"  {new string('-', 4)} {new string('-', 45)} {new string('-', 8)} {new string('-', 10)} {new string('-', 8)} {new string('-', 20)}");
+		for (int i = page_start; i < page_end; i++)
+		{
+			var m = models[i];
+			Console.WriteLine($"  {i + 1,-4} {Truncate(m.ShortName, 44),-45} {m.Params,-8} {m.Type,-10} {FormatDownloads(m.Downloads),-8} {m.Annotation}");
+		}
+		Console.WriteLine();
+
+		var has_more = page_end < models.Count;
+		var has_prev = page_start > 0;
+		var nav = new List<string>();
+		if (has_prev) nav.Add("'<' prev");
+		if (has_more) nav.Add("'>' next");
+		nav.Add("'f' filter");
+		nav.Add("'q' quit");
+		Console.Write($"Enter model #, {string.Join(", ", nav)}: ");
+
+		input = Console.ReadLine()?.Trim() ?? "";
+		if (input.Equals("q", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(input))
+			return;
+		if (input.Equals("f", StringComparison.OrdinalIgnoreCase))
+		{
+			Console.Write("Search: ");
+			search_filter = Console.ReadLine()?.Trim() ?? "";
+			break; // break inner loop to re-fetch
+		}
+		if (input == ">" && has_more)
+		{
+			page_start = page_end;
+			continue;
+		}
+		if (input == "<" && has_prev)
+		{
+			page_start = Math.Max(0, page_start - page_size);
+			continue;
+		}
+		break; // got a number
+	}
+
+	// If the user entered 'f', loop back to re-fetch
+	if (input.Equals("f", StringComparison.OrdinalIgnoreCase))
+		continue;
+
+	if (!int.TryParse(input, out var choice) || choice < 1 || choice > models.Count)
+	{
+		Console.WriteLine("Invalid selection.");
+		return;
+	}
+
+	selected_model = models[choice - 1];
+	break; // exit outer fetch loop
 }
 
-// ── Display model list ──────────────────────────────────────────────────────
-
-Console.WriteLine();
-Console.WriteLine($"  {"#",-4} {"Model",-45} {"Params",-8} {"Type",-10} {"DLs",-8} Description");
-Console.WriteLine($"  {new string('\u2500', 4)} {new string('\u2500', 45)} {new string('\u2500', 8)} {new string('\u2500', 10)} {new string('\u2500', 8)} {new string('\u2500', 20)}");for (int i = 0; i < models.Count; i++)
-{
-	var m = models[i];
-	Console.WriteLine($"  {i + 1,-4} {Truncate(m.ShortName, 44),-45} {m.Params,-8} {m.Type,-10} {FormatDownloads(m.Downloads),-8} {m.Annotation}");
-}
-Console.WriteLine();
-if (string.IsNullOrEmpty(search_filter))
-	Console.WriteLine("  Tip: narrow results with: dotnet-script _get_model.csx -- <keyword>");
-Console.Write("\nEnter model # for quantisation options (or 'q' to quit): ");
-var input = Console.ReadLine()?.Trim() ?? "";
-if (input.Equals("q", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(input))
-	return;
-
-if (!int.TryParse(input, out var choice) || choice < 1 || choice > models.Count)
-{
-	Console.WriteLine("Invalid selection.");
-	return;
-}
-
-var selected = models[choice - 1];
+var selected = selected_model;
 
 // ── Step 2: Fetch quantisation files ────────────────────────────────────────
 
@@ -314,11 +366,11 @@ for (int i = 0; i < files.Count; i++)
 }
 
 Console.Write($"\nEnter # to download (or 'q' to quit): ");
-input = Console.ReadLine()?.Trim() ?? "";
-if (input.Equals("q", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(input))
+var file_input = Console.ReadLine()?.Trim() ?? "";
+if (file_input.Equals("q", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(file_input))
 	return;
 
-if (!int.TryParse(input, out var file_choice) || file_choice < 1 || file_choice > files.Count)
+if (!int.TryParse(file_input, out var file_choice) || file_choice < 1 || file_choice > files.Count)
 {
 	Console.WriteLine("Invalid selection.");
 	return;
