@@ -40,10 +40,29 @@
     <Link>
       <AdditionalDependencies>
         ;winhttp.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- llama.cpp static libraries per configuration -->
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <Link>
+      <AdditionalDependencies>
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\src\Release\llama.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-base.lib
         ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-cpu.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <Link>
+      <AdditionalDependencies>
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\src\Debug\llama.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-base.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-cpu.lib
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>

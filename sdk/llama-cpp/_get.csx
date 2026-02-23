@@ -50,10 +50,10 @@ if (!Directory.Exists(SDKDir))
 
 // Build static libraries via CMake if not already built
 var buildDir = Path.Join(SDKDir, "build");
-var libFile = Path.Join(buildDir, "bin", "Release", "llama.lib");
+var libFile = Path.Join(buildDir, "src", "Release", "llama.lib");
 if (!File.Exists(libFile))
 {
-	Console.WriteLine("Building llama.cpp static libraries...");
+	Console.WriteLine("Building llama.cpp static libraries (Release)...");
 	Directory.CreateDirectory(buildDir);
 
 	var proc = new Process();
@@ -74,7 +74,7 @@ if (!File.Exists(libFile))
 		Console.WriteLine($"Error: {ex.Message}");
 	}
 
-	// Build
+	// Build Release
 	proc.StartInfo.FileName = "cmake.exe";
 	proc.StartInfo.Arguments = $"--build \"{buildDir}\" --config Release -j 8";
 	proc.StartInfo.WorkingDirectory = SDKDir;
@@ -82,7 +82,50 @@ if (!File.Exists(libFile))
 	{
 		proc.Start();
 		proc.WaitForExit();
-		if (proc.ExitCode != 0) throw new Exception("CMake build failed");
+		if (proc.ExitCode != 0) throw new Exception("CMake build (Release) failed");
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"Error: {ex.Message}");
+	}
+}
+
+// Build Debug libraries if not already built
+var debugLibFile = Path.Join(SDKDir, "build-debug", "src", "Debug", "llama.lib");
+if (!File.Exists(debugLibFile))
+{
+	Console.WriteLine("Building llama.cpp static libraries (Debug)...");
+
+	// Re-configure with static debug CRT (/MTd)
+	var debugBuildDir = Path.Join(SDKDir, "build-debug");
+	Directory.CreateDirectory(debugBuildDir);
+
+	var proc = new Process();
+	proc.StartInfo.UseShellExecute = true;
+
+	proc.StartInfo.FileName = "cmake.exe";
+	proc.StartInfo.Arguments = $"-S \"{SDKDir}\" -B \"{debugBuildDir}\" -DBUILD_SHARED_LIBS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug -DCMAKE_POLICY_DEFAULT_CMP0091=NEW -DCMAKE_C_FLAGS_DEBUG=\"/MTd /Zi /Ob0 /Od /RTC1 /D_ITERATOR_DEBUG_LEVEL=1\" -DCMAKE_CXX_FLAGS_DEBUG=\"/MTd /Zi /Ob0 /Od /RTC1 /D_ITERATOR_DEBUG_LEVEL=1\"";
+	proc.StartInfo.WorkingDirectory = SDKDir;
+	try
+	{
+		proc.Start();
+		proc.WaitForExit();
+		if (proc.ExitCode != 0) throw new Exception("CMake configure (Debug) failed");
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"Error: {ex.Message}");
+	}
+
+	// Build Debug
+	proc.StartInfo.FileName = "cmake.exe";
+	proc.StartInfo.Arguments = $"--build \"{debugBuildDir}\" --config Debug -j 8";
+	proc.StartInfo.WorkingDirectory = SDKDir;
+	try
+	{
+		proc.Start();
+		proc.WaitForExit();
+		if (proc.ExitCode != 0) throw new Exception("CMake build (Debug) failed");
 	}
 	catch (Exception ex)
 	{
