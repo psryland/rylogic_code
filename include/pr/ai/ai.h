@@ -25,8 +25,8 @@ namespace pr::ai
 	enum class EProvider
 	{
 		AzureOpenAI,
-		// OpenAI,      // Future
-		// LlamaCpp,    // Future: local inference
+		LlamaCpp,      // Local inference via llama.cpp (requires GGUF model file)
+		// OpenAI,      // Future: direct OpenAI API
 	};
 
 	// Memory tiers for agent context management.
@@ -67,13 +67,18 @@ namespace pr::ai
 	{
 		EProvider m_provider = EProvider::AzureOpenAI;
 
-		// Azure OpenAI connection settings
+		// Azure OpenAI connection settings (only used when m_provider == AzureOpenAI)
 		char const* m_api_key = nullptr;       // API key (or null to read from env var AZURE_OPENAI_API_KEY)
 		char const* m_endpoint = nullptr;      // e.g. "https://myresource.openai.azure.com"
 		char const* m_deployment = nullptr;    // e.g. "gpt-4o-mini"
 		char const* m_api_version = "2024-02-15-preview";
 
-		// Throttling
+		// Local inference settings (only used when m_provider == LlamaCpp)
+		char const* m_model_path = nullptr;    // Path to GGUF model file
+		int m_gpu_layers = 0;                  // Number of layers to offload to GPU (0 = CPU only)
+		int m_context_length = 2048;           // Context window size in tokens
+
+		// Throttling (Azure only; ignored for local inference)
 		int m_max_requests_per_minute = 60;    // Rate limit (0 = unlimited)
 		double m_max_cost_usd = 0.0;           // Cost cap in USD (0 = unlimited)
 	};

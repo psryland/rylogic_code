@@ -28,6 +28,8 @@
       <AdditionalIncludeDirectories>
         ;$(ProjectDir)
         ;$(RylogicRoot)include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\ggml\include
         ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>
@@ -38,6 +40,10 @@
     <Link>
       <AdditionalDependencies>
         ;winhttp.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\src\Release\llama.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-base.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-cpu.lib
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>

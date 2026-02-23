@@ -25,6 +25,8 @@
 
 #pragma comment(lib, "winhttp.lib")
 
+#include "llama.h"
+
 #include "pr/storage/json.h"
 #include "pr/ai/ai.h"
 
@@ -250,10 +252,16 @@ struct pr::ai::AgentData
 struct pr::ai::ContextData
 {
 	ErrorHandler m_error_cb;
+	EProvider m_provider;
 
-	// WinHTTP handles
+	// WinHTTP handles (Azure only)
 	HINTERNET m_session = nullptr;
 	HINTERNET m_connection = nullptr;
+
+	// llama.cpp handles (local only)
+	llama_model* m_llama_model = nullptr;
+	llama_context* m_llama_ctx = nullptr;
+	llama_sampler* m_llama_sampler = nullptr;
 
 	// Configuration
 	std::string m_api_key;
@@ -269,10 +277,10 @@ struct pr::ai::ContextData
 	std::atomic<int> m_in_flight = 0;
 	static constexpr int k_max_in_flight = 5;
 
-	// Rate limiting
+	// Rate limiting (Azure only)
 	RateLimiter m_rate_limiter;
 
-	// Cost cap
+	// Cost cap (Azure only)
 	double m_max_cost_usd = 0.0;
 
 	// Usage tracking
@@ -281,11 +289,23 @@ struct pr::ai::ContextData
 	// All agents owned by this context
 	std::vector<std::unique_ptr<AgentData>> m_agents;
 
+	// Initialised flag (true if backend is ready)
+	bool m_ready = false;
+
 	ContextData(ContextConfig const& cfg, ErrorHandler error_cb)
 		: m_error_cb(error_cb)
+		, m_provider(cfg.m_provider)
 		, m_api_version(cfg.m_api_version ? cfg.m_api_version : "2024-02-15-preview")
 		, m_deployment(cfg.m_deployment ? cfg.m_deployment : "")
 		, m_max_cost_usd(cfg.m_max_cost_usd)
+	{
+		if (m_provider == EProvider::AzureOpenAI)
+			InitialiseAzure(cfg);
+		else if (m_provider == EProvider::LlamaCpp)
+			InitialiseLlama(cfg);
+	}
+
+	void InitialiseAzure(ContextConfig const& cfg)
 	{
 		// API key: from config or environment variable
 		if (cfg.m_api_key)
@@ -325,10 +345,60 @@ struct pr::ai::ContextData
 			m_session = nullptr;
 			return;
 		}
+
+		m_ready = true;
+	}
+
+	void InitialiseLlama(ContextConfig const& cfg)
+	{
+		if (!cfg.m_model_path)
+		{
+			m_error_cb("Model path not provided for LlamaCpp provider.");
+			return;
+		}
+
+		llama_backend_init();
+
+		// Load the model
+		auto model_params = llama_model_default_params();
+		model_params.n_gpu_layers = cfg.m_gpu_layers;
+		m_llama_model = llama_model_load_from_file(cfg.m_model_path, model_params);
+		if (!m_llama_model)
+		{
+			m_error_cb(std::format("Failed to load model: {}", cfg.m_model_path));
+			return;
+		}
+
+		// Create the inference context
+		auto ctx_params = llama_context_default_params();
+		ctx_params.n_ctx = cfg.m_context_length;
+		ctx_params.n_batch = cfg.m_context_length;
+		m_llama_ctx = llama_init_from_model(m_llama_model, ctx_params);
+		if (!m_llama_ctx)
+		{
+			m_error_cb("Failed to create llama context");
+			llama_model_free(m_llama_model);
+			m_llama_model = nullptr;
+			return;
+		}
+
+		// Create a sampler chain (temperature -> top-p -> dist)
+		// Temperature will be overridden per-request based on agent settings
+		auto sparams = llama_sampler_chain_default_params();
+		m_llama_sampler = llama_sampler_chain_init(sparams);
+		llama_sampler_chain_add(m_llama_sampler, llama_sampler_init_top_k(40));
+		llama_sampler_chain_add(m_llama_sampler, llama_sampler_init_top_p(0.9f, 1));
+		llama_sampler_chain_add(m_llama_sampler, llama_sampler_init_temp(0.7f));
+		llama_sampler_chain_add(m_llama_sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+
+		m_ready = true;
 	}
 
 	~ContextData()
 	{
+		if (m_llama_sampler) llama_sampler_free(m_llama_sampler);
+		if (m_llama_ctx) llama_free(m_llama_ctx);
+		if (m_llama_model) llama_model_free(m_llama_model);
 		if (m_connection) WinHttpCloseHandle(m_connection);
 		if (m_session) WinHttpCloseHandle(m_session);
 	}
@@ -368,28 +438,36 @@ struct pr::ai::ContextData
 		});
 	}
 
-	// Submit the next pending request via WinHTTP (synchronous HTTP on a thread)
+	// Submit the next pending request
 	void SubmitNextRequest()
 	{
 		PendingRequest req;
 		{
 			std::lock_guard lock(m_mutex);
 
-			// Check rate limits and cost cap
-			m_rate_limiter.Prune();
-			if (!m_rate_limiter.CanSend()) return;
-			if (m_max_cost_usd > 0 && m_usage.m_estimated_cost_usd >= m_max_cost_usd) return;
 			if (m_pending.empty()) return;
 			if (m_in_flight.load() >= k_max_in_flight) return;
 
+			// Check rate limits and cost cap (Azure only)
+			if (m_provider == EProvider::AzureOpenAI)
+			{
+				m_rate_limiter.Prune();
+				if (!m_rate_limiter.CanSend()) return;
+				if (m_max_cost_usd > 0 && m_usage.m_estimated_cost_usd >= m_max_cost_usd) return;
+				m_rate_limiter.RecordRequest();
+			}
+
 			req = std::move(const_cast<PendingRequest&>(m_pending.top()));
 			m_pending.pop();
-			m_rate_limiter.RecordRequest();
 			m_in_flight.fetch_add(1);
 		}
 
-		// Perform synchronous HTTP request (called from Update on the game thread for simplicity)
-		auto completed = PerformHttpRequest(req);
+		// Perform the inference (synchronous, called from Update on the game thread)
+		CompletedResponse completed;
+		if (m_provider == EProvider::LlamaCpp)
+			completed = PerformLocalInference(req);
+		else
+			completed = PerformHttpRequest(req);
 
 		{
 			std::lock_guard lock(m_mutex);
@@ -403,9 +481,14 @@ struct pr::ai::ContextData
 				m_usage.m_prompt_tokens += c.m_prompt_tokens;
 				m_usage.m_completion_tokens += c.m_completion_tokens;
 				m_usage.m_total_requests++;
-				m_usage.m_estimated_cost_usd =
-					(m_usage.m_prompt_tokens * k_input_cost_per_million / 1'000'000.0) +
-					(m_usage.m_completion_tokens * k_output_cost_per_million / 1'000'000.0);
+
+				// Cost tracking only applies to Azure
+				if (m_provider == EProvider::AzureOpenAI)
+				{
+					m_usage.m_estimated_cost_usd =
+						(m_usage.m_prompt_tokens * k_input_cost_per_million / 1'000'000.0) +
+						(m_usage.m_completion_tokens * k_output_cost_per_million / 1'000'000.0);
+				}
 			}
 			else
 			{
@@ -413,6 +496,157 @@ struct pr::ai::ContextData
 				m_usage.m_total_requests++;
 			}
 		}
+	}
+
+	// Perform local inference via llama.cpp
+	CompletedResponse PerformLocalInference(PendingRequest const& req)
+	{
+		CompletedResponse result = {};
+		result.m_cb = req.m_cb;
+		result.m_user_ctx = req.m_user_ctx;
+		result.m_agent = req.m_agent;
+		result.m_add_response_to_recent = req.m_add_response_to_recent;
+		result.m_user_content = req.m_user_content;
+		result.m_user_role = req.m_user_role;
+
+		if (!m_llama_model || !m_llama_ctx)
+		{
+			result.m_error = "Local model not loaded";
+			result.m_success = false;
+			return result;
+		}
+
+		try
+		{
+			// Parse the JSON body to extract the messages array and parameters
+			auto doc = json::Read(std::string_view(req.m_body));
+			auto const& root = doc.to_object();
+			auto const& messages = root["messages"].to_array();
+
+			auto const* max_tok_val = root.find("max_tokens");
+			auto max_tokens = max_tok_val ? static_cast<int>(max_tok_val->to<double>()) : 256;
+
+			// Build the chat messages for llama_chat_apply_template
+			std::vector<llama_chat_message> chat_msgs;
+			for (auto const& m : messages)
+			{
+				auto const& obj = m.to_object();
+				auto role = obj["role"].to<std::string>();
+				auto content = obj["content"].to<std::string>();
+				// Store strings separately to keep pointers valid
+				chat_msgs.push_back({ nullptr, nullptr });
+			}
+
+			// We need to keep the strings alive while using the pointers
+			std::vector<std::string> roles, contents;
+			for (auto const& m : messages)
+			{
+				auto const& obj = m.to_object();
+				roles.push_back(obj["role"].to<std::string>());
+				contents.push_back(obj["content"].to<std::string>());
+			}
+			chat_msgs.clear();
+			for (size_t i = 0; i < roles.size(); ++i)
+				chat_msgs.push_back({ roles[i].c_str(), contents[i].c_str() });
+
+			// Apply the chat template to produce a formatted prompt
+			auto const* vocab = llama_model_get_vocab(m_llama_model);
+			std::vector<char> prompt_buf(4096);
+			auto prompt_len = llama_chat_apply_template(
+				nullptr, // use model's built-in template
+				chat_msgs.data(), chat_msgs.size(),
+				true, // add assistant turn start
+				prompt_buf.data(), static_cast<int32_t>(prompt_buf.size()));
+
+			if (prompt_len < 0)
+			{
+				result.m_error = "Failed to apply chat template";
+				result.m_success = false;
+				return result;
+			}
+
+			// Resize and retry if buffer was too small
+			if (prompt_len > static_cast<int32_t>(prompt_buf.size()))
+			{
+				prompt_buf.resize(prompt_len + 1);
+				prompt_len = llama_chat_apply_template(
+					nullptr, chat_msgs.data(), chat_msgs.size(),
+					true, prompt_buf.data(), static_cast<int32_t>(prompt_buf.size()));
+			}
+
+			std::string prompt(prompt_buf.data(), prompt_len);
+
+			// Tokenize the prompt
+			auto n_prompt_max = static_cast<int32_t>(prompt.size()) + 128;
+			std::vector<llama_token> tokens(n_prompt_max);
+			auto n_tokens = llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()),
+				tokens.data(), n_prompt_max, true, true);
+			if (n_tokens < 0)
+			{
+				result.m_error = "Tokenization failed";
+				result.m_success = false;
+				return result;
+			}
+			tokens.resize(n_tokens);
+			result.m_prompt_tokens = n_tokens;
+
+			// Clear the KV cache for a fresh generation
+			llama_memory_t mem = llama_get_memory(m_llama_ctx);
+			if (mem) llama_memory_clear(mem, false);
+
+			// Decode the prompt
+			auto batch = llama_batch_get_one(tokens.data(), n_tokens);
+			if (llama_decode(m_llama_ctx, batch) != 0)
+			{
+				result.m_error = "Failed to decode prompt";
+				result.m_success = false;
+				return result;
+			}
+
+			// Reset the sampler for this request
+			llama_sampler_reset(m_llama_sampler);
+
+			// Generate tokens
+			auto eos = llama_vocab_eos(vocab);
+			std::string response;
+			int n_generated = 0;
+
+			for (int i = 0; i < max_tokens; ++i)
+			{
+				auto token = llama_sampler_sample(m_llama_sampler, m_llama_ctx, -1);
+
+				// Check for end of sequence
+				if (token == eos || llama_vocab_is_eog(vocab, token))
+					break;
+
+				// Accept the token in the sampler
+				llama_sampler_accept(m_llama_sampler, token);
+
+				// Convert token to text
+				char piece[256];
+				auto piece_len = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, true);
+				if (piece_len > 0)
+					response.append(piece, piece_len);
+
+				// Decode the new token
+				auto next_batch = llama_batch_get_one(&token, 1);
+				if (llama_decode(m_llama_ctx, next_batch) != 0)
+					break;
+
+				++n_generated;
+			}
+
+			result.m_response = std::move(response);
+			result.m_completion_tokens = n_generated;
+			result.m_success = true;
+		}
+		catch (std::exception const& ex)
+		{
+			result.m_error = std::format("Local inference error: {}", ex.what());
+			result.m_success = false;
+		}
+
+		return result;
 	}
 
 	// Perform a synchronous HTTP POST request to the Azure OpenAI endpoint
@@ -578,7 +812,7 @@ extern "C"
 		try
 		{
 			auto ctx = new ContextData(cfg, error_cb);
-			if (!ctx->m_session)
+			if (!ctx->m_ready)
 			{
 				delete ctx;
 				return nullptr;

@@ -77,7 +77,7 @@ struct AgentState
 	bool name_received = false;
 };
 
-int main()
+int main(int argc, char* argv[])
 {
 	// Enable ANSI escape sequences and UTF-8 output in the Windows console
 	auto h_console = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -85,6 +85,18 @@ int main()
 	GetConsoleMode(h_console, &console_mode);
 	SetConsoleMode(h_console, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 	SetConsoleOutputCP(CP_UTF8);
+
+	// Parse command-line arguments for --local <model.gguf>
+	std::string local_model_path;
+	int gpu_layers = 0;
+	for (int i = 1; i < argc; ++i)
+	{
+		if (std::string(argv[i]) == "--local" && i + 1 < argc)
+			local_model_path = argv[++i];
+		else if (std::string(argv[i]) == "--gpu-layers" && i + 1 < argc)
+			gpu_layers = std::atoi(argv[++i]);
+	}
+	bool use_local = !local_model_path.empty();
 
 	// Seed RNG
 	std::mt19937 rng(std::random_device{}());
@@ -122,18 +134,33 @@ int main()
 
 	std::cout << "\nCreating " << agent_count << " agents...\n\n";
 
-	// Create context (reads API key from AZURE_OPENAI_API_KEY env var)
+	// Create context
 	ContextConfig ctx_cfg;
-	ctx_cfg.m_endpoint = std::getenv("AZURE_OPENAI_ENDPOINT");
-	ctx_cfg.m_deployment = std::getenv("AZURE_OPENAI_DEPLOYMENT");
-	ctx_cfg.m_max_requests_per_minute = 30;
-
-	if (!ctx_cfg.m_endpoint || !ctx_cfg.m_deployment)
+	if (use_local)
 	{
-		std::cerr << "Error: Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT environment variables.\n";
-		std::cerr << "  e.g. AZURE_OPENAI_ENDPOINT=https://myresource.openai.azure.com\n";
-		std::cerr << "       AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini\n";
-		return 1;
+		ctx_cfg.m_provider = EProvider::LlamaCpp;
+		ctx_cfg.m_model_path = local_model_path.c_str();
+		ctx_cfg.m_gpu_layers = gpu_layers;
+		ctx_cfg.m_context_length = 4096;
+		std::cout << "Using local model: " << local_model_path << "\n";
+		if (gpu_layers > 0)
+			std::cout << "GPU layers: " << gpu_layers << "\n";
+	}
+	else
+	{
+		ctx_cfg.m_provider = EProvider::AzureOpenAI;
+		ctx_cfg.m_endpoint = std::getenv("AZURE_OPENAI_ENDPOINT");
+		ctx_cfg.m_deployment = std::getenv("AZURE_OPENAI_DEPLOYMENT");
+		ctx_cfg.m_max_requests_per_minute = 30;
+
+		if (!ctx_cfg.m_endpoint || !ctx_cfg.m_deployment)
+		{
+			std::cerr << "Error: Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT environment variables.\n";
+			std::cerr << "  e.g. AZURE_OPENAI_ENDPOINT=https://myresource.openai.azure.com\n";
+			std::cerr << "       AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini\n";
+			std::cerr << "  Or use: --local <model.gguf> [--gpu-layers N]\n";
+			return 1;
+		}
 	}
 
 	Context ctx(ctx_cfg);
