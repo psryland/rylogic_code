@@ -630,6 +630,16 @@ struct pr::ai::ContextData
 				// Convert token to text (special=false to skip rendering template markers)
 				char piece[256];
 				auto piece_len = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, false);
+
+				// Detect hidden special tokens: if special=false renders empty but special=true doesn't,
+				// then this is a template marker (e.g. <|im_end|>) that the model didn't register as EOG.
+				if (piece_len <= 0)
+				{
+					auto special_len = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, true);
+					if (special_len > 0)
+						break; // Template marker — stop generation
+				}
+
 				if (piece_len > 0)
 					response.append(piece, piece_len);
 
@@ -649,9 +659,34 @@ struct pr::ai::ContextData
 			}
 
 			// Strip partial template markers (e.g., "<|im" at end of response)
-			auto partial = response.find("<|");
-			if (partial != std::string::npos)
-				response.erase(partial);
+			{
+				auto partial = response.find("<|");
+				if (partial != std::string::npos)
+					response.erase(partial);
+			}
+
+			// Truncate at role-name tokens that leak through after template markers are stripped.
+			// Models often generate <|im_end|><|im_start|>user\n... where the bare "user" or
+			// "assistant" survives because it's a regular text token.
+			for (auto const& role : {"\nuser\n", "\nassistant\n", "\nsystem\n"})
+			{
+				auto pos = response.find(role);
+				if (pos != std::string::npos)
+					response.erase(pos);
+			}
+
+			// Also check for role names at the very end of the response (no trailing newline)
+			for (auto const& role : {"user", "assistant", "system"})
+			{
+				auto rlen = std::strlen(role);
+				if (response.size() >= rlen && response.compare(response.size() - rlen, rlen, role) == 0)
+				{
+					// Only strip if preceded by a newline or start of string
+					auto before = response.size() - rlen;
+					if (before == 0 || response[before - 1] == '\n')
+						response.erase(before);
+				}
+			}
 
 			// Truncate at common meta-commentary patterns that instruction-tuned models emit
 			for (auto const& pattern : {"\n**", "\n---", "\nNote:", "\n(Note", "\nFollow-up", "\nYou are now", "\nImagine you", "\n[Narrator]", "\nNow, let"})
