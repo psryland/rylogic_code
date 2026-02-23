@@ -17,11 +17,14 @@
 #include <numeric>
 #include <cstdlib>
 
+#include <filesystem>
+
 #include <Windows.h>
 
 #include "pr/ai/ai.h"
 
 using namespace pr::ai;
+namespace fs = std::filesystem;
 
 // ANSI colour codes for up to 8 agents
 constexpr char const* k_colours[] = {
@@ -77,6 +80,41 @@ struct AgentState
 	bool name_received = false;
 };
 
+// Path to the models directory relative to the executable
+std::string FindModelsDir()
+{
+	// Walk up from the exe directory looking for sdk/llama-cpp/models
+	auto exe_path = fs::path(std::string(MAX_PATH, '\0'));
+	GetModuleFileNameA(nullptr, exe_path.string().data(), MAX_PATH);
+	
+	// Try a few known relative paths from the exe
+	// In development: exe is in projects/tests/ai-test/obj/x64/<Config>/
+	// The repo root contains sdk/llama-cpp/models/
+	for (auto dir = fs::path(exe_path).parent_path(); !dir.empty() && dir != dir.root_path(); dir = dir.parent_path())
+	{
+		auto models = dir / "sdk" / "llama-cpp" / "models";
+		if (fs::exists(models))
+			return models.string();
+	}
+	return {};
+}
+
+// List .gguf files in a directory
+std::vector<std::string> ListModels(std::string const& models_dir)
+{
+	std::vector<std::string> models;
+	if (models_dir.empty() || !fs::exists(models_dir))
+		return models;
+	
+	for (auto const& entry : fs::directory_iterator(models_dir))
+	{
+		if (entry.is_regular_file() && entry.path().extension() == ".gguf")
+			models.push_back(entry.path().string());
+	}
+	std::sort(models.begin(), models.end());
+	return models;
+}
+
 int main(int argc, char* argv[])
 {
 	// Enable ANSI escape sequences and UTF-8 output in the Windows console
@@ -86,17 +124,104 @@ int main(int argc, char* argv[])
 	SetConsoleMode(h_console, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 	SetConsoleOutputCP(CP_UTF8);
 
-	// Parse command-line arguments for --local <model.gguf>
+	// Parse command-line arguments (still supported for scripting)
 	std::string local_model_path;
 	int gpu_layers = 0;
+	bool provider_chosen = false;
+	bool use_local = false;
 	for (int i = 1; i < argc; ++i)
 	{
 		if (std::string(argv[i]) == "--local" && i + 1 < argc)
+		{
 			local_model_path = argv[++i];
+			use_local = true;
+			provider_chosen = true;
+		}
+		else if (std::string(argv[i]) == "--azure")
+		{
+			use_local = false;
+			provider_chosen = true;
+		}
 		else if (std::string(argv[i]) == "--gpu-layers" && i + 1 < argc)
+		{
 			gpu_layers = std::atoi(argv[++i]);
+		}
 	}
-	bool use_local = !local_model_path.empty();
+
+	std::cout << "\n=== AI Discussion Test ===\n\n";
+
+	// Prompt for provider if not specified on command line
+	if (!provider_chosen)
+	{
+		std::cout << "Select AI provider:\n";
+		std::cout << "  1. Azure OpenAI (cloud)\n";
+		std::cout << "  2. Local model (llama.cpp)\n";
+		std::cout << "> ";
+
+		std::string provider_input;
+		std::getline(std::cin, provider_input);
+
+		// Trim
+		while (!provider_input.empty() && provider_input.front() == ' ') provider_input.erase(provider_input.begin());
+		while (!provider_input.empty() && provider_input.back() == ' ') provider_input.pop_back();
+
+		if (provider_input == "2" || provider_input == "local")
+			use_local = true;
+		else
+			use_local = false;
+
+		std::cout << "\n";
+	}
+
+	// If local, prompt for model selection
+	if (use_local && local_model_path.empty())
+	{
+		auto models_dir = FindModelsDir();
+		auto available = ListModels(models_dir);
+
+		if (available.empty())
+		{
+			std::cerr << "No .gguf model files found.\n";
+			if (!models_dir.empty())
+				std::cerr << "  Searched: " << models_dir << "\n";
+			std::cerr << "  Download a model with: dotnet-script sdk/llama-cpp/_get_model.csx\n";
+			std::cerr << "  Or specify: --local <path-to-model.gguf>\n";
+			return 1;
+		}
+
+		std::cout << "Available models:\n";
+		for (size_t i = 0; i < available.size(); ++i)
+		{
+			auto path = fs::path(available[i]);
+			auto size_mb = fs::file_size(available[i]) / (1024.0 * 1024.0);
+			std::cout << std::format("  {}. {} ({:.0f} MB)\n", i + 1, path.filename().string(), size_mb);
+		}
+
+		if (available.size() == 1)
+		{
+			std::cout << std::format("> Using: {}\n", fs::path(available[0]).filename().string());
+			local_model_path = available[0];
+		}
+		else
+		{
+			std::cout << "> ";
+			std::string model_input;
+			std::getline(std::cin, model_input);
+
+			// Trim
+			while (!model_input.empty() && model_input.front() == ' ') model_input.erase(model_input.begin());
+			while (!model_input.empty() && model_input.back() == ' ') model_input.pop_back();
+
+			int model_idx = 0;
+			if (model_input.empty() || !((model_idx = std::atoi(model_input.c_str())) >= 1 && model_idx <= static_cast<int>(available.size())))
+			{
+				std::cerr << "Invalid selection.\n";
+				return 1;
+			}
+			local_model_path = available[model_idx - 1];
+		}
+		std::cout << "\n";
+	}
 
 	// Seed RNG
 	std::mt19937 rng(std::random_device{}());
@@ -110,7 +235,6 @@ int main(int argc, char* argv[])
 	std::shuffle(personality_indices.begin(), personality_indices.end(), rng);
 
 	// Pick a topic — prompt the user or use a random one
-	std::cout << "\n=== AI Discussion Test ===\n\n";
 	std::cout << "Enter a topic for discussion (or press Enter for a random one):\n> ";
 	std::string user_topic;
 	std::getline(std::cin, user_topic);
