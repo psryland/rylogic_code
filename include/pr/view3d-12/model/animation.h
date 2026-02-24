@@ -337,12 +337,14 @@ namespace pr::rdr12
 		void ReadKeys(int key_idx, int track_index, std::span<xform> out) const;
 		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
-		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'
-		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations);
+		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'.
+		// When 'calc_root_motion' is false, root bone trajectory calculation is skipped (e.g., for montage where per-frame O2W is used instead).
+		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, bool calc_root_motion = true);
 		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
 
-		// Populate this kinematic animation from multiple sources using qualified frame references
-		void Populate(std::span<KeyFrameAnimation const* const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
+		// Populate this kinematic animation from multiple sources using qualified frame references.
+		// Creates a composite IAnimSource with virtual frame indices and delegates to the IAnimSource overload.
+		void Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);

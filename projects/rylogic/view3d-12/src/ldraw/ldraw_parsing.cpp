@@ -1554,10 +1554,7 @@ namespace pr::rdr12::ldraw
 			AnimModifiers m_mods;
 			FrameRange m_frame_range = { 0, std::numeric_limits<int>::max() };
 			TimeRange m_time_range = { 0, std::numeric_limits<double>::max() }; // Seconds
-			vector<int> m_frames = {};
-			vector<float> m_durations = {};
 			std::optional<float> m_frame_rate = {};
-			bool m_per_frame_durations = false;
 
 			void Parse(IReader& reader, ParseParams& pp)
 			{
@@ -1567,29 +1564,12 @@ namespace pr::rdr12::ldraw
 				auto section = reader.SectionScope();
 				for (EKeyword kw; reader.NextKeyword(kw);)
 				{
-					// Try shared playback modifiers first
-					if (m_mods.ParseKeyword(reader, kw))
-						continue;
-
 					switch (kw)
 					{
 						case EKeyword::Frame:
 						{
 							auto frame = reader.Int<int>();
 							m_frame_range = { frame, frame };
-							break;
-						}
-						case EKeyword::Frames:
-						{
-							for (; !reader.IsSectionEnd(); )
-							{
-								m_frames.push_back(reader.Int<int>());
-								if (m_per_frame_durations)
-								{
-									auto dur = reader.Real<float>();
-									m_durations.push_back(dur);
-								}
-							}
 							break;
 						}
 						case EKeyword::FrameRate:
@@ -1611,13 +1591,11 @@ namespace pr::rdr12::ldraw
 							m_time_range = { t0, std::max(t1, t0) };
 							break;
 						}
-						case EKeyword::PerFrameDurations:
-						{
-							m_per_frame_durations = reader.IsSectionEnd() ? true : reader.Bool();
-							break;
-						}
 						default:
 						{
+							if (m_mods.ParseKeyword(reader, kw))
+								break;
+
 							if (auto const* tr = dynamic_cast<TextReader const*>(&reader))
 								pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Animation", tr->m_keyword.c_str()));
 							else
@@ -1636,18 +1614,12 @@ namespace pr::rdr12::ldraw
 		// Description of a montage — multiple animation sources with cherry-picked frames
 		struct MontageInfo
 		{
-			struct FrameEntry
-			{
-				int m_source_index = 0;
-				int m_frame_index = 0;
-				float m_duration = 1.0f;
-				m4x4 m_o2w = m4x4::Identity();
-			};
-
 			AnimModifiers m_mods;
 			vector<std::filesystem::path> m_source_paths;
 			vector<std::unique_ptr<std::istream>> m_source_streams;
-			vector<FrameEntry> m_frame_entries;
+			vector<FrameRef> m_frame_refs;
+			vector<float> m_durations;
+			vector<m4x4> m_per_frame_o2w;
 			bool m_has_data = false;
 
 			void Parse(IReader& reader, ParseParams& pp)
@@ -1658,10 +1630,6 @@ namespace pr::rdr12::ldraw
 				auto section = reader.SectionScope();
 				for (EKeyword kw; reader.NextKeyword(kw);)
 				{
-					// Try shared playback modifiers first
-					if (m_mods.ParseKeyword(reader, kw))
-						continue;
-
 					switch (kw)
 					{
 						case EKeyword::AnimSource:
@@ -1674,36 +1642,40 @@ namespace pr::rdr12::ldraw
 						}
 						case EKeyword::Frame:
 						{
-							auto frame_section = reader.SectionScope();
-							FrameEntry entry;
-							entry.m_source_index = reader.Int<int>();
-							entry.m_frame_index = reader.Int<int>();
-							if (!reader.IsSectionEnd())
-								entry.m_duration = reader.Real<float>();
+							auto fsection = reader.SectionScope();
+							auto source_index = reader.Int<int>();
+							auto frame_index = reader.Int<int>();
+							auto duration = 1.0f;
+							auto o2w = m4x4::Identity();
 
 							// Check for optional *O2W within the frame block
 							for (EKeyword fkw; reader.NextKeyword(fkw);)
 							{
 								switch (fkw)
 								{
-									case EKeyword::O2W:
-									case EKeyword::Txfm:
+									case EKeyword::Period:
 									{
-										reader.Transform(entry.m_o2w);
+										duration = reader.Real<float>();
 										break;
 									}
-									default:
+									case EKeyword::O2W:
 									{
-										pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Frame in *Montage", EKeyword_::ToStringA(fkw)));
+										reader.Transform(o2w);
 										break;
 									}
 								}
 							}
-							m_frame_entries.push_back(entry);
+
+							m_frame_refs.push_back({ source_index, frame_index });
+							m_durations.push_back(duration);
+							m_per_frame_o2w.push_back(o2w);
 							break;
 						}
 						default:
 						{
+							if (m_mods.ParseKeyword(reader, kw))
+								break;
+
 							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Montage", EKeyword_::ToStringA(kw)));
 							break;
 						}
@@ -4493,19 +4465,89 @@ namespace pr::rdr12::ldraw
 	};
 
 	// ELdrObject::Model
-	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator, ModelGenerator::IModelOut
+	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
+		struct ModelOut : ModelGenerator::IModelOut
+		{
+			ObjectCreator<ELdrObject::Model>& m_self;
+			geometry::ESceneParts m_parts;
+			LdrObject* m_obj;
+
+			ModelOut(ObjectCreator<ELdrObject::Model>& self, geometry::ESceneParts parts, LdrObject* obj)
+				: m_self(self)
+				, m_parts(parts)
+				, m_obj(obj)
+			{}
+
+			// IModelOut functions
+			geometry::ESceneParts Parts() const override
+			{
+				return m_parts;
+			}
+			rdr12::FrameRange FrameRange() const override
+			{
+				// The frame range of animation data to return
+				return m_self.m_anim_info ? m_self.m_anim_info.m_frame_range : ModelGenerator::IModelOut::FrameRange();
+			}
+			bool ModelFilter(std::string_view model_name) const override
+			{
+				return m_self.m_model_parts.empty() || m_self.m_model_parts.contains(model_name);
+			}
+			bool SkeletonFilter(std::string_view skeleton_name) const override
+			{
+				return m_self.m_skel_parts.empty() || m_self.m_skel_parts.contains(skeleton_name);
+			}
+			EResult Model(ModelTree&& tree) override
+			{
+				ModelTreeToLdr(m_obj, tree);
+				return EResult::Continue;
+			}
+			EResult Skeleton(SkeletonPtr&& skel) override
+			{
+				m_self.m_skels.push_back(skel);
+				return EResult::Continue;
+			}
+			EResult Animation(KeyFrameAnimationPtr&& anim) override
+			{
+				// If the script didn't ask for animation data, then ignore animation
+				if (!m_self.m_anim_info && !m_self.m_montage)
+					return EResult::Stop;
+
+				// Otherwise, record the animation
+				m_self.m_model_anim = std::move(anim);
+				return EResult::Stop;
+			}
+		};
+		struct AnimSourceOut : ModelGenerator::IModelOut
+		{
+			SkeletonPtr m_skel;
+			KeyFrameAnimationPtr m_anim;
+
+			geometry::ESceneParts Parts() const override
+			{
+				return geometry::ESceneParts::AnimationOnly;
+			}
+			EResult Skeleton(SkeletonPtr&& skel) override
+			{
+				m_skel = std::move(skel); return EResult::Continue;
+			}
+			EResult Animation(KeyFrameAnimationPtr&& anim) override
+			{
+				m_anim = std::move(anim); return EResult::Stop;
+			}
+		};
+
 		std::filesystem::path m_filepath;
 		std::unique_ptr<std::istream> m_file_stream;
 		std::unordered_set<string32> m_model_parts;
 		std::unordered_set<string32> m_skel_parts;
 		creation::KeyFrameAnimInfo m_anim_info;
 		creation::MontageInfo m_montage;
+		KeyFrameAnimationPtr m_model_anim; // The model's own animation, stored for montage source index 0
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
 		vector<SkeletonPtr, 1> m_skels;
 		bool m_ignore_materials;
-		LdrObject* m_obj;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
@@ -4515,11 +4557,11 @@ namespace pr::rdr12::ldraw
 			, m_skel_parts()
 			, m_anim_info()
 			, m_montage()
+			, m_model_anim()
 			, m_gen_norms()
 			, m_bake()
 			, m_skels()
 			, m_ignore_materials()
-			, m_obj()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -4597,27 +4639,73 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Attach a texture filepath resolver
-			auto search_paths = std::vector<path> {
-				path(m_filepath.string() + ".textures"),
+			vector<path> search_paths =  {
+				m_filepath.string().append(".textures"),
 				m_filepath.parent_path(),
 			};
 			AutoSub sub = m_pp.m_rdr.ResolveFilepath += [&](auto&, ResolvePathArgs& args)
 			{
 				// Look in a folder with the same name as the model
-				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
+				auto resolved = filesys::ResolvePath<vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
 				if (!exists(resolved)) return;
 				args.filepath = resolved;
 				args.handled = true;
 			};
 
+			// Select the parts of the model to load
+			auto parts = geometry::ESceneParts::ModelOnly;
+			if (m_anim_info || m_montage) parts = SetBits(parts, geometry::ESceneParts::All, true);
+			if (m_ignore_materials) parts = SetBits(parts, geometry::ESceneParts::Materials, false);
+
 			// Create the models
-			m_obj = obj;
+			ModelOut out(*this, parts, obj);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, *this, &opts);
+			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, out, &opts);
+
+			// If animation data is specified, load the model's animation sources and build the animation
+			if (m_anim_info)
+				CreateAnimation(obj, loc);
 
 			// If a montage is specified, load animation sources and build the montage animation
 			if (m_montage)
 				CreateMontage(obj, loc);
+		}
+
+		// Create an animation for the model using the loaded animation sources and the animation info
+		void CreateAnimation(LdrObject* obj, Location const& loc)
+		{
+			// Find the associated skeleton
+			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == m_model_anim->m_skel_id; });
+			if (!skeleton)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "The skeleton required by the animation is not found");
+				return;
+			}
+
+			// Overrite the frame rate if given
+			if (m_anim_info.m_frame_rate)
+			{
+				m_model_anim->m_native_frame_rate = *m_anim_info.m_frame_rate;
+				m_model_anim->m_native_duration = (m_model_anim->key_count() - 1) / m_model_anim->m_native_frame_rate;
+			}
+
+			// The animator to run the animation
+			auto animator = AnimatorPtr{ rdr12::New<Animator_KeyFrameAnimation>(m_model_anim), true };
+
+			// The time/frame range in the anim info is the portion of the animation to use during playback
+			auto time_range = TimeRange{ 0, animator->Duration() };
+
+			// Create an animator that uses the animation and a pose for it to animate
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy.
+			obj->Apply([&](LdrObject* ob)
+			{
+				ob->m_pose = pose;
+				ob->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
+				ob->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
 		}
 
 		// Load animation sources from the montage and build the composite animation
@@ -4626,41 +4714,32 @@ namespace pr::rdr12::ldraw
 			using namespace pr::geometry;
 			using namespace std::filesystem;
 
-			if (m_skels.empty())
-			{
-				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires a model with a skeleton");
+			// No frames, no montage
+			if (m_montage.m_frame_refs.empty())
 				return;
-			}
-			if (m_montage.m_source_paths.empty())
+
+			// The model's own animation is always source index 0 for montages, so it must be loaded for the montage to work
+			if (!m_model_anim)
 			{
-				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires at least one *AnimSource");
-				return;
-			}
-			if (m_montage.m_frame_entries.empty())
-			{
-				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires at least one *Frame");
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires a model with an animation (source index 0)");
 				return;
 			}
 
-			auto const& model_skel = m_skels[0];
-
-			// Load animation data from each source file
-			struct AnimSourceOut : ModelGenerator::IModelOut
+			// Find the associated skeleton
+			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == m_model_anim->m_skel_id; });
+			if (!skeleton)
 			{
-				SkeletonPtr m_skel;
-				KeyFrameAnimationPtr m_anim;
+				m_pp.ReportError(EParseError::InvalidValue, loc, "The skeleton required by the model's animation (source index 0) is not found");
+				return;
+			}
 
-				geometry::ESceneParts Parts() const override { return geometry::ESceneParts::AnimationOnly; }
-				EResult Skeleton(SkeletonPtr&& skel) override { m_skel = std::move(skel); return EResult::Continue; }
-				EResult Animation(KeyFrameAnimationPtr&& anim) override { m_anim = std::move(anim); return EResult::Stop; }
-			};
-
+			// Load the animations from the source animation files
 			vector<KeyFrameAnimationPtr> source_anims;
-			for (int si = 0; si != isize(m_montage.m_source_paths); ++si)
+			source_anims.push_back(std::move(m_model_anim)); // The model's own animation is source index 0
+			for (int si = 0; si != isize(m_montage.m_source_paths); ++si) // Add the additional animation sources from the montage (indices 1, 2, ...)
 			{
 				auto const& source_path = m_montage.m_source_paths[si];
 				auto& stream = m_montage.m_source_streams[si];
-
 				if (!stream)
 				{
 					m_pp.ReportError(EParseError::NotFound, loc, std::format("Failed to open animation source '{}'", source_path.string()));
@@ -4682,9 +4761,7 @@ namespace pr::rdr12::ldraw
 					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("No animation found in source '{}'", source_path.string()));
 					return;
 				}
-
-				// Validate skeleton compatibility
-				if (out.m_skel && !model_skel->IsCompatible(*out.m_skel.get()))
+				if (!out.m_skel || !skeleton->IsCompatible(*out.m_skel.get()))
 				{
 					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Skeleton in '{}' is not compatible with the model skeleton", source_path.string()));
 					return;
@@ -4694,50 +4771,30 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Validate source indices in frame entries
-			for (auto const& entry : m_montage.m_frame_entries)
+			for (auto const& entry : m_montage.m_frame_refs)
 			{
-				if (entry.m_source_index < 0 || entry.m_source_index >= isize(source_anims))
+				if (entry.source_index < 0 || entry.source_index >= isize(source_anims))
 				{
-					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", entry.m_source_index, isize(source_anims) - 1));
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", entry.source_index, isize(source_anims) - 1));
 					return;
 				}
 			}
 
-			// Build the frame references, durations, and per-frame O2W arrays
-			vector<FrameRef> frame_refs;
-			vector<float> durations;
-			vector<m4x4> per_frame_o2w;
-			bool has_o2w = false;
-
-			for (auto const& entry : m_montage.m_frame_entries)
-			{
-				frame_refs.push_back({ entry.m_source_index, entry.m_frame_index });
-				durations.push_back(entry.m_duration);
-				per_frame_o2w.push_back(entry.m_o2w);
-				if (entry.m_o2w != m4x4::Identity())
-					has_o2w = true;
-			}
-
-			// Build source pointer array
-			vector<KeyFrameAnimation const*> source_ptrs;
-			for (auto const& sa : source_anims)
-				source_ptrs.push_back(sa.get());
-
 			// Create kinematic key frame animation from the multi-source frames
 			auto const& first_src = *source_anims[0].get();
-			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(model_skel->Id(), first_src.duration(), first_src.frame_rate()), true };
+			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(skeleton->Id(), first_src.duration(), first_src.frame_rate()), true };
 			kkfa->Populate(
-				std::span<KeyFrameAnimation const* const>{source_ptrs},
-				std::span<FrameRef const>{frame_refs},
-				std::span<float const>{durations},
-				has_o2w ? std::span<m4x4 const>{per_frame_o2w} : std::span<m4x4 const>{}
+				source_anims,
+				m_montage.m_frame_refs,
+				m_montage.m_durations,
+				m_montage.m_per_frame_o2w
 			);
 
 			// Create animator and pose
 			AnimatorPtr animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
 			auto time_range = TimeRange{ 0, animator->Duration() };
 
-			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, model_skel, animator, m_montage.m_mods.m_style, m_montage.m_mods.m_flags, time_range, m_montage.m_mods.m_stretch, m_montage.m_mods.m_bias), true };
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_montage.m_mods.m_style, m_montage.m_mods.m_flags, time_range, m_montage.m_mods.m_stretch, m_montage.m_mods.m_bias), true };
 
 			// Set the pose for each model in the hierarchy
 			obj->Apply([&](LdrObject* o)
@@ -4747,94 +4804,6 @@ namespace pr::rdr12::ldraw
 				o->Flags(ELdrFlags::HideWhenNotAnimating, m_montage.m_mods.m_hide_when_not_animating);
 				return true;
 			}, "");
-		}
-
-		// IModelOut functions
-		geometry::ESceneParts Parts() const override
-		{
-			auto parts = (m_anim_info || m_montage)
-				? geometry::ESceneParts::All
-				: geometry::ESceneParts::ModelOnly;
-			if (m_ignore_materials)
-				parts = SetBits(parts, geometry::ESceneParts::Materials, false);
-			return parts;
-		}
-		rdr12::FrameRange FrameRange() const override
-		{
-			// The frame range of animation data to return
-			return m_anim_info ? m_anim_info.m_frame_range : ModelGenerator::IModelOut::FrameRange();
-		}
-		bool ModelFilter(std::string_view model_name) const override
-		{
-			return m_model_parts.empty() || m_model_parts.contains(model_name);
-		}
-		bool SkeletonFilter(std::string_view skeleton_name) const override
-		{
-			return m_skel_parts.empty() || m_skel_parts.contains(skeleton_name);
-		}
-		EResult Model(ModelTree&& tree) override
-		{
-			ModelTreeToLdr(m_obj, tree);
-			return EResult::Continue;
-		}
-		EResult Skeleton(SkeletonPtr&& skel) override
-		{
-			m_skels.push_back(skel);
-			return EResult::Continue;
-		}
-		EResult Animation(KeyFrameAnimationPtr&& anim) override
-		{
-			if (!m_anim_info)
-				return EResult::Stop;
-
-			// Montage uses its own animation sources, not the model's
-			if (m_montage)
-				return EResult::Stop;
-
-			// Find the associated skeleton
-			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
-
-			// Overrite the frame rate if given
-			if (m_anim_info.m_frame_rate)
-			{
-				anim->m_native_frame_rate = *m_anim_info.m_frame_rate;
-				anim->m_native_duration = (anim->key_count() - 1) / anim->m_native_frame_rate;
-			}
-
-			// The animator to run the animation
-			AnimatorPtr animator = {};
-
-			// If specific key frames are given, create a kinematic key frame animation
-			if (!m_anim_info.m_frames.empty())
-			{
-				auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(anim->m_skel_id, anim->duration(), anim->frame_rate()), true };
-				kkfa->Populate(*anim.get(), m_anim_info.m_frames, m_anim_info.m_durations);
-
-				animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
-		}
-			// Otherwise, create a standard key frame animation
-			else
-			{
-				animator = AnimatorPtr{ rdr12::New<Animator_KeyFrameAnimation>(anim), true };
-			}
-
-			// The time/frame range in the anim info is the portion of the animation to use during playback
-			auto time_range = TimeRange{ 0, animator->Duration() };
-
-			// Create an animator that uses the animation and a pose for it to animate
-			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
-
-			// Set the pose for each model in the hierarchy.
-			m_obj->Apply([&](LdrObject* obj)
-			{
-				obj->m_pose = pose;
-				obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
-				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
-				return true;
-			}, "");
-
-			// Only use the first animation
-			return EResult::Stop;
 		}
 	};
 

@@ -145,7 +145,7 @@
     },
     "Montage": {
       "keyword": "Montage",
-      "display": "*Montage\n{\n\t*AnimSource {<animation_filepath>}\n\t*Frame {<source_index> <frame_number> [<duration>] [*O2W {...}]}\n\t[*Style {NoAnimation|Once|Repeat|Continuous|PingPong}]\n\t[*Stretch {<speed_multiplier>}]\n\t[*NoRootTranslation {}]\n\t[*NoRootRotation {}]\n\t[*HideWhenNotAnimating {}]\n}",
+      "display": "*Montage\n{\n\t[*AnimSource {<animation_filepath>}] // index 1, 2, ... (model's own anim is index 0)\n\t*Frame {<source_index> <frame_number> [<duration>] [*O2W {...}]}\n\t[*Style {NoAnimation|Once|Repeat|Continuous|PingPong}]\n\t[*Stretch {<speed_multiplier>}]\n\t[*NoRootTranslation {}]\n\t[*NoRootRotation {}]\n\t[*HideWhenNotAnimating {}]\n}",
       "rootOnly": false,
       "hidden": true,
       "recursive": false,

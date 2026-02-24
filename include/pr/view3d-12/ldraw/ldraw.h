@@ -97,7 +97,6 @@ namespace pr::rdr12::ldraw
 		x(FovX                     )\
 		x(FovY                     )\
 		x(Frame                    )\
-		x(Frames                   )\
 		x(FrameRange               )\
 		x(FrameRate                )\
 		x(FrustumFA                )\
@@ -144,7 +143,6 @@ namespace pr::rdr12::ldraw
 		x(Part                     )\
 		x(Parts                    )\
 		x(Period                   )\
-		x(PerFrameDurations        )\
 		x(PerItemColour            )\
 		x(PerItemParametrics       )\
 		x(Pie                      )\

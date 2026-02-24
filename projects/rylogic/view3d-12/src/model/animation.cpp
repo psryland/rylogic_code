@@ -490,7 +490,7 @@ namespace pr::rdr12
 	}
 
 	// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'
-	void KinematicKeyFrameAnimation::Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations)
+	void KinematicKeyFrameAnimation::Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, bool calc_root_motion)
 	{
 		struct Builder
 		{
@@ -536,14 +536,15 @@ namespace pr::rdr12
 			}
 
 			// Calculate the dynamics data for the given frame numbers
-			void Run(std::span<int const> frames, std::span<float const> durations)
+			void Run(std::span<int const> frames, std::span<float const> durations, bool calc_root_motion = true)
 			{
 				InitBoneMap();
 				CopyFrames(frames, durations);
 				CalcBoneDynamics();
 				CalcFCurveDynamics();
 				CalcTCurveDynamics();
-				CalcRootMotion();
+				if (calc_root_motion)
+					CalcRootMotion();
 			}
 
 			// Initialize the mapping from track index to bone index
@@ -870,7 +871,7 @@ namespace pr::rdr12
 		};
 
 		Builder calc(src, *this);
-		calc.Run(frames, durations);
+		calc.Run(frames, durations, calc_root_motion);
 	}
 	void KinematicKeyFrameAnimation::Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations)
 	{
@@ -902,97 +903,83 @@ namespace pr::rdr12
 		AnimSource src = { kfa };
 		Populate(src, frames, durations);
 	}
-
-	// Populate from multiple animation sources using qualified frame references.
-	// Each frame_ref specifies which source to read from and which frame within that source.
-	// Dynamics are computed from the original source animation's adjacent frames.
-	// per_frame_o2w (optional) repositions the root bone value in montage space without affecting dynamics.
-	void KinematicKeyFrameAnimation::Populate(std::span<KeyFrameAnimation const* const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w)
+	void KinematicKeyFrameAnimation::Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w)
 	{
+		// Populate from multiple animation sources using qualified frame references.
+		// Creates a composite IAnimSource adapter with virtual frame indices so that the IAnimSource
+		// overload handles all dynamics calculation. CalcRootMotion is skipped — per-frame O2W is used instead.
 		assert(!sources.empty());
 		assert(!frame_refs.empty());
 
-		auto const& primary = *sources[0];
-		auto track_count = primary.track_count();
-
-		// Init bone map from the first source (all sources validated compatible beforehand)
-		m_bone_map.resize(track_count);
-		for (int i = 0; i != track_count; ++i)
-			m_bone_map[i] = primary.m_bone_map[i];
-
-		// Build frame indices and times
-		auto time = 0.f;
-		auto kinematic_key_count = isize(frame_refs);
-		m_key_count = kinematic_key_count;
-		m_times.resize(kinematic_key_count);
-		m_fidxs.resize(kinematic_key_count);
-		for (int i = 0; i != kinematic_key_count; ++i)
+		// Adapter that presents multiple KeyFrameAnimation sources as a single IAnimSource using virtual frame indices
+		struct MultiSourceAdapter : IAnimSource
 		{
-			m_times[i] = time;
-			m_fidxs[i] = frame_refs[i].frame_index;
-			time += Get(durations, i, 1.0f);
-		}
-		m_native_duration = time;
+			std::span<KeyFrameAnimationPtr const> m_sources;
+			vector<int> m_vframes;
+			int m_total;
 
-		// Calculate bone dynamics from each source
-		auto count = kinematic_key_count * track_count;
-		m_rotation.resize(count);
-		m_ang_vel.resize(count);
-		m_ang_acc.resize(count);
-		m_position.resize(count);
-		m_lin_vel.resize(count);
-		m_lin_acc.resize(count);
-		m_scale.resize(count);
-
-		// Generate dynamics for each track
-		for (int track_index = 0; track_index != track_count; ++track_index)
-		{
-			auto q0 = quat::Identity();
-			for (int k = 0; k != kinematic_key_count; ++k)
+			MultiSourceAdapter(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs)
+				: m_sources(sources)
+				, m_vframes(frame_refs.size())
+				, m_total()
 			{
-				auto const& ref = frame_refs[k];
-				auto const& src = *sources[ref.source_index];
-				auto iframe = std::clamp(ref.frame_index, 0, src.key_count() - 1);
-
-				// Sample the bone transforms at times that surround 'iframe' in the source animation
-				xform samples[5] = {};
-				src.ReadKeys(iframe - 2, track_index, samples);
-
-				// Ensure shortest arcs
-				for (auto& sample : samples)
+				vector<int> offsets(sources.size());
+				for (int i = 0; i != isize(sources); ++i)
 				{
-					if (Dot(q0, sample.rot) < 0)
-						sample.rot = -sample.rot;
-
-					q0 = sample.rot;
+					auto kcount = m_sources[i]->key_count();
+					offsets[i] = m_total;
+					m_total += kcount;
 				}
-
-				// Calculate dynamics for the frame using finite differences from the source
-				auto dt = 1.f / s_cast<float>(src.frame_rate());
-				auto [rot0, rot1, rot2] = CalculateRotationalDynamics(std::span<xform const>{samples}, dt);
-				auto [pos0, pos1, pos2] = CalculateTranslationalDynamics(std::span<xform const>{samples}, dt);
-				auto [scl0, scl1, scl2] = CalculateScaleDynamics(std::span<xform const>{samples}, dt);
-
-				// Where to write the data in the output
-				auto j = k * track_count + track_index;
-
-				// Record the dynamics values
-				m_rotation[j] = rot0;
-				m_ang_vel[j] = rot1.xyz;
-				m_ang_acc[j] = rot2.xyz;
-				m_position[j] = pos0.xyz;
-				m_lin_vel[j] = pos1.xyz;
-				m_lin_acc[j] = pos2.xyz;
-				m_scale[j] = scl0.xyz;
+				for (int i = 0; i != isize(frame_refs); ++i)
+				{
+					m_vframes[i] = offsets[frame_refs[i].source_index] + frame_refs[i].frame_index;
+				}
 			}
-		}
+			auto Decode(int vframe) const
+			{
+				struct R { KeyFrameAnimationPtr const src; int frame; };
+
+				if (vframe < 0)
+					return R{ m_sources[0], 0 };
+				if (vframe >= key_count())
+					return R{ m_sources.back(), m_sources.back()->key_count() - 1 };
+
+				int i = 0;
+				for (; i != isize(m_sources) && vframe >= m_sources[i]->key_count(); ++i)
+					vframe -= m_sources[i]->key_count();
+
+				return R{ m_sources[i], vframe };
+			}
+			int key_count() const noexcept override { return m_total; }
+			int track_count() const noexcept override { return m_sources[0]->track_count(); }
+			int fcurve_count() const noexcept override { return 0; }
+			int tcurve_count() const noexcept override { return 0; }
+			double frame_rate() const noexcept override { return m_sources[0]->frame_rate(); }
+			int key_to_frame(int key_index) const override { return key_index; }
+			uint16_t track_to_bone(int track_index) const override { return m_sources[0]->m_bone_map[track_index]; }
+			void ReadTrackValues(int frame_index, int track_index, std::span<xform> samples) const override
+			{
+				// All samples should come from the same source (the one containing the center frame).
+				// Decode the center frame (samples[2]) to find the source, then read consecutive frames from it.
+				auto center_frame = frame_index + isize(samples) / 2;
+				auto [src, fidx] = Decode(center_frame);
+				src->ReadKeys(fidx - isize(samples) / 2, track_index, samples);
+			}
+			void ReadFCurveValues(int, int, std::span<float>) const override {}
+			void ReadTCurveValues(int, int, std::span<xform>) const override {}
+		};
+
+		// Delegate to the IAnimSource overload (skip root motion — per-frame O2W replaces it)
+		MultiSourceAdapter adapter(sources, frame_refs);
+		Populate(adapter, adapter.m_vframes, durations, false);
 
 		// Apply per-frame O2W to root bone — transforms all dynamics into montage space.
 		// This ensures velocities, accelerations, etc. are rotated/transformed consistently
 		// with the frame's position in the montage.
 		if (!per_frame_o2w.empty())
 		{
-			for (int k = 0; k != kinematic_key_count; ++k)
+			auto tcount = track_count();
+			for (int k = 0; k != isize(frame_refs); ++k)
 			{
 				if (k >= isize(per_frame_o2w))
 					break;
@@ -1002,7 +989,7 @@ namespace pr::rdr12
 					continue;
 
 				auto r2a = xform(o2w);
-				auto idx = k * track_count; // Root is always track 0
+				auto idx = k * tcount; // Root is always track 0
 				Set(m_rotation, idx, (r2a * Get(m_rotation, idx, quat::Identity())));
 				Set(m_ang_vel , idx, (r2a * Get(m_ang_vel , idx, v3::Zero()).w0()).xyz);
 				Set(m_ang_acc , idx, (r2a * Get(m_ang_acc , idx, v3::Zero()).w0()).xyz);
