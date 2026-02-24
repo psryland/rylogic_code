@@ -46,6 +46,7 @@ namespace pr::rdr12::ldraw
 		x(Anchor                   )\
 		x(AngAccel                 )\
 		x(AngVelocity              )\
+		x(AnimSource               )\
 		x(Animation                )\
 		x(Arrow                    )\
 		x(Aspect                   )\
@@ -96,7 +97,6 @@ namespace pr::rdr12::ldraw
 		x(FovX                     )\
 		x(FovY                     )\
 		x(Frame                    )\
-		x(Frames                   )\
 		x(FrameRange               )\
 		x(FrameRate                )\
 		x(FrustumFA                )\
@@ -122,6 +122,7 @@ namespace pr::rdr12::ldraw
 		x(M4x4                     )\
 		x(Mesh                     )\
 		x(Model                    )\
+		x(Montage                  )\
 		x(Name                     )\
 		x(Near                     )\
 		x(NewLine                  )\
@@ -142,7 +143,6 @@ namespace pr::rdr12::ldraw
 		x(Part                     )\
 		x(Parts                    )\
 		x(Period                   )\
-		x(PerFrameDurations        )\
 		x(PerItemColour            )\
 		x(PerItemParametrics       )\
 		x(Pie                      )\

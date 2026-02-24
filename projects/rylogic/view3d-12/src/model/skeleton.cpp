@@ -28,6 +28,20 @@ namespace pr::rdr12
 		return isize(m_bone_ids);
 	}
 
+	// Check if this skeleton is structurally compatible with another (same bone count and names)
+	bool Skeleton::IsCompatible(Skeleton const& other) const
+	{
+		if (BoneCount() != other.BoneCount())
+			return false;
+
+		for (int i = 0, iend = BoneCount(); i != iend; ++i)
+		{
+			if (m_names[i] != other.m_names[i])
+				return false;
+		}
+		return true;
+	}
+
 	// Ref-counting clean up function
 	void Skeleton::RefCountZero(RefCounted<Skeleton>* doomed)
 	{
