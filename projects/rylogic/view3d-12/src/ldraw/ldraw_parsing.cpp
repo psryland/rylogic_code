@@ -1617,7 +1617,7 @@ namespace pr::rdr12::ldraw
 			AnimModifiers m_mods;
 			vector<std::filesystem::path> m_source_paths;
 			vector<std::unique_ptr<std::istream>> m_source_streams;
-			vector<FrameRef> m_frame_refs;
+			vector<KeyRef> m_key_refs;
 			vector<float> m_durations;
 			vector<m4x4> m_per_frame_o2w;
 			bool m_has_data = false;
@@ -1666,7 +1666,7 @@ namespace pr::rdr12::ldraw
 								}
 							}
 
-							m_frame_refs.push_back({ source_index, frame_index });
+							m_key_refs.push_back({ source_index, frame_index });
 							m_durations.push_back(duration);
 							m_per_frame_o2w.push_back(o2w);
 							break;
@@ -4477,7 +4477,8 @@ namespace pr::rdr12::ldraw
 				: m_self(self)
 				, m_parts(parts)
 				, m_obj(obj)
-			{}
+			{
+			}
 
 			// IModelOut functions
 			geometry::ESceneParts Parts() const override
@@ -4562,7 +4563,8 @@ namespace pr::rdr12::ldraw
 			, m_bake()
 			, m_skels()
 			, m_ignore_materials()
-		{}
+		{
+		}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
@@ -4583,7 +4585,7 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Parts:
 				{
 					auto section = reader.SectionScope();
-					for (;!reader.IsSectionEnd();)
+					for (; !reader.IsSectionEnd();)
 						m_model_parts.insert(reader.String<string32>());
 
 					return true;
@@ -4639,7 +4641,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Attach a texture filepath resolver
-			vector<path> search_paths =  {
+			vector<path> search_paths = {
 				m_filepath.string().append(".textures"),
 				m_filepath.parent_path(),
 			};
@@ -4715,7 +4717,7 @@ namespace pr::rdr12::ldraw
 			using namespace std::filesystem;
 
 			// No frames, no montage
-			if (m_montage.m_frame_refs.empty())
+			if (m_montage.m_key_refs.empty())
 				return;
 
 			// The model's own animation is always source index 0 for montages, so it must be loaded for the montage to work
@@ -4771,21 +4773,21 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Validate source indices in frame entries
-			for (auto const& entry : m_montage.m_frame_refs)
+			for (int i = 0; i != isize(m_montage.m_key_refs); ++i)
 			{
-				if (entry.source_index < 0 || entry.source_index >= isize(source_anims))
+				auto const& key_refs = m_montage.m_key_refs;
+				if (key_refs[i].source_index < 0 || key_refs[i].source_index >= isize(source_anims))
 				{
-					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", entry.source_index, isize(source_anims) - 1));
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", key_refs[i].source_index, isize(source_anims) - 1));
 					return;
 				}
 			}
 
 			// Create kinematic key frame animation from the multi-source frames
-			auto const& first_src = *source_anims[0].get();
-			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(skeleton->Id(), first_src.duration(), first_src.frame_rate()), true };
+			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(skeleton->Id()), true };
 			kkfa->Populate(
 				source_anims,
-				m_montage.m_frame_refs,
+				m_montage.m_key_refs,
 				m_montage.m_durations,
 				m_montage.m_per_frame_o2w
 			);

@@ -258,10 +258,10 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, double native_duration, double native_frame_rate)
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id)
 		: m_skel_id(skel_id)
-		, m_native_duration(native_duration)
-		, m_native_frame_rate(native_frame_rate)
+		, m_native_duration()   // Calculated during populate
+		, m_native_frame_rate() // Calculated during populate
 		, m_key_count()
 		, m_bone_map()
 		, m_rotation()
@@ -567,7 +567,6 @@ namespace pr::rdr12
 					return;
 				}
 
-				auto spf = 1.f / s_cast<float>(m_src.frame_rate());
 				auto time = 0.f;
 				auto fidx = 0;
 
@@ -577,15 +576,18 @@ namespace pr::rdr12
 				for (int i = 0, iend = isize(frames); i != iend; ++i)
 				{
 					// The frame indices can be any frames from the source animation, not necessarily in order!
-					// The duration of the last frame is meaningless because the sequence stops on that frame.
-					// I think this is better than inserting a dummy frame after. That can be done manually in the script if needed.
+					// Each frame can have a different duration as well, so frame-rate is a bit meaningless for KKFA.
+					// The duration of the last frame is zero because the sequence stops on that frame.
 					fidx = frames[i];
 					m_out.m_times[i] = time;
 					m_out.m_fidxs[i] = fidx;
-					time += Get(durations, i, spf);
+					time += i + 1 != iend ? Get(durations, i, 1.0f) : 0;
 				}
 
+				// Set the frame rate of the KKFA.
+				// The frame rate of the IAnimSource is different, that is used when calculating the frame dynamics
 				m_out.m_native_duration = time;
+				m_out.m_native_frame_rate = (m_out.m_key_count - 1) / time;
 			}
 
 			// Calculate positions, velocities, and accelerations for bones (linear and rotational)
@@ -903,24 +905,24 @@ namespace pr::rdr12
 		AnimSource src = { kfa };
 		Populate(src, frames, durations);
 	}
-	void KinematicKeyFrameAnimation::Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w)
+	void KinematicKeyFrameAnimation::Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w)
 	{
 		// Populate from multiple animation sources using qualified frame references.
 		// Creates a composite IAnimSource adapter with virtual frame indices so that the IAnimSource
 		// overload handles all dynamics calculation. CalcRootMotion is skipped — per-frame O2W is used instead.
 		assert(!sources.empty());
-		assert(!frame_refs.empty());
+		assert(!key_refs.empty());
 
 		// Adapter that presents multiple KeyFrameAnimation sources as a single IAnimSource using virtual frame indices
 		struct MultiSourceAdapter : IAnimSource
 		{
 			std::span<KeyFrameAnimationPtr const> m_sources;
-			vector<int> m_vframes;
+			vector<int> m_unified_keys;
 			int m_total;
 
-			MultiSourceAdapter(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs)
+			MultiSourceAdapter(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs)
 				: m_sources(sources)
-				, m_vframes(frame_refs.size())
+				, m_unified_keys(key_refs.size())
 				, m_total()
 			{
 				vector<int> offsets(sources.size());
@@ -930,9 +932,9 @@ namespace pr::rdr12
 					offsets[i] = m_total;
 					m_total += kcount;
 				}
-				for (int i = 0; i != isize(frame_refs); ++i)
+				for (int i = 0; i != isize(key_refs); ++i)
 				{
-					m_vframes[i] = offsets[frame_refs[i].source_index] + frame_refs[i].frame_index;
+					m_unified_keys[i] = offsets[key_refs[i].source_index] + key_refs[i].key_index;
 				}
 			}
 			auto Decode(int vframe) const
@@ -970,8 +972,8 @@ namespace pr::rdr12
 		};
 
 		// Delegate to the IAnimSource overload (skip root motion — per-frame O2W replaces it)
-		MultiSourceAdapter adapter(sources, frame_refs);
-		Populate(adapter, adapter.m_vframes, durations, false);
+		MultiSourceAdapter adapter(sources, key_refs);
+		Populate(adapter, adapter.m_unified_keys, durations, false);
 
 		// Apply per-frame O2W to root bone — transforms all dynamics into montage space.
 		// This ensures velocities, accelerations, etc. are rotated/transformed consistently
@@ -979,7 +981,7 @@ namespace pr::rdr12
 		if (!per_frame_o2w.empty())
 		{
 			auto tcount = track_count();
-			for (int k = 0; k != isize(frame_refs); ++k)
+			for (int k = 0; k != isize(key_refs); ++k)
 			{
 				if (k >= isize(per_frame_o2w))
 					break;

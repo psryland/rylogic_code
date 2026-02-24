@@ -168,11 +168,11 @@ namespace pr::rdr12
 		friend KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac, EAnimInterpolation interp);
 	};
 
-	// A reference to a specific frame in one of multiple animation sources
-	struct FrameRef
+	// A reference to a specific key in one of multiple animation sources
+	struct KeyRef
 	{
 		int source_index; // Index into an array of animation sources
-		int frame_index;  // Frame number within that source (clamped to valid range)
+		int key_index;  // Key number within that source (clamped to valid range)
 	};
 
 	// Simple root motion polynomial animation
@@ -272,7 +272,7 @@ namespace pr::rdr12
 
 		uint32_t m_skel_id;         // The skeleton that this animation is intended for (mainly for debugging)
 		double m_native_duration;   // The length (in seconds) of this animation
-		double m_native_frame_rate; // The native frame rate of the animation
+		double m_native_frame_rate; // The native frame rate of the animation. This doesn't really have meaning when the keys are not evenly spaced
 		int m_key_count;            // The number of kinematic frames. Track lengths should match this or be empty
 
 		vector<uint16_t, 0> m_bone_map;  // The bone id for each track. Length = track count.
@@ -292,7 +292,7 @@ namespace pr::rdr12
 		vector<float, 0> m_times;   // Time (in seconds) of each key. Empty if a fixed frame rate.
 		vector<int, 0> m_fidxs;     // Frame index of each key frame. Empty if one key per frame.
 
-		KinematicKeyFrameAnimation(uint32_t skel_id, double duration, double native_frame_rate);
+		explicit KinematicKeyFrameAnimation(uint32_t skel_id);
 
 		// Number of tracks in this animation
 		int track_count() const;
@@ -338,13 +338,9 @@ namespace pr::rdr12
 		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
 		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'.
-		// When 'calc_root_motion' is false, root bone trajectory calculation is skipped (e.g., for montage where per-frame O2W is used instead).
 		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, bool calc_root_motion = true);
 		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
-
-		// Populate this kinematic animation from multiple sources using qualified frame references.
-		// Creates a composite IAnimSource with virtual frame indices and delegates to the IAnimSource overload.
-		void Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
+		void Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);
