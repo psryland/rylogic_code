@@ -4,6 +4,7 @@
 #include <winsock2.h> // Include winsock2.h before windows.h
 
 // Headers to unit test
+#include "pr/ai/ai.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
 #include "pr/algorithm/multidimensional_scaling.h"
