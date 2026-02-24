@@ -1493,35 +1493,86 @@ namespace pr::rdr12::ldraw
 		};
 
 		// Information on a key-frame animation
-		struct KeyFrameAnimInfo
+		// Shared playback modifiers used by both *Animation and *Montage
+		struct AnimModifiers
 		{
 			EAnimStyle m_style = EAnimStyle::NoAnimation;
 			EAnimFlags m_flags = EAnimFlags::None;
+			float m_stretch = {1.0}; // aka playback speed scale
+			float m_bias = {0.0};
+			bool m_hide_when_not_animating = false;
+
+			// Parse playback modifier keywords. Returns true if the keyword was handled.
+			bool ParseKeyword(IReader& reader, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Style:
+					{
+						m_style = reader.Enum<EAnimStyle>();
+						return true;
+					}
+					case EKeyword::TimeBias:
+					{
+						m_bias = reader.Real<float>();
+						return true;
+					}
+					case EKeyword::Stretch:
+					{
+						m_stretch = reader.Real<float>();
+						return true;
+					}
+					case EKeyword::HideWhenNotAnimating:
+					{
+						m_hide_when_not_animating = reader.IsSectionEnd() ? true : reader.Bool();
+						return true;
+					}
+					case EKeyword::NoRootTranslation:
+					{
+						m_flags = SetBits(m_flags, EAnimFlags::NoRootTranslation, reader.IsSectionEnd() ? true : reader.Bool());
+						return true;
+					}
+					case EKeyword::NoRootRotation:
+					{
+						m_flags = SetBits(m_flags, EAnimFlags::NoRootRotation, reader.IsSectionEnd() ? true : reader.Bool());
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			explicit operator bool() const
+			{
+				return m_style != EAnimStyle::NoAnimation;
+			}
+		};
+
+		struct KeyFrameAnimInfo
+		{
+			AnimModifiers m_mods;
 			FrameRange m_frame_range = { 0, std::numeric_limits<int>::max() };
 			TimeRange m_time_range = { 0, std::numeric_limits<double>::max() }; // Seconds
 			vector<int> m_frames = {};
 			vector<float> m_durations = {};
 			std::optional<float> m_frame_rate = {};
-			float m_stretch = {1.0}; // aka playback speed scale
-			float m_bias = {0.0};
 			bool m_per_frame_durations = false;
-			bool m_hide_when_not_animating = false;
 
 			void Parse(IReader& reader, ParseParams& pp)
 			{
 				// Set a default and indicate that an *Animation block was found
-				m_style = EAnimStyle::Once;
+				m_mods.m_style = EAnimStyle::Once;
 
 				auto section = reader.SectionScope();
 				for (EKeyword kw; reader.NextKeyword(kw);)
 				{
+					// Try shared playback modifiers first
+					if (m_mods.ParseKeyword(reader, kw))
+						continue;
+
 					switch (kw)
 					{
-						case EKeyword::Style:
-						{
-							m_style = reader.Enum<EAnimStyle>();
-							break;
-						}
 						case EKeyword::Frame:
 						{
 							auto frame = reader.Int<int>();
@@ -1560,34 +1611,9 @@ namespace pr::rdr12::ldraw
 							m_time_range = { t0, std::max(t1, t0) };
 							break;
 						}
-						case EKeyword::TimeBias:
-						{
-							m_bias = reader.Real<float>();
-							break;
-						}
-						case EKeyword::Stretch:
-						{
-							m_stretch = reader.Real<float>();
-							break;
-						}
 						case EKeyword::PerFrameDurations:
 						{
 							m_per_frame_durations = reader.IsSectionEnd() ? true : reader.Bool();
-							break;
-						}
-						case EKeyword::HideWhenNotAnimating:
-						{
-							m_hide_when_not_animating = reader.IsSectionEnd() ? true : reader.Bool();
-							break;
-						}
-						case EKeyword::NoRootTranslation:
-						{
-							m_flags = SetBits(m_flags, EAnimFlags::NoRootTranslation, reader.IsSectionEnd() ? true : reader.Bool());
-							break;
-						}
-						case EKeyword::NoRootRotation:
-						{
-							m_flags = SetBits(m_flags, EAnimFlags::NoRootRotation, reader.IsSectionEnd() ? true : reader.Bool());
 							break;
 						}
 						default:
@@ -1603,7 +1629,90 @@ namespace pr::rdr12::ldraw
 			}
 			explicit operator bool() const
 			{
-				return m_style != EAnimStyle::NoAnimation;
+				return m_mods.m_style != EAnimStyle::NoAnimation;
+			}
+		};
+
+		// Description of a montage — multiple animation sources with cherry-picked frames
+		struct MontageInfo
+		{
+			struct FrameEntry
+			{
+				int m_source_index = 0;
+				int m_frame_index = 0;
+				float m_duration = 1.0f;
+				m4x4 m_o2w = m4x4::Identity();
+			};
+
+			AnimModifiers m_mods;
+			vector<std::filesystem::path> m_source_paths;
+			vector<std::unique_ptr<std::istream>> m_source_streams;
+			vector<FrameEntry> m_frame_entries;
+			bool m_has_data = false;
+
+			void Parse(IReader& reader, ParseParams& pp)
+			{
+				m_has_data = true;
+				m_mods.m_style = EAnimStyle::Once;
+
+				auto section = reader.SectionScope();
+				for (EKeyword kw; reader.NextKeyword(kw);)
+				{
+					// Try shared playback modifiers first
+					if (m_mods.ParseKeyword(reader, kw))
+						continue;
+
+					switch (kw)
+					{
+						case EKeyword::AnimSource:
+						{
+							auto path = reader.String<std::filesystem::path>();
+							auto stream = reader.PathResolver.OpenStream(path, IPathResolver::EFlags::Binary);
+							m_source_paths.push_back(std::move(path));
+							m_source_streams.push_back(std::move(stream));
+							break;
+						}
+						case EKeyword::Frame:
+						{
+							auto frame_section = reader.SectionScope();
+							FrameEntry entry;
+							entry.m_source_index = reader.Int<int>();
+							entry.m_frame_index = reader.Int<int>();
+							if (!reader.IsSectionEnd())
+								entry.m_duration = reader.Real<float>();
+
+							// Check for optional *O2W within the frame block
+							for (EKeyword fkw; reader.NextKeyword(fkw);)
+							{
+								switch (fkw)
+								{
+									case EKeyword::O2W:
+									case EKeyword::Txfm:
+									{
+										reader.Transform(entry.m_o2w);
+										break;
+									}
+									default:
+									{
+										pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Frame in *Montage", EKeyword_::ToStringA(fkw)));
+										break;
+									}
+								}
+							}
+							m_frame_entries.push_back(entry);
+							break;
+						}
+						default:
+						{
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Montage", EKeyword_::ToStringA(kw)));
+							break;
+						}
+					}
+				}
+			}
+			explicit operator bool() const
+			{
+				return m_has_data;
 			}
 		};
 	}
@@ -4391,6 +4500,7 @@ namespace pr::rdr12::ldraw
 		std::unordered_set<string32> m_model_parts;
 		std::unordered_set<string32> m_skel_parts;
 		creation::KeyFrameAnimInfo m_anim_info;
+		creation::MontageInfo m_montage;
 		creation::GenNorms m_gen_norms;
 		creation::BakeTransform m_bake;
 		vector<SkeletonPtr, 1> m_skels;
@@ -4404,6 +4514,7 @@ namespace pr::rdr12::ldraw
 			, m_model_parts()
 			, m_skel_parts()
 			, m_anim_info()
+			, m_montage()
 			, m_gen_norms()
 			, m_bake()
 			, m_skels()
@@ -4440,6 +4551,11 @@ namespace pr::rdr12::ldraw
 					m_anim_info.Parse(reader, m_pp);
 					return true;
 				}
+				case EKeyword::Montage:
+				{
+					m_montage.Parse(reader, m_pp);
+					return true;
+				}
 				default:
 				{
 					return
@@ -4462,6 +4578,11 @@ namespace pr::rdr12::ldraw
 			if (!m_file_stream)
 			{
 				m_pp.ReportError(EParseError::NotFound, loc, "Failed to open the model file");
+				return;
+			}
+			if (m_anim_info && m_montage)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Animation and *Montage cannot both be specified in the same *Model");
 				return;
 			}
 
@@ -4493,12 +4614,145 @@ namespace pr::rdr12::ldraw
 			m_obj = obj;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, *this, &opts);
+
+			// If a montage is specified, load animation sources and build the montage animation
+			if (m_montage)
+				CreateMontage(obj, loc);
+		}
+
+		// Load animation sources from the montage and build the composite animation
+		void CreateMontage(LdrObject* obj, Location const& loc)
+		{
+			using namespace pr::geometry;
+			using namespace std::filesystem;
+
+			if (m_skels.empty())
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires a model with a skeleton");
+				return;
+			}
+			if (m_montage.m_source_paths.empty())
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires at least one *AnimSource");
+				return;
+			}
+			if (m_montage.m_frame_entries.empty())
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage requires at least one *Frame");
+				return;
+			}
+
+			auto const& model_skel = m_skels[0];
+
+			// Load animation data from each source file
+			struct AnimSourceOut : ModelGenerator::IModelOut
+			{
+				SkeletonPtr m_skel;
+				KeyFrameAnimationPtr m_anim;
+
+				geometry::ESceneParts Parts() const override { return geometry::ESceneParts::AnimationOnly; }
+				EResult Skeleton(SkeletonPtr&& skel) override { m_skel = std::move(skel); return EResult::Continue; }
+				EResult Animation(KeyFrameAnimationPtr&& anim) override { m_anim = std::move(anim); return EResult::Stop; }
+			};
+
+			vector<KeyFrameAnimationPtr> source_anims;
+			for (int si = 0; si != isize(m_montage.m_source_paths); ++si)
+			{
+				auto const& source_path = m_montage.m_source_paths[si];
+				auto& stream = m_montage.m_source_streams[si];
+
+				if (!stream)
+				{
+					m_pp.ReportError(EParseError::NotFound, loc, std::format("Failed to open animation source '{}'", source_path.string()));
+					return;
+				}
+
+				auto source_format = GetModelFormat(source_path);
+				if (source_format == EModelFileFormat::Unknown)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Unsupported animation source format '{}'", source_path.string()));
+					return;
+				}
+
+				AnimSourceOut out;
+				ModelGenerator::LoadModel(source_format, m_pp.m_factory, *stream, out);
+
+				if (!out.m_anim)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("No animation found in source '{}'", source_path.string()));
+					return;
+				}
+
+				// Validate skeleton compatibility
+				if (out.m_skel && !model_skel->IsCompatible(*out.m_skel.get()))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Skeleton in '{}' is not compatible with the model skeleton", source_path.string()));
+					return;
+				}
+
+				source_anims.push_back(std::move(out.m_anim));
+			}
+
+			// Validate source indices in frame entries
+			for (auto const& entry : m_montage.m_frame_entries)
+			{
+				if (entry.m_source_index < 0 || entry.m_source_index >= isize(source_anims))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", entry.m_source_index, isize(source_anims) - 1));
+					return;
+				}
+			}
+
+			// Build the frame references, durations, and per-frame O2W arrays
+			vector<FrameRef> frame_refs;
+			vector<float> durations;
+			vector<m4x4> per_frame_o2w;
+			bool has_o2w = false;
+
+			for (auto const& entry : m_montage.m_frame_entries)
+			{
+				frame_refs.push_back({ entry.m_source_index, entry.m_frame_index });
+				durations.push_back(entry.m_duration);
+				per_frame_o2w.push_back(entry.m_o2w);
+				if (entry.m_o2w != m4x4::Identity())
+					has_o2w = true;
+			}
+
+			// Build source pointer array
+			vector<KeyFrameAnimation const*> source_ptrs;
+			for (auto const& sa : source_anims)
+				source_ptrs.push_back(sa.get());
+
+			// Create kinematic key frame animation from the multi-source frames
+			auto const& first_src = *source_anims[0].get();
+			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(model_skel->Id(), first_src.duration(), first_src.frame_rate()), true };
+			kkfa->Populate(
+				std::span<KeyFrameAnimation const* const>{source_ptrs},
+				std::span<FrameRef const>{frame_refs},
+				std::span<float const>{durations},
+				has_o2w ? std::span<m4x4 const>{per_frame_o2w} : std::span<m4x4 const>{}
+			);
+
+			// Create animator and pose
+			AnimatorPtr animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
+			auto time_range = TimeRange{ 0, animator->Duration() };
+
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, model_skel, animator, m_montage.m_mods.m_style, m_montage.m_mods.m_flags, time_range, m_montage.m_mods.m_stretch, m_montage.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy
+			obj->Apply([&](LdrObject* o)
+			{
+				o->m_pose = pose;
+				o->Flags(ELdrFlags::Animated, m_montage.m_mods.m_style != EAnimStyle::NoAnimation);
+				o->Flags(ELdrFlags::HideWhenNotAnimating, m_montage.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
 		}
 
 		// IModelOut functions
 		geometry::ESceneParts Parts() const override
 		{
-			auto parts = m_anim_info
+			auto parts = (m_anim_info || m_montage)
 				? geometry::ESceneParts::All
 				: geometry::ESceneParts::ModelOnly;
 			if (m_ignore_materials)
@@ -4533,6 +4787,10 @@ namespace pr::rdr12::ldraw
 			if (!m_anim_info)
 				return EResult::Stop;
 
+			// Montage uses its own animation sources, not the model's
+			if (m_montage)
+				return EResult::Stop;
+
 			// Find the associated skeleton
 			auto const& skeleton = get_if(m_skels, [&](SkeletonPtr skel) { return skel->Id() == anim->m_skel_id; });
 
@@ -4564,14 +4822,14 @@ namespace pr::rdr12::ldraw
 			auto time_range = TimeRange{ 0, animator->Duration() };
 
 			// Create an animator that uses the animation and a pose for it to animate
-			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch, m_anim_info.m_bias), true };
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
 
 			// Set the pose for each model in the hierarchy.
 			m_obj->Apply([&](LdrObject* obj)
 			{
 				obj->m_pose = pose;
-				obj->Flags(ELdrFlags::Animated, m_anim_info.m_style != EAnimStyle::NoAnimation);
-				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_hide_when_not_animating);
+				obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
+				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
 				return true;
 			}, "");
 
@@ -5509,14 +5767,14 @@ namespace pr::rdr12::ldraw
 				// Clone the animator because it can have cached state for efficient animation sampling
 				AnimatorPtr animator = source->m_pose->m_animator->Clone();
 
-				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_style, m_anim_info.m_flags, time_range, m_anim_info.m_stretch, m_anim_info.m_bias), true };
+				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
 
 				// Set the pose for each model in the hierarchy.
 				obj->Apply([&](LdrObject* obj)
 				{
 					obj->m_pose = pose;
-					obj->Flags(ELdrFlags::Animated, m_anim_info.m_style != EAnimStyle::NoAnimation);
-					obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_hide_when_not_animating);
+					obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
+					obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
 					return true;
 				}, "");
 			}

@@ -168,6 +168,13 @@ namespace pr::rdr12
 		friend KinematicKey Interp(KinematicKey const& lhs, KinematicKey const& rhs, float frac, EAnimInterpolation interp);
 	};
 
+	// A reference to a specific frame in one of multiple animation sources
+	struct FrameRef
+	{
+		int source_index; // Index into an array of animation sources
+		int frame_index;  // Frame number within that source (clamped to valid range)
+	};
+
 	// Simple root motion polynomial animation
 	struct RootAnimation : RefCounted<RootAnimation>
 	{
@@ -333,6 +340,9 @@ namespace pr::rdr12
 		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'
 		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations);
 		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
+
+		// Populate this kinematic animation from multiple sources using qualified frame references
+		void Populate(std::span<KeyFrameAnimation const* const> sources, std::span<FrameRef const> frame_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);

@@ -46,6 +46,7 @@ namespace pr::rdr12::ldraw
 		x(Anchor                   )\
 		x(AngAccel                 )\
 		x(AngVelocity              )\
+		x(AnimSource               )\
 		x(Animation                )\
 		x(Arrow                    )\
 		x(Aspect                   )\
@@ -122,6 +123,7 @@ namespace pr::rdr12::ldraw
 		x(M4x4                     )\
 		x(Mesh                     )\
 		x(Model                    )\
+		x(Montage                  )\
 		x(Name                     )\
 		x(Near                     )\
 		x(NewLine                  )\

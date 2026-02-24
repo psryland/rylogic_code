@@ -143,6 +143,24 @@
       "references": [],
       "childReferences": []
     },
+    "Montage": {
+      "keyword": "Montage",
+      "display": "*Montage\n{\n\t*AnimSource {<animation_filepath>}\n\t*Frame {<source_index> <frame_number> [<duration>] [*O2W {...}]}\n\t[*Style {NoAnimation|Once|Repeat|Continuous|PingPong}]\n\t[*Stretch {<speed_multiplier>}]\n\t[*NoRootTranslation {}]\n\t[*NoRootRotation {}]\n\t[*HideWhenNotAnimating {}]\n}",
+      "rootOnly": false,
+      "hidden": true,
+      "recursive": false,
+      "children": [
+        "AnimSource",
+        "Frame",
+        "Style",
+        "Stretch",
+        "NoRootTranslation",
+        "NoRootRotation",
+        "HideWhenNotAnimating"
+      ],
+      "references": [],
+      "childReferences": []
+    },
     "ObjectModifiers": {
       "keyword": "ObjectModifiers",
       "display": "*ObjectModifiers\n{\n\t[@o2w]\n\t[*Colour {<colour>}]\n\t[*GroupColour {<colour>}]\n\t[*Reflectivity {<amount>}]\n\t[*RandColour {}]\n\t[*Hidden {[true|false]}]\n\t[*Wireframe {[true|false]}]\n\t[*ScreenSpace {}]\n\t[*NoZTest {}]\n\t[*NoZWrite {}]\n\t[@RootAnimation]\n\t[@Font]\n}",
@@ -1257,7 +1275,7 @@
     },
     "Model": {
       "keyword": "Model",
-      "display": "*Model[<name>] [<colour>]\n{\n\t*FilePath {<model_filepath>}\n\t[*Parts {(<mesh_name>)}]\n\t[*NoMaterials {[true|false]}]\n\t[@Animation]\n\t[@GenerateNormals]\n\t[@BakeTransform]\n\t$ObjectModifiers\n\t&Recursive\n}",
+      "display": "*Model[<name>] [<colour>]\n{\n\t*FilePath {<model_filepath>}\n\t[*Parts {(<mesh_name>)}]\n\t[*NoMaterials {[true|false]}]\n\t[@Animation]\n\t[@Montage]\n\t[@GenerateNormals]\n\t[@BakeTransform]\n\t$ObjectModifiers\n\t&Recursive\n}",
       "rootOnly": false,
       "hidden": false,
       "recursive": true,
@@ -1277,6 +1295,7 @@
       ],
       "references": [
         "Animation",
+        "Montage",
         "GenerateNormals",
         "BakeTransform",
         "o2w",

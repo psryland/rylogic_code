@@ -136,6 +136,7 @@ class EKeyword(Enum):
 	Anchor = 1122880180
 	AngAccel = 801436173
 	AngVelocity = 2226367268
+	AnimSource = 4254838773
 	Animation = 3779456605
 	Arrow = 2220107398
 	Aspect = 2929999953
@@ -212,6 +213,7 @@ class EKeyword(Enum):
 	M4x4 = 3279345952
 	Mesh = 2701180604
 	Model = 2961925722
+	Montage = 2939791094
 	Name = 2369371622
 	Near = 1425233679
 	NewLine = 4281549323

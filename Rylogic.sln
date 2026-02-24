@@ -156,6 +156,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "p3d", "projects\tools\p3d\p3d.vcxproj", "{55743CFA-06D2-43DB-8B86-A03CC46F0847}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "prautoexp", "projects\tools\prautoexp\prautoexp.vcxproj", "{76D773AE-90AE-4574-A99A-1A9C5B54077A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C08B476-AF59-47F4-8122-2E068D55066E} = {8C08B476-AF59-47F4-8122-2E068D55066E}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BorderOfPeace", "projects\tools\BorderOfPeace\BorderOfPeace.csproj", "{236968CF-6A33-4E0C-8873-CE2C6338E3C4}"
 EndProject
