@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This targets file adds the ai.dll as a DependencyLink to the consuming project.
+For C# projects, it adds a Content link that copies the DLL to the output directory.
+For C++ projects, it uses the DependencyLink item type (handled by dependency_link.props).
+-->
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Add a dependency on the dll (C#) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+		<Content Include="$(RylogicRoot)lib\x64\debug\ai.dll">
+			<Link>lib\x64\debug\ai.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Include="$(RylogicRoot)lib\x64\release\ai.dll">
+			<Link>lib\x64\release\ai.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Add a dependency on the dll (C++) -->
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' == '.vcxproj'">
+		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\ai.dll" />
+	</ItemGroup>
+
+</Project>

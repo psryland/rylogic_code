@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
+    <ProjectName>ai</ProjectName>
+    <TargetName>ai</TargetName>
+    <RootNamespace>pr::ai</RootNamespace>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)dll.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\ggml\include
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
+      </PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>
+        ;winhttp.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- llama.cpp static libraries per configuration -->
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <Link>
+      <AdditionalDependencies>
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\src\Release\llama.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-base.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\Release\ggml-cpu.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\ggml-vulkan\Release\ggml-vulkan.lib
+        ;$(RylogicRoot)sdk\vulkan\lib\vulkan-1.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <Link>
+      <AdditionalDependencies>
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\src\Debug\llama.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-base.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\Debug\ggml-cpu.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build-debug\ggml\src\ggml-vulkan\Debug\ggml-vulkan.lib
+        ;$(RylogicRoot)sdk\vulkan\lib\vulkan-1.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\ai.cpp" />
+    <ClInclude Include="$(RylogicRoot)include\pr\ai\ai.h" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
