@@ -41,6 +41,9 @@ namespace pr::rdr12
 			rdr12::WalkHierarchy<Ret, std::span<uint8_t const>, Func>(m_hierarchy, func);
 		}
 
+		// Check if this skeleton is structurally compatible with another (same bone count and names)
+		bool IsCompatible(Skeleton const& other) const;
+
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<Skeleton>* doomed);
 	};

@@ -254,7 +254,7 @@ namespace Rylogic.Common
 			#endif
 		}
 
-		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'. Returns a full filepath</summary>
+		/// <summary>Remove '..' or '.' directories from a path and swap all '/','\' to the default path separater. Returns a full path</summary>
 		public static string Canonicalise(string path, Case change_case = Case.Unchanged)
 		{
 			if (change_case == Case.Lower) path = path.ToLowerInvariant();
