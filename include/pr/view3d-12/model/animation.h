@@ -338,9 +338,9 @@ namespace pr::rdr12
 		void ReadKeys(int key_idx, int track_index, std::span<m4x4> out) const;
 
 		// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'.
-		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, bool calc_root_motion = true);
-		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations);
-		void Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_o2w = {});
+		void Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a = {});
+		void Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a = {});
+		void Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a = {});
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<KinematicKeyFrameAnimation>* doomed);
