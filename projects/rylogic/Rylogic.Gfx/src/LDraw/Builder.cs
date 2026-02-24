@@ -1312,6 +1312,7 @@ namespace Rylogic.LDraw
 			return m_anim;
 		}
 
+		/// <summary>Don't load materials from the model</summary>
 		public LdrModel no_materials(bool on = true)
 		{
 			m_no_materials = on;
