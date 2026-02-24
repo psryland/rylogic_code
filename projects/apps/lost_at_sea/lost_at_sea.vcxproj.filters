@@ -46,6 +46,9 @@
     <Filter Include="src\core\input">
       <UniqueIdentifier>{e0ddeaa3-a1b5-448d-9fb1-03ba675bc6e8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps">
+      <UniqueIdentifier>{2ba3e61f-561b-4cb8-b31e-34d3f2d69c33}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
@@ -215,6 +218,8 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\imgui.dll" />
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\imgui.dll">
+      <Filter>deps</Filter>
+    </DependencyLink>
   </ItemGroup>
 </Project>

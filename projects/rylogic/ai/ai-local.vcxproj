@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ProjectGuid>{90E72998-020F-4FF3-B86C-3A82D6782FFD}</ProjectGuid>
+    <ProjectName>ai-local</ProjectName>
+    <TargetName>ai-local</TargetName>
+    <RootNamespace>pr::ai</RootNamespace>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+  </PropertyGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(PropsPath)build_configurations.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)dll.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup>
+    <PreBuildEvent>
+      <Command>
+        if not exist "$(RylogicRoot)sdk\vulkan\include" call $(RylogicRoot)sdk\vulkan\_get.csx
+        if not exist "$(RylogicRoot)sdk\llama-cpp\llama.cpp" call $(RylogicRoot)sdk\llama-cpp\_get.csx
+      </Command>
+    </PreBuildEvent>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\include
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\ggml\include
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;PR_AI_LOCAL_INFERENCE=1
+      </PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>
+        ;winhttp.lib
+        ;$(RylogicRoot)sdk\vulkan\lib\vulkan-1.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\src\$(Configuration)\llama.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\$(Configuration)\ggml.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\$(Configuration)\ggml-base.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\$(Configuration)\ggml-cpu.lib
+        ;$(RylogicRoot)sdk\llama-cpp\llama.cpp\build\ggml\src\ggml-vulkan\$(Configuration)\ggml-vulkan.lib
+        ;%(AdditionalDependencies)
+      </AdditionalDependencies>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\ai.cpp" />
+    <ClInclude Include="$(RylogicRoot)include\pr\ai\ai.h" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

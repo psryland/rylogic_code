@@ -136,6 +136,7 @@ class EKeyword(Enum):
 	Anchor = 1122880180
 	AngAccel = 801436173
 	AngVelocity = 2226367268
+	AnimSource = 4254838773
 	Animation = 3779456605
 	Arrow = 2220107398
 	Aspect = 2929999953
@@ -186,7 +187,6 @@ class EKeyword(Enum):
 	FovX = 862039340
 	FovY = 878816959
 	Frame = 3523899814
-	Frames = 2071016015
 	FrameRange = 1562558803
 	FrameRate = 2601589476
 	FrustumFA = 3281884904
@@ -212,6 +212,7 @@ class EKeyword(Enum):
 	M4x4 = 3279345952
 	Mesh = 2701180604
 	Model = 2961925722
+	Montage = 2939791094
 	Name = 2369371622
 	Near = 1425233679
 	NewLine = 4281549323
@@ -232,7 +233,6 @@ class EKeyword(Enum):
 	Part = 2088252948
 	Parts = 1480434725
 	Period = 2580104964
-	PerFrameDurations = 3890502406
 	PerItemColour = 1734234667
 	PerItemParametrics = 2079701142
 	Pie = 1782644405

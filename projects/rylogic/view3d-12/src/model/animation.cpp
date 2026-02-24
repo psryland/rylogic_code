@@ -258,10 +258,10 @@ namespace pr::rdr12
 
 	// --------------------------------------------------------------------------------------------
 
-	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id, double native_duration, double native_frame_rate)
+	KinematicKeyFrameAnimation::KinematicKeyFrameAnimation(uint32_t skel_id)
 		: m_skel_id(skel_id)
-		, m_native_duration(native_duration)
-		, m_native_frame_rate(native_frame_rate)
+		, m_native_duration()   // Calculated during populate
+		, m_native_frame_rate() // Calculated during populate
 		, m_key_count()
 		, m_bone_map()
 		, m_rotation()
@@ -490,7 +490,7 @@ namespace pr::rdr12
 	}
 
 	// Populate this kinematic animation from 'src' using the given 'frames' and 'durations'
-	void KinematicKeyFrameAnimation::Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations)
+	void KinematicKeyFrameAnimation::Populate(IAnimSource const& src, std::span<int const> frames, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a)
 	{
 		struct Builder
 		{
@@ -536,14 +536,14 @@ namespace pr::rdr12
 			}
 
 			// Calculate the dynamics data for the given frame numbers
-			void Run(std::span<int const> frames, std::span<float const> durations)
+			void Run(std::span<int const> frames, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a)
 			{
 				InitBoneMap();
 				CopyFrames(frames, durations);
 				CalcBoneDynamics();
 				CalcFCurveDynamics();
 				CalcTCurveDynamics();
-				CalcRootMotion();
+				CalcRootMotion(per_frame_r2a);
 			}
 
 			// Initialize the mapping from track index to bone index
@@ -566,7 +566,6 @@ namespace pr::rdr12
 					return;
 				}
 
-				auto spf = 1.f / s_cast<float>(m_src.frame_rate());
 				auto time = 0.f;
 				auto fidx = 0;
 
@@ -576,15 +575,18 @@ namespace pr::rdr12
 				for (int i = 0, iend = isize(frames); i != iend; ++i)
 				{
 					// The frame indices can be any frames from the source animation, not necessarily in order!
-					// The duration of the last frame is meaningless because the sequence stops on that frame.
-					// I think this is better than inserting a dummy frame after. That can be done manually in the script if needed.
+					// Each frame can have a different duration as well, so frame-rate is a bit meaningless for KKFA.
+					// The duration of the last frame is zero because the sequence stops on that frame.
 					fidx = frames[i];
 					m_out.m_times[i] = time;
 					m_out.m_fidxs[i] = fidx;
-					time += Get(durations, i, spf);
+					time += i + 1 != iend ? Get(durations, i, 1.0f) : 0;
 				}
 
+				// Set the frame rate of the KKFA.
+				// The frame rate of the IAnimSource is different, that is used when calculating the frame dynamics
 				m_out.m_native_duration = time;
+				m_out.m_native_frame_rate = (m_out.m_key_count - 1) / time;
 			}
 
 			// Calculate positions, velocities, and accelerations for bones (linear and rotational)
@@ -760,46 +762,61 @@ namespace pr::rdr12
 			}
 
 			// Calculate the new root motion for the provided frames
-			void CalcRootMotion()
+			void CalcRootMotion(std::span<m4x4 const> per_frame_r2a)
 			{
 				// So far, the root bone track is in animation space (i.e. positions and dynamics are in animation space).
-				// We need to construct a root bone path from the sparce frames provided. The frames are provided with durations so we know
-				// that each frame should run for that long. From the original animation, evolve each frame forward by its duration
-				// to find the root bone position at the end of that duration. This position, relative to the starting frame position,
-				// is the offset we should apply to each key to get the position of the next key.
-				
-				// First, transform all keys to the origin
+				// We need to construct a root bone path from the sparce frames provided. If 'per_frame_r2a' is provided,
+				// then we can simply set the position of each frame. If not, then we need to infer it from the provided
+				// durations per frame.
+
+				// First, transform all keys to root space
 				for (int kidx = 0; kidx != m_out.key_count(); ++kidx)
 				{
 					auto r2a = m_out.root_to_anim(kidx);
 					ApplyXform(kidx, Invert(r2a));
 				}
 
-				auto fps = s_cast<float>(m_src.frame_rate());
-
-				// The animation space transform for the root bone of key 'kidx'
-				xform k2w = xform::Identity();
-
-				// For each key, find it's original animation frame, and the frame after the key's duration.
-				// Note that the first key is always at the origin/identity.
-				for (int kidx = 1; kidx != m_out.key_count(); ++kidx)
+				// If a transform is provided for each frame, use them
+				if (!per_frame_r2a.empty())
 				{
-					auto dt =
-						Get(m_out.m_times, kidx - 0, (kidx - 0) / fps) -
-						Get(m_out.m_times, kidx - 1, (kidx - 1) / fps);
+					for (int kidx = 0; kidx != m_out.key_count(); ++kidx)
+					{
+						auto const& r2a = per_frame_r2a[std::clamp(kidx, 0, isize(per_frame_r2a) - 1)];
+						ApplyXform(kidx, r2a);
+					}
+				}
+				else
+				{
+					// The frames are provided with durations so we know that each frame should run for that long.
+					// From the original animation, evolve each frame forward by its duration to find the root bone
+					// position at the end of that duration. This position, relative to the starting frame position,
+					// is the offset we should apply to each key to get the position of the next key.
+					auto fps = s_cast<float>(m_src.frame_rate());
 
-					auto fidx_a = Get(m_out.m_fidxs, kidx - 1, kidx - 1);
-					auto fidx_b = fidx_a + s_cast<int>(dt * fps);
+					// The animation space transform for the root bone of key 'kidx'
+					xform k2w = xform::Identity();
 
-					xform a2w, b2w;
-					m_src.ReadTrackValues(fidx_a, RootBoneTrack, { &a2w, 1 });
-					m_src.ReadTrackValues(fidx_b, RootBoneTrack, { &b2w, 1 });
-					auto b2a = Invert(a2w) * b2w;
+					// For each key, find it's original animation frame, and the frame after the key's duration.
+					// Note that the first key is always at the origin/identity.
+					for (int kidx = 1; kidx != m_out.key_count(); ++kidx)
+					{
+						auto dt =
+							Get(m_out.m_times, kidx - 0, (kidx - 0) / fps) -
+							Get(m_out.m_times, kidx - 1, (kidx - 1) / fps);
 
-					k2w = k2w * b2a;
+						auto fidx_a = Get(m_out.m_fidxs, kidx - 1, kidx - 1);
+						auto fidx_b = fidx_a + s_cast<int>(dt * fps);
 
-					// Update the root bone transform
-					ApplyXform(kidx, k2w);
+						xform a2w, b2w;
+						m_src.ReadTrackValues(fidx_a, RootBoneTrack, { &a2w, 1 });
+						m_src.ReadTrackValues(fidx_b, RootBoneTrack, { &b2w, 1 });
+						auto b2a = Invert(a2w) * b2w;
+
+						k2w = k2w * b2a;
+
+						// Update the root bone transform
+						ApplyXform(kidx, k2w);
+					}
 				}
 			}
 
@@ -870,9 +887,9 @@ namespace pr::rdr12
 		};
 
 		Builder calc(src, *this);
-		calc.Run(frames, durations);
+		calc.Run(frames, durations, per_frame_r2a);
 	}
-	void KinematicKeyFrameAnimation::Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations)
+	void KinematicKeyFrameAnimation::Populate(KeyFrameAnimation const& kfa, std::span<int const> frames, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a)
 	{
 		struct AnimSource : IAnimSource
 		{
@@ -900,7 +917,77 @@ namespace pr::rdr12
 		};
 
 		AnimSource src = { kfa };
-		Populate(src, frames, durations);
+		Populate(src, frames, durations, per_frame_r2a);
+	}
+	void KinematicKeyFrameAnimation::Populate(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs, std::span<float const> durations, std::span<m4x4 const> per_frame_r2a)
+	{
+		// Populate from multiple animation sources using qualified frame references.
+		// Creates a composite IAnimSource adapter with virtual frame indices so that the IAnimSource
+		// overload handles all dynamics calculation. CalcRootMotion is skipped — per-frame O2W is used instead.
+		assert(!sources.empty());
+		assert(!key_refs.empty());
+
+		// Adapter that presents multiple KeyFrameAnimation sources as a single IAnimSource using virtual frame indices
+		struct MultiSourceAdapter : IAnimSource
+		{
+			std::span<KeyFrameAnimationPtr const> m_sources;
+			vector<int> m_unified_keys;
+			int m_total;
+
+			MultiSourceAdapter(std::span<KeyFrameAnimationPtr const> sources, std::span<KeyRef const> key_refs)
+				: m_sources(sources)
+				, m_unified_keys(key_refs.size())
+				, m_total()
+			{
+				vector<int> offsets(sources.size());
+				for (int i = 0; i != isize(sources); ++i)
+				{
+					auto kcount = m_sources[i]->key_count();
+					offsets[i] = m_total;
+					m_total += kcount;
+				}
+				for (int i = 0; i != isize(key_refs); ++i)
+				{
+					m_unified_keys[i] = offsets[key_refs[i].source_index] + key_refs[i].key_index;
+				}
+			}
+			auto Decode(int vframe) const
+			{
+				struct R { KeyFrameAnimationPtr const src; int frame; };
+
+				if (vframe < 0)
+					return R{ m_sources[0], 0 };
+				if (vframe >= key_count())
+					return R{ m_sources.back(), m_sources.back()->key_count() - 1 };
+
+				int i = 0;
+				for (; i != isize(m_sources) && vframe >= m_sources[i]->key_count(); ++i)
+					vframe -= m_sources[i]->key_count();
+
+				return R{ m_sources[i], vframe };
+			}
+			int key_count() const noexcept override { return m_total; }
+			int track_count() const noexcept override { return m_sources[0]->track_count(); }
+			int fcurve_count() const noexcept override { return 0; }
+			int tcurve_count() const noexcept override { return 0; }
+			double frame_rate() const noexcept override { return m_sources[0]->frame_rate(); }
+			int key_to_frame(int key_index) const override { return key_index; }
+			uint16_t track_to_bone(int track_index) const override { return m_sources[0]->m_bone_map[track_index]; }
+			void ReadTrackValues(int frame_index, int track_index, std::span<xform> samples) const override
+			{
+				// All samples should come from the same source (the one containing the center frame).
+				// Decode the center frame (samples[2]) to find the source, then read consecutive frames from it.
+				auto center_frame = frame_index + isize(samples) / 2;
+				auto [src, fidx] = Decode(center_frame);
+				src->ReadKeys(fidx - isize(samples) / 2, track_index, samples);
+			}
+			void ReadFCurveValues(int, int, std::span<float>) const override {}
+			void ReadTCurveValues(int, int, std::span<xform>) const override {}
+		};
+
+		// Delegate to the IAnimSource overload (skip root motion — per-frame O2W replaces it)
+		MultiSourceAdapter adapter(sources, key_refs);
+		Populate(adapter, adapter.m_unified_keys, durations, per_frame_r2a);
 	}
 
 	// Ref-counting clean up function

@@ -122,6 +122,7 @@ namespace pr::ldraw
 		inline static char const* Anchor = "*Anchor";
 		inline static char const* AngAccel = "*AngAccel";
 		inline static char const* AngVelocity = "*AngVelocity";
+		inline static char const* AnimSource = "*AnimSource";
 		inline static char const* Animation = "*Animation";
 		inline static char const* Arrow = "*Arrow";
 		inline static char const* Aspect = "*Aspect";
@@ -195,6 +196,7 @@ namespace pr::ldraw
 		inline static char const* M4x4 = "*M4x4";
 		inline static char const* Mesh = "*Mesh";
 		inline static char const* Model = "*Model";
+		inline static char const* Montage = "*Montage";
 		inline static char const* Name = "*Name";
 		inline static char const* Near = "*Near";
 		inline static char const* NewLine = "*NewLine";
