@@ -219,6 +219,7 @@ namespace pr::rdr12::ldraw
 			"{\n"
 			"	*Data {<object_to_instance>}\n"
 			"	[@Animation]\n"
+			"	[@Montage]\n"
 			"	$ObjectModifiers\n"
 			"	&Recursive\n"
 			"}\n"

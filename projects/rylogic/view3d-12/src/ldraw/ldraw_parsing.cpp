@@ -5647,10 +5647,14 @@ namespace pr::rdr12::ldraw
 	{
 		string32 m_source;
 		creation::KeyFrameAnimInfo m_anim_info;
+		creation::MontageInfo m_montage;
 		std::unordered_map<Pose const*, PosePtr> m_pose_map;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_source()
+			, m_anim_info()
+			, m_montage()
 			, m_pose_map()
 		{
 		}
@@ -5669,6 +5673,11 @@ namespace pr::rdr12::ldraw
 					m_anim_info.Parse(reader, m_pp);
 					return true;
 				}
+				case EKeyword::Montage:
+				{
+					m_montage.Parse(reader, m_pp);
+					return true;
+				}
 				default:
 				{
 					return
@@ -5681,6 +5690,13 @@ namespace pr::rdr12::ldraw
 			// Ignore empty instances
 			if (m_source.empty())
 				return;
+
+			// *Animation and *Montage are mutually exclusive
+			if (m_anim_info && m_montage)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Animation and *Montage cannot both be specified in the same *Instance");
+				return;
+			}
 
 			LdrObject* source = nullptr;
 			std::string_view addr{ m_source };
@@ -5729,27 +5745,14 @@ namespace pr::rdr12::ldraw
 
 			// Clone the pose if animation info is given
 			if (m_anim_info && source->m_pose != nullptr)
-			{
-				// Clamp the time range to the frame range
-				auto time_range = ToTimeRange(m_anim_info.m_frame_range, source->m_pose->m_animator->FrameRate());
-				time_range = Intersect(time_range, source->m_pose->m_time_range);
-				time_range = Intersect(time_range, m_anim_info.m_time_range);
+				CreateAnimation(obj, source, loc);
 
-				// Clone the animator because it can have cached state for efficient animation sampling
-				AnimatorPtr animator = source->m_pose->m_animator->Clone();
-
-				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
-
-				// Set the pose for each model in the hierarchy.
-				obj->Apply([&](LdrObject* obj)
-				{
-					obj->m_pose = pose;
-					obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
-					obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
-					return true;
-				}, "");
-			}
+			// Build a montage animation for this instance
+			if (m_montage && source->m_pose != nullptr)
+				CreateMontage(obj, source, loc);
 		}
+
+		// Recursively create an instance by copying the model and properties of 'source' into 'obj' and doing the same for each child.
 		void RecursiveCreate(LdrObject* obj, LdrObject const* source, bool copy_props)
 		{
 			obj->m_model = source->m_model;
@@ -5771,6 +5774,147 @@ namespace pr::rdr12::ldraw
 				child->m_name = source_child->m_name;
 				obj->m_child.push_back(std::move(child));
 			}
+		}
+
+		// Build an animation for the instance by cloning the source object's pose and applying the animation mods
+		void CreateAnimation(LdrObject* obj, LdrObject const* source, Location const&)
+		{
+			// Clamp the time range to the frame range
+			auto time_range = ToTimeRange(m_anim_info.m_frame_range, source->m_pose->m_animator->FrameRate());
+			time_range = Intersect(time_range, source->m_pose->m_time_range);
+			time_range = Intersect(time_range, m_anim_info.m_time_range);
+
+			// Clone the animator because it can have cached state for efficient animation sampling
+			AnimatorPtr animator = source->m_pose->m_animator->Clone();
+
+			// Create a new pose for the instance using the source pose's skeleton and the cloned animator
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy.
+			obj->Apply([&](LdrObject* obj)
+			{
+				obj->m_pose = pose;
+				obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
+				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
+		}
+
+		// Build a montage animation for the instance using the source object's animation as source index 0
+		void CreateMontage(LdrObject* obj, LdrObject const* source, Location const& loc)
+		{
+			using namespace pr::geometry;
+			using namespace std::filesystem;
+
+			// No frames, no montage
+			if (m_montage.m_key_refs.empty())
+				return;
+
+			// The source's pose must use a KeyFrameAnimation-based animator so we can access the raw animation data
+			auto* kfa_animator = dynamic_cast<Animator_KeyFrameAnimation const*>(source->m_pose->m_animator.get());
+			if (!kfa_animator || !kfa_animator->m_anim)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage on *Instance requires the source object to have a key-frame animation (source index 0)");
+				return;
+			}
+
+			auto const& skeleton = source->m_pose->m_skeleton;
+			auto const& model_anim = kfa_animator->m_anim;
+
+			// Collect animation sources: index 0 is the source object's animation
+			vector<KeyFrameAnimationPtr> source_anims;
+			source_anims.push_back(model_anim);
+
+			// Load additional animation sources from the montage
+			for (int si = 0; si != isize(m_montage.m_source_paths); ++si)
+			{
+				auto const& source_path = m_montage.m_source_paths[si];
+				auto& stream = m_montage.m_source_streams[si];
+				if (!stream)
+				{
+					m_pp.ReportError(EParseError::NotFound, loc, std::format("Failed to open animation source '{}'", source_path.string()));
+					return;
+				}
+
+				auto source_format = GetModelFormat(source_path);
+				if (source_format == EModelFileFormat::Unknown)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Unsupported animation source format '{}'", source_path.string()));
+					return;
+				}
+
+				// Reuse the AnimSourceOut type from the *Model creator
+				struct AnimSourceOut : ModelGenerator::IModelOut
+				{
+					SkeletonPtr m_skel;
+					KeyFrameAnimationPtr m_anim;
+
+					geometry::ESceneParts Parts() const override
+					{
+						return geometry::ESceneParts::AnimationOnly;
+					}
+					EResult Skeleton(SkeletonPtr&& skel) override
+					{
+						m_skel = std::move(skel); return EResult::Continue;
+					}
+					EResult Animation(KeyFrameAnimationPtr&& anim) override
+					{
+						m_anim = std::move(anim); return EResult::Stop;
+					}
+				};
+
+				AnimSourceOut out;
+				ModelGenerator::LoadModel(source_format, m_pp.m_factory, *stream, out);
+
+				if (!out.m_anim)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("No animation found in source '{}'", source_path.string()));
+					return;
+				}
+				if (!out.m_skel || !skeleton->IsCompatible(*out.m_skel.get()))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Skeleton in '{}' is not compatible with the source skeleton", source_path.string()));
+					return;
+				}
+
+				source_anims.push_back(std::move(out.m_anim));
+			}
+
+			// Validate source indices in frame entries
+			for (int i = 0; i != isize(m_montage.m_key_refs); ++i)
+			{
+				auto const& key_refs = m_montage.m_key_refs;
+				if (key_refs[i].source_index < 0 || key_refs[i].source_index >= isize(source_anims))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", key_refs[i].source_index, isize(source_anims) - 1));
+					return;
+				}
+			}
+
+			// Create kinematic key frame animation from the multi-source frames
+			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(skeleton->Id()), true };
+			kkfa->Populate(
+				source_anims,
+				m_montage.m_key_refs,
+				m_montage.m_durations,
+				m_montage.m_per_frame_o2w
+			);
+			auto time_range = TimeRange{ 0, kkfa->duration() };
+
+			// Create animator and pose
+			AnimatorPtr animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
+
+			// Create a new pose for the instance using the source pose's skeleton and the montage animator
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_montage.m_mods.m_style, m_montage.m_mods.m_flags, time_range, m_montage.m_mods.m_stretch, m_montage.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy
+			obj->Apply([&](LdrObject* o)
+			{
+				o->m_pose = pose;
+				o->Flags(ELdrFlags::Animated, m_montage.m_mods.m_style != EAnimStyle::NoAnimation);
+				o->Flags(ELdrFlags::HideWhenNotAnimating, m_montage.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
 		}
 	};
 

@@ -619,7 +619,7 @@ namespace Rylogic.LDraw
 		{
 			public int m_source_index;
 			public int m_frame_number;
-			public float m_duration;
+			public float? m_duration;
 			public m4x4? m_o2w;
 		}
 
@@ -640,7 +640,7 @@ namespace Rylogic.LDraw
 		}
 
 		/// <summary>Add a frame reference</summary>
-		public LdrMontage frame(int source_index, int frame_number, float duration = 1.0f, m4x4? o2w = null)
+		public LdrMontage frame(int source_index, int frame_number, float? duration = null, m4x4? o2w = null)
 		{
 			m_frame_entries.Add(new FrameEntry
 			{
@@ -706,7 +706,9 @@ namespace Rylogic.LDraw
 				{
 					res.Write(EKeyword.Frame, () =>
 					{
-						res.Append(entry.m_source_index, entry.m_frame_number, entry.m_duration);
+						res.Append(entry.m_source_index, entry.m_frame_number);
+						if (entry.m_duration is float duration)
+							res.Write(EKeyword.Period, duration);
 						if (entry.m_o2w is m4x4 o2w)
 							res.Write(EKeyword.O2W, () => res.Write(EKeyword.M4x4, () => res.Append(o2w)));
 					});
@@ -1455,6 +1457,7 @@ namespace Rylogic.LDraw
 	{
 		private string m_address = string.Empty;
 		private LdrAnimation? m_anim = null;
+		private LdrMontage? m_montage = null;
 
 		/// <summary>Set the object address that this is an instance of</summary>
 		public LdrInstance inst(string address)
@@ -1463,11 +1466,20 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
-		/// <summary>Add animation to the instance</summary>
+		/// <summary>Add animation to the instance (mutually exclusive with montage)</summary>
 		public LdrAnimation anim()
 		{
+			if (m_montage != null) throw new InvalidOperationException("Cannot use both *Animation and *Montage on the same *Instance");
 			m_anim ??= new();
 			return m_anim;
+		}
+
+		/// <summary>Add a montage to the instance (mutually exclusive with animation)</summary>
+		public LdrMontage montage()
+		{
+			if (m_anim != null) throw new InvalidOperationException("Cannot use both *Animation and *Montage on the same *Instance");
+			m_montage ??= new();
+			return m_montage;
 		}
 
 		/// <inheritdoc/>
@@ -1477,6 +1489,7 @@ namespace Rylogic.LDraw
 			{
 				res.Write(EKeyword.Data, m_address);
 				m_anim?.WriteTo(res);
+				m_montage?.WriteTo(res);
 				base.WriteTo(res);
 			});
 		}
