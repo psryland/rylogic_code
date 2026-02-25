@@ -612,6 +612,115 @@ namespace Rylogic.LDraw
 			});
 		}
 	}
+	public class LdrMontage
+	{
+		/// <summary>A frame reference within a montage</summary>
+		public struct FrameEntry
+		{
+			public int m_source_index;
+			public int m_frame_number;
+			public float m_duration;
+			public m4x4? m_o2w;
+		}
+
+		private List<string> m_anim_sources = [];
+		private List<FrameEntry> m_frame_entries = [];
+		private string? m_style = null;
+		private float? m_stretch = null;
+		private float? m_time_bias = null;
+		private bool m_no_translation = false;
+		private bool m_no_rotation = false;
+		private bool m_hide_when_not_animating = false;
+
+		/// <summary>Add an additional animation source file (indices 1, 2, ...)</summary>
+		public LdrMontage anim_source(string filepath)
+		{
+			m_anim_sources.Add(filepath);
+			return this;
+		}
+
+		/// <summary>Add a frame reference</summary>
+		public LdrMontage frame(int source_index, int frame_number, float duration = 1.0f, m4x4? o2w = null)
+		{
+			m_frame_entries.Add(new FrameEntry
+			{
+				m_source_index = source_index,
+				m_frame_number = frame_number,
+				m_duration = duration,
+				m_o2w = o2w,
+			});
+			return this;
+		}
+
+		/// <summary>Set the playback style</summary>
+		public LdrMontage style(string style)
+		{
+			m_style = style;
+			return this;
+		}
+
+		/// <summary>Set the playback speed multiplier</summary>
+		public LdrMontage stretch(float stretch)
+		{
+			m_stretch = stretch;
+			return this;
+		}
+
+		/// <summary>Set the time bias</summary>
+		public LdrMontage time_bias(float bias)
+		{
+			m_time_bias = bias;
+			return this;
+		}
+
+		/// <summary>Disable root bone translation</summary>
+		public LdrMontage no_translation(bool on = true)
+		{
+			m_no_translation = on;
+			return this;
+		}
+
+		/// <summary>Disable root bone rotation</summary>
+		public LdrMontage no_rotation(bool on = true)
+		{
+			m_no_rotation = on;
+			return this;
+		}
+
+		/// <summary>Hide the model when not animating</summary>
+		public LdrMontage hide_when_not_animating(bool on = true)
+		{
+			m_hide_when_not_animating = on;
+			return this;
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Montage, () =>
+			{
+				foreach (var src in m_anim_sources)
+					res.Write(EKeyword.AnimSource, $"\"{src}\"");
+
+				foreach (var entry in m_frame_entries)
+				{
+					res.Write(EKeyword.Frame, () =>
+					{
+						res.Append(entry.m_source_index, entry.m_frame_number, entry.m_duration);
+						if (entry.m_o2w is m4x4 o2w)
+							res.Write(EKeyword.O2W, () => res.Write(EKeyword.M4x4, () => res.Append(o2w)));
+					});
+				}
+
+				if (m_style != null) res.Write(EKeyword.Style, m_style);
+				if (m_stretch != null) res.Write(EKeyword.Stretch, m_stretch.Value);
+				if (m_time_bias != null) res.Write(EKeyword.TimeBias, m_time_bias.Value);
+				if (m_no_translation) res.Write(EKeyword.NoRootTranslation);
+				if (m_no_rotation) res.Write(EKeyword.NoRootRotation);
+				if (m_hide_when_not_animating) res.Write(EKeyword.HideWhenNotAnimating);
+			});
+		}
+	}
 	public class LdrFont
 	{
 		private string? m_name = null;
@@ -1296,6 +1405,7 @@ namespace Rylogic.LDraw
 	{
 		private string m_filepath = string.Empty;
 		private LdrAnimation? m_anim = null;
+		private LdrMontage? m_montage = null;
 		private bool m_no_materials = false;
 
 		/// <summary>Model filepath</summary>
@@ -1305,11 +1415,20 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
-		/// <summary>Add animation to the model</summary>
+		/// <summary>Add animation to the model (mutually exclusive with montage)</summary>
 		public LdrAnimation anim()
 		{
+			if (m_montage != null) throw new InvalidOperationException("Cannot use both *Animation and *Montage on the same *Model");
 			m_anim ??= new();
 			return m_anim;
+		}
+
+		/// <summary>Add a montage to the model (mutually exclusive with animation)</summary>
+		public LdrMontage montage()
+		{
+			if (m_anim != null) throw new InvalidOperationException("Cannot use both *Animation and *Montage on the same *Model");
+			m_montage ??= new();
+			return m_montage;
 		}
 
 		/// <summary>Don't load materials from the model</summary>
@@ -1326,6 +1445,7 @@ namespace Rylogic.LDraw
 			{
 				res.Write(EKeyword.FilePath, $"\"{m_filepath}\"");
 				m_anim?.WriteTo(res);
+				m_montage?.WriteTo(res);
 				if (m_no_materials) res.Write(EKeyword.NoMaterials);
 				base.WriteTo(res);
 			});
