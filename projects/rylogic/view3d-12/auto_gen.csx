@@ -63,6 +63,16 @@ void AutoGen()
 		"# AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineToPython);
 
+	// Update 'common/ldraw.h' keyword string constants
+	ReplaceSection(
+		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
+		Path.Join(Root, "include/pr/common/ldraw.h"),
+		"#define PR_LDRAW_KEYWORDS(x)",
+		"PR_LDRAW_KEYWORDS_END",
+		"// AUTO-GENERATED-KEYWORDS-BEGIN",
+		"// AUTO-GENERATED-KEYWORDS-END",
+		TransformEnumLineToKeywordString);
+
 	// Update keywords in LDRTemplate.bt
 	ReplaceSection(
 		Path.Join(Root, "include/pr/view3d-12/ldraw/ldraw.h"),
@@ -102,6 +112,13 @@ string TransformEnumLineToPython(string line)
 {
 	var match = Pattern.Match(line.Trim());
 	return match.Success ? $"{match.Groups[1].Value} = {HashI(match.Groups[1].Value)}" : line.Trim();
+}
+
+// Convert from C++ code macro to keyword with name and hash value
+string TransformEnumLineToKeywordString(string line)
+{
+	var match = Pattern.Match(line.Trim());
+	return match.Success ? $"inline static constexpr EKeyword {match.Groups[1].Value} = {{\"*{match.Groups[1].Value}\", {HashI(match.Groups[1].Value)}}};" : line.Trim();
 }
 
 // Convert from C++ code macro to C++

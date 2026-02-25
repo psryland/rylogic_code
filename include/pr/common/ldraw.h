@@ -1,4 +1,4 @@
-﻿//************************************
+//************************************
 // LDraw 
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
@@ -28,6 +28,7 @@ namespace pr::ldraw
 	struct LdrPoint;
 	struct LdrLine;
 	struct LdrBox;
+	struct LdrModel;
 	struct LdrGroup;
 	
 	//struct LdrCoordFrame;
@@ -39,7 +40,6 @@ namespace pr::ldraw
 	//struct LdrCylinder;
 	//struct LdrCone;
 	//struct LdrFrustum;
-	struct LdrModel;
 	//struct LdrInstance;
 	//struct LdrGroup;
 	//struct LdrCommands;
@@ -107,183 +107,196 @@ namespace pr::ldraw
 	// Enum strings
 	struct EKeyword
 	{
-		char const* name;
-		EKeyword() : name("") {}
-		EKeyword(char const* name_) : name(name_) {}
-		explicit operator bool() const { return *name != 0; }
+		char const* name = "";
+		uint32_t value = 0;
 
+		constexpr EKeyword() {}
+		constexpr EKeyword(char const* name_, uint32_t value_)
+		{
+			name = name_;
+			value = value_;
+		}
+		explicit constexpr operator bool() const { return value != 0; }
+		constexpr bool operator==(EKeyword const& rhs) const { return value == rhs.value; }
+		constexpr bool operator!=(EKeyword const& rhs) const { return value != rhs.value; }
+	};
+	struct EKeywords
+	{
 		#pragma region Keywords
 		// AUTO-GENERATED-KEYWORDS-BEGIN
-		inline static char const* Accel = "*Accel";
-		inline static char const* Addr = "*Addr";
-		inline static char const* Align = "*Align";
-		inline static char const* Alpha = "*Alpha";
-		inline static char const* Ambient = "*Ambient";
-		inline static char const* Anchor = "*Anchor";
-		inline static char const* AngAccel = "*AngAccel";
-		inline static char const* AngVelocity = "*AngVelocity";
-		inline static char const* AnimSource = "*AnimSource";
-		inline static char const* Animation = "*Animation";
-		inline static char const* Arrow = "*Arrow";
-		inline static char const* Aspect = "*Aspect";
-		inline static char const* Axis = "*Axis";
-		inline static char const* AxisId = "*AxisId";
-		inline static char const* BackColour = "*BackColour";
-		inline static char const* BakeTransform = "*BakeTransform";
-		inline static char const* Billboard = "*Billboard";
-		inline static char const* Billboard3D = "*Billboard3D";
-		inline static char const* BinaryStream = "*BinaryStream";
-		inline static char const* Box = "*Box";
-		inline static char const* BoxList = "*BoxList";
-		inline static char const* Camera = "*Camera";
-		inline static char const* CastShadow = "*CastShadow";
-		inline static char const* Chart = "*Chart";
-		inline static char const* Circle = "*Circle";
-		inline static char const* Closed = "*Closed";
-		inline static char const* Colour = "*Colour";
-		inline static char const* Colours = "*Colours";
-		inline static char const* Commands = "*Commands";
-		inline static char const* Cone = "*Cone";
-		inline static char const* ConvexHull = "*ConvexHull";
-		inline static char const* CoordFrame = "*CoordFrame";
-		inline static char const* CornerRadius = "*CornerRadius";
-		inline static char const* CrossSection = "*CrossSection";
-		inline static char const* CString = "*CString";
-		inline static char const* Custom = "*Custom";
-		inline static char const* Cylinder = "*Cylinder";
-		inline static char const* Dashed = "*Dashed";
-		inline static char const* Data = "*Data";
-		inline static char const* DataPoints = "*DataPoints";
-		inline static char const* Depth = "*Depth";
-		inline static char const* Diffuse = "*Diffuse";
-		inline static char const* Dim = "*Dim";
-		inline static char const* Direction = "*Direction";
-		inline static char const* Divisions = "*Divisions";
-		inline static char const* Equation = "*Equation";
-		inline static char const* Euler = "*Euler";
-		inline static char const* Faces = "*Faces";
-		inline static char const* Facets = "*Facets";
-		inline static char const* Far = "*Far";
-		inline static char const* FilePath = "*FilePath";
-		inline static char const* Filter = "*Filter";
-		inline static char const* Font = "*Font";
-		inline static char const* ForeColour = "*ForeColour";
-		inline static char const* Format = "*Format";
-		inline static char const* Fov = "*Fov";
-		inline static char const* FovX = "*FovX";
-		inline static char const* FovY = "*FovY";
-		inline static char const* Frame = "*Frame";
-		inline static char const* FrameRange = "*FrameRange";
-		inline static char const* FrustumFA = "*FrustumFA";
-		inline static char const* FrustumWH = "*FrustumWH";
-		inline static char const* GenerateNormals = "*GenerateNormals";
-		inline static char const* Grid = "*Grid";
-		inline static char const* Group = "*Group";
-		inline static char const* GroupColour = "*GroupColour";
-		inline static char const* Hidden = "*Hidden";
-		inline static char const* Instance = "*Instance";
-		inline static char const* Inverse = "*Inverse";
-		inline static char const* Layers = "*Layers";
-		inline static char const* LeftHanded = "*LeftHanded";
-		inline static char const* LightSource = "*LightSource";
-		inline static char const* Line = "*Line";
-		inline static char const* LineBox = "*LineBox";
-		inline static char const* LineList = "*LineList";
-		inline static char const* Lines = "*Lines";
-		inline static char const* LineStrip = "*LineStrip";
-		inline static char const* LookAt = "*LookAt";
-		inline static char const* M3x3 = "*M3x3";
-		inline static char const* M4x4 = "*M4x4";
-		inline static char const* Mesh = "*Mesh";
-		inline static char const* Model = "*Model";
-		inline static char const* Montage = "*Montage";
-		inline static char const* Name = "*Name";
-		inline static char const* Near = "*Near";
-		inline static char const* NewLine = "*NewLine";
-		inline static char const* NonAffine = "*NonAffine";
-		inline static char const* NoMaterials = "*NoMaterials";
-		inline static char const* Normalise = "*Normalise";
-		inline static char const* Normals = "*Normals";
-		inline static char const* NoRootTranslation = "*NoRootTranslation";
-		inline static char const* NoRootRotation = "*NoRootRotation";
-		inline static char const* NoZTest = "*NoZTest";
-		inline static char const* NoZWrite = "*NoZWrite";
-		inline static char const* O2W = "*O2W";
-		inline static char const* Orthographic = "*Orthographic";
-		inline static char const* Orthonormalise = "*Orthonormalise";
-		inline static char const* Padding = "*Padding";
-		inline static char const* Param = "*Param";
-		inline static char const* Parametrics = "*Parametrics";
-		inline static char const* Part = "*Part";
-		inline static char const* Parts = "*Parts";
-		inline static char const* Period = "*Period";
-		inline static char const* PerItemColour = "*PerItemColour";
-		inline static char const* PerItemParametrics = "*PerItemParametrics";
-		inline static char const* Pie = "*Pie";
-		inline static char const* Plane = "*Plane";
-		inline static char const* Point = "*Point";
-		inline static char const* PointDepth = "*PointDepth";
-		inline static char const* PointSize = "*PointSize";
-		inline static char const* PointStyle = "*PointStyle";
-		inline static char const* Polygon = "*Polygon";
-		inline static char const* Pos = "*Pos";
-		inline static char const* Position = "*Position";
-		inline static char const* Quad = "*Quad";
-		inline static char const* Quat = "*Quat";
-		inline static char const* QuatPos = "*QuatPos";
-		inline static char const* Rand4x4 = "*Rand4x4";
-		inline static char const* RandColour = "*RandColour";
-		inline static char const* RandOri = "*RandOri";
-		inline static char const* RandPos = "*RandPos";
-		inline static char const* Range = "*Range";
-		inline static char const* Rect = "*Rect";
-		inline static char const* Reflectivity = "*Reflectivity";
-		inline static char const* Resolution = "*Resolution";
-		inline static char const* Ribbon = "*Ribbon";
-		inline static char const* RootAnimation = "*RootAnimation";
-		inline static char const* Round = "*Round";
-		inline static char const* Scale = "*Scale";
-		inline static char const* ScreenSpace = "*ScreenSpace";
-		inline static char const* Series = "*Series";
-		inline static char const* Size = "*Size";
-		inline static char const* Smooth = "*Smooth";
-		inline static char const* Solid = "*Solid";
-		inline static char const* Source = "*Source";
-		inline static char const* Specular = "*Specular";
-		inline static char const* Sphere = "*Sphere";
-		inline static char const* Square = "*Square";
-		inline static char const* Step = "*Step";
-		inline static char const* Stretch = "*Stretch";
-		inline static char const* Strikeout = "*Strikeout";
-		inline static char const* Style = "*Style";
-		inline static char const* Tetra = "*Tetra";
-		inline static char const* TexCoords = "*TexCoords";
-		inline static char const* Text = "*Text";
-		inline static char const* TextLayout = "*TextLayout";
-		inline static char const* TextStream = "*TextStream";
-		inline static char const* Texture = "*Texture";
-		inline static char const* TimeRange = "*TimeRange";
-		inline static char const* Transpose = "*Transpose";
-		inline static char const* Triangle = "*Triangle";
-		inline static char const* TriList = "*TriList";
-		inline static char const* TriStrip = "*TriStrip";
-		inline static char const* Tube = "*Tube";
-		inline static char const* Txfm = "*Txfm";
-		inline static char const* Underline = "*Underline";
-		inline static char const* Unknown = "*Unknown";
-		inline static char const* Up = "*Up";
-		inline static char const* Velocity = "*Velocity";
-		inline static char const* Verts = "*Verts";
-		inline static char const* Video = "*Video";
-		inline static char const* ViewPlaneZ = "*ViewPlaneZ";
-		inline static char const* Wedges = "*Wedges";
-		inline static char const* Weight = "*Weight";
-		inline static char const* Width = "*Width";
-		inline static char const* Wireframe = "*Wireframe";
-		inline static char const* XAxis = "*XAxis";
-		inline static char const* XColumn = "*XColumn";
-		inline static char const* YAxis = "*YAxis";
-		inline static char const* ZAxis = "*ZAxis";
+		inline static constexpr EKeyword Accel = {"*Accel", 3784776339};
+		inline static constexpr EKeyword Addr = {"*Addr", 1087856498};
+		inline static constexpr EKeyword Align = {"*Align", 1613521886};
+		inline static constexpr EKeyword Alpha = {"*Alpha", 1569418667};
+		inline static constexpr EKeyword Ambient = {"*Ambient", 479609067};
+		inline static constexpr EKeyword Anchor = {"*Anchor", 1122880180};
+		inline static constexpr EKeyword AngAccel = {"*AngAccel", 801436173};
+		inline static constexpr EKeyword AngVelocity = {"*AngVelocity", 2226367268};
+		inline static constexpr EKeyword AnimSource = {"*AnimSource", 4254838773};
+		inline static constexpr EKeyword Animation = {"*Animation", 3779456605};
+		inline static constexpr EKeyword Arrow = {"*Arrow", 2220107398};
+		inline static constexpr EKeyword Aspect = {"*Aspect", 2929999953};
+		inline static constexpr EKeyword Axis = {"*Axis", 1831579124};
+		inline static constexpr EKeyword AxisId = {"*AxisId", 1558262649};
+		inline static constexpr EKeyword BackColour = {"*BackColour", 1583172070};
+		inline static constexpr EKeyword BakeTransform = {"*BakeTransform", 3697187404};
+		inline static constexpr EKeyword Billboard = {"*Billboard", 3842439780};
+		inline static constexpr EKeyword Billboard3D = {"*Billboard3D", 3185018435};
+		inline static constexpr EKeyword BinaryStream = {"*BinaryStream", 1110191492};
+		inline static constexpr EKeyword Box = {"*Box", 1892056626};
+		inline static constexpr EKeyword BoxList = {"*BoxList", 282663022};
+		inline static constexpr EKeyword Camera = {"*Camera", 2663290958};
+		inline static constexpr EKeyword CastShadow = {"*CastShadow", 3890809582};
+		inline static constexpr EKeyword Chart = {"*Chart", 1487494731};
+		inline static constexpr EKeyword Circle = {"*Circle", 673280137};
+		inline static constexpr EKeyword Closed = {"*Closed", 3958264005};
+		inline static constexpr EKeyword Colour = {"*Colour", 33939709};
+		inline static constexpr EKeyword Colours = {"*Colours", 3175120778};
+		inline static constexpr EKeyword Commands = {"*Commands", 3062934995};
+		inline static constexpr EKeyword Cone = {"*Cone", 3711978346};
+		inline static constexpr EKeyword ConvexHull = {"*ConvexHull", 1990998937};
+		inline static constexpr EKeyword CoordFrame = {"*CoordFrame", 3958982335};
+		inline static constexpr EKeyword CornerRadius = {"*CornerRadius", 2396916310};
+		inline static constexpr EKeyword CrossSection = {"*CrossSection", 3755993582};
+		inline static constexpr EKeyword CString = {"*CString", 2719639595};
+		inline static constexpr EKeyword Custom = {"*Custom", 542584942};
+		inline static constexpr EKeyword Cylinder = {"*Cylinder", 2904473583};
+		inline static constexpr EKeyword Dashed = {"*Dashed", 4029489596};
+		inline static constexpr EKeyword Data = {"*Data", 3631407781};
+		inline static constexpr EKeyword DataPoints = {"*DataPoints", 1656579750};
+		inline static constexpr EKeyword Depth = {"*Depth", 4269121258};
+		inline static constexpr EKeyword Diffuse = {"*Diffuse", 1416505917};
+		inline static constexpr EKeyword Dim = {"*Dim", 3496118841};
+		inline static constexpr EKeyword Direction = {"*Direction", 3748513642};
+		inline static constexpr EKeyword Divisions = {"*Divisions", 555458703};
+		inline static constexpr EKeyword Equation = {"*Equation", 2486886355};
+		inline static constexpr EKeyword Euler = {"*Euler", 1180123250};
+		inline static constexpr EKeyword Faces = {"*Faces", 455960701};
+		inline static constexpr EKeyword Facets = {"*Facets", 3463018577};
+		inline static constexpr EKeyword Far = {"*Far", 3170376174};
+		inline static constexpr EKeyword FilePath = {"*FilePath", 1962937316};
+		inline static constexpr EKeyword Filter = {"*Filter", 3353438327};
+		inline static constexpr EKeyword Font = {"*Font", 659427984};
+		inline static constexpr EKeyword ForeColour = {"*ForeColour", 3815865055};
+		inline static constexpr EKeyword Format = {"*Format", 3114108242};
+		inline static constexpr EKeyword Fov = {"*Fov", 2968750556};
+		inline static constexpr EKeyword FovX = {"*FovX", 862039340};
+		inline static constexpr EKeyword FovY = {"*FovY", 878816959};
+		inline static constexpr EKeyword Frame = {"*Frame", 3523899814};
+		inline static constexpr EKeyword FrameRange = {"*FrameRange", 1562558803};
+		inline static constexpr EKeyword FrameRate = {"*FrameRate", 2601589476};
+		inline static constexpr EKeyword FrustumFA = {"*FrustumFA", 3281884904};
+		inline static constexpr EKeyword FrustumWH = {"*FrustumWH", 3334630522};
+		inline static constexpr EKeyword GenerateNormals = {"*GenerateNormals", 750341558};
+		inline static constexpr EKeyword Grid = {"*Grid", 2944866961};
+		inline static constexpr EKeyword Group = {"*Group", 1605967500};
+		inline static constexpr EKeyword GroupColour = {"*GroupColour", 2738848320};
+		inline static constexpr EKeyword Hidden = {"*Hidden", 4128829753};
+		inline static constexpr EKeyword HideWhenNotAnimating = {"*HideWhenNotAnimating", 2975106646};
+		inline static constexpr EKeyword Instance = {"*Instance", 193386898};
+		inline static constexpr EKeyword Inverse = {"*Inverse", 2986472067};
+		inline static constexpr EKeyword Layers = {"*Layers", 2411172191};
+		inline static constexpr EKeyword LeftHanded = {"*LeftHanded", 1992685208};
+		inline static constexpr EKeyword LightSource = {"*LightSource", 2597226090};
+		inline static constexpr EKeyword Line = {"*Line", 400234023};
+		inline static constexpr EKeyword LineBox = {"*LineBox", 3297263992};
+		inline static constexpr EKeyword LineList = {"*LineList", 419493935};
+		inline static constexpr EKeyword Lines = {"*Lines", 3789825596};
+		inline static constexpr EKeyword LineStrip = {"*LineStrip", 4082781759};
+		inline static constexpr EKeyword LookAt = {"*LookAt", 3951693683};
+		inline static constexpr EKeyword M3x3 = {"*M3x3", 1709156072};
+		inline static constexpr EKeyword M4x4 = {"*M4x4", 3279345952};
+		inline static constexpr EKeyword Mesh = {"*Mesh", 2701180604};
+		inline static constexpr EKeyword Model = {"*Model", 2961925722};
+		inline static constexpr EKeyword Montage = {"*Montage", 2939791094};
+		inline static constexpr EKeyword Name = {"*Name", 2369371622};
+		inline static constexpr EKeyword Near = {"*Near", 1425233679};
+		inline static constexpr EKeyword NewLine = {"*NewLine", 4281549323};
+		inline static constexpr EKeyword NonAffine = {"*NonAffine", 3876544483};
+		inline static constexpr EKeyword NoMaterials = {"*NoMaterials", 762077060};
+		inline static constexpr EKeyword Normalise = {"*Normalise", 4066511049};
+		inline static constexpr EKeyword Normals = {"*Normals", 247908339};
+		inline static constexpr EKeyword NoRootTranslation = {"*NoRootTranslation", 3287374065};
+		inline static constexpr EKeyword NoRootRotation = {"*NoRootRotation", 3606635828};
+		inline static constexpr EKeyword NoZTest = {"*NoZTest", 329427844};
+		inline static constexpr EKeyword NoZWrite = {"*NoZWrite", 1339143375};
+		inline static constexpr EKeyword O2W = {"*O2W", 2877203913};
+		inline static constexpr EKeyword Orthographic = {"*Orthographic", 3824181163};
+		inline static constexpr EKeyword Orthonormalise = {"*Orthonormalise", 2850748489};
+		inline static constexpr EKeyword Padding = {"*Padding", 2157316278};
+		inline static constexpr EKeyword Param = {"*Param", 1309554226};
+		inline static constexpr EKeyword Parametrics = {"*Parametrics", 4148475404};
+		inline static constexpr EKeyword Part = {"*Part", 2088252948};
+		inline static constexpr EKeyword Parts = {"*Parts", 1480434725};
+		inline static constexpr EKeyword Period = {"*Period", 2580104964};
+		inline static constexpr EKeyword PerItemColour = {"*PerItemColour", 1734234667};
+		inline static constexpr EKeyword PerItemParametrics = {"*PerItemParametrics", 2079701142};
+		inline static constexpr EKeyword Pie = {"*Pie", 1782644405};
+		inline static constexpr EKeyword Plane = {"*Plane", 3435855957};
+		inline static constexpr EKeyword Point = {"*Point", 414084241};
+		inline static constexpr EKeyword PointDepth = {"*PointDepth", 1069768758};
+		inline static constexpr EKeyword PointSize = {"*PointSize", 375054368};
+		inline static constexpr EKeyword PointStyle = {"*PointStyle", 2082693170};
+		inline static constexpr EKeyword Polygon = {"*Polygon", 85768329};
+		inline static constexpr EKeyword Pos = {"*Pos", 1412654217};
+		inline static constexpr EKeyword Position = {"*Position", 2471448074};
+		inline static constexpr EKeyword Quad = {"*Quad", 1738228046};
+		inline static constexpr EKeyword Quat = {"*Quat", 1469786142};
+		inline static constexpr EKeyword QuatPos = {"*QuatPos", 1842422916};
+		inline static constexpr EKeyword Rand4x4 = {"*Rand4x4", 1326225514};
+		inline static constexpr EKeyword RandColour = {"*RandColour", 1796074266};
+		inline static constexpr EKeyword RandOri = {"*RandOri", 55550374};
+		inline static constexpr EKeyword RandPos = {"*RandPos", 4225427356};
+		inline static constexpr EKeyword Range = {"*Range", 4208725202};
+		inline static constexpr EKeyword Rect = {"*Rect", 3940830471};
+		inline static constexpr EKeyword Reflectivity = {"*Reflectivity", 3111471187};
+		inline static constexpr EKeyword Resolution = {"*Resolution", 488725647};
+		inline static constexpr EKeyword Ribbon = {"*Ribbon", 1119144745};
+		inline static constexpr EKeyword RootAnimation = {"*RootAnimation", 464566237};
+		inline static constexpr EKeyword Round = {"*Round", 1326178875};
+		inline static constexpr EKeyword Scale = {"*Scale", 2190941297};
+		inline static constexpr EKeyword ScreenSpace = {"*ScreenSpace", 3267318065};
+		inline static constexpr EKeyword Series = {"*Series", 3703783856};
+		inline static constexpr EKeyword Size = {"*Size", 597743964};
+		inline static constexpr EKeyword Smooth = {"*Smooth", 24442543};
+		inline static constexpr EKeyword Solid = {"*Solid", 2973793012};
+		inline static constexpr EKeyword Source = {"*Source", 466561496};
+		inline static constexpr EKeyword Specular = {"*Specular", 3195258592};
+		inline static constexpr EKeyword Sphere = {"*Sphere", 2950268184};
+		inline static constexpr EKeyword Square = {"*Square", 3031831110};
+		inline static constexpr EKeyword Step = {"*Step", 3343129103};
+		inline static constexpr EKeyword Stretch = {"*Stretch", 3542801962};
+		inline static constexpr EKeyword Strikeout = {"*Strikeout", 3261692833};
+		inline static constexpr EKeyword Style = {"*Style", 2888859350};
+		inline static constexpr EKeyword Tetra = {"*Tetra", 1647597299};
+		inline static constexpr EKeyword TexCoords = {"*TexCoords", 536531680};
+		inline static constexpr EKeyword Text = {"*Text", 3185987134};
+		inline static constexpr EKeyword TextLayout = {"*TextLayout", 2881593448};
+		inline static constexpr EKeyword TextStream = {"*TextStream", 998584670};
+		inline static constexpr EKeyword Texture = {"*Texture", 1013213428};
+		inline static constexpr EKeyword TimeBias = {"*TimeBias", 2748914857};
+		inline static constexpr EKeyword TimeRange = {"*TimeRange", 1138166793};
+		inline static constexpr EKeyword Transpose = {"*Transpose", 3224470464};
+		inline static constexpr EKeyword Triangle = {"*Triangle", 84037765};
+		inline static constexpr EKeyword TriList = {"*TriList", 3668920810};
+		inline static constexpr EKeyword TriStrip = {"*TriStrip", 1312470952};
+		inline static constexpr EKeyword Tube = {"*Tube", 1747223167};
+		inline static constexpr EKeyword Txfm = {"*Txfm", 2438414104};
+		inline static constexpr EKeyword Underline = {"*Underline", 3850515583};
+		inline static constexpr EKeyword Unknown = {"*Unknown", 2608177081};
+		inline static constexpr EKeyword Up = {"*Up", 1128467232};
+		inline static constexpr EKeyword Velocity = {"*Velocity", 846470194};
+		inline static constexpr EKeyword Verts = {"*Verts", 3167497763};
+		inline static constexpr EKeyword Video = {"*Video", 3472427884};
+		inline static constexpr EKeyword ViewPlaneZ = {"*ViewPlaneZ", 458706800};
+		inline static constexpr EKeyword Wedges = {"*Wedges", 451463732};
+		inline static constexpr EKeyword Weight = {"*Weight", 1352703673};
+		inline static constexpr EKeyword Width = {"*Width", 2508680735};
+		inline static constexpr EKeyword Wireframe = {"*Wireframe", 305834533};
+		inline static constexpr EKeyword XAxis = {"*XAxis", 3274667154};
+		inline static constexpr EKeyword XColumn = {"*XColumn", 3953029077};
+		inline static constexpr EKeyword YAxis = {"*YAxis", 1077811589};
+		inline static constexpr EKeyword ZAxis = {"*ZAxis", 3837765916};
 		// AUTO-GENERATED-KEYWORDS-END
 		#pragma endregion
 	};
@@ -589,11 +602,10 @@ namespace pr::ldraw
 		};
 		struct O2W
 		{
-			std::string m_xform;
+			// todo: need a better way to do this, either a text form or a binary form, but not both.
+			textbuf m_xform_txt = {};
+			bytebuf m_xform_bin = {};
 
-			O2W()
-				: m_xform()
-			{}
 			O2W& o2w(Mat4 o2w);
 			O2W& rot(Mat3 rot);
 			O2W& align(Vec3 dir, AxisId axis = AxisId::PosZ);
@@ -615,7 +627,7 @@ namespace pr::ldraw
 			O2W& non_affine();
 			explicit operator bool() const
 			{
-				return !m_xform.empty();
+				return !m_xform_txt.empty() || !m_xform_bin.empty();
 			}
 		};
 		struct Texture
@@ -677,6 +689,12 @@ namespace pr::ldraw
 				return !m_anim.empty();
 			}			
 		};
+		struct Header
+		{
+			EKeyword m_kw;
+			Name m_name;
+			Colour m_colour;
+		};
 	}
 
 	// LDraw object model
@@ -729,13 +747,13 @@ namespace pr::ldraw
 		LdrBase& rand_colour()
 		{
 			m_colour.m_colour = seri::Colour::Default;
-			m_colour.m_kw = EKeyword::RandColour;
+			m_colour.m_kw = EKeywords::RandColour;
 			return *this;
 		}
 		LdrBase& group_colour(seri::Colour colour)
 		{
 			m_group_colour = colour;
-			m_group_colour.m_kw = EKeyword::GroupColour;
+			m_group_colour.m_kw = EKeywords::GroupColour;
 			return *this;
 		}
 		LdrBase& o2w(seri::Mat4 o2w)
@@ -825,10 +843,12 @@ namespace pr::ldraw
 		}
 		virtual void Write(bytebuf& out) const
 		{
-			(void)out;
+			Append(out, m_group_colour, m_hide, m_wire, m_axis_id, m_solid, m_refl, m_left_handed, m_screen_space, m_no_ztest, m_no_zwrite, m_root_anim, m_o2w);
+			for (auto const& child : m_children)
+				child->Write(out);
 		}
 
-		// Append helpers
+		// Append helpers (textbuf)
 		template <typename T> struct no_overload;
 		template <typename Type> static void Append(textbuf& out, Type)
 		{
@@ -917,7 +937,7 @@ namespace pr::ldraw
 			if (!c) return;
 			if (!c.m_kw)
 				Append(out, *c.m_colour);
-			else if (c.m_kw.name == EKeyword::RandColour)
+			else if (c.m_kw == EKeywords::RandColour)
 				Append(out, c.m_kw, "{}");
 			else
 				Append(out, c.m_kw, "{", *c.m_colour, "}");
@@ -925,131 +945,131 @@ namespace pr::ldraw
 		static void Append(textbuf& out, seri::Size s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Size, "{", s.m_size, "}");
+			Append(out, EKeywords::Size, "{", s.m_size, "}");
 		}
 		static void Append(textbuf& out, seri::Size2 s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Size, "{", s.m_size, "}");
+			Append(out, EKeywords::Size, "{", s.m_size, "}");
 		}
 		static void Append(textbuf& out, seri::Scale s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Scale, "{", s.m_scale, "}");
+			Append(out, EKeywords::Scale, "{", s.m_scale, "}");
 		}
 		static void Append(textbuf& out, seri::Scale2 s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Scale, "{", s.m_scale, "}");
+			Append(out, EKeywords::Scale, "{", s.m_scale, "}");
 		}
 		static void Append(textbuf& out, seri::Scale3 s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Scale, "{", s.m_scale, "}");
+			Append(out, EKeywords::Scale, "{", s.m_scale, "}");
 		}
 		static void Append(textbuf& out, seri::PerItemColour c)
 		{
 			if (!c) return;
-			Append(out, EKeyword::PerItemColour, "{", *c.m_active, "}");
+			Append(out, EKeywords::PerItemColour, "{", *c.m_active, "}");
 		}
 		static void Append(textbuf& out, seri::Width w)
 		{
 			if (!w) return;
-			Append(out, EKeyword::Width, "{", *w.m_width, "}");
+			Append(out, EKeywords::Width, "{", *w.m_width, "}");
 		}
 		static void Append(textbuf& out, seri::Depth d)
 		{
 			if (!d) return;
-			Append(out, EKeyword::Depth, "{", *d.m_depth, "}");
+			Append(out, EKeywords::Depth, "{", *d.m_depth, "}");
 		}
 		static void Append(textbuf& out, seri::Hidden h)
 		{
 			if (!h) return;
-			Append(out, EKeyword::Hidden, "{", *h.m_hide, "}");
+			Append(out, EKeywords::Hidden, "{", *h.m_hide, "}");
 		}
 		static void Append(textbuf& out, seri::Wireframe w)
 		{
 			if (!w) return;
-			Append(out, EKeyword::Wireframe, "{", *w.m_wire, "}");
+			Append(out, EKeywords::Wireframe, "{", *w.m_wire, "}");
 		}
 		static void Append(textbuf& out, seri::Alpha a)
 		{
 			if (!a) return;
-			Append(out, EKeyword::Alpha, "{", *a.m_alpha, "}");
+			Append(out, EKeywords::Alpha, "{", *a.m_alpha, "}");
 		}
 		static void Append(textbuf& out, seri::Reflectivity r)
 		{
 			if (!r) return;
-			Append(out, EKeyword::Reflectivity, "{", *r.m_refl, "}");
+			Append(out, EKeywords::Reflectivity, "{", *r.m_refl, "}");
 		}
 		static void Append(textbuf& out, seri::Solid s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Solid, "{", *s.m_solid, "}");
+			Append(out, EKeywords::Solid, "{", *s.m_solid, "}");
 		}
 		static void Append(textbuf& out, seri::Smooth s)
 		{
 			if (!s) return;
-			Append(out, EKeyword::Smooth, "{", *s.m_smooth, "}");
+			Append(out, EKeywords::Smooth, "{", *s.m_smooth, "}");
 		}
 		static void Append(textbuf& out, seri::Dashed d)
 		{
 			if (!d) return;
-			Append(out, EKeyword::Dashed, "{", *d.m_dash, "}");
+			Append(out, EKeywords::Dashed, "{", *d.m_dash, "}");
 		}
 		static void Append(textbuf& out, seri::DataPoints dp)
 		{
 			if (!dp) return;
-			Append(out, EKeyword::DataPoints, "{");
-			if (dp.m_size) Append(out, EKeyword::Size, "{", *dp.m_size, "}");
-			if (dp.m_style) Append(out, EKeyword::Style, "{", dp.m_style->style, "}");
-			if (dp.m_colour) Append(out, EKeyword::Colour, "{", *dp.m_colour, "}");
+			Append(out, EKeywords::DataPoints, "{");
+			if (dp.m_size) Append(out, EKeywords::Size, "{", *dp.m_size, "}");
+			if (dp.m_style) Append(out, EKeywords::Style, "{", dp.m_style->style, "}");
+			if (dp.m_colour) Append(out, EKeywords::Colour, "{", *dp.m_colour, "}");
 			Append(out, "}");
 		}
 		static void Append(textbuf& out, seri::LeftHanded lh)
 		{
 			if (!lh) return;
-			Append(out, EKeyword::LeftHanded, "{", *lh.m_lh, "}");
+			Append(out, EKeywords::LeftHanded, "{", *lh.m_lh, "}");
 		}
 		static void Append(textbuf& out, seri::ScreenSpace ss)
 		{
 			if (!ss) return;
-			Append(out, EKeyword::ScreenSpace, "{", *ss.m_screen_space, "}");
+			Append(out, EKeywords::ScreenSpace, "{", *ss.m_screen_space, "}");
 		}
 		static void Append(textbuf& out, seri::NoZTest nzt)
 		{
 			if (!nzt) return;
-			Append(out, EKeyword::NoZTest, "{", *nzt.m_no_ztest, "}");
+			Append(out, EKeywords::NoZTest, "{", *nzt.m_no_ztest, "}");
 		}
 		static void Append(textbuf& out, seri::NoZWrite nzw)
 		{
 			if (!nzw) return;
-			Append(out, EKeyword::NoZWrite, "{", *nzw.m_no_zwrite, "}");
+			Append(out, EKeywords::NoZWrite, "{", *nzw.m_no_zwrite, "}");
 		}
 		static void Append(textbuf& out, seri::AxisId a)
 		{
 			if (!a) return;
-			Append(out, EKeyword::AxisId, "{", *a.m_id, "}");
+			Append(out, EKeywords::AxisId, "{", *a.m_id, "}");
 		}
 		static void Append(textbuf& out, seri::PointStyle p)
 		{
 			if (!p) return;
-			Append(out, EKeyword::Style, "{", p.m_style->style, "}");
+			Append(out, EKeywords::Style, "{", p.m_style->style, "}");
 		}
 		static void Append(textbuf& out, seri::LineStyle l)
 		{
 			if (!l) return;
-			Append(out, EKeyword::Style, "{", l.m_style->style, "}");
+			Append(out, EKeywords::Style, "{", l.m_style->style, "}");
 		}
 		static void Append(textbuf& out, seri::ArrowHeads a)
 		{
 			if (!a) return;
-			Append(out, EKeyword::Arrow, "{", a.m_type->type, a.m_size, "}");
+			Append(out, EKeywords::Arrow, "{", a.m_type->type, a.m_size, "}");
 		}
 		static void Append(textbuf& out, seri::O2W o2w)
 		{
 			if (!o2w) return;
-			Append(out, "*O2W {", o2w.m_xform, "}");
+			Append(out, "*O2W {", o2w.m_xform_txt, "}");
 		}
 		static void Append(textbuf& out, seri::Texture t)
 		{
@@ -1066,7 +1086,341 @@ namespace pr::ldraw
 			if (!a) return;
 			Append(out, "*Animation {", a.m_anim, "}");
 		}
-		template <typename textbuf, typename... Args> static void Append(textbuf& out, Args&&... args)
+		template <typename... Args> static void Append(textbuf& out, Args&&... args)
+		{
+			(Append(out, std::forward<Args>(args)), ...);
+		}
+
+		// Append Helper (bytebuf)
+		template <typename Type> static void Append(bytebuf& out, Type)
+		{
+			no_overload<Type> missing_overload;
+		}
+		static auto Append(bytebuf& out, seri::Header hdr)
+		{
+			auto ofs = out.size();
+
+			Append(out, hdr.m_kw);
+			Append(out, int(0)); // Placeholder for section size
+			if (hdr.m_name) Append(out, hdr.m_name);
+			if (hdr.m_colour) Append(out, hdr.m_colour);
+
+			// RAII object that updates the 'section size' field when it goes out of scope
+			struct R
+			{
+				bytebuf& m_out;
+				size_t m_start_ofs;
+				R(bytebuf& out, size_t start_ofs) : m_out(out), m_start_ofs(start_ofs) {}
+				R(R&&) = default;
+				R(R const&) = delete;
+				R& operator=(R&&) = default;
+				R& operator=(R const&) = delete;
+				~R()
+				{
+					auto end_ofs = m_out.size();
+					auto section_size = static_cast<int>(end_ofs - m_start_ofs - sizeof(uint32_t) - sizeof(int));
+					std::memcpy(m_out.data() + m_start_ofs + sizeof(uint32_t), &section_size, sizeof(section_size));
+				}
+			};
+			return R{ out, ofs };
+		}
+		template <typename... Args> static auto Append(bytebuf& out, seri::Header hdr, Args&&... args)
+		{
+			auto s = Append(out, hdr);
+			(Append(out, std::forward<Args>(args)), ...);
+			return std::move(s);
+		}
+		static void Append(bytebuf& out, std::span<std::byte const> data, int64_t ofs = -1)
+		{
+			if (ofs == -1)
+				out.append_range(data);
+			else if (ofs + data.size() <= out.size())
+				std::memcpy(out.data() + ofs, data.data(), data.size());
+			else
+				throw std::out_of_range("Append: offset out of range");
+		}
+		static void Append(bytebuf& out, EKeyword kw)
+		{
+			Append(out, { byte_ptr(&kw.value), sizeof(kw.value) });
+		}
+		static void Append(bytebuf& out, std::string_view s)
+		{
+			Append(out, { byte_ptr(s.data()), size_t(s.size()) });
+		}
+		static void Append(bytebuf& out, std::string s)
+		{
+			Append(out, std::string_view{ s });
+		}
+		static void Append(bytebuf& out, char const* s)
+		{
+			Append(out, std::string_view{ s });
+		}
+		static void Append(bytebuf& out, bool b)
+		{
+			Append(out, uint8_t(b ? 1 : 0));
+		}
+		static void Append(bytebuf& out, int8_t i)
+		{
+			Append(out, { byte_ptr(&i), sizeof(i) });
+		}
+		static void Append(bytebuf& out, int16_t i)
+		{
+			Append(out, { byte_ptr(&i), sizeof(i) });
+		}
+		static void Append(bytebuf& out, int32_t i)
+		{
+			Append(out, { byte_ptr(&i), sizeof(i) });
+		}
+		static void Append(bytebuf& out, int64_t i)
+		{
+			Append(out, { byte_ptr(&i), sizeof(i) });
+		}
+		static void Append(bytebuf& out, uint8_t u)
+		{
+			Append(out, { byte_ptr(&u), sizeof(u) });
+		}
+		static void Append(bytebuf& out, uint16_t u)
+		{
+			Append(out, { byte_ptr(&u), sizeof(u) });
+		}
+		static void Append(bytebuf& out, uint32_t u)
+		{
+			Append(out, { byte_ptr(&u), sizeof(u) });
+		}
+		static void Append(bytebuf& out, uint64_t u)
+		{
+			Append(out, { byte_ptr(&u), sizeof(u) });
+		}
+		static void Append(bytebuf& out, float f)
+		{
+			Append(out, { byte_ptr(&f), sizeof(f) });
+		}
+		static void Append(bytebuf& out, double f)
+		{
+			Append(out, { byte_ptr(&f), sizeof(f) });
+		}
+		static void Append(bytebuf& out, seri::Vec2 v)
+		{
+			Append(out, { byte_ptr(&v), sizeof(v) });
+		}
+		static void Append(bytebuf& out, seri::Vec3 v)
+		{
+			Append(out, { byte_ptr(&v), sizeof(v) });
+		}
+		static void Append(bytebuf& out, seri::Vec4 v)
+		{
+			Append(out, { byte_ptr(&v), sizeof(v) });
+		}
+		static void Append(bytebuf& out, seri::Mat3 m)
+		{
+			Append(out, { byte_ptr(&m), sizeof(m) });
+		}
+		static void Append(bytebuf& out, seri::Mat4 m)
+		{
+			Append(out, { byte_ptr(&m), sizeof(m) });
+		}
+		static void Append(bytebuf& out, seri::Name n)
+		{
+			if (!n) return;
+			if (!n.m_kw)
+			{
+				Append(out, *n.m_name);
+			}
+			else
+			{
+				Append(out, seri::Header{ n.m_kw }, *n.m_name);
+			}
+		}
+		static void Append(bytebuf& out, seri::Colour c)
+		{
+			if (!c) return;
+			if (!c.m_kw)
+			{
+				Append(out, *c.m_colour);
+			}
+			else if (c.m_kw == EKeywords::RandColour)
+			{
+				Append(out, seri::Header{ c.m_kw });
+			}
+			else
+			{
+				Append(out, seri::Header{ c.m_kw }, *c.m_colour);
+			}
+		}
+		static void Append(bytebuf& out, seri::Size sz)
+		{
+			if (!sz) return;
+			auto s = Append(out, seri::Header{ EKeywords::Size });
+			Append(out, sz.m_size);
+		}
+		static void Append(bytebuf& out, seri::Size2 sz)
+		{
+			if (!sz) return;
+			auto s = Append(out, seri::Header{ EKeywords::Size });
+			Append(out, sz.m_size);
+		}
+		static void Append(bytebuf& out, seri::Scale sc)
+		{
+			if (!sc) return;
+			auto s = Append(out, seri::Header{ EKeywords::Scale });
+			Append(out, sc.m_scale);
+		}
+		static void Append(bytebuf& out, seri::Scale2 sc)
+		{
+			if (!sc) return;
+			auto s = Append(out, seri::Header{ EKeywords::Scale });
+			Append(out, sc.m_scale);
+		}
+		static void Append(bytebuf& out, seri::Scale3 sc)
+		{
+			if (!sc) return;
+			auto s = Append(out, seri::Header{ EKeywords::Scale });
+			Append(out, sc.m_scale);
+		}
+		static void Append(bytebuf& out, seri::PerItemColour c)
+		{
+			if (!c) return;
+			auto s = Append(out, seri::Header{ EKeywords::PerItemColour });
+			Append(out, *c.m_active);
+		}
+		static void Append(bytebuf& out, seri::Width w)
+		{
+			if (!w) return;
+			auto s = Append(out, seri::Header{ EKeywords::Width });
+			Append(out, *w.m_width);
+		}
+		static void Append(bytebuf& out, seri::Depth d)
+		{
+			if (!d) return;
+			auto s = Append(out, seri::Header{ EKeywords::Depth });
+			Append(out, *d.m_depth);
+		}
+		static void Append(bytebuf& out, seri::Hidden h)
+		{
+			if (!h) return;
+			auto s = Append(out, seri::Header{ EKeywords::Hidden });
+			Append(out, *h.m_hide);
+		}
+		static void Append(bytebuf& out, seri::Wireframe w)
+		{
+			if (!w) return;
+			auto s = Append(out, seri::Header{ EKeywords::Wireframe });
+			Append(out, *w.m_wire);
+		}
+		static void Append(bytebuf& out, seri::Alpha a)
+		{
+			if (!a) return;
+			auto s = Append(out, seri::Header{ EKeywords::Alpha });
+			Append(out, *a.m_alpha);
+		}
+		static void Append(bytebuf& out, seri::Reflectivity r)
+		{
+			if (!r) return;
+			auto s = Append(out, seri::Header{ EKeywords::Reflectivity });
+			Append(out, *r.m_refl);
+		}
+		static void Append(bytebuf& out, seri::Solid so)
+		{
+			if (!so) return;
+			auto s = Append(out, seri::Header{ EKeywords::Solid });
+			Append(out, *so.m_solid);
+		}
+		static void Append(bytebuf& out, seri::Smooth sm)
+		{
+			if (!sm) return;
+			auto s = Append(out, seri::Header{ EKeywords::Smooth });
+			Append(out, *sm.m_smooth);
+		}
+		static void Append(bytebuf& out, seri::Dashed d)
+		{
+			if (!d) return;
+			auto s = Append(out, seri::Header{ EKeywords::Dashed });
+			Append(out, *d.m_dash);
+		}
+		static void Append(bytebuf& out, seri::DataPoints dp)
+		{
+			if (!dp) return;
+			auto s = Append(out, seri::Header{ EKeywords::DataPoints });
+			throw std::runtime_error("todo");
+			//if (dp.m_size) Append(out, EKeywords::Size, "{", *dp.m_size, "}");
+			//if (dp.m_style) Append(out, EKeywords::Style, "{", dp.m_style->style, "}");
+			//if (dp.m_colour) Append(out, EKeywords::Colour, "{", *dp.m_colour, "}");
+			
+		}
+		static void Append(bytebuf& out, seri::LeftHanded lh)
+		{
+			if (!lh) return;
+			auto s = Append(out, seri::Header{ EKeywords::LeftHanded });
+			Append(out, *lh.m_lh);
+		}
+		static void Append(bytebuf& out, seri::ScreenSpace ss)
+		{
+			if (!ss) return;
+			auto s = Append(out, seri::Header{ EKeywords::ScreenSpace });
+			Append(out, *ss.m_screen_space);
+		}
+		static void Append(bytebuf& out, seri::NoZTest nzt)
+		{
+			if (!nzt) return;
+			auto s = Append(out, seri::Header{ EKeywords::NoZTest });
+			Append(out, *nzt.m_no_ztest);
+		}
+		static void Append(bytebuf& out, seri::NoZWrite nzw)
+		{
+			if (!nzw) return;
+			auto s = Append(out, seri::Header{ EKeywords::NoZWrite });
+			Append(out, *nzw.m_no_zwrite);
+		}
+		static void Append(bytebuf& out, seri::AxisId a)
+		{
+			if (!a) return;
+			auto s = Append(out, seri::Header{ EKeywords::AxisId });
+			Append(out, *a.m_id);
+		}
+		static void Append(bytebuf& out, seri::PointStyle p)
+		{
+			if (!p) return;
+			auto s = Append(out, seri::Header{ EKeywords::Style });
+			Append(out, p.m_style->style);
+		}
+		static void Append(bytebuf& out, seri::LineStyle l)
+		{
+			if (!l) return;
+			auto s = Append(out, seri::Header{ EKeywords::Style });
+			Append(out, l.m_style->style);
+		}
+		static void Append(bytebuf& out, seri::ArrowHeads a)
+		{
+			if (!a) return;
+			auto s = Append(out, seri::Header{ EKeywords::Arrow });
+			Append(out, a.m_type->type, a.m_size);
+		}
+		static void Append(bytebuf& out, seri::O2W o2w)
+		{
+			if (!o2w) return;
+			auto s = Append(out, seri::Header{ EKeywords::O2W });
+			Append(out, std::span<std::byte const>{ o2w.m_xform_bin });
+		}
+		static void Append(bytebuf& out, seri::Texture t)
+		{
+			if (!t) return;
+			auto s = Append(out, seri::Header{ EKeywords::Texture });
+			Append(out, t.m_tex);
+			Append(out, t.m_t2s);
+		}
+		static void Append(bytebuf& out, seri::RootAnimation ra)
+		{
+			if (!ra) return;
+			auto s = Append(out, seri::Header{ EKeywords::RootAnimation });
+			Append(out, ra.m_anim);
+		}
+		static void Append(bytebuf& out, seri::Animation a)
+		{
+			if (!a) return;
+			auto s = Append(out, seri::Header{ EKeywords::Animation });
+			Append(out, a.m_anim);
+		}
+		template <typename... Args> static void Append(bytebuf& out, Args&&... args)
 		{
 			(Append(out, std::forward<Args>(args)), ...);
 		}
@@ -1083,6 +1437,16 @@ namespace pr::ldraw
 			auto [ptr, ec] = std::to_chars(&buf[0], &buf[0] + N, value, base);
 			if (ec != std::errc{}) throw std::system_error(std::make_error_code(ec));
 			return std::string_view{ &buf[0], static_cast<size_t>(ptr - &buf[0]) };
+		}
+
+		// Convert to std::byte*
+		template <typename T> static constexpr std::byte const* byte_ptr(T const* t)
+		{
+			return reinterpret_cast<std::byte const*>(t);
+		}
+		template <typename T> static constexpr std::byte* byte_ptr(T* t)
+		{
+			return reinterpret_cast<std::byte*>(t);
 		}
 	};
 	struct LdrPoint :LdrBase
@@ -1139,10 +1503,10 @@ namespace pr::ldraw
 
 		virtual void Write(textbuf& out) const override
 		{
-			Append(out, EKeyword::Point, m_name, m_colour, "{");
+			Append(out, EKeywords::Point, m_name, m_colour, "{");
 			{
 				Append(out, m_style, m_size, m_depth, m_per_item_colour);
-				Append(out, EKeyword::Data, "{");
+				Append(out, EKeywords::Data, "{");
 				{
 					for (auto& point : m_points)
 					{
@@ -1156,6 +1520,26 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			auto s = Append(out, seri::Header{ EKeywords::Point, m_name, m_colour });
+			{
+				Append(out, m_style, m_size, m_depth, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					{
+						for (auto& point : m_points)
+						{
+							Append(out, point.pt);
+							if (m_per_item_colour && *m_per_item_colour.m_active)
+								Append(out, point.col ? *point.col.m_colour : seri::Colour::Default);
+						}
+					}
+				}
+				Append(out, m_tex);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrLine : LdrBase
@@ -1258,12 +1642,12 @@ namespace pr::ldraw
 
 		virtual void Write(textbuf& out) const override
 		{
-			Append(out, EKeyword::Line, m_name, m_colour, "{");
+			Append(out, EKeywords::Line, m_name, m_colour, "{");
 			{
 				auto WriteBlock = [](textbuf& out, Block const& block)
 				{
 					Append(out, block.m_style, block.m_smooth, block.m_width, block.m_dashed, block.m_arrow, block.m_data_points, block.m_per_item_colour);
-					Append(out, EKeyword::Data, "{");
+					Append(out, EKeywords::Data, "{");
 					{
 						for (auto& ln : block.m_lines)
 						{
@@ -1320,7 +1704,7 @@ namespace pr::ldraw
 			auto single = m_boxes.size() == 1 && !m_boxes[0].m_pos && !m_boxes[0].m_col;
 			auto per_item_colour = std::ranges::any_of(m_boxes, [](auto const& x) { return !!x.m_col; });
 
-			Append(out, single ? EKeyword::Box : EKeyword::BoxList, m_name, m_colour, "{");
+			Append(out, single ? EKeywords::Box : EKeywords::BoxList, m_name, m_colour, "{");
 			{
 				if (single)
 				{
@@ -1373,11 +1757,11 @@ namespace pr::ldraw
 		// Write to 'out'
 		virtual void Write(textbuf& out) const override
 		{
-			Append(out, EKeyword::Model, m_name, m_colour, "{");
+			Append(out, EKeywords::Model, m_name, m_colour, "{");
 			{
-				Append(out, EKeyword::FilePath, std::format("{{\"{}\"}}", m_filepath.string()));
+				Append(out, EKeywords::FilePath, std::format("{{\"{}\"}}", m_filepath.string()));
 				if (m_anim) Append(out, m_anim);
-				if (m_no_materials) Append(out, EKeyword::NoMaterials, "{}" );
+				if (m_no_materials) Append(out, EKeywords::NoMaterials, "{}" );
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
@@ -1453,6 +1837,7 @@ namespace pr::ldraw
 				std::cerr << "LDraw save failed: " << ex.what();
 			}
 		}
+
 		textbuf& ToString(textbuf& out, ESaveFlags flags = ESaveFlags::None) const
 		{
 			try
@@ -1475,6 +1860,27 @@ namespace pr::ldraw
 		{
 			textbuf out;
 			return ToString(out, flags);
+		}
+
+		bytebuf& ToBinary(bytebuf& out, ESaveFlags flags = ESaveFlags::None) const
+		{
+			try
+			{
+				auto append = (int64_t(flags) & int64_t(ESaveFlags::Append)) != 0;
+				if (!append) out.resize(0);
+				Write(out);
+			}
+			catch (std::exception const& ex)
+			{
+				if ((int64_t(flags) & int64_t(ESaveFlags::NoThrowOnFailure)) == 0) throw;
+				std::cerr << "LDraw save failed: " << ex.what();
+			}
+			return out;
+		}
+		bytebuf ToBinary(ESaveFlags flags = ESaveFlags::None) const
+		{
+			bytebuf out;
+			return ToBinary(out, flags);
 		}
 
 		// Pretty format Ldraw script
@@ -1566,97 +1972,99 @@ namespace pr::ldraw
 	{
 		inline O2W& O2W::o2w(Mat4 o2w)
 		{
-			LdrBase::Append(m_xform, "*M4x4 {", o2w, "}");
+			LdrBase::Append(m_xform_txt, "*M4x4 {", o2w, "}");
+			auto s = LdrBase::Append(m_xform_bin, seri::Header{ EKeywords::M4x4 });
+			LdrBase::Append(m_xform_bin, o2w);
 			return *this;
 		}
 		inline O2W& O2W::rot(Mat3 rot)
 		{
-			LdrBase::Append(m_xform, "*M3x3 {", rot, "}");
+			LdrBase::Append(m_xform_txt, "*M3x3 {", rot, "}");
 			return *this;
 		}
 		inline O2W& O2W::align(Vec3 dir, AxisId axis)
 		{
-			LdrBase::Append(m_xform, "*Align {", *axis.m_id, dir, "}");
+			LdrBase::Append(m_xform_txt, "*Align {", *axis.m_id, dir, "}");
 			return *this;
 		}
 		inline O2W& O2W::lookat(Vec3 pos)
 		{
-			LdrBase::Append(m_xform, "*Lookat {", pos, "}");
+			LdrBase::Append(m_xform_txt, "*Lookat {", pos, "}");
 			return *this;
 		}
 		inline O2W& O2W::quat(Vec4 q)
 		{
-			LdrBase::Append(m_xform, "*Quat {", q, "}");
+			LdrBase::Append(m_xform_txt, "*Quat {", q, "}");
 			return *this;
 		}
 		inline O2W& O2W::pos(Vec3 pos)
 		{
-			LdrBase::Append(m_xform, "*Pos {", pos, "}");
+			LdrBase::Append(m_xform_txt, "*Pos {", pos, "}");
 			return *this;
 		}
 		inline O2W& O2W::pos(float x, float y, float z)
 		{
-			LdrBase::Append(m_xform, "*Pos {", x, y, z, "}");
+			LdrBase::Append(m_xform_txt, "*Pos {", x, y, z, "}");
 			return *this;
 		}
 		inline O2W& O2W::scale(Vec3 scale)
 		{
-			LdrBase::Append(m_xform, "*Scale {", scale.x, scale.y, scale.z, "}");
+			LdrBase::Append(m_xform_txt, "*Scale {", scale.x, scale.y, scale.z, "}");
 			return *this;
 		}
 		inline O2W& O2W::scale(float sx, float sy, float sz)
 		{
-			LdrBase::Append(m_xform, "*Scale {", sx, sy, sz, "}");
+			LdrBase::Append(m_xform_txt, "*Scale {", sx, sy, sz, "}");
 			return *this;
 		}
 		inline O2W& O2W::scale(float s)
 		{
-			LdrBase::Append(m_xform, "*Scale {", s, s, s, "}");
+			LdrBase::Append(m_xform_txt, "*Scale {", s, s, s, "}");
 			return *this;
 		}
 		inline O2W& O2W::euler(float pitch_deg, float yaw_deg, float roll_deg)
 		{
-			LdrBase::Append(m_xform, "*Euler {", pitch_deg, yaw_deg, roll_deg, "}");
+			LdrBase::Append(m_xform_txt, "*Euler {", pitch_deg, yaw_deg, roll_deg, "}");
 			return *this;
 		}
 		inline O2W& O2W::rand(Vec3 centre, float radius)
 		{
-			LdrBase::Append(m_xform, "*Rand4x4 {", centre, radius, "}");
+			LdrBase::Append(m_xform_txt, "*Rand4x4 {", centre, radius, "}");
 			return *this;
 		}
 		inline O2W& O2W::rand_pos(Vec3 centre, float radius)
 		{
-			LdrBase::Append(m_xform, "*RandPos {", centre, radius, "}");
+			LdrBase::Append(m_xform_txt, "*RandPos {", centre, radius, "}");
 			return *this;
 		}
 		inline O2W& O2W::rand_ori()
 		{
-			LdrBase::Append(m_xform, "*RandOri {}");
+			LdrBase::Append(m_xform_txt, "*RandOri {}");
 			return *this;
 		}
 		inline O2W& O2W::normalise()
 		{
-			LdrBase::Append(m_xform, "*Normalise {}");
+			LdrBase::Append(m_xform_txt, "*Normalise {}");
 			return *this;
 		}
 		inline O2W& O2W::orthonormalise()
 		{
-			LdrBase::Append(m_xform, "*Orthonormalise {}");
+			LdrBase::Append(m_xform_txt, "*Orthonormalise {}");
 			return *this;
 		}
 		inline O2W& O2W::transpose()
 		{
-			LdrBase::Append(m_xform, "*Transpose {}");
+			LdrBase::Append(m_xform_txt, "*Transpose {}");
 			return *this;
 		}
 		inline O2W& O2W::inverse()
 		{
-			LdrBase::Append(m_xform, "*Inverse {}");
+			LdrBase::Append(m_xform_txt, "*Inverse {}");
 			return *this;
 		}
 		inline O2W& O2W::non_affine()
 		{
-			LdrBase::Append(m_xform, "*NonAffine {}");
+			LdrBase::Append(m_xform_txt, "*NonAffine {}");
 			return *this;
 		}
 
@@ -1785,6 +2193,8 @@ namespace pr::ldraw
 				"		*Pos {-1 -1 -1}\n"
 				"	}\n"
 				"}");
+			auto bdr = builder.ToBinary();
+
 		}
 		PRUnitTestMethod(Line)
 		{
