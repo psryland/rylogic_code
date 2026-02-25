@@ -70,6 +70,14 @@ namespace pr::math
 		constexpr Vec4(Vec2<S> xy_, Vec2<S> zw_)
 			:Vec4(vec(xy_).x, vec(xy_).y, vec(zw_).z, vec(zw_).w)
 		{}
+		constexpr Vec4(AxisId axis_id)
+			:Vec4(
+				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosZ ? Sign<S>(axis_id) : S(0),
+				S(0)
+			)
+		{}
 		constexpr Vec4(intrinsic_t vec_) requires (!NoIntrinsic)
 			:vec(vec_)
 		{}
@@ -385,15 +393,15 @@ namespace pr::math
 		#pragma endregion
 	};
 
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Vec4<scalar>>\
-		: vector_traits_base<scalar, scalar, 4>\
-		, vector_access_member<Vec4<scalar>, scalar, 4>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec4<element>>\
+		: vector_traits_base<element, element, 4>\
+		, vector_access_member<Vec4<element>, element, 4>\
 	{};\
 	\
-	static_assert(VectorType<Vec4<scalar>>, "Vec4<"#scalar"> is not a valid vector type");\
-	static_assert(sizeof(Vec4<scalar>) == 4*sizeof(scalar), "Vec4<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Vec4<scalar>>, "Vec4<"#scalar"> is not trivially copyable");
+	static_assert(VectorType<Vec4<element>>, "Vec4<"#element"> is not a valid vector type");\
+	static_assert(sizeof(Vec4<element>) == 4*sizeof(element), "Vec4<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec4<element>>, "Vec4<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);

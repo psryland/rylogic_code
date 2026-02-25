@@ -8,6 +8,7 @@
 #include "pr/math_new/core/constants.h"
 #include "pr/math_new/types/vector3.h"
 #include "pr/math_new/types/vector4.h"
+#include "pr/math_new/types/matrix3x4.h"
 
 namespace pr::math
 {
@@ -180,15 +181,15 @@ namespace pr::math
 		}
 	};
 
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Quat<scalar>>\
-		: quaternion_traits_base<scalar>\
-		, vector_access_member<Quat<scalar>, scalar, 4>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Quat<element>>\
+		: quaternion_traits_base<element>\
+		, vector_access_member<Quat<element>, element, 4>\
 	{};\
 	\
-	static_assert(QuaternionType<Quat<scalar>>, "Quat<"#scalar"> is not a valid quaternion type");\
-	static_assert(sizeof(Quat<scalar>) == 4*sizeof(scalar), "Quat<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Quat<scalar>>, "Quat<"#scalar"> is not trivially copyable");
+	static_assert(QuaternionType<Quat<element>>, "Quat<"#element"> is not a valid quaternion type");\
+	static_assert(sizeof(Quat<element>) == 4*sizeof(element), "Quat<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Quat<element>>, "Quat<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);
@@ -200,7 +201,7 @@ namespace pr::math
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		struct R { Vec4<S> axis; S angle; };
-		pr_assert("quaternion isn't normalised" && IsNormal(q));
+		pr_assert(IsNormal(q) && "quaternion isn't normalised");
 
 		// Use atan2 for the angle — well-conditioned everywhere, unlike acos
 		auto sin_half_angle = Length(q.xyz);
@@ -253,7 +254,7 @@ namespace pr::math
 
 	// Return possible Euler angles for the quaternion 'q'
 	template <QuaternionType Quat>
-	inline auto EulerAngles(Quat q)
+	inline auto pr_vectorcall EulerAngles(Quat q)
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
@@ -272,11 +273,8 @@ namespace pr::math
 	}
 
 	// Rotate a vector by a quaternion
-	template <QuaternionType Quat, VectorType Vec>
-		requires (IsRank1<Vec>) &&
-		requires () { std::floating_point<typename vector_traits<Vec>::element_t>; } &&
-		requires () { vector_traits<Vec>::dimension >= 3; }
-	constexpr Vec Rotate(Quat lhs, Vec rhs)
+	template <QuaternionType Quat, VectorTypeFP Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
+	constexpr Vec pr_vectorcall Rotate(Quat lhs, Vec rhs)
 	{
 		using vt = vector_traits<Vec>;
 
@@ -354,10 +352,7 @@ namespace pr::math
 	}
 
 	// Logarithm map of quaternion to tangent space at identity
-	template <QuaternionType Quat, VectorType Vec>
-		requires (IsRank1<Vec>) &&
-		requires () { std::floating_point<typename vector_traits<Vec>::element_t>; } &&
-		requires () { vector_traits<Vec>::dimension >= 3; }
+	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
 	inline Vec pr_vectorcall LogMap(Quat q)
 	{
 		using S = typename vector_traits<Quat>::element_t;
@@ -374,10 +369,7 @@ namespace pr::math
 	}
 	
 	// Exponential map of tangent space at identity to quaternion
-	template <QuaternionType Quat, VectorType Vec>
-		requires (IsRank1<Vec>) &&
-		requires () { std::floating_point<typename vector_traits<Vec>::element_t>; } &&
-		requires () { vector_traits<Vec>::dimension >= 3; }
+	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
 	inline Quat pr_vectorcall ExpMap(Vec v)
 	{
 		using S = typename vector_traits<Vec>::element_t;
@@ -391,10 +383,7 @@ namespace pr::math
 	}
 
 	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
-	template <QuaternionType Quat, VectorType Vec>
-		requires (IsRank1<Vec>) &&
-		requires () { std::floating_point<typename vector_traits<Vec>::element_t>; } &&
-		requires () { vector_traits<Vec>::dimension >= 3; }
+	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
 	inline Quat pr_vectorcall RotationAt(float time, Quat ori, Vec avel, Vec aacc)
 	{
 		using vt = vector_traits<Quat>;
@@ -430,53 +419,65 @@ namespace pr::math
 		}
 	}
 
-	// Create a quaternion from the rotation part of a matrix
-	template <QuaternionType Quat>
-	constexpr Quat RotationFrom(Mat3x4<typename vector_traits<Quat>::element_t> const& mat)
+	// Create a quaternion from a rotation matrix
+	template <QuaternionType Quat, VectorType Mat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
+	constexpr Quat pr_vectorcall ToQuat(Mat const& mat)
 	{
-		using vt = vector_traits<Quat>;
-		using S = typename vt::element_t;
-		assert(IsOrthonormal(mat) && "Only orientation matrices can be converted into quaternions");
+		using qt = vector_traits<Quat>;
+		using mt = vector_traits<Mat>;
+		using S = typename qt::element_t;
+		pr_assert(IsOrthonormal(mat) && "Only orientation matrices can be converted into quaternions");
 
-		constexpr auto Rsqrt = [](float x) { return 1.0f / Sqrt(x); };
+		S xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y, xz = vec(vec(mat).x).z;
+		S yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z;
+		S zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z;
 
-		Quat q = {};
-		if (mat.x.x + mat.y.y + mat.z.z >= 0)
+		if (xx + yy + zz >= 0)
 		{
-			auto s = 0.5f * Rsqrt(1.f + mat.x.x + mat.y.y + mat.z.z);
-			vec(q).x = (mat.y.z - mat.z.y) * s;
-			vec(q).y = (mat.z.x - mat.x.z) * s;
-			vec(q).z = (mat.x.y - mat.y.x) * s;
-			vec(q).w = (0.25f / s);
+			auto s = S(0.5) / Sqrt(S(1) + xx + yy + zz);
+			return Quat{ (yz - zy) * s, (zx - xz) * s, (xy - yx) * s, (0.25f / s) };
 		}
-		else if (mat.x.x > mat.y.y && mat.x.x > mat.z.z)
+		if (xx > yy && xx > zz)
 		{
-			auto s = 0.5f * Rsqrt(1.f + mat.x.x - mat.y.y - mat.z.z);
-			vec(q).x = (0.25f / s);
-			vec(q).y = (mat.x.y + mat.y.x) * s;
-			vec(q).z = (mat.z.x + mat.x.z) * s;
-			vec(q).w = (mat.y.z - mat.z.y) * s;
+			auto s = S(0.5) / Sqrt(S(1) + xx - yy - zz);
+			return Quat{ (0.25f / s), (xy + yx) * s, (zx + xz) * s, (yz - zy) * s };
 		}
-		else if (mat.y.y > mat.z.z)
+		if (yy > zz)
 		{
-			auto s = 0.5f * Rsqrt(1.f - mat.x.x + mat.y.y - mat.z.z);
-			vec(q).x = (mat.x.y + mat.y.x) * s;
-			vec(q).y = (0.25f / s);
-			vec(q).z = (mat.y.z + mat.z.y) * s;
-			vec(q).w = (mat.z.x - mat.x.z) * s;
+			auto s = S(0.5) / Sqrt(S(1) - xx + yy - zz);
+			return Quat{ (xy + yx) * s, (0.25f / s), (yz + zy) * s, (zx - xz) * s };
 		}
-		else
 		{
-			auto s = 0.5f * Rsqrt(1.f - mat.x.x - mat.y.y + mat.z.z);
-			vec(q).x = (mat.z.x + mat.x.z) * s;
-			vec(q).y = (mat.y.z + mat.z.y) * s;
-			vec(q).z = (0.25f / s);
-			vec(q).w = (mat.x.y - mat.y.x) * s;
+			auto s = S(0.5) / Sqrt(S(1) - xx - yy + zz);
+			return Quat{ (zx + xz) * s, (yz + zy) * s, (0.25f / s), (xy - yx) * s };
 		}
-		return q;
 	}
 
+	// Create a rotation matrix from a quaternion
+	template <QuaternionType Quat, VectorType Mat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
+	constexpr Mat pr_vectorcall ToMatrix(Quat q)
+	{
+		using qt = vector_traits<Quat>;
+		using mt = vector_traits<Mat>;
+		using Vec = typename mt::component_t;
+		using S = typename qt::element_t;
+		pr_assert(q != Quat{} && "'quat' is a zero quaternion");
 
+		auto s = S(2) / LengthSq(q);
+		S xs = vec(q).x *  s, ys = vec(q).y *  s, zs = vec(q).z *  s;
+		S wx = vec(q).w * xs, wy = vec(q).w * ys, wz = vec(q).w * zs;
+		S xx = vec(q).x * xs, xy = vec(q).x * ys, xz = vec(q).x * zs;
+		S yy = vec(q).y * ys, yz = vec(q).y * zs, zz = vec(q).z * zs;
+	
+		Mat m = {};
+		vec(m).x = Vec{S(1) - (yy + zz), xy + wz, xz - wy};
+		vec(m).y = Vec{xy - wz, S(1) - (xx + zz), yz + wx};
+		vec(m).z = Vec{xz + wy, yz - wx, S(1) - (xx + yy)};
+		if constexpr (mt::dimension == 4)
+			vec(m).w = Vec{0, 0, 0, S(1)};
+
+		return m;
+	}
 
 
 
@@ -486,76 +487,12 @@ namespace pr::math
 
 
 	#if 0
-	// Component add
-	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall CompAdd(Quat_cref<S,A,B> lhs, Quat_cref<S,A,B> rhs)
-	{
-		return Quat<S,A,B>{lhs.xyzw + rhs.xyzw};
-	}
-
-	// Component multiply
-	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall CompMul(Quat_cref<S,A,B> lhs, S rhs)
-	{
-		return Quat<S,A,B>{lhs.xyzw * rhs};
-	}
-	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall CompMul(Quat_cref<S,A,B> lhs, Quat_cref<S,A,B> rhs)
-	{
-		return Quat<S,A,B>{lhs.xyzw * rhs.xyzw};
-	}
-
-	// Length squared
-	template <Scalar S, typename A, typename B> inline S pr_vectorcall LengthSq(Quat_cref<S,A,B> q)
-	{
-		return LengthSq(q.xyzw);
-	}
-
-	// Normalise the quaternion 'q'
-	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall Normalise(Quat_cref<S,A,B> q)
-	{
-		return Quat<S,A,B>{Normalise(q.xyzw)};
-	}
-	template <Scalar S, typename A, typename B> inline Quat<S,A,B> pr_vectorcall Normalise(Quat_cref<S,A,B> q, Quat_cref<S,A,B> def)
-	{
-		return Quat<S,A,B>{Normalise(q.xyzw, def.xyzw)};
-	}
-
-	// Returns the smallest angle between two quaternions (in radians, [0, tau/2])
-	template <Scalar S, typename A, typename B> inline S pr_vectorcall Angle(Quat_cref<S,A,B> a, Quat_cref<S,A,B> b)
-	{
-		// q.w = Cos(theta/2)
-		// Note: cos(A) = 2 * cos²(A/2) - 1
-		//  and: acos(A) = 0.5 * acos(2A² - 1), for A in [0, tau/2]
-		// Using the 'acos(2A² - 1)' form always returns the smallest angle
-		auto cos_half_ang = CosHalfAngle(a, b);
-		return 
-			cos_half_ang > 1.0f - tiny<S> ? S(0) :
-			cos_half_ang > 0 ? S(2) * Acos(Clamp(cos_half_ang, -S(1), +S(1))) : // better precision
-			Acos(Clamp(S(2) * Sqr(cos_half_ang) - S(1), -S(1), +S(1)));
-	}
-
-
-	// Rotate a vector by a quaternion
-	template <Scalar S, typename A, typename B> inline Vec4<S,B> pr_vectorcall Rotate(Quat_cref<S,A,B> lhs, Vec4_cref<S,A> rhs)
-	{
-		// This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'
-		S xx = lhs.x*lhs.x, xy = lhs.x*lhs.y, xz = lhs.x*lhs.z, xw = lhs.x*lhs.w;
-		S                   yy = lhs.y*lhs.y, yz = lhs.y*lhs.z, yw = lhs.y*lhs.w;
-		S                                     zz = lhs.z*lhs.z, zw = lhs.z*lhs.w;
-		S                                                       ww = lhs.w*lhs.w;
-
-		Vec4<S,B> r;
-		r.x =   ww*rhs.x + 2*yw*rhs.z - 2*zw*rhs.y +   xx*rhs.x + 2*xy*rhs.y + 2*xz*rhs.z -   zz*rhs.x - yy*rhs.x;
-		r.y = 2*xy*rhs.x +   yy*rhs.y + 2*yz*rhs.z + 2*zw*rhs.x -   zz*rhs.y +   ww*rhs.y - 2*xw*rhs.z - xx*rhs.y;
-		r.z = 2*xz*rhs.x + 2*yz*rhs.y +   zz*rhs.z - 2*yw*rhs.x -   yy*rhs.z + 2*xw*rhs.y -   xx*rhs.z + ww*rhs.z;
-		r.w = rhs.w;
-		return r;
-	}
-
 
 	namespace maths
 	{
 		// Specialise 'Avr' for quaternions
 		// Finds the average rotation.
-		template <Scalar S, typename A, typename B> 
+		template <ScalarType S, typename A, typename B> 
 		struct Avr<Quat<S,A,B>, S>
 		{
 			Avr<Vec4<S, void>, S> m_avr;

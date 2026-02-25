@@ -15,16 +15,19 @@ namespace pr::math
 
 		PRUnitTestMethod(Construction, float, double)
 		{
-			using vec8_t = Vec8<T>;
+			using vec8_t = Vec8<T, void>;
 			using vec4_t = Vec4<T>;
 		}
 
 		PRUnitTestMethod(LinAt_AngAt, float, double)
 		{
-			using vec8_t = Vec8<T>;
+			using vec8_t = Vec8<T, void>;
 			using vec4_t = Vec4<T>;
 			{
-				auto v = vec8_t{ Random<vec4_t>(rng, T(10), T(0)), Random<vec4_t>(rng, T(10), T(0)) };
+				auto v = vec8_t{
+					Random<vec4_t>(rng, T(0), T(10)),
+					Random<vec4_t>(rng, T(0), T(10))
+				};
 				auto lin = v.LinAt(vec4_t::Origin());
 				auto ang = v.AngAt(vec4_t::Origin());
 				auto V = vec8_t{ ang, lin };
@@ -61,7 +64,7 @@ namespace pr::math
 		}
 		PRUnitTestMethod(Projection, float, double)
 		{
-			using vec8_t = Vec8<T>;
+			using vec8_t = Vec8<T, void>;
 			using vec4_t = Vec4<T>;
 			
 			auto v = vec8_t{ 1,-2,3,-3,2,-1 };
@@ -74,7 +77,7 @@ namespace pr::math
 		}
 		PRUnitTestMethod(Reflection, float, double)
 		{
-			using vec8_t = Vec8<T>;
+			using vec8_t = Vec8<T, void>;
 			using vec4_t = Vec4<T>;
 			
 			// Projection/Reflect

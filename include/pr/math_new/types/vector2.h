@@ -6,6 +6,7 @@
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
+#include "pr/math_new/core/axis_id.h"
 #include "pr/math_new/core/functions.h"
 
 namespace pr::math
@@ -41,6 +42,12 @@ namespace pr::math
 		{}
 		constexpr explicit Vec2(VectorTypeN<S, 2> auto v)
 			:Vec2(vec(v).x, vec(v).y)
+		{}
+		constexpr Vec2(AxisId axis_id)
+			:Vec2(
+				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0)
+			)
 		{}
 
 		// Array access
@@ -108,15 +115,15 @@ namespace pr::math
 		}
 	};
 
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Vec2<scalar>>\
-		: vector_traits_base<scalar, scalar, 2>\
-		, vector_access_member<Vec2<scalar>, scalar, 2>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec2<element>>\
+		: vector_traits_base<element, element, 2>\
+		, vector_access_member<Vec2<element>, element, 2>\
 	{};\
 	\
-	static_assert(VectorType<Vec2<scalar>>, "Vec2<"#scalar"> is not a valid vector type");\
-	static_assert(sizeof(Vec2<scalar>) == 2*sizeof(scalar), "Vec2<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Vec2<scalar>>, "Vec2<"#scalar"> is not trivially copyable");
+	static_assert(VectorType<Vec2<element>>, "Vec2<"#element"> is not a valid vector type");\
+	static_assert(sizeof(Vec2<element>) == 2*sizeof(element), "Vec2<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec2<element>>, "Vec2<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);

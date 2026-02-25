@@ -46,6 +46,13 @@ namespace pr::math
 		constexpr Vec3(Vec2<S> v, S z_)
 			:Vec3(vec(v).x, vec(v).y, z_)
 		{}
+		constexpr Vec3(AxisId axis_id)
+			:Vec3(
+				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosZ ? Sign<S>(axis_id) : S(0)
+			)
+		{}
 
 		// Array access
 		constexpr S operator [] (int i) const
@@ -124,15 +131,15 @@ namespace pr::math
 		}
 	};
 	
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Vec3<scalar>>\
-		: vector_traits_base<scalar, scalar, 3>\
-		, vector_access_member<Vec3<scalar>, scalar, 3>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec3<element>>\
+		: vector_traits_base<element, element, 3>\
+		, vector_access_member<Vec3<element>, element, 3>\
 	{};\
 	\
-	static_assert(VectorType<Vec3<scalar>>, "Vec3<"#scalar"> is not a valid vector type");\
-	static_assert(sizeof(Vec3<scalar>) == 3*sizeof(scalar), "Vec3<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Vec3<scalar>>, "Vec3<"#scalar"> is not trivially copyable");
+	static_assert(VectorType<Vec3<element>>, "Vec3<"#element"> is not a valid vector type");\
+	static_assert(sizeof(Vec3<element>) == 3*sizeof(element), "Vec3<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec3<element>>, "Vec3<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);

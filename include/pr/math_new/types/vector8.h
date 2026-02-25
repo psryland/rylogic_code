@@ -11,11 +11,12 @@
 
 namespace pr::math
 {
-	template <ScalarType S>
+	template <ScalarType S, typename T>
 	struct Vec8
 	{
 		// Notes:
-		//  - Spatial vectors describe a vector at a point plus the field of vectors around that point. 
+		//  - Spatial vectors describe a vector at a point plus the field of vectors around that point.
+		//  - Spatial vectors live in two separate vector spaces. The T parameter protects against mixing spaces.
 		using Vec3 = Vec3<S>;
 		using Vec4 = Vec4<S>;
 
@@ -54,6 +55,24 @@ namespace pr::math
 			: ang(wx, wy, wz, ww)
 			, lin(vx, vy, vz, vw)
 		{
+		}
+
+		// Reinterpret as a different vector type
+		template <typename U> explicit operator Vec8<S, U> const& () const
+		{
+			return reinterpret_cast<Vec8<S, U> const&>(*this);
+		}
+		template <typename U> explicit operator Vec8<S, U>& ()
+		{
+			return reinterpret_cast<Vec8<S, U>&>(*this);
+		}
+		operator Vec8<S, void> const& () const
+		{
+			return reinterpret_cast<Vec8<S, void> const&>(*this);
+		}
+		operator Vec8<S, void>& ()
+		{
+			return reinterpret_cast<Vec8<S, void>&>(*this);
 		}
 
 		// Array access
@@ -139,11 +158,19 @@ namespace pr::math
 		#pragma endregion
 	};
 
-	// Note: Vec8 isn't really a vector type, but it has the same memory layout as 8 scalars, so we can treat it as a vector for the purposes of generic algorithms.
+	// Note: Vec8 isn't really a VectorType. It can't be used with the generic vector functions. We can do checks though.
+	#define PR_MATH_DEFINE_TYPE(element)\
+	static_assert(sizeof(Vec8<element, void>) == 8*sizeof(element), "Vec8<"#element",T> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec8<element, void>>, "Vec8<"#element",T> is not trivially copyable");
+	PR_MATH_DEFINE_TYPE(float);
+	PR_MATH_DEFINE_TYPE(double);
+	PR_MATH_DEFINE_TYPE(int32_t);
+	PR_MATH_DEFINE_TYPE(int64_t);
+	#undef PR_MATH_DEFINE_TYPE
 
 	// Compare for floating point equality
-	template <ScalarType S>
-	constexpr bool FEql(Vec8<S> lhs, Vec8<S> rhs)
+	template <ScalarType S, typename T>
+	constexpr bool FEql(Vec8<S, T> lhs, Vec8<S, T> rhs)
 	{
 		return
 			FEql(lhs.ang, rhs.ang) &&
@@ -151,17 +178,18 @@ namespace pr::math
 	}
 
 	// Project a vector onto an axis. Loosely "dot(vec,axis)*axis"
-	template <ScalarType S>
-	constexpr inline Vec8<S> Proj(Vec8<S> vec, Vec4<S> axis)
+	template <ScalarType S, typename T>
+	constexpr inline Vec8<S, T> Proj(Vec8<S, T> vec, Vec4<S> axis)
 	{
-		return Vec8<S>{
-			Dot(vec.ang, axis) * axis,
-			Dot(vec.lin, axis) * axis};
+		return Vec8<S, T>{
+			Dot(vec.ang, axis)* axis,
+			Dot(vec.lin, axis)* axis
+		};
 	}
 
 	// Reflect a vector. Reverses the components of 'vec' in the direction of 'normal'
-	template <ScalarType S>
-	constexpr inline Vec8<S> Reflect(Vec8<S> vec, Vec4<S> normal)
+	template <ScalarType S, typename T>
+	constexpr inline Vec8<S, T> Reflect(Vec8<S, T> vec, Vec4<S> normal)
 	{
 		return vec - S(2) * Proj(vec, normal);
 	}

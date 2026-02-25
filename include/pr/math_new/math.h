@@ -16,9 +16,16 @@
 //  - Functions are implemented for vector concepts, not specific types. So that they can be used on
 //    any type that conforms to the vector concept
 
+// Design Goals:
+//  - Vector types and functions should be independent. Functions should work for any type that meets
+//    the vector concept.
+//  - Vector types do not contain functions because they would be limited to just that type. They can,
+//    however, contain methods that forward to global functions (e.g. Vec3::Length() forwards to Length(Vec3)).
+
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
+#include "pr/math_new/core/axis_id.h"
 #include "pr/math_new/core/functions.h"
 #include "pr/math_new/types/vector2.h"
 #include "pr/math_new/types/vector3.h"
@@ -26,16 +33,10 @@
 #include "pr/math_new/types/vector8.h"
 #include "pr/math_new/types/quaternion.h"
 #include "pr/math_new/types/transform.h"
+#include "pr/math_new/types/matrix2x2.h"
+#include "pr/math_new/types/matrix3x4.h"
 // No non-standard dependencies outside of './'
 
-// #include "pr/maths/forward.h"
-// #include "pr/maths/constants.h"
-// #include "pr/maths/limits.h"
-// #include "pr/maths/maths_core.h"
-// #include "pr/maths/vector8.h"
-// #include "pr/maths/quaternion.h"
-// #include "pr/maths/matrix2x2.h"
-// #include "pr/maths/matrix3x4.h"
 // #include "pr/maths/matrix4x4.h"
 // #include "pr/maths/matrix6x8.h"
 // #include "pr/maths/matrix.h"
@@ -54,5 +55,20 @@
 // #include "pr/maths/polynomial.h"
 // #include "pr/maths/constants_vector.h"
 
+// @Copilot, please check each function for mathematical correctness and numerical stability.
+
+// @Copilot, look for patterns that appear to be broken. There should be a sort of symmetry to the code.
+
 // @Copilot, please check this math library for consistency and correctness.
-// Also, look for any missing constexpr, noexcept, or other qualifiers that could be added to improve the code.
+
+// @Copilot, please look for any missing constexpr
+
+// @Copilot, please look for any missing noexcept, or other qualifiers that could be added to improve the code/performance.
+
+// @Copilot, please check that I've used pr_assert rather than assert, and that the format is pr_assert(condition && "message")
+
+// @Copilot, check for consistency with the design goals
+
+// @Copilot, check that 'pr_vectorcall ' is used for all vector functions, and that it's not used for non-vector functions.
+
+// @Copilot, check that vector types (i.e. Rank1) are passed by value, and that matrix types (i.e. Rank2) are passed by reference

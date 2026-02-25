@@ -131,6 +131,9 @@
     <Filter Include="pr\math_new\types">
       <UniqueIdentifier>{8c56cf7a-9ff9-4884-90ca-60c1278fafd1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\math_new\primitives">
+      <UniqueIdentifier>{b21d84d7-5c39-4e48-8845-8b4097746cbc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h">
@@ -1202,6 +1205,15 @@
       <Filter>pr\math_new\tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\tests\vector8_tests.h">
+      <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\matrix6x8.h">
+      <Filter>pr\math_new\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\core\axis_id.h">
+      <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix6x8_tests.h">
       <Filter>pr\math_new\tests</Filter>
     </ClInclude>
   </ItemGroup>
