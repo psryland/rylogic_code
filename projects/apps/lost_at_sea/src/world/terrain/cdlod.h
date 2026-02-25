@@ -12,15 +12,15 @@ namespace las
 {
 	namespace cdlod
 	{
-		static constexpr int GridN = 32;                              // Subdivisions per patch edge
-		static constexpr int GridVerts = GridN + 1;                   // Vertices per edge = 33
-		static constexpr int GridVertCount = GridVerts * GridVerts;   // 1089
-		static constexpr int GridIdxCount = GridN * GridN * 6;        // 6144
-		static constexpr int SkirtVertCount = 4 * GridVerts;          // 132 (one strip per edge)
-		static constexpr int SkirtIdxCount = 4 * GridN * 6;           // 768 (quads = 2 tris each)
-		static constexpr int TotalVertCount = GridVertCount + SkirtVertCount; // 1221
-		static constexpr int TotalIdxCount = GridIdxCount + SkirtIdxCount;    // 6912
-		static constexpr float MinPatchSize = 32.0f;                  // Finest patch size (1m cells)
+		static constexpr int GridN = 64;                              // Subdivisions per patch edge
+		static constexpr int GridVerts = GridN + 1;                   // Vertices per edge = 65
+		static constexpr int GridVertCount = GridVerts * GridVerts;   // 4225
+		static constexpr int GridIdxCount = GridN * GridN * 6;        // 24576
+		static constexpr int SkirtVertCount = 4 * GridVerts;          // 260 (one strip per edge)
+		static constexpr int SkirtIdxCount = 4 * GridN * 6;           // 1536 (quads = 2 tris each)
+		static constexpr int TotalVertCount = GridVertCount + SkirtVertCount; // 4485
+		static constexpr int TotalIdxCount = GridIdxCount + SkirtIdxCount;    // 26112
+		static constexpr float MinPatchSize = 16.0f;                  // Finest patch size (0.25m cells)
 		static constexpr float MaxDrawDist = 5000.0f;                 // Maximum draw distance
 		static constexpr int MaxPatches = 512;                        // Max visible patches per frame
 		static constexpr float SubdivFactor = 2.0f;                    // Subdivide when cam dist < size * factor

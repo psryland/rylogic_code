@@ -32,7 +32,7 @@ namespace las
 		, m_cbuf()
 		, m_tuning()
 	{
-		static_assert(sizeof(shaders::terrain::CBufTerrain) <= sizeof(m_cbuf), "CBufTerrain exceeds m_cbuf storage");
+		static_assert(sizeof(shaders::terrain::CBufTerrain) == sizeof(m_cbuf), "CBufTerrain exceeds m_cbuf storage");
 
 		// Compile the shader
 		auto compiler = ShaderCompiler{}
@@ -56,7 +56,7 @@ namespace las
 			.m_sun_direction = Normalise(v4(0.5f, 0.3f, 0.8f, 0.0f)),
 			.m_sun_colour = v4(1.0f, 0.95f, 0.85f, 1.0f),
 			.m_weather_params = v4(m_tuning.m_warp_freq, m_tuning.m_warp_strength, m_tuning.m_ridge_threshold, m_tuning.m_macro_freq),
-			.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, 0),
+			.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, m_tuning.m_underwater_smooth_depth),
 		};
 	}
 
@@ -97,6 +97,6 @@ namespace las
 		cbuf.m_noise_params = v4(m_tuning.m_octaves, m_tuning.m_base_freq, m_tuning.m_persistence, m_tuning.m_amplitude);
 		cbuf.m_noise_bias = v4(m_tuning.m_sea_level_bias, 0, 0, 0);
 		cbuf.m_weather_params = v4(m_tuning.m_warp_freq, m_tuning.m_warp_strength, m_tuning.m_ridge_threshold, m_tuning.m_macro_freq);
-		cbuf.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, 0);
+		cbuf.m_beach_params = v4(m_tuning.m_beach_height, m_tuning.m_macro_scale_min, m_tuning.m_macro_scale_max, m_tuning.m_underwater_smooth_depth);
 	}
 }

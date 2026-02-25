@@ -42,6 +42,7 @@ namespace pr::rdr12
 	public:
 
 		ResourceStore(Renderer& rdr);
+		~ResourceStore();
 
 		// Return one of the stock textures. These should be considered immutable.
 		Texture2DPtr StockTexture(EStockTexture id) const;

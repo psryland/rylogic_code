@@ -40,6 +40,15 @@
     <Filter Include="res">
       <UniqueIdentifier>{97b81594-9f7a-4667-883f-1d5f153d5851}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\core\cameras">
+      <UniqueIdentifier>{5d2d16bc-f36b-4290-b27a-15cf70e16369}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core\input">
+      <UniqueIdentifier>{e0ddeaa3-a1b5-448d-9fb1-03ba675bc6e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deps">
+      <UniqueIdentifier>{2ba3e61f-561b-4cb8-b31e-34d3f2d69c33}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
@@ -78,6 +87,21 @@
     <ClCompile Include="src\world\sky\shaders\procedural_sky_shader.cpp">
       <Filter>src\world\sky\shaders</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\input\input_handler.cpp">
+      <Filter>src\core\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\cameras\free_camera.cpp">
+      <Filter>src\core\cameras</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\cameras\icamera.cpp">
+      <Filter>src\core\cameras</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\input\modes.cpp">
+      <Filter>src\core\input</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\cameras\ship_camera.cpp">
+      <Filter>src\core\cameras</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\forward.h">
@@ -88,9 +112,6 @@
     </ClInclude>
     <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\core\day_night_cycle.h">
-      <Filter>src\core</Filter>
     </ClInclude>
     <ClInclude Include="src\world\ocean\ocean.h">
       <Filter>src\world\ocean</Filter>
@@ -127,6 +148,27 @@
     </ClInclude>
     <ClInclude Include="src\diag\diag_ui.h">
       <Filter>src\diag</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\cameras\free_camera.h">
+      <Filter>src\core\cameras</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\cameras\icamera.h">
+      <Filter>src\core\cameras</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\sky\day_night_cycle.h">
+      <Filter>src\world\sky</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\input\actions.h">
+      <Filter>src\core\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\input\input_handler.h">
+      <Filter>src\core\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\input\modes.h">
+      <Filter>src\core\input</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\cameras\ship_camera.h">
+      <Filter>src\core\cameras</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -174,5 +216,10 @@
     <ResourceCompile Include="src\world\sky\shaders\procedural_sky.rc">
       <Filter>src\world\sky\shaders</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\imgui.dll">
+      <Filter>deps</Filter>
+    </DependencyLink>
   </ItemGroup>
 </Project>

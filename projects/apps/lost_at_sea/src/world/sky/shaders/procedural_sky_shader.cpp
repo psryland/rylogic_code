@@ -27,7 +27,7 @@ namespace las
 		, m_ps_bytecode()
 		, m_cbuf()
 	{
-		static_assert(sizeof(shaders::procedural_sky::CBufProceduralSky) <= sizeof(m_cbuf),
+		static_assert(sizeof(shaders::procedural_sky::CBufProceduralSky) == sizeof(m_cbuf),
 			"CBufProceduralSky exceeds m_cbuf storage");
 
 		auto compiler = ShaderCompiler{}

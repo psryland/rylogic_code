@@ -90,14 +90,14 @@ namespace pr::app
 		Main& operator=(Main const&) = delete;
 		virtual ~Main() {}
 
-		// Mouse navigation
-		virtual void Nav(v2 const& pt, gui::EMouseKey btn_state, bool nav_start_stop)
+		// Default mouse navigation
+		virtual void Nav(v2 pt, gui::EMouseKey btn_state, bool nav_start_stop)
 		{
 			auto op = camera::MouseBtnToNavOp(int(btn_state));
 			m_cam.MouseControl(pt, op, nav_start_stop);
 			RenderNeeded();
 		}
-		virtual void NavZ(v2 const& pt, float delta, bool along_ray)
+		virtual void NavZ(v2 pt, float delta, bool along_ray)
 		{
 			m_cam.MouseControlZ(pt, delta, along_ray);
 			RenderNeeded();

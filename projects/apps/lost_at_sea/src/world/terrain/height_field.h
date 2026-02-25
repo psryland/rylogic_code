@@ -26,5 +26,8 @@ namespace las
 		float HeightAt(float world_x, float world_y) const;
 		v4 NormalAt(float world_x, float world_y) const;
 		bool IsLand(float world_x, float world_y) const;
+
+		// Search for a high terrain point near 'centre', sampling in a grid of 'radius' extent.
+		v4 FindHighPoint(float centre_x, float centre_y, float radius = 2000.0f, float step = 50.0f) const;
 	};
 }

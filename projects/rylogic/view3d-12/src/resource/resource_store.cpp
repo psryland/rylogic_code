@@ -42,6 +42,13 @@ namespace pr::rdr12
 			m_stock_samplers[s_cast<int>(id)] = factory.CreateSampler(id);
 		}
 	}
+	ResourceStore::~ResourceStore()
+	{
+		// Explicitly release stock resources to ensure proper cleanup through Delete() pipeline
+		// before member destruction begins. This ensures the tracker sees remove() calls.
+		m_stock_samplers.clear();
+		m_stock_textures.clear();
+	}
 	
 	// Stock resources
 	Texture2DPtr ResourceStore::StockTexture(EStockTexture id) const

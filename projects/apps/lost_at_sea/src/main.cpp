@@ -4,22 +4,26 @@
 //************************************
 #include "src/forward.h"
 #include "src/main.h"
+#include "src/core/cameras/ship_camera.h"
+#include "src/core/cameras/free_camera.h"
 #include "src/world/terrain/shaders/terrain_shader.h"
 
 namespace las
 {
 	Main::Main(MainUI& ui)
 		:base(pr::app::DefaultSetup(), ui)
+		, m_input()
+		, m_camera()
+		, m_camera_mode(0)
 		, m_sky(m_rdr)
 		, m_day_cycle()
 		, m_ocean(m_rdr)
 		, m_distant_ocean(m_rdr)
 		, m_terrain(m_rdr)
 		, m_height_field(42)
-		, m_ship(m_rdr, m_ocean, v4::Origin())
+		, m_ship(m_rdr, m_height_field, v4::Origin())
 		, m_sim_state()
 		, m_sim_time(0.0)
-		, m_move_speed(20.0f)
 		, m_render_frame(0)
 		, m_step_graph(2)   // Step graph: small thread pool (input-heavy, will grow with physics/AI)
 		, m_render_graph(4) // Render graph: larger pool for parallel CB prep
@@ -33,13 +37,15 @@ namespace las
 		})
 		, m_diag()
 	{
-		// Position the camera: looking forward (+X) from above the ocean
+		// Camera setup
 		m_cam.FocusDist(10.0f);
-		m_cam.Near(0.01f, false);
+		m_cam.Near(0.5f, false);
 		m_cam.Far(7000.0f, false);
-		m_cam.LockMask(Camera::ELockMask::FocusDistance);
-		m_cam.LookAt(v4(-5, 0, 3, 1), v4(0, 0, 0, 1), v4(0, 0, 1, 0));
 		m_cam.Align(v4ZAxis);
+
+		// Default camera: ship camera (third-person follow)
+		m_camera = CameraPtr(new camera::ShipCamera(m_cam, m_input, m_ship));
+		m_input.Mode(input::EMode::ShipControl);
 
 		// Watch for scene renders
 		m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1, _2);
@@ -69,6 +75,10 @@ namespace las
 			ui.Separator();
 			ui.Text("-- Beach --");
 			ui.SliderFloat("Beach Height", &tuning.m_beach_height, 5.0f, 200.0f);
+
+			ui.Separator();
+			ui.Text("-- Underwater --");
+			ui.SliderFloat("Smooth Depth", &tuning.m_underwater_smooth_depth, 10.0f, 200.0f);
 		});
 	}
 	Main::~Main()
@@ -80,37 +90,34 @@ namespace las
 		m_window.m_gsync.Wait();
 	}
 
+	// Cycle to the next camera mode
+	void Main::CycleCamera()
+	{
+		static constexpr int CameraModeCount = 2;
+		m_camera_mode = (m_camera_mode + 1) % CameraModeCount;
+
+		switch (m_camera_mode)
+		{
+			case 0: // Ship camera (default)
+				m_camera = CameraPtr(new camera::ShipCamera(m_cam, m_input, m_ship));
+				m_input.Mode(input::EMode::ShipControl);
+				break;
+			case 1: // Free camera
+				m_camera = CameraPtr(new camera::FreeCamera(m_cam, m_input));
+				m_input.Mode(input::EMode::FreeCamera);
+				break;
+		}
+	}
+
 	// Simulation step — builds and runs the step task graph
-	void Main::Step(double elapsed_seconds)
+	void Main::SimStep(double elapsed_seconds)
 	{
 		m_sim_time += elapsed_seconds;
 		auto dt = static_cast<float>(elapsed_seconds);
 
-		// Input task: process WASD movement
-		m_step_graph.Add(StepTaskId::Input, [&](auto&) -> pr::task_graph::Task {
-			auto speed = m_move_speed * (KeyDown(VK_SHIFT) ? 3.0f : 1.0f);
-			auto c2w = m_cam.CameraToWorld();
-			auto forward = -c2w.z;
-			auto right = c2w.x;
-			auto move = v4::Zero();
-			if (KeyDown('W')) move += forward;
-			if (KeyDown('S')) move -= forward;
-			if (KeyDown('D')) move += right;
-			if (KeyDown('A')) move -= right;
-			if (LengthSq(move) > 0)
-			{
-				move = Normalise(move) * speed * dt;
-				move.z = 0;
-				c2w.pos += move;
-				m_cam.CameraToWorld(c2w);
-			}
-			co_return;
-		});
-
-		// Physics task: step rigid bodies (depends on Input for camera/intent)
-		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto ctx) -> pr::task_graph::Task {
-			co_await ctx.Wait(StepTaskId::Input);
-			m_ship.Step(dt, m_ocean, static_cast<float>(m_sim_time));
+		// Physics task: step rigid bodies
+		m_step_graph.Add(StepTaskId::Physics, [&, dt](auto&) -> pr::task_graph::Task {
+			m_ship.Step(dt, m_ocean, m_height_field, static_cast<float>(m_sim_time));
 			co_return;
 		});
 
@@ -122,7 +129,6 @@ namespace las
 			m_day_cycle.Update(dt);
 
 			auto lock = m_sim_state.Lock();
-			lock->m_camera_pos = m_cam.CameraToWorld().pos;
 			lock->m_sim_time = m_sim_time;
 			lock->m_sun_direction = m_day_cycle.SunDirection();
 			lock->m_sun_colour = m_day_cycle.SunColour();
@@ -158,8 +164,8 @@ namespace las
 
 		// Read the latest simulation state snapshot
 		auto const& sim = m_sim_state.Read();
-		auto cam_pos = sim.m_camera_pos;
 		auto time = static_cast<float>(sim.m_sim_time);
+		auto cam_pos = m_cam.CameraToWorld().pos; // Current camera position (updated by input handler in render loop)
 		auto sun_dir = sim.m_sun_direction;
 		auto sun_col = sim.m_sun_colour;
 		auto sun_int = sim.m_sun_intensity;
@@ -255,14 +261,18 @@ namespace las
 
 			m_imgui.Separator();
 
-			// Task graph thread counts
-			*std::format_to(buf, "Step Threads: {}", m_step_graph.ThreadCount()) = 0;
-			m_imgui.Text(buf);
-			*std::format_to(buf, "Render Threads: {}", m_render_graph.ThreadCount()) = 0;
-			m_imgui.Text(buf);
 			*std::format_to(buf, "Terrain Patches: {}", m_terrain.PatchCount()) = 0;
 			m_imgui.Text(buf);
-			*std::format_to(buf, "Ocean Patches: {}", m_distant_ocean.PatchCount()) = 0;
+			*std::format_to(buf, "Input Queue: {}", m_input.EventCount()) = 0;
+			m_imgui.Text(buf);
+			*std::format_to(buf, "Camera: {} [{:.1f} m/s]", m_camera->Name(), m_camera->Speed()) = 0;
+			m_imgui.Text(buf);
+
+			m_imgui.Separator();
+
+			// Ship position
+			auto ship_pos = m_ship.m_body.O2W().pos;
+			*std::format_to(buf, "Ship: ({:.1f}, {:.1f}, {:.1f})", ship_pos.x, ship_pos.y, ship_pos.z) = 0;
 			m_imgui.Text(buf);
 
 			m_imgui.Separator();
@@ -299,29 +309,50 @@ namespace las
 	MainUI::MainUI(wchar_t const*, int)
 		:base(Params().title(AppTitle()))
 	{
-		m_msg_loop.m_config.msgs_per_loop = 1;
+		// Drain all pending messages each frame so input is responsive
+		// (default is 1000, which is fine for real-time games)
 
 		// Fixed step simulation at 60Hz, render as fast as possible (capped by vsync/present)
-		m_msg_loop.AddLoop(60.0, false, [this](double dt) { if (m_main) m_main->Step(dt); });
-		m_msg_loop.AddLoop(120.0, true, [this](double) { if (m_main) m_main->DoRender(true); });
+		m_msg_loop.AddLoop(60.0, false, [this](double dt)
+		{
+			if (!m_main) return;
+			
+			m_main->SimStep(dt);
+		});
+		m_msg_loop.AddLoop(120.0, true, [this](double dt)
+		{
+			if (!m_main) return;
+
+			// Process input in the render loop so the camera works even when the simulation is paused
+			m_main->m_input.Step(static_cast<float>(dt));
+			m_main->m_camera->Update(static_cast<float>(dt));
+			m_main->DoRender(true);
+		});
 	}
 
 	bool MainUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
-		// F3 toggles the diagnostic overlay (before ImGui gets it)
-		if (m_main && message == WM_KEYDOWN && wparam == VK_F3)
+		// F1 cycles camera mode, F3 toggles diagnostics (before ImGui gets them)
+		if (m_main && message == WM_KEYDOWN)
 		{
-			m_main->m_diag.Toggle();
-			result = 0;
-			return true;
+			if (wparam == VK_F1)
+			{
+				m_main->CycleCamera();
+				result = 0;
+				return true;
+			}
+			if (wparam == VK_F3)
+			{
+				m_main->m_diag.Toggle();
+				result = 0;
+				return true;
+			}
 		}
 
-		// Forward to imgui first
-		if (m_main && m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam))
-		{
-			result = 0;
-			return true;
-		}
+		// Let imgui see all messages (for hover, panel interaction, etc.)
+		// but don't suppress game input — the game's input handler also needs them.
+		if (m_main)
+			m_main->m_imgui.WndProc(parent_hwnd, message, wparam, lparam);
 
 		// On WM_CLOSE, tear down the renderer before the HWND is destroyed.
 		// DXGI's swap chain can post internal messages that starve WM_QUIT

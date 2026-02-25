@@ -139,8 +139,9 @@ namespace las
 		}
 
 		// Bbox covers the unit grid with generous height range for frustum culling.
+		// Height range must cover the full noise amplitude to avoid culling tall peaks.
 		// When transformed by the instance i2w (scale + translate), this gives world-space bounds.
-		buf.m_bbox = BBox(v4(0.5f, 0.5f, 0, 1), v4(0.5f, 0.5f, 300, 0));
+		buf.m_bbox = BBox(v4(0.5f, 0.5f, 0, 1), v4(0.5f, 0.5f, 1000, 0));
 
 		// Create the terrain shader
 		auto shdr = Shader::Create<TerrainShader>(rdr);

@@ -23,7 +23,7 @@ namespace las
 			#undef PR_RDR_INST
 		};
 
-		static constexpr float DomeScale = 5000.0f;
+		static constexpr float DomeScale = 3500.0f;
 
 		Instance m_inst;
 		ProceduralSkyShader* m_shader;

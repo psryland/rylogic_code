@@ -51,4 +51,27 @@ namespace las
 	{
 		return HeightAt(world_x, world_y) > 0.0f;
 	}
+
+	v4 HeightField::FindHighPoint(float centre_x, float centre_y, float radius, float step) const
+	{
+		auto best_x = centre_x;
+		auto best_y = centre_y;
+		auto best_z = HeightAt(centre_x, centre_y);
+
+		for (auto y = centre_y - radius; y <= centre_y + radius; y += step)
+		{
+			for (auto x = centre_x - radius; x <= centre_x + radius; x += step)
+			{
+				auto z = HeightAt(x, y);
+				if (z > best_z)
+				{
+					best_x = x;
+					best_y = y;
+					best_z = z;
+				}
+			}
+		}
+
+		return v4{best_x, best_y, best_z, 1};
+	}
 }

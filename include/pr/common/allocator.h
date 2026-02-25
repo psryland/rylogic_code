@@ -11,6 +11,8 @@
 
 #define PR_DBG_MEMORY_ALLOC_CALLSTACKS 0
 #if PR_DBG_MEMORY_ALLOC_CALLSTACKS
+#include <fstream>
+#include <format>
 #include "pr/win32/stackdump.h"
 #endif
 
@@ -143,7 +145,9 @@ namespace pr
 
 			Allocation al(ptr);
 			#if PR_DBG_MEMORY_ALLOC_CALLSTACKS
-			DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(FmtS("%S(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
+			DumpStack([&](std::string const& name, std::string const& file, int line) {
+				al.m_callstack.append(std::format("  {}({}): {}\n", file, line, name));
+			}, 1, 10);
 			#endif
 			m_live.insert(al);
 			return true;

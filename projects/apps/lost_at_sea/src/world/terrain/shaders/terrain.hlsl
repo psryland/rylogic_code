@@ -101,17 +101,22 @@ float terrain_height(float world_x, float world_y)
 	float amp = 1.0;
 	float max_amp = 0.0;
 	float ridge_blend = 1.0;
+	float detail_atten = 1.0; // reduces fine octaves underwater
 
 	for (int i = 0; i < octaves; ++i)
 	{
 		float n = noise2d(wx * freq, wy * freq);
 
 		// After the first 4 (coarse) octaves, estimate the base height to determine
-		// whether we're above or below sea level. Suppress ridging underwater.
+		// whether we're above or below sea level. Suppress ridging and fine detail underwater.
 		if (i == 4)
 		{
 			float base_h = (value / max_amp + sea_level_bias) * amplitude;
 			ridge_blend = saturate(base_h / m_weather_params.z);
+
+			// Underwater: smoothly attenuate fine-detail octaves for a smoother sea floor
+			float smooth_depth = m_beach_params.w;
+			detail_atten = saturate(base_h / max(smooth_depth, 1.0) + 1.0);
 		}
 
 		// Ridged noise for fine octaves: sharp ridges where noise crosses zero.
@@ -120,6 +125,7 @@ float terrain_height(float world_x, float world_y)
 		{
 			float n_ridged = 1.0 - 2.0 * abs(n);
 			n = lerp(n, n_ridged, ridge_blend);
+			n *= detail_atten;
 		}
 
 		value += n * amp;

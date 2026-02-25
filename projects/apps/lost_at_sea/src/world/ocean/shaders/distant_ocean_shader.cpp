@@ -27,7 +27,7 @@ namespace las
 		, m_ps_bytecode()
 		, m_cbuf()
 	{
-		static_assert(sizeof(shaders::distant_ocean::CBufDistantOcean) <= sizeof(m_cbuf), "CBufDistantOcean exceeds m_cbuf storage");
+		static_assert(sizeof(shaders::distant_ocean::CBufDistantOcean) == sizeof(m_cbuf), "CBufDistantOcean exceeds m_cbuf storage");
 
 		auto compiler = ShaderCompiler{}
 			.Source(resource::Read<char>(L"DISTANT_OCEAN_HLSL", L"TEXT"))

@@ -12,6 +12,7 @@
 namespace las
 {
 	struct Ocean;
+	struct HeightField;
 
 	struct Ship
 	{
@@ -38,10 +39,10 @@ namespace las
 		// Graphics
 		Instance m_inst;
 
-		Ship(Renderer& rdr, Ocean const& ocean, v4 location);
+		Ship(Renderer& rdr, HeightField const& height_field, v4 location);
 
-		// Step the ship's physics: apply gravity, constrain to the ocean surface.
-		void Step(float dt, Ocean const& ocean, float sim_time);
+		// Step the ship's physics: apply gravity, ocean buoyancy, terrain collision.
+		void Step(float dt, Ocean const& ocean, HeightField const& height_field, float sim_time);
 
 		// Prepare shader constant buffers for rendering (thread-safe).
 		void PrepareRender(v4 camera_world_pos);

@@ -32,6 +32,9 @@ namespace las
 
 		// Beach flattening
 		float m_beach_height = 80.0f;
+
+		// Underwater smoothing: depth (m below sea level) at which fine detail is fully removed
+		float m_underwater_smooth_depth = 60.0f;
 	};
 
 	struct TerrainShader : rdr12::Shader
@@ -43,7 +46,7 @@ namespace las
 
 		// Terrain constant buffer data. Shared parameters set in SetupFrame,
 		// per-patch morph range overridden in SetupElement.
-		alignas(16) std::byte m_cbuf[256];
+		alignas(16) std::byte m_cbuf[128];
 
 		// Tunable parameters, modifiable via the diagnostic UI
 		TerrainTuning m_tuning;
