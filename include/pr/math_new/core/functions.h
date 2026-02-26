@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -400,6 +400,10 @@ namespace pr::math
 	{
 		return S(0);
 	}
+	template <typename S> constexpr S One()
+	{
+		return S(1);
+	}
 	template <typename S> constexpr S Min()
 	{
 		return std::numeric_limits<S>::lowest();
@@ -408,34 +412,84 @@ namespace pr::math
 	{
 		return std::numeric_limits<S>::max();
 	}
+	template <typename S> constexpr S Infinity()
+	{
+		return std::numeric_limits<S>::infinity();
+	}
+	template <typename S> constexpr S Epsilon()
+	{
+		return std::numeric_limits<S>::epsilon();
+	}
 	template <VectorType Vec> constexpr Vec Zero()
 	{
 		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = Zero<typename vt::component_t>();
-		if constexpr (vt::dimension > 1) vec(res).y = Zero<typename vt::component_t>();
-		if constexpr (vt::dimension > 2) vec(res).z = Zero<typename vt::component_t>();
-		if constexpr (vt::dimension > 3) vec(res).w = Zero<typename vt::component_t>();
+		if constexpr (vt::dimension > 0) vec(res).x = Zero<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Zero<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Zero<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Zero<C>();
+		return res;
+	}
+	template <VectorType Vec> constexpr Vec One()
+	{
+		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = One<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = One<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = One<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = One<C>();
 		return res;
 	}
 	template <VectorType Vec> constexpr Vec Min()
 	{
 		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = Min<typename vt::component_t>();
-		if constexpr (vt::dimension > 1) vec(res).y = Min<typename vt::component_t>();
-		if constexpr (vt::dimension > 2) vec(res).z = Min<typename vt::component_t>();
-		if constexpr (vt::dimension > 3) vec(res).w = Min<typename vt::component_t>();
+		if constexpr (vt::dimension > 0) vec(res).x = Min<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Min<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Min<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Min<C>();
 		return res;
 	}
 	template <VectorType Vec> constexpr Vec Max()
 	{
 		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = Max<typename vt::component_t>();
-		if constexpr (vt::dimension > 1) vec(res).y = Max<typename vt::component_t>();
-		if constexpr (vt::dimension > 2) vec(res).z = Max<typename vt::component_t>();
-		if constexpr (vt::dimension > 3) vec(res).w = Max<typename vt::component_t>();
+		if constexpr (vt::dimension > 0) vec(res).x = Max<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Max<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Max<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Max<C>();
+		return res;
+	}
+	template <VectorType Vec> constexpr Vec Infinity()
+	{
+		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Infinity<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Infinity<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Infinity<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Infinity<C>();
+		return res;
+	}
+	template <VectorType Vec> constexpr Vec Epsilon()
+	{
+		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Epsilon<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Epsilon<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Epsilon<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Epsilon<C>();
 		return res;
 	}
 	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 1) constexpr Vec XAxis()
@@ -498,11 +552,11 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(1);
 		return res;
 	}
-	template <VectorType Vec> requires (VectorType<typename vector_traits<Vec>::component_t>) constexpr Vec Identity()
+	template <VectorType Mat> requires (IsRank2<Mat>) constexpr Mat Identity()
 	{
-		using vt = vector_traits<Vec>;
+		using vt = vector_traits<Mat>;
 
-		Vec res = {};
+		Mat res = {};
 		if constexpr (vt::dimension > 0) vec(res).x = XAxis<typename vt::component_t>();
 		if constexpr (vt::dimension > 1) vec(res).y = YAxis<typename vt::component_t>();
 		if constexpr (vt::dimension > 2) vec(res).z = ZAxis<typename vt::component_t>();
@@ -799,11 +853,23 @@ namespace pr::math
 		using S = typename vt::element_t;
 
 		S sum = {};
-		if constexpr (vt::dimension >= 1) sum += vec(v).x;
-		if constexpr (vt::dimension >= 2) sum += vec(v).y;
-		if constexpr (vt::dimension >= 3) sum += vec(v).z;
-		if constexpr (vt::dimension >= 4) sum += vec(v).w;
+		if constexpr (vt::dimension > 0) sum += vec(v).x;
+		if constexpr (vt::dimension > 1) sum += vec(v).y;
+		if constexpr (vt::dimension > 2) sum += vec(v).z;
+		if constexpr (vt::dimension > 3) sum += vec(v).w;
 		return sum;
+	}
+
+	// Scale each component of 'mat' by the values in 'scale'
+	template <VectorType Mat> requires (IsRank2<Mat>)
+	constexpr Mat pr_vectorcall CompMul(Mat const& mat, typename vector_traits<Mat>::component_t scale)
+	{
+		Mat m = mat;
+		if constexpr (vector_traits<Mat>::dimension > 0) vec(m).x *= scale;
+		if constexpr (vector_traits<Mat>::dimension > 1) vec(m).y *= scale;
+		if constexpr (vector_traits<Mat>::dimension > 2) vec(m).z *= scale;
+		if constexpr (vector_traits<Mat>::dimension > 3) vec(m).w *= scale;
+		return m;
 	}
 
 	// Min/Max element (i.e. nearest to -inf/+inf)
@@ -1397,11 +1463,37 @@ namespace pr::math
 		}
 		if constexpr (vt::dimension == 4)
 		{
+			auto c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
+			auto c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
+			auto c3 = (mat.z.y * mat.w.z) - (mat.z.z * mat.w.y);
+			auto c4 = (mat.z.x * mat.w.w) - (mat.z.w * mat.w.x);
+			auto c5 = (mat.z.x * mat.w.z) - (mat.z.z * mat.w.x);
+			auto c6 = (mat.z.x * mat.w.y) - (mat.z.y * mat.w.x);
 			return
-				vec(mat).x * Cross3(vec(mat).y, vec(mat).z, vec(mat).w) -
-				vec(mat).y * Cross3(vec(mat).x, vec(mat).z, vec(mat).w) +
-				vec(mat).z * Cross3(vec(mat).x, vec(mat).y, vec(mat).w) -
-				vec(mat).w * Cross3(vec(mat).x, vec(mat).y, vec(mat).z);
+				mat.x.x * (mat.y.y*c1 - mat.y.z*c2 + mat.y.w*c3) -
+				mat.x.y * (mat.y.x*c1 - mat.y.z*c4 + mat.y.w*c5) +
+				mat.x.z * (mat.y.x*c2 - mat.y.y*c4 + mat.y.w*c6) -
+				mat.x.w * (mat.y.x*c3 - mat.y.y*c5 + mat.y.z*c6);
+		}
+	}
+
+	// Return the 4x4 determinant of the affine transform 'mat'
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr typename vector_traits<Mat>::element_t pr_vectorcall DeterminantAffine(Mat const& mat)
+	{
+		using vt = vector_traits<Mat>;
+
+		// Theres probably versions of this for 2x2 and 3x3 as well
+		if constexpr (vt::dimension == 4)
+		{
+			pr_assert(IsAffine(mat) && "'mat' must be an affine transform to use this function");
+			return
+				(mat.x.x * mat.y.y * mat.z.z) +
+				(mat.x.y * mat.y.z * mat.z.x) +
+				(mat.x.z * mat.y.x * mat.z.y) -
+				(mat.x.z * mat.y.y * mat.z.x) -
+				(mat.x.y * mat.y.x * mat.z.z) -
+				(mat.x.x * mat.y.z * mat.z.y);
 		}
 	}
 
@@ -1426,11 +1518,44 @@ namespace pr::math
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
-		return Vec{
-			+vec(vec(mat).y).y * vec(vec(mat).z).z - vec(vec(mat).y).z * vec(vec(mat).z).y,
-			-vec(vec(mat).y).x * vec(vec(mat).z).z + vec(vec(mat).y).z * vec(vec(mat).z).x,
-			+vec(vec(mat).y).x * vec(vec(mat).z).y - vec(vec(mat).y).y * vec(vec(mat).z).x,
-		};
+
+		// @Copilot, please check if these are correct
+		if constexpr (vt::dimension == 2)
+		{
+			auto xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y;
+			auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y;
+
+			return Vec{
+				+yy,
+				-yx,
+			};
+		}
+		if constexpr (vt::dimension == 3)
+		{
+			auto xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y, xz = vec(vec(mat).x).z;
+			auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z;
+			auto zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z;
+
+			return Vec{
+				+yy * zz - yz * zy,
+				-yx * zz + yz * zx,
+				+yx * zy - yy * zx,
+			};
+		}
+		if constexpr (vt::dimension == 4)
+		{
+			auto xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y, xz = vec(vec(mat).x).z, xw = vec(vec(mat).x).w;
+			auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z, yw = vec(vec(mat).y).w;
+			auto zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z, zw = vec(vec(mat).z).w;
+			auto wx = vec(vec(mat).w).x, wy = vec(vec(mat).w).y, wz = vec(vec(mat).w).z, ww = vec(vec(mat).w).w;
+
+			return Vec{
+				+yy * (zz * ww - zw * wz) - yz * (zy * ww - zw * wy) + yw * (zy * wz - zz * wy),
+				-yx * (zz * ww - zw * wz) + yz * (zx * ww - zw * wx) - yw * (zx * wz - zz * wx),
+				+yx * (zy * ww - zw * wy) - yy * (zx * ww - zw * wx) + yw * (zx * wy - zy * wx),
+				-yx * (zy * wz - zz * wy) + yy * (zx * wz - zz * wx) - yz * (zx * wy - zy * wx),
+			};
+		}
 	}
 
 	// Normalise a vector
@@ -1516,9 +1641,9 @@ namespace pr::math
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
 
-		if constexpr (vt::dimension >= 1) if (!IsNormalised(vec(mat).x, tol)) return false;
-		if constexpr (vt::dimension >= 2) if (!IsNormalised(vec(mat).y, tol)) return false;
-		if constexpr (vt::dimension >= 3) if (!IsNormalised(vec(mat).z, tol)) return false;
+		if constexpr (vt::dimension >= 1) if (Abs(LengthSq(vec(mat).x) - S(1)) > tol) return false;
+		if constexpr (vt::dimension >= 2) if (Abs(LengthSq(vec(mat).y) - S(1)) > tol) return false;
+		if constexpr (vt::dimension >= 3) if (Abs(LengthSq(vec(mat).z) - S(1)) > tol) return false;
 		if constexpr (vt::dimension == 2) if (Abs(Cross(vec(mat).x, vec(mat).y) - S(1)) > tol) return false;
 		if constexpr (vt::dimension >= 3) if (Abs(Triple3(vec(mat).x, vec(mat).y, vec(mat).z) - S(1)) > tol) return false;
 		return true;
@@ -1531,10 +1656,17 @@ namespace pr::math
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
 
-		return
-			vec(vec(mat).x).w == S(0) &&
-			vec(vec(mat).y).w == S(0) &&
-			vec(vec(mat).z).w == S(0);
+		if constexpr (vt::dimension >= 3)
+		{
+			if (vec(vec(mat).x).w != S(0)) return false;
+			if (vec(vec(mat).y).w != S(0)) return false;
+			if (vec(vec(mat).z).w != S(0)) return false;
+		}
+		if constexpr (vt::dimension >= 4)
+		{
+			if (vec(vec(mat).w).w != S(1)) return false;
+		}
+		return true;
 	}
 
 	// True if 'mat' can be inverted
@@ -1753,10 +1885,10 @@ namespace pr::math
 		using S = typename vt::element_t;
 
 		uint32_t mask = 0;
-		if constexpr (vt::dimension >= 1) mask |= (vec(v).x >= S(0)) << 0;
-		if constexpr (vt::dimension >= 2) mask |= (vec(v).y >= S(0)) << 1;
-		if constexpr (vt::dimension >= 3) mask |= (vec(v).z >= S(0)) << 2;
-		if constexpr (vt::dimension >= 4) mask |= (vec(v).w >= S(0)) << 3;
+		if constexpr (vt::dimension > 0) mask |= (vec(v).x >= S(0)) << 0;
+		if constexpr (vt::dimension > 1) mask |= (vec(v).y >= S(0)) << 1;
+		if constexpr (vt::dimension > 2) mask |= (vec(v).z >= S(0)) << 2;
+		if constexpr (vt::dimension > 0) mask |= (vec(v).w >= S(0)) << 3;
 		return mask;
 	}
 
@@ -1784,6 +1916,17 @@ namespace pr::math
 		}
 		return m;
 	}
+	template <VectorType Mat> requires (IsRank2<Mat>&& vector_traits<Mat>::dimension >= 3)
+	constexpr Mat pr_vectorcall Transpose3x3(Mat const& mat)
+	{
+		using vt = vector_traits<Mat>;
+
+		Mat m = mat;
+		std::swap(vec(vec(m).x).y, vec(vec(m).y).x);
+		std::swap(vec(vec(m).x).z, vec(vec(m).z).x);
+		std::swap(vec(vec(m).y).z, vec(vec(m).z).y);
+		return m;
+	}
 
 	// Return the inverse of 'mat' (assuming an orthonormal matrix)
 	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
@@ -1795,7 +1938,7 @@ namespace pr::math
 		Mat m = mat;
 		if constexpr (vector_traits<Mat>::dimension >= 2)
 		{
-			std::swap(vec(vec(m).x).y, vec(vec(m).y).x); // Transpose
+			std::swap(vec(vec(m).x).y, vec(vec(m).y).x);
 		}
 		if constexpr (vector_traits<Mat>::dimension >= 3)
 		{
@@ -1821,8 +1964,9 @@ namespace pr::math
 		pr_assert(IsAffine(mat) && "Matrix is not affine");
 
 		Mat m = mat;
+
 		auto scale = Vec{ LengthSq(vec(mat).x), LengthSq(vec(mat).y), LengthSq(vec(mat).z) };
-		if (Abs(One<Vec>() - scale) > tiny<S>)
+		if (Abs(scale - One<Vec>()) > tiny<S>)
 		{
 			pr_assert(vec(scale).x != 0 && vec(scale).y != 0 && vec(scale).z != 0 && "Cannot invert a degenerate matrix");
 			scale = CompSqrt(scale);
@@ -1834,19 +1978,30 @@ namespace pr::math
 		vec(m).z /= vec(scale).z;
 
 		// Invert rotation
-		m = Transpose(m);
+		m = Transpose3x3(m);
 
 		// Invert scale
 		vec(m).x /= vec(scale).x;
 		vec(m).y /= vec(scale).y;
 		vec(m).z /= vec(scale).z;
 
+		// Invert translation
+		if constexpr (vt::dimension == 4)
+		{
+			vec(m).w = Vec{
+				-(vec(vec(mat).w).x * vec(vec(m).x).x + vec(vec(mat).w).y * vec(vec(m).y).x + vec(vec(mat).w).z * vec(vec(m).z).x),
+				-(vec(vec(mat).w).x * vec(vec(m).x).y + vec(vec(mat).w).y * vec(vec(m).y).y + vec(vec(mat).w).z * vec(vec(m).z).y),
+				-(vec(vec(mat).w).x * vec(vec(m).x).z + vec(vec(mat).w).y * vec(vec(m).y).z + vec(vec(mat).w).z * vec(vec(m).z).z),
+				S(1)
+			};
+		}
+
 		return m;
 	}
 
 	// Return the inverse of 'mat'
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat Invert(Mat const& mat)
+	constexpr Mat pr_vectorcall Invert(Mat const& mat)
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -1896,7 +2051,95 @@ namespace pr::math
 			auto det = xx * vec(vec(inv).x).x + xy * vec(vec(inv).y).x + xz * vec(vec(inv).z).x + xw * vec(vec(inv).w).x;
 			pr_assert(det != S(0) && "matrix has no inverse");
 			return inv * (S(1) / det);
+
+			// Reference invert 4x4 implementation
+			if constexpr (false)
+			{
+				auto mA = Transpose(mat); // Take the transpose so that row operations are faster
+				auto mB = Identity<Mat>();
+
+				// Loop through columns of 'A'
+				for (int j = 0; j != 4; ++j)
+				{
+					// Select the pivot element: maximum magnitude in this row
+					auto pivot = 0; auto val = S(0);
+					if (j <= 0 && val < Abs(mA.x[j])) { pivot = 0; val = Abs(mA.x[j]); }
+					if (j <= 1 && val < Abs(mA.y[j])) { pivot = 1; val = Abs(mA.y[j]); }
+					if (j <= 2 && val < Abs(mA.z[j])) { pivot = 2; val = Abs(mA.z[j]); }
+					if (j <= 3 && val < Abs(mA.w[j])) { pivot = 3; val = Abs(mA.w[j]); }
+					if (val < tiny<S>)
+					{
+						pr_assert(false && "Matrix has no inverse");
+						return mat;
+					}
+
+					// Interchange rows to put pivot element on the diagonal
+					if (pivot != j) // skip if already on diagonal
+					{
+						std::swap(mA[j], mA[pivot]);
+						std::swap(mB[j], mB[pivot]);
+					}
+
+					// Divide row by pivot element. Pivot element becomes 1
+					auto scale = mA[j][j];
+					mA[j] /= scale;
+					mB[j] /= scale;
+
+					// Subtract this row from others to make the rest of column j zero
+					if (j != 0) { scale = mA.x[j]; mA.x -= scale * mA[j]; mB.x -= scale * mB[j]; }
+					if (j != 1) { scale = mA.y[j]; mA.y -= scale * mA[j]; mB.y -= scale * mB[j]; }
+					if (j != 2) { scale = mA.z[j]; mA.z -= scale * mA[j]; mB.z -= scale * mB[j]; }
+					if (j != 3) { scale = mA.w[j]; mA.w -= scale * mA[j]; mB.w -= scale * mB[j]; }
+				}
+
+				// When these operations have been completed, A should have been transformed to the identity matrix
+				// and B should have been transformed into the inverse of the original A
+				mB = Transpose(mB);
+				return mB;
+			}
 		}
+	}
+
+	// Return the inverse of 'mat' using double precision floats
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr Mat pr_vectorcall InvertPrecise(Mat const& mat)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+
+		auto xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y, xz = vec(vec(mat).x).z, xw = vec(vec(mat).x).w;
+		auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z, yw = vec(vec(mat).y).w;
+		auto zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z, zw = vec(vec(mat).z).w;
+		auto wx = vec(vec(mat).w).x, wy = vec(vec(mat).w).y, wz = vec(vec(mat).w).z, ww = vec(vec(mat).w).w;
+
+		double inv[4][4];
+		inv[0][0] = 0.0 + yy * zz * ww - yy * zw * wz - zy * yz * ww + zy * yw * wz + wy * yz * zw - wy * yw * zz;
+		inv[0][1] = 0.0 - xy * zz * ww + xy * zw * wz + zy * xz * ww - zy * xw * wz - wy * xz * zw + wy * xw * zz;
+		inv[0][2] = 0.0 + xy * yz * ww - xy * yw * wz - yy * xz * ww + yy * xw * wz + wy * xz * yw - wy * xw * yz;
+		inv[0][3] = 0.0 - xy * yz * zw + xy * yw * zz + yy * xz * zw - yy * xw * zz - zy * xz * yw + zy * xw * yz;
+		inv[1][0] = 0.0 - yx * zz * ww + yx * zw * wz + zx * yz * ww - zx * yw * wz - wx * yz * zw + wx * yw * zz;
+		inv[1][1] = 0.0 + xx * zz * ww - xx * zw * wz - zx * xz * ww + zx * xw * wz + wx * xz * zw - wx * xw * zz;
+		inv[1][2] = 0.0 - xx * yz * ww + xx * yw * wz + yx * xz * ww - yx * xw * wz - wx * xz * yw + wx * xw * yz;
+		inv[1][3] = 0.0 + xx * yz * zw - xx * yw * zz - yx * xz * zw + yx * xw * zz + zx * xz * yw - zx * xw * yz;
+		inv[2][0] = 0.0 + yx * zy * ww - yx * zw * wy - zx * yy * ww + zx * yw * wy + wx * yy * zw - wx * yw * zy;
+		inv[2][1] = 0.0 - xx * zy * ww + xx * zw * wy + zx * xy * ww - zx * xw * wy - wx * xy * zw + wx * xw * zy;
+		inv[2][2] = 0.0 + xx * yy * ww - xx * yw * wy - yx * xy * ww + yx * xw * wy + wx * xy * yw - wx * xw * yy;
+		inv[2][3] = 0.0 - xx * yy * zw + xx * yw * zy + yx * xy * zw - yx * xw * zy - zx * xy * yw + zx * xw * yy;
+		inv[3][0] = 0.0 - yx * zy * wz + yx * zz * wy + zx * yy * wz - zx * yz * wy - wx * yy * zz + wx * yz * zy;
+		inv[3][1] = 0.0 + xx * zy * wz - xx * zz * wy - zx * xy * wz + zx * xz * wy + wx * xy * zz - wx * xz * zy;
+		inv[3][2] = 0.0 - xx * yy * wz + xx * yz * wy + yx * xy * wz - yx * xz * wy - wx * xy * yz + wx * xz * yy;
+		inv[3][3] = 0.0 + xx * yy * zz - xx * yz * zy - yx * xy * zz + yx * xz * zy + zx * xy * yz - zx * xz * yy;
+
+		auto det = xx * inv[0][0] + xy * inv[1][0] + xz * inv[2][0] + xw * inv[3][0];
+		pr_assert(det != 0.0 && "matrix has no inverse");
+
+		Mat m;
+		vec(m).x = Vec(S(inv[0][0]), S(inv[0][1]), S(inv[0][2]), S(inv[0][3]));
+		vec(m).y = Vec(S(inv[1][0]), S(inv[1][1]), S(inv[1][2]), S(inv[1][3]));
+		vec(m).z = Vec(S(inv[2][0]), S(inv[2][1]), S(inv[2][2]), S(inv[2][3]));
+		vec(m).w = Vec(S(inv[3][0]), S(inv[3][1]), S(inv[3][2]), S(inv[3][3]));
+		m /= det;
+		return m;
 	}
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
@@ -1927,6 +2170,7 @@ namespace pr::math
 		vec(m).x = Normalise(vec(m).x);
 		vec(m).y = Normalise(Cross3(vec(m).z, vec(m).x));
 		vec(m).z = Cross3(vec(m).x, vec(m).y);
+		pr_assert(IsOrthonormal(m));
 		return m;
 	}
 
@@ -1939,10 +2183,10 @@ namespace pr::math
 
 		Vec res = {};
 		auto a2bT = Transpose(a2b);
-		if constexpr (vt::dimension >= 1) vec(res).x = Dot(vec(a2bT).x, v);
-		if constexpr (vt::dimension >= 2) vec(res).y = Dot(vec(a2bT).y, v);
-		if constexpr (vt::dimension >= 3) vec(res).z = Dot(vec(a2bT).z, v);
-		if constexpr (vt::dimension >= 4) vec(res).w = Dot(vec(a2bT).w, v);
+		if constexpr (vt::dimension > 0) vec(res).x = Dot(vec(a2bT).x, v);
+		if constexpr (vt::dimension > 1) vec(res).y = Dot(vec(a2bT).y, v);
+		if constexpr (vt::dimension > 2) vec(res).z = Dot(vec(a2bT).z, v);
+		if constexpr (vt::dimension > 3) vec(res).w = Dot(vec(a2bT).w, v);
 		return res;
 	}
 	template <VectorType Mat> requires (IsRank2<Mat>)
@@ -1983,43 +2227,29 @@ namespace pr::math
 		return ans;
 	}
 
-	// TRS matrix creation ----- 
+	// Matrix creation ----- 
 
-	// Create an affine transform from axis, angle, and translation
+	// Create a translation matrix
 	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	inline Mat pr_vectorcall Transform(typename vector_traits<Mat>::component_t axis, typename vector_traits<Mat>::element_t angle, typename vector_traits<Mat>::component_t const& translation)
+	constexpr Mat Translation(typename vector_traits<Mat>::component_t xyz)
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
-		assert(IsNormalised(axis) && "Axis should be unit length");
 
-		Mat mat = {};
+		pr_assert((xyz.w == S(0) || xyz.w == S(1)) && "translation should be an affine vector");
+		Mat m = Identity<Mat>();
+		vec(m).w = xyz;         // 'xyz' can be a position or an offset
+		vec(vec(m).w).w = S(1); // Ensure affine
+		return m;
+	}
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr Mat Translation(typename vector_traits<Mat>::element_t x, typename vector_traits<Mat>::element_t y, typename vector_traits<Mat>::element_t z)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
 
-		auto sin_angle = static_cast<S>(std::sin(angle));
-		auto cos_angle = static_cast<S>(std::cos(angle));
-		auto trace_vec = axis * (S(1) - cos_angle);
-
-		vec(vec(mat).x).x = vec(trace_vec).x * vec(axis).x + cos_angle;
-		vec(vec(mat).y).y = vec(trace_vec).y * vec(axis).y + cos_angle;
-		vec(vec(mat).z).z = vec(trace_vec).z * vec(axis).z + cos_angle;
-
-		vec(trace_vec).x *= vec(axis).y;
-		vec(trace_vec).z *= vec(axis).x;
-		vec(trace_vec).y *= vec(axis).z;
-
-		vec(vec(mat).x).y = vec(trace_vec).x + sin_angle * vec(axis).z;
-		vec(vec(mat).x).z = vec(trace_vec).z - sin_angle * vec(axis).y;
-		vec(vec(mat).x).w = 0.0f;
-		vec(vec(mat).y).x = vec(trace_vec).x - sin_angle * vec(axis).z;
-		vec(vec(mat).y).z = vec(trace_vec).y + sin_angle * vec(axis).x;
-		vec(vec(mat).y).w = 0.0f;
-		vec(vec(mat).z).x = vec(trace_vec).z + sin_angle * vec(axis).y;
-		vec(vec(mat).z).y = vec(trace_vec).y - sin_angle * vec(axis).x;
-		vec(vec(mat).z).w = 0.0f;
-
-		vec(mat).w = translation;
-
-		return mat;
+		return Translation(Vec{ x, y,z, S(1) });
 	}
 
 	// Create a 2D rotation matrix
@@ -2035,8 +2265,8 @@ namespace pr::math
 	}
 
 	// Create a 3D rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall RotationRad(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll)
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2051,10 +2281,19 @@ namespace pr::math
 			Vec{+sin_y * cos_p                         ,        -sin_p ,                          cos_y * cos_p}
 		};
 	}
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall RotationDeg(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll)
+	{
+		return RotationRad<Mat>(
+			DegreesToRadians(pitch),
+			DegreesToRadians(yaw),
+			DegreesToRadians(roll)
+		);
+	}
 
 	// Create a 3D rotation matrix from an axis and angle.
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::component_t axis_sine_angle, typename vector_traits<Mat>::element_t cos_angle)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	constexpr Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::component_t axis_sine_angle, typename vector_traits<Mat>::element_t cos_angle)
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2077,32 +2316,26 @@ namespace pr::math
 		vec(vec(m).y).z = vec(trace_vec).y + vec(axis_sine_angle).x;
 		vec(vec(m).z).x = vec(trace_vec).z + vec(axis_sine_angle).y;
 		vec(vec(m).z).y = vec(trace_vec).y - vec(axis_sine_angle).x;
-		
-		if constexpr (vector_traits<Mat>::dimension == 4)
-		{
-			vec(vec(m).x).w = S(0);
-			vec(vec(m).y).w = S(0);
-			vec(vec(m).z).w = S(0);
-		}
+
 		return m;
 	}
 
 	// Create a 3D rotation from an axis and angle. 'axis' should be normalised
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
 	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::element_t angle)
 	{
 		return Rotation<Mat>(axis_norm, axis_norm * std::sin(angle), std::cos(angle));
 	}
 
 	// Create a 3D rotation from an angular displacement vector. length = angle(rad), direction = axis
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
 	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t angular_displacement) // This is ExpMap3x3.
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
 		pr_assert(angular_displacement.w == S(0) && "'angular_displacement' should be a scaled direction vector");
 
-		// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta�) * omega�
+		// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta²) * omega²
 		auto len = Length(angular_displacement);
 		return len > constants<S>::tiny
 			? Rotation<Mat>(angular_displacement / len, len)
@@ -2110,7 +2343,7 @@ namespace pr::math
 	}
 
 	// Create a 3D rotation representing the rotation from one vector to another. (Vectors do not need to be normalised)
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
 	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t from, typename vector_traits<Mat>::component_t to)
 	{
 		using vt = vector_traits<Mat>;
@@ -2130,7 +2363,7 @@ namespace pr::math
 	}
 
 	// Create a 3D rotation transform from one basis axis to another. Remember AxisId can be cast to Vec4
-	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
 	inline Mat pr_vectorcall Rotation(AxisId from_axis, AxisId to_axis)
 	{
 		using vt = vector_traits<Mat>;
@@ -2206,7 +2439,7 @@ namespace pr::math
 	}
 
 	// Create a 3D shear matrix
-	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
 	constexpr Mat Shear(S sxy, S sxz, S syx, S syz, S szx, S szy)
 	{
 		using vt = vector_traits<Mat>;
@@ -2217,8 +2450,134 @@ namespace pr::math
 		vec(mat).x = Vec{ S(1), sxy, sxz };
 		vec(mat).y = Vec{ syx, S(1), syz };
 		vec(mat).z = Vec{ szx, szy, S(1) };
-		if constexpr (vt::dimension == 4)
-			vec(mat).w = WAxis<Vec>();
+		return mat;
+	}
+
+	// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	inline Mat TransformRad(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll, typename vector_traits<Mat>::component_t pos)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+
+		Mat m = RotationRad<Mat>(pitch, yaw, roll);
+		vec(m).w = pos;
+		return m;
+	}
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	inline Mat TransformDeg(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll, typename vector_traits<Mat>::component_t pos)
+	{
+		return TransformRad<Mat>(
+			DegreesToRadians(pitch),
+			DegreesToRadians(yaw),
+			DegreesToRadians(roll),
+			pos
+		);
+	}
+
+	// Create a Look-At transform
+	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	inline Mat LookAt(typename vector_traits<Mat>::component_t eye, typename vector_traits<Mat>::component_t at, typename vector_traits<Mat>::component_t up)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+		pr_assert(vec(eye).w == S(1) && vec(at).w == S(1) && vec(up).w == S(0) && "Invalid position/direction vectors passed to LookAt");
+		pr_assert(eye - at != Zero<Vec>() && "LookAt 'eye' and 'at' positions are coincident");
+		pr_assert(!Parallel(eye - at, up, S(0)) && "LookAt 'forward' and 'up' axes are aligned");
+
+		Mat mat = {};
+		vec(mat).z = Normalise(eye - at);
+		vec(mat).x = Normalise(Cross3(up, vec(mat).z));
+		vec(mat).y = Cross3(vec(mat).z, vec(mat).x);
+		vec(mat).w = eye;
+		return mat;
+	}
+
+	// Construct an orthographic projection matrix
+	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr Mat ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		pr_assert(IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0) && "invalid view rect");
+		pr_assert(IsFinite(zn) && IsFinite(zf) && (zn - zf) != 0 && "invalid near/far planes");
+
+		auto rh = Bool2SignF(righthanded);
+
+		Mat mat = {};
+		vec(vec(mat).x).x = S(2) / w;
+		vec(vec(mat).y).y = S(2) / h;
+		vec(vec(mat).z).z = rh / (zn - zf);
+		vec(vec(mat).w).w = S(1);
+		vec(vec(mat).w).z = rh * zn / (zn - zf);
+		return mat;
+	}
+
+	// Construct a perspective projection matrix. 'w' and 'h' are measured at 'zn'
+	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr Mat ProjectionPerspective(S w, S h, S zn, S zf, bool righthanded)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		pr_assert(IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0) && "invalid view rect");
+		pr_assert(IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0) && "invalid near/far planes");
+
+		// Getting your head around perspective transforms:
+		//   p0 = c2s * Vec4(0,0,-zn,1); p0/p0.w = (0,0,0,1)
+		//   p1 = c2s * Vec4(0,0,-zf,1); p1/p1.w = (0,0,1,1)
+
+		auto rh = Bool2SignF(righthanded);
+
+		Mat mat = {};
+		vec(vec(mat).x).x = S(2) * zn / w;
+		vec(vec(mat).y).y = S(2) * zn / h;
+		vec(vec(mat).z).w = -rh;
+		vec(vec(mat).z).z = rh * zf / (zn - zf);
+		vec(vec(mat).w).z = zn * zf / (zn - zf);
+		return mat;
+	}
+
+	// Construct a perspective projection matrix offset from the centre
+	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	constexpr Mat ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		pr_assert(IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > S(0) && (t - b) > S(0) && "invalid view rect");
+		pr_assert(IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0) && "invalid near/far planes");
+		
+		auto rh = Bool2SignF(righthanded);
+		
+		Mat mat = {};
+		vec(vec(mat).x).x = S(2) * zn / (r - l);
+		vec(vec(mat).y).y = S(2) * zn / (t - b);
+		vec(vec(mat).z).x = rh * (r + l) / (r - l);
+		vec(vec(mat).z).y = rh * (t + b) / (t - b);
+		vec(vec(mat).z).w = -rh;
+		vec(vec(mat).z).z = rh * zf / (zn - zf);
+		vec(vec(mat).w).z = zn * zf / (zn - zf);
+		return mat;
+	}
+
+	// Construct a perspective projection matrix using field of view
+	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	inline Mat ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		pr_assert(IsFinite(aspect) && aspect > S(0) && "invalid aspect ratio");
+		pr_assert(IsFinite(zn) && IsFinite(zf) && zn > S(0) && zf > S(0) && (zn - zf) != S(0) && "invalid near/far planes");
+
+		auto rh = Bool2SignF(righthanded);
+
+		Mat mat = {};
+		vec(vec(mat).y).y = S(1) / std::tan(fovY / S(2));
+		vec(vec(mat).x).x = vec(vec(mat).y).y / aspect;
+		vec(vec(mat).z).w = -rh;
+		vec(vec(mat).z).z = rh * zf / (zn - zf);
+		vec(vec(mat).w).z = zn * zf / (zn - zf);
 		return mat;
 	}
 
@@ -2413,6 +2772,132 @@ namespace pr::math
 
 		// Permute the column vectors so +Z becomes 'axis'
 		return Permute(ori, -Abs(axis_id)); // permute rolls: xyz, yzx, zxy // @Copilot, please check this logic.
+	}
+
+	// Make a scaled orientation matrix from a direction vector
+	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall ScaledOriFromDir(typename vector_traits<Mat>::component_t dir, AxisId axis, typename vector_traits<Mat>::component_t up = {})
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+
+		auto len = Length(dir);
+		return len > tiny<S>
+			? OriFromDir(dir, axis, up) * Scale<Mat>(len)
+			: Zero<Mat>();
+	}
+
+	// Return a vector representing the approximate rotation between two orthonormal transforms
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall RotationVectorApprox(Mat const& from, Mat const& to)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+		pr_assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
+		
+		auto cpm_x_i2wR = to - from;
+		auto w2iR = Transpose(from);
+		auto cpm = cpm_x_i2wR * w2iR;
+		return Vec{
+			vec(vec(cpm).y).z,
+			vec(vec(cpm).z).x,
+			vec(vec(cpm).x).y
+		};
+	}
+	
+	// Create a cross product matrix for 'vec'.
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	constexpr Mat pr_vectorcall CPM(typename vector_traits<Mat>::component_t v)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+
+		// This matrix can be used to calculate the cross product with
+		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
+		return Mat{
+			Vec{     S(0),  vec(v).z, -vec(v).y},
+			Vec{-vec(v).z,      S(0),  vec(v).x},
+			Vec{ vec(v).y, -vec(v).x,      S(0)}
+		};
+	}
+
+	// Return 'exp(omega)' (Rodriges' formula)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall ExpMap3x3(typename vector_traits<Mat>::component_t omega)
+	{
+		// Converts an angular velocity into a finite rotation that stays within SO(3).
+		// If you have an angular velocity, w, that is constant over a time step,
+		// then:
+		//   R(t + dt) = R(t) * ExpMap(w * dt)
+		//   (no need to orthonormalise)
+		//
+		// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta²) * omega²
+		// If you want the shortest rotation from R0 to R1:
+		//   R(t) = R0 * ExpMap(t * LogMap(Transpose(R0) * ​R1​))
+		return Rotation<Mat>(omega);
+	}
+
+	// Returns the Axis*Angle vector representation of a rotation matrix (Inverse of ExpMap)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline typename vector_traits<Mat>::component_t pr_vectorcall LogMap3x3(Mat const& rot)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+
+		auto cos_angle = Clamp<S>((Trace(rot) - S(1)) / S(2), -S(1), +S(1));
+		auto theta = std::acos(cos_angle);
+		if (Abs(theta) < tiny<S>)
+			return Zero<Vec>();
+
+		auto s = S(1) / (S(2) * std::sin(theta));
+		auto axis = s * Vec{
+			vec(vec(rot).y).z - vec(vec(rot).z).y,
+			vec(vec(rot).z).x - vec(vec(rot).x).z,
+			vec(vec(rot).x).y - vec(vec(rot).y).x
+		};
+		return theta * axis;
+	}
+
+	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall RotationAt(float time, Mat const& ori, typename vector_traits<Mat>::component_t avel, typename vector_traits<Mat>::component_t aacc)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using Vec = typename vt::component_t;
+
+		// Orientation can be computed analytically if angular velocity
+		// and angular acceleration are parallel or angular acceleration is zero.
+		if (LengthSq(Cross(avel, aacc)) < tiny<S>)
+		{
+			auto w = avel + aacc * time;
+			return ExpMap3x3(w * time) * ori;
+		}
+		else
+		{
+			// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
+
+			// 3-point Gauss-Legendre nodes for 6th order accuracy
+			constexpr S root15 = S(3.87298334620741688518);
+			constexpr S c1 = S(0.5) - root15 / S(10);
+			constexpr S c2 = S(0.5);
+			constexpr S c3 = S(0.5) + root15 / S(10);
+
+			// Evaluate instantaneous angular velocity at nodes
+			auto w0 = avel + aacc * c1 * time;
+			auto w1 = avel + aacc * c2 * time;
+			auto w2 = avel + aacc * c3 * time;
+
+			auto u0 = ExpMap3x3(w0 * time / S(3));
+			auto u1 = ExpMap3x3(w1 * time / S(3));
+			auto u2 = ExpMap3x3(w2 * time / S(3));
+
+			return u2 * u1 * u0 * ori;
+		}
 	}
 
 	// Random -----

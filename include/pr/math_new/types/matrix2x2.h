@@ -58,11 +58,11 @@ namespace pr::math
 		// Constants
 		static constexpr Mat2x2 Zero()
 		{
-			return Mat2x2{Vec2<S>::Zero(), Vec2<S>::Zero()};
+			return math::Zero<Mat2x2>();
 		}
 		static constexpr Mat2x2 Identity()
 		{
-			return Mat2x2{Vec2<S>::XAxis(), Vec2<S>::YAxis()};
+			return math::Identity<Mat2x2>();
 		}
 
 		// Create a rotation matrix

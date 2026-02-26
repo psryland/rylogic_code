@@ -1216,6 +1216,9 @@
     <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix6x8_tests.h">
       <Filter>pr\math_new\tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\bbox.h">
+      <Filter>pr\math_new\primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">

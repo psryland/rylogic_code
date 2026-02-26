@@ -6,9 +6,9 @@
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
-#include "pr/math_new/types/vector3.h"
 #include "pr/math_new/types/vector4.h"
-#include "pr/math_new/types/matrix3x4.h"
+#include "pr/math_new/types/vector3.h"
+#include "pr/math_new/types/vector2.h"
 
 namespace pr::math
 {
@@ -479,6 +479,31 @@ namespace pr::math
 		return m;
 	}
 
+	// Spherically interpolate between two rotations (using quat slerp)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
+	inline Mat pr_vectorcall Slerp(Mat const& lhs, Mat const& rhs, typename vector_traits<Mat>::element_t frac)
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+
+		if (frac == S(0)) return lhs;
+		if (frac == S(1)) return rhs;
+		auto l = ToQuat(lhs);
+		auto r = ToQuat(rhs);
+		auto q = Slerp(l, r, frac);
+		
+		if constexpr (vt::dimension == 3)
+		{
+			return Mat{ q };
+		}
+		if constexpr (vt::dimension == 4)
+		{
+			auto p = Lerp(vec(lhs).w, vec(rhs).w, frac);
+			return Mat{ q, p };
+		}
+	}
+}
+
 
 
 
@@ -524,4 +549,3 @@ namespace pr::math
 	}
 
 	#endif
-}

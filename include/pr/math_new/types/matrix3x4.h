@@ -7,6 +7,7 @@
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
 #include "pr/math_new/types/vector4.h"
+#include "pr/math_new/types/quaternion.h"
 
 namespace pr::math
 {
@@ -61,11 +62,11 @@ namespace pr::math
 		// Constants
 		static constexpr Mat3x4 Zero()
 		{
-			return Mat3x4{Vec4<S>::Zero(), Vec4<S>::Zero(), Vec4<S>::Zero()};
+			return math::Zero<Mat3x4>();
 		}
 		static constexpr Mat3x4 Identity()
 		{
-			return Mat3x4{Vec4<S>::XAxis(), Vec4<S>::YAxis(), Vec4<S>::ZAxis()};
+			return math::Identity<Mat3x4>();
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
@@ -88,10 +89,14 @@ namespace pr::math
 			z[i] = row.z;
 		}
 
+		// Create a 4x4 matrix from this 3x4 matrix
+		constexpr Mat4x4<S> w1() const;
+		constexpr Mat4x4<S> w1(Vec4<S> xyz) const;
+
 		// Return the trace of this matrix
 		constexpr Vec4<S> trace() const
 		{
-			return Trace<Mat3x4>(*this);
+			return math::Trace<Mat3x4>(*this);
 		}
 
 		// Return the scale of this matrix
@@ -101,7 +106,7 @@ namespace pr::math
 		}
 
 		// Return this matrix with the scale removed
-		Mat3x4 unscaled() const
+		constexpr Mat3x4 unscaled() const
 		{
 			return math::Unscaled<Mat3x4>(*this);
 		}
@@ -161,6 +166,7 @@ namespace pr::math
 		{
 			return math::Shear<Mat3x4>(sxy, sxz, syx, syz, szx, szy);
 		}
+
 	};
 
 	#define PR_MATH_DEFINE_TYPE(component, element)\
@@ -311,107 +317,4 @@ namespace pr::math
 		}
 		#pragma endregion
 	};
-
-	// Make a scaled orientation matrix from a direction vector
-	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	template <Scalar S, typename A> inline Mat3x4<S,A,A> pr_vectorcall ScaledOriFromDir(Vec4_cref<S,A> dir, AxisId axis, Vec4_cref<S,A> up)
-	{
-		auto len = Length(dir);
-		return len > maths::tiny<S> ? OriFromDir(dir, axis, up) * Mat3x4<S,A,A>::Scale(len) : Mat3x4<S,A,A>::Zero();
-	}
-	template <Scalar S, typename A> inline Mat3x4<S,A,A> pr_vectorcall ScaledOriFromDir(Vec4_cref<S,A> dir, AxisId axis)
-	{
-		return ScaledOriFromDir(dir, axis, Perpendicular(dir));
-	}
-
-	// Return a vector representing the approximate rotation between two orthonormal transforms
-	template <Scalar S, typename A, typename B> inline Vec4<S> pr_vectorcall RotationVectorApprox(Mat3x4_cref<S,A,B> from, Mat3x4_cref<S,A,B> to)
-	{
-		pr_assert("This only works for orthonormal matrices" && IsOrthonormal(from) && IsOrthonormal(to));
-		
-		auto cpm_x_i2wR = to - from;
-		auto w2iR = Transpose(from);
-		auto cpm = cpm_x_i2wR * w2iR;
-		return Vec4<S>{cpm.y.z, cpm.z.x, cpm.x.y, S(0)};
-	}
-
-	// Spherically interpolate between two rotations
-	template <Scalar S, typename A, typename B> inline Mat3x4<S,A,B> pr_vectorcall Slerp(Mat3x4_cref<S,A,B> lhs, Mat3x4_cref<S,A,B> rhs, S frac)
-	{
-		if (frac == S(0)) return lhs;
-		if (frac == S(1)) return rhs;
-		return Mat3x4<S,A,B>{Slerp(Quat<S,A,B>(lhs), Quat<S,A,B>(rhs), frac)};
-	}
-
-	// Create a cross product matrix for 'vec'.
-	template <Scalar S, typename A> inline Mat3x4<S,A,A> pr_vectorcall CPM(Vec4_cref<S,A> vec)
-	{
-		// This matrix can be used to calculate the cross product with
-		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
-		return Mat3x4<S,A,A>{
-			Vec4<S>(  S(0),  vec.z, -vec.y, S(0)),
-			Vec4<S>(-vec.z,   S(0),  vec.x, S(0)),
-			Vec4<S>( vec.y, -vec.x,   S(0), S(0))};
-	}
-
-	// Return 'exp(omega)' (Rodriges' formula)
-	template <Scalar S, typename A> inline Mat3x4<S, A, A> pr_vectorcall ExpMap3x3(Vec4_cref<S, A> omega)
-	{
-		// Converts an angular velocity into a finite rotation that stays within SO(3).
-		// If you have an angular velocity, w, that is constant over a time step,
-		// then:
-		//   R(t + dt) = R(t) * ExpMap(w * dt)
-		//   (no need to orthonormalise)
-		//
-		// Rodrigues' formula:  exp(omega) = I + (sin(theta)/theta) * omega + ((1 - cos(theta)/theta²) * omega²
-		// If you want the shortest rotation from R0 to R1:
-		//   R(t) = R0 * ExpMap(t * LogMap(Transpose(R0) * ​R1​))
-		return Mat3x4<S, A, A>::Rotation(omega);
-	}
-
-	// Returns the Axis*Angle vector representation of a rotation matrix (Inverse of ExpMap)
-	template <Scalar S, typename A, typename B> inline Vec4<S, A> pr_vectorcall LogMap(Mat3x4_cref<S, A, B> rot)
-	{
-		auto cos_angle = Clamp<S>((Trace(rot) - S(1)) / S(2), -S(1), +S(1));
-		auto theta = Acos(cos_angle);
-		if (Abs(theta) < maths::tiny<S>)
-			return Vec4<S, A>::Zero();
-
-		auto s = S(1) / (S(2) * Sin(theta));
-		auto axis = s * Vec4<S, A>{rot.y.z - rot.z.y, rot.z.x - rot.x.z, rot.x.y - rot.y.x, S(0)};
-		return theta * axis;
-	}
-
-	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
-	template <Scalar S, typename A, typename B> inline Mat3x4<S, A, B> pr_vectorcall RotationAt(float time, Mat3x4_cref<S, A, B> ori, v4_cref avel, v4_cref aacc)
-	{
-		// Orientation can be computed analytically if angular velocity
-		// and angular acceleration are parallel or angular acceleration is zero.
-		if (LengthSq(Cross(avel, aacc)) < maths::tinyf)
-		{
-			auto w = avel + aacc * time;
-			return ExpMap3x3(w * time) * ori;
-		}
-		else
-		{
-			// Otherwise, use the SPIRAL(6) algorithm. 6th order accurate for moderate 'time_s'
-
-			// 3-point Gauss-Legendre nodes for 6th order accuracy
-			constexpr float root15f = 3.87298334620741688518f;
-			constexpr float c1 = 0.5f - root15f / 10.0f;
-			constexpr float c2 = 0.5f;
-			constexpr float c3 = 0.5f + root15f / 10.0f;
-
-			// Evaluate instantaneous angular velocity at nodes
-			auto w0 = avel + aacc * c1 * time;
-			auto w1 = avel + aacc * c2 * time;
-			auto w2 = avel + aacc * c3 * time;
-
-			auto u0 = ExpMap3x3(w0 * time / 3.0f);
-			auto u1 = ExpMap3x3(w1 * time / 3.0f);
-			auto u2 = ExpMap3x3(w2 * time / 3.0f);
-
-			return u2 * u1 * u0 * ori;
-		}
-	}
 #endif

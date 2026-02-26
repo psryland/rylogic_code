@@ -365,10 +365,7 @@ namespace Rylogic.LDraw
 		}
 		public TDerived euler(float pitch_deg, float yaw_deg, float roll_deg)
 		{
-			return ori(m3x4.Rotation(
-				Math_.DegreesToRadians(pitch_deg),
-				Math_.DegreesToRadians(yaw_deg),
-				Math_.DegreesToRadians(roll_deg)));
+			return ori(m3x4.RotationDeg(pitch_deg, yaw_deg, roll_deg));
 		}
 
 		/// <summary>Wire frame</summary>
@@ -490,10 +487,7 @@ namespace Rylogic.LDraw
 		}
 		public LdrTransform euler(float pitch_deg, float yaw_deg, float roll_deg)
 		{
-			return ori(m3x4.Rotation(
-				Math_.DegreesToRadians(pitch_deg),
-				Math_.DegreesToRadians(yaw_deg),
-				Math_.DegreesToRadians(roll_deg)));
+			return ori(m3x4.RotationDeg(pitch_deg, yaw_deg, roll_deg));
 		}
 
 		// Write to 'out'

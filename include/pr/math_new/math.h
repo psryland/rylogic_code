@@ -35,19 +35,17 @@
 #include "pr/math_new/types/transform.h"
 #include "pr/math_new/types/matrix2x2.h"
 #include "pr/math_new/types/matrix3x4.h"
+#include "pr/math_new/types/matrix4x4.h"
+#include "pr/math_new/types/matrix6x8.h"
+#include "pr/math_new/types/matrix.h"
+#include "pr/math_new/primitives/bbox.h"
 // No non-standard dependencies outside of './'
 
-// #include "pr/maths/matrix4x4.h"
-// #include "pr/maths/matrix6x8.h"
-// #include "pr/maths/matrix.h"
-// #include "pr/maths/transform.h"
-// #include "pr/maths/bbox.h"
 // #include "pr/maths/bsphere.h"
 // #include "pr/maths/oriented_box.h"
 // #include "pr/maths/rectangle.h"
 // #include "pr/maths/plane.h"
 // #include "pr/maths/frustum.h"
-// #include "pr/maths/axis_id.h"
 // #include "pr/maths/conversion.h"
 // #include "pr/maths/spline.h"
 // #include "pr/maths/line3.h"
@@ -65,10 +63,12 @@
 
 // @Copilot, please look for any missing noexcept, or other qualifiers that could be added to improve the code/performance.
 
-// @Copilot, please check that I've used pr_assert rather than assert, and that the format is pr_assert(condition && "message")
+// @Copilot, please check that I've used pr_assert rather than assert
 
 // @Copilot, check for consistency with the design goals
 
 // @Copilot, check that 'pr_vectorcall ' is used for all vector functions, and that it's not used for non-vector functions.
 
 // @Copilot, check that vector types (i.e. Rank1) are passed by value, and that matrix types (i.e. Rank2) are passed by reference
+
+// @Copilot The constants in the vector and matrix types should all be using the functions from 'functions.h'

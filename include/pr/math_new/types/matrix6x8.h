@@ -114,31 +114,31 @@ namespace pr::math
 		}
 
 		#pragma region Operators
-		friend constexpr Mat6x8 operator + (Mat6x8_cref<S, A, B> m)
+		friend constexpr Mat6x8 operator + (Mat6x8<S, A, B> const& m)
 		{
 			return m;
 		}
-		friend constexpr Mat6x8 operator - (Mat6x8_cref<S, A, B> m)
+		friend constexpr Mat6x8 operator - (Mat6x8<S, A, B> const& m)
 		{
 			return Mat6x8{ -m.m00, -m.m01, -m.m10, -m.m11 };
 		}
-		friend Mat6x8 operator + (Mat6x8_cref<S, A, B> lhs, Mat6x8_cref<S, A, B> rhs)
+		friend Mat6x8 operator + (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs)
 		{
 			return Mat6x8{ lhs.m00 + rhs.m00, lhs.m01 + rhs.m01, lhs.m10 + rhs.m10, lhs.m11 + rhs.m11 };
 		}
-		friend Mat6x8 operator - (Mat6x8_cref<S, A, B> lhs, Mat6x8_cref<S, A, B> rhs)
+		friend Mat6x8 operator - (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs)
 		{
 			return Mat6x8{ lhs.m00 - rhs.m00, lhs.m01 - rhs.m01, lhs.m10 - rhs.m10, lhs.m11 - rhs.m11 };
 		}
-		friend Mat6x8 operator * (Mat6x8_cref<S, A, B> lhs, S rhs)
+		friend Mat6x8 operator * (Mat6x8<S, A, B> const& lhs, S rhs)
 		{
 			return Mat6x8{ lhs.m00 * rhs, lhs.m01 * rhs, lhs.m10 * rhs, lhs.m11 * rhs };
 		}
-		friend Mat6x8 operator * (S lhs, Mat6x8_cref<S, A, B> rhs)
+		friend Mat6x8 operator * (S lhs, Mat6x8<S, A, B> const& rhs)
 		{
 			return rhs * lhs;
 		}
-		friend Vec8<S, B> operator * (Mat6x8_cref<S, A, B> lhs, Vec8<S, A> const& rhs)
+		friend Vec8<S, B> operator * (Mat6x8<S, A, B> const& lhs, Vec8<S, A> const& rhs)
 		{
 			// [m00*a + m01*b] = [m00, m01] [a]
 			// [m10*a + m11*b]   [m10, m11] [b]
@@ -146,7 +146,7 @@ namespace pr::math
 				lhs.m00* rhs.ang + lhs.m01 * rhs.lin,
 					lhs.m10* rhs.ang + lhs.m11 * rhs.lin};
 		}
-		template <typename C> friend Mat6x8<S, A, C> pr_vectorcall operator * (Mat6x8_cref<S, B, C> lhs, Mat6x8_cref<S, A, B> rhs)
+		template <typename C> friend Mat6x8<S, A, C> pr_vectorcall operator * (Mat6x8<S, B, C> const& lhs, Mat6x8<S, A, B> const& rhs)
 		{
 			// [a00, a01] [b00, b01] = [a00*b00 + a01*b10, a00*b01 + a01*b11]
 			// [a10, a11] [b10, b11]   [a10*b00 + a11*b10, a10*b01 + a11*b11]
@@ -200,9 +200,12 @@ namespace pr::math
 				if (IsInvertible(schur))
 				{
 					auto schur_inv = Invert(schur);
-					return Mat6x8f<B, A>{
-						a_inv + a_inv * b * schur_inv * c * a_inv, -a_inv * b * schur_inv,
-							-schur_inv * c * a_inv, schur_inv};
+					return Mat6x8<B, A>{
+						a_inv + a_inv * b * schur_inv * c * a_inv,
+						-a_inv * b * schur_inv,
+						-schur_inv * c * a_inv,
+						schur_inv
+					};
 				}
 			}
 			if (IsInvertible(d))
@@ -212,9 +215,12 @@ namespace pr::math
 				if (IsInvertible(schur))
 				{
 					auto schur_inv = Invert(schur);
-					return Mat6x8f<B, A>{
-						schur_inv, -schur_inv * b * d_inv,
-							-d_inv * c * schur_inv, d_inv + d_inv * c * schur_inv * b * d_inv};
+					return Mat6x8<B, A>{
+						schur_inv,
+						-schur_inv * b * d_inv,
+						-d_inv * c * schur_inv,
+						d_inv + d_inv * c * schur_inv * b * d_inv
+					};
 				}
 			}
 			throw std::runtime_error("matrix is singular");

@@ -115,13 +115,13 @@ namespace pr::math
 		}
 
 		// Constants
-		static constexpr Vec4 Zero()
+		static consteval Vec4 Zero()
 		{
-			return Vec4(S(0), S(0), S(0), S(0));
+			return math::Zero<Vec4>();
 		}
 		static constexpr Vec4 One()
 		{
-			return Vec4(S(1), S(1), S(1), S(1));
+			return math::One<Vec4>();
 		}
 		static constexpr Vec4 Tiny()
 		{
@@ -129,11 +129,11 @@ namespace pr::math
 		}
 		static constexpr Vec4 Min()
 		{
-			return Vec4(limits<S>::min(), limits<S>::min(), limits<S>::min(), limits<S>::min());
+			return math::Min<Vec4>();
 		}
 		static constexpr Vec4 Max()
 		{
-			return Vec4(limits<S>::max(), limits<S>::max(), limits<S>::max(), limits<S>::max());
+			return math::Max<Vec4>();
 		}
 		static constexpr Vec4 Lowest()
 		{
@@ -141,31 +141,31 @@ namespace pr::math
 		}
 		static constexpr Vec4 Epsilon()
 		{
-			return Vec4(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon());
+			return math::Epsilon<Vec4>();
 		}
 		static constexpr Vec4 Infinity()
 		{
-			return Vec4(limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity());
+			return math::Infinity<Vec4>();
 		}
 		static constexpr Vec4 XAxis()
 		{
-			return Vec4(S(1), S(0), S(0), S(0));
+			return math::XAxis<Vec4>();
 		}
 		static constexpr Vec4 YAxis()
 		{
-			return Vec4(S(0), S(1), S(0), S(0));
+			return math::YAxis<Vec4>();
 		}
 		static constexpr Vec4 ZAxis()
 		{
-			return Vec4(S(0), S(0), S(1), S(0));
+			return math::ZAxis<Vec4>();
 		}
 		static constexpr Vec4 WAxis()
 		{
-			return Vec4(S(0), S(0), S(0), S(1));
+			return math::WAxis<Vec4>();
 		}
 		static constexpr Vec4 Origin()
 		{
-			return Vec4(S(0), S(0), S(0), S(1));
+			return math::Origin<Vec4>();
 		}
 
 		// Construct normalised

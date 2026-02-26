@@ -116,7 +116,7 @@ namespace Rylogic.Maths
 		/// <summary>
 		/// Create from an pitch, yaw, and roll (in radians).
 		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up. (And to match DirectX)</summary>
-		public static m3x4 Rotation(float pitch, float yaw, float roll)
+		public static m3x4 RotationRad(float pitch, float yaw, float roll)
 		{
 			float cos_p = (float)Math.Cos(pitch), sin_p = (float)Math.Sin(pitch);
 			float cos_y = (float)Math.Cos(yaw  ), sin_y = (float)Math.Sin(yaw  );
@@ -125,6 +125,13 @@ namespace Rylogic.Maths
 				new v4( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
 				new v4(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
 				new v4( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f));
+		}
+		public static m3x4 RotationDeg(float pitch, float yaw, float roll)
+		{
+			return RotationRad(
+				Math_.DegreesToRadians(pitch),
+				Math_.DegreesToRadians(yaw),
+				Math_.DegreesToRadians(roll));
 		}
 
 		/// <summary>Create a rotation from an axis and angle</summary>
@@ -202,21 +209,21 @@ namespace Rylogic.Maths
 			m3x4 o2f, o2t;
 			switch (from)
 			{
-				case -1: o2f = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
-				case +1: o2f = Rotation(0f, (float)-Math_.TauBy4, 0f); break;
-				case -2: o2f = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
-				case +2: o2f = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
-				case -3: o2f = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
+				case -1: o2f = RotationRad(0f, (float)+Math_.TauBy4, 0f); break;
+				case +1: o2f = RotationRad(0f, (float)-Math_.TauBy4, 0f); break;
+				case -2: o2f = RotationRad((float)+Math_.TauBy4, 0f, 0f); break;
+				case +2: o2f = RotationRad((float)-Math_.TauBy4, 0f, 0f); break;
+				case -3: o2f = RotationRad(0f, (float)+Math_.TauBy2, 0f); break;
 				case +3: o2f = Identity; break;
 				default: throw new Exception("axis_id must one of \uC2B11, \uC2B12, \uC2B13");
 			}
 			switch (to)
 			{
-				case -1: o2t = Rotation(0f, (float)-Math_.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-				case +1: o2t = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
-				case -2: o2t = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
-				case +2: o2t = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
-				case -3: o2t = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
+				case -1: o2t = RotationRad(0f, (float)-Math_.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+				case +1: o2t = RotationRad(0f, (float)+Math_.TauBy4, 0f); break;
+				case -2: o2t = RotationRad((float)+Math_.TauBy4, 0f, 0f); break;
+				case +2: o2t = RotationRad((float)-Math_.TauBy4, 0f, 0f); break;
+				case -3: o2t = RotationRad(0f, (float)+Math_.TauBy2, 0f); break;
 				case +3: o2t = Identity; break;
 				default: throw new Exception("axis_id must one of \uC2B11, \uC2B12, \uC2B13");
 			}

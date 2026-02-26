@@ -59,6 +59,17 @@ namespace Rylogic.Maths
 			this.rot = new m3x4(xform.rot) * m3x4.Scale(xform.scl.xyz);
 			this.pos = xform.pos;
 		}
+		public m4x4(
+			float xx, float xy, float xz, float xw,
+			float yx, float yy, float yz, float yw,
+			float zx, float zy, float zz, float zw,
+			float wx, float wy, float wz, float ww) :this()
+		{
+			this.x = new(xx, xy, xz, xw);
+			this.y = new(yx, yy, yz, yw);
+			this.z = new(zx, zy, zz, zw);
+			this.w = new(wx, wy, wz, ww);
+		}
 		public m4x4(float[] arr, int start = 0)
 			:this(new v4(arr, 0), new v4(arr, 4), new v4(arr, 8), new v4(arr, 12))
 		{}
@@ -167,9 +178,13 @@ namespace Rylogic.Maths
 		{
 			return new(rot, translation);
 		}
-		public static m4x4 Transform(float pitch, float yaw, float roll, v4 translation)
+		public static m4x4 TransformRad(float pitch, float yaw, float roll, v4 translation)
 		{
-			return new(m3x4.Rotation(pitch, yaw, roll), translation);
+			return new(m3x4.RotationRad(pitch, yaw, roll), translation);
+		}
+		public static m4x4 TransformDeg(float pitch, float yaw, float roll, v4 translation)
+		{
+			return new(m3x4.RotationDeg(pitch, yaw, roll), translation);
 		}
 		public static m4x4 Transform(v4 axis_norm, float angle, v4 translation)
 		{
@@ -869,7 +884,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void CreateFrom2()
 		{
-			var m1 = m4x4.Transform(1.0f, 0.5f, 0.7f, v4.Origin);
+			var m1 = m4x4.TransformRad(1.0f, 0.5f, 0.7f, v4.Origin);
 			var m2 = new m4x4(new Quat(1.0f, 0.5f, 0.7f), v4.Origin);
 			Assert.True(Math_.IsOrthonormal(m1));
 			Assert.True(Math_.IsOrthonormal(m2));

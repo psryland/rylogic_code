@@ -17,7 +17,7 @@ namespace pr::math
 		Vec4<S> scl;
 	};
 
-		#if 0
+	#if 0
 	inline bool FEql(transform const& lhs, transform const& rhs)
 	{
 		return
@@ -25,9 +25,7 @@ namespace pr::math
 			FEql(lhs.translation, rhs.translation) &&
 			FEql(lhs.scale, rhs.scale);
 	}
-	#endif
-	
-	#if 0
+
 	// Transform Operators
 	constexpr bool operator == (Xform const& lhs, Xform const& rhs)
 	{
