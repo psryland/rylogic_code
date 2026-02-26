@@ -4,6 +4,7 @@
 //*****************************************************************************
 #pragma once
 #include "pr/math_new/core/forward.h"
+#include "pr/math_new/core/traits.h"
 #include "pr/math_new/types/vector2.h"
 #include "pr/math_new/types/vector3.h"
 
@@ -55,20 +56,17 @@ namespace pr::math
 			, z(z_)
 			, w(w_)
 		{}
-		constexpr explicit Vec4(std::ranges::random_access_range auto&& v)
-			:Vec4(v[0], v[1], v[2], v[3])
-		{}
 		constexpr explicit Vec4(VectorTypeN<S, 4> auto v)
 			:Vec4(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
 		constexpr Vec4(Vec3<S> v, S w_)
-			:Vec4(vec(v).x, vec(v).y, vec(v).z, w_)
+			:Vec4(v.x, v.y, v.z, w_)
 		{}
 		constexpr Vec4(Vec2<S> v, S z_, S w_)
-			:Vec4(vec(v).x, vec(v).y, z_, w_)
+			:Vec4(v.x, v.y, z_, w_)
 		{}
 		constexpr Vec4(Vec2<S> xy_, Vec2<S> zw_)
-			:Vec4(vec(xy_).x, vec(xy_).y, vec(zw_).z, vec(zw_).w)
+			:Vec4(xy_.x, xy_.y, zw_.z, zw_.w)
 		{}
 		constexpr Vec4(AxisId axis_id)
 			:Vec4(
@@ -80,6 +78,9 @@ namespace pr::math
 		{}
 		constexpr Vec4(intrinsic_t vec_) requires (!NoIntrinsic)
 			:vec(vec_)
+		{}
+		constexpr explicit Vec4(std::ranges::random_access_range auto&& v)
+			:Vec4(v[0], v[1], v[2], v[3])
 		{}
 
 		// Array access

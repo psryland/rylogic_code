@@ -390,8 +390,8 @@ namespace pr::math
 	}
 
 	// Matrix Multiply forward
-	template <VectorType Mat, VectorType Vec = typename vector_traits<Mat>::component_t> requires (IsRank2<Mat>)
-	constexpr Vec pr_vectorcall operator * (Mat const& a2b, Vec v) noexcept;
+	template <VectorType Mat> requires (IsRank2<Mat>)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall operator * (Mat const& a2b, typename vector_traits<Mat>::component_t v) noexcept;
 	template <VectorType Mat> requires (IsRank2<Mat>)
 	constexpr Mat pr_vectorcall operator * (Mat const& b2c, Mat const& a2b) noexcept;
 
@@ -2175,8 +2175,8 @@ namespace pr::math
 	}
 
 	// Matrix Multiply
-	template <VectorType Mat, VectorType Vec> requires (IsRank2<Mat>)
-	constexpr Vec pr_vectorcall operator * (Mat const& a2b, Vec v) noexcept
+	template <VectorType Mat> requires (IsRank2<Mat>)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall operator * (Mat const& a2b, typename vector_traits<Mat>::component_t v) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;

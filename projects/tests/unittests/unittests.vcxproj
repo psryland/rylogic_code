@@ -400,6 +400,10 @@
     <ClInclude Include="..\..\..\include\pr\math_new\core\functions.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\core\traits.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\bbox.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\bsphere.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\oriented_box.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\plane.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\spline.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\all_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix2x2_tests.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\tests\matrix3x4_tests.h" />

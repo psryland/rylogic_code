@@ -7,9 +7,9 @@
 #include "pr/math_new/types/vector4.h"
 #include "pr/math_new/types/matrix3x4.h"
 #include "pr/math_new/types/matrix4x4.h"
+#include "pr/math_new/primitives/bsphere.h"
 //#include "pr/maths/constants.h"
 //#include "pr/maths/plane.h"
-//#include "pr/maths/bsphere.h"
 
 namespace pr::math
 {
@@ -425,34 +425,34 @@ namespace pr::math
 		case BBox::EPlane::Uz: return plane::make( 0.0f,  0.0f, -1.0f, bbox.m_centre.z + bbox.m_radius.z);
 		}
 	}
+	#endif
 
 	// Return a bounding sphere that bounds the bounding box
-	inline BSphere pr_vectorcall GetBSphere(BBox_cref bbox)
+	template <ScalarType S> [[nodiscard]] BSphere<S> pr_vectorcall GetBSphere(BBox<S> bbox)
 	{
-		return BSphere(bbox.m_centre, Length(bbox.m_radius));
+		return BSphere<S>(bbox.m_centre, Length(bbox.m_radius));
 	}
 
 	// Include 'rhs' in 'lhs'
 	template <ScalarType S> [[nodiscard]] constexpr BBox<S> Union(BBox<S> lhs, BSphere<S> rhs)
 	{
 		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
-		BBox bb = lhs;
+		auto bb = lhs;
 		if (!rhs.valid()) return bb;
-		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
+		auto radius = Vec4<S>(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
 		bb.Grow(rhs.Centre() + radius);
 		bb.Grow(rhs.Centre() - radius);
 		return bb;
 	}
-	inline BSphere_cref Grow(BBox& lhs, BSphere_cref rhs)
+	template <ScalarType S> constexpr BSphere<S> Grow(BBox<S>& lhs, BSphere<S> rhs)
 	{
 		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
 		if (!rhs.valid()) return rhs;
-		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
+		auto radius = Vec4<S>(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
 		lhs.Grow(rhs.Centre() + radius);
 		lhs.Grow(rhs.Centre() - radius);
 		return rhs;
 	}
-	#endif
 
 	// Returns true if 'point' is within the bounding volume
 	template <ScalarType S> constexpr bool pr_vectorcall IsWithin(BBox<S> bbox, Vec4<S> point, S tol = 0)

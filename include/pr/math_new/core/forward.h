@@ -9,23 +9,23 @@
 #include <ranges>
 #include <limits>
 #include <memory>
+#include <array>
+#include <vector>
 #include <random>
 #include <algorithm>
 #include <numeric>
+#include <stdexcept>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <cassert>
 #include <intrin.h>
 #include <immintrin.h>
 #include <emmintrin.h>
-#include <cassert>
 // #include <iterator>
-// #include <algorithm>
 // #include <thread>
-// #include <array>
-// #include <stdexcept>
 // #include <complex>
-// No non-standard dependencies outside of './'
+// No non-standard dependencies
 
 // Use intrinsics by default
 #ifndef PR_MATHS_USE_INTRINSICS
@@ -75,6 +75,20 @@ namespace pr::math
 	// Concept for scalar types
 	template <typename T>
 	concept ScalarType = std::floating_point<T> || std::integral<T>;
+	template <typename T>
+	concept ScalarTypeFP = std::floating_point<T>;
+
+	// Concept for a vector-like container template
+	template <template <typename...> class C, typename T>
+	concept VectorLike = requires(C<T>& c, T const& val)
+	{
+		{ c.push_back(val) };
+		{ c.size() } -> std::convertible_to<std::size_t>;
+		{ c[0] } -> std::convertible_to<T const&>;
+		c.begin();
+		c.end();
+	};
+	static_assert(VectorLike<std::vector, int>, "std::vector should satisfy VectorLike");
 
 	// Forward declarations
 	template <ScalarType S> struct Vec2;

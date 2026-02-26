@@ -37,14 +37,11 @@ namespace pr::math
 			, y(y_)
 			, z(z_)
 		{}
-		constexpr explicit Vec3(std::ranges::random_access_range auto&& v)
-			:Vec3(v[0], v[1], v[2])
-		{}
 		constexpr explicit Vec3(VectorTypeN<S, 3> auto v)
 			:Vec3(vec(v).x, vec(v).y, vec(v).z)
 		{}
 		constexpr Vec3(Vec2<S> v, S z_)
-			:Vec3(vec(v).x, vec(v).y, z_)
+			:Vec3(v.x, v.y, z_)
 		{}
 		constexpr Vec3(AxisId axis_id)
 			:Vec3(
@@ -52,6 +49,9 @@ namespace pr::math
 				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0),
 				Abs(axis_id) == AxisId::PosZ ? Sign<S>(axis_id) : S(0)
 			)
+		{}
+		constexpr explicit Vec3(std::ranges::random_access_range auto&& v)
+			:Vec3(v[0], v[1], v[2])
 		{}
 
 		// Array access
