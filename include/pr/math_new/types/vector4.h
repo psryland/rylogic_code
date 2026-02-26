@@ -13,14 +13,12 @@ namespace pr::math
 	template <ScalarType S>
 	struct Vec4
 	{
-		enum
-		{
-			IntrinsicF = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, float>,
-			IntrinsicD = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>,
-			IntrinsicI = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, int32_t>,
-			IntrinsicL = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, int64_t>,
-			NoIntrinsic = PR_MATHS_USE_INTRINSICS == 0,
-		};
+		inline static constexpr bool IntrinsicF = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, float>;
+		inline static constexpr bool IntrinsicD = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>;
+		inline static constexpr bool IntrinsicI = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, int32_t>;
+		inline static constexpr bool IntrinsicL = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, int64_t>;
+		inline static constexpr bool NoIntrinsic = PR_MATHS_USE_INTRINSICS == 0;
+
 		using intrinsic_t =
 			std::conditional_t<IntrinsicF, __m128,
 			std::conditional_t<IntrinsicD, __m256d,
@@ -401,6 +399,7 @@ namespace pr::math
 	{};\
 	\
 	static_assert(VectorType<Vec4<element>>, "Vec4<"#element"> is not a valid vector type");\
+	static_assert(IsRank1<Vec4<element>>, "Vec4<"#element"> is not rank 1");\
 	static_assert(sizeof(Vec4<element>) == 4*sizeof(element), "Vec4<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Vec4<element>>, "Vec4<"#element"> is not trivially copyable");
 

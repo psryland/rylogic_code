@@ -171,11 +171,12 @@ namespace pr::math
 
 	#define PR_MATH_DEFINE_TYPE(component, element)\
 	template <> struct vector_traits<Mat3x4<element>>\
-		: vector_traits_base<component, element, 3>\
-		, vector_access_member<Mat3x4<element>, element, 3>\
+		: vector_traits_base<element, component, 3>\
+		, vector_access_member<Mat3x4<element>, component, 3>\
 	{};\
 	\
 	static_assert(VectorType<Mat3x4<element>>, "Mat3x4<"#element"> is not a valid vector type");\
+	static_assert(IsRank2<Mat3x4<element>>, "Mat3x4<"#element"> is not rank 2");\
 	static_assert(sizeof(Mat3x4<element>) == 3*4*sizeof(element), "Mat3x4<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Mat3x4<element>>, "Mat3x4<"#element"> is not trivially copyable");
 

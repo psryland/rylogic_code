@@ -409,18 +409,19 @@ namespace pr::math
 		friend Mat4x4<S> pr_vectorcall Transpose(Mat4x4<S> const& mat) requires (Vec4<S>::IntrinsicF)
 		{
 			auto m = mat;
-			_MM_TRANSPOSE4_PS(mat.x.vec, mat.y.vec, mat.z.vec, mat.w.vec);
+			_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
 			return m;
 		}
 	};
 
 	#define PR_MATH_DEFINE_TYPE(component, element)\
 	template <> struct vector_traits<Mat4x4<element>>\
-		: vector_traits_base<component, element, 4>\
-		, vector_access_member<Mat4x4<element>, element, 4>\
+		: vector_traits_base<element, component, 4>\
+		, vector_access_member<Mat4x4<element>, component, 4>\
 	{};\
 	\
 	static_assert(VectorType<Mat4x4<element>>, "Mat4x4<"#element"> is not a valid vector type");\
+	static_assert(IsRank2<Mat4x4<element>>, "Mat4x4<"#element"> is not rank 2");\
 	static_assert(sizeof(Mat4x4<element>) == 4*4*sizeof(element), "Mat4x4<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Mat4x4<element>>, "Mat4x4<"#element"> is not trivially copyable");
 

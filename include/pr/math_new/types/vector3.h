@@ -138,6 +138,7 @@ namespace pr::math
 	{};\
 	\
 	static_assert(VectorType<Vec3<element>>, "Vec3<"#element"> is not a valid vector type");\
+	static_assert(IsRank1<Vec3<element>>, "Vec3<"#element"> is not rank 1");\
 	static_assert(sizeof(Vec3<element>) == 3*sizeof(element), "Vec3<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Vec3<element>>, "Vec3<"#element"> is not trivially copyable");
 

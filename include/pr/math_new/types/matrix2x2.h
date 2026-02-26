@@ -90,11 +90,12 @@ namespace pr::math
 
 	#define PR_MATH_DEFINE_TYPE(component, element)\
 	template <> struct vector_traits<Mat2x2<element>>\
-		: vector_traits_base<component, element, 2>\
-		, vector_access_member<Mat2x2<element>, element, 2>\
+		: vector_traits_base<element, component, 2>\
+		, vector_access_member<Mat2x2<element>, component, 2>\
 	{};\
 	\
 	static_assert(VectorType<Mat2x2<element>>, "Mat2x2<"#element"> is not a valid vector type");\
+	static_assert(IsRank2<Mat2x2<element>>, "Mat2x2<"#element"> is not rank 2");\
 	static_assert(sizeof(Mat2x2<element>) == 2*2*sizeof(element), "Mat2x2<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Mat2x2<element>>, "Mat2x2<"#element"> is not trivially copyable");
 

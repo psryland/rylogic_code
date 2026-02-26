@@ -137,27 +137,27 @@ namespace pr::math
 		Vec res = lhs;
 		return res -= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, Vec rhs) requires (IsRank1<Vec>)
 	{
 		Vec res = lhs;
 		return res *= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, typename vector_traits<Vec>::element_t rhs) requires (IsRank1<Vec>)
 	{
 		Vec res = lhs;
 		return res *= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (typename vector_traits<Vec>::element_t lhs, Vec rhs) requires (IsRank1<Vec>)
 	{
 		Vec res = rhs;
 		return res *= lhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, Vec rhs) requires (IsRank1<Vec>)
 	{
 		Vec res = lhs;
 		return res /= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, typename vector_traits<Vec>::element_t rhs) requires (IsRank1<Vec>)
 	{
 		Vec res = lhs;
 		return res /= rhs;

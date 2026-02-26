@@ -448,7 +448,7 @@ namespace pr::math
 			{}
 
 			// Breadth-first recursive raster of this spline
-			int Raster(S t0 = 0, S t1 = std::numeric_limits<S>::max())
+			int Raster(S t0 = 0, S t1 = (std::numeric_limits<S>::max)())
 			{
 				t0 = std::clamp(t0, m_spline.Time0(), m_spline.Time1());
 				t1 = std::clamp(t1, m_spline.Time0(), m_spline.Time1());
@@ -456,7 +456,7 @@ namespace pr::math
 				Elem init = {};
 				init.m_p0 = m_spline.Position(t0); init.m_p0.w = t0;
 				init.m_p1 = m_spline.Position(t1); init.m_p1.w = t1;
-				init.m_err = std::numeric_limits<S>::max();
+				init.m_err = (std::numeric_limits<S>::max)();
 				init.m_idx = 1;
 
 				assert(ssize(m_out) >= 2);
@@ -526,7 +526,7 @@ namespace pr::math
 				{
 					// If 't0' and 't1' are on different curves, pick a "large" error amount
 					if (p1.w - p0.w > 1)
-						return std::numeric_limits<S>::max();
+						return (std::numeric_limits<S>::max)();
 
 					// Use geometric deviation from a chord
 					auto dpos = p1.xyz - p0.xyz;
