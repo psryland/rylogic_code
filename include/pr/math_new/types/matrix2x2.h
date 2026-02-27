@@ -46,13 +46,15 @@ namespace pr::math
 		// Array access
 		constexpr Vec2<S> const& operator [](int i) const
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 2 && "index out of range");
+			if consteval { return i == 0 ? x : y; }
+			else { return arr[i]; }
 		}
 		constexpr Vec2<S>& operator [](int i)
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 2 && "index out of range");
+			if consteval { return i == 0 ? x : y; }
+			else { return arr[i]; }
 		}
 
 		// Constants

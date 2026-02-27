@@ -47,15 +47,7 @@
 
 // Allow assert handler replacement
 #ifndef pr_assert
-#define pr_assert(x) assert(x)
-//#define pr_assert(condition, message)\
-//	do {\
-//		if constexpr (std::is_constant_evaluated()) { \
-//			if (!(condition)) throw std::logic_error(message); \
-//		} else\
-//			if (!(condition)) pr_assert_fail(#condition, message, __FILE__, __LINE__); \
-//		} \
-//	} while(0)
+#define pr_assert(x) do { if consteval {} else { assert(x); } } while (0)
 #endif
 
 // C++11's 'alignas'

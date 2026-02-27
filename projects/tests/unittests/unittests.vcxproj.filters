@@ -1135,9 +1135,6 @@
     <ClInclude Include="..\..\..\include\pr\math_new\tests\quaternion_tests.h">
       <Filter>pr\math_new\tests</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\math_new\tests\vector_tests.h">
-      <Filter>pr\math_new\tests</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\core\constants.h">
       <Filter>pr\math_new\core</Filter>
     </ClInclude>
@@ -1230,6 +1227,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\spline.h">
       <Filter>pr\math_new\primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\tests\function_tests.h">
+      <Filter>pr\math_new\tests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -57,13 +57,15 @@ namespace pr::math
 		// Array access
 		constexpr Vec4<S> const& operator [](int i) const
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 4 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
+			else { return arr[i]; }
 		}
 		constexpr Vec4<S>& operator [](int i)
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 4 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
+			else { return arr[i]; }
 		}
 
 		// Constants
@@ -139,11 +141,11 @@ namespace pr::math
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
 		static Mat4x4 TransformRad(S pitch, S yaw, S roll, Vec4<S> pos)
 		{
-			return math::TransformRad<Mat4x4>(pitch, yaw, roll, pos);
+			return Mat4x4{ math::RotationRad<Mat3x4>(pitch, yaw, roll), pos };
 		}
 		static Mat4x4 TransformDeg(S pitch, S yaw, S roll, Vec4<S> pos)
 		{
-			return math::TransformDeg<Mat4x4>(pitch, yaw, roll, pos);
+			return Mat4x4{ math::RotationDeg<Mat3x4>(pitch, yaw, roll), pos };
 		}
 
 		// Create from rotation and translation

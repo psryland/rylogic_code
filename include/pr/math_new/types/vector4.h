@@ -54,6 +54,12 @@ namespace pr::math
 			, z(z_)
 			, w(w_)
 		{}
+		constexpr Vec4(S x_, S y_, S z_)
+			: x(x_)
+			, y(y_)
+			, z(z_)
+			, w(S(0))
+		{}
 		constexpr explicit Vec4(VectorTypeN<S, 4> auto v)
 			:Vec4(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
@@ -84,13 +90,15 @@ namespace pr::math
 		// Array access
 		constexpr S operator [] (int i) const
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 4 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
+			else { return arr[i]; }
 		}
 		constexpr S& operator [] (int i)
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 4 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
+			else { return arr[i]; }
 		}
 
 		// Create other vector types
