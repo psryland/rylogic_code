@@ -54,6 +54,17 @@ namespace pr::math
 		}
 		constexpr Mat4x4(Xform<S> const& xform) requires (std::floating_point<S>);
 
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Mat4x4<S2>() const
+		{
+			return Mat4x4<S2>(
+				static_cast<Vec4<S2>>(x),
+				static_cast<Vec4<S2>>(y),
+				static_cast<Vec4<S2>>(z),
+				static_cast<Vec4<S2>>(w)
+			);
+		}
+
 		// Array access
 		constexpr Vec4<S> const& operator [](int i) const
 		{
@@ -139,11 +150,11 @@ namespace pr::math
 		}
 
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
-		static Mat4x4 TransformRad(S pitch, S yaw, S roll, Vec4<S> pos)
+		static Mat4x4 TransformRad(S pitch, S yaw, S roll, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::RotationRad<Mat3x4>(pitch, yaw, roll), pos };
 		}
-		static Mat4x4 TransformDeg(S pitch, S yaw, S roll, Vec4<S> pos)
+		static Mat4x4 TransformDeg(S pitch, S yaw, S roll, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::RotationDeg<Mat3x4>(pitch, yaw, roll), pos };
 		}
@@ -155,31 +166,32 @@ namespace pr::math
 		}
 
 		// Create from quaternion + position
-		static Mat4x4 Transform(Quat<S> q, Vec4<S> pos)
+		template <typename Q = S> requires std::floating_point<Q>
+		static Mat4x4 Transform(Quat<Q> q, Vec4<S> pos)
 		{
 			return Mat4x4{ math::ToMatrix<Mat3x4<S>>(q), pos };
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat4x4 Transform(Vec4<S> axis, S angle, Vec4<S> pos)
+		static Mat4x4 Transform(Vec4<S> axis, S angle, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::Rotation<Mat4x4>(axis, angle), pos };
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat4x4 Transform(Vec4<S> angular_displacement, Vec4<S> pos)
+		static Mat4x4 Transform(Vec4<S> angular_displacement, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::Rotation<Mat3x4<S>>(angular_displacement), pos };
 		}
 
 		// Create a transform representing the rotation from one vector to another. (Vectors do not need to be normalised)
-		static Mat4x4 Transform(Vec4<S> from, Vec4<S> to, Vec4<S> pos)
+		static Mat4x4 Transform(Vec4<S> from, Vec4<S> to, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::Rotation<Mat3x4<S>>(from, to), pos };
 		}
 
 		// Create a transform from one basis axis to another
-		static Mat4x4 Transform(AxisId from_axis, AxisId to_axis, Vec4<S> pos)
+		static Mat4x4 Transform(AxisId from_axis, AxisId to_axis, Vec4<S> pos) requires std::floating_point<S>
 		{
 			return Mat4x4{ math::Rotation<Mat3x4<S>>(from_axis, to_axis), pos };
 		}

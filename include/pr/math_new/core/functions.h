@@ -788,7 +788,7 @@ namespace pr::math
 
 		if consteval
 		{
-			return static_cast<S>(SqrtCT(x));
+			return static_cast<S>(SqrtCT(static_cast<double>(x)));
 		}
 		else
 		{
@@ -813,7 +813,7 @@ namespace pr::math
 		// Matrices have an overload that finds the matrix whose product is 'x'.
 		static_assert(std::is_same_v<Vec, void>, "Sqrt is not defined for general vector types");
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall CompSqrt(Vec v) // Component Sqrt
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSqrt(Vec v) // Component Sqrt
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -823,7 +823,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = CompSqrt(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall CompSignedSqrt(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSignedSqrt(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -905,11 +905,11 @@ namespace pr::math
 	}
 
 	// Min/Max element (i.e. nearest to -inf/+inf)
-	template <ScalarType S> inline constexpr S MinElement(S v)
+	template <ScalarType S> constexpr S MinElement(S v)
 	{
 		return v;
 	}
-	template <ScalarType S> inline constexpr S MaxElement(S v)
+	template <ScalarType S> constexpr S MaxElement(S v)
 	{
 		return v;
 	}
@@ -935,7 +935,7 @@ namespace pr::math
 	}
 
 	// Min/Max absolute element (i.e. nearest to 0/+inf)
-	template <ScalarType S> inline constexpr S MinElementAbs(S v)
+	template <ScalarType S> constexpr S MinElementAbs(S v)
 	{
 		return Abs(v);
 	}
@@ -950,7 +950,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) res = Min(res, MinElementAbs(vec(v).w));
 		return res;
 	}
-	template <ScalarType S> inline constexpr S MaxElementAbs(S v)
+	template <ScalarType S> constexpr S MaxElementAbs(S v)
 	{
 		return Abs(v);
 	}
@@ -995,17 +995,13 @@ namespace pr::math
 	}
 
 	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if 'a' is in the range (b-tol,b+tol)
-	template <std::integral T> constexpr bool FEqlAbsolute(T a, T b, auto)
-	{
-		return a == b;
-	}
 	template <std::floating_point T> constexpr bool FEqlAbsolute(T a, T b, T tol)
 	{
 		// When float operations are performed at compile time, the compiler warnings about 'inf'
 		assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
 		return Abs(a - b) < tol;
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall FEqlAbsolute(Vec lhs, Vec rhs, auto tol)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlAbsolute(Vec lhs, Vec rhs, auto tol)
 	{
 		using vt = vector_traits<Vec>;
 		bool eql = true;
@@ -1017,10 +1013,6 @@ namespace pr::math
 	}
 
 	// Floating point comparisons. *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
-	template <std::integral T> constexpr bool FEqlRelative(T a, T b, auto)
-	{
-		return a == b;
-	}
 	template <std::floating_point T> constexpr bool FEqlRelative(T a, T b, T tol)
 	{
 		// Floating point compare is dangerous and subtle.
@@ -1044,7 +1036,7 @@ namespace pr::math
 		auto abs_max_element = std::max(Abs(a), Abs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall FEqlRelative(Vec lhs, Vec rhs, auto tol)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlRelative(Vec lhs, Vec rhs, auto tol)
 	{
 		auto max_a = MaxElement(Abs(lhs));
 		auto max_b = MaxElement(Abs(rhs));
@@ -1055,23 +1047,19 @@ namespace pr::math
 	}
 
 	// FEqlRelative using 'Tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
-	template <std::integral S> constexpr bool FEql(S a, S b)
-	{
-		return a == b;
-	}
 	template <std::floating_point S> constexpr bool FEql(S a, S b)
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
 		return FEqlRelative(a, b, constants<S>::tiny);
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall FEql(Vec lhs, Vec rhs)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEql(Vec lhs, Vec rhs)
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		return FEqlRelative(lhs, rhs, constants<S>::tiny);
 	}
 
 	// Ceil/Floor/Round/Modulus
-	template <ScalarType S> constexpr S Ceil(S x)
+	template <ScalarTypeFP S> constexpr S Ceil(S x)
 	{
 		if consteval
 		{
@@ -1086,7 +1074,7 @@ namespace pr::math
 			return static_cast<S>(std::ceil(x));
 		}
 	}
-	template <ScalarType S> constexpr S Floor(S x)
+	template <ScalarTypeFP S> constexpr S Floor(S x)
 	{
 		if consteval
 		{
@@ -1101,7 +1089,7 @@ namespace pr::math
 			return static_cast<S>(std::floor(x));
 		}
 	}
-	template <ScalarType S> constexpr S Round(S x)
+	template <ScalarTypeFP S> constexpr S Round(S x)
 	{
 		if consteval
 		{
@@ -1116,7 +1104,7 @@ namespace pr::math
 			return static_cast<S>(std::round(x));
 		}
 	}
-	template <ScalarType S> constexpr S RoundSD(S d, int significant_digits)
+	template <ScalarTypeFP S> constexpr S RoundSD(S d, int significant_digits)
 	{
 		pr_assert(significant_digits >= 0 && "'significant_digits' value must be >= 0");
 
@@ -1152,7 +1140,7 @@ namespace pr::math
 		else
 			return x % y;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Ceil(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Ceil(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1162,7 +1150,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Ceil(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Floor(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Floor(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1172,7 +1160,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Floor(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Round(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Round(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1182,7 +1170,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Round(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall RoundSD(Vec v, int significant_digits)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall RoundSD(Vec v, int significant_digits)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1416,7 +1404,7 @@ namespace pr::math
 	{
 		using vt = vector_traits<Vec>;
 		// Note: Sign flipped compared to the old library (pr::maths). Now uses the standard convention: a.x*b.y - a.y*b.x.
-		return vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x; // 2D Cross product == Dot(Rotate90CCW(lhs), rhs)
+		return vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x; // 2D Cross product == Dot(Rotate90CW(lhs), rhs)
 	}
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 3)
 	constexpr Vec Cross(Vec lhs, Vec rhs)
@@ -1432,12 +1420,17 @@ namespace pr::math
 	constexpr Vec Cross3(Vec lhs, Vec rhs)
 	{
 		using vt = vector_traits<Vec>;
-		return Vec {
-			vec(lhs).y * vec(rhs).z - vec(lhs).z * vec(rhs).y,
-			vec(lhs).z * vec(rhs).x - vec(lhs).x * vec(rhs).z,
-			vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x,
-			typename vt::element_t(0)
-		};
+		using S = typename vt::element_t;
+
+		if constexpr (vt::dimension == 3)
+			return Cross(lhs, rhs);
+		else
+			return Vec {
+				vec(lhs).y * vec(rhs).z - vec(lhs).z * vec(rhs).y,
+				vec(lhs).z * vec(rhs).x - vec(lhs).x * vec(rhs).z,
+				vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x,
+				S(0)
+			};
 	}
 
 	// Vector triple product: a . b x c
@@ -1640,7 +1633,7 @@ namespace pr::math
 	}
 
 	// Return true if 'mat' is an orthonormal matrix
-	template <TensorType Vec> requires (IsRank1<Vec>)
+	template <TensorTypeFP Vec> requires (IsRank1<Vec>)
 	constexpr bool pr_vectorcall IsNormalised(Vec v, typename vector_traits<Vec>::element_t tol = tiny<typename vector_traits<Vec>::element_t>)
 	{
 		using S = typename vector_traits<Vec>::element_t;
@@ -1648,7 +1641,7 @@ namespace pr::math
 	}
 
 	// Return true if 'mat' is an orthogonal matrix
-	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 2)
+	template <VectorType Mat> requires (IsRank2<Mat>)
 	constexpr bool pr_vectorcall IsOrthogonal(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>)
 	{
 		using vt = vector_traits<Mat>;
@@ -1657,24 +1650,24 @@ namespace pr::math
 		if constexpr (vt::dimension == 2)
 		{
 			return
-				Abs(Dot(vec(mat).x, vec(mat).y)) < tol;
+				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol;
 		}
 		if constexpr (vt::dimension == 3)
 		{
 			return
-				Abs(Dot(vec(mat).x, vec(mat).y)) < tol &&
-				Abs(Dot(vec(mat).x, vec(mat).z)) < tol &&
-				Abs(Dot(vec(mat).y, vec(mat).z)) < tol;
+				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol &&
+				Abs(Dot(vec(mat).x, vec(mat).z)) <= tol &&
+				Abs(Dot(vec(mat).y, vec(mat).z)) <= tol;
 		}
 		if constexpr (vt::dimension == 4)
 		{
 			return
-				Abs(Dot(vec(mat).x, vec(mat).y)) < tol &&
-				Abs(Dot(vec(mat).x, vec(mat).z)) < tol &&
-				Abs(Dot(vec(mat).x, vec(mat).w)) < tol &&
-				Abs(Dot(vec(mat).y, vec(mat).z)) < tol &&
-				Abs(Dot(vec(mat).y, vec(mat).w)) < tol &&
-				Abs(Dot(vec(mat).z, vec(mat).w)) < tol;
+				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol &&
+				Abs(Dot(vec(mat).x, vec(mat).z)) <= tol &&
+				Abs(Dot(vec(mat).x, vec(mat).w)) <= tol &&
+				Abs(Dot(vec(mat).y, vec(mat).z)) <= tol &&
+				Abs(Dot(vec(mat).y, vec(mat).w)) <= tol &&
+				Abs(Dot(vec(mat).z, vec(mat).w)) <= tol;
 		}
 	}
 
@@ -1814,14 +1807,16 @@ namespace pr::math
 		}
 	}
 
-	// Rotate a 2D vector by 90deg (when looking down the Z axis)
+	// Rotate a 2D vector by 90deg CW (when at the origin, looking in the direction of +Z)
+	// CW rotates +X toward +Y. Cross2D(a,b) == Dot(Rotate90CW(a), b)
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
 	constexpr Vec pr_vectorcall Rotate90CW(Vec v)
 	{
 		return Vec{ -vec(v).y, +vec(v).x };
 	}
 
-	// Rotate a 2D vector by -90def (when looking down the Z axis)
+	// Rotate a 2D vector by 90deg CCW (when at the origin, looking in the direction of +Z)
+	// CCW rotates +X toward -Y.
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
 	constexpr Vec pr_vectorcall Rotate90CCW(Vec v)
 	{
@@ -1837,10 +1832,15 @@ namespace pr::math
 		pr_assert(vec != Zero<Vec>() && "Cannot make a perpendicular to a zero vector");
 
 		Vec v;
-		if constexpr (vt::dimension == 2) v = Rotate90CCW(vec);
-		if constexpr (vt::dimension == 3) v = Cross(vec, CreateNotParallelTo(vec));
-		if constexpr (vt::dimension == 4) v = Cross3(vec, CreateNotParallelTo(vec));
-		v *= Sqrt(LengthSq(vec) / LengthSq(v));
+		if constexpr (vt::dimension == 2)
+		{
+			v = Rotate90CCW(vec);
+		}
+		if constexpr (vt::dimension >= 3)
+		{
+			v = Cross3(vec, CreateNotParallelTo(vec));
+			v *= Sqrt(LengthSq(vec) / LengthSq(v));
+		}
 		return v;
 	}
 
@@ -1866,14 +1866,22 @@ namespace pr::math
 		}
 
 		// If 'previous' is still perpendicular, reuse it
-		if (Abs(Dot3(vec, previous)) < tiny<S>)
+		S dot_vp = Dot(vec, previous);
+		if (Abs(dot_vp) < tiny<S>)
 			return previous;
 
 		// Otherwise, make a perpendicular that is close to 'previous'
 		Vec v = {};
-		if constexpr (vt::dimension == 2) v = Dot(vec, previous) >= S(0) ? Rotate90CCW(vec) : Rotate90CW(vec);
-		if constexpr (vt::dimension == 3) v = Normalise(Cross(Cross(vec, previous), vec));
-		if constexpr (vt::dimension == 4) v = Normalise(Cross3(Cross3(vec, previous), vec));
+		if constexpr (vt::dimension == 2)
+		{
+			// Cross2D > 0 means 'previous' is on the CW side of 'vec'
+			v = Cross(vec, previous) >= S(0) ? Rotate90CW(vec) : Rotate90CCW(vec);
+		}
+		else
+		{
+			v = Cross3(Cross3(vec, previous), vec);
+			if constexpr (std::floating_point<S>) v = Normalise(v);
+		}
 		return v;
 	}
 
@@ -2278,7 +2286,7 @@ namespace pr::math
 		if constexpr (vt::dimension == 2)
 		{
 			vec(m).x = Normalise(vec(m).x);
-			vec(m).y = Rotate90CCW(vec(m).x);
+			vec(m).y = Rotate90CW(vec(m).x);
 		}
 		if constexpr (vt::dimension >= 3)
 		{
@@ -2346,7 +2354,7 @@ namespace pr::math
 	// Matrix creation ----- 
 
 	// Create a translation matrix
-	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
 	constexpr Mat Translation(typename vector_traits<Mat>::component_t xyz)
 	{
 		using vt = vector_traits<Mat>;
@@ -2358,7 +2366,7 @@ namespace pr::math
 		vec(vec(m).w).w = S(1); // Ensure affine
 		return m;
 	}
-	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
+	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
 	constexpr Mat Translation(typename vector_traits<Mat>::element_t x, typename vector_traits<Mat>::element_t y, typename vector_traits<Mat>::element_t z)
 	{
 		using vt = vector_traits<Mat>;
@@ -2547,10 +2555,10 @@ namespace pr::math
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
 
-		Mat mat = {};
-		vec(mat).x = Vec{ S(1), sxy };
-		vec(mat).y = Vec{ syx, S(1) };
-		return mat;
+		return Mat {
+			Vec{ S(1), sxy },
+			Vec{ syx, S(1) },
+		};
 	}
 
 	// Create a 3D shear matrix
@@ -2560,11 +2568,11 @@ namespace pr::math
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
 
-		Mat mat = {};
-		vec(mat).x = Vec{ S(1), sxy, sxz };
-		vec(mat).y = Vec{ syx, S(1), syz };
-		vec(mat).z = Vec{ szx, szy, S(1) };
-		return mat;
+		return Mat {
+			Vec{ S(1), sxy, sxz },
+			Vec{ syx, S(1), syz },
+			Vec{ szx, szy, S(1) },
+		};
 	}
 
 	// Create a Look-At transform
@@ -2998,7 +3006,7 @@ namespace pr::math
 	// Random -----
 
 	// Create a random vector with unit length
-	template <VectorTypeFP Vec, typename Rng = std::default_random_engine>
+	template <VectorType Vec, typename Rng = std::default_random_engine>
 	inline Vec pr_vectorcall RandomN(Rng& rng)
 	{
 		using vt = vector_traits<Vec>;
@@ -3007,26 +3015,39 @@ namespace pr::math
 
 		if constexpr (IsRank1<Vec>)
 		{
-			std::uniform_real_distribution<S> dist(S(-1), S(1));
-			for (;;)
+			if constexpr (std::floating_point<S>)
 			{
+				std::uniform_real_distribution<S> dist(S(-1), S(1));
+				for (;;)
+				{
+					Vec res = {};
+					if constexpr (vt::dimension > 0) vec(res).x = dist(rng);
+					if constexpr (vt::dimension > 1) vec(res).y = dist(rng);
+					if constexpr (vt::dimension > 2) vec(res).z = dist(rng);
+					if constexpr (vt::dimension > 3) vec(res).w = dist(rng);
+					if (auto len = LengthSq(res); len > S(0.01) && len <= S(1))
+						return res / Sqrt(len);
+				}
+			}
+			else
+			{
+				// For integer types, pick a random axis-aligned unit vector
+				std::uniform_int_distribution<int> axis_dist(0, vt::dimension - 1);
+				std::uniform_int_distribution<int> sign_dist(0, 1);
 				Vec res = {};
-				if constexpr (vt::dimension > 0) vec(res).x = dist(rng);
-				if constexpr (vt::dimension > 1) vec(res).y = dist(rng);
-				if constexpr (vt::dimension > 2) vec(res).z = dist(rng);
-				if constexpr (vt::dimension > 3) vec(res).w = dist(rng);
-				if (auto len = LengthSq(res); len > S(0.01) && len <= S(1))
-					return res / Sqrt(len);
+				res[axis_dist(rng)] = S(sign_dist(rng) * 2 - 1);
+				return res;
 			}
 		}
 		else
 		{
+			// Each column is independently a random unit vector
 			Vec res = {};
 			if constexpr (vt::dimension > 0) vec(res).x = RandomN<C>(rng);
 			if constexpr (vt::dimension > 1) vec(res).y = RandomN<C>(rng);
 			if constexpr (vt::dimension > 2) vec(res).z = RandomN<C>(rng);
 			if constexpr (vt::dimension > 3) vec(res).w = RandomN<C>(rng);
-			return Normalise(res);
+			return res;
 		}
 	}
 
@@ -3041,10 +3062,20 @@ namespace pr::math
 		if constexpr (IsRank1<Vec>)
 		{
 			Vec res = {};
-			if constexpr (vt::dimension > 0) { std::uniform_real_distribution<S> dist_x(vec(vmin).x, vec(vmax).x); vec(res).x = dist_x(rng); }
-			if constexpr (vt::dimension > 1) { std::uniform_real_distribution<S> dist_y(vec(vmin).y, vec(vmax).y); vec(res).y = dist_y(rng); }
-			if constexpr (vt::dimension > 2) { std::uniform_real_distribution<S> dist_z(vec(vmin).z, vec(vmax).z); vec(res).z = dist_z(rng); }
-			if constexpr (vt::dimension > 3) { std::uniform_real_distribution<S> dist_w(vec(vmin).w, vec(vmax).w); vec(res).w = dist_w(rng); }
+			if constexpr (std::floating_point<S>)
+			{
+				if constexpr (vt::dimension > 0) { std::uniform_real_distribution<S> dist_x(vec(vmin).x, vec(vmax).x); vec(res).x = dist_x(rng); }
+				if constexpr (vt::dimension > 1) { std::uniform_real_distribution<S> dist_y(vec(vmin).y, vec(vmax).y); vec(res).y = dist_y(rng); }
+				if constexpr (vt::dimension > 2) { std::uniform_real_distribution<S> dist_z(vec(vmin).z, vec(vmax).z); vec(res).z = dist_z(rng); }
+				if constexpr (vt::dimension > 3) { std::uniform_real_distribution<S> dist_w(vec(vmin).w, vec(vmax).w); vec(res).w = dist_w(rng); }
+			}
+			else
+			{
+				if constexpr (vt::dimension > 0) { std::uniform_int_distribution<S> dist_x(vec(vmin).x, vec(vmax).x); vec(res).x = dist_x(rng); }
+				if constexpr (vt::dimension > 1) { std::uniform_int_distribution<S> dist_y(vec(vmin).y, vec(vmax).y); vec(res).y = dist_y(rng); }
+				if constexpr (vt::dimension > 2) { std::uniform_int_distribution<S> dist_z(vec(vmin).z, vec(vmax).z); vec(res).z = dist_z(rng); }
+				if constexpr (vt::dimension > 3) { std::uniform_int_distribution<S> dist_w(vec(vmin).w, vec(vmax).w); vec(res).w = dist_w(rng); }
+			}
 			return res;
 		}
 		else
@@ -3068,8 +3099,16 @@ namespace pr::math
 
 		if constexpr (IsRank1<Vec>)
 		{
-			std::uniform_real_distribution<S> dist(min_length, max_length);
-			return dist(rng) * RandomN<Vec>(rng);
+			if constexpr (std::floating_point<S>)
+			{
+				std::uniform_real_distribution<S> dist(min_length, max_length);
+				return dist(rng) * RandomN<Vec>(rng);
+			}
+			else
+			{
+				std::uniform_int_distribution<S> dist(min_length, max_length);
+				return dist(rng) * RandomN<Vec>(rng);
+			}
 		}
 		else
 		{

@@ -57,6 +57,15 @@ namespace pr::math
 		{
 		}
 
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Vec8<S2, T>() const
+		{
+			return Vec8<S2, T>(
+				static_cast<math::Vec4<S2>>(ang),
+				static_cast<math::Vec4<S2>>(lin)
+			);
+		}
+
 		// Reinterpret as a different vector type
 		template <typename U> explicit operator Vec8<S, U> const& () const
 		{

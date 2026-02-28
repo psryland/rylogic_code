@@ -47,6 +47,16 @@ namespace pr::math
 				Vec4<S>(v[8], v[9], v[10], v[11]))
 		{}
 
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Mat3x4<S2>() const
+		{
+			return Mat3x4<S2>(
+				static_cast<Vec4<S2>>(x),
+				static_cast<Vec4<S2>>(y),
+				static_cast<Vec4<S2>>(z)
+			);
+		}
+
 		// Array access
 		constexpr Vec4<S> const& operator [](int i) const
 		{

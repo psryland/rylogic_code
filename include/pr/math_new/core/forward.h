@@ -87,7 +87,7 @@ namespace pr::math
 	template <ScalarType S> struct Vec3;
 	template <ScalarType S> struct Vec4;
 	template <ScalarType S, typename T> struct Vec8;
-	template <ScalarType S> struct Quat;
+	template <ScalarTypeFP S> struct Quat;
 	template <ScalarType S> struct Mat2x2;
 	template <ScalarType S> struct Mat3x4;
 	template <ScalarType S> struct Mat4x4;

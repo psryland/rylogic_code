@@ -54,6 +54,16 @@ namespace pr::math
 			:Vec3(v[0], v[1], v[2])
 		{}
 
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Vec3<S2>() const
+		{
+			return Vec3<S2>(
+				static_cast<S2>(x),
+				static_cast<S2>(y),
+				static_cast<S2>(z)
+			);
+		}
+
 		// Array access
 		constexpr S operator [] (int i) const
 		{

@@ -43,6 +43,15 @@ namespace pr::math
 				Vec2<S>(v[2], v[3]))
 		{}
 
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Mat2x2<S2>() const
+		{
+			return Mat2x2<S2>(
+				static_cast<Vec2<S2>>(x),
+				static_cast<Vec2<S2>>(y)
+			);
+		}
+
 		// Array access
 		constexpr Vec2<S> const& operator [](int i) const
 		{

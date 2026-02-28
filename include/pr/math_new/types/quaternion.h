@@ -12,7 +12,7 @@
 
 namespace pr::math
 {
-	template <ScalarType S>
+	template <ScalarTypeFP S>
 	struct Quat
 	{
 		enum
@@ -68,6 +68,17 @@ namespace pr::math
 		// Create a quaternion from a rotation matrix
 		explicit Quat(Mat3x4<S> const& m);
 
+		// Explicit cast to different Scalar type
+		template <ScalarTypeFP S2> constexpr explicit operator Quat<S2>() const
+		{
+			return Quat<S2>(
+				static_cast<S2>(x),
+				static_cast<S2>(y),
+				static_cast<S2>(z),
+				static_cast<S2>(w)
+			);
+		}
+			
 		// Create a quaternion from an axis and an angle
 		Quat(Vec3<S> axis, S angle)
 		{
