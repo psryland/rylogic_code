@@ -4,7 +4,10 @@
 //*****************************************************************************
 //http://graphics.stanford.edu/~seander/bithacks.html
 #pragma once
-#include "pr/maths/forward.h"
+#include <type_traits>
+#include <concepts>
+
+//#include "pr/maths/forward.h"
 
 namespace pr
 {

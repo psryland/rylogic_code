@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -635,14 +635,7 @@ namespace pr::math
 	}
 	template <ScalarType S> constexpr bool IsFinite(S value, S max_value)
 	{
-		if consteval
-		{
-			return IsFinite(value) && Abs(value) < max_value;
-		}
-		else
-		{
-			return IsFinite(value) && Abs(value) < max_value;
-		}
+		return IsFinite(value) && value < max_value && value > -max_value;
 	}
 	template <TensorType Vec> constexpr bool pr_vectorcall IsFinite(Vec v, bool any = false)
 	{
@@ -690,11 +683,26 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) yes = yes && pred(vec(v).w);
 		return yes;
 	}
+	template <std::ranges::input_range Range, typename Pred> constexpr bool Any(Range&& range, Pred pred) requires (!TensorType<std::decay_t<Range>>)
+	{
+		for (auto&& element : range)
+			if (pred(element)) return true;
+		return false;
+	}
+	template <std::ranges::input_range Range, typename Pred> constexpr bool All(Range&& range, Pred pred) requires (!TensorType<std::decay_t<Range>>)
+	{
+		for (auto&& element : range)
+			if (!pred(element)) return false;
+		return true;
+	}
 
 	// Absolute value (component-wise)
 	template <std::integral S> constexpr S Abs(S v)
 	{
-		return v >= S(0) ? v : -v;
+		if constexpr (std::is_unsigned_v<S>)
+			return v;
+		else
+			return v >= S(0) ? v : -v;
 	}
 	template <std::floating_point S> constexpr S Abs(S v)
 	{
@@ -953,9 +961,35 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) maximum = std::max(maximum, MaxElement(vec(v).w));
 		return maximum;
 	}
+	template <std::ranges::input_range Range> constexpr auto MinElement(Range&& range)
+	{
+		// Note: if 'range' is a Vec4[], this will find the minimum element among all components of all vectors, not the minimum vector by component comparison.
+		using value_t = std::ranges::range_value_t<Range>;
+		using element_t = decltype(MinElement(std::declval<value_t>()));
+
+		element_t minimum = Max<element_t>();
+		for (auto&& element : range)
+			minimum = std::min(minimum, MinElement(element));
+		return minimum;
+	}
+	template <std::ranges::input_range Range> constexpr auto MaxElement(Range&& range)
+	{
+		// Note: if 'range' is a Vec4[], this will find the maximum element among all components of all vectors, not the maximum vector by component comparison.
+		using value_t = std::ranges::range_value_t<Range>;
+		using element_t = decltype(MaxElement(std::declval<value_t>()));
+
+		element_t maximum = Min<element_t>();
+		for (auto&& element : range)
+			maximum = std::max(maximum, MaxElement(element));
+		return maximum;
+	}
 
 	// Min/Max absolute element (i.e. nearest to 0/+inf)
 	template <ScalarType S> constexpr S MinElementAbs(S v)
+	{
+		return Abs(v);
+	}
+	template <ScalarType S> constexpr S MaxElementAbs(S v)
 	{
 		return Abs(v);
 	}
@@ -969,10 +1003,6 @@ namespace pr::math
 		if constexpr (vt::dimension > 2) res = Min(res, MinElementAbs(vec(v).z));
 		if constexpr (vt::dimension > 3) res = Min(res, MinElementAbs(vec(v).w));
 		return res;
-	}
-	template <ScalarType S> constexpr S MaxElementAbs(S v)
-	{
-		return Abs(v);
 	}
 	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MaxElementAbs(Vec v)
 	{
@@ -1012,6 +1042,44 @@ namespace pr::math
 		if constexpr (vt::dimension > 2) idx = vec(v).z > val ? (val = vec(v).z, 2) : idx;
 		if constexpr (vt::dimension > 3) idx = vec(v).w > val ? (val = vec(v).w, 3) : idx;
 		return idx;
+	}
+	template <std::ranges::input_range Range> constexpr int MinElementIndex(Range&& range)
+	{
+		using value_t = std::ranges::range_value_t<Range>;
+		using element_t = decltype(MinElement(std::declval<value_t>()));
+
+		int idx = 0, min_idx = 0;
+		element_t min_val = Max<element_t>();
+		for (auto&& element : range)
+		{
+			auto val = MinElement(element);
+			if (val < min_val)
+			{
+				min_val = val;
+				min_idx = idx;
+			}
+			idx++;
+		}
+		return min_idx;
+	}
+	template <std::ranges::input_range Range> constexpr int MaxElementIndex(Range&& range)
+	{
+		using value_t = std::ranges::range_value_t<Range>;
+		using element_t = decltype(MaxElement(std::declval<value_t>()));
+
+		int idx = 0, max_idx = 0;
+		element_t max_val = Min<element_t>();
+		for (auto&& element : range)
+		{
+			auto val = MaxElement(element);
+			if (val > max_val)
+			{
+				max_val = val;
+				max_idx = idx;
+			}
+			idx++;
+		}
+		return max_idx;
 	}
 
 	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if 'a' is in the range (b-tol,b+tol)
@@ -1265,7 +1333,7 @@ namespace pr::math
 			default: pr_assert("Unknown truncation type" && false); return x;
 		}
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Trunc(Vec v, ETruncate trunc = ETruncate::TowardZero)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Trunc(Vec v, ETruncate trunc = ETruncate::TowardZero)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1292,7 +1360,7 @@ namespace pr::math
 			return std::modf(x, &n);
 		}
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec v)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1325,7 +1393,7 @@ namespace pr::math
 
 		return x * x;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Sqr(Vec v)
+	template <VectorType Vec> constexpr Vec pr_vectorcall Sqr(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1358,7 +1426,7 @@ namespace pr::math
 
 		return x * x * x;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Cube(Vec v)
+	template <VectorType Vec> constexpr Vec pr_vectorcall Cube(Vec v)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1370,9 +1438,69 @@ namespace pr::math
 	}
 
 	// Raise 'x' to an integer power
+	constexpr int Pow2(int n)
+	{
+		return 1 << n;
+	}
 	template <ScalarType S> constexpr S Pow(S x, int y)
 	{
 		return y == 0 ? 1 : x * Pow(x, y - 1);
+	}
+	template <ScalarTypeFP S> inline S Pow(S x, S y)
+	{
+		return static_cast<S>(std::pow(x, y));
+	}
+	template <ScalarTypeFP S> inline S Exp(S x)
+	{
+		return static_cast<S>(std::exp(x));
+	}
+	template <ScalarTypeFP S> inline S Log10(S x)
+	{
+		return static_cast<S>(std::log10(x));
+	}
+	template <ScalarTypeFP S> inline S Log(S x)
+	{
+		return static_cast<S>(std::log(x));
+	}
+	template <TensorType Vec> constexpr Vec pr_vectorcall Pow(Vec v, int y)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Pow(vec(v).x, y);
+		if constexpr (vt::dimension > 1) vec(res).y = Pow(vec(v).y, y);
+		if constexpr (vt::dimension > 2) vec(res).z = Pow(vec(v).z, y);
+		if constexpr (vt::dimension > 3) vec(res).w = Pow(vec(v).w, y);
+		return res;
+	}
+	template <TensorType Vec> constexpr Vec pr_vectorcall Exp(Vec v)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Exp(vec(v).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Exp(vec(v).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Exp(vec(v).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Exp(vec(v).w);
+		return res;
+	}
+	template <TensorType Vec> constexpr Vec pr_vectorcall Log10(Vec v)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Log10(vec(v).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Log10(vec(v).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Log10(vec(v).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Log10(vec(v).w);
+		return res;
+	}
+	template <TensorType Vec> constexpr Vec pr_vectorcall Log(Vec v, int y)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Log(vec(v).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Log(vec(v).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Log(vec(v).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Log(vec(v).w);
+		return res;
 	}
 
 	// atan2 that returns a positive angle in the range [0, tau)
@@ -1391,6 +1519,480 @@ namespace pr::math
 	template <ScalarType S> constexpr S RadiansToDegrees(S radians)
 	{
 		return static_cast<S>(radians * S(360) / constants<S>::tau);
+	}
+	
+	// Return the normalised fraction that 'x' is, in the range ['min', 'max']
+	template <ScalarTypeFP S> constexpr S Frac(S min, S x, S max)
+	{
+		pr_assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
+		return (x - min) / (max - min);
+	}
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec min, Vec x, Vec max)
+	{
+		auto n = x - min;
+		auto d = max - min;
+		return n / d;
+	}
+
+	// Linearly interpolate from 'lhs' to 'rhs'
+	template <ScalarTypeFP S> constexpr S Lerp(S lhs, S rhs, std::floating_point auto frac)
+	{
+		return static_cast<S>(lhs + frac * (rhs - lhs));
+	}
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Lerp(Vec lhs, Vec rhs, typename vector_traits<Vec>::element_t frac)
+	{
+		// Don't implement this for integral vector types, callers can just cast from FP to intg.
+		return lhs + frac * (rhs - lhs);
+	}
+
+	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Slerp(Vec a, Vec b, typename vector_traits<Vec>::element_t frac)
+	{
+		pr_assert("Cannot spherically interpolate to/from the zero vector" && a != Zero<Vec>() && b != Zero<Vec>());
+
+		auto a_len = Length(a);
+		auto b_len = Length(b);
+		auto len = Lerp(a_len, b_len, frac);
+		auto vec = Normalise(((1 - frac) / a_len) * a + (frac / b_len) * b);
+		return len * vec;
+	}
+
+	// Quantise a value to a power of two. 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc
+	template <ScalarTypeFP S, std::integral I> constexpr S Quantise(S x, I scale)
+	{
+		// The purpose of 'Quantise' is to round 'x' to the nearest representable floating number using 'N' mantissa bits where '1 << N' == 'scale.
+		return static_cast<I>(x * scale) / static_cast<S>(scale);
+	}
+	template <VectorTypeFP Vec, std::integral I> constexpr Vec pr_vectorcall Quantise(Vec v, I scale)
+	{
+		using vt = vector_traits<Vec>;
+		using S = typename vt::element_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Quantise(vec(v).x, scale);
+		if constexpr (vt::dimension > 1) vec(res).y = Quantise(vec(v).y, scale);
+		if constexpr (vt::dimension > 2) vec(res).z = Quantise(vec(v).z, scale);
+		if constexpr (vt::dimension > 3) vec(res).w = Quantise(vec(v).w, scale);
+		return res;
+	}
+
+	// Return the cosine of the angle of the triangle apex opposite 'opp'
+	template <ScalarTypeFP S> constexpr S CosAngle(S adj0, S adj1, S opp)
+	{
+		pr_assert("Angle undefined an when adjacent length is zero" && !FEql(adj0, S{}) && !FEql(adj1, S{}));
+		return Clamp<S>((adj0*adj0 + adj1*adj1 - opp*opp) / (S(2) * adj0 * adj1), -S(1), +S(1));
+	}
+
+	// Return the cosine of the angle between two vectors
+	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall CosAngle(Vec lhs, Vec rhs)
+	{
+		using vt = vector_traits<Vec>;
+		using S = typename vt::element_t;
+		pr_assert("CosAngle undefined for zero vectors" && lhs != Vec{} && rhs != Vec{});
+		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -S(1), +S(1));
+	}
+
+	// Return the angle (in radians) of the triangle apex opposite 'opp'
+	template <ScalarTypeFP S> inline S Angle(S adj0, S adj1, S opp)
+	{
+		return std::acos(CosAngle(adj0, adj1, opp));
+	}
+
+	// Return the angle between two vectors
+	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall Angle(Vec lhs, Vec rhs)
+	{
+		return std::acos(CosAngle(lhs, rhs));
+	}
+
+	// Return the length of a triangle side given by two adjacent side lengths and an angle between them
+	template <ScalarTypeFP S> inline S Length(S adj0, S adj1, S angle)
+	{
+		auto len_sq = adj0*adj0 + adj1*adj1 - 2 * adj0 * adj1 * std::cos(angle);
+		return len_sq > 0 ? Sqrt(len_sq) : 0;
+	}
+
+	// Returns 1 if 'hi' is > 'lo' otherwise 0
+	template <ScalarType S> constexpr S Step(S lo, S hi)
+	{
+		return lo <= hi ? S(0) : S(1);
+	}
+
+	// Returns the 'Hermite' interpolation (3t^2 - 2t^3) between 'lo' and 'hi' for t=[0,1]
+	template <ScalarTypeFP S> constexpr S SmoothStep(S lo, S hi, S t)
+	{
+		if (lo == hi) return lo;
+		t = Clamp((t - lo) / (hi - lo), S(0), S(1));
+		return t * t * (S(3) - S(2) * t);
+	}
+
+	// Returns a fifth-order 'Perlin' interpolation (6t^5 - 15t^4 + 10t^3) between 'lo' and 'hi' for t=[0,1]
+	template <ScalarTypeFP S> constexpr S SmoothStep2(S lo, S hi, S t)
+	{
+		if (lo == hi) return lo;
+		t = Clamp((t - lo) / (hi - lo), S(0), S(1));
+		return static_cast<S>(t * t * t * (t * (t * S(6) - S(15)) + S(10)));
+	}
+
+	// Scale a value on the range [-inf,+inf] to within the range [-1,+1].
+	template <ScalarTypeFP S> inline S Sigmoid(S x, S n = S(1))
+	{
+		// 'n' is a horizontal scaling factor.
+		// If n = 1, [-1,+1] maps to [-0.5, +0.5]
+		// If n = 10, [-10,+10] maps to [-0.5, +0.5], etc
+		return static_cast<S>(std::atan(x/n) / constants<S>::tau_by_4);
+	}
+
+	// Scale a value on the range [0,1] such that:' f(0) = 0, f(1) = 1, and df(0.5) = 0'
+	template <ScalarTypeFP S> constexpr S UnitCubic(S x)
+	{
+		// This is used to weight values so that values near 0.5 are favoured
+		return S(4) * Cube(x - S(0.5)) + S(0.5);
+	}
+
+	// Low precision reciprocal square root
+	template <ScalarTypeFP S> inline S Rsqrt0(S x)
+	{
+		S r;
+		if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>)
+		{
+			// todo
+			//__m128d r0;
+			//r0 = _mm_load_sd(&x);
+			//r0 = _mm_rsqrt_sd(r0);
+			//_mm_store_sd(&r, r0);
+			r = S(1) / Sqrt(x);
+		}
+		else if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<S, float>)
+		{
+			__m128 r0;
+			r0 = _mm_load_ss(&x);
+			r0 = _mm_rsqrt_ss(r0);
+			_mm_store_ss(&r, r0);
+		}
+		else
+		{
+			r = S(1) / Sqrt(x);
+		}
+		return r;
+	}
+
+	// High(er) precision reciprocal square root
+	template <ScalarTypeFP S> inline S Rsqrt1(S x)
+	{
+		constexpr S c0 = +3.0;
+		constexpr S c1 = -0.5;
+
+		S r;
+		if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>)
+		{
+			//todo
+			//__m128d r0, r1;
+			//r0 = _mm_load_sd(&x);
+			//r1 = _mm_rsqrt_sd(r0);
+			//r0 = _mm_mul_sd(r0, r1); // The general 'Newton-Raphson' reciprocal square root recurrence:
+			//r0 = _mm_mul_sd(r0, r1); // (3 - b * X * X) * (X / 2)
+			//r0 = _mm_sub_sd(r0, _mm_load_sd(&c0));
+			//r1 = _mm_mul_sd(r1, _mm_load_sd(&c1));
+			//r0 = _mm_mul_sd(r0, r1);
+			//_mm_store_sd(&r, r0);
+			r = S(1) / Sqrt(x);
+		}
+		else if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<S, float>)
+		{
+			__m128 r0, r1;
+			r0 = _mm_load_ss(&x);
+			r1 = _mm_rsqrt_ss(r0);
+			r0 = _mm_mul_ss(r0, r1); // The general 'Newton-Raphson' reciprocal square root recurrence:
+			r0 = _mm_mul_ss(r0, r1); // (3 - b * X * X) * (X / 2)
+			r0 = _mm_sub_ss(r0, _mm_load_ss(&c0));
+			r1 = _mm_mul_ss(r1, _mm_load_ss(&c1));
+			r0 = _mm_mul_ss(r0, r1);
+			_mm_store_ss(&r, r0);
+		}
+		else
+		{
+			r = S(1) / Sqrt(x);
+		}
+		return r;
+	}
+
+	// Cube root
+	template <ScalarTypeFP S> inline S Cubert(S x)
+	{
+		// This works because the integer interpretation of an IEEE 754 float
+		// is approximately the log2(x) scaled by 2^23. The basic idea is to
+		// use the log2(x) value as the initial guess then do some 'Newton-Raphson'
+		// iterations to find the actual root.
+		
+		if (x == 0)
+			return x;
+
+		auto flip_sign = x < 0;
+		if (flip_sign) x = -x;
+		
+		if constexpr (std::is_same_v<S, float>)
+		{
+			union { float f; unsigned long i; } as;
+			as.f = x;
+			as.i = (as.i + 2U * 0x3f800000) / 3U;
+			auto guess = as.f;
+
+			x *= 1.0f / 3.0f;
+			guess = (x / (guess * guess) + guess * (2.0f / 3.0f));
+			guess = (x / (guess * guess) + guess * (2.0f / 3.0f));
+			guess = (x / (guess * guess) + guess * (2.0f / 3.0f));
+			return (flip_sign ? -guess : guess);
+		}
+		else
+		{
+			union { double f; unsigned long long i; } as;
+			as.f = x;
+			as.i = (as.i + 2ULL * 0x3FF0000000000000ULL) / 3ULL;
+			auto guess = as.f;
+
+			x *= 1.0 / 3.0;
+			guess = (x / (guess * guess) + guess * (2.0 / 3.0));
+			guess = (x / (guess * guess) + guess * (2.0 / 3.0));
+			guess = (x / (guess * guess) + guess * (2.0 / 3.0));
+			guess = (x / (guess * guess) + guess * (2.0 / 3.0));
+			guess = (x / (guess * guess) + guess * (2.0 / 3.0));
+			return (flip_sign ? -guess : guess);
+		}
+	}
+
+	// Fast hash
+	inline uint32_t Hash(float value, uint32_t max_value)
+	{
+		constexpr uint32_t h = 0x8da6b343; // Arbitrary prime
+		int n = static_cast<int>(h * value);
+		n = n % max_value;
+		if (n < 0) n += max_value;
+		return static_cast<uint32_t>(n);
+	}
+	template <VectorType Vec> inline uint32_t Hash(Vec v, uint32_t max_value)
+	{
+		using vt = vector_traits<Vec>;
+		using S = typename vt::element_t;
+
+		constexpr uint32_t h[] = {0x8da6b343, 0xd8163841, 0xcb1ab31f}; // Arbitrary Primes
+
+		int n = 0;
+		if constexpr (vt::dimension > 0) n += static_cast<int>(h[0 % _countof(h)] * vec(v).x);
+		if constexpr (vt::dimension > 1) n += static_cast<int>(h[1 % _countof(h)] * vec(v).y);
+		if constexpr (vt::dimension > 2) n += static_cast<int>(h[2 % _countof(h)] * vec(v).z);
+		if constexpr (vt::dimension > 3) n += static_cast<int>(h[3 % _countof(h)] * vec(v).w);
+		n = n % max_value;
+		if (n < 0) n += max_value;
+		return static_cast<uint32_t>(n);
+	}
+
+	// Return the greatest common factor between 'a' and 'b'
+	template <std::integral S> constexpr S GreatestCommonFactor(S a, S b)
+	{
+		// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
+		while (b) { auto t = b; b = a % b; a = t; }
+		return a;
+	}
+
+	// Return the least common multiple between 'a' and 'b'
+	template <std::integral S> constexpr S LeastCommonMultiple(S a, S b)
+	{
+		return (a * b) / GreatestCommonFactor(a, b);
+	}
+
+	// Convert a decimal back to a rational. Returns [numerator, denominator]
+	template <ScalarTypeFP S> std::tuple<int, int> DecimalToRational(double num)
+	{
+		(void)num;
+		// Algorithm:
+		//  c = the number of digits that form the repeating part of 'num'
+		//  l = the offset from the decimal point to the start of the repeating part of 'num'
+		//  let d = 9[c times]0[l times]
+		//     e.g. 0.1435282828... has c = 2 (28), and l = 4 (0.1435), so d = 990000
+		//          0.125           has c = 0, and l = 3, so d = 1000
+		//  let n = the digits right of the decimal point with the repeating part removed
+		//     e.g. 0.1435282828... so n = 1435
+		//          0.125           so n = 125
+		//  Find the GCF between n and d to get the rational: n/d
+		//
+		// Explanation:
+		//   0.123(45)... (45 repeating) equals 0.123 + (45/10000 + 45/1000000 + 45/100000000 + ...)
+		//   which is 123/1000 + the sum of the geometric series with ratio = 1/100
+		//     = 123/1000 + (45/10000).(1/(1-(1/100)))
+		//     = 123/1000 + (45/10000).(1/99)
+		//     = 123/1000 + (45/990000)
+		//     = (99*123 + 45)/990000
+		//     = 12222/990000
+
+		// todo: implement this
+		return { 0, 1 };
+	}
+
+	// Returns the number to add to pad 'size' up to 'alignment'
+	template <std::integral S> constexpr S Pad(S size, int alignment)
+	{
+		pr_assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
+		return static_cast<S>(~(size - 1) & (alignment - 1));
+	}
+
+	// Returns 'size' increased to a multiple of 'alignment'
+	template <std::integral S> constexpr S PadTo(S size, int alignment)
+	{
+		return size + Pad<S>(size, alignment);
+	}
+
+	// An infinite range arithmetic sequence
+	template <typename Type> auto ArithmeticSequence(Type initial_value, Type step)
+	{
+		// A sequence defined by:
+		//  an = a0 + n * step
+		//  Sn = (n + 1) * (a0 + an) / 2
+		struct I
+		{
+			Type a0, step, n;
+			I(Type initial_value, Type step)
+				:a0(initial_value)
+				,step(step)
+				,n(0)
+			{}
+			Type operator*() const
+			{
+				return static_cast<Type>(a0 + n * step);
+			}
+			I& operator++()
+			{
+				++n;
+				return *this;
+			}
+			bool operator!=(I const&) const
+			{
+				return true; // Infinite range
+			}
+		};
+		struct R
+		{
+			Type a0, step;
+			auto begin() const { return I{ a0, step}; }
+			auto end() const { return I{0, 0}; }
+		};
+		return R{ initial_value, step };
+	}
+	
+	// The sum of the first 'n' terms of an arithmetic sequence
+	template <typename Type> constexpr Type ArithmeticSum(Type a0, Type step, int n)
+	{
+		auto an = a0 + n * step;
+		return static_cast<Type>((n + 1) * (a0 + an) / 2);
+	}
+
+	// An infinite range geometric sequence
+	template <typename Type> auto GeometricSequence(Type initial_value, Type ratio)
+	{
+		// A sequence defined by:
+		//  an = am * r = a0 * r^n, (where m = n - 1)
+		//  Sn = a0.(1 - r^(n+1)) / (1 - r)
+		struct I
+		{
+			Type a0, ratio, n;
+			I(Type initial_value, Type ratio)
+				:a0(initial_value)
+				,ratio(ratio)
+				,n(0)
+			{}
+			Type operator*() const
+			{
+				return static_cast<Type>(a0 * Pow<double>(ratio, n));
+			}
+			I& operator++()
+			{
+				++n;
+				return *this;
+			}
+			bool operator!=(I const&) const
+			{
+				return true; // Infinite range
+			}
+		};
+		struct R
+		{
+			Type a0, ratio;
+			auto begin() const { return I{ a0, ratio}; }
+			auto end() const { return I{0, 0}; }
+		};
+		return R{ initial_value, ratio };
+	};
+	
+	// The sum of the first 'n' terms of a geometric sequence
+	template <typename Type> constexpr Type GeometricSum(Type a0, Type ratio, int n)
+	{
+		auto rn = Pow<double>(ratio, n + 1);
+		return static_cast<Type>(a0 * (1 - rn) / (1 - ratio));
+	}
+
+	// Permutes the elements in 'arr' with each iteration. The first permutation is the ordered array; [0,N). Number of permutations == n!
+	template <std::integral T> auto PermutationsOf(std::span<T> arr)
+	{
+		// Algorithm:
+		// - find the last pair of values that has increasing order.
+		// - swap the first of the pair with the next greater value from the values in [i+1,n)
+		// - sort the values in [i+1,n)
+		// e.g.
+		//   Given '524761', the last pair with increasing order is '47'.
+		//   Swap '4' with '6' because its the next greater value to the right of '4' => '526741'
+		//   Sort the values right of '6' => '526147'
+
+		struct I
+		{
+			std::span<T> m_arr;
+			bool m_done;
+
+			I(std::span<T> arr, bool done)
+				:m_arr(arr)
+				,m_done(done)
+			{}
+			std::span<T> operator*() const
+			{
+				return m_arr;
+			}
+			I& operator++()
+			{
+				int n = static_cast<int>(m_arr.size());
+
+				// Find the last pair of values that has increasing order.
+				int i = n - 1;
+				for (; i-- > 0 && m_arr[i] > m_arr[i+1];) {}
+				if (i == -1)
+				{
+					m_done = true;
+					return *this;
+				}
+
+				// Swap 'arr[i]' with the nearest value greater than 'arr[i]'
+				// to the right of 'i' then sort the values in the range: [i+1, n)
+				int j = i + 1;
+				for (int k = j + 1; k < n; ++k)
+				{
+					if (m_arr[k] < m_arr[i]) continue;
+					if (m_arr[k] > m_arr[j]) continue;
+					j = k;
+				}
+				std::swap(m_arr[i], m_arr[j]);
+				std::sort(m_arr.data() + i + 1, m_arr.data() + n);
+				return *this;
+			}
+			bool operator!=(I const& rhs) const
+			{
+				return m_done != rhs.m_done;
+			}
+		};
+		struct R
+		{
+			std::span<T> m_arr;
+			R(std::span<T> arr) :m_arr(arr) { std::sort(m_arr.begin(), m_arr.end()); }
+			auto begin() const { return I{ m_arr, m_arr.empty() || m_arr.front() == m_arr.back() }; }
+			auto end() const { return I{ m_arr, true }; }
+		};
+		return R{ arr };
 	}
 
 	// Vector dot product
@@ -3020,10 +3622,33 @@ namespace pr::math
 	inline int pr_vectorcall Sector(Vec v, int sectors)
 	{
 		using S = typename vector_traits<Vec>::element_t;
-		return static_cast<int>(ATan2Positive(vec(v).y, vec(v).x) * sectors / constants<S>::tau);
+		return static_cast<int>(Atan2Positive(vec(v).y, vec(v).x) * sectors / constants<S>::tau);
 	}
 
 	// Random -----
+
+	// Create a random value on interval ['vmin', 'vmax']
+	template <ScalarType S, typename Rng = std::default_random_engine>
+	constexpr S Random(Rng& rng, S vmin, S vmax)
+	{
+		if constexpr (std::integral<S>)
+		{
+			std::uniform_int_distribution<S> dist(vmin, vmax);
+			return dist(rng);
+		}
+		else
+		{
+			std::uniform_real_distribution<S> dist(vmin, vmax);
+			return dist(rng);
+		}
+	}
+
+	// Create a random value centred on 'centre' with radius 'radius'
+	template <ScalarType S, typename Rng = std::default_random_engine>
+	constexpr S RandomC(Rng& rng, S centre, S radius)
+	{
+		return Random<S, Rng>(rng, centre - radius, centre + radius);
+	}
 
 	// Create a random vector with unit length
 	template <VectorType Vec, typename Rng = std::default_random_engine>

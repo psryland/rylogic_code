@@ -105,7 +105,7 @@ namespace pr::math
 	template <> constexpr int64_t tiny<int64_t>       = constants<int64_t>::tiny;
 	template <> constexpr int32_t tiny<int32_t>       = constants<int32_t>::tiny;
 
-	#if 0
+	#if 0 // deprecated, don't relabel existing values
 	inline constexpr double tinyd = constants<double>::tiny;
 	inline constexpr double tiny_sqd = constants<double>::tiny_sq;
 	inline constexpr double tiny_sqrtd = constants<double>::tiny_sqrt;
@@ -164,7 +164,6 @@ namespace pr::math
 	inline constexpr float sin_30f = constants<float>::sin_30;
 	inline constexpr float sin_45f = constants<float>::sin_45;
 	inline constexpr float sin_60f = constants<float>::sin_60;
-	#endif
 
 	// Convenient constants
 	inline constexpr int8_t   int8_min     = limits<int8_t>::min();
@@ -194,6 +193,7 @@ namespace pr::math
 	inline constexpr double   double_inf   = limits<double>::infinity();
 	inline constexpr float    float_nan    = limits<float>::quiet_NaN();
 	inline constexpr double   double_nan   = limits<double>::quiet_NaN();
+	#endif
 
 	// The maximum integer value that can be exactly represented by a float,double
 	inline constexpr int32_t max_int_in_float  = 16777216;           // 2^24

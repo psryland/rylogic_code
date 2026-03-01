@@ -1841,7 +1841,180 @@ namespace pr::math::tests
 			PR_EXPECT(IsOrthonormal(R1));
 		}
 
-		// @Copilot, please add a test for Sector
+		// ---- Lerp (functions.h line ~1554) ----
+		PRUnitTestMethod(LerpTests
+		, Vec2<float>, Vec2<double>
+		, Vec3<float>, Vec3<double>
+		, Vec4<float>, Vec4<double>
+		) {
+			using vec_t = T;
+			using S = typename vector_traits<vec_t>::element_t;
+
+			auto a = vec_t(S(0));
+			auto b = vec_t(S(10));
+
+			PR_EXPECT(FEql(Lerp(a, b, S(0.0)), a));
+			PR_EXPECT(FEql(Lerp(a, b, S(1.0)), b));
+			PR_EXPECT(FEql(Lerp(a, b, S(0.5)), vec_t(S(5))));
+			PR_EXPECT(FEql(Lerp(a, b, S(0.25)), vec_t(S(2.5))));
+
+			// Scalar Lerp
+			PR_EXPECT(FEql(Lerp(S(0), S(10), S(0.5)), S(5)));
+			PR_EXPECT(FEql(Lerp(S(-5), S(5), S(0.5)), S(0)));
+		}
+
+		// ---- Slerp (functions.h line ~1565) ----
+		PRUnitTestMethod(SlerpTests
+		, Vec2<float>, Vec2<double>
+		, Vec3<float>, Vec3<double>
+		, Vec4<float>, Vec4<double>
+		) {
+			using vec_t = T;
+			using S = typename vector_traits<vec_t>::element_t;
+			using vt = vector_traits<vec_t>;
+
+			auto a = vec_t(S(0)); vec(a).x = S(1);
+			auto b = vec_t(S(0)); vec(b).y = S(1);
+
+			// Endpoints
+			PR_EXPECT(FEql(Slerp(a, b, S(0.0)), a));
+			PR_EXPECT(FEql(Slerp(a, b, S(1.0)), b));
+
+			// Midpoint should be normalised (equal length vectors)
+			auto mid = Slerp(a, b, S(0.5));
+			PR_EXPECT(FEql(Length(mid), S(1)));
+		}
+
+		// ---- Quantise (functions.h line ~1577) ----
+		PRUnitTestMethod(QuantiseTests
+		, Vec2<float>, Vec2<double>
+		, Vec3<float>, Vec3<double>
+		, Vec4<float>, Vec4<double>
+		) {
+			using vec_t = T;
+			using S = typename vector_traits<vec_t>::element_t;
+
+			// Scalar quantise
+			PR_EXPECT(Quantise(S(0.123456), 100) == S(0.12));
+			PR_EXPECT(Quantise(S(0.999), 10) == S(0.9));
+
+			// Vector quantise
+			auto v = vec_t(S(0.123456));
+			auto q = Quantise(v, 100);
+			PR_EXPECT(FEql(q, vec_t(S(0.12))));
+		}
+
+		// ---- SmoothStep (functions.h line ~1637) ----
+		PRUnitTestMethod(SmoothStepTests
+		, float, double
+		) {
+			using S = T;
+
+			// SmoothStep: 0 at lo, 1 at hi, smooth in between
+			PR_EXPECT(FEql(SmoothStep(S(0), S(1), S(0)), S(0)));
+			PR_EXPECT(FEql(SmoothStep(S(0), S(1), S(1)), S(1)));
+			PR_EXPECT(FEql(SmoothStep(S(0), S(1), S(0.5)), S(0.5)));
+
+			// Clamped outside range
+			PR_EXPECT(FEql(SmoothStep(S(0), S(1), S(-1)), S(0)));
+			PR_EXPECT(FEql(SmoothStep(S(0), S(1), S(2)), S(1)));
+
+			// SmoothStep2: same boundary conditions
+			PR_EXPECT(FEql(SmoothStep2(S(0), S(1), S(0)), S(0)));
+			PR_EXPECT(FEql(SmoothStep2(S(0), S(1), S(1)), S(1)));
+			PR_EXPECT(FEql(SmoothStep2(S(0), S(1), S(0.5)), S(0.5)));
+		}
+
+		// ---- Step (functions.h line ~1631) ----
+		PRUnitTestMethod(StepTests
+		, float, double, int32_t, int64_t
+		) {
+			using S = T;
+
+			PR_EXPECT(Step(S(0), S(1)) == S(0)); // lo <= hi → 0
+			PR_EXPECT(Step(S(1), S(0)) == S(1)); // lo > hi → 1
+			PR_EXPECT(Step(S(5), S(5)) == S(0)); // lo == hi → 0
+		}
+
+		// ---- Sigmoid (functions.h line ~1653) ----
+		PRUnitTestMethod(SigmoidTests
+		, float, double
+		) {
+			using S = T;
+
+			// Sigmoid(0) should be 0
+			PR_EXPECT(FEql(Sigmoid(S(0)), S(0)));
+
+			// Sigmoid should be odd: Sigmoid(-x) == -Sigmoid(x)
+			PR_EXPECT(FEql(Sigmoid(S(1)) + Sigmoid(S(-1)), S(0)));
+
+			// Sigmoid should be bounded in (-1, 1)
+			PR_EXPECT(Sigmoid(S(1000)) < S(1));
+			PR_EXPECT(Sigmoid(S(-1000)) > S(-1));
+		}
+
+		// ---- UnitCubic (functions.h line ~1662) ----
+		PRUnitTestMethod(UnitCubicTests
+		, float, double
+		) {
+			using S = T;
+
+			// f(0) = 0, f(1) = 1, df(0.5) = 0
+			PR_EXPECT(FEql(UnitCubic(S(0)), S(0)));
+			PR_EXPECT(FEql(UnitCubic(S(1)), S(1)));
+			PR_EXPECT(FEql(UnitCubic(S(0.5)), S(0.5)));
+		}
+
+		// ---- Rsqrt (functions.h line ~1669) ----
+		PRUnitTestMethod(RsqrtTests
+		, float, double
+		) {
+			using S = T;
+
+			auto v = S(4);
+			auto expected = S(0.5); // 1/sqrt(4) = 0.5
+
+			// Rsqrt0: low precision
+			PR_EXPECT(FEqlRelative(Rsqrt0(v), expected, S(0.01)));
+
+			// Rsqrt1: higher precision
+			PR_EXPECT(FEqlRelative(Rsqrt1(v), expected, S(0.0001)));
+		}
+
+		// ---- Log (functions.h line ~1477) ----
+		PRUnitTestMethod(LogTests
+		, float, double
+		) {
+			using S = T;
+
+			// Log(1) == 0
+			PR_EXPECT(FEql(Log(S(1)), S(0)));
+
+			// Log(e) == 1
+			PR_EXPECT(FEqlRelative(Log(Exp(S(1))), S(1), S(0.0001)));
+
+			// Log10(100) == 2
+			PR_EXPECT(FEqlRelative(Log10(S(100)), S(2), S(0.0001)));
+		}
+
+		// ---- Sector (functions.h line ~3638) ----
+		PRUnitTestMethod(SectorTests
+		, Vec2<float>, Vec2<double>
+		) {
+			using vec_t = T;
+			using S = typename vector_traits<vec_t>::element_t;
+
+			// 4 sectors: right=0, up=1, left=2, down=3
+			vec_t right = {S(1), S(0)};
+			vec_t up = {S(0), S(1)};
+			vec_t left = {S(-1), S(0)};
+			vec_t down = {S(0), S(-1)};
+
+			PR_EXPECT(Sector(right, 4) == 0);
+			PR_EXPECT(Sector(up, 4) == 1);
+			PR_EXPECT(Sector(left, 4) == 2);
+			PR_EXPECT(Sector(down, 4) == 3);
+		}
 
 		// ---- RandomN (functions.h line ~2922) ----
 		PRUnitTestMethod(RandomNTests
