@@ -1228,6 +1228,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\fibonacci_sphere.h">
       <Filter>pr\algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\frustum.h">
+      <Filter>pr\math_new\primitives</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli">

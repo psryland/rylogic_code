@@ -401,6 +401,7 @@
     <ClInclude Include="..\..\..\include\pr\math_new\core\traits.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\bbox.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\bsphere.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\frustum.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\oriented_box.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\plane.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\spline.h" />

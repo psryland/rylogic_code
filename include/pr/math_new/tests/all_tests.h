@@ -11,3 +11,4 @@
 #include "pr/math_new/tests/matrix3x4_tests.h"
 #include "pr/math_new/tests/matrix4x4_tests.h"
 #include "pr/math_new/tests/quaternion_tests.h"
+#include "pr/math_new/tests/matrix_tests.h"
