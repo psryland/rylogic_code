@@ -7,7 +7,7 @@
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::math
+namespace pr::math::tests
 {
 	PRUnitTestClass(Vector2)
 	{

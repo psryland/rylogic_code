@@ -8,7 +8,7 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/matrix.h"
-namespace pr::math
+namespace pr::math::tests
 {
 	#if 0 // todo
 	PRUnitTest(Matrix6x8Tests, float)

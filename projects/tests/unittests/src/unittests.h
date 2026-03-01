@@ -6,6 +6,8 @@
 // Headers to unit test
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
+#include "pr/algorithm/fft.h"
+#include "pr/algorithm/fibonacci_sphere.h"
 #include "pr/algorithm/multidimensional_scaling.h"
 #include "pr/algorithm/peak_detection.h"
 #include "pr/audio/synth/synth.h"
@@ -103,9 +105,6 @@
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/bsphere.h"
 #include "pr/maths/conversion.h"
-#include "pr/maths/eigenvalue.h"
-#include "pr/maths/fft.h"
-#include "pr/maths/fibonacci_sphere.h"
 #include "pr/maths/frustum.h"
 #include "pr/maths/half.h"
 #include "pr/maths/interpolate.h"

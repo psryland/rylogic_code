@@ -1939,6 +1939,22 @@ namespace pr::maths
 				}
 			}
 		}
+		PRUnitTestMethod(EigenSymmetricSingleElement)
+		{
+			// 1×1 matrix: eigenvalue is the single element
+			auto M = Matrix<double>(1, 1, { 7.0 });
+			auto result = EigenSymmetric(M);
+			PR_EXPECT(result.values.cmps() == 1);
+			PR_EXPECT(std::abs(result.values(0, 0) - 7.0) < 1e-10);
+		}
+		PRUnitTestMethod(EigenSymmetricEmpty)
+		{
+			// 0×0 matrix: empty result
+			auto M = Matrix<double>(0, 0);
+			auto result = EigenSymmetric(M);
+			PR_EXPECT(result.values.cmps() == 0);
+			PR_EXPECT(result.vectors.cmps() == 0);
+		}
 		PRUnitTestMethod(EigenTopKSmall)
 		{
 			// Top-2 eigenpairs of a 3×3 matrix

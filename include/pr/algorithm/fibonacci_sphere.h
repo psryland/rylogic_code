@@ -3,11 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-#include "pr/maths/forward.h"
-#include "pr/maths/constants.h"
-#include "pr/maths/maths_core.h"
+#include "pr/maths/maths.h"
 
-namespace pr
+namespace pr::algorithm
 {
 	// Notes:
 	//  - A Fibonacci sphere is basically a spiral from (0,0,-1) to (0,0,+1). Over evenly distributed
@@ -113,7 +111,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::maths
+namespace pr::algorithm::tests
 {
 	PRUnitTest(FibonacciSphereTests)
 	{

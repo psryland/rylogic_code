@@ -256,8 +256,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\conversion.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\convex_hull.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\dynamics.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\fibonacci_sphere.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\fft.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\fibonacci_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\half.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\limits.h" />
@@ -275,12 +275,12 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\oriented_box.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\perlin_noise.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\perlin_noise.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\polynomial.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\primes.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\pr_to_ode.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\quaternion.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\rand_mt19937.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\algorithm\rand_mt19937.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spline.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\stat.h" />
@@ -427,7 +427,6 @@
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector4.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector8.h" />
     <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\eigenvalue.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
