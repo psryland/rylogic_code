@@ -739,7 +739,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\conversion.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\convex_hull.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\convex_hull.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\fft.h">
