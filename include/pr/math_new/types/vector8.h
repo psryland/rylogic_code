@@ -106,7 +106,7 @@ namespace pr::math
 		// Returns the direction and magnitude of the vector field at 'ofs'
 		Vec4 LinAt(Vec4 ofs) const
 		{
-			return Vec4{ lin + Cross3(ang, ofs) };
+			return Vec4{ lin + Cross(ang, ofs) };
 		}
 
 		// Sample the vector field at 'ofs'
@@ -115,7 +115,7 @@ namespace pr::math
 		// is constant over the whole vector field, given that 'ofs x lin' contributes to the angular.
 		Vec4 AngAt(Vec4 ofs) const
 		{
-			return Vec4{ ang - Cross3(ofs, lin) };
+			return Vec4{ ang - Cross(ofs, lin) };
 		}
 
 		// Operators

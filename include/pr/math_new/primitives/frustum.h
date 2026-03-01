@@ -260,10 +260,10 @@ namespace pr::math
 			// Direction vectors for the corners
 			auto norms = face_normals();
 			return Mat4x4(
-				Cross3(norms.z, norms.x),  // BL
-				Cross3(norms.x, norms.w),  // TL
-				Cross3(norms.w, norms.y),  // TR
-				Cross3(norms.y, norms.z)); // BR
+				Cross(norms.z, norms.x),  // BL
+				Cross(norms.x, norms.w),  // TL
+				Cross(norms.w, norms.y),  // TR
+				Cross(norms.y, norms.z)); // BR
 		}
 
 		// Clip the infinite line that passes through 's' with direction 'd' to this frustum.

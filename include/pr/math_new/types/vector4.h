@@ -476,11 +476,11 @@ namespace pr::math
 
 		// Cross product (3-component, w=0). Only for float — doubles use generic fallback.
 		// Note: w is zeroed by cancellation (aw*bw - aw*bw), which produces NaN if w is NaN.
-		friend constexpr Vec4 pr_vectorcall Cross3(Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall Cross(Vec4 lhs, Vec4 rhs)
 		{
 			if consteval
 			{
-				return math::Cross3<Vec4>(lhs, rhs);
+				return math::Cross<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -499,11 +499,11 @@ namespace pr::math
 					auto a = _mm256_blend_pd(lhs.vec, _mm256_setzero_pd(), 0x8); // zero w of lhs
 					auto b = _mm256_blend_pd(rhs.vec, _mm256_setzero_pd(), 0x8); // zero w of rhs
 					Vec4 a_vec{a}, b_vec{b};
-					return math::Cross3<Vec4>(a_vec, b_vec);
+					return math::Cross<Vec4>(a_vec, b_vec);
 				}
 				else
 				{
-					return math::Cross3<Vec4>(lhs, rhs);
+					return math::Cross<Vec4>(lhs, rhs);
 				}
 			}
 		}

@@ -67,7 +67,7 @@ namespace pr::math
 		// Construct from 3 points in 3D space
 		static Plane FromTriangle(Vec4 a, Vec4 b, Vec4 c)
 		{
-			auto p = Normalise(Cross3(b-a, c-a));
+			auto p = Normalise(Cross(b-a, c-a));
 			p.w = -Dot(a, p);
 			return Plane{ p };
 		}

@@ -1436,21 +1436,21 @@ namespace pr::math
 			vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x,
 		};
 	}
-	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 3)
-	constexpr Vec Cross3(Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 4)
+	constexpr Vec Cross(Vec lhs, Vec rhs)
 	{
+		// Although this operates on 4D vectors, there is no such thing as a 4D cross product.
+		// This function is provided for convenience when working with 4D homogeneous vectors
+		// and since 4D cross is meaningless, there shouldn't be any confusion.
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
 
-		if constexpr (vt::dimension == 3)
-			return Cross(lhs, rhs);
-		else
-			return Vec {
-				vec(lhs).y * vec(rhs).z - vec(lhs).z * vec(rhs).y,
-				vec(lhs).z * vec(rhs).x - vec(lhs).x * vec(rhs).z,
-				vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x,
-				S(0)
-			};
+		return Vec {
+			vec(lhs).y * vec(rhs).z - vec(lhs).z * vec(rhs).y,
+			vec(lhs).z * vec(rhs).x - vec(lhs).x * vec(rhs).z,
+			vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x,
+			S(0)
+		};
 	}
 
 	// Vector triple product: a . b x c
@@ -1462,7 +1462,7 @@ namespace pr::math
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 3)
 	constexpr typename vector_traits<Vec>::element_t Triple3(Vec a, Vec b, Vec c)
 	{
-		return Dot3(a, Cross3(b, c));
+		return Dot3(a, Cross(b, c));
 	}
 
 	// Squared Length of a vector
@@ -1804,9 +1804,9 @@ namespace pr::math
 		else if constexpr (vt::dimension == 3)
 			return LengthSq(Cross(v0, v1)) <= Sqr(tol);
 
-		// 4D uses Cross3 (ignores w)
+		// 4D uses Cross (ignores w)
 		else
-			return LengthSq(Cross3(v0, v1)) <= Sqr(tol);
+			return LengthSq(Cross(v0, v1)) <= Sqr(tol);
 	}
 
 	// Returns a vector guaranteed not parallel to 'v'
@@ -1858,7 +1858,7 @@ namespace pr::math
 		}
 		if constexpr (vt::dimension >= 3)
 		{
-			v = Cross3(vec, CreateNotParallelTo(vec));
+			v = Cross(vec, CreateNotParallelTo(vec));
 			v *= Sqrt(LengthSq(vec) / LengthSq(v));
 		}
 		return v;
@@ -1899,7 +1899,7 @@ namespace pr::math
 		}
 		else
 		{
-			v = Cross3(Cross3(vec, previous), vec);
+			v = Cross(Cross(vec, previous), vec);
 			if constexpr (std::floating_point<S>) v = Normalise(v);
 		}
 		return v;
@@ -2134,9 +2134,9 @@ namespace pr::math
 		if constexpr (vt::dimension == 3)
 		{
 			Mat inv = {};
-			vec(inv).x = Cross3(vec(mat).y, vec(mat).z);
-			vec(inv).y = Cross3(vec(mat).z, vec(mat).x);
-			vec(inv).z = Cross3(vec(mat).x, vec(mat).y);
+			vec(inv).x = Cross(vec(mat).y, vec(mat).z);
+			vec(inv).y = Cross(vec(mat).z, vec(mat).x);
+			vec(inv).z = Cross(vec(mat).x, vec(mat).y);
 			inv = Transpose(inv);
 			
 			auto det = Determinant(mat);
@@ -2311,8 +2311,8 @@ namespace pr::math
 		if constexpr (vt::dimension >= 3)
 		{
 			vec(m).x = Normalise(vec(m).x);
-			vec(m).y = Normalise(Cross3(vec(m).z, vec(m).x));
-			vec(m).z = Cross3(vec(m).x, vec(m).y);
+			vec(m).y = Normalise(Cross(vec(m).z, vec(m).x));
+			vec(m).z = Cross(vec(m).x, vec(m).y);
 		}
 		pr_assert(IsOrthonormal(m));
 		return m;
@@ -2501,7 +2501,7 @@ namespace pr::math
 		if (cos_angle >= 1.0f - tiny<S>) return Identity<Mat>();
 		if (cos_angle <= tiny<S> - S(1)) return Rotation<Mat>(Normalise(Perpendicular(from - to)), constants<S>::tau_by_2);
 
-		auto axis_size_angle = Cross3(from, to) / len;
+		auto axis_size_angle = Cross(from, to) / len;
 		auto axis_norm = Normalise(axis_size_angle);
 		return Rotation<Mat>(axis_norm, axis_size_angle, cos_angle);
 	}
@@ -2608,8 +2608,8 @@ namespace pr::math
 
 		Mat mat = {};
 		vec(mat).z = Normalise(eye - at);
-		vec(mat).x = Normalise(Cross3(up, vec(mat).z));
-		vec(mat).y = Cross3(vec(mat).z, vec(mat).x);
+		vec(mat).x = Normalise(Cross(up, vec(mat).z));
+		vec(mat).y = Cross(vec(mat).z, vec(mat).x);
 		vec(mat).w = eye;
 		return mat;
 	}
@@ -2797,7 +2797,7 @@ namespace pr::math
 		auto vec = CreateNotParallelTo(axis);
 		auto X = vec - Dot(axis, vec) * axis;
 		auto Xprim = mat * X;
-		auto XcXp = Cross3(X, Xprim);
+		auto XcXp = Cross(X, Xprim);
 		if (Dot3(XcXp, axis) < S(0))
 			angle = -angle;
 
@@ -2882,8 +2882,8 @@ namespace pr::math
 
 		Mat ori = {};
 		vec(ori).z = Normalise(Sign(S(axis_id)) * dir);
-		vec(ori).x = Normalise(Cross3(up, vec(ori).z));
-		vec(ori).y = Cross3(vec(ori).z, vec(ori).x);
+		vec(ori).x = Normalise(Cross(up, vec(ori).z));
+		vec(ori).y = Cross(vec(ori).z, vec(ori).x);
 
 		// Permute the column vectors so +Z becomes 'axis'
 		return Permute(ori, -Abs(axis_id));
@@ -2931,7 +2931,7 @@ namespace pr::math
 		using Vec = typename vt::component_t;
 
 		// This matrix can be used to calculate the cross product with
-		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
+		// another vector: e.g. Cross(v1, v2) == CPM(v1) * v2
 		return Mat{
 			Vec{     S(0),  vec(v).z, -vec(v).y},
 			Vec{-vec(v).z,      S(0),  vec(v).x},
@@ -2987,7 +2987,7 @@ namespace pr::math
 
 		// Orientation can be computed analytically if angular velocity
 		// and angular acceleration are parallel or angular acceleration is zero.
-		if (LengthSq(Cross3(avel, aacc)) < tiny<S>)
+		if (LengthSq(Cross(avel, aacc)) < tiny<S>)
 		{
 			auto w = avel + aacc * time;
 			return ExpMap3x3<Mat>(w * time) * ori;

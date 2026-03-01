@@ -186,7 +186,7 @@ namespace pr::math
 			t = Clamp<S>(t, 0, 1);
 			auto vel = EvalDerivative(t);
 			auto acc = EvalDerivative2(t);
-			auto v_x_a = Length(Cross3(vel, acc));
+			auto v_x_a = Length(Cross(vel, acc));
 			auto vel_len = Length(vel);
 			return vel_len > tiny<S> ? v_x_a / (vel_len * vel_len * vel_len) : 0;
 		}

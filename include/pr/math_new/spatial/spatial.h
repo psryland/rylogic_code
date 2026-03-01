@@ -26,7 +26,7 @@
 //   [ E    0 ]   where E = rotation, r = position of source frame's origin in target frame
 //   [r^E   E ]   r^ = CPM(r) = cross product matrix of r
 // This means a spatial transform can be created from a normal affine transform.
-//   m4x4 o2w = [o2w.rot                   0      ]
+//   m4x4 o2w = [o2w.rot                   0  ]
 //              [CPM(o2w.pos)*o2w.rot  o2w.rot]  (r = o2w.pos)
 // If X is a matrix that transforms a to b for M6 vectors, and X* is a matrix that
 // performs the same transform for F6 vectors, then X* == X^-T (invert then transpose).
@@ -53,8 +53,8 @@ namespace pr::math::spatial
 	// Rotate a spatial motion vector
 	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Motion> vec)
 	{
-		// [ E    0  ] * [v.ang] = [E*v.ang                       ]
-		// [r^E   E  ]   [v.lin]   [E*v.lin + r^(E*v.ang)        ] where r^ = (0,0,0) for pure rotation
+		// [ E    0] * [v.ang] = [E*v.ang              ]
+		// [r^E   E]   [v.lin]   [E*v.lin + r^(E*v.ang)] where r^ = (0,0,0) for pure rotation
 		auto ang_b = a2b * vec.ang;
 		auto lin_b = a2b * vec.lin;
 		return Vec8<S, Motion>{ang_b, lin_b};
@@ -63,8 +63,8 @@ namespace pr::math::spatial
 	// Rotate a spatial force vector
 	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Force> vec)
 	{
-		// [E   r^E ] * [v.ang] = [E*v.ang + r^(E*v.lin)        ]
-		// [0    E  ]   [v.lin]   [E*v.lin                       ] where r^ = (0,0,0) for pure rotation
+		// [E   r^E] * [v.ang] = [E*v.ang + r^(E*v.lin)]
+		// [0    E ]   [v.lin]   [E*v.lin              ] where r^ = (0,0,0) for pure rotation
 		auto lin_b = a2b * vec.lin;
 		auto ang_b = a2b * vec.ang;
 		return Vec8<S, Force>{ang_b, lin_b};
@@ -73,22 +73,22 @@ namespace pr::math::spatial
 	// Transform a spatial motion vector by an affine transform
 	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Motion> vec)
 	{
-		// [ E    0  ] * [v.ang] = [E*v.ang                       ]
-		// [r^E   E  ]   [v.lin]   [E*v.lin + r^(E*v.ang)        ] where r = a2b.pos
+		// [ E    0] * [v.ang] = [E*v.ang              ]
+		// [r^E   E]   [v.lin]   [E*v.lin + r^(E*v.ang)] where r = a2b.pos
 		pr_assert("'lhs' is not an affine transform" && IsAffine(a2b));
 		auto ang_b = a2b.rot * vec.ang;
-		auto lin_b = a2b.rot * vec.lin + Cross3(a2b.pos, ang_b);
+		auto lin_b = a2b.rot * vec.lin + Cross(a2b.pos, ang_b);
 		return Vec8<S, Motion>{ang_b, lin_b};
 	}
 
 	// Transform a spatial force vector by an affine transform
 	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Force> vec)
 	{
-		// [E   r^E ] * [v.ang] = [E*v.ang + r^(E*v.lin)        ]
-		// [0    E  ]   [v.lin]   [E*v.lin                       ] where r = a2b.pos
+		// [E   r^E] * [v.ang] = [E*v.ang + r^(E*v.lin)]
+		// [0    E ]   [v.lin]   [E*v.lin              ] where r = a2b.pos
 		pr_assert("'lhs' is not an affine transform" && IsAffine(a2b));
 		auto lin_b = a2b.rot * vec.lin;
-		auto ang_b = a2b.rot * vec.ang + Cross3(a2b.pos, lin_b);
+		auto ang_b = a2b.rot * vec.ang + Cross(a2b.pos, lin_b);
 		return Vec8<S, Force>{ang_b, lin_b};
 	}
 
@@ -135,15 +135,15 @@ namespace pr::math::spatial
 	template <ScalarTypeFP S> constexpr Vec8<S, Motion> Cross(Vec8<S, Motion> lhs, Vec8<S, Motion> rhs)
 	{
 		return Vec8<S, Motion>{
-			Cross3(lhs.ang, rhs.ang),
-			Cross3(lhs.ang, rhs.lin) + Cross3(lhs.lin, rhs.ang)
+			Cross(lhs.ang, rhs.ang),
+			Cross(lhs.ang, rhs.lin) + Cross(lhs.lin, rhs.ang)
 		};
 	}
 	template <ScalarTypeFP S> constexpr Vec8<S, Force> Cross(Vec8<S, Force> lhs, Vec8<S, Force> rhs)
 	{
 		return Vec8<S, Force>{
-			Cross3(lhs.ang, rhs.ang) + Cross3(lhs.lin, rhs.lin),
-			Cross3(lhs.ang, rhs.lin)
+			Cross(lhs.ang, rhs.ang) + Cross(lhs.lin, rhs.lin),
+			Cross(lhs.ang, rhs.lin)
 		};
 	}
 
@@ -151,14 +151,14 @@ namespace pr::math::spatial
 	template <ScalarTypeFP S> constexpr Vec8<S, Motion> Shift(Vec8<S, Motion> motion, Vec4<S> ofs)
 	{
 		// c.f. RBDS 2.21
-		return Vec8<S, Motion>(motion.ang, motion.lin + Cross3(motion.ang, ofs));
+		return Vec8<S, Motion>(motion.ang, motion.lin + Cross(motion.ang, ofs));
 	}
 
 	// Return a force vector, equal to 'force', but expressed at a new location equal to the previous location + 'ofs'.
 	template <ScalarTypeFP S> constexpr Vec8<S, Force> Shift(Vec8<S, Force> force, Vec4<S> ofs)
 	{
 		// c.f. RBDS 2.22
-		return Vec8<S, Force>(force.ang + Cross3(force.lin, ofs), force.lin);
+		return Vec8<S, Force>(force.ang + Cross(force.lin, ofs), force.lin);
 	}
 
 	// Shift a spatial acceleration measured at some point to that same spatial
@@ -172,7 +172,7 @@ namespace pr::math::spatial
 	{
 		return Vec8<S, Motion>{
 			acc.ang,
-			acc.lin + Cross3(acc.ang, ofs) + Cross3(avel, Cross3(avel, ofs))
+			acc.lin + Cross(acc.ang, ofs) + Cross(avel, Cross(avel, ofs))
 		};
 	}
 
@@ -198,8 +198,8 @@ namespace pr::math::spatial
 	template <typename VecSpace, ScalarTypeFP S> constexpr Mat6x8<S, VecSpace, VecSpace> Transform(Mat4x4<S> const& a2b)
 	{
 		// Note: RBDA shows a transform to be (with r = a2b.pos):
-		//  [ E    0 ] = motion   [E   r^E]
-		//  [r^E   E ]    force = [0    E  ]
+		//  [ E    0] = motion         [E   r^E]
+		//  [r^E   E]          force = [0    E ]
 		if constexpr (std::same_as<VecSpace, Motion>)
 			return Mat6x8<S, Motion, Motion>{a2b.rot, Zero<Mat3x4<S>>(), math::CPM<Mat3x4<S>>(a2b.pos) * a2b.rot, a2b.rot};
 		else if constexpr (std::same_as<VecSpace, Force>)
@@ -350,8 +350,8 @@ namespace pr::math::spatial::tests
 
 				{// Motion vectors
 					// Calculation using 3-vectors
-					auto ang_c = a2c * ang_a;                          // Angular velocity in frame 'c'
-					auto lin_c = a2c * lin_a + Cross3(a2c.pos, ang_c); // Linear velocity in frame 'c'
+					auto ang_c = a2c * ang_a;                         // Angular velocity in frame 'c'
+					auto lin_c = a2c * lin_a + Cross(a2c.pos, ang_c); // Linear velocity in frame 'c'
 
 					//{
 					//	{
@@ -376,10 +376,10 @@ namespace pr::math::spatial::tests
 
 					{
 						// At some point 'pt_a' find the velocity in frame 'a'
-						auto vel_a = lin_a + Cross3(ang_a, pt_a);
+						auto vel_a = lin_a + Cross(ang_a, pt_a);
 
 						// The velocity at 'pt_c' in frame 'c'
-						auto vel_c = lin_c + Cross3(ang_c, pt_c);
+						auto vel_c = lin_c + Cross(ang_c, pt_c);
 
 						// Should be equivalent to the velocity measured in frame 'a'
 						auto VEL_A = c2a * vel_c;
@@ -412,7 +412,7 @@ namespace pr::math::spatial::tests
 				{// Force vectors
 					// Calculation using 3-vectors
 					auto lin_c = a2c * lin_a;                          // Force in frame 'c'
-					auto ang_c = a2c * ang_a + Cross3(a2c.pos, lin_c); // Torque in frame 'c' (Plücker force transform)
+					auto ang_c = a2c * ang_a + Cross(a2c.pos, lin_c); // Torque in frame 'c' (Plücker force transform)
 
 					{
 						// Verify torque at a point is frame-invariant
@@ -473,10 +473,10 @@ namespace pr::math::spatial::tests
 				auto force = v8force{ang, lin};
 				auto ofs = Vec4{T(1), 0, 0, 0};   // shift to (1,0,0)
 
-				// Torque changes: τ + f × r = 0 + (0,0,1)×(1,0,0) = (0,-1,0)... wait: Cross3(f, ofs) = f × ofs
+				// Torque changes: τ + f × r = 0 + (0,0,1)×(1,0,0) = (0,-1,0)... wait: Cross(f, ofs) = f × ofs
 				auto shifted = Shift(force, ofs);
 				PR_EXPECT(FEql(shifted.lin, lin)); // force unchanged
-				auto expected_ang = Cross3(lin, ofs); // f × r
+				auto expected_ang = Cross(lin, ofs); // f × r
 				PR_EXPECT(FEql(shifted.ang, expected_ang));
 			}
 			{// ShiftAccelerationBy: centripetal + tangential

@@ -889,7 +889,7 @@ namespace pr::math::tests
 			static_assert(Cross(X, X) == vec_t::Zero());
 		}
 
-		// ---- Cross3 4D (functions.h line ~1379) ----
+		// ---- Cross 4D (functions.h line ~1379) ----
 		PRUnitTestMethod(CrossProduct4D
 		, Vec4<float>, Vec4<double>, Vec4<int32_t>, Vec4<int64_t>
 		) {
@@ -900,10 +900,10 @@ namespace pr::math::tests
 			constexpr auto Y = vec_t::YAxis();
 			constexpr auto Z = vec_t::ZAxis();
 
-			static_assert(Cross3(X, Y) == Z);
-			static_assert(Cross3(Y, Z) == X);
-			static_assert(Cross3(Z, X) == Y);
-			static_assert(Cross3(X, Y) == -Cross3(Y, X));
+			static_assert(Cross(X, Y) == Z);
+			static_assert(Cross(Y, Z) == X);
+			static_assert(Cross(Z, X) == Y);
+			static_assert(Cross(X, Y) == -Cross(Y, X));
 		}
 
 		// ---- Triple, Triple3 (functions.h line ~1392) ----
@@ -1786,10 +1786,10 @@ namespace pr::math::tests
 			using S = typename vt::element_t;
 			using Vec = typename vt::component_t;
 
-			// CPM(v) * u == Cross3(v, u)
+			// CPM(v) * u == Cross(v, u)
 			auto v = Vec::XAxis();
 			auto u = Vec::YAxis();
-			PR_EXPECT(FEql(CPM<mat_t>(v) * u, Cross3(v, u)));
+			PR_EXPECT(FEql(CPM<mat_t>(v) * u, Cross(v, u)));
 
 			// CPM is anti-symmetric
 			PR_EXPECT(IsAntiSymmetric(CPM<mat_t>(v)));
