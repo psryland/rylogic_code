@@ -229,12 +229,12 @@ namespace pr::math
 
 	// Note: Vec8 isn't really a VectorType. It can't be used with the generic vector functions. We can do checks though.
 	#define PR_MATH_DEFINE_TYPE(element)\
-	static_assert(sizeof(Mat6x8<element,void,void>) == 6*8*sizeof(element), "Mat6<"#element"> has the wrong size");\
+	static_assert(sizeof(Mat6x8<element,void,void>) == 6*8*sizeof(element), "Mat6x8<"#element"> has the wrong size");\
 	static_assert(std::is_trivially_copyable_v<Mat6x8<element,void,void>>, "Mat6x8<"#element"> must be a pod type");\
 	static_assert(std::alignment_of_v<Mat6x8<element, void, void>> == std::alignment_of_v<Vec4<element>>, "Mat6x8<"#element"> is not aligned correctly");
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);
 	PR_MATH_DEFINE_TYPE(int32_t);
 	PR_MATH_DEFINE_TYPE(int64_t);
-	#undef PR_MAT6X8_CHECKS
+	#undef PR_MATH_DEFINE_TYPE
 }

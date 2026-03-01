@@ -43,6 +43,7 @@
 #include "pr/math_new/primitives/oriented_box.h"
 #include "pr/math_new/primitives/plane.h"
 #include "pr/math_new/primitives/spline.h"
+#include "pr/math_new/primitives/frustum.h"
 // No non-standard dependencies outside of './'
 
 // #include "pr/maths/rectangle.h"

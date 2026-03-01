@@ -89,6 +89,7 @@
 #include "pr/macros/remove_parenthesis.h"
 #include "pr/math_new/primitives/bbox.h"
 #include "pr/math_new/primitives/bsphere.h"
+#include "pr/math_new/primitives/frustum.h"
 #include "pr/math_new/primitives/spline.h"
 #include "pr/math_new/tests/function_tests.h"
 #include "pr/math_new/tests/matrix_tests.h"

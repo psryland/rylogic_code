@@ -268,7 +268,7 @@ namespace pr::math
 			pr_assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
 			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
-			BBox bb(m.pos, Vec4::Zero);
+			BBox bb(m.pos, Vec4::Zero());
 			auto mat = Transpose3x3(m);
 			for (int i = 0; i != 3; ++i)
 			{
@@ -281,7 +281,7 @@ namespace pr::math
 		{
 			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
-			BBox bb(Vec4::Origin, Vec4::Zero);
+			BBox bb(Vec4::Origin(), Vec4::Zero());
 			auto mat = Transpose(m);
 			for (int i = 0; i != 3; ++i)
 			{

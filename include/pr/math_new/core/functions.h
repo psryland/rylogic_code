@@ -162,6 +162,16 @@ namespace pr::math
 		Vec res = lhs;
 		return res /= rhs;
 	}
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = lhs / vec(rhs).x;
+		if constexpr (vt::dimension > 1) vec(res).y = lhs / vec(rhs).y;
+		if constexpr (vt::dimension > 2) vec(res).z = lhs / vec(rhs).z;
+		if constexpr (vt::dimension > 3) vec(res).w = lhs / vec(rhs).w;
+		return res;
+	}
 	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (Vec lhs, Vec rhs)
 	{
 		Vec res = lhs;
@@ -171,6 +181,16 @@ namespace pr::math
 	{
 		Vec res = lhs;
 		return res %= rhs;
+	}
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = lhs % vec(rhs).x;
+		if constexpr (vt::dimension > 1) vec(res).y = lhs % vec(rhs).y;
+		if constexpr (vt::dimension > 2) vec(res).z = lhs % vec(rhs).z;
+		if constexpr (vt::dimension > 3) vec(res).w = lhs % vec(rhs).w;
+		return res;
 	}
 	template <TensorType Vec> constexpr auto pr_vectorcall operator <=> (Vec lhs, Vec rhs)
 	{
