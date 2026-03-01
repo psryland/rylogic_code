@@ -121,10 +121,10 @@ namespace pr::math
 			return Mat4x4{ rot, xyz };
 		}
 
-		// Return the trace of this matrix
-		constexpr Vec4<S> trace() const
+		// Return the diagonal elements of this matrix
+		constexpr Vec4<S> diagonal() const
 		{
-			return math::Trace<Mat4x4>(*this);
+			return math::Diagonal(*this);
 		}
 
 		// Return the scale of this matrix
@@ -146,7 +146,7 @@ namespace pr::math
 		}
 		static Mat4x4 Translation(S x, S y, S z)
 		{
-			return math::Translation(x, y, z);
+			return math::Translation<Mat4x4>(x, y, z);
 		}
 
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
@@ -169,13 +169,13 @@ namespace pr::math
 		template <typename Q = S> requires std::floating_point<Q>
 		static Mat4x4 Transform(Quat<Q> q, Vec4<S> pos)
 		{
-			return Mat4x4{ math::ToMatrix<Mat3x4<S>>(q), pos };
+			return Mat4x4{ math::ToMatrix<Quat<Q>, Mat3x4<Q>>(q), pos };
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
 		static Mat4x4 Transform(Vec4<S> axis, S angle, Vec4<S> pos) requires std::floating_point<S>
 		{
-			return Mat4x4{ math::Rotation<Mat4x4>(axis, angle), pos };
+			return Mat4x4{ math::Rotation<Mat3x4<S>>(axis, angle), pos };
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis

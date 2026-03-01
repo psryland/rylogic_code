@@ -82,11 +82,11 @@ namespace pr::math
 		// Create a quaternion from an axis and an angle
 		Quat(Vec3<S> axis, S angle)
 		{
-			auto s = Sin(S(0.5) * angle);
+			auto s = std::sin(S(0.5) * angle);
 			x = axis.x * s;
 			y = axis.y * s;
 			z = axis.z * s;
-			w = Cos(S(0.5) * angle);
+			w = std::cos(S(0.5) * angle);
 		}
 		Quat(Vec4<S> axis, S angle)
 			:Quat(axis.xyz, angle)
@@ -97,9 +97,9 @@ namespace pr::math
 		// Create a quaternion from Euler angles. Order is roll, pitch, yaw
 		Quat(S pitch, S yaw, S roll)
 		{
-			S cos_p = Cos(pitch * S(0.5)), sin_p = Sin(pitch * S(0.5));
-			S cos_y = Cos(yaw   * S(0.5)), sin_y = Sin(yaw   * S(0.5));
-			S cos_r = Cos(roll  * S(0.5)), sin_r = Sin(roll  * S(0.5));
+			S cos_p = std::cos(pitch * S(0.5)), sin_p = std::sin(pitch * S(0.5));
+			S cos_y = std::cos(yaw   * S(0.5)), sin_y = std::sin(yaw   * S(0.5));
+			S cos_r = std::cos(roll  * S(0.5)), sin_r = std::sin(roll  * S(0.5));
 			x = sin_p * cos_y * cos_r + cos_p * sin_y * sin_r;
 			y = cos_p * sin_y * cos_r - sin_p * cos_y * sin_r;
 			z = cos_p * cos_y * sin_r - sin_p * sin_y * cos_r;
@@ -120,7 +120,7 @@ namespace pr::math
 				axis =
 					LengthSq(from) > tiny<S> ? Perpendicular(from) :
 					LengthSq(to) > tiny<S> ? Perpendicular(to) :
-					Vec4<S>::ZAxis();
+					Vec3<S>::ZAxis();
 			}
 
 			xyzw = Normalise(Vec4<S>{axis.x, axis.y, axis.z, s});
@@ -141,7 +141,7 @@ namespace pr::math
 		// Return the angle of rotation about 'Axis()'
 		S Angle() const
 		{
-			return Acos(CosAngle());
+			return std::acos(CosAngle());
 		}
 
 		// Return the cosine of the angle of rotation about 'Axis()'
@@ -206,17 +206,33 @@ namespace pr::math
 	PR_MATH_DEFINE_TYPE(double);
 	#undef PR_MATH_DEFINE_TYPE
 
+	// Normalise a quaternion to unit length
+	template <QuaternionType Quat>
+	inline Quat pr_vectorcall Normalise(Quat q)
+	{
+		using S = typename vector_traits<Quat>::element_t;
+		auto len = Length(q.xyzw);
+		return Quat{ q.x / len, q.y / len, q.z / len, q.w / len };
+	}
+	template <QuaternionType Quat>
+	inline Quat pr_vectorcall Normalise(Quat q, Quat value_if_zero_length)
+	{
+		using S = typename vector_traits<Quat>::element_t;
+		auto len = Length(q.xyzw);
+		return len > tiny<S> ? Quat{ q.x / len, q.y / len, q.z / len, q.w / len } : value_if_zero_length;
+	}
+
 	// Decompose a quaternion into axis (normalised) and angle (radians)
 	template <QuaternionType Quat>
 	inline auto pr_vectorcall AxisAngle(Quat q)
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		struct R { Vec4<S> axis; S angle; };
-		pr_assert(IsNormal(q) && "quaternion isn't normalised");
+		pr_assert(IsNormalised(q.xyzw) && "quaternion isn't normalised");
 
 		// Use atan2 for the angle — well-conditioned everywhere, unlike acos
 		auto sin_half_angle = Length(q.xyz);
-		auto angle = S(2) * Atan2(sin_half_angle, Abs(q.w));
+		auto angle = S(2) * std::atan2(sin_half_angle, Abs(q.w));
 
 		// Normalise the xyz part directly (avoids sqrt(1-w²) cancellation)
 		auto axis = sin_half_angle > tiny<S>
@@ -228,7 +244,7 @@ namespace pr::math
 
 	// Test two quaternions for equivalence (i.e. do they represent the same orientation)
 	template <QuaternionType Quat>
-	inline bool FEqlOrientation(Quat lhs, Quat rhs, typename vector_traits<Quat>::element_t tol = Tiny<typename vector_traits<Quat>::element_t>())
+	inline bool FEqlOrientation(Quat lhs, Quat rhs, typename vector_traits<Quat>::element_t tol = tiny<typename vector_traits<Quat>::element_t>)
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		return FEqlAbsolute(AxisAngle(rhs * ~lhs).angle, S(0), tol);
@@ -236,19 +252,14 @@ namespace pr::math
 
 	// Quaternion FEql. Note: q == -q
 	template <QuaternionType Quat>
-	constexpr bool pr_vectorcall FEqlRelative(Quat lhs, Quat rhs, typename vector_traits<Quat>::element_t tol)
-	{
-		return
-			FEqlRelative(lhs.xyzw, +rhs.xyzw, tol) ||
-			FEqlRelative(lhs.xyzw, -rhs.xyzw, tol);
-	}
-	template <QuaternionType Quat>
 	constexpr bool pr_vectorcall FEql(Quat lhs, Quat rhs)
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
 
-		return FEqlRelative(lhs, rhs, tiny<S>);
+		return
+			FEqlRelative(lhs.xyzw, +rhs.xyzw, tiny<S>) ||
+			FEqlRelative(lhs.xyzw, -rhs.xyzw, tiny<S>);
 	}
 
 	// Returns the value of 'cos(theta / 2)', where 'theta' is the angle between 'a' and 'b'
@@ -308,14 +319,14 @@ namespace pr::math
 	inline Quat pr_vectorcall Scale(Quat q, typename vector_traits<Quat>::element_t frac)
 	{
 		using S = typename vector_traits<Quat>::element_t;
-		pr_assert("quaternion isn't normalised" && IsNormal(q));
+		pr_assert("quaternion isn't normalised" && IsNormalised(q.xyzw));
 
 		// Use atan2 for the half-angle — well-conditioned everywhere, unlike acos
 		auto sin_half_angle = Length(q.xyz);
-		auto half_angle = Atan2(sin_half_angle, Abs(q.w));
+		auto half_angle = std::atan2(sin_half_angle, Abs(q.w));
 		auto scaled_half_angle = frac * half_angle;
-		auto sin_ha = Sin(scaled_half_angle);
-		auto cos_ha = Cos(scaled_half_angle);
+		auto sin_ha = std::sin(scaled_half_angle);
+		auto cos_ha = std::cos(scaled_half_angle);
 
 		// Normalise the xyz part directly (avoids sqrt(1-w²) cancellation near identity)
 		if (sin_half_angle > tiny<S>)
@@ -341,9 +352,9 @@ namespace pr::math
 		if (frac == S(1)) return b;
 
 		// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
-		auto cos_angle = CosAngle(a,b);
+		auto cos_angle = CosHalfAngle(a, b);
 		auto b_ = cos_angle >= 0 ? b : -b;
-		cos_angle = Abs(cos_angle);
+		cos_angle = std::abs(cos_angle);
 
 		// Calculate coefficients
 		if (cos_angle < S(0.95))
@@ -353,12 +364,13 @@ namespace pr::math
 			auto scale1    = std::sin((frac       ) * angle);
 			auto sin_angle = std::sin(angle);
 			auto lerped    = (scale0 * a.xyzw + scale1 * b_.xyzw) / sin_angle;
-			return Quat{ lerped };
+			return Quat{ vec(lerped).x, vec(lerped).y, vec(lerped).z, vec(lerped).w };
 		}
 		else // "a" and "b" quaternions are very close
 		{
-			auto lerped = Lerp(a.xyzw, b_.xyzw, frac);
-			return Normalise(Quat{ lerped });
+			auto lerped = a.xyzw + frac * (b_.xyzw - a.xyzw);
+			Quat q{ vec(lerped).x, vec(lerped).y, vec(lerped).z, vec(lerped).w };
+			return Normalise(q);
 		}
 	}
 
@@ -371,7 +383,7 @@ namespace pr::math
 
 		// Quat = [u·sin(A/2), cos(A/2)]
 		auto sin_half_ang = Length(xyz0);
-		auto ang_by_2 = Atan2(sin_half_ang, Abs(vec(q).w)); // well-conditioned everywhere
+		auto ang_by_2 = std::atan2(sin_half_ang, Abs(vec(q).w)); // well-conditioned everywhere
 
 		// Scale xyz by (half_angle / sin_half_angle) to get axis * half_angle
 		return sin_half_ang > tiny<S>
@@ -387,9 +399,9 @@ namespace pr::math
 
 		// Vec = (+/-)A * (-/+)u.
 		auto ang_by_2 = Length(v); // By convention, log space uses Length = A/2
-		auto cos_half_ang = Cos(ang_by_2);
-		auto sin_half_ang = Sin(ang_by_2); // != sqrt(1 - cos_half_ang²) when ang_by_2 > tau/2
-		auto s = ang_by_2 > Tiny<S>() ? static_cast<S>(sin_half_ang / ang_by_2) : S(1);
+		auto cos_half_ang = std::cos(ang_by_2);
+		auto sin_half_ang = std::sin(ang_by_2); // != sqrt(1 - cos_half_ang²) when ang_by_2 > tau/2
+		auto s = ang_by_2 > tiny<S> ? static_cast<S>(sin_half_ang / ang_by_2) : S(1);
 		return { vec(v).x * s, vec(v).y * s, vec(v).z * s, static_cast<S>(cos_half_ang) };
 	}
 
@@ -474,7 +486,7 @@ namespace pr::math
 		using S = typename qt::element_t;
 		pr_assert(q != Quat{} && "'quat' is a zero quaternion");
 
-		auto s = S(2) / LengthSq(q);
+		auto s = S(2) / LengthSq(q.xyzw);
 		S xs = vec(q).x *  s, ys = vec(q).y *  s, zs = vec(q).z *  s;
 		S wx = vec(q).w * xs, wy = vec(q).w * ys, wz = vec(q).w * zs;
 		S xx = vec(q).x * xs, xy = vec(q).x * ys, xz = vec(q).x * zs;
@@ -499,18 +511,18 @@ namespace pr::math
 
 		if (frac == S(0)) return lhs;
 		if (frac == S(1)) return rhs;
-		auto l = ToQuat(lhs);
-		auto r = ToQuat(rhs);
+		auto l = ToQuat<Quat<S>, Mat>(lhs);
+		auto r = ToQuat<Quat<S>, Mat>(rhs);
 		auto q = Slerp(l, r, frac);
 		
 		if constexpr (vt::dimension == 3)
 		{
-			return Mat{ q };
+			return ToMatrix<Quat<S>, Mat>(q);
 		}
 		if constexpr (vt::dimension == 4)
 		{
-			auto p = Lerp(vec(lhs).w, vec(rhs).w, frac);
-			return Mat{ q, p };
+			auto p = vec(lhs).w + frac * (vec(rhs).w - vec(lhs).w);
+			return Mat{ ToMatrix<Quat<S>, Mat3x4<S>>(q), p };
 		}
 	}
 }

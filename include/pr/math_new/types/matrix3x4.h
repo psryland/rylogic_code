@@ -105,10 +105,10 @@ namespace pr::math
 		constexpr Mat4x4<S> w1() const;
 		constexpr Mat4x4<S> w1(Vec4<S> xyz) const;
 
-		// Return the trace of this matrix
-		constexpr Vec4<S> trace() const
+		// Return the diagonal elements of this matrix
+		constexpr Vec4<S> diagonal() const
 		{
-			return math::Trace<Mat3x4>(*this);
+			return math::Diagonal(*this);
 		}
 
 		// Return the scale of this matrix
@@ -123,10 +123,14 @@ namespace pr::math
 			return math::Unscaled<Mat3x4>(*this);
 		}
 
-		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-		static Mat3x4 Rotation(S pitch, S yaw, S roll)
+		// Construct a rotation matrix from Euler angles. Order is: roll, pitch, yaw (to match DirectX)
+		static Mat3x4 RotationRad(S pitch, S yaw, S roll)
 		{
-			return math::Rotation<Mat3x4>(pitch, yaw, roll);
+			return math::RotationRad<Mat3x4>(pitch, yaw, roll);
+		}
+		static Mat3x4 RotationDeg(S pitch, S yaw, S roll)
+		{
+			return math::RotationDeg<Mat3x4>(pitch, yaw, roll);
 		}
 
 		// Create from an axis, angle
@@ -166,11 +170,11 @@ namespace pr::math
 		}
 		static Mat3x4 Scale(S sx, S sy, S sz)
 		{
-			return math::Scale<Mat3x4>(Vec3<S>(sx, sy, sz));
+			return math::Scale<Mat3x4>(Vec4<S>(sx, sy, sz, S(0)));
 		}
 		static Mat3x4 Scale(Vec3<S> scale)
 		{
-			return math::Scale<Mat3x4>(scale);
+			return math::Scale<Mat3x4>(Vec4<S>(scale.x, scale.y, scale.z, S(0)));
 		}
 
 		// Create a shear matrix

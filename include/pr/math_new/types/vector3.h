@@ -45,9 +45,9 @@ namespace pr::math
 		{}
 		constexpr Vec3(AxisId axis_id)
 			:Vec3(
-				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
-				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0),
-				Abs(axis_id) == AxisId::PosZ ? Sign<S>(axis_id) : S(0)
+				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosZ ? static_cast<S>(Sign<int>(axis_id)) : S(0)
 			)
 		{}
 		constexpr explicit Vec3(std::ranges::random_access_range auto&& v)

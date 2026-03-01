@@ -160,24 +160,30 @@ namespace pr::math
 		}
 		#endif
 
-		#if 0 // todo: Rotate90CW/Rotate90CCW functions not yet ported to math_new
 		PRUnitTestMethod(Rotate90, float, double, int32_t, int64_t)
 		{
 			using vec2_t = Vec2<T>;
 
 			constexpr auto V0 = vec2_t(T(1), T(0));
 
-			// Rotate CW: (1,0) -> (0,1)
+			// Rotate CW: (1,0) -> (0,1). CW rotates +X toward +Y.
 			static_assert(Rotate90CW(V0) == vec2_t(T(0), T(1)));
 
-			// Rotate CCW: (1,0) -> (0,-1)
+			// Rotate CCW: (1,0) -> (0,-1). CCW rotates +X toward -Y.
 			static_assert(Rotate90CCW(V0) == vec2_t(T(0), T(-1)));
 
 			// Full rotation: 4x CW should return to original
 			constexpr auto V1 = Rotate90CW(Rotate90CW(Rotate90CW(Rotate90CW(V0))));
 			static_assert(V1 == V0);
+
+			// Full rotation: 4x CCW should return to original
+			constexpr auto V2 = Rotate90CCW(Rotate90CCW(Rotate90CCW(Rotate90CCW(V0))));
+			static_assert(V2 == V0);
+
+			// CW then CCW is identity
+			constexpr auto V3 = Rotate90CCW(Rotate90CW(V0));
+			static_assert(V3 == V0);
 		}
-		#endif
 	};
 }
 #endif

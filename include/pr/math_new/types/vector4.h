@@ -70,13 +70,13 @@ namespace pr::math
 			:Vec4(v.x, v.y, z_, w_)
 		{}
 		constexpr Vec4(Vec2<S> xy_, Vec2<S> zw_)
-			:Vec4(xy_.x, xy_.y, zw_.z, zw_.w)
+			:Vec4(xy_.x, xy_.y, zw_.x, zw_.y)
 		{}
 		constexpr Vec4(AxisId axis_id)
 			:Vec4(
-				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
-				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0),
-				Abs(axis_id) == AxisId::PosZ ? Sign<S>(axis_id) : S(0),
+				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosZ ? static_cast<S>(Sign<int>(axis_id)) : S(0),
 				S(0)
 			)
 		{}
@@ -427,4 +427,16 @@ namespace pr::math
 	PR_MATH_DEFINE_TYPE(int32_t);
 	PR_MATH_DEFINE_TYPE(int64_t);
 	#undef PR_MATH_DEFINE_TYPE
+
+	// Deferred definitions for Vec3::w0() and Vec3::w1() (Vec4 must be complete)
+	template <ScalarType S>
+	constexpr Vec4<S> Vec3<S>::w0() const
+	{
+		return Vec4<S>(x, y, z, S(0));
+	}
+	template <ScalarType S>
+	constexpr Vec4<S> Vec3<S>::w1() const
+	{
+		return Vec4<S>(x, y, z, S(1));
+	}
 }

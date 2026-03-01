@@ -45,8 +45,8 @@ namespace pr::math
 		{}
 		constexpr Vec2(AxisId axis_id)
 			:Vec2(
-				Abs(axis_id) == AxisId::PosX ? Sign<S>(axis_id) : S(0),
-				Abs(axis_id) == AxisId::PosY ? Sign<S>(axis_id) : S(0)
+				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0)
 			)
 		{}
 
