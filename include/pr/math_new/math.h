@@ -44,6 +44,7 @@
 #include "pr/math_new/primitives/plane.h"
 #include "pr/math_new/primitives/spline.h"
 #include "pr/math_new/primitives/frustum.h"
+#include "pr/math_new/spatial/spatial.h"
 // No non-standard dependencies outside of './'
 
 // #include "pr/maths/rectangle.h"

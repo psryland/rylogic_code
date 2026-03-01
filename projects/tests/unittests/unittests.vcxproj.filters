@@ -134,6 +134,9 @@
     <Filter Include="pr\math_new\primitives">
       <UniqueIdentifier>{b21d84d7-5c39-4e48-8845-8b4097746cbc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\math_new\spatial">
+      <UniqueIdentifier>{bdc09006-3fb7-4670-aa4d-74d846e92a40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\algorithm.h">
@@ -1230,6 +1233,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\frustum.h">
       <Filter>pr\math_new\primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\core\spatial.h">
+      <Filter>pr\math_new\core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\spatial\spatial.h">
+      <Filter>pr\math_new\spatial</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

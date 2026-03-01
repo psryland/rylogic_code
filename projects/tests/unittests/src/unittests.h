@@ -91,6 +91,7 @@
 #include "pr/math_new/primitives/bsphere.h"
 #include "pr/math_new/primitives/frustum.h"
 #include "pr/math_new/primitives/spline.h"
+#include "pr/math_new/spatial/spatial.h"
 #include "pr/math_new/tests/function_tests.h"
 #include "pr/math_new/tests/matrix_tests.h"
 #include "pr/math_new/tests/matrix2x2_tests.h"
