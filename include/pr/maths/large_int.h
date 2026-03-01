@@ -8,7 +8,7 @@
 #include <cassert>
 #include "pr/common/fmt.h"
 #include "pr/maths/forward.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 
 namespace pr
 {

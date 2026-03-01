@@ -14,7 +14,7 @@
 #include "pr/common/tweakables.h"
 #include "pr/common/static_callback.h"
 #include "pr/common/resource.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/stat.h"
 #include "pr/maths/conversion.h"

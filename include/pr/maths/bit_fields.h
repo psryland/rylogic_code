@@ -2,12 +2,9 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-//http://graphics.stanford.edu/~seander/bithacks.html
+// Moved to pr/common/bit_fields.h
 #pragma once
-#include <type_traits>
-#include <concepts>
-
-//#include "pr/maths/forward.h"
+#include "pr/common/bit_fields.h"
 
 namespace pr
 {
@@ -55,11 +52,10 @@ namespace pr
 	// Sets the masked bits of 'value' to the state 'state'
 	// If 'state' is boolean-true, returns 'value | mask'. If false, returns 'value & ~mask'
 	// If 'state' is integral, then applies 'mask & state' to 'value'
-	template <BitField T, BitField U, typename B>
-	requires (BitField<B> || std::is_same_v<B,bool>)
+	template <BitField T, BitField U, typename B> requires (BitField<B> || std::is_same_v<B,bool>)
 	[[nodiscard]] constexpr T SetBits(T value, U mask, B state)
 	{
-		using UT = underlying_type_t<T>;
+		using UT = typename std::conditional_t<std::is_enum_v<T>, std::underlying_type<T>, std::type_identity<T>>::type;
 		if constexpr (std::is_same_v<B, bool>)
 		{
 			return state

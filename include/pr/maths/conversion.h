@@ -8,7 +8,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
 

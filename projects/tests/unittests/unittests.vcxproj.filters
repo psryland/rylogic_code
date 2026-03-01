@@ -730,9 +730,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\bbox.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\bit_fields.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\bsphere.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -1248,6 +1245,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\tests\scalar_tests.h">
       <Filter>pr\math_new\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\bit_fields.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

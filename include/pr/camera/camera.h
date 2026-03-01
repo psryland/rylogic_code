@@ -7,7 +7,7 @@
 #pragma once
 #include <memory>
 #include "pr/maths/maths.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"
 #include "pr/common/flags_enum.h"

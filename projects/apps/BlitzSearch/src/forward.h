@@ -27,7 +27,7 @@
 #include "pr/common/profile.h"
 #include "pr/container/suffix_array.h"
 #include "pr/filesys/filesys.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/gui/wingui.h"
 #include "pr/storage/json.h"
 #include "pr/threads/thread_pool.h"

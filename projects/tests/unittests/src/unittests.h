@@ -106,7 +106,7 @@
 #include "pr/math_new/tests/vector4_tests.h"
 #include "pr/math_new/tests/vector8_tests.h"
 #include "pr/maths/bbox.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/maths/bsphere.h"
 #include "pr/maths/conversion.h"
 #include "pr/maths/frustum.h"
