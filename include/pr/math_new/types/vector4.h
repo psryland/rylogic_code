@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
+#include "pr/math_new/core/functions.h"
 #include "pr/math_new/types/vector2.h"
 #include "pr/math_new/types/vector3.h"
 
@@ -200,72 +201,76 @@ namespace pr::math
 		}
 		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, S rhs)
 		{
-			if constexpr (IntrinsicF)
+			if consteval
 			{
-				return Vec4{_mm_mul_ps(lhs.vec, _mm_set_ps1(rhs))};
-			}
-			else if constexpr (IntrinsicD)
-			{
-				return Vec4{_mm256_mul_pd(lhs.vec, _mm256_set1_pd(rhs))};
+				return math::operator*<Vec4>(lhs, rhs);
 			}
 			else
 			{
-				return Vec4{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{ _mm_mul_ps(lhs.vec, _mm_set_ps1(rhs)) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{ _mm256_mul_pd(lhs.vec, _mm256_set1_pd(rhs)) };
+				}
+				else
+				{
+					return math::operator*<Vec4>(lhs, rhs);
+				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, S rhs)
 		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (IntrinsicF)
+			if consteval
 			{
-				return Vec4{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
-			}
-			else if constexpr (IntrinsicD)
-			{
-				return Vec4{_mm256_div_pd(lhs.vec, _mm256_set1_pd(rhs))};
+				return math::operator/<Vec4>(lhs, rhs);
 			}
 			else
 			{
-				return Vec4{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+				// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{ _mm_div_ps(lhs.vec, _mm_set_ps1(rhs)) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{ _mm256_div_pd(lhs.vec, _mm256_set1_pd(rhs)) };
+				}
+				else
+				{
+					return math::operator/<Vec4>(lhs, rhs);
+				}
 			}
-		}
-		friend constexpr Vec4 pr_vectorcall operator % (Vec4 lhs, S rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			return Vec4{ Modulus(lhs.x, rhs), Modulus(lhs.y, rhs), Modulus(lhs.z, rhs), Modulus(lhs.w, rhs) };
 		}
 		friend constexpr Vec4 pr_vectorcall operator / (S lhs, Vec4 rhs)
 		{
-			if constexpr (IntrinsicF)
+			if consteval
 			{
-				return Vec4{_mm_div_ps(_mm_set_ps1(lhs), rhs.vec)};
-			}
-			else if constexpr (IntrinsicD)
-			{
-				return Vec4{_mm256_div_pd(_mm256_set1_pd(lhs), rhs.vec)};
+				return math::operator/<Vec4>(lhs, rhs);
 			}
 			else
 			{
-				return Vec4{lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w};
-			}
-		}
-		friend constexpr Vec4 pr_vectorcall operator % (S lhs, Vec4 rhs)
-		{
-			if constexpr (std::floating_point<S>)
-			{
-				return Vec4{Fmod(lhs, rhs.x), Fmod(lhs, rhs.y), Fmod(lhs, rhs.z), Fmod(lhs, rhs.w)};
-			}
-			else
-			{
-				return Vec4{lhs % rhs.x, lhs % rhs.y, lhs % rhs.z, lhs % rhs.w};
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{ _mm_div_ps(_mm_set_ps1(lhs), rhs.vec) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{ _mm256_div_pd(_mm256_set1_pd(lhs), rhs.vec) };
+				}
+				else
+				{
+					return math::operator/<Vec4>(lhs, rhs);
+				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator + (Vec4 lhs, Vec4 rhs)
 		{
-			auto fallback = [&]() constexpr { return Vec4{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w}; };
 			if consteval
 			{
-				return fallback();
+				return math::operator+<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -279,16 +284,15 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+					return math::operator+<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator - (Vec4 lhs, Vec4 rhs)
 		{
-			auto fallback = [&]() constexpr { return Vec4{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w}; };
 			if consteval
 			{
-				return fallback();
+				return math::operator-<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -302,16 +306,15 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+					return math::operator-<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, Vec4 rhs)
 		{
-			auto fallback = [&]() constexpr { return Vec4{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w}; };
 			if consteval
 			{
-				return fallback();
+				return math::operator*<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -325,17 +328,16 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+					return math::operator*<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, Vec4 rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			auto fallback = [&]() constexpr { return Vec4{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w}; };
 			if consteval
 			{
-				return fallback();
+				return math::operator/<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -349,17 +351,16 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+				return math::operator/<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		friend constexpr Vec4 pr_vectorcall operator % (Vec4 lhs, Vec4 rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			auto fallback = [&]() constexpr { return Vec4{ Modulus(lhs.x, rhs.x), Modulus(lhs.y, rhs.y), Modulus(lhs.z, rhs.z), Modulus(lhs.w, rhs.w) }; };
 			if consteval
 			{
-				return fallback();
+				return math::operator%<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -381,16 +382,15 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+					return math::operator%<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		friend constexpr bool pr_vectorcall operator == (Vec4 lhs, Vec4 rhs)
 		{
-			auto fallback = [&]() constexpr { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; };
 			if consteval
 			{
-				return fallback();
+				return math::operator==<Vec4>(lhs, rhs);
 			}
 			else
 			{
@@ -404,11 +404,238 @@ namespace pr::math
 				}
 				else
 				{
-					return fallback();
+					return math::operator==<Vec4>(lhs, rhs);
 				}
 			}
 		}
 		#pragma endregion
+
+		// --- SIMD-optimised free functions ---
+		// These friend overloads are only active when intrinsics are available.
+		// For non-intrinsic types, the generic versions in functions.h are used.
+
+		// Dot product (4-component)
+		friend constexpr S pr_vectorcall Dot(Vec4 lhs, Vec4 rhs)
+		{
+			if consteval
+			{
+				return math::Dot<Vec4>(lhs, rhs);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					return _mm_cvtss_f32(_mm_dp_ps(lhs.vec, rhs.vec, 0xF1));
+				}
+				else if constexpr (IntrinsicD)
+				{
+					auto mul = _mm256_mul_pd(lhs.vec, rhs.vec);
+					auto hi = _mm256_extractf128_pd(mul, 1);
+					auto lo = _mm256_castpd256_pd128(mul);
+					auto sum = _mm_add_pd(lo, hi);
+					auto shuf = _mm_unpackhi_pd(sum, sum);
+					return _mm_cvtsd_f64(_mm_add_sd(sum, shuf));
+				}
+				else
+				{
+					return math::Dot<Vec4>(lhs, rhs);
+				}
+			}
+		}
+
+		// Dot product (3-component, w ignored)
+		friend constexpr S pr_vectorcall Dot3(Vec4 lhs, Vec4 rhs)
+		{
+			if consteval
+			{
+				return math::Dot3<Vec4>(lhs, rhs);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					// 0x71 = multiply xyz (bits 6-4), store result in element 0 (bit 0)
+					return _mm_cvtss_f32(_mm_dp_ps(lhs.vec, rhs.vec, 0x71));
+				}
+				else if constexpr (IntrinsicD)
+				{
+					auto a = _mm256_blend_pd(lhs.vec, _mm256_setzero_pd(), 0x8); // zero w of lhs
+					auto mul = _mm256_mul_pd(a, rhs.vec);
+					auto hi = _mm256_extractf128_pd(mul, 1);
+					auto lo = _mm256_castpd256_pd128(mul);
+					auto sum = _mm_add_pd(lo, hi);
+					auto shuf = _mm_unpackhi_pd(sum, sum);
+					return _mm_cvtsd_f64(_mm_add_sd(sum, shuf));
+				}
+				else
+				{
+					return math::Dot3<Vec4>(lhs, rhs);
+				}
+			}
+		}
+
+		// Cross product (3-component, w=0). Only for float — doubles use generic fallback.
+		// Note: w is zeroed by cancellation (aw*bw - aw*bw), which produces NaN if w is NaN.
+		friend constexpr Vec4 pr_vectorcall Cross3(Vec4 lhs, Vec4 rhs)
+		{
+			if consteval
+			{
+				return math::Cross3<Vec4>(lhs, rhs);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					auto a_yzx = _mm_shuffle_ps(lhs.vec, lhs.vec, _MM_SHUFFLE(3, 0, 2, 1));
+					auto b_yzx = _mm_shuffle_ps(rhs.vec, rhs.vec, _MM_SHUFFLE(3, 0, 2, 1));
+					auto c = _mm_sub_ps(
+						_mm_mul_ps(lhs.vec, b_yzx),
+						_mm_mul_ps(a_yzx, rhs.vec));
+					return Vec4{ _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 0, 2, 1)) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					// No intrinsic support for cross product, so blend to zero w and use generic implementation
+					auto a = _mm256_blend_pd(lhs.vec, _mm256_setzero_pd(), 0x8); // zero w of lhs
+					auto b = _mm256_blend_pd(rhs.vec, _mm256_setzero_pd(), 0x8); // zero w of rhs
+					Vec4 a_vec{a}, b_vec{b};
+					return math::Cross3<Vec4>(a_vec, b_vec);
+				}
+				else
+				{
+					return math::Cross3<Vec4>(lhs, rhs);
+				}
+			}
+		}
+
+		// Length of a vector. Combined dot+sqrt avoids intermediate scalar extraction.
+		friend constexpr S pr_vectorcall Length(Vec4 v)
+		{
+			if consteval
+			{
+				return math::Length<Vec4>(v);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					auto dp = _mm_dp_ps(v.vec, v.vec, 0xF1);
+					return _mm_cvtss_f32(_mm_sqrt_ss(dp));
+				}
+				else if constexpr (IntrinsicD)
+				{
+					auto dp = _mm256_mul_pd(v.vec, v.vec);
+					auto hi = _mm256_extractf128_pd(dp, 1);
+					auto lo = _mm256_castpd256_pd128(dp);
+					auto sum = _mm_add_pd(lo, hi);
+					auto shuf = _mm_unpackhi_pd(sum, sum);
+					auto length_sq = _mm_add_sd(sum, shuf);
+					return _mm_cvtsd_f64(_mm_sqrt_sd(length_sq, length_sq));
+				}
+				else
+				{
+					return math::Length<Vec4>(v);
+				}
+			}
+		}
+
+		// Component-wise minimum
+		friend constexpr Vec4 pr_vectorcall Min(Vec4 lhs, Vec4 rhs)
+		{
+			if consteval
+			{
+				return math::Min<Vec4>(lhs, rhs);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{_mm_min_ps(lhs.vec, rhs.vec)};
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{_mm256_min_pd(lhs.vec, rhs.vec)};
+				}
+				else
+				{
+					return math::Min<Vec4>(lhs, rhs);
+				}
+			}
+		}
+
+		// Component-wise maximum
+		friend constexpr Vec4 pr_vectorcall Max(Vec4 lhs, Vec4 rhs)
+		{
+			if consteval
+			{
+				return math::Max<Vec4>(lhs, rhs);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{ _mm_max_ps(lhs.vec, rhs.vec) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{ _mm256_max_pd(lhs.vec, rhs.vec) };
+				}
+				else
+				{
+					return math::Max<Vec4>(lhs, rhs);
+				}
+			}
+		}
+
+		// Component-wise absolute value
+		friend constexpr Vec4 pr_vectorcall Abs(Vec4 v)
+		{
+			if consteval
+			{
+				return math::Abs<Vec4>(v);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					auto sign_mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFFFFFF));
+					return Vec4{_mm_and_ps(v.vec, sign_mask)};
+				}
+				else if constexpr (IntrinsicD)
+				{
+					auto sign_mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFFFFFFFFFFFFFFLL));
+					return Vec4{_mm256_and_pd(v.vec, sign_mask)};
+				}
+				else
+				{
+					return math::Abs<Vec4>(v);
+				}
+			}
+		}
+
+		// Component-wise clamp
+		friend constexpr Vec4 pr_vectorcall Clamp(Vec4 v, Vec4 lo, Vec4 hi)
+		{
+			if consteval
+			{
+				return math::Clamp<Vec4>(v, lo, hi);
+			}
+			else
+			{
+				if constexpr (IntrinsicF)
+				{
+					return Vec4{ _mm_min_ps(_mm_max_ps(v.vec, lo.vec), hi.vec) };
+				}
+				else if constexpr (IntrinsicD)
+				{
+					return Vec4{ _mm256_min_pd(_mm256_max_pd(v.vec, lo.vec), hi.vec) };
+				}
+				else
+				{
+					return math::Clamp<Vec4>(v, lo, hi);
+				}
+			}
+		}
 	};
 
 	#define PR_MATH_DEFINE_TYPE(element)\

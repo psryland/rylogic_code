@@ -242,132 +242,63 @@ namespace pr::math
 			return math::ProjectionPerspectiveFOV<Mat4x4>(fovY, aspect, zn, zf, righthanded);
 		}
 
-
-		#if 0
-
-		// Create a 4x4 matrix contains random values on the interval [min_value, max_value)
-		template <typename Rng = std::default_random_engine>
-		static Mat4x4 Random(Rng& rng, S min_value, S max_value)
-		{
-			std::uniform_real_distribution<S> dist(min_value, max_value);
-			Mat4x4 m = {};
-			m.x = Vec4<S, void>(dist(rng), dist(rng), dist(rng), dist(rng));
-			m.y = Vec4<S, void>(dist(rng), dist(rng), dist(rng), dist(rng));
-			m.z = Vec4<S, void>(dist(rng), dist(rng), dist(rng), dist(rng));
-			m.w = Vec4<S, void>(dist(rng), dist(rng), dist(rng), dist(rng));
-			return m;
-		}
-
-		// Create an affine transform matrix with a random rotation about 'axis', located at 'position'
-		template <typename Rng = std::default_random_engine>
-		static Mat4x4 Random(Rng& rng, Vec4<S> axis, S min_angle, S max_angle, Vec4<S> position)
-		{
-			std::uniform_real_distribution<S> dist(min_angle, max_angle);
-			return Transform(axis, dist(rng), position);
-		}
-
-		// Create an affine transform matrix with a random orientation, located at 'position'
-		template <typename Rng = std::default_random_engine>
-		static Mat4x4 Random(Rng& rng, Vec4<S> position)
-		{
-			return Random(rng, Vec4<S, void>::RandomN(rng, S(0)), S(0), constants<S>::tau, position);
-		}
-
-		// Create an affine transform matrix with a random rotation about 'axis', located randomly within a sphere [centre, radius]
-		template <typename Rng = std::default_random_engine>
-		static Mat4x4 Random(Rng& rng, Vec4<S> axis, S min_angle, S max_angle, Vec4<S> centre, S radius)
-		{
-			return Random(rng, axis, min_angle, max_angle, centre + Vec4<S, void>::Random(rng, S(0), radius, S(0)));
-		}
-
-		// Create an affine transform matrix with a random orientation, located randomly within a sphere [centre, radius]
-		template <typename Rng = std::default_random_engine>
-		static Mat4x4 Random(Rng& rng, Vec4<S> centre, S radius)
-		{
-			return Random(rng, Vec4<S, void>::RandomN(rng, S(0)), S(0), constants<S>::tau, centre, radius);
-		}
-
 		#pragma region Operators
-		friend constexpr Mat4x4 pr_vectorcall operator + (Mat4x4<S> const& mat)
+		friend Vec4<S> pr_vectorcall operator * (Mat4x4 const& a2b, Vec4<S> v)
 		{
-			return mat;
-		}
-		friend constexpr Mat4x4 pr_vectorcall operator - (Mat4x4<S> const& mat)
-		{
-			return Mat4x4{ -mat.x, -mat.y, -mat.z, -mat.w };
-		}
-		friend Mat4x4 pr_vectorcall operator * (S lhs, Mat4x4<S> const& rhs)
-		{
-			return rhs * lhs;
-		}
-		friend Mat4x4 pr_vectorcall operator * (Mat4x4<S> const& lhs, S rhs)
-		{
-			return Mat4x4{ lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs };
-		}
-		friend Mat4x4 pr_vectorcall operator / (Mat4x4<S> const& lhs, S rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			return Mat4x4{ lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs };
-		}
-		friend Mat4x4 pr_vectorcall operator % (Mat4x4<S> const& lhs, S rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			if constexpr (std::floating_point<S>)
+			if consteval
 			{
-				return Mat4x4{ Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs) };
+				return math::operator*<Mat4x4>(a2b, v);
 			}
 			else
 			{
-				return Mat4x4{ lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs };
+				if constexpr (Vec4<S>::IntrinsicF)
+				{
+					auto x = _mm_load_ps(a2b.x.arr);
+					auto y = _mm_load_ps(a2b.y.arr);
+					auto z = _mm_load_ps(a2b.z.arr);
+					auto w = _mm_load_ps(a2b.w.arr);
+
+					auto brod1 = _mm_set_ps1(v.x);
+					auto brod2 = _mm_set_ps1(v.y);
+					auto brod3 = _mm_set_ps1(v.z);
+					auto brod4 = _mm_set_ps1(v.w);
+
+					auto ans = _mm_add_ps(
+						_mm_add_ps(
+							_mm_mul_ps(brod1, x),
+							_mm_mul_ps(brod2, y)),
+						_mm_add_ps(
+							_mm_mul_ps(brod3, z),
+							_mm_mul_ps(brod4, w)));
+
+					return Vec4<S>{ans};
+				}
+				else if constexpr (Vec4<S>::IntrinsicD)
+				{
+					auto x = _mm256_load_pd(a2b.x.arr);
+					auto y = _mm256_load_pd(a2b.y.arr);
+					auto z = _mm256_load_pd(a2b.z.arr);
+					auto w = _mm256_load_pd(a2b.w.arr);
+					auto brod1 = _mm256_set1_pd(v.x);
+					auto brod2 = _mm256_set1_pd(v.y);
+					auto brod3 = _mm256_set1_pd(v.z);
+					auto brod4 = _mm256_set1_pd(v.w);
+					auto ans = _mm256_add_pd(
+						_mm256_add_pd(
+							_mm256_mul_pd(brod1, x),
+							_mm256_mul_pd(brod2, y)),
+						_mm256_add_pd(
+							_mm256_mul_pd(brod3, z),
+							_mm256_mul_pd(brod4, w)));
+					return Vec4<S>{ans};
+				}
+				else
+				{
+					return math::operator*<Mat4x4>(a2b, v);
+				}
 			}
 		}
-		friend Mat4x4 pr_vectorcall operator + (Mat4x4<S> const& lhs, Mat4x4<S> const& rhs)
-		{
-			return Mat4x4{ lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w };
-		}
-		friend Mat4x4 pr_vectorcall operator - (Mat4x4<S> const& lhs, Mat4x4<S> const& rhs)
-		{
-			return Mat4x4{ lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w };
-		}
-		friend Mat4x4 pr_vectorcall operator + (Mat4x4<S> const& lhs, Mat3x4<S> const& rhs)
-		{
-			return Mat4x4{ lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z };
-		}
-		friend Mat4x4 pr_vectorcall operator - (Mat4x4<S> const& lhs, Mat3x4<S> const& rhs)
-		{
-			return Mat4x4{ lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z };
-		}
-		friend Vec4<S, B> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec4<S> v)
-		{
-			if constexpr (Vec4<S, void>::IntrinsicF)
-			{
-				auto x = _mm_load_ps(a2b.x.arr);
-				auto y = _mm_load_ps(a2b.y.arr);
-				auto z = _mm_load_ps(a2b.z.arr);
-				auto w = _mm_load_ps(a2b.w.arr);
-
-				auto brod1 = _mm_set_ps1(v.x);
-				auto brod2 = _mm_set_ps1(v.y);
-				auto brod3 = _mm_set_ps1(v.z);
-				auto brod4 = _mm_set_ps1(v.w);
-
-				auto ans = _mm_add_ps(
-					_mm_add_ps(
-						_mm_mul_ps(brod1, x),
-						_mm_mul_ps(brod2, y)),
-					_mm_add_ps(
-						_mm_mul_ps(brod3, z),
-						_mm_mul_ps(brod4, w)));
-
-				return Vec4<S, B>{ans};
-			}
-			else
-			{
-				auto a2bT = Transpose4x4(a2b);
-				return Vec4<S, B>{Dot4(a2bT.x, v), Dot4(a2bT.y, v), Dot4(a2bT.z, v), Dot4(a2bT.w, v)};
-			}
-		}
-		template <typename C> friend Mat4x4<S, A, C> pr_vectorcall operator * (Mat4x4_cref<S, B, C> b2c, Mat4x4<S> const& a2b)
+		friend Mat4x4 pr_vectorcall operator * (Mat4x4 const& b2c, Mat4x4 const& a2b)
 		{
 			// Note:
 			//  - The reason for this order is because matrices are applied from right to left
@@ -380,51 +311,106 @@ namespace pr::math
 			//       [a2c]       [  b2c  ]       [a2b]
 			//       [1x3]   =   [  2x3  ]   *   [1x2]
 			//       [   ]       [       ]       [   ]
-			if constexpr (Vec4<S, A>::IntrinsicF)
+			if consteval
 			{
-				auto ans = Mat4x4<S, A, C>{};
-				auto x = _mm_load_ps(b2c.x.arr);
-				auto y = _mm_load_ps(b2c.y.arr);
-				auto z = _mm_load_ps(b2c.z.arr);
-				auto w = _mm_load_ps(b2c.w.arr);
-				for (int i = 0; i != 4; ++i)
-				{
-					auto brod1 = _mm_set_ps1(a2b.arr[i].x);
-					auto brod2 = _mm_set_ps1(a2b.arr[i].y);
-					auto brod3 = _mm_set_ps1(a2b.arr[i].z);
-					auto brod4 = _mm_set_ps1(a2b.arr[i].w);
-					auto row = _mm_add_ps(
-						_mm_add_ps(
-							_mm_mul_ps(brod1, x),
-							_mm_mul_ps(brod2, y)),
-						_mm_add_ps(
-							_mm_mul_ps(brod3, z),
-							_mm_mul_ps(brod4, w)));
-					_mm_store_ps(ans.arr[i].arr, row);
-				}
-				return ans;
+				return math::operator*<Mat4x4>(b2c, a2b);
 			}
 			else
 			{
-				auto ans = Mat4x4<S, A, C>{};
-				auto b2cT = Transpose4x4(b2c);
-				ans.x = Vec4<S, void>(Dot4(b2cT.x, a2b.x), Dot4(b2cT.y, a2b.x), Dot4(b2cT.z, a2b.x), Dot4(b2cT.w, a2b.x));
-				ans.y = Vec4<S, void>(Dot4(b2cT.x, a2b.y), Dot4(b2cT.y, a2b.y), Dot4(b2cT.z, a2b.y), Dot4(b2cT.w, a2b.y));
-				ans.z = Vec4<S, void>(Dot4(b2cT.x, a2b.z), Dot4(b2cT.y, a2b.z), Dot4(b2cT.z, a2b.z), Dot4(b2cT.w, a2b.z));
-				ans.w = Vec4<S, void>(Dot4(b2cT.x, a2b.w), Dot4(b2cT.y, a2b.w), Dot4(b2cT.z, a2b.w), Dot4(b2cT.w, a2b.w));
-				return ans;
+				if constexpr (Vec4<S>::IntrinsicF)
+				{
+					auto ans = Mat4x4<S>{};
+					auto x = _mm_load_ps(b2c.x.arr);
+					auto y = _mm_load_ps(b2c.y.arr);
+					auto z = _mm_load_ps(b2c.z.arr);
+					auto w = _mm_load_ps(b2c.w.arr);
+					for (int i = 0; i != 4; ++i)
+					{
+						auto brod1 = _mm_set_ps1(a2b.arr[i].x);
+						auto brod2 = _mm_set_ps1(a2b.arr[i].y);
+						auto brod3 = _mm_set_ps1(a2b.arr[i].z);
+						auto brod4 = _mm_set_ps1(a2b.arr[i].w);
+						auto row = _mm_add_ps(
+							_mm_add_ps(
+								_mm_mul_ps(brod1, x),
+								_mm_mul_ps(brod2, y)),
+							_mm_add_ps(
+								_mm_mul_ps(brod3, z),
+								_mm_mul_ps(brod4, w)));
+						_mm_store_ps(ans.arr[i].arr, row);
+					}
+					return ans;
+				}
+				else if constexpr (Vec4<S>::IntrinsicD)
+				{
+					auto ans = Mat4x4<S>{};
+					auto x = _mm256_load_pd(b2c.x.arr);
+					auto y = _mm256_load_pd(b2c.y.arr);
+					auto z = _mm256_load_pd(b2c.z.arr);
+					auto w = _mm256_load_pd(b2c.w.arr);
+					for (int i = 0; i != 4; ++i)
+					{
+						auto brod1 = _mm256_set1_pd(a2b.arr[i].x);
+						auto brod2 = _mm256_set1_pd(a2b.arr[i].y);
+						auto brod3 = _mm256_set1_pd(a2b.arr[i].z);
+						auto brod4 = _mm256_set1_pd(a2b.arr[i].w);
+						auto row = _mm256_add_pd(
+							_mm256_add_pd(
+								_mm256_mul_pd(brod1, x),
+								_mm256_mul_pd(brod2, y)),
+							_mm256_add_pd(
+								_mm256_mul_pd(brod3, z),
+								_mm256_mul_pd(brod4, w)));
+						_mm256_store_pd(ans.arr[i].arr, row);
+					}
+					return ans;
+				}
+				else
+				{
+					return math::operator*<Mat4x4>(b2c, a2b);
+				}
 			}
 		}
 		#pragma endregion
 
-		#endif
-
 		// Return the 4x4 transpose of 'mat'
-		friend Mat4x4<S> pr_vectorcall Transpose(Mat4x4<S> const& mat) requires (Vec4<S>::IntrinsicF)
+		friend Mat4x4 pr_vectorcall Transpose(Mat4x4 const& mat)
 		{
-			auto m = mat;
-			_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
-			return m;
+			if consteval
+			{
+				return math::Transpose<Mat4x4>(mat);
+			}
+			else
+			{
+				if constexpr (Vec4<S>::IntrinsicF)
+				{
+					auto m = mat;
+					_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
+					return m;
+				}
+				else if constexpr (Vec4<S>::IntrinsicD)
+				{
+					auto m = mat;
+
+					// Step 1: Interleave low/high double pairs
+					auto t0 = _mm256_unpacklo_pd(m.x.vec, m.y.vec); // [x0, y0, x2, y2]
+					auto t1 = _mm256_unpackhi_pd(m.x.vec, m.y.vec); // [x1, y1, x3, y3]
+					auto t2 = _mm256_unpacklo_pd(m.z.vec, m.w.vec); // [z0, w0, z2, w2]
+					auto t3 = _mm256_unpackhi_pd(m.z.vec, m.w.vec); // [z1, w1, z3, w3]
+
+					// Step 2: Permute 128-bit lanes to form transposed columns
+					m.x.vec = _mm256_permute2f128_pd(t0, t2, 0x20); // [x0, y0, z0, w0]
+					m.y.vec = _mm256_permute2f128_pd(t1, t3, 0x20); // [x1, y1, z1, w1]
+					m.z.vec = _mm256_permute2f128_pd(t0, t2, 0x31); // [x2, y2, z2, w2]
+					m.w.vec = _mm256_permute2f128_pd(t1, t3, 0x31); // [x3, y3, z3, w3]
+
+					return m;
+				}
+				else
+				{
+					return math::Transpose<Mat4x4>(mat);
+				}
+			}
 		}
 	};
 
