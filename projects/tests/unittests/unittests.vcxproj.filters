@@ -1234,9 +1234,6 @@
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\frustum.h">
       <Filter>pr\math_new\primitives</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\math_new\core\spatial.h">
-      <Filter>pr\math_new\core</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\spatial\spatial.h">
       <Filter>pr\math_new\spatial</Filter>
     </ClInclude>
@@ -1248,6 +1245,9 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\bit_fields.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\types\half.h">
+      <Filter>pr\math_new\types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

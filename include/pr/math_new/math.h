@@ -46,12 +46,12 @@
 #include "pr/math_new/primitives/frustum.h"
 #include "pr/math_new/spatial/spatial.h"
 #include "pr/math_new/stats/stat.h"
+#include "pr/math_new/types/half.h"
 // No non-standard dependencies outside of './'
 
 // #include "pr/maths/rectangle.h"
 // #include "pr/maths/conversion.h"
 // #include "pr/maths/line3.h"
-// #include "pr/maths/half.h"
 // #include "pr/maths/polynomial.h"
 // #include "pr/maths/constants_vector.h"
 
