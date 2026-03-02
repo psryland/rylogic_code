@@ -8,8 +8,7 @@
 #include "pr/math_new/types/matrix3x4.h"
 #include "pr/math_new/types/matrix4x4.h"
 #include "pr/math_new/primitives/bsphere.h"
-//#include "pr/maths/constants.h"
-//#include "pr/maths/plane.h"
+#include "pr/math_new/primitives/plane.h"
 
 namespace pr::math
 {
@@ -17,18 +16,6 @@ namespace pr::math
 	struct BBox
 	{
 		using Vec4 = Vec4<S>;
-
-		// Faces of the bounding box
-		enum class EPlane
-		{
-			Lx = 0,
-			Ux = 1,
-			Ly = 2,
-			Uy = 3,
-			Lz = 4,
-			Uz = 5,
-			NumberOf = 6
-		};
 
 		Vec4 m_centre;
 		Vec4 m_radius;
@@ -333,6 +320,18 @@ namespace pr::math
 
 	#pragma region Functions
 
+	// Faces of the bounding box
+	enum class EBBoxPlane
+	{
+		Lx = 0,
+		Ux = 1,
+		Ly = 2,
+		Uy = 3,
+		Lz = 4,
+		Uz = 5,
+		NumberOf = 6
+	};
+
 	// Return a corner of the bounding box
 	template <ScalarType S> constexpr Vec4<S> pr_vectorcall Corner(BBox<S> bbox, int corner)
 	{
@@ -410,22 +409,24 @@ namespace pr::math
 		return bbox.m_centre + Sign(separating_axis, false) * bbox.m_radius;
 	}
 
-	#if 0 // Todo
-	// Return a plane corresponding to a side of the bounding box. Returns inward facing planes
-	inline Plane pr_vectorcall GetPlane(BBox_cref bbox, BBox::EPlane side)
+	// Return the planes of 'bbox'. Returns inward facing planes
+	template <ScalarType S> constexpr std::array<Plane<S>,6> pr_vectorcall ToPlanes(BBox<S> bbox)
 	{
-		switch (side)
-		{
-		default: pr_assert(false && "Unknown side index"); return Plane();
-		case BBox::EPlane::Lx: return plane::make( 1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
-		case BBox::EPlane::Ux: return plane::make(-1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
-		case BBox::EPlane::Ly: return plane::make( 0.0f,  1.0f,  0.0f, bbox.m_centre.y + bbox.m_radius.y);
-		case BBox::EPlane::Uy: return plane::make( 0.0f, -1.0f,  0.0f, bbox.m_centre.y + bbox.m_radius.y);
-		case BBox::EPlane::Lz: return plane::make( 0.0f,  0.0f,  1.0f, bbox.m_centre.z + bbox.m_radius.z);
-		case BBox::EPlane::Uz: return plane::make( 0.0f,  0.0f, -1.0f, bbox.m_centre.z + bbox.m_radius.z);
-		}
+		return std::array<Plane<S>, EBBoxPlane::NumberOf> {
+			Plane(+S(1), +S(0), +S(0), bbox.m_centre.x + bbox.m_radius.x),
+			Plane(-S(1), +S(0), +S(0), bbox.m_centre.x + bbox.m_radius.x),
+			Plane(+S(0), +S(1), +S(0), bbox.m_centre.y + bbox.m_radius.y),
+			Plane(+S(0), -S(1), +S(0), bbox.m_centre.y + bbox.m_radius.y),
+			Plane(+S(0), +S(0), +S(1), bbox.m_centre.z + bbox.m_radius.z),
+			Plane(+S(0), +S(0), -S(1), bbox.m_centre.z + bbox.m_radius.z),
+		};
 	}
-	#endif
+
+	// Return a plane corresponding to a side of the bounding box. Returns inward facing planes
+	template <ScalarType S> constexpr Plane<S> pr_vectorcall GetPlane(BBox<S> bbox, EBBoxPlane side)
+	{
+		return ToPlanes(bbox)[static_cast<int>(side)];
+	}
 
 	// Return a bounding sphere that bounds the bounding box
 	template <ScalarType S> [[nodiscard]] BSphere<S> pr_vectorcall GetBSphere(BBox<S> bbox)

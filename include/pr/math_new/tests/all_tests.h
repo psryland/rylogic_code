@@ -15,4 +15,6 @@
 #include "pr/math_new/tests/transform_tests.h"
 #include "pr/math_new/tests/matrix_tests.h"
 #include "pr/math_new/tests/stat_tests.h"
+#include "pr/math_new/tests/rectangle_tests.h"
+#include "pr/math_new/tests/primes_tests.h"
 

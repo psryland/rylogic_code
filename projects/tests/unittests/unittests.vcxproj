@@ -404,6 +404,7 @@
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\frustum.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\oriented_box.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\plane.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\primitives\rectangle.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\spline.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\spatial\spatial.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\stats\stat.h" />
@@ -432,6 +433,7 @@
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector4.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector8.h" />
     <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\primes.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />
     <None Include="$(RylogicRoot)include\pr\hlsl\core.hlsli" />
