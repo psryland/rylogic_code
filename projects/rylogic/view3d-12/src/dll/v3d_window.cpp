@@ -812,7 +812,7 @@ namespace pr::rdr12
 	{
 		return m_wnd.BkgdColour();
 	}
-	void V3dWindow::BackgroundColour(Colour_cref colour)
+	void V3dWindow::BackgroundColour(Colour colour)
 	{
 		if (BackgroundColour() == colour)
 			return;
@@ -889,7 +889,7 @@ namespace pr::rdr12
 	{
 		return m_scene.m_cam.FocusPoint();
 	}
-	void V3dWindow::FocusPoint(v4_cref position)
+	void V3dWindow::FocusPoint(v4 position)
 	{
 		if (FocusPoint() == position)
 			return;
@@ -906,7 +906,7 @@ namespace pr::rdr12
 	{
 		return m_scene.m_cam.FocusBounds();
 	}
-	void V3dWindow::FocusBounds(BBox_cref bounds)
+	void V3dWindow::FocusBounds(BBox bounds)
 	{
 		if (FocusBounds() == bounds)
 			return;
@@ -964,7 +964,7 @@ namespace pr::rdr12
 	{
 		return m_scene.m_cam.ViewRectAtDistance(dist);
 	}
-	void V3dWindow::ViewRectAtDistance(v2_cref rect, float focus_dist)
+	void V3dWindow::ViewRectAtDistance(v2 rect, float focus_dist)
 	{
 		if (ViewRectAtDistance(focus_dist) == rect)
 			return;
@@ -1015,7 +1015,7 @@ namespace pr::rdr12
 	{
 		return m_scene.m_cam.Align();
 	}
-	void V3dWindow::AlignAxis(v4_cref axis)
+	void V3dWindow::AlignAxis(v4 axis)
 	{
 		if (AlignAxis() == axis)
 			return;
@@ -1794,16 +1794,16 @@ namespace pr::rdr12
 		// Create the focus point/origin models
 		m_focus_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
-		m_focus_point.m_i2w = m4x4Identity;
+		m_focus_point.m_i2w = m4x4::Identity();
 		m_focus_point.m_size = 1.0f;
 		m_origin_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
-		m_origin_point.m_i2w = m4x4Identity;
+		m_origin_point.m_i2w = m4x4::Identity();
 		m_origin_point.m_size = 1.0f;
 
 		// Create the selection box model
 		m_selection_box.m_model = factory.CreateModel(EStockModel::SelectionBox);
 		m_selection_box.m_tint = Colour32White;
-		m_selection_box.m_i2w = m4x4Identity;
+		m_selection_box.m_i2w = m4x4::Identity();
 	}
 }

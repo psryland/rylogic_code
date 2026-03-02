@@ -2092,6 +2092,20 @@ namespace pr::math
 		return Sqrt<S>(LengthSq(v));
 	}
 
+	// Length of a list of parameters
+	template <typename T, typename... A> constexpr T Len(T x, A&&... a) noexcept
+	{
+		if constexpr (sizeof...(A) == 0)
+		{
+			return Abs(x);
+		}
+		else
+		{
+			auto rest = Len(std::forward<A>(a)...);
+			return Sqrt(Square(x) + Square(rest));
+		}
+	}
+
 	// Return the trace of this matrix, 
 	template <VectorType Mat> requires (IsRank2<Mat>)
 	constexpr typename vector_traits<Mat>::element_t pr_vectorcall Trace(Mat const& mat) noexcept

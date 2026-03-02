@@ -970,6 +970,22 @@ namespace pr::math::tests
 				static_assert(len * len <= LengthSq(V0));
 		}
 
+		// ---- Length (functions.h line ~2096) ----
+		PRUnitTestMethod(LenTests)
+		{
+			PR_EXPECT(Len(3.0) == 3.0);
+			PR_EXPECT(Len(0.0) == 0.0);
+			PR_EXPECT(Len(-2.0) == 2.0);
+			PR_EXPECT(Len(1.0f) == 1.0f);
+			PR_EXPECT(Len(5) == 5);
+			PR_EXPECT(Len(-0.5) == 0.5);
+
+			PR_EXPECT(FEql(Len(3.0, 4.0), 5.0));               // 3-4-5
+			PR_EXPECT(FEql(Len(1.0, 2.0, 2.0), 3.0));          // 1² + 2² + 2² = 9
+			PR_EXPECT(FEql(Len(0.0, 0.0, 0.0), 0.0));          // zero vector
+			PR_EXPECT(FEql(Len(1.0, 1.0, 1.0, 1.0), 2.0));     // 4 * 1² = 4, sqrt = 2
+		}
+
 		// ---- Trace (functions.h line ~1429) ----
 		PRUnitTestMethod(TraceTests
 		, Mat2x2<float>, Mat2x2<double>, Mat2x2<int32_t>, Mat2x2<int64_t>

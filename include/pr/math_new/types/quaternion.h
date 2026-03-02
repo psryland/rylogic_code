@@ -563,7 +563,7 @@ namespace pr::math
 			{
 				return Normalise(Quat<S,A,B>{m_avr.Mean()});
 			}
-			void Add(Quat_cref<S,A,B> q) noexcept
+			void Add(Quat<S,A,B> q) noexcept
 			{
 				// Nicked from Unity3D
 				// Note: this only really works if all the quaternions are relatively close together.
