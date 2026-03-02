@@ -525,6 +525,12 @@ namespace pr::math
 			return Mat{ ToMatrix<Quat<S>, Mat3x4<S>>(q), p };
 		}
 	}
+
+	// Deferred definition of Quat(Mat3x4) constructor
+	template <ScalarTypeFP S>
+	Quat<S>::Quat(Mat3x4<S> const& m)
+		: Quat(ToQuat<Quat<S>, Mat3x4<S>>(m))
+	{}
 }
 
 
