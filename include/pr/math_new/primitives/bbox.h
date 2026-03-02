@@ -59,8 +59,8 @@ namespace pr::math
 		// Returns true if the bbox is valid
 		constexpr bool valid() const noexcept
 		{
-			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0 &&
-				IsFinite(LengthSq(m_radius)) && IsFinite(LengthSq(m_centre));
+			// Note: An infinite bounding box should still be valid
+			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0 && IsFinite(m_centre);
 		}
 
 		// Returns true if this bbox encloses a single point
@@ -202,30 +202,29 @@ namespace pr::math
 					}
 				}
 			};
-			auto optimised = [&]()
-			{
-				__m128 const zero = _mm_set_ps1(+0.0f);
-				__m128 const half = _mm_set_ps1(+0.5f);
-				auto init = _mm_cmplt_ps(m_radius.vec, zero);                               // init = radius == -1 ? FFFF... : 0000... 
-				auto lwr = _mm_sub_ps(m_centre.vec, m_radius.vec);                          // lwr  = centre - radius
-				auto upr = _mm_add_ps(m_centre.vec, m_radius.vec);                          // upr  = centre + radius
-				auto init_pt = _mm_and_ps(init, point.vec);                                 // init_pt = init & point
-				lwr = _mm_or_ps(init_pt, _mm_andnot_ps(init, _mm_min_ps(lwr, point.vec))); // lwr  = init_pt | (~init & min(lwr, point))
-				upr = _mm_or_ps(init_pt, _mm_andnot_ps(init, _mm_max_ps(upr, point.vec))); // upr  = init_pt | (~init & max(upr, point))
-				m_centre.vec = _mm_mul_ps(_mm_add_ps(upr, lwr), half);                       // center = (upr + lwr) / 2;
-				m_radius.vec = _mm_mul_ps(_mm_sub_ps(upr, lwr), half);                       // radius = (upr - lwr) / 2;
-			};
-
 			if consteval
 			{
 				fallback();
 			}
 			else
 			{
-				if constexpr (Vec4::IntrinsicF)
-					optimised();
+				if constexpr (Vec4::IntrinsicF && std::same_as<S, float>)
+				{
+					__m128 const zero = _mm_set_ps1(+0.0f);
+					__m128 const half = _mm_set_ps1(+0.5f);
+					auto init = _mm_cmplt_ps(m_radius.vec, zero);                               // init = radius == -1 ? FFFF... : 0000... 
+					auto lwr = _mm_sub_ps(m_centre.vec, m_radius.vec);                          // lwr  = centre - radius
+					auto upr = _mm_add_ps(m_centre.vec, m_radius.vec);                          // upr  = centre + radius
+					auto init_pt = _mm_and_ps(init, point.vec);                                 // init_pt = init & point
+					lwr = _mm_or_ps(init_pt, _mm_andnot_ps(init, _mm_min_ps(lwr, point.vec))); // lwr  = init_pt | (~init & min(lwr, point))
+					upr = _mm_or_ps(init_pt, _mm_andnot_ps(init, _mm_max_ps(upr, point.vec))); // upr  = init_pt | (~init & max(upr, point))
+					m_centre.vec = _mm_mul_ps(_mm_add_ps(upr, lwr), half);                       // center = (upr + lwr) / 2;
+					m_radius.vec = _mm_mul_ps(_mm_sub_ps(upr, lwr), half);                       // radius = (upr - lwr) / 2;
+				}
 				else
+				{
 					fallback();
+				}
 			}
 			return point;
 		}
