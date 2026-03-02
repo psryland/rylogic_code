@@ -235,7 +235,7 @@ namespace pr::math::spatial::tests
 		{
 		//	v4 vel(1,2,3,0);
 		//	v4 ang(4,3,2,0);
-		//	auto o2w = Mat4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4(1,1,1,1));
+		//	auto o2w = Mat4x4::Transform(v4::ZAxis(), float(maths::tau_by_4), v4(1,1,1,1));
 		}
 		PRUnitTestMethod(CrossProducts, float, double)
 		{

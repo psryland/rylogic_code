@@ -12,7 +12,7 @@
 namespace pr::geometry::closest_point
 {
 	// Returns the point closest to 'point' on 'plane'
-	inline v4 pr_vectorcall PointToPlane(v4 point, Plane const& plane)
+	inline v4 pr_vectorcall PointToPlane(v4 point, Plane plane)
 	{
 		return point - distance::PointToPlane(point, plane) * plane::Direction(plane);
 	}
@@ -436,17 +436,17 @@ namespace pr::geometry::closest_point
 		auto sep = MinSeparation{};
 
 		// Try world coordinate axes
-		sep(bbox.m_radius.x + rad.x - Abs(mid.x), Sign(mid.x) * v4XAxis);
-		sep(bbox.m_radius.y + rad.y - Abs(mid.y), Sign(mid.y) * v4YAxis);
-		sep(bbox.m_radius.z + rad.z - Abs(mid.z), Sign(mid.z) * v4ZAxis);
+		sep(bbox.m_radius.x + rad.x - Abs(mid.x), Sign(mid.x) * v4::XAxis());
+		sep(bbox.m_radius.y + rad.y - Abs(mid.y), Sign(mid.y) * v4::YAxis());
+		sep(bbox.m_radius.z + rad.z - Abs(mid.z), Sign(mid.z) * v4::ZAxis());
 
 		// Lambda for returning a separating axis with the correct sign
 		auto sep_axis = [&](v4 sa) { return Sign(Dot(mid, sa)) * sa; };
 
 		// Try cross products of the segment direction with the coordinate axes.
-		sep(rad.z * bbox.m_radius.y + rad.y * bbox.m_radius.z - rad.z * Abs(mid.y) - rad.y * Abs(mid.z), sep_axis(Cross(v4XAxis, half)));
-		sep(rad.z * bbox.m_radius.x + rad.x * bbox.m_radius.z - rad.x * Abs(mid.z) - rad.z * Abs(mid.x), sep_axis(Cross(v4YAxis, half)));
-		sep(rad.y * bbox.m_radius.x + rad.x * bbox.m_radius.y - rad.y * Abs(mid.x) - rad.x * Abs(mid.y), sep_axis(Cross(v4ZAxis, half)));
+		sep(rad.z * bbox.m_radius.y + rad.y * bbox.m_radius.z - rad.z * Abs(mid.y) - rad.y * Abs(mid.z), sep_axis(Cross(v4::XAxis(), half)));
+		sep(rad.z * bbox.m_radius.x + rad.x * bbox.m_radius.z - rad.x * Abs(mid.z) - rad.z * Abs(mid.x), sep_axis(Cross(v4::YAxis(), half)));
+		sep(rad.y * bbox.m_radius.x + rad.x * bbox.m_radius.y - rad.y * Abs(mid.x) - rad.x * Abs(mid.y), sep_axis(Cross(v4::ZAxis(), half)));
 
 		return sep;
 	}

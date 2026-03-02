@@ -391,7 +391,7 @@ namespace pr::math::tests
 			using vec_t = T;
 			using S = typename vector_traits<vec_t>::element_t;
 
-			static_assert(Square(S(3)) == S(9));
+			static_assert(Sqr(S(3)) == S(9));
 			if constexpr (IsRank2<vec_t>)
 			{
 				PR_EXPECT(SignedSqr(vec_t(S(-3))) == vec_t(S(-9)));

@@ -366,7 +366,7 @@ namespace pr::geometry::intersect
 	// Returns true if the ray that passes through 's' and has direction 'd' passes through the infinite plane 'plane'
 	// (i.e. returns false if the line and plane are parallel but not coincident
 	// Also returns the parametric value of the intercept 't'. 'plane' does not have to be a normalised plane.
-	inline bool pr_vectorcall RayVsPlane(v4 s, v4 d, Plane const& plane, float& t, float tmin, float tmax)
+	inline bool pr_vectorcall RayVsPlane(v4 s, v4 d, Plane plane, float& t, float tmin, float tmax)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = distance::PointToPlane(s, plane);
@@ -388,7 +388,7 @@ namespace pr::geometry::intersect
 	// The portion of the line on the positive side of the plane is returned, described
 	// by updated 't0' and 't1' values. 'plane' does not have to be a normalised plane.
 	// Returns true if the interval [t0,t1] is not zero.
-	inline bool pr_vectorcall LineVsPlane(Plane const& plane, v4 s, v4 e, float& t0, float& t1)
+	inline bool pr_vectorcall LineVsPlane(Plane plane, v4 s, v4 e, float& t0, float& t1)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = distance::PointToPlane(s, plane);
@@ -408,7 +408,7 @@ namespace pr::geometry::intersect
 	// Test if the line segment starting at 's' and ending at 'e' intersects the infinite plane 'plane'.
 	// Returns true if any part of the line is on the positive side of the plane.
 	// Parameter aliasing is allowed, i.e. &s_out == &s is allowed
-	inline bool pr_vectorcall LineVsPlane(Plane const& plane, v4 s, v4 e, v4& s_out, v4& e_out)
+	inline bool pr_vectorcall LineVsPlane(Plane plane, v4 s, v4 e, v4& s_out, v4& e_out)
 	{
 		float d0 = distance::PointToPlane(s, plane);
 		float d1 = distance::PointToPlane(e, plane);
@@ -476,10 +476,10 @@ namespace pr::geometry::intersect
 	}
 
 	// Returns true if 'bbox' intersects 'plane'
-	inline bool pr_vectorcall BBoxVsPlane(BBox bbox, Plane const& plane)
+	inline bool pr_vectorcall BBoxVsPlane(BBox bbox, Plane plane)
 	{
 		// Project the box onto the plane normal
-		auto r = Dot(Abs(plane.w0()), bbox.m_radius);
+		auto r = Dot(Abs(plane.direction()), bbox.m_radius);
 
 		// Compute distance of box center from plane
 		auto s = Dot(plane, bbox.m_centre);

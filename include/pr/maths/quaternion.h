@@ -69,11 +69,9 @@ namespace pr
 		Quat(intrinsic_t v)
 			:vec(v)
 		{
-			pr_assert(maths::is_aligned(this));
 		}
 		Quat& operator =(intrinsic_t v)
 		{
-			pr_assert(maths::is_aligned(this));
 			vec = v;
 			return *this;
 		}

@@ -222,27 +222,27 @@ namespace pr::geometry
 		MinSeparation()
 			:m_axis()
 			,m_axis_len_sq()
-			,m_depth_sq(maths::float_inf)
+			,m_depth_sq(limits<float>::infinity())
 		{}
 
 		// Boolean test of penetration
 		bool Contact() const
 		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			assert("No separating axes have been tested yet" && m_depth_sq != limits<float>::infinity());
 			return m_depth_sq > 0;
 		}
 
 		// Return the depth of penetration
 		float Depth() const
 		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			assert("No separating axes have been tested yet" && m_depth_sq != limits<float>::infinity());
 			return SignedSqrt(m_depth_sq);
 		}
 
 		// The direction of minimum penetration (normalised)
 		v4 SeparatingAxis() const
 		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			assert("No separating axes have been tested yet" && m_depth_sq != limits<float>::infinity());
 			return m_axis / Sqrt(m_axis_len_sq);
 		}
 
@@ -278,7 +278,7 @@ namespace pr::geometry
 	namespace distance
 	{
 		float pr_vectorcall PointToPlane(v4 point, v4 a, v4 b, v4 c);
-		float pr_vectorcall PointToPlane(v4 point, Plane const& plane);
+		float pr_vectorcall PointToPlane(v4 point, Plane plane);
 		float pr_vectorcall PointToRay(v4 point, v4 start, v4 end);
 		float pr_vectorcall RayToRay(v4 s0, v4 line0, v4 s1, v4 line1);
 		float pr_vectorcall PointToRaySq(v4 point, v4 s, v4 d);
@@ -289,7 +289,7 @@ namespace pr::geometry
 	}
 	namespace closest_point
 	{
-		v4 pr_vectorcall PointToPlane(v4 point, Plane const& plane);
+		v4 pr_vectorcall PointToPlane(v4 point, Plane plane);
 		v4 pr_vectorcall PointToPlane(v4 point, v4 a, v4 b, v4 c);
 		v4 pr_vectorcall PointToRay(v4 point, v4 s, v4 d, void*, float& t);
 		v4 pr_vectorcall PointToRay(v4 point, v4 s, v4 d, void*);
@@ -330,12 +330,12 @@ namespace pr::geometry
 		bool pr_vectorcall RayVsSphere(v4 s, v4 d, float radius, float& tmin, float& tmax);
 		bool pr_vectorcall RayVsBBox(v4 s, v4 d, BBox box, float& tmin, float& tmax);
 		bool pr_vectorcall RayVsFrustum(v4 s, v4 d, Frustum const& frustum, bool accumulative, float& t0, float& t1, bool include_zfar);
-		bool pr_vectorcall LineVsPlane(Plane const& plane, v4 s, v4 e, float& t0, float& t1);
-		bool pr_vectorcall LineVsPlane(Plane const& plane, v4 s, v4 e, v4& s_out, v4& e_out);
+		bool pr_vectorcall LineVsPlane(Plane plane, v4 s, v4 e, float& t0, float& t1);
+		bool pr_vectorcall LineVsPlane(Plane plane, v4 s, v4 e, v4& s_out, v4& e_out);
 		bool pr_vectorcall LineVsBoundingBox(v4 s, v4 e, BBox bbox);
-		bool pr_vectorcall RayVsPlane(Plane const& plane, v4 s, v4 e, float* t, float tmin, float tmax);
+		bool pr_vectorcall RayVsPlane(Plane plane, v4 s, v4 e, float* t, float tmin, float tmax);
 		bool pr_vectorcall LineVsSlab(v4 norm, float dist1, float dist2, v4 s, v4 e, v4& s_out, v4& e_out);
-		bool pr_vectorcall BBoxVsPlane(BBox bbox, Plane const& plane);
+		bool pr_vectorcall BBoxVsPlane(BBox bbox, Plane plane);
 		bool pr_vectorcall BBoxVsBBox(BBox lhs, BBox rhs);
 		bool pr_vectorcall OBoxVsOBox(OBox const& lhs, OBox const& rhs);
 		bool pr_vectorcall ConvexPolygonVsConvexPolygon(v4 const* poly0, int count0, v4 const* poly1, int count1, v4 norm, std::invocable<v4> auto& out);

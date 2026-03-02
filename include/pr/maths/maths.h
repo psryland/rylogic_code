@@ -32,6 +32,7 @@ namespace pr
 	using m6x8 = math::Mat6x8<float, void, void>;
 	using BBox = math::BBox<float>;
 	using BSphere = math::BSphere<float>;
+	using Plane = math::Plane<float>;
 
 	namespace maths
 	{
@@ -40,6 +41,8 @@ namespace pr
 	}
 }
 #else
+
+#include "pr/common/cast.h"
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"

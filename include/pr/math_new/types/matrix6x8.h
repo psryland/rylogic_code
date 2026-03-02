@@ -103,16 +103,16 @@ namespace pr::math
 		static constexpr Mat6x8 const& Zero() noexcept
 		{
 			static auto s_zero = Mat6x8{
-				Zero<Mat3x4<S>>(), Zero<Mat3x4<S>>(),
-				Zero<Mat3x4<S>>(), Zero<Mat3x4<S>>()
+				math::Zero<Mat3x4<S>>(), math::Zero<Mat3x4<S>>(),
+				math::Zero<Mat3x4<S>>(), math::Zero<Mat3x4<S>>()
 			};
 			return s_zero;
 		}
 		static constexpr Mat6x8 const& Identity() noexcept
 		{
 			static auto s_identity = Mat6x8{
-				Identity<Mat3x4<S>>(), Zero<Mat3x4<S>>(),
-				Zero<Mat3x4<S>>(), Identity<Mat3x4<S>>()
+				math::Identity<Mat3x4<S>>(), math::Zero<Mat3x4<S>>(),
+				math::Zero<Mat3x4<S>>(), math::Identity<Mat3x4<S>>()
 			};
 			return s_identity;
 		}

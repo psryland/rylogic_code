@@ -956,13 +956,13 @@ namespace pr::rdr12::ldraw
 					hit = EComponent::X;
 					min_dist_sq = dist_sq;
 				}
-				closest_point::LineToRay(v4::Origin(), v4YAxis.w1(), p, d, t0, t1, dist_sq);
+				closest_point::LineToRay(v4::Origin(), v4::YAxis().w1(), p, d, t0, t1, dist_sq);
 				if (t0 > t_min && t0 <= t_max && dist_sq < min_dist_sq && t1 > 0.0f)
 				{
 					hit = EComponent::Y;
 					min_dist_sq = dist_sq;
 				}
-				closest_point::LineToRay(v4::Origin(), v4ZAxis.w1(), p, d, t0, t1, dist_sq);
+				closest_point::LineToRay(v4::Origin(), v4::ZAxis().w1(), p, d, t0, t1, dist_sq);
 				if (t0 > t_min && t0 <= t_max && dist_sq < min_dist_sq && t1 > 0.0f)
 				{
 					hit = EComponent::Z;

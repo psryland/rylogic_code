@@ -186,8 +186,8 @@ namespace pr::geometry
 
 		// Texture coordinates
 		auto uvbase = (t2q * v4Origin).xy;
-		auto du     = (t2q * v4XAxis).xy;
-		auto dv     = (t2q * v4YAxis).xy;
+		auto du     = (t2q * v4::XAxis()).xy;
+		auto dv     = (t2q * v4::YAxis()).xy;
 
 		// Create the vertices
 		for (int h = 0, hend = divisions.y+2; h != hend; ++h, uvbase += dv)
@@ -238,12 +238,12 @@ namespace pr::geometry
 		// Z => X = width, Y = Height
 		v4 quad_w, quad_h;
 		switch (axis_id) {
-		case AxisId::PosX: quad_w = +width * v4YAxis; quad_h = +height * v4ZAxis; break;
-		case AxisId::PosY: quad_w = +width * v4ZAxis; quad_h = +height * v4XAxis; break;
-		case AxisId::PosZ: quad_w = +width * v4XAxis; quad_h = +height * v4YAxis; break;
-		case AxisId::NegX: quad_w = -width * v4YAxis; quad_h = -height * v4ZAxis; break;
-		case AxisId::NegY: quad_w = -width * v4ZAxis; quad_h = -height * v4XAxis; break;
-		case AxisId::NegZ: quad_w = -width * v4XAxis; quad_h = -height * v4YAxis; break;
+		case AxisId::PosX: quad_w = +width * v4::YAxis(); quad_h = +height * v4::ZAxis(); break;
+		case AxisId::PosY: quad_w = +width * v4::ZAxis(); quad_h = +height * v4::XAxis(); break;
+		case AxisId::PosZ: quad_w = +width * v4::XAxis(); quad_h = +height * v4::YAxis(); break;
+		case AxisId::NegX: quad_w = -width * v4::YAxis(); quad_h = -height * v4::ZAxis(); break;
+		case AxisId::NegY: quad_w = -width * v4::ZAxis(); quad_h = -height * v4::XAxis(); break;
+		case AxisId::NegZ: quad_w = -width * v4::XAxis(); quad_h = -height * v4::YAxis(); break;
 		}
 		return Quad(anchor, quad_w, quad_h, divisions, colour, t2q, vout, iout);
 	}
@@ -256,10 +256,10 @@ namespace pr::geometry
 	template <VertOutputFn VOut, IndexOutputFn IOut>
 	Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
-		auto fwd = forward != v4Zero ? forward : v4YAxis;
-		auto up = top != v4Zero ? top : -v4ZAxis;
+		auto fwd = forward != v4Zero ? forward : v4::YAxis();
+		auto up = top != v4Zero ? top : -v4::ZAxis();
 		if (Parallel(up, fwd))
-			up = -v4XAxis;
+			up = -v4::XAxis();
 
 		auto quad_w = width  * Normalise(Cross(up, fwd));
 		auto quad_h = height * Normalise(Cross(fwd, quad_w));
@@ -410,7 +410,7 @@ namespace pr::geometry
 			for (int i = 0; i != dimx; ++i)
 			{
 				auto x = static_cast<float>(i) / dimx;
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 			}
 		}
 
@@ -460,34 +460,34 @@ namespace pr::geometry
 
 		// Make a grid of verts
 		float x = 0.0f, y = 0.0f;
-		vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y)); // centre vert
+		vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y)); // centre vert
 		for (int ring = 1; ring <= rings; ++ring)
 		{
 			x = -2.0f * ring * dx; y = 0.0f;
 
 			// Sextant 0 = (1,0,2)
 			for (int i = 0; i != ring; ++i, x += dx, y += dy)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 
 			// Sextant 1 = (2,0,3)
 			for (int i = 0; i != ring; ++i, x += 2*dx)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 
 			// Sextant 2 = (3,0,4)
 			for (int i = 0; i != ring; ++i, x += dx, y -= dy)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 
 			// Sextant 3 = (4,0,5)
 			for (int i = 0; i != ring; ++i, x -= dx, y -= dy)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 
 			// Sextant 4 = (5,0,6)
 			for (int i = 0; i != ring; ++i, x -= 2*dx)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 
 			// Sextant 5 = (6,0,1)
 			for (int i = 0; i != ring; ++i, x -= dx, y += dy)
-				vout(v4(x,y,0,1), Colour32White, v4ZAxis, v2(x,y));
+				vout(v4(x,y,0,1), Colour32White, v4::ZAxis(), v2(x,y));
 		}
 
 		// Generate the indices for the triangle strip

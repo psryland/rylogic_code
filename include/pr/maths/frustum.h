@@ -573,7 +573,7 @@ namespace pr
 		bbox.m_centre.z += frustum_zfar;
 		
 		// If 'pt' is beyond the far plane, extend the far plane
-		auto pt = SupportPoint(bbox, -v4ZAxis);
+		auto pt = SupportPoint(bbox, -v4::ZAxis());
 		if (pt.z < 0)
 		{
 			frustum_zfar -= pt.z;

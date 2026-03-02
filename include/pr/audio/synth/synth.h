@@ -80,7 +80,7 @@ namespace pr::audio
 					{
 					case ETone::Sine:
 						{
-							value = std::sinf(time * freq * pr::maths::tauf);
+							value = std::sinf(time * freq * constants<float>::tau);
 							break;
 						}
 					case ETone::Square:

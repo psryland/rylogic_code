@@ -277,7 +277,7 @@ namespace pr::maths
 		{
 			v4 vel(1,2,3,0);
 			v4 ang(4,3,2,0);
-			auto o2w = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4(1,1,1,1));
+			auto o2w = m4x4::Transform(v4::ZAxis(), float(maths::tau_by_4), v4(1,1,1,1));
 		}
 		{// Cross Products
 			{// Test: CPM(m) * a == m x a
@@ -304,8 +304,8 @@ namespace pr::maths
 			}
 		}
 		{// Transforms
-			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
-			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
+			auto a2b = m4x4::Transform(v4::ZAxis(), float(maths::tau_by_4), v4{1,1,1,1});
+			auto b2c = m4x4::Transform(v4::YAxis(), float(maths::tau_by_8), v4{-1,2,-3,1});
 			auto a2c = b2c * a2b;
 
 			auto A2B = m6x8m{a2b.rot, m3x4Zero, CPM(a2b.pos) * a2b.rot, a2b.rot};
@@ -316,8 +316,8 @@ namespace pr::maths
 			PR_EXPECT(FEql(A2C, r));
 		}
 		{// Transforms
-			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
-			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
+			auto a2b = m4x4::Transform(v4::ZAxis(), float(maths::tau_by_4), v4{1,1,1,1});
+			auto b2c = m4x4::Transform(v4::YAxis(), float(maths::tau_by_8), v4{-1,2,-3,1});
 			auto a2c = b2c * a2b;
 
 			auto A2Bm = Transform<Motion>(a2b);

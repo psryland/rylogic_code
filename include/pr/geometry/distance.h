@@ -15,7 +15,7 @@ namespace pr::geometry::distance
 		plane.w = -Dot3(plane, a);
 		return Dot4(plane, point);
 	}
-	inline float pr_vectorcall PointToPlane(v4 point, Plane const& plane)
+	inline float pr_vectorcall PointToPlane(v4 point, Plane plane)
 	{
 		assert(point.w == 1.0f);
 		return Dot(plane, point);

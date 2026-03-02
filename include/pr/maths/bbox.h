@@ -172,7 +172,7 @@ namespace pr
 		v4 Grow(v4 point)
 		{
 			pr_assert("BBox Grow. Point must have w = 1" && point.w == 1.0f);
-			pr_assert("'point' must be aligned to 16" && maths::is_aligned(&point));
+			pr_assert("'point' must be aligned to 16" && is_aligned<v4>(&point));
 
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 const zero = _mm_set_ps1(+0.0f);

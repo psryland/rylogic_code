@@ -34,7 +34,7 @@ namespace pr::rdr12
 		{}
 		MeshCreationData& verts(std::span<v4 const> vbuf)
 		{
-			assert(maths::is_aligned(vbuf.data()));
+			assert(is_aligned(vbuf.data()));
 			m_verts = vbuf;
 			return *this;
 		}
@@ -57,7 +57,7 @@ namespace pr::rdr12
 		MeshCreationData& normals(std::span<v4 const> nbuf)
 		{
 			// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
-			assert(maths::is_aligned(nbuf.data()));
+			assert(is_aligned(nbuf.data()));
 			m_normals = nbuf;
 			return *this;
 		}

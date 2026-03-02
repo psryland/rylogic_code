@@ -93,11 +93,11 @@ namespace pr
 		Vec4(intrinsic_t v)
 			: vec(v)
 		{
-			pr_assert(maths::is_aligned(this));
+			pr_assert(is_aligned<Vec4>(this));
 		}
 		Vec4& operator =(intrinsic_t v)
 		{
-			pr_assert(maths::is_aligned(this));
+			pr_assert(is_aligned<Vec4>(this));
 			vec = v;
 			return *this;
 		}
@@ -1005,8 +1005,8 @@ namespace pr::maths
 				{5, 6, 7, 8},
 			};
 			(void)c0,c1;
-			PR_EXPECT(maths::is_aligned(&pt0[0]));
-			PR_EXPECT(maths::is_aligned(&pt1[0]));
+			PR_EXPECT(is_aligned(&pt0[0]));
+			PR_EXPECT(is_aligned(&pt1[0]));
 		}
 		PRUnitTestMethod(LinearInterpolate, float, double)
 		{

@@ -83,7 +83,7 @@ namespace pr::rdr12
 			m_scene.m_global_light.m_diffuse = Colour32(0xFF404040U);
 			m_scene.m_global_light.m_specular = Colour32(0xFF808080U);
 			m_scene.m_global_light.m_specular_power = 1000.0f;
-			m_scene.m_global_light.m_direction = -v4ZAxis;
+			m_scene.m_global_light.m_direction = -v4::ZAxis();
 			m_scene.m_global_light.m_on = true;
 			m_scene.m_global_light.m_cam_relative = true;
 
