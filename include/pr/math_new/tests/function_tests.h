@@ -1230,7 +1230,74 @@ namespace pr::math::tests
 			PR_EXPECT(!IsParallel(V1, CreateNotParallelTo(V1)));
 		}
 
-		// @Copilot, please add tests for Rotate90CW and Rotate90CCW
+		// ---- Rotate90CW and Rotate90CCW (functions.h line ~2432) ----
+		PRUnitTestMethod(Rotate90CWCCWTests
+		, Vec2<float>, Vec2<double>, Vec2<int32_t>, Vec2<int64_t>
+		) {
+			using vec_t = T;
+			using S = typename vector_traits<vec_t>::element_t;
+
+			// CW rotates +X toward +Y
+			{
+				auto v = vec_t{ S(1), S(0) };
+				auto cw = Rotate90CW(v);
+				PR_EXPECT(cw.x == S(0));
+				PR_EXPECT(cw.y == S(1));
+			}
+
+			// CW rotates +Y toward -X
+			{
+				auto v = vec_t{ S(0), S(1) };
+				auto cw = Rotate90CW(v);
+				PR_EXPECT(cw.x == S(-1));
+				PR_EXPECT(cw.y == S(0));
+			}
+
+			// CCW rotates +X toward -Y
+			{
+				auto v = vec_t{ S(1), S(0) };
+				auto ccw = Rotate90CCW(v);
+				PR_EXPECT(ccw.x == S(0));
+				PR_EXPECT(ccw.y == S(-1));
+			}
+
+			// CCW rotates +Y toward +X
+			{
+				auto v = vec_t{ S(0), S(1) };
+				auto ccw = Rotate90CCW(v);
+				PR_EXPECT(ccw.x == S(1));
+				PR_EXPECT(ccw.y == S(0));
+			}
+
+			// CW then CCW is identity
+			{
+				auto v = vec_t{ S(3), S(7) };
+				PR_EXPECT(Rotate90CCW(Rotate90CW(v)) == v);
+				PR_EXPECT(Rotate90CW(Rotate90CCW(v)) == v);
+			}
+
+			// CW preserves length
+			{
+				auto v = vec_t{ S(3), S(4) };
+				PR_EXPECT(LengthSq(Rotate90CW(v)) == LengthSq(v));
+				PR_EXPECT(LengthSq(Rotate90CCW(v)) == LengthSq(v));
+			}
+
+			// CW is perpendicular
+			{
+				auto v = vec_t{ S(5), S(2) };
+				PR_EXPECT(Dot(v, Rotate90CW(v)) == S(0));
+				PR_EXPECT(Dot(v, Rotate90CCW(v)) == S(0));
+			}
+
+			// Cross2D(a,b) == Dot(Rotate90CW(a), b)
+			if constexpr (std::is_floating_point_v<S>)
+			{
+				auto a = vec_t{ S(3), S(5) };
+				auto b = vec_t{ S(7), S(2) };
+				PR_EXPECT(FEql(Cross(a, b), Dot(Rotate90CW(a), b)));
+			}
+		}
 
 		// ---- Perpendicular (functions.h line ~1775) ----
 		PRUnitTestMethod(PerpendicularTests

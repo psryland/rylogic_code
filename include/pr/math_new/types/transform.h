@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -34,41 +34,41 @@ namespace pr::math
 
 		// Construct
 		Xform() = default;
-		constexpr Xform(Vec4<S> p, Quat<S> r, Vec4<S> s)
+		constexpr Xform(Vec4<S> p, Quat<S> r, Vec4<S> s) noexcept
 			: pos(p)
 			, rot(r)
 			, scl(s)
 		{}
-		constexpr Xform(Vec4<S> p, Quat<S> r)
+		constexpr Xform(Vec4<S> p, Quat<S> r) noexcept
 			: pos(p)
 			, rot(r)
 			, scl(Vec4<S>::One())
 		{}
-		Xform(Vec4<S> p, Mat3x4<S> const& r)
+		Xform(Vec4<S> p, Mat3x4<S> const& r) noexcept
 		{
 			auto [r_norm, scale] = Normalise(r);
 			pos = p;
 			rot = Quat<S>(r_norm);
 			scl = scale.w1();
 		}
-		Xform(Mat4x4<S> const& m)
+		Xform(Mat4x4<S> const& m) noexcept
 			: Xform(m.pos, m.rot)
 		{}
 
 		// Return the transform with scale set to one
-		constexpr Xform s1() const
+		constexpr Xform s1() const noexcept
 		{
 			return Xform{ pos, rot, Vec4<S>::One() };
 		}
 
 		// Basic constants
-		static constexpr Xform Identity()
+		static constexpr Xform Identity() noexcept
 		{
 			return { Vec4<S>::Origin(), Quat<S>::Identity(), Vec4<S>::One() };
 		}
 
 		#pragma region Operators
-		friend Xform pr_vectorcall operator * (Xform const& lhs, Xform const& rhs)
+		friend Xform pr_vectorcall operator * (Xform const& lhs, Xform const& rhs) noexcept
 		{
 			return Xform{
 				Rotate(lhs.rot, lhs.scl * rhs.pos.w0()) + lhs.pos,
@@ -76,13 +76,13 @@ namespace pr::math
 				lhs.scl * rhs.scl,
 			};
 		}
-		friend Vec4<S> pr_vectorcall operator * (Xform const& lhs, Vec4<S> rhs)
+		friend Vec4<S> pr_vectorcall operator * (Xform const& lhs, Vec4<S> rhs) noexcept
 		{
 			return
 				Rotate(lhs.rot, lhs.scl * rhs.w0()) +
 				lhs.pos * rhs.w;
 		}
-		friend Quat<S> pr_vectorcall operator * (Xform const& lhs, Quat<S> rhs)
+		friend Quat<S> pr_vectorcall operator * (Xform const& lhs, Quat<S> rhs) noexcept
 		{
 			return lhs.rot * rhs;
 		}
@@ -103,7 +103,7 @@ namespace pr::math
 
 	// Deferred definition of Mat4x4(Xform) constructor
 	template <ScalarType S>
-	constexpr Mat4x4<S>::Mat4x4(Xform<S> const& xform) requires (std::floating_point<S>)
+	constexpr Mat4x4<S>::Mat4x4(Xform<S> const& xform) noexcept requires (std::floating_point<S>)
 	{
 		auto rotation = ::pr::math::ToMatrix<Quat<S>, Mat3x4<S>>(xform.rot);
 		auto scale_mat = ::pr::math::Scale<Mat3x4<S>>(xform.scl);
@@ -113,7 +113,7 @@ namespace pr::math
 
 	// Approximate equality (absolute tolerance)
 	template <ScalarTypeFP S>
-	inline bool pr_vectorcall FEqlAbsolute(Xform<S> const& lhs, Xform<S> const& rhs, S tol)
+	inline bool pr_vectorcall FEqlAbsolute(Xform<S> const& lhs, Xform<S> const& rhs, S tol) noexcept
 	{
 		return
 			FEqlOrientation(lhs.rot, rhs.rot, tol) &&
@@ -123,7 +123,7 @@ namespace pr::math
 
 	// Approximate equality (relative tolerance)
 	template <ScalarTypeFP S>
-	inline bool pr_vectorcall FEqlRelative(Xform<S> const& lhs, Xform<S> const& rhs, S tol)
+	inline bool pr_vectorcall FEqlRelative(Xform<S> const& lhs, Xform<S> const& rhs, S tol) noexcept
 	{
 		return
 			FEqlOrientation(lhs.rot, rhs.rot, tol) &&
@@ -133,14 +133,14 @@ namespace pr::math
 
 	// Approximate equality (default tolerance)
 	template <ScalarTypeFP S>
-	inline bool pr_vectorcall FEql(Xform<S> const& lhs, Xform<S> const& rhs)
+	inline bool pr_vectorcall FEql(Xform<S> const& lhs, Xform<S> const& rhs) noexcept
 	{
 		return FEqlRelative(lhs, rhs, tiny<S>);
 	}
 
 	// Invert a transform
 	template <ScalarTypeFP S>
-	inline Xform<S> Invert(Xform<S> const& xform)
+	inline Xform<S> Invert(Xform<S> const& xform) noexcept
 	{
 		auto inv_rot = ~xform.rot;
 		auto inv_scl = S(1) / xform.scl;
@@ -150,7 +150,7 @@ namespace pr::math
 
 	// Create a random transform with position, rotation, and scale
 	template <XformType X, typename Rng = std::default_random_engine>
-	inline X Random(Rng& rng, Vec4<typename X::element_t> centre, typename X::element_t radius, Vec2<typename X::element_t> scale_range)
+	inline X Random(Rng& rng, Vec4<typename X::element_t> centre, typename X::element_t radius, Vec2<typename X::element_t> scale_range) noexcept
 	{
 		using S = typename X::element_t;
 
@@ -167,19 +167,19 @@ namespace pr::math
 		return X(p, q, s);
 	}
 	template <XformType X, typename Rng = std::default_random_engine>
-	inline X Random(Rng& rng, Vec4<typename X::element_t> centre, typename X::element_t radius)
+	inline X Random(Rng& rng, Vec4<typename X::element_t> centre, typename X::element_t radius) noexcept
 	{
 		using S = typename X::element_t;
 		return Random<X>(rng, centre, radius, Vec2<S>{ S(1), S(1) });
 	}
 	template <XformType X, typename Rng = std::default_random_engine>
-	inline X Random(Rng& rng, Vec2<typename X::element_t> scale_range)
+	inline X Random(Rng& rng, Vec2<typename X::element_t> scale_range) noexcept
 	{
 		using S = typename X::element_t;
 		return Random<X>(rng, Vec4<S>::Origin(), S(1), scale_range);
 	}
 	template <XformType X, typename Rng = std::default_random_engine>
-	inline X Random(Rng& rng)
+	inline X Random(Rng& rng) noexcept
 	{
 		using S = typename X::element_t;
 		return Random<X>(rng, Vec2<S>{ S(1), S(1) });

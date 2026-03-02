@@ -22,11 +22,11 @@ namespace pr::math
 		{
 			int m_count;
 
-			void Reset()
+			void Reset() noexcept
 			{
 				m_count = 0;
 			}
-			void Add(Type)
+			void Add(Type) noexcept
 			{
 				++m_count;
 			}
@@ -38,12 +38,12 @@ namespace pr::math
 			Type m_min;
 			Type m_max;
 			
-			void Reset()
+			void Reset() noexcept
 			{
 				m_min = (std::numeric_limits<Type>::max)();
 				m_max = std::numeric_limits<Type>::lowest();
 			}	
-			void Add(Type value)
+			void Add(Type value) noexcept
 			{
 				if (value < m_min) m_min = value;
 				if (value > m_max) m_max = value;
@@ -55,11 +55,11 @@ namespace pr::math
 		{
 			Type m_mean;
 
-			void Reset()
+			void Reset() noexcept
 			{
 				m_mean = {};
 			}	
-			void Add(Type value, int count)
+			void Add(Type value, int count) noexcept
 			{
 				auto diff = value - m_mean;
 				m_mean += diff * static_cast<Scalar>(1.0 / count);
@@ -73,28 +73,28 @@ namespace pr::math
 			
 			// Use the population standard deviation when all data values in a set have been considered.
 			// Use the sample standard deviation when the data values used are only a sample of the total population
-			Type PopStdDev(int count) const
+			Type PopStdDev(int count) const noexcept
 			{
 				return static_cast<Type>(sqrt(PopStdVar(count)));
 			}
-			Type SamStdDev(int count) const
+			Type SamStdDev(int count) const noexcept
 			{
 				return static_cast<Type>(sqrt(SamStdVar(count)));
 			}
-			Type PopStdVar(int count) const
+			Type PopStdVar(int count) const noexcept
 			{
 				return static_cast<Type>(m_var * (1.0 / (count + (count == 0))));
 			}
-			Type SamStdVar(int count) const
+			Type SamStdVar(int count) const noexcept
 			{
 				return static_cast<Type>(m_var * (1.0 / (count - (count != 1))));
 			}
 
-			void Reset()
+			void Reset() noexcept
 			{
 				m_var = {};
 			}
-			void Add(Type value, Type mean, int count)
+			void Add(Type value, Type mean, int count) noexcept
 			{
 				auto diff = value - mean;
 				m_var  += diff * diff * ((count - 1) * static_cast<Scalar>(1.0 / count));
@@ -147,22 +147,22 @@ namespace pr::math
 			Type m_mean;
 			Type m_var;
 
-			EMA(int window_size)
+			EMA(int window_size) noexcept
 				:m_size(window_size)
 				,m_count()
 				,m_mean()
 				,m_var()
 			{}
 
-			int WindowSize() const
+			int WindowSize() const noexcept
 			{
 				return m_size;
 			}
-			int Count() const
+			int Count() const noexcept
 			{
 				return m_count;
 			}
-			Type Mean() const
+			Type Mean() const noexcept
 			{
 				return m_mean;
 			}
@@ -170,31 +170,31 @@ namespace pr::math
 			// Use the population standard deviation when all data values in a set have been considered.
 			// Use the sample standard deviation when the data values used are only a sample of the total population
 			// Note: for a moving variance the choice between population/sample SD is a bit arbitrary
-			Type PopStdDev() const
+			Type PopStdDev() const noexcept
 			{
 				return static_cast<Type>(CompSqrt(PopStdVar()));
 			}
-			Type SamStdDev() const
+			Type SamStdDev() const noexcept
 			{
 				return static_cast<Type>(CompSqrt(SamStdVar()));
 			}
-			Type PopStdVar() const
+			Type PopStdVar() const noexcept
 			{
 				return m_var * static_cast<Scalar>(1.0 / (m_count + (m_count == 0)));
 			}
-			Type SamStdVar() const
+			Type SamStdVar() const noexcept
 			{
 				return m_var * static_cast<Scalar>(1.0 / (m_count - (m_count != 1)));
 			}
 
-			void Reset(int window_size)
+			void Reset(int window_size) noexcept
 			{
 				m_size = window_size;
 				m_count = 0;
 				m_mean = {};
 				m_var = {};
 			}
-			void Add(Type const& value)
+			void Add(Type const& value) noexcept
 			{
 				if (m_count >= m_size)
 				{
@@ -231,7 +231,7 @@ namespace pr::math
 			Type m_mean;
 			Type* m_in;
 
-			SMA(int window_size)
+			SMA(int window_size) noexcept
 				: m_window(window_size)
 				, m_count()
 				, m_mean()
@@ -240,11 +240,11 @@ namespace pr::math
 				Reset(window_size);
 			}
 
-			int Count() const
+			int Count() const noexcept
 			{
 				return m_count;
 			}
-			Type Mean() const
+			Type Mean() const noexcept
 			{
 				return m_mean;
 			}
@@ -253,23 +253,23 @@ namespace pr::math
 			// so that we could remove (X(k-N) - avr(k-N))^2 at each iteration
 			// Use the population standard deviation when all data values in a set have been considered.
 			// Use the sample standard deviation when the data values used are only a sample of the total population
-			Type PopStdDev() const
+			Type PopStdDev() const noexcept
 			{
 				return static_cast<Type>(sqrt(PopStdVar()));
 			}
-			Type SamStdDev() const
+			Type SamStdDev() const noexcept
 			{
 				return static_cast<Type>(sqrt(SamStdVar()));
 			}
-			Type PopStdVar() const
+			Type PopStdVar() const noexcept
 			{
 				return static_cast<Type>(Var() * static_cast<Scalar>(1.0 / (m_count + (m_count == 0))));
 			}
-			Type SamStdVar() const
+			Type SamStdVar() const noexcept
 			{
 				return static_cast<Type>(Var() * static_cast<Scalar>(1.0 / (m_count - (m_count != 1))));
 			}
-			Type Var() const
+			Type Var() const noexcept
 			{
 				auto var = Type();
 				auto count = m_count;
@@ -279,18 +279,18 @@ namespace pr::math
 				return var;
 			}
 
-			void Reset()
+			void Reset() noexcept
 			{
 				Reset(static_cast<int>(m_window.size()));
 			}
-			void Reset(int window_size)
+			void Reset(int window_size) noexcept
 			{
 				m_window.resize(window_size);
 				m_count = 0;
 				m_mean = {};
 				m_in = m_window.data();
 			}
-			void Add(Type const& value)
+			void Add(Type const& value) noexcept
 			{
 				if (m_count == static_cast<int>(m_window.size()))
 				{
@@ -321,59 +321,59 @@ namespace pr::math
 		stats::Mean<Type, Scalar> m_mean;
 		stats::Variance<Type, Scalar> m_variance;
 
-		Stat()
+		Stat() noexcept
 		{
 			Reset();
 		}
 
-		int Count() const
+		int Count() const noexcept
 		{
 			return m_count.m_count;
 		}
-		Type Min() const
+		Type Min() const noexcept
 		{
 			return m_minmax.m_min;
 		}
-		Type Max() const
+		Type Max() const noexcept
 		{
 			return m_minmax.m_max;
 		}
-		Type Mean() const
+		Type Mean() const noexcept
 		{
 			return m_mean.m_mean;
 		}
-		Type Sum() const
+		Type Sum() const noexcept
 		{
 			return Mean() * Count();
 		}
 
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
-		Type PopStdDev() const
+		Type PopStdDev() const noexcept
 		{
 			return m_variance.PopStdDev(m_count.m_count);
 		}
-		Type SamStdDev() const
+		Type SamStdDev() const noexcept
 		{
 			return m_variance.SamStdDev(m_count.m_count);
 		}
-		Type PopStdVar() const
+		Type PopStdVar() const noexcept
 		{
 			return m_variance.PopStdVar(m_count.m_count);
 		}
-		Type SamStdVar(int count) const
+		Type SamStdVar(int count) const noexcept
 		{
 			return m_variance.SamStdVar(m_count.m_count);
 		}
 
-		void Reset()
+		void Reset() noexcept
 		{
 			m_count.Reset();
 			m_minmax.Reset();
 			m_mean.Reset();
 			m_variance.Reset();
 		}
-		void Add(Type value)
+		void Add(Type value) noexcept
 		{
 			m_count.Add(value);
 			m_minmax.Add(value);
@@ -404,33 +404,33 @@ namespace pr::math
 		int  m_count;
 
 	public:
-		Avr()
+		Avr() noexcept
 			:m_mean()
 			,m_count()
 		{}
 
-		int Count() const
+		int Count() const noexcept
 		{
 			return m_count;
 		}
-		Type Mean() const
+		Type Mean() const noexcept
 		{
 			return m_mean;
 		}
-		Type Sum() const
+		Type Sum() const noexcept
 		{
 			return m_mean * m_count;
 		}
 
 		// Reset the average
-		void Reset()
+		void Reset() noexcept
 		{
 			m_count = 0;
 			m_mean  = Type();
 		}
 
 		// Accumulate the mean for 'value' in a single pass.
-		void Add(Type const& value)
+		void Add(Type const& value) noexcept
 		{
 			++m_count;
 			auto diff = value - m_mean;
@@ -478,7 +478,7 @@ namespace pr::math
 		int  m_count;
 
 	public:
-		AvrVar()
+		AvrVar() noexcept
 			:m_mean()
 			,m_var()
 			,m_count()
@@ -496,7 +496,7 @@ namespace pr::math
 		Type SamStdVar() const { return static_cast<Type>(m_var * (1.0 / (m_count - (m_count != 1)))); }
 
 		// Reset the average
-		void Reset()
+		void Reset() noexcept
 		{
 			m_count = 0;
 			m_mean  = Type();
@@ -505,7 +505,7 @@ namespace pr::math
 
 		// Accumulate statistics for 'value' in a single pass.
 		// Note, this method is more accurate than the sum of squares, square of sums approach.
-		void Add(Type const& value)
+		void Add(Type const& value) noexcept
 		{
 			++m_count;
 			auto diff = value - m_mean;
@@ -564,7 +564,7 @@ namespace pr::math
 		int m_count;
 
 	public:
-		ExpMovingAvr(int window_size)
+		ExpMovingAvr(int window_size) noexcept
 			:m_mean()
 			,m_var()
 			,m_size(window_size)
@@ -583,14 +583,14 @@ namespace pr::math
 		Type PopStdVar() const { return m_var * static_cast<Scalar>(1.0 / (m_count + (m_count == 0))); }
 		Type SamStdVar() const { return m_var * static_cast<Scalar>(1.0 / (m_count - (m_count != 1))); }
 
-		void Reset(int window_size)
+		void Reset(int window_size) noexcept
 		{
 			m_size  = window_size;
 			m_count = 0;
 			m_mean  = Type();
 			m_var   = Type();
 		}
-		void Add(Type const& value)
+		void Add(Type const& value) noexcept
 		{
 			if (m_count >= m_size)
 			{
@@ -629,7 +629,7 @@ namespace pr::math
 		int m_count;
 		int m_size;
 
-		Type Var() const
+		Type Var() const noexcept
 		{
 			auto var = Type();
 			auto count = m_count;
@@ -640,7 +640,7 @@ namespace pr::math
 		}
 
 	public:
-		MovingAvr(int window_size = MaxWindowSize)
+		MovingAvr(int window_size = MaxWindowSize) noexcept
 		{
 			Reset(window_size);
 		}
@@ -657,7 +657,7 @@ namespace pr::math
 		Type PopStdVar() const { return static_cast<Type>(Var() * static_cast<Scalar>(1.0 / (m_count + (m_count == 0)))); }
 		Type SamStdVar() const { return static_cast<Type>(Var() * static_cast<Scalar>(1.0 / (m_count - (m_count != 1)))); }
 
-		void Reset(int window_size = MaxWindowSize)
+		void Reset(int window_size = MaxWindowSize) noexcept
 		{
 			pr_assert(window_size <= MaxWindowSize);
 			m_in    = &m_window[0];
@@ -665,7 +665,7 @@ namespace pr::math
 			m_mean  = Type();
 			m_count = 0;
 		}
-		void Add(Type const& value)
+		void Add(Type const& value) noexcept
 		{
 			if (m_count == m_size)
 			{

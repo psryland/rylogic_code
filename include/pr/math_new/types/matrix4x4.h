@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -32,30 +32,30 @@ namespace pr::math
 
 		// Construct
 		Mat4x4() = default;
-		constexpr explicit Mat4x4(S x_)
+		constexpr explicit Mat4x4(S x_) noexcept
 			:x(x_)
 			, y(x_)
 			, z(x_)
 			, w(x_)
 		{
 		}
-		constexpr Mat4x4(Vec4<S> x_, Vec4<S> y_, Vec4<S> z_, Vec4<S> w_)
+		constexpr Mat4x4(Vec4<S> x_, Vec4<S> y_, Vec4<S> z_, Vec4<S> w_) noexcept
 			:x(x_)
 			, y(y_)
 			, z(z_)
 			, w(w_)
 		{
 		}
-		constexpr Mat4x4(Mat3x4<S> const& rot_, Vec4<S> pos_)
+		constexpr Mat4x4(Mat3x4<S> const& rot_, Vec4<S> pos_) noexcept
 			:rot(rot_)
 			, pos(pos_)
 		{
 			// Don't assert 'pos.w == 1' here. Not all m4x4's are affine transforms
 		}
-		constexpr Mat4x4(Xform<S> const& xform) requires (std::floating_point<S>);
+		constexpr Mat4x4(Xform<S> const& xform) noexcept requires (std::floating_point<S>);
 
 		// Explicit cast to different Scalar type
-		template <ScalarType S2> constexpr explicit operator Mat4x4<S2>() const
+		template <ScalarType S2> constexpr explicit operator Mat4x4<S2>() const noexcept
 		{
 			return Mat4x4<S2>(
 				static_cast<Vec4<S2>>(x),
@@ -66,13 +66,13 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr Vec4<S> const& operator [](int i) const
+		constexpr Vec4<S> const& operator [](int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < 4 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
 			else { return arr[i]; }
 		}
-		constexpr Vec4<S>& operator [](int i)
+		constexpr Vec4<S>& operator [](int i) noexcept
 		{
 			pr_assert(i >= 0 && i < 4 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
@@ -80,29 +80,29 @@ namespace pr::math
 		}
 
 		// Constants
-		static constexpr Mat4x4 Zero()
+		static constexpr Mat4x4 Zero() noexcept
 		{
 			return math::Zero<Mat4x4>();
 		}
-		static constexpr Mat4x4 Identity()
+		static constexpr Mat4x4 Identity() noexcept
 		{
 			return math::Identity<Mat4x4>();
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
-		constexpr Vec4<S> col(int i) const
+		constexpr Vec4<S> col(int i) const noexcept
 		{
 			return arr[i];
 		}
-		constexpr Vec4<S> row(int i) const
+		constexpr Vec4<S> row(int i) const noexcept
 		{
 			return Vec4<S>{x[i], y[i], z[i], w[i]};
 		}
-		void col(int i, Vec4<S> col)
+		void col(int i, Vec4<S> col) noexcept
 		{
 			arr[i] = col;
 		}
-		void row(int i, Vec4<S> row)
+		void row(int i, Vec4<S> row) noexcept
 		{
 			x[i] = row.x;
 			y[i] = row.y;
@@ -111,40 +111,40 @@ namespace pr::math
 		}
 
 		// Create a 4x4 matrix with this matrix as the rotation part
-		constexpr Mat4x4 w0() const
+		constexpr Mat4x4 w0() const noexcept
 		{
 			return Mat4x4{ rot, Origin<Vec4<S>>() };
 		}
-		constexpr Mat4x4 w1(Vec4<S> xyz) const
+		constexpr Mat4x4 w1(Vec4<S> xyz) const noexcept
 		{
 			pr_assert(xyz.w == 1 && "'pos' must be a position vector");
 			return Mat4x4{ rot, xyz };
 		}
 
 		// Return the diagonal elements of this matrix
-		constexpr Vec4<S> diagonal() const
+		constexpr Vec4<S> diagonal() const noexcept
 		{
 			return math::Diagonal(*this);
 		}
 
 		// Return the scale of this matrix
-		constexpr Mat4x4 scale() const
+		constexpr Mat4x4 scale() const noexcept
 		{
 			return math::Scale<Mat4x4>(*this);
 		}
 
 		// Return this matrix with the scale removed
-		constexpr Mat4x4 unscaled() const
+		constexpr Mat4x4 unscaled() const noexcept
 		{
 			return math::Unscaled<Mat4x4>(*this);
 		}
 
 		// Create a translation matrix
-		static Mat4x4 Translation(Vec4<S> xyz)
+		static Mat4x4 Translation(Vec4<S> xyz) noexcept
 		{
 			return math::Translation<Mat4x4>(xyz);
 		}
-		static Mat4x4 Translation(S x, S y, S z)
+		static Mat4x4 Translation(S x, S y, S z) noexcept
 		{
 			return math::Translation<Mat4x4>(x, y, z);
 		}
@@ -160,14 +160,14 @@ namespace pr::math
 		}
 
 		// Create from rotation and translation
-		static Mat4x4 Transform(Mat3x4<S> const& rot, Vec4<S> pos)
+		static Mat4x4 Transform(Mat3x4<S> const& rot, Vec4<S> pos) noexcept
 		{
 			return Mat4x4{ rot, pos };
 		}
 
 		// Create from quaternion + position
 		template <typename Q = S> requires std::floating_point<Q>
-		static Mat4x4 Transform(Quat<Q> q, Vec4<S> pos)
+		static Mat4x4 Transform(Quat<Q> q, Vec4<S> pos) noexcept
 		{
 			return Mat4x4{ math::ToMatrix<Quat<Q>, Mat3x4<Q>>(q), pos };
 		}
@@ -197,53 +197,53 @@ namespace pr::math
 		}
 
 		// Create a scale matrix
-		static Mat4x4 Scale(S scale, Vec4<S> pos)
+		static Mat4x4 Scale(S scale, Vec4<S> pos) noexcept
 		{
 			return Mat4x4{ math::Scale<Mat3x4<S>>(scale), pos };
 		}
-		static Mat4x4 Scale(S sx, S sy, S sz, Vec4<S> pos)
+		static Mat4x4 Scale(S sx, S sy, S sz, Vec4<S> pos) noexcept
 		{
 			return Mat4x4{ math::Scale<Mat3x4<S>>(sx, sy, sz), pos };
 		}
 
 		// Create a shear matrix
-		static Mat4x4 Shear(S sxy, S sxz, S syx, S syz, S szx, S szy, Vec4<S> pos)
+		static Mat4x4 Shear(S sxy, S sxz, S syx, S syz, S szx, S szy, Vec4<S> pos) noexcept
 		{
 			return Mat4x4{ math::Shear<Mat3x4<S>>(sxy, sxz, syx, syz, szx, szy), pos };
 		}
 
 		// Orientation matrix to "look" at a point
-		static Mat4x4 LookAt(Vec4<S> eye, Vec4<S> at, Vec4<S> up)
+		static Mat4x4 LookAt(Vec4<S> eye, Vec4<S> at, Vec4<S> up) noexcept
 		{
 			return math::LookAt<Mat4x4>(eye, at, up);
 		}
 
 		// Construct an orthographic projection matrix
-		static Mat4x4 ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded)
+		static Mat4x4 ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded) noexcept
 		{
 			return math::ProjectionOrthographic<Mat4x4>(w, h, zn, zf, righthanded);
 		}
 
 		// Construct a perspective projection matrix. 'w' and 'h' are measured at 'zn'
-		static Mat4x4 ProjectionPerspective(S w, S h, S zn, S zf, bool righthanded)
+		static Mat4x4 ProjectionPerspective(S w, S h, S zn, S zf, bool righthanded) noexcept
 		{
 			return math::ProjectionPerspective<Mat4x4>(w, h, zn, zf, righthanded);
 		}
 
 		// Construct a perspective projection matrix offset from the centre
-		static Mat4x4 ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded)
+		static Mat4x4 ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded) noexcept
 		{
 			return math::ProjectionPerspective<Mat4x4>(l, r, t, b, zn, zf, righthanded);
 		}
 
 		// Construct a perspective projection matrix using field of view
-		static Mat4x4 ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded)
+		static Mat4x4 ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded) noexcept
 		{
 			return math::ProjectionPerspectiveFOV<Mat4x4>(fovY, aspect, zn, zf, righthanded);
 		}
 
 		#pragma region Operators
-		friend Vec4<S> pr_vectorcall operator * (Mat4x4 const& a2b, Vec4<S> v)
+		friend Vec4<S> pr_vectorcall operator * (Mat4x4 const& a2b, Vec4<S> v) noexcept
 		{
 			if consteval
 			{
@@ -298,7 +298,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend Mat4x4 pr_vectorcall operator * (Mat4x4 const& b2c, Mat4x4 const& a2b)
+		friend Mat4x4 pr_vectorcall operator * (Mat4x4 const& b2c, Mat4x4 const& a2b) noexcept
 		{
 			// Note:
 			//  - The reason for this order is because matrices are applied from right to left
@@ -374,7 +374,7 @@ namespace pr::math
 		#pragma endregion
 
 		// Return the 4x4 transpose of 'mat'
-		friend Mat4x4 pr_vectorcall Transpose(Mat4x4 const& mat)
+		friend Mat4x4 pr_vectorcall Transpose(Mat4x4 const& mat) noexcept
 		{
 			if consteval
 			{
@@ -432,11 +432,11 @@ namespace pr::math
 	#undef PR_MATH_DEFINE_TYPE
 
 	// Create a 4x4 matrix from this 3x4 matrix
-	template <ScalarType S> constexpr Mat4x4<S> Mat3x4<S>::w1() const
+	template <ScalarType S> constexpr Mat4x4<S> Mat3x4<S>::w1() const noexcept
 	{
 		return Mat4x4{ *this, Origin<Vec4<S>>() };
 	}
-	template <ScalarType S> constexpr Mat4x4<S> Mat3x4<S>::w1(Vec4<S> xyz) const
+	template <ScalarType S> constexpr Mat4x4<S> Mat3x4<S>::w1(Vec4<S> xyz) const noexcept
 	{
 		return Mat4x4{ *this, xyz };
 	}

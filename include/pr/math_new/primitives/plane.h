@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -21,17 +21,17 @@ namespace pr::math
 		Vec4 m_dir_dist; // xyz = direction, w = distance
 
 		// Default construct to the plane x = 0
-		constexpr Plane()
+		constexpr Plane() noexcept
 			:m_dir_dist(0, 0, 1, 0)
 		{}
 
 		// Construct from a direction and distance (direction not necessarily unit length)
-		constexpr Plane(S dx, S dy, S dz, S dist)
+		constexpr Plane(S dx, S dy, S dz, S dist) noexcept
 			: m_dir_dist(dx, dy, dz, dist)
 		{}
 
 		// Construct from a normal direction and distance
-		constexpr Plane(Vec4 norm, S dist)
+		constexpr Plane(Vec4 norm, S dist) noexcept
 		{
 			auto p = norm;
 			p.w = -dist;
@@ -39,7 +39,7 @@ namespace pr::math
 		}
 
 		// Construct from a point and a direction (not necessarily unit length)
-		constexpr Plane(Vec4 point, Vec4 direction)
+		constexpr Plane(Vec4 point, Vec4 direction) noexcept
 		{
 			auto p = direction;
 			p.w = -Dot3(point, direction);
@@ -47,25 +47,25 @@ namespace pr::math
 		}
 
 		// Allow implicit conversion to Vec4
-		constexpr operator Vec4() const
+		constexpr operator Vec4() const noexcept
 		{
 			return m_dir_dist;
 		}
 
 		// Return the direction vector component of the plane
-		constexpr Vec4 direction() const
+		constexpr Vec4 direction() const noexcept
 		{
 			return m_dir_dist.w0();
 		}
 
 		// Return the signed distance component of the plane
-		constexpr S distance() const
+		constexpr S distance() const noexcept
 		{
 			return -m_dir_dist.w;
 		}
 
 		// Construct from 3 points in 3D space
-		static Plane FromTriangle(Vec4 a, Vec4 b, Vec4 c)
+		static Plane FromTriangle(Vec4 a, Vec4 b, Vec4 c) noexcept
 		{
 			auto p = Normalise(Cross(b-a, c-a));
 			p.w = -Dot(a, p);
@@ -74,7 +74,7 @@ namespace pr::math
 
 		// Make a best fit plane for a set of points. (designed for polygons really)
 		// This is using Newell's method of projecting the points into the yz, xz, and xy planes
-		static Plane FromBestFit(std::span<Vec4 const> points)
+		static Plane FromBestFit(std::span<Vec4 const> points) noexcept
 		{
 			auto p = Vec4{};
 			auto centre = Vec4{};
@@ -99,13 +99,13 @@ namespace pr::math
 	#pragma region Functions
 
 	// Normalise (Canonicalise a plane)
-	template <ScalarTypeFP S> constexpr Plane<S> Normalise(Plane<S> plane)
+	template <ScalarTypeFP S> constexpr Plane<S> pr_vectorcall Normalise(Plane<S> plane) noexcept
 	{
 		return plane / Length(plane.xyz); // This scales the w-component as well
 	}
 
 	// Return the signed distance of 'v' from the plane.
-	template <ScalarTypeFP S> constexpr S Distance(Plane<S> plane, Vec4<S> v)
+	template <ScalarTypeFP S> constexpr S pr_vectorcall Distance(Plane<S> plane, Vec4<S> v) noexcept
 	{
 		return Dot(plane, v);
 	}
@@ -113,7 +113,7 @@ namespace pr::math
 	// Returns 'v' projected onto 'plane'
 	// So if plane.w == -dist, if v.w == 1 the returned point will lie on the plane at 'dist'
 	// from the origin. if v.w == 0, the returned vector will lie in a plane parallel to 'plane'.
-	template <ScalarTypeFP S> constexpr Vec4<S> Project(Plane<S> plane, Vec4<S> v)
+	template <ScalarTypeFP S> constexpr Vec4<S> pr_vectorcall Project(Plane<S> plane, Vec4<S> v) noexcept
 	{
 		return v - Dot(plane, v) * Direction(plane);
 	}

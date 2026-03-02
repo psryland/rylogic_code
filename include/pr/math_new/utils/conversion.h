@@ -28,7 +28,7 @@ namespace pr
 	struct Convert<math::Vec2<S>, TFrom>
 	{
 		// Vec2 to Vec2
-		template <math::ScalarType SS> static math::Vec2<S> Func(math::Vec2<SS> v)
+		template <math::ScalarType SS> static math::Vec2<S> Func(math::Vec2<SS> v) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(v.x), s_cast<S>(v.y));
 		}
@@ -60,26 +60,26 @@ namespace pr
 		}
 
 		// Rect to Vec2
-		static math::Vec2<S> Func(FRect x)
+		static math::Vec2<S> Func(FRect x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.SizeX()), s_cast<S>(x.SizeY()));
 		}
-		static math::Vec2<S> Func(IRect x)
+		static math::Vec2<S> Func(IRect x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.SizeX()), s_cast<S>(x.SizeY()));
 		}
 
 		// Win32 primitive types to Vec2
 		#ifdef _WINDEF_
-		static math::Vec2<S> Func(POINT x)
+		static math::Vec2<S> Func(POINT x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.x), s_cast<S>(x.y));
 		}
-		static math::Vec2<S> Func(SIZE x)
+		static math::Vec2<S> Func(SIZE x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.cx), s_cast<S>(x.cy));
 		}
-		static math::Vec2<S> Func(RECT x)
+		static math::Vec2<S> Func(RECT x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.right - x.left), s_cast<S>(x.bottom - x.top));
 		}
@@ -87,11 +87,11 @@ namespace pr
 
 		// GDI+ types to Vec2
 		#ifdef _GDIPLUS_H
-		static math::Vec2<S> Func(Gdiplus::Rect x)
+		static math::Vec2<S> Func(Gdiplus::Rect x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.Width), s_cast<S>(x.Height));
 		}
-		static math::Vec2<S> Func(Gdiplus::RectF x)
+		static math::Vec2<S> Func(Gdiplus::RectF x) noexcept
 		{
 			return math::Vec2<S>(s_cast<S>(x.Width), s_cast<S>(x.Height));
 		}
@@ -115,14 +115,14 @@ namespace pr
 	struct Convert<math::Vec3<S>, TFrom>
 	{
 		// Vec3 to Vec3
-		template <math::ScalarType SS> static math::Vec3<S> Func(math::Vec3<SS> v)
+		template <math::ScalarType SS> static math::Vec3<S> Func(math::Vec3<SS> v) noexcept
 		{
 			return math::Vec3<S>(s_cast<S>(v.x), s_cast<S>(v.y), s_cast<S>(v.z));
 		}
 
 		// String to Vec3
 		template <StringType Str>
-		static math::Vec3<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Vec3<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -164,14 +164,14 @@ namespace pr
 	struct Convert<math::Vec4<S>, TFrom>
 	{
 		// Vec4 to Vec4
-		template <math::ScalarType SS> static math::Vec4<S> Func(math::Vec4<SS> v)
+		template <math::ScalarType SS> static math::Vec4<S> Func(math::Vec4<SS> v) noexcept
 		{
 			return math::Vec4<S>(s_cast<S>(v.x), s_cast<S>(v.y), s_cast<S>(v.z), s_cast<S>(v.w));
 		}
 
 		// String to Vec4
 		template <StringType Str>
-		static math::Vec4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Vec4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -184,7 +184,7 @@ namespace pr
 			return math::Vec4<S>(x, y, z, w);
 		}
 		template <StringType Str>
-		static math::Vec4<S> Func(Str const& s, S w, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Vec4<S> Func(Str const& s, S w, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -239,7 +239,7 @@ namespace pr
 	struct Convert<math::Vec8<S,T>, TFrom>
 	{
 		// Vec8 to Vec8
-		template <math::ScalarType SS, typename TT> static math::Vec8<S, T> Func(math::Vec8<SS, TT> v)
+		template <math::ScalarType SS, typename TT> static math::Vec8<S, T> Func(math::Vec8<SS, TT> v) noexcept
 		{
 			return math::Vec8<S, T>(To<math::Vec4<S>>(v.ang), To<math::Vec4<S>>(v.lin));
 		}
@@ -302,7 +302,7 @@ namespace pr
 	{
 		// String to Mat2x2
 		template <StringType Str>
-		static math::Mat2x2<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Mat2x2<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -332,7 +332,7 @@ namespace pr
 	{
 		// String to Mat3x4
 		template <StringType Str>
-		static math::Mat3x4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Mat3x4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -364,7 +364,7 @@ namespace pr
 	{
 		// String to Mat4x4
 		template <StringType Str>
-		static math::Mat4x4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Mat4x4<S> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -398,7 +398,7 @@ namespace pr
 	struct Convert<math::Mat6x8<S, A, B>, TFrom>
 	{
 		// Mat6x8 to Mat6x8
-		template <math::ScalarType SS, typename AA, typename BB> static math::Mat6x8<S, A, B> Func(math::Mat6x8<SS, AA, BB> const& v)
+		template <math::ScalarType SS, typename AA, typename BB> static math::Mat6x8<S, A, B> Func(math::Mat6x8<SS, AA, BB> const& v) noexcept
 		{
 			return math::Mat6x8<S, A, B>(
 				To<math::Mat3x4<S>>(v.m00),
@@ -409,7 +409,7 @@ namespace pr
 
 		// String to Mat6x8
 		template <StringType Str>
-		static math::Mat6x8<S, A, B> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr)
+		static math::Mat6x8<S, A, B> Func(Str const& s, typename string_traits<Str>::value_type const** end = nullptr) noexcept
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -430,7 +430,7 @@ namespace pr
 	struct Convert<math::Rectangle<S>, TFrom>
 	{
 		template <math::ScalarType V>
-		static math::Rectangle<S> Func(math::Vec2<S> x)
+		static math::Rectangle<S> Func(math::Vec2<S> x) noexcept
 		{
 			return math::Rectangle<S>{
 				math::Vec2<S>(0, 0),
@@ -438,7 +438,7 @@ namespace pr
 			};
 		}
 		template <math::ScalarType V>
-		static math::Rectangle<S> Func(math::Rectangle<V> x)
+		static math::Rectangle<S> Func(math::Rectangle<V> x) noexcept
 		{
 			return math::Rectangle<S>{
 				math::Vec2<S>(s_cast<S>(x.m_min.x), s_cast<S>(x.m_min.y)),
@@ -447,11 +447,11 @@ namespace pr
 		}
 
 		#ifdef _WINDEF_
-		static Rectangle<S> Func(RECT x)
+		static Rectangle<S> Func(RECT x) noexcept
 		{
 			return math::Rectangle<S>{s_cast<S>(x.left), s_cast<S>(x.top), s_cast<S>(x.right), s_cast<S>(x.bottom)};
 		}
-		static Rectangle<S> Func(SIZE x)
+		static Rectangle<S> Func(SIZE x) noexcept
 		{
 			return math::Rectangle<S>(S(0), S(0), s_cast<S>(x.cx), s_cast<S>(x.cy));
 		}

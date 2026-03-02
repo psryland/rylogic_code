@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************************************************
@@ -31,11 +31,11 @@ namespace pr::math
 		{
 			return value;
 		}
-		static constexpr bool IsValid(AxisId axis_id)
+		static constexpr bool IsValid(AxisId axis_id) noexcept
 		{
 			return axis_id >= -3 && axis_id <= 3 && axis_id != 0;
 		}
-		friend constexpr AxisId Abs(AxisId axis_id)
+		friend constexpr AxisId Abs(AxisId axis_id) noexcept
 		{
 			return AxisId(axis_id.value < 0 ? -axis_id.value : axis_id.value);
 		}

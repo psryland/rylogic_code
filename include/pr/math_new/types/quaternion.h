@@ -42,34 +42,34 @@ namespace pr::math
 
 		// Construct
 		Quat() = default;
-		constexpr explicit Quat(S x_)
+		constexpr explicit Quat(S x_) noexcept
 			: x(x_)
 			, y(x_)
 			, z(x_)
 			, w(x_)
 		{
 		}
-		constexpr Quat(S x_, S y_, S z_, S w_)
+		constexpr Quat(S x_, S y_, S z_, S w_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 			, w(w_)
 		{}
-		constexpr explicit Quat(std::ranges::random_access_range auto&& v)
+		constexpr explicit Quat(std::ranges::random_access_range auto&& v) noexcept
 			:Quat(v[0], v[1], v[2], v[3])
 		{}
-		constexpr explicit Quat(VectorTypeN<S, 4> auto v)
+		constexpr explicit Quat(VectorTypeN<S, 4> auto v) noexcept
 			:Quat(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
-		constexpr Quat(intrinsic_t vec_) requires (!NoIntrinsic)
+		constexpr Quat(intrinsic_t vec_) noexcept requires (!NoIntrinsic)
 			:vec(vec_)
 		{}
 
 		// Create a quaternion from a rotation matrix
-		explicit Quat(Mat3x4<S> const& m);
+		explicit Quat(Mat3x4<S> const& m) noexcept;
 
 		// Explicit cast to different Scalar type
-		template <ScalarTypeFP S2> constexpr explicit operator Quat<S2>() const
+		template <ScalarTypeFP S2> constexpr explicit operator Quat<S2>() const noexcept
 		{
 			return Quat<S2>(
 				static_cast<S2>(x),
@@ -80,7 +80,7 @@ namespace pr::math
 		}
 			
 		// Create a quaternion from an axis and an angle
-		Quat(Vec3<S> axis, S angle)
+		Quat(Vec3<S> axis, S angle) noexcept
 		{
 			auto s = std::sin(S(0.5) * angle);
 			x = axis.x * s;
@@ -88,14 +88,14 @@ namespace pr::math
 			z = axis.z * s;
 			w = std::cos(S(0.5) * angle);
 		}
-		Quat(Vec4<S> axis, S angle)
+		Quat(Vec4<S> axis, S angle) noexcept
 			:Quat(axis.xyz, angle)
 		{
 			pr_assert(axis.w == 0);
 		}
 		
 		// Create a quaternion from Euler angles. Order is roll, pitch, yaw
-		Quat(S pitch, S yaw, S roll)
+		Quat(S pitch, S yaw, S roll) noexcept
 		{
 			S cos_p = std::cos(pitch * S(0.5)), sin_p = std::sin(pitch * S(0.5));
 			S cos_y = std::cos(yaw   * S(0.5)), sin_y = std::sin(yaw   * S(0.5));
@@ -107,7 +107,7 @@ namespace pr::math
 		}
 
 		// Construct a quaternion from two vectors representing start and end orientations
-		Quat(Vec3<S> from, Vec3<S> to)
+		Quat(Vec3<S> from, Vec3<S> to) noexcept
 		{
 			auto d = Dot(from, to);
 			auto s = Sqrt(LengthSq(from) * LengthSq(to)) + d;
@@ -125,27 +125,27 @@ namespace pr::math
 
 			xyzw = Normalise(Vec4<S>{axis.x, axis.y, axis.z, s});
 		}
-		Quat(Vec4<S> from, Vec4<S> to)
+		Quat(Vec4<S> from, Vec4<S> to) noexcept
 			:Quat(from.xyz, to.xyz)
 		{
 			pr_assert(from.w == 0 && to.w == 0);
 		}
 
 		// Get the axis component of the quaternion (normalised)
-		Vec4<S> Axis() const
+		Vec4<S> Axis() const noexcept
 		{
 			// The axis is arbitrary for identity rotations
 			return Normalise(xyzw.w0(), Vec4<S>{0, 0, 1, 0});
 		}
 
 		// Return the angle of rotation about 'Axis()'
-		S Angle() const
+		S Angle() const noexcept
 		{
 			return std::acos(CosAngle());
 		}
 
 		// Return the cosine of the angle of rotation about 'Axis()'
-		S CosAngle() const
+		S CosAngle() const noexcept
 		{
 			// Trig:
 			//' w == cos(θ/2)
@@ -158,7 +158,7 @@ namespace pr::math
 		}
 
 		// Return the sine of the angle of rotation about 'Axis()'
-		S SinAngle() const
+		S SinAngle() const noexcept
 		{
 			// Trig:
 			//'  w == cos(θ/2)
@@ -170,23 +170,23 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr S operator [] (int i) const
+		constexpr S operator [] (int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];
 		}
-		constexpr S& operator [] (int i)
+		constexpr S& operator [] (int i) noexcept
 		{
 			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
 			return arr[i];
 		}
 
 		// Constants
-		static constexpr Quat Zero()
+		static constexpr Quat Zero() noexcept
 		{
 			return Quat(S(0), S(0), S(0), S(0));
 		}
-		static constexpr Quat Identity()
+		static constexpr Quat Identity() noexcept
 		{
 			return Quat(S(0), S(0), S(0), S(1));
 		}
@@ -208,14 +208,14 @@ namespace pr::math
 
 	// Normalise a quaternion to unit length
 	template <QuaternionType Quat>
-	inline Quat pr_vectorcall Normalise(Quat q)
+	inline Quat pr_vectorcall Normalise(Quat q) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		auto len = Length(q.xyzw);
 		return Quat{ q.x / len, q.y / len, q.z / len, q.w / len };
 	}
 	template <QuaternionType Quat>
-	inline Quat pr_vectorcall Normalise(Quat q, Quat value_if_zero_length)
+	inline Quat pr_vectorcall Normalise(Quat q, Quat value_if_zero_length) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		auto len = Length(q.xyzw);
@@ -224,7 +224,7 @@ namespace pr::math
 
 	// Decompose a quaternion into axis (normalised) and angle (radians)
 	template <QuaternionType Quat>
-	inline auto pr_vectorcall AxisAngle(Quat q)
+	inline auto pr_vectorcall AxisAngle(Quat q) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		struct R { Vec4<S> axis; S angle; };
@@ -244,7 +244,7 @@ namespace pr::math
 
 	// Test two quaternions for equivalence (i.e. do they represent the same orientation)
 	template <QuaternionType Quat>
-	inline bool FEqlOrientation(Quat lhs, Quat rhs, typename vector_traits<Quat>::element_t tol = tiny<typename vector_traits<Quat>::element_t>)
+	inline bool FEqlOrientation(Quat lhs, Quat rhs, typename vector_traits<Quat>::element_t tol = tiny<typename vector_traits<Quat>::element_t>) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		return FEqlAbsolute(AxisAngle(rhs * ~lhs).angle, S(0), tol);
@@ -252,7 +252,7 @@ namespace pr::math
 
 	// Quaternion FEql. Note: q == -q
 	template <QuaternionType Quat>
-	constexpr bool pr_vectorcall FEql(Quat lhs, Quat rhs)
+	constexpr bool pr_vectorcall FEql(Quat lhs, Quat rhs) noexcept
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
@@ -264,7 +264,7 @@ namespace pr::math
 
 	// Returns the value of 'cos(theta / 2)', where 'theta' is the angle between 'a' and 'b'
 	template <QuaternionType Quat>
-	constexpr typename vector_traits<Quat>::element_t pr_vectorcall CosHalfAngle(Quat a, Quat b)
+	constexpr typename vector_traits<Quat>::element_t pr_vectorcall CosHalfAngle(Quat a, Quat b) noexcept
 	{
 		// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
 		// where operator * is a quaternion multiply. The 'w' component of a quaternion
@@ -276,7 +276,7 @@ namespace pr::math
 
 	// Return possible Euler angles for the quaternion 'q'
 	template <QuaternionType Quat>
-	inline auto pr_vectorcall EulerAngles(Quat q)
+	inline auto pr_vectorcall EulerAngles(Quat q) noexcept
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
@@ -296,7 +296,7 @@ namespace pr::math
 
 	// Rotate a vector by a quaternion
 	template <QuaternionType Quat, VectorTypeFP Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
-	constexpr Vec pr_vectorcall Rotate(Quat lhs, Vec rhs)
+	constexpr Vec pr_vectorcall Rotate(Quat lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 
@@ -316,7 +316,7 @@ namespace pr::math
 
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'
 	template <QuaternionType Quat>
-	inline Quat pr_vectorcall Scale(Quat q, typename vector_traits<Quat>::element_t frac)
+	inline Quat pr_vectorcall Scale(Quat q, typename vector_traits<Quat>::element_t frac) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		pr_assert("quaternion isn't normalised" && IsNormalised(q.xyzw));
@@ -343,7 +343,7 @@ namespace pr::math
 
 	// Spherically interpolate between quaternions
 	template <QuaternionType Quat>
-	inline Quat pr_vectorcall Slerp(Quat a, Quat b, typename vector_traits<Quat>::element_t frac)
+	inline Quat pr_vectorcall Slerp(Quat a, Quat b, typename vector_traits<Quat>::element_t frac) noexcept
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
@@ -376,7 +376,7 @@ namespace pr::math
 
 	// Logarithm map of quaternion to tangent space at identity
 	template <VectorType Vec, QuaternionType Quat> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
-	inline Vec pr_vectorcall LogMap(Quat q)
+	inline Vec pr_vectorcall LogMap(Quat q) noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		auto xyz0 = Vec{ vec(q).x, vec(q).y, vec(q).z };
@@ -393,7 +393,7 @@ namespace pr::math
 	
 	// Exponential map of tangent space at identity to quaternion
 	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
-	inline Quat pr_vectorcall ExpMap(Vec v)
+	inline Quat pr_vectorcall ExpMap(Vec v) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 
@@ -407,7 +407,7 @@ namespace pr::math
 
 	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
 	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
-	inline Quat pr_vectorcall RotationAt(float time, Quat ori, Vec avel, Vec aacc)
+	inline Quat pr_vectorcall RotationAt(float time, Quat ori, Vec avel, Vec aacc) noexcept
 	{
 		using vt = vector_traits<Quat>;
 		using S = typename vt::element_t;
@@ -444,7 +444,7 @@ namespace pr::math
 
 	// Create a quaternion from a rotation matrix
 	template <QuaternionType Quat, VectorType Mat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
-	constexpr Quat pr_vectorcall ToQuat(Mat const& mat)
+	constexpr Quat pr_vectorcall ToQuat(Mat const& mat) noexcept
 	{
 		using qt = vector_traits<Quat>;
 		using mt = vector_traits<Mat>;
@@ -478,7 +478,7 @@ namespace pr::math
 
 	// Create a rotation matrix from a quaternion
 	template <QuaternionType Quat, VectorType Mat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
-	constexpr Mat pr_vectorcall ToMatrix(Quat q)
+	constexpr Mat pr_vectorcall ToMatrix(Quat q) noexcept
 	{
 		using qt = vector_traits<Quat>;
 		using mt = vector_traits<Mat>;
@@ -504,7 +504,7 @@ namespace pr::math
 
 	// Spherically interpolate between two rotations (using quat slerp)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	inline Mat pr_vectorcall Slerp(Mat const& lhs, Mat const& rhs, typename vector_traits<Mat>::element_t frac)
+	inline Mat pr_vectorcall Slerp(Mat const& lhs, Mat const& rhs, typename vector_traits<Mat>::element_t frac) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -528,7 +528,7 @@ namespace pr::math
 
 	// Deferred definition of Quat(Mat3x4) constructor
 	template <ScalarTypeFP S>
-	Quat<S>::Quat(Mat3x4<S> const& m)
+	Quat<S>::Quat(Mat3x4<S> const& m) noexcept
 		: Quat(ToQuat<Quat<S>, Mat3x4<S>>(m))
 	{}
 }
@@ -551,19 +551,19 @@ namespace pr::math
 		{
 			Avr<Vec4<S, void>, S> m_avr;
 
-			int Count() const
+			int Count() const noexcept
 			{
 				return m_avr.Count();
 			}
-			void Reset()
+			void Reset() noexcept
 			{
 				m_avr.Reset();
 			}
-			Quat<S,A,B> Mean() const
+			Quat<S,A,B> Mean() const noexcept
 			{
 				return Normalise(Quat<S,A,B>{m_avr.Mean()});
 			}
-			void Add(Quat_cref<S,A,B> q)
+			void Add(Quat_cref<S,A,B> q) noexcept
 			{
 				// Nicked from Unity3D
 				// Note: this only really works if all the quaternions are relatively close together.

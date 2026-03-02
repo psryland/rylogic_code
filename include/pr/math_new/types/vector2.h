@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -29,21 +29,21 @@ namespace pr::math
 
 		// Construct
 		Vec2() = default;
-		constexpr Vec2(S x_)
+		constexpr Vec2(S x_) noexcept
 			: x(x_)
 			, y(x_)
 		{}
-		constexpr Vec2(S x_, S y_)
+		constexpr Vec2(S x_, S y_) noexcept
 			: x(x_)
 			, y(y_)
 		{}
-		constexpr explicit Vec2(std::ranges::random_access_range auto&& v)
+		constexpr explicit Vec2(std::ranges::random_access_range auto&& v) noexcept
 			:Vec2(v[0], v[1])
 		{}
-		constexpr explicit Vec2(VectorTypeN<S, 2> auto v)
+		constexpr explicit Vec2(VectorTypeN<S, 2> auto v) noexcept
 			:Vec2(vec(v).x, vec(v).y)
 		{}
-		constexpr Vec2(AxisId axis_id)
+		constexpr Vec2(AxisId axis_id) noexcept
 			:Vec2(
 				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
 				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0)
@@ -51,7 +51,7 @@ namespace pr::math
 		{}
 
 		// Explicit cast to different Scalar type
-		template <ScalarType S2> constexpr explicit operator Vec2<S2>() const
+		template <ScalarType S2> constexpr explicit operator Vec2<S2>() const noexcept
 		{
 			return Vec2<S2>(
 				static_cast<S2>(x),
@@ -60,13 +60,13 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr S operator [] (int i) const
+		constexpr S operator [] (int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < 2 && "index out of range");
 			if consteval { return i == 0 ? x : y; }
 			else { return arr[i]; }
 		}
-		constexpr S& operator [] (int i)
+		constexpr S& operator [] (int i) noexcept
 		{
 			pr_assert(i >= 0 && i < 2 && "index out of range");
 			if consteval { return i == 0 ? x : y; }

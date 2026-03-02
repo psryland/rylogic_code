@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -51,7 +51,7 @@ namespace pr::math
 
 	public:
 
-		Matrix()
+		Matrix() noexcept
 			: m_data(&m_buf[0])
 			, m_vecs(0)
 			, m_cmps(0)
@@ -59,20 +59,20 @@ namespace pr::math
 		{
 			resize(0,0);
 		}
-		Matrix(int vecs, int cmps)
+		Matrix(int vecs, int cmps) noexcept
 			:Matrix()
 		{
 			resize(vecs, cmps, false);
 		}
-		Matrix(int vecs, int cmps, S const* data)
+		Matrix(int vecs, int cmps, S const* data) noexcept
 			:Matrix(vecs, cmps, std::initializer_list<S>(data, data + vecs * cmps))
 		{
 		}
-		Matrix(int vecs, int cmps, std::initializer_list<S> data)
+		Matrix(int vecs, int cmps, std::initializer_list<S> data) noexcept
 			:Matrix(vecs, cmps, data, false)
 		{
 		}
-		Matrix(int vecs, int cmps, std::initializer_list<S> data, bool transposed)
+		Matrix(int vecs, int cmps, std::initializer_list<S> data, bool transposed) noexcept
 			:Matrix(!transposed ? vecs : cmps, !transposed ? cmps : vecs)
 		{
 			pr_assert("Data length mismatch" && int(data.size()) == vecs*cmps);
@@ -101,14 +101,14 @@ namespace pr::math
 				rhs.m_transposed = false;
 			}
 		}
-		Matrix(Matrix const& rhs)
+		Matrix(Matrix const& rhs) noexcept
 			:Matrix()
 		{
 			resize(rhs.m_vecs, rhs.m_cmps);
 			memcpy(m_data, rhs.m_data, sizeof(S) * size());
 			m_transposed = rhs.m_transposed;
 		}
-		explicit Matrix(Vec4<S> v)
+		explicit Matrix(Vec4<S> v) noexcept
 			:Matrix(1, 4)
 		{
 			auto data = m_data;
@@ -117,7 +117,7 @@ namespace pr::math
 			*data++ = S(v.z);
 			*data++ = S(v.w);
 		}
-		explicit Matrix(Mat4x4<S> const& m)
+		explicit Matrix(Mat4x4<S> const& m) noexcept
 			:Matrix(4, 4)
 		{
 			auto data = m_data;
@@ -126,7 +126,7 @@ namespace pr::math
 			*data++ = S(m.z.x); *data++ = S(m.z.y); *data++ = S(m.z.z); *data++ = S(m.z.w);
 			*data++ = S(m.w.x); *data++ = S(m.w.y); *data++ = S(m.w.z); *data++ = S(m.w.w);
 		}
-		~Matrix()
+		~Matrix() noexcept
 		{
 			resize(0, 0);
 		}
@@ -150,7 +150,7 @@ namespace pr::math
 			}
 			return *this;
 		}
-		Matrix& operator = (Matrix const& rhs)
+		Matrix& operator = (Matrix const& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			resize(rhs.m_vecs, rhs.m_cmps);
@@ -159,14 +159,14 @@ namespace pr::math
 		}
 
 		// Access this matrix as a 2D array
-		S operator()(int vec, int cmp) const
+		S operator()(int vec, int cmp) const noexcept
 		{
 			if (m_transposed) std::swap(vec, cmp);
 			pr_assert(vec >= 0 && vec < m_vecs);
 			pr_assert(cmp >= 0 && cmp < m_cmps);
 			return m_data[vec * m_cmps + cmp];
 		}
-		S& operator()(int vec, int cmp)
+		S& operator()(int vec, int cmp) noexcept
 		{
 			if (m_transposed) std::swap(vec, cmp);
 			pr_assert(vec >= 0 && vec < m_vecs);
@@ -189,29 +189,29 @@ namespace pr::math
 		}
 
 		// The number of vectors in the matrix (i.e. Y dimension, aka row count in row-major matrix)
-		int vecs() const
+		int vecs() const noexcept
 		{
 			return !m_transposed ? m_vecs : m_cmps;
 		}
 
 		// The number of components per vector in the matrix (i.e. X dimension, aka column count in row-major matrix)
-		int cmps() const
+		int cmps() const noexcept
 		{
 			return !m_transposed ? m_cmps : m_vecs;
 		}
 
 		// The total number of elements in the matrix
-		int size() const
+		int size() const noexcept
 		{
 			return m_vecs * m_cmps;
 		}
 
 		// Access to the linear underlying matrix data
-		std::span<S const> data() const
+		std::span<S const> data() const noexcept
 		{
 			return { m_data, static_cast<size_t>(size()) };
 		}
-		std::span<S> data()
+		std::span<S> data() noexcept
 		{
 			return { m_data, static_cast<size_t>(size()) };
 		}
@@ -222,13 +222,13 @@ namespace pr::math
 			Matrix* m_mat;
 			int     m_idx;
 
-			VecProxy(Matrix& m, int idx)
+			VecProxy(Matrix& m, int idx) noexcept
 				:m_mat(&m)
 				,m_idx(idx)
 			{
 				pr_assert(idx >= 0 && idx < m_mat->vecs());
 			}
-			operator Matrix() const
+			operator Matrix() const noexcept
 			{
 				Matrix v(1, m_mat->cmps());
 				for (int i = 0, iend = m_mat->cmps(); i != iend; ++i)
@@ -236,7 +236,7 @@ namespace pr::math
 
 				return v;
 			}
-			VecProxy& operator = (Matrix const& rhs)
+			VecProxy& operator = (Matrix const& rhs) noexcept
 			{
 				pr_assert("'rhs' must be a vector" && rhs.vecs() == 1 && rhs.cmps() == m_mat->cmps());
 
@@ -245,24 +245,24 @@ namespace pr::math
 
 				return *this;
 			}
-			S operator[](int i) const
+			S operator[](int i) const noexcept
 			{
 				return (*m_mat)(m_idx, i);
 			}
-			S& operator[](int i)
+			S& operator[](int i) noexcept
 			{
 				return (*m_mat)(m_idx, i);
 			}
-			std::span<S const> data() const
+			std::span<S const> data() const noexcept
 			{
 				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
 			}
-			std::span<S> data()
+			std::span<S> data() noexcept
 			{
 				return { &(*m_mat)(m_idx, 0), static_cast<size_t>(m_mat->cmps()) };
 			}
 		};
-		VecProxy vec(int i) const
+		VecProxy vec(int i) const noexcept
 		{
 			return VecProxy(const_cast<Matrix&>(*this), i);
 		}
@@ -273,13 +273,13 @@ namespace pr::math
 			Matrix* m_mat;
 			int     m_idx;
 
-			CmpProxy(Matrix& m, int idx)
+			CmpProxy(Matrix& m, int idx) noexcept
 				:m_mat(&m)
 				,m_idx(idx)
 			{
 				pr_assert(idx >= 0 && idx < m_mat->cmps());
 			}
-			operator Matrix() const
+			operator Matrix() const noexcept
 			{
 				Matrix v(m_mat->vecs(), 1);
 				for (int i = 0, iend = m_mat->vecs(); i != iend; ++i)
@@ -287,7 +287,7 @@ namespace pr::math
 
 				return v;
 			}
-			CmpProxy& operator = (Matrix const& rhs)
+			CmpProxy& operator = (Matrix const& rhs) noexcept
 			{
 				pr_assert("'rhs' must be a transposed vector" && rhs.cmps() == 1 && rhs.vecs() == m_mat->vecs());
 
@@ -296,42 +296,42 @@ namespace pr::math
 
 				return *this;
 			}
-			S operator [](int i) const
+			S operator [](int i) const noexcept
 			{
 				return (*m_mat)(i, m_idx);
 			}
-			S& operator [](int i)
+			S& operator [](int i) noexcept
 			{
 				return (*m_mat)(i, m_idx);
 			}
 		};
-		CmpProxy cmp(int i) const
+		CmpProxy cmp(int i) const noexcept
 		{
 			return CmpProxy(const_cast<Matrix&>(*this), i);
 		}
 
 		// True if the matrix is square
-		bool IsSquare() const
+		bool IsSquare() const noexcept
 		{
 			return m_vecs == m_cmps;
 		}
 
 		// Set this matrix to all zeros
-		Matrix& zero()
+		Matrix& zero() noexcept
 		{
 			memset(m_data, 0, sizeof(S) * size());
 			return *this;
 		}
 
 		// Set this matrix to all 'value'
-		Matrix& fill(S value)
+		Matrix& fill(S value) noexcept
 		{
 			std::fill(m_data, m_data + size(), value);
 			return *this;
 		}
 
 		// Set this matrix to an identity matrix
-		Matrix& identity()
+		Matrix& identity() noexcept
 		{
 			zero();
 			for (int i = 0, istep = cmps() + 1, iend = size(); i < iend; i += istep) m_data[i] = S(1);
@@ -339,20 +339,20 @@ namespace pr::math
 		}
 
 		// Transpose this matrix
-		Matrix& transpose()
+		Matrix& transpose() noexcept
 		{
 			m_transposed = !m_transposed;
 			return *this;
 		}
 
 		// True if the data of this matrix is locally buffered
-		bool local() const
+		bool local() const noexcept
 		{
 			return m_data == &m_buf[0];
 		}
 
 		// Change the dimensions of the matrix.
-		void resize(int vecs, int cmps, bool preserve_data = true)
+		void resize(int vecs, int cmps, bool preserve_data = true) noexcept
 		{
 			if (m_transposed) std::swap(vecs, cmps);
 
@@ -400,34 +400,34 @@ namespace pr::math
 		}
 
 		// Change the number of vectors in the matrix.
-		void resize(int size, bool preserve_data = true)
+		void resize(int size, bool preserve_data = true) noexcept
 		{
 			resize(size, cmps(), preserve_data);
 		}
 
 		// Return an identity matrix of the given dimensions
-		static Matrix Zero(int vecs, int cmps)
+		static Matrix Zero(int vecs, int cmps) noexcept
 		{
 			Matrix m(vecs, cmps);
 			return m.zero();
 		}
 
 		// Return an identity matrix of the given dimensions
-		static Matrix Fill(int vecs, int cmps, S value)
+		static Matrix Fill(int vecs, int cmps, S value) noexcept
 		{
 			Matrix m(vecs, cmps);
 			return m.fill(value);
 		}
 
 		// Return an identity matrix of the given dimensions
-		static Matrix Identity(int vecs, int cmps)
+		static Matrix Identity(int vecs, int cmps) noexcept
 		{
 			Matrix m(vecs, cmps);
 			return m.identity();
 		}
 
 		// Generates the random matrix
-		template <typename Rng = std::default_random_engine> static Matrix Random(Rng& rng, int vecs, int cmps, S min_value, S max_value)
+		template <typename Rng = std::default_random_engine> static Matrix Random(Rng& rng, int vecs, int cmps, S min_value, S max_value) noexcept
 		{
 			std::uniform_real_distribution<S> dist(min_value, max_value);
 
@@ -441,11 +441,11 @@ namespace pr::math
 		#pragma region Operators
 
 		// Unary operators
-		friend Matrix<S> operator + (Matrix<S> const& m)
+		friend Matrix<S> operator + (Matrix<S> const& m) noexcept
 		{
 			return m;
 		}
-		friend Matrix<S> operator - (Matrix<S> const& m)
+		friend Matrix<S> operator - (Matrix<S> const& m) noexcept
 		{
 			// If 'm' is transposed, return a transposed matrix for consistency
 			Matrix<S> res(m.m_vecs, m.m_cmps);
@@ -457,7 +457,7 @@ namespace pr::math
 		}
 
 		// Addition/Subtraction
-		friend Matrix<S> operator + (Matrix<S> const& lhs, Matrix<S> const& rhs)
+		friend Matrix<S> operator + (Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 		{
 			pr_assert(lhs.vecs() == rhs.vecs());
 			pr_assert(lhs.cmps() == rhs.cmps());
@@ -484,7 +484,7 @@ namespace pr::math
 				return res;
 			}
 		}
-		friend Matrix<S> operator - (Matrix<S> const& lhs, Matrix<S> const& rhs)
+		friend Matrix<S> operator - (Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 		{
 			pr_assert(lhs.vecs() == rhs.vecs());
 			pr_assert(lhs.cmps() == rhs.cmps());
@@ -513,7 +513,7 @@ namespace pr::math
 		}
 
 		// Multiplication
-		friend Matrix<S> operator * (S s, Matrix<S> const& mat)
+		friend Matrix<S> operator * (S s, Matrix<S> const& mat) noexcept
 		{
 			// Preserve the transposed state in the returned matrix
 			Matrix<S> res(mat.m_vecs, mat.m_cmps);
@@ -523,11 +523,11 @@ namespace pr::math
 
 			return res;
 		}
-		friend Matrix<S> operator * (Matrix<S> const& mat, S s)
+		friend Matrix<S> operator * (Matrix<S> const& mat, S s) noexcept
 		{
 			return s * mat;
 		}
-		friend Matrix<S> operator * (Matrix<S> const& b2c, Matrix<S> const& a2b)
+		friend Matrix<S> operator * (Matrix<S> const& b2c, Matrix<S> const& a2b) noexcept
 		{
 			// Note:
 			//  - The multplication order is the same as for m4x4.
@@ -583,7 +583,7 @@ namespace pr::math
 			#pragma region Sub Functions
 			struct L
 			{
-				static void SafeAplusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz)
+				static void SafeAplusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 					{
@@ -595,7 +595,7 @@ namespace pr::math
 						}
 					}
 				}
-				static void SafeAminusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz)
+				static void SafeAminusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 					{
@@ -607,7 +607,7 @@ namespace pr::math
 						}
 					}
 				}
-				static void SafeACopytoC(Matrix const& A, int xa, int ya, Matrix& C, int sz)
+				static void SafeACopytoC(Matrix const& A, int xa, int ya, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 					{
@@ -618,25 +618,25 @@ namespace pr::math
 						}
 					}
 				}
-				static void AplusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz)
+				static void AplusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
 							C(r, c) = A(ya + r, xa + c) + B(yb + r, xb + c);
 				}
-				static void AminusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz)
+				static void AminusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
 							C(r, c) = A(ya + r, xa + c) - B(yb + r, xb + c);
 				}
-				static void ACopytoC(Matrix const& A, int xa, int ya, Matrix& C, int sz)
+				static void ACopytoC(Matrix const& A, int xa, int ya, Matrix& C, int sz) noexcept
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
 							C(r, c) = A(ya + r, xa + c);
 				}
-				static void StrassenMultiplyRun(Matrix const& A, Matrix const& B, Matrix& C, int l, Matrix* f)
+				static void StrassenMultiplyRun(Matrix const& A, Matrix const& B, Matrix& C, int l, Matrix* f) noexcept
 				{
 					// A * B into C, level of recursion, matrix field
 					// function for square matrix 2^N x 2^N
@@ -764,7 +764,7 @@ namespace pr::math
 		}
 		
 		// Equals
-		friend bool operator == (Matrix<S> const& lhs, Matrix<S> const& rhs)
+		friend bool operator == (Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 		{
 			if (lhs.vecs() != rhs.vecs()) return false;
 			if (lhs.cmps() != rhs.cmps()) return false;
@@ -779,13 +779,13 @@ namespace pr::math
 
 			return true;
 		}
-		friend bool operator != (Matrix<S> const& lhs, Matrix<S> const& rhs)
+		friend bool operator != (Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 		{
 			return !(lhs == rhs);
 		}
 
 		// Value equality
-		friend bool FEqlAbsolute(Matrix<S> const& lhs, Matrix<S> const& rhs, S tol)
+		friend bool FEqlAbsolute(Matrix<S> const& lhs, Matrix<S> const& rhs, S tol) noexcept
 		{
 			if (lhs.vecs() != rhs.vecs()) return false;
 			if (lhs.cmps() != rhs.cmps()) return false;
@@ -807,7 +807,7 @@ namespace pr::math
 
 			return true;
 		}
-		friend bool FEqlRelative(Matrix<S> const& lhs, Matrix<S> const& rhs, S tol)
+		friend bool FEqlRelative(Matrix<S> const& lhs, Matrix<S> const& rhs, S tol) noexcept
 		{
 			if (lhs.vecs() != rhs.vecs()) return false;
 			if (lhs.cmps() != rhs.cmps()) return false;
@@ -829,11 +829,11 @@ namespace pr::math
 
 			return true;
 		}
-		friend bool FEql(Matrix<S> const& lhs, Matrix<S> const& rhs)
+		friend bool FEql(Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 		{
 			return FEqlRelative(lhs, rhs, tiny<S>);
 		}
-		friend bool FEqlAbsolute(Matrix<S> const& lhs, Mat4x4<S> const& rhs, float tol)
+		friend bool FEqlAbsolute(Matrix<S> const& lhs, Mat4x4<S> const& rhs, float tol) noexcept
 		{
 			if (lhs.vecs() != 4) return false;
 			if (lhs.cmps() != 4) return false;
@@ -843,7 +843,7 @@ namespace pr::math
 				FEqlAbsolute(float(lhs(2, 0)), rhs.z.x, tol) && FEqlAbsolute(float(lhs(2, 1)), rhs.z.y, tol) && FEqlAbsolute(float(lhs(2, 2)), rhs.z.z, tol) && FEqlAbsolute(float(lhs(2, 3)), rhs.z.w, tol) &&
 				FEqlAbsolute(float(lhs(3, 0)), rhs.w.x, tol) && FEqlAbsolute(float(lhs(3, 1)), rhs.w.y, tol) && FEqlAbsolute(float(lhs(3, 2)), rhs.w.z, tol) && FEqlAbsolute(float(lhs(3, 3)), rhs.w.w, tol);
 		}
-		friend bool FEqlRelative(Matrix<S> const& lhs, Mat4x4<S> const& rhs, float tol)
+		friend bool FEqlRelative(Matrix<S> const& lhs, Mat4x4<S> const& rhs, float tol) noexcept
 		{
 			if (lhs.vecs() != 4) return false;
 			if (lhs.cmps() != 4) return false;
@@ -853,11 +853,11 @@ namespace pr::math
 				FEqlRelative(float(lhs(2, 0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2, 1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2, 2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2, 3)), rhs.z.w, tol) &&
 				FEqlRelative(float(lhs(3, 0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3, 1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3, 2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3, 3)), rhs.w.w, tol);
 		}
-		friend bool FEql(Matrix<S> const& lhs, Mat4x4<S> const& rhs)
+		friend bool FEql(Matrix<S> const& lhs, Mat4x4<S> const& rhs) noexcept
 		{
 			return FEqlRelative(lhs, rhs, tiny<S>);
 		}
-		friend bool FEqlAbsolute(Matrix<S> const& lhs, Vec4<S> rhs, float tol)
+		friend bool FEqlAbsolute(Matrix<S> const& lhs, Vec4<S> rhs, float tol) noexcept
 		{
 			if (lhs.vecs() != 1 && lhs.cmps() != 1) return false;
 			if (lhs.size() != 4) return false;
@@ -867,7 +867,7 @@ namespace pr::math
 				FEqlAbsolute(float(lhs.m_data[2]), rhs.z, tol) &&
 				FEqlAbsolute(float(lhs.m_data[3]), rhs.w, tol);
 		}
-		friend bool FEqlRelative(Matrix<S> const& lhs, Vec4<S> rhs, float tol)
+		friend bool FEqlRelative(Matrix<S> const& lhs, Vec4<S> rhs, float tol) noexcept
 		{
 			if (lhs.vecs() != 1 && lhs.cmps() != 1) return false;
 			if (lhs.size() != 4) return false;
@@ -877,7 +877,7 @@ namespace pr::math
 				FEqlRelative(float(lhs.m_data[2]), rhs.z, tol) &&
 				FEqlRelative(float(lhs.m_data[3]), rhs.w, tol);
 		}
-		friend bool FEql(Matrix<S> const& lhs, Vec4<S> rhs)
+		friend bool FEql(Matrix<S> const& lhs, Vec4<S> rhs) noexcept
 		{
 			return FEqlRelative(lhs, rhs, tiny<S>);
 		}
@@ -892,10 +892,10 @@ namespace pr::math
 		struct LProxy
 		{
 			Matrix<S> const* m_mat;
-			LProxy(Matrix<S> const& m)
+			LProxy(Matrix<S> const& m) noexcept
 				:m_mat(&m)
 			{}
-			S operator ()(int vec, int cmp) const
+			S operator ()(int vec, int cmp) const noexcept
 			{
 				pr_assert(vec >= 0 && vec < m_mat->vecs());
 				pr_assert(cmp >= 0 && cmp < m_mat->cmps());
@@ -905,10 +905,10 @@ namespace pr::math
 		struct UProxy
 		{
 			Matrix<S> const* m_mat;
-			UProxy(Matrix<S> const& m)
+			UProxy(Matrix<S> const& m) noexcept
 				:m_mat(&m)
 			{}
-			S operator ()(int vec, int cmp) const
+			S operator ()(int vec, int cmp) const noexcept
 			{
 				pr_assert(vec >= 0 && vec < m_mat->vecs());
 				pr_assert(cmp >= 0 && cmp < m_mat->cmps());
@@ -1004,19 +1004,19 @@ namespace pr::math
 		}
 
 		// The matrix dimension (square)
-		int dim() const
+		int dim() const noexcept
 		{
 			return lu.vecs();
 		}
 
 		// Access to the linear underlying matrix data
-		S const* data() const
+		S const* data() const noexcept
 		{
 			return lu.data();
 		}
 		
 		// Access this matrix as a 2D array
-		S operator()(bool change, int vec, int cmp) const
+		S operator()(bool change, int vec, int cmp) const noexcept
 		{
 			return lu(vec, cmp);
 		}
@@ -1031,13 +1031,13 @@ namespace pr::math
 	};
 
 	// Return the transpose of matrix 'm'
-	template <typename S> inline Matrix<S> Transpose(Matrix<S> const& m)
+	template <typename S> inline Matrix<S> Transpose(Matrix<S> const& m) noexcept
 	{
 		return Matrix<S>(m).transpose();
 	}
 
 	// Return the determinant of a matrix
-	template <typename S> inline S Determinant(MatrixLU<S> const& m)
+	template <typename S> inline S Determinant(MatrixLU<S> const& m) noexcept
 	{
 		auto det = m.DetOfP;
 		for (int i = 0; i != m.dim(); ++i)
@@ -1045,13 +1045,13 @@ namespace pr::math
 
 		return det;
 	}
-	template <typename S> inline S Determinant(Matrix<S> const& m)
+	template <typename S> inline S Determinant(Matrix<S> const& m) noexcept
 	{
 		return Determinant(MatrixLU<S>(m));
 	}
 
 	// Return the dot product of two vectors
-	template <typename S> inline S Dot(Matrix<S> const& lhs, Matrix<S> const& rhs)
+	template <typename S> inline S Dot(Matrix<S> const& lhs, Matrix<S> const& rhs) noexcept
 	{
 		pr_assert("Dot product is between column vectors" && lhs.vecs() == 1 && rhs.vecs() == 1);
 		pr_assert("Dot product must be between vectors of the same length" && lhs.cmps() == rhs.cmps());
@@ -1063,17 +1063,17 @@ namespace pr::math
 	}
 
 	// True if 'm' has an inverse
-	template <typename S> inline bool IsInvertible(MatrixLU<S> const& m)
+	template <typename S> inline bool IsInvertible(MatrixLU<S> const& m) noexcept
 	{
 		return Determinant(m) != 0;
 	}
-	template <typename S> inline bool IsInvertible(Matrix<S> const& m)
+	template <typename S> inline bool IsInvertible(Matrix<S> const& m) noexcept
 	{
 		return IsInvertible(MatrixLU<S>(m));
 	}
 
 	// Solves for 'x' in 'Ax = v'
-	template <typename S> inline Matrix<S> Solve(MatrixLU<S> const& A, Matrix<S> const& v)
+	template <typename S> inline Matrix<S> Solve(MatrixLU<S> const& A, Matrix<S> const& v) noexcept
 	{
 		// e.g. [4x4][1x4] = [1x4]
 		pr_assert("Solution vector 'v' has the wrong dimensions" && A.dim() == v.cmps() && v.vecs() == 1);
@@ -1114,7 +1114,7 @@ namespace pr::math
 	}
 
 	// Return the inverse of matrix 'm'
-	template <typename S> inline Matrix<S> Invert(MatrixLU<S> const& lu)
+	template <typename S> inline Matrix<S> Invert(MatrixLU<S> const& lu) noexcept
 	{
 		pr_assert("Matrix has no inverse" && IsInvertible(lu));
 
@@ -1129,13 +1129,13 @@ namespace pr::math
 		}
 		return inv;
 	}
-	template <typename S> inline Matrix<S> Invert(Matrix<S> const& m)
+	template <typename S> inline Matrix<S> Invert(Matrix<S> const& m) noexcept
 	{
 		return Invert(MatrixLU<S>(m));
 	}
 
 	// Matrix to the power 'pow'
-	template <typename S> inline Matrix<S> Power(Matrix<S> const& m, int pow)
+	template <typename S> inline Matrix<S> Power(Matrix<S> const& m, int pow) noexcept
 	{
 		if (pow == +1) return m;
 		if (pow ==  0) return Matrix<S>::Identity(m.vecs(), m.cmps());
@@ -1156,12 +1156,12 @@ namespace pr::math
 
 	// Householder tridiagonalization: Q^T * A * Q = T
 	// Matrix convention: A(i,j) = A[row i][col j] in standard notation.
-	template <typename S> inline void Tridiagonalize(Matrix<S> const& m, Matrix<S>& diag, Matrix<S>& sub, Matrix<S>& Q)
+	template <typename S> inline void Tridiagonalize(Matrix<S> const& m, Matrix<S>& diag, Matrix<S>& sub, Matrix<S>& Q) noexcept
 	{
 		auto const N = m.vecs();
-		assert(diag.vecs() == 1 && diag.cmps() == N);
-		assert(sub.vecs() == 1 && sub.cmps() >= N);
-		assert(Q.vecs() == N && Q.cmps() == N);
+		pr_assert(diag.vecs() == 1 && diag.cmps() == N);
+		pr_assert(sub.vecs() == 1 && sub.cmps() >= N);
+		pr_assert(Q.vecs() == N && Q.cmps() == N);
 
 		auto A = Matrix<S>(m);
 		auto v = Matrix<S>();
@@ -1242,7 +1242,7 @@ namespace pr::math
 	// Implicit QL iteration with shifts on a symmetric tridiagonal matrix.
 	// Based on the EISPACK tql2 / Numerical Recipes algorithm.
 	// sub[i] = T[i][i-1] for i >= 1, sub[0] = 0.
-	template <typename S> inline void QLIteration(Matrix<S>& d, Matrix<S>& e, Matrix<S>& Q, int max_iterations)
+	template <typename S> inline void QLIteration(Matrix<S>& d, Matrix<S>& e, Matrix<S>& Q, int max_iterations) noexcept
 	{
 		auto const N = static_cast<int>(d.size());
 

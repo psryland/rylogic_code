@@ -17,24 +17,24 @@ namespace pr::math
 		int m_count;
 		double m_root[MaxRoots];
 			
-		constexpr Roots()
+		constexpr Roots() noexcept
 			:m_count(0)
 			,m_root()
 		{}
-		constexpr Roots(double a)
+		constexpr Roots(double a) noexcept
 			:m_count(1)
 			,m_root()
 		{
 			m_root[0] = a;
 		}
-		constexpr Roots(double a, double b)
+		constexpr Roots(double a, double b) noexcept
 			:m_count(2)
 			,m_root()
 		{
 			m_root[0] = a;
 			m_root[1] = b;
 		}
-		constexpr Roots(double a, double b, double c)
+		constexpr Roots(double a, double b, double c) noexcept
 			:m_count(3)
 			,m_root()
 		{
@@ -42,7 +42,7 @@ namespace pr::math
 			m_root[1] = b;
 			m_root[2] = c;
 		}
-		constexpr Roots(double a, double b, double c, double d)
+		constexpr Roots(double a, double b, double c, double d) noexcept
 			:m_count(4)
 			,m_root()
 		{
@@ -51,7 +51,7 @@ namespace pr::math
 			m_root[2] = c;
 			m_root[3] = d;
 		}
-		constexpr double operator[](int i) const
+		constexpr double operator[](int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < m_count);
 			return m_root[i];
@@ -64,33 +64,33 @@ namespace pr::math
 		double A;
 		double B;
 
-		constexpr Monic(double a, double b)
+		constexpr Monic(double a, double b) noexcept
 			:A(a)
 			,B(b)
 		{}
 
 		// Evaluate F(x) at 'x'
-		constexpr double F(double x) const
+		constexpr double F(double x) const noexcept
 		{
 			return A*x + B;
 		}
 
 		// Evaluate dF(x)/dx at 'x'
-		constexpr double dF(double x) const
+		constexpr double dF(double x) const noexcept
 		{
 			(void)x;
 			return A;
 		}
 
 		// Evaluate d²F(x)/dx at 'x'
-		constexpr double ddF(double x) const
+		constexpr double ddF(double x) const noexcept
 		{
 			(void)x;
 			return 0;
 		}
 
 		// Returns a linear approximation of a curve defined by evaluating F(x), dF(x)/dx at 'x'
-		static constexpr Monic FromDerivatives(double x, double y, double dy)
+		static constexpr Monic FromDerivatives(double x, double y, double dy) noexcept
 		{
 			//' y  = Ax + B
 			//' y' = A
@@ -106,7 +106,7 @@ namespace pr::math
 
 		// Create a Monic from 2 points
 		template <VectorTypeN<2> Vec>
-		static constexpr Monic FromPoints(Vec a, Vec b)
+		static constexpr Monic FromPoints(Vec a, Vec b) noexcept
 		{
 			using vt = vector_traits<Vec>;
 			using S = typename vt::element_t;
@@ -128,33 +128,33 @@ namespace pr::math
 		double B;
 		double C;
 
-		constexpr Quadratic(double a, double b, double c)
+		constexpr Quadratic(double a, double b, double c) noexcept
 			:A(a)
 			,B(b)
 			,C(c)
 		{}
 
 		// Evaluate F(x) at 'x'
-		constexpr double F(double x) const
+		constexpr double F(double x) const noexcept
 		{
 			return (A*x + B)*x + C;
 		}
 
 		// Evaluate dF(x)/dx at 'x'
-		constexpr double dF(double x) const
+		constexpr double dF(double x) const noexcept
 		{
 			return 2*A*x + B;
 		}
 
 		// Evaluate d²F(x)/dx at 'x'
-		constexpr double ddF(double x) const
+		constexpr double ddF(double x) const noexcept
 		{
 			(void)x;
 			return 2*A;
 		}
 
 		// Returns a quadratic approximation of a curve defined by evaluating F(x), dF(x)/dx, and d²F(x)/dx at 'x'
-		static constexpr Quadratic FromDerivatives(double x, double y, double dy, double ddy)
+		static constexpr Quadratic FromDerivatives(double x, double y, double dy, double ddy) noexcept
 		{
 			//' y  = Ax² + Bx + C
 			//' y' = 2Ax + B
@@ -173,7 +173,7 @@ namespace pr::math
 		}
 
 		// Create a quadratic from 3 points
-		template <VectorTypeN<2> Vec> static constexpr Quadratic FromPoints(Vec a, Vec b, Vec c)
+		template <VectorTypeN<2> Vec> static constexpr Quadratic FromPoints(Vec a, Vec b, Vec c) noexcept
 		{
 			//'   a.y = A(a.x)² + B(a.x) + C
 			//'   b.y = A(b.x)² + B(b.x) + C
@@ -195,11 +195,11 @@ namespace pr::math
 
 			return Quadratic(x.x, x.y, x.z);
 		}
-		template <VectorTypeN<2> Vec> static constexpr Quadratic FromPoints(std::span<Vec const, 3> pts)
+		template <VectorTypeN<2> Vec> static constexpr Quadratic FromPoints(std::span<Vec const, 3> pts) noexcept
 		{
 			return FromPoints(pts[0], pts[1], pts[2]);
 		}
-		static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2)
+		static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2) noexcept
 		{
 			auto M = Matrix<double>(3, 3,
 			{
@@ -213,7 +213,7 @@ namespace pr::math
 
 			return Quadratic(x(0, 0), x(0, 1), x(0, 2));
 		}
-		static Quadratic FromPoints(double const* pts)
+		static Quadratic FromPoints(double const* pts) noexcept
 		{
 			return FromPoints(pts[0], pts[1], pts[2], pts[3], pts[4], pts[5]);
 		}
@@ -227,7 +227,7 @@ namespace pr::math
 		double C;
 		double D;
 
-		constexpr Cubic(double a, double b, double c, double d)
+		constexpr Cubic(double a, double b, double c, double d) noexcept
 			:A(a)
 			,B(b)
 			,C(c)
@@ -235,25 +235,25 @@ namespace pr::math
 		{}
 
 		// Evaluate F(x) at 'x'
-		constexpr double F(double x) const
+		constexpr double F(double x) const noexcept
 		{
 			return ((A*x + B)*x + C)*x + D;
 		}
 
 		// Evaluate dF(x)/dx at 'x'
-		constexpr double dF(double x) const
+		constexpr double dF(double x) const noexcept
 		{
 			return (3*A*x + 2*B)*x + C;
 		}
 
 		// Evaluate d²F(x)/dx at 'x'
-		constexpr double ddF(double x) const
+		constexpr double ddF(double x) const noexcept
 		{
 			return 6*A*x + 2*B;
 		}
 
 		// Create a cubic from 4 points
-		template <VectorTypeN<2> Vec> static constexpr Cubic FromPoints(Vec a, Vec b, Vec c, Vec d)
+		template <VectorTypeN<2> Vec> static constexpr Cubic FromPoints(Vec a, Vec b, Vec c, Vec d) noexcept
 		{
 			using vt = vector_traits<Vec>;
 			using S = typename vt::element_t;
@@ -288,7 +288,7 @@ namespace pr::math
 		double D;
 		double E;
 
-		constexpr Quartic(double a, double b, double c, double d, double e)
+		constexpr Quartic(double a, double b, double c, double d, double e) noexcept
 			:A(a)
 			,B(b)
 			,C(c)
@@ -297,31 +297,31 @@ namespace pr::math
 		{}
 
 		// Evaluate F(x) at 'x'
-		constexpr double F(double x) const
+		constexpr double F(double x) const noexcept
 		{
 			return (((A*x + B)*x + C)*x + D)*x + E;
 		}
 
 		// Evaluate dF(x)/dx at 'x'
-		constexpr double dF(double x) const
+		constexpr double dF(double x) const noexcept
 		{
 			return ((4*A*x + 3*B)*x + 2*C)*x + D;
 		}
 
 		// Evaluate d²F(x)/dx at 'x'
-		constexpr double ddF(double x) const
+		constexpr double ddF(double x) const noexcept
 		{
 			return (12*A*x + 6*B)*x + 2*C;
 		}
 	};
 
 	// Calculate the real roots of this polynomial
-	inline constexpr Roots FindRoots(Monic const& p)
+	inline constexpr Roots FindRoots(Monic const& p) noexcept
 	{
 		if (p.A == 0) return Roots();
 		return Roots(-p.B / p.A);
 	}
-	inline constexpr Roots FindRoots(Quadratic const& p)
+	inline constexpr Roots FindRoots(Quadratic const& p) noexcept
 	{
 		// This method is numerically more stable than (-b +/- sqrt(b^2-4ac)) / 2a
 		// (see numerical recipes, p184)
@@ -348,7 +348,7 @@ namespace pr::math
 			p.C / discriminant
 		);
 	}
-	inline constexpr Roots FindRoots(Cubic const& p)
+	inline constexpr Roots FindRoots(Cubic const& p) noexcept
 	{
 		// Check for degenerate cubic (A == 0)
 		if (Abs(p.A) < tiny<double>)
@@ -409,7 +409,7 @@ namespace pr::math
 			((real_s1 + real_s2) / -2.0f - a2 / 3.0f - (imaginary_s2 - imaginary_s1) * root3_ovr_2)
 		);
 	}
-	inline constexpr Roots FindRoots(Quartic const& quartic)
+	inline constexpr Roots FindRoots(Quartic const& quartic) noexcept
 	{
 		// See http://forum.swarthmore.edu/dr.math/problems/cowan2.5.27.98.html
 		// Calculate depressed equation (x^4 coefft. = 1, x^3 coefft. = 0) by substituting x = y - b / 4a
@@ -470,12 +470,12 @@ namespace pr::math
 	}
 
 	// Return the X values of the maxima, minima, or inflection points
-	inline constexpr Roots StationaryPoints(Monic const& p)
+	inline constexpr Roots StationaryPoints(Monic const& p) noexcept
 	{
 		(void)p;
 		return Roots();
 	}
-	inline constexpr Roots StationaryPoints(Quadratic const& p)
+	inline constexpr Roots StationaryPoints(Quadratic const& p) noexcept
 	{
 		// Check for linear polynomial (A == 0)
 		if (Abs(p.A) < tiny<double>)
@@ -483,13 +483,13 @@ namespace pr::math
 		
 		return Roots(-p.B / (2.0f * p.A));
 	}
-	inline constexpr Roots StationaryPoints(Cubic const& p)
+	inline constexpr Roots StationaryPoints(Cubic const& p) noexcept
 	{
 		// dF(x) = 3Ax² + 2Bx + C
 		// dF(x) == 0 at the roots of dF(x)
 		return FindRoots(Quadratic(3*p.A, 2*p.B, p.C));
 	}
-	inline constexpr Roots StationaryPoints(Quartic const& p)
+	inline constexpr Roots StationaryPoints(Quartic const& p) noexcept
 	{
 		// dF(x) = 4Ax³ + 3Bx² + 2Cx + D
 		// dF(x) == 0 at the roots of dF(x)

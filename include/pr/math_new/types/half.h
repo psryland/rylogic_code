@@ -13,7 +13,7 @@ namespace pr::math
 	using Half4 = Vec4<half_t>;
 
 	// Convert between 32-bit float (1s7e24m) and 16-bit float (1s5e10m) at compile time
-	constexpr half_t F32toF16CT(float f32)
+	constexpr half_t F32toF16CT(float f32) noexcept
 	{
 		// see https://gist.github.com/martin-kallman/5049614 (Note comments though, Martin's implementation has a bug)
 		// see https://github.com/numpy/numpy/blob/master/numpy/core/src/npymath/halffloat.c#L466
@@ -42,7 +42,7 @@ namespace pr::math
 		t1 |= t2;                                      // Re-insert sign bit
 		return static_cast<half_t>(t1);
 	}
-	constexpr float F16toF32CT(half_t f16)
+	constexpr float F16toF32CT(half_t f16) noexcept
 	{
 		// Martin Kallman (mostly. Some parts nicked from numpy)
 		//
@@ -67,7 +67,7 @@ namespace pr::math
 	}
 
 	// Convert between 32-bit float (1s7e24m) and 16-bit float (1s5e10m)
-	inline half_t F32toF16(float f32)
+	inline half_t F32toF16(float f32) noexcept
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		auto vecf32 = _mm_set_ps1(f32);
@@ -77,7 +77,7 @@ namespace pr::math
 		return F32toF16CT(f32);
 		#endif
 	}
-	inline float F16toF32(half_t f16)
+	inline float F16toF32(half_t f16) noexcept
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		auto vecf16 = _mm_set_epi16(0, 0, 0, 0, 0, 0, 0, static_cast<short>(f16));
@@ -89,7 +89,7 @@ namespace pr::math
 	}
 
 	// Return 'v' converted to half size floats
-	template <VectorTypeFP Vec> constexpr Half4 pr_vectorcall F32toF16(Vec v)
+	template <VectorTypeFP Vec> constexpr Half4 pr_vectorcall F32toF16(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 
@@ -113,7 +113,7 @@ namespace pr::math
 	}
 
 	// Return 'v' to full size floats/doubles
-	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall F16toF32(Half4 v)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall F16toF32(Half4 v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 
@@ -138,7 +138,7 @@ namespace pr::math
 	}
 
 	// float literal to half_t
-	constexpr half_t operator ""_hf(long double x)
+	constexpr half_t operator ""_hf(long double x) noexcept
 	{
 		return F32toF16CT(static_cast<float>(x));
 	}

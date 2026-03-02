@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -24,55 +24,55 @@ namespace pr::math
 		Vec4 m_radius;
 
 		OBox() = default;
-		OBox(Vec4 centre, Vec4 radii, Mat3 const& ori)
+		OBox(Vec4 centre, Vec4 radii, Mat3 const& ori) noexcept
 			:m_box_to_world(ori, centre)
 			,m_radius(radii)
 		{}
-		OBox(Mat4 const& box_to_world, Vec4 radii)
+		OBox(Mat4 const& box_to_world, Vec4 radii) noexcept
 			:m_box_to_world(box_to_world)
 			,m_radius(radii)
 		{}
 
 		// Width of the box
-		S SizeX() const
+		constexpr S SizeX() const noexcept
 		{
 			return S(2) * m_radius.x;
 		}
 
 		// Height of the box
-		S SizeY() const
+		constexpr S SizeY() const noexcept
 		{
 			return S(2) * m_radius.y;
 		}
 
 		// Length of the box
-		S SizeZ() const
+		constexpr S SizeZ() const noexcept
 		{
 			return S(2) * m_radius.z;
 		}
 
 		// The centre position of the box
-		Vec4 Centre() const
+		constexpr Vec4 Centre() const noexcept
 		{
 			return m_box_to_world.pos;
 		}
 
 		// Diagonal size of the box
-		S DiametreSq() const
+		constexpr S DiametreSq() const noexcept
 		{
 			return S(4) * LengthSq(m_radius);
 		}
-		S Diametre() const
+		S Diametre() const noexcept
 		{
 			return Sqrt(DiametreSq());
 		}
 
 		// Constants
-		static constexpr OBox Unit()
+		static constexpr OBox Unit() noexcept
 		{
 			return OBox{ Identity<Mat4>(), Vec4{S(0.5), S(0.5), S(0.5), S(1)} };
 		}
-		static constexpr OBox Reset()
+		static constexpr OBox Reset() noexcept
 		{
 			return { Identity<Mat4>(), Zero<Vec4>() };
 		}
@@ -84,27 +84,27 @@ namespace pr::math
 		friend bool operator >  (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 		friend bool operator <= (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 		friend bool operator >= (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-		friend OBox& pr_vectorcall operator += (OBox& lhs, Vec4 offset)
+		friend OBox& pr_vectorcall operator += (OBox& lhs, Vec4 offset) noexcept
 		{
 			lhs.m_box_to_world.pos += offset;
 			return lhs;
 		}
-		friend OBox& pr_vectorcall operator -= (OBox& lhs, Vec4 offset)
+		friend OBox& pr_vectorcall operator -= (OBox& lhs, Vec4 offset) noexcept
 		{
 			lhs.m_box_to_world.pos -= offset;
 			return lhs;
 		}
-		friend OBox pr_vectorcall operator + (OBox const& lhs, Vec4 offset)
+		friend OBox pr_vectorcall operator + (OBox const& lhs, Vec4 offset) noexcept
 		{
 			auto ob = lhs;
 			return ob += offset;
 		}
-		friend OBox pr_vectorcall operator - (OBox const& lhs, Vec4 offset)
+		friend OBox pr_vectorcall operator - (OBox const& lhs, Vec4 offset) noexcept
 		{
 			auto ob = lhs;
 			return ob -= offset;
 		}
-		friend OBox pr_vectorcall operator * (Mat4 const& m, OBox const& ob)
+		friend OBox pr_vectorcall operator * (Mat4 const& m, OBox const& ob) noexcept
 		{
 			OBox obox;
 			obox.m_box_to_world = m * ob.m_box_to_world;
@@ -119,13 +119,13 @@ namespace pr::math
 	#pragma region Functions
 
 	// Return the volume of the box
-	template <ScalarType S> constexpr S Volume(OBox<S> const& ob)
+	template <ScalarType S> constexpr S Volume(OBox<S> const& ob) noexcept
 	{
 		return ob.SizeX() * ob.SizeY() * ob.SizeZ();
 	}
 
 	// Return the bounding sphere for the box
-	template <ScalarType S> constexpr BSphere<S> GetBSphere(OBox<S> const& ob)
+	template <ScalarType S> constexpr BSphere<S> GetBSphere(OBox<S> const& ob) noexcept
 	{
 		return BSphere(ob.m_box_to_world.pos, Length(ob.m_radius));
 	}

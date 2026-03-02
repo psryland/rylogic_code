@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -27,35 +27,35 @@ namespace pr::math
 
 		// Construct
 		Vec3() = default;
-		constexpr Vec3(S x_)
+		constexpr Vec3(S x_) noexcept
 			: x(x_)
 			, y(x_)
 			, z(x_)
 		{}
-		constexpr Vec3(S x_, S y_, S z_)
+		constexpr Vec3(S x_, S y_, S z_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 		{}
-		constexpr explicit Vec3(VectorTypeN<S, 3> auto v)
+		constexpr explicit Vec3(VectorTypeN<S, 3> auto v) noexcept
 			:Vec3(vec(v).x, vec(v).y, vec(v).z)
 		{}
-		constexpr Vec3(Vec2<S> v, S z_)
+		constexpr Vec3(Vec2<S> v, S z_) noexcept
 			:Vec3(v.x, v.y, z_)
 		{}
-		constexpr Vec3(AxisId axis_id)
+		constexpr Vec3(AxisId axis_id) noexcept
 			:Vec3(
 				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
 				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0),
 				Abs(axis_id) == AxisId::PosZ ? static_cast<S>(Sign<int>(axis_id)) : S(0)
 			)
 		{}
-		constexpr explicit Vec3(std::ranges::random_access_range auto&& v)
+		constexpr explicit Vec3(std::ranges::random_access_range auto&& v) noexcept
 			:Vec3(v[0], v[1], v[2])
 		{}
 
 		// Explicit cast to different Scalar type
-		template <ScalarType S2> constexpr explicit operator Vec3<S2>() const
+		template <ScalarType S2> constexpr explicit operator Vec3<S2>() const noexcept
 		{
 			return Vec3<S2>(
 				static_cast<S2>(x),
@@ -65,13 +65,13 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr S operator [] (int i) const
+		constexpr S operator [] (int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < 3 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : z; }
 			else { return arr[i]; }
 		}
-		constexpr S& operator [] (int i)
+		constexpr S& operator [] (int i) noexcept
 		{
 			pr_assert(i >= 0 && i < 3 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : z; }
@@ -79,65 +79,65 @@ namespace pr::math
 		}
 
 		// Create other vector types
-		constexpr Vec4<S> w0() const;
-		constexpr Vec4<S> w1() const;
-		constexpr Vec2<S> vec2(int i0, int i1) const
+		constexpr Vec4<S> w0() const noexcept;
+		constexpr Vec4<S> w1() const noexcept;
+		constexpr Vec2<S> vec2(int i0, int i1) const noexcept
 		{
 			return Vec2<S>(arr[i0], arr[i1]);
 		}
 
 		// Constants
-		static constexpr Vec3 Zero()     
+		static constexpr Vec3 Zero()      noexcept
 		{
 			return Vec3(S(0), S(0), S(0));
 		}
-		static constexpr Vec3 One()      
+		static constexpr Vec3 One()       noexcept
 		{
 			return Vec3(S(1), S(1), S(1));
 		}
-		static constexpr Vec3 Tiny()     
+		static constexpr Vec3 Tiny()      noexcept
 		{
 			return Vec3(tiny<S>, tiny<S>, tiny<S>);
 		}
-		static constexpr Vec3 Min()      
+		static constexpr Vec3 Min()       noexcept
 		{
 			return Vec3(limits<S>::min(), limits<S>::min(), limits<S>::min());
 		}
-		static constexpr Vec3 Max()      
+		static constexpr Vec3 Max()       noexcept
 		{
 			return Vec3(limits<S>::max(), limits<S>::max(), limits<S>::max());
 		}
-		static constexpr Vec3 Lowest()   
+		static constexpr Vec3 Lowest()    noexcept
 		{
 			return Vec3(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest());
 		}
-		static constexpr Vec3 Epsilon()  
+		static constexpr Vec3 Epsilon()   noexcept
 		{
 			return Vec3(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon());
 		}
-		static constexpr Vec3 Infinity() 
+		static constexpr Vec3 Infinity()  noexcept
 		{
 			return Vec3(limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity());
 		}
-		static constexpr Vec3 XAxis()    
+		static constexpr Vec3 XAxis()     noexcept
 		{
 			return Vec3(S(1), S(0), S(0));
 		}
-		static constexpr Vec3 YAxis()    
+		static constexpr Vec3 YAxis()     noexcept
 		{
 			return Vec3(S(0), S(1), S(0));
 		}
-		static constexpr Vec3 ZAxis()    
+		static constexpr Vec3 ZAxis()     noexcept
 		{
 			return Vec3(S(0), S(0), S(1));
 		}
-		static constexpr Vec3 Origin()   
+		static constexpr Vec3 Origin()    noexcept
 		{
 			return Vec3(S(0), S(0), S(0));
 		}
 		
 		// Construct normalised
-		static constexpr Vec3 Normal(S x, S y, S z) requires std::floating_point<S>
+		static constexpr Vec3 Normal(S x, S y, S z) noexcept requires std::floating_point<S>
 		{
 			return Normalise(Vec3(x, y, z));
 		}

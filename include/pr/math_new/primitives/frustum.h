@@ -55,7 +55,7 @@ namespace pr::math
 		Mat4x4 m_Tplanes;
 
 		// Create a frustum from 'width' and 'height' at 'z' from the apex
-		static Frustum MakeWH(S width, S height, S z, S zfar)
+		static Frustum MakeWH(S width, S height, S z, S zfar) noexcept
 		{
 			pr_assert(z > 0 && "The focus plane should be a positive distance from the apex");
 			pr_assert(zfar >= 0 && "The far plane should be a positive distance from the apex");
@@ -73,20 +73,20 @@ namespace pr::math
 			f.zfar(zfar);
 			return f;
 		}
-		static Frustum MakeWH(Vec2 area, S z, S zfar)
+		static Frustum MakeWH(Vec2 area, S z, S zfar) noexcept
 		{
 			return MakeWH(area.x, area.y, z, zfar);
 		}
 
 		// Create a frustum from vertical 'field-of-view' and an 'aspect' ratio
-		static Frustum MakeFA(S fovY, S aspect, S zfar)
+		static Frustum MakeFA(S fovY, S aspect, S zfar) noexcept
 		{
 			auto h = S(2) * std::tan(S(0.5) * fovY);
 			return MakeWH(aspect * h, h, S(1), zfar);
 		}
 
 		// Create a frustum from horizontal and vertical fields of view
-		static Frustum MakeFovXY(S fovX, S fovY, S zfar)
+		static Frustum MakeFovXY(S fovX, S fovY, S zfar) noexcept
 		{
 			auto w = S(2) * std::tan(S(0.5) * fovX);
 			auto h = S(2) * std::tan(S(0.5) * fovY);
@@ -94,7 +94,7 @@ namespace pr::math
 		}
 
 		// Create an orthographic "frustum" that has the zfar at infinity and parallel side planes
-		static Frustum MakeOrtho(S width, S height)
+		static Frustum MakeOrtho(S width, S height) noexcept
 		{
 			Frustum f;
 			f.m_Tplanes.x = Vec4(+1.0f, 0.0f, 0.0f, width * 0.5f); // left
@@ -104,13 +104,13 @@ namespace pr::math
 			f.m_Tplanes = Transpose(f.m_Tplanes);
 			return f;
 		}
-		static Frustum MakeOrtho(Vec2 area)
+		static Frustum MakeOrtho(Vec2 area) noexcept
 		{
 			return MakeOrtho(area.x, area.y);
 		}
 
 		// Create from a projection matrix
-		static Frustum MakeFromProjection(Mat4x4 const& c2s)
+		static Frustum MakeFromProjection(Mat4x4 const& c2s) noexcept
 		{
 			Frustum f;
 			if (c2s.w.w == 1) // If orthographic
@@ -132,20 +132,20 @@ namespace pr::math
 		}
 
 		// Return the projection matrix for this Frustum
-		Mat4x4 projection(S zn, S zf) const
+		Mat4x4 projection(S zn, S zf) const noexcept
 		{
 			auto wh = area(zn);
 			return orthographic()
 				? ProjectionOrthographic<Mat4x4>(wh.x, wh.y, zn, zf, true)
 				: ProjectionPerspective<Mat4x4>(wh.x, wh.y, zn, zf, true);
 		}
-		Mat4x4 projection(Vec2 nf) const
+		Mat4x4 projection(Vec2 nf) const noexcept
 		{
 			return projection(nf.x, nf.y);
 		}
 
 		// True if this is an orthographic frustum
-		bool orthographic() const
+		constexpr bool orthographic() const noexcept
 		{
 			// If none of the plane normals have a z component,
 			// then they are all parallel to the z axis.
@@ -153,21 +153,21 @@ namespace pr::math
 		}
 
 		// Get/Set the distance to the far clip plane.
-		S zfar() const
+		S zfar() const noexcept
 		{
 			// Orthographic frusta don't have a far plane
 			return !orthographic()
 				? -CompSum(m_Tplanes.w / m_Tplanes.z) / S(4)
 				: std::numeric_limits<S>::infinity();
 		}
-		void zfar(S z)
+		void zfar(S z) noexcept
 		{
 			if (!orthographic())
 				m_Tplanes.w = -z * m_Tplanes.z;
 		}
 
 		// Get/Set the X field of view
-		S fovX() const
+		S fovX() const noexcept
 		{
 			// The FovX is the angle between the left/right plane normals: Cos(ang) = dot(l,r)
 			auto l = Vec4(m_Tplanes.x.x, m_Tplanes.y.x, m_Tplanes.z.x, 0);
@@ -177,7 +177,7 @@ namespace pr::math
 		}
 
 		// Get the Y field of view
-		S fovY() const
+		S fovY() const noexcept
 		{
 			// The FovY is the angle between the bottom/top plane normals: Cos(ang) = dot(b,t)
 			auto b = Vec4(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, 0);
@@ -187,7 +187,7 @@ namespace pr::math
 		}
 
 		// Get/Set the aspect ratio for the frustum
-		S aspect() const
+		constexpr S aspect() const noexcept
 		{
 			// Not using width/height here because if zfar is zero it will be
 			// 0/0 even though the aspect ratio is still actually valid.
@@ -206,7 +206,7 @@ namespace pr::math
 		}
 
 		// Get the frustum width/height at 'z' distance from the apex.
-		Vec2 area(S z) const
+		Vec2 area(S z) const noexcept
 		{
 			auto w = m_Tplanes.w.x / m_Tplanes.x.x - m_Tplanes.w.y / m_Tplanes.x.y;
 			auto h = m_Tplanes.w.z / m_Tplanes.y.z - m_Tplanes.w.w / m_Tplanes.y.w;
@@ -222,11 +222,11 @@ namespace pr::math
 		}
 
 		// Return the planes of the frustum
-		Mat4x4 planes() const
+		constexpr Mat4x4 planes() const noexcept
 		{
 			return Transpose(m_Tplanes);
 		}
-		Plane plane(EPlane plane_index) const
+		Plane plane(EPlane plane_index) const noexcept
 		{
 			switch (plane_index)
 			{
@@ -235,19 +235,19 @@ namespace pr::math
 				case EPlane::YPos: return Plane(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, m_Tplanes.w.z);
 				case EPlane::YNeg: return Plane(m_Tplanes.x.w, m_Tplanes.y.w, m_Tplanes.z.w, m_Tplanes.w.w);
 				case EPlane::ZFar: return Plane{0, 0, 1, 0};
-				default: throw std::runtime_error("Invalid plane index");
+				default: pr_assert(false && "Invalid plane index"); return Plane{ 0, 0, 1, 0 };
 			}
 		}
 
 		// Return a matrix containing the inward pointing face normals or the frustum sides.
 		// Order is the same as EPlane (i.e. x=left, y=right, z=bottom, w=top). The far plane is always (0,0,1,0)
-		Mat4x4 face_normals() const
+		constexpr Mat4x4 face_normals() const noexcept
 		{
 			auto norms = m_Tplanes;
 			norms.w = Zero<Vec4>();
 			return Transpose(norms);
 		}
-		Vec4 face_normal(EPlane plane_index) const
+		constexpr Vec4 face_normal(EPlane plane_index) const noexcept
 		{
 			auto p = static_cast<Vec4>(plane(plane_index));
 			return p.w0();
@@ -255,7 +255,7 @@ namespace pr::math
 
 		// Return a matrix containing the direction vectors of the frustum edges. These are the four ray directions
 		// that start at the camera and lie at the intersections of the frustum planes.
-		Mat4x4 edges() const
+		Mat4x4 edges() const noexcept
 		{
 			// Direction vectors for the corners
 			auto norms = face_normals();
@@ -270,7 +270,7 @@ namespace pr::math
 		// 's' and 'd' must be in frustum space where the frustum apex is at (0,0,0) and grows down the -z axis. (i.e. camera space).
 		// 'accumulative' means 't0' and 't1' are expected to be initialised already, otherwise they are initialised to an infinite line.
 		// Returns the parametric values 't0' and 't1' and true if t0 < t1 i.e. some of the line is within the frustum.
-		bool pr_vectorcall clip(Vec4 const& s, Vec4 const& d, bool accumulative, S& t0, S& t1, bool include_zfar) const
+		bool pr_vectorcall clip(Vec4 const& s, Vec4 const& d, bool accumulative, S& t0, S& t1, bool include_zfar) const noexcept
 		{
 			// Frustum stores the clip planes such that the far plane is actually at (0,0,0) and the apex is at zfar along the +Z axis.
 			// Shift 's' and 'd' by 'zfar' so that callers can treat the frustum apex as if it was at (0,0,0).
@@ -328,31 +328,31 @@ namespace pr::math
 		}
 
 		#pragma region Operators
-		friend bool operator == (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator == (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 		}
-		friend bool operator != (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator != (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) != 0;
 		}
-		friend bool operator <  (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator <  (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) < 0;
 		}
-		friend bool operator >  (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator >  (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) > 0;
 		}
-		friend bool operator <= (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator <= (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0;
 		}
-		friend bool operator >= (Frustum const& lhs, Frustum const& rhs)
+		friend bool operator >= (Frustum const& lhs, Frustum const& rhs) noexcept
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0;
 		}
-		friend Vec4 operator * (Frustum const& lhs, Vec4 const& rhs)
+		friend Vec4 pr_vectorcall operator * (Frustum const& lhs, Vec4 rhs) noexcept
 		{
 			// Returns the signed distance of 'rhs' from each face of the frustum
 			return lhs.m_Tplanes * rhs;
@@ -363,21 +363,21 @@ namespace pr::math
 
 	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if a is in the range (b-tol,b+tol)
 	template <ScalarTypeFP S>
-	constexpr bool FEqlAbsolute(Frustum<S> const& a, Frustum<S> const& b, S tol)
+	constexpr bool FEqlAbsolute(Frustum<S> const& a, Frustum<S> const& b, S tol) noexcept
 	{
 		return FEqlAbsolute(a.m_Tplanes, b.m_Tplanes, tol);
 	}
 
 	// *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
 	template <ScalarTypeFP S>
-	constexpr bool FEqlRelative(Frustum<S> const& a, Frustum<S> const& b, S tol)
+	constexpr bool FEqlRelative(Frustum<S> const& a, Frustum<S> const& b, S tol) noexcept
 	{
 		return FEqlRelative<>(a.m_Tplanes, b.m_Tplanes, tol);
 	}
 
 	// FEqlRelative using 'tinyf'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
 	template <ScalarTypeFP S>
-	constexpr bool FEql(Frustum<S> const& a, Frustum<S> const& b)
+	constexpr bool FEql(Frustum<S> const& a, Frustum<S> const& b) noexcept
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
 		return FEql<>(a.m_Tplanes, b.m_Tplanes);
@@ -385,7 +385,7 @@ namespace pr::math
 
 	// Returns the corners of the frustum (in frustum space) at a given 'z' distance (i.e. apex at (0,0,0). Far plane at (0,0,-zfar)). Return order: x=lb, y=lt, z=rt, w=rb
 	template <ScalarTypeFP S>
-	inline Mat4x4<S> Corners(Frustum<S> const& frustum, S z)
+	inline Mat4x4<S> Corners(Frustum<S> const& frustum, S z) noexcept
 	{
 		pr_assert(z >= 0 && "'z' should be a positive distance from the apex");
 		auto edges = frustum.edges();
@@ -412,7 +412,7 @@ namespace pr::math
 
 	// Returns the corners of the frustum at the zfar plane.
 	template <ScalarTypeFP S>
-	inline Mat4x4<S> Corners(Frustum<S> const& frustum)
+	inline Mat4x4<S> Corners(Frustum<S> const& frustum) noexcept
 	{
 		// Warning: calling this on orthographic frusta is probably a bug.. unless Z isn't used.
 		return Corners(frustum, frustum.zfar());
@@ -420,7 +420,7 @@ namespace pr::math
 
 	// Return true if any part of a point, box, or sphere is within 'frustum'.
 	// Use 'zf == 0' to use the frustum's far plane, or 'zf == -1' to ignore the far plane.
-	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, Vec4<S> point, S radius, Vec2<S> nf = Zero<Vec2<S>>())
+	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, Vec4<S> point, S radius, Vec2<S> nf = Zero<Vec2<S>>()) noexcept
 	{
 		auto pt = point;
 		auto frustum_apex = S(0);
@@ -463,12 +463,12 @@ namespace pr::math
 		// If all dot products are >= 0 then some part of the sphere is within the frustum
 		return dots == Abs(dots); 
 	}
-	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, BSphere<S> bsphere, Vec2<S> nf = Zero<Vec2<S>>())
+	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, BSphere<S> bsphere, Vec2<S> nf = Zero<Vec2<S>>()) noexcept
 	{
 		pr_assert(bsphere.valid() && "Invalid bsphere used in 'IsWithin' test against frustum");
 		return IsWithin(frustum, bsphere.Centre(), bsphere.Radius(), nf);
 	}
-	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, BBox<S> bbox, Vec2<S> nf = Zero<Vec2<S>>())
+	template <ScalarTypeFP S> inline bool pr_vectorcall IsWithin(Frustum<S> const& frustum, BBox<S> bbox, Vec2<S> nf = Zero<Vec2<S>>()) noexcept
 	{
 		pr_assert(bbox.valid() && "Invalid bbox used in 'IsWithin' test against frustum");
 
@@ -517,7 +517,7 @@ namespace pr::math
 	}
 
 	// Grow a frustum (i.e. move it along +f2w.Z growing zfar while preserving fov/aspect) so that 'ws_pt','ws_bbox', or 'ws_sphere' are within the frustum.
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, Vec4<S> ws_pt, S radius)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, Vec4<S> ws_pt, S radius) noexcept
 	{
 		// By similar triangles:
 		//   zfar1 / zfar0 = (n.w + Dot(n,pt)) / n.w
@@ -569,12 +569,12 @@ namespace pr::math
 		nf.x = Min(nf.x + dzfar, frustum_zfar - (pt.z + radius));
 		nf.y = Max(nf.y + dzfar, frustum_zfar - (pt.z - radius));
 	}
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, BSphere<S> ws_bsphere)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, BSphere<S> ws_bsphere) noexcept
 	{
 		pr_assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
 		return Grow(frustum, f2w, nf, ws_bsphere.Centre(), ws_bsphere.Radius());
 	}
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, BBox<S> ws_bbox)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec2<S>& nf, BBox<S> ws_bbox) noexcept
 	{
 		pr_assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
 
@@ -617,24 +617,24 @@ namespace pr::math
 		nf.x = Min(nf.x + dzfar, frustum_zfar - bbox.UpperZ());
 		nf.y = Max(nf.y + dzfar, frustum_zfar - bbox.LowerZ());
 	}
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec4<S> ws_pt, S radius)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, Vec4<S> ws_pt, S radius) noexcept
 	{
 		auto nf = Zero<Vec2<S>>();
 		Grow(frustum, f2w, nf, ws_pt, radius);
 	}
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, BSphere<S> ws_bsphere)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, BSphere<S> ws_bsphere) noexcept
 	{
 		auto nf = Zero<Vec2<S>>();
 		Grow(frustum, f2w, nf, ws_bsphere);
 	}
-	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, BBox<S> ws_bbox)
+	template <ScalarTypeFP S> inline void pr_vectorcall Grow(Frustum<S>& frustum, Mat4x4<S>& f2w, BBox<S> ws_bbox) noexcept
 	{
 		auto nf = Zero<Vec2<S>>();
 		Grow(frustum, f2w, nf, ws_bbox);
 	}
 
 	// Include 'f2w * frustum' in 'bbox'
-	template <ScalarTypeFP S> inline BBox<S>& pr_vectorcall Grow(BBox<S>& bbox, Frustum<S> const& frustum, Mat4x4<S> const& f2w = Identity<Mat4x4<S>>())
+	template <ScalarTypeFP S> inline BBox<S>& pr_vectorcall Grow(BBox<S>& bbox, Frustum<S> const& frustum, Mat4x4<S> const& f2w = Identity<Mat4x4<S>>()) noexcept
 	{
 		auto corner = Corners(frustum);
 		Grow(bbox, f2w.pos);
@@ -913,7 +913,7 @@ namespace pr::math::tests
 				PR_EXPECT(within);
 			}
 		}
-		template <ScalarTypeFP S> void DumpFrustum(Frustum<S> const& f, Mat4x4<S> const& f2w)
+		template <ScalarTypeFP S> void DumpFrustum(Frustum<S> const& f, Mat4x4<S> const& f2w) noexcept
 		{
 			(void)f,f2w;
 			//ldr::Builder b;

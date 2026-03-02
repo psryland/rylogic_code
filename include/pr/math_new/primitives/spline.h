@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -122,7 +122,7 @@ namespace pr::math
 			{+0, +0, +1 / 2.f, +0},
 			{+0, +0, +0, +1 / 6.f},
 		};
-		inline static constexpr Mat4x4<S> Cardinal(S s)
+		inline static constexpr Mat4x4<S> Cardinal(S s) noexcept
 		{
 			return {
 				{    +0,    +1,        +0, +0},
@@ -131,7 +131,7 @@ namespace pr::math
 				{    -s, 2 - s,     s - 2, +s},
 			};
 		}
-		template <ECurveType Type> static constexpr Mat4x4<S> Coeff()
+		template <ECurveType Type> static constexpr Mat4x4<S> Coeff() noexcept
 		{
 			if constexpr (Type == ECurveType::Bezier) return Bezier;
 			if constexpr (Type == ECurveType::Hermite) return Hermite;
@@ -157,30 +157,30 @@ namespace pr::math
 		//  Bezier, etc: p0, p1, p2, p3
 		//  Hermite:     p0, v0, p1, v1
 		//  Trajector:   p0, v0, a0, j0
-		CubicCurve3(Vec4 p0, Vec4 p1, Vec4 p2, Vec4 p3, Mat4x4 const& coeff)
+		CubicCurve3(Vec4 p0, Vec4 p1, Vec4 p2, Vec4 p3, Mat4x4 const& coeff) noexcept
 			: m_coeff(Mat4x4{ p0, p1, p2, p3 } * coeff)
 		{
 		}
-		Vec4 Eval(S t) const
+		Vec4 Eval(S t) const noexcept
 		{
 			t = Clamp<S>(t, 0, 1);
 			return m_coeff * Vec4{ 1, t, t * t, t * t * t };
 		}
-		Vec4 EvalDerivative(S t) const
+		Vec4 EvalDerivative(S t) const noexcept
 		{
 			t = Clamp<S>(t, 0, 1);
 			return m_coeff * Vec4{ 0, 1, 2 * t, 3 * t * t };
 		}
-		Vec4 EvalDerivative2(S t) const
+		Vec4 EvalDerivative2(S t) const noexcept
 		{
 			t = Clamp<S>(t, 0, 1);
 			return m_coeff * Vec4{ 0, 0, 2, 6 * t };
 		}
-		Vec4 EvalDerivative3() const
+		Vec4 EvalDerivative3() const noexcept
 		{
 			return m_coeff * Vec4{ 0, 0, 0, 6 };
 		}
-		S Curvature(S t) const
+		S Curvature(S t) const noexcept
 		{
 			// Curvature formula: κ = |v × a| / |v|³
 			t = Clamp<S>(t, 0, 1);
@@ -205,68 +205,68 @@ namespace pr::math
 		Container<CubicCurve3> m_curves;
 
 		CubicSpline() = default;
-		CubicSpline(Vec4 p0, Vec4 p1, Vec4 p2, Vec4 p3, Mat4x4 const& coeff)
+		CubicSpline(Vec4 p0, Vec4 p1, Vec4 p2, Vec4 p3, Mat4x4 const& coeff) noexcept
 			: m_curves()
 		{
 			m_curves.push_back(CubicCurve3{ p0, p1, p2, p3, coeff });
 		}
-		CubicSpline(std::initializer_list<CubicCurve3> curves)
+		CubicSpline(std::initializer_list<CubicCurve3> curves) noexcept
 			: m_curves(curves)
 		{
 		}
 
 		// Min/Max time for the spline
-		S Time0() const
+		S Time0() const noexcept
 		{
 			return 0;
 		}
-		S Time1() const
+		S Time1() const noexcept
 		{
 			return static_cast<S>(m_curves.size());
 		}
 
 		// Return the index of the curve that 'time' falls within
-		int CurveIndex(S time) const
+		int CurveIndex(S time) const noexcept
 		{
 			return std::clamp<int>(static_cast<int>(time), 0, static_cast<int>(m_curves.size() - 1));
 		}
 
 		// Return the curve that 'time' falls within
-		CubicCurve3 const& Curve(S time) const
+		CubicCurve3 const& Curve(S time) const noexcept
 		{
 			return m_curves[CurveIndex(time)];
 		}
 
 		// Interpolated position on the spline at time 't'
-		Vec4 Position(S time) const
+		Vec4 Position(S time) const noexcept
 		{
 			auto curve_index = CurveIndex(time);
 			return m_curves[curve_index].Eval(time - curve_index);
 		}
 
 		// Interpolated velocity on the spline at time 't'. (P'(t))
-		Vec4 Velocity(S time) const
+		Vec4 Velocity(S time) const noexcept
 		{
 			auto curve_index = CurveIndex(time);
 			return m_curves[curve_index].EvalDerivative(time - curve_index);
 		}
 
 		// Interpolated acceleration of the spline at time 't'. (P''(t))
-		Vec4 Acceleration(S time) const
+		Vec4 Acceleration(S time) const noexcept
 		{
 			auto curve_index = CurveIndex(time);
 			return m_curves[curve_index].EvalDerivative2(time - curve_index);
 		}
 
 		// The curvature of the curve at 'time'
-		S Curvature(S time) const
+		S Curvature(S time) const noexcept
 		{
 			auto curve_index = CurveIndex(time);
 			return m_curves[curve_index].Curvature(time - curve_index);
 		}
 
 		// Construct a spline from a collection of points
-		static CubicSpline pr_vectorcall FromPoints(std::span<Vec4 const> p, ECurveTopology topo, Mat4x4 const& coeff)
+		static CubicSpline pr_vectorcall FromPoints(std::span<Vec4 const> p, ECurveTopology topo, Mat4x4 const& coeff) noexcept
 		{
 			CubicSpline spline;
 
@@ -348,11 +348,11 @@ namespace pr::math
 	#pragma region Functions
 
 	// Return the length of a Cubic Curve from t0 to t1
-	template <ScalarTypeFP S> constexpr S Length(CubicCurve3<S> const& curve, S t0, S t1, S tol = tiny<S>)
+	template <ScalarTypeFP S> constexpr S Length(CubicCurve3<S> const& curve, S t0, S t1, S tol = tiny<S>) noexcept
 	{
 		struct L
 		{
-			static constexpr S Len(CubicCurve3<S> const& curve, S t0, S t1, S tol)
+			static constexpr S Len(CubicCurve3<S> const& curve, S t0, S t1, S tol) noexcept
 			{
 				return Len(curve, t0, t1,
 					Length(curve.EvalDerivative(t0)),
@@ -360,7 +360,7 @@ namespace pr::math
 					Length(curve.EvalDerivative(t1)),
 					tol, 0);
 			}
-			static constexpr S Len(CubicCurve3<S> const& curve, S a, S b, S fa, S fm, S fb, S tol, int depth)
+			static constexpr S Len(CubicCurve3<S> const& curve, S a, S b, S fa, S fm, S fb, S tol, int depth) noexcept
 			{
 				// Simpson estimate on [a,b]
 				auto len1 = (b - a) * (fa + 4 * fm + fb) / 6.0f;
@@ -397,7 +397,7 @@ namespace pr::math
 	}
 
 	// Return the length of a spline from t0 to t1
-	template <ScalarTypeFP S> constexpr S Length(CubicSpline<S> const& spline, S t0, S t1, S tol = tiny<S>)
+	template <ScalarTypeFP S> constexpr S Length(CubicSpline<S> const& spline, S t0, S t1, S tol = tiny<S>) noexcept
 	{
 		S length = 0;
 		int i0 = std::clamp(static_cast<int>(std::floor(t0)), 0, isize(spline.m_curves) - 1);
@@ -415,7 +415,7 @@ namespace pr::math
 
 	// Fill a container of points with a rasterized version of 'spline'. Returns the span of used points.
 	template <ScalarTypeFP S>
-	[[nodiscard]] inline std::span<Vec4<S>> Raster(CubicSpline<S> const& spline, S t0, S t1, std::span<Vec4<S>> out, bool store_time_in_w = false, S tol = tiny<S>)
+	[[nodiscard]] inline std::span<Vec4<S>> Raster(CubicSpline<S> const& spline, S t0, S t1, std::span<Vec4<S>> out, bool store_time_in_w = false, S tol = tiny<S>) noexcept
 	{
 		using Vec4 = Vec4<S>;
 		using CubicSpline = CubicSpline<S>;
@@ -439,7 +439,7 @@ namespace pr::math
 			S m_tol;
 			bool m_store_time_in_w;
 
-			L(CubicSpline const& spline, std::span<Vec4> out, bool store_time_in_w = false, S tol = tiny<S>)
+			L(CubicSpline const& spline, std::span<Vec4> out, bool store_time_in_w = false, S tol = tiny<S>) noexcept
 				: m_spline(spline)
 				, m_out(out)
 				, m_pts_added(0)
@@ -448,7 +448,7 @@ namespace pr::math
 			{}
 
 			// Breadth-first recursive raster of this spline
-			int Raster(S t0 = 0, S t1 = (std::numeric_limits<S>::max)())
+			int Raster(S t0 = 0, S t1 = (std::numeric_limits<S>::max)()) noexcept
 			{
 				t0 = std::clamp(t0, m_spline.Time0(), m_spline.Time1());
 				t1 = std::clamp(t1, m_spline.Time0(), m_spline.Time1());
@@ -459,7 +459,7 @@ namespace pr::math
 				init.m_err = (std::numeric_limits<S>::max)();
 				init.m_idx = 1;
 
-				assert(ssize(m_out) >= 2);
+				pr_assert(ssize(m_out) >= 2);
 				m_out[0] = m_store_time_in_w ? init.m_p0 : init.m_p0.w1();
 				m_out[1] = m_store_time_in_w ? init.m_p1 : init.m_p1.w1();
 				m_pts_added = 2;
@@ -470,7 +470,7 @@ namespace pr::math
 			}
 
 			// Recursive raster (recursive so that 'Elem's are stored on the stack)
-			void Raster(Elem* queue)
+			void Raster(Elem* queue) noexcept
 			{
 				// Pop the top spline segment from the queue or we've run out of points
 				Elem const& elem = *queue;
@@ -501,7 +501,7 @@ namespace pr::math
 			}
 
 			// Insert 'elem' into the priority queue of which 'queue' is the head
-			Elem* QInsert(Elem* queue, Elem& elem)
+			Elem* QInsert(Elem* queue, Elem& elem) noexcept
 			{
 				if (queue == nullptr || elem.m_err >= queue->m_err)
 				{
@@ -520,7 +520,7 @@ namespace pr::math
 			}
 
 			// Split 'elem' at 't'
-			std::tuple<Elem, Elem> Split(Elem const& elem, Vec4 mid) const
+			std::tuple<Elem, Elem> Split(Elem const& elem, Vec4 mid) const noexcept
 			{
 				auto err = [this](Vec4 p0, Vec4 p1)
 				{
@@ -592,12 +592,12 @@ namespace pr::math
 
 		// Construct a spline from 4 control points
 		Spline() = default;
-		Spline(v4 const& start, v4 const& start_ctrl, v4 const& end_ctrl, v4 const& end)
+		Spline(v4 const& start, v4 const& start_ctrl, v4 const& end_ctrl, v4 const& end) noexcept
 			:m4x4(start, start_ctrl, end_ctrl, end)
 		{
 			pr_assert(start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f && "Splines are constructed from 4 positions");
 		}
-		Spline(v4 const* spline)
+		Spline(v4 const* spline) noexcept
 			:Spline(spline[Spline::Start], spline[Spline::SCtrl], spline[Spline::ECtrl], spline[Spline::End])
 		{}
 
@@ -608,7 +608,7 @@ namespace pr::math
 		v4 Point1() const   { return w; }
 
 		// Return the position along the spline at 'time'
-		v4 Position(float time) const
+		v4 Position(float time) const noexcept
 		{
 			v4 blend;
 			blend.x = (1.0f - time) * (1.0f - time) * (1.0f - time);
@@ -622,7 +622,7 @@ namespace pr::math
 		// Notes about velocity:
 		// A spline from (0,0,0) to (1,0,0) with control points at (1/3,0,0) and (2/3,0,0) will
 		// have a constant velocity of (1,0,0) over the full length of the spline.
-		v4 Velocity(float time) const
+		v4 Velocity(float time) const noexcept
 		{
 			v4 dblend; // the derivative of blend
 			dblend.x = 3.0f * (time - 1.0f) * (1.0f - time);
@@ -633,7 +633,7 @@ namespace pr::math
 		}
 
 		// Return the acceleration along the spline at 'time'
-		v4 Acceleration(float time) const
+		v4 Acceleration(float time) const noexcept
 		{
 			v4 ddblend; // the 2nd derivative of blend
 			ddblend.x = 6.0f * (1.0f - time);
@@ -646,11 +646,11 @@ namespace pr::math
 		// Return an object to world transform for a position along the spline
 		// 'axis' is the axis id that will lie along the tangent of the spline
 		// By default, the z axis is aligned to the spline with Y as up
-		m4x4 O2W(float time) const
+		m4x4 O2W(float time) const noexcept
 		{
 			return O2W(time, 2, v4YAxis);
 		}
-		m4x4 O2W(float time, int axis, v4 const& up) const
+		m4x4 O2W(float time, int axis, v4 const& up) const noexcept
 		{
 			return OriFromDir(Velocity(time), axis, up, Position(time));
 		}
@@ -679,7 +679,7 @@ namespace pr::math
 	// The two resulting splines 'lhs' and 'rhs' are:
 	//  lhs = P0,P4,P7,P9;  rhs = P9,P8,P6,P3
 	// Note: 'spline' passed by value to prevent aliasing problems with 'lhs' and 'rhs'
-	inline void Split(Spline const& spline, float t, Spline& lhs, Spline& rhs)
+	inline void Split(Spline const& spline, float t, Spline& lhs, Spline& rhs) noexcept
 	{
 		pr_assert(&lhs != &rhs && "lhs and rhs must not be the same spline");
 		v4 P5;
@@ -694,11 +694,11 @@ namespace pr::math
 	}
 
 	// Return the length of a spline from t0 to t1
-	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf)
+	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf) noexcept
 	{
 		struct L
 		{
-			static float Len(Spline const& s, float tol)
+			static float Len(Spline const& s, float tol) noexcept
 			{
 				float poly_length = Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z);
 				float chord_length = Length(s.w - s.x);
@@ -722,7 +722,7 @@ namespace pr::math
 	// Note: the analytic solution to this problem involves solving a 5th order polynomial
 	// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
 	// Should have quadratic convergence
-	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, float initial_estimate, bool bound01 = true, int iterations = 5)
+	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, float initial_estimate, bool bound01 = true, int iterations = 5) noexcept
 	{
 		// The distance (squared) from 'pt' to the spline is: Dist(t) = |pt - S(t)|^2.    (S(t) = spline at t)
 		// At the closest point, Dist'(t) = 0.
@@ -747,7 +747,7 @@ namespace pr::math
 
 	// This overload attempts to find the nearest point robustly
 	// by testing 3 starting points and returning minimum.
-	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, bool bound01 = true)
+	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, bool bound01 = true) noexcept
 	{
 		float t0 = ClosestPoint_PointToSpline(spline, pt, -0.5f, bound01, 5);
 		float t1 = ClosestPoint_PointToSpline(spline, pt,  0.5f, bound01, 5);
@@ -764,7 +764,7 @@ namespace pr::math
 	// Generates a spline from each set of three points in 'points'
 	// VOut(Spline const& spline, bool last);
 	template <SplineOutput VOut>
-	void CreateSplines(std::span<v4 const> points, Spline::ETopo topo, VOut out)
+	void CreateSplines(std::span<v4 const> points, Spline::ETopo topo, VOut out) noexcept
 	{
 		auto beg = points.data();
 		auto end = beg + points.size();
@@ -884,7 +884,7 @@ namespace pr::math
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
 	template <typename PCont, typename TCont>
-	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tinyf)
+	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tinyf) noexcept
 	{
 		struct L
 		{
@@ -896,7 +896,7 @@ namespace pr::math
 				int           m_ins;       // The position to insert a vert in the out container
 				float         m_err;       // How much a straight line diverges from 'm_spline'
 				
-				Elem(Spline const& s, float t0, float t1, int ins)
+				Elem(Spline const& s, float t0, float t1, int ins) noexcept
 					:m_next(0)
 					,m_spline(&s)
 					,m_t0(t0)
@@ -907,7 +907,7 @@ namespace pr::math
 			};
 
 			// Insert 'elem' into the priority queue of which 'queue' is the head
-			static Elem* QInsert(Elem* queue, Elem& elem)
+			static Elem* QInsert(Elem* queue, Elem& elem) noexcept
 			{
 				if (queue == 0 || queue->m_err < elem.m_err) { elem.m_next = queue; return &elem; }
 				Elem* i; for (i = queue; i->m_next && i->m_next->m_err > elem.m_err; i = i->m_next) {}
@@ -917,7 +917,7 @@ namespace pr::math
 			}
 
 			// Breadth-first recursive raster of this spline
-			static void Raster(PCont& points, TCont& times, Elem* queue, int& pts_remaining, float tol)
+			static void Raster(PCont& points, TCont& times, Elem* queue, int& pts_remaining, float tol) noexcept
 			{
 				// Pop the top spline segment from the queue or we've run out of points
 				Elem const& elem = *queue;
@@ -957,7 +957,7 @@ namespace pr::math
 		L::Raster(points, times, &elem, pts_remaining, tol);
 	}
 	template <typename PCont>
-	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tinyf)
+	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tinyf) noexcept
 	{
 		// Dummy container for the time values
 		struct TCont
@@ -971,7 +971,7 @@ namespace pr::math
 
 	// Fill a container of points with a smoothed spline based on 'points
 	template <SmoothOutput VOut, int MaxPointsPerSpline = 30>
-	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tinyf)
+	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tinyf) noexcept
 	{
 		if (points.size() < 3)
 		{
@@ -982,7 +982,7 @@ namespace pr::math
 
 		pr::vector<v4, MaxPointsPerSpline, true> spline_points;
 		pr::vector<float, MaxPointsPerSpline, true> spline_times;
-		CreateSplines(points, topo, [&](Spline const& spline, bool last)
+		CreateSplines(points, topo, [&](Spline const& spline, bool last) noexcept
 		{
 			spline_points.resize(0);
 			spline_times.resize(0);
@@ -1006,7 +1006,7 @@ namespace pr::math
 		BBox   m_bbox;
 		float  m_clock;  // The current 'time' along the spline [0,1)
 
-		RandSpline(Rng& rng, BBox const& bbox = BBoxUnit)
+		RandSpline(Rng& rng, BBox const& bbox = BBoxUnit) noexcept
 			:m_rng(&rng)
 			,m_next()
 			,m_bbox(bbox)
@@ -1016,16 +1016,16 @@ namespace pr::math
 			Roll();
 			Roll();
 		}
-		void Reset(Rng& rng)
+		void Reset(Rng& rng) noexcept
 		{
 			m_rng = &rng;
 			m_clock = 0.0f;
 		}
-		v4 GenPoint()
+		v4 GenPoint() noexcept
 		{
 			return Random3(*m_rng, m_bbox.Lower(), m_bbox.Upper(), 1.0f);
 		}
-		void Roll()
+		void Roll() noexcept
 		{
 			static_cast<Spline&>(*this) = m_next;
 			m_next.x = m_next.Point1();
@@ -1033,36 +1033,36 @@ namespace pr::math
 			m_next.z = GenPoint();
 			m_next.w = GenPoint();
 		}
-		void Adv(float dt)
+		void Adv(float dt) noexcept
 		{
 			m_clock += dt;
 			for (int i = 0; i != 2 && m_clock >= 1.0f; ++i, m_clock -= 1.0f) Roll();
 		}
 
 		// Return an object to world transform for the current position on the spline
-		m4x4 O2W() const
+		m4x4 O2W() const noexcept
 		{
 			return Spline::O2W(m_clock);
 		}
-		m4x4 O2W(int axis, v4 const& up) const
+		m4x4 O2W(int axis, v4 const& up) const noexcept
 		{
 			return Spline::O2W(m_clock, axis, up);
 		}
 
 		// Return the current position along the spline
-		v4 Position() const
+		v4 Position() const noexcept
 		{
 			return Spline::Position(m_clock);
 		}
 
 		// Return the current velocity along the spline
-		v4 Velocity() const
+		v4 Velocity() const noexcept
 		{
 			return Spline::Velocity(m_clock);
 		}
 
 		// Return the acceleration along the spline at 'time'
-		v4 Acceleration() const
+		v4 Acceleration() const noexcept
 		{
 			return Spline::Acceleration(m_clock);
 		}

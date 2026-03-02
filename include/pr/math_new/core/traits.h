@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -117,7 +117,7 @@ namespace pr::math
 	};
 
 	// Vector component access
-	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec& v)
+	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec& v) noexcept
 	{
 		using vt = vector_traits<std::remove_cv_t<Vec>>;
 		using S = std::conditional_t<std::is_const_v<Vec>, typename vt::component_t, typename vt::component_t&>;
@@ -133,7 +133,7 @@ namespace pr::math
 		else if constexpr (vt::dimension == 4) return Proxy4{vt::x(v), vt::y(v), vt::z(v), vt::w(v)};
 		else static_assert(vt::dimension <= 4);
 	}
-	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec&& v)
+	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec&& v) noexcept
 	{
 		using vt = vector_traits<std::remove_cv_t<Vec>>;
 		using S = typename vt::component_t;

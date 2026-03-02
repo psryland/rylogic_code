@@ -112,7 +112,7 @@ namespace pr::math
 	};
 
 	// Return true if 'n' is a prime number
-	template <std::integral T> constexpr bool IsPrime(T n)
+	template <std::integral T> constexpr bool IsPrime(T n) noexcept
 	{
 		if (n <= 3) return n > 1;
 		if (n % 2 == 0 || n % 3 == 0) return false;
@@ -125,7 +125,7 @@ namespace pr::math
 	}
 
 	// Return the next prime greater than 'n'
-	template <std::integral T> constexpr T PrimeGtrThan(T n)
+	template <std::integral T> constexpr T PrimeGtrThan(T n) noexcept
 	{
 		if (n < 2) return 2;
 		auto next = (n + 1) | 1;
@@ -134,7 +134,7 @@ namespace pr::math
 	}
 
 	// Return the next prime less than 'n'
-	template <std::integral T> constexpr T PrimeLessThan(T n)
+	template <std::integral T> constexpr T PrimeLessThan(T n) noexcept
 	{
 		pr_assert(n > 2 && "There are no primes less than 2");
 		if (n == 3) return 2;

@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -14,7 +14,6 @@
 #include <random>
 #include <algorithm>
 #include <numeric>
-#include <stdexcept>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>

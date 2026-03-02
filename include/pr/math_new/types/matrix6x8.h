@@ -37,21 +37,21 @@ namespace pr::math
 
 		// Construct from sub matrices. WARNING: careful with layout.
 		Mat6x8() = default;
-		constexpr explicit Mat6x8(S x_)
+		constexpr explicit Mat6x8(S x_) noexcept
 			:m00(x_)
 			, m10(x_)
 			, m01(x_)
 			, m11(x_)
 		{
 		}
-		constexpr Mat6x8(Mat3x4<S> const& m00_, Mat3x4<S> const& m01_, Mat3x4<S> const& m10_, Mat3x4<S> const& m11_)
+		constexpr Mat6x8(Mat3x4<S> const& m00_, Mat3x4<S> const& m01_, Mat3x4<S> const& m10_, Mat3x4<S> const& m11_) noexcept
 			:m00(m00_)
 			, m10(m10_)
 			, m01(m01_)
 			, m11(m11_)
 		{
 		}
-		constexpr Mat6x8(Vec8<S, void> x, Vec8<S, void> y, Vec8<S, void> z, Vec8<S, void> u, Vec8<S, void> v, Vec8<S, void> w)
+		constexpr Mat6x8(Vec8<S, void> x, Vec8<S, void> y, Vec8<S, void> z, Vec8<S, void> u, Vec8<S, void> v, Vec8<S, void> w) noexcept
 			:m00(x.ang, y.ang, z.ang)
 			, m10(x.lin, y.lin, z.lin)
 			, m01(u.ang, v.ang, w.ang)
@@ -60,25 +60,25 @@ namespace pr::math
 		}
 
 		// Reinterpret as a different matrix type
-		template <typename C, typename D> explicit operator Mat6x8<S, C, D> const& () const
+		template <typename C, typename D> explicit operator Mat6x8<S, C, D> const& () const noexcept
 		{
 			return reinterpret_cast<Mat6x8<S, C, D> const&>(*this);
 		}
-		template <typename C, typename D> explicit operator Mat6x8<S, C, D>& ()
+		template <typename C, typename D> explicit operator Mat6x8<S, C, D>& () noexcept
 		{
 			return reinterpret_cast<Mat6x8<S, C, D>&>(*this);
 		}
-		operator Mat6x8<S, void, void> const& () const
+		operator Mat6x8<S, void, void> const& () const noexcept
 		{
 			return reinterpret_cast<Mat6x8<S, void, void> const&>(*this);
 		}
-		operator Mat6x8<S, void, void>& ()
+		operator Mat6x8<S, void, void>& () noexcept
 		{
 			return reinterpret_cast<Mat6x8<S, void, void>&>(*this);
 		}
 
 		// Array of column vectors
-		Vec8<S, void> operator [](int i) const
+		Vec8<S, void> operator [](int i) const noexcept
 		{
 			// Note: Creating a Vec8Proxy doesn't work because by default the compiler selects the
 			// mutable overload for non-const instances, so swap-style assignments don't work.
@@ -87,12 +87,12 @@ namespace pr::math
 				? Vec8<S, void>{m00[i], m10[i]}
 			: Vec8<S, void>{ m01[i - 3], m11[i - 3] };
 		}
-		Vec8<S, void> col(int i) const
+		Vec8<S, void> col(int i) const noexcept
 		{
 			pr_assert("index out of range" && i >= 0 && i < 6);
 			return (*this)[i];
 		}
-		void col(int i, Vec8<S, void> rhs)
+		void col(int i, Vec8<S, void> rhs) noexcept
 		{
 			pr_assert("index out of range" && i >= 0 && i < 6);
 			if (i < 3) { m00[i] = rhs.ang; m10[i] = rhs.lin; }
@@ -100,13 +100,13 @@ namespace pr::math
 		}
 
 		// Basic constants
-		static constexpr Mat6x8 Zero()
+		static constexpr Mat6x8 Zero() noexcept
 		{
 			return Mat6x8{
 				Mat3x4<S, void, void>::Zero(), Mat3x4<S, void, void>::Zero(),
 				Mat3x4<S, void, void>::Zero(), Mat3x4<S, void, void>::Zero() };
 		}
-		static constexpr Mat6x8 Identity()
+		static constexpr Mat6x8 Identity() noexcept
 		{
 			return Mat6x8{
 				Mat3x4<S, void, void>::Identity(), Mat3x4<S, void, void>::Zero(),
@@ -114,31 +114,31 @@ namespace pr::math
 		}
 
 		#pragma region Operators
-		friend constexpr Mat6x8 operator + (Mat6x8<S, A, B> const& m)
+		friend constexpr Mat6x8 operator + (Mat6x8<S, A, B> const& m) noexcept
 		{
 			return m;
 		}
-		friend constexpr Mat6x8 operator - (Mat6x8<S, A, B> const& m)
+		friend constexpr Mat6x8 operator - (Mat6x8<S, A, B> const& m) noexcept
 		{
 			return Mat6x8{ -m.m00, -m.m01, -m.m10, -m.m11 };
 		}
-		friend Mat6x8 operator + (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs)
+		friend Mat6x8 operator + (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs) noexcept
 		{
 			return Mat6x8{ lhs.m00 + rhs.m00, lhs.m01 + rhs.m01, lhs.m10 + rhs.m10, lhs.m11 + rhs.m11 };
 		}
-		friend Mat6x8 operator - (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs)
+		friend Mat6x8 operator - (Mat6x8<S, A, B> const& lhs, Mat6x8<S, A, B> const& rhs) noexcept
 		{
 			return Mat6x8{ lhs.m00 - rhs.m00, lhs.m01 - rhs.m01, lhs.m10 - rhs.m10, lhs.m11 - rhs.m11 };
 		}
-		friend Mat6x8 operator * (Mat6x8<S, A, B> const& lhs, S rhs)
+		friend Mat6x8 operator * (Mat6x8<S, A, B> const& lhs, S rhs) noexcept
 		{
 			return Mat6x8{ lhs.m00 * rhs, lhs.m01 * rhs, lhs.m10 * rhs, lhs.m11 * rhs };
 		}
-		friend Mat6x8 operator * (S lhs, Mat6x8<S, A, B> const& rhs)
+		friend Mat6x8 operator * (S lhs, Mat6x8<S, A, B> const& rhs) noexcept
 		{
 			return rhs * lhs;
 		}
-		friend Vec8<S, B> operator * (Mat6x8<S, A, B> const& lhs, Vec8<S, A> const& rhs)
+		friend Vec8<S, B> pr_vectorcall operator * (Mat6x8<S, A, B> const& lhs, Vec8<S, A> rhs) noexcept
 		{
 			// [m00*a + m01*b] = [m00, m01] [a]
 			// [m10*a + m11*b]   [m10, m11] [b]
@@ -146,7 +146,7 @@ namespace pr::math
 				lhs.m00* rhs.ang + lhs.m01 * rhs.lin,
 					lhs.m10* rhs.ang + lhs.m11 * rhs.lin};
 		}
-		template <typename C> friend Mat6x8<S, A, C> pr_vectorcall operator * (Mat6x8<S, B, C> const& lhs, Mat6x8<S, A, B> const& rhs)
+		template <typename C> friend Mat6x8<S, A, C> pr_vectorcall operator * (Mat6x8<S, B, C> const& lhs, Mat6x8<S, A, B> const& rhs) noexcept
 		{
 			// [a00, a01] [b00, b01] = [a00*b00 + a01*b10, a00*b01 + a01*b11]
 			// [a10, a11] [b10, b11]   [a10*b00 + a11*b10, a10*b01 + a11*b11]
@@ -157,7 +157,7 @@ namespace pr::math
 		#pragma endregion
 
 		// Compare for floating point equality
-		friend constexpr bool FEql(Mat6x8 const& lhs, Mat6x8 const& rhs)
+		friend constexpr bool FEql(Mat6x8 const& lhs, Mat6x8 const& rhs) noexcept
 		{
 			return
 				FEql(lhs.m00, rhs.m00) &&
@@ -167,7 +167,7 @@ namespace pr::math
 		}
 
 		// Return the transpose of a spatial matrix
-		friend constexpr Mat6x8 Transpose(Mat6x8 const& mat)
+		friend constexpr Mat6x8 Transpose(Mat6x8 const& mat) noexcept
 		{
 			return Mat6x8(
 				Transpose(mat.m00), Transpose(mat.m10),
@@ -176,7 +176,7 @@ namespace pr::math
 		}
 
 		// Invert the 6x6 matrix 'm'
-		friend Mat6x8<S, B, A> Invert(Mat6x8<S, A, B> const& m)
+		friend Mat6x8<S, B, A> Invert(Mat6x8<S, A, B> const& m) noexcept
 		{
 			// 2x2 block matrix inversion
 			// R = [A B]  R' = [E F]

@@ -22,6 +22,18 @@
 //  - Vector types do not contain functions because they would be limited to just that type. They can,
 //    however, contain methods that forward to global functions (e.g. Vec3::Length() forwards to Length(Vec3)).
 
+// Checklist:
+//  - Check each function for mathematical correctness and numerical stability.
+//  - Look for any patterns that appear to be broken, or inconsistent style.
+//  - Look for any missing constexpr opportunities, or other qualifiers that could be added to improve the code/performance (e.g. noexcept, [[nodiscard]], etc).
+//  - Check that pr_assert is used rather than assert
+//  - Check for consistency with the 'Design Goals'
+//  - Check that 'pr_vectorcall' is used correctly for all vector functions.
+//  - Check that vector types (i.e. Rank1) are passed by value, and that matrix types (i.e. Rank2) are passed by reference
+//  - Check that constants and static factory functions within the vector and matrix types are all thin wrappers around functions from 'functions.h' and constants from 'constants.h'.
+//  - Check for any duplication that should be removed.
+//  - Pure functions shouldn't throw exceptions, but should use assert instead to allow noexcept to be used.
+
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
@@ -56,23 +68,3 @@
 
 // Depends on pr/common/to.h and pr/str/ — not part of math_new core
 //#include "pr/math_new/utils/conversion.h"
-
-// @Copilot, please check each function for mathematical correctness and numerical stability.
-
-// @Copilot, look for patterns that appear to be broken. There should be a sort of symmetry to the code.
-
-// @Copilot, please check this math library for consistency and correctness.
-
-// @Copilot, please look for any missing constexpr
-
-// @Copilot, please look for any missing noexcept, or other qualifiers that could be added to improve the code/performance.
-
-// @Copilot, please check that I've used pr_assert rather than assert
-
-// @Copilot, check for consistency with the design goals
-
-// @Copilot, check that 'pr_vectorcall ' is used for all vector functions, and that it's not used for non-vector functions.
-
-// @Copilot, check that vector types (i.e. Rank1) are passed by value, and that matrix types (i.e. Rank2) are passed by reference
-
-// @Copilot The constants in the vector and matrix types should all be using the functions from 'functions.h'

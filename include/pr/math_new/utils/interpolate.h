@@ -20,25 +20,25 @@ namespace pr::math
 		Vec4 m_x1;
 		S m_interval;
 
-		InterpolateVector()
+		InterpolateVector() noexcept
 			:InterpolateVector(Origin<Vec4>(), Zero<Vec4>(), Origin<Vec4>(), Zero<Vec4>(), S(1))
 		{}
-		InterpolateVector(Vec4 x0, Vec4 v0, Vec4 x1, Vec4 v1, S interval)
+		InterpolateVector(Vec4 x0, Vec4 v0, Vec4 x1, Vec4 v1, S interval) noexcept
 			: m_p(x0 - x1, v0 * interval, Zero<Vec4>(), v1 * interval, CurveType::Hermite)
 			, m_x1(x1)
 			, m_interval(interval)
 		{
-			assert(interval != 0);
+			pr_assert(interval != 0);
 		}
-		Vec4 Eval(S t) const
+		Vec4 Eval(S t) const noexcept
 		{
 			return m_x1 + m_p.Eval(t / m_interval);
 		}
-		Vec4 EvalDerivative(S t) const
+		Vec4 EvalDerivative(S t) const noexcept
 		{
 			return m_p.EvalDerivative(t / m_interval) / m_interval;
 		}
-		Vec4 EvalDerivative2(S t) const
+		Vec4 EvalDerivative2(S t) const noexcept
 		{
 			return m_p.EvalDerivative2(t / m_interval) / m_interval;
 		}
@@ -70,15 +70,15 @@ namespace pr::math
 		Quat m_q1;
 		S m_interval;
 		
-		InterpolateRotation()
+		InterpolateRotation() noexcept
 			:InterpolateRotation(Identity<Quat>(), Zero<Vec4>(), Identity<Quat>(), Zero<Vec4>(), S(1))
 		{}
-		InterpolateRotation(Quat q0, Vec4 w0, Quat q1, Vec4 w1, S interval)
+		InterpolateRotation(Quat q0, Vec4 w0, Quat q1, Vec4 w1, S interval) noexcept
 			: m_p()
 			, m_q1(q1)
 			, m_interval(interval)
 		{
-			assert(interval != 0);
+			pr_assert(interval != 0);
 
 			// Compute relative quaternion, ensuring w >= 0 so that
 			// LogMap (which uses |w|) round-trips correctly via ExpMap.
@@ -92,13 +92,13 @@ namespace pr::math
 				Tangent(::pr::math::Identity<Quat>(), Rotate(~q1, w1)) * interval,
 				CurveType::Hermite);
 		}
-		Quat Eval(S t) const
+		Quat Eval(S t) const noexcept
 		{
 			// Evaluate the curve in the log domain and convert to quaternion
 			auto u = m_p.Eval(t / m_interval);
 			return m_q1 * ExpMap<Quat>(u);
 		}
-		Vec4 EvalDerivative(S t) const
+		Vec4 EvalDerivative(S t) const noexcept
 		{
 			// To calculate 'W' from log(q) and log(q)`:   (x` means derivative of x)
 			// Say:
@@ -155,7 +155,7 @@ namespace pr::math
 		}
 
 		// Returns the tangent of 'q' in SO(3) based on angular velocity 'w'
-		static Vec4 Tangent(Quat q, Vec4 w)
+		static Vec4 Tangent(Quat q, Vec4 w) noexcept
 		{
 			// Using the inverse left-Jacobian to map angular velocity 'w' to tangent space at 'q'
 			// The factor of 0.5 applied on return is because the Exp/Log functions use the
@@ -212,7 +212,7 @@ namespace pr::math::tests
 			V4 avel;
 			float t;
 		};
-		std::vector<Sample> GenerateTestData()
+		std::vector<Sample> GenerateTestData() noexcept
 		{
 			std::vector<Sample> samples = {
 				{Q{-0.2060304f, +0.15757678f, +0.51549790f, +0.81669027f}, V4{+5.3832355f, -3.1496096f, +4.6114840f, 1}, {}, {}, 0.00f},

@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -15,7 +15,7 @@ namespace pr::math
 	//  - Overloads for specific types can be created (e.g. Vec4)
 
 	// Operators
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator + (Vec lhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator + (Vec lhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -25,7 +25,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = +vec(lhs).w;
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator - (Vec lhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator - (Vec lhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -35,7 +35,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = -vec(lhs).w;
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator += (Vec& lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator += (Vec& lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x += vec(rhs).x;
@@ -44,7 +44,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w += vec(rhs).w;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator -= (Vec& lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator -= (Vec& lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x -= vec(rhs).x;
@@ -53,7 +53,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w -= vec(rhs).w;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator *= (Vec& lhs, Vec rhs) requires (IsRank1<Vec>)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator *= (Vec& lhs, Vec rhs) noexcept requires (IsRank1<Vec>)
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x *= vec(rhs).x;
@@ -62,7 +62,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w *= vec(rhs).w;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator *= (Vec& lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator *= (Vec& lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x *= rhs;
@@ -71,7 +71,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w *= rhs;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator /= (Vec& lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator /= (Vec& lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x /= vec(rhs).x;
@@ -80,7 +80,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w /= vec(rhs).w;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator /= (Vec& lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator /= (Vec& lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) vec(lhs).x /= rhs;
@@ -89,7 +89,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(lhs).w /= rhs;
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator %= (Vec& lhs, Vec rhs) requires (IsRank1<Vec>)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator %= (Vec& lhs, Vec rhs) noexcept requires (IsRank1<Vec>)
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (std::is_integral_v<typename vt::element_t>)
@@ -108,7 +108,7 @@ namespace pr::math
 		}
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec& pr_vectorcall operator %= (Vec& lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec& pr_vectorcall operator %= (Vec& lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (std::is_integral_v<typename vt::element_t>)
@@ -127,42 +127,42 @@ namespace pr::math
 		}
 		return lhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator + (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator + (Vec lhs, Vec rhs) noexcept
 	{
 		Vec res = lhs;
 		return res += rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator - (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator - (Vec lhs, Vec rhs) noexcept
 	{
 		Vec res = lhs;
 		return res -= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, Vec rhs) requires (IsRank1<Vec>)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, Vec rhs) noexcept requires (IsRank1<Vec>)
 	{
 		Vec res = lhs;
 		return res *= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (Vec lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		Vec res = lhs;
 		return res *= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator * (typename vector_traits<Vec>::element_t lhs, Vec rhs) noexcept
 	{
 		Vec res = rhs;
 		return res *= lhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, Vec rhs) noexcept
 	{
 		Vec res = lhs;
 		return res /= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (Vec lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		Vec res = lhs;
 		return res /= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator / (typename vector_traits<Vec>::element_t lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -172,17 +172,17 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = lhs / vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (Vec lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (Vec lhs, Vec rhs) noexcept
 	{
 		Vec res = lhs;
 		return res %= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (Vec lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		Vec res = lhs;
 		return res %= rhs;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (typename vector_traits<Vec>::element_t lhs, Vec rhs)
+	template <VectorType Vec> constexpr Vec pr_vectorcall operator % (typename vector_traits<Vec>::element_t lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -192,7 +192,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = lhs % vec(rhs).w;
 		return res;
 	}
-	template <TensorType Vec> constexpr auto pr_vectorcall operator <=> (Vec lhs, Vec rhs)
+	template <TensorType Vec> constexpr auto pr_vectorcall operator <=> (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) if (auto cmp = std::partial_order(vec(lhs).x, vec(rhs).x); cmp != 0) return cmp;
@@ -201,7 +201,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) if (auto cmp = std::partial_order(vec(lhs).w, vec(rhs).w); cmp != 0) return cmp;
 		return std::partial_ordering::equivalent;
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall operator == (Vec lhs, Vec rhs)
+	template <TensorType Vec> constexpr bool pr_vectorcall operator == (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) if (!(vec(lhs).x == vec(rhs).x)) return false;
@@ -210,11 +210,11 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) if (!(vec(lhs).w == vec(rhs).w)) return false;
 		return true;
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall operator != (Vec lhs, Vec rhs)
+	template <TensorType Vec> constexpr bool pr_vectorcall operator != (Vec lhs, Vec rhs) noexcept
 	{
 		return !(lhs == rhs);
 	}
-	template <TensorType Vec> constexpr std::ostream& operator << (std::ostream& out, Vec v)
+	template <TensorType Vec> constexpr std::ostream& operator << (std::ostream& out, Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		if constexpr (vt::dimension > 0) out << vec(v).x << (vt::dimension > 1 ? ", " : "");
@@ -225,7 +225,7 @@ namespace pr::math
 	}
 
 	// Bitwise operators (only for integral vectors)
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ~ (Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ~ (Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -235,7 +235,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = ~vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ! (Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ! (Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -245,7 +245,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = !vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator | (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator | (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -255,7 +255,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w | vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator & (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator & (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -265,7 +265,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w & vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ^ (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ^ (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -275,7 +275,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w ^ vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator << (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator << (Vec lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -285,7 +285,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w << rhs;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator << (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator << (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -295,7 +295,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w << vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator >> (Vec lhs, typename vector_traits<Vec>::element_t rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator >> (Vec lhs, typename vector_traits<Vec>::element_t rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -305,7 +305,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w >> rhs;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator >> (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator >> (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -315,7 +315,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w >> vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator || (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator || (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -325,7 +325,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = vec(lhs).w || vec(rhs).w;
 		return res;
 	}
-	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator && (Vec lhs, Vec rhs)
+	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator && (Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -337,11 +337,11 @@ namespace pr::math
 	}
 
 	// Quaternion Operators
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator + (Quat const& lhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator + (Quat const& lhs) noexcept
 	{
 		return lhs;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator - (Quat const& lhs) // Note: Not conjugate
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator - (Quat const& lhs) noexcept // Note: Not conjugate
 	{
 		return {
 			-vec(lhs).x,
@@ -350,7 +350,7 @@ namespace pr::math
 			-vec(lhs).w,
 		};
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator ~ (Quat const& lhs) // This is conjugate
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator ~ (Quat const& lhs) noexcept // This is conjugate
 	{
 		return {
 			-vec(lhs).x,
@@ -359,7 +359,7 @@ namespace pr::math
 			 vec(lhs).w,
 		};
 	}
-	template <QuaternionType Quat> constexpr Quat& pr_vectorcall operator *= (Quat& lhs, typename vector_traits<Quat>::element_t rhs)
+	template <QuaternionType Quat> constexpr Quat& pr_vectorcall operator *= (Quat& lhs, typename vector_traits<Quat>::element_t rhs) noexcept
 	{
 		vec(lhs).x *= rhs;
 		vec(lhs).y *= rhs;
@@ -367,17 +367,17 @@ namespace pr::math
 		vec(lhs).w *= rhs;
 		return lhs;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (Quat const& lhs, typename vector_traits<Quat>::element_t rhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (Quat const& lhs, typename vector_traits<Quat>::element_t rhs) noexcept
 	{
 		Quat res = lhs;
 		return res *= rhs;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (typename vector_traits<Quat>::element_t lhs, Quat const& rhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (typename vector_traits<Quat>::element_t lhs, Quat const& rhs) noexcept
 	{
 		Quat res = rhs;
 		return res *= lhs;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (Quat const& lhs, Quat const& rhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator * (Quat const& lhs, Quat const& rhs) noexcept
 	{
 		// Quaternion multiply
 		// Note about 'quat multiply' vs. 'r = q*v*conj(q)':
@@ -395,7 +395,7 @@ namespace pr::math
 		vec(res).w = vec(lhs).w * vec(rhs).w - vec(lhs).x * vec(rhs).x - vec(lhs).y * vec(rhs).y - vec(lhs).z * vec(rhs).z;
 		return res;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator /= (Quat& lhs, typename vector_traits<Quat>::element_t rhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator /= (Quat& lhs, typename vector_traits<Quat>::element_t rhs) noexcept
 	{
 		vec(lhs).x /= rhs;
 		vec(lhs).y /= rhs;
@@ -403,7 +403,7 @@ namespace pr::math
 		vec(lhs).w /= rhs;
 		return lhs;
 	}
-	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator / (Quat const& lhs, typename vector_traits<Quat>::element_t rhs)
+	template <QuaternionType Quat> constexpr Quat pr_vectorcall operator / (Quat const& lhs, typename vector_traits<Quat>::element_t rhs) noexcept
 	{
 		Quat res = lhs;
 		return res /= rhs;
@@ -416,31 +416,31 @@ namespace pr::math
 	constexpr Mat pr_vectorcall operator * (Mat const& b2c, Mat const& a2b) noexcept;
 
 	// Constants
-	template <typename S> constexpr S Zero()
+	template <typename S> constexpr S Zero() noexcept
 	{
 		return S(0);
 	}
-	template <typename S> constexpr S One()
+	template <typename S> constexpr S One() noexcept
 	{
 		return S(1);
 	}
-	template <typename S> constexpr S Min()
+	template <typename S> constexpr S Min() noexcept
 	{
 		return std::numeric_limits<S>::lowest();
 	}
-	template <typename S> constexpr S Max()
+	template <typename S> constexpr S Max() noexcept
 	{
 		return std::numeric_limits<S>::max();
 	}
-	template <typename S> constexpr S Infinity()
+	template <typename S> constexpr S Infinity() noexcept
 	{
 		return std::numeric_limits<S>::infinity();
 	}
-	template <typename S> constexpr S Epsilon()
+	template <typename S> constexpr S Epsilon() noexcept
 	{
 		return std::numeric_limits<S>::epsilon();
 	}
-	template <VectorType Vec> constexpr Vec Zero()
+	template <VectorType Vec> constexpr Vec Zero() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -452,7 +452,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Zero<C>();
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec One()
+	template <VectorType Vec> constexpr Vec One() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -464,7 +464,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = One<C>();
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec Min()
+	template <VectorType Vec> constexpr Vec Min() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -476,7 +476,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Min<C>();
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec Max()
+	template <VectorType Vec> constexpr Vec Max() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -488,7 +488,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Max<C>();
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec Infinity()
+	template <VectorType Vec> constexpr Vec Infinity() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -500,7 +500,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Infinity<C>();
 		return res;
 	}
-	template <VectorType Vec> constexpr Vec Epsilon()
+	template <VectorType Vec> constexpr Vec Epsilon() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using C = typename vt::component_t;
@@ -512,7 +512,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Epsilon<C>();
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 1) constexpr Vec XAxis()
+	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 1) constexpr Vec XAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -524,7 +524,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 2) constexpr Vec YAxis()
+	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 2) constexpr Vec YAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -536,7 +536,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 3) constexpr Vec ZAxis()
+	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 3) constexpr Vec ZAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -548,7 +548,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec WAxis()
+	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec WAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -560,7 +560,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(1);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec Origin()
+	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec Origin() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -572,7 +572,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(1);
 		return res;
 	}
-	template <VectorType Mat> requires (IsRank2<Mat>) constexpr Mat Identity()
+	template <VectorType Mat> requires (IsRank2<Mat>) constexpr Mat Identity() noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -583,18 +583,18 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Origin<typename vt::component_t>();
 		return res;
 	}
-	template <QuaternionType Quat> constexpr Quat Identity()
+	template <QuaternionType Quat> constexpr Quat Identity() noexcept
 	{
 		using S = typename vector_traits<Quat>::element_t;
 		return { S(0), S(0), S(0), S(1) };
 	}
 
 	// NaN test
-	template <ScalarType S> constexpr bool IsNaN(S value)
+	template <ScalarType S> constexpr bool IsNaN(S value) noexcept
 	{
 		return value != value; // NaN is the only value that is not equal to itself
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall IsNaN(Vec v, bool any = true) // false = all
+	template <TensorType Vec> constexpr bool pr_vectorcall IsNaN(Vec v, bool any = true) noexcept // false = all
 	{
 		using vt = vector_traits<Vec>;
 		bool yes;
@@ -618,7 +618,7 @@ namespace pr::math
 	}
 
 	// Finite test
-	template <ScalarType S> constexpr bool IsFinite(S value)
+	template <ScalarType S> constexpr bool IsFinite(S value) noexcept
 	{
 		if consteval
 		{
@@ -633,11 +633,11 @@ namespace pr::math
 				return true;
 		}
 	}
-	template <ScalarType S> constexpr bool IsFinite(S value, S max_value)
+	template <ScalarType S> constexpr bool IsFinite(S value, S max_value) noexcept
 	{
 		return IsFinite(value) && value < max_value && value > -max_value;
 	}
-	template <TensorType Vec> constexpr bool pr_vectorcall IsFinite(Vec v, bool any = false)
+	template <TensorType Vec> constexpr bool pr_vectorcall IsFinite(Vec v, bool any = false) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		bool yes;
@@ -661,7 +661,7 @@ namespace pr::math
 	}
 
 	// Return true if any element satisfies 'Pred'
-	template <TensorType Vec, typename Pred> constexpr bool pr_vectorcall Any(Vec v, Pred pred)
+	template <TensorType Vec, typename Pred> constexpr bool pr_vectorcall Any(Vec v, Pred pred) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		bool yes = false;
@@ -673,7 +673,7 @@ namespace pr::math
 	}
 
 	// Return true if all elements satisfy 'Pred'
-	template <TensorType Vec, typename Pred> constexpr bool pr_vectorcall All(Vec v, Pred pred)
+	template <TensorType Vec, typename Pred> constexpr bool pr_vectorcall All(Vec v, Pred pred) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		bool yes = true;
@@ -683,13 +683,13 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) yes = yes && pred(vec(v).w);
 		return yes;
 	}
-	template <std::ranges::input_range Range, typename Pred> constexpr bool Any(Range&& range, Pred pred) requires (!TensorType<std::decay_t<Range>>)
+	template <std::ranges::input_range Range, typename Pred> constexpr bool Any(Range&& range, Pred pred) noexcept requires (!TensorType<std::decay_t<Range>>)
 	{
 		for (auto&& element : range)
 			if (pred(element)) return true;
 		return false;
 	}
-	template <std::ranges::input_range Range, typename Pred> constexpr bool All(Range&& range, Pred pred) requires (!TensorType<std::decay_t<Range>>)
+	template <std::ranges::input_range Range, typename Pred> constexpr bool All(Range&& range, Pred pred) noexcept requires (!TensorType<std::decay_t<Range>>)
 	{
 		for (auto&& element : range)
 			if (!pred(element)) return false;
@@ -697,18 +697,18 @@ namespace pr::math
 	}
 
 	// Absolute value (component-wise)
-	template <std::integral S> constexpr S Abs(S v)
+	template <std::integral S> constexpr S Abs(S v) noexcept
 	{
 		if constexpr (std::is_unsigned_v<S>)
 			return v;
 		else
 			return v >= S(0) ? v : -v;
 	}
-	template <std::floating_point S> constexpr S Abs(S v)
+	template <std::floating_point S> constexpr S Abs(S v) noexcept
 	{
 		return v >= S(0) ? v : -v;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Abs(Vec v)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Abs(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -720,15 +720,15 @@ namespace pr::math
 	}
 
 	// Min/Max
-	template <ScalarType S> constexpr S Min(S x, S y)
+	template <ScalarType S> constexpr S Min(S x, S y) noexcept
 	{
 		return (x < y) ? x : y;
 	}
-	template <ScalarType S> constexpr S Max(S x, S y)
+	template <ScalarType S> constexpr S Max(S x, S y) noexcept
 	{
 		return (x < y) ? y : x;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Min(Vec x, Vec y)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Min(Vec x, Vec y) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -738,7 +738,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Min(vec(x).w, vec(y).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Max(Vec x, Vec y)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Max(Vec x, Vec y) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -748,22 +748,22 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Max(vec(x).w, vec(y).w);
 		return res;
 	}
-	template <typename T, typename... A> constexpr T Min(T const& x, T const& y, A&&... a)
+	template <typename T, typename... A> constexpr T Min(T const& x, T const& y, A&&... a) noexcept
 	{
 		return Min(Min(x, y), std::forward<A>(a)...);
 	}
-	template <typename T, typename... A> constexpr T Max(T const& x, T const& y, A&&... a)
+	template <typename T, typename... A> constexpr T Max(T const& x, T const& y, A&&... a) noexcept
 	{
 		return Max(Max(x, y), std::forward<A>(a)...);
 	}
 
 	// Clamp
-	template <ScalarType S> constexpr S Clamp(S x, S mn, S mx)
+	template <ScalarType S> constexpr S Clamp(S x, S mn, S mx) noexcept
 	{
 		pr_assert(!(mx < mn) && "[min,max] must be a positive range");
 		return (mx < x) ? mx : (x < mn) ? mn : x;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Clamp(Vec x, Vec mn, Vec mx)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Clamp(Vec x, Vec mn, Vec mx) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -775,15 +775,15 @@ namespace pr::math
 	}
 
 	// Square/Signed Square
-	template <ScalarType S> constexpr S Square(S x)
+	template <ScalarType S> constexpr S Square(S x) noexcept
 	{
 		return x * x;
 	}
-	template <ScalarType S> constexpr S SignedSqr(S x)
+	template <ScalarType S> constexpr S SignedSqr(S x) noexcept
 	{
 		return x >= S() ? +Square(x) : -Square(x);
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall SignedSqr(Vec v)
+	template <TensorType Vec> constexpr Vec pr_vectorcall SignedSqr(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -795,19 +795,19 @@ namespace pr::math
 	}
 
 	// Square root/Signed Square root
-	constexpr double SqrtCT(double x)
+	constexpr double SqrtCT(double x) noexcept
 	{
 		// For a finite and non-negative value of "x", returns an approximation for the square root of "x", otherwise returns NaN.
 		struct L
 		{
-			constexpr static double NewtonRaphson(double x, double curr, double prev)
+			constexpr static double NewtonRaphson(double x, double curr, double prev) noexcept
 			{
 				return curr == prev ? curr : NewtonRaphson(x, 0.5 * (curr + x / curr), curr);
 			}
 		};
 		return x >= 0 && x < std::numeric_limits<double>::infinity() ? L::NewtonRaphson(x, x, 0) : std::numeric_limits<double>::quiet_NaN();
 	}
-	template <ScalarType S> constexpr S Sqrt(S x)
+	template <ScalarType S> constexpr S Sqrt(S x) noexcept
 	{
 		if constexpr (std::floating_point<S>)
 			pr_assert("Sqrt of undefined value" && IsFinite(x));
@@ -823,25 +823,25 @@ namespace pr::math
 			return static_cast<S>(std::sqrt(x));
 		}
 	}
-	template <ScalarType S> constexpr S SignedSqrt(S x)
+	template <ScalarType S> constexpr S SignedSqrt(S x) noexcept
 	{
 		return x >= S(0) ? +Sqrt(x) : -Sqrt(-x);
 	}
-	template <ScalarType S> constexpr S CompSqrt(S x)
+	template <ScalarType S> constexpr S CompSqrt(S x) noexcept
 	{
 		return Sqrt(x);
 	}
-	template <ScalarType S> constexpr S CompSignedSqrt(S x)
+	template <ScalarType S> constexpr S CompSignedSqrt(S x) noexcept
 	{
 		return SignedSqrt(x);
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Sqrt(Vec) requires (IsRank1<Vec>)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Sqrt(Vec) noexcept requires (IsRank1<Vec>)
 	{
 		// Sqrt is ill-defined for non-square matrices.
 		// Matrices have an overload that finds the matrix whose product is 'x'.
 		static_assert(std::is_same_v<Vec, void>, "Sqrt is not defined for general vector types");
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSqrt(Vec v) // Component Sqrt
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSqrt(Vec v) noexcept // Component Sqrt
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -851,7 +851,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = CompSqrt(vec(v).w);
 		return res;
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSignedSqrt(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall CompSignedSqrt(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -863,7 +863,7 @@ namespace pr::math
 	}
 
 	// Integer square root
-	template <std::integral T> constexpr T ISqrt(T x)
+	template <std::integral T> constexpr T ISqrt(T x) noexcept
 	{
 		// Compile time version of the square root.
 		//  - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
@@ -881,11 +881,11 @@ namespace pr::math
 		}
 		return Abs(x - curr * curr) < Abs(x - prev * prev) ? curr : prev;
 	}
-	template <std::integral T> constexpr T CompISqrt(T x)
+	template <std::integral T> constexpr T CompISqrt(T x) noexcept
 	{
 		return ISqrt(x);
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall CompISqrt(Vec v) requires (std::integral<typename vector_traits<Vec>::element_t>)
+	template <TensorType Vec> constexpr Vec pr_vectorcall CompISqrt(Vec v) noexcept requires (std::integral<typename vector_traits<Vec>::element_t>)
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -897,7 +897,7 @@ namespace pr::math
 	}
 
 	// Return the component sum
-	template <VectorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall CompSum(Vec v)
+	template <VectorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall CompSum(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -922,7 +922,7 @@ namespace pr::math
 
 	// Scale each component of 'mat' by the values in 'scale'
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall CompMul(Mat const& mat, typename vector_traits<Mat>::component_t scale)
+	constexpr Mat pr_vectorcall CompMul(Mat const& mat, typename vector_traits<Mat>::component_t scale) noexcept
 	{
 		Mat m = mat;
 		if constexpr (vector_traits<Mat>::dimension > 0) vec(m).x *= scale;
@@ -933,15 +933,15 @@ namespace pr::math
 	}
 
 	// Min/Max element (i.e. nearest to -inf/+inf)
-	template <ScalarType S> constexpr S MinElement(S v)
+	template <ScalarType S> constexpr S MinElement(S v) noexcept
 	{
 		return v;
 	}
-	template <ScalarType S> constexpr S MaxElement(S v)
+	template <ScalarType S> constexpr S MaxElement(S v) noexcept
 	{
 		return v;
 	}
-	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MinElement(Vec v)
+	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MinElement(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		auto minimum = Max<typename vt::element_t>();
@@ -951,7 +951,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) minimum = std::min(minimum, MinElement(vec(v).w));
 		return minimum;
 	}
-	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MaxElement(Vec v)
+	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MaxElement(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		auto maximum = Min<typename vt::element_t>();
@@ -961,7 +961,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) maximum = std::max(maximum, MaxElement(vec(v).w));
 		return maximum;
 	}
-	template <std::ranges::input_range Range> constexpr auto MinElement(Range&& range)
+	template <std::ranges::input_range Range> constexpr auto MinElement(Range&& range) noexcept
 	{
 		// Note: if 'range' is a Vec4[], this will find the minimum element among all components of all vectors, not the minimum vector by component comparison.
 		using value_t = std::ranges::range_value_t<Range>;
@@ -972,7 +972,7 @@ namespace pr::math
 			minimum = std::min(minimum, MinElement(element));
 		return minimum;
 	}
-	template <std::ranges::input_range Range> constexpr auto MaxElement(Range&& range)
+	template <std::ranges::input_range Range> constexpr auto MaxElement(Range&& range) noexcept
 	{
 		// Note: if 'range' is a Vec4[], this will find the maximum element among all components of all vectors, not the maximum vector by component comparison.
 		using value_t = std::ranges::range_value_t<Range>;
@@ -985,15 +985,15 @@ namespace pr::math
 	}
 
 	// Min/Max absolute element (i.e. nearest to 0/+inf)
-	template <ScalarType S> constexpr S MinElementAbs(S v)
+	template <ScalarType S> constexpr S MinElementAbs(S v) noexcept
 	{
 		return Abs(v);
 	}
-	template <ScalarType S> constexpr S MaxElementAbs(S v)
+	template <ScalarType S> constexpr S MaxElementAbs(S v) noexcept
 	{
 		return Abs(v);
 	}
-	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MinElementAbs(Vec v)
+	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MinElementAbs(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1004,7 +1004,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) res = Min(res, MinElementAbs(vec(v).w));
 		return res;
 	}
-	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MaxElementAbs(Vec v)
+	template <TensorType Vec> constexpr typename vector_traits<Vec>::element_t pr_vectorcall MaxElementAbs(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1017,7 +1017,7 @@ namespace pr::math
 	}
 
 	// Smallest/Largest element index. Returns the index of the first min/max element if elements are equal.
-	template <TensorType Vec> constexpr int pr_vectorcall MinElementIndex(Vec v) requires (IsRank1<Vec>)
+	template <TensorType Vec> constexpr int pr_vectorcall MinElementIndex(Vec v) noexcept requires (IsRank1<Vec>)
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1030,7 +1030,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) idx = vec(v).w < val ? (val = vec(v).w, 3) : idx;
 		return idx;
 	}
-	template <TensorType Vec> constexpr int pr_vectorcall MaxElementIndex(Vec v) requires (IsRank1<Vec>)
+	template <TensorType Vec> constexpr int pr_vectorcall MaxElementIndex(Vec v) noexcept requires (IsRank1<Vec>)
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1043,7 +1043,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) idx = vec(v).w > val ? (val = vec(v).w, 3) : idx;
 		return idx;
 	}
-	template <std::ranges::input_range Range> constexpr int MinElementIndex(Range&& range)
+	template <std::ranges::input_range Range> constexpr int MinElementIndex(Range&& range) noexcept
 	{
 		using value_t = std::ranges::range_value_t<Range>;
 		using element_t = decltype(MinElement(std::declval<value_t>()));
@@ -1062,7 +1062,7 @@ namespace pr::math
 		}
 		return min_idx;
 	}
-	template <std::ranges::input_range Range> constexpr int MaxElementIndex(Range&& range)
+	template <std::ranges::input_range Range> constexpr int MaxElementIndex(Range&& range) noexcept
 	{
 		using value_t = std::ranges::range_value_t<Range>;
 		using element_t = decltype(MaxElement(std::declval<value_t>()));
@@ -1083,13 +1083,13 @@ namespace pr::math
 	}
 
 	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if 'a' is in the range (b-tol,b+tol)
-	template <std::floating_point T> constexpr bool FEqlAbsolute(T a, T b, T tol)
+	template <std::floating_point T> constexpr bool FEqlAbsolute(T a, T b, T tol) noexcept
 	{
 		// When float operations are performed at compile time, the compiler warnings about 'inf'
-		assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
+		pr_assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
 		return Abs(a - b) < tol;
 	}
-	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlAbsolute(Vec lhs, Vec rhs, auto tol)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlAbsolute(Vec lhs, Vec rhs, auto tol) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		bool eql = true;
@@ -1101,7 +1101,7 @@ namespace pr::math
 	}
 
 	// Floating point comparisons. *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
-	template <std::floating_point T> constexpr bool FEqlRelative(T a, T b, T tol)
+	template <std::floating_point T> constexpr bool FEqlRelative(T a, T b, T tol) noexcept
 	{
 		// Floating point compare is dangerous and subtle.
 		// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
@@ -1124,7 +1124,7 @@ namespace pr::math
 		auto abs_max_element = std::max(Abs(a), Abs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
-	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlRelative(Vec lhs, Vec rhs, auto tol)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEqlRelative(Vec lhs, Vec rhs, auto tol) noexcept
 	{
 		auto max_a = MaxElement(Abs(lhs));
 		auto max_b = MaxElement(Abs(rhs));
@@ -1135,19 +1135,19 @@ namespace pr::math
 	}
 
 	// FEqlRelative using 'Tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
-	template <std::floating_point S> constexpr bool FEql(S a, S b)
+	template <std::floating_point S> constexpr bool FEql(S a, S b) noexcept
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
 		return FEqlRelative(a, b, constants<S>::tiny);
 	}
-	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEql(Vec lhs, Vec rhs)
+	template <TensorTypeFP Vec> constexpr bool pr_vectorcall FEql(Vec lhs, Vec rhs) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		return FEqlRelative(lhs, rhs, constants<S>::tiny);
 	}
 
 	// Ceil/Floor/Round/Modulus
-	template <ScalarTypeFP S> constexpr S Ceil(S x)
+	template <ScalarTypeFP S> constexpr S Ceil(S x) noexcept
 	{
 		if consteval
 		{
@@ -1162,7 +1162,7 @@ namespace pr::math
 			return static_cast<S>(std::ceil(x));
 		}
 	}
-	template <ScalarTypeFP S> constexpr S Floor(S x)
+	template <ScalarTypeFP S> constexpr S Floor(S x) noexcept
 	{
 		if consteval
 		{
@@ -1177,7 +1177,7 @@ namespace pr::math
 			return static_cast<S>(std::floor(x));
 		}
 	}
-	template <ScalarTypeFP S> constexpr S Round(S x)
+	template <ScalarTypeFP S> constexpr S Round(S x) noexcept
 	{
 		if consteval
 		{
@@ -1192,7 +1192,7 @@ namespace pr::math
 			return static_cast<S>(std::round(x));
 		}
 	}
-	template <ScalarTypeFP S> constexpr S RoundSD(S d, int significant_digits)
+	template <ScalarTypeFP S> constexpr S RoundSD(S d, int significant_digits) noexcept
 	{
 		pr_assert(significant_digits >= 0 && "'significant_digits' value must be >= 0");
 
@@ -1221,14 +1221,14 @@ namespace pr::math
 		auto result = scale != 0 ? static_cast<S>(Round<double>(d * scale) / scale) : S{};
 		return result;
 	}
-	template <ScalarType S> constexpr S Modulus(S x, S y)
+	template <ScalarType S> constexpr S Modulus(S x, S y) noexcept
 	{
 		if constexpr (std::floating_point<S>)
 			return std::fmod(x, y);
 		else
 			return x % y;
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Ceil(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Ceil(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1238,7 +1238,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Ceil(vec(v).w);
 		return res;
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Floor(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Floor(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1248,7 +1248,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Floor(vec(v).w);
 		return res;
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Round(Vec v)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall Round(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1258,7 +1258,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Round(vec(v).w);
 		return res;
 	}
-	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall RoundSD(Vec v, int significant_digits)
+	template <TensorTypeFP Vec> constexpr Vec pr_vectorcall RoundSD(Vec v, int significant_digits) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1268,7 +1268,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = RoundSD(vec(v).w, significant_digits);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec Modulus(Vec x, Vec y)
+	template <TensorType Vec> constexpr Vec Modulus(Vec x, Vec y) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1280,7 +1280,7 @@ namespace pr::math
 	}
 
 	// Wrap 'x' to range [mn, mx)
-	template <ScalarType S> constexpr S Wrap(S x, S mn, S mx)
+	template <ScalarType S> constexpr S Wrap(S x, S mn, S mx) noexcept
 	{
 		// Given the range ['mn', 'mx') and 'x' somewhere on the number line.
 		// Return 'x' wrapped into the range, allowing for 'x' < 'mn'.
@@ -1289,24 +1289,24 @@ namespace pr::math
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
-	constexpr int Bool2SignI(bool positive)
+	constexpr int Bool2SignI(bool positive) noexcept
 	{
 		return positive ? +1 : -1;
 	}
-	constexpr float Bool2SignF(bool positive)
+	constexpr float Bool2SignF(bool positive) noexcept
 	{
 		return positive ? +1.0f : -1.0f;
 	}
 
 	// Sign, returns +1 if x >= 0 otherwise -1. If 'zero_is_positive' is false, then 0 in gives 0 out.
-	template <ScalarType S> constexpr S Sign(S x, bool zero_is_positive = true)
+	template <ScalarType S> constexpr S Sign(S x, bool zero_is_positive = true) noexcept
 	{
 		if constexpr (std::is_unsigned_v<S>)
 			return x > 0 ? +S(1) : static_cast<S>(zero_is_positive);
 		else
 			return x > 0 ? +S(1) : x < 0 ? -S(1) : static_cast<S>(zero_is_positive);
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Sign(Vec v, bool zero_is_positive = true)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Sign(Vec v, bool zero_is_positive = true) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1318,13 +1318,13 @@ namespace pr::math
 	}
 
 	// Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 'def'
-	template <typename T> constexpr T Div(T a, T b, T def = {}) requires (requires (T x) { x / x; x != x; })
+	template <typename T> constexpr T Div(T a, T b, T def = {}) noexcept requires (requires (T x) { x / x; x != x; })
 	{
 		return b != T{} ? a / b : def;
 	}
 
 	// Truncate value
-	template <ScalarType S> constexpr S Trunc(S x, ETruncate trunc = ETruncate::TowardZero) requires (std::floating_point<S>)
+	template <ScalarType S> constexpr S Trunc(S x, ETruncate trunc = ETruncate::TowardZero) noexcept requires (std::floating_point<S>)
 	{
 		switch (trunc)
 		{
@@ -1333,7 +1333,7 @@ namespace pr::math
 			default: pr_assert("Unknown truncation type" && false); return x;
 		}
 	}
-	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Trunc(Vec v, ETruncate trunc = ETruncate::TowardZero)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Trunc(Vec v, ETruncate trunc = ETruncate::TowardZero) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1345,7 +1345,7 @@ namespace pr::math
 	}
 
 	// Fractional part
-	template <ScalarType S> constexpr S Frac(S x) requires (std::floating_point<S>)
+	template <ScalarType S> constexpr S Frac(S x) noexcept requires (std::floating_point<S>)
 	{
 		if consteval
 		{
@@ -1360,7 +1360,7 @@ namespace pr::math
 			return std::modf(x, &n);
 		}
 	}
-	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec v)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1372,7 +1372,7 @@ namespace pr::math
 	}
 
 	// Square a value
-	template <ScalarType S> constexpr S Sqr(S x)
+	template <ScalarType S> constexpr S Sqr(S x) noexcept
 	{
 		if constexpr (std::is_same_v<S, int8_t>)
 			pr_assert("Overflow" && Abs(x) <= 0xB);
@@ -1393,7 +1393,7 @@ namespace pr::math
 
 		return x * x;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall Sqr(Vec v)
+	template <VectorType Vec> constexpr Vec pr_vectorcall Sqr(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1405,7 +1405,7 @@ namespace pr::math
 	}
 
 	// Cube a value
-	template <ScalarType S> constexpr S Cube(S x)
+	template <ScalarType S> constexpr S Cube(S x) noexcept
 	{
 		if constexpr (std::is_same_v<S, int8_t>)
 			pr_assert("Overflow" && Abs(x) <= 0x5);
@@ -1426,7 +1426,7 @@ namespace pr::math
 
 		return x * x * x;
 	}
-	template <VectorType Vec> constexpr Vec pr_vectorcall Cube(Vec v)
+	template <VectorType Vec> constexpr Vec pr_vectorcall Cube(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1438,31 +1438,31 @@ namespace pr::math
 	}
 
 	// Raise 'x' to an integer power
-	constexpr int Pow2(int n)
+	constexpr int Pow2(int n) noexcept
 	{
 		return 1 << n;
 	}
-	template <ScalarType S> constexpr S Pow(S x, int y)
+	template <ScalarType S> constexpr S Pow(S x, int y) noexcept
 	{
 		return y == 0 ? 1 : x * Pow(x, y - 1);
 	}
-	template <ScalarTypeFP S> inline S Pow(S x, S y)
+	template <ScalarTypeFP S> inline S Pow(S x, S y) noexcept
 	{
 		return static_cast<S>(std::pow(x, y));
 	}
-	template <ScalarTypeFP S> inline S Exp(S x)
+	template <ScalarTypeFP S> inline S Exp(S x) noexcept
 	{
 		return static_cast<S>(std::exp(x));
 	}
-	template <ScalarTypeFP S> inline S Log10(S x)
+	template <ScalarTypeFP S> inline S Log10(S x) noexcept
 	{
 		return static_cast<S>(std::log10(x));
 	}
-	template <ScalarTypeFP S> inline S Log(S x)
+	template <ScalarTypeFP S> inline S Log(S x) noexcept
 	{
 		return static_cast<S>(std::log(x));
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Pow(Vec v, int y)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Pow(Vec v, int y) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1472,7 +1472,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Pow(vec(v).w, y);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Exp(Vec v)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Exp(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1482,7 +1482,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Exp(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Log10(Vec v)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Log10(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1492,7 +1492,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Log10(vec(v).w);
 		return res;
 	}
-	template <TensorType Vec> constexpr Vec pr_vectorcall Log(Vec v, int y)
+	template <TensorType Vec> constexpr Vec pr_vectorcall Log(Vec v, int y) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
@@ -1504,7 +1504,7 @@ namespace pr::math
 	}
 
 	// atan2 that returns a positive angle in the range [0, tau)
-	template <ScalarType S> inline S Atan2Positive(S y, S x)
+	template <ScalarType S> inline S Atan2Positive(S y, S x) noexcept
 	{
 		auto a = std::atan2(y, x);
 		if (a < 0) a += constants<S>::tau;
@@ -1512,22 +1512,22 @@ namespace pr::math
 	}
 
 	// Convert degrees/radians
-	template <ScalarType S> constexpr S DegreesToRadians(S degrees)
+	template <ScalarType S> constexpr S DegreesToRadians(S degrees) noexcept
 	{
 		return static_cast<S>(degrees * constants<S>::tau / S(360));
 	}
-	template <ScalarType S> constexpr S RadiansToDegrees(S radians)
+	template <ScalarType S> constexpr S RadiansToDegrees(S radians) noexcept
 	{
 		return static_cast<S>(radians * S(360) / constants<S>::tau);
 	}
 	
 	// Return the normalised fraction that 'x' is, in the range ['min', 'max']
-	template <ScalarTypeFP S> constexpr S Frac(S min, S x, S max)
+	template <ScalarTypeFP S> constexpr S Frac(S min, S x, S max) noexcept
 	{
 		pr_assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
 		return (x - min) / (max - min);
 	}
-	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec min, Vec x, Vec max)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Frac(Vec min, Vec x, Vec max) noexcept
 	{
 		auto n = x - min;
 		auto d = max - min;
@@ -1535,18 +1535,18 @@ namespace pr::math
 	}
 
 	// Linearly interpolate from 'lhs' to 'rhs'
-	template <ScalarTypeFP S> constexpr S Lerp(S lhs, S rhs, std::floating_point auto frac)
+	template <ScalarTypeFP S> constexpr S Lerp(S lhs, S rhs, std::floating_point auto frac) noexcept
 	{
 		return static_cast<S>(lhs + frac * (rhs - lhs));
 	}
-	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Lerp(Vec lhs, Vec rhs, typename vector_traits<Vec>::element_t frac)
+	template <VectorTypeFP Vec> constexpr Vec pr_vectorcall Lerp(Vec lhs, Vec rhs, typename vector_traits<Vec>::element_t frac) noexcept
 	{
 		// Don't implement this for integral vector types, callers can just cast from FP to intg.
 		return lhs + frac * (rhs - lhs);
 	}
 
 	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall Slerp(Vec a, Vec b, typename vector_traits<Vec>::element_t frac)
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Slerp(Vec a, Vec b, typename vector_traits<Vec>::element_t frac) noexcept
 	{
 		pr_assert("Cannot spherically interpolate to/from the zero vector" && a != Zero<Vec>() && b != Zero<Vec>());
 
@@ -1558,12 +1558,12 @@ namespace pr::math
 	}
 
 	// Quantise a value to a power of two. 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc
-	template <ScalarTypeFP S, std::integral I> constexpr S Quantise(S x, I scale)
+	template <ScalarTypeFP S, std::integral I> constexpr S Quantise(S x, I scale) noexcept
 	{
 		// The purpose of 'Quantise' is to round 'x' to the nearest representable floating number using 'N' mantissa bits where '1 << N' == 'scale.
 		return static_cast<I>(x * scale) / static_cast<S>(scale);
 	}
-	template <VectorTypeFP Vec, std::integral I> constexpr Vec pr_vectorcall Quantise(Vec v, I scale)
+	template <VectorTypeFP Vec, std::integral I> constexpr Vec pr_vectorcall Quantise(Vec v, I scale) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1577,14 +1577,14 @@ namespace pr::math
 	}
 
 	// Return the cosine of the angle of the triangle apex opposite 'opp'
-	template <ScalarTypeFP S> constexpr S CosAngle(S adj0, S adj1, S opp)
+	template <ScalarTypeFP S> constexpr S CosAngle(S adj0, S adj1, S opp) noexcept
 	{
 		pr_assert("Angle undefined an when adjacent length is zero" && !FEql(adj0, S{}) && !FEql(adj1, S{}));
 		return Clamp<S>((adj0*adj0 + adj1*adj1 - opp*opp) / (S(2) * adj0 * adj1), -S(1), +S(1));
 	}
 
 	// Return the cosine of the angle between two vectors
-	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall CosAngle(Vec lhs, Vec rhs)
+	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall CosAngle(Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1593,32 +1593,32 @@ namespace pr::math
 	}
 
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
-	template <ScalarTypeFP S> inline S Angle(S adj0, S adj1, S opp)
+	template <ScalarTypeFP S> inline S Angle(S adj0, S adj1, S opp) noexcept
 	{
 		return std::acos(CosAngle(adj0, adj1, opp));
 	}
 
 	// Return the angle between two vectors
-	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall Angle(Vec lhs, Vec rhs)
+	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline typename vector_traits<Vec>::element_t pr_vectorcall Angle(Vec lhs, Vec rhs) noexcept
 	{
 		return std::acos(CosAngle(lhs, rhs));
 	}
 
 	// Return the length of a triangle side given by two adjacent side lengths and an angle between them
-	template <ScalarTypeFP S> inline S Length(S adj0, S adj1, S angle)
+	template <ScalarTypeFP S> inline S Length(S adj0, S adj1, S angle) noexcept
 	{
 		auto len_sq = adj0*adj0 + adj1*adj1 - 2 * adj0 * adj1 * std::cos(angle);
 		return len_sq > 0 ? Sqrt(len_sq) : 0;
 	}
 
 	// Returns 1 if 'hi' is > 'lo' otherwise 0
-	template <ScalarType S> constexpr S Step(S lo, S hi)
+	template <ScalarType S> constexpr S Step(S lo, S hi) noexcept
 	{
 		return lo <= hi ? S(0) : S(1);
 	}
 
 	// Returns the 'Hermite' interpolation (3t^2 - 2t^3) between 'lo' and 'hi' for t=[0,1]
-	template <ScalarTypeFP S> constexpr S SmoothStep(S lo, S hi, S t)
+	template <ScalarTypeFP S> constexpr S SmoothStep(S lo, S hi, S t) noexcept
 	{
 		if (lo == hi) return lo;
 		t = Clamp((t - lo) / (hi - lo), S(0), S(1));
@@ -1626,7 +1626,7 @@ namespace pr::math
 	}
 
 	// Returns a fifth-order 'Perlin' interpolation (6t^5 - 15t^4 + 10t^3) between 'lo' and 'hi' for t=[0,1]
-	template <ScalarTypeFP S> constexpr S SmoothStep2(S lo, S hi, S t)
+	template <ScalarTypeFP S> constexpr S SmoothStep2(S lo, S hi, S t) noexcept
 	{
 		if (lo == hi) return lo;
 		t = Clamp((t - lo) / (hi - lo), S(0), S(1));
@@ -1634,7 +1634,7 @@ namespace pr::math
 	}
 
 	// Scale a value on the range [-inf,+inf] to within the range [-1,+1].
-	template <ScalarTypeFP S> inline S Sigmoid(S x, S n = S(1))
+	template <ScalarTypeFP S> inline S Sigmoid(S x, S n = S(1)) noexcept
 	{
 		// 'n' is a horizontal scaling factor.
 		// If n = 1, [-1,+1] maps to [-0.5, +0.5]
@@ -1643,14 +1643,14 @@ namespace pr::math
 	}
 
 	// Scale a value on the range [0,1] such that:' f(0) = 0, f(1) = 1, and df(0.5) = 0'
-	template <ScalarTypeFP S> constexpr S UnitCubic(S x)
+	template <ScalarTypeFP S> constexpr S UnitCubic(S x) noexcept
 	{
 		// This is used to weight values so that values near 0.5 are favoured
 		return S(4) * Cube(x - S(0.5)) + S(0.5);
 	}
 
 	// Low precision reciprocal square root
-	template <ScalarTypeFP S> inline S Rsqrt0(S x)
+	template <ScalarTypeFP S> inline S Rsqrt0(S x) noexcept
 	{
 		S r;
 		if constexpr (PR_MATHS_USE_INTRINSICS && std::is_same_v<S, double>)
@@ -1677,7 +1677,7 @@ namespace pr::math
 	}
 
 	// High(er) precision reciprocal square root
-	template <ScalarTypeFP S> inline S Rsqrt1(S x)
+	template <ScalarTypeFP S> inline S Rsqrt1(S x) noexcept
 	{
 		constexpr S c0 = +3.0;
 		constexpr S c1 = -0.5;
@@ -1717,7 +1717,7 @@ namespace pr::math
 	}
 
 	// Cube root
-	template <ScalarTypeFP S> inline S Cubert(S x)
+	template <ScalarTypeFP S> inline S Cubert(S x) noexcept
 	{
 		// This works because the integer interpretation of an IEEE 754 float
 		// is approximately the log2(x) scaled by 2^23. The basic idea is to
@@ -1761,7 +1761,7 @@ namespace pr::math
 	}
 
 	// Fast hash
-	inline uint32_t Hash(float value, uint32_t max_value)
+	inline uint32_t Hash(float value, uint32_t max_value) noexcept
 	{
 		constexpr uint32_t h = 0x8da6b343; // Arbitrary prime
 		int n = static_cast<int>(h * value);
@@ -1769,7 +1769,7 @@ namespace pr::math
 		if (n < 0) n += max_value;
 		return static_cast<uint32_t>(n);
 	}
-	template <VectorType Vec> inline uint32_t Hash(Vec v, uint32_t max_value)
+	template <VectorType Vec> inline uint32_t Hash(Vec v, uint32_t max_value) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -1787,7 +1787,7 @@ namespace pr::math
 	}
 
 	// Return the greatest common factor between 'a' and 'b'
-	template <std::integral S> constexpr S GreatestCommonFactor(S a, S b)
+	template <std::integral S> constexpr S GreatestCommonFactor(S a, S b) noexcept
 	{
 		// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
 		while (b) { auto t = b; b = a % b; a = t; }
@@ -1795,13 +1795,13 @@ namespace pr::math
 	}
 
 	// Return the least common multiple between 'a' and 'b'
-	template <std::integral S> constexpr S LeastCommonMultiple(S a, S b)
+	template <std::integral S> constexpr S LeastCommonMultiple(S a, S b) noexcept
 	{
 		return (a * b) / GreatestCommonFactor(a, b);
 	}
 
 	// Convert a decimal back to a rational. Returns [numerator, denominator]
-	template <ScalarTypeFP S> std::tuple<int, int> DecimalToRational(double num)
+	template <ScalarTypeFP S> std::tuple<int, int> DecimalToRational(double num) noexcept
 	{
 		(void)num;
 		// Algorithm:
@@ -1829,20 +1829,20 @@ namespace pr::math
 	}
 
 	// Returns the number to add to pad 'size' up to 'alignment'
-	template <std::integral S> constexpr S Pad(S size, int alignment)
+	template <std::integral S> constexpr S Pad(S size, int alignment) noexcept
 	{
 		pr_assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
 		return static_cast<S>(~(size - 1) & (alignment - 1));
 	}
 
 	// Returns 'size' increased to a multiple of 'alignment'
-	template <std::integral S> constexpr S PadTo(S size, int alignment)
+	template <std::integral S> constexpr S PadTo(S size, int alignment) noexcept
 	{
 		return size + Pad<S>(size, alignment);
 	}
 
 	// An infinite range arithmetic sequence
-	template <typename Type> auto ArithmeticSequence(Type initial_value, Type step)
+	template <typename Type> auto ArithmeticSequence(Type initial_value, Type step) noexcept
 	{
 		// A sequence defined by:
 		//  an = a0 + n * step
@@ -1850,21 +1850,21 @@ namespace pr::math
 		struct I
 		{
 			Type a0, step, n;
-			I(Type initial_value, Type step)
+			I(Type initial_value, Type step) noexcept
 				:a0(initial_value)
 				,step(step)
 				,n(0)
 			{}
-			Type operator*() const
+			Type operator*() const noexcept
 			{
 				return static_cast<Type>(a0 + n * step);
 			}
-			I& operator++()
+			I& operator++() noexcept
 			{
 				++n;
 				return *this;
 			}
-			bool operator!=(I const&) const
+			bool operator!=(I const&) const noexcept
 			{
 				return true; // Infinite range
 			}
@@ -1879,14 +1879,14 @@ namespace pr::math
 	}
 	
 	// The sum of the first 'n' terms of an arithmetic sequence
-	template <typename Type> constexpr Type ArithmeticSum(Type a0, Type step, int n)
+	template <typename Type> constexpr Type ArithmeticSum(Type a0, Type step, int n) noexcept
 	{
 		auto an = a0 + n * step;
 		return static_cast<Type>((n + 1) * (a0 + an) / 2);
 	}
 
 	// An infinite range geometric sequence
-	template <typename Type> auto GeometricSequence(Type initial_value, Type ratio)
+	template <typename Type> auto GeometricSequence(Type initial_value, Type ratio) noexcept
 	{
 		// A sequence defined by:
 		//  an = am * r = a0 * r^n, (where m = n - 1)
@@ -1894,21 +1894,21 @@ namespace pr::math
 		struct I
 		{
 			Type a0, ratio, n;
-			I(Type initial_value, Type ratio)
+			I(Type initial_value, Type ratio) noexcept
 				:a0(initial_value)
 				,ratio(ratio)
 				,n(0)
 			{}
-			Type operator*() const
+			Type operator*() const noexcept
 			{
 				return static_cast<Type>(a0 * Pow<double>(ratio, n));
 			}
-			I& operator++()
+			I& operator++() noexcept
 			{
 				++n;
 				return *this;
 			}
-			bool operator!=(I const&) const
+			bool operator!=(I const&) const noexcept
 			{
 				return true; // Infinite range
 			}
@@ -1923,14 +1923,14 @@ namespace pr::math
 	};
 	
 	// The sum of the first 'n' terms of a geometric sequence
-	template <typename Type> constexpr Type GeometricSum(Type a0, Type ratio, int n)
+	template <typename Type> constexpr Type GeometricSum(Type a0, Type ratio, int n) noexcept
 	{
 		auto rn = Pow<double>(ratio, n + 1);
 		return static_cast<Type>(a0 * (1 - rn) / (1 - ratio));
 	}
 
 	// Permutes the elements in 'arr' with each iteration. The first permutation is the ordered array; [0,N). Number of permutations == n!
-	template <std::integral T> auto PermutationsOf(std::span<T> arr)
+	template <std::integral T> auto PermutationsOf(std::span<T> arr) noexcept
 	{
 		// Algorithm:
 		// - find the last pair of values that has increasing order.
@@ -1946,15 +1946,15 @@ namespace pr::math
 			std::span<T> m_arr;
 			bool m_done;
 
-			I(std::span<T> arr, bool done)
+			I(std::span<T> arr, bool done) noexcept
 				:m_arr(arr)
 				,m_done(done)
 			{}
-			std::span<T> operator*() const
+			std::span<T> operator*() const noexcept
 			{
 				return m_arr;
 			}
-			I& operator++()
+			I& operator++() noexcept
 			{
 				int n = static_cast<int>(m_arr.size());
 
@@ -1980,7 +1980,7 @@ namespace pr::math
 				std::sort(m_arr.data() + i + 1, m_arr.data() + n);
 				return *this;
 			}
-			bool operator!=(I const& rhs) const
+			bool operator!=(I const& rhs) const noexcept
 			{
 				return m_done != rhs.m_done;
 			}
@@ -1997,7 +1997,7 @@ namespace pr::math
 
 	// Vector dot product
 	template <TensorType Vec> requires (IsRank1<Vec>)
-	constexpr typename vector_traits<Vec>::element_t Dot(Vec lhs, Vec rhs)
+	constexpr typename vector_traits<Vec>::element_t Dot(Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2009,7 +2009,7 @@ namespace pr::math
 		return product;
 	}
 	template <TensorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 3)
-	constexpr typename vector_traits<Vec>::element_t Dot3(Vec lhs, Vec rhs)
+	constexpr typename vector_traits<Vec>::element_t Dot3(Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2022,14 +2022,14 @@ namespace pr::math
 
 	// Vector cross product
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
-	constexpr typename vector_traits<Vec>::component_t Cross(Vec lhs, Vec rhs)
+	constexpr typename vector_traits<Vec>::component_t Cross(Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		// Note: Sign flipped compared to the old library (pr::maths). Now uses the standard convention: a.x*b.y - a.y*b.x.
 		return vec(lhs).x * vec(rhs).y - vec(lhs).y * vec(rhs).x; // 2D Cross product == Dot(Rotate90CW(lhs), rhs)
 	}
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 3)
-	constexpr Vec Cross(Vec lhs, Vec rhs)
+	constexpr Vec Cross(Vec lhs, Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		return Vec {
@@ -2039,7 +2039,7 @@ namespace pr::math
 		};
 	}
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 4)
-	constexpr Vec Cross(Vec lhs, Vec rhs)
+	constexpr Vec Cross(Vec lhs, Vec rhs) noexcept
 	{
 		// Although this operates on 4D vectors, there is no such thing as a 4D cross product.
 		// This function is provided for convenience when working with 4D homogeneous vectors
@@ -2057,36 +2057,36 @@ namespace pr::math
 
 	// Vector triple product: a . b x c
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 3)
-	constexpr typename vector_traits<Vec>::element_t Triple(Vec a, Vec b, Vec c)
+	constexpr typename vector_traits<Vec>::element_t Triple(Vec a, Vec b, Vec c) noexcept
 	{
 		return Dot(a, Cross(b, c));
 	}
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 3)
-	constexpr typename vector_traits<Vec>::element_t Triple3(Vec a, Vec b, Vec c)
+	constexpr typename vector_traits<Vec>::element_t Triple3(Vec a, Vec b, Vec c) noexcept
 	{
 		return Dot3(a, Cross(b, c));
 	}
 
 	// Squared Length of a vector
 	template <TensorType Vec> requires (IsRank1<Vec>)
-	constexpr typename vector_traits<Vec>::element_t LengthSq(Vec v)
+	constexpr typename vector_traits<Vec>::element_t LengthSq(Vec v) noexcept
 	{
 		return Dot(v, v);
 	}
 
 	// Length of a vector
-	template <std::integral S> constexpr S Length(S x)
+	template <std::integral S> constexpr S Length(S x) noexcept
 	{
 		// Defined for use in recursive vector functions
 		return Abs(x);
 	}
-	template <std::floating_point S> constexpr S Length(S x)
+	template <std::floating_point S> constexpr S Length(S x) noexcept
 	{
 		// Defined for use in recursive vector functions
 		return Abs(x);
 	}
 	template <TensorType Vec> requires (IsRank1<Vec>)
-	constexpr typename vector_traits<Vec>::element_t Length(Vec v)
+	constexpr typename vector_traits<Vec>::element_t Length(Vec v) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		return Sqrt<S>(LengthSq(v));
@@ -2094,7 +2094,7 @@ namespace pr::math
 
 	// Return the trace of this matrix, 
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr typename vector_traits<Mat>::element_t pr_vectorcall Trace(Mat const& mat)
+	constexpr typename vector_traits<Mat>::element_t pr_vectorcall Trace(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2109,24 +2109,24 @@ namespace pr::math
 
 	// Return the determinant of 'mat'
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr typename vector_traits<Mat>::element_t pr_vectorcall Determinant(Mat const& mat)
+	constexpr typename vector_traits<Mat>::element_t pr_vectorcall Determinant(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
-		// @Copilot, is this correct?
+		// The Determinant function uses cofactor expansion along column 0.
 		if constexpr (vt::dimension == 1)
 		{
 			return vec(mat).x;
 		}
-		if constexpr (vt::dimension == 2)
+		else if constexpr (vt::dimension == 2)
 		{
 			return Cross(vec(mat).x, vec(mat).y);
 		}
-		if constexpr (vt::dimension == 3)
+		else if constexpr (vt::dimension == 3)
 		{
 			return Triple3(vec(mat).x, vec(mat).y, vec(mat).z);
 		}
-		if constexpr (vt::dimension == 4)
+		else if constexpr (vt::dimension == 4)
 		{
 			auto c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
 			auto c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
@@ -2144,7 +2144,7 @@ namespace pr::math
 
 	// Return the 4x4 determinant of the affine transform 'mat'
 	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr typename vector_traits<Mat>::element_t pr_vectorcall DeterminantAffine(Mat const& mat)
+	constexpr typename vector_traits<Mat>::element_t pr_vectorcall DeterminantAffine(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2164,7 +2164,7 @@ namespace pr::math
 
 	// Return a vector containing the diagonal elements of this matrix, 
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr typename vector_traits<Mat>::component_t pr_vectorcall Diagonal(Mat const& mat)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall Diagonal(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
@@ -2179,7 +2179,7 @@ namespace pr::math
 
 	// Return the kernel of 'mat'
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr typename vector_traits<Mat>::component_t pr_vectorcall Kernel(Mat const& mat)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall Kernel(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
@@ -2192,7 +2192,7 @@ namespace pr::math
 				-yx,
 			};
 		}
-		if constexpr (vt::dimension == 3)
+		else if constexpr (vt::dimension == 3)
 		{
 			auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z;
 			auto zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z;
@@ -2202,7 +2202,7 @@ namespace pr::math
 				+yx * zy - yy * zx,
 			};
 		}
-		if constexpr (vt::dimension == 4)
+		else if constexpr (vt::dimension == 4)
 		{
 			auto yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z, yw = vec(vec(mat).y).w;
 			auto zx = vec(vec(mat).z).x, zy = vec(vec(mat).z).y, zz = vec(vec(mat).z).z, zw = vec(vec(mat).z).w;
@@ -2218,19 +2218,19 @@ namespace pr::math
 
 	// Normalise a vector
 	template <TensorTypeFP Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall Normalise(Vec v)
+	constexpr Vec pr_vectorcall Normalise(Vec v) noexcept
 	{
 		return v / Length(v);
 	}
 	template <TensorTypeFP Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall Normalise(Vec v, Vec value_if_zero_length)
+	constexpr Vec pr_vectorcall Normalise(Vec v, Vec value_if_zero_length) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		auto len = Length(v);
 		return len > tiny<S> ? v / len : value_if_zero_length;
 	}
 	template <TensorTypeFP Vec, typename IfZeroFactory> requires (IsRank1<Vec> && requires (IfZeroFactory f) { { f() } -> std::convertible_to<Vec>; })
-	constexpr Vec pr_vectorcall Normalise(Vec v, IfZeroFactory value_if_zero_length)
+	constexpr Vec pr_vectorcall Normalise(Vec v, IfZeroFactory value_if_zero_length) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		auto len = Length(v);
@@ -2239,7 +2239,7 @@ namespace pr::math
 
 	// Normalise the columns of a matrix returning the lengths prior to renormalising
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	inline std::tuple<Mat, typename vector_traits<Mat>::component_t> Normalise(Mat const& mat)
+	inline std::tuple<Mat, typename vector_traits<Mat>::component_t> Normalise(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2256,7 +2256,7 @@ namespace pr::math
 
 	// Return true if 'mat' is an orthonormal matrix
 	template <TensorTypeFP Vec> requires (IsRank1<Vec>)
-	constexpr bool pr_vectorcall IsNormalised(Vec v, typename vector_traits<Vec>::element_t tol = tiny<typename vector_traits<Vec>::element_t>)
+	constexpr bool pr_vectorcall IsNormalised(Vec v, typename vector_traits<Vec>::element_t tol = tiny<typename vector_traits<Vec>::element_t>) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		return Abs(LengthSq(v) - S(1)) < tol;
@@ -2264,7 +2264,7 @@ namespace pr::math
 
 	// Return true if 'mat' is an orthogonal matrix
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr bool pr_vectorcall IsOrthogonal(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>)
+	constexpr bool pr_vectorcall IsOrthogonal(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2274,14 +2274,14 @@ namespace pr::math
 			return
 				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol;
 		}
-		if constexpr (vt::dimension == 3)
+		else if constexpr (vt::dimension == 3)
 		{
 			return
 				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol &&
 				Abs(Dot(vec(mat).x, vec(mat).z)) <= tol &&
 				Abs(Dot(vec(mat).y, vec(mat).z)) <= tol;
 		}
-		if constexpr (vt::dimension == 4)
+		else if constexpr (vt::dimension == 4)
 		{
 			return
 				Abs(Dot(vec(mat).x, vec(mat).y)) <= tol &&
@@ -2295,7 +2295,7 @@ namespace pr::math
 
 	// Return true if 'mat' is an orthonormal matrix
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	constexpr bool pr_vectorcall IsOrthonormal(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>)
+	constexpr bool pr_vectorcall IsOrthonormal(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2310,7 +2310,7 @@ namespace pr::math
 
 	// Return true if 'mat' is an affine transform
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	constexpr bool pr_vectorcall IsAffine(Mat const& mat)
+	constexpr bool pr_vectorcall IsAffine(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2330,7 +2330,7 @@ namespace pr::math
 
 	// True if 'mat' can be inverted
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr bool pr_vectorcall IsInvertible(Mat const& mat)
+	constexpr bool pr_vectorcall IsInvertible(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2340,7 +2340,7 @@ namespace pr::math
 
 	// True if 'mat' is symmetric
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr bool pr_vectorcall IsSymmetric(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>)
+	constexpr bool pr_vectorcall IsSymmetric(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2367,7 +2367,7 @@ namespace pr::math
 
 	// True if 'mat' is anti-symmetric
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr bool pr_vectorcall IsAntiSymmetric(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>)
+	constexpr bool pr_vectorcall IsAntiSymmetric(Mat const& mat, typename vector_traits<Mat>::element_t tol = tiny<typename vector_traits<Mat>::element_t>) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2394,7 +2394,7 @@ namespace pr::math
 
 	// Returns true if 'a' and 'b' are parallel
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr bool pr_vectorcall IsParallel(Vec v0, Vec v1, typename vector_traits<Vec>::element_t tol = tiny<typename vector_traits<Vec>::element_t>)
+	constexpr bool pr_vectorcall IsParallel(Vec v0, Vec v1, typename vector_traits<Vec>::element_t tol = tiny<typename vector_traits<Vec>::element_t>) noexcept
 	{
 		using vt = vector_traits<Vec>;
 
@@ -2413,7 +2413,7 @@ namespace pr::math
 
 	// Returns a vector guaranteed not parallel to 'v'
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall CreateNotParallelTo(Vec v)
+	constexpr Vec pr_vectorcall CreateNotParallelTo(Vec v) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2432,7 +2432,7 @@ namespace pr::math
 	// Rotate a 2D vector by 90deg CW (when at the origin, looking in the direction of +Z)
 	// CW rotates +X toward +Y. Cross2D(a,b) == Dot(Rotate90CW(a), b)
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
-	constexpr Vec pr_vectorcall Rotate90CW(Vec v)
+	constexpr Vec pr_vectorcall Rotate90CW(Vec v) noexcept
 	{
 		return Vec{ -vec(v).y, +vec(v).x };
 	}
@@ -2440,14 +2440,14 @@ namespace pr::math
 	// Rotate a 2D vector by 90deg CCW (when at the origin, looking in the direction of +Z)
 	// CCW rotates +X toward -Y.
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
-	constexpr Vec pr_vectorcall Rotate90CCW(Vec v)
+	constexpr Vec pr_vectorcall Rotate90CCW(Vec v) noexcept
 	{
 		return Vec{ +vec(v).y, -vec(v).x };
 	}
 
 	// Returns a vector perpendicular to 'v' with the same length of 'v'
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall Perpendicular(Vec vec)
+	constexpr Vec pr_vectorcall Perpendicular(Vec vec) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2468,7 +2468,7 @@ namespace pr::math
 
 	// Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular.
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall Perpendicular(Vec vec, Vec previous)
+	constexpr Vec pr_vectorcall Perpendicular(Vec vec, Vec previous) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2509,7 +2509,7 @@ namespace pr::math
 
 	// Permute the values in a vector. Rolls <--. e.g. 0:xyzw, 1:yzwx, 2:zwxy, etc
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr Vec pr_vectorcall Permute(Vec v, int n)
+	constexpr Vec pr_vectorcall Permute(Vec v, int n) noexcept
 	{
 		using vt = vector_traits<Vec>;
 
@@ -2549,7 +2549,7 @@ namespace pr::math
 	
 	// Permute the vectors in a matrix by 'n'. Rolls <--. e.g. 0:xyzw, 1:yzwx, 2:zwxy, etc
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Permute(Mat mat, int n)
+	constexpr Mat pr_vectorcall Permute(Mat mat, int n) noexcept
 	{
 		// Rolls the vectors around, last becomes first
 		using vt = vector_traits<Mat>;
@@ -2592,7 +2592,7 @@ namespace pr::math
 
 	// Returns a n-bit bitmask of the orthant that the vector is in. 0=(-x,-y,-z), 1=(+x,-y,-z), 2=(-x,+y,-z), 3=(+x,+y,-z), 4=(-x,-y+z), 5=(+x,-y,+z), 6=(-x,+y,+z), 7=(+x,+y,+z)
 	template <VectorType Vec> requires (IsRank1<Vec>)
-	constexpr uint32_t Orthant(Vec v) // Octant, Quadrant, etc depending on the dimension of 'Vec'
+	constexpr uint32_t Orthant(Vec v) noexcept // Octant, Quadrant, etc depending on the dimension of 'Vec'
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -2607,7 +2607,7 @@ namespace pr::math
 
 	// Return the transpose of 'mat'
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Transpose(Mat const& mat)
+	constexpr Mat pr_vectorcall Transpose(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2630,7 +2630,7 @@ namespace pr::math
 		return m;
 	}
 	template <VectorType Mat> requires (IsRank2<Mat>&& vector_traits<Mat>::dimension >= 3)
-	constexpr Mat pr_vectorcall Transpose3x3(Mat const& mat)
+	constexpr Mat pr_vectorcall Transpose3x3(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2643,7 +2643,7 @@ namespace pr::math
 
 	// Return the inverse of 'mat' (assuming an orthonormal matrix)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat pr_vectorcall InvertOrthonormal(Mat const& mat)
+	constexpr Mat pr_vectorcall InvertOrthonormal(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		pr_assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
@@ -2669,7 +2669,7 @@ namespace pr::math
 
 	// Invert the orthonormal matrix 'mat'
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	constexpr Mat pr_vectorcall InvertAffine(Mat const& mat)
+	constexpr Mat pr_vectorcall InvertAffine(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2714,7 +2714,7 @@ namespace pr::math
 
 	// Return the inverse of 'mat'
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Invert(Mat const& mat)
+	constexpr Mat pr_vectorcall Invert(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2733,7 +2733,7 @@ namespace pr::math
 			vec(inv).y *= scale;
 			return inv;
 		}
-		if constexpr (vt::dimension == 3)
+		else if constexpr (vt::dimension == 3)
 		{
 			Mat inv = {};
 			vec(inv).x = Cross(vec(mat).y, vec(mat).z);
@@ -2749,7 +2749,7 @@ namespace pr::math
 			vec(inv).z *= scale;
 			return inv;
 		}
-		if constexpr (vt::dimension == 4)
+		else if constexpr (vt::dimension == 4)
 		{
 			S xx = vec(vec(mat).x).x, xy = vec(vec(mat).x).y, xz = vec(vec(mat).x).z, xw = vec(vec(mat).x).w;
 			S yx = vec(vec(mat).y).x, yy = vec(vec(mat).y).y, yz = vec(vec(mat).y).z, yw = vec(vec(mat).y).w;
@@ -2837,7 +2837,7 @@ namespace pr::math
 
 	// Return the inverse of 'mat' using double precision floats
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat pr_vectorcall InvertPrecise(Mat const& mat)
+	constexpr Mat pr_vectorcall InvertPrecise(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2880,7 +2880,7 @@ namespace pr::math
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Sqrt(Mat const& mat)
+	constexpr Mat pr_vectorcall Sqrt(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2900,7 +2900,7 @@ namespace pr::math
 
 	// Orthonormalise the rotation component of 'mat'
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	inline Mat pr_vectorcall Orthonorm(Mat const& mat)
+	inline Mat pr_vectorcall Orthonorm(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -2977,7 +2977,7 @@ namespace pr::math
 
 	// Create a translation matrix
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat Translation(typename vector_traits<Mat>::component_t xyz)
+	constexpr Mat Translation(typename vector_traits<Mat>::component_t xyz) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -2989,7 +2989,7 @@ namespace pr::math
 		return m;
 	}
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat Translation(typename vector_traits<Mat>::element_t x, typename vector_traits<Mat>::element_t y, typename vector_traits<Mat>::element_t z)
+	constexpr Mat Translation(typename vector_traits<Mat>::element_t x, typename vector_traits<Mat>::element_t y, typename vector_traits<Mat>::element_t z) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3000,7 +3000,7 @@ namespace pr::math
 
 	// Create a 2D rotation matrix
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 2)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::element_t angle)
+	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::element_t angle) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
@@ -3012,7 +3012,7 @@ namespace pr::math
 
 	// Create a 3D rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall RotationRad(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll)
+	inline Mat pr_vectorcall RotationRad(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3028,7 +3028,7 @@ namespace pr::math
 		};
 	}
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall RotationDeg(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll)
+	inline Mat pr_vectorcall RotationDeg(typename vector_traits<Mat>::element_t pitch, typename vector_traits<Mat>::element_t yaw, typename vector_traits<Mat>::element_t roll) noexcept
 	{
 		return RotationRad<Mat>(
 			DegreesToRadians(pitch),
@@ -3039,7 +3039,7 @@ namespace pr::math
 
 	// Create a 3D rotation matrix from an axis and angle.
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	constexpr Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::component_t axis_sine_angle, typename vector_traits<Mat>::element_t cos_angle)
+	constexpr Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::component_t axis_sine_angle, typename vector_traits<Mat>::element_t cos_angle) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3068,14 +3068,14 @@ namespace pr::math
 
 	// Create a 3D rotation from an axis and angle. 'axis' should be normalised
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::element_t angle)
+	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::element_t angle) noexcept
 	{
 		return Rotation<Mat>(axis_norm, axis_norm * std::sin(angle), std::cos(angle));
 	}
 
 	// Create a 3D rotation from an angular displacement vector. length = angle(rad), direction = axis
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t angular_displacement) // This is ExpMap3x3.
+	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t angular_displacement) noexcept // This is ExpMap3x3.
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3090,7 +3090,7 @@ namespace pr::math
 
 	// Create a 3D rotation representing the rotation from one vector to another. (Vectors do not need to be normalised)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t from, typename vector_traits<Mat>::component_t to)
+	inline Mat pr_vectorcall Rotation(typename vector_traits<Mat>::component_t from, typename vector_traits<Mat>::component_t to) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3110,7 +3110,7 @@ namespace pr::math
 
 	// Create a 3D rotation transform from one basis axis to another. Remember AxisId can be cast to Vec4
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall Rotation(AxisId from_axis, AxisId to_axis)
+	inline Mat pr_vectorcall Rotation(AxisId from_axis, AxisId to_axis) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3144,7 +3144,7 @@ namespace pr::math
 
 	// Create a scale matrix
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Scale(typename vector_traits<Mat>::element_t scale)
+	constexpr Mat pr_vectorcall Scale(typename vector_traits<Mat>::element_t scale) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3157,7 +3157,7 @@ namespace pr::math
 		return mat;
 	}
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall Scale(typename vector_traits<Mat>::component_t scale)
+	constexpr Mat pr_vectorcall Scale(typename vector_traits<Mat>::component_t scale) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3172,7 +3172,7 @@ namespace pr::math
 
 	// Create a 2D shear matrix
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 2)
-	constexpr Mat Shear(S sxy, S syx)
+	constexpr Mat Shear(S sxy, S syx) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
@@ -3185,7 +3185,7 @@ namespace pr::math
 
 	// Create a 3D shear matrix
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	constexpr Mat Shear(S sxy, S sxz, S syx, S syz, S szx, S szy)
+	constexpr Mat Shear(S sxy, S sxz, S syx, S syz, S szx, S szy) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using Vec = typename vt::component_t;
@@ -3199,7 +3199,7 @@ namespace pr::math
 
 	// Create a Look-At transform
 	template <VectorType Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	inline Mat LookAt(typename vector_traits<Mat>::component_t eye, typename vector_traits<Mat>::component_t at, typename vector_traits<Mat>::component_t up)
+	inline Mat LookAt(typename vector_traits<Mat>::component_t eye, typename vector_traits<Mat>::component_t at, typename vector_traits<Mat>::component_t up) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3218,7 +3218,7 @@ namespace pr::math
 
 	// Construct an orthographic projection matrix
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded)
+	constexpr Mat ProjectionOrthographic(S w, S h, S zn, S zf, bool righthanded) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		pr_assert(IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0) && "invalid view rect");
@@ -3237,7 +3237,7 @@ namespace pr::math
 
 	// Construct a perspective projection matrix. 'w' and 'h' are measured at 'zn'
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat ProjectionPerspective(S w, S h, S zn, S zf, bool righthanded)
+	constexpr Mat ProjectionPerspective(S w, S h, S zn, S zf, bool righthanded) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		pr_assert(IsFinite(w) && IsFinite(h) && w > S(0) && h > S(0) && "invalid view rect");
@@ -3260,7 +3260,7 @@ namespace pr::math
 
 	// Construct a perspective projection matrix offset from the centre
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	constexpr Mat ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded)
+	constexpr Mat ProjectionPerspective(S l, S r, S t, S b, S zn, S zf, bool righthanded) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		pr_assert(IsFinite(l)  && IsFinite(r) && IsFinite(t) && IsFinite(b) && (r - l) > S(0) && (t - b) > S(0) && "invalid view rect");
@@ -3281,7 +3281,7 @@ namespace pr::math
 
 	// Construct a perspective projection matrix using field of view
 	template <VectorType Mat, ScalarType S = typename vector_traits<Mat>::element_t> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
-	inline Mat ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded)
+	inline Mat ProjectionPerspectiveFOV(S fovY, S aspect, S zn, S zf, bool righthanded) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		pr_assert(IsFinite(aspect) && aspect > S(0) && "invalid aspect ratio");
@@ -3302,7 +3302,7 @@ namespace pr::math
 
 	// Diagonalise a 3x3 matrix. From numerical recipes
 	template <VectorType Mat> requires (IsRank2<Mat> && ArrayAccess<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall Diagonalise(Mat const& mat_, Mat& eigen_vectors, typename vector_traits<Mat>::component_t& eigen_values)
+	inline Mat pr_vectorcall Diagonalise(Mat const& mat_, Mat& eigen_vectors, typename vector_traits<Mat>::component_t& eigen_values) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3310,7 +3310,7 @@ namespace pr::math
 
 		struct L
 		{
-			static void Rotate(Mat& mat, int i, int j, int k, int l, S s, S tau)
+			static void Rotate(Mat& mat, int i, int j, int k, int l, S s, S tau) noexcept
 			{
 				auto temp = mat[j][i];
 				auto h = mat[l][k];
@@ -3381,7 +3381,7 @@ namespace pr::math
 
 	// Return the axis and angle of a rotation matrix
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline std::tuple<typename vector_traits<Mat>::component_t, typename vector_traits<Mat>::element_t> pr_vectorcall AxisAngle(Mat const& mat)
+	inline std::tuple<typename vector_traits<Mat>::component_t, typename vector_traits<Mat>::element_t> pr_vectorcall AxisAngle(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3408,7 +3408,7 @@ namespace pr::math
 
 	// Create a scale matrix from 'mat'. Use 'Diagonal' to get the scale components as a vector
 	template <VectorType Mat> requires (IsRank2<Mat>)
-	constexpr Mat pr_vectorcall ScaleFrom(Mat const& mat)
+	constexpr Mat pr_vectorcall ScaleFrom(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -3422,7 +3422,7 @@ namespace pr::math
 
 	// Return a copy of 'mat' with the component vectors normalised
 	template <VectorTypeFP Mat> requires (IsRank2<Mat>)
-	inline Mat pr_vectorcall Unscaled(Mat const& mat)
+	inline Mat pr_vectorcall Unscaled(Mat const& mat) noexcept
 	{
 		using vt = vector_traits<Mat>;
 
@@ -3438,7 +3438,7 @@ namespace pr::math
 	// Other points can then be projected onto the XY plane by rotating by this
 	// matrix and then setting the z value to zero
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat RotationToZAxis(typename vector_traits<Mat>::component_t from)
+	inline Mat RotationToZAxis(typename vector_traits<Mat>::component_t from) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3472,7 +3472,7 @@ namespace pr::math
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be chosen.
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall OriFromDir(typename vector_traits<Mat>::component_t dir, AxisId axis_id, typename vector_traits<Mat>::component_t up_ = {})
+	inline Mat pr_vectorcall OriFromDir(typename vector_traits<Mat>::component_t dir, AxisId axis_id, typename vector_traits<Mat>::component_t up_ = {}) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3494,7 +3494,7 @@ namespace pr::math
 	// Make a scaled orientation matrix from a direction vector
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall ScaledOriFromDir(typename vector_traits<Mat>::component_t dir, AxisId axis, typename vector_traits<Mat>::component_t up = {})
+	inline Mat pr_vectorcall ScaledOriFromDir(typename vector_traits<Mat>::component_t dir, AxisId axis, typename vector_traits<Mat>::component_t up = {}) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3507,7 +3507,7 @@ namespace pr::math
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	constexpr typename vector_traits<Mat>::component_t pr_vectorcall RotationVectorApprox(Mat const& from, Mat const& to)
+	constexpr typename vector_traits<Mat>::component_t pr_vectorcall RotationVectorApprox(Mat const& from, Mat const& to) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3526,7 +3526,7 @@ namespace pr::math
 	
 	// Create a cross product matrix for 'vec'.
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	constexpr Mat pr_vectorcall CPM(typename vector_traits<Mat>::component_t v)
+	constexpr Mat pr_vectorcall CPM(typename vector_traits<Mat>::component_t v) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3543,7 +3543,7 @@ namespace pr::math
 
 	// Return 'exp(omega)' (Rodriges' formula)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall ExpMap3x3(typename vector_traits<Mat>::component_t omega)
+	inline Mat pr_vectorcall ExpMap3x3(typename vector_traits<Mat>::component_t omega) noexcept
 	{
 		// Converts an angular velocity into a finite rotation that stays within SO(3).
 		// If you have an angular velocity, w, that is constant over a time step,
@@ -3559,7 +3559,7 @@ namespace pr::math
 
 	// Returns the Axis*Angle vector representation of a rotation matrix (Inverse of ExpMap)
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline typename vector_traits<Mat>::component_t pr_vectorcall LogMap3x3(Mat const& rot)
+	inline typename vector_traits<Mat>::component_t pr_vectorcall LogMap3x3(Mat const& rot) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3581,7 +3581,7 @@ namespace pr::math
 
 	// Evaluates 'ori' after 'time' for a constant angular velocity and angular acceleration
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
-	inline Mat pr_vectorcall RotationAt(float time, Mat const& ori, typename vector_traits<Mat>::component_t avel, typename vector_traits<Mat>::component_t aacc)
+	inline Mat pr_vectorcall RotationAt(float time, Mat const& ori, typename vector_traits<Mat>::component_t avel, typename vector_traits<Mat>::component_t aacc) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3619,7 +3619,7 @@ namespace pr::math
 
 	// Divide a circle into N sectors and return an index for the sector that 'v' is in
 	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension == 2)
-	inline int pr_vectorcall Sector(Vec v, int sectors)
+	inline int pr_vectorcall Sector(Vec v, int sectors) noexcept
 	{
 		using S = typename vector_traits<Vec>::element_t;
 		return static_cast<int>(Atan2Positive(vec(v).y, vec(v).x) * sectors / constants<S>::tau);
@@ -3629,7 +3629,7 @@ namespace pr::math
 
 	// Create a random value on interval ['vmin', 'vmax']
 	template <ScalarType S, typename Rng = std::default_random_engine>
-	constexpr S Random(Rng& rng, S vmin, S vmax)
+	constexpr S Random(Rng& rng, S vmin, S vmax) noexcept
 	{
 		if constexpr (std::integral<S>)
 		{
@@ -3645,14 +3645,14 @@ namespace pr::math
 
 	// Create a random value centred on 'centre' with radius 'radius'
 	template <ScalarType S, typename Rng = std::default_random_engine>
-	constexpr S RandomC(Rng& rng, S centre, S radius)
+	constexpr S RandomC(Rng& rng, S centre, S radius) noexcept
 	{
 		return Random<S, Rng>(rng, centre - radius, centre + radius);
 	}
 
 	// Create a random vector with unit length
 	template <VectorType Vec, typename Rng = std::default_random_engine>
-	inline Vec pr_vectorcall RandomN(Rng& rng)
+	inline Vec pr_vectorcall RandomN(Rng& rng) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -3698,7 +3698,7 @@ namespace pr::math
 
 	// Create a random vector with components on interval [vmin, vmax]
 	template <VectorType Vec, typename Rng = std::default_random_engine>
-	constexpr Vec pr_vectorcall Random(Rng& rng, Vec vmin, Vec vmax)
+	constexpr Vec pr_vectorcall Random(Rng& rng, Vec vmin, Vec vmax) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -3736,7 +3736,7 @@ namespace pr::math
 
 	// Create a random vector with length on interval [min_length, max_length]
 	template <VectorType Vec, typename Rng = std::default_random_engine>
-	constexpr Vec pr_vectorcall Random(Rng& rng, typename vector_traits<Vec>::component_t min_length, typename vector_traits<Vec>::component_t max_length)
+	constexpr Vec pr_vectorcall Random(Rng& rng, typename vector_traits<Vec>::component_t min_length, typename vector_traits<Vec>::component_t max_length) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -3768,7 +3768,7 @@ namespace pr::math
 
 	// Create a random vector centred on 'centre' with radius 'radius'
 	template <VectorType Vec, typename Rng = std::default_random_engine>
-	constexpr Vec pr_vectorcall Random(Rng& rng, Vec centre, typename vector_traits<Vec>::component_t radius)
+	constexpr Vec pr_vectorcall Random(Rng& rng, Vec centre, typename vector_traits<Vec>::component_t radius) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -3791,7 +3791,7 @@ namespace pr::math
 
 	// Create a 3D matrix containing random rotation about 'axis' and between angles [min_angle, max_angle)
 	template <VectorTypeFP Mat, typename Rng = std::default_random_engine> requires (IsRank2<Mat> && vector_traits<Mat>::dimension >= 3)
-	inline Mat pr_vectorcall Random(Rng& rng, typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::element_t min_angle, typename vector_traits<Mat>::element_t max_angle)
+	inline Mat pr_vectorcall Random(Rng& rng, typename vector_traits<Mat>::component_t axis_norm, typename vector_traits<Mat>::element_t min_angle, typename vector_traits<Mat>::element_t max_angle) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3802,7 +3802,7 @@ namespace pr::math
 
 	// Create a 2D matrix containing random rotation between angles [min_angle, max_angle)
 	template <VectorType Mat, typename Rng = std::default_random_engine> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 2)
-	inline Mat pr_vectorcall Random(Rng& rng, typename vector_traits<Mat>::element_t min_angle, typename vector_traits<Mat>::element_t max_angle)
+	inline Mat pr_vectorcall Random(Rng& rng, typename vector_traits<Mat>::element_t min_angle, typename vector_traits<Mat>::element_t max_angle) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;
@@ -3813,7 +3813,7 @@ namespace pr::math
 
 	// Create a random 2D rotation matrix
 	template <VectorType Mat, typename Rng = std::default_random_engine> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 2)
-	inline Mat pr_vectorcall Random(Rng& rng)
+	inline Mat pr_vectorcall Random(Rng& rng) noexcept
 	{
 		using vt = vector_traits<Mat>;
 		using S = typename vt::element_t;

@@ -51,7 +51,7 @@ namespace pr::math::spatial
 	#pragma region Operators
 
 	// Rotate a spatial motion vector
-	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Motion> vec)
+	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Motion> vec) noexcept
 	{
 		// [ E    0] * [v.ang] = [E*v.ang              ]
 		// [r^E   E]   [v.lin]   [E*v.lin + r^(E*v.ang)] where r^ = (0,0,0) for pure rotation
@@ -61,7 +61,7 @@ namespace pr::math::spatial
 	}
 
 	// Rotate a spatial force vector
-	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Force> vec)
+	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat3x4<S> const& a2b, Vec8<S, Force> vec) noexcept
 	{
 		// [E   r^E] * [v.ang] = [E*v.ang + r^(E*v.lin)]
 		// [0    E ]   [v.lin]   [E*v.lin              ] where r^ = (0,0,0) for pure rotation
@@ -71,7 +71,7 @@ namespace pr::math::spatial
 	}
 
 	// Transform a spatial motion vector by an affine transform
-	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Motion> vec)
+	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Motion> vec) noexcept
 	{
 		// [ E    0] * [v.ang] = [E*v.ang              ]
 		// [r^E   E]   [v.lin]   [E*v.lin + r^(E*v.ang)] where r = a2b.pos
@@ -82,7 +82,7 @@ namespace pr::math::spatial
 	}
 
 	// Transform a spatial force vector by an affine transform
-	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Force> vec)
+	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall operator * (Mat4x4<S> const& a2b, Vec8<S, Force> vec) noexcept
 	{
 		// [E   r^E] * [v.ang] = [E*v.ang + r^(E*v.lin)]
 		// [0    E ]   [v.lin]   [E*v.lin              ] where r = a2b.pos
@@ -119,27 +119,27 @@ namespace pr::math::spatial
 
 	// Spatial dot product
 	// The dot product is only defined for Dot(motion,force) and Dot(force,motion). e.g Dot(force, velocity) == power delivered
-	template <ScalarTypeFP S> constexpr S Dot(Vec8<S, Motion> lhs, Vec8<S, Force> rhs)
+	template <ScalarTypeFP S> constexpr S Dot(Vec8<S, Motion> lhs, Vec8<S, Force> rhs) noexcept
 	{
 		// motion and force are vectors in the dual spaces M and F
 		// A property of dual spaces is dot(m,f) = transpose(m)*f
 		return Dot3(lhs.ang, rhs.ang) + Dot3(lhs.lin, rhs.lin);
 	}
-	template <ScalarTypeFP S> constexpr S Dot(Vec8<S, Force> lhs, Vec8<S, Motion> rhs)
+	template <ScalarTypeFP S> constexpr S Dot(Vec8<S, Force> lhs, Vec8<S, Motion> rhs) noexcept
 	{
 		return Dot(rhs, lhs);
 	}
 
 	// Spatial cross product.
 	// There are two cross product operators, one for motion vectors (rx) and one for forces (rx*)
-	template <ScalarTypeFP S> constexpr Vec8<S, Motion> Cross(Vec8<S, Motion> lhs, Vec8<S, Motion> rhs)
+	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall Cross(Vec8<S, Motion> lhs, Vec8<S, Motion> rhs) noexcept
 	{
 		return Vec8<S, Motion>{
 			Cross(lhs.ang, rhs.ang),
 			Cross(lhs.ang, rhs.lin) + Cross(lhs.lin, rhs.ang)
 		};
 	}
-	template <ScalarTypeFP S> constexpr Vec8<S, Force> Cross(Vec8<S, Force> lhs, Vec8<S, Force> rhs)
+	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall Cross(Vec8<S, Force> lhs, Vec8<S, Force> rhs) noexcept
 	{
 		return Vec8<S, Force>{
 			Cross(lhs.ang, rhs.ang) + Cross(lhs.lin, rhs.lin),
@@ -148,14 +148,14 @@ namespace pr::math::spatial
 	}
 
 	// Return a motion vector, equal to 'motion', but expressed at a new location equal to the previous location + 'ofs'. 
-	template <ScalarTypeFP S> constexpr Vec8<S, Motion> Shift(Vec8<S, Motion> motion, Vec4<S> ofs)
+	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall Shift(Vec8<S, Motion> motion, Vec4<S> ofs) noexcept
 	{
 		// c.f. RBDS 2.21
 		return Vec8<S, Motion>(motion.ang, motion.lin + Cross(motion.ang, ofs));
 	}
 
 	// Return a force vector, equal to 'force', but expressed at a new location equal to the previous location + 'ofs'.
-	template <ScalarTypeFP S> constexpr Vec8<S, Force> Shift(Vec8<S, Force> force, Vec4<S> ofs)
+	template <ScalarTypeFP S> constexpr Vec8<S, Force> pr_vectorcall Shift(Vec8<S, Force> force, Vec4<S> ofs) noexcept
 	{
 		// c.f. RBDS 2.22
 		return Vec8<S, Force>(force.ang + Cross(force.lin, ofs), force.lin);
@@ -168,7 +168,7 @@ namespace pr::math::spatial
 	// 'acc' is the spatial acceleration to shift
 	// 'avel' is the angular velocity of the frame in which 'acc' is being shifted
 	// 'ofs' is the offset from the last position that 'acc' was measured at.
-	template <ScalarTypeFP S> constexpr Vec8<S, Motion> ShiftAccelerationBy(Vec8<S, Motion> acc, Vec4<S> avel, Vec4<S> ofs)
+	template <ScalarTypeFP S> constexpr Vec8<S, Motion> pr_vectorcall ShiftAccelerationBy(Vec8<S, Motion> acc, Vec4<S> avel, Vec4<S> ofs) noexcept
 	{
 		return Vec8<S, Motion>{
 			acc.ang,
@@ -178,7 +178,7 @@ namespace pr::math::spatial
 
 	// Returns the spatial cross product matrix for 'a', for use with motion vectors.
 	//' i.e. b = a x m = CPM(a) * m, where m is a motion vector
-	template <ScalarTypeFP S> constexpr Mat6x8<S, Motion, Motion> CPM(Vec8<S, Motion> a)
+	template <ScalarTypeFP S> constexpr Mat6x8<S, Motion, Motion> CPM(Vec8<S, Motion> a) noexcept
 	{
 		auto cx_ang = math::CPM<Mat3x4<S>>(a.ang);
 		auto cx_lin = math::CPM<Mat3x4<S>>(a.lin);
@@ -187,7 +187,7 @@ namespace pr::math::spatial
 
 	// Returns the spatial cross product matrix for 'a', for use with force vectors.
 	// i.e. b = a x* f = CPM(a) * f, where f is a force vector
-	template <ScalarTypeFP S> constexpr Mat6x8<S, Force, Force> CPM(Vec8<S, Force> a)
+	template <ScalarTypeFP S> constexpr Mat6x8<S, Force, Force> CPM(Vec8<S, Force> a) noexcept
 	{
 		auto cx_ang = math::CPM<Mat3x4<S>>(a.ang);
 		auto cx_lin = math::CPM<Mat3x4<S>>(a.lin);
@@ -195,7 +195,7 @@ namespace pr::math::spatial
 	}
 
 	// Create a spatial coordinate transform
-	template <typename VecSpace, ScalarTypeFP S> constexpr Mat6x8<S, VecSpace, VecSpace> Transform(Mat4x4<S> const& a2b)
+	template <typename VecSpace, ScalarTypeFP S> constexpr Mat6x8<S, VecSpace, VecSpace> Transform(Mat4x4<S> const& a2b) noexcept
 	{
 		// Note: RBDA shows a transform to be (with r = a2b.pos):
 		//  [ E    0] = motion         [E   r^E]
@@ -209,7 +209,7 @@ namespace pr::math::spatial
 	}
 
 	// Spatial inertia matrix
-	template <ScalarTypeFP S> inline Mat6x8<S, Motion, Force> Inertia(Mat3x4<S> unit_inertia, Vec4<S> com, S mass)
+	template <ScalarTypeFP S> inline Mat6x8<S, Motion, Force> Inertia(Mat3x4<S> unit_inertia, Vec4<S> com, S mass) noexcept
 	{
 		auto cx = math::CPM<Mat3x4<S>>(com);
 		auto mcx = mass * cx;

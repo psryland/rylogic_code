@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -42,38 +42,38 @@ namespace pr::math
 
 		// Construct
 		Vec4() = default;
-		constexpr explicit Vec4(S x_)
+		constexpr explicit Vec4(S x_) noexcept
 			: x(x_)
 			, y(x_)
 			, z(x_)
 			, w(x_)
 		{
 		}
-		constexpr Vec4(S x_, S y_, S z_, S w_)
+		constexpr Vec4(S x_, S y_, S z_, S w_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 			, w(w_)
 		{}
-		constexpr Vec4(S x_, S y_, S z_)
+		constexpr Vec4(S x_, S y_, S z_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 			, w(S(0))
 		{}
-		constexpr explicit Vec4(VectorTypeN<S, 4> auto v)
+		constexpr explicit Vec4(VectorTypeN<S, 4> auto v) noexcept
 			:Vec4(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
-		constexpr Vec4(Vec3<S> v, S w_)
+		constexpr Vec4(Vec3<S> v, S w_) noexcept
 			:Vec4(v.x, v.y, v.z, w_)
 		{}
-		constexpr Vec4(Vec2<S> v, S z_, S w_)
+		constexpr Vec4(Vec2<S> v, S z_, S w_) noexcept
 			:Vec4(v.x, v.y, z_, w_)
 		{}
-		constexpr Vec4(Vec2<S> xy_, Vec2<S> zw_)
+		constexpr Vec4(Vec2<S> xy_, Vec2<S> zw_) noexcept
 			:Vec4(xy_.x, xy_.y, zw_.x, zw_.y)
 		{}
-		constexpr Vec4(AxisId axis_id)
+		constexpr Vec4(AxisId axis_id) noexcept
 			:Vec4(
 				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
 				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0),
@@ -81,15 +81,15 @@ namespace pr::math
 				S(0)
 			)
 		{}
-		constexpr Vec4(intrinsic_t vec_) requires (!NoIntrinsic)
+		constexpr Vec4(intrinsic_t vec_) noexcept requires (!NoIntrinsic)
 			:vec(vec_)
 		{}
-		constexpr explicit Vec4(std::ranges::random_access_range auto&& v)
+		constexpr explicit Vec4(std::ranges::random_access_range auto&& v) noexcept
 			:Vec4(v[0], v[1], v[2], v[3])
 		{}
 
 		// Explicit cast to different Scalar type
-		template <ScalarType S2> constexpr explicit operator Vec4<S2>() const
+		template <ScalarType S2> constexpr explicit operator Vec4<S2>() const noexcept
 		{
 			return Vec4<S2>(
 				static_cast<S2>(x),
@@ -100,13 +100,13 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr S operator [] (int i) const
+		constexpr S operator [] (int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < 4 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
 			else { return arr[i]; }
 		}
-		constexpr S& operator [] (int i)
+		constexpr S& operator [] (int i) noexcept
 		{
 			pr_assert(i >= 0 && i < 4 && "index out of range");
 			if consteval { return i == 0 ? x : i == 1 ? y : i == 2 ? z : w; }
@@ -114,75 +114,75 @@ namespace pr::math
 		}
 
 		// Create other vector types
-		constexpr Vec4 w0() const
+		constexpr Vec4 w0() const noexcept
 		{
 			Vec4 r(x, y, z, S(0)); // LValue because of alignment
 			return r;
 		}
-		constexpr Vec4 w1() const
+		constexpr Vec4 w1() const noexcept
 		{
 			Vec4 r(x, y, z, S(1)); // LValue because of alignment
 			return r;
 		}
-		constexpr Vec2<S> vec2(int i0, int i1) const
+		constexpr Vec2<S> vec2(int i0, int i1) const noexcept
 		{
 			return Vec2<S>{arr[i0], arr[i1]};
 		}
-		constexpr Vec3<S> vec3(int i0, int i1, int i2) const
+		constexpr Vec3<S> vec3(int i0, int i1, int i2) const noexcept
 		{
 			return Vec3<S>{arr[i0], arr[i1], arr[i2]};
 		}
 
 		// Constants
-		static consteval Vec4 Zero()
+		static consteval Vec4 Zero() noexcept
 		{
 			return math::Zero<Vec4>();
 		}
-		static constexpr Vec4 One()
+		static constexpr Vec4 One() noexcept
 		{
 			return math::One<Vec4>();
 		}
-		static constexpr Vec4 Tiny()
+		static constexpr Vec4 Tiny() noexcept
 		{
 			return Vec4(tiny<S>, tiny<S>, tiny<S>, tiny<S>);
 		}
-		static constexpr Vec4 Min()
+		static constexpr Vec4 Min() noexcept
 		{
 			return math::Min<Vec4>();
 		}
-		static constexpr Vec4 Max()
+		static constexpr Vec4 Max() noexcept
 		{
 			return math::Max<Vec4>();
 		}
-		static constexpr Vec4 Lowest()
+		static constexpr Vec4 Lowest() noexcept
 		{
 			return Vec4(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest());
 		}
-		static constexpr Vec4 Epsilon()
+		static constexpr Vec4 Epsilon() noexcept
 		{
 			return math::Epsilon<Vec4>();
 		}
-		static constexpr Vec4 Infinity()
+		static constexpr Vec4 Infinity() noexcept
 		{
 			return math::Infinity<Vec4>();
 		}
-		static constexpr Vec4 XAxis()
+		static constexpr Vec4 XAxis() noexcept
 		{
 			return math::XAxis<Vec4>();
 		}
-		static constexpr Vec4 YAxis()
+		static constexpr Vec4 YAxis() noexcept
 		{
 			return math::YAxis<Vec4>();
 		}
-		static constexpr Vec4 ZAxis()
+		static constexpr Vec4 ZAxis() noexcept
 		{
 			return math::ZAxis<Vec4>();
 		}
-		static constexpr Vec4 WAxis()
+		static constexpr Vec4 WAxis() noexcept
 		{
 			return math::WAxis<Vec4>();
 		}
-		static constexpr Vec4 Origin()
+		static constexpr Vec4 Origin() noexcept
 		{
 			return math::Origin<Vec4>();
 		}
@@ -195,11 +195,11 @@ namespace pr::math
 
 		// Optimised operators
 		#pragma region Operators
-		friend constexpr Vec4 pr_vectorcall operator * (S lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator * (S lhs, Vec4 rhs) noexcept
 		{
 			return rhs * lhs;
 		}
-		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, S rhs)
+		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, S rhs) noexcept
 		{
 			if consteval
 			{
@@ -221,7 +221,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, S rhs)
+		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, S rhs) noexcept
 		{
 			if consteval
 			{
@@ -244,7 +244,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator / (S lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator / (S lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -266,7 +266,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator + (Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator + (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -288,7 +288,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator - (Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator - (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -310,7 +310,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator * (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -332,7 +332,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator / (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
 			if consteval
@@ -355,7 +355,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr Vec4 pr_vectorcall operator % (Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall operator % (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
 			if consteval
@@ -386,7 +386,7 @@ namespace pr::math
 				}
 			}
 		}
-		friend constexpr bool pr_vectorcall operator == (Vec4 lhs, Vec4 rhs)
+		friend constexpr bool pr_vectorcall operator == (Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -415,7 +415,7 @@ namespace pr::math
 		// For non-intrinsic types, the generic versions in functions.h are used.
 
 		// Dot product (4-component)
-		friend constexpr S pr_vectorcall Dot(Vec4 lhs, Vec4 rhs)
+		friend constexpr S pr_vectorcall Dot(Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -444,7 +444,7 @@ namespace pr::math
 		}
 
 		// Dot product (3-component, w ignored)
-		friend constexpr S pr_vectorcall Dot3(Vec4 lhs, Vec4 rhs)
+		friend constexpr S pr_vectorcall Dot3(Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -476,7 +476,7 @@ namespace pr::math
 
 		// Cross product (3-component, w=0). Only for float — doubles use generic fallback.
 		// Note: w is zeroed by cancellation (aw*bw - aw*bw), which produces NaN if w is NaN.
-		friend constexpr Vec4 pr_vectorcall Cross(Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall Cross(Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -509,7 +509,7 @@ namespace pr::math
 		}
 
 		// Length of a vector. Combined dot+sqrt avoids intermediate scalar extraction.
-		friend constexpr S pr_vectorcall Length(Vec4 v)
+		friend constexpr S pr_vectorcall Length(Vec4 v) noexcept
 		{
 			if consteval
 			{
@@ -540,7 +540,7 @@ namespace pr::math
 		}
 
 		// Component-wise minimum
-		friend constexpr Vec4 pr_vectorcall Min(Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall Min(Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -564,7 +564,7 @@ namespace pr::math
 		}
 
 		// Component-wise maximum
-		friend constexpr Vec4 pr_vectorcall Max(Vec4 lhs, Vec4 rhs)
+		friend constexpr Vec4 pr_vectorcall Max(Vec4 lhs, Vec4 rhs) noexcept
 		{
 			if consteval
 			{
@@ -588,7 +588,7 @@ namespace pr::math
 		}
 
 		// Component-wise absolute value
-		friend constexpr Vec4 pr_vectorcall Abs(Vec4 v)
+		friend constexpr Vec4 pr_vectorcall Abs(Vec4 v) noexcept
 		{
 			if consteval
 			{
@@ -614,7 +614,7 @@ namespace pr::math
 		}
 
 		// Component-wise clamp
-		friend constexpr Vec4 pr_vectorcall Clamp(Vec4 v, Vec4 lo, Vec4 hi)
+		friend constexpr Vec4 pr_vectorcall Clamp(Vec4 v, Vec4 lo, Vec4 hi) noexcept
 		{
 			if consteval
 			{
@@ -657,12 +657,12 @@ namespace pr::math
 
 	// Deferred definitions for Vec3::w0() and Vec3::w1() (Vec4 must be complete)
 	template <ScalarType S>
-	constexpr Vec4<S> Vec3<S>::w0() const
+	constexpr Vec4<S> Vec3<S>::w0() const noexcept
 	{
 		return Vec4<S>(x, y, z, S(0));
 	}
 	template <ScalarType S>
-	constexpr Vec4<S> Vec3<S>::w1() const
+	constexpr Vec4<S> Vec3<S>::w1() const noexcept
 	{
 		return Vec4<S>(x, y, z, S(1));
 	}

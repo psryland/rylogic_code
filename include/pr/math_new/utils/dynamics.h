@@ -1,4 +1,4 @@
-//*****************************************************************************
+ï»¿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -12,11 +12,11 @@ namespace pr::math
 	// From a sample of 5 consecutive transforms (spaced by dt), returns the orientation, angular velocity, and angular acceleration
 	// Note: Ensure the quaternions within 'samples' are all the shortest arc
 	template <ScalarTypeFP S>
-	inline std::tuple<Quat<S>, Vec4<S>, Vec4<S>> CalculateRotationalDynamics(std::span<Xform<S> const, 5> samples, S dt)
+	inline std::tuple<Quat<S>, Vec4<S>, Vec4<S>> CalculateRotationalDynamics(std::span<Xform<S> const, 5> samples, S dt) noexcept
 	{ 
 		// Indices into 'samples'
 		enum : int32_t { p2 = 0, p1 = 1, c0 = 2, n1 = 3, n2 = 4, count };
-		assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
+		pr_assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
 
 		auto ori_p2 = samples[p2].rot;
 		auto ori_p1 = samples[p1].rot;
@@ -46,11 +46,11 @@ namespace pr::math
 
 	// From a sample of 5 consecutive transforms (spaced by dt), returns the position, linear velocity, and linear acceleration
 	template <ScalarTypeFP S>
-	inline std::tuple<Vec4<S>, Vec4<S>, Vec4<S>> CalculateTranslationalDynamics(std::span<Xform<S> const, 5> samples, S dt)
+	inline std::tuple<Vec4<S>, Vec4<S>, Vec4<S>> CalculateTranslationalDynamics(std::span<Xform<S> const, 5> samples, S dt) noexcept
 	{
 		// Indices into 'samples'
 		enum : int32_t { p2 = 0, p1 = 1, c0 = 2, n1 = 3, n2 = 4, count };
-		assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
+		pr_assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
 
 		auto pos_p2 = samples[p2].pos;
 		auto pos_p1 = samples[p1].pos;
@@ -78,11 +78,11 @@ namespace pr::math
 
 	// From a sample of 5 consecutive transforms (spaced by dt), returns the position, linear velocity, and linear acceleration
 	template <ScalarTypeFP S>
-	inline std::tuple<Vec4<S>, Vec4<S>, Vec4<S>> CalculateScaleDynamics(std::span<Xform<S> const, 5> samples, S dt)
+	inline std::tuple<Vec4<S>, Vec4<S>, Vec4<S>> CalculateScaleDynamics(std::span<Xform<S> const, 5> samples, S dt) noexcept
 	{
 		// Indices into 'samples'
 		enum : int32_t { p2 = 0, p1 = 1, c0 = 2, n1 = 3, n2 = 4, count };
-		assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
+		pr_assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
 
 		auto scale_c0 = samples[c0].scl;
 		auto value = scale_c0;
@@ -104,13 +104,13 @@ namespace pr::math
 		return {value, velocity, acceleration};
 	}
 
-	// From a sample of 5 consecutive scalar values (spaced by dt), returns the value, dvalue/dt, d²value/dt²
+	// From a sample of 5 consecutive scalar values (spaced by dt), returns the value, dvalue/dt, dï¿½value/dtï¿½
 	template <ScalarTypeFP S>
-	inline std::tuple<S, S, S> CalculateScalarDynamics(std::span<S const> samples, S dt)
+	inline std::tuple<S, S, S> CalculateScalarDynamics(std::span<S const> samples, S dt) noexcept
 	{
 		// Indices into 'samples'
 		enum : int32_t { p2 = 0, p1 = 1, c0 = 2, n1 = 3, n2 = 4, count };
-		assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
+		pr_assert(ssize(samples) >= count && "'samples' must be at least length >= 5");
 
 		// Value
 		auto value = samples[c0];
@@ -119,7 +119,7 @@ namespace pr::math
 		auto vel_c0 = (samples[n1] - samples[p1]) / (2*dt); // Central difference of position
 		auto velocity = vel_c0;
 
-		// d²Value/dt² (central difference of velocities)
+		// dï¿½Value/dtï¿½ (central difference of velocities)
 		auto vel_p1 = (samples[c0] - samples[p2]) / (2*dt);
 		auto vel_n1 = (samples[n2] - samples[c0]) / (2*dt);
 		auto acc_c0 = (vel_n1 - vel_p1) / (2*dt); // central difference of velocity

@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -25,26 +25,26 @@ namespace pr::math
 
 		// Construct
 		Mat2x2() = default;
-		constexpr explicit Mat2x2(S x_)
+		constexpr explicit Mat2x2(S x_) noexcept
 			:x(x_)
 			,y(x_)
 		{}
-		constexpr Mat2x2(S xx, S xy, S yx, S yy)
+		constexpr Mat2x2(S xx, S xy, S yx, S yy) noexcept
 			:x(xx, xy)
 			,y(yx, yy)
 		{}
-		constexpr Mat2x2(Vec2<S> x_, Vec2<S> y_)
+		constexpr Mat2x2(Vec2<S> x_, Vec2<S> y_) noexcept
 			:x(x_)
 			,y(y_)
 		{}
-		constexpr explicit Mat2x2(std::ranges::random_access_range auto&& v)
+		constexpr explicit Mat2x2(std::ranges::random_access_range auto&& v) noexcept
 			:Mat2x2(
 				Vec2<S>(v[0], v[1]),
 				Vec2<S>(v[2], v[3]))
 		{}
 
 		// Explicit cast to different Scalar type
-		template <ScalarType S2> constexpr explicit operator Mat2x2<S2>() const
+		template <ScalarType S2> constexpr explicit operator Mat2x2<S2>() const noexcept
 		{
 			return Mat2x2<S2>(
 				static_cast<Vec2<S2>>(x),
@@ -53,13 +53,13 @@ namespace pr::math
 		}
 
 		// Array access
-		constexpr Vec2<S> const& operator [](int i) const
+		constexpr Vec2<S> const& operator [](int i) const noexcept
 		{
 			pr_assert(i >= 0 && i < 2 && "index out of range");
 			if consteval { return i == 0 ? x : y; }
 			else { return arr[i]; }
 		}
-		constexpr Vec2<S>& operator [](int i)
+		constexpr Vec2<S>& operator [](int i) noexcept
 		{
 			pr_assert(i >= 0 && i < 2 && "index out of range");
 			if consteval { return i == 0 ? x : y; }
@@ -67,33 +67,33 @@ namespace pr::math
 		}
 
 		// Constants
-		static constexpr Mat2x2 Zero()
+		static constexpr Mat2x2 Zero() noexcept
 		{
 			return math::Zero<Mat2x2>();
 		}
-		static constexpr Mat2x2 Identity()
+		static constexpr Mat2x2 Identity() noexcept
 		{
 			return math::Identity<Mat2x2>();
 		}
 
 		// Create a rotation matrix
-		static Mat2x2 Rotation(S angle)
+		static Mat2x2 Rotation(S angle) noexcept
 		{
 			return math::Rotation<Mat2x2>(angle);
 		}
 
 		// Create a scale matrix
-		static constexpr Mat2x2 Scale(S scale)
+		static constexpr Mat2x2 Scale(S scale) noexcept
 		{
 			return math::Scale<Mat2x2>(scale);
 		}
-		static constexpr Mat2x2 Scale(S sx, S sy)
+		static constexpr Mat2x2 Scale(S sx, S sy) noexcept
 		{
 			return math::Scale<Mat2x2>(Vec2<S>(sx, sy));
 		}
 
 		// Create a shear matrix
-		static Mat2x2 Shear(S sxy, S syx)
+		static Mat2x2 Shear(S sxy, S syx) noexcept
 		{
 			return math::Shear<Mat2x2>(sxy, syx);
 		}
