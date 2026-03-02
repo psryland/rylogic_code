@@ -763,9 +763,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\limits.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\line3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -1256,6 +1253,18 @@
       <Filter>pr\math_new\primitives</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\utils\primes.h">
+      <Filter>pr\math_new\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\conversion.h">
+      <Filter>pr\math_new\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\dynamics.h">
+      <Filter>pr\math_new\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\interpolate.h">
+      <Filter>pr\math_new\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\polynomial.h">
       <Filter>pr\math_new\utils</Filter>
     </ClInclude>
   </ItemGroup>

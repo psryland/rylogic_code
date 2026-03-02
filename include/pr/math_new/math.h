@@ -49,12 +49,13 @@
 #include "pr/math_new/spatial/spatial.h"
 #include "pr/math_new/stats/stat.h"
 #include "pr/math_new/utils/primes.h"
+#include "pr/math_new/utils/interpolate.h"
+#include "pr/math_new/utils/dynamics.h"
+#include "pr/math_new/utils/polynomial.h"
 // No non-standard dependencies outside of './'
 
-// #include "pr/maths/conversion.h"
-// #include "pr/maths/line3.h"
-// #include "pr/maths/polynomial.h"
-// #include "pr/maths/constants_vector.h"
+// Depends on pr/common/to.h and pr/str/ — not part of math_new core
+//#include "pr/math_new/utils/conversion.h"
 
 // @Copilot, please check each function for mathematical correctness and numerical stability.
 

@@ -375,7 +375,7 @@ namespace pr::math
 	}
 
 	// Logarithm map of quaternion to tangent space at identity
-	template <QuaternionType Quat, VectorType Vec> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
+	template <VectorType Vec, QuaternionType Quat> requires (IsRank1<Vec> && SameS<Quat, Vec> && vector_traits<Vec>::dimension >= 3)
 	inline Vec pr_vectorcall LogMap(Quat q)
 	{
 		using S = typename vector_traits<Quat>::element_t;

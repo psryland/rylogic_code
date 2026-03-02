@@ -164,6 +164,14 @@ namespace pr::math
 		{
 			return Vec8{ lhs.ang % rhs.ang, lhs.lin % rhs.lin };
 		}
+		friend bool pr_vectorcall operator == (Vec8 lhs, Vec8 rhs)
+		{
+			return lhs.ang == rhs.ang && lhs.lin == rhs.lin;
+		}
+		friend bool pr_vectorcall operator != (Vec8 lhs, Vec8 rhs)
+		{
+			return !(lhs == rhs);
+		}
 		#pragma endregion
 	};
 

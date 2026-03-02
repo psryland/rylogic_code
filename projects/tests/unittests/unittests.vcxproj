@@ -268,7 +268,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\maths\frustum.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\interpolate.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\large_int.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\line3.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\maths_core.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix2x2.h" />
@@ -433,6 +432,10 @@
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector4.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\types\vector8.h" />
     <ClInclude Include="..\..\..\include\pr\algorithm\multidimensional_scaling.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\conversion.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\dynamics.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\interpolate.h" />
+    <ClInclude Include="..\..\..\include\pr\math_new\utils\polynomial.h" />
     <ClInclude Include="..\..\..\include\pr\math_new\utils\primes.h" />
     <ClInclude Include="src\unittests.h" />
     <None Include="$(RylogicRoot)include\pr\hlsl\camera.hlsli" />

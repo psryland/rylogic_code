@@ -22,27 +22,17 @@ namespace pr::geometry::closest_point
 	}
 
 	// Returns the parametric value of the closest point on 'line'
-	inline v4 pr_vectorcall PointToRay(v4_cref point, v4_cref start, v4_cref end, float& t)
+	inline v4 pr_vectorcall PointToRay(v4_cref point, v4 s, v4 d, void*, float& t)
 	{
-		assert(point.w == 1.0f && start.w == 1.0f && end.w == 1.0f);
-		assert(start != end);
-		v4 line = end - start;
-		t = Dot(point - start, line) / LengthSq(line);
-		return start + t * line;
+		assert(point.w == 1 && s.w == 1.0f && d.w == 0.0f);
+		assert(d != v4::Zero());
+		t = Dot(point - s, d) / LengthSq(d);
+		return s + t * d;
 	}
-	inline v4 pr_vectorcall PointToRay(v4_cref point, v4_cref start, v4_cref end)
+	inline v4 pr_vectorcall PointToRay(v4_cref point, v4 s, v4 d, void*)
 	{
 		float t;
-		return PointToRay(point, start, end, t);
-	}
-	inline v4 pr_vectorcall PointToRay(v4_cref point, const Line3& line, float& t)
-	{
-		return PointToRay(point, line.m_point, line.m_point + line.m_line, t);
-	}
-	inline v4 pr_vectorcall PointToRay(v4_cref point, const Line3& line)
-	{
-		float t;
-		return PointToRay(point, line.m_point, line.m_point + line.m_line, t);
+		return PointToRay(point, s, d, 0, t);
 	}
 
 	// Returns the parametric value of the closest point on 'line'
@@ -72,19 +62,10 @@ namespace pr::geometry::closest_point
 		t = t / denom;
 		return s + t * line;
 	}
-	inline v4 pr_vectorcall PointToLine(v4_cref point, v4_cref start, v4_cref end)
+	inline v4 pr_vectorcall PointToLine(v4_cref point, v4_cref s, v4_cref e)
 	{
 		float t;
-		return PointToLine(point, start, end, t);
-	}
-	inline v4 pr_vectorcall PointToLine(v4_cref point, Line3 const& line, float& t)
-	{
-		return PointToLine(point, line.m_point, line.m_point + line.m_line, t);
-	}
-	inline v4 pr_vectorcall PointToLine(v4_cref point, Line3 const& line)
-	{
-		float t;
-		return PointToLine(point, line.m_point, line.m_point + line.m_line, t);
+		return PointToLine(point, s, e, t);
 	}
 
 	// Returns the point on an AABB that is closest to 'point'

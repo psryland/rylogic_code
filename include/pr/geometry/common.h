@@ -18,7 +18,6 @@
 #include "pr/container/ring.h"
 #include "pr/gfx/colour.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/line3.h"
 #include "pr/maths/interpolate.h"
 
 namespace pr::geometry
@@ -293,14 +292,10 @@ namespace pr::geometry
 	{
 		v4 pr_vectorcall PointToPlane(v4_cref point, Plane const& plane);
 		v4 pr_vectorcall PointToPlane(v4_cref point, v4_cref a, v4_cref b, v4_cref c);
-		v4 pr_vectorcall PointToRay(v4_cref point, v4_cref start, v4_cref end, float& t);
-		v4 pr_vectorcall PointToRay(v4_cref point, v4_cref start, v4_cref end);
-		v4 pr_vectorcall PointToRay(v4_cref point, const Line3& line, float& t);
-		v4 pr_vectorcall PointToRay(v4_cref point, const Line3& line);
+		v4 pr_vectorcall PointToRay(v4_cref point, v4 s, v4 d, void*, float& t);
+		v4 pr_vectorcall PointToRay(v4_cref point, v4 s, v4 d, void*);
 		v4 pr_vectorcall PointToLine(v4_cref point, v4_cref s, v4_cref e, float& t);
-		v4 pr_vectorcall PointToLine(v4_cref point, v4_cref start, v4_cref end);
-		v4 pr_vectorcall PointToLine(v4_cref point, Line3 const& line, float& t);
-		v4 pr_vectorcall PointToLine(v4_cref point, Line3 const& line);
+		v4 pr_vectorcall PointToLine(v4_cref point, v4_cref s, v4_cref e);
 		v4 pr_vectorcall PointToBoundingBox(v4_cref point, BBox_cref bbox, bool surface_only = false);
 		v2 pr_vectorcall PointToEllipse(float x, float y, float major, float minor);
 		v4 pr_vectorcall PointToTriangle(v4_cref p, v4_cref a, v4_cref b, v4_cref c, v4& barycentric);
