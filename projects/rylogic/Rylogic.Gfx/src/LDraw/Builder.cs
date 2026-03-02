@@ -137,6 +137,12 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name ?? new()).colour(colour ?? new());
 		}
+		public LdrChart Chart(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var child = new LdrChart();
+			m_objects.Add(child);
+			return child.name(name ?? new()).colour(colour ?? new());
+		}
 		public LdrCommands Command()
 		{
 			var child = new LdrCommands();
@@ -1587,6 +1593,166 @@ namespace Rylogic.LDraw
 		{
 			res.Write(EKeyword.Group, m_name, m_colour, () =>
 			{
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrSeries
+	{
+		private Serialiser.Name m_name = new();
+		private Serialiser.Colour m_colour = new();
+		private string m_xaxis = string.Empty;
+		private string m_yaxis = string.Empty;
+		private Serialiser.Width m_width = new();
+		private Serialiser.Dashed m_dashed = new();
+		private Serialiser.Smooth m_smooth = new();
+		private Serialiser.DataPoints m_data_points = new();
+
+		/// <summary>Series name</summary>
+		public LdrSeries name(Serialiser.Name name)
+		{
+			m_name = name;
+			return this;
+		}
+
+		/// <summary>Series colour</summary>
+		public LdrSeries colour(Serialiser.Colour colour)
+		{
+			m_colour = colour;
+			return this;
+		}
+
+		/// <summary>X-axis expression (e.g. "C0", "CI")</summary>
+		public LdrSeries xaxis(string expr)
+		{
+			m_xaxis = expr;
+			return this;
+		}
+
+		/// <summary>Y-axis expression (e.g. "C1", "abs(C2 - C1)")</summary>
+		public LdrSeries yaxis(string expr)
+		{
+			m_yaxis = expr;
+			return this;
+		}
+
+		/// <summary>Line width</summary>
+		public LdrSeries width(float w)
+		{
+			m_width = new(w);
+			return this;
+		}
+
+		/// <summary>Dashed line pattern</summary>
+		public LdrSeries dashed(v2 dash)
+		{
+			m_dashed = new Serialiser.Dashed(dash);
+			return this;
+		}
+
+		/// <summary>Smooth the line</summary>
+		public LdrSeries smooth(bool on = true)
+		{
+			m_smooth = new(on);
+			return this;
+		}
+
+		/// <summary>Data point markers</summary>
+		public LdrSeries data_points(float size, Colour32? colour = null, EPointStyle? style = null)
+		{
+			return data_points(new v2(size, size), colour, style);
+		}
+		public LdrSeries data_points(v2 size, Colour32? colour = null, EPointStyle? style = null)
+		{
+			m_data_points = new Serialiser.DataPoints(size, colour, style);
+			return this;
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Series, m_name, m_colour, () =>
+			{
+				if (m_xaxis.Length != 0)
+					res.Write(EKeyword.XAxis, $"\"{m_xaxis}\"");
+				if (m_yaxis.Length != 0)
+					res.Write(EKeyword.YAxis, $"\"{m_yaxis}\"");
+				res.Append(m_width, m_dashed, m_smooth, m_data_points);
+			});
+		}
+	}
+	public class LdrChart : LdrBase<LdrChart>
+	{
+		private string? m_filepath = null;
+		private int m_dim_columns = 0;
+		private int m_dim_rows = 0;
+		private readonly List<double> m_data = [];
+		private readonly List<LdrSeries> m_series = [];
+
+		/// <summary>Reference an external CSV data file (mutually exclusive with data)</summary>
+		public LdrChart filepath(string filepath)
+		{
+			m_filepath = Path_.Canonicalise(filepath);
+			return this;
+		}
+
+		/// <summary>Set the data dimensions (columns, and optionally rows)</summary>
+		public LdrChart dim(int columns, int rows = 0)
+		{
+			m_dim_columns = columns;
+			m_dim_rows = rows;
+			return this;
+		}
+
+		/// <summary>Add data values to the chart</summary>
+		public LdrChart data(params double[] values)
+		{
+			m_data.AddRange(values);
+			return this;
+		}
+
+		/// <summary>Add data values to the chart</summary>
+		public LdrChart data(IEnumerable<double> values)
+		{
+			m_data.AddRange(values);
+			return this;
+		}
+
+		/// <summary>Add a series to the chart</summary>
+		public LdrSeries Series(Serialiser.Name? name = null, Serialiser.Colour? colour = null)
+		{
+			var s = new LdrSeries();
+			m_series.Add(s);
+			return s.name(name ?? new()).colour(colour ?? new());
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Chart, m_name, m_colour, () =>
+			{
+				if (m_filepath != null)
+				{
+					res.Write(EKeyword.FilePath, $"\"{m_filepath}\"");
+				}
+				if (m_dim_columns != 0)
+				{
+					if (m_dim_rows != 0)
+						res.Write(EKeyword.Dim, m_dim_columns, m_dim_rows);
+					else
+						res.Write(EKeyword.Dim, m_dim_columns);
+				}
+				if (m_data.Count != 0)
+				{
+					res.Write(EKeyword.Data, () =>
+					{
+						foreach (var value in m_data)
+							res.Append(value);
+					});
+				}
+				foreach (var series in m_series)
+					series.WriteTo(res);
+
 				base.WriteTo(res);
 			});
 		}
