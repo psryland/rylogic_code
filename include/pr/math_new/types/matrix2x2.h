@@ -67,13 +67,15 @@ namespace pr::math
 		}
 
 		// Constants
-		static constexpr Mat2x2 Zero() noexcept
+		static constexpr Mat2x2 const& Zero() noexcept
 		{
-			return math::Zero<Mat2x2>();
+			static auto s_zero = math::Zero<Mat2x2>();
+			return s_zero;
 		}
-		static constexpr Mat2x2 Identity() noexcept
+		static constexpr Mat2x2 const& Identity() noexcept
 		{
-			return math::Identity<Mat2x2>();
+			static auto s_identity = math::Identity<Mat2x2>();
+			return s_identity;
 		}
 
 		// Create a rotation matrix

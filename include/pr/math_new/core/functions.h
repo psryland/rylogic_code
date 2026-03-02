@@ -440,6 +440,14 @@ namespace pr::math
 	{
 		return std::numeric_limits<S>::epsilon();
 	}
+	template <typename S> constexpr S Tiny() noexcept
+	{
+		return constants<S>::tiny;
+	}
+	template <typename S> constexpr S Lowest() noexcept
+	{
+		return std::numeric_limits<S>::lowest();
+	}
 	template <VectorType Vec> constexpr Vec Zero() noexcept
 	{
 		using vt = vector_traits<Vec>;
@@ -488,6 +496,30 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Max<C>();
 		return res;
 	}
+	template <VectorType Vec> constexpr Vec Tiny() noexcept
+	{
+		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Tiny<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Tiny<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Tiny<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Tiny<C>();
+		return res;
+	}
+	template <VectorType Vec> constexpr Vec Lowest() noexcept
+	{
+		using vt = vector_traits<Vec>;
+		using C = typename vt::component_t;
+
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Lowest<C>();
+		if constexpr (vt::dimension > 1) vec(res).y = Lowest<C>();
+		if constexpr (vt::dimension > 2) vec(res).z = Lowest<C>();
+		if constexpr (vt::dimension > 3) vec(res).w = Lowest<C>();
+		return res;
+	}
 	template <VectorType Vec> constexpr Vec Infinity() noexcept
 	{
 		using vt = vector_traits<Vec>;
@@ -512,7 +544,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Epsilon<C>();
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 1) constexpr Vec XAxis() noexcept
+	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 1) constexpr Vec XAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -524,7 +556,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 2) constexpr Vec YAxis() noexcept
+	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 2) constexpr Vec YAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -536,7 +568,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 3) constexpr Vec ZAxis() noexcept
+	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 3) constexpr Vec ZAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -548,7 +580,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(0);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec WAxis() noexcept
+	template <VectorType Vec> requires (IsRank1<Vec> && vector_traits<Vec>::dimension >= 4) constexpr Vec WAxis() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;
@@ -560,7 +592,7 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = S(1);
 		return res;
 	}
-	template <VectorType Vec> requires (IsRank1<Vec>&& vector_traits<Vec>::dimension >= 4) constexpr Vec Origin() noexcept
+	template <VectorType Vec> requires (IsRank1<Vec>) constexpr Vec Origin() noexcept
 	{
 		using vt = vector_traits<Vec>;
 		using S = typename vt::element_t;

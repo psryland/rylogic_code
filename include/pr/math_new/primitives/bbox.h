@@ -31,6 +31,23 @@ namespace pr::math
 				(radius.x == -S(1) && radius.y == -S(1) && radius.z == -S(1))));
 		}
 
+		// Constants
+		static constexpr BBox const& Unit() noexcept
+		{
+			static auto s_unit = BBox{ math::Origin<Vec4>(), S(0.5) * math::One<Vec4>().w0() };
+			return s_unit;
+		}
+		static constexpr BBox const& Reset() noexcept
+		{
+			static auto s_reset = BBox{ math::Origin<Vec4>(), -math::One<Vec4>().w0() };
+			return s_reset;
+		}
+		static constexpr BBox const& Infinity() noexcept
+		{
+			static auto s_infinity = BBox{ math::Origin<Vec4>(), math::Infinity<Vec4>().w0() };
+			return s_infinity;
+		}
+
 		// Reset this bbox to an invalid interval
 		BBox& reset() noexcept
 		{
@@ -255,7 +272,7 @@ namespace pr::math
 			pr_assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
 			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
-			BBox bb(m.pos, Vec4::Zero());
+			BBox bb(m.pos, Zero<Vec4>());
 			auto mat = Transpose3x3(m);
 			for (int i = 0; i != 3; ++i)
 			{
@@ -268,7 +285,7 @@ namespace pr::math
 		{
 			pr_assert("Transforming an invalid bounding box" && rhs.valid());
 
-			BBox bb(Vec4::Origin(), Vec4::Zero());
+			BBox bb(Origin<Vec4>(), Zero<Vec4>());
 			auto mat = Transpose(m);
 			for (int i = 0; i != 3; ++i)
 			{
@@ -278,20 +295,6 @@ namespace pr::math
 			return bb;
 		}
 		#pragma endregion
-
-		// Constants
-		static constexpr BBox Unit() noexcept
-		{
-			return BBox{ math::Origin<Vec4>(), S(0.5) * math::One<Vec4>().w0() };
-		}
-		static constexpr BBox Reset() noexcept
-		{
-			return BBox{ math::Origin<Vec4>(), -math::One<Vec4>().w0() };
-		}
-		static constexpr BBox Infinity() noexcept
-		{
-			return BBox{ math::Origin<Vec4>(), math::Infinity<Vec4>().w0() };
-		}
 
 		// Create a bounding box from lower/upper corners
 		static BBox Make(Vec4 lower, Vec4 upper) noexcept

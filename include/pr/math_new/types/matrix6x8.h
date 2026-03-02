@@ -100,17 +100,19 @@ namespace pr::math
 		}
 
 		// Basic constants
-		static constexpr Mat6x8 Zero() noexcept
+		static constexpr Mat6x8 const& Zero() noexcept
 		{
-			return Mat6x8{
+			static auto s_zero = Mat6x8{
 				Mat3x4<S, void, void>::Zero(), Mat3x4<S, void, void>::Zero(),
 				Mat3x4<S, void, void>::Zero(), Mat3x4<S, void, void>::Zero() };
+			return s_zero;
 		}
-		static constexpr Mat6x8 Identity() noexcept
+		static constexpr Mat6x8 const& Identity() noexcept
 		{
-			return Mat6x8{
+			static auto s_identity = Mat6x8{
 				Mat3x4<S, void, void>::Identity(), Mat3x4<S, void, void>::Zero(),
 				Mat3x4<S, void, void>::Zero(), Mat3x4<S, void, void>::Identity() };
+			return s_identity;
 		}
 
 		#pragma region Operators
