@@ -116,6 +116,12 @@ namespace pr::rdr12
 		return m_sources.AddBinary(data, context_id, add_complete);
 	}
 
+	// Cancel an in-progress load operation
+	void Context::CancelLoad(Guid const& context_id)
+	{
+		m_sources.CancelLoad(context_id);
+	}
+
 	// Enable/Disable streaming script sources.
 	ldraw::EStreamingState Context::StreamingState() const
 	{

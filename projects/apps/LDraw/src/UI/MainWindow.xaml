@@ -168,24 +168,37 @@
 				VerticalAlignment="Center"
 				Margin="3,0,3,0"
 				>
-				<Grid
+				<StackPanel
+					Orientation="Horizontal"
 					DataContext="{Binding ParsingProgress}"
 					>
-					<ProgressBar
-						Value="{Binding Percentage, FallbackValue=0, Mode=OneWay}"
-						IsIndeterminate="{Binding IsIndeterminate}"
-						Maximum="100"
-						Minimum="0"
+					<Grid>
+						<ProgressBar
+							Value="{Binding Percentage, FallbackValue=0, Mode=OneWay}"
+							IsIndeterminate="{Binding IsIndeterminate}"
+							Maximum="100"
+							Minimum="0"
+							VerticalAlignment="Center"
+							MinWidth="300"
+							MinHeight="16"
+							/>
+						<TextBlock
+							VerticalAlignment="Center"
+							Text="{Binding DisplayName}"
+							Margin="3,0,0,0"
+							/>
+					</Grid>
+					<Button
+						Content="Cancel"
+						Command="{Binding CancelCommand}"
+						Visibility="{Binding CanCancel, Converter={conv:BoolToVisible}}"
 						VerticalAlignment="Center"
-						MinWidth="300"
 						MinHeight="16"
-						/>
-					<TextBlock
-						VerticalAlignment="Center"
-						Text="{Binding DataSourceName}"
+						MinWidth="50"
+						Padding="3,0,3,0"
 						Margin="3,0,0,0"
 						/>
-				</Grid>
+				</StackPanel>
 			</StatusBarItem>
 
 			<!-- Focus position -->

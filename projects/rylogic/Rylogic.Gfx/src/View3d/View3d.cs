@@ -1439,21 +1439,34 @@ namespace Rylogic.Gfx
 			return new Source(ctx, this);
 		}
 
+		/// <summary>Cancel an in-progress load operation. Thread-safe.</summary>
+		public void CancelLoad(Guid context_id)
+		{
+			View3D_CancelLoad(ref context_id);
+		}
+
 		/// <summary>Wrap the 'add_completed' callback so that it doesn't get collected during an async load</summary>
 		private AddCompleteCB WrapAddCompletedCB(Action<Guid, bool>? add_completed)
 		{
 			if (add_completed is null)
 				return new AddCompleteCB();
 
-			var add_completed_cb = new AddCompleteCB { m_cb = HandleLoadScript, m_ctx = Marshal.GetFunctionPointerForDelegate(add_completed) };
+			// Use a GCHandle as the context pointer to keep the delegate alive and provide a unique key for cleanup.
+			// Marshal.GetFunctionPointerForDelegate doesn't work with generic delegate types like Action<Guid, bool>.
+			var handle = GCHandle.Alloc(add_completed);
+			var ctx_ptr = GCHandle.ToIntPtr(handle);
+			var add_completed_cb = new AddCompleteCB { m_cb = HandleLoadScript, m_ctx = ctx_ptr };
 			m_add_complete_cb.Add(add_completed_cb);
 			return add_completed_cb;
 
 			void HandleLoadScript(IntPtr ctx, ref Guid context_id, bool before)
 			{
-				var action = Marshal.GetDelegateForFunctionPointer<Action<Guid, bool>>(ctx);
-				if (!before) m_add_complete_cb.RemoveAll(x => x.m_ctx == ctx);
-				action.Invoke(context_id, before);
+				if (!before)
+				{
+					m_add_complete_cb.RemoveAll(x => x.m_ctx == ctx);
+					GCHandle.FromIntPtr(ctx).Free();
+				}
+				add_completed.Invoke(context_id, before);
 			}
 		}
 
@@ -1579,7 +1592,10 @@ namespace Rylogic.Gfx
 		// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
 		[DllImport(Dll)] private static extern Guid View3D_LoadScriptFromString([MarshalAs(UnmanagedType.LPStr)] string ldr_script, ref Guid context_id, ref Includes includes, AddCompleteCB on_add_cb);
 		[DllImport(Dll)] private static extern Guid View3D_LoadScriptFromFile([MarshalAs(UnmanagedType.LPStr)] string ldr_file, ref Guid context_id, ref Includes includes, AddCompleteCB on_add_cb);
-		
+
+		// Cancel an in-progress load operation
+		[DllImport(Dll)] private static extern void View3D_CancelLoad(ref Guid context_id);
+
 		// Enumerate all sources in the store
 		[DllImport(Dll)] private static extern void View3D_EnumSources(EnumGuidsCB enum_guids_cb);
 
