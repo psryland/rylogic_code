@@ -691,7 +691,7 @@ namespace pr::physics
 		// at a point other than where the inertia was measured at. Translate()
 		// moves the measure point, so if 'com' is non-zero, update it to reflect
 		// the new offset.
-		if (inertia1.m_com_and_mass.xyz != v3{})
+		if (inertia0.CoM() != v4{})
 			inertia1.m_com_and_mass.xyz -= sign * offset.xyz;
 
 		return inertia1;
@@ -736,5 +736,19 @@ namespace pr
 			FEql(lhs.m_diagonal, rhs.m_diagonal) &&
 			FEql(lhs.m_products, rhs.m_products) &&
 			FEql(lhs.m_com_and_invmass, rhs.m_com_and_invmass);
+	}
+	bool FEqlRelative(physics::Inertia const& lhs, physics::Inertia const& rhs, float tol)
+	{
+		return
+			FEqlRelative(lhs.m_diagonal, rhs.m_diagonal, tol) &&
+			FEqlRelative(lhs.m_products, rhs.m_products, tol) &&
+			FEqlRelative(lhs.m_com_and_mass, rhs.m_com_and_mass, tol);
+	}
+	bool FEqlRelative(physics::InertiaInv const& lhs, physics::InertiaInv const& rhs, float tol)
+	{
+		return
+			FEqlRelative(lhs.m_diagonal, rhs.m_diagonal, tol) &&
+			FEqlRelative(lhs.m_products, rhs.m_products, tol) &&
+			FEqlRelative(lhs.m_com_and_invmass, rhs.m_com_and_invmass, tol);
 	}
 }

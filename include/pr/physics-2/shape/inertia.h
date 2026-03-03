@@ -249,4 +249,6 @@ namespace pr
 {
 	bool FEql(physics::Inertia const& lhs, physics::Inertia const& rhs);
 	bool FEql(physics::InertiaInv const& lhs, physics::InertiaInv const& rhs);
+	bool FEqlRelative(physics::Inertia const& lhs, physics::Inertia const& rhs, float tol);
+	bool FEqlRelative(physics::InertiaInv const& lhs, physics::InertiaInv const& rhs, float tol);
 }
