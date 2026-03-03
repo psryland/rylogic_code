@@ -143,6 +143,7 @@ namespace LDraw
 						else
 						{
 							ParsingProgress.DataSourceName = args.Filepath;
+							ParsingProgress.DataLength = args.FileSize;
 							ParsingProgress.DataOffset = args.FileOffset;
 						}
 					}, e);

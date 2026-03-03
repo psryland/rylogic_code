@@ -41,6 +41,7 @@ namespace pr::rdr12::ldraw
 	struct Location
 	{
 		std::filesystem::path m_filepath;
+		int64_t m_filesize = {};
 		int64_t m_offset = {};
 		int m_column = {};
 		int m_line = {};

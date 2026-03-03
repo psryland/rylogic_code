@@ -607,7 +607,7 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ParsingProgressCB
 		{
-			public delegate void FuncCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
+			public delegate void FuncCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, long file_size, bool complete, ref bool cancel);
 			public IntPtr m_ctx;
 			public FuncCB m_cb;
 		}
@@ -1353,9 +1353,9 @@ namespace Rylogic.Gfx
 
 				// Sign up for progress reports
 				View3D_ParsingProgressCBSet(m_parsing_progress_cb = new ParsingProgressCB { m_cb = HandleParsingProgress }, true);
-				void HandleParsingProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
+				void HandleParsingProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, long fsize, bool complete, ref bool cancel)
 				{
-					var args = new ParsingProgressEventArgs(context_id, filepath, foffset, complete);
+					var args = new ParsingProgressEventArgs(context_id, filepath, foffset, fsize, complete);
 					ParsingProgress?.Invoke(this, args);
 					cancel = args.Cancel;
 				}
