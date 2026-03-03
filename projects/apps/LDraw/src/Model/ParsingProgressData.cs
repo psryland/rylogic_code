@@ -1,19 +1,32 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Windows.Input;
 using Rylogic.Common;
+using Rylogic.Gui.WPF;
 
 namespace LDraw
 {
 	public class ParsingProgressData :INotifyPropertyChanged
 	{
-		public ParsingProgressData(Guid context_id)
+		public ParsingProgressData(Guid context_id, Action? cancel_action = null)
 		{
 			ContextId = context_id;
+			CancelAction = cancel_action;
+			CancelCommand = Command.Create(this, () => CancelAction?.Invoke(), () => CanCancel);
 		}
 
 		/// <summary>The context id associated with the parsing progress</summary>
 		public Guid ContextId { get; }
+
+		/// <summary>Action to invoke to cancel the current load</summary>
+		public Action? CancelAction { get; }
+
+		/// <summary>True if cancellation is supported</summary>
+		public bool CanCancel => CancelAction != null;
+
+		/// <summary>Command to cancel the current loading operation</summary>
+		public ICommand CancelCommand { get; }
 
 		/// <summary>The name of the file/script currently being parsed</summary>
 		public string DataSourceName
@@ -25,9 +38,13 @@ namespace LDraw
 				m_data_source_name = value;
 				DataLength = Path_.FileExists(m_data_source_name) ? new FileInfo(m_data_source_name).Length : 0;
 				NotifyPropertyChanged(nameof(DataSourceName));
+				NotifyPropertyChanged(nameof(DisplayName));
 			}
 		}
 		private string? m_data_source_name;
+
+		/// <summary>Display name for the status bar (includes "Loading:" prefix)</summary>
+		public string DisplayName => $"Loading: {Path.GetFileName(DataSourceName)}...";
 
 		/// <summary>The length of the data being parsed</summary>
 		public long DataLength

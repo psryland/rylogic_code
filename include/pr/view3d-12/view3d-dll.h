@@ -819,6 +819,9 @@ extern "C"
 	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb);
 	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb);
 
+	// Cancel an in-progress load operation
+	VIEW3D_API void __stdcall View3D_CancelLoad(GUID const* context_id);
+
 	// Enumerate all sources in the store
 	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb);
 
