@@ -1249,7 +1249,7 @@ namespace pr::rdr12::ldraw
 						}
 						default:
 						{
-							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *DataPoints", EKeyword_::ToStringA(kw)));
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Arrow", EKeyword_::ToStringA(kw)));
 							break;
 						}
 					}
