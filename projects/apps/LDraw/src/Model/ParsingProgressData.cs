@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
-using Rylogic.Common;
 using Rylogic.Gui.WPF;
 
 namespace LDraw
@@ -36,15 +35,16 @@ namespace LDraw
 			{
 				if (m_data_source_name == value) return;
 				m_data_source_name = value;
-				DataLength = Path_.FileExists(m_data_source_name) ? new FileInfo(m_data_source_name).Length : 0;
 				NotifyPropertyChanged(nameof(DataSourceName));
 				NotifyPropertyChanged(nameof(DisplayName));
 			}
 		}
 		private string? m_data_source_name;
 
-		/// <summary>Display name for the status bar (includes "Loading:" prefix)</summary>
-		public string DisplayName => $"Loading: {Path.GetFileName(DataSourceName)}...";
+		/// <summary>Display name for the status bar (includes "Loading:" prefix and percentage)</summary>
+		public string DisplayName => DataLength != 0
+			? $"Loading: {Path.GetFileName(DataSourceName)}... ({Percentage:F0}%)"
+			: $"Loading: {Path.GetFileName(DataSourceName)}...";
 
 		/// <summary>The length of the data being parsed</summary>
 		public long DataLength
@@ -56,6 +56,7 @@ namespace LDraw
 				field = value;
 				NotifyPropertyChanged(nameof(Percentage));
 				NotifyPropertyChanged(nameof(IsIndeterminate));
+				NotifyPropertyChanged(nameof(DisplayName));
 			}
 		}
 
@@ -68,6 +69,7 @@ namespace LDraw
 				if (field == value) return;
 				field = value;
 				NotifyPropertyChanged(nameof(Percentage));
+				NotifyPropertyChanged(nameof(DisplayName));
 			}
 		}
 

@@ -769,7 +769,7 @@ namespace pr
 		// Callbacks
 		using GuidPredCB = Callback<bool(__stdcall*)(void* ctx, GUID const&)>;
 		using SettingsChangedCB = Callback<void(__stdcall *)(void* ctx, Window window, ESettings setting)>;
-		using ParsingProgressCB = Callback<void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel)>;
+		using ParsingProgressCB = Callback<void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, long long file_size, BOOL complete, BOOL& cancel)>;
 		using SourcesChangedCB = Callback<void(__stdcall *)(void* ctx, ESourcesChangedReason reason, GUID const* ids, int count, BOOL before)>;
 		using EnumGuidsCB = Callback<bool(__stdcall *)(void* ctx, GUID const& context_id)>;
 		using EnumObjectsCB = Callback<bool(__stdcall *)(void* ctx, Object object)>;

@@ -228,7 +228,7 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Give a progress update
-		void ReportProgress(int r = 0)
+		void ReportProgress(IReader& reader, int r = 0)
 		{
 			using namespace std::chrono;
 
@@ -253,7 +253,7 @@ namespace pr::rdr12::ldraw
 
 			// Call the callback with the freshly minted object.
 			// If the callback returns false, abort parsing.
-			m_cancel = !m_progress_cb(m_context_id, m_result, Location(), false);
+			m_cancel = !m_progress_cb(m_context_id, m_result, reader.Loc(), false);
 			m_last_progress_update = system_clock::now();
 		}
 	};
@@ -1803,7 +1803,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						if (m_per_item_colour)
 							m_colours.push_back(reader.Int<uint32_t>(16));
@@ -1972,7 +1972,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						m_verts.push_back(reader.Vector3f().w1());
 						segment.m_vcount += 2;
@@ -1998,7 +1998,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						segment.m_vcount += 1;
 						if (m_per_item_colour)
 						{
@@ -2020,7 +2020,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto p = reader.Vector3f().w1();
 						auto d = reader.Vector3f().w0();
 						m_verts.push_back(p);
@@ -2049,7 +2049,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto p0 = reader.Vector3f().w1();
 						auto p1 = reader.Vector3f().w1();
 						auto p2 = reader.Vector3f().w1();
@@ -2662,7 +2662,7 @@ namespace pr::rdr12::ldraw
 					// Read data till the end of the section
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto value = reader.Real<double>();
 						m_data.push_back(value);
 					}
@@ -3345,7 +3345,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 
 						v4 pt[3] = {};
 						Colour32 col[3] = {};
@@ -3422,7 +3422,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 
 						v4 pt[4] = {};
 						Colour32 col[4] = {};
@@ -3554,7 +3554,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						if (m_per_item_colour)
 							m_colours.push_back(reader.Int<uint32_t>(16));
@@ -3668,7 +3668,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto dim = reader.Vector3f().w0();
 						auto xyz = reader.Vector3f().w1();
 						m_boxes.push_back(BBox(xyz, Abs(dim) * 0.5f));
@@ -4209,7 +4209,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 					}
 					return true;
@@ -4218,7 +4218,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_normals.push_back(reader.Vector3f().w0());
 					}
 					return true;
@@ -4227,7 +4227,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_colours.push_back(pr::Colour(reader.Int<uint32_t>(16)));
 					}
 					return true;
@@ -4236,7 +4236,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_texs.push_back(reader.Vector2f());
 					}
 					return true;
@@ -4255,7 +4255,7 @@ namespace pr::rdr12::ldraw
 
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
@@ -4281,7 +4281,7 @@ namespace pr::rdr12::ldraw
 
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
@@ -4304,7 +4304,7 @@ namespace pr::rdr12::ldraw
 
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 
 						uint16_t const idx[] = {
 							reader.Int<uint16_t>(10),
@@ -4426,7 +4426,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_pp.ReportProgress(r);
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 					}
 					return true;
@@ -6003,7 +6003,7 @@ namespace pr::rdr12::ldraw
 		pp.m_cache.Reset();
 
 		// Report progress
-		pp.ReportProgress();
+		pp.ReportProgress(reader);
 
 		return true;
 	}
