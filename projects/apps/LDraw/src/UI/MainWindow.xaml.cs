@@ -62,11 +62,40 @@ namespace LDraw
 		}
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
-			if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && m_dc.ActivePane != null)
+			// Handle keyboard shortcuts that may be swallowed by child HWNDs (e.g. the 3D viewport)
+			if (Keyboard.Modifiers == ModifierKeys.Control)
 			{
-				var steps = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : +1;
-				m_dc.ActivePane.CycleVisibleContent(steps);
-				e.Handled = true;
+				switch (e.Key)
+				{
+				    case Key.N:
+					{
+					    NewScript.Execute(null);
+					    e.Handled = true;
+					    break;
+					}
+				    case Key.O:
+					{
+						OpenFile.Execute(null);
+					    e.Handled = true;
+					    break;
+					}
+				    case Key.S:
+					{
+						SaveFile.Execute(null);
+					    e.Handled = true;
+					    break;
+					}
+				    case Key.Tab:
+					{
+						if (m_dc.ActivePane != null)
+					    {
+							var steps = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : +1;
+							m_dc.ActivePane.CycleVisibleContent(steps);
+							e.Handled = true;
+					    }
+					    break;
+					}
+				}
 			}
 			base.OnPreviewKeyDown(e);
 		}

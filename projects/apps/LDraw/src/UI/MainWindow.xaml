@@ -44,15 +44,18 @@
 						/>
 					<MenuItem Header="_New Script"
 						Command="{Binding NewScript}"
+						InputGestureText="Ctrl+N"
 						ToolTip="Create a new empty script window"
 						/>
 					<Separator/>
 					<MenuItem Header="_Open File"
 						Command="{Binding OpenFile}"
+						InputGestureText="Ctrl+O"
 						ToolTip="View 3D objects from a file in a scene"
 						/>
 					<MenuItem Header="_Save File"
 						Command="{Binding SaveFile}"
+						InputGestureText="Ctrl+S"
 						IsEnabled="{Binding ScriptHasFocusAndNeedsSave}"
 						ToolTip="Save the current script"
 						/>

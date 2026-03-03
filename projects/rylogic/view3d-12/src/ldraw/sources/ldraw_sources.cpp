@@ -246,6 +246,8 @@ namespace pr::rdr12::ldraw
 			loading->emplace(src->m_context_id, std::move(ss));
 		}
 
+		src->ParsingProgress += [this](auto&, auto& args) { m_events->OnParsingProgress(args); };
+
 		// Start a task to 'parse' it
 		auto output = src->Load(rdr(), ss_token);
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
@@ -288,6 +290,8 @@ namespace pr::rdr12::ldraw
 			loading->emplace(src->m_context_id, std::move(ss));
 		}
 
+		src->ParsingProgress += [this](auto&, auto& args) { m_events->OnParsingProgress(args); };
+
 		// Start a task to 'parse' it
 		auto output = src->Load(rdr(), ss_token);
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
@@ -327,6 +331,8 @@ namespace pr::rdr12::ldraw
 			ss_token = ss.get_token();
 			loading->emplace(src->m_context_id, std::move(ss));
 		}
+
+		src->ParsingProgress += [this](auto&, auto& args) { m_events->OnParsingProgress(args); };
 
 		// Start a task to 'parse' it
 		auto output = src->Load(rdr(), ss_token);
