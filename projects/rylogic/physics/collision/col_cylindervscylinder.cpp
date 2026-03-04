@@ -29,11 +29,11 @@ namespace pr
 			struct Point
 			{
 				Point() {}
-				Point(v4 const& point)
+				Point(v4 point)
 				:m_point(point)
 				,m_type(EPointType_Point)
 				{}
-				void set(v4 const& point, int type, int dof0, int dof1)
+				void set(v4 point, int type, int dof0, int dof1)
 				{
 					m_point = point;
 					m_type = type;
@@ -81,7 +81,7 @@ using namespace pr::ph::collision;
 // Projects a cylinder onto 'axis'
 // Returns the half width of the cylinder when projected.
 // Also returns the point in the minimum direction of axis
-float Project(v4 const& axis, v4 const& cyl_axis, float height, float radius, Point& point)
+float Project(v4 axis, v4 cyl_axis, float height, float radius, Point& point)
 {
 	float dist = 0.0f;
 	float d = Dot3(axis, cyl_axis);

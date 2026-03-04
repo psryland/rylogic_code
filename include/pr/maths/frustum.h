@@ -347,7 +347,7 @@ namespace pr
 		{
 			return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0;
 		}
-		friend v4 operator * (Frustum const& lhs, v4 const& rhs)
+		friend v4 operator * (Frustum const& lhs, v4 rhs)
 		{
 			// Returns the signed distance of 'rhs' from each face of the frustum
 			return lhs.m_Tplanes * rhs;

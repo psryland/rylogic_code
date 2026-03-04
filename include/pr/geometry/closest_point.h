@@ -14,11 +14,11 @@ namespace pr::geometry::closest_point
 	// Returns the point closest to 'point' on 'plane'
 	inline v4 pr_vectorcall PointToPlane(v4 point, Plane plane)
 	{
-		return point - distance::PointToPlane(point, plane) * plane::Direction(plane);
+		return point - distance::PointToPlane(point, plane) * plane.direction();
 	}
 	inline v4 pr_vectorcall PointToPlane(v4 point, v4 a, v4 b, v4 c)
 	{
-		return PointToPlane(point, plane::make(a, b, c));
+		return PointToPlane(point, Plane::FromTriangle(a, b, c));
 	}
 
 	// Returns the parametric value of the closest point on 'line'

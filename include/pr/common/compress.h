@@ -10,7 +10,7 @@ namespace pr
 	// Compress a normalised 3-vector into a v2 (almost) losslessly
 	struct Norm64bit
 	{
-		static v2 Compress(v4 const& norm)
+		static v2 Compress(v4 norm)
 		{
 			// Find the largest component
 			auto abs_norm = Abs(norm);
@@ -51,7 +51,7 @@ namespace pr
 	struct Norm32bit
 	{
 		// Best compression method (max error 0.0001)
-		static uint32_t Compress(v4 const& normal)
+		static uint32_t Compress(v4 normal)
 		{
 			auto sign_bits =
 				(int(normal.x >= 0) << 2) |
@@ -112,7 +112,7 @@ namespace pr
 		}
 
 		// An alternative compression method (max error 0.012)
-		static uint32_t Compress2(v4 const& norm)
+		static uint32_t Compress2(v4 norm)
 		{
 			// Drop Z component
 			// 1 bit: z sign
@@ -157,7 +157,7 @@ namespace pr
 	struct Norm16bit
 	{
 		// Best compression method (max error 0.029)
-		static uint16_t Compress(v4 const& normal)
+		static uint16_t Compress(v4 normal)
 		{
 			// ~0.7 degrees angular error measured empirically
 			auto sign_bits =
@@ -219,7 +219,7 @@ namespace pr
 		}
 
 		// An alternative compression method (max error 0.04)
-		static uint16_t Compress2(v4 const& vec)
+		static uint16_t Compress2(v4 vec)
 		{
 			auto tmp = vec;
 

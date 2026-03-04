@@ -32,7 +32,7 @@ bool Simplex::AddVertex(mesh_vs_mesh::Vert const& v)
 
 // This function finds the nearest point on the simplex to 'point'. It also reduces
 // the simplex to the minimum number of vertices needed to describe that point.
-v4 Simplex::FindNearestPoint(v4 const& point)
+v4 Simplex::FindNearestPoint(v4 point)
 {
 	switch( m_num_vertices )
 	{

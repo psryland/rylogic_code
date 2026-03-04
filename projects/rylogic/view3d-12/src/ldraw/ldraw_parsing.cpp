@@ -1098,7 +1098,7 @@ namespace pr::rdr12::ldraw
 						{
 							return verts[i];
 						},
-						[&](int new_idx, int orig_idx, v4 const& norm)
+						[&](int new_idx, int orig_idx, v4 norm)
 						{
 							if (new_idx >= isize(verts))
 							{
@@ -2288,7 +2288,7 @@ namespace pr::rdr12::ldraw
 			ccount = 0;
 
 			constexpr auto cc = [](Colour32 c, bool& has_alpha) -> pr::Colour { has_alpha |= HasAlpha(c); return pr::Colour(c); };
-			constexpr auto bb = [](v4 const& v, BBox& bbox) { Grow(bbox, v); return v; };
+			constexpr auto bb = [](v4 v, BBox& bbox) { Grow(bbox, v); return v; };
 
 			// Combine all segments into one model
 			for (auto& segment : m_segments)

@@ -66,9 +66,9 @@ namespace pr::physics
 		auto off_diag = v4{}; // Accumulate matrix off-diagonals  [y*z, x*z, x*y]
 		for (ShapePolyFace const *f = shape.face_beg(), *fend = shape.face_end(); f != fend; ++f)
 		{
-			auto& a = shape.vertex(f->m_index[0]);
-			auto& b = shape.vertex(f->m_index[1]);
-			auto& c = shape.vertex(f->m_index[2]);
+			auto a = shape.vertex(f->m_index[0]);
+			auto b = shape.vertex(f->m_index[1]);
+			auto c = shape.vertex(f->m_index[2]);
 			auto vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 			volume += vol_x6;
 

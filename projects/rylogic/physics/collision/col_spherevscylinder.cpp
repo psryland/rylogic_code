@@ -26,7 +26,7 @@ void pr::ph::SphereVsCylinder(Shape const& sphere, m4x4 const& a2w, Shape const&
 
 	// Get a transform for the sphere in cylinder space
 	m4x4 a2b = InvertAffine(b2w) * a2w;
-	v4 const& sphere_pos = a2b.pos; // sphere position in cylinder space
+	v4 sphere_pos = a2b.pos; // sphere position in cylinder space
 	float height = Abs(sphere_pos.y);
 
 	// Test for penetration into the ends of the cylinder

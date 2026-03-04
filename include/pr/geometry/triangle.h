@@ -19,7 +19,7 @@ namespace pr::geometry
 {
 	// Return the 'circum radius' of three points
 	// 'centre' is only defined if the returned radius is less than float max
-	inline float CircumRadius(v4 const& a, v4 const& b, v4 const& c, v4& centre)
+	inline float CircumRadius(v4 a, v4 b, v4 c, v4& centre)
 	{
 		v4 ab = b - a;
 		v4 ac = c - a;
@@ -38,7 +38,7 @@ namespace pr::geometry
 	}
 
 	// Returns the angles at each triangle vertex for the triangle v0,v1,v2
-	inline v4 TriangleAngles(v4 const& v0, v4 const& v1, v4 const& v2)
+	inline v4 TriangleAngles(v4 v0, v4 v1, v4 v2)
 	{
 		// Angle at a vertex:
 		// Cos(C) = a.b / |a|b|

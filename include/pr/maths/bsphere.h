@@ -17,7 +17,7 @@ namespace pr
 		v4 m_ctr_rad; // x,y,z = position, 'w' = radius
 
 		BSphere() = default;
-		constexpr BSphere(v4 const& centre, float radius)
+		constexpr BSphere(v4 centre, float radius)
 			:m_ctr_rad(centre.xyz, radius)
 		{}
 

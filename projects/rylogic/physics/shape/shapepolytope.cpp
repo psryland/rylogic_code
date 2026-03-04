@@ -30,9 +30,9 @@ float pr::ph::CalcVolume(ShapePolytope const& shape)
 	float volume = 0;
 	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
-		v4 const& a = shape.vertex(f->m_index[0]);
-		v4 const& b = shape.vertex(f->m_index[1]);
-		v4 const& c = shape.vertex(f->m_index[2]);
+		v4 a = shape.vertex(f->m_index[0]);
+		v4 b = shape.vertex(f->m_index[1]);
+		v4 c = shape.vertex(f->m_index[2]);
 		volume += Triple(a, b, c); // Triple product is volume x 6
 	}
 	if (volume < maths::tinyf)
@@ -50,9 +50,9 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 	v4 centre_of_mass = v4Zero;
 	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
-		v4 const& a = shape.vertex(f->m_index[0]);
-		v4 const& b = shape.vertex(f->m_index[1]);
-		v4 const& c = shape.vertex(f->m_index[2]);
+		v4 a = shape.vertex(f->m_index[0]);
+		v4 b = shape.vertex(f->m_index[1]);
+		v4 c = shape.vertex(f->m_index[2]);
 		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 		centre_of_mass += vol_x6 * (a + b + c);	// Divide by 4 at end
 		volume += vol_x6;
@@ -100,9 +100,9 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 	v4		off_diagonal_integrals = v4Zero;	// Accumulate matrix off-diagonal  integrals [y*z, x*z, x*y]
 	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
-		v4 const& a = shape.vertex(f->m_index[0]);
-		v4 const& b = shape.vertex(f->m_index[1]);
-		v4 const& c = shape.vertex(f->m_index[2]);
+		v4 a = shape.vertex(f->m_index[0]);
+		v4 b = shape.vertex(f->m_index[1]);
+		v4 c = shape.vertex(f->m_index[2]);
 		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 		volume += vol_x6;
 		for (int i = 0, j = 1, k = 2; i != 3; ++i, (++j) %= 3, (++k) %= 3)
@@ -153,7 +153,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapePolytope const& shape, float den
 }
 
 // Return a support vertex for a polytope
-v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id)
+v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 direction, std::size_t hint_vert_id, std::size_t& sup_vert_id)
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_SUPPORT_VERTS, phSupVertPoly);
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertPoly);
@@ -169,7 +169,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 	// Start at the hint vertex and look for a neighbour that is more extreme in the
 	// support direction. When no neighbours are closer we've found the support vertex
 	sup_vert_id = (hint_vert_id < shape.m_vert_count) * hint_vert_id; // Make sure we don't get an invalid id to start with
-	v4 const* support_vertex = &shape.vertex(sup_vert_id);
+	v4 const* support_vertex = shape.vert_begin() + sup_vert_id;
 	v4 const* nearest_vertex;
 	float	  sup_dist = Dot3(*support_vertex, direction);
 	bool	  use_first_nbr = true;
@@ -193,7 +193,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 				{
 					sup_vert_id	   = *n;
 					sup_dist	   = dist;
-					support_vertex = &shape.vertex(sup_vert_id);
+					support_vertex = shape.vert_begin() + sup_vert_id;
 					PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Line("to", "FF0000FF", *nearest_vertex, *support_vertex);)
 					PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Box("v", "FF0000FF", *support_vertex, 0.05f);)
 					break;
@@ -216,7 +216,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 				if( dots.w > sup_dist )		{ sup_dist = dots.w; sup_vert_id = *(n + 3); }
 				if( sup_vert_id != id )
 				{
-					support_vertex = &shape.vertex(sup_vert_id);
+					support_vertex = shape.vert_begin() + sup_vert_id;
 					PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Line("to", "FF0000FF", *nearest_vertex, *support_vertex);)
 					PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Box("v", "FF0000FF", *support_vertex, 0.05f);)
 					break;
@@ -249,8 +249,8 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 
 	float eps = major ? maths::tinyf : -maths::tinyf;
 	vert_id0 = hint_vert_id;
-	v4 const* V1 = &shape.vertex(vert_id0);
-	v4 const* V2 = &shape.vertex(*shape.nbr(vert_id0).begin());	// The first neighbour is always the most distant
+	v4 const* V1 = shape.vert_begin() + (vert_id0);
+	v4 const* V2 = shape.vert_begin() + (*shape.nbr(vert_id0).begin());	// The first neighbour is always the most distant
 	direction = *V1 - *V2;
 	float span_lenSq = LengthSq(direction);
 	do
@@ -261,8 +261,8 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 		ShapePolyNbrs const& nbr = shape.nbr(vert_id0);
 		for( uint8_t const *n = nbr.begin() + 1, *n_end = nbr.end(); n < n_end; ++n )
 		{
-			v4 const* v1 = &shape.vertex(*n);
-			v4 const* v2 = &shape.vertex(*shape.nbr(*n).begin());
+			v4 const* v1 = shape.vert_begin() + (*n);
+			v4 const* v2 = shape.vert_begin() + (*shape.nbr(*n).begin());
 			v4 span = *v1 - *v2;
 			float lenSq = LengthSq(span);
 			if( (lenSq > span_lenSq + eps) == major )
@@ -393,12 +393,12 @@ void pr::ph::GenerateFaces(ShapePolytope const& shape, uint32_t* faces, uint32_t
 	// Generate the convex hull
 	for( uint32_t i = 3; i != shape.m_vert_count; ++i )
 	{
-		v4 const& v = shape.vertex(i);
+		v4 v = shape.vertex(i);
 		for( uint32_t* f = faces_start, *f_end = faces; f != f_end; f += 3 )
 		{
-			v4 const& a = shape.vertex(*(f + 0));
-			v4 const& b = shape.vertex(*(f + 1));
-			v4 const& c = shape.vertex(*(f + 2));
+			v4 a = shape.vertex(*(f + 0));
+			v4 b = shape.vertex(*(f + 1));
+			v4 c = shape.vertex(*(f + 2));
 
 			// If 'v' is in front of this face add its edges to the edge stack and remove the face
 			if( Triple(v - a, b - a, c - a) >= 0.0f )

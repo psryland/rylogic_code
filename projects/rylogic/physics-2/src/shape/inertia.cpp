@@ -256,7 +256,7 @@ namespace pr::physics
 	{
 		return !(lhs == rhs);
 	}
-	v4 operator * (Inertia const& inertia, v4 const& v)
+	v4 operator * (Inertia const& inertia, v4 v)
 	{
 		if (inertia.CoM() == v4{})
 			return inertia.To3x3() * v;
@@ -508,7 +508,7 @@ namespace pr::physics
 	{
 		return !(lhs == rhs);
 	}
-	v4 operator * (InertiaInv const& inertia_inv, v4 const& h)
+	v4 operator * (InertiaInv const& inertia_inv, v4 h)
 	{
 		if (inertia_inv.CoM() == v4{})
 			return inertia_inv.To3x3() * h;

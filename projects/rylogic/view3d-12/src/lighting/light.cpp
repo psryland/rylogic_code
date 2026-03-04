@@ -39,7 +39,7 @@ namespace pr::rdr12
 	}
 
 	// Returns a light to world transform appropriate for this light type and facing 'centre'
-	m4x4 Light::LightToWorld(v4 const& centre, float centre_dist, m4x4 const& c2w) const
+	m4x4 Light::LightToWorld(v4 centre, float centre_dist, m4x4 const& c2w) const
 	{
 		auto pos = m_cam_relative ? c2w * m_position : m_position;
 		auto dir = m_cam_relative ? c2w * m_direction : m_direction;

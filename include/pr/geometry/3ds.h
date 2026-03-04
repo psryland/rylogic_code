@@ -629,7 +629,7 @@ namespace pr::geometry::max_3ds
 			uint16_t m_orig_index; // The index into the original obj.m_mesh.m_vert container
 			uint16_t m_new_index;  // The index of this vert in the 'verts' container
 
-			Vert(uint16_t orig_index, uint16_t new_index, v4 const& norm, Colour const& col, uint32_t sg)
+			Vert(uint16_t orig_index, uint16_t new_index, v4 norm, Colour const& col, uint32_t sg)
 				:m_norm(norm)
 				,m_col(col)
 				,m_smooth(sg)
@@ -656,7 +656,7 @@ namespace pr::geometry::max_3ds
 			}
 
 			// Returns the new index for the vert in 'cont'
-			uint16_t add(uint16_t idx, v4 const& norm, Colour const& col, uint32_t sg)
+			uint16_t add(uint16_t idx, v4 norm, Colour const& col, uint32_t sg)
 			{
 				auto& vert = m_data.at(idx);
 

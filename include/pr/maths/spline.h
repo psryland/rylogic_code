@@ -509,9 +509,9 @@ namespace pr
 				}
 
 				// Split 'elem' at 't'
-				std::tuple<Elem, Elem> Split(Elem const& elem, v4 const& mid) const
+				std::tuple<Elem, Elem> Split(Elem const& elem, v4 mid) const
 				{
-					auto err = [this](v4 const& p0, v4 const& p1)
+					auto err = [this](v4 p0, v4 p1)
 					{
 						// If 't0' and 't1' are on different curves, pick a "large" error amount
 						if (p1.w - p0.w > 1.0f)
@@ -581,7 +581,7 @@ namespace pr
 
 		// Construct a spline from 4 control points
 		Spline() = default;
-		Spline(v4 const& start, v4 const& start_ctrl, v4 const& end_ctrl, v4 const& end)
+		Spline(v4 start, v4 start_ctrl, v4 end_ctrl, v4 end)
 			:m4x4(start, start_ctrl, end_ctrl, end)
 		{
 			pr_assert(start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f && "Splines are constructed from 4 positions");
@@ -639,7 +639,7 @@ namespace pr
 		{
 			return O2W(time, 2, v4::YAxis());
 		}
-		m4x4 O2W(float time, int axis, v4 const& up) const
+		m4x4 O2W(float time, int axis, v4 up) const
 		{
 			return OriFromDir(Velocity(time), axis, up, Position(time));
 		}
@@ -711,7 +711,7 @@ namespace pr
 	// Note: the analytic solution to this problem involves solving a 5th order polynomial
 	// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
 	// Should have quadratic convergence
-	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, float initial_estimate, bool bound01 = true, int iterations = 5)
+	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 pt, float initial_estimate, bool bound01 = true, int iterations = 5)
 	{
 		// The distance (squared) from 'pt' to the spline is: Dist(t) = |pt - S(t)|^2.    (S(t) = spline at t)
 		// At the closest point, Dist'(t) = 0.
@@ -736,7 +736,7 @@ namespace pr
 
 	// This overload attempts to find the nearest point robustly
 	// by testing 3 starting points and returning minimum.
-	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 const& pt, bool bound01 = true)
+	inline float ClosestPoint_PointToSpline(Spline const& spline, v4 pt, bool bound01 = true)
 	{
 		float t0 = ClosestPoint_PointToSpline(spline, pt, -0.5f, bound01, 5);
 		float t1 = ClosestPoint_PointToSpline(spline, pt,  0.5f, bound01, 5);
@@ -1033,7 +1033,7 @@ namespace pr
 		{
 			return Spline::O2W(m_clock);
 		}
-		m4x4 O2W(int axis, v4 const& up) const
+		m4x4 O2W(int axis, v4 up) const
 		{
 			return Spline::O2W(m_clock, axis, up);
 		}

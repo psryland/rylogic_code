@@ -274,7 +274,7 @@ namespace pr
 		// Return a point in world space corresponding to a normalised screen space point.
 		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left -> upper right).
 		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
-		v4 NSSPointToWSPoint(v4 const& nss_point) const
+		v4 NSSPointToWSPoint(v4 nss_point) const
 		{
 			auto half_height = m_focus_dist * std::tan(m_fovY * 0.5);
 
@@ -295,7 +295,7 @@ namespace pr
 
 		// Return a point in normalised screen space corresponding to 'ws_point'
 		// The returned 'z' component will be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
-		v4 WSPointToNSSPoint(v4 const& ws_point) const
+		v4 WSPointToNSSPoint(v4 ws_point) const
 		{
 			auto half_height = m_focus_dist * std::tan(m_fovY * 0.5);
 
@@ -319,7 +319,7 @@ namespace pr
 		// Return a ray from the camera that passes through 'nss_point' (a normalised screen space point).
 		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left -> upper right).
 		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
-		std::tuple<v4, v4> NSSPointToWSRay(v4 const& nss_point) const
+		std::tuple<v4, v4> NSSPointToWSRay(v4 nss_point) const
 		{
 			v4 ws_point, ws_direction;
 			auto pt = NSSPointToWSPoint(nss_point);
@@ -337,7 +337,7 @@ namespace pr
 			}
 			return {ws_point, ws_direction};
 		}
-		//void NSSPointToWSRay(v4 const& nss_point, v4& ws_point, v4& ws_direction) const // deprecate
+		//void NSSPointToWSRay(v4 nss_point, v4& ws_point, v4& ws_direction) const // deprecate
 		//{
 		//	std::tie(ws_point, ws_direction) = NSSPointToWSRay(nss_point);
 		//	//auto pt = NSSPointToWSPoint(nss_point);
@@ -495,7 +495,7 @@ namespace pr
 		{
 			return m_align;
 		}
-		void Align(v4 const& up)
+		void Align(v4 up)
 		{
 			m_align = up;
 			if (LengthSq(m_align) > maths::tinyf)
@@ -580,7 +580,7 @@ namespace pr
 		{
 			return m_c2w.pos - s_cast<float>(m_focus_dist) * m_c2w.z;
 		}
-		void FocusPoint(v4 const& position)
+		void FocusPoint(v4 position)
 		{
 			m_c2w.pos += position - FocusPoint();
 			EnforceBounds();
@@ -937,7 +937,7 @@ namespace pr
 		}
 
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
-		void LookAt(v4 const& position, v4 const& lookat, v4 const& up, bool commit = true)
+		void LookAt(v4 position, v4 lookat, v4 up, bool commit = true)
 		{
 			CameraToWorld(m4x4::LookAt(position, lookat, up));
 			FocusDist(Clamp<double>(Length(lookat - position), FocusDistMin(), FocusDistMax()));
@@ -947,7 +947,7 @@ namespace pr
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(BBox const& bbox, v4 const& forward, v4 const& up, double focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
+		void View(BBox const& bbox, v4 forward, v4 up, double focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
 			if (!bbox.valid())
 				throw std::runtime_error("Camera: Cannot view an invalid bounding box");

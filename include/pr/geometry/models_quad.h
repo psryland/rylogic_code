@@ -174,7 +174,7 @@ namespace pr::geometry
 	// 'colour' is a colour for the whole quad
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 	template <VertOutputFn VOut, IndexOutputFn IOut>
-	Props Quad(v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
+	Props Quad(v2 const& anchor, v4 quad_w, v4 quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		// Set the start point so that the model origin matches 'anchor'
 		auto origin = v4Origin
@@ -236,7 +236,7 @@ namespace pr::geometry
 		// X => Y = width, Z = Height
 		// Y => Z = width, X = Height
 		// Z => X = width, Y = Height
-		v4 quad_w, quad_h;
+		v4 quad_w = {}, quad_h = {};
 		switch (axis_id) {
 		case AxisId::PosX: quad_w = +width * v4::YAxis(); quad_h = +height * v4::ZAxis(); break;
 		case AxisId::PosY: quad_w = +width * v4::ZAxis(); quad_h = +height * v4::XAxis(); break;
@@ -254,7 +254,7 @@ namespace pr::geometry
 	// 'top' is the up direction of the quad. Can be zero (defaults to -ZAxis, then -XAxis), doesn't need to be orthogonal to 'forward'
 	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 	template <VertOutputFn VOut, IndexOutputFn IOut>
-	Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
+	Props Quad(v4 centre, v4 forward, v4 top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		auto fwd = forward != v4Zero ? forward : v4::YAxis();
 		auto up = top != v4Zero ? top : -v4::ZAxis();

@@ -75,7 +75,7 @@ namespace pr::geometry
 
 		// Create a vertex and add it to the vertex container
 		// Returns the index position of the vertex
-		inline VIndex AddVertex(v4 const& norm, float ang, bool pole, CreateGeosphereData& data)
+		inline VIndex AddVertex(v4 norm, float ang, bool pole, CreateGeosphereData& data)
 		{
 			PR_ASSERT(PR_DBG, IsNormal(norm), "");
 
@@ -187,7 +187,7 @@ namespace pr::geometry
 
 	// Generate an ellipsoid geosphere
 	template <VertOutputFn VOut, IndexOutputFn IOut>
-	Props Geosphere(v4 const& radius, int divisions, Colour32 colour, VOut vout, IOut iout)
+	Props Geosphere(v4 radius, int divisions, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_bbox = BBox(pr::v4Origin, radius);
@@ -234,7 +234,7 @@ namespace pr::geometry
 
 	// Generate a standard sphere
 	template <VertOutputFn VOut, IndexOutputFn IOut>
-	Props Sphere(v4 const& radius, int wedges, int layers, Colour32 colour, VOut vout, IOut iout)
+	Props Sphere(v4 radius, int wedges, int layers, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_bbox = BBox(pr::v4Origin, radius);
