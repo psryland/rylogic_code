@@ -795,8 +795,8 @@ namespace Rylogic.Script
 					}
 				case "euler":
 					{
-						var angles = Math_.DegreesToRadians(Vector3S(0.0f));
-						p2w = m4x4.Transform(angles.x, angles.y, angles.z, v4.Origin) * p2w;
+						var angles = Vector3S(0.0f);
+						p2w = m4x4.TransformDeg(angles.x, angles.y, angles.z, v4.Origin) * p2w;
 						break;
 					}
 				case "scale":

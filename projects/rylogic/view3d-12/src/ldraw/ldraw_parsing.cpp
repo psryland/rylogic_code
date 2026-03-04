@@ -26,7 +26,7 @@
 #include "pr/view3d-12/texture/texture_desc.h"
 
 #include "pr/str/extract.h"
-#include "pr/maths/convex_hull.h"
+#include "pr/geometry/convex_hull.h"
 #include "pr/geometry/index_buffer.h"
 #include "pr/container/byte_data.h"
 #include "pr/script/forward.h"
@@ -172,8 +172,9 @@ namespace pr::rdr12::ldraw
 		time_point      m_last_progress_update;
 		EFlags          m_flags;
 		bool&           m_cancel;
+		std::stop_token m_stop_token;
 
-		ParseParams(Renderer& rdr, ParseResult& result, Guid const& context_id, ReportErrorCB error_cb, ParseProgressCB progress_cb, bool& cancel)
+		ParseParams(Renderer& rdr, ParseResult& result, Guid const& context_id, ReportErrorCB error_cb, ParseProgressCB progress_cb, bool& cancel, std::stop_token stop_token = {})
 			: m_rdr(rdr)
 			, m_result(result)
 			, m_objects(result.m_objects)
@@ -190,6 +191,7 @@ namespace pr::rdr12::ldraw
 			, m_last_progress_update(system_clock::now())
 			, m_flags(EFlags::None)
 			, m_cancel(cancel)
+			, m_stop_token(std::move(stop_token))
 		{}
 		ParseParams(ParseParams& pp, ObjectCont& objects, LdrObject* parent, IObjectCreator* parent_creator)
 			: m_rdr(pp.m_rdr)
@@ -208,6 +210,7 @@ namespace pr::rdr12::ldraw
 			, m_last_progress_update(pp.m_last_progress_update)
 			, m_flags(pp.m_flags)
 			, m_cancel(pp.m_cancel)
+			, m_stop_token(pp.m_stop_token)
 		{}
 		ParseParams(ParseParams&&) = delete;
 		ParseParams(ParseParams const&) = delete;
@@ -225,9 +228,20 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Give a progress update
-		void ReportProgress()
+		void ReportProgress(IReader& reader, int r = 0)
 		{
 			using namespace std::chrono;
+
+			// Reduce report progress frequency based on external loop counter
+			if ((r % 0xfff) != 0)
+				return;
+
+			// Check for stop_token cancellation
+			if (m_stop_token.stop_requested())
+			{
+				m_cancel = true;
+				return;
+			}
 
 			// Callback provided?
 			if (m_progress_cb == nullptr)
@@ -239,7 +253,7 @@ namespace pr::rdr12::ldraw
 
 			// Call the callback with the freshly minted object.
 			// If the callback returns false, abort parsing.
-			m_cancel = !m_progress_cb(m_context_id, m_result, Location(), false);
+			m_cancel = !m_progress_cb(m_context_id, m_result, reader.Loc(), false);
 			m_last_progress_update = system_clock::now();
 		}
 	};
@@ -1249,7 +1263,7 @@ namespace pr::rdr12::ldraw
 						}
 						default:
 						{
-							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *DataPoints", EKeyword_::ToStringA(kw)));
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Arrow", EKeyword_::ToStringA(kw)));
 							break;
 						}
 					}
@@ -1787,8 +1801,9 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						if (m_per_item_colour)
 							m_colours.push_back(reader.Int<uint32_t>(16));
@@ -1955,8 +1970,9 @@ namespace pr::rdr12::ldraw
 				// Read pairs of points, each pair is a line segment
 				case ELineStyle::LineSegments:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						m_verts.push_back(reader.Vector3f().w1());
 						segment.m_vcount += 2;
@@ -1980,9 +1996,9 @@ namespace pr::rdr12::ldraw
 				// Read single points, each point is a continuation of a line strip. Use separate *Data sections to create strip cuts.
 				case ELineStyle::LineStrip:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
-						m_verts.push_back(reader.Vector3f().w1());
+						m_pp.ReportProgress(reader, r);
 						segment.m_vcount += 1;
 						if (m_per_item_colour)
 						{
@@ -2002,8 +2018,9 @@ namespace pr::rdr12::ldraw
 				// Read pairs of points, each pair is a (pt, pt + dir) line segment
 				case ELineStyle::Direction:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto p = reader.Vector3f().w1();
 						auto d = reader.Vector3f().w0();
 						m_verts.push_back(p);
@@ -2030,8 +2047,9 @@ namespace pr::rdr12::ldraw
 				// Read control points in sets of 4
 				case ELineStyle::BezierSpline:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto p0 = reader.Vector3f().w1();
 						auto p1 = reader.Vector3f().w1();
 						auto p2 = reader.Vector3f().w1();
@@ -2642,8 +2660,9 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Data:
 				{
 					// Read data till the end of the section
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto value = reader.Real<double>();
 						m_data.push_back(value);
 					}
@@ -3324,8 +3343,10 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
+
 						v4 pt[3] = {};
 						Colour32 col[3] = {};
 						for (int i = 0; i != 3; ++i)
@@ -3399,8 +3420,10 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
+
 						v4 pt[4] = {};
 						Colour32 col[4] = {};
 						for (int i = 0; i != 4; ++i)
@@ -3529,8 +3552,9 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					for (; !reader.IsSectionEnd();)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
 						if (m_per_item_colour)
 							m_colours.push_back(reader.Int<uint32_t>(16));
@@ -3642,8 +3666,9 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Data:
 				{
-					for (; !reader.IsSectionEnd(); )
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto dim = reader.Vector3f().w0();
 						auto xyz = reader.Vector3f().w1();
 						m_boxes.push_back(BBox(xyz, Abs(dim) * 0.5f));
@@ -4182,37 +4207,37 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Verts:
 				{
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
 				}
 				case EKeyword::Normals:
 				{
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_normals.push_back(reader.Vector3f().w0());
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
 				}
 				case EKeyword::Colours:
 				{
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_colours.push_back(pr::Colour(reader.Int<uint32_t>(16)));
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
 				}
 				case EKeyword::TexCoords:
 				{
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_texs.push_back(reader.Vector2f());
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
 				}
@@ -4228,14 +4253,13 @@ namespace pr::rdr12::ldraw
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
-
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 
 					m_nuggets.push_back(nug);
@@ -4255,14 +4279,13 @@ namespace pr::rdr12::ldraw
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
-
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 
 					m_nuggets.push_back(nug);
@@ -4279,8 +4302,10 @@ namespace pr::rdr12::ldraw
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					for (int r = 1;!reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
+
 						uint16_t const idx[] = {
 							reader.Int<uint16_t>(10),
 							reader.Int<uint16_t>(10),
@@ -4305,8 +4330,6 @@ namespace pr::rdr12::ldraw
 						nug.m_vrange.grow(idx[2]);
 						nug.m_vrange.grow(idx[3]);
 						nug.m_irange.m_end += 12;
-
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 
 					m_nuggets.push_back(nug);
@@ -4401,10 +4424,10 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Verts:
 				{
-					for (int r = 1; !reader.IsSectionEnd(); ++r)
+					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
+						m_pp.ReportProgress(reader, r);
 						m_verts.push_back(reader.Vector3f().w1());
-						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
 				}
@@ -5129,7 +5152,7 @@ namespace pr::rdr12::ldraw
 			// Update object colour, visibility, etc
 			ApplyObjectState(&ob);
 		}
-		static void LinePlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
+		static void LinePlot(Model& model, BBox range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
 			// Notes:
 			//  - 'range' is the independent variable range. For line plots, only 'x' is used
@@ -5187,7 +5210,7 @@ namespace pr::rdr12::ldraw
 				model.CreateNugget(factory, n);
 			}
 		}
-		static void SurfacePlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
+		static void SurfacePlot(Model& model, BBox range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
 			// Notes:
 			//  - 'range' is the independent variable range. For surface plots, 'x' and 'y' are used.
@@ -5217,7 +5240,7 @@ namespace pr::rdr12::ldraw
 			auto iout = update_i.ptr<uint32_t>();
 
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref pos, Colour32, v4_cref, v2_cref)
+				[&](v4 pos, Colour32, v4, v2)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform
@@ -5259,7 +5282,7 @@ namespace pr::rdr12::ldraw
 				model.CreateNugget(factory, NuggetDesc(ETopo::TriStrip, props.m_geom).vrange(Range(0, nv)).irange(Range(0, ni)).alpha_geom(extras.has_alpha()));
 			}
 		}
-		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
+		static void CloudPlot(Model& model, BBox range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
 			(void)model, range, equation, extras, init;
 			throw std::runtime_error("Plots of 3 independent variables are not supported");
@@ -5647,10 +5670,14 @@ namespace pr::rdr12::ldraw
 	{
 		string32 m_source;
 		creation::KeyFrameAnimInfo m_anim_info;
+		creation::MontageInfo m_montage;
 		std::unordered_map<Pose const*, PosePtr> m_pose_map;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_source()
+			, m_anim_info()
+			, m_montage()
 			, m_pose_map()
 		{
 		}
@@ -5669,6 +5696,11 @@ namespace pr::rdr12::ldraw
 					m_anim_info.Parse(reader, m_pp);
 					return true;
 				}
+				case EKeyword::Montage:
+				{
+					m_montage.Parse(reader, m_pp);
+					return true;
+				}
 				default:
 				{
 					return
@@ -5681,6 +5713,13 @@ namespace pr::rdr12::ldraw
 			// Ignore empty instances
 			if (m_source.empty())
 				return;
+
+			// *Animation and *Montage are mutually exclusive
+			if (m_anim_info && m_montage)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Animation and *Montage cannot both be specified in the same *Instance");
+				return;
+			}
 
 			LdrObject* source = nullptr;
 			std::string_view addr{ m_source };
@@ -5729,27 +5768,14 @@ namespace pr::rdr12::ldraw
 
 			// Clone the pose if animation info is given
 			if (m_anim_info && source->m_pose != nullptr)
-			{
-				// Clamp the time range to the frame range
-				auto time_range = ToTimeRange(m_anim_info.m_frame_range, source->m_pose->m_animator->FrameRate());
-				time_range = Intersect(time_range, source->m_pose->m_time_range);
-				time_range = Intersect(time_range, m_anim_info.m_time_range);
+				CreateAnimation(obj, source, loc);
 
-				// Clone the animator because it can have cached state for efficient animation sampling
-				AnimatorPtr animator = source->m_pose->m_animator->Clone();
-
-				PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
-
-				// Set the pose for each model in the hierarchy.
-				obj->Apply([&](LdrObject* obj)
-				{
-					obj->m_pose = pose;
-					obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
-					obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
-					return true;
-				}, "");
-			}
+			// Build a montage animation for this instance
+			if (m_montage && source->m_pose != nullptr)
+				CreateMontage(obj, source, loc);
 		}
+
+		// Recursively create an instance by copying the model and properties of 'source' into 'obj' and doing the same for each child.
 		void RecursiveCreate(LdrObject* obj, LdrObject const* source, bool copy_props)
 		{
 			obj->m_model = source->m_model;
@@ -5771,6 +5797,147 @@ namespace pr::rdr12::ldraw
 				child->m_name = source_child->m_name;
 				obj->m_child.push_back(std::move(child));
 			}
+		}
+
+		// Build an animation for the instance by cloning the source object's pose and applying the animation mods
+		void CreateAnimation(LdrObject* obj, LdrObject const* source, Location const&)
+		{
+			// Clamp the time range to the frame range
+			auto time_range = ToTimeRange(m_anim_info.m_frame_range, source->m_pose->m_animator->FrameRate());
+			time_range = Intersect(time_range, source->m_pose->m_time_range);
+			time_range = Intersect(time_range, m_anim_info.m_time_range);
+
+			// Clone the animator because it can have cached state for efficient animation sampling
+			AnimatorPtr animator = source->m_pose->m_animator->Clone();
+
+			// Create a new pose for the instance using the source pose's skeleton and the cloned animator
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, source->m_pose->m_skeleton, animator, m_anim_info.m_mods.m_style, m_anim_info.m_mods.m_flags, time_range, m_anim_info.m_mods.m_stretch, m_anim_info.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy.
+			obj->Apply([&](LdrObject* obj)
+			{
+				obj->m_pose = pose;
+				obj->Flags(ELdrFlags::Animated, m_anim_info.m_mods.m_style != EAnimStyle::NoAnimation);
+				obj->Flags(ELdrFlags::HideWhenNotAnimating, m_anim_info.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
+		}
+
+		// Build a montage animation for the instance using the source object's animation as source index 0
+		void CreateMontage(LdrObject* obj, LdrObject const* source, Location const& loc)
+		{
+			using namespace pr::geometry;
+			using namespace std::filesystem;
+
+			// No frames, no montage
+			if (m_montage.m_key_refs.empty())
+				return;
+
+			// The source's pose must use a KeyFrameAnimation-based animator so we can access the raw animation data
+			auto* kfa_animator = dynamic_cast<Animator_KeyFrameAnimation const*>(source->m_pose->m_animator.get());
+			if (!kfa_animator || !kfa_animator->m_anim)
+			{
+				m_pp.ReportError(EParseError::InvalidValue, loc, "*Montage on *Instance requires the source object to have a key-frame animation (source index 0)");
+				return;
+			}
+
+			auto const& skeleton = source->m_pose->m_skeleton;
+			auto const& model_anim = kfa_animator->m_anim;
+
+			// Collect animation sources: index 0 is the source object's animation
+			vector<KeyFrameAnimationPtr> source_anims;
+			source_anims.push_back(model_anim);
+
+			// Load additional animation sources from the montage
+			for (int si = 0; si != isize(m_montage.m_source_paths); ++si)
+			{
+				auto const& source_path = m_montage.m_source_paths[si];
+				auto& stream = m_montage.m_source_streams[si];
+				if (!stream)
+				{
+					m_pp.ReportError(EParseError::NotFound, loc, std::format("Failed to open animation source '{}'", source_path.string()));
+					return;
+				}
+
+				auto source_format = GetModelFormat(source_path);
+				if (source_format == EModelFileFormat::Unknown)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Unsupported animation source format '{}'", source_path.string()));
+					return;
+				}
+
+				// Reuse the AnimSourceOut type from the *Model creator
+				struct AnimSourceOut : ModelGenerator::IModelOut
+				{
+					SkeletonPtr m_skel;
+					KeyFrameAnimationPtr m_anim;
+
+					geometry::ESceneParts Parts() const override
+					{
+						return geometry::ESceneParts::AnimationOnly;
+					}
+					EResult Skeleton(SkeletonPtr&& skel) override
+					{
+						m_skel = std::move(skel); return EResult::Continue;
+					}
+					EResult Animation(KeyFrameAnimationPtr&& anim) override
+					{
+						m_anim = std::move(anim); return EResult::Stop;
+					}
+				};
+
+				AnimSourceOut out;
+				ModelGenerator::LoadModel(source_format, m_pp.m_factory, *stream, out);
+
+				if (!out.m_anim)
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("No animation found in source '{}'", source_path.string()));
+					return;
+				}
+				if (!out.m_skel || !skeleton->IsCompatible(*out.m_skel.get()))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Skeleton in '{}' is not compatible with the source skeleton", source_path.string()));
+					return;
+				}
+
+				source_anims.push_back(std::move(out.m_anim));
+			}
+
+			// Validate source indices in frame entries
+			for (int i = 0; i != isize(m_montage.m_key_refs); ++i)
+			{
+				auto const& key_refs = m_montage.m_key_refs;
+				if (key_refs[i].source_index < 0 || key_refs[i].source_index >= isize(source_anims))
+				{
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("*Frame source index {} is out of range (0..{})", key_refs[i].source_index, isize(source_anims) - 1));
+					return;
+				}
+			}
+
+			// Create kinematic key frame animation from the multi-source frames
+			auto kkfa = KinematicKeyFrameAnimationPtr{ rdr12::New<KinematicKeyFrameAnimation>(skeleton->Id()), true };
+			kkfa->Populate(
+				source_anims,
+				m_montage.m_key_refs,
+				m_montage.m_durations,
+				m_montage.m_per_frame_o2w
+			);
+			auto time_range = TimeRange{ 0, kkfa->duration() };
+
+			// Create animator and pose
+			AnimatorPtr animator = AnimatorPtr{ rdr12::New<Animator_InterpolatedAnimation>(kkfa), true };
+
+			// Create a new pose for the instance using the source pose's skeleton and the montage animator
+			PosePtr pose{ rdr12::New<Pose>(m_pp.m_factory, skeleton, animator, m_montage.m_mods.m_style, m_montage.m_mods.m_flags, time_range, m_montage.m_mods.m_stretch, m_montage.m_mods.m_bias), true };
+
+			// Set the pose for each model in the hierarchy
+			obj->Apply([&](LdrObject* o)
+			{
+				o->m_pose = pose;
+				o->Flags(ELdrFlags::Animated, m_montage.m_mods.m_style != EAnimStyle::NoAnimation);
+				o->Flags(ELdrFlags::HideWhenNotAnimating, m_montage.m_mods.m_hide_when_not_animating);
+				return true;
+			}, "");
 		}
 	};
 
@@ -5836,7 +6003,7 @@ namespace pr::rdr12::ldraw
 		pp.m_cache.Reset();
 
 		// Report progress
-		pp.ReportProgress();
+		pp.ReportProgress(reader);
 
 		return true;
 	}
@@ -5846,7 +6013,7 @@ namespace pr::rdr12::ldraw
 	void ParseLdrObjects(IReader& reader, ParseParams& pp, AddCB add_cb)
 	{
 		// Loop over keywords in the script
-		for (EKeyword kw; !pp.m_cancel && reader.NextKeyword(kw);)
+		for (EKeyword kw; !pp.m_cancel && !pp.m_stop_token.stop_requested() && reader.NextKeyword(kw);)
 		{
 			switch (kw)
 			{
@@ -5896,7 +6063,7 @@ namespace pr::rdr12::ldraw
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult Parse(Renderer& rdr, IReader& reader, Guid const& context_id)
+	ParseResult Parse(Renderer& rdr, IReader& reader, Guid const& context_id, std::stop_token stop_token)
 	{
 		ParseResult out;
 
@@ -5907,35 +6074,35 @@ namespace pr::rdr12::ldraw
 
 		// Parse the script
 		bool cancel = false;
-		ParseParams pp(rdr, out, context_id, reader.ReportError, reader.Progress, cancel);
+		ParseParams pp(rdr, out, context_id, reader.ReportError, reader.Progress, cancel, std::move(stop_token));
 		ParseLdrObjects(reader, pp, [&](int){});
 		return out;
 	}
-	ParseResult Parse(Renderer& rdr, std::string_view ldr_script, Guid const& context_id)
+	ParseResult Parse(Renderer& rdr, std::string_view ldr_script, Guid const& context_id, std::stop_token stop_token)
 	{
 		mem_istream<char> src{ ldr_script };
 		rdr12::ldraw::TextReader reader(src, {});
-		return Parse(rdr, reader, context_id);
+		return Parse(rdr, reader, context_id, std::move(stop_token));
 	}
-	ParseResult Parse(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id)
+	ParseResult Parse(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id, std::stop_token stop_token)
 	{
 		mem_istream<wchar_t> src{ ldr_script };
 		rdr12::ldraw::TextReader reader(src, {});
-		return Parse(rdr, reader, context_id);
+		return Parse(rdr, reader, context_id, std::move(stop_token));
 	}
-	ParseResult ParseFile(Renderer& rdr, std::filesystem::path ldr_filepath, Guid const& context_id)
+	ParseResult ParseFile(Renderer& rdr, std::filesystem::path ldr_filepath, Guid const& context_id, std::stop_token stop_token)
 	{
 		if (ldr_filepath.extension() == ".ldr")
 		{
 			std::ifstream src{ ldr_filepath };
 			rdr12::ldraw::TextReader reader(src, ldr_filepath);
-			return Parse(rdr, reader, context_id);
+			return Parse(rdr, reader, context_id, std::move(stop_token));
 		}
 		if (ldr_filepath.extension() == ".bdr")
 		{
 			std::ifstream src{ ldr_filepath, std::ios::binary };
 			rdr12::ldraw::BinaryReader reader(src, ldr_filepath);
-			return Parse(rdr, reader, context_id);
+			return Parse(rdr, reader, context_id, std::move(stop_token));
 		}
 		return {};
 	}

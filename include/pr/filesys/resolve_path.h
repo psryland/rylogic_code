@@ -15,7 +15,7 @@
 #include "pr/common/memstream.h"
 #include "pr/common/event_handler.h"
 #include "pr/common/flags_enum.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 
 namespace pr::filesys
 {

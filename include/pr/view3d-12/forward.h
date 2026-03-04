@@ -34,6 +34,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include <latch>
 #include <future>
 #include <cwctype>
 
@@ -79,6 +80,7 @@
 #include "pr/common/static_callback.h"
 #include "pr/common/to.h"
 #include "pr/common/user_data.h"
+#include "pr/common/async_wrap.h"
 #include "pr/container/byte_data.h"
 #include "pr/container/chain.h"
 #include "pr/container/deque.h"
@@ -113,8 +115,7 @@
 #include "pr/gui/gdiplus.h"
 #include "pr/macros/enum.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/bit_fields.h"
-#include "pr/maths/dynamics.h"
+#include "pr/common/bit_fields.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/meta/nameof.h"
 #include "pr/network/winsock.h"
@@ -124,7 +125,6 @@
 #include "pr/str/to_string.h"
 #include "pr/script/script.h"
 #include "pr/threads/name_thread.h"
-#include "pr/threads/synchronise.h"
 #include "pr/win32/dummy_window.h"
 #include "pr/win32/key_codes.h"
 #include "pr/win32/win32.h"

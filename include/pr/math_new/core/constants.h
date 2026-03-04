@@ -85,18 +85,27 @@ namespace pr::math
 		// The maximum integer value that can be exactly represented by a float,double
 		static constexpr int32_t max_representable_int = 16777216; // 2^24
 	};
+	template <> struct constants<int64_t>
+	{
+		static constexpr int64_t tiny = 0LL;
+	};
+	template <> struct constants<int32_t>
+	{
+		static constexpr int32_t tiny = 0;
+	};
 
 	// static constants
 	template <typename T> constexpr std::decay_t<T> tiny;
 	template <> constexpr double  tiny<double const>  = constants<double>::tiny;
 	template <> constexpr float   tiny<float const>   = constants<float>::tiny;
-	template <> constexpr int64_t tiny<int64_t const> = 0LL;
-	template <> constexpr int32_t tiny<int32_t const> = 0;
+	template <> constexpr int64_t tiny<int64_t const> = constants<int64_t>::tiny;
+	template <> constexpr int32_t tiny<int32_t const> = constants<int32_t>::tiny;
 	template <> constexpr double  tiny<double>        = constants<double>::tiny;
 	template <> constexpr float   tiny<float>         = constants<float>::tiny;
-	template <> constexpr int64_t tiny<int64_t>       = 0LL;
-	template <> constexpr int32_t tiny<int32_t>       = 0;
+	template <> constexpr int64_t tiny<int64_t>       = constants<int64_t>::tiny;
+	template <> constexpr int32_t tiny<int32_t>       = constants<int32_t>::tiny;
 
+	#if 0 // deprecated, don't relabel existing values
 	inline constexpr double tinyd = constants<double>::tiny;
 	inline constexpr double tiny_sqd = constants<double>::tiny_sq;
 	inline constexpr double tiny_sqrtd = constants<double>::tiny_sqrt;
@@ -184,6 +193,7 @@ namespace pr::math
 	inline constexpr double   double_inf   = limits<double>::infinity();
 	inline constexpr float    float_nan    = limits<float>::quiet_NaN();
 	inline constexpr double   double_nan   = limits<double>::quiet_NaN();
+	#endif
 
 	// The maximum integer value that can be exactly represented by a float,double
 	inline constexpr int32_t max_int_in_float  = 16777216;           // 2^24

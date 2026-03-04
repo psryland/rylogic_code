@@ -172,36 +172,36 @@ struct Simplex
 	{
 		PR_ASSERT(PR_DBG_PHYSICS, m_num_verts > 0, "");
 		float t0, t1;
-		switch( m_num_verts )
+		switch (m_num_verts)
 		{
-		case 1: 
-			m_nearest = m_vert[0].m_vert;
-			m_normal  = closest_point::PointToRay(m_nearest, lineS, lineE, t0) - m_nearest;
-			return m_normal;
-		case 2:
+			case 1:
+				m_nearest = m_vert[0].m_vert;
+				m_normal = closest_point::PointToRay(m_nearest, lineS, lineE - lineS, 0, t0) - m_nearest;
+				return m_normal;
+			case 2:
 			{
 				v4 line = lineE - lineS;
 				closest_point::LineToRay(m_vert[0].m_vert, m_vert[1].m_vert, lineS, line, t0, t1);
-				if( t0 == 1.0f )	{ m_vert[0] = m_vert[1]; t0 = 0.0f; } // careful here, using t0 to pass into the next if
-				if( t0 == 0.0f )	{ m_nearest = m_vert[0].m_vert; m_num_verts = 1; }
-				else				{ m_nearest = (1.0f - t0)*m_vert[0].m_vert + t0*m_vert[1].m_vert; }
+				if (t0 == 1.0f) { m_vert[0] = m_vert[1]; t0 = 0.0f; } // careful here, using t0 to pass into the next if
+				if (t0 == 0.0f) { m_nearest = m_vert[0].m_vert; m_num_verts = 1; }
+				else { m_nearest = (1.0f - t0) * m_vert[0].m_vert + t0 * m_vert[1].m_vert; }
 				m_normal = Cross3(m_vert[1].m_vert - m_vert[0].m_vert, line);
 				m_normal *= (Dot3(lineS - m_vert[0].m_vert, m_normal) >= 0.0f) * 2.0f - 1.0f;
 				//m_normal = lineS + t0*line - m_nearest; don't use, not as robust
 			}return m_normal;
-		case 3:
+			case 3:
 			{
 				// The nearest and normal have already been calculated in 'AddVertex'
-				if( m_intersects ) return m_normal;
+				if (m_intersects) return m_normal;
 
 				// If the line intersects the triangle then the closest point is the
 				// intercept and the normal is the triangle normal (opposing the line)
 				v4 bary; float f2b;
 				m_intersects = intersect::RayVsTriangle(lineS, lineE - lineS, 0, m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert, f2b, bary);
-				if( m_intersects )
+				if (m_intersects)
 				{
 					m_nearest = BaryPoint(m_vert[0].m_vert, m_vert[1].m_vert, m_vert[2].m_vert, bary);
-					m_normal  = f2b * Cross3(m_vert[1].m_vert - m_vert[0].m_vert, m_vert[2].m_vert - m_vert[1].m_vert);
+					m_normal = f2b * Cross3(m_vert[1].m_vert - m_vert[0].m_vert, m_vert[2].m_vert - m_vert[1].m_vert);
 
 					// Save a copy of the simplex when we detect that the line intersects the
 					// simplex. This is an optimisation to jump start the back facing search
@@ -217,13 +217,13 @@ struct Simplex
 					Vert  closest[2];
 					float closest_t = 0.0f;
 					float closest_dist_sq = maths::float_max;
-					for( int i = 0; i != 3; ++i )
+					for (int i = 0; i != 3; ++i)
 					{
-						Vert const& vert0 = m_vert[ i     ];
-						Vert const& vert1 = m_vert[(i+1)%3];
+						Vert const& vert0 = m_vert[i];
+						Vert const& vert1 = m_vert[(i + 1) % 3];
 						float dist_sq;
 						closest_point::LineToRay(vert0.m_vert, vert1.m_vert, lineS, line, t0, t1, dist_sq);
-						if( dist_sq < closest_dist_sq )
+						if (dist_sq < closest_dist_sq)
 						{
 							closest_dist_sq = dist_sq;
 							closest[0] = vert0;
@@ -231,15 +231,31 @@ struct Simplex
 							closest_t = t0;
 						}
 					}
-					if     ( closest_t == 1.0f )	{ m_num_verts = 1; m_vert[0] = closest[1];						   m_nearest = m_vert[0].m_vert; }
-					else if( closest_t == 0.0f )	{ m_num_verts = 1; m_vert[0] = closest[0];						   m_nearest = m_vert[0].m_vert; }
-					else							{ m_num_verts = 2; m_vert[0] = closest[0]; m_vert[1] = closest[1]; m_nearest = (1.0f - closest_t)*m_vert[0].m_vert + closest_t*m_vert[1].m_vert; }
-					m_normal  = closest_point::PointToRay(m_nearest, lineS, lineE, t0) - m_nearest;
+					if (closest_t == 1.0f)
+					{
+						m_num_verts = 1;
+						m_vert[0] = closest[1];
+						m_nearest = m_vert[0].m_vert;
+					}
+					else if (closest_t == 0.0f)
+					{
+						m_num_verts = 1;
+						m_vert[0] = closest[0];
+						m_nearest = m_vert[0].m_vert;
+					}
+					else
+					{
+						m_num_verts = 2;
+						m_vert[0] = closest[0];
+						m_vert[1] = closest[1];
+						m_nearest = (1.0f - closest_t) * m_vert[0].m_vert + closest_t * m_vert[1].m_vert;
+					}
+					m_normal = closest_point::PointToRay(m_nearest, lineS, lineE - lineS, 0, t0) - m_nearest;
 					return m_normal;
 				}
 			}break;
-		default:
-			PR_ASSERT(PR_DBG_PHYSICS, false, "");
+			default:
+				PR_ASSERT(PR_DBG_PHYSICS, false, "");
 		}
 		return m_normal;
 	}
@@ -295,8 +311,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	// Attempt a quick out for the line vs. polyyope test. If the distance to the most extreme vert
 	// in the direction from the centre of 'shape' to the line is less that the distance to the line
 	// then the line cannot penetrate the polytope
-	v4 dir = closest_point::PointToRay(v4Origin, lineS, lineE, t) - v4Origin;
-	//dir = closest_point::PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
+	v4 dir = closest_point::PointToRay(v4Origin, lineS, lineE - lineS, 0, t) - v4Origin;
 	if( !FEql(dir,pr::v4Zero) )
 	{
 		start_vert = SupportVertex(shape, dir, id, id);

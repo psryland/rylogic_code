@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -27,112 +27,144 @@ namespace pr::math
 
 		// Construct
 		Vec3() = default;
-		constexpr Vec3(S x_)
+		constexpr Vec3(S x_) noexcept
 			: x(x_)
 			, y(x_)
 			, z(x_)
 		{}
-		constexpr Vec3(S x_, S y_, S z_)
+		constexpr Vec3(S x_, S y_, S z_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 		{}
-		constexpr explicit Vec3(std::ranges::random_access_range auto&& v)
-			:Vec3(v[0], v[1], v[2])
-		{}
-		constexpr explicit Vec3(VectorTypeN<S, 3> auto v)
+		constexpr explicit Vec3(VectorTypeN<S, 3> auto v) noexcept
 			:Vec3(vec(v).x, vec(v).y, vec(v).z)
 		{}
-		constexpr Vec3(Vec2<S> v, S z_)
-			:Vec3(vec(v).x, vec(v).y, z_)
+		constexpr Vec3(Vec2<S> v, S z_) noexcept
+			:Vec3(v.x, v.y, z_)
+		{}
+		constexpr Vec3(AxisId axis_id) noexcept
+			:Vec3(
+				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosZ ? static_cast<S>(Sign<int>(axis_id)) : S(0)
+			)
+		{}
+		constexpr explicit Vec3(std::ranges::random_access_range auto&& v) noexcept
+			:Vec3(v[0], v[1], v[2])
 		{}
 
-		// Array access
-		constexpr S operator [] (int i) const
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Vec3<S2>() const noexcept
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			return Vec3<S2>(
+				static_cast<S2>(x),
+				static_cast<S2>(y),
+				static_cast<S2>(z)
+			);
 		}
-		constexpr S& operator [] (int i)
+
+		// Array access
+		constexpr S operator [] (int i) const noexcept
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 3 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : z; }
+			else { return arr[i]; }
+		}
+		constexpr S& operator [] (int i) noexcept
+		{
+			pr_assert(i >= 0 && i < 3 && "index out of range");
+			if consteval { return i == 0 ? x : i == 1 ? y : z; }
+			else { return arr[i]; }
 		}
 
 		// Create other vector types
-		constexpr Vec4<S> w0() const;
-		constexpr Vec4<S> w1() const;
-		constexpr Vec2<S> vec2(int i0, int i1) const
+		constexpr Vec4<S> w0() const noexcept;
+		constexpr Vec4<S> w1() const noexcept;
+		constexpr Vec2<S> vec2(int i0, int i1) const noexcept
 		{
 			return Vec2<S>(arr[i0], arr[i1]);
 		}
 
 		// Constants
-		static constexpr Vec3 Zero()     
+		static constexpr Vec3 const& Zero() noexcept
 		{
-			return Vec3(S(0), S(0), S(0));
+			static auto s_zero = math::Zero<Vec3>();
+			return s_zero;
 		}
-		static constexpr Vec3 One()      
+		static constexpr Vec3 const& One() noexcept
 		{
-			return Vec3(S(1), S(1), S(1));
+			static auto s_one = math::One<Vec3>();
+			return s_one;
 		}
-		static constexpr Vec3 Tiny()     
+		static constexpr Vec3 const& Tiny() noexcept
 		{
-			return Vec3(tiny<S>, tiny<S>, tiny<S>);
+			static auto s_tiny = math::Tiny<Vec3>();
+			return s_tiny;
 		}
-		static constexpr Vec3 Min()      
+		static constexpr Vec3 const& Min() noexcept
 		{
-			return Vec3(limits<S>::min(), limits<S>::min(), limits<S>::min());
+			static auto s_min = math::Min<Vec3>();
+			return s_min;
 		}
-		static constexpr Vec3 Max()      
+		static constexpr Vec3 const& Max() noexcept
 		{
-			return Vec3(limits<S>::max(), limits<S>::max(), limits<S>::max());
+			static auto s_max = math::Max<Vec3>();
+			return s_max;
 		}
-		static constexpr Vec3 Lowest()   
+		static constexpr Vec3 const& Lowest() noexcept
 		{
-			return Vec3(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest());
+			static auto s_lowest = math::Lowest<Vec3>();
+			return s_lowest;
 		}
-		static constexpr Vec3 Epsilon()  
+		static constexpr Vec3 const& Epsilon() noexcept
 		{
-			return Vec3(limits<S>::epsilon(), limits<S>::epsilon(), limits<S>::epsilon());
+			static auto s_epsilon = math::Epsilon<Vec3>();
+			return s_epsilon;
 		}
-		static constexpr Vec3 Infinity() 
+		static constexpr Vec3 const& Infinity() noexcept
 		{
-			return Vec3(limits<S>::infinity(), limits<S>::infinity(), limits<S>::infinity());
+			static auto s_infinity = math::Infinity<Vec3>();
+			return s_infinity;
 		}
-		static constexpr Vec3 XAxis()    
+		static constexpr Vec3 const& XAxis() noexcept
 		{
-			return Vec3(S(1), S(0), S(0));
+			static auto s_x_axis = math::XAxis<Vec3>();
+			return s_x_axis;
 		}
-		static constexpr Vec3 YAxis()    
+		static constexpr Vec3 const& YAxis() noexcept
 		{
-			return Vec3(S(0), S(1), S(0));
+			static auto s_y_axis = math::YAxis<Vec3>();
+			return s_y_axis;
 		}
-		static constexpr Vec3 ZAxis()    
+		static constexpr Vec3 const& ZAxis() noexcept
 		{
-			return Vec3(S(0), S(0), S(1));
+			static auto s_z_axis = math::ZAxis<Vec3>();
+			return s_z_axis;
 		}
-		static constexpr Vec3 Origin()   
+		static constexpr Vec3 const& Origin() noexcept
 		{
-			return Vec3(S(0), S(0), S(0));
+			static auto s_origin = math::Origin<Vec3>();
+			return s_origin;
 		}
 		
 		// Construct normalised
-		static constexpr Vec3 Normal(S x, S y, S z) requires std::floating_point<S>
+		static constexpr Vec3 Normal(S x, S y, S z) noexcept requires std::floating_point<S>
 		{
 			return Normalise(Vec3(x, y, z));
 		}
 	};
 	
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Vec3<scalar>>\
-		: vector_traits_base<scalar, scalar, 3>\
-		, vector_access_member<Vec3<scalar>, scalar, 3>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec3<element>>\
+		: vector_traits_base<element, element, 3>\
+		, vector_access_member<Vec3<element>, element, 3>\
 	{};\
 	\
-	static_assert(VectorType<Vec3<scalar>>, "Vec3<"#scalar"> is not a valid vector type");\
-	static_assert(sizeof(Vec3<scalar>) == 3*sizeof(scalar), "Vec3<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Vec3<scalar>>, "Vec3<"#scalar"> is not trivially copyable");
+	static_assert(VectorType<Vec3<element>>, "Vec3<"#element"> is not a valid vector type");\
+	static_assert(IsRank1<Vec3<element>>, "Vec3<"#element"> is not rank 1");\
+	static_assert(sizeof(Vec3<element>) == 3*sizeof(element), "Vec3<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec3<element>>, "Vec3<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);

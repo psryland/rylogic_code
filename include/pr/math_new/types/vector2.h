@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -6,6 +6,7 @@
 #include "pr/math_new/core/forward.h"
 #include "pr/math_new/core/traits.h"
 #include "pr/math_new/core/constants.h"
+#include "pr/math_new/core/axis_id.h"
 #include "pr/math_new/core/functions.h"
 
 namespace pr::math
@@ -28,77 +29,105 @@ namespace pr::math
 
 		// Construct
 		Vec2() = default;
-		constexpr Vec2(S x_)
+		constexpr Vec2(S x_) noexcept
 			: x(x_)
 			, y(x_)
 		{}
-		constexpr Vec2(S x_, S y_)
+		constexpr Vec2(S x_, S y_) noexcept
 			: x(x_)
 			, y(y_)
 		{}
-		constexpr explicit Vec2(std::ranges::random_access_range auto&& v)
+		constexpr explicit Vec2(std::ranges::random_access_range auto&& v) noexcept
 			:Vec2(v[0], v[1])
 		{}
-		constexpr explicit Vec2(VectorTypeN<S, 2> auto v)
+		constexpr explicit Vec2(VectorTypeN<S, 2> auto v) noexcept
 			:Vec2(vec(v).x, vec(v).y)
 		{}
+		constexpr Vec2(AxisId axis_id) noexcept
+			:Vec2(
+				Abs(axis_id) == AxisId::PosX ? static_cast<S>(Sign<int>(axis_id)) : S(0),
+				Abs(axis_id) == AxisId::PosY ? static_cast<S>(Sign<int>(axis_id)) : S(0)
+			)
+		{}
+
+		// Explicit cast to different Scalar type
+		template <ScalarType S2> constexpr explicit operator Vec2<S2>() const noexcept
+		{
+			return Vec2<S2>(
+				static_cast<S2>(x),
+				static_cast<S2>(y)
+			);
+		}
 
 		// Array access
-		constexpr S operator [] (int i) const
+		constexpr S operator [] (int i) const noexcept
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 2 && "index out of range");
+			if consteval { return i == 0 ? x : y; }
+			else { return arr[i]; }
 		}
-		constexpr S& operator [] (int i)
+		constexpr S& operator [] (int i) noexcept
 		{
-			pr_assert(i >= 0 && i < _countof(arr) && "index out of range");
-			return arr[i];
+			pr_assert(i >= 0 && i < 2 && "index out of range");
+			if consteval { return i == 0 ? x : y; }
+			else { return arr[i]; }
 		}
 
 		// Constants
-		static constexpr Vec2 Zero() noexcept
+		static constexpr Vec2 const& Zero() noexcept
 		{
-			return Vec2{0, 0};
+			static auto s_zero = math::Zero<Vec2>();
+			return s_zero;
 		}
-		static constexpr Vec2 One() noexcept
+		static constexpr Vec2 const& One() noexcept
 		{
-			return Vec2{1, 1};
+			static auto s_one = math::One<Vec2>();
+			return s_one;
 		}
-		static constexpr Vec2 Tiny() noexcept
+		static constexpr Vec2 const& Tiny() noexcept
 		{
-			return Vec2(tiny<S>, tiny<S>);
+			static auto s_tiny = math::Tiny<Vec2>();
+			return s_tiny;
 		}
-		static constexpr Vec2 Min() noexcept
+		static constexpr Vec2 const& Min() noexcept
 		{
-			return Vec2(limits<S>::min(), limits<S>::min());
+			static auto s_min = math::Min<Vec2>();
+			return s_min;
 		}
-		static constexpr Vec2 Max() noexcept
+		static constexpr Vec2 const& Max() noexcept
 		{
-			return Vec2(limits<S>::max(), limits<S>::max());
+			static auto s_max = math::Max<Vec2>();
+			return s_max;
 		}
-		static constexpr Vec2 Lowest() noexcept
+		static constexpr Vec2 const& Lowest() noexcept
 		{
-			return Vec2(limits<S>::lowest(), limits<S>::lowest());
+			static auto s_lowest = math::Lowest<Vec2>();
+			return s_lowest;
 		}
-		static constexpr Vec2 Epsilon() noexcept
+		static constexpr Vec2 const& Epsilon() noexcept
 		{
-			return Vec2(limits<S>::epsilon(), limits<S>::epsilon());
+			static auto s_epsilon = math::Epsilon<Vec2>();
+			return s_epsilon;
 		}
-		static constexpr Vec2 Infinity() noexcept
+		static constexpr Vec2 const& Infinity() noexcept
 		{
-			return Vec2(limits<S>::infinity(), limits<S>::infinity());
+			static auto s_infinity = math::Infinity<Vec2>();
+			return s_infinity;
 		}
-		static constexpr Vec2 XAxis() noexcept
+		static constexpr Vec2 const& XAxis() noexcept
 		{
-			return Vec2{1, 0};
+			static auto s_x_axis = math::XAxis<Vec2>();
+			return s_x_axis;
 		}
-		static constexpr Vec2 YAxis() noexcept
+		static constexpr Vec2 const& YAxis() noexcept
 		{
-			return Vec2{0, 1};
+			static auto s_y_axis = math::YAxis<Vec2>();
+			return s_y_axis;
 		}
-		static constexpr Vec2 Origin() noexcept
+		static constexpr Vec2 const& Origin() noexcept
 		{
-			return Vec2{0, 0};
+			static auto s_origin = math::Origin<Vec2>();
+			return s_origin;
 		}
 
 		// Construct normalised
@@ -108,15 +137,16 @@ namespace pr::math
 		}
 	};
 
-	#define PR_MATH_DEFINE_TYPE(scalar)\
-	template <> struct vector_traits<Vec2<scalar>>\
-		: vector_traits_base<scalar, scalar, 2>\
-		, vector_access_member<Vec2<scalar>, scalar, 2>\
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec2<element>>\
+		: vector_traits_base<element, element, 2>\
+		, vector_access_member<Vec2<element>, element, 2>\
 	{};\
 	\
-	static_assert(VectorType<Vec2<scalar>>, "Vec2<"#scalar"> is not a valid vector type");\
-	static_assert(sizeof(Vec2<scalar>) == 2*sizeof(scalar), "Vec2<"#scalar"> has the wrong size");\
-	static_assert(std::is_trivially_copyable_v<Vec2<scalar>>, "Vec2<"#scalar"> is not trivially copyable");
+	static_assert(VectorType<Vec2<element>>, "Vec2<"#element"> is not a valid vector type");\
+	static_assert(IsRank1<Vec2<element>>, "Vec2<"#element"> is not rank 1");\
+	static_assert(sizeof(Vec2<element>) == 2*sizeof(element), "Vec2<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec2<element>>, "Vec2<"#element"> is not trivially copyable");
 
 	PR_MATH_DEFINE_TYPE(float);
 	PR_MATH_DEFINE_TYPE(double);

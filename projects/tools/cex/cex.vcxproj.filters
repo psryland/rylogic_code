@@ -76,6 +76,9 @@
     <Filter Include="src\commands\wait_window">
       <UniqueIdentifier>{5498008d-4173-4846-9950-14abe623c9db}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\commands\rtfm">
+      <UniqueIdentifier>{0be8a0a5-b387-41da-afd8-80d470ccf081}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\forward.h">
@@ -160,6 +163,9 @@
     </ClCompile>
     <ClCompile Include="src\commands\wait_window\wait_window.cpp">
       <Filter>src\commands\wait_window</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\rtfm\rtfm.cpp">
+      <Filter>src\commands\rtfm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -29,7 +29,7 @@
 #include "pr/common/task_graph.h"
 #include "pr/geometry/p3d.h"
 #include "pr/storage/json.h"
-#include "pr/maths/perlin_noise.h"
+#include "pr/algorithm/perlin_noise.h"
 #include "pr/view3d-12/view3d.h"
 #include "pr/physics-2/physics.h"
 #include "pr/win32/win32.h"

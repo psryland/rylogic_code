@@ -26,7 +26,7 @@
 #include "pr/common/expr_eval.h"
 #include "pr/container/vector.h"
 #include "pr/container/stack.h"
-#include "pr/maths/bit_fields.h"
+#include "pr/common/bit_fields.h"
 #include "pr/macros/enum.h"
 #include "pr/str/string_core.h"
 #include "pr/str/string_util.h"

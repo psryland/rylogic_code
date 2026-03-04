@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -17,29 +17,48 @@ namespace pr::math
 		inline static constexpr bool is_quaternion_v = false;
 	};
 
-	// Concept for vector-like types
+	// Concept for vector-like types. Note, can be rank-1 (e.g. Vec3) or rank-2 (e.g. Mat4x4) vectors
 	template <typename T>
 	concept VectorType = vector_traits<std::remove_cv_t<T>>::is_vector_v;
 
-	// Concept for vector-like type with dimension N
+	// Concept for vector-like types with dimension N
 	template <typename T, int N>
-	concept VectorTypeN = VectorType<T> && (vector_traits<std::remove_cv_t<T>>::dimension == N);
+	concept VectorTypeN = VectorType<T> && vector_traits<std::remove_cv_t<T>>::dimension == N;
+
+	// Concept for floating point vectors
+	template <typename T>
+	concept VectorTypeFP = VectorType<T> && std::floating_point<typename vector_traits<std::remove_cv_t<T>>::element_t>;
 
 	// Concept for quaternion-like types
 	template <typename T>
 	concept QuaternionType = vector_traits<std::remove_cv_t<T>>::is_quaternion_v;
 
-	// Concept for matrix-like types (i.e. a vector of vectors)
+	// Concept for either a vector or quaternion-like type
 	template <typename T>
-	concept MatrixType = VectorType<T> && VectorType<typename vector_traits<T>::component_t>;
+	concept TensorType = VectorType<T> || QuaternionType<T>;
 
-	// Concept for either vector or quaternion-like types
+	// Concept for either a vector or quaternion-like type with a floating point element type
 	template <typename T>
-	concept TensorType = VectorType<T> || QuaternionType<T> || MatrixType<T>;
+	concept TensorTypeFP = VectorTypeFP<T> || QuaternionType<T>;
 
 	// Concept for rank-1 vectors
 	template <typename T>
-	concept IsRank1 = TensorType<T> && !TensorType<typename vector_traits<T>::component_t>;
+	concept IsRank1 = VectorType<T> && !VectorType<typename vector_traits<T>::component_t>;
+
+	// Concept for rank-2 vectors
+	template <typename T>
+	concept IsRank2 = VectorType<T> && VectorType<typename vector_traits<T>::component_t> && !VectorType<typename vector_traits<typename vector_traits<T>::component_t>::component_t>;
+
+	// Concept to ensure two vector types have the same element type
+	template <typename T, typename U>
+	concept SameS = TensorType<T> && TensorType<U> && std::is_same_v<typename vector_traits<std::remove_cv_t<T>>::element_t, typename vector_traits<std::remove_cv_t<U>>::element_t>;
+
+	// Concept for vector types that support array access (e.g. m[i])
+	template <typename T>
+	concept ArrayAccess = VectorType<T> && (
+		(IsRank1<T> && requires (T t, int i) { t[i]; }) ||
+		(IsRank2<T> && requires (T t, int i) { t[i][i]; })
+	);
 
 	// Use these types for standard attributes
 	template <typename ElementType, typename ComponentType, int Dim> struct vector_traits_base
@@ -98,7 +117,7 @@ namespace pr::math
 	};
 
 	// Vector component access
-	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec& v)
+	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec& v) noexcept
 	{
 		using vt = vector_traits<std::remove_cv_t<Vec>>;
 		using S = std::conditional_t<std::is_const_v<Vec>, typename vt::component_t, typename vt::component_t&>;
@@ -114,7 +133,7 @@ namespace pr::math
 		else if constexpr (vt::dimension == 4) return Proxy4{vt::x(v), vt::y(v), vt::z(v), vt::w(v)};
 		else static_assert(vt::dimension <= 4);
 	}
-	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec&& v)
+	template <TensorType Vec> [[msvc::forceinline]] constexpr auto vec(Vec&& v) noexcept
 	{
 		using vt = vector_traits<std::remove_cv_t<Vec>>;
 		using S = typename vt::component_t;

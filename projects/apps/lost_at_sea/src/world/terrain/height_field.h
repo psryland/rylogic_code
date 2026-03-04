@@ -18,7 +18,7 @@ namespace las
 		float m_amplitude;
 		float m_sea_level_bias;
 
-		pr::PerlinNoiseGenerator<std::default_random_engine> m_noise;
+		pr::algorithm::PerlinNoiseGenerator<std::default_random_engine> m_noise;
 		std::default_random_engine m_rng;
 
 		explicit HeightField(uint32_t seed = 42);
