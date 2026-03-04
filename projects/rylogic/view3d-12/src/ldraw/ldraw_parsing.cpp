@@ -1999,6 +1999,7 @@ namespace pr::rdr12::ldraw
 					for (int r = 1; !reader.IsSectionEnd() && !m_pp.m_cancel; ++r)
 					{
 						m_pp.ReportProgress(reader, r);
+						m_verts.push_back(reader.Vector3f().w1());
 						segment.m_vcount += 1;
 						if (m_per_item_colour)
 						{
