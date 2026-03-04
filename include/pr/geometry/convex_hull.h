@@ -551,7 +551,7 @@ namespace pr
 			vcont[*i].w = static_cast<float>(i - index);
 
 		// Then sort on 'w'
-		std::sort(&vcont[0], &vcont[0] + num_verts, [](v4 const& lhs, v4 const& rhs) { return lhs.w < rhs.w; });
+		std::sort(&vcont[0], &vcont[0] + num_verts, [](v4 lhs, v4 rhs) { return lhs.w < rhs.w; });
 		
 		// Then restore the 'w' component to '1.0f'
 		for (v4* i = &vcont[0], *i_end = i + num_verts; i != i_end; ++i)

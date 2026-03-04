@@ -30,9 +30,11 @@ namespace pr
 	using m3x4 = math::Mat3x4<float>;
 	using m4x4 = math::Mat4x4<float>;
 	using m6x8 = math::Mat6x8<float, void, void>;
-	using BBox = math::BBox<float>;
-	using BSphere = math::BSphere<float>;
-	using Plane = math::Plane<float>;
+	using BBox = math::BoundingBox<float>;
+	using BSphere = math::BoundingSphere<float>;
+	using OBox = math::OrientedBox<float>;
+	using Plane = math::Plane3<float>;
+	using Frustum = math::Frustum3<float>;
 
 	namespace maths
 	{

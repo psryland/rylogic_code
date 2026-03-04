@@ -724,14 +724,14 @@ namespace pr::rdr12
 	}
 
 	// Reset the scene camera to view all objects in the scene
-	void V3dWindow::ResetView(v4 const& forward, v4 const& up, float dist, bool preserve_aspect, bool commit)
+	void V3dWindow::ResetView(v4 forward, v4 up, float dist, bool preserve_aspect, bool commit)
 	{
 		auto bbox = SceneBounds(view3d::ESceneBounds::All, 0, nullptr);
 		ResetView(bbox, forward, up, dist, preserve_aspect, commit);
 	}
 
 	// Reset the camera to view a bbox
-	void V3dWindow::ResetView(BBox const& bbox, v4 const& forward, v4 const& up, float dist, bool preserve_aspect, bool commit)
+	void V3dWindow::ResetView(BBox const& bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit)
 	{
 		m_scene.m_cam.View(bbox, forward, up, dist, preserve_aspect, commit);
 

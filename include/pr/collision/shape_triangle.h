@@ -52,7 +52,7 @@ namespace pr::collision
 
 	// Shift the centre of a triangle
 	template <typename>
-	void pr_vectorcall ShiftCentre(ShapeTriangle& shape, v4 const& shift)
+	void pr_vectorcall ShiftCentre(ShapeTriangle& shape, v4 shift)
 	{
 		assert(shift.w == 0.0f);
 		if (FEql(shift, v4Zero)) return;

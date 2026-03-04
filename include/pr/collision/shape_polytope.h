@@ -79,7 +79,7 @@ namespace pr::collision
 		v4*       vert_beg()                    { return type_ptr<v4>(this + 1); }
 		v4 const* vert_end() const              { return vert_beg() + m_vert_count; }
 		v4*       vert_end()                    { return vert_beg() + m_vert_count; }
-		v4 const& vertex(std::size_t idx) const { return vert_beg()[idx]; }
+		v4        vertex(std::size_t idx) const { return vert_beg()[idx]; }
 		v4&       vertex(std::size_t idx)       { return vert_beg()[idx]; }
 
 		// Face accessors
@@ -99,7 +99,7 @@ namespace pr::collision
 		Nbrs&       nbrs(int idx)       { return nbrs_beg()[idx]; }
 
 		// Opposite side vertex
-		v4 const& opp_vertex(int idx) const { return vert_beg()[*nbrs(idx).begin()]; }
+		v4        opp_vertex(int idx) const { return vert_beg()[*nbrs(idx).begin()]; }
 		v4&       opp_vertex(int idx)       { return vert_beg()[*nbrs(idx).begin()]; }
 
 		// Conversion
@@ -143,9 +143,9 @@ namespace pr::collision
 		auto volume = 0.0f;
 		for (ShapePolyFace const *f = shape.face_beg(), *f_end = shape.face_end(); f != f_end; ++f)
 		{
-			auto& a = shape.vertex(f->m_index[0]);
-			auto& b	= shape.vertex(f->m_index[1]);
-			auto& c = shape.vertex(f->m_index[2]);
+			auto a = shape.vertex(f->m_index[0]);
+			auto b	= shape.vertex(f->m_index[1]);
+			auto c = shape.vertex(f->m_index[2]);
 			volume += Triple(a, b, c); // Triple product is volume x 6
 		}
 		return volume / 6.0f;
@@ -161,9 +161,9 @@ namespace pr::collision
 		auto volume = 0.0f;
 		for (ShapePolyFace const *f = shape.face_beg(), *fend = shape.face_end(); f != fend; ++f)
 		{
-			auto& a = shape.vertex(f->m_index[0]);
-			auto& b = shape.vertex(f->m_index[1]);
-			auto& c = shape.vertex(f->m_index[2]);
+			auto a = shape.vertex(f->m_index[0]);
+			auto b = shape.vertex(f->m_index[1]);
+			auto c = shape.vertex(f->m_index[2]);
 			auto vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 			com	+= vol_x6 * (a + b + c);    // Divide by 4 at end
 			volume += vol_x6;

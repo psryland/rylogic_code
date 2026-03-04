@@ -47,9 +47,9 @@ namespace pr
 				m4x4 const&			 m_a2w;
 				ShapeCylinder const& m_cyl;
 				m4x4 const&			 m_b2w;
-				v4 const&			 m_box_pos;
-				v4 const&			 m_cyl_pos;
-				v4 const&			 m_cyl_axis;
+				v4			 m_box_pos;
+				v4			 m_cyl_pos;
+				v4			 m_cyl_axis;
 				v4					 m_diff;
 				v4					 m_axis;		// The collision normal
 				v4					 m_pointA;		// The point of contact on object A (box)

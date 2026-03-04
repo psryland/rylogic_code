@@ -143,8 +143,8 @@ void ConstraintAccumulator::SetMaterialProperties(Constraint& cons, uint32_t mat
 // 'mass_mask' is used to treat either object A or B as infinite mass
 void ConstraintAccumulator::SetCollisionMatrix(Constraint& cons, Rigidbody const& rbA, Rigidbody const& rbB, int mass_mask) const
 {
-	v4 const& pointA = cons.m_pointA;
-	v4 const& pointB = cons.m_pointB;
+	v4 pointA = cons.m_pointA;
+	v4 pointB = cons.m_pointB;
 
 	// "mass" is a matrix defined as impulse = mass * drelative_velocity.
 	// "inv_mass" is also called the 'K' matrix and is equal to:

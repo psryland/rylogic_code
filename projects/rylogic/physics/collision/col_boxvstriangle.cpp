@@ -214,7 +214,7 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
 
 		Overlap data(box, a2w, tri, b2w);
-	v4 const& a_to_b = b2w.pos - a2w.pos;
+	v4 a_to_b = b2w.pos - a2w.pos;
 
 	// Test the box against the plane of the triangle
 	{

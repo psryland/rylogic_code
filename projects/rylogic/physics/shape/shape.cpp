@@ -88,7 +88,7 @@ void pr::ph::ShiftCentre(Shape& shape, v4& shift)
 }
 
 // Returns the support vertex for 'shape' in 'direction'. 'direction' is in shape space
-v4 pr::ph::SupportVertex(Shape const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id)
+v4 pr::ph::SupportVertex(Shape const& shape, v4 direction, std::size_t hint_vert_id, std::size_t& sup_vert_id)
 {
 	switch( shape.m_type )
 	{
@@ -101,7 +101,7 @@ v4 pr::ph::SupportVertex(Shape const& shape, v4 const& direction, std::size_t hi
 	}
 }
 
-void pr::ph::ClosestPoint(Shape const& shape, v4 const& point, float& distance, v4& closest)
+void pr::ph::ClosestPoint(Shape const& shape, v4 point, float& distance, v4& closest)
 {
 	switch( shape.m_type )
 	{
@@ -136,7 +136,7 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 const& point, float& distance, 
 //				moi.z.z = (1.0f / 2.0f) * (prim.m_radius.x * prim.m_radius.x);	// (1/2)mr^2
 //				return moi;
 //			}
-//			v4 Support(const Primitive& prim, const v4& direction)
+//			v4 Support(const Primitive& prim, v4 direction)
 //			{
 //				prim;
 //				direction;

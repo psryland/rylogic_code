@@ -169,7 +169,7 @@ namespace pr::physics
 		friend bool operator != (Inertia const& lhs, Inertia const& rhs);
 
 		// Multiply a vector by 'inertia'.
-		friend v4 operator * (Inertia const& inertia, v4 const& v);
+		friend v4 operator * (Inertia const& inertia, v4 v);
 
 		// Multiply a spatial motion vector by 'inertia'.
 		friend v8force operator * (Inertia const& inertia, v8motion const& motion);
@@ -238,7 +238,7 @@ namespace pr::physics
 		friend bool operator != (InertiaInv const& lhs, InertiaInv const& rhs);
 
 		// Multiply a vector by 'inertia_inv'.
-		friend v4 operator * (InertiaInv const& inertia_inv, v4 const& h);
+		friend v4 operator * (InertiaInv const& inertia_inv, v4 h);
 
 		// Multiply a spatial force vector by 'inertia_inv' (i.e. F/M = a)
 		friend v8motion operator * (InertiaInv const& inertia_inv, v8force const& force);

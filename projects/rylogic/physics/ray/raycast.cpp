@@ -118,11 +118,11 @@ bool pr::ph::RayCast(Ray const& ray, ShapeCylinder const& shape, RayCastResult& 
 namespace pr { namespace ph { namespace ray_cast {
 struct Simplex
 {
-	struct Vert { v4 m_vert; std::size_t m_id; void set(v4 const& vert, std::size_t id) {m_vert = vert; m_id = id;} };
+	struct Vert { v4 m_vert; std::size_t m_id; void set(v4 vert, std::size_t id) {m_vert = vert; m_id = id;} };
 	Simplex() : m_num_verts(0), m_intersects(false) {}
 	
 	// Add a vertex to the simplex. Returns false if it's a duplicate
-	bool AddVertex(v4 const& vert, std::size_t id, v4 const& lineS, v4 const& lineE)
+	bool AddVertex(v4 vert, std::size_t id, v4 lineS, v4 lineE)
 	{
 		PR_ASSERT(PR_DBG_PHYSICS, m_num_verts < 4, "");
 		for( std::size_t i = 0; i != m_num_verts; ++i )
@@ -168,7 +168,7 @@ struct Simplex
 	}
 
 	// Find the next direction to search in.
-	v4 FindNearest(v4 const& lineS, v4 const& lineE, Simplex& save_for_back_facing)
+	v4 FindNearest(v4 lineS, v4 lineE, Simplex& save_for_back_facing)
 	{
 		PR_ASSERT(PR_DBG_PHYSICS, m_num_verts > 0, "");
 		float t0, t1;
@@ -439,7 +439,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapeArray const& shape, RayCastResult& res
 #if PR_DBG_PHYSICS == 1
 bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCastResult& result)
 {
-	v4 const&	lineS = ray.m_point;
+	v4	lineS = ray.m_point;
 	v4			lineE = ray.m_point + ray.m_direction;
 	result.m_t0 = -maths::float_max; result.m_t1 = maths::float_max;
 

@@ -54,7 +54,7 @@ void pr::ph::ShiftCentre(ShapeCylinder&, v4& shift)
 }
 
 // Return a support vertex for the shape
-v4 pr::ph::SupportVertex(ShapeCylinder const& shape, v4 const& direction, std::size_t, std::size_t& sup_vert_id)
+v4 pr::ph::SupportVertex(ShapeCylinder const& shape, v4 direction, std::size_t, std::size_t& sup_vert_id)
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_SUPPORT_VERTS, phSupVertCyl);
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertCyl);
@@ -87,7 +87,7 @@ v4 pr::ph::SupportVertex(ShapeCylinder const& shape, v4 const& direction, std::s
 
 // Find the nearest point and distance from a point to a shape
 // 'shape' and 'point' are in the same space
-void pr::ph::ClosestPoint(ShapeCylinder const& shape, v4 const& point, float& distance, v4& closest)
+void pr::ph::ClosestPoint(ShapeCylinder const& shape, v4 point, float& distance, v4& closest)
 {
 	closest  = point;
 	distance = 0.0f; // Accumulate distance squared

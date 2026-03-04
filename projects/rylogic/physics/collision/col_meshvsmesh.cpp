@@ -172,7 +172,7 @@ namespace pr::ph::mesh_vs_mesh
 		}
 		return false;
 	}
-	bool VerifyHalfSpace(v4 const* r, uint32_t r_size, v4 const& half_space_normal)
+	bool VerifyHalfSpace(v4 const* r, uint32_t r_size, v4 half_space_normal)
 	{
 		r; half_space_normal;
 		PR_ASSERT(PR_DBG_PHYSICS, !FEql(half_space_normal,pr::v4Zero), "");
@@ -194,7 +194,7 @@ namespace pr::ph::mesh_vs_mesh
 	}
 
 	// Clip an edge to a triangle
-	inline void ClipEdgeToTriangle(v4 const (&tri)[3], v4 const& face_norm, v4& s, v4& e)
+	inline void ClipEdgeToTriangle(v4 const (&tri)[3], v4 face_norm, v4& s, v4& e)
 	{
 		for( int i = 0; i != 3; ++i )
 		{
@@ -385,7 +385,7 @@ namespace pr::ph::mesh_vs_mesh
 	}
 
 	// Choose a vert with an offset that opposes 'a'
-	bool GetOpposingVert(Couple& col, TrackVert& a, TrackVert& b, v4 const& refine_normal_direction)
+	bool GetOpposingVert(Couple& col, TrackVert& a, TrackVert& b, v4 refine_normal_direction)
 	{
 		PR_EXPAND(PR_DBG_MESH_COLLISION, int loop_count = 0;)
 		PR_EXPAND(PR_DBG_MESH_COLLISION, get_opposing_edge_count = 0;)
@@ -417,7 +417,7 @@ namespace pr::ph::mesh_vs_mesh
 
 	// Refine an edge by bringing the normals into alignment
 	// 'refine_normal_direction' - This is the direction we bend the normals.
-	bool RefineEdge(Couple& col, TrackVert& a, TrackVert& b, v4 const& refine_normal_direction)
+	bool RefineEdge(Couple& col, TrackVert& a, TrackVert& b, v4 refine_normal_direction)
 	{
 		PR_EXPAND(PR_DBG_MESH_COLLISION, int loop_count = 0;)
 
@@ -574,7 +574,7 @@ namespace pr::ph::mesh_vs_mesh
 			// Ignore vectors already above the half space
 			if (Dot3(half_space_normal, r[first_new_r]) >= -maths::tinyf) continue;
 
-			v4 const& new_r = r[first_new_r];
+			v4 new_r = r[first_new_r];
 
 			// If 'new_r' lies outside the current half space then 'new_r' should lie in the plane
 			// of a new half space (if it exists). This constrains the half space around one axis (new_r).

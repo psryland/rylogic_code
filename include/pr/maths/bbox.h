@@ -31,7 +31,7 @@ namespace pr
 		v4 m_radius;
 
 		BBox() = default;
-		constexpr BBox(v4 const& centre, v4 const& radius)
+		constexpr BBox(v4 centre, v4 radius)
 			:m_centre(centre)
 			,m_radius(radius)
 		{
@@ -290,7 +290,7 @@ namespace pr
 		}
 
 		// Create a bounding box from lower/upper corners
-		static BBox Make(v4 const& lower, v4 const& upper)
+		static BBox Make(v4 lower, v4 upper)
 		{
 			return BBox((upper + lower) * 0.5f, (upper - lower) * 0.5f);
 		}

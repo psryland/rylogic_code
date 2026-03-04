@@ -21,11 +21,11 @@ namespace pr
 		v4   m_radius;
 
 		OBox() = default;
-		OBox(v4 const& centre, v4 const& radii, m3x4 const& ori)
+		OBox(v4 centre, v4 radii, m3x4 const& ori)
 			:m_box_to_world(ori, centre)
 			,m_radius(radii)
 		{}
-		OBox(m4x4 const& box_to_world, v4 const& radii)
+		OBox(m4x4 const& box_to_world, v4 radii)
 			:m_box_to_world(box_to_world)
 			,m_radius(radii)
 		{}
@@ -49,7 +49,7 @@ namespace pr
 		}
 
 		// The centre position of the box
-		v4 const& Centre() const
+		v4 Centre() const
 		{
 			return m_box_to_world.pos;
 		}

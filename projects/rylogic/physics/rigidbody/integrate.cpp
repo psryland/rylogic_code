@@ -18,7 +18,7 @@ void EvolveAngularOrder2(Rigidbody& rb, float elapsed_seconds);
 void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds);
 
 // Set the micro velocity threshold for 'object'
-inline float CalcMicroMomentum(v4 const& gravity, float mass, float step_time)
+inline float CalcMicroMomentum(v4 gravity, float mass, float step_time)
 {
 	// Objects without gravity can't go to sleep.
 	// Micro momentum is the momentum after one step under gravity alone

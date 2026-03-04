@@ -75,7 +75,7 @@ void Support::Clear()
 }
 
 // Insert 'leg' into the chain of objects supported by 'on_obj'
-inline void AddSupport(v4 const& point, support::Leg& leg, Rigidbody& on_obj)
+inline void AddSupport(v4 point, support::Leg& leg, Rigidbody& on_obj)
 {
 	leg.m_point = point;
 	leg.m_count = 0;
@@ -83,7 +83,7 @@ inline void AddSupport(v4 const& point, support::Leg& leg, Rigidbody& on_obj)
 }
 
 // Add a support point. Attempt to add 'point' as a support of the object that owns this struct
-void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
+void Support::Add(Rigidbody& on_obj, v4 gravity, v4 point)
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_SLEEPING, phSleepAddSupport);
 	PR_PROFILE_SCOPE(PR_PROFILE_SLEEPING, phSleepAddSupport);
