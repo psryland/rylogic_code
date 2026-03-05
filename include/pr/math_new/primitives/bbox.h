@@ -468,12 +468,13 @@ namespace pr::math
 	}
 
 	// Returns true if 'bb' is within the bounding volume
-	template <ScalarType S> constexpr bool pr_vectorcall IsWithin(BoundingBox<S> bb, BoundingBox<S> , S tol = 0) noexcept
+	template <ScalarType S> constexpr bool pr_vectorcall IsWithin(BoundingBox<S> bb, BoundingBox<S> test, S tol = 0) noexcept
 	{
+		// True if 'test' is entirely within 'bb'
 		return
-			Abs(bb.m_centre.x - bb.m_centre.x) <= (bb.m_radius.x - bb.m_radius.x) + tol &&
-			Abs(bb.m_centre.y - bb.m_centre.y) <= (bb.m_radius.y - bb.m_radius.y) + tol &&
-			Abs(bb.m_centre.z - bb.m_centre.z) <= (bb.m_radius.z - bb.m_radius.z) + tol;
+			Abs(bb.m_centre.x - test.m_centre.x) <= (bb.m_radius.x - test.m_radius.x) + tol &&
+			Abs(bb.m_centre.y - test.m_centre.y) <= (bb.m_radius.y - test.m_radius.y) + tol &&
+			Abs(bb.m_centre.z - test.m_centre.z) <= (bb.m_radius.z - test.m_radius.z) + tol;
 	}
 
 	// Multiply the bounding box by a non-affine transform
