@@ -1,0 +1,368 @@
+#pragma once
+#include "src/forward.h"
+#include "src/scene.h"
+#include "src/media_panel.h"
+#include "src/details_panel.h"
+
+using namespace pr;
+using namespace pr::gui;
+
+// Main window for the physics sandbox application.
+// Assembles the 3D viewport, media controls, details panel, and menu bar
+// into a resizable layout, and wires up the simulation loop.
+struct SandboxUI : Form
+{
+	// UI components, ordered by docking precedence (bottom-up):
+	// StatusBar docks to bottom, MediaPanel above it, DetailsPanel to right,
+	// View3DPanel fills the remaining space.
+	StatusBar   m_status;
+	MediaPanel  m_media;
+	DetailsPanel m_details;
+	View3DPanel m_view3d;
+
+	// Physics simulation
+	Scene       m_scene;
+	bool        m_pause_on_collision;
+
+	// Diagnostic visualisation
+	view3d::Object m_trail_gfx;
+	view3d::Object m_diag_gfx;
+
+	// Cached status text to avoid flickering from constant WM_SETTEXT
+	std::wstring m_last_status;
+
+	// Set when WM_CLOSE is received to prevent step/render after destruction begins
+	bool m_closing;
+
+	SandboxUI()
+		: Form(Params<>()
+			.name("physics-sandbox")
+			.title(L"Rylogic Physics Sandbox")
+			.wh(1280, 800)
+			.start_pos(EStartPosition::CentreParent)
+			.padding(0)
+			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+			.main_wnd(true)
+			.wndclass(RegisterWndClass<SandboxUI>()))
+		, m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
+		, m_media(MediaPanel::Params<>().parent(this_))
+		, m_details(DetailsPanel::Params<>().parent(this_))
+		, m_view3d(View3DPanel::Params()
+			.parent(this_)
+			.error_cb(ReportErrorCB, this_)
+			.dock(EDock::Fill)
+			.show_focus_point())
+		, m_scene()
+		, m_pause_on_collision(false)
+		, m_trail_gfx()
+		, m_diag_gfx()
+		, m_closing(false)
+	{
+		// Wire media panel events to simulation control
+		m_media.OnPlay += [&](auto&, auto&)
+		{
+			m_scene.m_steps_remaining = -1; // Run continuously
+		};
+		m_media.OnPause += [&](auto&, auto&)
+		{
+			m_scene.m_steps_remaining = 0; // Pause
+		};
+		m_media.OnReset += [&](auto&, auto&)
+		{
+			ResetScene();
+		};
+
+		// Keyboard shortcuts for power-user control
+		m_view3d.Key += [&](Control&, KeyEventArgs const& args)
+		{
+			if (!args.m_down)
+				return;
+
+			// 0-5: select scenario (0 = sandbox, 1-5 = test scenarios)
+			if (args.m_vk_key >= '0' && args.m_vk_key <= '5')
+			{
+				m_scene.m_scenario = static_cast<EScenario>(args.m_vk_key - '0');
+				ResetScene();
+				m_scene.m_steps_remaining = -1; // Auto-start
+			}
+
+			// R=reset, S=single step, G=go (play), P=pause
+			if (args.m_vk_key == 'R')
+				ResetScene();
+			if (args.m_vk_key == 'S')
+				m_scene.m_steps_remaining = 1;
+			if (args.m_vk_key == 'G')
+				m_scene.m_steps_remaining = -1;
+			if (args.m_vk_key == 'P')
+				m_scene.m_steps_remaining = 0;
+
+			// C=toggle pause-on-collision
+			if (args.m_vk_key == 'C')
+				m_pause_on_collision = !m_pause_on_collision;
+
+			// T=run all test scenarios
+			if (args.m_vk_key == 'T')
+				m_scene.RunAllTests();
+		};
+
+		// Start with the sandbox scenario
+		ResetScene();
+	}
+
+	~SandboxUI()
+	{
+		// Remove all graphics from the window and delete them BEFORE member
+		// destructors run. Body::~Body deletes the View3D object, but if they're
+		// still associated with the window, View3D_Shutdown (in ~m_view3d) asserts.
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+		{
+			if (m_scene.m_body[i].m_gfx)
+				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+		}
+		CleanupDiagGfx();
+	}
+
+	// Override message processing to ensure clean shutdown
+	bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+	{
+		if (message == WM_CLOSE)
+		{
+			// Set closing flag so the step/render lambdas stop accessing View3D
+			m_closing = true;
+
+			// Clean up View3D objects before the window is destroyed.
+			// After DestroyWindow, the View3DPanel's HWND is invalid and swap chain
+			// present may hang or crash.
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+			{
+				if (m_scene.m_body[i].m_gfx)
+					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+			}
+			CleanupDiagGfx();
+		}
+		return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+	}
+
+	// Reset the scene and sync graphics
+	void ResetScene()
+	{
+		// Remove old body graphics from the viewport
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+		{
+			if (m_scene.m_body[i].m_gfx)
+				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+		}
+
+		CleanupDiagGfx();
+		m_scene.Reset();
+
+		// Add body graphics to the viewport
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+		{
+			if (m_scene.m_body[i].m_gfx)
+				View3D_WindowAddObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+		}
+
+		// Set up a sensible default camera position looking at the origin
+		View3D_ResetView(m_view3d.m_win,
+			view3d::Vec4{0, 0, -1, 0},  // Forward direction
+			view3d::Vec4{0, 1, 0, 0},   // Up direction
+			20,                           // Distance
+			TRUE, TRUE);
+
+		Render();
+	}
+
+	// Advance the simulation by one timestep
+	void Step(double elapsed_seconds)
+	{
+		// Don't step after close begins
+		if (m_closing)
+			return;
+
+		// Update the title bar with simulation info and viewport diagnostics
+		auto bb = View3D_WindowBackBufferSizeGet(m_view3d.m_win);
+		auto vp = View3D_WindowViewportGet(m_view3d.m_win);
+		SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d | BB:%ldx%ld VP:%.0fx%.0f",
+			static_cast<int>(m_scene.m_scenario),
+			ScenarioName(m_scene.m_scenario),
+			m_scene.m_clock,
+			m_scene.m_diag.count,
+			bb.cx, bb.cy,
+			vp.m_width, vp.m_height));
+
+		// Check if we should be stepping
+		if (m_scene.m_steps_remaining == 0)
+			return;
+		if (m_scene.m_steps_remaining > 0)
+			--m_scene.m_steps_remaining;
+
+		// Step the physics scene
+		auto collision = m_scene.Step(elapsed_seconds);
+
+		// Pause on first collision if requested
+		if (collision && m_pause_on_collision && m_scene.m_diag.count == 1)
+			m_scene.m_steps_remaining = 0;
+	}
+
+	// Render a frame: sync graphics, rebuild overlays, update details panel
+	void Render()
+	{
+		// Don't render after close begins
+		if (m_closing)
+			return;
+
+		// Sync each body's View3D graphics to its physics transform
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+			m_scene.m_body[i].UpdateGfx();
+
+		// Rebuild trail and diagnostic visualisation
+		RebuildDiagGfx();
+
+		// Update the details panel with current body properties
+		m_details.Update(m_scene);
+
+		// Update status bar (only when text changes to avoid flicker)
+		auto new_status = std::wstring(pr::FmtS(L"t=%.3f  %hs  Collisions: %d  %s",
+			m_scene.m_clock,
+			ScenarioName(m_scene.m_scenario),
+			m_scene.m_diag.count,
+			m_scene.m_steps_remaining == 0 ? L"[Paused]" : L"[Running]"));
+		if (new_status != m_last_status)
+		{
+			m_last_status = std::move(new_status);
+			m_status.Text(0, m_last_status.c_str());
+		}
+
+		// Only invalidate the 3D viewport for rendering. Other controls (details panel,
+		// status bar) are invalidated only when their content changes, to avoid flicker.
+		m_view3d.Invalidate();
+	}
+
+	// Rebuild the LDraw objects for trails, velocity arrows, and collision markers
+	void RebuildDiagGfx()
+	{
+		using namespace pr::rdr12::ldraw;
+
+		CleanupDiagGfx();
+
+		// Build trail line strips for each body
+		bool has_trails = false;
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+		{
+			if (m_scene.m_trail[i].size() >= 2)
+				has_trails = true;
+		}
+
+		if (has_trails)
+		{
+			Builder trail_builder;
+
+			// Per-body trails with distinct colours
+			Colour32 trail_colours[] = { 0xFFFF4040, 0xFF4040FF, 0xFF40FF40, 0xFFFFFF40 };
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+			{
+				if (m_scene.m_trail[i].size() < 2)
+					continue;
+
+				auto colour = trail_colours[i % std::size(trail_colours)];
+				auto& line = trail_builder.Line(std::string(pr::FmtS("trail_%d", i)), colour);
+				line.strip(m_scene.m_trail[i][0]);
+				for (size_t j = 1; j < m_scene.m_trail[i].size(); ++j)
+					line.line_to(m_scene.m_trail[i][j]);
+			}
+
+			// System centre of mass trail (yellow, if 2+ bodies have trails)
+			if (m_scene.m_body_count >= 2 && m_scene.m_trail[0].size() >= 2 && m_scene.m_trail[1].size() >= 2)
+			{
+				auto total_mass = m_scene.m_body[0].Mass() + m_scene.m_body[1].Mass();
+				auto& line = trail_builder.Line("trail_CoM", 0xFFFFFF00);
+				auto com0 = (m_scene.m_trail[0][0] * m_scene.m_body[0].Mass() + m_scene.m_trail[1][0] * m_scene.m_body[1].Mass()) / total_mass;
+				com0.w = 1;
+				line.strip(com0);
+				auto n = std::min(m_scene.m_trail[0].size(), m_scene.m_trail[1].size());
+				for (size_t i = 1; i < n; ++i)
+				{
+					auto com = (m_scene.m_trail[0][i] * m_scene.m_body[0].Mass() + m_scene.m_trail[1][i] * m_scene.m_body[1].Mass()) / total_mass;
+					com.w = 1;
+					line.line_to(com);
+				}
+			}
+
+			auto trail_text = trail_builder.ToText(false);
+			m_trail_gfx = View3D_ObjectCreateLdrA(trail_text.c_str(), false, nullptr, nullptr);
+			if (m_trail_gfx)
+				View3D_WindowAddObject(m_view3d.m_win, m_trail_gfx);
+		}
+
+		// Build diagnostic overlays: velocity arrows, contact marker, collision normal
+		{
+			Builder diag_builder;
+			Colour32 vel_colours[] = { 0xFFFF8080, 0xFF8080FF, 0xFF80FF80, 0xFFFFFF80 };
+
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+			{
+				auto vel = m_scene.m_body[i].VelocityWS();
+				auto pos = m_scene.m_body[i].O2W().pos;
+
+				// Linear velocity arrow
+				auto speed = Length(vel.lin);
+				if (speed > 0.01f)
+				{
+					auto colour = vel_colours[i % std::size(vel_colours)];
+					auto& arrow = diag_builder.Line(std::string(pr::FmtS("vel_%d", i)), colour);
+					arrow.line(pos, pos + vel.lin);
+					arrow.arrow(EArrowType::Fwd, 8.0f);
+				}
+
+				// Angular velocity arrow (green)
+				auto aspeed = Length(vel.ang);
+				if (aspeed > 0.01f)
+				{
+					auto& arrow = diag_builder.Line(std::string(pr::FmtS("avel_%d", i)), 0xFF00FF00);
+					arrow.line(pos, pos + vel.ang);
+					arrow.arrow(EArrowType::Fwd, 6.0f);
+				}
+			}
+
+			// Collision markers (shown after collision has occurred)
+			if (m_scene.m_diag.count > 0)
+			{
+				diag_builder.Sphere("contact_pt", 0xFFFFFFFF).radius(0.08f).pos(m_scene.m_diag.contact_point_ws);
+
+				auto& normal = diag_builder.Line("contact_normal", 0xFF00FFFF);
+				normal.line(m_scene.m_diag.contact_point_ws, m_scene.m_diag.contact_point_ws + m_scene.m_diag.contact_normal_ws * 2.0f);
+				normal.arrow(EArrowType::Fwd, 8.0f);
+			}
+
+			auto diag_text = diag_builder.ToText(false);
+			m_diag_gfx = View3D_ObjectCreateLdrA(diag_text.c_str(), false, nullptr, nullptr);
+			if (m_diag_gfx)
+				View3D_WindowAddObject(m_view3d.m_win, m_diag_gfx);
+		}
+	}
+
+	void CleanupDiagGfx()
+	{
+		if (m_trail_gfx)
+		{
+			View3D_WindowRemoveObject(m_view3d.m_win, m_trail_gfx);
+			View3D_ObjectDelete(m_trail_gfx);
+			m_trail_gfx = nullptr;
+		}
+		if (m_diag_gfx)
+		{
+			View3D_WindowRemoveObject(m_view3d.m_win, m_diag_gfx);
+			View3D_ObjectDelete(m_diag_gfx);
+			m_diag_gfx = nullptr;
+		}
+	}
+
+	// Handle errors reported within view3d
+	static void __stdcall ReportErrorCB(void* ctx, char const* msg, char const* filepath, int line, int64_t)
+	{
+		auto this_ = static_cast<SandboxUI*>(ctx);
+		auto message = pr::FmtS(L"%s(%d): %s", filepath, line, msg);
+		::MessageBoxW(this_->m_hwnd, message, L"Error", MB_OK);
+	}
+};

@@ -2,10 +2,13 @@
 #include <functional>
 #include <cstdarg>
 #include <sstream>
+#include <iomanip>
+#include <span>
 
 #include "pr/common/assert.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/guid.h"
+#include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
@@ -16,5 +19,3 @@
 #include "pr/win32/windows_com.h"
 
 #include "pr/physics-2/physics.h"
-
-using namespace pr;

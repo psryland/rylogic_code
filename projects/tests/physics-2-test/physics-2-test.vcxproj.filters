@@ -211,6 +211,24 @@
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClInclude Include="src\scene.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\details_panel.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\diagnostics.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\media_panel.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sandbox_tests.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sandbox_ui.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">

@@ -1,9 +1,13 @@
 ﻿#pragma once
 #include "src/forward.h"
 
-static int BodyIndex;
+using namespace pr;
+using namespace pr::gui;
 
-struct Body :physics::RigidBody
+// A rigid body with attached View3D graphics.
+// When the collision shape changes, the graphics object is automatically
+// rebuilt from LDraw. UpdateGfx() syncs the graphics transform to the physics transform.
+struct Body : pr::physics::RigidBody
 {
 	// Graphics for the object
 	view3d::Object m_gfx;
