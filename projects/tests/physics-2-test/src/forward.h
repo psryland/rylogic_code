@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include <functional>
+#include <cstdarg>
+#include <sstream>
 
 #include "pr/common/assert.h"
 #include "pr/common/min_max_fix.h"

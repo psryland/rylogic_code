@@ -275,6 +275,17 @@ namespace pr::collision
 				centre += s + 0.5f * (edges[i].t0 + edges[i].t1) * d;
 				total += 1.0f;
 			}
+
+			// Fallback: if all edges were clipped out (degenerate case, e.g. faces
+			// share boundaries), use the centroid of the original polygon instead.
+			if (total == 0.0f)
+			{
+				for (int i = 0; i != count; ++i)
+				{
+					centre += point[i];
+					total += 1.0f;
+				}
+			}
 			return centre / total;
 		};
 		auto centreA = avr(pointA, countA, edgesA);

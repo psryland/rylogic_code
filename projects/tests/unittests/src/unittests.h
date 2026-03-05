@@ -184,6 +184,7 @@
 #include "pr/win32/dummy_window.h"
 #include "pr/win32/stackdump.h"
 #include "pr/win32/win32.h"
+#include "physics-2/src/unittests/test_collision.h"
 #include "physics-2/src/unittests/test_field.h"
 #include "physics-2/src/unittests/test_impulse.h"
 #include "physics-2/src/unittests/test_inertia.h"
