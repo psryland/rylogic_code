@@ -47,6 +47,9 @@
     <Filter Include="deps">
       <UniqueIdentifier>{c90e4abd-930a-45f1-9831-7318b3319c8b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="unittests">
+      <UniqueIdentifier>{32591f07-c0c9-490c-8d19-a44814071b70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
@@ -228,6 +231,27 @@
     </ClInclude>
     <ClInclude Include="src\sandbox_ui.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_collision.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_field.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_impulse.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_inertia.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_integrator.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_rigid_body.h">
+      <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h">
+      <Filter>unittests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

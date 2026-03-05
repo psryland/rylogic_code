@@ -282,7 +282,7 @@ struct Scene
 		// We must add the orbital term r × (m*v) for a correct system total.
 		auto ang_mom_about_origin = [](BodySnapshot const& s)
 		{
-			auto orbital = pr::Cross3(s.pos, s.momentum.lin);
+			auto orbital = Cross(s.pos, s.momentum.lin);
 			return s.momentum.ang + orbital;
 		};
 		auto pre_total_L = ang_mom_about_origin(m_diag.before[0]) + ang_mom_about_origin(m_diag.before[1]);

@@ -56,8 +56,8 @@ namespace pr::physics
 				// Spin angular momentum (I*ω) is stored in MomentumWS().ang at each body's origin.
 				// Orbital angular momentum (r × p) accounts for the body's position relative to
 				// the measurement point (world origin).
-				auto La = a.MomentumWS().ang + Cross3(a.O2W().pos, a.MomentumWS().lin);
-				auto Lb = b.MomentumWS().ang + Cross3(b.O2W().pos, b.MomentumWS().lin);
+				auto La = a.MomentumWS().ang + Cross(a.O2W().pos, a.MomentumWS().lin);
+				auto Lb = b.MomentumWS().ang + Cross(b.O2W().pos, b.MomentumWS().lin);
 				s.total_ang_momentum = La + Lb;
 
 				s.total_ke = a.KineticEnergy() + b.KineticEnergy();

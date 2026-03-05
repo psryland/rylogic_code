@@ -44,8 +44,8 @@ namespace pr::physics
 			{
 				auto s = SystemState{};
 				s.total_lin_momentum = a.MomentumWS().lin + b.MomentumWS().lin;
-				auto La = a.MomentumWS().ang + Cross3(a.O2W().pos, a.MomentumWS().lin);
-				auto Lb = b.MomentumWS().ang + Cross3(b.O2W().pos, b.MomentumWS().lin);
+				auto La = a.MomentumWS().ang + Cross(a.O2W().pos, a.MomentumWS().lin);
+				auto Lb = b.MomentumWS().ang + Cross(b.O2W().pos, b.MomentumWS().lin);
 				s.total_ang_momentum = La + Lb;
 				s.total_ke = a.KineticEnergy() + b.KineticEnergy();
 				return s;
