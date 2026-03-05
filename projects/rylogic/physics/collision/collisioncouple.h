@@ -51,7 +51,7 @@ namespace pr
 					m_vertex.m_direction = direction;
 					m_vertex.m_p = m_a2w * pr::ph::SupportVertex(m_shapeA, m_w2a *  direction, m_hint_id_p, m_vertex.m_id_p);
 					m_vertex.m_q = m_b2w * pr::ph::SupportVertex(m_shapeB, m_w2b * -direction, m_hint_id_q, m_vertex.m_id_q);
-					m_vertex.m_r = m_vertex.m_p - m_vertex.m_q + v4Origin;
+					m_vertex.m_r = m_vertex.m_p - m_vertex.m_q + v4::Origin();
 					m_hint_id_p  = m_vertex.m_id_p;
 					m_hint_id_q  = m_vertex.m_id_q;
 				}

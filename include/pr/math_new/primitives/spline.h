@@ -694,7 +694,7 @@ namespace pr::math
 	}
 
 	// Return the length of a spline from t0 to t1
-	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf) noexcept
+	inline float Length(Spline const& spline, float t0, float t1, float tol = tiny<float>) noexcept
 	{
 		struct L
 		{
@@ -884,7 +884,7 @@ namespace pr::math
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
 	template <typename PCont, typename TCont>
-	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tinyf) noexcept
+	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = tiny<float>) noexcept
 	{
 		struct L
 		{
@@ -957,7 +957,7 @@ namespace pr::math
 		L::Raster(points, times, &elem, pts_remaining, tol);
 	}
 	template <typename PCont>
-	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tinyf) noexcept
+	void Raster(Spline const& spline, PCont& points, int max_points, float tol = tiny<float>) noexcept
 	{
 		// Dummy container for the time values
 		struct TCont
@@ -971,7 +971,7 @@ namespace pr::math
 
 	// Fill a container of points with a smoothed spline based on 'points
 	template <SmoothOutput VOut, int MaxPointsPerSpline = 30>
-	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tinyf) noexcept
+	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = tiny<float>) noexcept
 	{
 		if (points.size() < 3)
 		{

@@ -17,14 +17,18 @@ namespace pr
 	struct Plane : Vec4f<struct PlaneType>
 	{
 		Plane() = default;
-		Plane(float dx, float dy, float dz, float dist)
-			: Vec4f<struct PlaneType>{dx, dy, dz, dist}
-		{}
 		Plane(v4 v)
 			: Vec4f<struct PlaneType>{v}
 		{}
+		Plane(float dx, float dy, float dz, float dist)
+			: Vec4f<struct PlaneType>{dx, dy, dz, dist}
+		{}
+		Plane(v4 norm, float dist)
+			: Vec4f<struct PlaneType>{ norm.x, norm.y, norm.z, -dist }
+		{}
 		v4 direction() const { return static_cast<v4>(w0()); }
 		static Plane FromTriangle(v4 a, v4 b, v4 c);
+		static Plane FromBestFit(std::span<v4 const> points);
 	};
 
 	// Define the dot product for planes
@@ -52,7 +56,7 @@ namespace pr
 		// Create a point from 3 points in 3D space
 		inline Plane make(v4 a, v4 b, v4 c)
 		{
-			auto p = Normalise(Cross3(b-a, c-a));
+			auto p = Normalise(Cross(b-a, c-a));
 			p.w = -Dot3(a, p);
 			return Plane{p};
 		}
@@ -122,5 +126,9 @@ namespace pr
 	inline Plane Plane::FromTriangle(v4 a, v4 b, v4 c)
 	{
 		return plane::make(a, b, c);
+	}
+	inline Plane Plane::FromBestFit(std::span<v4 const> points)
+	{
+		return plane::make(points.data(), points.data() + points.size());
 	}
 }

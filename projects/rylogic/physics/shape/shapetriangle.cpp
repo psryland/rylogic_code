@@ -21,7 +21,7 @@ ShapeTriangle& ShapeTriangle::set(v4 a, v4 b, v4 c, const m4x4& shape_to_model, 
 	m_v.x = a;
 	m_v.y = b;
 	m_v.z = c;
-	m_v.w = Normalise(Cross3(b-a,c-b));
+	m_v.w = Normalise(Cross(b-a,c-b));
 	CalcBBox(*this, m_base.m_bbox);
 	return *this;
 }
@@ -64,7 +64,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeTriangle const& shape, float den
 {
 	mp.m_centre_of_mass = (shape.m_v.x + shape.m_v.y + shape.m_v.z) / 3.0f;
 	mp.m_centre_of_mass.w = 0.0f;	// 'centre_of_mass' is an offset from the current model origin
-	mp.m_mass = Length(Cross3(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
+	mp.m_mass = Length(Cross(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
 	mp.m_os_inertia_tensor = CalcInertiaTensor(shape);
 	return mp;
 }
@@ -73,12 +73,12 @@ MassProperties& pr::ph::CalcMassProperties(ShapeTriangle const& shape, float den
 void pr::ph::ShiftCentre(ShapeTriangle& shape, v4& shift)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, shift.w == 0.0f, "");
-	if( FEql(shift,pr::v4Zero) ) return;
+	if( FEql(shift,pr::v4::Zero()) ) return;
 	shape.m_v.x -= shift;
 	shape.m_v.y -= shift;
 	shape.m_v.z -= shift;
 	shape.m_base.m_shape_to_model.pos += shift;
-	shift = pr::v4Zero;
+	shift = pr::v4::Zero();
 }
 
 // Return a support vertex for a triangle

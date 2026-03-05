@@ -662,7 +662,7 @@ namespace pr::geometry::max_3ds
 
 				// If the smoothing group intersects, accumulate 'norm'
 				// and return the vertex index of this vert
-				if ((sg == 0 && vert.m_smooth == 0) || (sg & vert.m_smooth) != 0 || (vert.m_norm == v4Zero))
+				if ((sg == 0 && vert.m_smooth == 0) || (sg & vert.m_smooth) != 0 || (vert.m_norm == v4::Zero()))
 				{
 					vert.m_norm += norm;
 					vert.m_col = col;
@@ -685,7 +685,7 @@ namespace pr::geometry::max_3ds
 
 		// Initialise 'verts'
 		for (uint16_t i = 0, iend = s_cast<uint16_t>(obj.m_mesh.m_vert.size()); i != iend; ++i)
-			verts.push_back(Vert(i, i, v4Zero, ColourWhite, 0));
+			verts.push_back(Vert(i, i, v4::Zero(), ColourWhite, 0));
 
 		// Loop over material groups, each material group is a nugget
 		auto vrange = Range<size_t>::Zero();
@@ -719,8 +719,8 @@ namespace pr::geometry::max_3ds
 				auto v2 = obj.m_mesh.m_vert[face.m_idx[2]].w1();
 				auto e0 = v1 - v0;
 				auto e1 = v2 - v1;
-				auto cx = Cross3(e0, e1);
-				auto norm = Normalise(cx, v4Zero);
+				auto cx = Cross(e0, e1);
+				auto norm = Normalise(cx, v4::Zero());
 				auto angles = TriangleAngles(v0, v1, v2);
 
 				// Get the final vertex indices for the face
@@ -746,7 +746,7 @@ namespace pr::geometry::max_3ds
 		{
 			auto p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
 			auto c = vert.m_col;
-			auto n = Normalise(vert.m_norm, v4Zero);
+			auto n = Normalise(vert.m_norm, v4::Zero());
 			auto t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
 			vout(p, c, n, t);
 		}

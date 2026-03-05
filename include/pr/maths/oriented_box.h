@@ -68,9 +68,9 @@ namespace pr
 	static_assert(std::alignment_of_v<OBox> == 16, "Should be 16 byte aligned");
 
 	#pragma region Constants
-	static OBox const OBoxZero  = {m4x4Identity, v4Zero};
-	static OBox const OBoxUnit  = {m4x4Identity, {0.5f, 0.5f, 0.5f, 1.0f}};
-	static OBox const OBoxReset = {m4x4Identity, v4Zero};
+	static OBox const OBoxZero  = {m4x4::Identity(), v4::Zero()};
+	static OBox const OBoxUnit  = {m4x4::Identity(), {0.5f, 0.5f, 0.5f, 1.0f}};
+	static OBox const OBoxReset = {m4x4::Identity(), v4::Zero()};
 	#pragma endregion
 
 	#pragma region Operators

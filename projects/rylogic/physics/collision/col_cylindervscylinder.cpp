@@ -53,7 +53,7 @@ namespace pr
 				,m_a2w(a2w)
 				,m_shapeB(shapeB)
 				,m_b2w(b2w)
-				,m_penetration(maths::float_max)
+				,m_penetration(limits<float>::max())
 				{
 					m_heightA = m_a2w.y * m_shapeA.m_height;
 					m_heightB = m_b2w.y * m_shapeB.m_height;
@@ -104,7 +104,7 @@ float Project(v4 axis, v4 cyl_axis, float height, float radius, Point& point)
 	}
 
 	// Project the radius
-	v4 radius_v4 = Cross3(cyl_axis, Cross3(cyl_axis, axis));
+	v4 radius_v4 = Cross(cyl_axis, Cross(cyl_axis, axis));
 	d = Length(radius_v4);
 	if( FEqlRelative(d, 0.f, FaceToFaceTolerance) )
 	{

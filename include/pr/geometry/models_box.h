@@ -71,7 +71,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Helper function for generating normals
-		auto norm = [](v4 a, v4 b, v4 c) { return Normalise(Cross3(c - b, a - b), v4Zero); };
+		auto norm = [](v4 a, v4 b, v4 c) { return Normalise(Cross(c - b, a - b), v4::Zero()); };
 
 		// Colour iterator wrapper
 		auto col = CreateRepeater(colours, 8*num_boxes, Colour32White);

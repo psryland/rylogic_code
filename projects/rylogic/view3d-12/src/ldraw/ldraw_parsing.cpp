@@ -4146,8 +4146,8 @@ namespace pr::rdr12::ldraw
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
 						m_cs.push_back(v2(
-							m_radius.x * Cos(float(maths::tau) * i / m_cs_facets),
-							m_radius.y * Sin(float(maths::tau) * i / m_cs_facets)));
+							m_radius.x * Cos(float(constants<double>::tau) * i / m_cs_facets),
+							m_radius.y * Sin(float(constants<double>::tau) * i / m_cs_facets)));
 					break;
 				}
 				case ECSType::Square:
@@ -4847,7 +4847,7 @@ namespace pr::rdr12::ldraw
 			ColourBands m_col;
 
 			Axis()
-				: m_min(maths::float_max)
+				: m_min(limits<float>::max())
 				, m_max(maths::float_lowest)
 				, m_col()
 			{
@@ -5507,6 +5507,22 @@ namespace pr::rdr12::ldraw
 		}
 		void CreateModel(LdrObject* obj, Location const&) override
 		{
+			// If an explicit colour was given for the text object, apply it to the font colour
+			// for any text ranges that still use the default font colour. The font colour is baked
+			// into the text texture, so the object tint colour can't brighten it (black * tint = black).
+			// After applying the colour to the font, reset the object tint to white so that the
+			// texture renders without colour distortion.
+			if (AllSet(m_pp.m_flags, EFlags::ExplicitColour))
+			{
+				auto default_colour = Font().m_colour;
+				for (auto& fmt : m_fmt)
+				{
+					if (fmt.m_font.m_colour == default_colour)
+						fmt.m_font.m_colour = obj->m_base_colour;
+				}
+				obj->m_base_colour = Colour32White;
+			}
+
 			// Create a quad containing the text
 			obj->m_model = ModelGenerator::Text(m_pp.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align.m_axis);
 			obj->m_model->m_name = obj->TypeAndName();
@@ -6491,7 +6507,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Transpose:
 				{
-					p2w = Transpose4x4(p2w);
+					p2w = Transpose(p2w);
 					break;
 				}
 				case EKeyword::Inverse:

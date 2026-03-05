@@ -40,7 +40,7 @@ RigidbodySettings Rigidbody::GetSettings() const
 	settings.m_object_to_world                      = m_object_to_world;
 	settings.m_shape                                = m_shape;
 	settings.m_type                                 = m_type;
-	settings.m_mass_properties                      .set(m_os_inertia_tensor, v4Zero, m_mass);
+	settings.m_mass_properties                      .set(m_os_inertia_tensor, v4::Zero(), m_mass);
 	settings.m_motion_type                          = m_motion_type;
 	settings.m_initially_sleeping                   = m_sleeping;
 	settings.m_lin_velocity                         = Velocity();
@@ -71,8 +71,8 @@ void Rigidbody::Create(RigidbodySettings const& settings)
 	SetForce(settings.m_force);
 	SetTorque(settings.m_torque);
 	SetSleepState(settings.m_initially_sleeping);
-	m_acc_impulse               = pr::v4Zero;
-	m_acc_twist                 = pr::v4Zero;
+	m_acc_impulse               = pr::v4::Zero();
+	m_acc_twist                 = pr::v4::Zero();
 	m_micro_mom_sq              = 0.0f;
 	m_user_data                 = settings.m_user_data;
 	m_flags                     = settings.m_flags;
@@ -136,7 +136,7 @@ void Rigidbody::SetMass(float mass)
 	PR_EXPAND(PR_LOG_RB, Log(*this, "SetMass");)
 	PR_ASSERT(PR_DBG_PHYSICS, mass > 0.0f, "");
 	m_mass                  = mass;
-	m_inv_mass              = (1.0f/mass > maths::tinyf) ? 1.0f/mass : 0.0f;
+	m_inv_mass              = (1.0f/mass > maths::tiny<float>) ? 1.0f/mass : 0.0f;
 }
 
 // Set the mass properties of a rigidbody
@@ -290,7 +290,7 @@ void Rigidbody::ApplyWSImpulse(v4 ws_impulse, v4 point)
 	PR_ASSERT(PR_DBG_PHYSICS, IsFinite(point, ph::OverflowValue) && IsFinite(ws_impulse, ph::OverflowValue), "");
 	if (m_motion_type != EMotion_Dynamic) return;
 	m_lin_momentum += ws_impulse;
-	m_ang_momentum += Cross3(point, ws_impulse);
+	m_ang_momentum += Cross(point, ws_impulse);
 	// If the object is asleep only wake it up once the velocity is above the micro velocity
 	if (m_sleeping)
 	{
@@ -304,8 +304,8 @@ void Rigidbody::ApplyWSImpulse(v4 ws_impulse, v4 point)
 // Clear the impulse accumulator
 void Rigidbody::AccClearImpulse()
 {
-	m_acc_impulse = pr::v4Zero;
-	m_acc_twist = pr::v4Zero;
+	m_acc_impulse = pr::v4::Zero();
+	m_acc_twist = pr::v4::Zero();
 }
 
 // Add an impulse to the accumulator members
@@ -316,7 +316,7 @@ void Rigidbody::AccAddWSImpulse(v4 ws_impulse, v4 point)
 	PR_ASSERT(PR_DBG_PHYSICS, ws_impulse.w == 0.0f, "");
 	if (m_motion_type != EMotion_Dynamic) return;
 	m_acc_impulse += ws_impulse;
-	m_acc_twist   += Cross3(point, ws_impulse);
+	m_acc_twist   += Cross(point, ws_impulse);
 }
 
 // Apply the accumulated impulses to the velocity

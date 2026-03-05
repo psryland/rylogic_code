@@ -81,7 +81,7 @@ namespace pr::physics
 		// impulseT: the tangential (friction) component.
 		auto impulse0 = -(col_I * V_inv);
 		auto denom = Dot(c.m_axis, col_I_inv * c.m_axis);
-		auto impulseN = Abs(denom) > maths::tinyf 
+		auto impulseN = Abs(denom) > maths::tiny<float> 
 			? -(Dot(c.m_axis, V_inv) / denom) * c.m_axis 
 			: v4{};
 		auto impulseT = impulse0 - impulseN;
@@ -104,7 +104,7 @@ namespace pr::physics
 			{
 				Jt = static_friction * Abs(Jn);
 				auto impulseT_lenSq = LengthSq(impulseT);
-				if (impulseT_lenSq > maths::tiny_sqf)
+				if (impulseT_lenSq > Sqr(maths::tiny<float>))
 					impulseT = Jt * (impulseT / Sqrt(impulseT_lenSq));
 				impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + impulseT;
 			}

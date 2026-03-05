@@ -18,8 +18,8 @@ namespace pr::rdr12
 		,m_specular_power(1000.0f)
 		,m_range(100.0f)
 		,m_falloff(0.0f)
-		,m_inner_angle(maths::tau_by_4f)
-		,m_outer_angle(maths::tau_by_4f)
+		,m_inner_angle(constants<float>::tau_by_4)
+		,m_outer_angle(constants<float>::tau_by_4)
 		,m_cast_shadow(0.0f)
 		,m_cam_relative(false)
 		,m_on(true)
@@ -32,8 +32,8 @@ namespace pr::rdr12
 		{
 			case ELight::Ambient:     return true;
 			case ELight::Point:       return m_position.w == 1.0f;
-			case ELight::Spot:        return m_direction != v4Zero;
-			case ELight::Directional: return m_direction != v4Zero;
+			case ELight::Spot:        return m_direction != v4::Zero();
+			case ELight::Directional: return m_direction != v4::Zero();
 			default: return false;
 		}
 	}

@@ -122,7 +122,7 @@ v4 Simplex::FindNearestPoint(v4 point)
 // Return the nearest point on object A
 v4 Simplex::GetNearestPointOnA() const
 {
-	v4 point = v4Zero;
+	v4 point = v4::Zero();
 	for( int i = 0; i != (int)m_num_vertices; ++i )
 		point += m_bary_coords[i] * m_vertex[i].m_p;
 	return point;
@@ -131,7 +131,7 @@ v4 Simplex::GetNearestPointOnA() const
 // Return the nearest point on object B
 v4 Simplex::GetNearestPointOnB() const
 {
-	v4 point = v4Zero;
+	v4 point = v4::Zero();
 	for (int i = 0; i != (int)m_num_vertices; ++i)
 		point += m_bary_coords[i] * m_vertex[i].m_q;
 	return point;

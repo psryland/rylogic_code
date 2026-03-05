@@ -110,8 +110,8 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 	rb.m_ang_momentum += rb.m_torque * elapsed_seconds;
 	
 	// Prepare this object for the next step
-	rb.m_force                  = pr::v4Zero;
-	rb.m_torque                 = pr::v4Zero;
+	rb.m_force                  = pr::v4::Zero();
+	rb.m_torque                 = pr::v4::Zero();
 	rb.m_ws_bbox                = rb.ObjectToWorld() * rb.BBoxOS();
 	rb.m_ws_inv_inertia_tensor  = InvInertiaTensorWS(rb.Orientation(), rb.m_os_inv_inertia_tensor); //Iw = (o2w * Io * w2o)^-1  =  w2o^-1 * Io^-1 * o2w^-1  =  o2w * Io^-1 * w2o
 	rb.m_micro_mom_sq           = CalcMicroMomentum(gravity, rb.m_mass, elapsed_seconds);
