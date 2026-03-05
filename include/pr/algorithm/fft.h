@@ -376,7 +376,7 @@ namespace pr
 			m_count = 0;
 
 			// Initialize 'e-to-the-i-thetas' for theta = 0..tau in increments of 1/N
-			auto k = (!inverse ? +maths::tau : -maths::tau) * complex(0,1) / double(window_size);
+			auto k = (!inverse ? +constants<double>::tau : -constants<double>::tau) * complex(0,1) / double(window_size);
 			for (int i = 0; i != window_size; ++i)
 				m_coeffs[i] = std::exp(k * Real(i));
 		}

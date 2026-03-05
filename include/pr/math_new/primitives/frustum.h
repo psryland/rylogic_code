@@ -922,14 +922,14 @@ namespace pr::math::tests
 			//auto c = GetCorners(f);
 			//
 			//std::string s;
-			//ldr::Triangle(s, "left", 0xFFFFFFFF, v4Origin, c.x, c.y);
-			//ldr::Triangle(s, "top", 0xFFFFFFFF, v4Origin, c.y, c.z);
-			//ldr::Triangle(s, "right", 0xFFFFFFFF, v4Origin, c.z, c.w);
-			//ldr::Triangle(s, "bottom", 0xFFFFFFFF, v4Origin, c.w, c.x);
-			//ldr::Plane(s, "left", 0xFFFFFFFF, f.plane(Frustum3::EPlane::XPos), v4Origin, zfar);
-			//ldr::Plane(s, "right", 0xFFFFFFFF, f.plane(Frustum3::EPlane::XNeg), v4Origin, zfar);
-			//ldr::Plane(s, "bottom", 0xFFFFFFFF, f.plane(Frustum3::EPlane::YPos), v4Origin, zfar);
-			//ldr::Plane(s, "top", 0xFFFFFFFF, f.plane(Frustum3::EPlane::YNeg), v4Origin, zfar);
+			//ldr::Triangle(s, "left", 0xFFFFFFFF, v4::Origin(), c.x, c.y);
+			//ldr::Triangle(s, "top", 0xFFFFFFFF, v4::Origin(), c.y, c.z);
+			//ldr::Triangle(s, "right", 0xFFFFFFFF, v4::Origin(), c.z, c.w);
+			//ldr::Triangle(s, "bottom", 0xFFFFFFFF, v4::Origin(), c.w, c.x);
+			//ldr::Plane(s, "left", 0xFFFFFFFF, f.plane(Frustum3::EPlane::XPos), v4::Origin(), zfar);
+			//ldr::Plane(s, "right", 0xFFFFFFFF, f.plane(Frustum3::EPlane::XNeg), v4::Origin(), zfar);
+			//ldr::Plane(s, "bottom", 0xFFFFFFFF, f.plane(Frustum3::EPlane::YPos), v4::Origin(), zfar);
+			//ldr::Plane(s, "top", 0xFFFFFFFF, f.plane(Frustum3::EPlane::YNeg), v4::Origin(), zfar);
 			//ldr::Write(s, "P:\\dump\\frustum.ldr");
 		}
 	};

@@ -37,7 +37,7 @@ namespace pr
 		// Some default helper implementations
 		struct NoGravity : IGravity
 		{
-			v4    GravityField    (v4) const { return v4Zero; }
+			v4    GravityField    (v4) const { return v4::Zero(); }
 			float GravityPotential(v4) const { return 0.0f; }
 		};
 		struct DirectionalGravity : IGravity

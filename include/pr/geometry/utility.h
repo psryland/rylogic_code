@@ -43,7 +43,7 @@ namespace pr::geometry
 					if (idx == m_idx[1]) return m_norm * m_angles.y;
 					if (idx == m_idx[2]) return m_norm * m_angles.z;
 					assert(false && "index is not part of this face");
-					return v4Zero;
+					return v4::Zero();
 				}
 			};
 			struct Edge
@@ -121,7 +121,7 @@ namespace pr::geometry
 					max_index = pr::max(max_index, face.m_idx[0], face.m_idx[1], face.m_idx[2]);
 
 					// Get properties of the face (normal, angles, etc)
-					face.m_norm = Normalise(Cross3(v1 - v0, v2 - v1), v4Zero);
+					face.m_norm = Normalise(Cross(v1 - v0, v2 - v1), v4::Zero());
 					face.m_angles = TriangleAngles(v0, v1, v2);
 					face.m_grp = ++sg; // each face is in a unique smoothing group to start with
 
@@ -343,7 +343,7 @@ namespace pr::geometry
 			// Callback function should duplicate the original vertex and set the normal to that provided.
 			auto new_idx = s_cast<VIdx>(vert.m_new_idx);
 			auto org_idx = s_cast<VIdx>(vert.m_orig_idx);
-			vout(new_idx, org_idx, Normalise(norm, v4Zero));
+			vout(new_idx, org_idx, Normalise(norm, v4::Zero()));
 		}
 
 		// Output the new faces
@@ -371,7 +371,7 @@ namespace pr::geometry
 		// Initialise all of the vertex normals to zero
 		auto ib = indices;
 		for (size_t i = 0; i != num_indices; ++i, ++ib)
-			SetN(*ib, v4Zero);
+			SetN(*ib, v4::Zero());
 
 		// For each face, calculate the face normal and add it to the normals of each adjoining vertex
 		ib = indices;
@@ -386,7 +386,7 @@ namespace pr::geometry
 			v4 v2 = GetV(i2);
 
 			// Calculate the face normal
-			v4 norm = Normalise(Cross3(v1 - v0, v2 - v0), v4Zero);
+			v4 norm = Normalise(Cross(v1 - v0, v2 - v0), v4::Zero());
 
 			// Add the normal to each vertex that references the face
 			SetN(i0, GetN(i0) + norm);
@@ -397,7 +397,7 @@ namespace pr::geometry
 		// Normalise all of the normals
 		ib = indices;
 		for (size_t i = 0; i != num_indices; ++i, ++ib)
-			SetN(*ib, Normalise(GetN(*ib), v4Zero));
+			SetN(*ib, Normalise(GetN(*ib), v4::Zero()));
 	}
 }
 

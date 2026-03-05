@@ -23,7 +23,7 @@ namespace pr::ph
 	// Return the bounding box for a sphere
 	BBox& CalcBBox(ShapeSphere const& shape, BBox& bbox)
 	{
-		bbox.m_centre = v4Origin;
+		bbox.m_centre = v4::Origin();
 		bbox.m_radius.x = shape.m_radius;
 		bbox.m_radius.y = shape.m_radius;
 		bbox.m_radius.z = shape.m_radius;
@@ -34,11 +34,11 @@ namespace pr::ph
 	// Return the mass properties
 	MassProperties& CalcMassProperties(ShapeSphere const& shape, float density, MassProperties& mp)
 	{
-		auto volume = float((2.0 / 3.0) * maths::tau * shape.m_radius * shape.m_radius * shape.m_radius);
+		auto volume = float((2.0 / 3.0) * constants<double>::tau * shape.m_radius * shape.m_radius * shape.m_radius);
 
-		mp.m_centre_of_mass = v4Zero;
+		mp.m_centre_of_mass = v4::Zero();
 		mp.m_mass = volume * density;
-		mp.m_os_inertia_tensor = m3x4Identity;	// Note for a shell, Ixx = Iyy = Izz = 2/3mr^2
+		mp.m_os_inertia_tensor = m3x4::Identity();	// Note for a shell, Ixx = Iyy = Izz = 2/3mr^2
 		mp.m_os_inertia_tensor.x.x = (2.0f / 5.0f) * (shape.m_radius * shape.m_radius);	// (2/5)mr^2
 		mp.m_os_inertia_tensor.y.y = mp.m_os_inertia_tensor.x.x;
 		mp.m_os_inertia_tensor.z.z = mp.m_os_inertia_tensor.x.x;
@@ -48,7 +48,7 @@ namespace pr::ph
 	// Shift the centre of a sphere
 	void ShiftCentre(ShapeSphere&, v4& shift)
 	{
-		PR_ASSERT(PR_DBG_PHYSICS, FEql(shift, pr::v4Zero), ""); shift; // Impossible to shift the centre of an implicit object
+		PR_ASSERT(PR_DBG_PHYSICS, FEql(shift, pr::v4::Zero()), ""); shift; // Impossible to shift the centre of an implicit object
 	}
 
 	// Return a support vertex for a sphere
@@ -65,7 +65,7 @@ namespace pr::ph
 			static_cast<std::size_t>((dir.x + 1.0f) * 0.5f * (1 << 4)) << 20 |
 			static_cast<std::size_t>((dir.y + 1.0f) * 0.5f * (1 << 4)) << 10 |
 			static_cast<std::size_t>((dir.z + 1.0f) * 0.5f * (1 << 4)) << 0;
-		return dir * shape.m_radius + v4Origin;
+		return dir * shape.m_radius + v4::Origin();
 	}
 
 	// Find the nearest point and distance from a point to a shape

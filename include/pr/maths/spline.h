@@ -185,9 +185,9 @@ namespace pr
 			t = Clamp<float>(t, 0, 1);
 			auto vel = EvalDerivative(t);
 			auto acc = EvalDerivative2(t);
-			auto v_x_a = Length(Cross3(vel, acc));
+			auto v_x_a = Length(Cross(vel, acc));
 			auto vel_len = Length(vel);
-			return vel_len > maths::tinyf ? v_x_a / (vel_len * vel_len * vel_len) : 0;
+			return vel_len > maths::tiny<float> ? v_x_a / (vel_len * vel_len * vel_len) : 0;
 		}
 	};
 
@@ -341,7 +341,7 @@ namespace pr
 	namespace spline
 	{
 		// Return the length of a Cubic Curve from t0 to t1
-		inline float Length(CubicCurve3 const& curve, float t0, float t1, float tol = maths::tinyf)
+		inline float Length(CubicCurve3 const& curve, float t0, float t1, float tol = maths::tiny<float>)
 		{
 			struct L
 			{
@@ -390,7 +390,7 @@ namespace pr
 		}
 
 		// Return the length of a spline from t0 to t1
-		inline float Length(CubicSpline const& spline, float t0, float t1, float tol = maths::tinyf)
+		inline float Length(CubicSpline const& spline, float t0, float t1, float tol = maths::tiny<float>)
 		{
 			auto length = 0.0f;
 			int i0 = std::clamp(static_cast<int>(std::floor(t0)), 0, isize(spline.m_curves) - 1);
@@ -407,7 +407,7 @@ namespace pr
 		}
 
 		// Fill a container of points with a rasterized version of 'spline'. Returns the span of used points.
-		[[nodiscard]] inline std::span<v4> Raster(CubicSpline const& spline, float t0, float t1, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tinyf)
+		[[nodiscard]] inline std::span<v4> Raster(CubicSpline const& spline, float t0, float t1, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tiny<float>)
 		{
 			struct L
 			{
@@ -428,7 +428,7 @@ namespace pr
 				float m_tol;
 				bool m_store_time_in_w;
 
-				L(CubicSpline const& spline, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tinyf)
+				L(CubicSpline const& spline, std::span<v4> out, bool store_time_in_w = false, float tol = maths::tiny<float>)
 					: m_spline(spline)
 					, m_out(out)
 					, m_pts_added(0)
@@ -521,7 +521,7 @@ namespace pr
 						auto dpos = p1.xyz - p0.xyz;
 						auto dpos_len = Length(dpos);
 						auto mid = m_spline.Position(0.5f * (p1.w + p0.w));
-						return dpos_len > maths::tinyf ? Length(Cross(mid.xyz - p0.xyz, dpos)) / Length(dpos) : 0;
+						return dpos_len > maths::tiny<float> ? Length(Cross(mid.xyz - p0.xyz, dpos)) / Length(dpos) : 0;
 					};
 
 					Elem lhs =
@@ -683,7 +683,7 @@ namespace pr
 	}
 
 	// Return the length of a spline from t0 to t1
-	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf)
+	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tiny<float>)
 	{
 		struct L
 		{
@@ -873,7 +873,7 @@ namespace pr
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
 	template <typename PCont, typename TCont>
-	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tinyf)
+	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tiny<float>)
 	{
 		struct L
 		{
@@ -946,7 +946,7 @@ namespace pr
 		L::Raster(points, times, &elem, pts_remaining, tol);
 	}
 	template <typename PCont>
-	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tinyf)
+	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tiny<float>)
 	{
 		// Dummy container for the time values
 		struct TCont
@@ -960,7 +960,7 @@ namespace pr
 
 	// Fill a container of points with a smoothed spline based on 'points
 	template <SmoothOutput VOut, int MaxPointsPerSpline = 30>
-	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tinyf)
+	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tiny<float>)
 	{
 		if (points.size() < 3)
 		{

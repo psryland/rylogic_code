@@ -24,7 +24,7 @@ namespace pr
 		// Reset this bsphere to invalid
 		BSphere& reset()
 		{
-			m_ctr_rad = -v4Origin;
+			m_ctr_rad = -v4::Origin();
 			return *this;
 		}
 
@@ -43,7 +43,7 @@ namespace pr
 		// Set this bsphere to a unit sphere centred on the origin
 		BSphere& unit()
 		{
-			m_ctr_rad = v4Origin;
+			m_ctr_rad = v4::Origin();
 			return *this;
 		}
 

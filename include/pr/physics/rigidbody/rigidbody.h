@@ -59,14 +59,14 @@ namespace pr
 				m_shape                                 = GetDummyShape();
 				m_type                                  = ERigidbody_Dynamic;
 				m_mass_properties.m_mass                = 10.0f;
-				m_mass_properties.m_centre_of_mass      = pr::v4Origin;
-				m_mass_properties.m_os_inertia_tensor   = m3x4Identity;
+				m_mass_properties.m_centre_of_mass      = pr::v4::Origin();
+				m_mass_properties.m_os_inertia_tensor   = m3x4::Identity();
 				m_motion_type                           = EMotion_Dynamic;
 				m_initially_sleeping                    = false;
-				m_lin_velocity                          = pr::v4Zero;
-				m_ang_velocity                          = pr::v4Zero;
-				m_force                                 = pr::v4Zero;
-				m_torque                                = pr::v4Zero;
+				m_lin_velocity                          = pr::v4::Zero();
+				m_ang_velocity                          = pr::v4::Zero();
+				m_force                                 = pr::v4::Zero();
+				m_torque                                = pr::v4::Zero();
 				m_user_data                             = 0;
 				m_flags                                 = ERBFlags_None;
 				m_name                                  = "";
@@ -97,12 +97,12 @@ namespace pr
 			v4              AngMomentum() const                     { return m_ang_momentum; }
 			v4              Velocity() const                        { return m_inv_mass * Momentum(); }
 			v4              AngVelocity() const                     { return m_inv_mass * (m_ws_inv_inertia_tensor * AngMomentum()); }
-			v4              VelocityAt(v4 ws_offset) const   { return Velocity() + Cross3(AngVelocity(), ws_offset); }
+			v4              VelocityAt(v4 ws_offset) const   { return Velocity() + Cross(AngVelocity(), ws_offset); }
 			BBox            BBoxWS() const                          { return m_ws_bbox; }
 			BBox            BBoxOS() const                          { return GetShape()->m_bbox; }
 			m3x4            InertiaOS() const                       { return m_os_inertia_tensor; }
 			void*           UserData() const                        { return m_user_data; }
-			MassProperties  GetMassProperties() const               { MassProperties mp = {m_os_inertia_tensor, v4Zero, Mass()}; return mp; }
+			MassProperties  GetMassProperties() const               { MassProperties mp = {m_os_inertia_tensor, v4::Zero(), Mass()}; return mp; }
 			v4              Gravity() const                         { return GetGravitationalAcceleration(m_object_to_world.pos); }
 			float           Energy() const                          { return PotentialEnergy() + KineticEnergy(); }             // mgh + 0.5mv^2 + 0.5wIw
 			float           PotentialEnergy() const                 { return -Dot3(Gravity(), Position()); }                    // mgh
@@ -145,7 +145,7 @@ namespace pr
 			v4              AccAngMomentum() const                  { return m_ang_momentum + m_acc_twist; }
 			v4              AccVelocity() const                     { return m_inv_mass * AccMomentum(); }
 			v4              AccAngVelocity() const                  { return m_inv_mass * (m_ws_inv_inertia_tensor * AccAngMomentum()); }
-			v4              AccVelocityAt(v4 ws_offset) const { return AccVelocity() + Cross3(AccAngVelocity(), ws_offset); }
+			v4              AccVelocityAt(v4 ws_offset) const { return AccVelocity() + Cross(AccAngVelocity(), ws_offset); }
 			void            AccClearImpulse();
 			void            AccAddWSImpulse(v4 ws_impulse, v4 point);
 			void            AccApplyWSImpulse();

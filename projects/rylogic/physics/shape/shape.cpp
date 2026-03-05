@@ -97,7 +97,7 @@ v4 pr::ph::SupportVertex(Shape const& shape, v4 direction, std::size_t hint_vert
 	case EShape_Cylinder:	return SupportVertex(shape_cast<ShapeCylinder>(shape), direction, hint_vert_id, sup_vert_id);
 	case EShape_Polytope:	return SupportVertex(shape_cast<ShapePolytope>(shape), direction, hint_vert_id, sup_vert_id);
 	case EShape_Triangle:	return SupportVertex(shape_cast<ShapeTriangle>(shape), direction, hint_vert_id, sup_vert_id);
-	default: PR_ASSERT(PR_DBG_PHYSICS, false, "Unknown primitive type"); return v4Zero;
+	default: PR_ASSERT(PR_DBG_PHYSICS, false, "Unknown primitive type"); return v4::Zero();
 	}
 }
 
@@ -121,11 +121,11 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 point, float& distance, v4& clo
 //		{
 //			BBox BBox(const Primitive& prim)
 //			{
-//				return BBox::make(v4Origin, prim.m_radius);
+//				return BBox::make(v4::Origin(), prim.m_radius);
 //			}
 //			v4 CenterOfMass(const Primitive&)
 //			{
-//				return v4Origin;
+//				return v4::Origin();
 //			}
 //			m4x4 InertiaTensor(const Primitive& prim)
 //			{
@@ -141,7 +141,7 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 point, float& distance, v4& clo
 //				prim;
 //				direction;
 //				PR_ASSERT(PR_DBG_PHYSICS, false);
-//				return v4Zero;
+//				return v4::Zero();
 //			}
 //			float Volume(const Primitive& prim)
 //			{
@@ -218,7 +218,7 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 point, float& distance, v4& clo
 //			case EPrimitive_Cylinder:	return cylinder	::CenterOfMass(prim);
 //			case EPrimitive_Box:		return box		::CenterOfMass(prim);
 //			case EPrimitive_Polytope:	return polytope	::CenterOfMass(prim);
-//			default: PR_ASSERT(PR_DBG_PHYSICS, false, "Unknown primitive type"); return v4Zero;
+//			default: PR_ASSERT(PR_DBG_PHYSICS, false, "Unknown primitive type"); return v4::Zero();
 //			}
 //		}
 //

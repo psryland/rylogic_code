@@ -39,7 +39,7 @@ namespace las
 		auto w2o = InvertAffine(o2w);
 
 		// Apply gravity
-		m_body.ApplyForceWS(v4{0, 0, Gravity * mass, 0}, v4Zero);
+		m_body.ApplyForceWS(v4{0, 0, Gravity * mass, 0}, v4::Zero());
 
 		// Box corners in object space (1x1x1 box, half-extent 0.5)
 		constexpr float H = 0.5f;
@@ -53,7 +53,7 @@ namespace las
 
 		// Ocean collision: test each corner against the ocean surface
 		auto max_pen = 0.0f;
-		auto max_correction = v4Zero;
+		auto max_correction = v4::Zero();
 		auto submerged_count = 0;
 		for (auto const& os_corner : os_corners)
 		{

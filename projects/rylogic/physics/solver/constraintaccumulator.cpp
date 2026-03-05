@@ -156,12 +156,12 @@ void ConstraintAccumulator::SetCollisionMatrix(Constraint& cons, Rigidbody const
 	if( mass_mask & 1 )
 	{
 		auto cpmA = CPM(pointA); // pointA is object relative
-		inv_mass += rbA.m_inv_mass * (m3x4Identity - (cpmA * rbA.m_ws_inv_inertia_tensor * cpmA));
+		inv_mass += rbA.m_inv_mass * (m3x4::Identity() - (cpmA * rbA.m_ws_inv_inertia_tensor * cpmA));
 	}
 	if( mass_mask & 2 )
 	{
 		auto cpmB = CPM(pointB); // pointB is object relative
-		inv_mass += rbB.m_inv_mass * (m3x4Identity - (cpmB * rbB.m_ws_inv_inertia_tensor * cpmB));
+		inv_mass += rbB.m_inv_mass * (m3x4::Identity() - (cpmB * rbB.m_ws_inv_inertia_tensor * cpmB));
 	}
 	cons.m_mass = Invert(inv_mass);
 }
@@ -186,13 +186,13 @@ void ConstraintAccumulator::AddContact(Rigidbody& rbA, Rigidbody& rbB, ContactMa
 	pair.m_resting_contact_speed = grav_accel * m_step_size;
 	//float rest_speed_sq = Sqr(pair.m_resting_contact_speed);
 	//if( pair.m_objA->Velocity().LengthSq() < rest_speed_sq )
-	//	pair.m_objA->SetVelocity(v4Zero);
+	//	pair.m_objA->SetVelocity(v4::Zero());
 	//if( pair.m_objB->Velocity().LengthSq() < rest_speed_sq )
-	//	pair.m_objB->SetVelocity(v4Zero);
+	//	pair.m_objB->SetVelocity(v4::Zero());
 	//if( pair.m_objA->AngMomentum().LengthSq() < rest_speed_sq )
-	//	pair.m_objA->SetAngMomentum(v4Zero);
+	//	pair.m_objA->SetAngMomentum(v4::Zero());
 	//if( pair.m_objB->AngMomentum().LengthSq() < rest_speed_sq )
-	//	pair.m_objB->SetAngMomentum(v4Zero);
+	//	pair.m_objB->SetAngMomentum(v4::Zero());
 
 	// Fill out the constraints for the pair
 	for( uint32_t i = 0, j = 0; i != manifold.Size(); ++i )
@@ -476,7 +476,7 @@ uint32_t ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair
 	PR_EXPAND(PR_DBG_COLLISION, std::string str);
 
 	uint32_t first_to_solve = pair.m_num_constraints;
-	float max_error_sq = maths::tinyf;
+	float max_error_sq = maths::tiny<float>;
 
 	// Calculate the desired final relative velocities for each constraint
 	// before we start applying impulses

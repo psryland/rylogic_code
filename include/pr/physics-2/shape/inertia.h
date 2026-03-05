@@ -69,7 +69,7 @@ namespace pr::physics
 	// Use the sqrt of float_max as the threshold for infinite mass so that 
 	// 'InfiniteMass * InfiniteMass' does not overflow a float. If mass becomes
 	// 'inf' then multiplying by 0 creates NaNs.
-	constexpr float InfiniteMass = 1.84467435229094026671e19f; // = sqrt(maths::float_max);
+	constexpr float InfiniteMass = 1.84467435229094026671e19f; // = sqrt(limits<float>::max());
 	constexpr float ZeroMass = 1.0f / InfiniteMass;
 
 	// Direction for translating an inertia matrix
@@ -139,7 +139,7 @@ namespace pr::physics
 		m3x4 To3x3(float mass = -1) const;
 
 		// The 6x6 inertia matrix (mass scaled by default)
-		Mat6x8f<Motion,Force> To6x6(float mass = -1) const;
+		Mat6x8<float, Motion, Force> To6x6(float mass = -1) const;
 
 		// Sanity check
 		bool Check() const;
@@ -217,7 +217,7 @@ namespace pr::physics
 		m3x4 To3x3(float inv_mass = -1) const;
 
 		// Return the inverse inertia matrix as a full spatial matrix
-		Mat6x8f<Force,Motion> To6x6(float inv_mass = -1) const;
+		Mat6x8<float, Force, Motion> To6x6(float inv_mass = -1) const;
 
 		// Sanity check
 		bool Check() const;

@@ -28,7 +28,7 @@ namespace pr::geometry
 		float abac = Dot3(ab, ac);
 		float e = abab * acac;
 		float d = 2.0f * (e - abac * abac);
-		if (Abs(d) <= maths::tinyf) return maths::float_max;
+		if (Abs(d) <= maths::tiny<float>) return limits<float>::max();
 
 		float s = (e - acac * abac) / d;
 		float t = (e - abab * abac) / d;
@@ -63,7 +63,7 @@ namespace pr::geometry
 
 			angles.x = 0.5f * Acos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.y = 0.5f * Acos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.z = maths::tau_by_2f - angles.x - angles.y;
+			angles.z = constants<float>::tau_by_2 - angles.x - angles.y;
 		}
 		else if (asq > bsq && asq > csq)
 		{
@@ -72,7 +72,7 @@ namespace pr::geometry
 
 			angles.y = 0.5f * Acos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.z = 0.5f * Acos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.x = maths::tau_by_2f - angles.y - angles.z;
+			angles.x = constants<float>::tau_by_2 - angles.y - angles.z;
 		}
 		else
 		{
@@ -81,7 +81,7 @@ namespace pr::geometry
 			
 			angles.x = 0.5f * Acos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.z = 0.5f * Acos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
-			angles.y = maths::tau_by_2f - angles.x - angles.z;
+			angles.y = constants<float>::tau_by_2 - angles.x - angles.z;
 		}
 		angles.w = 0.0f;
 		return angles;

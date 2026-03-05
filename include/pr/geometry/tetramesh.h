@@ -257,7 +257,7 @@ namespace pr
 		// Return the volume of a tetra (actually volume*6 but I only care about relative volumes)
 		inline float Volume(v4 a, v4 b, v4 c, v4 d)
 		{
-			return Dot3(a-b, Cross3(b-c, c-d));
+			return Dot3(a-b, Cross(b-c, c-d));
 		}
 		inline float Volume(tetramesh::Mesh const& mesh, VIndex a, VIndex b, VIndex c, VIndex d)
 		{

@@ -243,7 +243,7 @@ namespace pr::container
 			auto& results = builder.Point("results", 0xFF00FF00).size(10.0f);
 			index.Find<v4>(points, search.xyz.arr, radius, GetValue, [&](v4 a, float dist_sq)
 			{
-				PR_EXPECT(dist_sq < radius * radius + maths::tinyf);
+				PR_EXPECT(dist_sq < radius * radius + maths::tiny<float>);
 				results.pt(a);
 			});
 		}

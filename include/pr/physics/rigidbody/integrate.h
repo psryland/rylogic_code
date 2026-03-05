@@ -35,7 +35,7 @@ namespace pr
 		//	const m4x4&			ObjectToWorld() const				{ return *m_object_to_world; }
 		//	v4			Velocity() const					{ return m_velocity; }
 		//	v4			AngVelocity() const					{ return m_ang_velocity; }
-		//	v4					VelocityAt(v4 where) const	{ return m_velocity + Cross3(m_ang_velocity, where); }
+		//	v4					VelocityAt(v4 where) const	{ return m_velocity + Cross(m_ang_velocity, where); }
 		//	float				GetEnergy(v4 gravity) const;
 
 		//	// Set methods
@@ -93,7 +93,7 @@ namespace pr
 		//inline void	Instance::ApplyWorldImpulseAt(v4 force, v4 where)
 		//{
 		//	m_force	 += force;
-		//	m_torque += Cross3(where, force);
+		//	m_torque += Cross(where, force);
 		//}
 
 		////*****
@@ -105,7 +105,7 @@ namespace pr
 		//	if( inward_force < 0.0f ) { m_force -= (inward_force / force.LengthSq()) * force; }
 		//	m_force += force;
 
-		//	v4 torque = Cross3(where, force);
+		//	v4 torque = Cross(where, force);
 		//	float inward_torque = Dot3(torque, m_torque);
 		//	if( inward_torque < 0.0f ) { m_torque -= (inward_torque / torque.LengthSq()) * torque; }
 		//	m_torque += torque;

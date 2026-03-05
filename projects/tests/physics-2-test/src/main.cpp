@@ -36,7 +36,7 @@ struct MainUI :Form
 		, m_physics()
 		, m_sph(0.5f)
 		#if TEST_PAIR
-		, m_box(v4{2, 2, 2, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4Origin))
+		, m_box(v4{2, 2, 2, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4::Origin()))
 		#else
 		, m_box(Abs(v4::Random(rng, v4{0.8f}, v4{1.4f}, 0)))
 		#endif
@@ -132,8 +132,8 @@ struct MainUI :Form
 			{
 				auto force_mag = G * m_body[0].Mass() * m_body[1].Mass() / (r_sq + softening_sq);
 				auto force = force_mag * sep / r;
-				m_body[0].ApplyForceWS(-force, v4Zero);
-				m_body[1].ApplyForceWS(+force, v4Zero);
+				m_body[0].ApplyForceWS(-force, v4::Zero());
+				m_body[1].ApplyForceWS(+force, v4::Zero());
 			}
 		}
 
@@ -185,8 +185,8 @@ struct MainUI :Form
 				{
 					auto force_mag = G * body0.Mass() * body1.Mass() / (r_sq + softening_sq);
 					auto force = force_mag * sep / r;
-					body0.ApplyForceWS(-force, v4Zero);
-					body1.ApplyForceWS(+force, v4Zero);
+					body0.ApplyForceWS(-force, v4::Zero());
+					body1.ApplyForceWS(+force, v4::Zero());
 				}
 			}
 		}

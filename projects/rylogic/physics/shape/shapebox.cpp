@@ -25,7 +25,7 @@ ShapeBox& ShapeBox::set(v4 dim, const m4x4& shape_to_model, MaterialId material_
 // Return the bounding box for a box
 BBox& pr::ph::CalcBBox(const ShapeBox& shape, BBox& bbox)
 {
-	bbox.m_centre = v4Origin;
+	bbox.m_centre = v4::Origin();
 	bbox.m_radius = shape.m_radius;
 	return bbox;
 }
@@ -35,9 +35,9 @@ MassProperties& pr::ph::CalcMassProperties(const ShapeBox& shape, float density,
 {
 	float volume = 8.0f * shape.m_radius.x * shape.m_radius.y * shape.m_radius.z;
 
-	mp.m_centre_of_mass = v4Zero;
+	mp.m_centre_of_mass = v4::Zero();
 	mp.m_mass = volume * density;
-	mp.m_os_inertia_tensor = m3x4Identity;
+	mp.m_os_inertia_tensor = m3x4::Identity();
 	mp.m_os_inertia_tensor.x.x = (1.0f / 3.0f) * (shape.m_radius.y * shape.m_radius.y + shape.m_radius.z * shape.m_radius.z);	// (1/12)m(Y^2 + Z^2)
 	mp.m_os_inertia_tensor.y.y = (1.0f / 3.0f) * (shape.m_radius.x * shape.m_radius.x + shape.m_radius.z * shape.m_radius.z);	// (1/12)m(X^2 + Z^2)
 	mp.m_os_inertia_tensor.z.z = (1.0f / 3.0f) * (shape.m_radius.y * shape.m_radius.y + shape.m_radius.x * shape.m_radius.x);	// (1/12)m(Y^2 + Z^2)
@@ -47,7 +47,7 @@ MassProperties& pr::ph::CalcMassProperties(const ShapeBox& shape, float density,
 // Shift the centre of a box
 void pr::ph::ShiftCentre(ShapeBox&, v4& shift)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, FEql(shift,pr::v4Zero), ""); (void)shift; //impossible to shift the centre of an implicit object
+	PR_ASSERT(PR_DBG_PHYSICS, FEql(shift,pr::v4::Zero()), ""); (void)shift; //impossible to shift the centre of an implicit object
 }
 
 // Return a support vertex for a box
