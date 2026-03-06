@@ -42,8 +42,11 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 	if (lpCmdLine && strstr(lpCmdLine, "-unittest"))
 		return RunUnitTests();
 
-	// Interactive sandbox mode
-	pr::InitCom com;
+	// Interactive sandbox mode.
+	// Must use STA (apartment-threaded) because COM UI components like IFileDialog
+	// require a single-threaded apartment with a message pump on the calling thread.
+	// MTA (the InitCom default) causes IFileDialog::Show() to hang indefinitely.
+	pr::InitCom com(COINIT_APARTMENTTHREADED);
 	pr::GdiPlus gdi;
 
 	try
@@ -56,6 +59,25 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 
 		SandboxUI sandbox;
 		sandbox.cp().msg_loop(&loop);
+
+		// Check for -scene <filepath> to load a scene file on startup
+		if (lpCmdLine)
+		{
+			auto scene_arg = strstr(lpCmdLine, "-scene ");
+			if (scene_arg != nullptr)
+			{
+				auto filepath = std::string(scene_arg + 7);
+
+				// Trim leading/trailing quotes and whitespace
+				while (!filepath.empty() && (filepath.front() == '"' || filepath.front() == ' '))
+					filepath.erase(filepath.begin());
+				while (!filepath.empty() && (filepath.back() == '"' || filepath.back() == ' '))
+					filepath.pop_back();
+
+				sandbox.LoadSceneFile(std::filesystem::path(filepath));
+			}
+		}
+
 		sandbox.Show();
 
 		loop.AddLoop(100.0, false, [&](double dt) { sandbox.Step(dt); });
@@ -65,7 +87,15 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 	}
 	catch (std::exception const& ex)
 	{
-		OutputDebugStringA(ex.what());
+		auto msg = std::string("EXCEPTION: ") + ex.what() + "\n";
+		OutputDebugStringA(msg.c_str());
+		if (auto f = fopen("dump\\crash.log", "w")) { fputs(msg.c_str(), f); fclose(f); }
 		return -1;
+	}
+	catch (...)
+	{
+		OutputDebugStringA("UNKNOWN EXCEPTION\n");
+		if (auto f = fopen("dump\\crash.log", "w")) { fputs("UNKNOWN EXCEPTION\n", f); fclose(f); }
+		return -2;
 	}
 }

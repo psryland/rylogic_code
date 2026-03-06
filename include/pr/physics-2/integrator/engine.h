@@ -43,8 +43,13 @@ namespace pr::physics
 
 			// Advance all bodies to 't + dt' using semi-implicit Euler integration.
 			// After this, body positions reflect the new time but may overlap.
+			// Static bodies (infinite mass) are skipped — they have no forces, no
+			// velocity, and evolving them would only accumulate numerical drift.
 			for (auto& body : bodies)
+			{
+				if (body.Mass() >= InfiniteMass * 0.5f) continue;
 				Evolve(body, dt);
+			}
 
 			// Broad phase: find pairs of bodies whose bounding volumes overlap.
 			// Narrow phase: test each pair for actual geometric contact.
@@ -117,10 +122,30 @@ namespace pr::physics
 		// Calculate and apply the restitution impulse to resolve a collision.
 		// The impulse is computed in objA's space (where all contact data lives),
 		// then transformed to each body's own object space before being applied.
-		void ResolveCollision(Contact const& c)
+		//
+		// Important: When multiple collisions are resolved in a single time step,
+		// earlier resolutions change body momenta. We must recompute the relative
+		// velocity using CURRENT momenta before computing each impulse, otherwise
+		// stale velocity data causes catastrophic energy injection. For example:
+		// if body A bounces off the ground (velocity reversed from -v to +v), then
+		// a subsequent collision (A, B) using the old velocity (-v) would compute
+		// an impulse as if A is still approaching B, doubling the energy.
+		void ResolveCollision(Contact& c)
 		{
 			auto& objA = const_cast<RigidBody&>(*c.m_objA);
 			auto& objB = const_cast<RigidBody&>(*c.m_objB);
+
+			// Recompute relative velocity using current momenta.
+			// The geometric data (contact point, axis, depth) is still valid because
+			// only momenta changed, not positions. But the velocity field is stale.
+			c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
+
+			// Re-check the separating condition with updated velocities.
+			// A previous impulse in this step may have already resolved this contact.
+			auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point_at_t);
+			auto sep_dot = Dot(rel_vel_at_point, c.m_axis);
+			if (sep_dot > 0)
+				return;
 
 			// Compute the equal-and-opposite impulse pair as spatial force wrenches.
 			// Each wrench is expressed at the body's own model origin, in its own frame.

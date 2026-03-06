@@ -50,6 +50,9 @@
     <Filter Include="unittests">
       <UniqueIdentifier>{32591f07-c0c9-490c-8d19-a44814071b70}</UniqueIdentifier>
     </Filter>
+    <Filter Include="examples">
+      <UniqueIdentifier>{b37cb0b2-6163-4c60-a478-00a5c9a33593}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
@@ -258,5 +261,10 @@
     <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">
       <Filter>deps</Filter>
     </DependencyLink>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="examples\gravity_playground.json">
+      <Filter>examples</Filter>
+    </None>
   </ItemGroup>
 </Project>

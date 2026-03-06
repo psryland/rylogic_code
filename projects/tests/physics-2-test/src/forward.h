@@ -4,6 +4,9 @@
 #include <sstream>
 #include <iomanip>
 #include <span>
+#include <memory>
+#include <filesystem>
+#include <variant>
 
 #include "pr/common/assert.h"
 #include "pr/common/min_max_fix.h"

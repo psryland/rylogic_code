@@ -37,45 +37,26 @@ namespace pr::physics
 		#endif
 
 		// Lever arms from each body's origin to the contact point (in A's frame).
-		// These determine how much of the impulse goes into rotation vs translation.
 		auto rA = pt - v4::Origin();
 		auto rB = pt - c.m_b2a.pos;
 
-		// Relative velocity of B w.r.t. A at the contact point.
-		// V_inv is the full 3D velocity; Vn_inv is the component along the collision normal.
+		// Relative velocity at the contact point.
 		auto V_inv  = c.m_velocity.LinAt(pt);
 		auto Vn_inv = Dot(V_inv, c.m_axis) * c.m_axis;
 
-		// Get the inverse inertia tensors as 3x3 matrices in A's frame.
-		// For objA: already in its own frame, so no transform needed.
-		// For objB: rotate B's inertia into A's frame using the rotational part of b2a.
-		//   Important: we must NOT pass the full b2a transform (including position) because
-		//   InertiaInvOS(m4x4) interprets the position as a CoM offset and applies the
-		//   parallel axis theorem. The collision mass matrix formula already accounts for
-		//   the positional offset through the CPM(rB) terms below.
+		// Inverse inertia tensors in A's frame.
 		auto Ia_inv_3x3 = objA.InertiaInvOS().To3x3();
 		auto Ib_inv_3x3 = objB.InertiaInvOS(c.m_b2a.rot).To3x3();
 
-		// Build the collision inverse-mass matrix for each body.
-		// This is the 3x3 matrix M⁻¹ such that: Δv_at_contact = M⁻¹ · J
-		// where J is the impulse applied at the contact point.
-		//
-		// Derivation: for a rigid body, the velocity change at point P due to impulse J at P:
-		//   Δv_P = J/m + (I⁻¹ · (r × J)) × r
-		//        = (1/m · I₃ - [r]× · I⁻¹ · [r]×) · J
-		//
-		// where [r]× is the cross-product (skew-symmetric) matrix of the lever arm r.
-		// Note: [r]× · I⁻¹ · [r]× is negative semi-definite, so the minus sign makes
-		// the rotational contribution ADD to the compliance (the body is "softer" at
-		// off-centre points because it can rotate as well as translate).
+		// Collision inverse-mass matrix.
 		auto col_Ia_inv = (1/objA.Mass()) * m3x4Identity - CPM(rA) * Ia_inv_3x3 * CPM(rA);
 		auto col_Ib_inv = (1/objB.Mass()) * m3x4Identity - CPM(rB) * Ib_inv_3x3 * CPM(rB);
 		auto col_I_inv = col_Ia_inv + col_Ib_inv;
 
-		// The collision mass matrix (inverse of the compliance) maps velocity to impulse.
+		// The collision mass matrix.
 		auto col_I = Invert(col_I_inv);
 
-		// Decompose the impulse into normal and tangential components.
+		// Decomposethe impulse into normal and tangential components.
 		// impulse0: the impulse needed to kill ALL relative velocity (zero restitution).
 		// impulseN: the normal component only (for zero restitution).
 		// impulseT: the tangential (friction) component.

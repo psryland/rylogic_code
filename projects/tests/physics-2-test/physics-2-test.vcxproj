@@ -118,6 +118,9 @@
     <ProjectReference Include="$(RylogicRoot)projects\rylogic\view3d-12\view3d-12.dll.vcxproj" />
   </ItemGroup>
   <!-- Targets -->
+  <ItemGroup>
+    <None Include="examples\gravity_playground.json" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(TargetsPath)view3d-12.targets" />
 </Project>

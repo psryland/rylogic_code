@@ -7,6 +7,12 @@
 using namespace pr;
 using namespace pr::gui;
 
+// Menu command IDs for the sandbox application
+namespace MenuID
+{
+	static constexpr int OpenFile = 1001;
+}
+
 // Main window for the physics sandbox application.
 // Assembles the 3D viewport, media controls, details panel, and menu bar
 // into a resizable layout, and wires up the simulation loop.
@@ -41,7 +47,11 @@ struct SandboxUI : Form
 			.wh(1280, 800)
 			.start_pos(EStartPosition::CentreParent)
 			.padding(0)
-			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+			.menu({{L"&File", Menu(Menu::EKind::Popup, {
+				MenuItem(L"&Open Scene...\tCtrl+O", MenuID::OpenFile),
+				MenuItem(MenuItem::Separator),
+				MenuItem(L"E&xit", IDCLOSE),
+			})}})
 			.main_wnd(true)
 			.wndclass(RegisterWndClass<SandboxUI>()))
 		, m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
@@ -103,6 +113,10 @@ struct SandboxUI : Form
 			// T=run all test scenarios
 			if (args.m_vk_key == 'T')
 				m_scene.RunAllTests();
+
+			// Ctrl+O=open scene file
+			if (args.m_vk_key == 'O' && (GetKeyState(VK_CONTROL) & 0x8000))
+				OpenSceneFile();
 		};
 
 		// Start with the sandbox scenario
@@ -119,6 +133,7 @@ struct SandboxUI : Form
 			if (m_scene.m_body[i].m_gfx)
 				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 		}
+		RemoveGroundGfx();
 		CleanupDiagGfx();
 	}
 
@@ -138,8 +153,22 @@ struct SandboxUI : Form
 				if (m_scene.m_body[i].m_gfx)
 					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 			}
+			RemoveGroundGfx();
 			CleanupDiagGfx();
 		}
+
+		// Handle menu commands
+		if (message == WM_COMMAND)
+		{
+			auto id = LOWORD(wparam);
+			if (id == MenuID::OpenFile)
+			{
+				OpenSceneFile();
+				result = 0;
+				return true;
+			}
+		}
+
 		return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 	}
 
@@ -153,6 +182,7 @@ struct SandboxUI : Form
 				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 		}
 
+		RemoveGroundGfx();
 		CleanupDiagGfx();
 		m_scene.Reset();
 
@@ -163,6 +193,9 @@ struct SandboxUI : Form
 				View3D_WindowAddObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 		}
 
+		// Add ground visual if the scene has one
+		AddGroundGfx();
+
 		// Set up a sensible default camera position looking at the origin
 		View3D_ResetView(m_view3d.m_win,
 			view3d::Vec4{0, 0, -1, 0},  // Forward direction
@@ -171,6 +204,70 @@ struct SandboxUI : Form
 			TRUE, TRUE);
 
 		Render();
+	}
+
+	// Show the Open File dialog and load a JSON scene file
+	void OpenSceneFile()
+	{
+		COMDLG_FILTERSPEC filters[] = {
+			{L"Scene Files (*.json)", L"*.json"},
+			{L"All Files (*.*)", L"*.*"},
+		};
+		auto opts = FileUIOptions()
+			.def_extn(L"json")
+			.filters(filters, std::size(filters), 0);
+
+		auto files = OpenFileUI(m_hwnd, opts);
+		if (files.empty())
+			return;
+
+		LoadSceneFile(std::filesystem::path(files[0]));
+	}
+
+	// Load a scene from a JSON file path.
+	// Can be called before or after Show() — if the window isn't visible yet,
+	// the graphics will be added when ResetScene-equivalent logic runs.
+	void LoadSceneFile(std::filesystem::path const& filepath)
+	{
+		try
+		{
+			// Remove old body graphics from the viewport before loading
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+			{
+				if (m_scene.m_body[i].m_gfx)
+					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+			}
+			RemoveGroundGfx();
+			CleanupDiagGfx();
+
+			// Load the scene from JSON
+			m_scene.LoadFromJson(filepath);
+
+			// Add new body graphics to the viewport
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+			{
+				if (m_scene.m_body[i].m_gfx)
+					View3D_WindowAddObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
+			}
+
+			// Add ground visual if the scene has one
+			AddGroundGfx();
+
+			// Reset camera to frame all bodies in the scene.
+			// Compute a bounding box that encompasses all body positions,
+			// then use View3D_ResetViewBBox for proper framing.
+			auto bbox = ComputeSceneBBox();
+			View3D_ResetViewBBox(m_view3d.m_win, bbox,
+				view3d::Vec4{0, 0, -1, 0},
+				view3d::Vec4{0, 1, 0, 0},
+				0, TRUE, TRUE);
+
+			Render();
+		}
+		catch (std::exception const& ex)
+		{
+			::MessageBoxA(m_hwnd, pr::FmtS("Failed to load scene:\n%s", ex.what()), "Load Error", MB_OK | MB_ICONERROR);
+		}
 	}
 
 	// Advance the simulation by one timestep
@@ -356,6 +453,64 @@ struct SandboxUI : Form
 			View3D_ObjectDelete(m_diag_gfx);
 			m_diag_gfx = nullptr;
 		}
+	}
+
+	// Add the ground visual to the viewport (if the scene has one)
+	void AddGroundGfx()
+	{
+		if (m_scene.m_ground_gfx)
+			View3D_WindowAddObject(m_view3d.m_win, m_scene.m_ground_gfx);
+	}
+
+	// Remove the ground visual from the viewport (but don't delete it — Scene owns it)
+	void RemoveGroundGfx()
+	{
+		if (m_scene.m_ground_gfx)
+			View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_ground_gfx);
+	}
+
+	// Compute a bounding box that encompasses all bodies in the scene.
+	// Used to frame the camera when loading a new scene.
+	view3d::BBox ComputeSceneBBox() const
+	{
+		if (m_scene.m_body_count == 0)
+			return view3d::BBox{{0, 0, 0, 1}, {5, 5, 5, 0}};
+
+		// Find the min/max extents of all dynamic body positions.
+		// Also include the ground plane height (Y=0 typically) so the camera
+		// can see the ground surface, not just the bodies floating in space.
+		auto lo = pr::v4{+1e10f, +1e10f, +1e10f, 1};
+		auto hi = pr::v4{-1e10f, -1e10f, -1e10f, 1};
+		for (int i = 0; i != m_scene.m_body_count; ++i)
+		{
+			// Skip static (ground) bodies — they're huge and would dominate the bbox
+			if (m_scene.m_body[i].Mass() > pr::physics::InfiniteMass * 0.5f)
+				continue;
+
+			auto pos = m_scene.m_body[i].O2W().pos;
+			lo.x = pr::Min(lo.x, pos.x - 2.0f);
+			lo.y = pr::Min(lo.y, pos.y - 2.0f);
+			lo.z = pr::Min(lo.z, pos.z - 2.0f);
+			hi.x = pr::Max(hi.x, pos.x + 2.0f);
+			hi.y = pr::Max(hi.y, pos.y + 2.0f);
+			hi.z = pr::Max(hi.z, pos.z + 2.0f);
+		}
+
+		// If there's a ground visual, include the ground height in the bbox
+		// so the camera can see where objects will land.
+		if (m_scene.m_ground_gfx)
+		{
+			lo.y = pr::Min(lo.y, 0.0f);
+		}
+
+		auto centre = (lo + hi) * 0.5f;
+		auto radius = (hi - lo) * 0.5f;
+		centre.w = 1;
+		radius.w = 0;
+		return view3d::BBox{
+			{centre.x, centre.y, centre.z, 1},
+			{radius.x, radius.y, radius.z, 0}
+		};
 	}
 
 	// Handle errors reported within view3d
