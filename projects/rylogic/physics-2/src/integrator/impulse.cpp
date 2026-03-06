@@ -52,8 +52,8 @@ namespace pr::physics
 		auto Vn_inv = Dot(V_inv, c.m_axis) * c.m_axis;
 
 		// The collision inertia contribution by each object
-		auto col_Ia_inv = (1/objA.Mass()) * m3x4::Identity() - CPM(rA) * objA.InertiaInvOS().To3x3() * CPM(rA);
-		auto col_Ib_inv = (1/objB.Mass()) * m3x4::Identity() - CPM(rB) * objB.InertiaInvOS(c.m_b2a).To3x3() * CPM(rB);
+		auto col_Ia_inv = (1/objA.Mass()) * m3x4::Identity() - CPM<m3x4>(rA) * objA.InertiaInvOS().To3x3() * CPM<m3x4>(rA);
+		auto col_Ib_inv = (1/objB.Mass()) * m3x4::Identity() - CPM<m3x4>(rB) * objB.InertiaInvOS(c.m_b2a).To3x3() * CPM<m3x4>(rB);
 		auto col_I_inv = col_Ia_inv + col_Ib_inv;
 		auto col_I = Invert(col_I_inv);
 		

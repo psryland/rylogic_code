@@ -31,6 +31,19 @@ namespace pr::math
 		{
 			return value;
 		}
+		template <ScalarType S> constexpr Vec4<S> vec() const noexcept
+		{
+			switch (value)
+			{
+				case +1: return Vec4<S>{+1, 0, 0, 0};
+				case -1: return Vec4<S>{-1, 0, 0, 0};
+				case +2: return Vec4<S>{0, +1, 0, 0};
+				case -2: return Vec4<S>{0, -1, 0, 0};
+				case +3: return Vec4<S>{0, 0, +1, 0};
+				case -3: return Vec4<S>{0, 0, -1, 0};
+				default: return Vec4<S>{};
+			}
+		}
 		static constexpr bool IsValid(AxisId axis_id) noexcept
 		{
 			return axis_id >= -3 && axis_id <= 3 && axis_id != 0;

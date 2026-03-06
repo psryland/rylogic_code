@@ -427,7 +427,7 @@ namespace pr::geometry::closest_point
 		// Line segment "radius" plus an epsilon term to counteract arithmetic
 		// errors when the segment is (near) parallel to a coordinate axis.
 		auto half = e - mid;
-		auto rad = Abs(half) + v4::TinyF();
+		auto rad = Abs(half) + v4::Tiny();
 
 		// Translate box and segment to origin
 		mid = mid - bbox.m_centre;

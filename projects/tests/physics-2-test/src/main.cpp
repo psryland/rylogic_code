@@ -36,7 +36,7 @@ struct MainUI :Form
 		, m_physics()
 		, m_sph(0.5f)
 		#if TEST_PAIR
-		, m_box(v4{2, 2, 2, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4::Origin()))
+		, m_box(v4{2, 2, 2, 0}, m4x4::Transform(0, 0, constants<float>::tau_by_8, v4::Origin()))
 		#else
 		, m_box(Abs(v4::Random(rng, v4{0.8f}, v4{1.4f}, 0)))
 		#endif

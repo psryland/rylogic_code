@@ -1478,19 +1478,19 @@ namespace pr::math
 	{
 		return static_cast<S>(std::tan(x));
 	}
-	template <ScalarTypeFP S> inline S ASin(S x) noexcept
+	template <ScalarTypeFP S> inline S Asin(S x) noexcept
 	{
 		return static_cast<S>(std::asin(x));
 	}
-	template <ScalarTypeFP S> inline S ACos(S x) noexcept
+	template <ScalarTypeFP S> inline S Acos(S x) noexcept
 	{
 		return static_cast<S>(std::acos(x));
 	}
-	template <ScalarTypeFP S> inline S ATan(S x) noexcept
+	template <ScalarTypeFP S> inline S Atan(S x) noexcept
 	{
 		return static_cast<S>(std::atan(x));
 	}
-	template <ScalarTypeFP S> inline S ATan2(S y, S x) noexcept
+	template <ScalarTypeFP S> inline S Atan2(S y, S x) noexcept
 	{
 		return static_cast<S>(std::atan2(y, x));
 	}
@@ -1552,44 +1552,44 @@ namespace pr::math
 		if constexpr (vt::dimension > 3) vec(res).w = Tan(vec(x).w);
 		return res;
 	}
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall ASin(Vec x) noexcept
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Asin(Vec x) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = ASin(vec(x).x);
-		if constexpr (vt::dimension > 1) vec(res).y = ASin(vec(x).y);
-		if constexpr (vt::dimension > 2) vec(res).z = ASin(vec(x).z);
-		if constexpr (vt::dimension > 3) vec(res).w = ASin(vec(x).w);
+		if constexpr (vt::dimension > 0) vec(res).x = Asin(vec(x).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Asin(vec(x).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Asin(vec(x).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Asin(vec(x).w);
 		return res;
 	}
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall ACos(Vec x) noexcept
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Acos(Vec x) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = ACos(vec(x).x);
-		if constexpr (vt::dimension > 1) vec(res).y = ACos(vec(x).y);
-		if constexpr (vt::dimension > 2) vec(res).z = ACos(vec(x).z);
-		if constexpr (vt::dimension > 3) vec(res).w = ACos(vec(x).w);
+		if constexpr (vt::dimension > 0) vec(res).x = Acos(vec(x).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Acos(vec(x).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Acos(vec(x).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Acos(vec(x).w);
 		return res;
 	}
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall ATan(Vec x) noexcept
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Atan(Vec x) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = ATan(vec(x).x);
-		if constexpr (vt::dimension > 1) vec(res).y = ATan(vec(x).y);
-		if constexpr (vt::dimension > 2) vec(res).z = ATan(vec(x).z);
-		if constexpr (vt::dimension > 3) vec(res).w = ATan(vec(x).w);
+		if constexpr (vt::dimension > 0) vec(res).x = Atan(vec(x).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Atan(vec(x).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Atan(vec(x).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Atan(vec(x).w);
 		return res;
 	}
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall ATan2(Vec y, Vec x) noexcept
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Atan2(Vec y, Vec x) noexcept
 	{
 		using vt = vector_traits<Vec>;
 		Vec res = {};
-		if constexpr (vt::dimension > 0) vec(res).x = ATan2(vec(y).x, vec(x).x);
-		if constexpr (vt::dimension > 1) vec(res).y = ATan2(vec(y).y, vec(x).y);
-		if constexpr (vt::dimension > 2) vec(res).z = ATan2(vec(y).z, vec(x).z);
-		if constexpr (vt::dimension > 3) vec(res).w = ATan2(vec(y).w, vec(x).w);
+		if constexpr (vt::dimension > 0) vec(res).x = Atan2(vec(y).x, vec(x).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Atan2(vec(y).y, vec(x).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Atan2(vec(y).z, vec(x).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Atan2(vec(y).w, vec(x).w);
 		return res;
 	}
 	template <VectorTypeFP Vec> inline Vec pr_vectorcall Sinh(Vec x) noexcept

@@ -611,9 +611,9 @@ namespace pr::ph::mesh_vs_mesh
 
 			// 'ra' and 'rb' are bounds for the line in the XY place
 			int i = 0;
-			v2 ra = v2Zero, rb = v2Zero;
-			for (; i != first_new_r && FEql(ra, v2Zero);) { ra = (M * r[i++]).xy; }
-			for (; i != first_new_r && FEql(rb, v2Zero);) { rb = (M * r[i++]).xy; }
+			v2 ra = v2::Zero(), rb = v2::Zero();
+			for (; i != first_new_r && FEql(ra, v2::Zero());) { ra = (M * r[i++]).xy; }
+			for (; i != first_new_r && FEql(rb, v2::Zero());) { rb = (M * r[i++]).xy; }
 
 			// We need to ensure 'rb' is on the positive side of 'ra'
 			if (Line::Eqn(ra, rb) < 0.0f)
@@ -625,7 +625,7 @@ namespace pr::ph::mesh_vs_mesh
 			for (i = 2; i != first_new_r + 1; ++i)
 			{
 				v2 t = (M * r[i]).xy;
-				if (!FEql(t, v2Zero))
+				if (!FEql(t, v2::Zero()))
 				{
 					if (Line::Eqn(ra, t) >= 0.0f)
 					{
@@ -655,11 +655,11 @@ namespace pr::ph::mesh_vs_mesh
 			// that's zero in which case, use the perpendicular to 'rb'. If that's zero
 			// as well then is doesn't matter what we use, might as well be the x axis
 			v2 rn = v2(ra[1], -ra[0]);
-			if (!FEql(rn, v2Zero)) { rn = Normalise(rn); }
+			if (!FEql(rn, v2::Zero())) { rn = Normalise(rn); }
 			else
 			{
 				rn = v2(-rb[1], rb[0]);
-				if (!FEql(rn, v2Zero)) { rn = Normalise(rn); }
+				if (!FEql(rn, v2::Zero())) { rn = Normalise(rn); }
 				else { rn = v2XAxis; }
 			}
 			half_space_normal = Transpose(M) * v4(rn, 0.0f, 0.0f);

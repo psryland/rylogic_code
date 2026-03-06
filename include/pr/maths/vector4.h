@@ -161,7 +161,7 @@ namespace pr
 		static constexpr Vec4 WAxis() { return Vec4(S(0), S(0), S(0), S(1)); }
 		static constexpr Vec4 Origin() { return Vec4(S(0), S(0), S(0), S(1)); }
 		static constexpr Vec4 One() { return Vec4(S(1), S(1), S(1), S(1)); }
-		static constexpr Vec4 TinyF() { return Vec4(maths::tiny<S>, maths::tiny<S>, maths::tiny<S>, maths::tiny<S>); }
+		static constexpr Vec4 Tiny() { return Vec4(maths::tiny<S>, maths::tiny<S>, maths::tiny<S>, maths::tiny<S>); }
 		static constexpr Vec4 Min() { return Vec4(limits<S>::min(), limits<S>::min(), limits<S>::min(), limits<S>::min()); }
 		static constexpr Vec4 Max() { return Vec4(limits<S>::max(), limits<S>::max(), limits<S>::max(), limits<S>::max()); }
 		static constexpr Vec4 Lowest() { return Vec4(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest()); }

@@ -1,4 +1,23 @@
 ﻿#pragma once
+
+// DimensionIndex — A lightweight N-dimensional spatial index for range and radius queries.
+//
+// Uses the same per-axis sorted array idea as sweep-and-prune, but for
+// point-in-region queries rather than pair-wise interval overlap detection.
+// Maintains N sorted index arrays (one per dimension) over a collection of items.
+// Queries perform parallel binary searches on each axis to narrow candidates,
+// then intersect the results. Supports axis-aligned bounding box and spherical
+// range queries.
+//
+// Complexity:
+//   Build/Update:  O(N log N) per dimension (parallel across dimensions)
+//   Query:         O(D * log N) for the binary search phase, then linear in
+//                  the narrowest candidate set for intersection.
+//   Storage:       sizeof(Index) * Dimensions * N
+//
+// Intended for moderate-sized datasets where a full spatial tree (k-d, BVH)
+// is overkill and the data changes frequently enough to benefit from fast rebuilds.
+
 #include <vector>
 #include <algorithm>
 #include <execution>
@@ -7,7 +26,7 @@
 #include <span>
 #include <cassert>
 
-namespace pr::spatial
+namespace pr::algorithm
 {
 	// Concept for a dimension value
 	template <typename S> concept ValueType = requires(S s)
@@ -164,7 +183,7 @@ namespace pr::spatial
 #include "pr/common/unittests.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
 
-namespace pr::container
+namespace pr::algorithm::tests
 {
 	PRUnitTest(DimensionIndexTests)
 	{
@@ -184,7 +203,7 @@ namespace pr::container
 		};
 
 		std::vector<v2> results;
-		spatial::DimensionIndex<2, float> index;
+		DimensionIndex<2, float> index;
 		index.Build<v2>(points, GetValue);
 
 		{
@@ -232,7 +251,7 @@ namespace pr::container
 			return p[i];
 		};
 
-		spatial::DimensionIndex<3, float> index;
+		DimensionIndex<3, float> index;
 		index.Build<v4>(points, GetValue);
 
 		auto search = v3::Random(rng, -v3::One(), +v3::One()).w1();

@@ -134,8 +134,8 @@ namespace pr::collision
 
 		// Determine the sign of the separating axis to make it the normal from 'lhs' to 'rhs'
 		auto sep_axis = p.SeparatingAxis();
-		auto p0 = Dot3(sep_axis, (l2w * lhs.m_s2p).pos);
-		auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
+		auto p0 = Dot(sep_axis, (l2w * lhs.m_s2p).pos);
+		auto p1 = Dot(sep_axis, (r2w * rhs.m_s2p).pos);
 		auto sign = Bool2SignF(p0 < p1);
 
 		contact.m_depth = p.Depth();
@@ -165,10 +165,10 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(maths::tau_by_8f, 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, maths::tau_by_8f, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, -3 * maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(constants<float>::tau_by_8, 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, constants<float>::tau_by_8, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, 0, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, 0, -3 * constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;

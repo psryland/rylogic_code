@@ -61,7 +61,7 @@ namespace pr::math
 			, z(z_)
 			, w(S(0))
 		{}
-		constexpr explicit Vec4(VectorTypeN<S, 4> auto v) noexcept
+		constexpr Vec4(VectorTypeN<S, 4> auto v) noexcept
 			:Vec4(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
 		constexpr Vec4(Vec3<S> v, S w_) noexcept
@@ -84,7 +84,7 @@ namespace pr::math
 		constexpr Vec4(intrinsic_t vec_) noexcept requires (!NoIntrinsic)
 			:vec(vec_)
 		{}
-		constexpr explicit Vec4(std::ranges::random_access_range auto&& v) noexcept
+		constexpr Vec4(std::ranges::random_access_range auto&& v) noexcept
 			:Vec4(v[0], v[1], v[2], v[3])
 		{}
 

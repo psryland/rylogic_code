@@ -150,7 +150,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\deque.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\quadtree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\queue.h" />
@@ -162,7 +161,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h" />
     <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
@@ -224,6 +222,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gui\round_button_ctrl.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\scaled_dc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\dimension_index.h" />
+    <ClInclude Include="..\..\..\include\pr\algorithm\vp_tree.h" />
     <ClInclude Include="..\..\..\include\pr\gui\message_loop.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100_colours.h" />

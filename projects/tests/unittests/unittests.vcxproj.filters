@@ -436,9 +436,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\deque.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -470,9 +467,6 @@
       <Filter>pr\container</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h">
-      <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\container\vp_tree.h">
       <Filter>pr\container</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h">
@@ -1305,6 +1299,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\math_new\primitives\bsphere.h">
       <Filter>pr\math_new\primitives</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\algorithm\dimension_index.h">
+      <Filter>pr\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\algorithm\vp_tree.h">
+      <Filter>pr\algorithm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

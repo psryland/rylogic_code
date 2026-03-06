@@ -127,7 +127,7 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;

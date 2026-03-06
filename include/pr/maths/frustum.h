@@ -212,7 +212,7 @@ namespace pr
 			else
 			{
 				auto z0 = zfar();
-				return z0 != 0 ? v2(w * z / z0, h * z / z0) : v2Zero;
+				return z0 != 0 ? v2(w * z / z0, h * z / z0) : v2::Zero();
 			}
 		}
 
@@ -408,7 +408,7 @@ namespace pr
 
 	// Return true if any part of a point, box, or sphere is within 'frustum'.
 	// Use 'zf == 0' to use the frustum's far plane, or 'zf == -1' to ignore the far plane.
-	inline bool pr_vectorcall IsWithin(Frustum const& frustum, v4 point, float radius, v2 nf = v2Zero)
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, v4 point, float radius, v2 nf = v2::Zero())
 	{
 		auto pt = point;
 		auto frustum_apex = 0.0f;
@@ -451,12 +451,12 @@ namespace pr
 		// If all dot products are >= 0 then some part of the sphere is within the frustum
 		return dots == Abs(dots); 
 	}
-	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BSphere bsphere, v2 nf = v2Zero)
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BSphere bsphere, v2 nf = v2::Zero())
 	{
 		pr_assert(bsphere.valid() && "Invalid bsphere used in 'IsWithin' test against frustum");
 		return IsWithin(frustum, bsphere.Centre(), bsphere.Radius(), nf);
 	}
-	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BBox bbox, v2 nf = v2Zero)
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BBox bbox, v2 nf = v2::Zero())
 	{
 		pr_assert(bbox.valid() && "Invalid bbox used in 'IsWithin' test against frustum");
 
@@ -607,17 +607,17 @@ namespace pr
 	}
 	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v4 ws_pt, float radius)
 	{
-		auto nf = v2Zero;
+		auto nf = v2::Zero();
 		Grow(frustum, f2w, nf, ws_pt, radius);
 	}
 	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, BSphere ws_bsphere)
 	{
-		auto nf = v2Zero;
+		auto nf = v2::Zero();
 		Grow(frustum, f2w, nf, ws_bsphere);
 	}
 	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, BBox ws_bbox)
 	{
-		auto nf = v2Zero;
+		auto nf = v2::Zero();
 		Grow(frustum, f2w, nf, ws_bbox);
 	}
 
@@ -662,7 +662,7 @@ namespace pr::maths
 		};
 
 		{// Projection round trip
-			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
+			auto f = Frustum::MakeFA(constants<float>::tau_by_8, 1.75f, 10.0f);
 			auto p = f.projection(2.0f, 10.0f);
 			auto F = Frustum::MakeFromProjection(p);
 			auto P = F.projection(2.0f, 10.0f);
@@ -671,7 +671,7 @@ namespace pr::maths
 			PR_EXPECT(FEql(P, p));
 		}
 		{ // FA Frustum
-			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
+			auto f = Frustum::MakeFA(constants<float>::tau_by_8, 1.75f, 10.0f);
 			
 			// ZDist
 			f.zfar(5.0f);
@@ -683,7 +683,7 @@ namespace pr::maths
 			PR_EXPECT(FEql(f.aspect(), 1.75f));
 
 			// FOV
-			PR_EXPECT(FEql(f.fovY(), maths::tau_by_8f));
+			PR_EXPECT(FEql(f.fovY(), constants<float>::tau_by_8));
 			PR_EXPECT(FEql(f.fovX(), 2 * Atan(f.aspect() * Tan(f.fovY()/2))));
 
 			// width/height
@@ -808,9 +808,9 @@ namespace pr::maths
 			for (int i = 0; i != 50; ++i)
 				pts.push_back(v4::Random(rng, 0.0f, 2.0f, 1.0f));
 
-			auto nf = v2Zero;
+			auto nf = v2::Zero();
 			auto f2w = m4x4::Identity();
-			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			auto f = Frustum::MakeFA(constants<float>::tau_by_8, 1.0f, 0.0f);
 			PR_EXPECT(f.zfar() == 0.0f);
 
 			for (auto& pt : pts)
@@ -842,7 +842,7 @@ namespace pr::maths
 
 			auto nf = v2::Zero();
 			auto f2w = m4x4::Identity();
-			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			auto f = Frustum::MakeFA(constants<float>::tau_by_8, 1.0f, 0.0f);
 			PR_EXPECT(f.zfar() == 0.0f);
 			for (auto& bb : bboxes)
 			{
@@ -873,7 +873,7 @@ namespace pr::maths
 
 			auto nf = v2::Zero();
 			auto f2w = m4x4::Identity();
-			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			auto f = Frustum::MakeFA(constants<float>::tau_by_8, 1.0f, 0.0f);
 			PR_EXPECT(f.zfar() == 0.0f);
 			for (auto& bs : spheres)
 			{

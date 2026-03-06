@@ -856,7 +856,7 @@ namespace pr::rdr12::ldraw
 			}
 			LdrPlane& wh(float width, float height)
 			{
-				m_wh = { width, height };
+				m_wh = v2{ width, height };
 				return *this;
 			}
 			LdrPlane& wh(v2 wh)

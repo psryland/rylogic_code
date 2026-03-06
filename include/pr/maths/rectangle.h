@@ -229,9 +229,9 @@ namespace pr
 	using IRect = Rectangle<Vec2<int, void>>;
 
 	#pragma region Constants
-	static FRect const FRectZero  = {v2Zero, v2Zero};
+	static FRect const FRectZero  = {v2::Zero(), v2::Zero()};
 	static FRect const FRectReset = {v2Max, -v2Max};
-	static FRect const FRectUnit  = {v2Zero, v2One};
+	static FRect const FRectUnit  = {v2::Zero(), v2One};
 	static IRect const IRectZero  = {iv2Zero, iv2Zero};
 	static IRect const IRectReset = {iv2Max, -iv2Max};
 	static IRect const IRectUnit  = {iv2Zero, iv2One};
