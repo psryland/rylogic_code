@@ -50,7 +50,7 @@ namespace physics_sandbox
 		// can have a unique shape, so we store them here to keep them alive for the
 		// lifetime of the scene. The hardcoded scenarios use 'm_box' instead.
 		// Uses variant because collision shapes are value types (no virtual destructor).
-		using OwnedShape = std::variant<pr::collision::ShapeBox, pr::collision::ShapeSphere>;
+		using OwnedShape = std::variant<pr::collision::ShapeBox, pr::collision::ShapeSphere, pr::collision::ShapeLine, pr::collision::ShapeTriangle>;
 		std::vector<OwnedShape> m_owned_shapes;
 
 		// Gravity acceleration vector (direction and magnitude, e.g. [0, -9.81, 0]).
@@ -233,6 +233,28 @@ namespace physics_sandbox
 					{
 						m_owned_shapes.emplace_back(pr::collision::ShapeSphere(bd.sphere_radius));
 						auto& shape = std::get<pr::collision::ShapeSphere>(m_owned_shapes.back());
+
+						if (bd.mass <= 0.0f)
+							body.Shape(shape, pr::physics::Inertia::Infinite());
+						else
+							body.Shape(shape, bd.mass);
+						break;
+					}
+					case scene_loader::BodyDesc::EShape::Line:
+					{
+						m_owned_shapes.emplace_back(pr::collision::ShapeLine(bd.line_length, bd.line_thickness));
+						auto& shape = std::get<pr::collision::ShapeLine>(m_owned_shapes.back());
+
+						if (bd.mass <= 0.0f)
+							body.Shape(shape, pr::physics::Inertia::Infinite());
+						else
+							body.Shape(shape, bd.mass);
+						break;
+					}
+					case scene_loader::BodyDesc::EShape::Triangle:
+					{
+						m_owned_shapes.emplace_back(pr::collision::ShapeTriangle(bd.tri_verts[0], bd.tri_verts[1], bd.tri_verts[2]));
+						auto& shape = std::get<pr::collision::ShapeTriangle>(m_owned_shapes.back());
 
 						if (bd.mass <= 0.0f)
 							body.Shape(shape, pr::physics::Inertia::Infinite());

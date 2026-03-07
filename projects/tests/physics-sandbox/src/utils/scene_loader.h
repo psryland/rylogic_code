@@ -21,25 +21,14 @@ namespace physics_sandbox::scene_loader
 	//         "bodies": [
 	//             {
 	//                 "name": "box1",
-	//                 "shape": {
-	//                     "type": "box",
-	//                     "dimensions": [2, 2, 2]     // Full width/height/depth
-	//                 },
-	//                 "mass": 10.0,              // Use 0 for static (immovable) bodies
-	//                 "position": [x, y, z],
-	//                 "velocity": [vx, vy, vz],       // Optional, defaults to zero
-	//                 "angular_velocity": [wx, wy, wz] // Optional, defaults to zero
+	//                 "shape": { "type": "box", "dimensions": [2, 2, 2] },
+	//                 "mass": 10.0, "position": [x, y, z],
+	//                 "velocity": [vx, vy, vz],        // Optional
+	//                 "angular_velocity": [wx, wy, wz]  // Optional
 	//             },
-	//             {
-	//                 "name": "sphere1",
-	//                 "shape": {
-	//                     "type": "sphere",
-	//                     "radius": 1.0
-	//                 },
-	//                 "mass": 5.0,
-	//                 "position": [0, 0, 0],
-	//                 "velocity": [1, 0, 0]
-	//             }
+	//             { "name": "s1", "shape": { "type": "sphere", "radius": 1.0 }, ... },
+	//             { "name": "l1", "shape": { "type": "line", "length": 2.0, "thickness": 0.1 }, ... },
+	//             { "name": "t1", "shape": { "type": "triangle", "vertices": [[0,0,0],[1,0,0],[0,1,0]] }, ... }
 	//         ]
 	//     }
 	// }
@@ -49,10 +38,13 @@ namespace physics_sandbox::scene_loader
 	{
 		std::string name;
 
-		// Shape: either a box (dimensions) or a sphere (radius)
-		enum class EShape { Box, Sphere } shape_type;
-		v4 box_dimensions;   // Full dimensions (only valid when shape_type == Box)
-		float sphere_radius; // Radius (only valid when shape_type == Sphere)
+		// Shape: box, sphere, line, or triangle
+		enum class EShape { Box, Sphere, Line, Triangle } shape_type;
+		v4 box_dimensions;     // Full dimensions (only valid when shape_type == Box)
+		float sphere_radius;   // Radius (only valid when shape_type == Sphere)
+		float line_length;     // Full length (only valid when shape_type == Line)
+		float line_thickness;  // Full thickness, 0 = infinitely thin (only valid when shape_type == Line)
+		v4 tri_verts[3];       // Triangle vertices as offsets from origin (only valid when shape_type == Triangle)
 
 		float mass;          // 0 = static (immovable) body with infinite mass
 		v4 position;
@@ -127,6 +119,25 @@ namespace physics_sandbox::scene_loader
 		{
 			desc.shape_type = BodyDesc::EShape::Sphere;
 			desc.sphere_radius = shape_obj["radius"].to<float>();
+		}
+		else if (shape_type == "line")
+		{
+			desc.shape_type = BodyDesc::EShape::Line;
+			desc.line_length = shape_obj["length"].to<float>();
+			if (auto* t = shape_obj.find("thickness"))
+				desc.line_thickness = t->to<float>();
+			else
+				desc.line_thickness = 0.0f;
+		}
+		else if (shape_type == "triangle")
+		{
+			desc.shape_type = BodyDesc::EShape::Triangle;
+			auto const& verts = shape_obj["vertices"].to_array();
+			if (verts.size() < 3)
+				throw std::runtime_error("Triangle shape requires 3 vertices");
+			desc.tri_verts[0] = ReadVec3(verts[0], 0);
+			desc.tri_verts[1] = ReadVec3(verts[1], 0);
+			desc.tri_verts[2] = ReadVec3(verts[2], 0);
 		}
 		else
 		{
