@@ -45,6 +45,13 @@ struct SandboxUI : Form
 	double m_fps_elapsed;
 	double m_fps;
 
+	// Rate-limiting accumulators for expensive operations.
+	// These prevent costly Win32 API calls and LDraw object rebuilds
+	// from running at the full sim/render rate.
+	double m_title_elapsed;      // Title bar update interval (every 0.25s)
+	double m_diag_gfx_elapsed;   // Diagnostic gfx rebuild interval (every 0.1s)
+	double m_details_elapsed;    // Details panel update interval (every 0.2s)
+
 	// Set when WM_CLOSE is received to prevent step/render after destruction begins
 	bool m_closing;
 
@@ -77,6 +84,9 @@ struct SandboxUI : Form
 		, m_frame_count(0)
 		, m_fps_elapsed(0)
 		, m_fps(0)
+		, m_title_elapsed(0)
+		, m_diag_gfx_elapsed(0)
+		, m_details_elapsed(0)
 		, m_closing(false)
 	{
 		// Wire media panel events to simulation control
@@ -303,25 +313,17 @@ struct SandboxUI : Form
 		if (m_closing)
 			return;
 
-		// Accumulate time for FPS measurement
+		// Accumulate time for FPS measurement and rate-limited UI updates
 		m_fps_elapsed += elapsed_seconds;
+		m_title_elapsed += elapsed_seconds;
+		m_diag_gfx_elapsed += elapsed_seconds;
+		m_details_elapsed += elapsed_seconds;
 		if (m_fps_elapsed >= 1.0)
 		{
 			m_fps = m_frame_count / m_fps_elapsed;
 			m_frame_count = 0;
 			m_fps_elapsed = 0;
 		}
-
-		// Update the title bar with simulation info and viewport diagnostics
-		auto bb = View3D_WindowBackBufferSizeGet(m_view3d.m_win);
-		auto vp = View3D_WindowViewportGet(m_view3d.m_win);
-		SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d | BB:%ldx%ld VP:%.0fx%.0f",
-			static_cast<int>(m_scene.m_scenario),
-			ScenarioName(m_scene.m_scenario),
-			m_scene.m_clock,
-			m_scene.m_diag.count,
-			bb.cx, bb.cy,
-			vp.m_width, vp.m_height));
 
 		// Check if we should be stepping
 		if (m_scene.m_steps_remaining == 0)
@@ -337,7 +339,8 @@ struct SandboxUI : Form
 			m_scene.m_steps_remaining = 0;
 	}
 
-	// Render a frame: sync graphics, rebuild overlays, update details panel
+	// Render a frame: sync graphics, rebuild overlays, update details panel.
+	// Expensive UI operations are rate-limited to avoid dominating frame time.
 	void Render()
 	{
 		// Don't render after close begins
@@ -346,17 +349,46 @@ struct SandboxUI : Form
 
 		++m_frame_count;
 
-		// Sync each body's View3D graphics to its physics transform
+		// Sync each body's View3D graphics to its physics transform.
+		// This is cheap — just copying an O2W matrix per body.
 		for (int i = 0; i != m_scene.m_body_count; ++i)
 			m_scene.m_body[i].UpdateGfx();
 
-		// Rebuild trail and diagnostic visualisation
-		RebuildDiagGfx();
+		// Render the 3D viewport directly. Calling View3D_WindowRender bypasses
+		// the WM_PAINT message queue, which is low-priority and can cause frame
+		// starvation when the sim loop is busy. This matches how Lost at Sea renders.
+		View3D_WindowRender(m_view3d.m_win);
 
-		// Update the details panel with current body properties
-		m_details.Update(m_scene);
+		// Rebuild trail and diagnostic visualisation at reduced rate (~2 Hz).
+		// Creating View3D objects from LDraw text is expensive (text generation,
+		// parsing, GPU resource allocation). Keep the rate low to avoid frame drops.
+		if (m_diag_gfx_elapsed >= 0.5)
+		{
+			m_diag_gfx_elapsed = 0;
+			RebuildDiagGfx();
+		}
 
-		// Update status bar with sim state and FPS (only when text changes to avoid flicker)
+		// Update the details panel text at reduced rate (~5 Hz).
+		if (m_details_elapsed >= 0.2)
+		{
+			m_details_elapsed = 0;
+			m_details.Update(m_scene);
+		}
+
+		// Update title bar at reduced rate (~4 Hz). SetWindowTextA triggers
+		// non-client repaint which is expensive at high frequency.
+		if (m_title_elapsed >= 0.25)
+		{
+			m_title_elapsed = 0;
+			SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d  FPS: %.0f",
+				static_cast<int>(m_scene.m_scenario),
+				ScenarioName(m_scene.m_scenario),
+				m_scene.m_clock,
+				m_scene.m_diag.count,
+				m_fps));
+		}
+
+		// Update status bar (only when text changes to avoid flicker)
 		auto new_status = std::wstring(pr::FmtS(L"t=%.3f  %hs  Collisions: %d  %s  FPS: %.0f",
 			m_scene.m_clock,
 			ScenarioName(m_scene.m_scenario),
@@ -368,10 +400,6 @@ struct SandboxUI : Form
 			m_last_status = std::move(new_status);
 			m_status.Text(0, m_last_status.c_str());
 		}
-
-		// Only invalidate the 3D viewport for rendering. Other controls (details panel,
-		// status bar) are invalidated only when their content changes, to avoid flicker.
-		m_view3d.Invalidate();
 	}
 
 	// Rebuild the LDraw objects for trails, velocity arrows, and collision markers

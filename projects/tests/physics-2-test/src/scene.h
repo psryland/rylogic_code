@@ -66,7 +66,10 @@ struct Scene
 
 	// Diagnostics
 	CollisionDiag   m_diag;
-	std::vector<pr::v4> m_trail[MaxBodies];
+	static constexpr int MaxTrailPoints = 300;  // ~30 seconds of trail at ~10 Hz recording
+	static constexpr int TrailRecordInterval = 6; // Record every 6th sim step (~10 Hz at 60 Hz sim)
+	int m_trail_step_counter;
+	std::deque<pr::v4> m_trail[MaxBodies];
 
 	Scene()
 		: m_body()
@@ -79,6 +82,7 @@ struct Scene
 		, m_steps_remaining(0)
 		, m_scenario(EScenario::Sandbox)
 		, m_diag()
+		, m_trail_step_counter(0)
 		, m_trail{}
 	{
 		// Hook collision detection for diagnostics.
@@ -113,6 +117,7 @@ struct Scene
 		m_clock = 0;
 		m_diag.Reset();
 		m_gravity = pr::v4Zero;
+		m_trail_step_counter = 0;
 		for (int i = 0; i != MaxBodies; ++i)
 			m_trail[i].clear();
 
@@ -315,9 +320,19 @@ struct Scene
 		// Reset per-step collision flag
 		m_diag.occurred = false;
 
-		// Record trail positions for each active body
-		for (int i = 0; i != m_body_count; ++i)
-			m_trail[i].push_back(m_body[i].O2W().pos);
+		// Record trail positions at a reduced rate (~10 Hz).
+		// Full-rate recording at 60 Hz produces too many points for the
+		// LDraw trail visualisation to rebuild efficiently.
+		if (++m_trail_step_counter >= TrailRecordInterval)
+		{
+			m_trail_step_counter = 0;
+			for (int i = 0; i != m_body_count; ++i)
+			{
+				m_trail[i].push_back(m_body[i].O2W().pos);
+				if (static_cast<int>(m_trail[i].size()) > MaxTrailPoints)
+					m_trail[i].pop_front();
+			}
+		}
 
 		// Apply gravity as an external force: F = m * g.
 		// Static bodies (infinite mass) are skipped — they should not accelerate.

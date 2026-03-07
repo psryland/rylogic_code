@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <span>
 #include <memory>
+#include <deque>
 #include <filesystem>
 #include <variant>
 

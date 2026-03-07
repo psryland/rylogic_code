@@ -86,8 +86,13 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 
 		sandbox.Show();
 
-		loop.AddLoop(100.0, false, [&](double dt) { sandbox.Step(dt); });
-		loop.AddLoop(60.0, true, [&](double) { sandbox.Render(); });
+		// Simulation loop: fixed 60 Hz timestep for deterministic physics.
+		// Render loop: variable at high target rate. The actual frame rate is
+		// limited by vsync inside View3D_WindowRender→Present. Setting a high
+		// target (1000 Hz) ensures the loop fires immediately after vsync
+		// completes, rather than waiting for MsgWaitForMultipleObjects timeout.
+		loop.AddLoop(60.0, false, [&](double dt) { sandbox.Step(dt); });
+		loop.AddLoop(1000.0, true, [&](double) { sandbox.Render(); });
 		loop.AddMessageFilter(sandbox);
 		return loop.Run();
 	}
