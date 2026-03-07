@@ -104,17 +104,17 @@ namespace pr
 	}
 
 	// Return the vector as 32-bit floats
-	inline Vec4<float, void> pr_vectorcall F16toF32(Half4 v)
+	template <typename Vec4> inline Vec4 pr_vectorcall F16toF32(Half4 v)
 	{
-		if constexpr (Vec4<float, void>::IntrinsicF)
+		if constexpr (Vec4::IntrinsicF)
 		{
 			auto f16 = _mm_set_epi16(0, 0, 0, 0, v.w, v.z, v.y, v.x);
-			auto res = Vec4<float,void>{_mm_cvtph_ps(f16)};
+			auto res = Vec4{_mm_cvtph_ps(f16)};
 			return res;
 		}
 		else
 		{
-			return Vec4<float,void>{F16toF32(v.x), F16toF32(v.y), F16toF32(v.z), F16toF32(v.w)};
+			return Vec4{F16toF32(v.x), F16toF32(v.y), F16toF32(v.z), F16toF32(v.w)};
 		}
 	}
 
@@ -200,19 +200,19 @@ namespace pr::maths
 		{
 			auto x0 = v4::Zero();
 			auto x1 = F32toF16(x0);
-			auto x2 = F16toF32(x1);
+			auto x2 = F16toF32<v4>(x1);
 			PR_EXPECT(x2 == x0);
 		}
 		{
 			auto x0 = v4{1,2,3,4};
 			auto x1 = F32toF16(x0);
-			auto x2 = F16toF32(x1);
+			auto x2 = F16toF32<v4>(x1);
 			PR_EXPECT(x2 == x0);
 		}
 		{
 			auto x0 = v4{-4000.0f, -200.0f, 0.003f, -4.125e-6f};
 			auto x1 = F32toF16(x0);
-			auto x2 = F16toF32(x1);
+			auto x2 = F16toF32<v4>(x1);
 			PR_EXPECT(FEql(x2, x0));
 		}
 	}

@@ -40,7 +40,7 @@ namespace pr::math
 			,y(y_)
 			,z(z_)
 		{}
-		constexpr explicit Mat3x4(std::ranges::random_access_range auto&& v) noexcept // 12 scalars
+		constexpr Mat3x4(std::ranges::random_access_range auto&& v) noexcept // 12 scalars
 			:Mat3x4(
 				Vec4<S>(v[0], v[1], v[2], v[3]),
 				Vec4<S>(v[4], v[5], v[6], v[7]),

@@ -42,23 +42,16 @@ namespace pr::math
 
 		// Construct
 		Quat() = default;
-		constexpr explicit Quat(S x_) noexcept
-			: x(x_)
-			, y(x_)
-			, z(x_)
-			, w(x_)
-		{
-		}
 		constexpr Quat(S x_, S y_, S z_, S w_) noexcept
 			: x(x_)
 			, y(y_)
 			, z(z_)
 			, w(w_)
 		{}
-		constexpr explicit Quat(std::ranges::random_access_range auto&& v) noexcept
+		constexpr Quat(std::ranges::random_access_range auto&& v) noexcept
 			:Quat(v[0], v[1], v[2], v[3])
 		{}
-		constexpr explicit Quat(VectorTypeN<S, 4> auto v) noexcept
+		constexpr Quat(VectorTypeN<S, 4> auto v) noexcept
 			:Quat(vec(v).x, vec(v).y, vec(v).z, vec(v).w)
 		{}
 		constexpr Quat(intrinsic_t vec_) noexcept requires (!NoIntrinsic)

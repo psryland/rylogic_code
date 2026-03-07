@@ -29,7 +29,7 @@ namespace pr::math
 
 		// Construct
 		Vec2() = default;
-		constexpr Vec2(S x_) noexcept
+		constexpr explicit Vec2(S x_) noexcept
 			: x(x_)
 			, y(x_)
 		{}
@@ -37,7 +37,7 @@ namespace pr::math
 			: x(x_)
 			, y(y_)
 		{}
-		constexpr explicit Vec2(std::ranges::random_access_range auto&& v) noexcept
+		constexpr Vec2(std::ranges::random_access_range auto&& v) noexcept
 			:Vec2(v[0], v[1])
 		{}
 		constexpr explicit Vec2(VectorTypeN<S, 2> auto v) noexcept

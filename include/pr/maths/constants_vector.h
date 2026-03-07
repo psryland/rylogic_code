@@ -61,7 +61,7 @@ namespace pr
 	inline constexpr quat QuatZero     = quat{0.0f, 0.0f, 0.0f, 0.0f};
 	inline constexpr quat QuatIdentity = quat{0.0f, 0.0f, 0.0f, 1.0f};
 
-	inline constexpr m2x2 m2x2Zero     = m2x2{v2Zero, v2Zero};
+	inline constexpr m2x2 m2x2Zero     = m2x2{v2::Zero(), v2::Zero()};
 	inline constexpr m2x2 m2x2Identity = m2x2{v2XAxis, v2YAxis};
 	inline constexpr m2x2 m2x2One      = m2x2{v2One, v2One};
 	inline constexpr m2x2 m2x2Min      = m2x2{+v2Min, +v2Min};
@@ -114,5 +114,17 @@ namespace pr
 	inline constexpr iv4 iv4YAxis  = iv4{0, 1, 0, 0};
 	inline constexpr iv4 iv4ZAxis  = iv4{0, 0, 1, 0};
 	inline constexpr iv4 iv4Origin = iv4{0, 0, 0, 1};
+
+
+	template <typename T> constexpr std::decay_t<T> Zero() noexcept;
+	template <> constexpr v2 Zero<v2>() { return v2Zero; }
+	template <> constexpr v3 Zero<v3>() { return v3Zero; }
+	template <> constexpr v4 Zero<v4>() { return v4Zero; }
+
+	template <typename T> constexpr std::decay_t<T> Origin() noexcept;
+	template <> constexpr v4 Origin<v4>() { return v4Origin; }
+
+
+
 }
 

@@ -1061,7 +1061,6 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/view3d-12/ldraw/ldraw_builder.h"
 namespace pr::maths
 {
 	PRUnitTestClass(SplineTests)
@@ -1097,6 +1096,9 @@ namespace pr::maths
 		
 		void DumpToLDraw(CubicCurve3 const& curve)
 		{
+			(void)curve;
+
+			#if PR_UNITTESTS_VISUALISE
 			using namespace pr::rdr12::ldraw;
 
 			Builder builder;
@@ -1111,6 +1113,7 @@ namespace pr::maths
 			}
 
 			builder.Save("E:\\Dump\\Ldraw\\spline_line.ldr", ESaveFlags::Pretty);
+			#endif
 		}
 	};
 }

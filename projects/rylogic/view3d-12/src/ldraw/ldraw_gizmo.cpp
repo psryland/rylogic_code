@@ -1081,7 +1081,7 @@ namespace pr::rdr12::ldraw
 		auto p0 = camera.WSPointToNSSPoint(p);
 		auto p1 = camera.WSPointToNSSPoint(p + d);
 		auto s  = Sign(p1.z - p0.z);
-		auto a  = Normalise(m_ref_pt - p0.xy, v2Zero);
+		auto a  = Normalise(m_ref_pt - p0.xy, v2::Zero());
 		auto b  = Rotate90CCW(a);
 		auto c  = nss_point - p0.xy;
 		auto t  = s * Atan2(Dot(c,b), Dot(c,a));

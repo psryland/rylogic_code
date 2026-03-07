@@ -258,10 +258,10 @@ namespace pr::math
 	constexpr bool pr_vectorcall IsNaN(Mat6x8<S, A, B> m, bool any = true) noexcept // false = all
 	{
 		return
-			IsNan(m.m00, any) &&
-			IsNan(m.m01, any) &&
-			IsNan(m.m10, any) &&
-			IsNan(m.m11, any);
+			IsNaN(m.m00, any) &&
+			IsNaN(m.m01, any) &&
+			IsNaN(m.m10, any) &&
+			IsNaN(m.m11, any);
 	}
 
 	// Return the transpose of a spatial matrix

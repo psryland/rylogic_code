@@ -1197,7 +1197,7 @@ namespace pr::rdr12
 				auto vptr = cache.m_vcont.data();
 				for (int i = 0, iend = int(mesh.m_verts.size()); i != iend; ++i)
 				{
-					SetPCNT(*vptr, cache.m_bbox.Grow(mesh.m_verts[i]), ColourWhite, mesh.m_norms[i/3], v2Zero);
+					SetPCNT(*vptr, cache.m_bbox.Grow(mesh.m_verts[i]), ColourWhite, mesh.m_norms[i/3], v2::Zero());
 					++vptr;
 				}
 

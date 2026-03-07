@@ -293,7 +293,7 @@ namespace pr::physics
 			spatial_force = Shift(spatial_force, -ws_at);
 			ApplyForceWS(spatial_force);
 		}
-		void ApplyForceWS(v8force const& ws_force)
+		void ApplyForceWS(v8force ws_force)
 		{
 			m_ws_force += ws_force;
 		}

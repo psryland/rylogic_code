@@ -173,6 +173,36 @@ namespace pr::math
 		{
 			return !(lhs == rhs);
 		}
+		friend Vec8& pr_vectorcall operator += (Vec8 &lhs, Vec8 rhs) noexcept
+		{
+			lhs.ang += rhs.ang;
+			lhs.lin += rhs.lin;
+			return lhs;
+		}
+		friend Vec8& pr_vectorcall operator -= (Vec8 &lhs, Vec8 rhs) noexcept
+		{
+			lhs.ang -= rhs.ang;
+			lhs.lin -= rhs.lin;
+			return lhs;
+		}
+		friend Vec8& pr_vectorcall operator *= (Vec8 &lhs, S rhs) noexcept
+		{
+			lhs.ang *= rhs;
+			lhs.lin *= rhs;
+			return lhs;
+		}
+		friend Vec8& pr_vectorcall operator /= (Vec8 &lhs, S rhs) noexcept
+		{
+			lhs.ang /= rhs;
+			lhs.lin /= rhs;
+			return lhs;
+		}
+		friend Vec8& pr_vectorcall operator %= (Vec8 &lhs, S rhs) noexcept
+		{
+			lhs.ang %= rhs;
+			lhs.lin %= rhs;
+			return lhs;
+		}
 		#pragma endregion
 	};
 

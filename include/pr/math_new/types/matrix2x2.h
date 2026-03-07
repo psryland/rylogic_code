@@ -37,7 +37,7 @@ namespace pr::math
 			:x(x_)
 			,y(y_)
 		{}
-		constexpr explicit Mat2x2(std::ranges::random_access_range auto&& v) noexcept
+		constexpr Mat2x2(std::ranges::random_access_range auto&& v) noexcept
 			:Mat2x2(
 				Vec2<S>(v[0], v[1]),
 				Vec2<S>(v[2], v[3]))

@@ -3785,7 +3785,7 @@ namespace pr::rdr12::ldraw
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_axis()
 			, m_pt()
-			, m_fovY(maths::tau_by_8f)
+			, m_fovY(constants<float>::tau_by_8)
 			, m_aspect(1.0f)
 			, m_near(0.0f)
 			, m_far(1.0f)

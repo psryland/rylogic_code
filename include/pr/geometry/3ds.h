@@ -747,7 +747,7 @@ namespace pr::geometry::max_3ds
 			auto p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
 			auto c = vert.m_col;
 			auto n = Normalise(vert.m_norm, v4::Zero());
-			auto t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
+			auto t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2::Zero();
 			vout(p, c, n, t);
 		}
 	}

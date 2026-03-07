@@ -164,6 +164,18 @@ namespace pr
 				Vec4<S, void>(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , S(0)),
 				Vec4<S, void>( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , S(0))};
 		}
+		static Mat3x4 RotationRad(S pitch, S yaw, S roll)
+		{
+			return Rotation(pitch, yaw, roll);
+		}
+		static Mat3x4 RotationDeg(S pitch, S yaw, S roll)
+		{
+			return Rotation(
+				DegreesToRadians(pitch),
+				DegreesToRadians(yaw),
+				DegreesToRadians(roll)
+			);
+		}
 
 		// Create from an axis, angle
 		static Mat3x4 pr_vectorcall Rotation(Vec4<S,void> axis_norm, Vec4<S,void> axis_sine_angle, S cos_angle)
@@ -869,7 +881,11 @@ namespace pr
 			Vec4<S,void>(-vec.z,   S(0),  vec.x, S(0)),
 			Vec4<S,void>( vec.y, -vec.x,   S(0), S(0))};
 	}
-	template <Scalar S, typename A> inline Mat3x4<S, A, A> pr_vectorcall CPM(Vec4<S, A> vec)
+	template <Scalar S, typename A > inline Mat3x4<S, A, A> pr_vectorcall CPM(Vec4<S, A> vec)
+	{
+		return CPM(vec.xyz);
+	}
+	template <typename Mat> inline Mat pr_vectorcall CPM(v4 vec) requires (std::is_same_v<Mat, Mat3x4<float, void, void>>)
 	{
 		return CPM(vec.xyz);
 	}

@@ -404,8 +404,7 @@ namespace pr::vp_tree
 #if PR_UNITTESTS
 #include "pr/maths/maths.h"
 #include "pr/common/unittests.h"
-//#include "pr/view3d-12/ldraw/ldraw_builder.h"
-namespace pr::container
+namespace pr::vp_tree::tests
 {
 	PRUnitTestClass(VPTreeTests)
 	{

@@ -12,6 +12,19 @@ namespace pr::math
 	using half_t = unsigned short;
 	using Half4 = Vec4<half_t>;
 
+	#define PR_MATH_DEFINE_TYPE(element)\
+	template <> struct vector_traits<Vec4<element>>\
+		: vector_traits_base<element, element, 4>\
+		, vector_access_member<Vec4<element>, element, 4>\
+	{};\
+	\
+	static_assert(VectorType<Vec4<element>>, "Vec4<"#element"> is not a valid vector type");\
+	static_assert(IsRank1<Vec4<element>>, "Vec4<"#element"> is not rank 1");\
+	static_assert(sizeof(Vec4<element>) == 4*sizeof(element), "Vec4<"#element"> has the wrong size");\
+	static_assert(std::is_trivially_copyable_v<Vec4<element>>, "Vec4<"#element"> is not trivially copyable");
+	PR_MATH_DEFINE_TYPE(half_t);
+	#undef PR_MATH_DEFINE_TYPE
+
 	// Convert between 32-bit float (1s7e24m) and 16-bit float (1s5e10m) at compile time
 	constexpr half_t F32toF16CT(float f32) noexcept
 	{

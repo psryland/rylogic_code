@@ -201,10 +201,10 @@ namespace pr
 		Camera()
 			:Camera(m4x4::Identity())
 		{}
-		Camera(m4x4 const& c2w, double fovY = maths::tau_by_8, double aspect = 1.0, double focus_dist = 1.0)
+		Camera(m4x4 const& c2w, double fovY = constants<double>::tau_by_8, double aspect = 1.0, double focus_dist = 1.0)
 			:Camera(c2w, fovY, aspect, focus_dist, false, 0.01, 100.0)
 		{}
-		Camera(v4 eye, v4 pt, v4 up, double fovY = maths::tau_by_8, double aspect = 1.0)
+		Camera(v4 eye, v4 pt, v4 up, double fovY = constants<double>::tau_by_8, double aspect = 1.0)
 			:Camera(m4x4::Identity(), fovY, aspect)
 		{
 			LookAt(eye, pt, up, true);
@@ -844,7 +844,7 @@ namespace pr
 			v4 old_focus = FocusPoint();
 
 			// Rotate the camera matrix
-			m_c2w = m_nav.m_c2w0 * m4x4::Transform(s_cast<float>(pitch), s_cast<float>(yaw), s_cast<float>(roll), v4::Origin());
+			m_c2w = m_nav.m_c2w0 * m4x4::Transform(m3x4::RotationRad(s_cast<float>(pitch), s_cast<float>(yaw), s_cast<float>(roll)), v4::Origin());
 
 			// Position the camera so that the focus is still in the same position
 			m_c2w.pos = old_focus + s_cast<float>(m_focus_dist) * m_c2w.z;

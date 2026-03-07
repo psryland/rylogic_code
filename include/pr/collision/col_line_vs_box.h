@@ -119,7 +119,7 @@ namespace pr::collision::tests
 		auto box = ShapeBox{v4{0.3f, 0.5f, 0.2f, 0.0f}};
 		m4x4 l2w_[] =
 		{
-			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 		m4x4 b2w_[] =
 		{

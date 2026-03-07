@@ -10,7 +10,6 @@
 // Also remember NOMINMAX
 
 #define NEW_MATHS 0
-
 #if NEW_MATHS
 #include "pr/math_new/math.h"
 namespace pr
@@ -19,6 +18,7 @@ namespace pr
 
 	namespace maths
 	{
+		template <typename T> constexpr std::decay_t<T> tiny = ::pr::math::tiny<T>;
 		namespace spatial
 		{
 			using namespace ::pr::math::spatial;

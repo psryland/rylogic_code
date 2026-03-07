@@ -119,7 +119,12 @@ namespace pr
 }
 namespace pr::geometry::gltf
 {
-	static constexpr Vert NoVert = { .m_idx0 = {NoIndex, 0} };
+	static constexpr Vert NoVert = {
+		.m_vert = Zero<v4>(), 
+		.m_colr = ColourWhite,
+		.m_norm = Zero<v4>(),
+		.m_tex0 = Zero<v2>(),
+		.m_idx0 = {NoIndex, 0} };
 
 	// Model data types (owning versions of the public span-based types)
 	struct MaterialData

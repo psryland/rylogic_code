@@ -27,7 +27,7 @@ namespace pr::math
 
 		// Construct
 		Vec3() = default;
-		constexpr Vec3(S x_) noexcept
+		constexpr explicit Vec3(S x_) noexcept
 			: x(x_)
 			, y(x_)
 			, z(x_)
@@ -50,7 +50,7 @@ namespace pr::math
 				Abs(axis_id) == AxisId::PosZ ? static_cast<S>(Sign<int>(axis_id)) : S(0)
 			)
 		{}
-		constexpr explicit Vec3(std::ranges::random_access_range auto&& v) noexcept
+		constexpr Vec3(std::ranges::random_access_range auto&& v) noexcept
 			:Vec3(v[0], v[1], v[2])
 		{}
 

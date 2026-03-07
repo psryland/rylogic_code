@@ -135,7 +135,7 @@ namespace pr::rdr12
 			// Get the scene bounds in light space
 			// Inflate the bounds slightly so that the edge of the smap is avoided
 			auto ls_bounds = w2ls * ws_bounds;
-			ls_bounds.m_radius = Max(ls_bounds.m_radius * 1.01f, v4::TinyF().w0());
+			ls_bounds.m_radius = Max(ls_bounds.m_radius * 1.01f, v4::Tiny().w0());
 			m_params.m_bounds = ls_bounds;
 
 			// Create a projection that encloses the scene bounds. This is basically "c2s"

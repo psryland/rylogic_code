@@ -1405,8 +1405,8 @@ namespace pr::eval
 						{
 							case Val::EType::Intg: stack.push_back(x.db() * constants<double>::E60_by_tau); break;
 							case Val::EType::Real: stack.push_back(x.db() * constants<double>::E60_by_tau); break;
-							case Val::EType::Intg4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
-							case Val::EType::Real4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
+							case Val::EType::Intg4: stack.push_back(x.v4() * constants<float>::E60_by_tau); break;
+							case Val::EType::Real4: stack.push_back(x.v4() * constants<float>::E60_by_tau); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -1419,8 +1419,8 @@ namespace pr::eval
 						{
 							case Val::EType::Intg: stack.push_back(x.db() * constants<double>::tau_by_360); break;
 							case Val::EType::Real: stack.push_back(x.db() * constants<double>::tau_by_360); break;
-							case Val::EType::Intg4: stack.push_back(x.v4() * maths::tau_by_360f); break;
-							case Val::EType::Real4: stack.push_back(x.v4() * maths::tau_by_360f); break;
+							case Val::EType::Intg4: stack.push_back(x.v4() * constants<float>::tau_by_360); break;
+							case Val::EType::Real4: stack.push_back(x.v4() * constants<float>::tau_by_360); break;
 							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
@@ -1849,7 +1849,7 @@ namespace pr::eval
 		case 'p':
 			{
 				if (cmp(expr, "pow")) { expr += 3; return ETok::Pow; }
-				if (cmp(expr, "phi")) { expr += 3; val = maths::golden_ratio; return ETok::Value; }
+				if (cmp(expr, "phi")) { expr += 3; val = constants<double>::golden_ratio; return ETok::Value; }
 				if (cmp(expr, "pi")) { expr += 2; val = constants<double>::tau_by_2; return ETok::Value; }
 				break;
 			}
@@ -2714,7 +2714,7 @@ namespace pr::common
 					{
 					case Val::EType::Intg: result[ridx].push_back(x.db() * constants<double>::E60_by_tau); break;
 					case Val::EType::Real: result[ridx].push_back(x.db() * constants<double>::E60_by_tau); break;
-					case Val::EType::Vec4: result[ridx].push_back(CompOp(x.v4(), [](auto x) { return x * maths::E60_by_tauf; })); break;
+					case Val::EType::Vec4: result[ridx].push_back(CompOp(x.v4(), [](auto x) { return x * constants<float>::E60_by_tau; })); break;
 					default: throw std::runtime_error("Unknown value type");
 					}
 //todo - update needed

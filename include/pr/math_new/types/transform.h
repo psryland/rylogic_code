@@ -51,7 +51,7 @@ namespace pr::math
 			rot = Quat<S>(r_norm);
 			scl = scale.w1();
 		}
-		Xform(Mat4x4<S> const& m) noexcept
+		explicit Xform(Mat4x4<S> const& m) noexcept
 			: Xform(m.pos, m.rot)
 		{}
 
