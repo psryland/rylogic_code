@@ -741,6 +741,27 @@ namespace pr::collision
 			faces[f].pad = 0;
 		}
 
+		// Ensure consistent outward-facing winding by checking the signed volume.
+		// The divergence theorem-based volume/inertia formulas require outward normals
+		// (positive triple products when the origin is inside). If the convex hull
+		// produced inward-facing normals, the total volume will be negative — fix by
+		// reversing the winding of every face.
+		{
+			auto vol = 0.0f;
+			for (int f = 0; f != fc; ++f)
+			{
+				auto a = verts[faces[f].m_index[0]];
+				auto b = verts[faces[f].m_index[1]];
+				auto c = verts[faces[f].m_index[2]];
+				vol += Triple(a, b, c);
+			}
+			if (vol < 0)
+			{
+				for (int f = 0; f != fc; ++f)
+					std::swap(faces[f].m_index[1], faces[f].m_index[2]);
+			}
+		}
+
 		// Build the neighbour headers and index data.
 		// Each Nbrs header stores a byte offset (m_first) from its own address
 		// to the start of its neighbour index array in the trailing Idx data.

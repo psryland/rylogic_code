@@ -694,13 +694,15 @@ namespace pr::physics
 		inertia1.m_diagonal.y += sign * (Sqr(offset.z) + Sqr(offset.x));
 		inertia1.m_diagonal.z += sign * (Sqr(offset.x) + Sqr(offset.y));
 
-		// For off diagonal elements:
-		//'  Ixy = Ioxy + mdxdy  (away from CoM), Io = I - mdxdy (toward CoM) '
-		//'  Ixz = Ioxz + mdxdz  (away from CoM), Io = I - mdxdz (toward CoM) '
-		//'  Iyz = Ioyz + mdydz  (away from CoM), Io = I - mdydz (toward CoM) '
-		inertia1.m_products.x += sign * (offset.x * offset.y); // xy
-		inertia1.m_products.y += sign * (offset.x * offset.z); // xz
-		inertia1.m_products.z += sign * (offset.y * offset.z); // yz
+		// For off-diagonal elements: the products of inertia have the OPPOSITE sign
+		// from the diagonal terms in the parallel axis theorem. The cxcx matrix has
+		// negative diagonals -(cj²+ck²) but positive off-diagonals ci*cj, so when
+		// applying Io = Ic - cxcx: diagonals ADD (d²) but off-diagonals SUBTRACT (di*dj).
+		//'  Io_xy = Ic_xy - dxdy  (away from CoM) '
+		//'  Ic_xy = Io_xy + dxdy  (toward CoM)    '
+		inertia1.m_products.x -= sign * (offset.x * offset.y); // xy
+		inertia1.m_products.y -= sign * (offset.x * offset.z); // xz
+		inertia1.m_products.z -= sign * (offset.y * offset.z); // yz
 
 		// 'com' is mainly used for spatial inertia when multiplying the inertia
 		// at a point other than where the inertia was measured at. Translate()

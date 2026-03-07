@@ -32,21 +32,16 @@ namespace pr::physics
 	}
 
 	// Return the unit inertia for the triangle.
-	// Computed about the centroid (centre of mass) since the Inertia class applies
-	// the parallel axis theorem internally using the stored CoM.
+	// Computed about the model origin. SetMassProperties applies the parallel axis
+	// theorem to translate from origin to centre of mass using mp.m_centre_of_mass.
 	inline m3x4 UnitInertia(ShapeTriangle const& shape)
 	{
-		// Centroid of the triangle
-		auto com = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z);
-		com.w = 0;
-
-		// Compute the inertia tensor about the centroid using vertex positions
-		// relative to the centroid. For a surface element (thin plate), each vertex
-		// contributes equally to the inertia (1/3 of the total area each).
+		// Compute the inertia tensor about the origin using the vertex positions.
+		// For a surface element (thin plate), each vertex contributes equally (1/3).
 		auto inertia = m3x4{};
 		for (int i = 0; i != 3; ++i)
 		{
-			auto v = shape.m_v[i] - com; // Vertex relative to centroid
+			auto v = shape.m_v[i];
 			v.w = 0;
 			inertia.x.x += Sqr(v.y) + Sqr(v.z);
 			inertia.y.y += Sqr(v.z) + Sqr(v.x);
@@ -89,10 +84,10 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Returns the unit inertia for the polytope, computed about the centroid.
+	// Returns the unit inertia for the polytope, computed about the model origin.
+	// SetMassProperties applies the parallel axis theorem to translate from origin
+	// to the centre of mass using mp.m_centre_of_mass.
 	// Uses the divergence theorem to integrate x², y², z² etc. over the volume.
-	// The result is the centroidal inertia (per unit mass) since the Inertia class
-	// applies the parallel axis theorem internally using the stored CoM.
 	inline m3x4 UnitInertia(ShapePolytope const& shape)
 	{
 		// Notes:
@@ -142,7 +137,7 @@ namespace pr::physics
 			return Inertia::Point(1.0f, centre).To3x3();
 		}
 
-		// Divide by total volume — gives inertia about the origin
+		// Divide by total volume — gives the per-unit-mass inertia about the origin
 		volume   /= 6.0f;
 		diagonal /= volume * 60.0f;
 		off_diag /= volume * 120.0f;
@@ -151,12 +146,7 @@ namespace pr::physics
 			v4{-off_diag.z             , diagonal.x + diagonal.z , -off_diag.x           ,0},
 			v4{-off_diag.y             , -off_diag.x             , diagonal.x+diagonal.y ,0}};
 
-		// Shift from origin to centroid using the parallel axis theorem:
-		// Ic = Io - d⊗d  (per unit mass), where d is the centroid position.
-		// CPM(d)² is negative semi-definite, so adding it reduces the inertia.
-		auto com = CalcCentreOfMass(shape);
-		auto cx = CPM<m3x4>(com);
-		return Io + cx * cx;
+		return Io;
 	}
 
 	// Return the mass properties

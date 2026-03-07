@@ -418,6 +418,7 @@ namespace pr::collision
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/collision/col_sphere_vs_sphere.h"
 
 namespace pr::collision::tests
 {
