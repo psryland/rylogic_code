@@ -111,40 +111,103 @@ namespace pr::collision
 
 namespace pr::collision::tests
 {
-	PRUnitTest(CollisionBoxVsLine)
+	PRUnitTestClass(LineVsBoxTests)
 	{
-		using namespace pr::rdr12::ldraw;
-
-		auto line = ShapeLine{3.0f};
-		auto box = ShapeBox{v4{0.3f, 0.5f, 0.2f, 0.0f}};
-		m4x4 l2w_[] =
+		PRUnitTestMethod(Visualise)
 		{
-			m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-		};
-		m4x4 b2w_[] =
-		{
-			m4x4::Identity(),
-		};
+			using namespace pr::rdr12::ldraw;
 
-		std::default_random_engine rng;
-		for (int i = 0; i != 20; ++i)
-		{
-			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
-			m4x4 b2w = i < _countof(b2w_) ? b2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
+			#if PR_UNITTESTS_VISUALISE
+			auto line = ShapeLine{3.0f};
+			auto box = ShapeBox{v4{0.3f, 0.5f, 0.2f, 0.0f}};
+			m4x4 l2w_[] =
+			{
+				m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			};
+			m4x4 b2w_[] =
+			{
+				m4x4::Identity(),
+			};
 
-			Builder builder;
-			builder._<LdrPhysicsShape>("line", 0x30FF0000).shape(line).o2w(l2w);
-			builder._<LdrPhysicsShape>("box", 0x3000FF00).shape(box).o2w(b2w);
-			//bilder.Write(L"collision_unittests.ldr");
-			if (!LineVsBox(line, l2w, box, b2w, c))
-				continue;
+			std::default_random_engine rng;
+			for (int i = 0; i != 20; ++i)
+			{
+				Contact c;
+				m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
+				m4x4 b2w = i < _countof(b2w_) ? b2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
 
-			builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point - 0.5f * c.m_depth * c.m_axis, c.m_axis);
-			builder.Box("pt0", Colour32Yellow).dim(0.002f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
-			builder.Box("pt1", Colour32Yellow).dim(0.002f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
-			//builder.Write(L"collision_unittests.ldr");
+				Builder builder;
+				builder._<LdrPhysicsShape>("line", 0x30FF0000).shape(line).o2w(l2w);
+				builder._<LdrPhysicsShape>("box", 0x3000FF00).shape(box).o2w(b2w);
+				if (LineVsBox(line, l2w, box, b2w, c))
+				{
+					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point - 0.5f * c.m_depth * c.m_axis, c.m_axis);
+					builder.Box("pt0", Colour32Yellow).dim(0.002f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt1", Colour32Yellow).dim(0.002f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
+				}
+				builder.Write(L"collision_unittests.ldr");
+			}
+			#endif
 		}
-	}
+
+		// Line through centre of box along Z
+		PRUnitTestMethod(LineThroughCentre)
+		{
+			auto line = ShapeLine{4.0f}; // half-length = 2, along Z from -2 to +2
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Identity();
+			auto b2w = m4x4::Identity();
+
+			PR_EXPECT(LineVsBox(line, l2w, box, b2w));
+		}
+
+		// Line parallel to box face, outside
+		PRUnitTestMethod(LineParallelOutside)
+		{
+			auto line = ShapeLine{4.0f};
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Translation(v4{2, 0, 0, 0}); // offset in X
+			auto b2w = m4x4::Identity();
+
+			PR_EXPECT(!LineVsBox(line, l2w, box, b2w));
+		}
+
+		// Line endpoint inside box
+		PRUnitTestMethod(EndpointInsideBox)
+		{
+			auto line = ShapeLine{2.0f}; // half-length = 1
+			auto box = ShapeBox{v4{2, 2, 2, 0}};
+
+			// Line from (0,0,-1) to (0,0,1), box extends ±2 → fully inside
+			auto l2w = m4x4::Identity();
+			auto b2w = m4x4::Identity();
+
+			PR_EXPECT(LineVsBox(line, l2w, box, b2w));
+		}
+
+		// Line at 45° piercing a box face
+		PRUnitTestMethod(AngledPiercing)
+		{
+			auto line = ShapeLine{4.0f};
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+
+			// Rotate line 45° about Y so it crosses the box diagonally
+			auto l2w = m4x4::Transform(0, constants<float>::tau_by_8, 0, v4::Origin());
+			auto b2w = m4x4::Identity();
+
+			PR_EXPECT(LineVsBox(line, l2w, box, b2w));
+		}
+
+		// Separated: line well beyond box extents
+		PRUnitTestMethod(Separated)
+		{
+			auto line = ShapeLine{2.0f};
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Translation(v4{0, 0, 5, 0}); // line at z=[4,6], box at z=[-1,+1]
+			auto b2w = m4x4::Identity();
+
+			PR_EXPECT(!LineVsBox(line, l2w, box, b2w));
+		}
+	};
 }
 #endif

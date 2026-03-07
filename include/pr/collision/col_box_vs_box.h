@@ -184,7 +184,6 @@ namespace pr::collision::tests
 				Builder builder;
 				builder._<LdrPhysicsShape>("lhs", 0x30FF0000).shape(lhs).o2w(l2w);
 				builder._<LdrPhysicsShape>("rhs", 0x3000FF00).shape(rhs).o2w(r2w);
-				builder.Write(L"collision_unittests.ldr");
 				if (BoxVsBox(lhs, l2w, rhs, r2w, c))
 				{
 					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
@@ -194,6 +193,77 @@ namespace pr::collision::tests
 				builder.Write(L"collision_unittests.ldr");
 			}
 			#endif
+		}
+
+		// Coincident boxes: maximum overlap
+		PRUnitTestMethod(CoincidentBoxes)
+		{
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Identity();
+
+			PR_EXPECT(BoxVsBox(box, l2w, box, r2w));
+			Contact c;
+			PR_EXPECT(BoxVsBox(box, l2w, box, r2w, c));
+			PR_EXPECT(c.m_depth > 0.0f);
+		}
+
+		// Face-to-face overlap: boxes separated along X
+		PRUnitTestMethod(FaceToFaceOverlap)
+		{
+			auto box = ShapeBox{v4{2, 2, 2, 0}}; // half-extent (1,1,1)
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Translation(v4{1.5f, 0, 0, 0}); // overlap of 0.5 in X
+
+			Contact c;
+			PR_EXPECT(BoxVsBox(box, l2w, box, r2w, c));
+			PR_EXPECT(FEqlRelative(c.m_depth, 0.5f, 0.02f));
+		}
+
+		// Separated: gap between boxes
+		PRUnitTestMethod(Separated)
+		{
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Translation(v4{3, 0, 0, 0});
+
+			PR_EXPECT(!BoxVsBox(box, l2w, box, r2w));
+		}
+
+		// Edge-to-edge: rotated box touching via edges
+		PRUnitTestMethod(EdgeContact)
+		{
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Identity();
+
+			// Rotate rhs 45° about Z and offset so edges overlap
+			auto r2w = m4x4::Transform(0, 0, constants<float>::tau_by_8, v4{1.3f, 1.3f, 0, 1});
+
+			// The rotated box edge should be close to lhs corner
+			Contact c;
+			auto result = BoxVsBox(box, l2w, box, r2w, c);
+			if (result)
+			{
+				PR_EXPECT(c.m_depth > 0.0f);
+				PR_EXPECT(IsNormalised(c.m_axis));
+			}
+		}
+
+		// Corner-to-face: rotated box poking into face
+		PRUnitTestMethod(CornerToFace)
+		{
+			auto box = ShapeBox{v4{1, 1, 1, 0}};
+			auto l2w = m4x4::Identity();
+
+			// Rotate rhs by 45° on two axes so its corner points into lhs face
+			auto r2w = m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, 0, v4{2.0f, 0, 0, 1});
+
+			Contact c;
+			auto result = BoxVsBox(box, l2w, box, r2w, c);
+			if (result)
+			{
+				PR_EXPECT(c.m_depth > 0.0f);
+			}
 		}
 	};
 }

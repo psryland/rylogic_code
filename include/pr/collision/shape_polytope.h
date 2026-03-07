@@ -14,7 +14,7 @@ namespace pr::collision
 		// All polytopes are assumed to be convex.
 
 		// Mesh structure types
-		using Idx = unsigned char;
+		using Idx = uint8_t;
 		struct Face
 		{
 			Idx m_index[3];
@@ -26,8 +26,8 @@ namespace pr::collision
 			// Neighbours also include an 'artificial' neighbour used to quickly link
 			// to the other side of the polytope. The artificial neighbour is always
 			// the first index in the list of neighbours.
-			unsigned short m_first; // Byte offset to the first neighbour
-			unsigned short m_count; // Number of neighbours
+			uint16_t m_first; // Byte offset to the first neighbour
+			uint16_t m_count; // Number of neighbours
 
 			Idx const* begin() const      { return type_ptr<Idx>(byte_ptr(this) + m_first); }
 			Idx*       begin()            { return type_ptr<Idx>(byte_ptr(this) + m_first); }
@@ -35,11 +35,26 @@ namespace pr::collision
 			Idx*       end()              { return begin() + m_count; }
 			Idx const& nbr(int idx) const { return begin()[idx]; }
 			Idx&       nbr(int idx)       { return begin()[idx]; }
+
+			// Ranged-for helpers
+			auto nbrs() const
+			{
+				struct R
+				{
+					Idx const* m_beg;
+					Idx const* m_end;
+					auto begin() const { return m_beg; }
+					auto end() const   { return m_end; }
+				};
+				return R{ begin(), end() };
+			}
 		};
 
 		Shape m_base;
 		int   m_vert_count;
 		int   m_face_count;
+		
+		// Memory layout. The following data is expected to follow this struct in memory, but is not actually part of the struct.
 		// v4   m_vert[m_vert_count]
 		// Face m_face[m_face_count]
 		// Nbrs m_nbrs[m_vert_count]
@@ -52,7 +67,7 @@ namespace pr::collision
 		{
 			// Careful: We can't be sure of what follows this object in memory.
 			// The polytope data that belongs to this array may not be there yet.
-			// Differ calculating the bounding box to the caller
+			// Defer calculating the bounding box until the caller calls 'Complete()'.
 		}
 		void Complete(int vert_count, int face_count)
 		{
@@ -81,6 +96,17 @@ namespace pr::collision
 		v4*       vert_end()                    { return vert_beg() + m_vert_count; }
 		v4 const& vertex(std::size_t idx) const { return vert_beg()[idx]; }
 		v4&       vertex(std::size_t idx)       { return vert_beg()[idx]; }
+		auto verts() const
+		{
+			struct R
+			{
+				v4 const* m_beg;
+				v4 const* m_end;
+				auto begin() const { return m_beg; }
+				auto end() const   { return m_end; }
+			};
+			return R{ vert_beg(), vert_end() };
+		}
 
 		// Face accessors
 		Face const* face_beg() const    { return type_ptr<Face>(vert_end()); }
@@ -89,6 +115,17 @@ namespace pr::collision
 		Face*       face_end()          { return face_beg() + m_face_count; }
 		Face const& face(int idx) const { return face_beg()[idx]; }
 		Face&       face(int idx)       { return face_beg()[idx]; }
+		auto faces() const
+		{
+			struct R
+			{
+				Face const* m_beg;
+				Face const* m_end;
+				auto begin() const { return m_beg; }
+				auto end() const   { return m_end; }
+			};
+			return R{ face_beg(), face_end() };
+		}
 
 		// Neighbours accessors
 		Nbrs const* nbrs_beg() const    { return type_ptr<Nbrs>(face_end()); }
@@ -129,8 +166,8 @@ namespace pr::collision
 	inline BBox pr_vectorcall CalcBBox(ShapePolytope const& shape)
 	{
 		auto bb = BBox::Reset();
-		for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v)
-			Grow(bb, *v);
+		for (v4 v : shape.verts())
+			Grow(bb, v);
 
 		return bb;
 	}
@@ -139,10 +176,10 @@ namespace pr::collision
 	inline float CalcVolume(ShapePolytope const& shape)
 	{
 		auto volume = 0.0f;
-		for (ShapePolyFace const *f = shape.face_beg(), *f_end = shape.face_end(); f != f_end; ++f)
+		for (ShapePolyFace const *f = shape.face_beg(), *fend = shape.face_end(); f != fend; ++f)
 		{
 			auto a = shape.vertex(f->m_index[0]);
-			auto b	= shape.vertex(f->m_index[1]);
+			auto b = shape.vertex(f->m_index[1]);
 			auto c = shape.vertex(f->m_index[2]);
 			volume += Triple(a, b, c); // Triple product is volume x 6
 		}
