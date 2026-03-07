@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -30,7 +30,7 @@ namespace pr::collision
 		// Line segment "radius" plus an epsilon term to counteract arithmetic 
 		// errors when segment is (near) parallel to a coordinate axis. 
 		auto half = line.m_radius * l2b.z; 
-		auto rad = Abs(half) + v4(maths::tiny<float>); 
+		auto rad = Abs(half) + v4(math::tiny<float>); 
  
 		// Try box face normals as separating axes.
 		// For thick lines, the collision envelope extends m_thickness perpendicular to the line axis.
@@ -195,7 +195,7 @@ namespace pr::collision::tests
 			auto box = ShapeBox{v4{1, 1, 1, 0}};
 
 			// Rotate line 45° about Y so it crosses the box diagonally
-			auto l2w = m4x4::Transform(0, constants<float>::tau_by_8, 0, v4::Origin());
+			auto l2w = m4x4::Transform(RotationRad<m3x4>(0, constants<float>::tau_by_8, 0), v4::Origin());
 			auto b2w = m4x4::Identity();
 
 			PR_EXPECT(LineVsBox(line, l2w, box, b2w));

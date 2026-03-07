@@ -49,8 +49,8 @@ namespace pr::physics
 		auto Ib_inv_3x3 = objB.InertiaInvOS(c.m_b2a.rot).To3x3();
 
 		// Collision inverse-mass matrix.
-		auto col_Ia_inv = (1/objA.Mass()) * m3x4Identity - CPM(rA) * Ia_inv_3x3 * CPM(rA);
-		auto col_Ib_inv = (1/objB.Mass()) * m3x4Identity - CPM(rB) * Ib_inv_3x3 * CPM(rB);
+		auto col_Ia_inv = (1/objA.Mass()) * m3x4::Identity() - CPM<m3x4>(rA) * Ia_inv_3x3 * CPM<m3x4>(rA);
+		auto col_Ib_inv = (1/objB.Mass()) * m3x4::Identity() - CPM<m3x4>(rB) * Ib_inv_3x3 * CPM<m3x4>(rB);
 		auto col_I_inv = col_Ia_inv + col_Ib_inv;
 
 		// The collision mass matrix.
@@ -62,7 +62,7 @@ namespace pr::physics
 		// impulseT: the tangential (friction) component.
 		auto impulse0 = -(col_I * V_inv);
 		auto denom = Dot(c.m_axis, col_I_inv * c.m_axis);
-		auto impulseN = Abs(denom) > maths::tiny<float> 
+		auto impulseN = Abs(denom) > math::tiny<float> 
 			? -(Dot(c.m_axis, V_inv) / denom) * c.m_axis 
 			: v4{};
 		auto impulseT = impulse0 - impulseN;
@@ -85,7 +85,7 @@ namespace pr::physics
 			{
 				Jt = static_friction * Abs(Jn);
 				auto impulseT_lenSq = LengthSq(impulseT);
-				if (impulseT_lenSq > Sqr(maths::tiny<float>))
+				if (impulseT_lenSq > Sqr(math::tiny<float>))
 					impulseT = Jt * (impulseT / Sqrt(impulseT_lenSq));
 				impulse4 = (1 + c.m_mat.m_elasticity_norm) * impulseN + impulseT;
 			}
@@ -95,7 +95,7 @@ namespace pr::physics
 		// at A's model origin. Shift translates the pure force into force + torque:
 		//   wrench.lin = impulse4  (force unchanged)
 		//   wrench.ang = r × impulse4  (torque from the lever arm)
-		auto impulse = Shift(v8force{v4{}, impulse4}, v4Origin - pt);
+		auto impulse = Shift(v8force{v4{}, impulse4}, v4::Origin() - pt);
 
 		// Build the impulse pair: equal and opposite wrenches for each body.
 		// For objA: receives the negative (reaction) impulse, already in A's frame.

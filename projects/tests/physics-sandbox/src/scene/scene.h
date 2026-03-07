@@ -88,7 +88,7 @@ namespace physics_sandbox
 			, m_body_count(2)
 			, m_physics()
 			, m_box(pr::v4{ 2, 2, 2, 0 })
-			, m_gravity(pr::v4Zero)
+			, m_gravity(v4::Zero())
 			, m_kill_zone_height(-100.0f)
 			, m_ground_gfx()
 			, m_clock()
@@ -129,7 +129,7 @@ namespace physics_sandbox
 			m_steps_remaining = 0;
 			m_clock = 0;
 			m_diag.Reset();
-			m_gravity = pr::v4Zero;
+			m_gravity = v4::Zero();
 			m_kill_zone_height = -100.0f;
 			m_trail_step_counter = 0;
 			for (int i = 0; i != MaxBodies; ++i)
@@ -345,7 +345,7 @@ namespace physics_sandbox
 				// +half_thickness above the box centre.
 				auto ground_half_thickness = ground_thickness * 0.5f;
 				ground_body.O2W(pr::m4x4::Translation(pr::v4{ 0, 0, scene_desc.ground.height - ground_half_thickness, 1 }));
-				ground_body.VelocityWS(pr::v4Zero, pr::v4Zero);
+				ground_body.VelocityWS(v4::Zero(), v4::Zero());
 
 				// Create the ground visual: a large textured quad.
 				// The visual is separate from the body's auto-generated collision shape graphic.
@@ -399,13 +399,13 @@ namespace physics_sandbox
 			// Apply gravity as an external force: F = m * g.
 			// Static bodies (infinite mass) are skipped — they should not accelerate.
 			// Forces are cleared by Evolve() at the end of each step, so we re-apply each frame.
-			if (m_gravity != pr::v4Zero)
+			if (m_gravity != pr::v4::Zero())
 			{
 				for (int i = 0; i != m_body_count; ++i)
 				{
 					auto mass = m_body[i].Mass();
 					if (mass < pr::physics::InfiniteMass * 0.5f)
-						m_body[i].ApplyForceWS(m_gravity * mass, pr::v4Zero);
+						m_body[i].ApplyForceWS(m_gravity * mass, pr::v4::Zero());
 				}
 			}
 
@@ -480,8 +480,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +2.0f, 0, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4{ -2.0f, 0, 0, 0 });
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +2.0f, 0, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4{ -2.0f, 0, 0, 0 });
 					break;
 				}
 				case EScenario::HeadOnEqualMass:
@@ -492,8 +492,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +3.0f, 0, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4{ -3.0f, 0, 0, 0 });
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, 0, 0, 0 });
 					break;
 				}
 				case EScenario::HeadOnDiffMass:
@@ -505,8 +505,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 5.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +3.0f, 0, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4{ -3.0f, 0, 0, 0 });
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, 0, 0, 0 });
 					break;
 				}
 				case EScenario::StationaryTarget:
@@ -516,8 +516,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +3.0f, 0, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4Zero);
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4::Zero());
 					break;
 				}
 				case EScenario::OffCenter:
@@ -529,8 +529,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, +0.8f, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +3.0f, 0, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4Zero);
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4::Zero());
 					break;
 				}
 				case EScenario::Oblique:
@@ -540,8 +540,8 @@ namespace physics_sandbox
 					objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
 					objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, -2.0f, 0, 1 }));
 					objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, +2.0f, 0, 1 }));
-					objA.VelocityWS(pr::v4Zero, pr::v4{ +3.0f, +1.0f, 0, 0 });
-					objB.VelocityWS(pr::v4Zero, pr::v4{ -3.0f, -1.0f, 0, 0 });
+					objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, +1.0f, 0, 0 });
+					objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, -1.0f, 0, 0 });
 					break;
 				}
 			}

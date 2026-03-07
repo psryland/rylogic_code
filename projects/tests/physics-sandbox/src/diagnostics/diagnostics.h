@@ -41,7 +41,7 @@ namespace physics_sandbox
 		pr::v4 pos;
 		pr::v4 lin_vel;
 		pr::v4 ang_vel;
-		pr::physics::v8force momentum;
+		pr::v8force momentum;
 		float mass;
 		float ke;
 

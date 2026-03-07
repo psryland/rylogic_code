@@ -140,7 +140,7 @@ namespace pr::app
 			m_scene.ClearDrawlists();
 			auto& frame = m_window.NewFrame();
 			m_scene.Render(frame);
-			m_window.Present(frame, pr::rdr12::EGpuFlush::Block);
+			m_window.Present(frame, rdr12::EGpuFlush::Block);
 		}
 
 		// Show the last rendered scene

@@ -181,7 +181,7 @@ namespace pr::physics
 			// For KE(α) = KE₀: α²A + αB = 0 → α = -B/A = (A - δ)/A.
 			auto ke_after = objA.KineticEnergy() + objB.KineticEnergy();
 			auto delta = ke_after - ke_before;
-			if (delta > 0 && A > maths::tiny<float>)
+			if (delta > 0 && A > math::tiny<float>)
 			{
 				auto alpha = Clamp((A - delta) / A, 0.0f, 1.0f);
 				auto correction = 1.0f - alpha;

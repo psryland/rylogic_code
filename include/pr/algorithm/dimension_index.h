@@ -241,7 +241,7 @@ namespace pr::algorithm::tests
 			auto& input = builder.Point("points", 0xFFA0A0A0).size(3.0f);
 			for (int i = 0; i != N; ++i)
 			{
-				points.push_back(v3::Random(rng, -v3::One(), +v3::One()).w1());
+				points.push_back(Random<v3>(rng, -v3::One(), +v3::One()).w1());
 				input.pt(points.back());
 			}
 		}
@@ -254,7 +254,7 @@ namespace pr::algorithm::tests
 		DimensionIndex<3, float> index;
 		index.Build<v4>(points, GetValue);
 
-		auto search = v3::Random(rng, -v3::One(), +v3::One()).w1();
+		auto search = Random<v3>(rng, -v3::One(), +v3::One()).w1();
 		auto radius = dist(rng);
 		builder.Sphere("search", 0x8000FF00).radius(radius).pos(search);
 
@@ -262,7 +262,7 @@ namespace pr::algorithm::tests
 			auto& results = builder.Point("results", 0xFF00FF00).size(10.0f);
 			index.Find<v4>(points, search.xyz.arr, radius, GetValue, [&](v4 a, float dist_sq)
 			{
-				PR_EXPECT(dist_sq < radius * radius + maths::tiny<float>);
+				PR_EXPECT(dist_sq < radius * radius + math::tiny<float>);
 				results.pt(a);
 			});
 		}

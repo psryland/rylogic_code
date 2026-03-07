@@ -49,7 +49,7 @@ namespace pr::collision
 		// If 'dist_sq' is zero then the centre of the sphere is inside the box.
 		// The separating axis is the box face normal with the minimum penetration depth
 		// (i.e., the shortest escape route for the sphere).
-		if (dist_sq < maths::tiny<float>)
+		if (dist_sq < math::tiny<float>)
 		{
 			// For each axis, the penetration is: sphere_radius + box_half_extent - |distance_from_centre|.
 			// The minimum penetration axis is where (box_half_extent - |r2l|) is smallest,

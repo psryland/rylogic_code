@@ -109,7 +109,7 @@ namespace pr::collision
 
 				// Skip degenerate axes (parallel edges)
 				auto axis_len_sq = LengthSq(axis);
-				if (axis_len_sq < Sqr(maths::tiny<float>))
+				if (axis_len_sq < Sqr(math::tiny<float>))
 					continue;
 
 				auto depth = test_axis(axis);

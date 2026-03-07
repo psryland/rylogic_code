@@ -77,14 +77,14 @@ namespace pr::physics
 			// Sanity checks on the post-integration state:
 			// 1. Verify no NaN crept in during integration
 			auto h = rb.MomentumWS();
-			auto o2w = rb.O2W();
+			auto rb_o2w = rb.O2W();
 			assert("Evolve: NaN in momentum" && !IsNaN(h.ang) && !IsNaN(h.lin));
-			assert("Evolve: NaN in transform" && !IsNaN(o2w));
+			assert("Evolve: NaN in transform" && !IsNaN(rb_o2w));
 
 			// 2. Verify the orientation is still orthonormal (Orthonorm shouldn't need
 			//    to make large corrections — if it does, the angular velocity is too high
 			//    for the timestep or there's an integration bug)
-			auto rot = o2w.rot;
+			auto rot = rb_o2w.rot;
 			assert("Evolve: orientation not orthonormal" && IsOrthonormal(rot));
 
 			// 3. Verify the inertia inverse is still valid after rotation

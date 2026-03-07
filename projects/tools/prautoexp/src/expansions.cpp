@@ -19,7 +19,7 @@
 #include "pr/common/alloca.h"
 #include "pr/common/cast.h"
 #include "pr/macros/link.h"
-#include "pr/maths/maths.h"
+#include "pr/math/math.h"
 #include "pr/physics-2/physics.h"
 #include "pr/lua/lua.h"
 #include "lua/include/lstate.h"
@@ -28,29 +28,29 @@ using namespace pr;
 #define ADDIN_API __declspec(dllexport)
 
 // Helper rounding function
-inline float R(float x)
+inline double R(int x)
+{
+	return static_cast<double>(x);
+}
+inline double R(int64_t x)
+{
+	return static_cast<double>(x);
+}
+inline double R(float x)
 {
 	return
 		isnan(x) ? x :
-		x < -maths::tiny<float> ? x :
-		x > +maths::tiny<float> ? x :
+		x < -math::tiny<float> ? x :
+		x > +math::tiny<float> ? x :
 		x < 0 ? -0 : +0;
 }
 inline double R(double x)
 {
 	return 
 		isnan(x) ? x :
-		x < -maths::tiny<double> ? x :
-		x > +maths::tiny<double> ? x :
+		x < -math::tiny<double> ? x :
+		x > +math::tiny<double> ? x :
 		x < 0 ? -0 : +0;
-}
-inline int R(int x)
-{
-	return x;
-}
-inline int64_t R(int64_t x)
-{
-	return x;
 }
 
 extern "C"
@@ -121,8 +121,8 @@ extern "C"
 		if (FAILED(pHelper->Read(vec))) return E_FAIL;
 		_snprintf(pResult, max,
 			"{%+d %+d} Len2=%g"
-			,R(vec.x)
-			,R(vec.y)
+			,vec.x
+			,vec.y
 			,R(Length(vec))
 		);
 		return S_OK;
@@ -134,10 +134,10 @@ extern "C"
 		if (FAILED(pHelper->Read(vec))) return E_FAIL;
 		_snprintf(pResult, max,
 			"{%+d %+d %+d %+d} Len3=%g Len4=%g"
-			,R(vec.x)
-			,R(vec.y)
-			,R(vec.z)
-			,R(vec.w)
+			,vec.x
+			,vec.y
+			,vec.z
+			,vec.w
 			,R(Length(vec.w0()))
 			,R(Length(vec))
 		);
@@ -153,10 +153,10 @@ extern "C"
 		auto len4 = Len(double(vec[0]), double(vec[1]), double(vec[2]), double(vec[3]));
 		_snprintf(pResult, max,
 			"{%+lld %+lld %+lld %+lld} Len3=%g Len4=%g"
-			,R(vec[0])
-			,R(vec[1])
-			,R(vec[2])
-			,R(vec[3])
+			,vec[0]
+			,vec[1]
+			,vec[2]
+			,vec[3]
 			,R(len3)
 			,R(len4)
 		);
@@ -378,7 +378,7 @@ extern "C"
 		quat q;
 		if (FAILED(pHelper->Read(q))) return E_FAIL;
 
-		auto mat = m3x4::Rotation(q);
+		auto mat = ToMatrix<m3x4>(q);
 		_snprintf(pResult, max,
 			"{%+g %+g %+g} \n"
 			"{%+g %+g %+g} \n"

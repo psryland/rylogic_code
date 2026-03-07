@@ -19,7 +19,7 @@
 #include "pr/common/guid.h"
 #include "pr/common/fmt.h"
 #include "pr/common/unittests.h"
-#include "pr/maths/maths.h"
+#include "pr/math/math.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/view3d_panel.h"
@@ -37,4 +37,4 @@
 
 using namespace pr;
 using namespace pr::gui;
-using namespace pr::maths::spatial;
+using namespace pr::math::spatial;

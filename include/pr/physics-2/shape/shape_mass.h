@@ -67,7 +67,7 @@ namespace pr::physics
 		auto L = 2.0f * shape.m_radius;     // Full length
 		auto r = shape.m_thickness;          // Collision radius (half-thickness)
 		auto inertia = m3x4{};
-		if (r > maths::tiny<float>)
+		if (r > math::tiny<float>)
 		{
 			// Solid cylinder inertia (per unit mass)
 			inertia.x.x = (1.0f / 12.0f) * (3.0f * Sqr(r) + Sqr(L));
@@ -79,7 +79,7 @@ namespace pr::physics
 			// Thin rod along Z (per unit mass)
 			inertia.x.x = (1.0f / 12.0f) * Sqr(L);
 			inertia.y.y = inertia.x.x;
-			inertia.z.z = maths::tiny<float>; // Near-zero to avoid singular inertia
+			inertia.z.z = math::tiny<float>; // Near-zero to avoid singular inertia
 		}
 		return inertia;
 	}
@@ -190,9 +190,9 @@ namespace pr::physics
 		// For zero-thickness lines, use a small minimum volume to avoid zero mass.
 		auto L = 2.0f * shape.m_radius;
 		auto r = shape.m_thickness;
-		auto volume = (r > maths::tiny<float>)
+		auto volume = (r > math::tiny<float>)
 			? float(constants<double>::tau_by_2) * Sqr(r) * L  // pi * r^2 * L
-			: L * maths::tiny<float>;                          // Fallback: thin rod with minimal cross-section
+			: L * math::tiny<float>;                          // Fallback: thin rod with minimal cross-section
 
 		MassProperties mp;
 		mp.m_centre_of_mass  = v4{};

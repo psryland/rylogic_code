@@ -175,7 +175,7 @@ namespace pr::physics
 		// thin plates) have Izz = Ixx + Iyy exactly, but float arithmetic and inversion
 		// roundtrips can push this past exact equality. Use a small relative tolerance
 		// based on the trace to avoid false asserts on physically valid inertia tensors.
-		auto tol = (dia.x + dia.y + dia.z) * maths::tiny<float>;
+		auto tol = (dia.x + dia.y + dia.z) * math::tiny<float>;
 
 		// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
 		if ((dia.x + dia.y + tol) < dia.z ||
@@ -572,7 +572,7 @@ namespace pr::physics
 		//   I3 = m3U3 = m1U1 + m2U2
 		//   U3 = (m1U1 + m2U2)/m3
 		Inertia sum = {};
-		if (mass < maths::tiny<float>)
+		if (mass < math::tiny<float>)
 		{
 			sum.m_diagonal = (Ia.m_diagonal + Ib.m_diagonal) / 2.0f;
 			sum.m_products = (Ia.m_products + Ib.m_products) / 2.0f;

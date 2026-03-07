@@ -310,7 +310,7 @@ namespace pr::rdr12::ldraw
 			}
 			Derived& ori(v4 dir, pr::AxisId axis = pr::AxisId::PosZ)
 			{
-				return ori(m3x4::Rotation(axis.vec(), dir));
+				return ori(m3x4::Rotation(v4(axis), dir));
 			}
 			Derived& ori(m3x4 const& rot)
 			{
@@ -346,10 +346,7 @@ namespace pr::rdr12::ldraw
 			}
 			Derived& euler(float pitch_deg, float yaw_deg, float roll_deg)
 			{
-				return ori(m3x4::Rotation(
-					DegreesToRadians(pitch_deg),
-					DegreesToRadians(yaw_deg),
-					DegreesToRadians(roll_deg)));
+				return ori(m3x4::RotationDeg(pitch_deg, yaw_deg, roll_deg));
 			}
 			O2W m_o2w;
 

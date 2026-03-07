@@ -47,14 +47,14 @@ namespace pr::collision
 
 		// Penetration depth: positive means overlap.
 		// For thick lines, the collision envelope extends m_thickness from the line axis.
-		auto dist = Sqrt(dist_sq + maths::tiny<float>);
+		auto dist = Sqrt(dist_sq + math::tiny<float>);
 		auto depth = (line.m_thickness + sph.m_radius) - dist;
 
 		pen(depth, [&]
 		{
 			// Separating axis: from line toward sphere centre (in world space).
 			// If the sphere centre lies exactly on the line, use an arbitrary perpendicular.
-			if (dist_sq > Sqr(maths::tiny<float>))
+			if (dist_sq > Sqr(math::tiny<float>))
 				return l2w * (delta / dist);
 			else
 				return l2w.x; // arbitrary perpendicular to line's Z-axis

@@ -59,13 +59,13 @@ namespace pr::collision
 		{
 			// Separating axis: perpendicular to both lines (cross product)
 			// Fall back to the delta between closest points, or an arbitrary axis
-			if (dist_sq > Sqr(maths::tiny<float>))
+			if (dist_sq > Sqr(math::tiny<float>))
 				return Normalise(delta);
 
 			// Lines intersect or are coincident — use cross product of directions
 			auto cross = Cross(l2w.z, r2w.z);
 			auto cross_len_sq = LengthSq(cross);
-			if (cross_len_sq > Sqr(maths::tiny<float>))
+			if (cross_len_sq > Sqr(math::tiny<float>))
 				return cross / Sqrt(cross_len_sq);
 
 			// Parallel and coincident — use arbitrary perpendicular to line direction

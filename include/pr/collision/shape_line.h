@@ -76,7 +76,7 @@ namespace pr::collision
 		if (shape.m_thickness > 0)
 		{
 			auto len_sq = LengthSq(direction);
-			if (len_sq > Sqr(maths::tiny<float>))
+			if (len_sq > Sqr(math::tiny<float>))
 				vert += shape.m_thickness * direction / Sqrt(len_sq);
 		}
 		return vert;

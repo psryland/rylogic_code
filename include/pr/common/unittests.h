@@ -39,6 +39,7 @@ namespace pr::unittests
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <deque>
 #include <tuple>
 #include <set>
 #include <map>

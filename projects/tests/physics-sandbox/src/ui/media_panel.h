@@ -121,7 +121,7 @@ namespace physics_sandbox
 			if (!m_slider)
 				return;
 
-			auto pos = pr::Clamp(static_cast<int>(scale * 100.0f), SliderMin, SliderMax);
+			auto pos = Clamp(static_cast<int>(scale * 100.0f), SliderMin, SliderMax);
 			::SendMessage(m_slider, TBM_SETPOS, TRUE, pos);
 		}
 

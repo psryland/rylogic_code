@@ -20,11 +20,15 @@
 
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
+#include "pr/common/bit_fields.h"
 #include "pr/geometry/gltf.h"
 #include "pr/geometry/common.h"
 #include "pr/container/vector.h"
+#include "pr/math/math.h"
+#include "pr/math/conversion.h"
 
 using namespace pr;
+using namespace pr::math;
 using namespace pr::geometry::gltf;
 
 namespace pr

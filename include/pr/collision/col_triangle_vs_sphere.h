@@ -41,7 +41,7 @@ namespace pr::collision
 		// Vector from closest point to sphere centre
 		auto delta = s2t - (closest - v4::Origin());
 		auto dist_sq = LengthSq(delta);
-		auto dist = Sqrt(dist_sq + maths::tiny<float>);
+		auto dist = Sqrt(dist_sq + math::tiny<float>);
 
 		// Penetration depth: positive means overlap
 		auto depth = sph.m_radius - dist;
@@ -49,7 +49,7 @@ namespace pr::collision
 		pen(depth, [&]
 		{
 			// Separating axis: from triangle surface toward sphere centre (in world space).
-			if (dist_sq > Sqr(maths::tiny<float>))
+			if (dist_sq > Sqr(math::tiny<float>))
 				return l2w * (delta / dist);
 
 			// Sphere centre is exactly on the triangle surface — use the triangle normal

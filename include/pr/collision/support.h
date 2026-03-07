@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -41,8 +41,8 @@ namespace pr::collision
 		{
 			float d = Dot3(direction, shape.m_base.m_s2p[i]);
 
-			if      (d > +maths::tiny<float>) vert += shape.m_base.m_s2p[i] * shape.m_radius[i];
-			else if (d < -maths::tiny<float>) vert -= shape.m_base.m_s2p[i] * shape.m_radius[i];
+			if      (d > +math::tiny<float>) vert += shape.m_base.m_s2p[i] * shape.m_radius[i];
+			else if (d < -math::tiny<float>) vert -= shape.m_base.m_s2p[i] * shape.m_radius[i];
 			else feature_type = EFeature(int(feature_type) << 1);
 		}
 		return vert;
@@ -54,15 +54,15 @@ namespace pr::collision
 
 		feature_type = EFeature::Vert;
 		auto vert = shape.m_base.m_s2p.pos;
-		if      (d > +maths::tiny<float>) vert += r;
-		else if (d < -maths::tiny<float>) vert -= r;
+		if      (d > +math::tiny<float>) vert += r;
+		else if (d < -math::tiny<float>) vert -= r;
 		else feature_type = EFeature::Edge;
 
 		// Hemispherical end-cap offset for thick lines
 		if (shape.m_thickness > 0)
 		{
 			auto len_sq = LengthSq(direction);
-			if (len_sq > Sqr(maths::tiny<float>))
+			if (len_sq > Sqr(math::tiny<float>))
 				vert += shape.m_thickness * direction / Sqrt(len_sq);
 		}
 		return vert;
@@ -97,12 +97,12 @@ namespace pr::collision
 		for (int i = 0; i != 3; ++i)
 		{
 			float d = Dot3(axis, shape.m_base.m_s2p[i]);
-			if (d > +maths::tiny<float>)
+			if (d > +math::tiny<float>)
 			{
 				for (int f = 0; f != int(feature_type); ++f)
 					points[f] += shape.m_base.m_s2p[i] * shape.m_radius[i];
 			}
-			else if (d < -maths::tiny<float>)
+			else if (d < -math::tiny<float>)
 			{
 				for (int f = 0; f != int(feature_type); ++f)
 					points[f] -= shape.m_base.m_s2p[i] * shape.m_radius[i];
@@ -142,17 +142,17 @@ namespace pr::collision
 		if (shape.m_thickness > 0)
 		{
 			auto len_sq = LengthSq(axis);
-			if (len_sq > Sqr(maths::tiny<float>))
+			if (len_sq > Sqr(math::tiny<float>))
 				thickness_offset = shape.m_thickness * axis / Sqrt(len_sq);
 		}
 
-		if (d > +maths::tiny<float>)
+		if (d > +math::tiny<float>)
 		{
 			// Line points in the direction of the axis, return the end point
 			feature_type = EFeature::Vert;
 			points[0] = shape.m_base.m_s2p.pos + r + thickness_offset;
 		}
-		else if (d < -maths::tiny<float>)
+		else if (d < -math::tiny<float>)
 		{
 			// Line points against the direction of the axis, return the start point
 			feature_type = EFeature::Vert;
@@ -176,7 +176,7 @@ namespace pr::collision
 
 		// Count how many vertices are at the maximum projection (within tolerance).
 		// 1 vertex  → Vert feature, 2 vertices → Edge feature, 3 vertices → Tri (face) feature.
-		auto tol = maths::tiny<float>;
+		auto tol = math::tiny<float>;
 		int count = 0;
 		int indices[3] = {};
 		if (d0 >= d_max - tol) indices[count++] = 0;
