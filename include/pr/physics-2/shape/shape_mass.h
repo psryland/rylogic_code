@@ -31,23 +31,32 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Return the unit inertia for the triangle
+	// Return the unit inertia for the triangle.
+	// Computed about the centroid (centre of mass) since the Inertia class applies
+	// the parallel axis theorem internally using the stored CoM.
 	inline m3x4 UnitInertia(ShapeTriangle const& shape)
 	{
+		// Centroid of the triangle
+		auto com = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z);
+		com.w = 0;
+
+		// Compute the inertia tensor about the centroid using vertex positions
+		// relative to the centroid. For a surface element (thin plate), each vertex
+		// contributes equally to the inertia (1/3 of the total area each).
 		auto inertia = m3x4{};
 		for (int i = 0; i != 3; ++i)
 		{
-			auto& vert = shape.m_v[i];
-			inertia.x.x += Sqr(vert.y) + Sqr(vert.z);
-			inertia.y.y += Sqr(vert.z) + Sqr(vert.x);
-			inertia.z.z += Sqr(vert.x) + Sqr(vert.y);
-			inertia.x.y += vert.x * vert.y;
-			inertia.x.z += vert.x * vert.z;
-			inertia.y.z += vert.y * vert.z;
+			auto v = shape.m_v[i] - com; // Vertex relative to centroid
+			v.w = 0;
+			inertia.x.x += Sqr(v.y) + Sqr(v.z);
+			inertia.y.y += Sqr(v.z) + Sqr(v.x);
+			inertia.z.z += Sqr(v.x) + Sqr(v.y);
+			inertia.x.y -= v.x * v.y;
+			inertia.x.z -= v.x * v.z;
+			inertia.y.z -= v.y * v.z;
 		}
-		inertia.x.y = -inertia.x.y;
-		inertia.x.z = -inertia.x.y;
-		inertia.y.z = -inertia.x.y;
+
+		// Mirror off-diagonal elements (inertia tensor is symmetric)
 		inertia.y.x = inertia.x.y;
 		inertia.z.x = inertia.x.z;
 		inertia.z.y = inertia.y.z;
@@ -80,7 +89,10 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Returns the unit inertia for the polytope.
+	// Returns the unit inertia for the polytope, computed about the centroid.
+	// Uses the divergence theorem to integrate x², y², z² etc. over the volume.
+	// The result is the centroidal inertia (per unit mass) since the Inertia class
+	// applies the parallel axis theorem internally using the stored CoM.
 	inline m3x4 UnitInertia(ShapePolytope const& shape)
 	{
 		// Notes:
@@ -130,14 +142,21 @@ namespace pr::physics
 			return Inertia::Point(1.0f, centre).To3x3();
 		}
 
-		// Divide by total volume
+		// Divide by total volume — gives inertia about the origin
 		volume   /= 6.0f;
 		diagonal /= volume * 60.0f;
 		off_diag /= volume * 120.0f;
-		return m3x4{
+		auto Io = m3x4{
 			v4{diagonal.y + diagonal.z , -off_diag.z             , -off_diag.y           ,0},
 			v4{-off_diag.z             , diagonal.x + diagonal.z , -off_diag.x           ,0},
 			v4{-off_diag.y             , -off_diag.x             , diagonal.x+diagonal.y ,0}};
+
+		// Shift from origin to centroid using the parallel axis theorem:
+		// Ic = Io - d⊗d  (per unit mass), where d is the centroid position.
+		// CPM(d)² is negative semi-definite, so adding it reduces the inertia.
+		auto com = CalcCentreOfMass(shape);
+		auto cx = CPM<m3x4>(com);
+		return Io + cx * cx;
 	}
 
 	// Return the mass properties

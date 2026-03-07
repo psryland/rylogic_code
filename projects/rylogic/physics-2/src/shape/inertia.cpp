@@ -162,16 +162,22 @@ namespace pr::physics
 		if (dia.x < 0 || dia.y < 0 || dia.z < 0)
 			return assert(false), false;
 
+		// Relative tolerance for floating-point comparisons. Flat objects (e.g. triangles,
+		// thin plates) have Izz = Ixx + Iyy exactly, but float arithmetic and inversion
+		// roundtrips can push this past exact equality. Use a small relative tolerance
+		// based on the trace to avoid false asserts on physically valid inertia tensors.
+		auto tol = (dia.x + dia.y + dia.z) * maths::tiny<float>;
+
 		// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
-		if ((dia.x + dia.y) < dia.z ||
-			(dia.y + dia.z) < dia.x ||
-			(dia.z + dia.x) < dia.y)
+		if ((dia.x + dia.y + tol) < dia.z ||
+			(dia.y + dia.z + tol) < dia.x ||
+			(dia.z + dia.x + tol) < dia.y)
 			return assert(false), false;
 
 		// The magnitude of a product of inertia was too large to be physical.
-		if (dia.x < Abs(2 * off.z) ||
-			dia.y < Abs(2 * off.y) ||
-			dia.z < Abs(2 * off.x))
+		if ((dia.x + tol) < Abs(2 * off.z) ||
+			(dia.y + tol) < Abs(2 * off.y) ||
+			(dia.z + tol) < Abs(2 * off.x))
 			return assert(false), false;
 
 		return true;
