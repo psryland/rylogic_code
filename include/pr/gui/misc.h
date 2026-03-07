@@ -10,7 +10,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/assert.h"
 #include "pr/container/byte_data.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/gui/wingui.h"
 
 namespace pr

@@ -7,7 +7,7 @@
 #include <concepts>
 #include <cassert>
 
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/common/cast.h"
 #include "pr/common/scope.h"
 #include "pr/common/alloca.h"

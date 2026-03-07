@@ -6,7 +6,7 @@
 #include <string>
 #include <concepts>
 #include <type_traits>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/macros/enum.h"
 #include "pr/common/to.h"
 #include "pr/common/interpolate.h"

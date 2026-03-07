@@ -33,7 +33,7 @@
 //#include "pr/common/guid.h"
 //#include "pr/common/hash.h"
 #include "pr/common/command_line.h"
-//#include "pr/math_new/math.h"
+//#include "pr/math/math.h"
 //#include "pr/str/extract.h"
 //#include "pr/str/to_string.h"
 //#include "pr/filesys/filesys.h"

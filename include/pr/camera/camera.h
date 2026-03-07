@@ -6,7 +6,7 @@
 // Supports 3D trackball-like mouse control and basic keyboard control
 #pragma once
 #include <memory>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/common/bit_fields.h"
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"

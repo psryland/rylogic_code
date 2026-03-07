@@ -15,7 +15,7 @@
 #include <condition_variable>
 #include "pr/common/to.h"
 #include "pr/common/hresult.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 namespace pr::tweakables
 {

@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 namespace pr::collision
 {

@@ -24,8 +24,8 @@
 #include "pr/geometry/gltf.h"
 #include "pr/geometry/common.h"
 #include "pr/container/vector.h"
-#include "pr/math_new/math.h"
-#include "pr/math_new/conversion.h"
+#include "pr/math/math.h"
+#include "pr/math/conversion.h"
 
 using namespace pr;
 using namespace pr::math;

@@ -5,7 +5,7 @@
 #pragma once
 #include <cassert>
 #include <concepts>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/container/ring.h"

@@ -23,7 +23,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
 #include "pr/gfx/colour.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/script/reader.h"
 #include "pr/str/string_util.h"
 #include "pr/str/string.h"

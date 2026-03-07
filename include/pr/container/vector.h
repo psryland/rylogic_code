@@ -1267,7 +1267,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 namespace pr::container
 {
 	PRUnitTestClass(VectorTests)

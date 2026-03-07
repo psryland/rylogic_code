@@ -15,7 +15,7 @@
 #include "pr/str/to_string.h"
 #include "pr/container/vector.h"
 #include "pr/container/byte_data.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/collision/collision.h"
 #include "pr/geometry/closest_point.h"
 #include "pr/geometry/intersect.h"

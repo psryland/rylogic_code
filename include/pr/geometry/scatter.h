@@ -8,7 +8,7 @@
 #include <execution>
 #include <random>
 #include <tuple>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 namespace pr::geometry
 {

@@ -602,7 +602,7 @@ namespace pr::kdtree
 }
 
 #if PR_UNITTESTS
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/common/unittests.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
 namespace pr::container

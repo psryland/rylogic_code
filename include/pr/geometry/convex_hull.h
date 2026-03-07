@@ -8,7 +8,7 @@
 #include <algorithm>
 #include "pr/common/assert.h"
 #include "pr/common/alloca.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 #ifndef PR_DBG_CONVEX_HULL
 #define PR_DBG_CONVEX_HULL 0

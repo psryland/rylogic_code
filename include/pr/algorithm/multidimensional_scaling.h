@@ -14,7 +14,7 @@
 #include <numeric>
 #include <cmath>
 #include <cassert>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 namespace pr::algorithm::mds
 {

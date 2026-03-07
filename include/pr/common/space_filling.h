@@ -4,7 +4,7 @@
 //*************************************
 #pragma once
 #include <cstdint>
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 
 namespace pr::space_filling
 {

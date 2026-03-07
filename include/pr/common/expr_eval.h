@@ -12,8 +12,8 @@
 #include <cassert>
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
-#include "pr/math_new/math.h"
-#include "pr/math_new/conversion.h"
+#include "pr/math/math.h"
+#include "pr/math/conversion.h"
 #include "pr/container/vector.h"
 #include "pr/container/byte_data.h"
 

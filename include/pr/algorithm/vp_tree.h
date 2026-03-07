@@ -402,7 +402,7 @@ namespace pr::vp_tree
 }
 
 #if PR_UNITTESTS
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/common/unittests.h"
 namespace pr::vp_tree::tests
 {

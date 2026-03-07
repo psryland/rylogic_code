@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
 #pragma once
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/script/forward.h"
 #include "pr/script/script_core.h"
 #include "pr/script/filter.h"

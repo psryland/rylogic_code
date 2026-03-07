@@ -19,7 +19,7 @@
 #include "pr/common/alloca.h"
 #include "pr/common/cast.h"
 #include "pr/macros/link.h"
-#include "pr/math_new/math.h"
+#include "pr/math/math.h"
 #include "pr/physics-2/physics.h"
 #include "pr/lua/lua.h"
 #include "lua/include/lstate.h"
