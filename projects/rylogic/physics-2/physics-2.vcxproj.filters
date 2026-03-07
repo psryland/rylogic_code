@@ -42,6 +42,12 @@
     <ClCompile Include="src\integrator\impulse.cpp">
       <Filter>src\integrator</Filter>
     </ClCompile>
+    <ClCompile Include="src\integrator\engine.cpp">
+      <Filter>src\integrator</Filter>
+    </ClCompile>
+    <ClCompile Include="src\integrator\integrator.cpp">
+      <Filter>src\integrator</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h">
@@ -118,6 +124,12 @@
     </ClInclude>
     <ClInclude Include="src\unittests\test_shape_builder.h">
       <Filter>src\unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\ibroadphase.h">
+      <Filter>include\broadphase</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\imaterials.h">
+      <Filter>include\material</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

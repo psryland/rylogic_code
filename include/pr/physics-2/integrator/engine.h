@@ -28,11 +28,6 @@ namespace pr::physics
 		IBroadphase& m_broadphase;
 		IMaterials& m_materials;
 
-		// GPU compute callback — called during Step() if set.
-		// This hook allows GPU work to be injected into the physics pipeline
-		// without exposing view3d-12/DirectX types in the physics headers.
-		std::function<void(float dt)> m_gpu_step;
-
 		// Raised after collision detection, but before resolution.
 		// Subscribers can inspect, modify, add, or remove contacts before impulses are applied.
 		EventHandler<Engine&, std::vector<Contact>&> PostCollisionDetection;
@@ -40,7 +35,6 @@ namespace pr::physics
 		Engine(IBroadphase& bp, IMaterials& mats)
 			: m_broadphase(bp)
 			, m_materials(mats)
-			, m_gpu_step()
 			, PostCollisionDetection()
 		{}
 
@@ -62,10 +56,6 @@ namespace pr::physics
 				if (body.Mass() >= InfiniteMass * 0.5f) continue;
 				Evolve(body, dt);
 			}
-
-			// Run GPU compute work if a callback is registered
-			if (m_gpu_step)
-				m_gpu_step(dt);
 
 			// Broad phase → narrow phase → resolve (implemented in engine.cpp)
 			DetectAndResolve(dt);
