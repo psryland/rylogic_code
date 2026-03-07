@@ -135,14 +135,18 @@ float3x3 orthonorm3x3(float3x3 m)
 //   [I⁻¹_c   0  ] [τ]   [I⁻¹_c * τ    ]   [ω]
 //   [0     1/m  ] [f] = [(1/m) * f     ] = [v]
 //
-// When com ≠ 0, there are off-diagonal coupling terms from the parallel axis theorem.
-// The full 6×6 form is:
-//   [I⁻¹_o         I⁻¹_o * cxᵀ ] [τ]
-//   [cx * I⁻¹_o    1/m + cx * I⁻¹_o * cxᵀ] [f]
-// where cx is the cross-product matrix of the com offset.
+// When com ≠ 0, the full 6×6 spatial inverse inertia has off-diagonal coupling terms
+// from the parallel axis theorem:
+//   Io⁻¹ = [Ic⁻¹          , -Ic⁻¹ * cx           ]
+//          [cx * Ic⁻¹     , 1/m - cx * Ic⁻¹ * cx  ]
+// where cx is the cross-product matrix of the com offset: cx * v = cross(com, v).
+//
+// Applied to a spatial force (τ, f):
+//   ω = Ic⁻¹ * τ - Ic⁻¹ * (com × f)
+//   v = com × (Ic⁻¹ * τ) + f/m - com × (Ic⁻¹ * (com × f))
 //
 // Parameters:
-//   iinv_3x3   — The world-space 3×3 inverse inertia (unit, at CoM) scaled by inv_mass
+//   iinv_3x3   — The world-space 3×3 inverse inertia (at CoM, scaled by inv_mass)
 //   inv_mass   — 1/mass
 //   com        — Centre of mass offset from model origin (in current frame)
 //   torque     — Angular component of the spatial force (momentum.ang)
@@ -163,22 +167,16 @@ void spatial_multiply_inertia_inv(
 	}
 	else
 	{
-		// Full 6×6 spatial inverse inertia with coupling terms.
-		// cx is the cross-product matrix of 'com':
-		//   cx * v = cross(com, v)
-		// cxT * v = cross(v, com) = -cross(com, v)
+		// Full 6×6 spatial inverse inertia multiply.
+		// Compute two intermediates to share work between ω and v:
+		float3 Ic_inv_tau = mul(iinv_3x3, torque);            // Ic⁻¹ * τ
+		float3 Ic_inv_cxf = mul(iinv_3x3, cross(com, force)); // Ic⁻¹ * (com × f)
 
-		// Top-left block: I⁻¹_o (inverse inertia at origin, not CoM)
-		// We have I⁻¹_c (at CoM). To get I⁻¹_o we'd need the full inverse,
-		// but since this is the less common path and bodies typically have
-		// com at the model origin, we use the approximation:
-		//   angular = I⁻¹_c * (torque + cross(force, com))
-		//   linear  = inv_mass * force + cross(angular, com)
-		// This is equivalent to shifting the force to CoM, computing velocity there,
-		// then shifting back.
-		float3 shifted_torque = torque + cross(force, com);
-		out_ang = mul(iinv_3x3, shifted_torque);
-		out_lin = inv_mass * force + cross(out_ang, com);
+		// ω = Ic⁻¹ * τ - Ic⁻¹ * (com × f) = Ic⁻¹ * (τ - com × f)
+		out_ang = Ic_inv_tau - Ic_inv_cxf;
+
+		// v = com × (Ic⁻¹ * τ) + f/m - com × (Ic⁻¹ * (com × f))
+		out_lin = cross(com, Ic_inv_tau) + inv_mass * force - cross(com, Ic_inv_cxf);
 	}
 }
 

@@ -130,20 +130,31 @@ namespace pr::physics
 		auto os_com = v4{dyn.inertia_inv_com_and_invmass.x, dyn.inertia_inv_com_and_invmass.y, dyn.inertia_inv_com_and_invmass.z, 0};
 		auto ws_com = rot * os_com;
 
-		// Compute velocity from momentum
+		// Compute velocity from momentum using the spatial inverse inertia.
+		// When CoM == 0, the 6x6 inverse inertia is block-diagonal and simplifies.
+		// When CoM != 0, we need the full 6x6 spatial multiply:
+		//   Io_inv = | Ic_inv       , -Ic_inv * cx       |
+		//            | cx * Ic_inv  , 1/m - cx*Ic_inv*cx |
+		// where cx is the cross-product matrix of 'com' (cx * v = cross(com, v)).
 		v4 vel_ang, vel_lin;
 		if (LengthSq(ws_com) < 1e-12f)
 		{
-			// Simple case: no coupling between angular and linear
+			// Block-diagonal: no coupling between angular and linear
 			vel_ang = ws_iinv * dyn.momentum_ang;
 			vel_lin = inv_mass * dyn.momentum_lin;
 		}
 		else
 		{
-			// Shift force to CoM, compute velocity, shift back
-			auto shifted_torque = dyn.momentum_ang + Cross(dyn.momentum_lin, ws_com);
-			vel_ang = ws_iinv * shifted_torque;
-			vel_lin = inv_mass * dyn.momentum_lin + Cross(vel_ang, ws_com);
+			// Full 6x6 spatial inverse inertia multiply.
+			// Compute two intermediates to share work between angular and linear:
+			auto Ic_inv_tau = ws_iinv * dyn.momentum_ang;         // Ic_inv * tau
+			auto Ic_inv_cxf = ws_iinv * Cross(ws_com, dyn.momentum_lin); // Ic_inv * (com x f)
+
+			// omega = Ic_inv * tau - Ic_inv * (com x f) = Ic_inv * (tau - com x f)
+			vel_ang = Ic_inv_tau - Ic_inv_cxf;
+
+			// v = com x (Ic_inv * tau) + f/m - com x (Ic_inv * (com x f))
+			vel_lin = Cross(ws_com, Ic_inv_tau) + inv_mass * dyn.momentum_lin - Cross(ws_com, Ic_inv_cxf);
 		}
 
 		// Compute displacement
