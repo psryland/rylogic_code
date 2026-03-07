@@ -37,13 +37,16 @@ namespace physics_sandbox
 	// the interactive sandbox and the headless unit test mode.
 	struct Scene
 	{
-		using Physics = pr::physics::Engine<pr::physics::broadphase::Brute<Body>, pr::physics::MaterialMap>;
-
 		static constexpr int MaxBodies = 16;
 
 		Body        m_body[MaxBodies];
 		int         m_body_count;
-		Physics     m_physics;
+
+		// Broadphase and materials are owned by the scene and passed by reference
+		// to the engine. This keeps the engine decoupled from concrete implementations.
+		pr::physics::broadphase::Brute m_broadphase;
+		pr::physics::MaterialMap       m_materials;
+		pr::physics::Engine            m_physics;
 		pr::collision::ShapeBox m_box;
 
 		// Shapes owned by a loaded scene file. When loading from JSON, each body
@@ -82,7 +85,9 @@ namespace physics_sandbox
 		Scene()
 			: m_body()
 			, m_body_count(2)
-			, m_physics()
+			, m_broadphase()
+			, m_materials()
+			, m_physics(m_broadphase, m_materials)
 			, m_box(pr::v4{ 2, 2, 2, 0 })
 			, m_gravity(v4::Zero())
 			, m_kill_zone_height(-100.0f)
@@ -136,7 +141,7 @@ namespace physics_sandbox
 			m_owned_shapes.clear();
 
 			// Set up perfectly elastic, frictionless material for clean collision tests
-			auto& mat = m_physics.m_materials(0);
+			auto& mat = m_materials(0);
 			mat.m_elasticity_norm = 1.0f;
 			mat.m_elasticity_tang = 0.0f;
 			mat.m_elasticity_tors = 0.0f;
@@ -146,9 +151,9 @@ namespace physics_sandbox
 			SetupScenario();
 
 			// Rebuild the broadphase with the active bodies
-			m_physics.m_broadphase.Clear();
+			m_broadphase.Clear();
 			for (int i = 0; i != m_body_count; ++i)
-				m_physics.m_broadphase.Add(m_body[i]);
+				m_broadphase.Add(m_body[i]);
 
 			DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
 			DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
@@ -190,7 +195,7 @@ namespace physics_sandbox
 			m_kill_zone_height = scene_desc.ground.height - 50.0f;
 
 			// Apply material properties from the scene file
-			auto& mat = m_physics.m_materials(0);
+			auto& mat = m_materials(0);
 			mat.m_elasticity_norm = scene_desc.elasticity;
 			mat.m_elasticity_tang = 0.0f;
 			mat.m_elasticity_tors = 0.0f;
@@ -342,9 +347,9 @@ namespace physics_sandbox
 			}
 
 			// Rebuild the broadphase with the new bodies
-			m_physics.m_broadphase.Clear();
+			m_broadphase.Clear();
 			for (int i = 0; i != m_body_count; ++i)
-				m_physics.m_broadphase.Add(m_body[i]);
+				m_broadphase.Add(m_body[i]);
 
 			DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
 			if (!scene_desc.description.empty())

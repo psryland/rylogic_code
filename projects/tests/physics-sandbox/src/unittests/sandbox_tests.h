@@ -20,8 +20,6 @@ namespace physics_sandbox::tests
 	// to completion, recording pre/post state for validation.
 	namespace collision_test
 	{
-		using TestEngine = physics::Engine<physics::broadphase::Brute<physics::RigidBody>, physics::MaterialMap>;
-
 		// Snapshot of conserved system quantities (momentum, energy)
 		struct SystemState
 		{
@@ -75,15 +73,18 @@ namespace physics_sandbox::tests
 			body_b.VelocityWS(v4::Zero(), vel_b);
 
 			// Configure perfectly elastic, frictionless collisions
-			auto engine = TestEngine{};
-			auto& mat = engine.m_materials(0);
+			physics::broadphase::Brute broadphase;
+			physics::MaterialMap materials;
+			physics::Engine engine(broadphase, materials);
+
+			auto& mat = materials(0);
 			mat.m_elasticity_norm = 1.0f;
 			mat.m_elasticity_tang = 0.0f;
 			mat.m_elasticity_tors = 0.0f;
 			mat.m_friction_static = 0.0f;
 
-			engine.m_broadphase.Add(body_a);
-			engine.m_broadphase.Add(body_b);
+			broadphase.Add(body_a);
+			broadphase.Add(body_b);
 
 			// Capture the "before" state on the step where collision is first detected,
 			// before the impulse is applied.

@@ -6,10 +6,11 @@
 
 #include "pr/physics-2/forward.h"
 #include "pr/physics-2/material/material.h"
+#include "pr/physics-2/material/imaterials.h"
 
 namespace pr::physics
 {
-	struct MaterialMap
+	struct MaterialMap : IMaterials
 	{
 	private:
 		std::vector<Material> m_mats;
@@ -59,8 +60,8 @@ namespace pr::physics
 			return m_mats[0];
 		}
 
-		// Return the material that represents the properties of two materials in contact
-		Material operator()(int id0, int id1) const
+		// IMaterials — return the combined material for two bodies in contact
+		Material operator()(int id0, int id1) const override
 		{
 			auto& mat0 = (*this)(id0);
 			auto& mat1 = (*this)(id1);
