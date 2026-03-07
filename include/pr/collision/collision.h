@@ -15,6 +15,7 @@
 #include "pr/collision/col_triangle_vs_box.h"
 #include "pr/collision/col_triangle_vs_line.h"
 #include "pr/collision/col_triangle_vs_triangle.h"
+#include "pr/collision/col_gjk.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
 
@@ -59,11 +60,11 @@ namespace pr::collision
 			TriangleVsLine,          // (3 v 2) - Triangle v Line
 			TriangleVsTriangle,      // (3 v 3) - Triangle v Triangle
 
-			CollisionNotImplemented, // (4 v 0) - Polytope v Sphere
-			CollisionNotImplemented, // (4 v 1) - Polytope v Box
-			CollisionNotImplemented, // (4 v 2) - Polytope v Line
-			CollisionNotImplemented, // (4 v 3) - Polytope v Triangle
-			CollisionNotImplemented, // (4 v 4) - Polytope v Polytope
+			GjkCollide,              // (4 v 0) - Polytope v Sphere
+			GjkCollide,              // (4 v 1) - Polytope v Box
+			GjkCollide,              // (4 v 2) - Polytope v Line
+			GjkCollide,              // (4 v 3) - Polytope v Triangle
+			GjkCollide,              // (4 v 4) - Polytope v Polytope
 
 			CollisionNotImplemented, // (5 v 0) - Array v Sphere
 			CollisionNotImplemented, // (5 v 1) - Array v Box
