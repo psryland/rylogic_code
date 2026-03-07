@@ -28,7 +28,8 @@ namespace physics_sandbox::scene_loader
 	//             },
 	//             { "name": "s1", "shape": { "type": "sphere", "radius": 1.0 }, ... },
 	//             { "name": "l1", "shape": { "type": "line", "length": 2.0, "thickness": 0.1 }, ... },
-	//             { "name": "t1", "shape": { "type": "triangle", "vertices": [[0,0,0],[1,0,0],[0,1,0]] }, ... }
+	//             { "name": "t1", "shape": { "type": "triangle", "vertices": [[0,0,0],[1,0,0],[0,1,0]] }, ... },
+	//             { "name": "p1", "shape": { "type": "polytope", "vertices": [[x,y,z], ...] }, ... }
 	//         ]
 	//     }
 	// }
@@ -38,13 +39,14 @@ namespace physics_sandbox::scene_loader
 	{
 		std::string name;
 
-		// Shape: box, sphere, line, or triangle
-		enum class EShape { Box, Sphere, Line, Triangle } shape_type;
+		// Shape: box, sphere, line, triangle, or polytope
+		enum class EShape { Box, Sphere, Line, Triangle, Polytope } shape_type;
 		v4 box_dimensions;     // Full dimensions (only valid when shape_type == Box)
 		float sphere_radius;   // Radius (only valid when shape_type == Sphere)
 		float line_length;     // Full length (only valid when shape_type == Line)
 		float line_thickness;  // Full thickness, 0 = infinitely thin (only valid when shape_type == Line)
 		v4 tri_verts[3];       // Triangle vertices as offsets from origin (only valid when shape_type == Triangle)
+		std::vector<v4> polytope_verts; // Convex hull vertices (only valid when shape_type == Polytope)
 
 		float mass;          // 0 = static (immovable) body with infinite mass
 		v4 position;
@@ -138,6 +140,15 @@ namespace physics_sandbox::scene_loader
 			desc.tri_verts[0] = ReadVec3(verts[0], 0);
 			desc.tri_verts[1] = ReadVec3(verts[1], 0);
 			desc.tri_verts[2] = ReadVec3(verts[2], 0);
+		}
+		else if (shape_type == "polytope")
+		{
+			desc.shape_type = BodyDesc::EShape::Polytope;
+			auto const& verts = shape_obj["vertices"].to_array();
+			if (verts.size() < 4)
+				throw std::runtime_error("Polytope shape requires at least 4 non-coplanar vertices");
+			for (auto const& v : verts)
+				desc.polytope_verts.push_back(ReadVec3(v, 1.0f));
 		}
 		else
 		{

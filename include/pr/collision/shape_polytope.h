@@ -3,8 +3,11 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
+#include <algorithm>
 #include "pr/collision/forward.h"
 #include "pr/collision/shape.h"
+#include "pr/container/byte_data.h"
+#include "pr/geometry/convex_hull.h"
 
 namespace pr::collision
 {
@@ -606,4 +609,283 @@ namespace pr::collision
 
 		return true;
 	}
+
+	// Build a ShapePolytope from a set of points using convex hull.
+	// Returns the polytope packed into a byte_data<16> buffer suitable for use as a collision shape.
+	// The caller owns the buffer and can access the shape via: buf.as<ShapePolytope>()
+	// Note: ShapePolytope uses uint8_t vertex indices, so max 255 vertices.
+	inline byte_data<16> BuildPolytopeFromPoints(
+		v4 const* points, int point_count,
+		m4x4 const& shape_to_parent = m4x4::Identity(),
+		MaterialId material_id = 0,
+		Shape::EFlags flags = Shape::EFlags::None)
+	{
+		using Idx  = ShapePolytope::Idx;
+		using Face = ShapePolytope::Face;
+		using Nbrs = ShapePolytope::Nbrs;
+
+		assert(point_count >= 4 && "Need at least 4 non-coplanar points for a polytope");
+		assert(point_count <= 255 && "ShapePolytope uses uint8_t indices, max 255 vertices");
+
+		// Compute the convex hull of the point set.
+		// ConvexHull partitions the index array so hull vertices come first,
+		// and returns face index-triples referencing positions in the index array.
+		std::vector<int> indices(point_count);
+		for (int i = 0; i != point_count; ++i)
+			indices[i] = i;
+
+		// Allocate face buffer. A convex hull of N vertices has at most 2*(N-2) faces.
+		auto max_faces = 2 * (point_count - 2);
+		std::vector<int> face_buf(max_faces * 3);
+
+		size_t hull_vert_count = 0;
+		size_t hull_face_count = 0;
+		auto ok = ConvexHull(
+			points,
+			indices.data(), indices.data() + point_count,
+			face_buf.data(), face_buf.data() + face_buf.size(),
+			hull_vert_count, hull_face_count);
+
+		if (!ok || hull_vert_count < 4 || hull_face_count < 4)
+			throw std::runtime_error("ConvexHull failed: point set is degenerate (coplanar, collinear, or too few points)");
+
+		auto vc = static_cast<int>(hull_vert_count);
+		auto fc = static_cast<int>(hull_face_count);
+
+		// Build edge adjacency from the hull faces.
+		// For each vertex, collect all vertices that share an edge with it.
+		std::vector<std::vector<Idx>> adj(vc);
+		for (int f = 0; f != fc; ++f)
+		{
+			auto a = static_cast<Idx>(face_buf[f * 3 + 0]);
+			auto b = static_cast<Idx>(face_buf[f * 3 + 1]);
+			auto c = static_cast<Idx>(face_buf[f * 3 + 2]);
+
+			// Record edges in both directions (each edge appears in two faces)
+			auto add_edge = [&](Idx from, Idx to)
+			{
+				auto& list = adj[from];
+				if (std::find(list.begin(), list.end(), to) == list.end())
+					list.push_back(to);
+			};
+			add_edge(a, b); add_edge(b, a);
+			add_edge(b, c); add_edge(c, b);
+			add_edge(c, a); add_edge(a, c);
+		}
+
+		// For each vertex, find the "artificial" neighbour — the most distant vertex.
+		// This is used by the hill-climbing support vertex search to quickly jump
+		// across the polytope, avoiding local minima on large convex shapes.
+		for (int i = 0; i != vc; ++i)
+		{
+			auto& vi = points[indices[i]];
+			auto max_dist_sq = -1.0f;
+			auto art_nbr = Idx{0};
+			for (int j = 0; j != vc; ++j)
+			{
+				if (j == i) continue;
+				auto dist_sq = LengthSq(points[indices[j]] - vi);
+				if (dist_sq > max_dist_sq)
+				{
+					max_dist_sq = dist_sq;
+					art_nbr = static_cast<Idx>(j);
+				}
+			}
+
+			// Prepend the artificial neighbour (always first in the list)
+			adj[i].insert(adj[i].begin(), art_nbr);
+		}
+
+		// Calculate total neighbour count for buffer sizing
+		auto total_nbr_count = 0;
+		for (int i = 0; i != vc; ++i)
+			total_nbr_count += static_cast<int>(adj[i].size());
+
+		// Allocate the byte buffer with the exact layout expected by ShapePolytope:
+		//   ShapePolytope header
+		//   v4    verts[vc]
+		//   Face  faces[fc]
+		//   Nbrs  nbrs[vc]        (headers with byte-offset pointers)
+		//   Idx   nbr_data[total]  (contiguous neighbour index arrays)
+		auto buf_size =
+			sizeof(ShapePolytope) +
+			sizeof(v4)   * vc +
+			sizeof(Face) * fc +
+			sizeof(Nbrs) * vc +
+			sizeof(Idx)  * total_nbr_count;
+
+		byte_data<16> buf;
+		buf.resize(buf_size, std::byte{0});
+
+		// Placement-new the ShapePolytope header at the start of the buffer
+		auto& poly = *new (buf.m_ptr) ShapePolytope(shape_to_parent, material_id, flags);
+
+		// Set counts so that the accessor methods (vert_beg, face_beg, nbrs_beg) work
+		poly.m_vert_count = vc;
+		poly.m_face_count = fc;
+
+		// Copy hull vertices. The ConvexHull partitioned the index array so that
+		// indices[0..vc-1] are the hull vertices. Map through the index array
+		// to get the original point positions.
+		auto* verts = poly.vert_beg();
+		for (int i = 0; i != vc; ++i)
+			verts[i] = points[indices[i]];
+
+		// Copy hull faces (already in the correct 0-based index space)
+		auto* faces = poly.face_beg();
+		for (int f = 0; f != fc; ++f)
+		{
+			faces[f].m_index[0] = static_cast<Idx>(face_buf[f * 3 + 0]);
+			faces[f].m_index[1] = static_cast<Idx>(face_buf[f * 3 + 1]);
+			faces[f].m_index[2] = static_cast<Idx>(face_buf[f * 3 + 2]);
+			faces[f].pad = 0;
+		}
+
+		// Build the neighbour headers and index data.
+		// Each Nbrs header stores a byte offset (m_first) from its own address
+		// to the start of its neighbour index array in the trailing Idx data.
+		auto* nbrs_hdrs = poly.nbrs_beg();
+		auto* nbr_data = reinterpret_cast<Idx*>(nbrs_hdrs + vc);
+		auto nbr_ofs = 0;
+		for (int i = 0; i != vc; ++i)
+		{
+			auto& hdr = nbrs_hdrs[i];
+			auto& nbr_list = adj[i];
+
+			hdr.m_count = static_cast<uint16_t>(nbr_list.size());
+
+			// m_first = byte distance from this Nbrs struct to its first Idx entry
+			hdr.m_first = static_cast<uint16_t>(
+				reinterpret_cast<char const*>(&nbr_data[nbr_ofs]) -
+				reinterpret_cast<char const*>(&nbrs_hdrs[i]));
+
+			for (auto idx : nbr_list)
+				nbr_data[nbr_ofs++] = idx;
+		}
+
+		// Finalize — Complete() recalculates m_base.m_size and the bounding box
+		poly.Complete(vc, fc);
+		return buf;
+	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+
+namespace pr::collision::tests
+{
+	PRUnitTestClass(BuildPolytopeTests)
+	{
+		// Build a tetrahedron polytope and validate its structure
+		PRUnitTestMethod(TetrahedronPolytope)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{2, 0, 0, 1},
+				v4{1, 2, 0, 1},
+				v4{1, 1, 2, 1},
+			};
+
+			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto& poly = buf.as<ShapePolytope>();
+
+			PR_EXPECT(poly.m_vert_count == 4);
+			PR_EXPECT(poly.m_face_count == 4);
+			PR_EXPECT(poly.m_base.m_type == EShape::Polytope);
+
+			// Validate the polytope structure (neighbour consistency, closed polyhedron)
+			char const* err = nullptr;
+			PR_EXPECT(Validate(poly, false, &err));
+		}
+
+		// Build a cube polytope from 8 corner points
+		PRUnitTestMethod(CubePolytope)
+		{
+			v4 pts[] = {
+				v4{-1, -1, -1, 1}, v4{ 1, -1, -1, 1},
+				v4{-1,  1, -1, 1}, v4{ 1,  1, -1, 1},
+				v4{-1, -1,  1, 1}, v4{ 1, -1,  1, 1},
+				v4{-1,  1,  1, 1}, v4{ 1,  1,  1, 1},
+			};
+
+			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto& poly = buf.as<ShapePolytope>();
+
+			PR_EXPECT(poly.m_vert_count == 8);
+			PR_EXPECT(poly.m_face_count == 12); // 6 quads = 12 triangles
+
+			char const* err = nullptr;
+			PR_EXPECT(Validate(poly, false, &err));
+		}
+
+		// Build a polytope with interior points — only hull verts should appear
+		PRUnitTestMethod(InteriorPointsFiltered)
+		{
+			v4 pts[] = {
+				v4{-2, -2, -2, 1}, v4{ 2, -2, -2, 1},
+				v4{-2,  2, -2, 1}, v4{ 2,  2, -2, 1},
+				v4{-2, -2,  2, 1}, v4{ 2, -2,  2, 1},
+				v4{-2,  2,  2, 1}, v4{ 2,  2,  2, 1},
+				v4{0, 0, 0, 1},     // interior
+				v4{1, 0.5f, 0.5f, 1}, // interior
+			};
+
+			auto buf = BuildPolytopeFromPoints(pts, 10);
+			auto& poly = buf.as<ShapePolytope>();
+
+			PR_EXPECT(poly.m_vert_count == 8);
+
+			char const* err = nullptr;
+			PR_EXPECT(Validate(poly, false, &err));
+		}
+
+		// Bounding box should tightly contain all hull vertices
+		PRUnitTestMethod(BoundingBox)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{4, 0, 0, 1},
+				v4{0, 3, 0, 1},
+				v4{0, 0, 2, 1},
+			};
+
+			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto& poly = buf.as<ShapePolytope>();
+
+			// BBox should contain all vertices
+			for (auto v : poly.verts())
+				PR_EXPECT(IsWithin(poly.m_base.m_bbox, v, maths::tiny<float>));
+		}
+
+		// Support vertex should return the most extreme vertex in a given direction
+		PRUnitTestMethod(SupportVertex)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{3, 0, 0, 1},
+				v4{0, 3, 0, 1},
+				v4{0, 0, 3, 1},
+			};
+
+			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto& poly = buf.as<ShapePolytope>();
+
+			// Support in +X direction should be the vertex at (3,0,0)
+			int hint = 0, sup_id = 0;
+			auto sv = collision::SupportVertex(poly, v4{1, 0, 0, 0}, hint, sup_id);
+			PR_EXPECT(FEql(sv, v4{3, 0, 0, 1}));
+
+			// Support in +Y direction should be (0,3,0)
+			hint = 0;
+			sv = collision::SupportVertex(poly, v4{0, 1, 0, 0}, hint, sup_id);
+			PR_EXPECT(FEql(sv, v4{0, 3, 0, 1}));
+
+			// Support in +Z direction should be (0,0,3)
+			hint = 0;
+			sv = collision::SupportVertex(poly, v4{0, 0, 1, 0}, hint, sup_id);
+			PR_EXPECT(FEql(sv, v4{0, 0, 3, 1}));
+		}
+
+	};
+}
+#endif

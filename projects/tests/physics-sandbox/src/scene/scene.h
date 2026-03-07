@@ -53,6 +53,11 @@ namespace physics_sandbox
 		using OwnedShape = std::variant<pr::collision::ShapeBox, pr::collision::ShapeSphere, pr::collision::ShapeLine, pr::collision::ShapeTriangle>;
 		std::vector<OwnedShape> m_owned_shapes;
 
+		// Polytope shapes are variable-sized (trailing vertex/face/neighbour data),
+		// so they can't fit in the OwnedShape variant. Store them in separate byte
+		// buffers and access via: buf.as<ShapePolytope>()
+		std::vector<pr::byte_data<16>> m_owned_polytopes;
+
 		// Gravity acceleration vector (direction and magnitude, e.g. [0, -9.81, 0]).
 		// Applied each step to all non-static bodies as F = m * g.
 		pr::v4 m_gravity;
@@ -255,6 +260,20 @@ namespace physics_sandbox
 					{
 						m_owned_shapes.emplace_back(pr::collision::ShapeTriangle(bd.tri_verts[0], bd.tri_verts[1], bd.tri_verts[2]));
 						auto& shape = std::get<pr::collision::ShapeTriangle>(m_owned_shapes.back());
+
+						if (bd.mass <= 0.0f)
+							body.Shape(shape, pr::physics::Inertia::Infinite());
+						else
+							body.Shape(shape, bd.mass);
+						break;
+					}
+					case scene_loader::BodyDesc::EShape::Polytope:
+					{
+						// Build the polytope from the convex hull of the given vertices.
+						// The byte_data buffer holds the variable-sized ShapePolytope + trailing data.
+						m_owned_polytopes.push_back(pr::collision::BuildPolytopeFromPoints(
+							bd.polytope_verts.data(), static_cast<int>(bd.polytope_verts.size())));
+						auto& shape = m_owned_polytopes.back().as<pr::collision::ShapePolytope>();
 
 						if (bd.mass <= 0.0f)
 							body.Shape(shape, pr::physics::Inertia::Infinite());

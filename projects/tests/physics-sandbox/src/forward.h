@@ -30,6 +30,7 @@
 
 #include "pr/collision/shape_box.h"
 #include "pr/collision/shape_sphere.h"
+#include "pr/collision/shape_polytope.h"
 
 #include "pr/physics-2/physics.h"
 

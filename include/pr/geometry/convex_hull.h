@@ -583,3 +583,121 @@ namespace pr
 		return ConvexHull<VertCont, Face*>(vcont, num_verts, face_beg, face_end, vert_count, face_count);
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+
+namespace pr::geometry::tests
+{
+	PRUnitTestClass(ConvexHullTests)
+	{
+		// Helper: run convex hull on a set of points and return hull vert/face counts
+		static bool RunHull(v4 const* pts, int count, size_t& vert_count, size_t& face_count)
+		{
+			std::vector<int> indices(count);
+			for (int i = 0; i != count; ++i) indices[i] = i;
+
+			auto max_faces = 2 * (count - 2);
+			std::vector<int> faces(max_faces * 3);
+
+			return ConvexHull(
+				pts,
+				indices.data(), indices.data() + count,
+				faces.data(), faces.data() + faces.size(),
+				vert_count, face_count);
+		}
+
+		// Four points forming a tetrahedron — simplest valid hull
+		PRUnitTestMethod(Tetrahedron)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{1, 0, 0, 1},
+				v4{0, 1, 0, 1},
+				v4{0, 0, 1, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(RunHull(pts, 4, vc, fc));
+			PR_EXPECT(vc == 4);
+			PR_EXPECT(fc == 4); // Tetrahedron has 4 faces
+		}
+
+		// Cube: 8 vertices, expected hull is all 8 verts with 12 triangular faces
+		PRUnitTestMethod(Cube)
+		{
+			v4 pts[] = {
+				v4{-1, -1, -1, 1}, v4{ 1, -1, -1, 1},
+				v4{-1,  1, -1, 1}, v4{ 1,  1, -1, 1},
+				v4{-1, -1,  1, 1}, v4{ 1, -1,  1, 1},
+				v4{-1,  1,  1, 1}, v4{ 1,  1,  1, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(RunHull(pts, 8, vc, fc));
+			PR_EXPECT(vc == 8);
+			PR_EXPECT(fc == 12); // Cube = 6 quads = 12 triangles
+		}
+
+		// Points with interior points — only hull verts should be counted
+		PRUnitTestMethod(InteriorPointsFiltered)
+		{
+			v4 pts[] = {
+				// Cube corners (hull vertices)
+				v4{-2, -2, -2, 1}, v4{ 2, -2, -2, 1},
+				v4{-2,  2, -2, 1}, v4{ 2,  2, -2, 1},
+				v4{-2, -2,  2, 1}, v4{ 2, -2,  2, 1},
+				v4{-2,  2,  2, 1}, v4{ 2,  2,  2, 1},
+				// Interior points (should be filtered out)
+				v4{0, 0, 0, 1},
+				v4{1, 0, 0, 1},
+				v4{0, 1, 0, 1},
+				v4{0, 0, 1, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(RunHull(pts, 12, vc, fc));
+			PR_EXPECT(vc == 8);  // Only the 8 cube corners
+			PR_EXPECT(fc == 12);
+		}
+
+		// Degenerate: coplanar points should fail (no volume)
+		PRUnitTestMethod(CoplanarPointsFail)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{1, 0, 0, 1},
+				v4{0, 1, 0, 1},
+				v4{1, 1, 0, 1},
+				v4{0.5f, 0.5f, 0, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(!RunHull(pts, 5, vc, fc));
+		}
+
+		// Degenerate: collinear points should fail
+		PRUnitTestMethod(CollinearPointsFail)
+		{
+			v4 pts[] = {
+				v4{0, 0, 0, 1},
+				v4{1, 0, 0, 1},
+				v4{2, 0, 0, 1},
+				v4{3, 0, 0, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(!RunHull(pts, 4, vc, fc));
+		}
+
+		// Irregular shape: 6 points forming an octahedron
+		PRUnitTestMethod(Octahedron)
+		{
+			v4 pts[] = {
+				v4{ 1, 0, 0, 1}, v4{-1, 0, 0, 1},
+				v4{ 0, 1, 0, 1}, v4{ 0,-1, 0, 1},
+				v4{ 0, 0, 1, 1}, v4{ 0, 0,-1, 1},
+			};
+			size_t vc = 0, fc = 0;
+			PR_EXPECT(RunHull(pts, 6, vc, fc));
+			PR_EXPECT(vc == 6);
+			PR_EXPECT(fc == 8); // Octahedron has 8 triangular faces
+		}
+	};
+}
+#endif

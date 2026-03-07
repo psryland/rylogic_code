@@ -277,6 +277,27 @@
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_gjk.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">

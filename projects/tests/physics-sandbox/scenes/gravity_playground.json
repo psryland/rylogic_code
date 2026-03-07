@@ -1,6 +1,6 @@
 {
 	"scene": {
-		"description": "Objects falling under gravity onto a ground plane. Boxes, spheres, thick lines, and triangles at various heights. Demonstrates gravity, ground contact, and inter-body collisions across all shape types.",
+		"description": "Objects falling under gravity onto a ground plane. Boxes, spheres, thick lines, triangles, and polytopes at various heights. Demonstrates gravity, ground contact, and inter-body collisions across all shape types.",
 
 		"gravity": [0, 0, -9.81],
 
@@ -140,6 +140,56 @@
 				"position": [-3.0, 2.0, 24.0],
 				"velocity": [0.4, 0.0, 0.0],
 				"angular_velocity": [0.0, 0.0, 1.5]
+			},
+			{
+				"name": "polytope_tetra",
+				"shape": {
+					"type": "polytope",
+					"vertices": [
+						[-0.8, -0.8, -0.5],
+						[ 0.8, -0.8, -0.5],
+						[ 0.0,  0.8, -0.5],
+						[ 0.0,  0.0,  0.8]
+					]
+				},
+				"mass": 7.0,
+				"position": [5.0, 0.0, 11.0],
+				"velocity": [-0.4, 0.0, 0.0],
+				"angular_velocity": [0.5, 0.3, 0.0]
+			},
+			{
+				"name": "polytope_wedge",
+				"shape": {
+					"type": "polytope",
+					"vertices": [
+						[-1.5, -0.4, -0.3],
+						[ 1.5, -0.4, -0.3],
+						[-1.5,  0.4, -0.3],
+						[ 1.5,  0.4, -0.3],
+						[ 0.0,  0.0,  0.6]
+					]
+				},
+				"mass": 5.0,
+				"position": [-5.0, 1.0, 17.0],
+				"velocity": [0.3, -0.2, 0.0]
+			},
+			{
+				"name": "polytope_gem",
+				"shape": {
+					"type": "polytope",
+					"vertices": [
+						[ 0.0,  0.0, -0.8],
+						[ 1.0,  0.0,  0.0],
+						[-1.0,  0.0,  0.0],
+						[ 0.0,  1.0,  0.0],
+						[ 0.0, -1.0,  0.0],
+						[ 0.0,  0.0,  0.8]
+					]
+				},
+				"mass": 9.0,
+				"position": [0.0, -4.0, 13.0],
+				"velocity": [0.0, 0.5, 0.0],
+				"angular_velocity": [0.0, 0.0, 1.0]
 			}
 		]
 	}

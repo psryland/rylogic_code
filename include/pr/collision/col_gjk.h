@@ -558,6 +558,31 @@ namespace pr::collision::tests
 			if (gjk_result && ref_result)
 				PR_EXPECT(FEqlRelative(gjk_c.m_depth, ref_c.m_depth, 0.1f));
 		}
+
+		// GJK collision between polytopes built from point clouds via BuildPolytopeFromPoints
+		PRUnitTestMethod(GjkBuiltPolytopes)
+		{
+			v4 pts_a[] = {
+				v4{-1, -1, -1, 1}, v4{1, -1, -1, 1},
+				v4{0, 1, -1, 1}, v4{0, 0, 1, 1},
+			};
+			v4 pts_b[] = {
+				v4{-1, -1, -1, 1}, v4{1, -1, -1, 1},
+				v4{0, 1, -1, 1}, v4{0, 0, 1, 1},
+			};
+
+			auto buf_a = BuildPolytopeFromPoints(pts_a, 4);
+			auto buf_b = BuildPolytopeFromPoints(pts_b, 4);
+			auto& pa = buf_a.as<ShapePolytope>();
+			auto& pb = buf_b.as<ShapePolytope>();
+
+			// Overlapping at origin — should collide
+			Contact c;
+			PR_EXPECT(GjkCollide(pa, m4x4::Identity(), pb, m4x4::Identity(), c));
+
+			// Separated — should not collide
+			PR_EXPECT(!GjkCollide(pa, m4x4::Identity(), pb, m4x4::Translation(v4{10, 0, 0, 0}), c));
+		}
 	};
 }
 #endif

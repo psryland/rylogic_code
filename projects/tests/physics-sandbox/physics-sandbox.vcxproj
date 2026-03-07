@@ -46,6 +46,7 @@
     <ClCompile Include="src\utils\collision_dependency_check.cpp" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_gjk.h" />
     <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_box.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h" />
@@ -94,6 +95,12 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\misc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_line.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_sphere.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_box.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_line.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_sphere.h" />
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h" />
     <ClInclude Include="..\..\..\include\pr\collision\forward.h" />
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h" />
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_collision.h" />
