@@ -62,6 +62,11 @@ namespace physics_sandbox
 		// Applied each step to all non-static bodies as F = m * g.
 		pr::v4 m_gravity;
 
+		// Height below which bodies are frozen (zero velocity/momentum).
+		// Prevents bodies that escape through the ground from falling to -infinity
+		// and accumulating extreme float values that corrupt the simulation.
+		float m_kill_zone_height;
+
 		// Ground plane visual. This is a View3D object rendered as a large textured
 		// quad. The physics ground is a static body in m_body[] with a thin box shape.
 		view3d::Object m_ground_gfx;
@@ -84,6 +89,7 @@ namespace physics_sandbox
 			, m_physics()
 			, m_box(pr::v4{ 2, 2, 2, 0 })
 			, m_gravity(pr::v4Zero)
+			, m_kill_zone_height(-100.0f)
 			, m_ground_gfx()
 			, m_clock()
 			, m_steps_remaining(0)
@@ -124,6 +130,7 @@ namespace physics_sandbox
 			m_clock = 0;
 			m_diag.Reset();
 			m_gravity = pr::v4Zero;
+			m_kill_zone_height = -100.0f;
 			m_trail_step_counter = 0;
 			for (int i = 0; i != MaxBodies; ++i)
 				m_trail[i].clear();
@@ -188,6 +195,10 @@ namespace physics_sandbox
 
 			// Apply gravity from the scene file
 			m_gravity = scene_desc.gravity;
+
+			// Set the kill zone well below the ground plane. Bodies that fall below
+			// this height are frozen to prevent them from corrupting the simulation.
+			m_kill_zone_height = scene_desc.ground.height - 50.0f;
 
 			// Apply material properties from the scene file
 			auto& mat = m_physics.m_materials(0);
@@ -309,10 +320,11 @@ namespace physics_sandbox
 				if (ground_half_extent < 20.0f)
 					ground_half_extent = 20.0f;
 
-				// Create a thin box shape for the ground. The box dimensions are
-				// [2*extent, 2*extent, 0.5] so it's wide enough that objects don't
-				// fall off the edges.
-				auto ground_dim = pr::v4{ ground_half_extent * 2, ground_half_extent * 2, 0.5f, 0 };
+				// Create a thick box shape for the ground. The box is wide enough in XY that
+				// objects don't fall off the edges, and thick enough in Z (10 units) that
+				// fast-moving objects can't tunnel through it.
+				auto ground_thickness = 10.0f;
+				auto ground_dim = pr::v4{ ground_half_extent * 2, ground_half_extent * 2, ground_thickness, 0 };
 				m_owned_shapes.emplace_back(pr::collision::ShapeBox(ground_dim));
 				auto& ground_shape = std::get<pr::collision::ShapeBox>(m_owned_shapes.back());
 
@@ -329,9 +341,10 @@ namespace physics_sandbox
 				}
 
 				// Position the ground box so its top surface is at the requested height.
-				// ShapeBox stores half-extents in m_radius, so the top face is at +0.25
-				// above the box centre. We offset by -0.25 so the top face aligns with height.
-				ground_body.O2W(pr::m4x4::Translation(pr::v4{ 0, 0, scene_desc.ground.height - 0.25f, 1 }));
+				// ShapeBox stores half-extents in m_radius, so the top face is at
+				// +half_thickness above the box centre.
+				auto ground_half_thickness = ground_thickness * 0.5f;
+				ground_body.O2W(pr::m4x4::Translation(pr::v4{ 0, 0, scene_desc.ground.height - ground_half_thickness, 1 }));
 				ground_body.VelocityWS(pr::v4Zero, pr::v4Zero);
 
 				// Create the ground visual: a large textured quad.
@@ -420,6 +433,23 @@ namespace physics_sandbox
 					DbgLog("!!! NaN detected, resetting !!!\n");
 					Reset();
 					return false;
+				}
+			}
+
+			// Kill zone: freeze bodies that have fallen below the threshold.
+			// This prevents escaped bodies from accumulating extreme velocities
+			// that corrupt float precision for the entire simulation.
+			for (int i = 0; i != m_body_count; ++i)
+			{
+				auto mass = m_body[i].Mass();
+				if (mass >= pr::physics::InfiniteMass * 0.5f)
+					continue; // skip static bodies
+
+				auto pos = m_body[i].O2W().pos;
+				if (pos.z < m_kill_zone_height)
+				{
+					m_body[i].ZeroMomentum();
+					m_body[i].ZeroForces();
 				}
 			}
 

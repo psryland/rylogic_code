@@ -217,6 +217,15 @@ namespace physics_sandbox
 				if (args.m_vk_key == 'T')
 					m_scene.RunAllTests();
 
+				// Speed control: [=slower, ]=faster, \=reset to 1.0x
+				// Each press adjusts by 0.1x (10 slider ticks)
+				if (args.m_vk_key == VK_OEM_4) // '[' key
+					m_media.TimeScale(m_media.TimeScale() - 0.1f);
+				if (args.m_vk_key == VK_OEM_6) // ']' key
+					m_media.TimeScale(m_media.TimeScale() + 0.1f);
+				if (args.m_vk_key == VK_OEM_5) // '\' key
+					m_media.TimeScale(1.0f);
+
 				// Ctrl+O=open scene file
 				if (args.m_vk_key == 'O' && (GetKeyState(VK_CONTROL) & 0x8000))
 					OpenSceneFile();
@@ -453,7 +462,8 @@ namespace physics_sandbox
 			if (m_closing)
 				return;
 
-			// Accumulate time for FPS measurement and rate-limited UI updates
+			// Accumulate time for FPS measurement and rate-limited UI updates.
+			// These use wall-clock time (not scaled time) so the UI stays responsive.
 			m_fps_elapsed += elapsed_seconds;
 			m_title_elapsed += elapsed_seconds;
 			m_diag_gfx_elapsed += elapsed_seconds;
@@ -471,8 +481,13 @@ namespace physics_sandbox
 			if (m_scene.m_steps_remaining > 0)
 				--m_scene.m_steps_remaining;
 
-			// Step the physics scene
-			auto collision = m_scene.Step(elapsed_seconds);
+			// Apply the time scale from the slow-mo slider.
+			// This scales the physics dt so that 0.5x = half speed, 2.0x = double speed, etc.
+			// Wall-clock elapsed_seconds drives the render loop; sim_dt drives the physics.
+			auto sim_dt = elapsed_seconds * m_media.TimeScale();
+
+			// Step the physics scene with the scaled timestep
+			auto collision = m_scene.Step(sim_dt);
 
 			// Pause on first collision if requested
 			if (collision && m_pause_on_collision && m_scene.m_diag.count == 1)
@@ -520,6 +535,10 @@ namespace physics_sandbox
 			if (m_title_elapsed >= 0.25)
 			{
 				m_title_elapsed = 0;
+
+				// Keep the slider's speed label text in sync with the trackbar position
+				m_media.UpdateSpeedLabel();
+
 				SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d  FPS: %.0f",
 					static_cast<int>(m_scene.m_scenario),
 					ScenarioName(m_scene.m_scenario),

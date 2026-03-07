@@ -138,7 +138,16 @@ namespace pr::physics
 
 		auto Ic = Ic3x3(mass);
 		auto cx = CPM<m3x4>(CoM());
-		auto Io = Mat6x8<float, Motion, Force>{Ic - mass * cx * cx, mass * cx, -mass * cx, mass * m3x4::Identity()};
+
+		// The m00 block is Ic - mass*cx*cx which is algebraically symmetric (cx*cx is symmetric
+		// because (cxcx)^T = cx^T*cx^T = (-cx)(-cx) = cxcx). Float arithmetic in the triple
+		// product introduces tiny asymmetry, so explicitly symmetrize.
+		auto m00 = Ic - mass * cx * cx;
+		m00.x.y = m00.y.x = 0.5f * (m00.x.y + m00.y.x);
+		m00.x.z = m00.z.x = 0.5f * (m00.x.z + m00.z.x);
+		m00.y.z = m00.z.y = 0.5f * (m00.y.z + m00.z.y);
+
+		auto Io = Mat6x8<float, Motion, Force>{m00, mass * cx, -mass * cx, mass * m3x4::Identity()};
 		return Io;
 	}
 	bool Inertia::Check() const
@@ -424,7 +433,16 @@ namespace pr::physics
 
 		auto Ic_inv = Ic3x3(inv_mass);
 		auto cx = CPM<m3x4>(CoM());
-		auto Io_inv = Mat6x8<float, Force, Motion>{Ic_inv, -Ic_inv * cx, cx * Ic_inv, inv_mass * m3x4::Identity() - cx * Ic_inv * cx};
+
+		// The m11 block is cx*Ic_inv*cx which is algebraically symmetric (since Ic_inv is
+		// symmetric and cx is antisymmetric: (cSc)^T = c^T S c^T = (-c)S(-c) = cSc). Float
+		// arithmetic in the triple product introduces tiny asymmetry, so explicitly symmetrize.
+		auto m11 = inv_mass * m3x4::Identity() - cx * Ic_inv * cx;
+		m11.x.y = m11.y.x = 0.5f * (m11.x.y + m11.y.x);
+		m11.x.z = m11.z.x = 0.5f * (m11.x.z + m11.z.x);
+		m11.y.z = m11.z.y = 0.5f * (m11.y.z + m11.z.y);
+
+		auto Io_inv = Mat6x8<float, Force, Motion>{Ic_inv, -Ic_inv * cx, cx * Ic_inv, m11};
 		return Io_inv;
 	}
 	bool InertiaInv::Check() const
@@ -652,16 +670,25 @@ namespace pr::physics
 	Inertia Rotate(Inertia const& inertia, m3x4 const& a2b)
 	{
 		// Ib = a2b*Ia*b2a
+		// Explicitly symmetrize because R*S*R^T introduces tiny float asymmetry.
 		auto b2a = InvertAffine(a2b);
 		auto Ic = a2b * inertia.Ic3x3(1) * b2a;
+		Ic.x.y = Ic.y.x = 0.5f * (Ic.x.y + Ic.y.x);
+		Ic.x.z = Ic.z.x = 0.5f * (Ic.x.z + Ic.z.x);
+		Ic.y.z = Ic.z.y = 0.5f * (Ic.y.z + Ic.z.y);
 		auto com = a2b * inertia.CoM();
 		return Inertia{Ic, inertia.Mass(), com};
 	}
 	InertiaInv Rotate(InertiaInv const& inertia_inv, m3x4 const& a2b)
 	{
 		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
+		// Explicitly symmetrize the result because R*S*R^T introduces tiny float
+		// asymmetry when R is not perfectly orthogonal (e.g. after Orthonorm).
 		auto b2a = InvertAffine(a2b);
 		auto Ic_inv = a2b * inertia_inv.Ic3x3(1) * b2a;
+		Ic_inv.x.y = Ic_inv.y.x = 0.5f * (Ic_inv.x.y + Ic_inv.y.x);
+		Ic_inv.x.z = Ic_inv.z.x = 0.5f * (Ic_inv.x.z + Ic_inv.z.x);
+		Ic_inv.y.z = Ic_inv.z.y = 0.5f * (Ic_inv.y.z + Ic_inv.z.y);
 		auto com = a2b * inertia_inv.CoM();
 		return InertiaInv{Ic_inv, inertia_inv.InvMass(), com};
 	}

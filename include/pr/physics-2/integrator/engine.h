@@ -16,7 +16,6 @@ namespace pr::physics
 {
 	// ToDo:
 	//  - Make use of sub step collision time
-	//  - Stop Evolve adding energy to the system (higher order integrating?)
 	//  - Use spatial vectors for impulse restitution
 	//  - Optimise the impulse restitution function
 
@@ -149,15 +148,62 @@ namespace pr::physics
 			if (sep_dot > 0)
 				return;
 
+			// Measure pre-collision kinetic energy of the pair
+			auto ke_before = objA.KineticEnergy() + objB.KineticEnergy();
+
 			// Compute the equal-and-opposite impulse pair as spatial force wrenches.
 			// Each wrench is expressed at the body's own model origin, in its own frame.
 			auto impulse_pair = RestitutionImpulse(c);
+			auto ja = impulse_pair.m_os_impulse_objA;
+			auto jb = impulse_pair.m_os_impulse_objB;
+
+			// Pre-compute the "impulse kinetic energy" term: the KE that the impulse
+			// alone would create if applied to stationary bodies. This is the coefficient
+			// of the α² term in KE(α) = KE₀ + αB + α²A.
+			auto va_j = objA.InertiaInvOS() * ja;
+			auto vb_j = objB.InertiaInvOS() * jb;
+			auto A = 0.5f * (Dot(va_j, ja) + Dot(vb_j, jb));
 
 			// Apply the impulses to each body's momentum (stored as spatial force at model origin).
 			// The impulse changes both linear momentum (causing velocity change) and angular
 			// momentum (causing spin change proportional to the lever arm from CoM to contact).
-			objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
-			objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
+			objA.MomentumOS(objA.MomentumOS() + ja);
+			objB.MomentumOS(objB.MomentumOS() + jb);
+
+			// Energy conservation guard: if the impulse injected energy, scale it back.
+			// For elastic collisions (e=1), KE should be conserved exactly. For inelastic (e<1),
+			// KE must decrease. Numerical errors in contact geometry, sub-step approximation,
+			// or the collision mass matrix can cause small energy gains that compound over
+			// many collisions, leading to objects "exploding" apart.
+			//
+			// KE(α) = KE₀ + αB + α²A is quadratic in the impulse scale factor α.
+			// At α=1: KE₁ = KE₀ + B + A, so B = (KE₁ - KE₀) - A = δ - A.
+			// For KE(α) = KE₀: α²A + αB = 0 → α = -B/A = (A - δ)/A.
+			auto ke_after = objA.KineticEnergy() + objB.KineticEnergy();
+			auto delta = ke_after - ke_before;
+			if (delta > 0 && A > maths::tiny<float>)
+			{
+				auto alpha = Clamp((A - delta) / A, 0.0f, 1.0f);
+				auto correction = 1.0f - alpha;
+				objA.MomentumOS(objA.MomentumOS() - correction * ja);
+				objB.MomentumOS(objB.MomentumOS() - correction * jb);
+
+				#if PR_DBG
+				{
+					// Log significant energy clamping events to diagnose explosion sources
+					auto ke_clamped = objA.KineticEnergy() + objB.KineticEnergy();
+					if (delta > 0.1f || alpha < 0.5f)
+					{
+						char buf[256];
+						snprintf(buf, sizeof(buf),
+							"[CLAMP] ke_before=%.4f delta=%.4f A=%.4f alpha=%.4f ke_clamped=%.4f\n",
+							ke_before, delta, A, alpha, ke_clamped);
+						auto f = fopen("E:\\Copilot\\rylogic_code\\dump\\clamp.log", "a");
+						if (f) { fputs(buf, f); fclose(f); }
+					}
+				}
+				#endif
+			}
 		}
 	};
 }

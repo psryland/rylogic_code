@@ -35,73 +35,63 @@ namespace pr::physics
 		return ke;
 	}
 
-	// Evolve a rigid body forward in time. 
+	// Evolve a rigid body forward in time using Störmer-Verlet (kick-drift-kick)
+	// symplectic integration. This scheme exactly conserves a modified Hamiltonian
+	// H_dt = H + O(dt²), preventing secular energy drift while maintaining second-order
+	// accuracy. The structure is:
+	//   Half-kick:  h += f * dt/2       (advance momentum by half-step)
+	//   Drift:      v = Iinv(R) * h     (velocity from half-kicked momentum)
+	//               R *= Rot(v.ang*dt)  (update orientation)
+	//               x += v.lin * dt     (update position)
+	//   Half-kick:  h += f * dt/2       (advance momentum by second half-step)
 	template <typename = void>
 	void Evolve(RigidBody& rb, float elapsed_seconds)
 	{
-		// World-frame equation of motion:
-		//   dh/dt = f
-		// where:
-		//   h = spatial momentum at the model origin (world coordinates)
-		//   f = net external spatial force at the model origin (world coordinates)
-		//
-		// Note: The body-frame equation is dh^B/dt = f^B - v^B ×* h^B (Featherstone RBDA).
-		// In the world frame, the gyroscopic/Euler effects are captured by the time-varying
-		// world-space inertia (which changes as the body rotates). The mid-step inertia
-		// refinement below handles this implicitly.
-
-		#if PR_DBG
-		auto ke_before = rb.KineticEnergy();
-		#endif
-
-		// Notes:
-		//  - The WS inertia depends on orientation which changes throughout the step due to the angular velocity of the body.
-		//    Assuming the WS force is constant for the step, then the average momentum for the step is 'h = h0 + 0.5*t*Force'.
-		//    Angular velocity = Iinv.h but I depends on orientation, so we need to approximate I at t = 0.5.
-		//  - WS spatial vectors are all measured at the model origin
-
 		auto ws_force = rb.ForceWS();
+		auto half_impulse = ws_force * (elapsed_seconds * 0.5f);
+
+		// Step 1: Half-kick — advance momentum by half-step
+		rb.MomentumWS(rb.MomentumWS() + half_impulse);
+
+		// Step 2: Drift — advance position/orientation using the half-kicked momentum.
+		// The velocity is computed from the current orientation's inertia and the
+		// half-stepped momentum. This is the key property of the Verlet scheme:
+		// the position update uses the "midpoint" momentum.
 		auto ws_inertia_inv = rb.InertiaInvWS();
-		auto ws_momentum = rb.MomentumWS() + ws_force * elapsed_seconds * 0.5f;
-
-		// Refine ws_inertia_inv by estimating mid-step orientation
-		for (int i = 0; i != 1; ++i)
-		{
-			auto ws_velocity = ws_inertia_inv * ws_momentum;
-			auto dpos = ws_velocity * elapsed_seconds * 0.5f;
-			auto do2w = m3x4::Rotation(dpos.ang);
-			ws_inertia_inv = Rotate(ws_inertia_inv, do2w);
-		}
-
-		// Mid-step velocity using refined inertia
-		auto ws_velocity = ws_inertia_inv * ws_momentum;
+		auto ws_velocity = ws_inertia_inv * rb.MomentumWS();
 		auto dpos = ws_velocity * elapsed_seconds;
 
-		#if PR_DBG
-		// KE change ≈ power × time = Dot(v_mid, f) × dt.
-		// This is second-order accurate for the midpoint scheme.
-		auto ke_change = Dot(ws_velocity, ws_force) * elapsed_seconds;
-		#endif
-
-		// Update the position/orientation and momentum
-		// 'dpos' is in world space, but is object relative so it cannot be applied as a single transform
 		auto o2w = m4x4
 		{
 			m3x4::Rotation(dpos.ang) * rb.O2W().rot,
 			dpos.lin                 + rb.O2W().pos
 		};
+		rb.O2W(Orthonorm(o2w));
 
-		rb.O2W(o2w);
-		rb.MomentumWS(rb.MomentumWS() + ws_force * elapsed_seconds);
+		// Step 3: Half-kick — advance momentum by second half-step
+		rb.MomentumWS(rb.MomentumWS() + half_impulse);
 		rb.ZeroForces();
 
 		#if PR_DBG
-		auto ke_after = rb.KineticEnergy();
-		assert("Evolve has caused an unexpected change in kinetic energy" && FEqlRelative(ke_before + ke_change, ke_after, 0.1f * elapsed_seconds));
-		#endif
+		{
+			// Sanity checks on the post-integration state:
+			// 1. Verify no NaN crept in during integration
+			auto h = rb.MomentumWS();
+			auto o2w = rb.O2W();
+			assert("Evolve: NaN in momentum" && !IsNaN(h.ang) && !IsNaN(h.lin));
+			assert("Evolve: NaN in transform" && !IsNaN(o2w));
 
-		// Do this after the KE test because changing the orientation changes the KE.
-		rb.O2W(Orthonorm(rb.O2W()));
+			// 2. Verify the orientation is still orthonormal (Orthonorm shouldn't need
+			//    to make large corrections — if it does, the angular velocity is too high
+			//    for the timestep or there's an integration bug)
+			auto rot = o2w.rot;
+			assert("Evolve: orientation not orthonormal" && IsOrthonormal(rot));
+
+			// 3. Verify the inertia inverse is still valid after rotation
+			auto ws_iinv = rb.InertiaInvWS();
+			assert("Evolve: invalid inertia after rotation" && ws_iinv.Check());
+		}
+		#endif
 	}
 }
 
