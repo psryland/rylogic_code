@@ -1,8 +1,8 @@
 #pragma once
 #include "src/forward.h"
-#include "src/body.h"
-#include "src/diagnostics.h"
-#include "src/scene_loader.h"
+#include "src/utils/body.h"
+#include "src/diagnostics/diagnostics.h"
+#include "src/utils/scene_loader.h"
 
 // Test scenarios for validating physics behaviour progressively.
 // Each scenario configures two bodies with specific initial conditions.

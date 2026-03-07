@@ -5,6 +5,18 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="src\ui">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-7890-abcd-ef1234567890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\diagnostics">
+      <UniqueIdentifier>{b2c3d4e5-f6a7-8901-bcde-f12345678901}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\tests">
+      <UniqueIdentifier>{c3d4e5f6-a7b8-9012-cdef-012345678912}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\utils">
+      <UniqueIdentifier>{d4e5f6a7-b8c9-0123-defa-123456789023}</UniqueIdentifier>
+    </Filter>
     <Filter Include="pr">
       <UniqueIdentifier>{9b98bf3f-1fe2-4e94-a95f-ee30b710460e}</UniqueIdentifier>
     </Filter>
@@ -208,32 +220,35 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h">
       <Filter>pr\view3d</Filter>
     </ClInclude>
-    <ClInclude Include="src\body.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClInclude Include="src\scene.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\ui\sandbox_ui.h">
+      <Filter>src\ui</Filter>
     </ClInclude>
-    <ClInclude Include="src\details_panel.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\ui\details_panel.h">
+      <Filter>src\ui</Filter>
     </ClInclude>
-    <ClInclude Include="src\diagnostics.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\ui\media_panel.h">
+      <Filter>src\ui</Filter>
     </ClInclude>
-    <ClInclude Include="src\media_panel.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\diagnostics\diagnostics.h">
+      <Filter>src\diagnostics</Filter>
     </ClInclude>
-    <ClInclude Include="src\sandbox_tests.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\tests\sandbox_tests.h">
+      <Filter>src\tests</Filter>
     </ClInclude>
-    <ClInclude Include="src\sandbox_ui.h">
-      <Filter>src</Filter>
+    <ClInclude Include="src\utils\body.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\scene.h">
+      <Filter>src\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\scene_loader.h">
+      <Filter>src\utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_collision.h">
       <Filter>unittests</Filter>

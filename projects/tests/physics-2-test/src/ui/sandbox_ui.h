@@ -1,8 +1,8 @@
 #pragma once
 #include "src/forward.h"
-#include "src/scene.h"
-#include "src/media_panel.h"
-#include "src/details_panel.h"
+#include "src/utils/scene.h"
+#include "src/ui/media_panel.h"
+#include "src/ui/details_panel.h"
 
 using namespace pr;
 using namespace pr::gui;

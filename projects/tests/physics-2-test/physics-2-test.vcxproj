@@ -102,14 +102,15 @@
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_integrator.h" />
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_rigid_body.h" />
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h" />
-    <ClInclude Include="src\body.h" />
-    <ClInclude Include="src\diagnostics.h" />
-    <ClInclude Include="src\details_panel.h" />
     <ClInclude Include="src\forward.h" />
-    <ClInclude Include="src\media_panel.h" />
-    <ClInclude Include="src\sandbox_tests.h" />
-    <ClInclude Include="src\sandbox_ui.h" />
-    <ClInclude Include="src\scene.h" />
+    <ClInclude Include="src\diagnostics\diagnostics.h" />
+    <ClInclude Include="src\tests\sandbox_tests.h" />
+    <ClInclude Include="src\ui\details_panel.h" />
+    <ClInclude Include="src\ui\media_panel.h" />
+    <ClInclude Include="src\ui\sandbox_ui.h" />
+    <ClInclude Include="src\utils\body.h" />
+    <ClInclude Include="src\utils\scene.h" />
+    <ClInclude Include="src\utils\scene_loader.h" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <!-- Dependencies -->

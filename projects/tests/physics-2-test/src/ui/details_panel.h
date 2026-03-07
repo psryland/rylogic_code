@@ -1,6 +1,6 @@
 #pragma once
 #include "src/forward.h"
-#include "src/scene.h"
+#include "src/utils/scene.h"
 
 using namespace pr::gui;
 

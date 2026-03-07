@@ -13,8 +13,8 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include "src/sandbox_ui.h"
-#include "src/sandbox_tests.h"
+#include "src/ui/sandbox_ui.h"
+#include "src/tests/sandbox_tests.h"
 
 using namespace pr;
 using namespace pr::gui;
