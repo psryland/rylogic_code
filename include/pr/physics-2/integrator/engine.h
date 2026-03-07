@@ -59,7 +59,9 @@ namespace pr::physics
 				auto c = Contact{objA, objB};
 				if (NarrowPhaseCollision(dt, c))
 				{
+					#ifdef PR_PHYSICS_DUMP_CONTACTS
 					Dump(c);
+					#endif
 					collision_queue.push_back(c);
 				}
 			});

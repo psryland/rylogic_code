@@ -30,6 +30,9 @@ struct SandboxUI : Form
 	Scene       m_scene;
 	bool        m_pause_on_collision;
 
+	// Path of the last loaded scene file, so Reset reloads the same scene
+	std::filesystem::path m_scene_filepath;
+
 	// Diagnostic visualisation
 	view3d::Object m_trail_gfx;
 	view3d::Object m_diag_gfx;
@@ -172,9 +175,17 @@ struct SandboxUI : Form
 		return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 	}
 
-	// Reset the scene and sync graphics
+	// Reset the scene and sync graphics.
+	// If a scene file was loaded, reload it from disk. Otherwise, reset the built-in scenario.
 	void ResetScene()
 	{
+		// If a scene file was loaded, reload it from scratch
+		if (!m_scene_filepath.empty())
+		{
+			LoadSceneFile(m_scene_filepath);
+			return;
+		}
+
 		// Remove old body graphics from the viewport
 		for (int i = 0; i != m_scene.m_body_count; ++i)
 		{
@@ -239,6 +250,9 @@ struct SandboxUI : Form
 			}
 			RemoveGroundGfx();
 			CleanupDiagGfx();
+
+			// Remember the filepath so Reset can reload it
+			m_scene_filepath = filepath;
 
 			// Load the scene from JSON
 			m_scene.LoadFromJson(filepath);

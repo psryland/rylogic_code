@@ -3,6 +3,9 @@
 
 // Diagnostic output helper — writes to both OutputDebugString and a log file.
 // Useful for capturing physics state during interactive testing without a debugger.
+// Enable by defining PR_PHYSICS_DIAGNOSTICS before including this header.
+#ifdef PR_PHYSICS_DIAGNOSTICS
+
 static FILE* s_log_file = nullptr;
 static void DbgLog(char const* fmt, ...)
 {
@@ -21,6 +24,13 @@ static void DbgLog(char const* fmt, ...)
 		fflush(s_log_file);
 	}
 }
+
+#else
+
+// No-op when diagnostics are disabled
+static void DbgLog(char const*, ...) {}
+
+#endif
 
 // Snapshot of a rigid body's state at a moment in time.
 // Used for before/after comparisons across collision events.

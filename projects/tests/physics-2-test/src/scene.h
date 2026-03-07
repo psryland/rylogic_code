@@ -88,9 +88,11 @@ struct Scene
 			if (collisions.empty())
 				return;
 
+			// Lightweight: just track that a collision occurred (used by UI title bar)
 			m_diag.occurred = true;
 			m_diag.count++;
 
+			#ifdef PR_PHYSICS_DIAGNOSTICS
 			// Capture pre-impulse state for first two bodies
 			m_diag.before[0] = BodySnapshot::Capture(m_body[0]);
 			m_diag.before[1] = BodySnapshot::Capture(m_body[1]);
@@ -100,6 +102,7 @@ struct Scene
 			m_diag.contact_point_ws = m_body[0].O2W() * c.m_point_at_t;
 			m_diag.contact_normal_ws = (m_body[0].O2W().rot * c.m_axis).w0();
 			m_diag.depth = c.m_depth;
+			#endif
 		};
 	}
 
@@ -333,6 +336,7 @@ struct Scene
 		auto bodies = std::span<Body>(m_body, m_body_count);
 		m_physics.Step(dt, bodies);
 
+		#ifdef PR_PHYSICS_DIAGNOSTICS
 		// If a collision occurred this step, capture post-impulse snapshots.
 		// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
 		if (m_diag.occurred && m_body_count == 2)
@@ -341,6 +345,7 @@ struct Scene
 			m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
 			LogCollisionDiagnostics();
 		}
+		#endif
 
 		// NaN guard
 		for (int i = 0; i != m_body_count; ++i)
