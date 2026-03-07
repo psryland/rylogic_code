@@ -7,6 +7,12 @@
 //   -unittest : Allocate a console, run embedded unit tests, and exit.
 //   (default) : Launch the interactive physics sandbox window.
 //
+
+// Enable ComCtl32 v6 visual styles (modern themed controls)
+#pragma comment(linker, "\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 #include "src/sandbox_ui.h"
 #include "src/sandbox_tests.h"
 

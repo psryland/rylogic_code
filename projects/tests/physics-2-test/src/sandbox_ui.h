@@ -40,6 +40,11 @@ struct SandboxUI : Form
 	// Cached status text to avoid flickering from constant WM_SETTEXT
 	std::wstring m_last_status;
 
+	// FPS measurement
+	int m_frame_count;
+	double m_fps_elapsed;
+	double m_fps;
+
 	// Set when WM_CLOSE is received to prevent step/render after destruction begins
 	bool m_closing;
 
@@ -69,6 +74,9 @@ struct SandboxUI : Form
 		, m_pause_on_collision(false)
 		, m_trail_gfx()
 		, m_diag_gfx()
+		, m_frame_count(0)
+		, m_fps_elapsed(0)
+		, m_fps(0)
 		, m_closing(false)
 	{
 		// Wire media panel events to simulation control
@@ -121,6 +129,10 @@ struct SandboxUI : Form
 			if (args.m_vk_key == 'O' && (GetKeyState(VK_CONTROL) & 0x8000))
 				OpenSceneFile();
 		};
+
+		// Camera setup: Z-up alignment and perspective projection
+		View3D_CameraAlignAxisSet(m_view3d.m_win, view3d::Vec4{0, 0, 1, 0});
+		View3D_CameraOrthographicSet(m_view3d.m_win, FALSE);
 
 		// Start with the sandbox scenario
 		ResetScene();
@@ -209,8 +221,8 @@ struct SandboxUI : Form
 
 		// Set up a sensible default camera position looking at the origin
 		View3D_ResetView(m_view3d.m_win,
-			view3d::Vec4{0, 0, -1, 0},  // Forward direction
-			view3d::Vec4{0, 1, 0, 0},   // Up direction
+			view3d::Vec4{0, -1, 0, 0},  // Forward direction (looking from +Y toward -Y)
+			view3d::Vec4{0, 0, 1, 0},   // Up direction (Z-up)
 			20,                           // Distance
 			TRUE, TRUE);
 
@@ -272,8 +284,8 @@ struct SandboxUI : Form
 			// then use View3D_ResetViewBBox for proper framing.
 			auto bbox = ComputeSceneBBox();
 			View3D_ResetViewBBox(m_view3d.m_win, bbox,
-				view3d::Vec4{0, 0, -1, 0},
-				view3d::Vec4{0, 1, 0, 0},
+				view3d::Vec4{0, -1, 0, 0},
+				view3d::Vec4{0, 0, 1, 0},
 				0, TRUE, TRUE);
 
 			Render();
@@ -290,6 +302,15 @@ struct SandboxUI : Form
 		// Don't step after close begins
 		if (m_closing)
 			return;
+
+		// Accumulate time for FPS measurement
+		m_fps_elapsed += elapsed_seconds;
+		if (m_fps_elapsed >= 1.0)
+		{
+			m_fps = m_frame_count / m_fps_elapsed;
+			m_frame_count = 0;
+			m_fps_elapsed = 0;
+		}
 
 		// Update the title bar with simulation info and viewport diagnostics
 		auto bb = View3D_WindowBackBufferSizeGet(m_view3d.m_win);
@@ -323,6 +344,8 @@ struct SandboxUI : Form
 		if (m_closing)
 			return;
 
+		++m_frame_count;
+
 		// Sync each body's View3D graphics to its physics transform
 		for (int i = 0; i != m_scene.m_body_count; ++i)
 			m_scene.m_body[i].UpdateGfx();
@@ -333,12 +356,13 @@ struct SandboxUI : Form
 		// Update the details panel with current body properties
 		m_details.Update(m_scene);
 
-		// Update status bar (only when text changes to avoid flicker)
-		auto new_status = std::wstring(pr::FmtS(L"t=%.3f  %hs  Collisions: %d  %s",
+		// Update status bar with sim state and FPS (only when text changes to avoid flicker)
+		auto new_status = std::wstring(pr::FmtS(L"t=%.3f  %hs  Collisions: %d  %s  FPS: %.0f",
 			m_scene.m_clock,
 			ScenarioName(m_scene.m_scenario),
 			m_scene.m_diag.count,
-			m_scene.m_steps_remaining == 0 ? L"[Paused]" : L"[Running]"));
+			m_scene.m_steps_remaining == 0 ? L"[Paused]" : L"[Running]",
+			m_fps));
 		if (new_status != m_last_status)
 		{
 			m_last_status = std::move(new_status);
@@ -491,7 +515,7 @@ struct SandboxUI : Form
 			return view3d::BBox{{0, 0, 0, 1}, {5, 5, 5, 0}};
 
 		// Find the min/max extents of all dynamic body positions.
-		// Also include the ground plane height (Y=0 typically) so the camera
+		// Also include the ground plane height (Z=0 typically) so the camera
 		// can see the ground surface, not just the bodies floating in space.
 		auto lo = pr::v4{+1e10f, +1e10f, +1e10f, 1};
 		auto hi = pr::v4{-1e10f, -1e10f, -1e10f, 1};
@@ -514,7 +538,7 @@ struct SandboxUI : Form
 		// so the camera can see where objects will land.
 		if (m_scene.m_ground_gfx)
 		{
-			lo.y = pr::Min(lo.y, 0.0f);
+			lo.z = pr::Min(lo.z, 0.0f);
 		}
 
 		auto centre = (lo + hi) * 0.5f;

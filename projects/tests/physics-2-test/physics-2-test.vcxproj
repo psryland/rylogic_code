@@ -119,7 +119,11 @@
   </ItemGroup>
   <!-- Targets -->
   <ItemGroup>
-    <None Include="examples\gravity_playground.json" />
+    <None Include="scenes\box_vs_sphere.json" />
+    <None Include="scenes\drop_test.json" />
+    <None Include="scenes\gravity_playground.json" />
+    <None Include="scenes\oblique_spheres.json" />
+    <None Include="scenes\three_body_chain.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(TargetsPath)view3d-12.targets" />

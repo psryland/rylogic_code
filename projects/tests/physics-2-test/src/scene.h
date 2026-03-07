@@ -241,7 +241,7 @@ struct Scene
 		}
 
 		// Create the ground plane body as a large thin box with infinite mass.
-		// The box is thin in Y (0.5 units) and wide in XZ, centred at the ground height.
+		// The box is thin in Z (0.5 units) and wide in XY, centred at the ground height.
 		if (ground_body_index >= 0)
 		{
 			auto& ground_body = m_body[ground_body_index];
@@ -249,16 +249,16 @@ struct Scene
 			ground_body.ZeroMomentum();
 
 			// Compute the bounding box of all scene bodies to size the ground plane.
-			// The ground quad visual will be 10x this extent in XZ.
+			// The ground quad visual will be 10x this extent in XY.
 			auto scene_extent = ComputeSceneExtent(num_scene_bodies);
 			auto ground_half_extent = scene_extent * 10.0f;
 			if (ground_half_extent < 20.0f)
 				ground_half_extent = 20.0f;
 
 			// Create a thin box shape for the ground. The box dimensions are
-			// [2*extent, 0.5, 2*extent] so it's wide enough that objects don't
+			// [2*extent, 2*extent, 0.5] so it's wide enough that objects don't
 			// fall off the edges.
-			auto ground_dim = pr::v4{ground_half_extent * 2, 0.5f, ground_half_extent * 2, 0};
+			auto ground_dim = pr::v4{ground_half_extent * 2, ground_half_extent * 2, 0.5f, 0};
 			m_owned_shapes.emplace_back(pr::collision::ShapeBox(ground_dim));
 			auto& ground_shape = std::get<pr::collision::ShapeBox>(m_owned_shapes.back());
 
@@ -277,7 +277,7 @@ struct Scene
 			// Position the ground box so its top surface is at the requested height.
 			// ShapeBox stores half-extents in m_radius, so the top face is at +0.25
 			// above the box centre. We offset by -0.25 so the top face aligns with height.
-			ground_body.O2W(pr::m4x4::Translation(pr::v4{0, scene_desc.ground.height - 0.25f, 0, 1}));
+			ground_body.O2W(pr::m4x4::Translation(pr::v4{0, 0, scene_desc.ground.height - 0.25f, 1}));
 			ground_body.VelocityWS(pr::v4Zero, pr::v4Zero);
 
 			// Create the ground visual: a large textured quad.
@@ -669,21 +669,21 @@ struct Scene
 	void CreateGroundGfx(float height, float extent, std::string const& texture)
 	{
 		// Use hand-crafted LDraw script matching the demo scene format.
-		// The plane is oriented in XZ (horizontal) via AxisId +2 (Y-up).
+		// The plane is oriented in XY (horizontal) via AxisId +3 (Z-up).
 		// Use white base colour so the checker texture shows with full contrast.
 		auto scale = extent / 8.0f;
 		auto script = pr::FmtS(
 			"*Plane ground FFFFFFFF\n"
 			"{\n"
 			"  *Data {%f %f}\n"
-			"  *AxisId {+2}\n"
+			"  *AxisId {+3}\n"
 			"  *Texture\n"
 			"  {\n"
 			"    *FilePath {\"%s\"}\n"
 			"    *Addr {Wrap Wrap}\n"
 			"    *o2w {*Scale {%f %f 1}}\n"
 			"  }\n"
-			"  *o2w {*pos {0 %f 0}}\n"
+			"  *o2w {*pos {0 0 %f}}\n"
 			"}\n",
 			extent, extent,
 			texture.c_str(),
