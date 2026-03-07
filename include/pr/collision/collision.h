@@ -6,7 +6,7 @@
 #include "pr/collision/forward.h"
 #include "pr/collision/shapes.h"
 #include "pr/collision/col_sphere_vs_sphere.h"
-#include "pr/collision/col_sphere_vs_box.h"
+#include "pr/collision/col_box_vs_sphere.h"
 #include "pr/collision/col_box_vs_box.h"
 #include "pr/collision/col_line_vs_box.h"
 #include "pr/collision/penetration.h"
@@ -41,7 +41,7 @@ namespace pr::collision
 		{
 			SphereVsSphere,          // (0 v 0) - Sphere v Sphere  
 
-			SphereVsBox,             // (1 v 0) - Box v Sphere 
+			BoxVsSphere,             // (1 v 0) - Box v Sphere
 			BoxVsBox,                // (1 v 1) - Box v Box 
 
 			CollisionNotImplemented, // (2 v 0) - Line v Sphere
