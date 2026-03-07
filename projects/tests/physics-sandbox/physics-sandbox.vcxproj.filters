@@ -11,9 +11,6 @@
     <Filter Include="src\diagnostics">
       <UniqueIdentifier>{b2c3d4e5-f6a7-8901-bcde-f12345678901}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\tests">
-      <UniqueIdentifier>{c3d4e5f6-a7b8-9012-cdef-012345678912}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\utils">
       <UniqueIdentifier>{d4e5f6a7-b8c9-0123-defa-123456789023}</UniqueIdentifier>
     </Filter>
@@ -64,6 +61,12 @@
     </Filter>
     <Filter Include="scenes">
       <UniqueIdentifier>{f1310b0d-c9eb-447e-9e5f-e49dbfb614fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\scene">
+      <UniqueIdentifier>{28a8bcdd-bc1b-4028-85d2-e4cd908391d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\unittests">
+      <UniqueIdentifier>{c3d4e5f6-a7b8-9012-cdef-012345678912}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -238,15 +241,6 @@
     <ClInclude Include="src\diagnostics\diagnostics.h">
       <Filter>src\diagnostics</Filter>
     </ClInclude>
-    <ClInclude Include="src\tests\sandbox_tests.h">
-      <Filter>src\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\body.h">
-      <Filter>src\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\scene.h">
-      <Filter>src\utils</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\scene_loader.h">
       <Filter>src\utils</Filter>
     </ClInclude>
@@ -270,6 +264,15 @@
     </ClInclude>
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h">
       <Filter>unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\body.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\scene.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unittests\sandbox_tests.h">
+      <Filter>src\unittests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

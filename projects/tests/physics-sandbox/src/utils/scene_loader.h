@@ -1,51 +1,48 @@
 #pragma once
 #include "src/forward.h"
-#include "pr/storage/json.h"
 
-// Loads a physics scene from a JSON file.
-//
-// JSON schema:
-// {
-//     "scene": {
-//         "description": "Optional description of the scene",
-//         "gravity": [0, 0, -9.81],       // Optional, defaults to [0,0,0]
-//         "material": {                    // Optional global material properties
-//             "elasticity": 1.0,           // Normal restitution coefficient [0,1]
-//             "friction": 0.0              // Static friction coefficient
-//         },
-//         "ground_plane": {               // Optional ground plane
-//             "height": 0.0,              // Z height of the ground surface
-//             "texture": "#checker3"      // Stock texture name (optional)
-//         },
-//         "bodies": [
-//             {
-//                 "name": "box1",
-//                 "shape": {
-//                     "type": "box",
-//                     "dimensions": [2, 2, 2]     // Full width/height/depth
-//                 },
-//                 "mass": 10.0,              // Use 0 for static (immovable) bodies
-//                 "position": [x, y, z],
-//                 "velocity": [vx, vy, vz],       // Optional, defaults to zero
-//                 "angular_velocity": [wx, wy, wz] // Optional, defaults to zero
-//             },
-//             {
-//                 "name": "sphere1",
-//                 "shape": {
-//                     "type": "sphere",
-//                     "radius": 1.0
-//                 },
-//                 "mass": 5.0,
-//                 "position": [0, 0, 0],
-//                 "velocity": [1, 0, 0]
-//             }
-//         ]
-//     }
-// }
-
-namespace scene_loader
+namespace physics_sandbox::scene_loader
 {
-	using namespace pr;
+	// Loads a physics scene from a JSON file.
+	//
+	// JSON schema:
+	// {
+	//     "scene": {
+	//         "description": "Optional description of the scene",
+	//         "gravity": [0, 0, -9.81],       // Optional, defaults to [0,0,0]
+	//         "material": {                    // Optional global material properties
+	//             "elasticity": 1.0,           // Normal restitution coefficient [0,1]
+	//             "friction": 0.0              // Static friction coefficient
+	//         },
+	//         "ground_plane": {               // Optional ground plane
+	//             "height": 0.0,              // Z height of the ground surface
+	//             "texture": "#checker3"      // Stock texture name (optional)
+	//         },
+	//         "bodies": [
+	//             {
+	//                 "name": "box1",
+	//                 "shape": {
+	//                     "type": "box",
+	//                     "dimensions": [2, 2, 2]     // Full width/height/depth
+	//                 },
+	//                 "mass": 10.0,              // Use 0 for static (immovable) bodies
+	//                 "position": [x, y, z],
+	//                 "velocity": [vx, vy, vz],       // Optional, defaults to zero
+	//                 "angular_velocity": [wx, wy, wz] // Optional, defaults to zero
+	//             },
+	//             {
+	//                 "name": "sphere1",
+	//                 "shape": {
+	//                     "type": "sphere",
+	//                     "radius": 1.0
+	//                 },
+	//                 "mass": 5.0,
+	//                 "position": [0, 0, 0],
+	//                 "velocity": [1, 0, 0]
+	//             }
+	//         ]
+	//     }
+	// }
 
 	// Parsed description of a single rigid body from JSON
 	struct BodyDesc

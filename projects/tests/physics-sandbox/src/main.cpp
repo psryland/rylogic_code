@@ -1,23 +1,25 @@
 //************************************
-// Physics-2 Sandbox
-//  Copyright (c) Rylogic Ltd 2016
+// Physics Sandbox
+//  Copyright (c) Rylogic Ltd 2026
 //************************************
-// Entry point for the physics-2-test application.
+// Entry point for the physics sandbox application.
 // Two modes:
 //   -unittest : Allocate a console, run embedded unit tests, and exit.
 //   (default) : Launch the interactive physics sandbox window.
 //
+
+#include "src/forward.h"
+#include "src/ui/sandbox_ui.h"
+#include "src/unittests/sandbox_tests.h"
 
 // Enable ComCtl32 v6 visual styles (modern themed controls)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include "src/ui/sandbox_ui.h"
-#include "src/tests/sandbox_tests.h"
-
 using namespace pr;
 using namespace pr::gui;
+using namespace physics_sandbox;
 
 // Run embedded unit tests to a console window and exit.
 // Uses AllocConsole() to create a console for the WinApp process,

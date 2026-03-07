@@ -7,7 +7,7 @@
     <ProjectGuid>{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}</ProjectGuid>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <RootNamespace>physics2</RootNamespace>
-    <ProjectName>physics-2-test</ProjectName>
+    <ProjectName>physics-sandbox</ProjectName>
   </PropertyGroup>
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -38,7 +38,6 @@
       </AdditionalDependencies>
       <DelayLoadDLLs>
 				;view3d-12.dll
-				;physics-2.dll
       </DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -104,12 +103,12 @@
     <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\diagnostics\diagnostics.h" />
-    <ClInclude Include="src\tests\sandbox_tests.h" />
+    <ClInclude Include="src\scene\body.h" />
+    <ClInclude Include="src\scene\scene.h" />
     <ClInclude Include="src\ui\details_panel.h" />
     <ClInclude Include="src\ui\media_panel.h" />
     <ClInclude Include="src\ui\sandbox_ui.h" />
-    <ClInclude Include="src\utils\body.h" />
-    <ClInclude Include="src\utils\scene.h" />
+    <ClInclude Include="src\unittests\sandbox_tests.h" />
     <ClInclude Include="src\utils\scene_loader.h" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>

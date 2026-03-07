@@ -1,8 +1,8 @@
 //************************************
-// Physics-2 Sandbox
-//  Copyright (c) Rylogic Ltd 2016
+// Physics Sandbox
+//  Copyright (c) Rylogic Ltd 2026
 //************************************
-// Embedded unit tests for the physics-2-test application.
+// Embedded unit tests for the physics sandbox application.
 // Run with the `-unittest` command line argument.
 // These tests use the PR_UNITTESTS framework and run headlessly
 // (no View3D, no window) — they operate directly on RigidBody objects.
@@ -11,31 +11,16 @@
 //   projects/rylogic/physics-2/src/unittests/test_collision.h
 //
 #pragma once
+#include "src/forward.h"
 
-// Force PR_UNITTESTS to be defined so the test macros are available
-// even in Release builds (when running from -unittest mode).
-#ifndef PR_UNITTESTS
-#define PR_UNITTESTS 1
-#define PR_UNITTESTS_DEFINED_HERE
-#endif
-
-#include "pr/common/unittests.h"
-#include "pr/collision/shape_box.h"
-#include "pr/collision/shape_sphere.h"
-#include "pr/physics-2/rigid_body/rigid_body.h"
-#include "pr/physics-2/shape/inertia.h"
-#include "pr/physics-2/broadphase/brute.h"
-#include "pr/physics-2/integrator/engine.h"
-#include "pr/physics-2/material/material_map.h"
-
-namespace pr::physics
+namespace physics_sandbox::tests
 {
 	// Common test infrastructure shared by all collision test classes.
 	// Captures conserved quantities and runs a two-body elastic collision
 	// to completion, recording pre/post state for validation.
 	namespace collision_test
 	{
-		using TestEngine = Engine<broadphase::Brute<RigidBody>, MaterialMap>;
+		using TestEngine = physics::Engine<physics::broadphase::Brute<physics::RigidBody>, physics::MaterialMap>;
 
 		// Snapshot of conserved system quantities (momentum, energy)
 		struct SystemState
@@ -44,7 +29,7 @@ namespace pr::physics
 			v4 total_ang_momentum;
 			float total_ke;
 
-			static SystemState Capture(RigidBody const& a, RigidBody const& b)
+			static SystemState Capture(physics::RigidBody const& a, physics::RigidBody const& b)
 			{
 				auto s = SystemState{};
 				s.total_lin_momentum = a.MomentumWS().lin + b.MomentumWS().lin;
@@ -74,15 +59,15 @@ namespace pr::physics
 		// The engine uses perfectly elastic (restitution = 1) frictionless collisions.
 		// Returns the system state before and after the first collision.
 		inline CollisionResult RunScenario(
-			collision::Shape const& shape_a, Inertia const& inertia_a, v4 pos_a, v4 vel_a,
-			collision::Shape const& shape_b, Inertia const& inertia_b, v4 pos_b, v4 vel_b)
+			collision::Shape const& shape_a, physics::Inertia const& inertia_a, v4 pos_a, v4 vel_a,
+			collision::Shape const& shape_b, physics::Inertia const& inertia_b, v4 pos_b, v4 vel_b)
 		{
 			auto result = CollisionResult{};
 			result.collision_occurred = false;
 
-			RigidBody bodies[2] = {
-				RigidBody{&shape_a, m4x4::Translation(pos_a), inertia_a},
-				RigidBody{&shape_b, m4x4::Translation(pos_b), inertia_b},
+			physics::RigidBody bodies[2] = {
+				physics::RigidBody{&shape_a, m4x4::Translation(pos_a), inertia_a},
+				physics::RigidBody{&shape_b, m4x4::Translation(pos_b), inertia_b},
 			};
 			auto& body_a = bodies[0];
 			auto& body_b = bodies[1];
@@ -146,8 +131,8 @@ namespace pr::physics
 			v4 pos_a, v4 vel_a, float mass_a,
 			v4 pos_b, v4 vel_b, float mass_b)
 		{
-			auto inertia_a = Inertia::Box(box.m_radius, mass_a);
-			auto inertia_b = Inertia::Box(box.m_radius, mass_b);
+			auto inertia_a = physics::Inertia::Box(box.m_radius, mass_a);
+			auto inertia_b = physics::Inertia::Box(box.m_radius, mass_b);
 			return collision_test::RunScenario(box, inertia_a, pos_a, vel_a, box, inertia_b, pos_b, vel_b);
 		}
 
@@ -214,8 +199,8 @@ namespace pr::physics
 			collision::ShapeBox& box, float mass_a, v4 pos_a, v4 vel_a,
 			collision::ShapeSphere& sphere, float mass_b, v4 pos_b, v4 vel_b)
 		{
-			auto inertia_a = Inertia::Box(box.m_radius, mass_a);
-			auto inertia_b = Inertia::Sphere(sphere.m_radius, mass_b);
+			auto inertia_a = physics::Inertia::Box(box.m_radius, mass_a);
+			auto inertia_b = physics::Inertia::Sphere(sphere.m_radius, mass_b);
 			return collision_test::RunScenario(box, inertia_a, pos_a, vel_a, sphere, inertia_b, pos_b, vel_b);
 		}
 
@@ -335,8 +320,8 @@ namespace pr::physics
 			collision::ShapeSphere& sphere_a, float mass_a, v4 pos_a, v4 vel_a,
 			collision::ShapeSphere& sphere_b, float mass_b, v4 pos_b, v4 vel_b)
 		{
-			auto inertia_a = Inertia::Sphere(sphere_a.m_radius, mass_a);
-			auto inertia_b = Inertia::Sphere(sphere_b.m_radius, mass_b);
+			auto inertia_a = physics::Inertia::Sphere(sphere_a.m_radius, mass_a);
+			auto inertia_b = physics::Inertia::Sphere(sphere_b.m_radius, mass_b);
 			return collision_test::RunScenario(sphere_a, inertia_a, pos_a, vel_a, sphere_b, inertia_b, pos_b, vel_b);
 		}
 
@@ -461,9 +446,3 @@ namespace pr::physics
 		}
 	};
 }
-
-// Clean up our conditional define
-#ifdef PR_UNITTESTS_DEFINED_HERE
-#undef PR_UNITTESTS
-#undef PR_UNITTESTS_DEFINED_HERE
-#endif
