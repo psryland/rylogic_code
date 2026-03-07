@@ -65,7 +65,7 @@ namespace pr::collision
 #include "pr/common/unittests.h"
 #include "pr/collision/ldraw.h"
 
-namespace pr::collision
+namespace pr::collision::tests
 {
 	PRUnitTest(CollisionSphereVsSphere)
 	{
