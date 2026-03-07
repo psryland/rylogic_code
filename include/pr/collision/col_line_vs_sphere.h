@@ -7,10 +7,11 @@
 // Algorithm:
 //  Find the closest point on the line segment to the sphere centre.
 //  The separating axis is the vector from that closest point to the sphere centre.
-//  Penetration depth = sphere_radius - distance.
+//  Penetration depth = (line.m_thickness + sphere_radius) - distance.
 //
-// The line segment is aligned to the Z-axis in its local frame, centred
-// at the origin, with half-length = ShapeLine::m_radius.
+// When the line has non-zero thickness, it behaves as a capsule for collision
+// depth calculation (the cylindrical envelope extends m_thickness from the axis).
+// The support function uses hemispherical end-caps for accurate contact points.
 //
 #pragma once
 #include "pr/collision/forward.h"
@@ -44,9 +45,10 @@ namespace pr::collision
 		auto delta = s2l - v4(0, 0, t, 0);
 		auto dist_sq = LengthSq(delta);
 
-		// Penetration depth: positive means overlap
+		// Penetration depth: positive means overlap.
+		// For thick lines, the collision envelope extends m_thickness from the line axis.
 		auto dist = Sqrt(dist_sq + maths::tiny<float>);
-		auto depth = sph.m_radius - dist;
+		auto depth = (line.m_thickness + sph.m_radius) - dist;
 
 		pen(depth, [&]
 		{
@@ -238,6 +240,50 @@ namespace pr::collision::tests
 
 			// Axis should point from line to sphere, i.e., in +X direction
 			PR_EXPECT(c.m_axis.x > 0.0f);
+		}
+
+		// Thick line: sphere within thickness envelope but beyond zero-thickness range
+		PRUnitTestMethod(ThickLineVsSphere)
+		{
+			auto line = ShapeLine{2.0f, 0.4f}; // half-length=1, half-thickness=0.2
+			auto sph = ShapeSphere{0.3f};
+			auto l2w = m4x4::Identity();
+
+			// Place sphere 0.4 away laterally: zero-thickness line misses (0.3 < 0.4),
+			// but thick line should hit (0.2 + 0.3 = 0.5 > 0.4)
+			auto r2w = m4x4::Translation(v4{0.4f, 0, 0, 0});
+			PR_EXPECT(LineVsSphere(line, l2w, sph, r2w));
+
+			Contact c;
+			PR_EXPECT(LineVsSphere(line, l2w, sph, r2w, c));
+			PR_EXPECT(FEqlRelative(c.m_depth, 0.1f, 0.01f)); // (0.2 + 0.3) - 0.4 = 0.1
+		}
+
+		// Thick line: sphere just outside thickness envelope
+		PRUnitTestMethod(ThickLineSeparated)
+		{
+			auto line = ShapeLine{2.0f, 0.2f}; // half-thickness=0.1
+			auto sph = ShapeSphere{0.3f};
+			auto l2w = m4x4::Identity();
+
+			// Distance 0.5 laterally: 0.1 + 0.3 = 0.4 < 0.5, should not collide
+			auto r2w = m4x4::Translation(v4{0.5f, 0, 0, 0});
+			PR_EXPECT(!LineVsSphere(line, l2w, sph, r2w));
+		}
+
+		// Zero thickness: backwards compatible with original behaviour
+		PRUnitTestMethod(ZeroThicknessBackcompat)
+		{
+			auto line_thick = ShapeLine{2.0f, 0.0f}; // explicit zero thickness
+			auto line_default = ShapeLine{2.0f};       // default (no thickness)
+			auto sph = ShapeSphere{0.5f};
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Translation(v4{0.3f, 0, 0, 0});
+
+			Contact c1, c2;
+			PR_EXPECT(LineVsSphere(line_thick, l2w, sph, r2w, c1));
+			PR_EXPECT(LineVsSphere(line_default, l2w, sph, r2w, c2));
+			PR_EXPECT(FEqlRelative(c1.m_depth, c2.m_depth, 0.001f));
 		}
 	};
 }

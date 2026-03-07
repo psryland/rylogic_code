@@ -5,20 +5,15 @@
 // Line segment vs Line segment collision detection.
 //
 // Algorithm:
-//  Two zero-thickness line segments in 3D space. The separating axis
-//  candidates are:
+//  Two line segments in 3D space. The separating axis candidates are:
 //   1. The cross product of the two line directions (perpendicular to both).
 //   2. If the lines are parallel (cross product ≈ 0), fall back to the
 //      perpendicular distance between the parallel lines.
 //
-//  Since line segments have no volume, "penetration" means the segments
-//  are within a tolerance of each other. We use the minimum distance
-//  between the segments and report depth = -distance (negative = separated).
-//  Contact occurs when the segments actually intersect (distance ≈ 0).
-//
-// Note: In practice, line-vs-line collisions are extremely rare in 3D
-// because two zero-thickness segments almost never touch. This function
-// is included for completeness in the tri-table.
+//  For thick lines (m_thickness > 0), the effective collision radius is the
+//  sum of both thicknesses. Depth = combined_thickness - distance.
+//  For zero-thickness lines, a small tolerance is used so near-touching
+//  segments register as contact.
 //
 #pragma once
 #include "pr/collision/forward.h"
@@ -54,12 +49,11 @@ namespace pr::collision
 		auto delta = closest_b - closest_a;
 		auto dist_sq = LengthSq(delta);
 
-		// For zero-thickness segments, "penetration" = -distance.
-		// Only at distance ≈ 0 are they actually in contact.
-		// Use a small tolerance so that near-touching segments register as contact.
+		// For thick lines, overlap = combined_thickness - distance.
+		// For zero-thickness lines, use a small tolerance for numerical near-contact.
 		auto constexpr tol = 1e-4f;
 		auto dist = Sqrt(dist_sq);
-		auto depth = tol - dist;
+		auto depth = std::max(lhs.m_thickness + rhs.m_thickness, tol) - dist;
 
 		pen(depth, [&]
 		{
@@ -220,6 +214,50 @@ namespace pr::collision::tests
 			auto r2w = m4x4::Translation(v4{0, 0, 5.0f, 0}); // gap of 3 units
 
 			PR_EXPECT(!LineVsLine(line_a, l2w, line_b, r2w));
+		}
+
+		// Thick lines: perpendicular, separated by less than combined thickness
+		PRUnitTestMethod(ThickLinesCrossing)
+		{
+			auto line_a = ShapeLine{2.0f, 0.4f}; // half-thickness=0.2
+			auto line_b = ShapeLine{2.0f, 0.4f}; // half-thickness=0.2
+
+			// line_a along Z, line_b along X, offset 0.3 in Y
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Transform(v4::XAxis(), v4::ZAxis(), v4{0, 0.3f, 0, 1});
+
+			// Skew distance = 0.3, combined thickness = 0.2 + 0.2 = 0.4 > 0.3 → contact
+			PR_EXPECT(LineVsLine(line_a, l2w, line_b, r2w));
+
+			Contact c;
+			PR_EXPECT(LineVsLine(line_a, l2w, line_b, r2w, c));
+			PR_EXPECT(FEqlRelative(c.m_depth, 0.1f, 0.01f)); // 0.4 - 0.3 = 0.1
+		}
+
+		// Thick lines: separated beyond combined thickness
+		PRUnitTestMethod(ThickLinesSeparated)
+		{
+			auto line_a = ShapeLine{2.0f, 0.2f}; // half-thickness=0.1
+			auto line_b = ShapeLine{2.0f, 0.2f}; // half-thickness=0.1
+
+			// Offset 0.3 in Y: combined thickness = 0.2 < 0.3 → no contact
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Transform(v4::XAxis(), v4::ZAxis(), v4{0, 0.3f, 0, 1});
+
+			PR_EXPECT(!LineVsLine(line_a, l2w, line_b, r2w));
+		}
+
+		// Zero thickness: backward compatible (crossing lines still touch)
+		PRUnitTestMethod(ZeroThicknessBackcompat)
+		{
+			auto line_a = ShapeLine{2.0f, 0.0f}; // explicit zero
+			auto line_b = ShapeLine{2.0f};
+
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Transform(v4::XAxis(), v4::ZAxis(), v4::Origin());
+
+			// Crossing at origin → distance = 0 → contact (via tolerance)
+			PR_EXPECT(LineVsLine(line_a, l2w, line_b, r2w));
 		}
 	};
 }

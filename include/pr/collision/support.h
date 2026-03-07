@@ -57,6 +57,14 @@ namespace pr::collision
 		if      (d > +maths::tiny<float>) vert += r;
 		else if (d < -maths::tiny<float>) vert -= r;
 		else feature_type = EFeature::Edge;
+
+		// Hemispherical end-cap offset for thick lines
+		if (shape.m_thickness > 0)
+		{
+			auto len_sq = LengthSq(direction);
+			if (len_sq > Sqr(maths::tiny<float>))
+				vert += shape.m_thickness * direction / Sqrt(len_sq);
+		}
 		return vert;
 	}
 	inline v4 SupportVertex(ShapeTriangle const& shape, v4 direction, EFeature& feature_type)
@@ -128,24 +136,34 @@ namespace pr::collision
 	{
 		auto d = Dot(axis, shape.m_base.m_s2p.z);
 		auto r = shape.m_base.m_s2p.z * shape.m_radius;
+
+		// Hemispherical end-cap offset for thick lines
+		auto thickness_offset = v4::Zero();
+		if (shape.m_thickness > 0)
+		{
+			auto len_sq = LengthSq(axis);
+			if (len_sq > Sqr(maths::tiny<float>))
+				thickness_offset = shape.m_thickness * axis / Sqrt(len_sq);
+		}
+
 		if (d > +maths::tiny<float>)
 		{
 			// Line points in the direction of the axis, return the end point
 			feature_type = EFeature::Vert;
-			points[0] = shape.m_base.m_s2p.pos + r;
+			points[0] = shape.m_base.m_s2p.pos + r + thickness_offset;
 		}
 		else if (d < -maths::tiny<float>)
 		{
 			// Line points against the direction of the axis, return the start point
 			feature_type = EFeature::Vert;
-			points[0] = shape.m_base.m_s2p.pos - r;
+			points[0] = shape.m_base.m_s2p.pos - r + thickness_offset;
 		}
 		else
 		{
-			// Line is perpendicular to the axis, return the line
+			// Line is perpendicular to the axis, return the line (both endpoints offset by thickness)
 			feature_type = EFeature::Edge;
-			points[0] = shape.m_base.m_s2p.pos - r;
-			points[1] = shape.m_base.m_s2p.pos + r;
+			points[0] = shape.m_base.m_s2p.pos - r + thickness_offset;
+			points[1] = shape.m_base.m_s2p.pos + r + thickness_offset;
 		}
 	}
 	inline void SupportFeature(ShapeTriangle const& shape, v4 axis, EFeature& feature_type, v4 (&points)[FeaturePolygonMaxSides])

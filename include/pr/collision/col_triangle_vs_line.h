@@ -55,7 +55,8 @@ namespace pr::collision
 		// Triangle normal in triangle space
 		auto tri_norm = tri.m_v.w; // already computed as Normalise(Cross(b-a, c-b))
 
-		// Lambda: project triangle and line onto an axis and compute overlap
+		// Lambda: project triangle and line onto an axis and compute overlap.
+		// For thick lines, the collision envelope adds m_thickness * |axis| to the line's projection.
 		auto test_axis = [&](v4 axis) -> float
 		{
 			// Project triangle vertices onto axis
@@ -65,9 +66,9 @@ namespace pr::collision
 			auto t_min = std::min({da, db, dc});
 			auto t_max = std::max({da, db, dc});
 
-			// Project line segment onto axis
+			// Project line segment onto axis, plus thickness envelope
 			auto lm = Dot3(axis, line_mid);
-			auto lr = Abs(Dot3(axis, line_half));
+			auto lr = Abs(Dot3(axis, line_half)) + line.m_thickness * Length(axis);
 			auto l_min = lm - lr;
 			auto l_max = lm + lr;
 
@@ -255,6 +256,52 @@ namespace pr::collision::tests
 
 			// Line from (-1,0,0) to (+1,0,0) coincides with triangle edge
 			PR_EXPECT(TriangleVsLine(tri, l2w, line, r2w));
+		}
+
+		// Thick line: collision detected when thickness bridges the gap to the triangle
+		PRUnitTestMethod(ThickLinePiercesTriangle)
+		{
+			auto tri = ShapeTriangle{v4{-1, -1, 0, 0}, v4{1, -1, 0, 0}, v4{0, 1, 0, 0}};
+			auto line = ShapeLine{2.0f, 0.4f}; // half-length=1, half-thickness=0.2
+
+			// Line along Z, offset 0.15 above the XY plane: zero-thickness pierces but
+			// the thick envelope should give a larger penetration depth.
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Translation(v4{0, 0, 0.15f, 0});
+
+			PR_EXPECT(TriangleVsLine(tri, l2w, line, r2w));
+
+			Contact c;
+			PR_EXPECT(TriangleVsLine(tri, l2w, line, r2w, c));
+			// Penetration should be greater than zero-thickness case
+			PR_EXPECT(c.m_depth > 0.0f);
+		}
+
+		// Thick line: parallel to triangle, within thickness envelope
+		PRUnitTestMethod(ThickLineParallelNearTriangle)
+		{
+			auto tri = ShapeTriangle{v4{-2, -2, 0, 0}, v4{2, -2, 0, 0}, v4{0, 2, 0, 0}};
+			auto line = ShapeLine{1.0f, 0.4f}; // half-length=0.5, half-thickness=0.2
+
+			// Line along X-axis, 0.1 above the triangle: zero-thickness line doesn't intersect
+			// (parallel), but thick line's envelope (0.2) reaches the triangle plane.
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Transform(v4::XAxis(), v4::ZAxis(), v4{0, 0, 0.1f, 1});
+
+			PR_EXPECT(TriangleVsLine(tri, l2w, line, r2w));
+		}
+
+		// Thick line: parallel but too far away
+		PRUnitTestMethod(ThickLineParallelSeparated)
+		{
+			auto tri = ShapeTriangle{v4{-1, -1, 0, 0}, v4{1, -1, 0, 0}, v4{0, 1, 0, 0}};
+			auto line = ShapeLine{1.0f, 0.2f}; // half-thickness=0.1
+
+			// Line along X-axis, 0.5 above the triangle: thickness 0.1 can't bridge 0.5 gap
+			auto l2w = m4x4::Identity();
+			auto r2w = m4x4::Transform(v4::XAxis(), v4::ZAxis(), v4{0, 0, 0.5f, 1});
+
+			PR_EXPECT(!TriangleVsLine(tri, l2w, line, r2w));
 		}
 	};
 }
