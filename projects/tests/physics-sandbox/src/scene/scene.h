@@ -78,10 +78,6 @@ namespace physics_sandbox
 
 		// Diagnostics
 		CollisionDiag   m_diag;
-		static constexpr int MaxTrailPoints = 300;  // ~30 seconds of trail at ~10 Hz recording
-		static constexpr int TrailRecordInterval = 6; // Record every 6th sim step (~10 Hz at 60 Hz sim)
-		int m_trail_step_counter;
-		std::deque<pr::v4> m_trail[MaxBodies];
 
 		Scene()
 			: m_body()
@@ -95,8 +91,6 @@ namespace physics_sandbox
 			, m_steps_remaining(0)
 			, m_scenario(EScenario::Sandbox)
 			, m_diag()
-			, m_trail_step_counter(0)
-			, m_trail{}
 		{
 			// Hook collision detection for diagnostics.
 			// This fires AFTER Evolve but BEFORE impulse resolution.
@@ -131,9 +125,6 @@ namespace physics_sandbox
 			m_diag.Reset();
 			m_gravity = v4::Zero();
 			m_kill_zone_height = -100.0f;
-			m_trail_step_counter = 0;
-			for (int i = 0; i != MaxBodies; ++i)
-				m_trail[i].clear();
 
 			// Clean up the ground plane visual
 			CleanupGroundGfx();
@@ -182,8 +173,6 @@ namespace physics_sandbox
 			m_steps_remaining = 0;
 			m_clock = 0;
 			m_diag.Reset();
-			for (int i = 0; i != MaxBodies; ++i)
-				m_trail[i].clear();
 
 			// Clean up ground plane visual from previous scene
 			CleanupGroundGfx();
@@ -381,20 +370,6 @@ namespace physics_sandbox
 
 			// Reset per-step collision flag
 			m_diag.occurred = false;
-
-			// Record trail positions at a reduced rate (~10 Hz).
-			// Full-rate recording at 60 Hz produces too many points for the
-			// LDraw trail visualisation to rebuild efficiently.
-			if (++m_trail_step_counter >= TrailRecordInterval)
-			{
-				m_trail_step_counter = 0;
-				for (int i = 0; i != m_body_count; ++i)
-				{
-					m_trail[i].push_back(m_body[i].O2W().pos);
-					if (static_cast<int>(m_trail[i].size()) > MaxTrailPoints)
-						m_trail[i].pop_front();
-				}
-			}
 
 			// Apply gravity as an external force: F = m * g.
 			// Static bodies (infinite mass) are skipped — they should not accelerate.
@@ -684,8 +659,6 @@ namespace physics_sandbox
 				for (int step = 0; step < max_steps && m_diag.count == 0; ++step)
 				{
 					m_diag.occurred = false;
-					for (int i = 0; i != m_body_count; ++i)
-						m_trail[i].push_back(m_body[i].O2W().pos);
 
 					auto bodies = std::span<Body>(m_body, m_body_count);
 					m_physics.Step(dt, bodies);

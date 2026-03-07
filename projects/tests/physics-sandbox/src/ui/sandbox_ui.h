@@ -110,10 +110,6 @@ namespace physics_sandbox
 		// Most-recently-used scene files list, persisted to %APPDATA%
 		RecentFiles m_recent;
 
-		// Diagnostic visualisation
-		view3d::Object m_trail_gfx;
-		view3d::Object m_diag_gfx;
-
 		// Cached status text to avoid flickering from constant WM_SETTEXT
 		std::wstring m_last_status;
 
@@ -123,10 +119,8 @@ namespace physics_sandbox
 		double m_fps;
 
 		// Rate-limiting accumulators for expensive operations.
-		// These prevent costly Win32 API calls and LDraw object rebuilds
-		// from running at the full sim/render rate.
+		// These prevent costly Win32 API calls from running at the full render rate.
 		double m_title_elapsed;      // Title bar update interval (every 0.25s)
-		double m_diag_gfx_elapsed;   // Diagnostic gfx rebuild interval (every 0.1s)
 		double m_details_elapsed;    // Details panel update interval (every 0.2s)
 
 		// Set when WM_CLOSE is received to prevent step/render after destruction begins
@@ -157,13 +151,10 @@ namespace physics_sandbox
 				.show_focus_point())
 			, m_scene()
 			, m_pause_on_collision(false)
-			, m_trail_gfx()
-			, m_diag_gfx()
 			, m_frame_count(0)
 			, m_fps_elapsed(0)
 			, m_fps(0)
 			, m_title_elapsed(0)
-			, m_diag_gfx_elapsed(0)
 			, m_details_elapsed(0)
 			, m_closing(false)
 		{
@@ -250,7 +241,6 @@ namespace physics_sandbox
 					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 			}
 			RemoveGroundGfx();
-			CleanupDiagGfx();
 		}
 
 		// Override message processing to ensure clean shutdown
@@ -270,7 +260,6 @@ namespace physics_sandbox
 						View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 				}
 				RemoveGroundGfx();
-				CleanupDiagGfx();
 			}
 
 			// Handle menu commands
@@ -320,7 +309,6 @@ namespace physics_sandbox
 			}
 
 			RemoveGroundGfx();
-			CleanupDiagGfx();
 			m_scene.Reset();
 
 			// Add body graphics to the viewport
@@ -416,7 +404,6 @@ namespace physics_sandbox
 						View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
 				}
 				RemoveGroundGfx();
-				CleanupDiagGfx();
 
 				// Remember the filepath so Reset can reload it
 				m_scene_filepath = filepath;
@@ -466,7 +453,6 @@ namespace physics_sandbox
 			// These use wall-clock time (not scaled time) so the UI stays responsive.
 			m_fps_elapsed += elapsed_seconds;
 			m_title_elapsed += elapsed_seconds;
-			m_diag_gfx_elapsed += elapsed_seconds;
 			m_details_elapsed += elapsed_seconds;
 			if (m_fps_elapsed >= 1.0)
 			{
@@ -514,15 +500,6 @@ namespace physics_sandbox
 			// starvation when the sim loop is busy. This matches how Lost at Sea renders.
 			View3D_WindowRender(m_view3d.m_win);
 
-			// Rebuild trail and diagnostic visualisation at reduced rate (~2 Hz).
-			// Creating View3D objects from LDraw text is expensive (text generation,
-			// parsing, GPU resource allocation). Keep the rate low to avoid frame drops.
-			if (m_diag_gfx_elapsed >= 0.5)
-			{
-				m_diag_gfx_elapsed = 0;
-				RebuildDiagGfx();
-			}
-
 			// Update the details panel text at reduced rate (~5 Hz).
 			if (m_details_elapsed >= 0.2)
 			{
@@ -558,125 +535,6 @@ namespace physics_sandbox
 			{
 				m_last_status = std::move(new_status);
 				m_status.Text(0, m_last_status.c_str());
-			}
-		}
-
-		// Rebuild the LDraw objects for trails, velocity arrows, and collision markers
-		void RebuildDiagGfx()
-		{
-			using namespace pr::rdr12::ldraw;
-
-			CleanupDiagGfx();
-
-			// Build trail line strips for each body
-			bool has_trails = false;
-			for (int i = 0; i != m_scene.m_body_count; ++i)
-			{
-				if (m_scene.m_trail[i].size() >= 2)
-					has_trails = true;
-			}
-
-			if (has_trails)
-			{
-				Builder trail_builder;
-
-				// Per-body trails with distinct colours
-				Colour32 trail_colours[] = { 0xFFFF4040, 0xFF4040FF, 0xFF40FF40, 0xFFFFFF40 };
-				for (int i = 0; i != m_scene.m_body_count; ++i)
-				{
-					if (m_scene.m_trail[i].size() < 2)
-						continue;
-
-					auto colour = trail_colours[i % std::size(trail_colours)];
-					auto& line = trail_builder.Line(std::string(pr::FmtS("trail_%d", i)), colour);
-					line.strip(m_scene.m_trail[i][0]);
-					for (size_t j = 1; j < m_scene.m_trail[i].size(); ++j)
-						line.line_to(m_scene.m_trail[i][j]);
-				}
-
-				// System centre of mass trail (yellow, if 2+ bodies have trails)
-				if (m_scene.m_body_count >= 2 && m_scene.m_trail[0].size() >= 2 && m_scene.m_trail[1].size() >= 2)
-				{
-					auto total_mass = m_scene.m_body[0].Mass() + m_scene.m_body[1].Mass();
-					auto& line = trail_builder.Line("trail_CoM", 0xFFFFFF00);
-					auto com0 = (m_scene.m_trail[0][0] * m_scene.m_body[0].Mass() + m_scene.m_trail[1][0] * m_scene.m_body[1].Mass()) / total_mass;
-					com0.w = 1;
-					line.strip(com0);
-					auto n = std::min(m_scene.m_trail[0].size(), m_scene.m_trail[1].size());
-					for (size_t i = 1; i < n; ++i)
-					{
-						auto com = (m_scene.m_trail[0][i] * m_scene.m_body[0].Mass() + m_scene.m_trail[1][i] * m_scene.m_body[1].Mass()) / total_mass;
-						com.w = 1;
-						line.line_to(com);
-					}
-				}
-
-				auto trail_text = trail_builder.ToText(false);
-				m_trail_gfx = View3D_ObjectCreateLdrA(trail_text.c_str(), false, nullptr, nullptr);
-				if (m_trail_gfx)
-					View3D_WindowAddObject(m_view3d.m_win, m_trail_gfx);
-			}
-
-			// Build diagnostic overlays: velocity arrows, contact marker, collision normal
-			{
-				Builder diag_builder;
-				Colour32 vel_colours[] = { 0xFFFF8080, 0xFF8080FF, 0xFF80FF80, 0xFFFFFF80 };
-
-				for (int i = 0; i != m_scene.m_body_count; ++i)
-				{
-					auto vel = m_scene.m_body[i].VelocityWS();
-					auto pos = m_scene.m_body[i].O2W().pos;
-
-					// Linear velocity arrow
-					auto speed = Length(vel.lin);
-					if (speed > 0.01f)
-					{
-						auto colour = vel_colours[i % std::size(vel_colours)];
-						auto& arrow = diag_builder.Line(std::string(pr::FmtS("vel_%d", i)), colour);
-						arrow.line(pos, pos + vel.lin);
-						arrow.arrow(EArrowType::Fwd, 8.0f);
-					}
-
-					// Angular velocity arrow (green)
-					auto aspeed = Length(vel.ang);
-					if (aspeed > 0.01f)
-					{
-						auto& arrow = diag_builder.Line(std::string(pr::FmtS("avel_%d", i)), 0xFF00FF00);
-						arrow.line(pos, pos + vel.ang);
-						arrow.arrow(EArrowType::Fwd, 6.0f);
-					}
-				}
-
-				// Collision markers (shown after collision has occurred)
-				if (m_scene.m_diag.count > 0)
-				{
-					diag_builder.Sphere("contact_pt", 0xFFFFFFFF).radius(0.08f).pos(m_scene.m_diag.contact_point_ws);
-
-					auto& normal = diag_builder.Line("contact_normal", 0xFF00FFFF);
-					normal.line(m_scene.m_diag.contact_point_ws, m_scene.m_diag.contact_point_ws + m_scene.m_diag.contact_normal_ws * 2.0f);
-					normal.arrow(EArrowType::Fwd, 8.0f);
-				}
-
-				auto diag_text = diag_builder.ToText(false);
-				m_diag_gfx = View3D_ObjectCreateLdrA(diag_text.c_str(), false, nullptr, nullptr);
-				if (m_diag_gfx)
-					View3D_WindowAddObject(m_view3d.m_win, m_diag_gfx);
-			}
-		}
-
-		void CleanupDiagGfx()
-		{
-			if (m_trail_gfx)
-			{
-				View3D_WindowRemoveObject(m_view3d.m_win, m_trail_gfx);
-				View3D_ObjectDelete(m_trail_gfx);
-				m_trail_gfx = nullptr;
-			}
-			if (m_diag_gfx)
-			{
-				View3D_WindowRemoveObject(m_view3d.m_win, m_diag_gfx);
-				View3D_ObjectDelete(m_diag_gfx);
-				m_diag_gfx = nullptr;
 			}
 		}
 
