@@ -469,7 +469,7 @@ namespace pr::rdr12::ldraw
 				if (m_filepath.empty()) return;
 				Writer::Write(out, EKeyword::Texture, [&]
 				{
-					Writer::Write(out, EKeyword::FilePath, "\"", m_filepath.string(), "\"");
+					Writer::Write(out, EKeyword::FilePath, "\"" + m_filepath.string() + "\"");
 					Writer::Write(out, EKeyword::Addr, m_addr[0], m_addr[1]);
 					Writer::Write(out, EKeyword::Filter, m_filter);
 					Writer::Append(out, m_has_alpha);

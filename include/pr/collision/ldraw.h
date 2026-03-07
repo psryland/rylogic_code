@@ -5,10 +5,15 @@
 #pragma once
 #include "pr/maths/maths.h"
 #include "pr/gfx/colour.h"
-#include "pr/collision/shapes.h"
+#include "pr/view3d-12/ldraw/ldraw_builder.h"
+#include "pr/collision/shape.h"
+#include "pr/collision/shape_sphere.h"
+#include "pr/collision/shape_box.h"
+#include "pr/collision/shape_line.h"
+#include "pr/collision/shape_triangle.h"
+#include "pr/collision/shape_array.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
-#include "pr/view3d-12/ldraw/ldraw_builder.h"
 
 namespace pr::rdr12::ldraw
 {

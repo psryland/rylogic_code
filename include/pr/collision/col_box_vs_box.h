@@ -3,11 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/geometry/closest_point.h"
+#include "pr/collision/forward.h"
+#include "pr/collision/shape.h"
+#include "pr/collision/shape_box.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
-#include "pr/collision/shape_box.h"
 
 namespace pr::collision
 {
@@ -151,7 +151,7 @@ namespace pr::collision
 #include "pr/common/unittests.h"
 #include "pr/collision/ldraw.h"
 
-namespace pr::collision
+namespace pr::collision::tests
 {
 	PRUnitTest(CollisionBoxVsBoxTests)
 	{

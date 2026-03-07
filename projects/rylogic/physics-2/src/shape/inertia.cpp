@@ -367,7 +367,12 @@ namespace pr::physics
 	m3x4 InertiaInv::Ic3x3(float inv_mass) const
 	{
 		inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
-		if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
+
+		// For immovable bodies (inv_mass ≈ 0), the inverse inertia is zero.
+		// For massless bodies (inv_mass → ∞), treat as degenerate.
+		if (inv_mass < ZeroMass)
+			return m3x4{};
+		if (inv_mass >= InfiniteMass)
 			return m3x4::Identity();
 
 		auto dia = inv_mass * m_diagonal;
@@ -381,7 +386,11 @@ namespace pr::physics
 	m3x4 InertiaInv::To3x3(float inv_mass) const
 	{
 		inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
-		if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
+
+		// For immovable bodies (inv_mass ≈ 0), the inverse inertia is zero.
+		if (inv_mass < ZeroMass)
+			return m3x4{};
+		if (inv_mass >= InfiniteMass)
 			return m3x4::Identity();
 
 		auto Ic_inv = Ic3x3(inv_mass);

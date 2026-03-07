@@ -2671,6 +2671,7 @@ namespace pr
 				LoopCont m_loop;          // The loops to execute
 				Filters m_filters;        // Message filters to process messages before TranslateMessage is called
 				time_point_t m_clock0;    // The time when 'Run' was called
+				bool m_quit_pending;      // Set when PostQuitMessage has been called, enables aggressive drain
 
 			public:
 
@@ -2682,6 +2683,7 @@ namespace pr
 					, m_filters()
 					, m_clock0()
 					, m_config()
+					, m_quit_pending(false)
 				{
 					m_filters.push_back(this);
 				}
@@ -2758,7 +2760,31 @@ namespace pr
 
 						HandleMessage(msg);
 					}
+
+					// WM_QUIT has the lowest priority in the Windows message queue. It is only
+					// synthesized by PeekMessage/GetMessage when no other messages are pending.
+					// If any source continuously generates messages (timers, paint, posted messages
+					// from background threads), WM_QUIT can be starved indefinitely.
+					// Check explicitly by draining all remaining messages in a second pass.
+					if (m_quit_pending)
+					{
+						while (::PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+						{
+							if (msg.message == WM_QUIT)
+								return static_cast<int>(msg.wParam);
+							// Discard non-quit messages during shutdown drain
+						}
+					}
 					return std::nullopt;
+				}
+
+				// Post WM_QUIT to the thread message queue and enable aggressive message
+				// draining so that WM_QUIT (which has the lowest priority) is not starved
+				// by continuously generated messages from timers, paint, or background threads.
+				void RequestQuit(int exit_code = 0)
+				{
+					m_quit_pending = true;
+					::PostQuitMessage(exit_code);
 				}
 
 				// Call 'Step' on all loops that are pending. Returns the time in milliseconds until the next loop is due.
@@ -5571,7 +5597,7 @@ namespace pr
 						if (ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren))
 							return true;
 
-						// Parent window is being destroy, destroy this window to
+						// Parent window is being destroyed, destroy this window too
 						if (toplevel_hwnd != m_hwnd)
 							::DestroyWindow(m_hwnd);
 
@@ -6591,12 +6617,18 @@ namespace pr
 						// Don't detach children, that happens when the Form/Control is destructed
 						Parent(nullptr);
 
-						// If we're the main app, post WM_QUIT
+						// If we're the main app, quit the message loop (or fall back to
+						// PostQuitMessage if no loop is registered).
 						if (cp().m_main_wnd)
-							::PostQuitMessage((int)m_dialog_result);
+						{
+							if (cp().m_msg_loop)
+								cp().m_msg_loop->RequestQuit((int)m_dialog_result);
+							else
+								::PostQuitMessage((int)m_dialog_result);
+						}
 
 						// Return false so that WM_DESTROY is passed to the WndProc which
-						// while unhook the thunk and null the 'm_hwnd'
+						// will unhook the thunk and null the 'm_hwnd'
 						return false;
 					}
 					case WM_CTLCOLORDLG:

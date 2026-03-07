@@ -1,15 +1,14 @@
 ﻿//*********************************************
 // Collision
-//  Copyright (c) Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2026
 //*********************************************
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/geometry/closest_point.h"
-#include "pr/collision/penetration.h"
-#include "pr/collision/support.h"
+#include "pr/collision/forward.h"
 #include "pr/collision/shape.h"
 #include "pr/collision/shape_sphere.h"
 #include "pr/collision/shape_box.h"
+#include "pr/collision/penetration.h"
+#include "pr/collision/support.h"
 
 namespace pr::collision
 {
@@ -47,14 +46,19 @@ namespace pr::collision
 			}
 		}
 	
-		// If 'dist_sq' is zero then the centre of the sphere is inside the box
-		// The separating axis is in one of the box axis directions
+		// If 'dist_sq' is zero then the centre of the sphere is inside the box.
+		// The separating axis is the box face normal with the minimum penetration depth
+		// (i.e., the shortest escape route for the sphere).
 		if (dist_sq < maths::tiny<float>)
 		{
-			auto i = MaxElementIndex(Abs(l2r).xyz);
+			// For each axis, the penetration is: sphere_radius + box_half_extent - |distance_from_centre|.
+			// The minimum penetration axis is where (box_half_extent - |l2r|) is smallest,
+			// i.e., the face the sphere centre is closest to.
+			auto face_dist = v4{box.m_radius.x - Abs(l2r.x), box.m_radius.y - Abs(l2r.y), box.m_radius.z - Abs(l2r.z), FLT_MAX};
+			auto i = MinElementIndex(face_dist);
 
 			// Find the penetration depth
-			auto depth = sph.m_radius + box.m_radius[i] - Abs(l2r[i]);
+			auto depth = sph.m_radius + face_dist[i];
 			pen(depth, [&]
 			{
 				// Find the separating axis
@@ -113,7 +117,7 @@ namespace pr::collision
 #include "pr/common/unittests.h"
 #include "pr/collision/ldraw.h"
 
-namespace pr::collision
+namespace pr::collision::tests
 {
 	PRUnitTest(CollisionSphereVsBox)
 	{
