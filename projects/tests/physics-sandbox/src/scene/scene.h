@@ -208,6 +208,12 @@ namespace physics_sandbox
 			// existing shapes (bodies hold raw pointers into the variant storage).
 			m_owned_shapes.reserve(m_body_count);
 
+			// Same for polytope buffers — bodies hold pointers into these byte_data buffers.
+			auto polytope_count = 0;
+			for (auto const& bd : scene_desc.bodies)
+				if (bd.shape_type == scene_loader::BodyDesc::EShape::Polytope) ++polytope_count;
+			m_owned_polytopes.reserve(polytope_count);
+
 			// Create dynamic bodies from the scene description
 			for (int i = 0; i != num_scene_bodies; ++i)
 			{

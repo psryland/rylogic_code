@@ -10,7 +10,82 @@ namespace physics_sandbox
 	namespace MenuID
 	{
 		static constexpr int OpenFile = 1001;
+		static constexpr int RecentFileBase = 2000; // 2000..2000+MaxRecentFiles-1
 	}
+
+	// Maximum number of entries in the Recent Files submenu
+	static constexpr int MaxRecentFiles = 10;
+
+	// Persistent recent-files list stored in %APPDATA%.
+	// Keeps an MRU (most-recently-used) list of scene file paths,
+	// saved to a simple line-delimited text file between sessions.
+	struct RecentFiles
+	{
+		std::vector<std::filesystem::path> m_paths;
+
+		// Where to store the recent files list on disk
+		static std::filesystem::path StoragePath()
+		{
+			wchar_t* appdata = nullptr;
+			_wdupenv_s(&appdata, nullptr, L"APPDATA");
+			if (!appdata)
+				return {};
+
+			auto dir = std::filesystem::path(appdata) / L"RylogicPhysicsSandbox";
+			free(appdata);
+			std::filesystem::create_directories(dir);
+			return dir / L"recent.txt";
+		}
+
+		// Load the list from disk
+		void Load()
+		{
+			m_paths.clear();
+			auto path = StoragePath();
+			if (path.empty() || !std::filesystem::exists(path))
+				return;
+
+			std::ifstream f(path);
+			std::string line;
+			while (std::getline(f, line))
+			{
+				if (!line.empty())
+					m_paths.emplace_back(line);
+			}
+		}
+
+		// Save the list to disk
+		void Save() const
+		{
+			auto path = StoragePath();
+			if (path.empty())
+				return;
+
+			std::ofstream f(path);
+			for (auto const& p : m_paths)
+				f << p.string() << "\n";
+		}
+
+		// Add a path to the front (MRU order), removing duplicates and capping at max
+		void Add(std::filesystem::path const& filepath)
+		{
+			// Remove any existing entry for this path
+			auto canonical = std::filesystem::weakly_canonical(filepath);
+			std::erase_if(m_paths, [&](auto const& p)
+			{
+				return std::filesystem::weakly_canonical(p) == canonical;
+			});
+
+			// Insert at front (most recent first)
+			m_paths.insert(m_paths.begin(), canonical);
+
+			// Cap at maximum
+			if (static_cast<int>(m_paths.size()) > MaxRecentFiles)
+				m_paths.resize(MaxRecentFiles);
+
+			Save();
+		}
+	};
 
 	// Main window for the physics sandbox application.
 	// Assembles the 3D viewport, media controls, details panel, and menu bar
@@ -31,6 +106,9 @@ namespace physics_sandbox
 
 		// Path of the last loaded scene file, so Reset reloads the same scene
 		std::filesystem::path m_scene_filepath;
+
+		// Most-recently-used scene files list, persisted to %APPDATA%
+		RecentFiles m_recent;
 
 		// Diagnostic visualisation
 		view3d::Object m_trail_gfx;
@@ -63,6 +141,7 @@ namespace physics_sandbox
 				.padding(0)
 				.menu({ {L"&File", Menu(Menu::EKind::Popup, {
 					MenuItem(L"&Open Scene...\tCtrl+O", MenuID::OpenFile),
+					MenuItem(L"Recent Files", ::CreatePopupMenu()),
 					MenuItem(MenuItem::Separator),
 					MenuItem(L"E&xit", IDCLOSE),
 				})} })
@@ -88,6 +167,10 @@ namespace physics_sandbox
 			, m_details_elapsed(0)
 			, m_closing(false)
 		{
+			// Load the recent files list from disk and populate the submenu
+			m_recent.Load();
+			RebuildRecentFilesMenu();
+
 			// Wire media panel events to simulation control
 			m_media.OnPlay += [&](auto&, auto&)
 			{
@@ -191,6 +274,19 @@ namespace physics_sandbox
 					result = 0;
 					return true;
 				}
+
+				// Recent Files submenu items (IDs in range RecentFileBase..RecentFileBase+MaxRecentFiles-1)
+				if (id >= MenuID::RecentFileBase && id < MenuID::RecentFileBase + MaxRecentFiles)
+				{
+					auto index = id - MenuID::RecentFileBase;
+					if (index < static_cast<int>(m_recent.m_paths.size()))
+					{
+						LoadSceneFile(m_recent.m_paths[index]);
+						RebuildRecentFilesMenu();
+					}
+					result = 0;
+					return true;
+				}
 			}
 
 			return Form::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
@@ -256,6 +352,47 @@ namespace physics_sandbox
 			LoadSceneFile(std::filesystem::path(files[0]));
 		}
 
+		// Rebuild the Recent Files submenu from the current m_recent list.
+		// Finds the "Recent Files" popup in the File menu and replaces its items
+		// with numbered entries for each recently opened scene file.
+		void RebuildRecentFilesMenu()
+		{
+			// Navigate to the File menu (first submenu of the menu bar)
+			auto menu_bar = ::GetMenu(m_hwnd);
+			if (!menu_bar)
+				return;
+
+			auto file_menu = ::GetSubMenu(menu_bar, 0);
+			if (!file_menu)
+				return;
+
+			// The "Recent Files" item is at position 1 (after "Open Scene...")
+			auto recent_menu = ::GetSubMenu(file_menu, 1);
+			if (!recent_menu)
+				return;
+
+			// Clear existing items
+			while (::GetMenuItemCount(recent_menu) > 0)
+				::RemoveMenu(recent_menu, 0, MF_BYPOSITION);
+
+			// Populate with current recent files list
+			if (m_recent.m_paths.empty())
+			{
+				::AppendMenuW(recent_menu, MF_STRING | MF_GRAYED, 0, L"(empty)");
+			}
+			else
+			{
+				for (int i = 0; i != static_cast<int>(m_recent.m_paths.size()); ++i)
+				{
+					// Format as "&1 filename.json" for keyboard accelerator
+					auto label = pr::FmtS(L"&%d %s", i + 1, m_recent.m_paths[i].filename().c_str());
+					::AppendMenuW(recent_menu, MF_STRING, MenuID::RecentFileBase + i, label);
+				}
+			}
+
+			::DrawMenuBar(m_hwnd);
+		}
+
 		// Load a scene from a JSON file path.
 		// Can be called before or after Show() — if the window isn't visible yet,
 		// the graphics will be added when ResetScene-equivalent logic runs.
@@ -274,6 +411,10 @@ namespace physics_sandbox
 
 				// Remember the filepath so Reset can reload it
 				m_scene_filepath = filepath;
+
+				// Add to the recent files list (MRU order) and rebuild the submenu
+				m_recent.Add(filepath);
+				RebuildRecentFilesMenu();
 
 				// Load the scene from JSON
 				m_scene.LoadFromJson(filepath);

@@ -6,6 +6,7 @@
 #include <functional>
 #include <cstdarg>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <span>
 #include <memory>
