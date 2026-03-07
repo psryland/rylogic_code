@@ -20,7 +20,7 @@
 #include "pr/common/cast.h"
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
-#include "pr/physics/physics.h"
+#include "pr/physics-2/physics.h"
 #include "pr/lua/lua.h"
 #include "lua/include/lstate.h"
 
@@ -391,62 +391,64 @@ extern "C"
 	}
 	ADDIN_API HRESULT WINAPI AddIn_PhShape(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 	{
-		using namespace ph;
+		using namespace physics;
 		ReentryGuard guard;
 
 		Shape base;
 		if (FAILED(pHelper->Read(base))) return E_FAIL;
 		switch (base.m_type)
 		{
-		case EShape_Sphere:
+			case EShape::Sphere:
 			{
 				ShapeSphere shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
 				_snprintf(pResult, max, "Sph(%d): r=%f", (int)shape.m_base.m_size, shape.m_radius);
-			}break;
-		case EShape_Cylinder:
-			{
-				ShapeCylinder shape;
-				if (FAILED(pHelper->Read(shape))) return E_FAIL;
-				_snprintf(pResult, max, "Cyl(%d): r=%f h=%f", (int)shape.m_base.m_size, shape.m_radius, shape.m_height);
-			}break;
-		case EShape_Box:
+				break;
+			}
+			case EShape::Box:
 			{
 				ShapeBox shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
 				_snprintf(pResult, max, "Box(%d): w=%f h=%f d=%f", (int)shape.m_base.m_size, shape.m_radius.x, shape.m_radius.y, shape.m_radius.z);
-			}break;
-		case EShape_Polytope:
+				break;
+			}
+			case EShape::Line:
 			{
-				ShapePolytope shape;
+				ShapeLine shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
-				_snprintf(pResult, max, "Poly(%d): v=%d f=%d", (int)shape.m_base.m_size, shape.m_vert_count, shape.m_face_count);
-			}break;
-		case EShape_Triangle:
+				_snprintf(pResult, max, "Line(%d): <%3.3f>", (int)shape.m_base.m_size, shape.m_radius);
+				break;
+			}
+			case EShape::Triangle:
 			{
 				ShapeTriangle shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
 				_snprintf(pResult, max, "Tri(%d): <%3.3f,%3.3f,%3.3f> <%3.3f,%3.3f,%3.3f> <%3.3f,%3.3f,%3.3f>"
-					,(int)shape.m_base.m_size
-					,shape.m_v.x.x ,shape.m_v.x.y ,shape.m_v.x.z
-					,shape.m_v.y.x ,shape.m_v.y.y ,shape.m_v.y.z
-					,shape.m_v.z.x ,shape.m_v.z.y ,shape.m_v.z.z);
-			}break;
-		case EShape_Terrain:
+					, (int)shape.m_base.m_size
+					, shape.m_v.x.x, shape.m_v.x.y, shape.m_v.x.z
+					, shape.m_v.y.x, shape.m_v.y.y, shape.m_v.y.z
+					, shape.m_v.z.x, shape.m_v.z.y, shape.m_v.z.z);
+				break;
+			}
+			case EShape::Polytope:
 			{
-				ShapeTerrain shape;
+				ShapePolytope shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
-				_snprintf(pResult, max, "Terr(%d): ", (int)shape.m_base.m_size);
-			}break;
-		case EShape_Array:
+				_snprintf(pResult, max, "Poly(%d): v=%d f=%d", (int)shape.m_base.m_size, shape.m_vert_count, shape.m_face_count);
+				break;
+			}
+			case EShape::Array:
 			{
 				ShapeArray shape;
 				if (FAILED(pHelper->Read(shape))) return E_FAIL;
 				_snprintf(pResult, max, "Array(%d): n=%d", (int)shape.m_base.m_size, (int)shape.m_num_shapes);
-			}break;
-		default:
-			_snprintf(pResult, max, "Unknown Shape");
-			break;
+				break;
+			}
+			default:
+			{
+				_snprintf(pResult, max, "Unknown Shape");
+				break;
+			}
 		}
 		return S_OK;
 	}

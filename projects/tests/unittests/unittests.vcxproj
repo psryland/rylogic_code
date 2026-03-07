@@ -23,7 +23,6 @@
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
-				;$(RylogicRoot)projects\rylogic
 				;$(RylogicRoot)sdk
 				;$(RylogicRoot)sdk\sqlite3\include
 				;$(RylogicRoot)sdk\vorbis\include

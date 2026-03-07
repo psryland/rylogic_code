@@ -5,11 +5,12 @@
 #pragma once
 #include "pr/collision/forward.h"
 #include "pr/collision/shapes.h"
-#include "pr/collision/penetration.h"
-#include "pr/collision/support.h"
 #include "pr/collision/col_sphere_vs_sphere.h"
 #include "pr/collision/col_sphere_vs_box.h"
 #include "pr/collision/col_box_vs_box.h"
+#include "pr/collision/col_line_vs_box.h"
+#include "pr/collision/penetration.h"
+#include "pr/collision/support.h"
 
 namespace pr::collision
 {
@@ -44,7 +45,7 @@ namespace pr::collision
 			BoxVsBox,                // (1 v 1) - Box v Box 
 
 			CollisionNotImplemented, // (2 v 0) - Line v Sphere
-			CollisionNotImplemented, // (2 v 1) - Line v Box
+			LineVsBox,               // (2 v 1) - Line v Box
 			CollisionNotImplemented, // (2 v 2) - Line v Line
 
 			CollisionNotImplemented, // (3 v 0) - Triangle v Sphere
