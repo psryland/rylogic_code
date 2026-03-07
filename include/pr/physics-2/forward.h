@@ -33,6 +33,9 @@ namespace pr::physics
 	struct IBroadphase;
 	struct IMaterials;
 	struct Engine;
+	struct GpuIntegrator;
+	struct RigidBodyDynamics;
+	struct IntegrateOutput;
 
 	// Traits
 	template <typename T>

@@ -6,6 +6,7 @@
 
 #include "pr/physics-2/forward.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
+#include "pr/physics-2/integrator/rigid_body_dynamics.h"
 
 namespace pr::physics
 {
@@ -24,4 +25,9 @@ namespace pr::physics
 	//               x += v.lin * dt     (update position)
 	//   Half-kick:  h += f * dt/2       (advance momentum by second half-step)
 	void Evolve(RigidBody& rb, float elapsed_seconds);
+
+	// CPU fallback for GPU integration path.
+	// Performs the same Störmer-Verlet kick-drift-kick on a RigidBodyDynamics buffer entry.
+	// This mirrors the GPU compute shader exactly, allowing A/B comparison for debugging.
+	void EvolveCPU(RigidBodyDynamics& dyn, float elapsed_seconds);
 }

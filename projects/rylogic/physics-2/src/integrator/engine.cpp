@@ -7,6 +7,15 @@
 
 namespace pr::physics
 {
+	// GPU integration dispatch. Calls through the pimpl boundary function
+	// defined in gpu_integrator.cpp where GpuIntegrator is a complete type.
+	void Engine::IntegrateGpu(std::span<RigidBodyDynamics> dynamics, float dt)
+	{
+		assert(m_gpu_integrator != nullptr && "Call InitGpu() before stepping with UseGpu=true");
+		std::vector<IntegrateOutput> output(dynamics.size());
+		GpuIntegrate(*m_gpu_integrator, dynamics, dt, output);
+	}
+
 	// Broad phase overlap query → narrow phase collision detection → impulse resolution.
 	// This is the core collision pipeline, called after all bodies have been evolved.
 	void Engine::DetectAndResolve(float dt)

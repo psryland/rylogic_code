@@ -29,6 +29,12 @@
 				;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+				;$(RylogicRoot)include
+				;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>
@@ -120,6 +126,7 @@
     <ClInclude Include="src\unittests\sandbox_tests.h" />
     <ClInclude Include="src\utils\scene_loader.h" />
     <ClCompile Include="src\main.cpp" />
+    <ResourceCompile Include="$(RylogicRoot)include\pr\physics-2\compute\physics_shaders.rc" />
   </ItemGroup>
   <!-- Dependencies -->
   <ItemGroup>

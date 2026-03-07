@@ -16,5 +16,7 @@
 #include "pr/physics-2/material/imaterials.h"
 #include "pr/physics-2/material/material_map.h"
 #include "pr/physics-2/utility/ldraw.h"
+#include "pr/physics-2/integrator/rigid_body_dynamics.h"
 #include "pr/physics-2/integrator/integrator.h"
+#include "pr/physics-2/integrator/gpu_integrator.h"
 #include "pr/physics-2/integrator/engine.h"
