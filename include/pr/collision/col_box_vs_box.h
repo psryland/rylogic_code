@@ -153,43 +153,48 @@ namespace pr::collision
 
 namespace pr::collision::tests
 {
-	PRUnitTest(CollisionBoxVsBoxTests)
+	PRUnitTestClass(BoxVsBoxTests)
 	{
-		using namespace pr::rdr12::ldraw;
-
-		auto lhs = ShapeBox{v4(0.3f, 0.4f, 0.5f, 0.0f)};
-		auto rhs = ShapeBox{v4(0.3f, 0.4f, 0.5f, 0.0f)};
-		m4x4 l2w_[] =
+		PRUnitTestMethod(Visualise)
 		{
-			m4x4::Identity(),
-		};
-		m4x4 r2w_[] =
-		{
-			m4x4::Transform(constants<float>::tau_by_8, 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, constants<float>::tau_by_8, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, -3 * constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-		};
+			using namespace pr::rdr12::ldraw;
 
-		std::default_random_engine rng;
-		for (int i = 0; i != 20; ++i)
-		{
-			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
-
-			Builder builder;
-			builder._<LdrPhysicsShape>("lhs", 0x30FF0000).shape(lhs).o2w(l2w);
-			builder._<LdrPhysicsShape>("rhs", 0x3000FF00).shape(rhs).o2w(r2w);
-			//builder.Write(L"collision_unittests.ldr");
-			if (BoxVsBox(lhs, l2w, rhs, r2w, c))
+			#if PR_UNITTESTS_VISUALISE
+			auto lhs = ShapeBox{ v4(0.3f, 0.4f, 0.5f, 0.0f) };
+			auto rhs = ShapeBox{ v4(0.3f, 0.4f, 0.5f, 0.0f) };
+			m4x4 l2w_[] =
 			{
-				builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
-				builder.Box("pt0", Colour32Yellow).dim(0.01f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
-				builder.Box("pt1", Colour32Yellow).dim(0.01f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
+				m4x4::Identity(),
+			};
+			m4x4 r2w_[] =
+			{
+				m4x4::Transform(constants<float>::tau_by_8, 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				m4x4::Transform(0, constants<float>::tau_by_8, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				m4x4::Transform(0, 0, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+				m4x4::Transform(0, 0, -3 * constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			};
+
+			std::default_random_engine rng;
+			for (int i = 0; i != 20; ++i)
+			{
+				Contact c;
+				m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+				m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+
+				Builder builder;
+				builder._<LdrPhysicsShape>("lhs", 0x30FF0000).shape(lhs).o2w(l2w);
+				builder._<LdrPhysicsShape>("rhs", 0x3000FF00).shape(rhs).o2w(r2w);
+				builder.Write(L"collision_unittests.ldr");
+				if (BoxVsBox(lhs, l2w, rhs, r2w, c))
+				{
+					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
+					builder.Box("pt0", Colour32Yellow).dim(0.01f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt1", Colour32Yellow).dim(0.01f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
+				}
+				builder.Write(L"collision_unittests.ldr");
 			}
-			//builder.Write(L"collision_unittests.ldr");
+			#endif
 		}
-	}
+	};
 }
 #endif
