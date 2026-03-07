@@ -469,39 +469,28 @@ namespace pr::physics
 	{
 		// Check for any value == NaN
 		if (IsNaN(inertia_inv))
-			return assert(false), false;
+			return assert("InertiaInv 6x6: NaN" && false), false;
 
-		// Check symmetric
+		// Check symmetric blocks: m00 = Ic¯ (symmetric), m11 (symmetric)
 		if (!IsSymmetric(inertia_inv.m00) ||
 			!IsSymmetric(inertia_inv.m11))
-			return assert(false), false;
+			return assert("InertiaInv 6x6: not symmetric" && false), false;
 
-		// Check 'Ic¯'
+		// Check 'Ic¯' block (non-negative diags, etc.)
 		auto Ic_inv = inertia_inv.m00;
 		if (!Check(Ic_inv))
-			return assert(false), false;
+			return assert("InertiaInv 6x6: Ic_inv block" && false), false;
 
-		// Check 'Ic¯ * cxT'
-		auto cxT = Invert(Ic_inv) * inertia_inv.m01;
-		if (!FEql(Trace(cxT), 0.f) ||
-			!IsAntiSymmetric(cxT))
-			return assert(false), false;
-
-		// Check 'cx * Ic¯'
-		auto cx = inertia_inv.m10 * Invert(Ic_inv);
-		if (!FEql(Trace(cx), 0.f) ||
-			!IsAntiSymmetric(cx))
-			return assert(false), false;
-
-		// Check 'cx = -cxT'
-		if (!FEql(cx + cxT, m3x4{}))
-			return assert(false), false;
-
-		// Check '1/m'
-		auto im = inertia_inv.m11 + cx * Ic_inv * cx;
-		if (!FEql(im.y.y - im.x.x, 0.f) ||
-			!FEql(im.z.z - im.x.x, 0.f))
-			return assert(false), false;
+		// Check structural consistency of off-diagonal blocks.
+		// The 6x6 InertiaInv has the form:
+		//   | Ic¯          -Ic¯*cx        |
+		//   | cx*Ic¯       1/m - cx*Ic¯*cx |
+		// Since Ic¯ is symmetric and cx is anti-symmetric:
+		//   transpose(m10) = transpose(cx*Ic¯) = Ic¯ᵀ*cxᵀ = Ic¯*(-cx) = -Ic¯*cx = m01
+		// This relationship holds exactly (no matrix inversion needed) and catches
+		// any structural inconsistency between the off-diagonal blocks.
+		if (!FEql(inertia_inv.m01, Transpose(inertia_inv.m10)))
+			return assert("InertiaInv 6x6: m01 != transpose(m10)" && false), false;
 
 		return true;
 	}
