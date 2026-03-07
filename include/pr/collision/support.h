@@ -3,16 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-
-#include <cassert>
-#include "pr/maths/maths.h"
-#include "pr/common/alloca.h"
-#include "pr/geometry/intersect.h"
-
-#include "pr/collision/shape_sphere.h"
-#include "pr/collision/shape_box.h"
-#include "pr/collision/shape_triangle.h"
-#include "pr/collision/shape_line.h"
+#include "pr/collision/forward.h"
+#include "pr/collision/shapes.h"
 
 namespace pr::collision
 {
@@ -294,7 +286,7 @@ namespace pr::collision
 		// Shift centre to the halfway point between the faces
 		return (0.5f * (centreA + centreB)).w1();
 	}
-	template <typename Shape0, typename Shape1>
+	template <ShapeType Shape0, ShapeType Shape1>
 	v4 FindContactPoint(Shape0 const& lhs, m4x4 const& l2w, Shape1 const& rhs, m4x4 const& r2w, v4 axis, float pen)
 	{
 		// Find the support feature on each shape (in each shape's space)

@@ -13,7 +13,7 @@
 #include "pr/algorithm/trapping_sets.h"
 #include "pr/audio/synth/synth.h"
 #include "pr/collision/col_box_vs_box.h"
-#include "pr/collision/col_box_vs_line.h"
+#include "pr/collision/col_line_vs_box.h"
 #include "pr/collision/col_sphere_vs_box.h"
 #include "pr/collision/col_sphere_vs_sphere.h"
 #include "pr/collision/ldraw.h"

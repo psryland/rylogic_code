@@ -3,11 +3,10 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
+#include "pr/collision/forward.h"
 #include "pr/collision/shape.h"
 #include "pr/collision/ray.h"
 #include "pr/collision/ray_cast_result.h"
-#include "pr/geometry/intersect.h"
-#include "pr/geometry/point.h"
 
 namespace pr::collision
 {
@@ -510,16 +509,16 @@ namespace pr::collision
 	{
 		switch (shape.m_type)
 		{
-			#define PR_COLLISION_SHAPE_RAYCAST(name, comp) case EShape::name: return RayCast(ray, shape_cast<Shape##name>(shape));
-			PR_COLLISION_SHAPES(PR_COLLISION_SHAPE_RAYCAST)
-			#undef PR_COLLISION_SHAPE_RAYCAST
+			#define PR_ENUM(name, comp) case EShape::name: return RayCast(ray, shape_cast<Shape##name>(shape));
+			PR_COLLISION_SHAPES(PR_ENUM)
+			#undef PR_ENUM
 			default: assert("Unknown primitive type" && false); return RayCastResult{};
 		}
 	}
 
 	// Cast a world space ray
-	template <ShapeType TShape>
-	inline RayCastResult RayCastWS(Ray const& ray, TShape const& shape, m4x4 const& s2w)
+	template <ShapeType Shp>
+	inline RayCastResult RayCastWS(Ray const& ray, Shp const& shape, m4x4 const& s2w)
 	{
 		// Transform the ray cast into shape space
 		auto result = RayCast(InvertAffine(s2w) * ray, shape);

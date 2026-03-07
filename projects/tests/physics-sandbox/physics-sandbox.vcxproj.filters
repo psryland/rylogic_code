@@ -76,7 +76,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_line.h">
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_box.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_box.h">
@@ -101,9 +101,6 @@
       <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\shape.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\collision\shapes.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_array.h">
@@ -274,6 +271,12 @@
     <ClInclude Include="src\unittests\sandbox_tests.h">
       <Filter>src\unittests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\forward.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\shapes.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">
@@ -296,5 +299,10 @@
     <None Include="scenes\three_body_chain.json">
       <Filter>scenes</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\utils\collision_dependency_check.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

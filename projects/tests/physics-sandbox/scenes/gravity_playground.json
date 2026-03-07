@@ -11,7 +11,7 @@
 
 		"ground_plane": {
 			"height": 0.0,
-			"texture": "#checker"
+			"texture": "#checker3"
 		},
 
 		"bodies": [

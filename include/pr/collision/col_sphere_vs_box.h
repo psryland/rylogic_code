@@ -1,15 +1,14 @@
 ﻿//*********************************************
 // Collision
-//  Copyright (c) Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2026
 //*********************************************
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/geometry/closest_point.h"
-#include "pr/collision/penetration.h"
-#include "pr/collision/support.h"
+#include "pr/collision/forward.h"
 #include "pr/collision/shape.h"
 #include "pr/collision/shape_sphere.h"
 #include "pr/collision/shape_box.h"
+#include "pr/collision/penetration.h"
+#include "pr/collision/support.h"
 
 namespace pr::collision
 {
