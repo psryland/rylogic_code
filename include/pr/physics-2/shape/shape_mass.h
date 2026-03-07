@@ -54,6 +54,32 @@ namespace pr::physics
 		return inertia;
 	}
 
+	// Return the unit inertia for the line shape.
+	// Modelled as a thin rod along Z (length = 2*m_radius) with optional cylindrical thickness.
+	// When thickness > 0, uses a solid cylinder inertia: Ixx = Iyy = (1/12)*(3r^2 + L^2), Izz = (1/2)*r^2
+	// When thickness == 0, uses a thin rod: Ixx = Iyy = (1/12)*L^2, Izz ≈ 0
+	inline m3x4 UnitInertia(ShapeLine const& shape)
+	{
+		auto L = 2.0f * shape.m_radius;     // Full length
+		auto r = shape.m_thickness;          // Collision radius (half-thickness)
+		auto inertia = m3x4{};
+		if (r > maths::tiny<float>)
+		{
+			// Solid cylinder inertia (per unit mass)
+			inertia.x.x = (1.0f / 12.0f) * (3.0f * Sqr(r) + Sqr(L));
+			inertia.y.y = inertia.x.x;
+			inertia.z.z = 0.5f * Sqr(r);
+		}
+		else
+		{
+			// Thin rod along Z (per unit mass)
+			inertia.x.x = (1.0f / 12.0f) * Sqr(L);
+			inertia.y.y = inertia.x.x;
+			inertia.z.z = maths::tiny<float>; // Near-zero to avoid singular inertia
+		}
+		return inertia;
+	}
+
 	// Returns the unit inertia for the polytope.
 	inline m3x4 UnitInertia(ShapePolytope const& shape)
 	{
@@ -148,6 +174,24 @@ namespace pr::physics
 		return mp;
 	}
 
+	// Return the mass properties for the line shape
+	inline MassProperties CalcMassProperties(ShapeLine const& shape, float density)
+	{
+		// Volume depends on thickness: cylinder of radius m_thickness and length 2*m_radius.
+		// For zero-thickness lines, use a small minimum volume to avoid zero mass.
+		auto L = 2.0f * shape.m_radius;
+		auto r = shape.m_thickness;
+		auto volume = (r > maths::tiny<float>)
+			? float(constants<double>::tau_by_2) * Sqr(r) * L  // pi * r^2 * L
+			: L * maths::tiny<float>;                          // Fallback: thin rod with minimal cross-section
+
+		MassProperties mp;
+		mp.m_centre_of_mass  = v4{};
+		mp.m_mass            = volume * density;
+		mp.m_os_unit_inertia = UnitInertia(shape);
+		return mp;
+	}
+
 	// Return mass properties for the polytope
 	inline MassProperties CalcMassProperties(ShapePolytope const& shape, float density)
 	{
@@ -167,6 +211,7 @@ namespace pr::physics
 		default: assert("Unknown primitive type" && false); return MassProperties();
 		case EShape::Sphere:   return CalcMassProperties(shape_cast<ShapeSphere>(shape), density);
 		case EShape::Box:      return CalcMassProperties(shape_cast<ShapeBox>(shape), density);
+		case EShape::Line:     return CalcMassProperties(shape_cast<ShapeLine>(shape), density);
 		case EShape::Triangle: return CalcMassProperties(shape_cast<ShapeTriangle>(shape), density);
 		case EShape::Polytope: return CalcMassProperties(shape_cast<ShapePolytope>(shape), density);
 		}
