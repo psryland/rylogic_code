@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // FBX Model loader
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -1607,7 +1607,7 @@ namespace pr::geometry::fbx
 			ufbx_opts.thread_opts = { .pool = thread_pool };
 
 			// Create a stream adapter
-			pr::geometry::fbx::IStream stream(src);
+			geometry::fbx::IStream stream(src);
 
 			// Load the scene
 			ufbx_error error = {};

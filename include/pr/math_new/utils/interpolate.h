@@ -88,8 +88,8 @@ namespace pr::math
 			m_p = CubicCurve3(
 				LogMap<Vec4>(dq),
 				Tangent(dq, Rotate(~q1, w0)) * interval,
-				::pr::math::Zero<Vec4>(),
-				Tangent(::pr::math::Identity<Quat>(), Rotate(~q1, w1)) * interval,
+				math::Zero<Vec4>(),
+				Tangent(math::Identity<Quat>(), Rotate(~q1, w1)) * interval,
 				CurveType::Hermite);
 		}
 		Quat Eval(S t) const noexcept

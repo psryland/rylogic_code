@@ -166,7 +166,7 @@ namespace pr::geometry
 				throw std::runtime_error("Polygon winding order is incorrect");
 
 			#if LDR_OUTPUT
-			pr::ldr::LdrBuilder ldr;
+			ldr::LdrBuilder ldr;
 			ldr.Line("", 0xFF00FF00, 1, [=](int i, v4& pt) { pt = v4(m_verts[i%count], 0, 1.0f); return i <= count; });
 			ldr.ToFile(L"\\dump\\triangulate.ldr");
 			#endif
@@ -420,7 +420,7 @@ namespace pr::geometry
 				tris.push_back(i2);
 
 				#if LDR_OUTPUT
-				pr::ldr::LdrBuilder ldr;
+				ldr::LdrBuilder ldr;
 				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
 				ldr.ToFile(L"\\dump\\triangulate.ldr", true);
 				#endif
@@ -448,7 +448,7 @@ namespace pr::geometry
 				tris.push_back(i2);
 
 				#if LDR_OUTPUT
-				pr::ldr::LdrBuilder ldr;
+				ldr::LdrBuilder ldr;
 				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
 				ldr.ToFile(L"\\dump\\triangulate.ldr", true);
 				#endif

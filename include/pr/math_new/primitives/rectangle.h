@@ -50,8 +50,8 @@ namespace pr::math
 		// Reset this rectangle to an invalid interval
 		constexpr Rectangle& reset() noexcept
 		{
-			m_min = +::pr::math::Max<Vec2>();
-			m_max = -::pr::math::Max<Vec2>();
+			m_min = +math::Max<Vec2>();
+			m_max = -math::Max<Vec2>();
 			return *this;
 		}
 

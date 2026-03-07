@@ -266,9 +266,9 @@ namespace pr::script
 				++src;
 			}
 			if (*src == L'*') ++src; else return false;
-			pr::str::Resize(kw, 0);
-			if (!pr::str::ExtractIdentifier(kw, src, m_delim.c_str())) return false;
-			if (!m_case_sensitive) pr::str::LowerCase(kw);
+			str::Resize(kw, 0);
+			if (!str::ExtractIdentifier(kw, src, m_delim.c_str())) return false;
+			if (!m_case_sensitive) str::LowerCase(kw);
 			m_last_keyword = pr::Widen(kw);
 			return true;
 		}
@@ -1030,22 +1030,22 @@ namespace pr::script
 			auto& src = m_pp;
 			InLiteral lit;
 			if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
-			if (include_braces) pr::str::Append(str, L'{');
+			if (include_braces) str::Append(str, L'{');
 			for (int nest = 1; *src; ++src)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters
-				if (lit.WithinLiteral(*src)) { pr::str::Append(str, *src); continue; }
+				if (lit.WithinLiteral(*src)) { str::Append(str, *src); continue; }
 				nest += int(*src == '{');
 				nest -= int(*src == '}');
 				if (nest == 0) break;
-				pr::str::Append(str, *src);
+				str::Append(str, *src);
 			}
-			if (include_braces) pr::str::Append(str, '}');
+			if (include_braces) str::Append(str, '}');
 			if (IsSectionEnd()) ++src; else return ReportError(EResult::TokenNotFound, Location(), "expected '}'");
 			return true;
 		}
 
-		// Allow extension methods. e.g: template <> bool pr::script::Reader::Extract<MyType>(MyType& my_type) { return Int(my_type.int, 10); // etc }
+		// Allow extension methods. e.g: template <> bool script::Reader::Extract<MyType>(MyType& my_type) { return Int(my_type.int, 10); // etc }
 		template <typename Type> Type Extract()
 		{
 			Type type;

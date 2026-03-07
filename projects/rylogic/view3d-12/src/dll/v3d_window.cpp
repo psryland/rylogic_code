@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -1349,7 +1349,7 @@ namespace pr::rdr12
 	}
 
 	// Add/Update/Remove an async hit test ray.
-	view3d::HitTestRayId V3dWindow::HitTestRayUpdate(pr::view3d::HitTestRayId id, view3d::HitTestRay const* ray)
+	view3d::HitTestRayId V3dWindow::HitTestRayUpdate(view3d::HitTestRayId id, view3d::HitTestRay const* ray)
 	{
 		static int new_id = static_cast<int>(view3d::HitTestRayId::None);
 

@@ -31,13 +31,13 @@
 namespace pr::settings
 {
 	// Export/Import function overloads - overload as necessary (with appropriate return types)
-	//template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable pr::settings::Write() overload for this type"); return t; }
-	//template <typename T> inline bool     Read(pr::script::Reader& reader, T& t) { static_assert(false, "No suitable pr::settings::Read() overload for this type"); }
+	//template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable settings::Write() overload for this type"); return t; }
+	//template <typename T> inline bool     Read(script::Reader& reader, T& t) { static_assert(false, "No suitable settings::Read() overload for this type"); }
 }
 namespace pr::settings
 {
 	using string = pr::string<wchar_t>;
-	using Reader = pr::script::Reader;
+	using Reader = script::Reader;
 
 	// Export function overloads
 	inline string Write(bool t)
@@ -74,7 +74,7 @@ namespace pr::settings
 	}
 	inline string Write(wchar_t const* t)
 	{
-		auto s = pr::str::StringToCString<string>(t);
+		auto s = str::StringToCString<string>(t);
 		s = str::Quotes(s, true);
 		return s;
 	}
@@ -279,7 +279,7 @@ namespace pr
 					int hash;
 					auto setting = Derived::ByIndex(i);
 					auto name    = Derived::NameW(setting);
-					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue32>(setting))
+					if ((hash = reader.HashKeyword(name)) != static_cast<hash::HashValue32>(setting))
 						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", Derived::NameA(setting), hash);
 				}
 				if (!invalid_hashcodes.empty())
@@ -311,7 +311,7 @@ namespace pr
 		// Returns the CRC of 'settings'
 		size_t Crc(std::string const& settings) const
 		{
-			return pr::hash::Hash(settings.c_str());
+			return hash::Hash(settings.c_str());
 		}
 	};
 

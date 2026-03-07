@@ -106,8 +106,8 @@ namespace pr::math
 	template <ScalarType S>
 	constexpr Mat4x4<S>::Mat4x4(Xform<S> const& xform) noexcept requires (std::floating_point<S>)
 	{
-		auto rotation = ::pr::math::ToMatrix<Mat3x4<S>>(xform.rot);
-		auto scale_mat = ::pr::math::Scale<Mat3x4<S>>(xform.scl);
+		auto rotation = math::ToMatrix<Mat3x4<S>>(xform.rot);
+		auto scale_mat = math::Scale<Mat3x4<S>>(xform.scl);
 		rot = rotation * scale_mat;
 		pos = xform.pos;
 	}

@@ -574,8 +574,8 @@ namespace pr::script
 	{
 		enum class ETestKeyword :int
 		{
-			Identifer = pr::hash::HashICT("Identifier"),
-			String = pr::hash::HashICT("String"),
+			Identifer = hash::HashICT("Identifier"),
+			String = hash::HashICT("String"),
 		};
 
 		{// basic extract methods

@@ -1086,7 +1086,7 @@ namespace pr::rdr12
 		// Hash this description to create an Id that can be used to detect duplicate samplers
 		RdrId Id() const
 		{
-			return s_cast<RdrId>(pr::hash::HashBytes64(this, this + 1));
+			return s_cast<RdrId>(hash::HashBytes64(this, this + 1));
 		}
 
 		SamDesc& border(Colour32 colour)

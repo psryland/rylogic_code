@@ -14,7 +14,7 @@ namespace pr::math::spatial::tests
 		PRUnitTestMethod(CrossProduct, float, double)
 		{
 			using V4 = Vec4<T>;
-			using V8 = Vec8<T, ::pr::math::spatial::Motion>;
+			using V8 = Vec8<T, math::spatial::Motion>;
 
 			// Cross of motion vectors: coriolis-like term
 			auto a = V8(V4(0, 0, 1, 0), V4(0, 0, 0, 0)); // pure rotation about z
@@ -28,8 +28,8 @@ namespace pr::math::spatial::tests
 		PRUnitTestMethod(DotProduct, float, double)
 		{
 			using V4 = Vec4<T>;
-			using VM = Vec8<T, ::pr::math::spatial::Motion>;
-			using VF = Vec8<T, ::pr::math::spatial::Force>;
+			using VM = Vec8<T, math::spatial::Motion>;
+			using VF = Vec8<T, math::spatial::Force>;
 
 			// Dot of motion and force vectors gives power
 			auto m = VM(V4(0, 0, 1, 0), V4(1, 0, 0, 0)); // angular z + linear x
@@ -43,7 +43,7 @@ namespace pr::math::spatial::tests
 		PRUnitTestMethod(ShiftMotion, float, double)
 		{
 			using V4 = Vec4<T>;
-			using V8 = Vec8<T, ::pr::math::spatial::Motion>;
+			using V8 = Vec8<T, math::spatial::Motion>;
 
 			// Shifting a pure rotation about z by offset along x
 			// v_new = v_old + w x r
@@ -59,7 +59,7 @@ namespace pr::math::spatial::tests
 		PRUnitTestMethod(ShiftForce, float, double)
 		{
 			using V4 = Vec4<T>;
-			using V8 = Vec8<T, ::pr::math::spatial::Force>;
+			using V8 = Vec8<T, math::spatial::Force>;
 
 			// Shifting a pure force along x by offset along y
 			// τ_new = τ_old + r x f

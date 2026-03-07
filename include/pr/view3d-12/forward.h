@@ -140,14 +140,14 @@ namespace pr::rdr12
 	using Range = pr::Range<int64_t>;
 	using TimeRange = pr::Range<double>;
 	using FrameRange = pr::Range<int>;
-	using Handle = pr::win32::Handle;
-	using Winsock = pr::network::Winsock;
-	using HashValue32 = pr::hash::HashValue32;
+	using Handle = win32::Handle;
+	using Winsock = network::Winsock;
+	using HashValue32 = hash::HashValue32;
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
-	using IPathResolver = pr::filesys::IPathResolver;
-	using PathResolver = pr::filesys::PathResolver;
-	using NoIncludes = pr::filesys::NoIncludes;
+	using IPathResolver = filesys::IPathResolver;
+	using PathResolver = filesys::PathResolver;
+	using NoIncludes = filesys::NoIncludes;
 	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
@@ -166,9 +166,9 @@ namespace pr::rdr12
 	static constexpr RdrId InvalidId = RdrId();
 
 	// Enumerations
-	using EGeom = pr::geometry::EGeom;
-	using ETopo = pr::geometry::ETopo;
-	using ETopoGroup = pr::geometry::ETopoGroup;
+	using EGeom = geometry::EGeom;
+	using ETopo = geometry::ETopo;
+	using ETopoGroup = geometry::ETopoGroup;
 
 	// Renderer
 	struct Renderer;
@@ -224,7 +224,7 @@ namespace pr::rdr12
 	struct NuggetDesc;
 	struct MeshCreationData;
 	using ModelPtr = RefPtr<Model>;
-	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
+	using TNuggetChain = chain::head<Nugget, struct ChainGroupNugget>;
 
 	// Instances
 	struct BaseInstance;

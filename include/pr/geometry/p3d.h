@@ -292,7 +292,7 @@ namespace pr::geometry::p3d
 	using CCont = Cont<Colour32, CBase>;
 	using NCont = Cont<v4, NBase>;
 	using TCont = Cont<v2, TBase>;
-	using IdxBuf = pr::geometry::IdxBuf;
+	using IdxBuf = geometry::IdxBuf;
 
 	struct Str16;
 	struct Nugget;
@@ -310,7 +310,7 @@ namespace pr::geometry::p3d
 	struct FatVert
 	{
 		// Notes:
-		//  - This vertex is intended to be compatible with pr::rdr::Vert.
+		//  - This vertex is intended to be compatible with rdr::Vert.
 		v4     m_vert;
 		Colour m_diff;
 		v4     m_norm;
@@ -2347,7 +2347,7 @@ namespace pr::geometry::p3d
 
 			// Write the model vertices
 			out << ind << "#pragma region Verts\n";
-			out << ind << "static pr::rdr::Vert const verts[] =\n";
+			out << ind << "static rdr::Vert const verts[] =\n";
 			out << ind << "{\n";
 			ind.push_back('\t');
 			for (auto const& vert : mesh.fat_verts())
@@ -2393,7 +2393,7 @@ namespace pr::geometry::p3d
 
 			// Write the model nuggets
 			out << ind << "#pragma region Nuggets\n";
-			out << ind << "static pr::rdr::NuggetProps const nuggets[] =\n";
+			out << ind << "static rdr::NuggetProps const nuggets[] =\n";
 			out << ind << "{\n";
 			ind.push_back('\t');
 			size_t ibeg = 0;
@@ -2401,12 +2401,12 @@ namespace pr::geometry::p3d
 			{
 				auto vrange = nug.vrange();
 				out << ind 
-					<< "pr::rdr::NuggetProps{"
-					<< "pr::rdr::ETopo{" << s_cast<int>(nug.m_topo) << "}, "
-					<< "pr::rdr::EGeom{" << s_cast<int>(nug.m_geom) << "}, "
+					<< "rdr::NuggetProps{"
+					<< "rdr::ETopo{" << s_cast<int>(nug.m_topo) << "}, "
+					<< "rdr::EGeom{" << s_cast<int>(nug.m_geom) << "}, "
 					<< "nullptr, "
-					<< "pr::rdr::Range{" << vrange.m_beg << "," << vrange.m_end << "}, "
-					<< "pr::rdr::Range{" << ibeg << "," << ibeg + nug.icount() << "}"
+					<< "rdr::Range{" << vrange.m_beg << "," << vrange.m_end << "}, "
+					<< "rdr::Range{" << ibeg << "," << ibeg + nug.icount() << "}"
 					<< "},\n";
 
 				ibeg += nug.icount();
@@ -2637,7 +2637,7 @@ namespace pr::geometry
 			{
 				auto& m0 = cmp.m_scene.m_materials[i];
 				auto& m1 = file.m_scene.m_materials[i];
-				PR_EXPECT(pr::str::Equal(m0.m_id.str, m1.m_id.str));
+				PR_EXPECT(str::Equal(m0.m_id.str, m1.m_id.str));
 				PR_EXPECT(m0.m_diffuse == m1.m_diffuse);
 				PR_EXPECT(m0.m_textures.size() == m1.m_textures.size());
 				for (size_t j = 0; j != m1.m_textures.size(); ++j)

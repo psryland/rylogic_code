@@ -61,7 +61,7 @@ namespace pr::gui
 		{
 			real x, y;
 			Point(real x_ = 0, real y_ = 0) :x(x_) ,y(y_) {}
-			Point(pr::gui::Point const& pt) :x(real(pt.x)) ,y(real(pt.y)) {}
+			Point(gui::Point const& pt) :x(real(pt.x)) ,y(real(pt.y)) {}
 			Point(PointF const& pt) :x(real(pt.X)) ,y(real(pt.Y)) {}
 		};
 
@@ -327,7 +327,7 @@ namespace pr::gui
 		using AxisRange        = typename Axis::Range;
 		using SeriesRdrOptions = typename Series::RdrOptions;
 
-		static wchar_t const* WndClassName() { return L"pr::gui::GraphCtrl"; }
+		static wchar_t const* WndClassName() { return L"gui::GraphCtrl"; }
 
 		template <typename Derived = void>
 		struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
@@ -1388,8 +1388,8 @@ namespace pr::gui
 		// Plot a moving average curve over the data
 		void PlotMovingAverage(Graphics& gfx, SeriesRdrOptions const& opts, Point const& scale, Series const& series, size_t i0, size_t i1)
 		{
-			pr::math::ExpMovingAvr<> max(opts.MAWindowSize);
-			pr::math::ExpMovingAvr<> may(opts.MAWindowSize);
+			math::ExpMovingAvr<> max(opts.MAWindowSize);
+			math::ExpMovingAvr<> may(opts.MAWindowSize);
 			Pen ma_pen(opts.MALineColour, opts.MALineWidth);
 
 			bool first = true;
@@ -1543,13 +1543,13 @@ namespace pr::gui
 			//all_visible.m_check_state = vis + invis;
 			//
 			//
-			//struct Menu :pr::gui::ContextMenu
+			//struct Menu :gui::ContextMenu
 			//{
-			//	pr::gui::ContextMenuStyle m_style;
-			//	pr::gui::ContextMenu::Label m_vis;
+			//	gui::ContextMenuStyle m_style;
+			//	gui::ContextMenu::Label m_vis;
 			//	
 			//	Menu()
-			//	:pr::gui::ContextMenu(L"", &m_style)
+			//	:gui::ContextMenu(L"", &m_style)
 			//	,m_vis(L"&Visible", ECmd_Series)
 			//	{}
 			//};

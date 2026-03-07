@@ -49,7 +49,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	using NCont = pr::vector<v4>;
-	using ICont = pr::geometry::IdxBuf;
+	using ICont = geometry::IdxBuf;
 	using CCont = pr::vector<Colour32>;
 	using TCont = pr::vector<v2>;
 	using GCont = pr::vector<NuggetDesc>;
