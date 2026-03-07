@@ -30,7 +30,7 @@ namespace pr::collision
 		// Line segment "radius" plus an epsilon term to counteract arithmetic 
 		// errors when segment is (near) parallel to a coordinate axis. 
 		auto half = line.m_radius * l2b.z; 
-		auto rad = Abs(half) + v4(maths::tiny<float>); 
+		auto rad = Abs(half) + v4(math::tiny<float>); 
  
 		// Try world coordinate axes as separating axes 
 		if (!pen(box.m_radius.x + rad.x - Abs(mid.x), [&]{ return Sign(mid.x) * b2w.x; }, box_.m_material_id, line_.m_material_id)) return; 
@@ -119,7 +119,7 @@ namespace pr::collision::tests
 		auto box = ShapeBox{v4{0.3f, 0.5f, 0.2f, 0.0f}};
 		m4x4 l2w_[] =
 		{
-			m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::TransformRad(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 		m4x4 b2w_[] =
 		{
@@ -130,8 +130,8 @@ namespace pr::collision::tests
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
-			m4x4 b2w = i < _countof(b2w_) ? b2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4{Random<m3x4>(rng), Random<v4>(rng, v4::Origin(), 0.3f).w1()};
+			m4x4 b2w = i < _countof(b2w_) ? b2w_[i] : m4x4{Random<m3x4>(rng), Random<v4>(rng, v4::Origin(), 0.3f).w1()};
 
 			Builder builder;
 			builder._<LdrPhysicsShape>("line", 0x30FF0000).shape(line).o2w(l2w);

@@ -458,59 +458,6 @@ namespace pr
 		#endif
 	};
 
-	// Write a vector to a stream
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Vec2<S> const& vec)
-	{
-		return out << vec.x << " " << vec.y;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Vec3<S> const& vec)
-	{
-		return out << vec.x << " " << vec.y << " " << vec.z;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Vec4<S> const& vec)
-	{
-		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
-	}
-	template <typename Char, math::ScalarType S, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Vec8<S,T> const& vec)
-	{
-		return out << vec.ang << " " << vec.lin;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Quat<S> const& quat)
-	{
-		return out << quat.xyzw;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Mat2x2<S> const& mat)
-	{
-		return out << mat.x << " " << mat.y;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Mat3x4<S> const& mat)
-	{
-		auto m = mat;
-		auto sep = " ";
-		return out << m.x << sep << m.y << sep << m.z;
-	}
-	template <typename Char, math::ScalarType S>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Mat4x4<S> const& mat)
-	{
-		auto m = mat;
-		auto sep = " ";
-		return out << m.x << sep << m.y << sep << m.z << sep << m.w;
-	}
-	template <typename Char, math::ScalarType S, typename A, typename B>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, math::Mat6x8<S,A,B> const& mat)
-	{
-		auto m = mat;
-		auto sep = " ";
-		return out << mat[0] << sep << mat[1] << sep << mat[2] << sep << mat[3] << sep << mat[4] << sep << mat[5];
-	}
-
 	// Convert an integer to a string of 0s and 1s
 	template <StringTypeDynamic Str, std::integral Int>
 	inline Str ToBinaryStr(Int n)
@@ -522,6 +469,61 @@ namespace pr
 			str[i++] = (n & Bit64(--j)) ? '1' : '0';
 
 		return str;
+	}
+}
+namespace pr::math
+{
+	// Write a vector to a stream (in pr::math for ADL with /permissive-)
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec2<S> vec)
+	{
+		return out << vec.x << " " << vec.y;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec3<S> vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec4<S> vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+	}
+	template <typename Char, ScalarType S, typename T>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec8<S,T> vec)
+	{
+		return out << vec.ang << " " << vec.lin;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Quat<S> quat)
+	{
+		return out << quat.xyzw;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat2x2<S> const& mat)
+	{
+		return out << mat.x << " " << mat.y;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat3x4<S> const& mat)
+	{
+		auto m = mat;
+		auto sep = " ";
+		return out << m.x << sep << m.y << sep << m.z;
+	}
+	template <typename Char, ScalarType S>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat4x4<S> const& mat)
+	{
+		auto m = mat;
+		auto sep = " ";
+		return out << m.x << sep << m.y << sep << m.z << sep << m.w;
+	}
+	template <typename Char, ScalarType S, typename A, typename B>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat6x8<S,A,B> const& mat)
+	{
+		auto m = mat;
+		auto sep = " ";
+		return out << mat[0] << sep << mat[1] << sep << mat[2] << sep << mat[3] << sep << mat[4] << sep << mat[5];
 	}
 }
 
@@ -726,7 +728,7 @@ namespace pr::math::tests
 			PR_EXPECT(To<v2>("2 3") == v2(2, 3));
 			PR_EXPECT(To<v4>("1 2 3 4") == v4(1, 2, 3, 4));
 
-			PR_EXPECT(ToBinary<std::string>(uint8_t(0b11001010)) == "11001010");
+			PR_EXPECT(ToBinaryStr<std::string>(uint8_t(0b11001010)) == "11001010");
 		}
 	};
 }

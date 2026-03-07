@@ -133,8 +133,8 @@ namespace pr::math::tests
 				auto ang = rng_angle(rng);
 				auto axis = Vec4::Normal(T(1), T(2), T(3), T(0));
 				auto q0 = Quat(axis, ang);
-				auto mat = ToMatrix<Quat, Mat3x4>(q0);
-				auto q1 = ToQuat<Quat, Mat3x4>(mat);
+				auto mat = ToMatrix<Mat3x4>(q0);
+				auto q1 = ToQuat<Quat>(mat);
 
 				// Rotate a test vector with both and compare
 				auto v = Vec4::Normal(T(-1), T(3), T(2), T(0));

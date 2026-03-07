@@ -278,7 +278,7 @@ namespace pr::math
 					if (&coeff == &CurveType::Bezier)
 					{
 						// Mid-points are the curve ends, 
-						for (int i = 0, iend = isize(p) - 2; i < iend; ++i)
+						for (int i = 0, iend = static_cast<int>(p.size()) - 2; i < iend; ++i)
 						{
 							spline.m_curves.push_back(CubicCurve3(
 								i == 0 ? p[i + 0] : S(0.5) * (p[i + 0] + p[i + 1]),
@@ -295,7 +295,7 @@ namespace pr::math
 				// 4 points per curve. Last point is the first point of the next curve
 				case ECurveTopology::Continuous4:
 				{
-					for (int i = 0, iend = isize(p) - 3; i < iend; i += 3)
+					for (int i = 0, iend = static_cast<int>(p.size()) - 3; i < iend; i += 3)
 					{
 						spline.m_curves.push_back(CubicCurve3(
 							p[i + 0],
@@ -311,7 +311,7 @@ namespace pr::math
 				// 3 points per curve. Each set of 3 points is a separate curve
 				case ECurveTopology::Disjoint3:
 				{
-					for (int i = 0, iend = isize(p) - 2; i < iend; i += 3)
+					for (int i = 0, iend = static_cast<int>(p.size()) - 2; i < iend; i += 3)
 					{
 						spline.m_curves.push_back(CubicCurve3(
 							p[i + 0],
@@ -327,7 +327,7 @@ namespace pr::math
 				// 4 points per curve. Each set of 4 points is a separate curve
 				case ECurveTopology::Disjoint4:
 				{
-					for (int i = 0, iend = isize(p) - 3; i < iend; i += 4)
+					for (int i = 0, iend = static_cast<int>(p.size()) - 3; i < iend; i += 4)
 					{
 						spline.m_curves.push_back(CubicCurve3(
 							p[i + 0],
@@ -400,8 +400,8 @@ namespace pr::math
 	template <ScalarTypeFP S> constexpr S Length(CubicSpline<S> const& spline, S t0, S t1, S tol = tiny<S>) noexcept
 	{
 		S length = 0;
-		int i0 = std::clamp(static_cast<int>(std::floor(t0)), 0, isize(spline.m_curves) - 1);
-		int i1 = std::clamp(static_cast<int>(std::ceil(t1)), 0, isize(spline.m_curves) - 1);
+		int i0 = std::clamp(static_cast<int>(std::floor(t0)), 0, static_cast<int>(spline.m_curves.size()) - 1);
+		int i1 = std::clamp(static_cast<int>(std::ceil(t1)), 0, static_cast<int>(spline.m_curves.size()) - 1);
 		for (auto i = i0; i <= i1; ++i)
 		{
 			auto const& curve = spline.m_curves[i];

@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/gfx/colour.h"
 #include "pr/view3d-12/ldraw/ldraw_builder.h"
 #include "pr/collision/shape.h"

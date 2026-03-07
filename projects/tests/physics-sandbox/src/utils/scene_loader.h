@@ -143,13 +143,13 @@ namespace physics_sandbox::scene_loader
 		if (auto* vel = obj.find("velocity"))
 			desc.velocity = ReadVec3(*vel, 0.0f);
 		else
-			desc.velocity = v4Zero;
+			desc.velocity = v4::Zero();
 
 		// Angular velocity (optional, defaults to zero)
 		if (auto* avel = obj.find("angular_velocity"))
 			desc.angular_velocity = ReadVec3(*avel, 0.0f);
 		else
-			desc.angular_velocity = v4Zero;
+			desc.angular_velocity = v4::Zero();
 
 		return desc;
 	}
@@ -173,7 +173,7 @@ namespace physics_sandbox::scene_loader
 		if (auto* g = scene_obj.find("gravity"))
 			desc.gravity = ReadVec3(*g, 0.0f);
 		else
-			desc.gravity = v4Zero;
+			desc.gravity = v4::Zero();
 
 		// Material properties (optional, defaults to perfectly elastic + frictionless)
 		desc.elasticity = 1.0f;

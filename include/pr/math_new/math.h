@@ -70,4 +70,31 @@
 // No non-standard dependencies outside of './'
 
 // Depends on pr/common/to.h and pr/str/ — not part of math_new core
-//#include "pr/math_new/utils/conversion.h"
+//#include "pr/math_new/conversion.h"
+
+namespace pr
+{
+	using namespace math;
+
+	using v2 = math::Vec2<float>;
+	using v3 = math::Vec3<float>;
+	using v4 = math::Vec4<float>;
+	using v8 = math::Vec8<float, void>;
+	using iv2 = math::Vec2<int32_t>;
+	using iv3 = math::Vec3<int32_t>;
+	using iv4 = math::Vec4<int32_t>;
+	using quat = math::Quat<float>;
+	using xform = math::Xform<float>;
+	using m2x2 = math::Mat2x2<float>;
+	using m3x4 = math::Mat3x4<float>;
+	using m4x4 = math::Mat4x4<float>;
+	using m6x8 = math::Mat6x8<float, void, void>;
+	using BBox = math::BoundingBox<float>;
+	using BSphere = math::BoundingSphere<float>;
+	using OBox = math::OrientedBox<float>;
+	using Plane = math::Plane3<float>;
+	using Frustum = math::Frustum3<float>;
+
+	using v8motion = math::Vec8<float, math::spatial::Motion>;
+	using v8force = math::Vec8<float, math::spatial::Force>;
+}

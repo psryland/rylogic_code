@@ -239,27 +239,27 @@ namespace pr::math::spatial::tests
 		}
 		PRUnitTestMethod(CrossProducts, float, double)
 		{
-			using v8motion = Vec8<T, Motion>;
-			using v8force = Vec8<T, Force>;
+			using v8motionT = Vec8<T, Motion>;
+			using v8forceT = Vec8<T, Force>;
 
 			{// Test: CPM(m) * a == m x a
-				auto v0 = v8motion(1, 1, 1, 2, 2, 2);
-				auto v1 = v8motion(-1, -2, -3, -4, -5, -6);
+				auto v0 = v8motionT(1, 1, 1, 2, 2, 2);
+				auto v1 = v8motionT(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
 				auto r1 = CPM(v0) * v1;
 				PR_EXPECT(FEql(r0, r1));
 			}
 			{// Test: CPM(f) * a == f x* a
-				auto v0 = v8force(1, 1, 1, 2, 2, 2);
-				auto v1 = v8force(-1, -2, -3, -4, -5, -6);
+				auto v0 = v8forceT(1, 1, 1, 2, 2, 2);
+				auto v1 = v8forceT(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
 				auto r1 = CPM(v0) * v1;
 				PR_EXPECT(FEql(r0, r1));
 			}
 			{// Test: vx* == -Transpose(vx)
 				auto v = Vec8<T, void>(-2.3f, +1.3f, 0.9f, -2.2f, 0.0f, -1.0f);
-				auto m0 = CPM(static_cast<v8motion>(v)); // vx
-				auto m1 = CPM(static_cast<v8force>(v)); // vx*
+				auto m0 = CPM(static_cast<v8motionT>(v)); // vx
+				auto m1 = CPM(static_cast<v8forceT>(v)); // vx*
 				auto m2 = Transpose(m1);
 				auto m3 = static_cast<Mat6x8<T, Motion, Motion>>(-m2);
 				PR_EXPECT(FEql(m0, m3));
@@ -308,8 +308,8 @@ namespace pr::math::spatial::tests
 		}
 		PRUnitTestMethod(TransformingSpatialVectors, float, double)
 		{
-			using v8motion = Vec8<T, Motion>;
-			using v8force = Vec8<T, Force>;
+			using v8motionT = Vec8<T, Motion>;
+			using v8forceT = Vec8<T, Force>;
 			using Mat4x4 = Mat4x4<T>;
 			using Mat3x4 = Mat3x4<T>;
 			using Vec4 = Vec4<T>;
@@ -332,8 +332,8 @@ namespace pr::math::spatial::tests
 
 				auto ang_a = Vec4{0,0,0.1f,0}; // Angular component in frame 'a'
 				auto lin_a = Vec4{0,0.1f,0,0}; // Linear component in frame 'a'
-				auto spv_a = v8motion{ang_a, lin_a};
-				auto spf_a = v8force{ang_a, lin_a};
+				auto spv_a = v8motionT{ang_a, lin_a};
+				auto spf_a = v8forceT{ang_a, lin_a};
 
 				// In frame 'a', the velocity at any point 'x' is found from:  vel_a = lin_a + Cross(ang_a, x);
 				// So 'lin_a' and 'ang_a' are a description of the vector field in frame 'a'. They are not associated
@@ -416,7 +416,7 @@ namespace pr::math::spatial::tests
 
 					{
 						// Verify torque at a point is frame-invariant
-						auto spf_c = v8force{ang_c, lin_c};
+						auto spf_c = v8forceT{ang_c, lin_c};
 						auto torque_a = spf_a.AngAt(pt_a);
 						auto torque_c = spf_c.AngAt(pt_c);
 
@@ -452,14 +452,14 @@ namespace pr::math::spatial::tests
 		}
 		PRUnitTestMethod(ShiftTests, float, double)
 		{
-			using v8motion = Vec8<T, Motion>;
-			using v8force = Vec8<T, Force>;
+			using v8motionT = Vec8<T, Motion>;
+			using v8forceT = Vec8<T, Force>;
 			using Vec4 = Vec4<T>;
 
 			{// Motion: Shift velocity to an offset point
 				auto ang = Vec4{0, 0, T(1), 0};  // spinning about Z
 				auto lin = Vec4{0, 0, 0, 0};      // zero velocity at reference point
-				auto motion = v8motion{ang, lin};
+				auto motion = v8motionT{ang, lin};
 				auto ofs = Vec4{T(1), 0, 0, 0};   // point at (1,0,0)
 
 				// Velocity at offset: v + w × r = 0 + (0,0,1)×(1,0,0) = (0,1,0)
@@ -470,7 +470,7 @@ namespace pr::math::spatial::tests
 			{// Force: Shift force reference point
 				auto ang = Vec4{0, 0, 0, 0};      // no torque at reference
 				auto lin = Vec4{0, 0, T(1), 0};   // force in Z direction
-				auto force = v8force{ang, lin};
+				auto force = v8forceT{ang, lin};
 				auto ofs = Vec4{T(1), 0, 0, 0};   // shift to (1,0,0)
 
 				// Torque changes: τ + f × r = 0 + (0,0,1)×(1,0,0) = (0,-1,0)... wait: Cross(f, ofs) = f × ofs
@@ -482,7 +482,7 @@ namespace pr::math::spatial::tests
 			{// ShiftAccelerationBy: centripetal + tangential
 				auto ang_acc = Vec4{0, 0, T(2), 0}; // angular acceleration about Z
 				auto lin_acc = Vec4{0, 0, 0, 0};     // zero linear acceleration at reference
-				auto acc = v8motion{ang_acc, lin_acc};
+				auto acc = v8motionT{ang_acc, lin_acc};
 				auto avel = Vec4{0, 0, T(3), 0};     // angular velocity about Z
 				auto ofs = Vec4{T(1), 0, 0, 0};      // offset in X
 

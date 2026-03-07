@@ -10,6 +10,7 @@ namespace pr::math
 	// An integer that represents one of the basis axis: +/-X, +/-Y, +/-Z
 	struct AxisId
 	{
+		// Note: there's no 'vec()' method. Use a VecN constructor instead, e.g. Vec3{axis_id} or Vec4{axis_id}.
 		static int const None = 0;
 		static int const PosX = +1;
 		static int const PosY = +2;
@@ -30,19 +31,6 @@ namespace pr::math
 		constexpr operator int&() noexcept
 		{
 			return value;
-		}
-		template <ScalarType S> constexpr Vec4<S> vec() const noexcept
-		{
-			switch (value)
-			{
-				case +1: return Vec4<S>{+1, 0, 0, 0};
-				case -1: return Vec4<S>{-1, 0, 0, 0};
-				case +2: return Vec4<S>{0, +1, 0, 0};
-				case -2: return Vec4<S>{0, -1, 0, 0};
-				case +3: return Vec4<S>{0, 0, +1, 0};
-				case -3: return Vec4<S>{0, 0, -1, 0};
-				default: return Vec4<S>{};
-			}
 		}
 		static constexpr bool IsValid(AxisId axis_id) noexcept
 		{

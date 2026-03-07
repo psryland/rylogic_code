@@ -169,7 +169,7 @@ OLD STUFF, DON'T USE
 #include "pr/macros/noexcept.h"
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/str/string.h"
 
 namespace pr

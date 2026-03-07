@@ -844,15 +844,15 @@ namespace pr::math::tests
 			using Vec4 = Vec4<T>;
 			using Vec2 = Vec2<T>;
 			using Mat4x4 = Mat4x4<T>;
-			using BBox = BoundingBox<T>;
+			using BBoxT = BoundingBox<T>;
 
-			std::vector<BBox> bboxes;
+			std::vector<BBoxT> bboxes;
 			for (int i = 0; i != 50; ++i)
 			{
 				auto hi = T(i) * T(0.1);
 				auto centre = Random<Vec4>(rng, Vec4(-hi, -hi, -hi, T(1)), Vec4(hi, hi, hi, T(1)));
 				auto radius = Abs(Random<Vec4>(rng, Vec4(T(0.3), T(0.3), T(0.3), T(0)), Vec4(T(0.5), T(0.5), T(0.5), T(0))));
-				bboxes.push_back(BBox(centre, radius));
+				bboxes.push_back(BBoxT(centre, radius));
 			}
 
 			auto nf = Zero<Vec2>();
@@ -881,15 +881,15 @@ namespace pr::math::tests
 			using Vec4 = Vec4<T>;
 			using Vec2 = Vec2<T>;
 			using Mat4x4 = Mat4x4<T>;
-			using BSphere = BoundingSphere<T>;
+			using BSphereT = BoundingSphere<T>;
 
 			std::uniform_real_distribution<T> rdist(T(0.3), T(0.5));
-			std::vector<BSphere> spheres;
+			std::vector<BSphereT> spheres;
 			for (int i = 0; i != 50; ++i)
 			{
 				auto hi = T(i) * T(0.2);
 				auto centre = Random<Vec4>(rng, Vec4(-hi, -hi, -hi, T(1)), Vec4(hi, hi, hi, T(1)));
-				spheres.push_back(BSphere(centre, rdist(rng)));
+				spheres.push_back(BSphereT(centre, rdist(rng)));
 			}
 
 			auto nf = Zero<Vec2>();

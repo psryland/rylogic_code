@@ -12,6 +12,7 @@
 
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/wingui.h"
+#include "pr/common/fmt.h"
 
 namespace pr
 {

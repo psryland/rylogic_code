@@ -257,6 +257,27 @@ namespace pr::math
 			FEqlRelative(lhs.xyzw, -rhs.xyzw, tiny<S>);
 	}
 
+	// Squared length of a quaternion
+	template <QuaternionType Quat>
+	constexpr typename vector_traits<Quat>::element_t pr_vectorcall LengthSq(Quat q) noexcept
+	{
+		return Dot(q.xyzw, q.xyzw);
+	}
+
+	// Length of a quaternion
+	template <QuaternionType Quat>
+	constexpr typename vector_traits<Quat>::element_t pr_vectorcall Length(Quat q) noexcept
+	{
+		return Sqrt(LengthSq(q));
+	}
+
+	// Dot product of two quaternions. Note: q and -q represent the same rotation, but have opposite signs for the dot product
+	template <QuaternionType Quat>
+	constexpr typename vector_traits<Quat>::element_t pr_vectorcall Dot(Quat lhs, Quat rhs) noexcept
+	{
+		return Dot(lhs.xyzw, rhs.xyzw); // = Cos(theta/2)
+	}
+
 	// Returns the value of 'cos(theta / 2)', where 'theta' is the angle between 'a' and 'b'
 	template <QuaternionType Quat>
 	constexpr typename vector_traits<Quat>::element_t pr_vectorcall CosHalfAngle(Quat a, Quat b) noexcept
@@ -472,7 +493,7 @@ namespace pr::math
 	}
 
 	// Create a rotation matrix from a quaternion
-	template <QuaternionType Quat, VectorType Mat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
+	template <VectorType Mat, QuaternionType Quat> requires (IsRank2<Mat> && SameS<Quat, Mat> && vector_traits<Mat>::dimension >= 3)
 	constexpr Mat pr_vectorcall ToMatrix(Quat q) noexcept
 	{
 		using qt = vector_traits<Quat>;
@@ -506,25 +527,25 @@ namespace pr::math
 
 		if (frac == S(0)) return lhs;
 		if (frac == S(1)) return rhs;
-		auto l = ToQuat<Quat<S>, Mat>(lhs);
-		auto r = ToQuat<Quat<S>, Mat>(rhs);
+		auto l = ToQuat<Quat<S>>(lhs);
+		auto r = ToQuat<Quat<S>>(rhs);
 		auto q = Slerp(l, r, frac);
 		
 		if constexpr (vt::dimension == 3)
 		{
-			return ToMatrix<Quat<S>, Mat>(q);
+			return ToMatrix<Mat>(q);
 		}
 		if constexpr (vt::dimension == 4)
 		{
 			auto p = vec(lhs).w + frac * (vec(rhs).w - vec(lhs).w);
-			return Mat{ ToMatrix<Quat<S>, Mat3x4<S>>(q), p };
+			return Mat{ ToMatrix<Mat3x4<S>>(q), p };
 		}
 	}
 
 	// Deferred definition of Quat(Mat3x4) constructor
 	template <ScalarTypeFP S>
 	Quat<S>::Quat(Mat3x4<S> const& m) noexcept
-		: Quat(ToQuat<Quat<S>, Mat3x4<S>>(m))
+		: Quat(ToQuat<Quat<S>>(m))
 	{}
 }
 

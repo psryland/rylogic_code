@@ -1022,9 +1022,9 @@ namespace pr::rdr12::ldraw
 	{
 		auto scale = m4x4::Scale(m_scale, v4::Origin());
 
-		m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::Transform(0, float(pr::maths::tau_by_4), float(pr::maths::tau_by_4), v4::Origin()) * scale;
-		m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::Transform(-float(pr::maths::tau_by_4), -float(pr::maths::tau_by_4), 0, v4::Origin()) * scale;
-		m_gfx.m_axis[2].m_i2w = m_gfx.m_o2w * m4x4::Transform(0,0,0, v4::Origin()) * scale;
+		m_gfx.m_axis[0].m_i2w = m_gfx.m_o2w * m4x4::TransformRad(0, constants<float>::tau_by_4, constants<float>::tau_by_4, v4::Origin()) * scale;
+		m_gfx.m_axis[1].m_i2w = m_gfx.m_o2w * m4x4::TransformRad(-constants<float>::tau_by_4, -constants<float>::tau_by_4, 0, v4::Origin()) * scale;
+		m_gfx.m_axis[2].m_i2w = m_gfx.m_o2w * m4x4::TransformRad(0, 0, 0, v4::Origin()) * scale;
 
 		scene.AddInstance(m_gfx.m_axis[0]);
 		scene.AddInstance(m_gfx.m_axis[1]);
@@ -1074,7 +1074,7 @@ namespace pr::rdr12::ldraw
 		// Get the axis of rotation from the gizmo and normalised it
 		auto axis = d;
 		auto axis_lensq = LengthSq(axis);
-		if (axis_lensq < pr::maths::tiny<float>) return;
+		if (axis_lensq < pr::math::tiny<float>) return;
 		axis /= sqrt(axis_lensq);
 
 		// Project the component axis back into normalised screen space

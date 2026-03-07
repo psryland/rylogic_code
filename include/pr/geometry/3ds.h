@@ -15,7 +15,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/scope.h"
 #include "pr/gfx/colour.h"
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/triangle.h"
 

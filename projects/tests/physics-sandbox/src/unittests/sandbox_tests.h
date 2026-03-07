@@ -71,8 +71,8 @@ namespace physics_sandbox::tests
 			};
 			auto& body_a = bodies[0];
 			auto& body_b = bodies[1];
-			body_a.VelocityWS(v4Zero, vel_a);
-			body_b.VelocityWS(v4Zero, vel_b);
+			body_a.VelocityWS(v4::Zero(), vel_a);
+			body_b.VelocityWS(v4::Zero(), vel_b);
 
 			// Configure perfectly elastic, frictionless collisions
 			auto engine = TestEngine{};

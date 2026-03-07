@@ -23,8 +23,6 @@
 #include <immintrin.h>
 #include <emmintrin.h>
 #include <iterator>
-// #include <thread>
-// #include <complex>
 // No non-standard dependencies
 
 // Use intrinsics by default

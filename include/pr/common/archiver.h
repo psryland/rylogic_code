@@ -437,7 +437,7 @@ namespace pr::archive
 #include "pr/common/StdVector.h"
 #include "pr/common/StdList.h"
 #include "pr/common/StdMap.h"
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 
 namespace pr
 {

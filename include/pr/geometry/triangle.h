@@ -5,7 +5,7 @@
 #pragma once
 #include <cassert>
 #include <concepts>
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/container/ring.h"
@@ -28,7 +28,7 @@ namespace pr::geometry
 		float abac = Dot3(ab, ac);
 		float e = abab * acac;
 		float d = 2.0f * (e - abac * abac);
-		if (Abs(d) <= maths::tiny<float>) return limits<float>::max();
+		if (Abs(d) <= math::tiny<float>) return limits<float>::max();
 
 		float s = (e - acac * abac) / d;
 		float t = (e - abab * abac) / d;
@@ -92,7 +92,7 @@ namespace pr::geometry
 	{
 		auto area = 0.0f;
 		for (int i = 0; i != isize(poly)-1; ++i)
-			area += Cross(poly[i+1], poly[i]);
+			area += Cross(poly[i], poly[i+1]);
 
 		return area / 2.0f;
 	}
@@ -364,7 +364,7 @@ namespace pr::geometry
 		// True if 'b' is a convex vertex (assuming winding order a, b, c is CCW)
 		static bool Convex(v2 a, v2 b, v2 c)
 		{
-			return Cross(b - a, c - b) <= 0;
+			return Cross(b - a, c - b) >= 0;
 		}
 
 		// True if 'lhs' is less than 'rhs'

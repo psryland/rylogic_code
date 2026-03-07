@@ -74,7 +74,7 @@ namespace pr::rdr12
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.BackBufferSize();
-			if (rt_area != iv2Zero)
+			if (rt_area != iv2::Zero())
 				m_scene.m_cam.Aspect(rt_area.x / float(rt_area.y));
 
 			// The light for the scene
@@ -1714,7 +1714,7 @@ namespace pr::rdr12
 		{
 			case EKeyCodes::F7:
 			{
-				auto up = LengthSq(m_scene.m_cam.Align()) > maths::tiny<float> ? m_scene.m_cam.Align() : v4::YAxis();
+				auto up = LengthSq(m_scene.m_cam.Align()) > math::tiny<float> ? m_scene.m_cam.Align() : v4::YAxis();
 				auto forward = up.z > up.y ? v4::YAxis() : -v4::ZAxis();
 
 				auto bounds =

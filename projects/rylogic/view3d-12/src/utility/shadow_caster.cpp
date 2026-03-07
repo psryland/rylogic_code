@@ -23,7 +23,7 @@ namespace pr::rdr12
 	void ShadowCaster::UpdateParams(Scene const& scene, BBox ws_bounds)
 	{
 		auto const& c2w = scene.m_cam.CameraToWorld();
-		auto l2w = m_light->LightToWorld(ws_bounds.Centre(), 0.5f * ws_bounds.Diametre(), c2w);
+		auto l2w = m_light->LightToWorld(ws_bounds.Centre(), static_cast<float>(0.5 * ws_bounds.Diametre()), c2w);
 		m_params.m_l2w = l2w;
 
 		constexpr int UseLiSPSM = 0;
@@ -141,7 +141,7 @@ namespace pr::rdr12
 			// Create a projection that encloses the scene bounds. This is basically "c2s"
 			auto zn = Abs(ls_bounds.Centre().z + ls_bounds.Radius().z);
 			auto zf = Abs(ls_bounds.Centre().z - ls_bounds.Radius().z);
-			if (zf - zn < maths::tiny<float>) zf = zn + 1.0f;
+			if (zf - zn < math::tiny<float>) zf = zn + 1.0f;
 			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
 			m_params.m_ls2s = ls2s;
 

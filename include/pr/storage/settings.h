@@ -23,7 +23,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
 #include "pr/gfx/colour.h"
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/script/reader.h"
 #include "pr/str/string_util.h"
 #include "pr/str/string.h"
@@ -466,7 +466,7 @@ namespace pr::storage
 		s.m_scale = 1.6f;
 		s.m_mask = 0xCDEU;
 		s.m_colour = pr::Colour32Blue;
-		s.m_area = pr::v2One;
+		s.m_area = pr::v2::One();
 		s.m_position = pr::v4(3, 2, 1, 1);
 		s.m_name = "renamed";
 		s.m_emun = Enum1::Three;
@@ -476,7 +476,7 @@ namespace pr::storage
 		PR_EXPECT(s.m_scale == 1.6f);
 		PR_EXPECT(s.m_mask == 0xCDEU);
 		PR_EXPECT(s.m_colour == pr::Colour32Blue);
-		PR_EXPECT(s.m_area == pr::v2One);
+		PR_EXPECT(s.m_area == pr::v2::One());
 		PR_EXPECT(s.m_position == pr::v4(3,2,1,1) );
 		PR_EXPECT(s.m_name == "renamed");
 		PR_EXPECT(s.m_emun == Enum1::Three);
@@ -501,7 +501,7 @@ namespace pr::storage
 		PR_EXPECT(s2.m_scale == 1.6f);
 		PR_EXPECT(s2.m_mask == 0xCDEU);
 		PR_EXPECT(s2.m_colour == pr::Colour32Blue);
-		PR_EXPECT(s2.m_area == pr::v2One);
+		PR_EXPECT(s2.m_area == pr::v2::One());
 		PR_EXPECT(s2.m_position == pr::v4(3,2,1,1) );
 		PR_EXPECT(s2.m_name == "renamed");
 		PR_EXPECT(s2.m_emun == Enum1::Three);

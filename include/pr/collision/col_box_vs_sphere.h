@@ -49,7 +49,7 @@ namespace pr::collision
 		// If 'dist_sq' is zero then the centre of the sphere is inside the box.
 		// The separating axis is the box face normal with the minimum penetration depth
 		// (i.e., the shortest escape route for the sphere).
-		if (dist_sq < maths::tiny<float>)
+		if (dist_sq < math::tiny<float>)
 		{
 			// For each axis, the penetration is: sphere_radius + box_half_extent - |distance_from_centre|.
 			// The minimum penetration axis is where (box_half_extent - |r2l|) is smallest,
@@ -127,7 +127,7 @@ namespace pr::collision::tests
 		auto rhs = ShapeSphere{0.3f};
 		m4x4 l2w_[] =
 		{
-			m4x4::Transform(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::TransformRad(constants<float>::tau_by_8, constants<float>::tau_by_8, constants<float>::tau_by_8, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 		m4x4 r2w_[] =
 		{
@@ -138,8 +138,8 @@ namespace pr::collision::tests
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4{Random<m3x4>(rng), Random<v4>(rng, v4::Origin(), 0.5f).w1()};
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4{Random<m3x4>(rng), Random<v4>(rng, v4::Origin(), 0.5f).w1()};
 
 			Builder builder;
 			builder._<LdrPhysicsShape>("lhs", 0x3000FF00).shape(lhs).o2w(l2w);

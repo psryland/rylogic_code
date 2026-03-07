@@ -402,7 +402,7 @@ namespace pr::vp_tree
 }
 
 #if PR_UNITTESTS
-#include "pr/maths/maths.h"
+#include "pr/math_new/math.h"
 #include "pr/common/unittests.h"
 namespace pr::vp_tree::tests
 {
@@ -418,7 +418,7 @@ namespace pr::vp_tree::tests
 		void GeneratePoints(std::vector<Pt>& points)
 		{
 			for (auto& p : points)
-				p = Pt{ v2::Random(m_rng, v2::Zero(), 10.0f), 0 };
+				p = Pt{ Random<v2>(m_rng, v2::Zero(), 10.0f), 0 };
 		}
 		void CheckResults(std::vector<Pt> const& points, v2 centre, float radius, std::set<Pt> const& results)
 		{
@@ -427,9 +427,9 @@ namespace pr::vp_tree::tests
 			{
 				auto sep = Length(p.xy - centre);
 				if (results.find(p) != std::end(results))
-					PR_EXPECT(sep <= radius + maths::tiny<float>);
+					PR_EXPECT(sep <= radius + math::tiny<float>);
 				else
-					PR_EXPECT(sep >= radius - maths::tiny<float>);
+					PR_EXPECT(sep >= radius - math::tiny<float>);
 			}
 		}
 		void CheckNearest(std::vector<Pt> const& points, v2 centre, float radius, std::vector<VPTree::Neighbour> const& nearest)
@@ -632,7 +632,7 @@ namespace pr::vp_tree::tests
 				nearest.resize(std::uniform_int_distribution<size_t>(1, 20)(m_rng));
 				pairs.resize(std::uniform_int_distribution<size_t>(1, 20)(m_rng));
 
-				v2 const search_centre = v2::Random(m_rng, v2::Zero(), 7.0f);
+				v2 const search_centre = Random<v2>(m_rng, v2::Zero(), 7.0f);
 				float const search_radius = std::uniform_real_distribution<float>(0.f, 5.0f)(m_rng);
 
 				VPTree::Build(points,
@@ -749,7 +749,7 @@ namespace pr::vp_tree::tests
 				nearest.resize(std::uniform_int_distribution<size_t>(1, 20)(m_rng));
 				pairs.resize(std::uniform_int_distribution<size_t>(1, 20)(m_rng));
 
-				v2 const search_centre = v2::Random(m_rng, v2::Zero(), 7.0f);
+				v2 const search_centre = Random<v2>(m_rng, v2::Zero(), 7.0f);
 				float const search_radius = std::uniform_real_distribution<float>(0.f, 5.0f)(m_rng);
 
 				VPTree::Build(points,

@@ -14,7 +14,9 @@
 #include "pr/common/min_max_fix.h"
 #include "pr/common/event_handler.h"
 #include "pr/common/range.h"
-#include "pr/maths/maths.h"
+#include "pr/common/fmt.h"
+#include "pr/math_new/math.h"
+#include "pr/math_new/stats/stat.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/wingui.h"
@@ -442,7 +444,7 @@ namespace pr::gui
 			,m_base_xrange()
 			,m_base_yrange()
 			,m_zoom(1.0f)
-			,m_zoom_limits({maths::tiny<float>, limits<float>::max()})
+			,m_zoom_limits({math::tiny<float>, limits<float>::max()})
 			,m_cur_arrow()
 			,m_cur_cross()
 			,m_cur_grab()
@@ -520,7 +522,8 @@ namespace pr::gui
 
 			series.Values(pt.X - tol, pt.X + tol, [&](Elem const& e)
 			{
-				auto d = pr::LenSq(e.x - pt.X, e.y - pt.Y);
+				auto dx = e.x - pt.X, dy = e.y - pt.Y;
+				auto d = dx * dx + dy * dy;
 				if (d < dist_sq)
 				{
 					dist_sq = d;
@@ -633,9 +636,9 @@ namespace pr::gui
 		void Zoom(float zm)
 		{
 			auto aspect = (m_yaxis.span() * m_base_xrange.span()) / (m_base_yrange.span() * m_xaxis.span());
-			aspect = pr::Clamp(pr::IsFinite(aspect) ? aspect : 1.0, 0.001, 1000.0);
+			aspect = std::clamp(pr::IsFinite(aspect) ? aspect : 1.0, 0.001, 1000.0);
 
-			zm = pr::Clamp(zm, m_zoom_limits.m_beg, m_zoom_limits.m_end);
+			zm = std::clamp(zm, m_zoom_limits.m_beg, m_zoom_limits.m_end);
 			if (m_xaxis.m_allow_zoom) m_xaxis.span(m_base_xrange.span() * zm         );
 			if (m_yaxis.m_allow_zoom) m_yaxis.span(m_base_yrange.span() * zm * aspect);
 			Dirty(true);
@@ -754,7 +757,7 @@ namespace pr::gui
 				return;
 
 			auto pt = PointToGraph(point);
-			int delta = pr::Clamp<short>(args.m_delta, -999, 999);
+			int delta = std::clamp(static_cast<int>(args.m_delta), -999, 999);
 			Zoom(Zoom() * (1.0f - delta * 0.001f));
 			PositionGraph(Point(point), pt);
 			Dirty(true);
@@ -1385,8 +1388,8 @@ namespace pr::gui
 		// Plot a moving average curve over the data
 		void PlotMovingAverage(Graphics& gfx, SeriesRdrOptions const& opts, Point const& scale, Series const& series, size_t i0, size_t i1)
 		{
-			pr::maths::ExpMovingAvr<> max(opts.MAWindowSize);
-			pr::maths::ExpMovingAvr<> may(opts.MAWindowSize);
+			pr::math::ExpMovingAvr<> max(opts.MAWindowSize);
+			pr::math::ExpMovingAvr<> may(opts.MAWindowSize);
 			Pen ma_pen(opts.MALineColour, opts.MALineWidth);
 
 			bool first = true;

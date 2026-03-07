@@ -20,10 +20,14 @@
 
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
+#include "pr/common/bit_fields.h"
 #include "pr/geometry/fbx.h"
 #include "pr/container/vector.h"
+#include "pr/math_new/math.h"
+#include "pr/math_new/conversion.h"
 
 using namespace pr;
+using namespace pr::math;
 using namespace pr::geometry::fbx;
 
 #pragma region ufbx compat
@@ -1356,7 +1360,7 @@ namespace pr::geometry::fbx
 							auto scl = To<v3>(transform.scale);
 
 							// Ensure shortest path between adjacent quaternions
-							if (k != 0 && Dot(rot, prev) < 0)
+							if (k != 0 && Dot(rot.xyzw, prev.xyzw) < 0)
 								rot = -rot;
 
 							auto idx = k * bone_count + bone_idx;

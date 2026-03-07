@@ -108,10 +108,10 @@ namespace pr::geometry::closest_point
 		assert(major >= 0.0f && minor >= 0.0f && major >= minor);
 
 		// Special case minor axis lengths of zero
-		if (minor < maths::tiny<float>)
+		if (minor < math::tiny<float>)
 			return v2(Clamp(x, -major, major), 0.0f);
 
-		auto ratio = Sign(y) * minor / (major + maths::tiny<float>); // Add an epsilon to prevent divide by zero
+		auto ratio = Sign(y) * minor / (major + math::tiny<float>); // Add an epsilon to prevent divide by zero
 		auto a = Sqr(major), b = Sqr(minor);
 		v2 pt(x, y);
 		v2 nearest;

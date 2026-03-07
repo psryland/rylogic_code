@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -214,17 +214,8 @@ namespace pr::math
 	{
 		return !(lhs == rhs);
 	}
-	template <TensorType Vec> constexpr std::ostream& operator << (std::ostream& out, Vec v) noexcept
-	{
-		using vt = vector_traits<Vec>;
-		if constexpr (vt::dimension > 0) out << vec(v).x << (vt::dimension > 1 ? ", " : "");
-		if constexpr (vt::dimension > 1) out << vec(v).y << (vt::dimension > 2 ? ", " : "");
-		if constexpr (vt::dimension > 2) out << vec(v).z << (vt::dimension > 3 ? ", " : "");
-		if constexpr (vt::dimension > 3) out << vec(v).w << (vt::dimension > 4 ? ", " : "");
-		return out;
-	}
 
-	// Bitwise operators (only for integral vectors)
+	// Bitwise operators(only for integral vectors)
 	template <VectorType Vec> requires (std::integral<typename vector_traits<Vec>::element_t>) constexpr Vec pr_vectorcall operator ~ (Vec rhs) noexcept
 	{
 		using vt = vector_traits<Vec>;
@@ -726,6 +717,56 @@ namespace pr::math
 		for (auto&& element : range)
 			if (!pred(element)) return false;
 		return true;
+	}
+
+	// Compile time function for applying 'op' to each component of a vector
+	template <ScalarType S, typename Op> constexpr S CompOp(S a, Op op)
+	{
+	}
+	template <ScalarType S, typename Op> constexpr S CompOp(S a, S b, Op op)
+	{
+	}
+	template <ScalarType S, typename Op> constexpr S CompOp(S a, S b, S c, Op op)
+	{
+	}
+	template <ScalarType S, typename Op> constexpr S CompOp(S a, S b, S c, S d, Op op)
+	{
+	}
+	template <VectorType Vec, typename Op> constexpr Vec CompOp(Vec a, Op op)
+	{
+		Vec res = {};
+		if constexpr (vector_traits<Vec>::dimension > 0) vec(res).x = op(vec(a).x);
+		if constexpr (vector_traits<Vec>::dimension > 1) vec(res).y = op(vec(a).y);
+		if constexpr (vector_traits<Vec>::dimension > 2) vec(res).z = op(vec(a).z);
+		if constexpr (vector_traits<Vec>::dimension > 3) vec(res).w = op(vec(a).w);
+		return res;
+	}
+	template <VectorType Vec, typename Op> constexpr Vec CompOp(Vec a, Vec b, Op op)
+	{
+		Vec res = {};
+		if constexpr (vector_traits<Vec>::dimension > 0) vec(res).x = op(vec(a).x, vec(b).x);
+		if constexpr (vector_traits<Vec>::dimension > 1) vec(res).y = op(vec(a).y, vec(b).y);
+		if constexpr (vector_traits<Vec>::dimension > 2) vec(res).z = op(vec(a).z, vec(b).z);
+		if constexpr (vector_traits<Vec>::dimension > 3) vec(res).w = op(vec(a).w, vec(b).w);
+		return res;
+	}
+	template <VectorType Vec, typename Op> constexpr Vec CompOp(Vec a, Vec b, Vec c, Op op)
+	{
+		Vec res = {};
+		if constexpr (vector_traits<Vec>::dimension > 0) vec(res).x = op(vec(a).x, vec(b).x, vec(c).x);
+		if constexpr (vector_traits<Vec>::dimension > 1) vec(res).y = op(vec(a).y, vec(b).y, vec(c).y);
+		if constexpr (vector_traits<Vec>::dimension > 2) vec(res).z = op(vec(a).z, vec(b).z, vec(c).z);
+		if constexpr (vector_traits<Vec>::dimension > 3) vec(res).w = op(vec(a).w, vec(b).w, vec(c).w);
+		return res;
+	}
+	template <VectorType Vec, typename Op> constexpr Vec CompOp(Vec a, Vec b, Vec c, Vec d, Op op)
+	{
+		Vec res = {};
+		if constexpr (vector_traits<Vec>::dimension > 0) vec(res).x = op(vec(a).x, vec(b).x, vec(c).x, vec(d).x);
+		if constexpr (vector_traits<Vec>::dimension > 1) vec(res).y = op(vec(a).y, vec(b).y, vec(c).y, vec(d).y);
+		if constexpr (vector_traits<Vec>::dimension > 2) vec(res).z = op(vec(a).z, vec(b).z, vec(c).z, vec(d).z);
+		if constexpr (vector_traits<Vec>::dimension > 3) vec(res).w = op(vec(a).w, vec(b).w, vec(c).w, vec(d).w);
+		return res;
 	}
 
 	// Absolute value (component-wise)
@@ -1650,6 +1691,16 @@ namespace pr::math
 		if constexpr (vt::dimension > 1) vec(res).y = Log10(vec(v).y);
 		if constexpr (vt::dimension > 2) vec(res).z = Log10(vec(v).z);
 		if constexpr (vt::dimension > 3) vec(res).w = Log10(vec(v).w);
+		return res;
+	}
+	template <VectorTypeFP Vec> inline Vec pr_vectorcall Pow(Vec x, Vec y) noexcept
+	{
+		using vt = vector_traits<Vec>;
+		Vec res = {};
+		if constexpr (vt::dimension > 0) vec(res).x = Pow(vec(x).x, vec(y).x);
+		if constexpr (vt::dimension > 1) vec(res).y = Pow(vec(x).y, vec(y).y);
+		if constexpr (vt::dimension > 2) vec(res).z = Pow(vec(x).z, vec(y).z);
+		if constexpr (vt::dimension > 3) vec(res).w = Pow(vec(x).w, vec(y).w);
 		return res;
 	}
 
@@ -3153,8 +3204,13 @@ namespace pr::math
 		}
 		return ans;
 	}
+	template <VectorType Mat> requires (IsRank2<Mat>)
+	constexpr Mat& operator *= (Mat& lhs, Mat const& rhs) noexcept
+	{
+		return lhs = lhs * rhs;
+	}
 
-	// Matrix creation ----- 
+	// Matrix creation -----
 
 	// Create a translation matrix
 	template <VectorTypeFP Mat> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 4)
@@ -3979,6 +4035,19 @@ namespace pr::math
 
 		std::uniform_real_distribution<S> dist(min_angle, max_angle);
 		return Rotation<Mat>(axis_norm, dist(rng));
+	}
+
+	// Create a random 3D rotation matrix
+	template <VectorTypeFP Mat, typename Rng = std::default_random_engine> requires (IsRank2<Mat> && vector_traits<Mat>::dimension == 3)
+	inline Mat pr_vectorcall Random(Rng& rng) noexcept
+	{
+		using vt = vector_traits<Mat>;
+		using S = typename vt::element_t;
+		using C = typename vt::component_t;
+
+		std::uniform_real_distribution<S> dist(S(0), constants<S>::tau);
+		auto axis = RandomN<Vec3<S>>(rng).w0();
+		return Rotation<Mat>(axis, dist(rng));
 	}
 
 	// Create a 2D matrix containing random rotation between angles [min_angle, max_angle)

@@ -132,7 +132,7 @@ namespace pr::math
 		// Return the scale of this matrix
 		constexpr Mat4x4 scale() const noexcept
 		{
-			return math::Scale<Mat4x4>(*this);
+			return math::ScaleFrom<Mat4x4>(*this);
 		}
 
 		// Return this matrix with the scale removed
@@ -154,11 +154,11 @@ namespace pr::math
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
 		static Mat4x4 TransformRad(S pitch, S yaw, S roll, Vec4<S> pos) requires std::floating_point<S>
 		{
-			return Mat4x4{ math::RotationRad<Mat3x4>(pitch, yaw, roll), pos };
+			return Mat4x4{ math::RotationRad<Mat3x4<S>>(pitch, yaw, roll), pos };
 		}
 		static Mat4x4 TransformDeg(S pitch, S yaw, S roll, Vec4<S> pos) requires std::floating_point<S>
 		{
-			return Mat4x4{ math::RotationDeg<Mat3x4>(pitch, yaw, roll), pos };
+			return Mat4x4{ math::RotationDeg<Mat3x4<S>>(pitch, yaw, roll), pos };
 		}
 
 		// Create from rotation and translation
@@ -171,7 +171,7 @@ namespace pr::math
 		template <typename Q = S> requires std::floating_point<Q>
 		static Mat4x4 Transform(Quat<Q> q, Vec4<S> pos) noexcept
 		{
-			return Mat4x4{ math::ToMatrix<Quat<Q>, Mat3x4<Q>>(q), pos };
+			return Mat4x4{ math::ToMatrix<Mat3x4<Q>>(q), pos };
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
@@ -205,7 +205,7 @@ namespace pr::math
 		}
 		static Mat4x4 Scale(S sx, S sy, S sz, Vec4<S> pos) noexcept
 		{
-			return Mat4x4{ math::Scale<Mat3x4<S>>(sx, sy, sz), pos };
+			return Mat4x4{ math::Scale<Mat3x4<S>>(Vec4<S>(sx, sy, sz, S(1))), pos };
 		}
 
 		// Create a shear matrix
