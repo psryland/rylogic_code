@@ -164,6 +164,10 @@ namespace physics_sandbox
 			// Ctrl+O=open scene file
 			if (args.m_vk_key == 'O' && (GetKeyState(VK_CONTROL) & 0x8000))
 				OpenSceneFile();
+
+			// D=toggle details panel visibility
+			if (args.m_vk_key == 'D')
+				m_details.TogglePin();
 		};
 
 		// Give Body access to the renderer for creating graphics objects from LDraw script

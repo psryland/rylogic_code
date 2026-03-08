@@ -8,7 +8,7 @@ namespace physics_sandbox
 		, m_btn_play(Button::Params<>().parent(this_).text(L"\u25B6 Play").xy(0, 4).wh(80, 26))
 		, m_btn_pause(Button::Params<>().parent(this_).text(L"\u23F8 Pause").xy(84, 4).wh(80, 26))
 		, m_btn_reset(Button::Params<>().parent(this_).text(L"\u23EE Reset").xy(168, 4).wh(80, 26))
-		, m_lbl_speed(Label::Params<>().parent(this_).text(L"Speed: 1.00x").xy(280, 8).wh(90, 20))
+		, m_lbl_speed(Label::Params<>().parent(this_).text(L"Speed: 1.00x").xy(280, 4).wh(100, 26).style('+', SS_CENTERIMAGE))
 		, m_slider(nullptr)
 	{
 		// Ensure the trackbar common control class is registered.
@@ -19,6 +19,7 @@ namespace physics_sandbox
 
 		// Centre the button group and slider group when the panel is resized.
 		// Layout: [Play][Pause][Reset] --- gap --- [Speed: 1.00x][====slider====]
+		// All controls share the same vertical centre (y=4, h=26 → midpoint at 17px).
 		// The trackbar is created lazily here because wingui defers HWND creation —
 		// m_hwnd is null during the constructor body, so CreateWindowEx would fail.
 		WindowPosChange += [&](Control&, WindowPosEventArgs const& args)
@@ -31,7 +32,7 @@ namespace physics_sandbox
 				m_slider = ::CreateWindowExW(
 					0, TRACKBAR_CLASSW, L"",
 					WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
-					370, 2, 150, 28,
+					390, 4, 150, 26,
 					m_hwnd, nullptr, nullptr, nullptr);
 				::SendMessage(m_slider, TBM_SETRANGE, TRUE, MAKELPARAM(SliderMin, SliderMax));
 				::SendMessage(m_slider, TBM_SETPOS, TRUE, SliderDefault);
@@ -41,22 +42,22 @@ namespace physics_sandbox
 
 			// Button group: 3 buttons × 80px with 4px gaps between them
 			auto btn_group_w = 80 + 4 + 80 + 4 + 80; // = 248
-			// Slider group: speed label (90px) + gap (4px) + slider (150px)
-			auto slider_group_w = 90 + 4 + 150; // = 244
-			// Total width with 20px gap between groups
-			auto total_w = btn_group_w + 20 + slider_group_w;
+			// Slider group: speed label (100px) + gap (8px) + slider (150px)
+			auto slider_group_w = 100 + 8 + 150; // = 258
+			// Total width with 24px gap between groups
+			auto total_w = btn_group_w + 24 + slider_group_w;
 			auto left = (cx - total_w) / 2;
 
-			// Reposition buttons to stay centred
+			// All controls vertically centred at y=4, h=26
 			::SetWindowPos(m_btn_play, nullptr, left, 4, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			::SetWindowPos(m_btn_pause, nullptr, left + 84, 4, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			::SetWindowPos(m_btn_reset, nullptr, left + 168, 4, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 
-			// Reposition speed label and slider to the right of the buttons
-			auto slider_left = left + btn_group_w + 20;
-			::SetWindowPos(m_lbl_speed, nullptr, slider_left, 8, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			// Speed label and slider to the right of the buttons
+			auto slider_left = left + btn_group_w + 24;
+			::SetWindowPos(m_lbl_speed, nullptr, slider_left, 4, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 			if (m_slider)
-				::SetWindowPos(m_slider, nullptr, slider_left + 94, 2, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+				::SetWindowPos(m_slider, nullptr, slider_left + 108, 4, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		};
 
 		// Wire button clicks to events
