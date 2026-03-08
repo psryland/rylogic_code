@@ -14,6 +14,9 @@
 #include "pr/common/command_line.h"
 #include <crtdbg.h>
 
+// GPU collision comparison tests (compiled when PR_UNITTESTS is defined)
+#include "physics-2/src/unittests/test_gpu_collision.h"
+
 // Enable ComCtl32 v6 visual styles (modern themed controls)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \

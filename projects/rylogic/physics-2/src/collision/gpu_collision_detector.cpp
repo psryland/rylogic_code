@@ -285,17 +285,17 @@ namespace pr::physics
 					throw std::runtime_error(std::string("Failed to create GPU buffer: ") + name);
 			};
 
-			// SRV buffers
+			// SRV buffers (created in COMMON state, transitioned to SRV on first use)
 			create_buffer(m_max_shapes * sizeof(GpuShape),
-				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
 				m_r_shapes, "Physics:Shapes");
 
 			create_buffer(m_max_pairs * sizeof(GpuCollisionPair),
-				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
 				m_r_pairs, "Physics:Pairs");
 
 			create_buffer(m_max_verts * sizeof(v4),
-				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+				D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON,
 				m_r_verts, "Physics:CollisionVerts");
 
 			// UAV buffers

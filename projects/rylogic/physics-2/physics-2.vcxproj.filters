@@ -34,6 +34,12 @@
     <Filter Include="include\utility">
       <UniqueIdentifier>{A6B7C8D9-E0F1-A2B3-C4D5-E6F7A8B9C0D1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\collision">
+      <UniqueIdentifier>{48813738-03b8-4701-987d-48bcd9444531}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\compute">
+      <UniqueIdentifier>{0ec91900-7759-4f59-b73e-b425b89fa64c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\shape\inertia.cpp">
@@ -50,6 +56,9 @@
     </ClCompile>
     <ClCompile Include="src\integrator\gpu_integrator.cpp">
       <Filter>src\integrator</Filter>
+    </ClCompile>
+    <ClCompile Include="src\collision\gpu_collision_detector.cpp">
+      <Filter>src\collision</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -140,5 +149,27 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\rigid_body_dynamics.h">
       <Filter>src\integrator</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\collision\gpu_collision_detector.h">
+      <Filter>src\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\collision\gpu_collision_types.h">
+      <Filter>src\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="src\unittests\test_gpu_collision.h">
+      <Filter>src\unittests</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl">
+      <Filter>include\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl">
+      <Filter>include\compute</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\physics_shaders.rc">
+      <Filter>include\compute</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

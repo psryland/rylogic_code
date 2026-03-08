@@ -93,9 +93,17 @@
     <ClInclude Include="src\unittests\test_integrator.h" />
     <ClInclude Include="src\unittests\test_rigid_body.h" />
     <ClInclude Include="src\unittests\test_shape_builder.h" />
+    <ClInclude Include="src\unittests\test_gpu_collision.h" />
   </ItemGroup>
   <!--
   Targets
   -->
+  <ItemGroup>
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl" />
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\physics_shaders.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

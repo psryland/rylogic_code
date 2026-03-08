@@ -462,13 +462,16 @@ bool Epa(
 	// We'll use a flat add_face sequence instead.
 
 	// Build initial tetrahedron faces (4 faces)
-	// add_face(0,1,2), add_face(0,3,1), add_face(0,2,3), add_face(1,3,2)
-	int face_indices[4][3] = { {0,1,2}, {0,3,1}, {0,2,3}, {1,3,2} };
-	for (int fi = 0; fi < 4; ++fi)
+	// Indices: {0,1,2}, {0,3,1}, {0,2,3}, {1,3,2}
 	{
-		int ia = face_indices[fi][0];
-		int ib = face_indices[fi][1];
-		int ic = face_indices[fi][2];
+		int fi_a[4] = {0, 0, 0, 1};
+		int fi_b[4] = {1, 3, 2, 3};
+		int fi_c[4] = {2, 1, 3, 2};
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			int ia = fi_a[fi];
+			int ib = fi_b[fi];
+			int ic = fi_c[fi];
 
 		float4 fab = epa_verts[ib].w - epa_verts[ia].w;
 		float4 fac = epa_verts[ic].w - epa_verts[ia].w;
@@ -493,6 +496,7 @@ bool Epa(
 		epa_faces[nf].normal = fn;
 		epa_faces[nf].dist = fd;
 		nf++;
+		}
 	}
 
 	// EPA main loop
@@ -555,7 +559,8 @@ bool Epa(
 		int ni = nv++;
 
 		// Remove faces visible from the new point, collecting horizon edges
-		EpaEdge edges[MaxEpaFaces * 3]; // worst case
+		static const int MaxEpaEdges = 256;
+		EpaEdge edges[MaxEpaEdges];
 		int ne = 0;
 
 		for (int i = nf - 1; i >= 0; --i)
@@ -582,7 +587,7 @@ bool Epa(
 						break;
 					}
 				}
-				if (!is_shared && ne < MaxEpaFaces * 3)
+				if (!is_shared && ne < MaxEpaEdges)
 				{
 					edges[ne].a = ea;
 					edges[ne].b = eb;
