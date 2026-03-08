@@ -144,6 +144,10 @@ namespace physics_sandbox
 			if (args.m_vk_key == 'C')
 				m_pause_on_collision = !m_pause_on_collision;
 
+			// U=toggle GPU/CPU integration
+			if (args.m_vk_key == 'U')
+				m_scene.m_physics.m_use_gpu = !m_scene.m_physics.m_use_gpu;
+
 			// T=run all test scenarios
 			if (args.m_vk_key == 'T')
 				m_scene.RunAllTests();
@@ -164,6 +168,11 @@ namespace physics_sandbox
 
 		// Give Body access to the renderer for creating graphics objects from LDraw script
 		Body::s_rdr = &m_view3d.m_rdr;
+
+		// Initialise GPU-accelerated physics integration.
+		// Pass the D3D12 device from the renderer so the GPU integrator shares the
+		// same adapter. The engine starts in GPU mode; press 'U' to toggle CPU/GPU.
+		m_scene.m_physics.InitGpu(m_view3d.m_rdr.D3DDevice(), Scene::MaxBodies);
 
 		// Hook the scene population event — called each frame during DoRender() to add
 		// objects to the scene's drawlist before rendering.
@@ -432,11 +441,12 @@ namespace physics_sandbox
 			// Keep the slider's speed label text in sync with the trackbar position
 			m_media.UpdateSpeedLabel();
 
-			SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d  FPS: %.0f",
+			SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d  %s  FPS: %.0f",
 				static_cast<int>(m_scene.m_scenario),
 				ScenarioName(m_scene.m_scenario),
 				m_scene.m_clock,
 				m_scene.m_diag.count,
+				m_scene.m_physics.m_use_gpu ? "GPU" : "CPU",
 				m_fps));
 		}
 

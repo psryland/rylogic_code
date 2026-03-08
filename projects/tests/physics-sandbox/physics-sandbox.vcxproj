@@ -21,6 +21,7 @@
       <PreprocessorDefinitions>
 				;%(PreprocessorDefinitions)
 				;PR_UNITTESTS=1
+				;PR_PHYSICS_GPU=1
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
