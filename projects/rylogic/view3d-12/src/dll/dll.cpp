@@ -13,6 +13,7 @@
 //  want to temporarily push a different error handler. Each window maintains a
 //  stack of error handlers.
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_script_editor.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/resource/resource_factory.h"

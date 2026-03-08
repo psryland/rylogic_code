@@ -607,13 +607,15 @@ namespace physics_sandbox::tests
 		// Helper: Drop a shape onto a ground plane with elastic collision and measure
 		// total mechanical energy conservation. Returns the max drift fraction.
 		// Measures energy changes separately for integration and collision phases.
+		// When use_gpu is true, uses the GPU compute shader for integration.
 		static float RunDropTest(
 			char const* label,
 			collision::Shape const* shape,
 			float mass,
 			v4 ang_vel,
 			float drop_height = 5.0f,
-			int num_steps = 2000)
+			int num_steps = 2000,
+			bool use_gpu = false)
 		{
 			auto ground_shape = pr::collision::ShapeBox(v4{100, 100, 0.5f, 0});
 
@@ -631,6 +633,10 @@ namespace physics_sandbox::tests
 			physics::broadphase::Brute broadphase;
 			physics::MaterialMap materials;
 			physics::Engine engine(broadphase, materials);
+
+			// Enable GPU integration if requested
+			if (use_gpu)
+				engine.InitGpu(nullptr, 16);
 
 			auto& mat = materials(0);
 			mat.m_elasticity_norm = 1.0f;
@@ -878,6 +884,55 @@ namespace physics_sandbox::tests
 
 			auto drift = RunDropTest("Box", collision::shape_cast(&box_shape), 10.0f,
 				v4{0.5f, 0.3f, 0.0f, 0.0f});
+			PR_EXPECT(drift < 0.05f);
+		}
+
+		// ---- GPU integration tests ----
+		// These repeat key energy conservation tests using the GPU compute shader.
+		// The GPU shader mirrors the CPU Evolve() function — same Störmer-Verlet
+		// with midpoint rotation predictor. These tests verify the HLSL implementation
+		// matches the CPU path to within acceptable tolerance.
+
+		PRUnitTestMethod(GpuBoxDrop)
+		{
+			auto box_shape = pr::collision::ShapeBox(v4{0.5f, 0.5f, 0.5f, 0});
+
+			auto drift = RunDropTest("GPU-Box", collision::shape_cast(&box_shape), 10.0f,
+				v4{0.5f, 0.3f, 0.0f, 0.0f}, 5.0f, 2000, true);
+			PR_EXPECT(drift < 0.05f);
+		}
+
+		PRUnitTestMethod(GpuTetraDrop)
+		{
+			v4 pts[] = {
+				v4{0, 0.8f, 0, 1},
+				v4{0.75f, -0.4f, 0, 1},
+				v4{-0.375f, -0.4f, 0.65f, 1},
+				v4{-0.375f, -0.4f, -0.65f, 1},
+			};
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto& poly = buf.as<pr::collision::ShapePolytope>();
+
+			auto drift = RunDropTest("GPU-Tetra", collision::shape_cast(&poly), 10.0f,
+				v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000, true);
+			PR_EXPECT(drift < 0.05f);
+		}
+
+		PRUnitTestMethod(GpuWedgeDrop)
+		{
+			v4 pts[] = {
+				v4{-1.0f, -0.5f, -0.3f, 1},
+				v4{ 1.0f, -0.5f, -0.3f, 1},
+				v4{ 0.0f,  0.5f, -0.3f, 1},
+				v4{-1.0f, -0.5f,  0.3f, 1},
+				v4{ 1.0f, -0.5f,  0.3f, 1},
+				v4{ 0.0f,  0.5f,  0.3f, 1},
+			};
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 6);
+			auto& poly = buf.as<pr::collision::ShapePolytope>();
+
+			auto drift = RunDropTest("GPU-Wedge", collision::shape_cast(&poly), 10.0f,
+				v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000, true);
 			PR_EXPECT(drift < 0.05f);
 		}
 	};

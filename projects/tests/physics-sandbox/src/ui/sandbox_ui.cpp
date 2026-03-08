@@ -85,11 +85,9 @@ namespace physics_sandbox
 		, m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
 		, m_media(MediaPanel::Params<>().parent(this_))
 		, m_details(DetailsPanel::Params<>().parent(this_))
-		, m_view3d(View3DPanel::Params()
+		, m_view3d(View3DPanelStatic::Params()
 			.parent(this_)
-			.error_cb(ReportErrorCB, this_)
-			.dock(EDock::Fill)
-			.show_focus_point())
+			.dock(EDock::Fill))
 		, m_scene()
 		, m_pause_on_collision(false)
 		, m_frame_count(0)
@@ -163,9 +161,19 @@ namespace physics_sandbox
 				OpenSceneFile();
 		};
 
-		// Camera setup: Z-up alignment and perspective projection
-		View3D_CameraAlignAxisSet(m_view3d.m_win, view3d::Vec4{ 0, 0, 1, 0 });
-		View3D_CameraOrthographicSet(m_view3d.m_win, FALSE);
+		// Give Body access to the renderer for creating graphics objects from LDraw script
+		Body::s_rdr = &m_view3d.m_rdr;
+
+		// Hook the scene population event — called each frame during DoRender() to add
+		// objects to the scene's drawlist before rendering.
+		m_view3d.OnAddToScene += [&](auto&, rdr12::Scene& scene)
+		{
+			for (int i = 0; i != m_scene.m_body_count; ++i)
+				m_scene.m_body[i].AddToScene(scene);
+
+			if (m_scene.m_ground_gfx)
+				m_scene.m_ground_gfx->AddToScene(scene);
+		};
 
 		// Start with the sandbox scenario
 		ResetScene();
@@ -173,15 +181,12 @@ namespace physics_sandbox
 
 	SandboxUI::~SandboxUI()
 	{
-		// Remove all graphics from the window and delete them BEFORE member
-		// destructors run. Body::~Body deletes the View3D object, but if they're
-		// still associated with the window, View3D_Shutdown (in ~m_view3d) asserts.
+		// Release all graphics objects before the renderer is destroyed.
+		// LdrObjectPtr ref-counting handles the actual deletion.
 		for (int i = 0; i != m_scene.m_body_count; ++i)
-		{
-			if (m_scene.m_body[i].m_gfx)
-				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-		}
-		RemoveGroundGfx();
+			m_scene.m_body[i].m_gfx = nullptr;
+
+		m_scene.m_ground_gfx = nullptr;
 	}
 
 	// Override message processing to ensure clean shutdown
@@ -189,18 +194,14 @@ namespace physics_sandbox
 	{
 		if (message == WM_CLOSE)
 		{
-			// Set closing flag so the step/render lambdas stop accessing View3D
+			// Set closing flag so the step/render lambdas stop accessing the renderer
 			m_closing = true;
 
-			// Clean up View3D objects before the window is destroyed.
-			// After DestroyWindow, the View3DPanel's HWND is invalid and swap chain
-			// present may hang or crash.
+			// Release all graphics objects before the window is destroyed
 			for (int i = 0; i != m_scene.m_body_count; ++i)
-			{
-				if (m_scene.m_body[i].m_gfx)
-					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-			}
-			RemoveGroundGfx();
+				m_scene.m_body[i].m_gfx = nullptr;
+
+			m_scene.m_ground_gfx = nullptr;
 		}
 
 		// Handle menu commands
@@ -240,32 +241,13 @@ namespace physics_sandbox
 			return;
 		}
 
-		// Remove old body graphics from the viewport
-		for (int i = 0; i != m_scene.m_body_count; ++i)
-		{
-			if (m_scene.m_body[i].m_gfx)
-				View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-		}
-
-		RemoveGroundGfx();
 		m_scene.Reset();
 
-		// Add body graphics to the viewport
-		for (int i = 0; i != m_scene.m_body_count; ++i)
-		{
-			if (m_scene.m_body[i].m_gfx)
-				View3D_WindowAddObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-		}
-
-		// Add ground visual if the scene has one
-		AddGroundGfx();
-
-		// Set up a sensible default camera position looking at the origin
-		View3D_ResetView(m_view3d.m_win,
-			view3d::Vec4{ 0, -1, 0, 0 },  // Forward direction (looking from +Y toward -Y)
-			view3d::Vec4{ 0, 0, 1, 0 },   // Up direction (Z-up)
-			35,                           // Distance (far enough to see full scene)
-			TRUE, TRUE);
+		// Frame the camera to see the whole scene: look from +Y toward origin, Z-up
+		m_view3d.m_cam.LookAt(
+			v4(0, -35, 10, 1),
+			v4::Origin(),
+			v4{0, 0, 1, 0});
 
 		Render();
 	}
@@ -336,14 +318,6 @@ namespace physics_sandbox
 	{
 		try
 		{
-			// Remove old body graphics from the viewport before loading
-			for (int i = 0; i != m_scene.m_body_count; ++i)
-			{
-				if (m_scene.m_body[i].m_gfx)
-					View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-			}
-			RemoveGroundGfx();
-
 			// Remember the filepath so Reset can reload it
 			m_scene_filepath = filepath;
 
@@ -351,27 +325,14 @@ namespace physics_sandbox
 			m_recent.Add(filepath);
 			RebuildRecentFilesMenu();
 
-			// Load the scene from JSON
+			// Load the scene from JSON (creates new body graphics automatically)
 			m_scene.LoadFromJson(filepath);
 
-			// Add new body graphics to the viewport
-			for (int i = 0; i != m_scene.m_body_count; ++i)
-			{
-				if (m_scene.m_body[i].m_gfx)
-					View3D_WindowAddObject(m_view3d.m_win, m_scene.m_body[i].m_gfx);
-			}
-
-			// Add ground visual if the scene has one
-			AddGroundGfx();
-
-			// Reset camera to frame all bodies in the scene.
-			// Compute a bounding box that encompasses all body positions,
-			// then use View3D_ResetViewBBox for proper framing.
+			// Frame the camera to see all loaded bodies
 			auto bbox = ComputeSceneBBox();
-			View3D_ResetViewBBox(m_view3d.m_win, bbox,
-				view3d::Vec4{ 0, -1, 0, 0 },
-				view3d::Vec4{ 0, 0, 1, 0 },
-				0, TRUE, TRUE);
+			m_view3d.m_cam.View(bbox,
+				v4{ 0, -1, 0, 0 },  // Forward direction
+				v4{ 0, 0, 1, 0 });  // Up direction (Z-up)
 
 			Render();
 		}
@@ -434,10 +395,9 @@ namespace physics_sandbox
 		for (int i = 0; i != m_scene.m_body_count; ++i)
 			m_scene.m_body[i].UpdateGfx();
 
-		// Render the 3D viewport directly. Calling View3D_WindowRender bypasses
-		// the WM_PAINT message queue, which is low-priority and can cause frame
-		// starvation when the sim loop is busy. This matches how Lost at Sea renders.
-		View3D_WindowRender(m_view3d.m_win);
+		// Render the 3D viewport. Objects are added to the scene via the
+		// OnAddToScene event during DoRender(), so no explicit Add/Remove needed.
+		m_view3d.DoRender();
 
 		// Update the details panel text at reduced rate (~5 Hz).
 		if (m_details_elapsed >= 0.2)
@@ -477,24 +437,12 @@ namespace physics_sandbox
 		}
 	}
 
-	void SandboxUI::AddGroundGfx()
-	{
-		if (m_scene.m_ground_gfx)
-			View3D_WindowAddObject(m_view3d.m_win, m_scene.m_ground_gfx);
-	}
-
-	void SandboxUI::RemoveGroundGfx()
-	{
-		if (m_scene.m_ground_gfx)
-			View3D_WindowRemoveObject(m_view3d.m_win, m_scene.m_ground_gfx);
-	}
-
 	// Compute a bounding box that encompasses all bodies in the scene.
 	// Used to frame the camera when loading a new scene.
-	view3d::BBox SandboxUI::ComputeSceneBBox() const
+	BBox SandboxUI::ComputeSceneBBox() const
 	{
 		if (m_scene.m_body_count == 0)
-			return view3d::BBox{ {0, 0, 0, 1}, {5, 5, 5, 0} };
+			return BBox{ v4{0, 0, 0, 1}, v4{5, 5, 5, 0} };
 
 		// Find the min/max extents of all dynamic body positions.
 		// Also include the ground plane height (Z=0 typically) so the camera
@@ -527,16 +475,7 @@ namespace physics_sandbox
 		auto radius = (hi - lo) * 0.5f;
 		centre.w = 1;
 		radius.w = 0;
-		return view3d::BBox{
-			{centre.x, centre.y, centre.z, 1},
-			{radius.x, radius.y, radius.z, 0}
-		};
+		return BBox{ centre, radius };
 	}
 
-	void __stdcall SandboxUI::ReportErrorCB(void* ctx, char const* msg, char const* filepath, int line, int64_t)
-	{
-		auto this_ = static_cast<SandboxUI*>(ctx);
-		auto message = pr::FmtS(L"%s(%d): %s", filepath, line, msg);
-		::MessageBoxW(this_->m_hwnd, message, L"Error", MB_OK);
-	}
 }

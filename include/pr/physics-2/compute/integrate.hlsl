@@ -110,8 +110,20 @@ void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 	float3 vel_ang = mul(ws_iinv, body.momentum_ang.xyz);
 	float3 vel_lin = inv_mass * body.momentum_lin.xyz;
 
-	// Compute the angular displacement (axis-angle)
-	float3 drot = vel_ang * g_dt;
+	// Midpoint predictor for the rotation step:
+	// For anisotropic bodies, the angular velocity changes during the drift step
+	// because the world-space inertia tensor changes with orientation (precession).
+	// By estimating the rotation at the midpoint and recomputing omega there, we get
+	// second-order accuracy, significantly reducing secular energy drift.
+	float3x3 half_dR = rodrigues_rotation(vel_ang * (g_dt * 0.5f));
+	float3x3 mid_rot = mul(rot, half_dR);
+	mid_rot = orthonorm3x3(mid_rot);
+	float3x3 ws_iinv_mid_unit = rotate_inertia_inv(os_iinv_unit, mid_rot);
+	float3x3 ws_iinv_mid = inv_mass * ws_iinv_mid_unit;
+	float3 vel_ang_mid = mul(ws_iinv_mid, body.momentum_ang.xyz);
+
+	// Compute the angular displacement using the midpoint angular velocity
+	float3 drot = vel_ang_mid * g_dt;
 
 	// Apply rotation: R_new = Rodrigues(drot) * R_old
 	// In row-vector convention (rows = basis vectors): new_rot = mul(rot, dR)

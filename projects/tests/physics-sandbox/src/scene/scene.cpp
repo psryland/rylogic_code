@@ -263,11 +263,7 @@ namespace physics_sandbox
 			// Suppress the auto-generated collision shape graphic for the ground body.
 			// The body's ShapeChange event creates a visual from the huge thin box, which
 			// would obscure the scene. We use a separate textured quad for the ground visual.
-			if (ground_body.m_gfx)
-			{
-				View3D_ObjectDelete(ground_body.m_gfx);
-				ground_body.m_gfx = nullptr;
-			}
+			ground_body.m_gfx = nullptr;
 
 			// Position the ground box so its top surface is at the requested height.
 			// ShapeBox stores half-extents in m_radius, so the top face is at
@@ -697,16 +693,17 @@ namespace physics_sandbox
 			scale, scale,
 			height);
 
-		m_ground_gfx = View3D_ObjectCreateLdrA(script, false, nullptr, nullptr);
+		if (Body::s_rdr)
+		{
+			auto result = rdr12::ldraw::Parse(*Body::s_rdr, std::string_view(script));
+			if (!result.m_objects.empty())
+				m_ground_gfx = result.m_objects.front();
+		}
 	}
 
 	// Clean up the ground plane visual
 	void Scene::CleanupGroundGfx()
 	{
-		if (m_ground_gfx)
-		{
-			View3D_ObjectDelete(m_ground_gfx);
-			m_ground_gfx = nullptr;
-		}
+		m_ground_gfx = nullptr;
 	}
 }

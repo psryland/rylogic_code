@@ -26,16 +26,15 @@ namespace pr::physics
 	// The broadphase and material map are owned externally and passed by reference.
 	struct Engine
 	{
-		// Compile-time switch for GPU vs CPU integration path.
-		// When true, uses the GPU compute shader for Störmer-Verlet integration.
-		// When false, uses the CPU fallback path (EvolveCPU on the dynamics buffer).
-		// Set to false to disable GPU integration entirely (no D3D12 dependency).
-		static constexpr bool UseGpu = false;
-
 		IBroadphase& m_broadphase;
 		IMaterials& m_materials;
 
-		// GPU integrator (pimpl). Only created when UseGpu is true.
+		// Runtime flag for GPU vs CPU integration. Set to true after calling InitGpu().
+		// When true, integration is dispatched to the GPU compute shader.
+		// When false, integration runs on the CPU via Evolve() (default).
+		bool m_use_gpu = false;
+
+		// GPU integrator (pimpl). Only created when InitGpu() is called.
 		// The full definition is in gpu_integrator.cpp — no view3d-12 types leak here.
 		GpuIntegratorPtr m_gpu_integrator;
 
@@ -53,15 +52,18 @@ namespace pr::physics
 		Engine(IBroadphase& bp, IMaterials& mats)
 			: m_broadphase(bp)
 			, m_materials(mats)
+			, m_use_gpu(false)
 			, m_gpu_integrator()
 			, PostCollisionDetection()
 		{}
 
 		// Initialise GPU integration. Call this once, passing a D3D12 device pointer.
-		// Only needed when UseGpu is true. The device can come from a Renderer or standalone Gpu.
+		// Pass nullptr to create a standalone D3D12 device for compute only.
+		// After this call, m_use_gpu is set to true and Step() will use the GPU path.
 		void InitGpu(ID3D12Device4* device, int max_bodies)
 		{
 			m_gpu_integrator = CreateGpuIntegrator(device, max_bodies);
+			m_use_gpu = true;
 		}
 
 		// Evolve the physics objects forward in time and resolve any collisions.
@@ -73,7 +75,7 @@ namespace pr::physics
 		{
 			// Before here, callers should have set forces on the rigid bodies (including gravity).
 
-			if constexpr (UseGpu)
+			if (m_use_gpu)
 			{
 				// GPU path: pack bodies into flat dynamics buffer → dispatch compute → unpack results.
 				std::vector<RigidBodyDynamics> dynamics;

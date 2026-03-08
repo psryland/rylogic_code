@@ -25,6 +25,7 @@
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
 				;$(RylogicRoot)projects\rylogic
 				;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
@@ -38,13 +39,11 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>
-				;view3d-12.imp
+				;view3d-12-static.lib
 				;physics-2-static.lib
+				;dxcompiler.lib
 				;%(AdditionalDependencies)
       </AdditionalDependencies>
-      <DelayLoadDLLs>
-				;view3d-12.dll
-      </DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <!-- Source -->
@@ -138,7 +137,7 @@
   <!-- Dependencies -->
   <ItemGroup>
     <ProjectReference Include="$(RylogicRoot)projects\rylogic\physics-2\physics-2.vcxproj" />
-    <ProjectReference Include="$(RylogicRoot)projects\rylogic\view3d-12\view3d-12.dll.vcxproj" />
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\view3d-12\view3d-12.vcxproj" />
   </ItemGroup>
   <!-- Targets -->
   <ItemGroup>
@@ -149,5 +148,4 @@
     <None Include="scenes\three_body_chain.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="$(TargetsPath)view3d-12.targets" />
 </Project>
