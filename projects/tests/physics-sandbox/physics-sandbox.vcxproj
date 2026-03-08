@@ -50,6 +50,13 @@
   <!-- Source -->
   <ItemGroup>
     <ClCompile Include="src\utils\collision_dependency_check.cpp" />
+    <ClCompile Include="src\diagnostics\diagnostics.cpp" />
+    <ClCompile Include="src\scene\body.cpp" />
+    <ClCompile Include="src\scene\scene.cpp" />
+    <ClCompile Include="src\utils\scene_loader.cpp" />
+    <ClCompile Include="src\ui\details_panel.cpp" />
+    <ClCompile Include="src\ui\media_panel.cpp" />
+    <ClCompile Include="src\ui\sandbox_ui.cpp" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h" />
     <ClInclude Include="..\..\..\include\pr\collision\col_gjk.h" />
