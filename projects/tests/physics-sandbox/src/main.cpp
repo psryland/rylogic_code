@@ -68,7 +68,6 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 
 	try
 	{
-		pr::win32::LoadDll<struct View3d>(L"view3d-12.dll");
 		InitCtrls();
 
 		// Create the message loop first so the form can reference it for clean shutdown

@@ -86,6 +86,9 @@ namespace pr::gui
 			, m_cam(m_scene.m_cam)
 			, m_nav_active(false)
 		{
+			// Set background colour
+			m_wnd.BkgdColour(p.m_bkgd_colour);
+
 			// Default camera: perspective, Z-up, looking from the front
 			m_cam.FovY(constants<float>::tau_by_8);
 			m_cam.Align(v4{0, 0, 1, 0});

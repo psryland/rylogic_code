@@ -87,6 +87,7 @@ namespace physics_sandbox
 		, m_details(DetailsPanel::Params<>().parent(this_))
 		, m_view3d(View3DPanelStatic::Params()
 			.parent(this_)
+			.bkgd_colour(Colour(0xFF808080))
 			.dock(EDock::Fill))
 		, m_scene()
 		, m_pause_on_collision(false)
@@ -178,11 +179,12 @@ namespace physics_sandbox
 		// Start with the sandbox scenario
 		ResetScene();
 	}
-
 	SandboxUI::~SandboxUI()
 	{
-		// Release all graphics objects before the renderer is destroyed.
-		// LdrObjectPtr ref-counting handles the actual deletion.
+		// Clear drawlists first so no models are referenced, then release all
+		// graphics objects before the renderer is destroyed.
+		m_view3d.m_scene.ClearDrawlists();
+
 		for (int i = 0; i != m_scene.m_body_count; ++i)
 			m_scene.m_body[i].m_gfx = nullptr;
 
@@ -197,7 +199,9 @@ namespace physics_sandbox
 			// Set closing flag so the step/render lambdas stop accessing the renderer
 			m_closing = true;
 
-			// Release all graphics objects before the window is destroyed
+			// Clear drawlists before releasing objects to avoid RenderStep assert
+			m_view3d.m_scene.ClearDrawlists();
+
 			for (int i = 0; i != m_scene.m_body_count; ++i)
 				m_scene.m_body[i].m_gfx = nullptr;
 
@@ -240,6 +244,11 @@ namespace physics_sandbox
 			LoadSceneFile(m_scene_filepath);
 			return;
 		}
+
+		// Clear the scene drawlists before resetting. Reset triggers ShapeChange events
+		// which destroy LdrObjects. If the previous frame's drawlists still reference
+		// those objects' models, the RenderStep asserts on model deletion.
+		m_view3d.m_scene.ClearDrawlists();
 
 		m_scene.Reset();
 
@@ -325,6 +334,11 @@ namespace physics_sandbox
 			m_recent.Add(filepath);
 			RebuildRecentFilesMenu();
 
+			// Clear the scene drawlists before loading. LoadFromJson triggers ShapeChange
+			// events which destroy old LdrObjects. If the previous frame's drawlists still
+			// reference those objects' models, the RenderStep asserts on model deletion.
+			m_view3d.m_scene.ClearDrawlists();
+
 			// Load the scene from JSON (creates new body graphics automatically)
 			m_scene.LoadFromJson(filepath);
 
@@ -338,7 +352,10 @@ namespace physics_sandbox
 		}
 		catch (std::exception const& ex)
 		{
-			::MessageBoxA(m_hwnd, pr::FmtS("Failed to load scene:\n%s", ex.what()), "Load Error", MB_OK | MB_ICONERROR);
+			auto msg = pr::FmtS("Failed to load scene:\n%s", ex.what());
+			OutputDebugStringA(msg);
+			if (auto f = fopen("dump\\load_error.log", "w")) { fputs(msg, f); fclose(f); }
+			::MessageBoxA(m_hwnd, msg, "Load Error", MB_OK | MB_ICONERROR);
 		}
 	}
 
