@@ -15,3 +15,4 @@
 CORE_HLSLI                  TEXT    DISCARDABLE     "pr/hlsl/core.hlsli"
 SPATIAL_ALGEBRA_HLSLI       TEXT    DISCARDABLE     "pr/hlsl/spatial_algebra.hlsli"
 PHYSICS_INTEGRATE_HLSL      TEXT    DISCARDABLE     "pr/physics-2/compute/integrate.hlsl"
+PHYSICS_GJK_HLSL            TEXT    DISCARDABLE     "pr/physics-2/compute/gjk.hlsl"

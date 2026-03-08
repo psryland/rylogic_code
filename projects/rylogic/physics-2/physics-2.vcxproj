@@ -51,6 +51,7 @@
     <ClCompile Include="src\integrator\engine.cpp" />
     <ClCompile Include="src\integrator\integrator.cpp" />
     <ClCompile Include="src\integrator\gpu_integrator.cpp" />
+    <ClCompile Include="src\collision\gpu_collision_detector.cpp" />
   </ItemGroup>
   <!--
   Public headers
@@ -68,6 +69,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\integrator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\jacobian.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\rigid_body_dynamics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\collision\gpu_collision_types.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\collision\gpu_collision_detector.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\imaterials.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material_map.h" />

@@ -12,6 +12,7 @@
 #include "pr/physics-2/integrator/integrator.h"
 #include "pr/physics-2/integrator/impulse.h"
 #include "pr/physics-2/integrator/gpu_integrator.h"
+#include "pr/physics-2/collision/gpu_collision_detector.h"
 
 namespace pr::physics
 {
@@ -38,6 +39,10 @@ namespace pr::physics
 		// The full definition is in gpu_integrator.cpp — no view3d-12 types leak here.
 		GpuIntegratorPtr m_gpu_integrator;
 
+		// GPU collision detector (pimpl). Only created when InitGpu() is called.
+		// The full definition is in gpu_collision_detector.cpp.
+		GpuCollisionDetectorPtr m_gpu_collision_detector;
+
 		// Raised after collision detection, but before resolution.
 		// Subscribers can inspect, modify, add, or remove contacts before impulses are applied.
 		EventHandler<Engine&, std::vector<Contact>&> PostCollisionDetection;
@@ -54,15 +59,24 @@ namespace pr::physics
 			, m_materials(mats)
 			, m_use_gpu(false)
 			, m_gpu_integrator()
+			, m_gpu_collision_detector()
 			, PostCollisionDetection()
 		{}
 
-		// Initialise GPU integration. Call this once, passing a D3D12 device pointer.
+		// Initialise GPU integration and collision. Call this once, passing a D3D12 device pointer.
 		// Pass nullptr to create a standalone D3D12 device for compute only.
 		// After this call, m_use_gpu is set to true and Step() will use the GPU path.
 		void InitGpu(ID3D12Device4* device, int max_bodies)
 		{
 			m_gpu_integrator = CreateGpuIntegrator(device, max_bodies);
+
+			// Collision pair buffer capacity: worst case is n*(n-1)/2 pairs for n bodies.
+			// Vertex buffer: generous allocation for polytope/triangle vertices.
+			auto max_pairs = max_bodies * (max_bodies - 1) / 2;
+			auto max_shapes = max_bodies;
+			auto max_verts = max_bodies * 64; // up to 64 verts per polytope
+			m_gpu_collision_detector = CreateGpuCollisionDetector(device, max_pairs, max_shapes, max_verts);
+
 			m_use_gpu = true;
 		}
 
@@ -125,7 +139,9 @@ namespace pr::physics
 				#endif
 			}
 
-			// Broad phase → narrow phase → resolve (implemented in engine.cpp)
+			// Broad phase → narrow phase → resolve (implemented in engine.cpp).
+			// When m_use_gpu, narrow phase runs on the GPU (GJK compute shader).
+			// When !m_use_gpu, narrow phase runs on the CPU.
 			DetectAndResolve(dt);
 		}
 
@@ -207,8 +223,14 @@ namespace pr::physics
 		void IntegrateGpu(std::span<RigidBodyDynamics> dynamics, float dt);
 
 		// Broad phase overlap query → narrow phase collision detection → impulse resolution.
-		// Implemented in engine.cpp to keep DirectX/GPU dependencies out of the header.
+		// Dispatches to GPU or CPU path based on m_use_gpu.
 		void DetectAndResolve(float dt);
+
+		// CPU collision path: per-pair narrow phase on CPU.
+		void DetectAndResolveCpu(float dt);
+
+		// GPU collision path: pack shapes/pairs → dispatch GPU GJK → readback → resolve.
+		void DetectAndResolveGpu(float dt);
 
 		// Narrow phase collision detection.
 		// Tests whether the two bodies in 'c' are geometrically in contact using GJK/SAT.

@@ -4,6 +4,7 @@
 //*********************************************
 #include "pr/physics-2/integrator/engine.h"
 #include "pr/physics-2/utility/ldraw.h"
+#include <unordered_map>
 
 namespace pr::physics
 {
@@ -19,6 +20,19 @@ namespace pr::physics
 	// Broad phase overlap query → narrow phase collision detection → impulse resolution.
 	// This is the core collision pipeline, called after all bodies have been evolved.
 	void Engine::DetectAndResolve(float dt)
+	{
+		if (m_use_gpu && m_gpu_collision_detector)
+		{
+			DetectAndResolveGpu(dt);
+		}
+		else
+		{
+			DetectAndResolveCpu(dt);
+		}
+	}
+
+	// CPU collision path: broadphase → per-pair narrow phase → impulse resolution.
+	void Engine::DetectAndResolveCpu(float dt)
 	{
 		// Broad phase: find pairs of bodies whose bounding volumes overlap.
 		// Narrow phase: test each pair for actual geometric contact.
@@ -36,8 +50,6 @@ namespace pr::physics
 		});
 
 		// Sort the collisions by estimated time of impact so earlier collisions are resolved first.
-		// Todo: for parallel processing, collision queue should be broken up into islands of
-		// objects that affect each other.
 		std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
 		{
 			return lhs.m_time < rhs.m_time;
@@ -47,6 +59,107 @@ namespace pr::physics
 		PostCollisionDetection(*this, collision_queue);
 
 		// Apply restitution impulses to resolve each collision
+		for (auto& c : collision_queue)
+			ResolveCollision(c);
+	}
+
+	// GPU collision path: broadphase on CPU → pack shapes/pairs → GPU GJK → readback → impulse resolution.
+	void Engine::DetectAndResolveGpu(float dt)
+	{
+		// Phase 1: Broadphase on CPU — collect overlapping pairs and pack shapes for GPU.
+		std::vector<GpuShape> gpu_shapes;
+		std::vector<GpuCollisionPair> gpu_pairs;
+		std::vector<v4> gpu_verts;
+
+		// Track body pointers per pair so we can build physics::Contact structs after readback.
+		struct BodyPair { RigidBody const* objA; RigidBody const* objB; m4x4 b2a; };
+		std::vector<BodyPair> body_pairs;
+
+		// Shape deduplication: map shape pointer → index in gpu_shapes buffer
+		std::unordered_map<collision::Shape const*, int> shape_map;
+		auto get_or_add_shape = [&](collision::Shape const& shape) -> int
+		{
+			auto it = shape_map.find(&shape);
+			if (it != shape_map.end())
+				return it->second;
+
+			auto idx = static_cast<int>(gpu_shapes.size());
+			gpu_shapes.push_back(PackShapeGeneric(shape, gpu_verts));
+			shape_map[&shape] = idx;
+			return idx;
+		};
+
+		int pair_idx = 0;
+		m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+		{
+			auto idx_a = get_or_add_shape(objA.Shape());
+			auto idx_b = get_or_add_shape(objB.Shape());
+
+			// Compute B-to-A transform (collision runs in A's object space)
+			auto w2a = InvertAffine(objA.O2W());
+			auto b2a = w2a * objB.O2W();
+
+			GpuCollisionPair pair = {};
+			pair.shape_idx_a = idx_a;
+			pair.shape_idx_b = idx_b;
+			pair.pair_index = pair_idx;
+			pair.b2a = b2a;
+			gpu_pairs.push_back(pair);
+
+			body_pairs.push_back({&objA, &objB, b2a});
+			++pair_idx;
+		});
+
+		if (gpu_pairs.empty())
+			return;
+
+		// Phase 2: Dispatch GPU GJK collision detection.
+		std::vector<GpuContact> gpu_contacts;
+		GpuDetectCollisions(*m_gpu_collision_detector, gpu_shapes, gpu_pairs, gpu_verts, gpu_contacts);
+
+		// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
+		std::vector<Contact> collision_queue;
+		for (auto const& gc : gpu_contacts)
+		{
+			auto const& bp = body_pairs[gc.pair_index];
+			auto c = Contact{*bp.objA, *bp.objB};
+
+			// Copy geometric data from GPU contact (already in objA's space)
+			c.m_axis = gc.axis;
+			c.m_point = gc.pt;
+			c.m_depth = gc.depth;
+			c.m_mat_idA = gc.mat_id_a;
+			c.m_mat_idB = gc.mat_id_b;
+
+			// Check if the collision point is separating (relative velocity positive along axis)
+			auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
+			if (Dot(rel_vel_at_point, c.m_axis) > 0)
+				continue;
+
+			// Look up the combined material properties
+			c.m_mat = m_materials(c.m_mat_idA, c.m_mat_idB);
+
+			// Estimate sub-step collision time
+			auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
+			auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
+			auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
+
+			// Recompute contact data at the estimated collision time
+			c.update(sub_step * dt);
+
+			collision_queue.push_back(c);
+		}
+
+		// Sort by time of impact
+		std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
+		{
+			return lhs.m_time < rhs.m_time;
+		});
+
+		// Notify subscribers
+		PostCollisionDetection(*this, collision_queue);
+
+		// Apply impulses
 		for (auto& c : collision_queue)
 			ResolveCollision(c);
 	}
