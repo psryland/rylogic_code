@@ -35,9 +35,6 @@
     <Filter Include="pr\collision">
       <UniqueIdentifier>{74f19a98-ec3e-4080-af50-742308ee4069}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\maths">
-      <UniqueIdentifier>{b1e41304-46c3-4eb7-ac89-da6455d1835d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\ldraw">
       <UniqueIdentifier>{4ddb25be-c541-41a0-a212-6ae4b70d0ff8}</UniqueIdentifier>
     </Filter>
@@ -138,30 +135,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h">
       <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix6x8.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h">
       <Filter>pr\physics\broadphase</Filter>
@@ -300,6 +273,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h">
       <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_gpu_collision.h">
+      <Filter>unittests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -224,10 +224,8 @@ namespace pr::physics
 		void CompileShader()
 		{
 			auto device = static_cast<ID3D12Device4*>(m_gpu);
-
-			auto shader_source = resource::Read<char>(L"PHYSICS_GJK_HLSL", L"TEXT");
-			auto compiler = ShaderCompiler{}
-				.Source(shader_source)
+			ShaderCompiler compiler = ShaderCompiler{}
+				.Source(resource::Read<char>(L"PHYSICS_GJK_HLSL", L"TEXT"))
 				.Includes({new ResourceIncludeHandler, true})
 				.EntryPoint(L"CSCollisionDetect")
 				.ShaderModel(L"cs_6_0")
@@ -254,8 +252,7 @@ namespace pr::physics
 		{
 			auto device = static_cast<ID3D12Device4*>(m_gpu);
 
-			auto create_buffer = [&](UINT64 size_bytes, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES initial_state,
-				D3DPtr<ID3D12Resource>& out_resource, char const* name)
+			auto create_buffer = [&](UINT64 size_bytes, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES initial_state, D3DPtr<ID3D12Resource>& out_resource, char const* name)
 			{
 				auto desc = D3D12_RESOURCE_DESC{
 					.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,

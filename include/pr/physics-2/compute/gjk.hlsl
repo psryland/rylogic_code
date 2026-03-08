@@ -17,7 +17,8 @@
 //   g_contacts — RWStructuredBuffer of GpuContact (collision results, written atomically)
 //   g_counters — RWStructuredBuffer of uint (atomic contact count at index 0)
 //
-#include "core.hlsli"
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/vector.hlsli"
 
 // ---- Constants ----
 static const int MaxGjkIter = 64;
@@ -34,7 +35,6 @@ static const int SHAPE_TRIANGLE = 3;
 static const int SHAPE_POLYTOPE = 4;
 
 // ---- GPU data structures (must match C++ layout exactly) ----
-
 struct GpuShape
 {
 	row_major float4x4 s2p; // shape-to-parent transform
@@ -44,7 +44,6 @@ struct GpuShape
 	int material_id;
 	float4 data;            // type-specific: sphere(r), box(half_xyz), line(half_len,thickness)
 };
-
 struct GpuCollisionPair
 {
 	int shape_idx_a;
@@ -53,7 +52,6 @@ struct GpuCollisionPair
 	int pad0;
 	row_major float4x4 b2a; // transform B into A's space
 };
-
 struct GpuContact
 {
 	float4 axis;
@@ -81,44 +79,10 @@ RWStructuredBuffer<uint>           g_counters : register(u1);
 
 // ---- Vector helpers ----
 
-float Dot3(float4 a, float4 b)
-{
-	return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-float4 Cross3(float4 a, float4 b)
-{
-	return float4(
-		a.y * b.z - a.z * b.y,
-		a.z * b.x - a.x * b.z,
-		a.x * b.y - a.y * b.x,
-		0);
-}
-
-float LengthSq3(float4 v)
-{
-	return Dot3(v, v);
-}
-
-float Length3(float4 v)
-{
-	return sqrt(LengthSq3(v));
-}
-
 float4 Normalise3(float4 v)
 {
-	float len = Length3(v);
+	float len = length(v.xyz);
 	return len > GjkEps ? v / len : float4(1, 0, 0, 0);
-}
-
-// Return a vector perpendicular to 'v'
-float4 Perpendicular(float4 v)
-{
-	// Choose the axis least aligned with v, then cross
-	float4 ax = abs(v.x) < abs(v.y) ? float4(1, 0, 0, 0) : float4(0, 1, 0, 0);
-	if (abs(v.z) < abs(ax.x * v.x + ax.y * v.y + ax.z * v.z))
-		ax = float4(0, 0, 1, 0);
-	return Cross3(v, ax);
 }
 
 // Transform a point by a row_major float4x4 (point has w=1)
@@ -136,7 +100,6 @@ float4 TransformDir(float4x4 m, float4 d)
 // ---- Support vertex functions ----
 // Each function returns the furthest point on the shape boundary in the given direction.
 // Direction is in shape-local space (pre-transformed by inverse of s2p).
-
 float4 SupportVertex_Sphere(GpuShape shape, float4 dir)
 {
 	// Sphere support: centre + radius * normalised direction
@@ -156,9 +119,9 @@ float4 SupportVertex_Box(GpuShape shape, float4 dir)
 	float4 ay = float4(shape.s2p[1].xyz, 0);
 	float4 az = float4(shape.s2p[2].xyz, 0);
 
-	result += (Dot3(dir, ax) > 0 ? half_ext.x : -half_ext.x) * ax;
-	result += (Dot3(dir, ay) > 0 ? half_ext.y : -half_ext.y) * ay;
-	result += (Dot3(dir, az) > 0 ? half_ext.z : -half_ext.z) * az;
+	result += (dot(dir.xyz, ax.xyz) > 0 ? half_ext.x : -half_ext.x) * ax;
+	result += (dot(dir.xyz, ay.xyz) > 0 ? half_ext.y : -half_ext.y) * ay;
+	result += (dot(dir.xyz, az.xyz) > 0 ? half_ext.z : -half_ext.z) * az;
 	return result;
 }
 
@@ -170,14 +133,14 @@ float4 SupportVertex_Line(GpuShape shape, float4 dir)
 	float4 centre = shape.s2p[3];
 	float4 z_axis = float4(shape.s2p[2].xyz, 0); // line direction (Z axis of s2p)
 
-	float d = Dot3(dir, z_axis);
+	float d = dot(dir.xyz, z_axis.xyz);
 	float4 result = centre;
 	result += (d > 0 ? half_len : -half_len) * z_axis;
 
 	// Hemispherical end-cap offset for thick lines
 	if (thickness > 0)
 	{
-		float len_sq = LengthSq3(dir);
+		float len_sq = length_sq(dir.xyz);
 		if (len_sq > GjkEps * GjkEps)
 			result += thickness * dir / sqrt(len_sq);
 	}
@@ -197,9 +160,9 @@ float4 SupportVertex_Triangle(GpuShape shape, float4 dir, StructuredBuffer<float
 	float4 p1 = TransformPoint(shape.s2p, v1);
 	float4 p2 = TransformPoint(shape.s2p, v2);
 
-	float d0 = Dot3(dir, p0);
-	float d1 = Dot3(dir, p1);
-	float d2 = Dot3(dir, p2);
+	float d0 = dot(dir.xyz, p0.xyz);
+	float d1 = dot(dir.xyz, p1.xyz);
+	float d2 = dot(dir.xyz, p2.xyz);
 
 	if (d0 >= d1 && d0 >= d2) return p0;
 	if (d1 >= d0 && d1 >= d2) return p1;
@@ -216,7 +179,7 @@ float4 SupportVertex_Polytope(GpuShape shape, float4 dir, StructuredBuffer<float
 	for (int i = 0; i < shape.vert_count; ++i)
 	{
 		float4 v = TransformPoint(shape.s2p, verts[shape.vert_offset + i]);
-		float d = Dot3(dir, v);
+		float d = dot(dir.xyz, v.xyz);
 		if (d > best_dot)
 		{
 			best_dot = d;
@@ -242,7 +205,6 @@ float4 SupportVertex(GpuShape shape, float4 dir, StructuredBuffer<float4> verts)
 
 // ---- Minkowski difference support ----
 // Tracks both the difference point and the original shape vertices for EPA contact extraction.
-
 struct MkSup
 {
 	float4 w; // Minkowski difference point (a - b), w=0
@@ -255,8 +217,8 @@ MkSup MkSupport(
 	GpuShape shape_b, float4x4 b2w, float4x4 w2b,
 	float4 dir, StructuredBuffer<float4> verts)
 {
-	// Support on A in direction dir, support on B in direction -dir
-	float4 dir_a = TransformDir(w2a, dir);
+	// Support on A in direction +dir, support on B in direction -dir
+	float4 dir_a = TransformDir(w2a, +dir);
 	float4 dir_b = TransformDir(w2b, -dir);
 
 	float4 va = TransformPoint(a2w, SupportVertex(shape_a, dir_a, verts));
@@ -271,7 +233,6 @@ MkSup MkSupport(
 
 // ---- GJK Simplex ----
 // Up to 4 support points. Newest point is always at index 0.
-
 struct Simplex
 {
 	MkSup s[4];
@@ -282,6 +243,7 @@ void SimplexPush(inout Simplex sx, MkSup p)
 {
 	for (int i = sx.n; i > 0; --i)
 		sx.s[i] = sx.s[i - 1];
+
 	sx.s[0] = p;
 	sx.n++;
 }
@@ -289,19 +251,18 @@ void SimplexPush(inout Simplex sx, MkSup p)
 // ---- Simplex reduction cases ----
 // Each function updates the simplex to the closest feature to the origin,
 // sets the new search direction, and returns true if the origin is enclosed.
-
 bool SimplexLine(inout Simplex sx, inout float4 dir)
 {
 	// A = newest (sx.s[0]), B = previous (sx.s[1])
 	float4 ab = sx.s[1].w - sx.s[0].w;
 	float4 ao = -sx.s[0].w;
 
-	if (Dot3(ab, ao) > 0)
+	if (dot(ab.xyz, ao.xyz) > 0)
 	{
 		// Origin projects onto the segment interior — search perpendicular
-		dir = Cross3(Cross3(ab, ao), ab);
-		if (LengthSq3(dir) < GjkEps)
-			dir = Perpendicular(ab);
+		dir = float4(cross(cross(ab.xyz, ao.xyz), ab.xyz), 0);
+		if (length_sq(dir.xyz) < GjkEps)
+			dir = float4(Perpendicular(ab.xyz), 0);
 	}
 	else
 	{
@@ -318,20 +279,20 @@ bool SimplexTri(inout Simplex sx, inout float4 dir)
 	float4 ab = sx.s[1].w - sx.s[0].w;
 	float4 ac = sx.s[2].w - sx.s[0].w;
 	float4 ao = -sx.s[0].w;
-	float4 n = Cross3(ab, ac); // triangle normal
+	float4 n = float4(cross(ab.xyz, ac.xyz), 0); // triangle normal
 
 	// Test Voronoi regions of the triangle edges
-	if (Dot3(Cross3(n, ac), ao) > 0)
+	if (dot(cross(n.xyz, ac.xyz), ao.xyz) > 0)
 	{
 		// Origin is outside edge AC
-		if (Dot3(ac, ao) > 0)
+		if (dot(ac.xyz, ao.xyz) > 0)
 		{
 			// Closest to edge AC
 			sx.s[1] = sx.s[2];
 			sx.n = 2;
-			dir = Cross3(Cross3(ac, ao), ac);
-			if (LengthSq3(dir) < GjkEps)
-				dir = Perpendicular(ac);
+			dir = float4(cross(cross(ac.xyz, ao.xyz), ac.xyz), 0);
+			if (length_sq(dir.xyz) < GjkEps)
+				dir = float4(Perpendicular(ac.xyz), 0);
 		}
 		else
 		{
@@ -340,7 +301,7 @@ bool SimplexTri(inout Simplex sx, inout float4 dir)
 			return SimplexLine(sx, dir);
 		}
 	}
-	else if (Dot3(Cross3(ab, n), ao) > 0)
+	else if (dot(cross(ab.xyz, n.xyz), ao.xyz) > 0)
 	{
 		// Origin is outside edge AB
 		sx.n = 2;
@@ -349,7 +310,7 @@ bool SimplexTri(inout Simplex sx, inout float4 dir)
 	else
 	{
 		// Origin is inside the triangle prism — pick the correct face
-		if (Dot3(n, ao) > 0)
+		if (dot(n.xyz, ao.xyz) > 0)
 		{
 			dir = n; // above the triangle
 		}
@@ -374,22 +335,22 @@ bool SimplexTetra(inout Simplex sx, inout float4 dir)
 	float4 ao = -sx.s[0].w;
 
 	// Face normals, oriented outward (away from the opposite vertex)
-	float4 abc = Cross3(ab, ac); if (Dot3(abc, ad) > 0) abc = -abc;
-	float4 acd = Cross3(ac, ad); if (Dot3(acd, ab) > 0) acd = -acd;
-	float4 adb = Cross3(ad, ab); if (Dot3(adb, ac) > 0) adb = -adb;
+	float4 abc = float4(cross(ab.xyz, ac.xyz), 0); if (dot(abc.xyz, ad.xyz) > 0) abc = -abc;
+	float4 acd = float4(cross(ac.xyz, ad.xyz), 0); if (dot(acd.xyz, ab.xyz) > 0) acd = -acd;
+	float4 adb = float4(cross(ad.xyz, ab.xyz), 0); if (dot(adb.xyz, ac.xyz) > 0) adb = -adb;
 
 	// Check if origin is outside any face
-	if (Dot3(abc, ao) > 0)
+	if (dot(abc.xyz, ao.xyz) > 0)
 	{
 		sx.n = 3; // reduce to triangle ABC
 		return SimplexTri(sx, dir);
 	}
-	if (Dot3(acd, ao) > 0)
+	if (dot(acd.xyz, ao.xyz) > 0)
 	{
 		sx.s[1] = sx.s[2]; sx.s[2] = sx.s[3]; sx.n = 3; // triangle ACD
 		return SimplexTri(sx, dir);
 	}
-	if (Dot3(adb, ao) > 0)
+	if (dot(adb.xyz, ao.xyz) > 0)
 	{
 		MkSup tmp = sx.s[1]; sx.s[1] = sx.s[3]; sx.s[2] = tmp; sx.n = 3; // triangle ADB
 		return SimplexTri(sx, dir);
@@ -448,8 +409,8 @@ bool Epa(
 		epa_verts[i] = gjk_sx.s[i];
 
 	// Ensure consistent tetrahedron winding
-	float4 n012 = Cross3(epa_verts[1].w - epa_verts[0].w, epa_verts[2].w - epa_verts[0].w);
-	if (Dot3(n012, epa_verts[3].w - epa_verts[0].w) > 0)
+	float4 n012 = float4(cross(epa_verts[1].w.xyz - epa_verts[0].w.xyz, epa_verts[2].w.xyz - epa_verts[0].w.xyz), 0);
+	if (dot(n012.xyz, (epa_verts[3].w - epa_verts[0].w).xyz) > 0)
 	{
 		MkSup tmp = epa_verts[0];
 		epa_verts[0] = epa_verts[1];
@@ -475,11 +436,11 @@ bool Epa(
 
 		float4 fab = epa_verts[ib].w - epa_verts[ia].w;
 		float4 fac = epa_verts[ic].w - epa_verts[ia].w;
-		float4 fn = Cross3(fab, fac);
-		float flen = Length3(fn);
+		float4 fn = float4(cross(fab.xyz, fac.xyz), 0);
+		float flen = length(fn.xyz);
 		if (flen < GjkEps) continue;
 		fn /= flen;
-		float fd = Dot3(fn, epa_verts[ia].w);
+		float fd = dot(fn.xyz, epa_verts[ia].w.xyz);
 
 		// Ensure normal points outward (away from origin)
 		if (fd < 0)
@@ -518,7 +479,7 @@ bool Epa(
 
 		// Get new support in the closest face's normal direction
 		MkSup sup = MkSupport(shape_a, a2w, w2a, shape_b, b2w, w2b, cf_normal, verts);
-		float d = Dot3(sup.w, cf_normal);
+		float d = dot(sup.w.xyz, cf_normal.xyz);
 
 		// Convergence: new support doesn't extend the polytope significantly
 		if (d - cf_dist < EpaEps || nv >= MaxEpaVerts)
@@ -534,8 +495,8 @@ bool Epa(
 			float4 e0 = vb.w - va.w;
 			float4 e1 = vc.w - va.w;
 			float4 e2 = proj - va.w;
-			float d00 = Dot3(e0, e0), d01 = Dot3(e0, e1), d11 = Dot3(e1, e1);
-			float d20 = Dot3(e2, e0), d21 = Dot3(e2, e1);
+			float d00 = dot(e0.xyz, e0.xyz), d01 = dot(e0.xyz, e1.xyz), d11 = dot(e1.xyz, e1.xyz);
+			float d20 = dot(e2.xyz, e0.xyz), d21 = dot(e2.xyz, e1.xyz);
 			float denom = d00 * d11 - d01 * d01;
 
 			if (abs(denom) > GjkEps)
@@ -566,7 +527,7 @@ bool Epa(
 		for (int i = nf - 1; i >= 0; --i)
 		{
 			float4 face_to_new = sup.w - epa_verts[epa_faces[i].i0].w;
-			if (Dot3(epa_faces[i].normal, face_to_new) <= 0)
+			if (dot(epa_faces[i].normal.xyz, face_to_new.xyz) <= 0)
 				continue;
 
 			// Face is visible — collect its 3 edges
@@ -608,11 +569,11 @@ bool Epa(
 
 			float4 fab = epa_verts[ib].w - epa_verts[ia].w;
 			float4 fac = epa_verts[ic].w - epa_verts[ia].w;
-			float4 fn = Cross3(fab, fac);
-			float flen = Length3(fn);
+			float4 fn = float4(cross(fab.xyz, fac.xyz), 0);
+			float flen = length(fn.xyz);
 			if (flen < GjkEps) continue;
 			fn /= flen;
-			float fd = Dot3(fn, epa_verts[ia].w);
+			float fd = dot(fn.xyz, epa_verts[ia].w.xyz);
 
 			if (fd < 0)
 			{
@@ -633,30 +594,8 @@ bool Epa(
 	return false; // EPA did not converge
 }
 
-// ---- 4x4 Matrix inverse (affine) ----
-// Assumes bottom row is (0,0,0,1). For row_major layout: rows 0-2 are rotation, row 3 is translation.
-float4x4 Inverse(float4x4 m)
-{
-	// Extract 3x3 rotation and translation
-	float3x3 rot = float3x3(m[0].xyz, m[1].xyz, m[2].xyz);
-	float3 pos = m[3].xyz;
-
-	// Transpose the rotation (inverse of orthonormal matrix)
-	float3x3 rot_t = transpose(rot);
-
-	// Inverse translation = -rot_t * pos
-	float3 inv_pos = -mul(pos, rot_t);
-
-	return float4x4(
-		float4(rot_t[0], 0),
-		float4(rot_t[1], 0),
-		float4(rot_t[2], 0),
-		float4(inv_pos, 1));
-}
-
 // ---- GJK + EPA entry point ----
 // Returns true if shapes collide, filling out contact data.
-
 bool GjkCollide(
 	GpuShape shape_a, float4x4 a2w,
 	GpuShape shape_b, float4x4 b2w,
@@ -670,14 +609,14 @@ bool GjkCollide(
 	// Compute shape-to-world and world-to-shape transforms.
 	// For the GPU path, shapes are already positioned (s2p baked into a2w/b2w by caller),
 	// so the shape's s2p is baked into a2w/b2w.
-	float4x4 w2a = Inverse(a2w);
-	float4x4 w2b = Inverse(b2w);
+	float4x4 w2a = InvertOrthonormal(a2w);
+	float4x4 w2b = InvertOrthonormal(b2w);
 
 	// Initial search direction: from B's centre toward A's centre
 	float4 centre_a = a2w[3]; // position row
 	float4 centre_b = b2w[3];
 	float4 dir = float4((centre_a - centre_b).xyz, 0);
-	if (LengthSq3(dir) < GjkEps)
+	if (length_sq(dir.xyz) < GjkEps)
 		dir = float4(1, 0, 0, 0);
 
 	// Seed the simplex with the first support point
@@ -690,13 +629,13 @@ bool GjkCollide(
 	// GJK main loop
 	for (int iter = 0; iter < MaxGjkIter; ++iter)
 	{
-		if (LengthSq3(dir) < GjkEps)
+		if (length_sq(dir.xyz) < GjkEps)
 			break;
 
 		sup = MkSupport(shape_a, a2w, w2a, shape_b, b2w, w2b, dir, verts);
 
 		// If the new support point doesn't pass the origin, shapes are separated
-		if (Dot3(sup.w, dir) < 0)
+		if (dot(sup.w.xyz, dir.xyz) < 0)
 			return false;
 
 		SimplexPush(sx, sup);
@@ -706,13 +645,12 @@ bool GjkCollide(
 			// Origin enclosed — shapes overlap. Run EPA for penetration info.
 			float4 normal, ptA, ptB;
 			float depth;
-			if (!Epa(shape_a, a2w, w2a, shape_b, b2w, w2b, sx, verts,
-			         normal, depth, ptA, ptB))
+			if (!Epa(shape_a, a2w, w2a, shape_b, b2w, w2b, sx, verts, normal, depth, ptA, ptB))
 				return false;
 
 			// Orient axis from A toward B (convention: axis points A→B)
-			float pa = Dot3(normal, centre_a);
-			float pb = Dot3(normal, centre_b);
+			float pa = dot(normal.xyz, centre_a.xyz);
+			float pb = dot(normal.xyz, centre_b.xyz);
 			float sign = (pa < pb) ? 1.0f : -1.0f;
 			out_axis = sign * normal;
 			out_depth = depth;
@@ -727,14 +665,13 @@ bool GjkCollide(
 // ---- Compute shader entry point ----
 // One thread per broadphase pair. Tests collision via GJK + EPA.
 // Colliding pairs write their contact to g_contacts atomically.
-
 [numthreads(64, 1, 1)]
-void CSCollisionDetect(uint3 dtid : SV_DispatchThreadID)
+void CSCollisionDetect(uint3 ThreadID : SV_DispatchThreadID)
 {
-	if (dtid.x >= g_pair_count)
+	if (ThreadID.x >= g_pair_count)
 		return;
 
-	GpuCollisionPair pair = g_pairs[dtid.x];
+	GpuCollisionPair pair = g_pairs[ThreadID.x];
 	GpuShape shape_a = g_shapes[pair.shape_idx_a];
 	GpuShape shape_b = g_shapes[pair.shape_idx_b];
 

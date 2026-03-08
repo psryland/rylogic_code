@@ -18,6 +18,7 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(PropsPath)build_configurations.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)view3d_shader_build.props" />
   <Import Project="$(PropsPath)lib.props" />
   <!--
   Build options
@@ -41,6 +42,39 @@
         ;PR_DBG_PHYSICS=1
       </PreprocessorDefinitions>
     </ClCompile>
+  </ItemDefinitionGroup>
+  <!--
+  Shaders
+  -->
+  <ItemDefinitionGroup>
+    <View3dShaderBuild>
+      <ShaderType>Effect</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </View3dShaderBuild>
+    <FxCompile>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include\
+        ;$(RylogicRoot)projects\rylogic\
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+        ;SHADER_BUILD
+      </PreprocessorDefinitions>
+    </FxCompile>
   </ItemDefinitionGroup>
   <!--
   Source files
@@ -99,8 +133,8 @@
   Targets
   -->
   <ItemGroup>
-    <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl" />
-    <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl" />
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl" EntryPointName="CSCollisionDetect" />
+    <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl" EntryPointName="CSIntegrate" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\physics_shaders.rc" />
