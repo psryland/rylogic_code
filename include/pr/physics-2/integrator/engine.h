@@ -76,8 +76,6 @@ namespace pr::physics
 			if constexpr (UseGpu)
 			{
 				// GPU path: pack bodies into flat dynamics buffer → dispatch compute → unpack results.
-				// Static bodies (infinite mass) are skipped — they have no forces, no
-				// velocity, and evolving them would only accumulate numerical drift.
 				std::vector<RigidBodyDynamics> dynamics;
 				std::vector<int> dynamic_indices;
 				{
@@ -96,9 +94,6 @@ namespace pr::physics
 				#ifdef PR_PHYSICS_GPU
 				IntegrateGpu(dynamics, dt);
 				#else
-				// CPU fallback: process the dynamics buffer with EvolveCPU, which mirrors
-				// the GPU compute shader algorithm. This validates the pack→evolve→unpack
-				// pipeline without requiring a D3D12 device.
 				for (auto& dyn : dynamics)
 					EvolveCPU(dyn, dt);
 				#endif
@@ -116,17 +111,13 @@ namespace pr::physics
 			}
 			else
 			{
-				// CPU path: evolve each dynamic body directly using the original Evolve() function.
-				// This is the reference implementation; the GPU/EvolveCPU path must match it.
+				// CPU path: evolve each dynamic body directly using kick-drift-kick.
 				for (auto& body : bodies)
 				{
 					if (body.Mass() < InfiniteMass * 0.5f)
 						Evolve(body, dt);
 				}
 
-				// Debug: A/B comparison between Evolve() (just applied) and EvolveCPU (buffer-based).
-				// This validates that the pack→EvolveCPU→unpack pipeline produces identical results
-				// to the reference path. Any delta here means the GPU shader will also be wrong.
 				#if PR_DBG
 				CompareIntegrationPaths(dt, bodies);
 				#endif

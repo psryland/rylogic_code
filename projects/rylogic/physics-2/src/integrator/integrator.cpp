@@ -29,8 +29,75 @@ namespace pr::physics
 		return ke;
 	}
 
-	// Evolve a rigid body forward in time using Störmer-Verlet (kick-drift-kick)
-	// symplectic integration.
+	// Half-kick: advance momentum by half a timestep using the current force.
+	// This is one half of the Störmer-Verlet kick. Called before drift and after
+	// collision resolution, so that collisions see the half-kicked state.
+	void EvolveKick(RigidBody& rb, float half_dt)
+	{
+		auto ws_force = rb.ForceWS();
+		auto half_impulse = ws_force * half_dt;
+		rb.MomentumWS(rb.MomentumWS() + half_impulse);
+	}
+
+	// Drift: update position and orientation using the current (half-kicked) momentum.
+	// The velocity is computed at the CoM where the inertia is block-diagonal, then
+	// the CoM is translated and the model origin derived from the new rotation.
+	void EvolveDrift(RigidBody& rb, float elapsed_seconds)
+	{
+		// Compute velocity from momentum. Since inertia is stored at CoM with CoM()==0,
+		// the multiply is decoupled: omega = Ic_inv * h_ang, v_com = h_lin / m.
+		auto ws_momentum = rb.MomentumWS();
+		auto ws_inertia_inv = rb.InertiaInvWS();
+		auto ws_velocity = ws_inertia_inv * ws_momentum;
+
+		// Current CoM position in world space
+		auto com_os = rb.CentreOfMassOS();
+		auto com_ws = rb.O2W().pos + rb.O2W().rot * com_os;
+
+		// Midpoint predictor: estimate the angular velocity at the half-step rotation
+		// to account for precession of anisotropic bodies (see Evolve() for details).
+		auto mid_rot = m3x4::Rotation(ws_velocity.ang * (elapsed_seconds * 0.5f)) * rb.O2W().rot;
+		auto mid_iinv_ws = Rotate(rb.InertiaInvOS(), mid_rot);
+		auto ws_velocity_mid = mid_iinv_ws * ws_momentum;
+
+		// Apply rotation using the midpoint angular velocity
+		auto drot = ws_velocity_mid.ang * elapsed_seconds;
+		auto new_rot = m3x4::Rotation(drot) * rb.O2W().rot;
+
+		// Translate the CoM by the linear velocity, then derive the model origin
+		// from the new rotation. This ensures the model origin orbits around the
+		// CoM correctly when the body rotates.
+		auto new_com_ws = com_ws + ws_velocity.lin * elapsed_seconds;
+		auto new_pos = new_com_ws - new_rot * com_os;
+
+		auto o2w = Orthonorm(m4x4{new_rot, new_pos});
+		rb.O2W(o2w);
+
+		#if PR_DBG
+		{
+			auto h = rb.MomentumWS();
+			auto rb_o2w = rb.O2W();
+			if (IsNaN(h.ang) || IsNaN(h.lin) || IsNaN(rb_o2w))
+			{
+				auto f = fopen("dump\\evolve_crash.log", "a");
+				if (f) {
+					fprintf(f, "[NaN] h_ang=(%.4f,%.4f,%.4f) h_lin=(%.4f,%.4f,%.4f)\n",
+						h.ang.x, h.ang.y, h.ang.z, h.lin.x, h.lin.y, h.lin.z);
+					fprintf(f, "  pos=(%.4f,%.4f,%.4f) com=(%.4f,%.4f,%.4f)\n",
+						rb_o2w.pos.x, rb_o2w.pos.y, rb_o2w.pos.z,
+						rb.CentreOfMassOS().x, rb.CentreOfMassOS().y, rb.CentreOfMassOS().z);
+					fclose(f);
+				}
+			}
+			assert("EvolveDrift: NaN in momentum" && !IsNaN(h.ang) && !IsNaN(h.lin));
+			assert("EvolveDrift: NaN in transform" && !IsNaN(rb_o2w));
+			assert("EvolveDrift: orientation not orthonormal" && IsOrthonormal(rb_o2w.rot));
+		}
+		#endif
+	}
+
+	// Combined kick-drift-kick for backward compatibility.
+	// Equivalent to EvolveKick(dt/2) + EvolveDrift(dt) + EvolveKick(dt/2).
 	void Evolve(RigidBody& rb, float elapsed_seconds)
 	{
 		auto ws_force = rb.ForceWS();
@@ -42,16 +109,28 @@ namespace pr::physics
 		// Step 2: Drift — advance position/orientation using the half-kicked momentum.
 		// The velocity is at the CoM (inertia is block-diagonal, no coupling terms).
 		// omega = Ic_inv * h_ang, v_com = h_lin / m.
+		auto ws_momentum = rb.MomentumWS();
 		auto ws_inertia_inv = rb.InertiaInvWS();
-		auto ws_velocity = ws_inertia_inv * rb.MomentumWS();
+		auto ws_velocity = ws_inertia_inv * ws_momentum;
+
+		// Midpoint predictor for the rotation step:
+		// For anisotropic bodies, the angular velocity changes during the drift step
+		// because the world-space inertia tensor changes with orientation (precession).
+		// Using the angular velocity at the start of the step is only first-order accurate.
+		// By estimating the rotation at the midpoint and recomputing omega there, we get
+		// second-order accuracy, significantly reducing secular energy drift for bodies
+		// whose angular velocity changes at collisions (polytopes, non-face contacts).
+		auto mid_rot = m3x4::Rotation(ws_velocity.ang * (elapsed_seconds * 0.5f)) * rb.O2W().rot;
+		auto mid_iinv_ws = Rotate(rb.InertiaInvOS(), mid_rot);
+		auto ws_velocity_mid = mid_iinv_ws * ws_momentum;
 
 		// Compute CoM position before the step.
 		// The body's O2W transform positions the model origin; CoM is offset from it.
 		auto com_os = rb.CentreOfMassOS();
 		auto com_ws = rb.O2W().pos + rb.O2W().rot * com_os;
 
-		// Apply rotation
-		auto drot = ws_velocity.ang * elapsed_seconds;
+		// Apply rotation using the midpoint angular velocity
+		auto drot = ws_velocity_mid.ang * elapsed_seconds;
 		auto new_rot = m3x4::Rotation(drot) * rb.O2W().rot;
 
 		// Translate the CoM by the CoM velocity, then derive the model origin position
@@ -73,6 +152,18 @@ namespace pr::physics
 			// 1. Verify no NaN crept in during integration
 			auto h = rb.MomentumWS();
 			auto rb_o2w = rb.O2W();
+			if (IsNaN(h.ang) || IsNaN(h.lin) || IsNaN(rb_o2w))
+			{
+				auto f = fopen("dump\\evolve_crash.log", "a");
+				if (f) {
+					fprintf(f, "[NaN] h_ang=(%.4f,%.4f,%.4f) h_lin=(%.4f,%.4f,%.4f)\n",
+						h.ang.x, h.ang.y, h.ang.z, h.lin.x, h.lin.y, h.lin.z);
+					fprintf(f, "  pos=(%.4f,%.4f,%.4f) com=(%.4f,%.4f,%.4f)\n",
+						rb_o2w.pos.x, rb_o2w.pos.y, rb_o2w.pos.z,
+						rb.CentreOfMassOS().x, rb.CentreOfMassOS().y, rb.CentreOfMassOS().z);
+					fclose(f);
+				}
+			}
 			assert("Evolve: NaN in momentum" && !IsNaN(h.ang) && !IsNaN(h.lin));
 			assert("Evolve: NaN in transform" && !IsNaN(rb_o2w));
 
@@ -80,10 +171,34 @@ namespace pr::physics
 			//    to make large corrections — if it does, the angular velocity is too high
 			//    for the timestep or there's an integration bug)
 			auto rot = rb_o2w.rot;
+			if (!IsOrthonormal(rot))
+			{
+				auto f = fopen("dump\\evolve_crash.log", "a");
+				if (f) {
+					fprintf(f, "[NOT_ORTHONORMAL] rot:\n");
+					fprintf(f, "  x=(%.6f,%.6f,%.6f) y=(%.6f,%.6f,%.6f) z=(%.6f,%.6f,%.6f)\n",
+						rot.x.x,rot.x.y,rot.x.z, rot.y.x,rot.y.y,rot.y.z, rot.z.x,rot.z.y,rot.z.z);
+					fprintf(f, "  vel_ang=(%.4f,%.4f,%.4f) dt=%.6f\n",
+						ws_velocity.ang.x, ws_velocity.ang.y, ws_velocity.ang.z, elapsed_seconds);
+					fclose(f);
+				}
+			}
 			assert("Evolve: orientation not orthonormal" && IsOrthonormal(rot));
 
 			// 3. Verify the inertia inverse is still valid after rotation
 			auto ws_iinv = rb.InertiaInvWS();
+			if (!ws_iinv.Check())
+			{
+				auto f = fopen("dump\\evolve_crash.log", "a");
+				if (f) {
+					auto iinv = ws_iinv.Ic3x3(1);
+					fprintf(f, "[BAD_INERTIA] InvMass=%.6f CoM=(%.4f,%.4f,%.4f)\n",
+						ws_iinv.InvMass(), ws_iinv.CoM().x, ws_iinv.CoM().y, ws_iinv.CoM().z);
+					fprintf(f, "  diag=(%.6f,%.6f,%.6f) off=(%.6f,%.6f,%.6f)\n",
+						iinv.x.x, iinv.y.y, iinv.z.z, iinv.x.y, iinv.x.z, iinv.y.z);
+					fclose(f);
+				}
+			}
 			assert("Evolve: invalid inertia after rotation" && ws_iinv.Check());
 		}
 		#endif
@@ -142,11 +257,28 @@ namespace pr::physics
 		auto vel_ang = ws_iinv * dyn.momentum_ang;
 		auto vel_lin = inv_mass * dyn.momentum_lin;
 
+		// Midpoint predictor for the rotation step: estimate the angular velocity at
+		// the midpoint rotation to account for precession of anisotropic bodies.
+		// This gives second-order accuracy instead of first-order.
+		auto half_dR = m3x4::Rotation(vel_ang * (elapsed_seconds * 0.5f));
+		auto mid_rot = half_dR * rot;
+		auto mid_b2a = InvertAffine(mid_rot);
+		auto ws_iinv_mid = mid_rot * os_iinv_unit * mid_b2a;
+		ws_iinv_mid.x.y = ws_iinv_mid.y.x = 0.5f * (ws_iinv_mid.x.y + ws_iinv_mid.y.x);
+		ws_iinv_mid.x.z = ws_iinv_mid.z.x = 0.5f * (ws_iinv_mid.x.z + ws_iinv_mid.z.x);
+		ws_iinv_mid.y.z = ws_iinv_mid.z.y = 0.5f * (ws_iinv_mid.y.z + ws_iinv_mid.z.y);
+		auto ws_iinv_mid_scaled = m3x4{
+			ws_iinv_mid.x * inv_mass,
+			ws_iinv_mid.y * inv_mass,
+			ws_iinv_mid.z * inv_mass,
+		};
+		auto vel_ang_mid = ws_iinv_mid_scaled * dyn.momentum_ang;
+
 		// CoM-based position update: translate CoM, derive model origin from new rotation.
 		auto com_ws = rot * os_com;
 		auto com_pos = pos + com_ws;
 
-		auto dR = m3x4::Rotation(vel_ang * elapsed_seconds);
+		auto dR = m3x4::Rotation(vel_ang_mid * elapsed_seconds);
 		auto new_rot = dR * rot;
 		auto new_com_pos = com_pos + vel_lin * elapsed_seconds;
 		auto new_pos = new_com_pos - new_rot * os_com;

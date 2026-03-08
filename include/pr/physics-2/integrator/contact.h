@@ -53,13 +53,13 @@ namespace pr::physics
 			update(0);
 		}
 
-		// Adjust the collision data to the given time
-		void update(float dt)
+		// Adjust the collision data to the given sub-step time.
+		void update(float dt_sub)
 		{
 			// 'm_b2a' is the position/orientation of objB in objA space at 'time'
 			// 'm_velocity' is value of objB's velocity vector field sampled at objA's origin.
 			// 'm_point_at_t' is adjusted by half 'dt' because it is the average of the overlap.
-			m_b2a = InvertAffine(m_objA->O2W(dt)) * m_objB->O2W(dt);
+			m_b2a = InvertAffine(m_objA->O2W(dt_sub)) * m_objB->O2W(dt_sub);
 
 			// VelocityOS() returns the spatial velocity at the CoM (because momentum and
 			// inertia are stored at the CoM). The collision code expects velocity at the
@@ -69,8 +69,8 @@ namespace pr::physics
 			auto vb = Shift(m_objB->VelocityOS(), -m_objB->CentreOfMassOS());
 			m_velocity = m_b2a * vb - va;
 
-			m_point_at_t = m_point + 0.5f * dt * m_velocity.LinAt(m_point);
-			m_time = dt;
+			m_point_at_t = m_point + 0.5f * dt_sub * m_velocity.LinAt(m_point);
+			m_time = dt_sub;
 		}
 	};
 

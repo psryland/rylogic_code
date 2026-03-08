@@ -11,6 +11,7 @@
 #include "src/forward.h"
 #include "src/ui/sandbox_ui.h"
 #include "src/unittests/sandbox_tests.h"
+#include <crtdbg.h>
 
 // Enable ComCtl32 v6 visual styles (modern themed controls)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
@@ -57,6 +58,14 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 	pr::InitCom com(COINIT_APARTMENTTHREADED);
 	pr::GdiPlus gdi;
 
+	// When running headless (e.g. -autoplay from a script), suppress assert dialog boxes
+	// and send them to stderr instead so the process terminates cleanly with diagnostics.
+	if (lpCmdLine && strstr(lpCmdLine, "-autoplay"))
+	{
+		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+	}
+
 	try
 	{
 		pr::win32::LoadDll<struct View3d>(L"view3d-12.dll");
@@ -87,6 +96,10 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 		}
 
 		sandbox.Show();
+
+		// Check for -autoplay to start the simulation immediately
+		if (lpCmdLine && strstr(lpCmdLine, "-autoplay"))
+			sandbox.m_scene.m_steps_remaining = -1;
 
 		// Simulation loop: fixed 60 Hz timestep for deterministic physics.
 		// Render loop: variable at high target rate. The actual frame rate is

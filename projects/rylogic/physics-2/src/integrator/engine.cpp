@@ -86,8 +86,6 @@ namespace pr::physics
 		auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
 
 		// Recompute contact data (b2a, velocity, contact point) at the estimated collision time.
-		// Note: this is an approximation — the bodies aren't actually moved back in time,
-		// so there will be a small angular momentum error proportional to penetration depth.
 		c.update(sub_step * dt);
 
 		return true;
@@ -100,10 +98,7 @@ namespace pr::physics
 	// Important: When multiple collisions are resolved in a single time step,
 	// earlier resolutions change body momenta. We must recompute the relative
 	// velocity using CURRENT momenta before computing each impulse, otherwise
-	// stale velocity data causes catastrophic energy injection. For example:
-	// if body A bounces off the ground (velocity reversed from -v to +v), then
-	// a subsequent collision (A, B) using the old velocity (-v) would compute
-	// an impulse as if A is still approaching B, doubling the energy.
+	// stale velocity data causes catastrophic energy injection.
 	void Engine::ResolveCollision(Contact& c)
 	{
 		auto& objA = const_cast<RigidBody&>(*c.m_objA);
@@ -112,8 +107,6 @@ namespace pr::physics
 		// Recompute relative velocity using current momenta.
 		// The geometric data (contact point, axis, depth) is still valid because
 		// only momenta changed, not positions. But the velocity field is stale.
-		// VelocityOS() returns spatial velocity at the CoM; shift to model origin
-		// so LinAt(pt) gives the correct velocity at the contact point.
 		auto va = Shift(objA.VelocityOS(), -objA.CentreOfMassOS());
 		auto vb = Shift(objB.VelocityOS(), -objB.CentreOfMassOS());
 		c.m_velocity = c.m_b2a * vb - va;
@@ -167,7 +160,6 @@ namespace pr::physics
 
 			#if PR_DBG
 			{
-				// Log significant energy clamping events to diagnose explosion sources
 				auto ke_clamped = objA.KineticEnergy() + objB.KineticEnergy();
 				if (delta > 0.1f || alpha < 0.5f)
 				{
