@@ -60,7 +60,15 @@ namespace pr::physics
 			// 'm_velocity' is value of objB's velocity vector field sampled at objA's origin.
 			// 'm_point_at_t' is adjusted by half 'dt' because it is the average of the overlap.
 			m_b2a = InvertAffine(m_objA->O2W(dt)) * m_objB->O2W(dt);
-			m_velocity = m_b2a * m_objB->VelocityOS() - m_objA->VelocityOS();
+
+			// VelocityOS() returns the spatial velocity at the CoM (because momentum and
+			// inertia are stored at the CoM). The collision code expects velocity at the
+			// model origin so that LinAt(pt) gives the correct velocity at contact points
+			// measured from the model origin. Shift each body's velocity from CoM to origin.
+			auto va = Shift(m_objA->VelocityOS(), -m_objA->CentreOfMassOS());
+			auto vb = Shift(m_objB->VelocityOS(), -m_objB->CentreOfMassOS());
+			m_velocity = m_b2a * vb - va;
+
 			m_point_at_t = m_point + 0.5f * dt * m_velocity.LinAt(m_point);
 			m_time = dt;
 		}

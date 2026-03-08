@@ -23,20 +23,23 @@ namespace pr::physics
 		// w = position). In HLSL with 'row_major float4x4', each row = one C++ column.
 		m4x4 o2w;
 
-		// World-space spatial momentum [angular, linear], measured at the model origin
+		// World-space spatial momentum [angular, linear], measured at the centre of mass.
 		v4 momentum_ang;   // angular momentum (torque accumulation)
 		v4 momentum_lin;   // linear momentum
 
-		// World-space external force accumulator [angular, linear], measured at the model origin.
+		// World-space external force accumulator [angular, linear], measured at the centre of mass.
 		// Zeroed after each integration step so persistent forces must be re-applied each frame.
 		v4 force_ang;      // external torque
 		v4 force_lin;      // external force
 
 		// Object-space inverse inertia in compact symmetric form.
 		// The full 3×3 inverse inertia matrix is reconstructed from diagonal + off-diagonal terms.
-		v4 inertia_inv_diagonal;        // {Ixx_inv, Iyy_inv, Izz_inv, 0}
-		v4 inertia_inv_products;        // {Ixy_inv, Ixz_inv, Iyz_inv, 0}
-		v4 inertia_inv_com_and_invmass; // {com_x, com_y, com_z, inv_mass}
+		v4 inertia_inv_diagonal;  // {Ixx_inv, Iyy_inv, Izz_inv, 0}
+		v4 inertia_inv_products;  // {Ixy_inv, Ixz_inv, Iyz_inv, 0}
+
+		// Object-space CoM offset from model origin, packed with inverse mass.
+		// The CoM offset is needed to convert CoM velocity to model-origin position changes.
+		v4 os_com_and_invmass;    // {com_x, com_y, com_z, inv_mass}
 	};
 	static_assert(sizeof(RigidBodyDynamics) == 176, "RigidBodyDynamics must be 176 bytes for GPU alignment");
 	static_assert(alignof(RigidBodyDynamics) == 16, "RigidBodyDynamics must be 16-byte aligned");
@@ -59,6 +62,7 @@ namespace pr::physics
 		auto momentum = rb.MomentumWS();
 		auto force = rb.ForceWS();
 		auto iinv = rb.InertiaInvOS();
+		auto com = rb.CentreOfMassOS();
 
 		return RigidBodyDynamics
 		{
@@ -69,7 +73,7 @@ namespace pr::physics
 			.force_lin = force.lin,
 			.inertia_inv_diagonal = iinv.m_diagonal,
 			.inertia_inv_products = iinv.m_products,
-			.inertia_inv_com_and_invmass = iinv.m_com_and_invmass,
+			.os_com_and_invmass = v4{com.x, com.y, com.z, iinv.InvMass()},
 		};
 	}
 

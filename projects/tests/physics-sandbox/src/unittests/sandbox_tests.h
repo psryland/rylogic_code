@@ -32,10 +32,11 @@ namespace physics_sandbox::tests
 				auto s = SystemState{};
 				s.total_lin_momentum = a.MomentumWS().lin + b.MomentumWS().lin;
 
-				// Total angular momentum about the origin:
-				// L_total = (L_spin_a + r_a x p_a) + (L_spin_b + r_b x p_b)
-				auto La = a.MomentumWS().ang + Cross(a.O2W().pos, a.MomentumWS().lin);
-				auto Lb = b.MomentumWS().ang + Cross(b.O2W().pos, b.MomentumWS().lin);
+				// Total angular momentum about the world origin:
+				// L_total = (L_spin_a + com_a x p_a) + (L_spin_b + com_b x p_b)
+				// Momentum is stored at the CoM, so use CoM positions for orbital terms.
+				auto La = a.MomentumWS().ang + Cross(a.CentreOfMassWS(), a.MomentumWS().lin);
+				auto Lb = b.MomentumWS().ang + Cross(b.CentreOfMassWS(), b.MomentumWS().lin);
 				s.total_ang_momentum = La + Lb;
 				s.total_ke = a.KineticEnergy() + b.KineticEnergy();
 				return s;

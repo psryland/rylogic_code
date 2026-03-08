@@ -31,15 +31,17 @@ namespace pr::physics
 		// Offset from the model origin to the CoM (in object space). 
 		v4 m_os_com;
 
-		// World space spatial momentum, measured at the model origin (not CoM)
+		// World space spatial momentum, measured at the centre of mass.
+		// For bodies with CoM at the model origin, this is equivalent to model-origin momentum.
 		v8force m_ws_momentum;
 
-		// The external forces and torques applied to this body (in world space), measured at the model origin (not CoM).
+		// The external forces and torques applied to this body (in world space), measured at the centre of mass.
 		// This value is an accumulator and is reset to zero after each physics step so forces that should
 		// be constant need to be applied each frame.
 		v8force m_ws_force;
 
-		// Inertia, measured at the model origin (not CoM). Currently this is just simple 3x3 inertia. Articulated bodies will need 6x6 inertia.
+		// Inverse inertia, measured at the centre of mass (CoM() == 0, block-diagonal).
+		// For articulated bodies, the inertia can be shifted to joint frames using Translate()/To6x6().
 		InertiaInv m_os_inertia_inv;
 
 		// Collision shape
@@ -130,7 +132,7 @@ namespace pr::physics
 		m4x4 O2W(float dt) const
 		{
 			return Abs(dt) > math::tiny<float>
-				? ExtrapolateO2W(O2W(), MomentumWS(), ForceWS(), InertiaInvWS(), dt)
+				? ExtrapolateO2W(O2W(), CentreOfMassOS(), MomentumWS(), ForceWS(), InertiaInvWS(), dt)
 				: O2W();
 		}
 
@@ -233,9 +235,11 @@ namespace pr::physics
 		}
 		void VelocityWS(v4 ws_ang, v4 ws_lin, v4 ws_at = v4{})
 		{
-			// 'ws_ang' and 'ws_lin' describe velocity at 'ws_at'. Shift to model origin.
+			// 'ws_ang' and 'ws_lin' describe velocity at 'ws_at' (offset from model origin).
+			// Shift to the centre of mass.
+			auto ws_com = O2W().rot * m_os_com;
 			auto spatial_velocity = v8motion{ws_ang, ws_lin};
-			spatial_velocity = Shift(spatial_velocity, -ws_at);
+			spatial_velocity = Shift(spatial_velocity, ws_com - ws_at);
 			VelocityWS(spatial_velocity);
 		}
 		void VelocityOS(v4 os_ang, v4 os_lin, v4 os_at = v4{})
@@ -285,12 +289,18 @@ namespace pr::physics
 			return W2O().rot * ForceWS();
 		}
 
-		// Add a force acting on the rigid body at position 'at' (world space, object origin relative, not CoM relative)
+		// Add a force acting on the rigid body at position 'at' (world space, model origin relative).
+		// The force is shifted from the application point to the centre of mass before accumulation.
+		// For gravity: pass ws_at = O2W().rot * CentreOfMassOS() so gravity produces no torque about CoM.
 		void ApplyForceWS(v4 ws_force, v4 ws_torque, v4 ws_at = v4::Zero())
 		{
 			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
+
+			// Shift the spatial force from the application point to the centre of mass.
+			// ws_at is relative to the model origin, ws_com is the CoM relative to the model origin.
+			auto ws_com = O2W().rot * m_os_com;
 			auto spatial_force = v8force{ws_torque, ws_force};
-			spatial_force = Shift(spatial_force, -ws_at);
+			spatial_force = Shift(spatial_force, ws_com - ws_at);
 			ApplyForceWS(spatial_force);
 		}
 		void ApplyForceWS(v8force ws_force)
@@ -298,7 +308,7 @@ namespace pr::physics
 			m_ws_force += ws_force;
 		}
 
-		// Add a force acting on the rigid body at position 'at' (object space, not CoM relative)
+		// Add a force acting on the rigid body at position 'at' (object space, model origin relative)
 		void ApplyForceOS(v4 os_force, v4 os_torque, v4 os_at = v4::Zero())
 		{
 			assert("'at' should be an offset (in object space) from the object origin" && os_at.w == 0);
@@ -320,26 +330,25 @@ namespace pr::physics
 		void SetMassProperties(Inertia const& os_inertia, v4 os_model_to_com = v4{})
 		{
 			// Notes:
-			//  - os_inertia.CoM() vs. os_model_to_com:
-			//    See comments for 'Inertia', but you probably want 'os_inertia.CoM()' to be zero. It is really only
-			//    used with spatial vectors. 'os_model_to_com' is the more common case where the inertia has been
-			//    measured at a point that isn't the CoM (typically the model origin). This is recorded so that
-			//    callers can apply forces to the CoM.
-			//  - When CoM is offset from the model origin, we translate the inertia back to the CoM and record
-			//    the offset. This enables the full 6x6 spatial inertia math (with coupling between angular and
-			//    linear components) in the operator* overloads.
+			//  - When CoM is offset from the model origin, we translate the inertia from
+			//    the model origin to the CoM using the parallel axis theorem. The stored
+			//    inverse inertia is always in the CoM frame with CoM() == 0 (block-diagonal).
+			//  - Momentum and forces are stored about the CoM, so the inertia multiply is
+			//    simple: omega = Ic_inv * h_ang, v = h_lin / m (no coupling terms).
+			//  - The CoM offset is stored separately in m_os_com for position updates
+			//    (converting CoM velocity to model-origin position changes).
+			//  - For future Featherstone articulated body support, the inertia can be shifted
+			//    to joint frames on demand using Translate()/To6x6().
 			assert("'os_model_to_com' should be an offset (in object space) from the object origin" && os_model_to_com.w == 0);
 			
-			// Translate the inertia to the CoM and set the CoM offset so that the full
-			// 6x6 spatial inertia is used for operator*(Inertia, v8motion) etc.
+			// Translate the inertia from the model origin to the CoM.
+			// Do NOT set inertia.CoM() — we want it zero so operator*(InertiaInv, v8force)
+			// takes the block-diagonal path (no angular-linear coupling).
 			auto inertia = os_inertia;
 			if (os_model_to_com != v4{})
-			{
 				inertia = Translate(inertia, os_model_to_com, ETranslateInertia::TowardCoM);
-				inertia.CoM(os_model_to_com);
-			}
 
-			// Object space inertia inverse
+			// Object space inverse inertia, measured at the CoM
 			m_os_inertia_inv = Invert(inertia);
 
 			// Position of the centre of mass (in object space)

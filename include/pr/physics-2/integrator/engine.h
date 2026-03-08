@@ -30,7 +30,7 @@ namespace pr::physics
 		// When true, uses the GPU compute shader for Störmer-Verlet integration.
 		// When false, uses the CPU fallback path (EvolveCPU on the dynamics buffer).
 		// Set to false to disable GPU integration entirely (no D3D12 dependency).
-		static constexpr bool UseGpu = false; // Start with CPU; flip to true once GPU path is validated
+		static constexpr bool UseGpu = false;
 
 		IBroadphase& m_broadphase;
 		IMaterials& m_materials;
@@ -93,7 +93,15 @@ namespace pr::physics
 					}
 				}
 
+				#ifdef PR_PHYSICS_GPU
 				IntegrateGpu(dynamics, dt);
+				#else
+				// CPU fallback: process the dynamics buffer with EvolveCPU, which mirrors
+				// the GPU compute shader algorithm. This validates the pack→evolve→unpack
+				// pipeline without requiring a D3D12 device.
+				for (auto& dyn : dynamics)
+					EvolveCPU(dyn, dt);
+				#endif
 
 				// Unpack the integrated state back into the rigid bodies
 				{

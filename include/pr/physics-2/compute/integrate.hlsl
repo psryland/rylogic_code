@@ -28,18 +28,18 @@ struct RigidBodyDynamics
 	// Row 0-2 = rotation basis vectors, Row 3 = position (w=1).
 	row_major float4x4 o2w;
 
-	// World-space spatial momentum [angular, linear] at model origin
+	// World-space spatial momentum [angular, linear] at centre of mass
 	float4 momentum_ang;
 	float4 momentum_lin;
 
-	// World-space force accumulator [angular, linear] at model origin
+	// World-space force accumulator [angular, linear] at centre of mass
 	float4 force_ang;
 	float4 force_lin;
 
 	// Object-space inverse inertia (compact symmetric 3x3)
-	float4 inertia_inv_diagonal;        // {Ixx_inv, Iyy_inv, Izz_inv, 0}
-	float4 inertia_inv_products;        // {Ixy_inv, Ixz_inv, Iyz_inv, 0}
-	float4 inertia_inv_com_and_invmass; // {com_x, com_y, com_z, inv_mass}
+	float4 inertia_inv_diagonal;  // {Ixx_inv, Iyy_inv, Izz_inv, 0}
+	float4 inertia_inv_products;  // {Ixy_inv, Ixz_inv, Iyz_inv, 0}
+	float4 os_com_and_invmass;    // {com_x, com_y, com_z, inv_mass}
 };
 
 // Per-body output for debug energy validation
@@ -64,17 +64,6 @@ cbuffer cbIntegrate : register(b0)
 	uint g_pad1;
 };
 
-// Compute kinetic energy: KE = 0.5 * dot(velocity, momentum)
-float compute_ke(
-	float3x3 iinv_ws, float inv_mass, float3 com_ws,
-	float3 momentum_ang, float3 momentum_lin)
-{
-	float3 vel_ang, vel_lin;
-	spatial_multiply_inertia_inv(iinv_ws, inv_mass, com_ws,
-		momentum_ang, momentum_lin, vel_ang, vel_lin);
-	return 0.5f * spatial_dot(vel_ang, vel_lin, momentum_ang, momentum_lin);
-}
-
 [numthreads(64, 1, 1)]
 void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 {
@@ -85,7 +74,8 @@ void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 	// Load the body's dynamic state
 	RigidBodyDynamics body = g_bodies[idx];
 	float half_dt = g_dt * 0.5f;
-	float inv_mass = body.inertia_inv_com_and_invmass.w;
+	float inv_mass = body.os_com_and_invmass.w;
+	float3 os_com = body.os_com_and_invmass.xyz;
 
 	// ---- Step 1: Half-kick — advance momentum by half the force impulse ----
 	body.momentum_ang += body.force_ang * half_dt;
@@ -105,26 +95,23 @@ void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 	//   I⁻¹_ws = R * I⁻¹_os * Rᵀ
 	float3x3 ws_iinv_unit = rotate_inertia_inv(os_iinv_unit, rot);
 
-	// Mass-scaled world-space inverse inertia (for the angular component)
+	// Mass-scaled world-space inverse inertia
 	float3x3 ws_iinv = inv_mass * ws_iinv_unit;
 
-	// Rotate the centre of mass offset to world space: ws_com = R * os_com
-	float3 os_com = body.inertia_inv_com_and_invmass.xyz;
-	float3 ws_com = mul(os_com, rot);
-
-	// Compute KE before drift (for debug output)
-	float ke_before = compute_ke(ws_iinv, inv_mass, ws_com,
+	// Compute KE before drift (for debug output).
+	// Momentum is at CoM, inertia is block-diagonal — no coupling.
+	float3 vel_ang_pre = mul(ws_iinv, body.momentum_ang.xyz);
+	float3 vel_lin_pre = inv_mass * body.momentum_lin.xyz;
+	float ke_before = 0.5f * spatial_dot(vel_ang_pre, vel_lin_pre,
 		body.momentum_ang.xyz, body.momentum_lin.xyz);
 
-	// Compute velocity from momentum using the spatial inverse inertia
-	float3 vel_ang, vel_lin;
-	spatial_multiply_inertia_inv(ws_iinv, inv_mass, ws_com,
-		body.momentum_ang.xyz, body.momentum_lin.xyz,
-		vel_ang, vel_lin);
+	// Compute velocity from momentum (block-diagonal — no coupling terms).
+	// omega = Ic_inv * h_ang, v_com = h_lin / m.
+	float3 vel_ang = mul(ws_iinv, body.momentum_ang.xyz);
+	float3 vel_lin = inv_mass * body.momentum_lin.xyz;
 
-	// Compute the position/orientation displacement
-	float3 drot = vel_ang * g_dt; // angular displacement (axis-angle)
-	float3 dpos = vel_lin * g_dt; // linear displacement
+	// Compute the angular displacement (axis-angle)
+	float3 drot = vel_ang * g_dt;
 
 	// Apply rotation: R_new = Rodrigues(drot) * R_old
 	// In row-vector convention (rows = basis vectors): new_rot = mul(rot, dR)
@@ -134,8 +121,11 @@ void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 	// Re-orthonormalize to prevent drift accumulation
 	new_rot = orthonorm3x3(new_rot);
 
-	// Update position
-	float3 new_pos = body.o2w[3].xyz + dpos;
+	// CoM-based position update: translate CoM, derive model origin from new rotation.
+	float3 com_ws = mul(os_com, rot);         // world-space CoM offset
+	float3 com_pos = body.o2w[3].xyz + com_ws; // world-space CoM position
+	float3 new_com_pos = com_pos + vel_lin * g_dt;
+	float3 new_pos = new_com_pos - mul(os_com, new_rot);
 
 	// Write back the updated transform
 	body.o2w[0] = float4(new_rot[0], 0);
@@ -152,11 +142,12 @@ void CSIntegrate(uint3 dtid : SV_DispatchThreadID)
 	body.force_lin = float4(0, 0, 0, 0);
 
 	// ---- Debug: compute KE after integration ----
-	// Recompute the world-space inertia at the new orientation for the KE check
+	// Block-diagonal: no coupling, velocity is simple.
 	float3x3 new_ws_iinv_unit = rotate_inertia_inv(os_iinv_unit, new_rot);
 	float3x3 new_ws_iinv = inv_mass * new_ws_iinv_unit;
-	float3 new_ws_com = mul(os_com, new_rot);
-	float ke_after = compute_ke(new_ws_iinv, inv_mass, new_ws_com,
+	float3 vel_ang_post = mul(new_ws_iinv, body.momentum_ang.xyz);
+	float3 vel_lin_post = inv_mass * body.momentum_lin.xyz;
+	float ke_after = 0.5f * spatial_dot(vel_ang_post, vel_lin_post,
 		body.momentum_ang.xyz, body.momentum_lin.xyz);
 
 	// Write results

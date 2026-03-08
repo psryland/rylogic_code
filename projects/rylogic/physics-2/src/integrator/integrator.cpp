@@ -40,19 +40,28 @@ namespace pr::physics
 		rb.MomentumWS(rb.MomentumWS() + half_impulse);
 
 		// Step 2: Drift — advance position/orientation using the half-kicked momentum.
-		// The velocity is computed from the current orientation's inertia and the
-		// half-stepped momentum. This is the key property of the Verlet scheme:
-		// the position update uses the "midpoint" momentum.
+		// The velocity is at the CoM (inertia is block-diagonal, no coupling terms).
+		// omega = Ic_inv * h_ang, v_com = h_lin / m.
 		auto ws_inertia_inv = rb.InertiaInvWS();
 		auto ws_velocity = ws_inertia_inv * rb.MomentumWS();
-		auto dpos = ws_velocity * elapsed_seconds;
 
-		auto o2w = m4x4
-		{
-			m3x4::Rotation(dpos.ang) * rb.O2W().rot,
-			dpos.lin                 + rb.O2W().pos
-		};
-		rb.O2W(Orthonorm(o2w));
+		// Compute CoM position before the step.
+		// The body's O2W transform positions the model origin; CoM is offset from it.
+		auto com_os = rb.CentreOfMassOS();
+		auto com_ws = rb.O2W().pos + rb.O2W().rot * com_os;
+
+		// Apply rotation
+		auto drot = ws_velocity.ang * elapsed_seconds;
+		auto new_rot = m3x4::Rotation(drot) * rb.O2W().rot;
+
+		// Translate the CoM by the CoM velocity, then derive the model origin position
+		// from the new rotation. This ensures the model origin orbits around the CoM
+		// correctly when the body rotates.
+		auto new_com_ws = com_ws + ws_velocity.lin * elapsed_seconds;
+		auto new_pos = new_com_ws - new_rot * com_os;
+
+		auto o2w = Orthonorm(m4x4{new_rot, new_pos});
+		rb.O2W(o2w);
 
 		// Step 3: Half-kick — advance momentum by second half-step
 		rb.MomentumWS(rb.MomentumWS() + half_impulse);
@@ -87,7 +96,8 @@ namespace pr::physics
 	void EvolveCPU(RigidBodyDynamics& dyn, float elapsed_seconds)
 	{
 		auto half_dt = elapsed_seconds * 0.5f;
-		auto inv_mass = dyn.inertia_inv_com_and_invmass.w;
+		auto inv_mass = dyn.os_com_and_invmass.w;
+		auto os_com = v4{dyn.os_com_and_invmass.x, dyn.os_com_and_invmass.y, dyn.os_com_and_invmass.z, 0};
 
 		// ---- Step 1: Half-kick ----
 		dyn.momentum_ang += dyn.force_ang * half_dt;
@@ -126,45 +136,20 @@ namespace pr::physics
 			ws_iinv_unit.z * inv_mass,
 		};
 
-		// Rotate centre of mass to world space
-		auto os_com = v4{dyn.inertia_inv_com_and_invmass.x, dyn.inertia_inv_com_and_invmass.y, dyn.inertia_inv_com_and_invmass.z, 0};
-		auto ws_com = rot * os_com;
+		// Compute velocity from momentum (block-diagonal — no coupling terms).
+		// Since momentum/forces are about the CoM, the inverse inertia at the CoM
+		// gives a simple decoupled relationship: omega = Ic_inv * h_ang, v = h_lin / m.
+		auto vel_ang = ws_iinv * dyn.momentum_ang;
+		auto vel_lin = inv_mass * dyn.momentum_lin;
 
-		// Compute velocity from momentum using the spatial inverse inertia.
-		// When CoM == 0, the 6x6 inverse inertia is block-diagonal and simplifies.
-		// When CoM != 0, we need the full 6x6 spatial multiply:
-		//   Io_inv = | Ic_inv       , -Ic_inv * cx       |
-		//            | cx * Ic_inv  , 1/m - cx*Ic_inv*cx |
-		// where cx is the cross-product matrix of 'com' (cx * v = cross(com, v)).
-		v4 vel_ang, vel_lin;
-		if (LengthSq(ws_com) < 1e-12f)
-		{
-			// Block-diagonal: no coupling between angular and linear
-			vel_ang = ws_iinv * dyn.momentum_ang;
-			vel_lin = inv_mass * dyn.momentum_lin;
-		}
-		else
-		{
-			// Full 6x6 spatial inverse inertia multiply.
-			// Compute two intermediates to share work between angular and linear:
-			auto Ic_inv_tau = ws_iinv * dyn.momentum_ang;         // Ic_inv * tau
-			auto Ic_inv_cxf = ws_iinv * Cross(ws_com, dyn.momentum_lin); // Ic_inv * (com x f)
+		// CoM-based position update: translate CoM, derive model origin from new rotation.
+		auto com_ws = rot * os_com;
+		auto com_pos = pos + com_ws;
 
-			// omega = Ic_inv * tau - Ic_inv * (com x f) = Ic_inv * (tau - com x f)
-			vel_ang = Ic_inv_tau - Ic_inv_cxf;
-
-			// v = com x (Ic_inv * tau) + f/m - com x (Ic_inv * (com x f))
-			vel_lin = Cross(ws_com, Ic_inv_tau) + inv_mass * dyn.momentum_lin - Cross(ws_com, Ic_inv_cxf);
-		}
-
-		// Compute displacement
-		auto drot_vec = vel_ang * elapsed_seconds;
-		auto dpos_vec = vel_lin * elapsed_seconds;
-
-		// Apply rotation and position update
-		auto dR = m3x4::Rotation(drot_vec);
+		auto dR = m3x4::Rotation(vel_ang * elapsed_seconds);
 		auto new_rot = dR * rot;
-		auto new_pos = pos + v4{dpos_vec.x, dpos_vec.y, dpos_vec.z, 0};
+		auto new_com_pos = com_pos + vel_lin * elapsed_seconds;
+		auto new_pos = new_com_pos - new_rot * os_com;
 
 		// Orthonormalize the rotation and write back to the transform
 		dyn.o2w = Orthonorm(m4x4{new_rot, new_pos});

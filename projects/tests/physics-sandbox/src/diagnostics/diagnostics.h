@@ -38,7 +38,7 @@ namespace physics_sandbox
 	// Used for before/after comparisons across collision events.
 	struct BodySnapshot
 	{
-		pr::v4 pos;
+		pr::v4 com_pos;  // World-space centre of mass position
 		pr::v4 lin_vel;
 		pr::v4 ang_vel;
 		pr::v8force momentum;
@@ -49,7 +49,7 @@ namespace physics_sandbox
 		{
 			auto vel = rb.VelocityWS();
 			auto snap = BodySnapshot{};
-			snap.pos = rb.O2W().pos;
+			snap.com_pos = rb.CentreOfMassWS();
 			snap.lin_vel = vel.lin;
 			snap.ang_vel = vel.ang;
 			snap.momentum = rb.MomentumWS();
@@ -62,7 +62,7 @@ namespace physics_sandbox
 		{
 			DbgLog("  %s: pos=(%.4f, %.4f, %.4f) lvel=(%.4f, %.4f, %.4f) avel=(%.4f, %.4f, %.4f) mass=%.1f KE=%.6f\n",
 				label,
-				pos.x, pos.y, pos.z,
+				com_pos.x, com_pos.y, com_pos.z,
 				lin_vel.x, lin_vel.y, lin_vel.z,
 				ang_vel.x, ang_vel.y, ang_vel.z,
 				mass, ke);

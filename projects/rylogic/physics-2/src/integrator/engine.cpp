@@ -112,7 +112,11 @@ namespace pr::physics
 		// Recompute relative velocity using current momenta.
 		// The geometric data (contact point, axis, depth) is still valid because
 		// only momenta changed, not positions. But the velocity field is stale.
-		c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
+		// VelocityOS() returns spatial velocity at the CoM; shift to model origin
+		// so LinAt(pt) gives the correct velocity at the contact point.
+		auto va = Shift(objA.VelocityOS(), -objA.CentreOfMassOS());
+		auto vb = Shift(objB.VelocityOS(), -objB.CentreOfMassOS());
+		c.m_velocity = c.m_b2a * vb - va;
 
 		// Re-check the separating condition with updated velocities.
 		// A previous impulse in this step may have already resolved this contact.
@@ -137,7 +141,7 @@ namespace pr::physics
 		auto vb_j = objB.InertiaInvOS() * jb;
 		auto A = 0.5f * (Dot(va_j, ja) + Dot(vb_j, jb));
 
-		// Apply the impulses to each body's momentum (stored as spatial force at model origin).
+		// Apply the impulses to each body's momentum (stored as spatial force at CoM).
 		// The impulse changes both linear momentum (causing velocity change) and angular
 		// momentum (causing spin change proportional to the lever arm from CoM to contact).
 		objA.MomentumOS(objA.MomentumOS() + ja);

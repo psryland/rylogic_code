@@ -130,7 +130,7 @@ namespace physics_sandbox
 			: Form(Params<>()
 				.name("physics-sandbox")
 				.title(L"Rylogic Physics Sandbox")
-				.wh(1280, 800)
+				.wh(1600, 1000)
 				.start_pos(EStartPosition::CentreParent)
 				.padding(0)
 				.menu({ {L"&File", Menu(Menu::EKind::Popup, {
@@ -325,7 +325,7 @@ namespace physics_sandbox
 			View3D_ResetView(m_view3d.m_win,
 				view3d::Vec4{ 0, -1, 0, 0 },  // Forward direction (looking from +Y toward -Y)
 				view3d::Vec4{ 0, 0, 1, 0 },   // Up direction (Z-up)
-				20,                           // Distance
+				35,                           // Distance (far enough to see full scene)
 				TRUE, TRUE);
 
 			Render();

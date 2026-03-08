@@ -385,7 +385,7 @@ namespace physics_sandbox
 				{
 					auto mass = m_body[i].Mass();
 					if (mass < pr::physics::InfiniteMass * 0.5f)
-						m_body[i].ApplyForceWS(m_gravity * mass, pr::v4::Zero());
+						m_body[i].ApplyForceWS(m_gravity * mass, pr::v4::Zero(), m_body[i].O2W().rot * m_body[i].CentreOfMassOS());
 				}
 			}
 
@@ -551,12 +551,12 @@ namespace physics_sandbox
 			DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", pre_total_p.x, pre_total_p.y, pre_total_p.z);
 			DbgLog("  Total KE: %.6f\n", pre_total_ke);
 
-			// Angular momentum about world origin = spin (I*ω) + orbital (r × p).
-			// MomentumWS().ang is the spin angular momentum at each body's model origin.
-			// We must add the orbital term r × (m*v) for a correct system total.
+			// Angular momentum about world origin = spin (at CoM) + orbital (com × p).
+			// MomentumWS().ang is the spin angular momentum at each body's centre of mass.
+			// We must add the orbital term com × (m*v) for a correct system total.
 			auto ang_mom_about_origin = [](BodySnapshot const& s)
 			{
-				auto orbital = Cross(s.pos, s.momentum.lin);
+				auto orbital = Cross(s.com_pos, s.momentum.lin);
 				return s.momentum.ang + orbital;
 			};
 			auto pre_total_L = ang_mom_about_origin(m_diag.before[0]) + ang_mom_about_origin(m_diag.before[1]);
