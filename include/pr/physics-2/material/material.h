@@ -29,11 +29,11 @@ namespace pr::physics
 			float elasticity_tors = 0.0f,
 			float density         = 1000.0f)
 			:m_id(id)
+			,m_density(density)
 			,m_friction_static(friction_static)
 			,m_elasticity_norm(elasticity_norm)
 			,m_elasticity_tang(elasticity_tang)
 			,m_elasticity_tors(elasticity_tors)
-			,m_density(density)
 		{}
 
 		// Merge the properties of two contacting materials

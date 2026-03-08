@@ -689,9 +689,12 @@ void CSCollisionDetect(uint3 ThreadID : SV_DispatchThreadID)
 	if (!GjkCollide(shape_a, a2w, shape_b, b2w, g_verts, col_axis, col_point, depth))
 		return;
 
-	// Allocate a slot in the contact buffer atomically
+	// Allocate a slot in the contact buffer atomically.
+	// Bounds check prevents writing past the buffer if more pairs collide than expected.
 	uint slot;
 	InterlockedAdd(g_counters[0], 1, slot);
+	if (slot >= g_pair_count)
+		return;
 
 	// Write the contact
 	GpuContact contact;
