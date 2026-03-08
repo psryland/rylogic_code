@@ -11,19 +11,13 @@
 #include "pr/common/unittests.h"
 #include "pr/collision/col_gjk.h"
 #include "pr/collision/shapes.h"
+#include "pr/physics-2/integrator/gpu_integrator.h"
 #include "pr/physics-2/collision/gpu_collision_detector.h"
 
 namespace pr::physics
 {
 	PRUnitTestClass(GpuCollisionTests)
 	{
-		// NOTE: GPU collision unit tests are currently disabled because the DXC shader
-		// compiler crashes (SEH exception) when invoked from the unit test framework.
-		// The GPU collision path works correctly in the sandbox (verified interactively
-		// with gravity_playground scene at 120+ collisions). The crash appears to be a
-		// DXC bug with the shader's large local arrays (EPA buffers).
-		// TODO: Re-enable once DXC issue is resolved or shader is simplified.
-		static constexpr bool GpuTestsEnabled = false;
 		// Tolerance thresholds for comparing CPU vs GPU results
 		static constexpr float DepthRelTol = 0.05f;   // 5% relative depth tolerance
 		static constexpr float AxisAngleTol = 0.1f;    // radians
@@ -37,8 +31,6 @@ namespace pr::physics
 			collision::Shape const& sb, m4x4 const& r2w,
 			bool expect_collision)
 		{
-			if (!GpuTestsEnabled) return;
-
 			// --- CPU path ---
 			auto cpu_contact = collision::Contact{};
 			auto cpu_hit = collision::GjkCollide(sa, l2w, sb, r2w, cpu_contact);
@@ -61,39 +53,11 @@ namespace pr::physics
 			auto pairs = std::vector<GpuCollisionPair>{ pair };
 			auto gpu_contacts = std::vector<GpuContact>{};
 
-			// Create a standalone GPU collision detector (passes nullptr for auto device creation)
-			GpuCollisionDetectorPtr detector;
-			try
-			{
-				detector = CreateGpuCollisionDetector(nullptr, 16, 16, 256);
-			}
-			catch (std::exception const& ex)
-			{
-				auto f = fopen("dump\\gpu_collision_test.log", "w");
-				if (f) { fprintf(f, "CreateGpuCollisionDetector failed: %s\n", ex.what()); fclose(f); }
-				PR_EXPECT(false);
-				return;
-			}
-			catch (...)
-			{
-				auto f = fopen("dump\\gpu_collision_test.log", "w");
-				if (f) { fprintf(f, "CreateGpuCollisionDetector failed: unknown exception\n"); fclose(f); }
-				PR_EXPECT(false);
-				return;
-			}
-
-			int gpu_count = 0;
-			try
-			{
-				gpu_count = GpuDetectCollisions(*detector, shapes, pairs, verts, gpu_contacts);
-			}
-			catch (std::exception const& ex)
-			{
-				auto f = fopen("dump\\gpu_collision_test.log", "w");
-				if (f) { fprintf(f, "GpuDetectCollisions failed: %s\n", ex.what()); fclose(f); }
-				PR_EXPECT(false);
-				return;
-			}
+			// Create a GpuIntegrator (which owns the D3D12 device and command queue),
+			// then create the collision detector sharing the same Gpu instance.
+			auto integrator = CreateGpuIntegrator(nullptr, 2);
+			auto detector = CreateGpuCollisionDetector(*integrator, 16, 16, 256);
+			auto gpu_count = GpuDetectCollisions(*detector, shapes, pairs, verts, gpu_contacts);
 			auto gpu_hit = gpu_count > 0;
 
 			// --- Compare collision/no-collision agreement ---

@@ -67,6 +67,10 @@ namespace pr::physics
 		// After this call, m_use_gpu is set to true and Step() will use the GPU path.
 		void InitGpu(ID3D12Device4* device, int max_bodies)
 		{
+			// Create the integrator first. If device is nullptr, it creates a standalone
+			// D3D12 device internally. The collision detector shares the integrator's Gpu
+			// instance (device + command queue) to avoid creating a second D3D12 device
+			// which causes debug layer break-on-warning crashes.
 			m_gpu_integrator = CreateGpuIntegrator(device, max_bodies);
 
 			// Collision pair buffer capacity: worst case is n*(n-1)/2 pairs for n bodies.
@@ -74,7 +78,7 @@ namespace pr::physics
 			auto max_pairs = max_bodies * (max_bodies - 1) / 2;
 			auto max_shapes = max_bodies;
 			auto max_verts = max_bodies * 64; // up to 64 verts per polytope
-			m_gpu_collision_detector = CreateGpuCollisionDetector(device, max_pairs, max_shapes, max_verts);
+			m_gpu_collision_detector = CreateGpuCollisionDetector(*m_gpu_integrator, max_pairs, max_shapes, max_verts);
 
 			m_use_gpu = true;
 		}

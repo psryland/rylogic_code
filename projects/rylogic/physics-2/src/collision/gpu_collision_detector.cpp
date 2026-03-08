@@ -11,6 +11,7 @@
 //   2. Link view3d-12-static.lib (or equivalent)
 //   3. Embed physics_shaders.rc (gjk.hlsl) as a resource
 #include "pr/physics-2/collision/gpu_collision_detector.h"
+#include "pr/physics-2/integrator/gpu_integrator.h"
 
 #ifdef PR_PHYSICS_GPU
 
@@ -56,10 +57,11 @@ namespace pr::physics
 	};
 
 	// The full GpuCollisionDetector implementation, hidden behind the pimpl.
-	// Owns the D3D12 compute pipeline for GJK collision detection.
+	// Shares the Gpu instance from the GpuIntegrator to avoid creating a second
+	// D3D12 device/command queue (which causes debug layer break-on-warning crashes).
 	struct GpuCollisionDetector
 	{
-		Gpu m_gpu;                                 // Lightweight D3D12 wrapper (device + command queue)
+		Gpu& m_gpu;                                // Reference to integrator's Gpu (shared device + queue)
 		ComputeStep m_cs_gjk;                      // Root signature + PSO for the GJK shader
 		D3DPtr<ID3D12Resource> m_r_shapes;         // GPU buffer: StructuredBuffer<GpuShape>
 		D3DPtr<ID3D12Resource> m_r_pairs;          // GPU buffer: StructuredBuffer<GpuCollisionPair>
@@ -70,8 +72,8 @@ namespace pr::physics
 		int m_max_shapes;
 		int m_max_verts;
 
-		explicit GpuCollisionDetector(ID3D12Device4* device, int max_pairs, int max_shapes, int max_verts)
-			: m_gpu(device)
+		explicit GpuCollisionDetector(Gpu& gpu, int max_pairs, int max_shapes, int max_verts)
+			: m_gpu(gpu)
 			, m_cs_gjk()
 			, m_r_shapes()
 			, m_r_pairs()
@@ -309,9 +311,10 @@ namespace pr::physics
 	// Pimpl boundary functions
 	void GpuCollisionDetectorDeleter::operator()(GpuCollisionDetector* p) const { delete p; }
 
-	GpuCollisionDetectorPtr CreateGpuCollisionDetector(ID3D12Device4* device, int max_pairs, int max_shapes, int max_verts)
+	GpuCollisionDetectorPtr CreateGpuCollisionDetector(GpuIntegrator& integrator, int max_pairs, int max_shapes, int max_verts)
 	{
-		return GpuCollisionDetectorPtr(new GpuCollisionDetector(device, max_pairs, max_shapes, max_verts));
+		auto& gpu = *static_cast<Gpu*>(GpuIntegratorGpuPtr(integrator));
+		return GpuCollisionDetectorPtr(new GpuCollisionDetector(gpu, max_pairs, max_shapes, max_verts));
 	}
 
 	int GpuDetectCollisions(
@@ -333,7 +336,7 @@ namespace pr::physics
 {
 	void GpuCollisionDetectorDeleter::operator()(GpuCollisionDetector*) const {}
 
-	GpuCollisionDetectorPtr CreateGpuCollisionDetector(ID3D12Device4*, int, int, int)
+	GpuCollisionDetectorPtr CreateGpuCollisionDetector(GpuIntegrator&, int, int, int)
 	{
 		assert(false && "GPU collision requires PR_PHYSICS_GPU");
 		return {};

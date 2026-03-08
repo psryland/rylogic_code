@@ -242,6 +242,18 @@ namespace pr::physics
 	{
 		gpu.Integrate(dynamics, dt, output);
 	}
+
+	// Return the D3D12 device owned by this integrator.
+	ID3D12Device4* GpuIntegratorDevice(GpuIntegrator& gpu)
+	{
+		return static_cast<ID3D12Device4*>(gpu.m_gpu);
+	}
+
+	// Return the Gpu instance as a void* for sharing with other GPU subsystems.
+	void* GpuIntegratorGpuPtr(GpuIntegrator& gpu)
+	{
+		return &gpu.m_gpu;
+	}
 }
 
 #else // !PR_PHYSICS_GPU — Stub implementations when GPU support is not enabled
@@ -264,6 +276,18 @@ namespace pr::physics
 	void GpuIntegrate(GpuIntegrator&, std::span<RigidBodyDynamics>, float, std::span<IntegrateOutput>)
 	{
 		assert(false && "GPU integration requires PR_PHYSICS_GPU to be defined");
+	}
+
+	ID3D12Device4* GpuIntegratorDevice(GpuIntegrator&)
+	{
+		assert(false && "GPU integration requires PR_PHYSICS_GPU to be defined");
+		return nullptr;
+	}
+
+	void* GpuIntegratorGpuPtr(GpuIntegrator&)
+	{
+		assert(false && "GPU integration requires PR_PHYSICS_GPU to be defined");
+		return nullptr;
 	}
 }
 

@@ -30,6 +30,14 @@ namespace pr::physics
 	// 'max_bodies' determines the GPU buffer capacity.
 	GpuIntegratorPtr CreateGpuIntegrator(ID3D12Device4* device, int max_bodies);
 
+	// Get the D3D12 device owned by a GpuIntegrator. Used to share the device with
+	// other GPU subsystems (e.g. GpuCollisionDetector) to avoid creating multiple devices.
+	ID3D12Device4* GpuIntegratorDevice(GpuIntegrator& gpu);
+
+	// Get the Gpu instance owned by a GpuIntegrator, for sharing the command queue.
+	// Returns an opaque void* that can be cast to rdr12::Gpu* by code that includes view3d-12.
+	void* GpuIntegratorGpuPtr(GpuIntegrator& gpu);
+
 	// Run GPU integration on the dynamics buffer. This is the public API that engine.cpp calls.
 	// Defined in gpu_integrator.cpp where GpuIntegrator is a complete type.
 	void GpuIntegrate(GpuIntegrator& gpu, std::span<RigidBodyDynamics> dynamics, float dt, std::span<IntegrateOutput> output);
