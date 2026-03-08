@@ -11,6 +11,8 @@
 #include "src/forward.h"
 #include "src/ui/sandbox_ui.h"
 #include "src/unittests/sandbox_tests.h"
+#include "pr/common/command_line.h"
+#include <crtdbg.h>
 
 // Enable ComCtl32 v6 visual styles (modern themed controls)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
@@ -46,8 +48,14 @@ static int RunUnitTests()
 // Entry point
 int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 {
+	// Parse the command line using pr::CmdLine which handles quoted paths,
+	// tokenization, and key-value separation correctly.
+	// Prepend a dummy program name because lpCmdLine doesn't include it,
+	// but CmdLine's string_view constructor skips argv[0] as the exe name.
+	auto cmd = pr::CmdLine("app " + std::string(lpCmdLine ? lpCmdLine : ""));
+
 	// Check for -unittest mode before initialising any GUI resources
-	if (lpCmdLine && strstr(lpCmdLine, "-unittest"))
+	if (cmd.count("unittest"))
 		return RunUnitTests();
 
 	// Interactive sandbox mode.
@@ -57,9 +65,17 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 	pr::InitCom com(COINIT_APARTMENTTHREADED);
 	pr::GdiPlus gdi;
 
+	// When running headless (e.g. -autoplay from a script), suppress assert dialog boxes
+	// and send them to stderr instead so the process terminates cleanly with diagnostics.
+	auto autoplay = cmd.count("autoplay") > 0;
+	if (autoplay)
+	{
+		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+	}
+
 	try
 	{
-		pr::win32::LoadDll<struct View3d>(L"view3d-12.dll");
 		InitCtrls();
 
 		// Create the message loop first so the form can reference it for clean shutdown
@@ -68,25 +84,15 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 		SandboxUI sandbox;
 		sandbox.cp().msg_loop(&loop);
 
-		// Check for -scene <filepath> to load a scene file on startup
-		if (lpCmdLine)
-		{
-			auto scene_arg = strstr(lpCmdLine, "-scene ");
-			if (scene_arg != nullptr)
-			{
-				auto filepath = std::string(scene_arg + 7);
-
-				// Trim leading/trailing quotes and whitespace
-				while (!filepath.empty() && (filepath.front() == '"' || filepath.front() == ' '))
-					filepath.erase(filepath.begin());
-				while (!filepath.empty() && (filepath.back() == '"' || filepath.back() == ' '))
-					filepath.pop_back();
-
-				sandbox.LoadSceneFile(std::filesystem::path(filepath));
-			}
-		}
+		// Load a scene file on startup if specified: -scene <filepath>
+		if (cmd.count("scene"))
+			sandbox.LoadSceneFile(cmd("scene").as<std::filesystem::path>());
 
 		sandbox.Show();
+
+		// Start the simulation immediately if -autoplay was specified
+		if (autoplay)
+			sandbox.m_scene.m_steps_remaining = -1;
 
 		// Simulation loop: fixed 60 Hz timestep for deterministic physics.
 		// Render loop: variable at high target rate. The actual frame rate is

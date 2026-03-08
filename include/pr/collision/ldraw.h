@@ -11,6 +11,7 @@
 #include "pr/collision/shape_box.h"
 #include "pr/collision/shape_line.h"
 #include "pr/collision/shape_triangle.h"
+#include "pr/collision/shape_polytope.h"
 #include "pr/collision/shape_array.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
@@ -70,6 +71,19 @@ namespace pr::rdr12::ldraw
 						Writer::Append(m_out, O2W(shape.m_base.m_s2p));
 					});
 				}
+				void Write(collision::ShapePolytope const& shape) const
+				{
+					// Render the polytope as a triangle mesh from its face data
+					auto builder = fluent::LdrTriangle();
+					for (auto const& face : shape.faces())
+					{
+						builder.tri(
+							shape.vertex(face.m_index[0]),
+							shape.vertex(face.m_index[1]),
+							shape.vertex(face.m_index[2]));
+					}
+					builder.o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
+				}
 				void Write(collision::Shape const& shape) const
 				{
 					using namespace collision;
@@ -79,9 +93,8 @@ namespace pr::rdr12::ldraw
 						case EShape::Box:        return Write(shape_cast<ShapeBox>(shape));
 						case EShape::Triangle:   return Write(shape_cast<ShapeTriangle>(shape));
 						case EShape::Line:       return Write(shape_cast<ShapeLine>(shape));
+						case EShape::Polytope:   return Write(shape_cast<ShapePolytope>(shape));
 						case EShape::Array:      return Write(shape_cast<ShapeArray>(shape));
-						//case EShape::Polytope: return Shape(str, name, colour, shape_cast<ShapePolytope>(shape));
-						//case EShape::Cylinder: return Shape(str, name, colour, shape_cast<ShapeCylinder>(shape));
 						default: throw std::runtime_error("Unknown shape type");
 					}
 				}

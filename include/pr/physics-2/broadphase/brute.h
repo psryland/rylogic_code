@@ -4,35 +4,38 @@
 //*********************************************
 #pragma once
 
-#include "pr/physics-2/forward.h"
+#include "pr/physics-2/broadphase/ibroadphase.h"
+#include "pr/physics-2/rigid_body/rigid_body.h"
 
 namespace pr::physics::broadphase
 {
-	// A simple O(n²) broad phase implementation
-	template <typename TObject>
-	class Brute
+	// A simple O(n²) broad phase implementation.
+	// Tests every pair of registered bodies for bounding box overlap.
+	// Suitable for small scenes (< ~100 bodies). For larger scenes,
+	// consider sweep-and-prune or spatial hashing.
+	class Brute : public IBroadphase
 	{
-		std::vector<TObject const*> m_entity;
+		std::vector<RigidBody const*> m_entity;
 
 	public:
-		void Clear()
+
+		void Clear() override
 		{
 			m_entity.resize(0);
 		}
-		void Add(TObject const& obj)
+		void Add(RigidBody const& obj) override
 		{
 			m_entity.push_back(&obj);
 		}
-		void Remove(TObject const& obj)
+		void Remove(RigidBody const& obj) override
 		{
 			auto at = std::find(std::begin(m_entity), std::end(m_entity), &obj);
 			if (at == std::end(m_entity)) return;
 			m_entity.erase(at);
 		}
 
-		// Enumerate all pairs of entities that are overlapping
-		template <typename TEnumFuncCB>
-		void EnumOverlappingPairs(TEnumFuncCB pairs_cb, void* ctx = nullptr) const
+		// Enumerate all pairs of entities whose bounding boxes overlap
+		void EnumOverlappingPairs(std::function<void(RigidBody const&, RigidBody const&)> cb) const override
 		{
 			for (int i = 0, iend = int(m_entity.size()); i != iend; ++i)
 			{
@@ -43,7 +46,7 @@ namespace pr::physics::broadphase
 					auto bboxA = BBoxWS(objA);
 					auto bboxB = BBoxWS(objB);
 					if (!geometry::intersect::BBoxVsBBox(bboxA, bboxB)) continue;
-					pairs_cb(ctx, objA, objB);
+					cb(objA, objB);
 				}
 			}
 		}

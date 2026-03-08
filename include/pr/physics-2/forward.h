@@ -30,10 +30,12 @@ namespace pr::physics
 	struct Material;
 	struct MaterialMap;
 	struct RigidBody;
-	
-	// A container object that groups the parts of a physics system together
-	template <typename TBroadphase, typename TMaterials>
+	struct IBroadphase;
+	struct IMaterials;
 	struct Engine;
+	struct GpuIntegrator;
+	struct RigidBodyDynamics;
+	struct IntegrateOutput;
 
 	// Traits
 	template <typename T>

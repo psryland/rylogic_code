@@ -7,6 +7,9 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics-2/shape/inertia.h"
+#include "pr/physics-2/shape/shape_mass.h"
+#include "pr/collision/shape_polytope.h"
+#include "pr/collision/shape_box.h"
 
 namespace pr::physics
 {
@@ -322,6 +325,167 @@ namespace pr::physics
 			auto KE = 0.5f * Dot(vel, mom); // 0.5 v.I.v
 
 			PR_EXPECT(FEql(KE, ke));
+		}
+
+		// Validate that a cube-shaped polytope has the same inertia as the analytic ShapeBox formula.
+		// This catches errors in the polytope face integration (wrong divisors, sign errors, etc.)
+		PRUnitTestMethod(PolytopeVsBoxInertia_UnitCube)
+		{
+			using namespace pr::collision;
+
+			// Unit cube: half-extents = 1 in each axis
+			auto s = 1.0f;
+			v4 pts[] = {
+				v4{-s,-s,-s,1}, v4{+s,-s,-s,1}, v4{+s,+s,-s,1}, v4{-s,+s,-s,1},
+				v4{-s,-s,+s,1}, v4{+s,-s,+s,1}, v4{+s,+s,+s,1}, v4{-s,+s,+s,1},
+			};
+			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto& poly = buf.as<ShapePolytope>();
+
+			// ShapeBox stores half-extents in m_radius, takes full dimensions
+			ShapeBox box(v4{2 * s, 2 * s, 2 * s, 0});
+
+			auto density = 1.0f;
+			auto mp_poly = CalcMassProperties(poly, density);
+			auto mp_box = CalcMassProperties(box, density);
+
+			// Volume should match: (2s)^3 = 8
+			PR_EXPECT(FEqlRelative(mp_poly.m_mass, mp_box.m_mass, 0.001f));
+
+			// CoM should be at origin for a symmetric cube
+			PR_EXPECT(FEql(mp_poly.m_centre_of_mass, v4{}));
+
+			// Unit inertia diagonals should match: (1/3)(s² + s²) = 2s²/3
+			auto& Ip = mp_poly.m_os_unit_inertia;
+			auto& Ib = mp_box.m_os_unit_inertia;
+			PR_EXPECT(FEqlRelative(Ip.x.x, Ib.x.x, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.y.y, Ib.y.y, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.z.z, Ib.z.z, 0.001f));
+
+			// Off-diagonals should be zero for a symmetric cube at origin
+			PR_EXPECT(FEql(Ip.x.y, 0.0f));
+			PR_EXPECT(FEql(Ip.x.z, 0.0f));
+			PR_EXPECT(FEql(Ip.y.z, 0.0f));
+		}
+
+		// Validate polytope inertia for an asymmetric box (different dimensions per axis)
+		PRUnitTestMethod(PolytopeVsBoxInertia_AsymmetricBox)
+		{
+			using namespace pr::collision;
+
+			// Asymmetric box: half-extents 0.5, 1.0, 1.5
+			auto hx = 0.5f, hy = 1.0f, hz = 1.5f;
+			v4 pts[] = {
+				v4{-hx,-hy,-hz,1}, v4{+hx,-hy,-hz,1}, v4{+hx,+hy,-hz,1}, v4{-hx,+hy,-hz,1},
+				v4{-hx,-hy,+hz,1}, v4{+hx,-hy,+hz,1}, v4{+hx,+hy,+hz,1}, v4{-hx,+hy,+hz,1},
+			};
+			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto& poly = buf.as<ShapePolytope>();
+			ShapeBox box(v4{2 * hx, 2 * hy, 2 * hz, 0});
+
+			auto density = 2.5f;
+			auto mp_poly = CalcMassProperties(poly, density);
+			auto mp_box = CalcMassProperties(box, density);
+
+			// Volume = 1×2×3 = 6, mass = 6 × 2.5 = 15
+			PR_EXPECT(FEqlRelative(mp_poly.m_mass, mp_box.m_mass, 0.001f));
+			PR_EXPECT(FEql(mp_poly.m_centre_of_mass, v4{}));
+
+			// Each diagonal should match the box formula: (1/3)(hy² + hz²), etc.
+			auto& Ip = mp_poly.m_os_unit_inertia;
+			auto& Ib = mp_box.m_os_unit_inertia;
+			PR_EXPECT(FEqlRelative(Ip.x.x, Ib.x.x, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.y.y, Ib.y.y, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.z.z, Ib.z.z, 0.001f));
+			PR_EXPECT(FEql(Ip.x.y, 0.0f));
+			PR_EXPECT(FEql(Ip.x.z, 0.0f));
+			PR_EXPECT(FEql(Ip.y.z, 0.0f));
+		}
+
+		// Validate polytope inertia for an offset cube (CoM not at origin).
+		// The unit inertia should be measured at the model origin, not the centroid.
+		PRUnitTestMethod(PolytopeVsBoxInertia_OffsetCube)
+		{
+			using namespace pr::collision;
+
+			auto s = 1.0f;
+			auto ox = 2.0f, oy = 3.0f, oz = 4.0f;
+			v4 pts[] = {
+				v4{ox-s,oy-s,oz-s,1}, v4{ox+s,oy-s,oz-s,1}, v4{ox+s,oy+s,oz-s,1}, v4{ox-s,oy+s,oz-s,1},
+				v4{ox-s,oy-s,oz+s,1}, v4{ox+s,oy-s,oz+s,1}, v4{ox+s,oy+s,oz+s,1}, v4{ox-s,oy+s,oz+s,1},
+			};
+			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto& poly = buf.as<ShapePolytope>();
+
+			auto density = 1.0f;
+			auto mp_poly = CalcMassProperties(poly, density);
+
+			// CoM should be at (ox, oy, oz)
+			PR_EXPECT(FEqlRelative(mp_poly.m_centre_of_mass.x, ox, 0.001f));
+			PR_EXPECT(FEqlRelative(mp_poly.m_centre_of_mass.y, oy, 0.001f));
+			PR_EXPECT(FEqlRelative(mp_poly.m_centre_of_mass.z, oz, 0.001f));
+
+			// The unit inertia is measured at the model ORIGIN (parallel axis theorem).
+			// Io = Ic + (d·d)I - d⊗d  where Ic is the centroidal inertia, d is the offset
+			auto Ic_diag = (1.0f / 3.0f) * (s * s + s * s); // centroidal unit cube
+			auto Io_xx = Ic_diag + (oy * oy + oz * oz);
+			auto Io_yy = Ic_diag + (ox * ox + oz * oz);
+			auto Io_zz = Ic_diag + (ox * ox + oy * oy);
+			auto Io_xy = -(ox * oy);
+			auto Io_xz = -(ox * oz);
+			auto Io_yz = -(oy * oz);
+
+			auto& Ip = mp_poly.m_os_unit_inertia;
+			PR_EXPECT(FEqlRelative(Ip.x.x, Io_xx, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.y.y, Io_yy, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.z.z, Io_zz, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.x.y, Io_xy, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.x.z, Io_xz, 0.001f));
+			PR_EXPECT(FEqlRelative(Ip.y.z, Io_yz, 0.001f));
+		}
+
+		// Validate that a regular tetrahedron polytope has the correct inertia.
+		// Analytic formula: for a regular tetrahedron with edge length a,
+		// I_diag = (1/20) * a² (per unit mass, about CoM)
+		PRUnitTestMethod(PolytopeInertia_RegularTetrahedron)
+		{
+			using namespace pr::collision;
+
+			// Regular tetrahedron with edge length a = 2
+			auto a = 2.0f;
+			auto h = a * Sqrt(2.0f / 3.0f); // height from base to apex
+			auto r = a / Sqrt(3.0f);         // circumradius of base triangle
+			v4 pts[] = {
+				v4{ r,          0,       -h / 4.0f, 1}, // base vertex 0
+				v4{-r / 2.0f,  a / 2.0f, -h / 4.0f, 1}, // base vertex 1
+				v4{-r / 2.0f, -a / 2.0f, -h / 4.0f, 1}, // base vertex 2
+				v4{ 0,          0,        3.0f * h / 4.0f, 1}, // apex
+			};
+			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto& poly = buf.as<ShapePolytope>();
+
+			auto density = 1.0f;
+			auto mp = CalcMassProperties(poly, density);
+
+			// Volume of regular tetrahedron: a³/(6√2)
+			auto expected_volume = (a * a * a) / (6.0f * Sqrt(2.0f));
+			PR_EXPECT(FEqlRelative(mp.m_mass / density, expected_volume, 0.01f));
+
+			// CoM should be at the centroid: (0, 0, 0) by construction
+			// (we placed the base at -h/4 and apex at +3h/4 to centre vertically)
+			PR_EXPECT(FEqlRelative(mp.m_centre_of_mass.x, 0.0f, 0.01f));
+			PR_EXPECT(FEqlRelative(mp.m_centre_of_mass.y, 0.0f, 0.01f));
+			PR_EXPECT(FEqlRelative(mp.m_centre_of_mass.z, 0.0f, 0.01f));
+
+			// For a regular tetrahedron centred at origin, the centroidal unit inertia
+			// is isotropic: I_xx = I_yy = I_zz = (1/20) * a² (per unit mass)
+			auto expected_I = (1.0f / 20.0f) * a * a;
+			auto& I = mp.m_os_unit_inertia;
+
+			// Since CoM ≈ origin, the origin-measured inertia ≈ centroidal inertia
+			PR_EXPECT(FEqlRelative(I.x.x, expected_I, 0.02f));
+			PR_EXPECT(FEqlRelative(I.y.y, expected_I, 0.02f));
+			PR_EXPECT(FEqlRelative(I.z.z, expected_I, 0.02f));
 		}
 	};
 }

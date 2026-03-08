@@ -6,6 +6,7 @@
 #include <functional>
 #include <cstdarg>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <span>
 #include <memory>
@@ -21,15 +22,16 @@
 #include "pr/math/math.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
-#include "pr/gui/view3d_panel.h"
+#include "pr/gui/view3d_panel_static.h"
 #include "pr/storage/json.h"
-#include "pr/view3d-12/view3d-dll.h"
-#include "pr/view3d-12/utility/conversion.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 
 #include "pr/collision/shape_box.h"
 #include "pr/collision/shape_sphere.h"
+#include "pr/collision/shape_polytope.h"
 
 #include "pr/physics-2/physics.h"
 

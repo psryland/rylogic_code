@@ -33,10 +33,6 @@ namespace pr::physics
 	using collision::ShapeBox;
 	PRUnitTestClass(CollisionTests)
 	{
-		// Shorthand for the engine type used in all collision tests.
-		// Brute-force broadphase tests all pairs — fine for two-body tests.
-		using TestEngine = Engine<broadphase::Brute<RigidBody>, MaterialMap>;
-
 		// Snapshot of the system's conserved quantities at a moment in time.
 		// Used to compare before/after collision for conservation checks.
 		struct SystemState
@@ -103,15 +99,18 @@ namespace pr::physics
 			body_b.VelocityWS(ang_vel_b, vel_b);
 
 			// Set up the engine with perfectly elastic, frictionless material
-			auto engine = TestEngine{};
-			auto& mat = engine.m_materials(0);
+			broadphase::Brute bp;
+			MaterialMap mats;
+			Engine engine(bp, mats);
+
+			auto& mat = mats(0);
 			mat.m_elasticity_norm = 1.0f;  // Perfectly elastic
 			mat.m_elasticity_tang = 0.0f;
 			mat.m_elasticity_tors = 0.0f;
 			mat.m_friction_static = 0.0f;  // No friction
 
-			engine.m_broadphase.Add(body_a);
-			engine.m_broadphase.Add(body_b);
+			bp.Add(body_a);
+			bp.Add(body_b);
 
 			// Hook the PostCollisionDetection event to capture pre-impulse state.
 			// This fires after Evolve and collision detection, but before impulse resolution.

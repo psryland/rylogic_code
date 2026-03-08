@@ -68,6 +68,9 @@
     <Filter Include="src\unittests">
       <UniqueIdentifier>{c3d4e5f6-a7b8-9012-cdef-012345678912}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\physics\compute">
+      <UniqueIdentifier>{48da3655-f908-4ac8-ad93-f33464cec890}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
@@ -277,11 +280,27 @@
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll">
-      <Filter>deps</Filter>
-    </DependencyLink>
+    <ClInclude Include="..\..\..\include\pr\collision\col_gjk.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_line_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_line.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="scenes\box_vs_sphere.json">
@@ -304,5 +323,31 @@
     <ClCompile Include="src\utils\collision_dependency_check.cpp">
       <Filter>src\utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\scene\body.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\details_panel.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\diagnostics\diagnostics.cpp">
+      <Filter>src\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\media_panel.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\sandbox_ui.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\scene.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\scene_loader.cpp">
+      <Filter>src\utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(RylogicRoot)include\pr\physics-2\compute\physics_shaders.rc">
+      <Filter>pr\physics\compute</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

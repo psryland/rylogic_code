@@ -25,6 +25,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>
+        ;PR_PHYSICS_GPU=1
         ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
@@ -47,6 +48,9 @@
   <ItemGroup>
     <ClCompile Include="src\shape\inertia.cpp" />
     <ClCompile Include="src\integrator\impulse.cpp" />
+    <ClCompile Include="src\integrator\engine.cpp" />
+    <ClCompile Include="src\integrator\integrator.cpp" />
+    <ClCompile Include="src\integrator\gpu_integrator.cpp" />
   </ItemGroup>
   <!--
   Public headers
@@ -55,12 +59,16 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\physics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\ibroadphase.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\contact.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\engine.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\gpu_integrator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\impulse.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\integrator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\jacobian.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\integrator\rigid_body_dynamics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\imaterials.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\material\material_map.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\rigid_body\rigid_body.h" />
