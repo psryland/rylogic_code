@@ -1,5 +1,5 @@
 //*********************************************
-// Physics Engine — GPU Collision Types
+// Physics Engine
 //  Copyright (C) Rylogic Ltd 2026
 //*********************************************
 // POD structs mirroring the HLSL layouts for GPU narrow phase collision detection.
@@ -102,8 +102,8 @@ namespace pr::physics
 	static_assert(sizeof(GpuCollisionCounters) == 16);
 
 	// ---- Pack helpers ----
-	// Convert CPU collision shapes into the flat GPU format.
 
+	// Convert CPU collision shapes into the flat GPU format.
 	inline GpuShape PackShape(collision::ShapeSphere const& shape)
 	{
 		GpuShape g = {};
@@ -115,7 +115,6 @@ namespace pr::physics
 		g.data = v4(shape.m_radius, 0, 0, 0);
 		return g;
 	}
-
 	inline GpuShape PackShape(collision::ShapeBox const& shape)
 	{
 		GpuShape g = {};
@@ -127,7 +126,6 @@ namespace pr::physics
 		g.data = shape.m_radius; // half-extents (xyz), w=0
 		return g;
 	}
-
 	inline GpuShape PackShape(collision::ShapeLine const& shape)
 	{
 		GpuShape g = {};
@@ -139,7 +137,6 @@ namespace pr::physics
 		g.data = v4(shape.m_radius, shape.m_thickness, 0, 0);
 		return g;
 	}
-
 	inline GpuShape PackShape(collision::ShapeTriangle const& shape, int vert_offset)
 	{
 		// Triangle vertices are packed into the shared vertex buffer.
@@ -153,7 +150,6 @@ namespace pr::physics
 		g.data = v4::Zero();
 		return g;
 	}
-
 	inline GpuShape PackShape(collision::ShapePolytope const& shape, int vert_offset)
 	{
 		GpuShape g = {};
@@ -165,50 +161,51 @@ namespace pr::physics
 		g.data = v4::Zero();
 		return g;
 	}
-
-	// Generic pack dispatcher using the Shape base type.
-	// Writes the GpuShape and appends any vertex data to the vertex buffer.
-	// Returns the packed GpuShape.
 	inline GpuShape PackShapeGeneric(collision::Shape const& shape, std::vector<v4>& vertex_buffer)
 	{
 		using namespace collision;
 
 		switch (shape.m_type)
 		{
-		case EShape::Sphere:
-			return PackShape(shape_cast<ShapeSphere>(shape));
+			case EShape::Sphere:
+			{
+				return PackShape(shape_cast<ShapeSphere>(shape));
+			}
+			case EShape::Box:
+			{
+				return PackShape(shape_cast<ShapeBox>(shape));
+			}
+			case EShape::Line:
+			{
+				return PackShape(shape_cast<ShapeLine>(shape));
+			}
+			case EShape::Triangle:
+			{
+				auto& tri = shape_cast<ShapeTriangle>(shape);
+				auto offset = static_cast<int>(vertex_buffer.size());
 
-		case EShape::Box:
-			return PackShape(shape_cast<ShapeBox>(shape));
+				// Triangle vertices are stored as w=0 offsets in m_v.x/y/z
+				vertex_buffer.push_back(tri.m_v.x);
+				vertex_buffer.push_back(tri.m_v.y);
+				vertex_buffer.push_back(tri.m_v.z);
+				return PackShape(tri, offset);
+			}
+			case EShape::Polytope:
+			{
+				auto& poly = shape_cast<ShapePolytope>(shape);
+				auto offset = static_cast<int>(vertex_buffer.size());
 
-		case EShape::Line:
-			return PackShape(shape_cast<ShapeLine>(shape));
+				// Copy polytope vertices into the shared vertex buffer
+				for (auto const* v = poly.vert_beg(); v != poly.vert_end(); ++v)
+					vertex_buffer.push_back(*v);
 
-		case EShape::Triangle:
-		{
-			auto& tri = shape_cast<ShapeTriangle>(shape);
-			auto offset = static_cast<int>(vertex_buffer.size());
-
-			// Triangle vertices are stored as w=0 offsets in m_v.x/y/z
-			vertex_buffer.push_back(tri.m_v.x);
-			vertex_buffer.push_back(tri.m_v.y);
-			vertex_buffer.push_back(tri.m_v.z);
-			return PackShape(tri, offset);
-		}
-		case EShape::Polytope:
-		{
-			auto& poly = shape_cast<ShapePolytope>(shape);
-			auto offset = static_cast<int>(vertex_buffer.size());
-
-			// Copy polytope vertices into the shared vertex buffer
-			for (auto const* v = poly.vert_beg(); v != poly.vert_end(); ++v)
-				vertex_buffer.push_back(*v);
-
-			return PackShape(poly, offset);
-		}
-		default:
-			assert(false && "Unsupported shape type for GPU collision");
-			return {};
+				return PackShape(poly, offset);
+			}
+			default:
+			{
+				assert(false && "Unsupported shape type for GPU collision");
+				return {};
+			}
 		}
 	}
 }

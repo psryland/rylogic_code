@@ -45,8 +45,8 @@ namespace physics_sandbox
 		View3DPanelStatic m_view3d;
 
 		// Physics simulation
-		Scene       m_scene;
-		bool        m_pause_on_collision;
+		Scene m_scene;
+		bool m_pause_on_collision;
 
 		// Path of the last loaded scene file, so Reset reloads the same scene
 		std::filesystem::path m_scene_filepath;

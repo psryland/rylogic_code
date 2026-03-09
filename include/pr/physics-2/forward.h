@@ -5,13 +5,21 @@
 #pragma once
 #include <concepts>
 #include <type_traits>
+#include <span>
+#include <memory>
+#include <vector>
 #include <array>
+#include <ranges>
+#include <unordered_map>
 #include <algorithm>
+#include <cassert>
+
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/scope.h"
 #include "pr/common/event_handler.h"
+#include "pr/algorithm/algorithm.h"
 #include "pr/str/to_string.h"
 #include "pr/container/vector.h"
 #include "pr/container/byte_data.h"
@@ -20,11 +28,19 @@
 #include "pr/geometry/closest_point.h"
 #include "pr/geometry/intersect.h"
 
+// Forward declare D3D12 device (avoids including d3d12.h)
+struct ID3D12Device4;
+
 namespace pr::physics
 {
 	// Import types into this namespace
 	using namespace math::spatial;
 	using namespace collision;
+
+	// Custom deleter for smart pointers
+	template <typename T> struct Deleter {
+		void operator()(T* p) const; // Implemented where 'T' is fully defined
+	};
 
 	// Forwards
 	struct Material;
@@ -33,13 +49,29 @@ namespace pr::physics
 	struct IBroadphase;
 	struct IMaterials;
 	struct Engine;
-	struct GpuIntegrator;
 	struct RigidBodyDynamics;
 	struct IntegrateOutput;
+	struct Inertia;
+	struct InertiaInv;
+	struct RbContact;
+
+	struct Gpu;
+	struct GpuIntegrator;
+	struct GpuCollisionDetector;
+	struct GpuShape;
+	struct GpuCollisionPair;
+	struct GpuContact;
+
+	using GpuPtr = std::unique_ptr<Gpu, Deleter<Gpu>>;
+	using GpuIntegratorPtr = std::unique_ptr<GpuIntegrator, Deleter<GpuIntegrator>>;
+	using GpuCollisionDetectorPtr = std::unique_ptr<GpuCollisionDetector, Deleter<GpuCollisionDetector>>;
 
 	// Traits
 	template <typename T>
 	concept RigidBodyType = std::derived_from<T, RigidBody>;
+
+	template <typename T>
+	concept RigidBodyRange = std::ranges::random_access_range<T> && RigidBodyType<std::ranges::range_value_t<T>>;
 
 	// Literals
 	constexpr float operator ""_kg(long double mass)

@@ -11,8 +11,8 @@
 #include "pr/common/unittests.h"
 #include "pr/collision/col_gjk.h"
 #include "pr/collision/shapes.h"
-#include "pr/physics-2/integrator/gpu_integrator.h"
-#include "pr/physics-2/collision/gpu_collision_detector.h"
+#include "src/collision/gpu_collision_types.h"
+#include "src/collision/gpu_collision_detector.h"
 
 namespace pr::physics
 {
@@ -23,10 +23,17 @@ namespace pr::physics
 		static constexpr float AxisAngleTol = 0.1f;    // radians
 		static constexpr float PointTol = 0.1f;        // world units
 
+		Gpu m_gpu;
+		GpuCollisionDetector m_detector;
+		TestClass_GpuCollisionTests()
+			: m_gpu()
+			, m_detector(m_gpu)
+		{}
+
 		// Run both CPU GjkCollide and GPU GpuDetectCollisions for a shape pair.
 		// Returns true if both agree on collision (or both agree on no collision).
 		// When both detect collision, validates that axis/depth/point match within tolerance.
-		static void CompareGpuVsCpu(
+		void CompareGpuVsCpu(
 			collision::Shape const& sa, m4x4 const& l2w,
 			collision::Shape const& sb, m4x4 const& r2w,
 			bool expect_collision)
@@ -55,9 +62,7 @@ namespace pr::physics
 
 			// Create a GpuIntegrator (which owns the D3D12 device and command queue),
 			// then create the collision detector sharing the same Gpu instance.
-			auto integrator = CreateGpuIntegrator(nullptr, 2);
-			auto detector = CreateGpuCollisionDetector(*integrator, 16, 16, 256);
-			auto gpu_count = GpuDetectCollisions(*detector, shapes, pairs, verts, gpu_contacts);
+			auto gpu_count = m_detector.DetectCollisions(pairs, shapes, verts, gpu_contacts);
 			auto gpu_hit = gpu_count > 0;
 
 			// --- Compare collision/no-collision agreement ---

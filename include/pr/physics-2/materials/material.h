@@ -3,6 +3,7 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
+#include "pr/physics-2/forward.h"
 
 namespace pr::physics
 {

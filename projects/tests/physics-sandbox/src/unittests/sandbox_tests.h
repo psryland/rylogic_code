@@ -89,9 +89,11 @@ namespace physics_sandbox::tests
 
 			// Capture the "before" state on the step where collision is first detected,
 			// before the impulse is applied.
-			engine.PostCollisionDetection += [&](auto&, auto& collisions)
+			engine.PostCollisionDetection += [&](auto&, auto args)
 			{
-				if (collisions.empty()) return;
+				if (args.m_contacts.empty())
+					return;
+
 				result.before = SystemState::Capture(body_a, body_b);
 				result.collision_occurred = true;
 			};
@@ -614,8 +616,7 @@ namespace physics_sandbox::tests
 			float mass,
 			v4 ang_vel,
 			float drop_height = 5.0f,
-			int num_steps = 2000,
-			bool use_gpu = false)
+			int num_steps = 2000)
 		{
 			auto ground_shape = pr::collision::ShapeBox(v4{100, 100, 0.5f, 0});
 
@@ -633,10 +634,6 @@ namespace physics_sandbox::tests
 			physics::broadphase::Brute broadphase;
 			physics::MaterialMap materials;
 			physics::Engine engine(broadphase, materials);
-
-			// Enable GPU integration if requested
-			if (use_gpu)
-				engine.InitGpu(nullptr, 16);
 
 			auto& mat = materials(0);
 			mat.m_elasticity_norm = 1.0f;
@@ -670,10 +667,10 @@ namespace physics_sandbox::tests
 			float sum_collision_delta = 0.0f;     // total ΔE from collision resolution (signed)
 			float max_collision_delta = 0.0f;
 
-			engine.PostCollisionDetection += [&](auto&, auto& collisions)
+			engine.PostCollisionDetection += [&](auto&, auto args)
 			{
 				E_at_callback = TotalEnergy();
-				if (!collisions.empty())
+				if (!args.m_contacts.empty())
 				{
 					had_collision = true;
 					++collision_count;

@@ -3,6 +3,8 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #include "pr/physics-2/integrator/impulse.h"
+#include "pr/physics-2/collision/contact.h"
+#include "pr/physics-2/rigid_body/rigid_body.h"
 
 namespace pr::physics
 {
@@ -24,7 +26,7 @@ namespace pr::physics
 	//   5. Clamp the tangential component to the friction cone.
 	//   6. Convert the point impulse to a spatial wrench at each body's origin.
 	//
-	ImpulsePair RestitutionImpulse(Contact const& c)
+	ImpulsePair RestitutionImpulse(RbContact const& c)
 	{
 		auto& objA = *c.m_objA;
 		auto& objB = *c.m_objB;

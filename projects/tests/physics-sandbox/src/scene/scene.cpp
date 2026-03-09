@@ -17,12 +17,12 @@ namespace physics_sandbox
 		}
 	}
 
-	Scene::Scene()
+	Scene::Scene(ID3D12Device4* existing_device)
 		: m_body()
 		, m_body_count(2)
 		, m_broadphase()
 		, m_materials()
-		, m_physics(m_broadphase, m_materials)
+		, m_physics(m_broadphase, m_materials, existing_device)
 		, m_box(pr::v4{ 2, 2, 2, 0 })
 		, m_gravity(v4::Zero())
 		, m_kill_zone_height(-100.0f)
@@ -34,9 +34,9 @@ namespace physics_sandbox
 	{
 		// Hook collision detection for diagnostics.
 		// This fires AFTER Evolve but BEFORE impulse resolution.
-		m_physics.PostCollisionDetection += [&](auto&, auto& collisions)
+		m_physics.PostCollisionDetection += [&](auto&, auto args)
 		{
-			if (collisions.empty())
+			if (args.m_contacts.empty())
 				return;
 
 			// Lightweight: just track that a collision occurred (used by UI title bar)

@@ -27,14 +27,14 @@ namespace physics_sandbox
 	{
 		static constexpr int MaxBodies = 16;
 
-		Body        m_body[MaxBodies];
-		int         m_body_count;
+		Body m_body[MaxBodies];
+		int  m_body_count;
 
 		// Broadphase and materials are owned by the scene and passed by reference
 		// to the engine. This keeps the engine decoupled from concrete implementations.
 		pr::physics::broadphase::Brute m_broadphase;
-		pr::physics::MaterialMap       m_materials;
-		pr::physics::Engine            m_physics;
+		pr::physics::MaterialMap m_materials;
+		pr::physics::Engine m_physics;
 		pr::collision::ShapeBox m_box;
 
 		// Shapes owned by a loaded scene file. When loading from JSON, each body
@@ -70,7 +70,7 @@ namespace physics_sandbox
 		// Diagnostics
 		CollisionDiag   m_diag;
 
-		Scene();
+		explicit Scene(ID3D12Device4* existing_device = nullptr);
 
 		// Reset the simulation to the current scenario's initial conditions
 		void Reset();

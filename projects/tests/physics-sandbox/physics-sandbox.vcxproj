@@ -108,14 +108,6 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h" />
     <ClInclude Include="..\..\..\include\pr\collision\forward.h" />
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_collision.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_field.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_impulse.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_inertia.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_integrator.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_rigid_body.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_gpu_collision.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\diagnostics\diagnostics.h" />
     <ClInclude Include="src\scene\body.h" />

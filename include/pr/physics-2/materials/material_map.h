@@ -5,8 +5,8 @@
 #pragma once
 
 #include "pr/physics-2/forward.h"
-#include "pr/physics-2/material/material.h"
-#include "pr/physics-2/material/imaterials.h"
+#include "pr/physics-2/materials/imaterials.h"
+#include "pr/physics-2/materials/material.h"
 
 namespace pr::physics
 {

@@ -363,11 +363,5 @@ namespace pr::physics
 			return ke;
 		}
 	};
-
-	// Return the world space bounding box for 'rb'
-	inline BBox BBoxWS(RigidBody const& rb)
-	{
-		return rb.BBoxWS();
-	}
 }
 
