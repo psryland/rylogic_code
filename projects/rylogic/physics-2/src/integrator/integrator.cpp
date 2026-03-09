@@ -98,6 +98,14 @@ namespace pr::physics
 		dyn.force_lin = v4{};
 	}
 
+	// Evolve the rigid body forward in time by 'elapsed_seconds' using Störmer-Verlet integration.
+	void Evolve(RigidBody& rb, float elapsed_seconds)
+	{
+		RigidBodyDynamics dyn = PackDynamics(rb);
+		Evolve(dyn, elapsed_seconds);
+		UnpackDynamics(rb, dyn);
+	}
+
 	#if 0
 	// Half-kick: advance momentum by half a timestep using the current force.
 	// This is one half of the Störmer-Verlet kick. Called before drift and after

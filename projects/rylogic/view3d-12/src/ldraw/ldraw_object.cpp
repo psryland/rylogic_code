@@ -150,6 +150,7 @@ namespace pr::rdr12::ldraw
 
 		// Allow the object to change it's transform just before rendering
 		OnAddToScene(*this, scene);
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Decide if this object should be added to the scene
 		auto is_hidden =

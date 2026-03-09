@@ -2,7 +2,6 @@
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
-#pragma once
 #include "pr/physics-2/collision/broadphase_brute.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
 
@@ -42,8 +41,8 @@ namespace pr::physics::broadphase
 			{
 				auto& objA = *m_entity[i];
 				auto& objB = *m_entity[j];
-				auto bboxA = BBoxWS(objA);
-				auto bboxB = BBoxWS(objB);
+				auto bboxA = objA.BBoxWS();
+				auto bboxB = objB.BBoxWS();
 				if (!geometry::intersect::BBoxVsBBox(bboxA, bboxB)) continue;
 				cb(objA, objB);
 			}

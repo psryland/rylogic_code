@@ -7,7 +7,7 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics-2/integrator/integrator.h"
-#include "pr/physics-2/integrator/rigid_body_dynamics.h"
+#include "pr/physics-2/rigid_body/rigid_body_dynamics.h"
 #include "pr/physics-2/shape/inertia.h"
 
 namespace pr::physics
@@ -87,7 +87,7 @@ namespace pr::physics
 			// Path B: Pack → EvolveCPU → compare (don't unpack, just compare raw)
 			auto rb_b = rb_template;
 			auto dyn = PackDynamics(rb_b);
-			EvolveCPU(dyn, dt);
+			Evolve(dyn, dt);
 
 			// Compare transform
 			auto pos_err = Length(rb_a.O2W().pos - dyn.o2w.pos);

@@ -879,8 +879,7 @@ namespace physics_sandbox::tests
 		{
 			auto box_shape = pr::collision::ShapeBox(v4{0.5f, 0.5f, 0.5f, 0});
 
-			auto drift = RunDropTest("Box", collision::shape_cast(&box_shape), 10.0f,
-				v4{0.5f, 0.3f, 0.0f, 0.0f});
+			auto drift = RunDropTest("Box", collision::shape_cast(&box_shape), 10.0f, v4{0.5f, 0.3f, 0.0f, 0.0f});
 			PR_EXPECT(drift < 0.05f);
 		}
 
@@ -894,8 +893,7 @@ namespace physics_sandbox::tests
 		{
 			auto box_shape = pr::collision::ShapeBox(v4{0.5f, 0.5f, 0.5f, 0});
 
-			auto drift = RunDropTest("GPU-Box", collision::shape_cast(&box_shape), 10.0f,
-				v4{0.5f, 0.3f, 0.0f, 0.0f}, 5.0f, 2000, true);
+			auto drift = RunDropTest("GPU-Box", collision::shape_cast(&box_shape), 10.0f, v4{0.5f, 0.3f, 0.0f, 0.0f}, 5.0f, 2000);
 			PR_EXPECT(drift < 0.05f);
 		}
 
@@ -910,8 +908,7 @@ namespace physics_sandbox::tests
 			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
-			auto drift = RunDropTest("GPU-Tetra", collision::shape_cast(&poly), 10.0f,
-				v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000, true);
+			auto drift = RunDropTest("GPU-Tetra", collision::shape_cast(&poly), 10.0f, v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000);
 			PR_EXPECT(drift < 0.05f);
 		}
 
@@ -928,8 +925,7 @@ namespace physics_sandbox::tests
 			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 6);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
-			auto drift = RunDropTest("GPU-Wedge", collision::shape_cast(&poly), 10.0f,
-				v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000, true);
+			auto drift = RunDropTest("GPU-Wedge", collision::shape_cast(&poly), 10.0f, v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000);
 			PR_EXPECT(drift < 0.05f);
 		}
 	};

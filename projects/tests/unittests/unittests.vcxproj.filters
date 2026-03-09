@@ -1218,9 +1218,9 @@
     <None Include="$(RylogicRoot)include\pr\hlsl\intercept.hlsli">
       <Filter>pr\hlsl</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cpp.hint" />
+    <None Include="cpp.hint">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">
