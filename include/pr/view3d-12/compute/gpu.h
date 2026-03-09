@@ -10,6 +10,7 @@
 namespace pr::rdr12
 {
 	// A DirectX 12 instance for running compute shaders
+	template <D3D12_COMMAND_LIST_TYPE ListType>
 	class Gpu
 	{
 		// Notes:
@@ -24,8 +25,8 @@ namespace pr::rdr12
 		GpuSync m_gsync;
 
 		// Command lists/allocators
-		GfxCmdAllocPool m_cmd_alloc_pool;
-		GfxCmdListPool m_cmd_list_pool;
+		CmdAllocPool<ListType> m_cmd_alloc_pool;
+		CmdListPool<ListType> m_cmd_list_pool;
 
 		// Upload memory buffer for initialising resources
 		GpuUploadBuffer m_upload_buffer;
@@ -44,6 +45,9 @@ namespace pr::rdr12
 		GpuUploadBuffer& UploadBuffer();
 
 		// Allocate a DX resource
-		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, GfxCmdList& cmd_list, std::string_view name);
+		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, CmdList<ListType>& cmd_list, std::string_view name);
 	};
+
+	using GfxGpu = Gpu<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComGpu = Gpu<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 }
