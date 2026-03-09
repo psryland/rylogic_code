@@ -51,12 +51,13 @@ namespace pr::fluid
 
 	using ComputeStep = rdr12::ComputeStep;
 	using FluidSimulation = rdr12::compute::fluid::FluidSimulation<>;
-	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition;
-	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision;
+	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition<>;
+	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision<>;
 	using CollisionBuilder = rdr12::compute::particle_collision::CollisionBuilder;
 	using CollisionPrim = rdr12::compute::particle_collision::Prim;
 	using Particle = rdr12::compute::fluid::Particle;
 	using Dynamics = rdr12::compute::fluid::Dynamics;
+	using Gpu = FluidSimulation::Gpu;
 	using GpuJob = FluidSimulation::GpuJob;
 }
 

@@ -33,7 +33,8 @@ namespace pr::rdr12
 		
 	public:
 
-		Gpu(ID3D12Device4* existing_device = nullptr);
+		Gpu(ID3D12Device4* existing_device, ID3D12CommandQueue* existing_queue);
+		Gpu(ID3D12Device4* existing_device = nullptr) : Gpu(existing_device, nullptr) {}
 
 		// Allow use as a device
 		ID3D12Device4 const* operator -> () const;
