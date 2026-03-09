@@ -120,7 +120,7 @@ namespace pr::physics
 		}
 		m4x4 W2O() const
 		{
-			return InvertAffine(O2W());
+			return InvertOrthonormal(O2W());
 		}
 		void O2W(m4x4 const& o2w)
 		{

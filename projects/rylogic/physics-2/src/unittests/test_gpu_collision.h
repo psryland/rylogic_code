@@ -55,7 +55,7 @@ namespace pr::physics
 			pair.shape_idx_b = 1;
 			pair.pair_index = 0;
 			pair.pad0 = 0;
-			pair.b2a = InvertAffine(l2w) * r2w;
+			pair.b2a = InvertOrthonormal(l2w) * r2w;
 
 			auto pairs = std::vector<GpuCollisionPair>{ pair };
 			auto gpu_contacts = std::vector<GpuContact>{};
@@ -80,7 +80,7 @@ namespace pr::physics
 			auto const& gc = gpu_contacts[0];
 
 			// GPU contact is in objA's local space. Transform CPU contact to objA space for comparison.
-			auto w2a = InvertAffine(l2w);
+			auto w2a = InvertOrthonormal(l2w);
 			auto cpu_axis_local = (w2a * cpu_contact.m_axis.w0()).w0(); // transform direction (w=0)
 			auto cpu_point_local = w2a * cpu_contact.m_point;
 

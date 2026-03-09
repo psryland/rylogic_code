@@ -36,7 +36,7 @@ namespace las
 	{
 		auto mass = m_body.Mass();
 		auto o2w = m_body.O2W();
-		auto w2o = InvertAffine(o2w);
+		auto w2o = InvertOrthonormal(o2w);
 
 		// Apply gravity
 		m_body.ApplyForceWS(v4{0, 0, Gravity * mass, 0}, v4::Zero());

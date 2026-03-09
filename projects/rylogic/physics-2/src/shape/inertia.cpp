@@ -671,7 +671,7 @@ namespace pr::physics
 	{
 		// Ib = a2b*Ia*b2a
 		// Explicitly symmetrize because R*S*R^T introduces tiny float asymmetry.
-		auto b2a = InvertAffine(a2b);
+		auto b2a = InvertOrthonormal(a2b);
 		auto Ic = a2b * inertia.Ic3x3(1) * b2a;
 		Ic.x.y = Ic.y.x = 0.5f * (Ic.x.y + Ic.y.x);
 		Ic.x.z = Ic.z.x = 0.5f * (Ic.x.z + Ic.z.x);
@@ -684,7 +684,7 @@ namespace pr::physics
 		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
 		// Explicitly symmetrize the result because R*S*R^T introduces tiny float
 		// asymmetry when R is not perfectly orthogonal (e.g. after Orthonorm).
-		auto b2a = InvertAffine(a2b);
+		auto b2a = InvertOrthonormal(a2b);
 		auto Ic_inv = a2b * inertia_inv.Ic3x3(1) * b2a;
 		Ic_inv.x.y = Ic_inv.y.x = 0.5f * (Ic_inv.x.y + Ic_inv.y.x);
 		Ic_inv.x.z = Ic_inv.z.x = 0.5f * (Ic_inv.x.z + Ic_inv.z.x);

@@ -76,7 +76,7 @@ namespace pr::physics
 			auto o2w = rb.O2W();
 			auto pos = v4{0.5f / mass,0,0,1};
 			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));
-			auto invrot = InvertAffine(rot);
+			auto invrot = InvertOrthonormal(rot);
 			PR_EXPECT(FEql(o2w.pos, pos));
 			PR_EXPECT(FEql(o2w.rot, rot));
 
@@ -175,7 +175,7 @@ namespace pr::physics
 			auto ws_vel = ws_iinv * ws_mom_mid;
 			auto pos = (ws_vel.lin * 1.0f).w1();
 			auto rot = m3x4::Rotation(ws_vel.ang * 1.0f) * rb.O2W().rot;
-			auto invrot = InvertAffine(rot);
+			auto invrot = InvertOrthonormal(rot);
 
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);

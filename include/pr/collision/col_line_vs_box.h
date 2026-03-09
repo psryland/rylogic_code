@@ -22,7 +22,7 @@ namespace pr::collision
 		auto l2w = l2w_ * line_.m_s2p; 
  
 		// Compute a transform for 'line' in 'box's frame 
-		auto l2b = InvertAffine(b2w) * l2w; 
+		auto l2b = InvertOrthonormal(b2w) * l2w; 
  
 		// Line segment mid-point in box space 
 		auto mid = l2b.pos; 

@@ -363,8 +363,8 @@ namespace pr::collision
 		// Compute shape-to-world and world-to-shape transforms
 		auto a2w = l2w * lhs.m_s2p;
 		auto b2w = r2w * rhs.m_s2p;
-		auto w2a = InvertAffine(a2w);
-		auto w2b = InvertAffine(b2w);
+		auto w2a = InvertOrthonormal(a2w);
+		auto w2b = InvertOrthonormal(b2w);
 
 		int ha = 0, hb = 0; // support vertex hints (warm-start for polytopes)
 

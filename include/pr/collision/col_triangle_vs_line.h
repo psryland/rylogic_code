@@ -35,7 +35,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Transform to triangle space for simpler geometry
-		auto t2w_inv = InvertAffine(l2w);
+		auto t2w_inv = InvertOrthonormal(l2w);
 
 		// Triangle vertices (in triangle space, as positions w=1)
 		auto a = tri.m_v.x.w1();

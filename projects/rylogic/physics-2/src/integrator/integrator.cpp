@@ -38,7 +38,7 @@ namespace pr::physics
 		auto pos = dyn.o2w.pos;
 
 		// Rotate the inverse inertia from object space to world space: R * I * R^T
-		auto b2a = InvertAffine(rot);
+		auto b2a = InvertOrthonormal(rot);
 		auto ws_iinv_unit = rot * os_iinv_unit * b2a;
 
 		// Symmetrize to counteract float drift
@@ -65,7 +65,7 @@ namespace pr::physics
 		// This gives second-order accuracy instead of first-order.
 		auto half_dR = m3x4::Rotation(vel_ang * (elapsed_seconds * 0.5f));
 		auto mid_rot = half_dR * rot;
-		auto mid_b2a = InvertAffine(mid_rot);
+		auto mid_b2a = InvertOrthonormal(mid_rot);
 		auto ws_iinv_mid = mid_rot * os_iinv_unit * mid_b2a;
 		ws_iinv_mid.x.y = ws_iinv_mid.y.x = 0.5f * (ws_iinv_mid.x.y + ws_iinv_mid.y.x);
 		ws_iinv_mid.x.z = ws_iinv_mid.z.x = 0.5f * (ws_iinv_mid.x.z + ws_iinv_mid.z.x);

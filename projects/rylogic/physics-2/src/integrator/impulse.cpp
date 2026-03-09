@@ -108,7 +108,7 @@ namespace pr::physics
 		// For B: shift impulse from contact point to B's CoM (in A's frame),
 		// then rotate to B's frame (pure rotation, the wrench is already at B's CoM)
 		auto impulseB_in_A = Shift(impulse_at_pt, com_B_in_A - pt);
-		auto a2b_rot = InvertAffine(c.m_b2a).rot;
+		auto a2b_rot = InvertOrthonormal(c.m_b2a.rot);
 
 		// Build the impulse pair: equal and opposite wrenches for each body.
 		auto impulse_pair = ImpulsePair{};
