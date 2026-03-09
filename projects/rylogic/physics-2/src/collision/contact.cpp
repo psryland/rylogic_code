@@ -2,7 +2,6 @@
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
-#pragma once
 #include "pr/physics-2/rigid_body/rigid_body.h"
 #include "pr/physics-2/collision/contact.h"
 #include "pr/physics-2/utility/ldraw.h"

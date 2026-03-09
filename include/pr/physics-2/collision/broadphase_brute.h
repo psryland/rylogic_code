@@ -21,6 +21,8 @@ namespace pr::physics::broadphase
 
 	public:
 
+		Brute();
+
 		// Remove all registered bodies
 		void Clear() override;
 

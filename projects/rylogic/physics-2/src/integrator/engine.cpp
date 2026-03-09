@@ -9,6 +9,7 @@
 #include "pr/physics-2/collision/contact.h"
 #include "pr/physics-2/materials/imaterials.h"
 #include "pr/physics-2/utility/ldraw.h"
+#include "src/integrator/gpu.h"
 #include "src/integrator/gpu_integrator.h"
 #include "src/collision/gpu_collision_detector.h"
 #include "src/collision/gpu_collision_types.h"
@@ -43,6 +44,11 @@ namespace pr::physics
 	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
 	{
 		delete cache;
+	}
+
+	void Deleter<Gpu>::operator()(Gpu* p) const
+	{
+		delete p;
 	}
 
 	Engine::Engine(IBroadphase& bp, IMaterials& mats, ID3D12Device4* existing_device)

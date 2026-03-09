@@ -27,7 +27,6 @@
     <ClCompile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>
-        ;PR_PHYSICS_GPU=1
         ;%(PreprocessorDefinitions)
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
@@ -84,6 +83,7 @@
   -->
   <ItemGroup>
     <ClCompile Include="src\collision\contact.cpp" />
+    <ClCompile Include="src\collision\broadphase_brute.cpp" />
     <ClCompile Include="src\shape\inertia.cpp" />
     <ClCompile Include="src\integrator\impulse.cpp" />
     <ClCompile Include="src\integrator\engine.cpp" />
@@ -123,7 +123,6 @@
     <ClInclude Include="..\..\..\include\pr\physics-2\materials\material.h" />
     <ClInclude Include="..\..\..\include\pr\physics-2\materials\material_map.h" />
     <ClInclude Include="..\..\..\include\pr\physics-2\rigid_body\rigid_body_dynamics.h" />
-    <ClInclude Include="src\collision\broadphase_brute.cpp" />
     <ClInclude Include="src\collision\gpu_collision_detector.h" />
     <ClInclude Include="src\collision\gpu_collision_types.h" />
     <ClInclude Include="src\integrator\gpu.h" />
