@@ -7,7 +7,7 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics-2/integrator/integrator.h"
-#include "pr/physics-2/integrator/rigid_body_dynamics.h"
+#include "pr/physics-2/rigid_body/rigid_body_dynamics.h"
 #include "pr/physics-2/shape/inertia.h"
 
 namespace pr::physics
@@ -87,7 +87,7 @@ namespace pr::physics
 			// Path B: Pack → EvolveCPU → compare (don't unpack, just compare raw)
 			auto rb_b = rb_template;
 			auto dyn = PackDynamics(rb_b);
-			EvolveCPU(dyn, dt);
+			Evolve(dyn, dt);
 
 			// Compare transform
 			auto pos_err = Length(rb_a.O2W().pos - dyn.o2w.pos);
@@ -162,7 +162,7 @@ namespace pr::physics
 			// This exercises the full 6x6 spatial inverse inertia multiply.
 			auto com = v4{0.3f, -0.2f, 0.1f, 0};
 			auto rb = RigidBody{};
-			rb.SetMassProperties(Inertia::Sphere(1.0f, 10.0f, com));
+			rb.SetMassProperties(Inertia::Sphere(1.0f, 10.0f, com), com);
 			rb.O2W(m4x4::Translation(v4{0, 0, 5, 1}));
 			rb.VelocityWS(v4{0.5f, 0.3f, 0, 0}, v4{1.0f, 0, -2.0f, 0});
 
@@ -179,7 +179,7 @@ namespace pr::physics
 		{
 			auto com = v4{0.5f, 0.0f, -0.3f, 0};
 			auto rb = RigidBody{};
-			rb.SetMassProperties(Inertia::Box(v4{1, 2, 0.5f, 0}, 10.0f, com));
+			rb.SetMassProperties(Inertia::Box(v4{1, 2, 0.5f, 0}, 10.0f, com), com);
 			rb.O2W(m4x4::Translation(v4{0, 0, 5, 1}));
 			rb.VelocityWS(v4{0.5f, -0.3f, 0.2f, 0}, v4{1.0f, 0, -2.0f, 0});
 
@@ -198,7 +198,7 @@ namespace pr::physics
 		{
 			auto com = v4{-0.2f, 0.4f, 0.1f, 0};
 			auto rb = RigidBody{};
-			rb.SetMassProperties(Inertia::Box(v4{1, 1, 1, 0}, 5.0f, com));
+			rb.SetMassProperties(Inertia::Box(v4{1, 1, 1, 0}, 5.0f, com), com);
 			rb.O2W(m4x4::Identity());
 			rb.VelocityWS(v4{2.0f, 1.0f, -0.5f, 0}, v4::Zero());
 

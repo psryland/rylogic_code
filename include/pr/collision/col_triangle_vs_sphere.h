@@ -33,7 +33,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Transform the sphere centre into triangle space
-		auto s2t = InvertAffine(l2w) * r2w.pos - v4::Origin();
+		auto s2t = InvertOrthonormal(l2w) * r2w.pos - v4::Origin();
 
 		// Find the closest point on the triangle to the sphere centre (in triangle space)
 		auto closest = geometry::closest_point::PointToTriangle(s2t.w1(), tri.m_v.x.w1(), tri.m_v.y.w1(), tri.m_v.z.w1());

@@ -3,9 +3,8 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics-2/forward.h"
-#include "pr/physics-2/material/material.h"
+#include "pr/physics-2/materials/material.h"
 
 namespace pr::physics
 {

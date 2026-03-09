@@ -35,7 +35,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Work in box space to simplify box projection
-		auto b2w_inv = InvertAffine(r2w);
+		auto b2w_inv = InvertOrthonormal(r2w);
 
 		// Triangle vertices in box space (as positions)
 		auto tv0 = b2w_inv * (l2w * tri.m_v.x.w1());

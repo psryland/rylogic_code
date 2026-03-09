@@ -34,7 +34,7 @@ namespace pr::collision
 		auto r2w = r2w_ * rhs_.m_s2p;
 
 		// Work in line space: the line segment runs from (0,0,-R) to (0,0,+R) along Z.
-		auto s2l = InvertAffine(l2w) * r2w.pos - v4::Origin();
+		auto s2l = InvertOrthonormal(l2w) * r2w.pos - v4::Origin();
 
 		// Clamp the sphere centre's Z-coordinate to the line segment extent.
 		// This gives the closest point on the segment to the sphere centre.

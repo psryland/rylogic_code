@@ -3,15 +3,16 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics-2/forward.h"
-#include "pr/physics-2/broadphase/ibroadphase.h"
-#include "pr/physics-2/material/imaterials.h"
+#include "pr/physics-2/shape/inertia.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
-#include "pr/physics-2/integrator/contact.h"
-#include "pr/physics-2/integrator/integrator.h"
-#include "pr/physics-2/integrator/impulse.h"
-#include "pr/physics-2/integrator/gpu_integrator.h"
+#include "pr/physics-2/rigid_body/rigid_body_dynamics.h"
+//#include "pr/physics-2/broadphase/ibroadphase.h"
+//#include "pr/physics-2/material/imaterials.h"
+//#include "pr/physics-2/integrator/contact.h"
+//#include "pr/physics-2/integrator/impulse.h"
+//#include "pr/physics-2/integrator/gpu_integrator.h"
+//#include "pr/physics-2/collision/gpu_collision_detector.h"
 
 namespace pr::physics
 {
@@ -26,115 +27,105 @@ namespace pr::physics
 	// The broadphase and material map are owned externally and passed by reference.
 	struct Engine
 	{
+	private:
+
 		IBroadphase& m_broadphase;
 		IMaterials& m_materials;
+
+		// GPU device and command queue wrapper, shared by the integrator and collision detector.
+		GpuPtr m_gpu;
+
+		// GPU integrator (opaque)
+		GpuIntegratorPtr m_gpu_integrator;
+
+		// GPU collision detector (opaque)
+		GpuCollisionDetectorPtr m_gpu_collision_detector;
+
+		// Buffers for preparing GPU data
+		using CachePtr = std::unique_ptr<struct EngineBufferCache, Deleter<EngineBufferCache>>;
+		CachePtr m_cache;
+
+		// Staging buffer for packing body dynamics
+		std::vector<RigidBodyDynamics> m_rb_dynamics;
+		std::vector<IntegrateOutput> m_integrate_output;
 
 		// Runtime flag for GPU vs CPU integration. Set to true after calling InitGpu().
 		// When true, integration is dispatched to the GPU compute shader.
 		// When false, integration runs on the CPU via Evolve() (default).
-		bool m_use_gpu = false;
+		bool m_use_gpu;
 
-		// GPU integrator (pimpl). Only created when InitGpu() is called.
-		// The full definition is in gpu_integrator.cpp — no view3d-12 types leak here.
-		GpuIntegratorPtr m_gpu_integrator;
+	public:
+
+		Engine(IBroadphase& bp, IMaterials& mats, ID3D12Device4* existing_device = nullptr);
+
+		// Get/Set whether the GPU is used for integration and collision detection.
+		bool UseGpu() const;
+		void UseGpu(bool use_gpu);
 
 		// Raised after collision detection, but before resolution.
 		// Subscribers can inspect, modify, add, or remove contacts before impulses are applied.
-		EventHandler<Engine&, std::vector<Contact>&> PostCollisionDetection;
-
-		// Debug: stashed pre-integration state for A/B comparison between Evolve() and EvolveCPU().
-		#if PR_DBG
-		std::vector<RigidBodyDynamics> m_compare_dynamics;
-		std::vector<int> m_compare_indices;
-		float m_compare_dt = 0;
-		#endif
-
-		Engine(IBroadphase& bp, IMaterials& mats)
-			: m_broadphase(bp)
-			, m_materials(mats)
-			, m_use_gpu(false)
-			, m_gpu_integrator()
-			, PostCollisionDetection()
-		{}
-
-		// Initialise GPU integration. Call this once, passing a D3D12 device pointer.
-		// Pass nullptr to create a standalone D3D12 device for compute only.
-		// After this call, m_use_gpu is set to true and Step() will use the GPU path.
-		void InitGpu(ID3D12Device4* device, int max_bodies)
-		{
-			m_gpu_integrator = CreateGpuIntegrator(device, max_bodies);
-			m_use_gpu = true;
-		}
+		struct PostCollisionDetectionArgs { std::span<RbContact> m_contacts; };
+		EventHandler<Engine&, PostCollisionDetectionArgs> PostCollisionDetection;
 
 		// Evolve the physics objects forward in time and resolve any collisions.
-		// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
-		// Step() is a template so it can iterate containers of RigidBody-derived types
-		// (e.g. std::span<Body>) without slicing. The heavy collision work is in DetectAndResolve().
-		template <typename TRigidBodyCont>
-		void Step(float dt, TRigidBodyCont& bodies)
+		void Step(float dt, RigidBodyRange auto&& bodies)
 		{
 			// Before here, callers should have set forces on the rigid bodies (including gravity).
+			// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
+			// Step() is a template so it can iterate containers of RigidBody-derived types
+			// (e.g. std::span<Body>) without slicing. The heavy collision work is in DetectAndResolve().
+			m_rb_dynamics.resize(0);
+			int i = 0;
 
-			if (m_use_gpu)
+			// GPU path: pack bodies into flat dynamics buffer → dispatch compute → unpack results.
+			// CPU path: evolve each dynamic body directly using kick-drift-kick.
+			for (auto& body : bodies)
 			{
-				// GPU path: pack bodies into flat dynamics buffer → dispatch compute → unpack results.
-				std::vector<RigidBodyDynamics> dynamics;
-				std::vector<int> dynamic_indices;
-				{
-					int idx = 0;
-					for (auto& body : bodies)
-					{
-						if (body.Mass() < InfiniteMass * 0.5f)
-						{
-							dynamics.push_back(PackDynamics(body));
-							dynamic_indices.push_back(idx);
-						}
-						++idx;
-					}
-				}
-
-				#ifdef PR_PHYSICS_GPU
-				IntegrateGpu(dynamics, dt);
-				#else
-				for (auto& dyn : dynamics)
-					EvolveCPU(dyn, dt);
-				#endif
-
-				// Unpack the integrated state back into the rigid bodies
-				{
-					int i = 0;
-					for (auto dyn_idx : dynamic_indices)
-					{
-						auto body_it = std::next(std::begin(bodies), dyn_idx);
-						UnpackDynamics(*body_it, dynamics[i]);
-						++i;
-					}
-				}
-			}
-			else
-			{
-				// CPU path: evolve each dynamic body directly using kick-drift-kick.
-				for (auto& body : bodies)
-				{
-					if (body.Mass() < InfiniteMass * 0.5f)
-						Evolve(body, dt);
-				}
-
-				#if PR_DBG
-				CompareIntegrationPaths(dt, bodies);
-				#endif
+				if (body.Mass() >= 0.5f * InfiniteMass) continue;
+				m_rb_dynamics.push_back(PackDynamics(body));
 			}
 
-			// Broad phase → narrow phase → resolve (implemented in engine.cpp)
-			DetectAndResolve(dt);
+			Integrate(m_rb_dynamics, dt);
+
+			// Unpack the integrated state back into the rigid bodies
+			for (auto& body : bodies)
+			{
+				if (body.Mass() >= 0.5f * InfiniteMass) continue;
+				UnpackDynamics(body, m_rb_dynamics[i++]);
+			}
+			
+			#if PR_DBG&&0
+			CompareIntegrationPaths(dt, bodies);
+			#endif
+
+			// Detect and resolve collisions
+			DetectAndResolveCollisions(dt);
 		}
 
 	private:
 
+		// Integration dispatch
+		void Integrate(std::span<RigidBodyDynamics> dynamics, float dt);
+
+		// Broad phase overlap query → narrow phase collision detection → impulse resolution.
+		void DetectAndResolveCollisions(float dt);
+
+		// Narrow phase collision detection.
+		// Tests whether the two bodies in 'c' are geometrically in contact using GJK/SAT.
+		bool NarrowPhaseCollision(float dt, RbContact& c);
+
+		// Calculate and apply the restitution impulse to resolve a collision.
+		void ResolveCollision(RbContact& c);
+
+		// Debug: stashed pre-integration state for A/B comparison between Evolve() and EvolveCPU().
+		#if PR_DBG&&0
+		std::vector<RigidBodyDynamics> m_compare_dynamics;
+		std::vector<int> m_compare_indices;
+		float m_compare_dt = 0;
+
 		// A/B comparison: replay the last integration step through EvolveCPU and compare.
 		// Uses the pre-integration state (stashed below) to run EvolveCPU independently.
-		template <typename TRigidBodyCont>
-		void CompareIntegrationPaths([[maybe_unused]] float dt, [[maybe_unused]] TRigidBodyCont& bodies)
+		void CompareIntegrationPaths([[maybe_unused]] float dt, [[maybe_unused]] RigidBodyRange auto& bodies)
 		{
 			#if PR_DBG
 			// Stash pre-integration state for comparison on the NEXT step.
@@ -143,7 +134,7 @@ namespace pr::physics
 			{
 				// Run EvolveCPU on the stashed pre-integration dynamics
 				for (auto& dyn : m_compare_dynamics)
-					EvolveCPU(dyn, m_compare_dt);
+					Evolve(dyn, m_compare_dt);
 
 				// Compare EvolveCPU results with what Evolve() produced (now stored in bodies).
 				// m_compare_indices maps dynamics[i] to bodies[idx].
@@ -202,19 +193,6 @@ namespace pr::physics
 			}
 			#endif
 		}
-
-		// GPU integration dispatch (implemented in engine.cpp where GpuIntegrator is complete).
-		void IntegrateGpu(std::span<RigidBodyDynamics> dynamics, float dt);
-
-		// Broad phase overlap query → narrow phase collision detection → impulse resolution.
-		// Implemented in engine.cpp to keep DirectX/GPU dependencies out of the header.
-		void DetectAndResolve(float dt);
-
-		// Narrow phase collision detection.
-		// Tests whether the two bodies in 'c' are geometrically in contact using GJK/SAT.
-		bool NarrowPhaseCollision(float dt, Contact& c);
-
-		// Calculate and apply the restitution impulse to resolve a collision.
-		void ResolveCollision(Contact& c);
+		#endif
 	};
 }

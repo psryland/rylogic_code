@@ -3,18 +3,18 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics-2/forward.h"
-#include "pr/physics-2/rigid_body/rigid_body.h"
-#include "pr/physics-2/integrator/rigid_body_dynamics.h"
 
 namespace pr::physics
 {
-	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'.
-	// Assumes constant inertia over the timestep. Exact for symmetric bodies (sphere, etc.) at
-	// the model origin. For the general case, KE change ≈ Dot(v_mid, f) * dt (power formula).
-	float KineticEnergyChange(v8force force, v8force momentum0, InertiaInv const& inertia_inv, float time_s);
+	// Performs Störmer-Verlet kick-drift-kick on a RigidBody.
+	// This mirrors the GPU compute shader exactly, allowing A/B comparison for debugging.
+	void Evolve(RigidBodyDynamics& dyn, float elapsed_seconds);
 
+	// Evolve the rigid body forward in time by 'elapsed_seconds' using Störmer-Verlet integration.
+	void Evolve(RigidBody& rb, float elapsed_seconds);
+
+	#if 0
 	// Störmer-Verlet sub-steps for split integration.
 	// The engine splits the kick-drift-kick so collision detection and resolution
 	// occurs between the two half-kicks. This prevents phantom energy injection:
@@ -42,4 +42,10 @@ namespace pr::physics
 	// Performs the same Störmer-Verlet kick-drift-kick on a RigidBodyDynamics buffer entry.
 	// This mirrors the GPU compute shader exactly, allowing A/B comparison for debugging.
 	void EvolveCPU(RigidBodyDynamics& dyn, float elapsed_seconds);
+	#endif
+
+	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'.
+	// Assumes constant inertia over the timestep. Exact for symmetric bodies (sphere, etc.) at
+	// the model origin. For the general case, KE change ≈ Dot(v_mid, f) * dt (power formula).
+	float KineticEnergyChange(v8force force, v8force momentum0, InertiaInv const& inertia_inv, float time_s);
 }

@@ -1,0 +1,242 @@
+//*********************************************
+// Physics Engine
+//  Copyright (C) Rylogic Ltd 2026
+//*********************************************
+#include "src/collision/gpu_collision_detector.h"
+#include "src/collision/gpu_collision_types.h"
+
+namespace pr::physics
+{
+	using namespace pr::rdr12;
+
+	// Thread group size matching the HLSL [numthreads(64, 1, 1)] declaration.
+	static constexpr int ThreadGroupSize = 64;
+
+	// Constant buffer layout matching the HLSL cbCollision declaration.
+	struct alignas(16) cbCollision
+	{
+		uint32_t pair_count;
+		uint32_t pad0;
+		uint32_t pad1;
+		uint32_t pad2;
+	};
+	static_assert(sizeof(cbCollision) == 16);
+
+	// Register assignments for the collision root signature.
+	// b0 = constants, t0 = shapes (SRV), t1 = pairs (SRV), t2 = verts (SRV),
+	// u0 = contacts (UAV), u1 = counters (UAV)
+	struct EReg
+	{
+		inline static constexpr ECBufReg Params = ECBufReg::b0;
+		inline static constexpr ESRVReg  Shapes = ESRVReg::t0;
+		inline static constexpr ESRVReg  Pairs = ESRVReg::t1;
+		inline static constexpr ESRVReg  Verts = ESRVReg::t2;
+		inline static constexpr EUAVReg  Contacts = EUAVReg::u0;
+		inline static constexpr EUAVReg  Counters = EUAVReg::u1;
+	};
+
+	GpuCollisionDetector::GpuCollisionDetector(Gpu& gpu)
+		: m_gpu(gpu)
+		, m_job(m_gpu, "PhysicsCollision", 0xFF80FF40, 5)
+		, m_cs_gjk()
+		, m_r_shapes()
+		, m_r_pairs()
+		, m_r_verts()
+		, m_r_contacts()
+		, m_r_counters()
+		, m_max_shapes()
+		, m_max_verts()
+		, m_max_pairs()
+	{
+		CompileShader();
+	}
+
+	// Run collision detection on the GPU.
+	// Uploads shapes, pairs, and vertices → dispatches GJK shader → reads back contacts.
+	int GpuCollisionDetector::DetectCollisions(
+		std::span<GpuCollisionPair const> pairs,
+		std::span<GpuShape const> shapes,
+		std::span<v4 const> verts,
+		std::vector<GpuContact>& out_contacts)
+	{
+		auto shape_count = static_cast<int>(shapes.size());
+		auto vert_count = static_cast<int>(verts.size());
+		auto pair_count = static_cast<int>(pairs.size());
+		if (pair_count == 0)
+			return 0;
+
+		ResizeBuffers(m_job.m_cmd_list, shape_count, vert_count, pair_count);
+
+		// Upload shapes buffer
+		{
+			m_job.m_barriers.Transition(m_r_shapes.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			m_job.m_barriers.Commit();
+
+			auto upload = m_job.m_upload.Alloc<GpuShape>(shape_count);
+			memcpy(upload.ptr<GpuShape>(), shapes.data(), shape_count * sizeof(GpuShape));
+			m_job.m_cmd_list.CopyBufferRegion(m_r_shapes.get(), 0, upload);
+
+			m_job.m_barriers.Transition(m_r_shapes.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			m_job.m_barriers.Commit();
+		}
+
+		// Upload pairs buffer
+		{
+			m_job.m_barriers.Transition(m_r_pairs.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			m_job.m_barriers.Commit();
+
+			auto upload = m_job.m_upload.Alloc<GpuCollisionPair>(pair_count);
+			memcpy(upload.ptr<GpuCollisionPair>(), pairs.data(), pair_count * sizeof(GpuCollisionPair));
+			m_job.m_cmd_list.CopyBufferRegion(m_r_pairs.get(), 0, upload);
+
+			m_job.m_barriers.Transition(m_r_pairs.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			m_job.m_barriers.Commit();
+		}
+
+		// Upload vertices buffer (may be empty if no polytopes/triangles)
+		if (vert_count > 0)
+		{
+			m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			m_job.m_barriers.Commit();
+
+			auto upload = m_job.m_upload.Alloc<v4>(vert_count);
+			memcpy(upload.ptr<v4>(), verts.data(), vert_count * sizeof(v4));
+			m_job.m_cmd_list.CopyBufferRegion(m_r_verts.get(), 0, upload);
+
+			m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			m_job.m_barriers.Commit();
+		}
+
+		// Zero the counter buffer before dispatch
+		{
+			m_job.m_barriers.Transition(m_r_counters.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			m_job.m_barriers.Commit();
+
+			auto upload = m_job.m_upload.Alloc<GpuCollisionCounters>(1);
+			auto* counters = upload.ptr<GpuCollisionCounters>();
+			*counters = {};
+			m_job.m_cmd_list.CopyBufferRegion(m_r_counters.get(), 0, upload);
+
+			m_job.m_barriers.Transition(m_r_counters.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			m_job.m_barriers.Commit();
+		}
+
+		// Dispatch the GJK compute shader
+		{
+			auto cb = cbCollision{ .pair_count = static_cast<uint32_t>(pair_count) };
+
+			m_job.m_cmd_list.SetPipelineState(m_cs_gjk.m_pso.get());
+			m_job.m_cmd_list.SetComputeRootSignature(m_cs_gjk.m_sig.get());
+			m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
+			m_job.m_cmd_list.AddComputeRootShaderResourceView(m_r_shapes->GetGPUVirtualAddress());
+			m_job.m_cmd_list.AddComputeRootShaderResourceView(m_r_pairs->GetGPUVirtualAddress());
+			m_job.m_cmd_list.AddComputeRootShaderResourceView(m_r_verts->GetGPUVirtualAddress());
+			m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_contacts->GetGPUVirtualAddress());
+			m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_counters->GetGPUVirtualAddress());
+
+			auto dispatch_count = (pair_count + ThreadGroupSize - 1) / ThreadGroupSize;
+			m_job.m_cmd_list.Dispatch(dispatch_count, 1, 1);
+
+			// UAV barriers to ensure compute finishes before readback
+			m_job.m_barriers.UAV(m_r_contacts.get());
+			m_job.m_barriers.UAV(m_r_counters.get());
+		}
+
+		// Read back contacts and counter
+		GpuReadbackBuffer::Allocation readback_contacts;
+		GpuReadbackBuffer::Allocation readback_counters;
+		{
+			m_job.m_barriers.Transition(m_r_contacts.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			m_job.m_barriers.Transition(m_r_counters.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			m_job.m_barriers.Commit();
+
+			readback_contacts = m_job.m_readback.Alloc<GpuContact>(pair_count);
+			m_job.m_cmd_list.CopyBufferRegion(readback_contacts, m_r_contacts.get(), 0);
+
+			readback_counters = m_job.m_readback.Alloc<GpuCollisionCounters>(1);
+			m_job.m_cmd_list.CopyBufferRegion(readback_counters, m_r_counters.get(), 0);
+
+			// Transition back for next frame
+			m_job.m_barriers.Transition(m_r_contacts.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			m_job.m_barriers.Transition(m_r_counters.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		}
+
+		// Execute and wait for GPU completion
+		m_job.Run();
+
+		// Read the contact count
+		auto* counters = readback_counters.ptr<GpuCollisionCounters>();
+		auto contact_count = static_cast<int>(counters->contact_count);
+		contact_count = std::min(contact_count, pair_count); // safety clamp
+
+		// Copy contacts to output
+		out_contacts.resize(contact_count);
+		if (contact_count > 0)
+			memcpy(out_contacts.data(), readback_contacts.ptr<GpuContact>(), contact_count * sizeof(GpuContact));
+
+		return contact_count;
+	}
+
+	// Compile the GJK compute shader from embedded resources.
+	void GpuCollisionDetector::CompileShader()
+	{
+		auto device = static_cast<ID3D12Device4*>(m_gpu);
+		ShaderCompiler compiler = ShaderCompiler{}
+			.Source(resource::Read<char>(L"PHYSICS_GJK_HLSL", L"TEXT"))
+			.Includes({ new ResourceIncludeHandler, true })
+			.EntryPoint(L"CSCollisionDetect")
+			.ShaderModel(L"cs_6_0")
+			.Optimise();
+
+		auto bytecode = compiler.Compile();
+
+		// Root signature: constants + 3 SRVs + 2 UAVs
+		m_cs_gjk.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+			.U32<cbCollision>(EReg::Params)
+			.SRV(EReg::Shapes)
+			.SRV(EReg::Pairs)
+			.SRV(EReg::Verts)
+			.UAV(EReg::Contacts)
+			.UAV(EReg::Counters)
+			.Create(device, "Physics:GjkSig");
+
+		m_cs_gjk.m_pso = ComputePSO(m_cs_gjk.m_sig.get(), bytecode)
+			.Create(device, "Physics:GjkPSO");
+	}
+
+	// Create GPU buffers for collision pipeline.
+	void GpuCollisionDetector::ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs)
+	{
+		max_shapes = std::max(1, max_shapes);
+		max_verts = std::max(1, max_verts);
+		max_pairs = std::max(1, max_pairs);
+
+		// SRV buffers (created in COMMON state, transitioned to SRV on first use)
+		if (m_r_shapes == nullptr || max_shapes > m_max_shapes)
+		{
+			m_r_shapes = m_gpu.CreateResource(ResDesc::Buf<GpuShape>(max_shapes, {}), cmd_list, "Physics:Shapes");
+			m_max_shapes = max_shapes;
+		}
+		if (m_r_verts == nullptr || max_verts > m_max_verts)
+		{
+			m_r_verts = m_gpu.CreateResource(ResDesc::Buf<v4>(max_verts, {}), cmd_list, "Physics:CollisionVerts");
+			m_max_verts = max_verts;
+		}
+		if (m_r_pairs == nullptr || max_pairs > m_max_pairs)
+		{
+			m_r_pairs = m_gpu.CreateResource(ResDesc::Buf<GpuCollisionPair>(max_pairs, {}), cmd_list, "Physics:CollisionPairs");
+			m_r_contacts = m_gpu.CreateResource(ResDesc::Buf<GpuContact>(max_pairs, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:Contacts");
+			m_max_pairs = max_pairs;
+		}
+		if (m_r_counters == nullptr)
+		{
+			m_r_counters = m_gpu.CreateResource(ResDesc::Buf<GpuCollisionCounters>(1, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:CollisionCounters");
+		}
+	}
+
+	// Custom deleter implementation (GpuCollisionDetector is complete here)
+	void Deleter<GpuCollisionDetector>::operator()(GpuCollisionDetector* p) const
+	{
+		delete p;
+	}
+}

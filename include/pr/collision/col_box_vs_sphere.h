@@ -23,7 +23,7 @@ namespace pr::collision
 
 		// Convert into box space
 		// Box centre to sphere centre vector in box space
-		auto r2l = InvertAffine(l2w) * r2w.pos - v4::Origin();
+		auto r2l = InvertOrthonormal(l2w) * r2w.pos - v4::Origin();
 	
 		// Get a vector from the sphere to the nearest point on the box
 		auto closest = v4::Zero();

@@ -129,11 +129,12 @@ namespace pr::physics
 			}
 		}
 
-		// If the polytope is degenerate, use the weighted average vertex positions
+		// If the polytope is degenerate, use the average vertex position as a point mass
 		if (FEql(volume, 0.f))
 		{
 			auto centre = v4::Zero();
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) centre += *v;
+			centre /= static_cast<float>(shape.m_vert_count);
 			return Inertia::Point(1.0f, centre).To3x3();
 		}
 

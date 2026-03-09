@@ -11,8 +11,6 @@
 #include "src/forward.h"
 #include "src/ui/sandbox_ui.h"
 #include "src/unittests/sandbox_tests.h"
-#include "pr/common/command_line.h"
-#include <crtdbg.h>
 
 // Enable ComCtl32 v6 visual styles (modern themed controls)
 #pragma comment(linker, "\"/manifestdependency:type='win32' \

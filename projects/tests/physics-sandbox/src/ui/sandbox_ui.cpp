@@ -89,7 +89,7 @@ namespace physics_sandbox
 			.parent(this_)
 			.bkgd_colour(Colour(0xFF808080))
 			.dock(EDock::Fill))
-		, m_scene()
+		, m_scene(m_view3d.D3DDevice())
 		, m_pause_on_collision(false)
 		, m_frame_count(0)
 		, m_fps_elapsed(0)
@@ -146,7 +146,7 @@ namespace physics_sandbox
 
 			// U=toggle GPU/CPU integration
 			if (args.m_vk_key == 'U')
-				m_scene.m_physics.m_use_gpu = !m_scene.m_physics.m_use_gpu;
+				m_scene.m_physics.UseGpu(!m_scene.m_physics.UseGpu());
 
 			// T=run all test scenarios
 			if (args.m_vk_key == 'T')
@@ -164,15 +164,14 @@ namespace physics_sandbox
 			// Ctrl+O=open scene file
 			if (args.m_vk_key == 'O' && (GetKeyState(VK_CONTROL) & 0x8000))
 				OpenSceneFile();
+
+			// D=toggle details panel visibility
+			if (args.m_vk_key == 'D')
+				m_details.TogglePin();
 		};
 
 		// Give Body access to the renderer for creating graphics objects from LDraw script
 		Body::s_rdr = &m_view3d.m_rdr;
-
-		// Initialise GPU-accelerated physics integration.
-		// Pass the D3D12 device from the renderer so the GPU integrator shares the
-		// same adapter. The engine starts in GPU mode; press 'U' to toggle CPU/GPU.
-		m_scene.m_physics.InitGpu(m_view3d.m_rdr.D3DDevice(), Scene::MaxBodies);
 
 		// Hook the scene population event — called each frame during DoRender() to add
 		// objects to the scene's drawlist before rendering.
@@ -446,7 +445,7 @@ namespace physics_sandbox
 				ScenarioName(m_scene.m_scenario),
 				m_scene.m_clock,
 				m_scene.m_diag.count,
-				m_scene.m_physics.m_use_gpu ? "GPU" : "CPU",
+				m_scene.m_physics.UseGpu() ? "GPU" : "CPU",
 				m_fps));
 		}
 

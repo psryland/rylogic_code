@@ -21,7 +21,6 @@
       <PreprocessorDefinitions>
 				;%(PreprocessorDefinitions)
 				;PR_UNITTESTS=1
-				;PR_PHYSICS_GPU=1
       </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
 				;$(ProjectDir)
@@ -80,14 +79,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix6x8.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\forward.h" />
@@ -116,13 +107,6 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h" />
     <ClInclude Include="..\..\..\include\pr\collision\forward.h" />
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_collision.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_field.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_impulse.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_inertia.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_integrator.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_rigid_body.h" />
-    <ClInclude Include="..\..\rylogic\physics-2\src\unittests\test_shape_builder.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\diagnostics\diagnostics.h" />
     <ClInclude Include="src\scene\body.h" />
@@ -149,4 +133,11 @@
     <None Include="scenes\three_body_chain.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- Run unit tests as a post-build step in Debug builds.
+       IgnoreExitCode allows the build to succeed even if tests fail,
+       so that test failures don't block iteration during development.
+  <Target Name="RunUnitTests" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
+    <Exec Command="&quot;$(TargetPath)&quot; -unittest" WorkingDirectory="$(TargetDir)" IgnoreExitCode="true" />
+  </Target>
+       -->
 </Project>

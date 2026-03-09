@@ -24,7 +24,7 @@ namespace pr::physics
 			PR_EXPECT(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}));
 			PR_EXPECT(FEql(I0, Inertia{I0.To6x6()}));
 
-			auto I1 = Transform(I0, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
+			auto I1 = Transform(I0, m4x4::Transform(RotationRad<m3x4>(constants<float>::tau_by_4, constants<float>::tau_by_4, 0), v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
 			PR_EXPECT(FEql(I1, Inertia{I1.To3x3(1), I1.Mass()}));
 			PR_EXPECT(FEql(I1, Inertia{I1.To6x6()}));
 
@@ -44,7 +44,7 @@ namespace pr::physics
 			PR_EXPECT(FEql(I0_inv, InertiaInv{I0_inv.To3x3(1), I0_inv.InvMass()}));
 			PR_EXPECT(FEql(I0_inv, InertiaInv{I0_inv.To6x6()}));
 
-			auto I1_inv = Transform(I0_inv, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
+			auto I1_inv = Transform(I0_inv, m4x4::Transform(RotationRad<m3x4>(constants<float>::tau_by_4, constants<float>::tau_by_4, 0), v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
 			PR_EXPECT(FEql(I1_inv, InertiaInv{I1_inv.To3x3(1), I1_inv.InvMass()}));
 			PR_EXPECT(FEql(I1_inv, InertiaInv{I1_inv.To6x6()}));
 
@@ -68,8 +68,8 @@ namespace pr::physics
 			auto Ic1 = Ic0;
 
 			Ic1 = Translate(Ic1, v4{1,0,0,0}, ETranslateInertia::AwayFromCoM);
-			Ic1 = Rotate(Ic1, m3x4::Rotation(float(maths::tau_by_4), 0, 0));
-			Ic1 = Rotate(Ic1, m3x4::Rotation(0, float(maths::tau_by_4), 0));
+			Ic1 = Rotate(Ic1, RotationRad<m3x4>(constants<float>::tau_by_4, 0, 0));
+			Ic1 = Rotate(Ic1, RotationRad<m3x4>(0, constants<float>::tau_by_4, 0));
 			Ic1 = Translate(Ic1, v4{0,0,1,0}, ETranslateInertia::TowardCoM);
 
 			PR_EXPECT(FEqlRelative(Ic0, Ic1, 0.0001f));
@@ -79,7 +79,7 @@ namespace pr::physics
 		{
 			auto mass = 5.0f;
 			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
-			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
+			auto a2b = m4x4::Transform(RotationRad<m3x4>(constants<float>::tau_by_4, constants<float>::tau_by_4, 0), v4{0,0,1,1});
 			auto Ic0 = Inertia{moment, mass};
 			auto Ic1 = Translate(Rotate(Ic0, a2b.rot), a2b.pos, ETranslateInertia::AwayFromCoM);
 			auto Ic2 = Transform(Ic0, a2b, ETranslateInertia::AwayFromCoM);
@@ -89,7 +89,7 @@ namespace pr::physics
 		PRUnitTestMethod(TranslateInverse)
 		{
 			auto mass = 5.0f;
-			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
+			auto a2b = m4x4::Transform(RotationRad<m3x4>(constants<float>::tau_by_4, constants<float>::tau_by_4, 0), v4{0,0,1,1});
 			auto Ic0 = Rotate(Inertia::Box(v4{1,2,3,0}, mass, v4{1,1,1,0}), a2b.rot);
 			auto Ic0_inv = Invert(Ic0);
 

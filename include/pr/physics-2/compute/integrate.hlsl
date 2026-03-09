@@ -18,8 +18,8 @@
 //   For matrix compose:    mul(A, B) composes A then B (C++ equivalent: B_cpp * A_cpp).
 //   See spatial_algebra.hlsli for full convention documentation.
 
-#include "core.hlsli"
-#include "spatial_algebra.hlsli"
+#include "pr/hlsl/core.hlsli"
+#include "pr/hlsl/spatial_algebra.hlsli"
 
 // Must match the C++ RigidBodyDynamics struct exactly (176 bytes per element).
 struct RigidBodyDynamics

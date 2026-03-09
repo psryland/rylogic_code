@@ -15,6 +15,9 @@
 
 namespace pr::rdr12
 {
+	// Notes:
+	//  - GpuJob is meant to be a long-lived object. You Run() on it each frame rather than creating a new GpuJob each frame.
+	//
 	// System Values:
 	//   'dtid' = dispatch thread index (i.e. global thread index)
 	//   'gtid' = group thread index (i.e. group relative thread index)

@@ -175,19 +175,19 @@ namespace pr::physics
 		friend v8force operator * (Inertia const& inertia, v8motion const& motion);
 		#pragma endregion
 	};
-
-	// Inverse Inertia.
-	// See: RBDA 2.73
-	// The format of the inverse inertia expressed at the centre of mass is:
-	//   InvMass * [Ic¯ 0]
-	//             [0   1]
-	//  where:
-	//    'Ic¯' is the inverse of 'Ic', the inertia expressed at the centre of mass,
-	// The form of the inverse inertia expressed at an arbitrary point is:
-	//  Io¯ = InvMass * [Ic¯   ,       Ic¯cxT] = InvMass * [Ic¯   ,      -Ic¯cx]
-	//                  [cxIc¯ , 1 + cxIc¯cxT]             [cxIc¯ , 1 - cxIc¯cx]
 	struct InertiaInv
 	{
+		// Notes:
+		// See: RBDA 2.73
+		// The format of the inverse inertia expressed at the centre of mass is:
+		//   InvMass * [Ic¯ 0]
+		//             [0   1]
+		//  where:
+		//    'Ic¯' is the inverse of 'Ic', the inertia expressed at the centre of mass,
+		// The form of the inverse inertia expressed at an arbitrary point is:
+		//  Io¯ = InvMass * [Ic¯   ,       Ic¯cxT] = InvMass * [Ic¯   ,      -Ic¯cx]
+		//                  [cxIc¯ , 1 + cxIc¯cxT]             [cxIc¯ , 1 - cxIc¯cx]
+
 		v4 m_diagonal;        // The Ixx, Iyy, Izz terms of the unit inverse inertia
 		v4 m_products;        // The Ixy, Ixz, Iyz terms of the unit inverse inertia
 		v4 m_com_and_invmass; // Offset from the origin to the centre of mass, and the inverse mass.

@@ -339,8 +339,8 @@ namespace pr::collision
 		auto featB = EFeature{};
 		v4 pointA[FeaturePolygonMaxSides] = {};
 		v4 pointB[FeaturePolygonMaxSides] = {};
-		SupportFeature(lhs, InvertAffine(l2w) * +axis, featA, pointA);
-		SupportFeature(rhs, InvertAffine(r2w) * -axis, featB, pointB);
+		SupportFeature(lhs, InvertOrthonormal(l2w) * +axis, featA, pointA);
+		SupportFeature(rhs, InvertOrthonormal(r2w) * -axis, featB, pointB);
 
 		return FindContactPoint(pointA, featA, pointB, featB, l2w, r2w, axis, pen);
 	}

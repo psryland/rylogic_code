@@ -8,7 +8,8 @@
 
 namespace pr::rdr12
 {
-	Gpu::Gpu(ID3D12Device4* existing_device)
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	Gpu<ListType>::Gpu(ID3D12Device4* existing_device)
 		: m_device(existing_device, true)
 		, m_cmd_queue()
 		, m_gsync()
@@ -28,8 +29,8 @@ namespace pr::rdr12
 				Check(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)dbg.address_of()));
 				dbg->EnableDebugLayer();
 
-				#define HP_ENABLE_GPU_VALIDATION 0
-				#if HP_ENABLE_GPU_VALIDATION
+				#define PR_RDR12_GPU_VALIDATION 0
+				#if PR_RDR12_GPU_VALIDATION
 				{
 					#pragma message(HP_FILE_LINE "WARNING: ************************************************** GPU Validation enabled")
 
@@ -74,31 +75,37 @@ namespace pr::rdr12
 	}
 
 	// Allow use as a device
-	ID3D12Device4 const* Gpu::operator -> () const
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	ID3D12Device4 const* Gpu<ListType>::operator -> () const
 	{
 		return m_device.get();
 	}
-	ID3D12Device4* Gpu::operator ->()
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	ID3D12Device4* Gpu<ListType>::operator ->()
 	{
 		return m_device.get();
 	}
-	Gpu::operator ID3D12Device4 const* () const
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	Gpu<ListType>::operator ID3D12Device4 const* () const
 	{
 		return m_device.get();
 	}
-	Gpu::operator ID3D12Device4* ()
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	Gpu<ListType>::operator ID3D12Device4* ()
 	{
 		return m_device.get();
 	}
 	
 	// Access the GPU upload buffer
-	GpuUploadBuffer& Gpu::UploadBuffer()
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	GpuUploadBuffer& Gpu<ListType>::UploadBuffer()
 	{
 		return m_upload_buffer;
 	}
 
 	// Allocate a DX resource
-	D3DPtr<ID3D12Resource> Gpu::CreateResource(ResDesc const& desc, GfxCmdList& cmd_list, std::string_view name)
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	D3DPtr<ID3D12Resource> Gpu<ListType>::CreateResource(ResDesc const& desc, CmdList<ListType>& cmd_list, std::string_view name)
 	{
 		D3DPtr<ID3D12Resource> res;
 		auto has_init_data = !desc.Data.empty();
@@ -154,4 +161,7 @@ namespace pr::rdr12
 		barriers.Commit();
 		return res;
 	}
+
+	template class Gpu<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	template class Gpu<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 }

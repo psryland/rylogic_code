@@ -22,11 +22,11 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/collision/shape_box.h"
+#include "pr/physics-2/collision/broadphase_brute.h"
+#include "pr/physics-2/integrator/engine.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
 #include "pr/physics-2/shape/inertia.h"
-#include "pr/physics-2/broadphase/brute.h"
-#include "pr/physics-2/integrator/engine.h"
-#include "pr/physics-2/material/material_map.h"
+#include "pr/physics-2/materials/material_map.h"
 
 namespace pr::physics
 {
@@ -80,7 +80,7 @@ namespace pr::physics
 			ShapeBox& box,
 			v4 pos_a, v4 vel_a, float mass_a,
 			v4 pos_b, v4 vel_b, float mass_b,
-			v4 ang_vel_a = v4Zero, v4 ang_vel_b = v4Zero)
+			v4 ang_vel_a = v4::Zero(), v4 ang_vel_b = v4::Zero())
 		{
 			auto result = CollisionResult{};
 			result.collision_occurred = false;
@@ -114,9 +114,11 @@ namespace pr::physics
 
 			// Hook the PostCollisionDetection event to capture pre-impulse state.
 			// This fires after Evolve and collision detection, but before impulse resolution.
-			engine.PostCollisionDetection += [&](auto&, auto& collisions)
+			engine.PostCollisionDetection += [&](auto&, auto args)
 			{
-				if (collisions.empty()) return;
+				if (args.m_contacts.empty())
+					return;
+
 				result.before = SystemState::Capture(body_a, body_b);
 				result.collision_occurred = true;
 			};
