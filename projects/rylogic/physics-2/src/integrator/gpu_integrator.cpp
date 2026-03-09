@@ -33,6 +33,7 @@ namespace pr::physics
 
 	GpuIntegrator::GpuIntegrator(Gpu& gpu)
 		: m_gpu(gpu)
+		, m_job(m_gpu, "PhysicsIntegrate", 0xFF4080FF, 2)
 		, m_cs_integrate()
 		, m_r_bodies()
 		, m_r_output()
@@ -52,62 +53,61 @@ namespace pr::physics
 
 		// Create a compute job for this integration step.
 		// GpuJob is self-contained: owns command list, allocator, barriers, upload/readback.
-		GpuJob job(m_gpu, "PhysicsIntegrate", 0xFF4080FF, 2);
 
-		ResizeBuffers(job.m_cmd_list, body_count);
+		ResizeBuffers(m_job.m_cmd_list, body_count);
 
 		// Upload body dynamics to the GPU buffer
 		{
-			job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_COPY_DEST);
-			job.m_barriers.Commit();
+			m_job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			m_job.m_barriers.Commit();
 
-			auto upload = job.m_upload.template Alloc<RigidBodyDynamics>(body_count);
+			auto upload = m_job.m_upload.template Alloc<RigidBodyDynamics>(body_count);
 			memcpy(upload.template ptr<RigidBodyDynamics>(), dynamics.data(), body_count * sizeof(RigidBodyDynamics));
-			job.m_cmd_list.CopyBufferRegion(m_r_bodies.get(), 0, upload);
+			m_job.m_cmd_list.CopyBufferRegion(m_r_bodies.get(), 0, upload);
 
-			job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Commit();
+			m_job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			m_job.m_barriers.Commit();
 		}
 
 		// Dispatch the compute shader
 		{
 			auto cb = cbIntegrate{.dt = dt, .body_count = static_cast<uint32_t>(body_count)};
 
-			job.m_cmd_list.SetPipelineState(m_cs_integrate.m_pso.get());
-			job.m_cmd_list.SetComputeRootSignature(m_cs_integrate.m_sig.get());
-			job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
+			m_job.m_cmd_list.SetPipelineState(m_cs_integrate.m_pso.get());
+			m_job.m_cmd_list.SetComputeRootSignature(m_cs_integrate.m_sig.get());
+			m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
+			m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bodies->GetGPUVirtualAddress());
+			m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
 
 			auto dispatch_count = (body_count + ThreadGroupSize - 1) / ThreadGroupSize;
-			job.m_cmd_list.Dispatch(dispatch_count, 1, 1);
+			m_job.m_cmd_list.Dispatch(dispatch_count, 1, 1);
 
 			// UAV barrier to ensure the compute shader finishes before readback
-			job.m_barriers.UAV(m_r_bodies.get());
-			job.m_barriers.UAV(m_r_output.get());
+			m_job.m_barriers.UAV(m_r_bodies.get());
+			m_job.m_barriers.UAV(m_r_output.get());
 		}
 
 		// Read back updated body dynamics
 		GpuReadbackBuffer::Allocation readback_bodies;
 		GpuReadbackBuffer::Allocation readback_output;
 		{
-			job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-			job.m_barriers.Commit();
+			m_job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			m_job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			m_job.m_barriers.Commit();
 
-			readback_bodies = job.m_readback.template Alloc<RigidBodyDynamics>(body_count);
-			job.m_cmd_list.CopyBufferRegion(readback_bodies, m_r_bodies.get(), 0);
+			readback_bodies = m_job.m_readback.template Alloc<RigidBodyDynamics>(body_count);
+			m_job.m_cmd_list.CopyBufferRegion(readback_bodies, m_r_bodies.get(), 0);
 
-			readback_output = job.m_readback.template Alloc<IntegrateOutput>(body_count);
-			job.m_cmd_list.CopyBufferRegion(readback_output, m_r_output.get(), 0);
+			readback_output = m_job.m_readback.template Alloc<IntegrateOutput>(body_count);
+			m_job.m_cmd_list.CopyBufferRegion(readback_output, m_r_output.get(), 0);
 
 			// Transition back to UAV for next step
-			job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			m_job.m_barriers.Transition(m_r_bodies.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			m_job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		}
 
 		// Execute and wait for GPU completion
-		job.Run();
+		m_job.Run();
 
 		// Copy results back to the caller's buffer
 		memcpy(dynamics.data(), readback_bodies.template ptr<RigidBodyDynamics>(), body_count * sizeof(RigidBodyDynamics));

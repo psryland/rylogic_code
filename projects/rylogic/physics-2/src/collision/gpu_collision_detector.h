@@ -14,6 +14,7 @@ namespace pr::physics
 	struct GpuCollisionDetector
 	{
 		Gpu& m_gpu;                          // Lightweight D3D12 wrapper (device + command queue)
+		GpuJob m_job;                        // GpuJob for running the collision compute shader
 		ComputeStep m_cs_gjk;                // Root signature + PSO for the GJK shader
 		D3DPtr<ID3D12Resource> m_r_shapes;   // GPU buffer: StructuredBuffer<GpuShape>
 		D3DPtr<ID3D12Resource> m_r_verts;    // GPU buffer: StructuredBuffer<float4>
