@@ -5639,7 +5639,7 @@ namespace pr::rdr12::ldraw
 						auto scale = m4x4::Scale(m_to_px * ViewPortSize / w, m_to_px * ViewPortSize / h, 1, v4::Origin());
 
 						// Construct the 'i2w' using the screen space position
-						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale();
+						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale().w1();
 					};
 					break;
 				}
