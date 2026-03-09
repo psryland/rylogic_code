@@ -177,7 +177,7 @@ namespace physics_sandbox
 		// objects to the scene's drawlist before rendering.
 		m_view3d.OnAddToScene += [&](auto&, rdr12::Scene& scene)
 		{
-			for (int i = 0; i != m_scene.m_body_count; ++i)
+			for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
 				m_scene.m_body[i].AddToScene(scene);
 
 			if (m_scene.m_ground_gfx)
@@ -193,7 +193,7 @@ namespace physics_sandbox
 		// graphics objects before the renderer is destroyed.
 		m_view3d.m_scene.ClearDrawlists();
 
-		for (int i = 0; i != m_scene.m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
 			m_scene.m_body[i].m_gfx = nullptr;
 
 		m_scene.m_ground_gfx = nullptr;
@@ -210,7 +210,7 @@ namespace physics_sandbox
 			// Clear drawlists before releasing objects to avoid RenderStep assert
 			m_view3d.m_scene.ClearDrawlists();
 
-			for (int i = 0; i != m_scene.m_body_count; ++i)
+			for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
 				m_scene.m_body[i].m_gfx = nullptr;
 
 			m_scene.m_ground_gfx = nullptr;
@@ -417,7 +417,7 @@ namespace physics_sandbox
 
 		// Sync each body's View3D graphics to its physics transform.
 		// This is cheap — just copying an O2W matrix per body.
-		for (int i = 0; i != m_scene.m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
 			m_scene.m_body[i].UpdateGfx();
 
 		// Render the 3D viewport. Objects are added to the scene via the
@@ -467,7 +467,7 @@ namespace physics_sandbox
 	// Used to frame the camera when loading a new scene.
 	BBox SandboxUI::ComputeSceneBBox() const
 	{
-		if (m_scene.m_body_count == 0)
+		if (m_scene.m_body.empty())
 			return BBox{ v4{0, 0, 0, 1}, v4{5, 5, 5, 0} };
 
 		// Find the min/max extents of all dynamic body positions.
@@ -475,7 +475,7 @@ namespace physics_sandbox
 		// can see the ground surface, not just the bodies floating in space.
 		auto lo = pr::v4{ +1e10f, +1e10f, +1e10f, 1 };
 		auto hi = pr::v4{ -1e10f, -1e10f, -1e10f, 1 };
-		for (int i = 0; i != m_scene.m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
 		{
 			// Skip static (ground) bodies — they're huge and would dominate the bbox
 			if (m_scene.m_body[i].Mass() > pr::physics::InfiniteMass * 0.5f)

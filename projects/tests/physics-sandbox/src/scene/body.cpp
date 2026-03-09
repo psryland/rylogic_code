@@ -9,28 +9,31 @@ namespace physics_sandbox
 		: physics::RigidBody()
 		, m_gfx()
 	{
-		// Rebuild graphics whenever the collision shape changes
-		ShapeChange += [&](auto&, auto args)
+		// Rebuild graphics whenever the collision shape changes.
+		// The handler uses the sender reference (not a captured 'this') so that
+		// it remains valid after the Body is moved by std::vector reallocation.
+		ShapeChange += [](RigidBody& sender, auto args)
 		{
+			auto& self = static_cast<Body&>(sender);
 			if (args.before())
 			{
 				// Release the old graphics object (ref-counted, so deletion is automatic)
-				m_gfx = nullptr;
+				self.m_gfx = nullptr;
 			}
 			else
 			{
 				// Create new graphics from the physics shape using LDraw
-				if (HasShape() && s_rdr)
+				if (self.HasShape() && s_rdr)
 				{
 					using namespace pr::rdr12::ldraw;
 					static std::default_random_engine rng;
 					Builder builder;
-					builder._<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f)).rigid_body(*this);
+					builder._<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f)).rigid_body(self);
 					auto result = Parse(*s_rdr, builder.ToText(false));
 					if (!result.m_objects.empty())
-						m_gfx = result.m_objects.front();
+						self.m_gfx = result.m_objects.front();
 				}
-				UpdateGfx();
+				self.UpdateGfx();
 			}
 		};
 	}

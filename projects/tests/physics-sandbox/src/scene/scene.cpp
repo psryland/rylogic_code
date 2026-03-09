@@ -19,7 +19,6 @@ namespace physics_sandbox
 
 	Scene::Scene(ID3D12Device4* existing_device)
 		: m_body()
-		, m_body_count(2)
 		, m_broadphase()
 		, m_materials()
 		, m_physics(m_broadphase, m_materials, existing_device)
@@ -69,9 +68,13 @@ namespace physics_sandbox
 		// Clean up the ground plane visual
 		CleanupGroundGfx();
 
+		// Clear the broadphase before modifying bodies. The broadphase holds raw
+		// pointers to RigidBody objects, which become invalid if the vector resizes.
+		m_broadphase.Clear();
+
 		// Release any shapes owned by a previously loaded JSON scene.
 		// Must happen BEFORE SetupScenario assigns new shapes to bodies.
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_body[i].Shape(nullptr);
 		m_owned_shapes.clear();
 
@@ -87,12 +90,12 @@ namespace physics_sandbox
 
 		// Rebuild the broadphase with the active bodies
 		m_broadphase.Clear();
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_broadphase.Add(m_body[i]);
 
 		DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
 		DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto snap = BodySnapshot::Capture(m_body[i]);
 			snap.Log(pr::FmtS("Body %d (initial)", i));
@@ -117,8 +120,12 @@ namespace physics_sandbox
 		// Clean up ground plane visual from previous scene
 		CleanupGroundGfx();
 
+		// Clear the broadphase before modifying bodies. The broadphase holds raw
+		// pointers to RigidBody objects, which become invalid if the vector resizes.
+		m_broadphase.Clear();
+
 		// Clear existing bodies and owned shapes
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_body[i].Shape(nullptr);
 		m_owned_shapes.clear();
 
@@ -137,16 +144,17 @@ namespace physics_sandbox
 		mat.m_friction_static = scene_desc.friction;
 
 		// Count total bodies: scene bodies + optional ground plane body
-		auto num_scene_bodies = static_cast<int>(std::min(scene_desc.bodies.size(), static_cast<size_t>(MaxBodies)));
+		auto num_scene_bodies = static_cast<int>(scene_desc.bodies.size());
 		auto ground_body_index = -1;
-		if (scene_desc.has_ground && num_scene_bodies < MaxBodies)
+		if (scene_desc.has_ground)
 			ground_body_index = num_scene_bodies;
 
-		m_body_count = num_scene_bodies + (ground_body_index >= 0 ? 1 : 0);
+		auto total_bodies = num_scene_bodies + (ground_body_index >= 0 ? 1 : 0);
+		m_body.resize(total_bodies);
 
 		// Reserve shape storage upfront so that emplace_back doesn't relocate
 		// existing shapes (bodies hold raw pointers into the variant storage).
-		m_owned_shapes.reserve(m_body_count);
+		m_owned_shapes.reserve(total_bodies);
 
 		// Same for polytope buffers — bodies hold pointers into these byte_data buffers.
 		auto polytope_count = 0;
@@ -279,17 +287,17 @@ namespace physics_sandbox
 
 		// Rebuild the broadphase with the new bodies
 		m_broadphase.Clear();
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_broadphase.Add(m_body[i]);
 
 		DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
 		if (!scene_desc.description.empty())
 			DbgLog("  Description: %s\n", scene_desc.description.c_str());
-		DbgLog("  Bodies: %d\n", m_body_count);
+		DbgLog("  Bodies: %d\n", static_cast<int>(m_body.size()));
 		DbgLog("  Gravity: (%.2f, %.2f, %.2f)\n", m_gravity.x, m_gravity.y, m_gravity.z);
 		DbgLog("  Ground: %s (height=%.2f)\n", scene_desc.has_ground ? "yes" : "no", scene_desc.has_ground ? scene_desc.ground.height : 0.0f);
 		DbgLog("  Material: elasticity=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto snap = BodySnapshot::Capture(m_body[i]);
 			auto name = (i < static_cast<int>(scene_desc.bodies.size())) ? scene_desc.bodies[i].name.c_str() : "ground";
@@ -312,7 +320,7 @@ namespace physics_sandbox
 		// Forces are cleared by Evolve() at the end of each step, so we re-apply each frame.
 		if (m_gravity != pr::v4::Zero())
 		{
-			for (int i = 0; i != m_body_count; ++i)
+			for (int i = 0; i != std::ssize(m_body); ++i)
 			{
 				auto mass = m_body[i].Mass();
 				if (mass < pr::physics::InfiniteMass * 0.5f)
@@ -321,13 +329,13 @@ namespace physics_sandbox
 		}
 
 		// Step physics (Evolve → Broad Phase → Narrow Phase → PostCollisionDetection → Resolve)
-		auto bodies = std::span<Body>(m_body, m_body_count);
+		auto bodies = std::span(m_body);
 		m_physics.Step(dt, bodies);
 
 		#ifdef PR_PHYSICS_DIAGNOSTICS
 		// If a collision occurred this step, capture post-impulse snapshots.
 		// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
-		if (m_diag.occurred && m_body_count == 2)
+		if (m_diag.occurred && std::ssize(m_body) == 2)
 		{
 			m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
 			m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
@@ -336,7 +344,7 @@ namespace physics_sandbox
 		#endif
 
 		// NaN guard
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto pos = m_body[i].O2W().pos;
 			if (!std::isfinite(pos.x) || !std::isfinite(pos.y) || !std::isfinite(pos.z))
@@ -350,7 +358,7 @@ namespace physics_sandbox
 		// Kill zone: freeze bodies that have fallen below the threshold.
 		// This prevents escaped bodies from accumulating extreme velocities
 		// that corrupt float precision for the entire simulation.
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto mass = m_body[i].Mass();
 			if (mass >= pr::physics::InfiniteMass * 0.5f)
@@ -371,12 +379,12 @@ namespace physics_sandbox
 	// forces so that collisions can be validated against analytic predictions.
 	void Scene::SetupScenario()
 	{
-		m_body_count = 2;
+		m_body.resize(2);
 		auto& objA = m_body[0];
 		auto& objB = m_body[1];
 
 		// Common setup: zero forces/momentum
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			m_body[i].ZeroForces();
 			m_body[i].ZeroMomentum();
@@ -596,7 +604,7 @@ namespace physics_sandbox
 			{
 				m_diag.occurred = false;
 
-				auto bodies = std::span<Body>(m_body, m_body_count);
+				auto bodies = std::span(m_body);
 				m_physics.Step(dt, bodies);
 				m_clock += dt;
 

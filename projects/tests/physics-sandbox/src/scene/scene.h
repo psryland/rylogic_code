@@ -25,10 +25,7 @@ namespace physics_sandbox
 	// the interactive sandbox and the headless unit test mode.
 	struct Scene
 	{
-		static constexpr int MaxBodies = 16;
-
-		Body m_body[MaxBodies];
-		int  m_body_count;
+		std::vector<Body> m_body;
 
 		// Broadphase and materials are owned by the scene and passed by reference
 		// to the engine. This keeps the engine decoupled from concrete implementations.

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iomanip>
 #include <span>
+#include <iterator>
 #include <memory>
 #include <deque>
 #include <filesystem>
