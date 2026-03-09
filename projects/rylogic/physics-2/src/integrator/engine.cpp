@@ -29,6 +29,8 @@ namespace pr::physics
 		std::vector<GpuCollisionPair> m_col_pairs;
 		std::vector<v4> m_col_shape_verts;
 		std::vector<BodyPair> m_body_pairs;
+		std::vector<RbContact> m_collision_queue;
+		std::vector<GpuContact> m_gpu_contacts;
 		std::unordered_map<Shape const*, int> m_shape_map;
 
 		void Reset()
@@ -37,19 +39,10 @@ namespace pr::physics
 			m_col_pairs.resize(0);
 			m_col_shape_verts.resize(0);
 			m_body_pairs.resize(0);
+			m_collision_queue.resize(0);
 			m_shape_map.clear();
 		}
 	};
-
-	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
-	{
-		delete cache;
-	}
-
-	void Deleter<Gpu>::operator()(Gpu* p) const
-	{
-		delete p;
-	}
 
 	Engine::Engine(IBroadphase& bp, IMaterials& mats, ID3D12Device4* existing_device)
 		: m_broadphase(bp)
@@ -98,6 +91,8 @@ namespace pr::physics
 		auto& col_shape_verts = m_cache->m_col_shape_verts;
 		auto& col_pairs = m_cache->m_col_pairs;
 		auto& body_pairs = m_cache->m_body_pairs;
+		auto& collision_queue = m_cache->m_collision_queue;
+		auto& gpu_contacts = m_cache->m_gpu_contacts;
 		auto& shape_map = m_cache->m_shape_map;
 
 		if (m_use_gpu)
@@ -125,17 +120,23 @@ namespace pr::physics
 				auto idx_b = get_or_add_shape(objB.Shape());
 
 				// Compute B-to-A transform (collision runs in A's object space)
-				auto w2a = InvertAffine(objA.O2W());
+				auto w2a = InvertOrthonormal(objA.O2W());
 				auto b2a = w2a * objB.O2W();
 
-				GpuCollisionPair pair = {};
-				pair.shape_idx_a = idx_a;
-				pair.shape_idx_b = idx_b;
-				pair.pair_index = pair_idx;
-				pair.b2a = b2a;
-				col_pairs.push_back(pair);
+				col_pairs.push_back(GpuCollisionPair{
+					.shape_idx_a = idx_a,
+					.shape_idx_b = idx_b,
+					.pair_index = pair_idx,
+					.pad0 = 0,
+					.b2a = b2a,
+				});				
 
-				body_pairs.push_back(BodyPair{ b2a, &objA, &objB });
+				body_pairs.push_back(BodyPair{
+					b2a,
+					&objA,
+					&objB,
+				});
+
 				++pair_idx;
 			});
 
@@ -143,11 +144,9 @@ namespace pr::physics
 				return;
 
 			// Phase 2: Dispatch GPU GJK collision detection.
-			std::vector<GpuContact> gpu_contacts;
 			m_gpu_collision_detector->DetectCollisions(col_pairs, col_shapes, col_shape_verts, gpu_contacts);
 
 			// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
-			std::vector<RbContact> collision_queue;
 			for (auto const& gc : gpu_contacts)
 			{
 				auto const& bp = body_pairs[gc.pair_index];
@@ -178,25 +177,11 @@ namespace pr::physics
 
 				collision_queue.push_back(c);
 			}
-
-			// Sort by time of impact
-			std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
-			{
-				return lhs.m_time < rhs.m_time;
-			});
-
-			// Notify subscribers
-			PostCollisionDetection(*this, { collision_queue });
-
-			// Apply impulses
-			for (auto& c : collision_queue)
-				ResolveCollision(c);
 		}
 		else
 		{
 			// Broad phase: find pairs of bodies whose bounding volumes overlap.
 			// Narrow phase: test each pair for actual geometric contact.
-			std::vector<RbContact> collision_queue;
 			m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
 			{
 				auto c = RbContact{ objA, objB };
@@ -208,20 +193,20 @@ namespace pr::physics
 					collision_queue.push_back(c);
 				}
 			});
-
-			// Sort the collisions by estimated time of impact so earlier collisions are resolved first.
-			std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
-			{
-				return lhs.m_time < rhs.m_time;
-			});
-
-			// Notify of detected collisions, and allow updates/additions
-			PostCollisionDetection(*this, { collision_queue });
-
-			// Apply restitution impulses to resolve each collision
-			for (auto& c : collision_queue)
-				ResolveCollision(c);
 		}
+
+		// Sort the collisions by estimated time of impact so earlier collisions are resolved first.
+		std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
+		{
+			return lhs.m_time < rhs.m_time;
+		});
+
+		// Notify of detected collisions, and allow updates/additions
+		PostCollisionDetection(*this, { collision_queue });
+
+		// Apply restitution impulses to resolve each collision
+		for (auto& c : collision_queue)
+			ResolveCollision(c);
 	}
 
 	// Narrow phase collision detection.
@@ -347,4 +332,15 @@ namespace pr::physics
 			#endif
 		}
 	}
+
+
+	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
+	{
+		delete cache;
+	}
+	void Deleter<Gpu>::operator()(Gpu* p) const
+	{
+		delete p;
+	}
+
 }

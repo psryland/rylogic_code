@@ -7,7 +7,6 @@
 //
 // Pipeline:
 //   CPU broadphase → pack shapes/pairs → GPU GJK → readback contacts → CPU impulse resolution
-//
 #pragma once
 #include "pr/physics-2/forward.h"
 #include "pr/collision/shapes.h"

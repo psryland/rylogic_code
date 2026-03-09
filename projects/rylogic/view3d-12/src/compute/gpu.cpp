@@ -29,8 +29,8 @@ namespace pr::rdr12
 				Check(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)dbg.address_of()));
 				dbg->EnableDebugLayer();
 
-				#define HP_ENABLE_GPU_VALIDATION 0
-				#if HP_ENABLE_GPU_VALIDATION
+				#define PR_RDR12_GPU_VALIDATION 0
+				#if PR_RDR12_GPU_VALIDATION
 				{
 					#pragma message(HP_FILE_LINE "WARNING: ************************************************** GPU Validation enabled")
 

@@ -147,45 +147,13 @@ namespace pr::physics
 	// simple DEFAULT heap buffers with UAV access for compute.
 	void GpuIntegrator::ResizeBuffers(CmdList& cmd_list, int capacity)
 	{
-		//auto create_buffer = [&](UINT64 size_bytes, D3DPtr<ID3D12Resource>& out_resource, char const* name)
-		//{
-		//	auto desc = D3D12_RESOURCE_DESC
-		//	{
-		//		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-		//		.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		//		.Width = size_bytes,
-		//		.Height = 1,
-		//		.DepthOrArraySize = 1,
-		//		.MipLevels = 1,
-		//		.Format = DXGI_FORMAT_UNKNOWN,
-		//		.SampleDesc = {.Count = 1, .Quality = 0},
-		//		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		//		.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-		//	};
-		//	auto heap_props = D3D12_HEAP_PROPERTIES
-		//	{
-		//		.Type = D3D12_HEAP_TYPE_DEFAULT,
-		//		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		//		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		//		.CreationNodeMask = 1,
-		//		.VisibleNodeMask = 1,
-		//	};
-		//	auto hr = m_gpu->CreateCommittedResource(
-		//		&heap_props, D3D12_HEAP_FLAG_NONE,
-		//		&desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		//		nullptr, __uuidof(ID3D12Resource),
-		//		reinterpret_cast<void**>(out_resource.address_of()));
-		//	if (FAILED(hr))
-		//		throw std::runtime_error(std::string("Failed to create GPU buffer: ") + name);
-		//};
+		capacity = std::max(1, capacity);
 
 		if (m_r_bodies == nullptr || m_capacity < capacity)
 		{
 			m_r_bodies = m_gpu.CreateResource(ResDesc::Buf<RigidBodyDynamics>(capacity, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:BodyDynamics");
 			m_r_output = m_gpu.CreateResource(ResDesc::Buf<IntegrateOutput>(capacity, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:IntegrateOutput");
 			m_capacity = capacity;
-			//create_buffer(m_capacity * sizeof(RigidBodyDynamics), m_r_bodies, "Physics:BodyDynamics");
-			//create_buffer(m_capacity * sizeof(IntegrateOutput), m_r_output, "Physics:IntegrateOutput");
 		}
 	}
 

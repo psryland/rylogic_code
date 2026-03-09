@@ -13,13 +13,13 @@ namespace pr::physics
 {
 	struct GpuCollisionDetector
 	{
-		Gpu& m_gpu;                               // Lightweight D3D12 wrapper (device + command queue)
-		ComputeStep m_cs_gjk;                      // Root signature + PSO for the GJK shader
-		D3DPtr<ID3D12Resource> m_r_shapes;         // GPU buffer: StructuredBuffer<GpuShape>
-		D3DPtr<ID3D12Resource> m_r_verts;          // GPU buffer: StructuredBuffer<float4>
-		D3DPtr<ID3D12Resource> m_r_pairs;          // GPU buffer: StructuredBuffer<GpuCollisionPair>
-		D3DPtr<ID3D12Resource> m_r_contacts;       // GPU buffer: RWStructuredBuffer<GpuContact>
-		D3DPtr<ID3D12Resource> m_r_counters;       // GPU buffer: RWStructuredBuffer<uint>
+		Gpu& m_gpu;                          // Lightweight D3D12 wrapper (device + command queue)
+		ComputeStep m_cs_gjk;                // Root signature + PSO for the GJK shader
+		D3DPtr<ID3D12Resource> m_r_shapes;   // GPU buffer: StructuredBuffer<GpuShape>
+		D3DPtr<ID3D12Resource> m_r_verts;    // GPU buffer: StructuredBuffer<float4>
+		D3DPtr<ID3D12Resource> m_r_pairs;    // GPU buffer: StructuredBuffer<GpuCollisionPair>
+		D3DPtr<ID3D12Resource> m_r_contacts; // GPU buffer: RWStructuredBuffer<GpuContact>
+		D3DPtr<ID3D12Resource> m_r_counters; // GPU buffer: RWStructuredBuffer<uint>
 		int m_max_shapes;
 		int m_max_verts;
 		int m_max_pairs;

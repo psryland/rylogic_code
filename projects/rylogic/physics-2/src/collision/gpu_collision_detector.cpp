@@ -209,63 +209,30 @@ namespace pr::physics
 	// Create GPU buffers for collision pipeline.
 	void GpuCollisionDetector::ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs)
 	{
-		//auto create_buffer = [&](UINT64 size_bytes, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES initial_state, D3DPtr<ID3D12Resource>& out_resource, char const* name)
-		//{
-		//	auto desc = D3D12_RESOURCE_DESC{
-		//		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-		//		.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		//		.Width = std::max<UINT64>(size_bytes, 16),
-		//		.Height = 1,
-		//		.DepthOrArraySize = 1,
-		//		.MipLevels = 1,
-		//		.Format = DXGI_FORMAT_UNKNOWN,
-		//		.SampleDesc = {.Count = 1, .Quality = 0},
-		//		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		//		.Flags = flags,
-		//	};
-		//	auto heap_props = D3D12_HEAP_PROPERTIES{
-		//		.Type = D3D12_HEAP_TYPE_DEFAULT,
-		//		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		//		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		//		.CreationNodeMask = 1,
-		//		.VisibleNodeMask = 1,
-		//	};
-		//	auto hr = device->CreateCommittedResource(
-		//		&heap_props, D3D12_HEAP_FLAG_NONE,
-		//		&desc, initial_state,
-		//		nullptr, __uuidof(ID3D12Resource),
-		//		reinterpret_cast<void**>(out_resource.address_of()));
-		//	if (FAILED(hr))
-		//		throw std::runtime_error(std::string("Failed to create GPU buffer: ") + name);
-		//};
+		max_shapes = std::max(1, max_shapes);
+		max_verts = std::max(1, max_verts);
+		max_pairs = std::max(1, max_pairs);
 
 		// SRV buffers (created in COMMON state, transitioned to SRV on first use)
 		if (m_r_shapes == nullptr || max_shapes > m_max_shapes)
 		{
 			m_r_shapes = m_gpu.CreateResource(ResDesc::Buf<GpuShape>(max_shapes, {}), cmd_list, "Physics:Shapes");
 			m_max_shapes = max_shapes;
-			//create_buffer(m_max_shapes * sizeof(GpuShape), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, m_r_shapes, "Physics:Shapes");
 		}
 		if (m_r_verts == nullptr || max_verts > m_max_verts)
 		{
 			m_r_verts = m_gpu.CreateResource(ResDesc::Buf<v4>(max_verts, {}), cmd_list, "Physics:CollisionVerts");
 			m_max_verts = max_verts;
-			//create_buffer(m_max_verts * sizeof(v4), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, m_r_verts, "Physics:CollisionVerts");
 		}
 		if (m_r_pairs == nullptr || max_pairs > m_max_pairs)
 		{
 			m_r_pairs = m_gpu.CreateResource(ResDesc::Buf<GpuCollisionPair>(max_pairs, {}), cmd_list, "Physics:CollisionPairs");
 			m_r_contacts = m_gpu.CreateResource(ResDesc::Buf<GpuContact>(max_pairs, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:Contacts");
 			m_max_pairs = max_pairs;
-
-			//create_buffer(m_max_pairs * sizeof(GpuCollisionPair), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, m_r_pairs, "Physics:Pairs");
-			//create_buffer(m_max_pairs * sizeof(GpuContact), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, m_r_contacts, "Physics:Contacts");
-			// UAV buffer
 		}
 		if (m_r_counters == nullptr)
 		{
 			m_r_counters = m_gpu.CreateResource(ResDesc::Buf<GpuCollisionCounters>(1, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:CollisionCounters");
-			//create_buffer(sizeof(GpuCollisionCounters), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, m_r_counters, "Physics:Counters");
 		}
 	}
 

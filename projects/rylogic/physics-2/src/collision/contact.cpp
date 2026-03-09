@@ -31,7 +31,7 @@ namespace pr::physics
 		// 'm_b2a' is the position/orientation of objB in objA space at 'time'
 		// 'm_velocity' is value of objB's velocity vector field sampled at objA's origin.
 		// 'm_point_at_t' is adjusted by half 'dt' because it is the average of the overlap.
-		m_b2a = InvertAffine(m_objA->O2W(dt_sub)) * m_objB->O2W(dt_sub);
+		m_b2a = InvertOrthonormal(m_objA->O2W(dt_sub)) * m_objB->O2W(dt_sub);
 
 		// VelocityOS() returns the spatial velocity at the CoM (because momentum and
 		// inertia are stored at the CoM). The collision code expects velocity at the

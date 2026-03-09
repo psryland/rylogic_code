@@ -135,8 +135,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <!-- Run unit tests as a post-build step in Debug builds.
        IgnoreExitCode allows the build to succeed even if tests fail,
-       so that test failures don't block iteration during development. -->
+       so that test failures don't block iteration during development.
   <Target Name="RunUnitTests" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
     <Exec Command="&quot;$(TargetPath)&quot; -unittest" WorkingDirectory="$(TargetDir)" IgnoreExitCode="true" />
   </Target>
+       -->
 </Project>

@@ -41,6 +41,6 @@ namespace pr::physics
 		void Update(float dt_sub);
 
 		// Dump the collision scene to LDraw script (best-effort, won't throw)
-		friend void Dump(Contact const& c);
+		friend void Dump(RbContact const& c);
 	};
 }
