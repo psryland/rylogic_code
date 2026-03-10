@@ -65,6 +65,9 @@
     <Filter Include="pr\physics\compute">
       <UniqueIdentifier>{48da3655-f908-4ac8-ad93-f33464cec890}</UniqueIdentifier>
     </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{deeecb5d-650d-4abf-8a66-d65a41dc0df3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
@@ -295,8 +298,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="$(RylogicRoot)include\pr\physics-2\compute\physics_shaders.rc">
-      <Filter>pr\physics\compute</Filter>
+    <ResourceCompile Include="res\compute_shaders.rc">
+      <Filter>res</Filter>
     </ResourceCompile>
   </ItemGroup>
 </Project>

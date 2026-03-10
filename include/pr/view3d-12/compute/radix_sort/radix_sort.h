@@ -282,7 +282,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 		// Sort 'values' by 'keys' using the provided command list
 		// Returns Read back buffer allocations that will contain the sorted result once the command list has been executed.
-		Result Sort(CmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback) const
+		Result Sort(CmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback)
 		{
 			if (ssize(keys) > m_size)
 			{
@@ -336,13 +336,13 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			{
 				auto buf = readback.Alloc(ssize(keys) * sizeof(Key), alignof(Key));
 				cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_sort[0].get(), 0, buf.m_size);
-				result.keys = buf;
+				result.keys = std::move(buf);
 			}
 			if constexpr (HasPayload)
 			{
 				auto buf = readback.Alloc(ssize(values) * sizeof(Value), alignof(Value));
 				cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_payload[0].get(), 0, buf.m_size);
-				result.values = buf;
+				result.values = std::move(buf);
 			}
 			
 			barriers.Transition(m_sort[0].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

@@ -137,14 +137,17 @@
     <ClInclude Include="src\unittests\test_gpu_collision.h" />
   </ItemGroup>
   <!--
+  Resources
+  -->
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\compute_shaders.rc" />
+  </ItemGroup>
+  <!--
   Targets
   -->
   <ItemGroup>
     <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl" EntryPointName="CSCollisionDetect" />
     <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl" EntryPointName="CSIntegrate" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\physics_shaders.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
