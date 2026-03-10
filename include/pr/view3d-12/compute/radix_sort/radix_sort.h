@@ -115,22 +115,20 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				.Optimise()
 				.Define(L"KEYS_PER_THREAD", std::to_wstring(m_tuning.keys_per_thread))
 				.Define(L"PART_SIZE", std::to_wstring(m_tuning.part_size));
-			if constexpr (std::is_same_v<Key, int>)
-				compiler.Define(L"KEY_TYPE", L"int");
-			if constexpr (std::is_same_v<Key, uint32_t>)
-				compiler.Define(L"KEY_TYPE", L"uint");
-			if constexpr (std::is_same_v<Key, float>)
-				compiler.Define(L"KEY_TYPE", L"float");
-			if constexpr (std::is_same_v<Value, int>)
-				compiler.Define(L"PAYLOAD_TYPE", L"int");
-			if constexpr (std::is_same_v<Value, uint32_t>)
-				compiler.Define(L"PAYLOAD_TYPE", L"uint");
-			if constexpr (std::is_same_v<Value, float>)
-				compiler.Define(L"PAYLOAD_TYPE", L"float");
-			if constexpr (Ascending)
-				compiler.Define(L"SHOULD_ASCEND");
-			if constexpr (HasPayload)
-				compiler.Define(L"SORT_PAIRS", L"1");
+
+			if      constexpr (std::is_same_v<Key, int>)      compiler.Define(L"KEY_TYPE_ID", L"0");
+			else if constexpr (std::is_same_v<Key, uint32_t>) compiler.Define(L"KEY_TYPE_ID", L"1");
+			else if constexpr (std::is_same_v<Key, float>)    compiler.Define(L"KEY_TYPE_ID", L"2");
+			else static_assert(false, "Unsupported key type");
+			
+			if      constexpr (std::is_same_v<Value, int>)      compiler.Define(L"PAYLOAD_TYPE_ID", L"0");
+			else if constexpr (std::is_same_v<Value, uint32_t>) compiler.Define(L"PAYLOAD_TYPE_ID", L"1");
+			else if constexpr (std::is_same_v<Value, float>)    compiler.Define(L"PAYLOAD_TYPE_ID", L"2");
+			else static_assert(false, "Unsupported payload type");
+
+			if constexpr (Ascending)  compiler.Define(L"SHOULD_ASCEND");
+			if constexpr (HasPayload) compiler.Define(L"SORT_PAIRS", L"1");
+
 			if (m_tuning.use_16bit)
 			{
 				compiler.Define(L"DIGIT_TYPE", L"uint16_t");
@@ -202,18 +200,6 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		// Bind the given resources for sorting
 		void Bind(CmdList& cmd_list, int64_t size, D3DPtr<ID3D12Resource> sort0, D3DPtr<ID3D12Resource> payload0)
 		{
-			// Create sort-size independent buffers
-			if (m_global_histogram == nullptr)
-			{
-				ResDesc desc = ResDesc::Buf<Key>(Radix * RadixPasses, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
-				m_global_histogram = m_gpu->CreateResource(desc, cmd_list, "RadixSort:histogram");
-			}
-			if (m_error_count == nullptr)
-			{
-				ResDesc desc = ResDesc::Buf<Key>(1, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
-				m_error_count = m_gpu->CreateResource(desc, cmd_list, "RadixSort:error_count");
-			}
-
 			// Create binding-size dependent buffers
 			{
 				ResDesc desc = ResDesc::Buf<Key>(size, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
@@ -241,6 +227,19 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			if (size == m_size)
 				return;
 
+			// Create sort-size independent buffers
+			if (m_global_histogram == nullptr)
+			{
+				ResDesc desc = ResDesc::Buf<Key>(Radix * RadixPasses, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
+				m_global_histogram = m_gpu->CreateResource(desc, cmd_list, "RadixSort:histogram");
+			}
+			if (m_error_count == nullptr)
+			{
+				ResDesc desc = ResDesc::Buf<Key>(1, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
+				m_error_count = m_gpu->CreateResource(desc, cmd_list, "RadixSort:error_count");
+			}
+
+			// Create sort-size dependent buffers
 			{
 				ResDesc desc = ResDesc::Buf<Key>(size, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
 				m_sort[0] = m_gpu->CreateResource(desc, cmd_list, "RadixSort:sort0");
