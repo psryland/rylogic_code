@@ -5,27 +5,27 @@
 #include "pr/physics-2/collision/broadphase_brute.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
 
-namespace pr::physics::broadphase
+namespace pr::physics
 {
-	Brute::Brute()
+	BroadphaseBrute::BroadphaseBrute()
 		: m_entity()
 	{
 	}
 
 	// Remove all registered bodies
-	void Brute::Clear()
+	void BroadphaseBrute::Clear()
 	{
 		m_entity.resize(0);
 	}
 
 	// Register a body for overlap testing
-	void Brute::Add(RigidBody const& obj)
+	void BroadphaseBrute::Add(RigidBody const& obj)
 	{
 		m_entity.push_back(&obj);
 	}
 
 	// Unregister a body
-	void Brute::Remove(RigidBody const& obj)
+	void BroadphaseBrute::Remove(RigidBody const& obj)
 	{
 		auto at = std::find(std::begin(m_entity), std::end(m_entity), &obj);
 		if (at == std::end(m_entity)) return;
@@ -33,7 +33,7 @@ namespace pr::physics::broadphase
 	}
 
 	// Enumerate all pairs of entities whose bounding boxes overlap
-	void Brute::EnumOverlappingPairs(std::function<void(RigidBody const&, RigidBody const&)> cb) const
+	void BroadphaseBrute::EnumOverlappingPairs(std::function<void(RigidBody const&, RigidBody const&)> cb) const
 	{
 		for (int i = 0, iend = int(m_entity.size()); i != iend; ++i)
 		{

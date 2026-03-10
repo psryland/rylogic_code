@@ -61,10 +61,14 @@ namespace pr::physics
 	struct GpuShape;
 	struct GpuCollisionPair;
 	struct GpuContact;
+	struct EngineBufferCache;
+	struct GpuSortAndSweep;
 
 	using GpuPtr = std::unique_ptr<Gpu, Deleter<Gpu>>;
 	using GpuIntegratorPtr = std::unique_ptr<GpuIntegrator, Deleter<GpuIntegrator>>;
+	using GpuSortAndSweepPtr = std::unique_ptr<GpuSortAndSweep, Deleter<GpuSortAndSweep>>;
 	using GpuCollisionDetectorPtr = std::unique_ptr<GpuCollisionDetector, Deleter<GpuCollisionDetector>>;
+	using CachePtr = std::unique_ptr<EngineBufferCache, Deleter<EngineBufferCache>>;
 
 	// Traits
 	template <typename T>

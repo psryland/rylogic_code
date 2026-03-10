@@ -57,6 +57,9 @@
     <ClCompile Include="src\collision\broadphase_brute.cpp">
       <Filter>src\collision</Filter>
     </ClCompile>
+    <ClCompile Include="src\collision\gpu_sort_and_sweep.cpp">
+      <Filter>src\collision</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\rigid_body\rigid_body.h">
@@ -99,9 +102,6 @@
       <Filter>src\collision</Filter>
     </ClInclude>
     <ClInclude Include="src\integrator\gpu_integrator.h">
-      <Filter>src\integrator</Filter>
-    </ClInclude>
-    <ClInclude Include="src\integrator\gpu.h">
       <Filter>src\integrator</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\physics-2\rigid_body\rigid_body_dynamics.h">
@@ -160,6 +160,12 @@
     </ClInclude>
     <ClInclude Include="src\unittests\test_collision.h">
       <Filter>src\unittests</Filter>
+    </ClInclude>
+    <ClInclude Include="src\collision\gpu_sort_and_sweep.h">
+      <Filter>src\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utility\gpu.h">
+      <Filter>src\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

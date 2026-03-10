@@ -7,7 +7,7 @@
 // This header is safe to include from any physics-2 public header.
 #pragma once
 #include "pr/physics-2/forward.h"
-#include "src/integrator/gpu.h"
+#include "src/utility/gpu.h"
 
 namespace pr::physics
 {

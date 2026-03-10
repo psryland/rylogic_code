@@ -8,11 +8,11 @@
 #include "pr/physics-2/collision/ibroadphase.h"
 #include "pr/physics-2/collision/contact.h"
 #include "pr/physics-2/materials/imaterials.h"
-#include "pr/physics-2/utility/ldraw.h"
-#include "src/integrator/gpu.h"
 #include "src/integrator/gpu_integrator.h"
+#include "src/collision/gpu_sort_and_sweep.h"
 #include "src/collision/gpu_collision_detector.h"
 #include "src/collision/gpu_collision_types.h"
+#include "src/utility/gpu.h"
 
 namespace pr::physics
 {
@@ -44,12 +44,12 @@ namespace pr::physics
 		}
 	};
 
-	Engine::Engine(IBroadphase& bp, IMaterials& mats, ID3D12Device4* existing_device)
-		: m_broadphase(bp)
-		, m_materials(mats)
-		, m_gpu(new Gpu(existing_device))
+	Engine::Engine(IMaterials& mats, ID3D12Device4* existing_device)
+		: m_gpu(new Gpu(existing_device))
 		, m_gpu_integrator(new GpuIntegrator(*m_gpu))
+		, m_gpu_sort_and_sweep(new GpuSortAndSweep(*m_gpu))
 		, m_gpu_collision_detector(new GpuCollisionDetector(*m_gpu))
+		, m_materials(mats)
 		, m_cache(new EngineBufferCache)
 		, m_rb_dynamics()
 		, m_use_gpu(true)
@@ -64,6 +64,12 @@ namespace pr::physics
 	void Engine::UseGpu(bool use_gpu)
 	{
 		m_use_gpu = use_gpu;
+	}
+	
+	// Access the broadphase for registering bodies and enumerating overlapping pairs.
+	IBroadphase& Engine::Broadphase() const
+	{
+		return *m_gpu_sort_and_sweep;
 	}
 
 	// CPU integration dispatch.
@@ -114,7 +120,7 @@ namespace pr::physics
 			};
 
 			int pair_idx = 0;
-			m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
 			{
 				auto idx_a = get_or_add_shape(objA.Shape());
 				auto idx_b = get_or_add_shape(objB.Shape());
@@ -182,7 +188,7 @@ namespace pr::physics
 		{
 			// Broad phase: find pairs of bodies whose bounding volumes overlap.
 			// Narrow phase: test each pair for actual geometric contact.
-			m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
 			{
 				auto c = RbContact{ objA, objB };
 				if (NarrowPhaseCollision(dt, c))

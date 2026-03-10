@@ -8,6 +8,7 @@
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
 #include "pr/view3d-12/compute/compute_step.h"
+#include "pr/view3d-12/compute/radix_sort/radix_sort.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
@@ -51,4 +52,6 @@ namespace pr::physics
 	using GpuJob = rdr12::GpuJob<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 	using CmdList = rdr12::CmdList<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 	using ComputeStep = rdr12::ComputeStep;
+	using BoundsSorter = rdr12::compute::gpu_radix_sort::GpuRadixSort<float, uint32_t, true, D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+
 }

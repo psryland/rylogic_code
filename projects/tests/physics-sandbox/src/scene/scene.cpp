@@ -19,9 +19,8 @@ namespace physics_sandbox
 
 	Scene::Scene(ID3D12Device4* existing_device)
 		: m_body()
-		, m_broadphase()
 		, m_materials()
-		, m_physics(m_broadphase, m_materials, existing_device)
+		, m_physics(m_materials, existing_device)
 		, m_box(pr::v4{ 2, 2, 2, 0 })
 		, m_gravity(v4::Zero())
 		, m_kill_zone_height(-100.0f)
@@ -70,7 +69,7 @@ namespace physics_sandbox
 
 		// Clear the broadphase before modifying bodies. The broadphase holds raw
 		// pointers to RigidBody objects, which become invalid if the vector resizes.
-		m_broadphase.Clear();
+		m_physics.Broadphase().Clear();
 
 		// Release any shapes owned by a previously loaded JSON scene.
 		// Must happen BEFORE SetupScenario assigns new shapes to bodies.
@@ -89,9 +88,9 @@ namespace physics_sandbox
 		SetupScenario();
 
 		// Rebuild the broadphase with the active bodies
-		m_broadphase.Clear();
+		m_physics.Broadphase().Clear();
 		for (int i = 0; i != std::ssize(m_body); ++i)
-			m_broadphase.Add(m_body[i]);
+			m_physics.Broadphase().Add(m_body[i]);
 
 		DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
 		DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
@@ -122,7 +121,7 @@ namespace physics_sandbox
 
 		// Clear the broadphase before modifying bodies. The broadphase holds raw
 		// pointers to RigidBody objects, which become invalid if the vector resizes.
-		m_broadphase.Clear();
+		m_physics.Broadphase().Clear();
 
 		// Clear existing bodies and owned shapes
 		for (int i = 0; i != std::ssize(m_body); ++i)
@@ -286,9 +285,9 @@ namespace physics_sandbox
 		}
 
 		// Rebuild the broadphase with the new bodies
-		m_broadphase.Clear();
+		m_physics.Broadphase().Clear();
 		for (int i = 0; i != std::ssize(m_body); ++i)
-			m_broadphase.Add(m_body[i]);
+			m_physics.Broadphase().Add(m_body[i]);
 
 		DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
 		if (!scene_desc.description.empty())

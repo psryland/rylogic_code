@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/compute/gpu.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/cmd_list.h"
@@ -79,6 +80,7 @@ namespace pr::rdr12
 		//  - Creating a CommandQueue is slow. GpuJob is meant to be a long-lived object.
 		//    You call Run() on it each frame rather than creating a new GpuJob each frame.
 		//
+		using Gpu = Gpu<QueueType>;
 		using GpuViewHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
 		using CmdListCollection = CmdListCollection<QueueType>;
 		using BarrierBatch = BarrierBatch<QueueType>;
@@ -114,6 +116,9 @@ namespace pr::rdr12
 		}
 		GpuJob(ID3D12Device4* device, char const* name, uint32_t pix_colour, int view_heap_capacity = 1)
 			: GpuJob(device, nullptr, name, pix_colour, view_heap_capacity)
+		{}
+		GpuJob(Gpu& gpu, char const* name, uint32_t pix_colour, int view_heap_capacity = 1)
+			: GpuJob(gpu.device(), gpu.queue(), name, pix_colour, view_heap_capacity)
 		{}
 
 		// Run the job and block till complete

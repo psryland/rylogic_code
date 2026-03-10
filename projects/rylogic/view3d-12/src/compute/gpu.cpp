@@ -77,35 +77,6 @@ namespace pr::rdr12
 		m_gsync.Init(m_device.get());
 	}
 
-	// Allow use as a device
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	ID3D12Device4 const* Gpu<ListType>::operator -> () const
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	ID3D12Device4* Gpu<ListType>::operator ->()
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	Gpu<ListType>::operator ID3D12Device4 const* () const
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	Gpu<ListType>::operator ID3D12Device4* ()
-	{
-		return m_device.get();
-	}
-	
-	// Access the GPU upload buffer
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	GpuUploadBuffer& Gpu<ListType>::UploadBuffer()
-	{
-		return m_upload_buffer;
-	}
-
 	// Allocate a DX resource
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	D3DPtr<ID3D12Resource> Gpu<ListType>::CreateResource(ResDesc const& desc, CmdList<ListType>& cmd_list, std::string_view name)

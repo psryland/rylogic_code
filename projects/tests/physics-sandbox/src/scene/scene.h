@@ -27,28 +27,27 @@ namespace physics_sandbox
 	{
 		std::vector<Body> m_body;
 
-		// Broadphase and materials are owned by the scene and passed by reference
-		// to the engine. This keeps the engine decoupled from concrete implementations.
-		pr::physics::broadphase::Brute m_broadphase;
-		pr::physics::MaterialMap m_materials;
-		pr::physics::Engine m_physics;
-		pr::collision::ShapeBox m_box;
+		// Broadphase — either brute-force (CPU) or GPU sort-and-sweep.
+		// Owned via unique_ptr to allow runtime selection based on GPU availability.
+		physics::MaterialMap m_materials;
+		physics::Engine m_physics;
+		collision::ShapeBox m_box;
 
 		// Shapes owned by a loaded scene file. When loading from JSON, each body
 		// can have a unique shape, so we store them here to keep them alive for the
 		// lifetime of the scene. The hardcoded scenarios use 'm_box' instead.
 		// Uses variant because collision shapes are value types (no virtual destructor).
-		using OwnedShape = std::variant<pr::collision::ShapeBox, pr::collision::ShapeSphere, pr::collision::ShapeLine, pr::collision::ShapeTriangle>;
+		using OwnedShape = std::variant<collision::ShapeBox, collision::ShapeSphere, collision::ShapeLine, collision::ShapeTriangle>;
 		std::vector<OwnedShape> m_owned_shapes;
 
 		// Polytope shapes are variable-sized (trailing vertex/face/neighbour data),
 		// so they can't fit in the OwnedShape variant. Store them in separate byte
 		// buffers and access via: buf.as<ShapePolytope>()
-		std::vector<pr::byte_data<16>> m_owned_polytopes;
+		std::vector<byte_data<16>> m_owned_polytopes;
 
 		// Gravity acceleration vector (direction and magnitude, e.g. [0, -9.81, 0]).
 		// Applied each step to all non-static bodies as F = m * g.
-		pr::v4 m_gravity;
+		v4 m_gravity;
 
 		// Height below which bodies are frozen (zero velocity/momentum).
 		// Prevents bodies that escape through the ground from falling to -infinity
