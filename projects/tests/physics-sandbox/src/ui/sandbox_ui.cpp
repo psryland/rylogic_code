@@ -3,70 +3,6 @@
 
 namespace physics_sandbox
 {
-	// ===== RecentFiles implementation =====
-
-	std::filesystem::path RecentFiles::StoragePath()
-	{
-		wchar_t* appdata = nullptr;
-		_wdupenv_s(&appdata, nullptr, L"APPDATA");
-		if (!appdata)
-			return {};
-
-		auto dir = std::filesystem::path(appdata) / L"RylogicPhysicsSandbox";
-		free(appdata);
-		std::filesystem::create_directories(dir);
-		return dir / L"recent.txt";
-	}
-
-	void RecentFiles::Load()
-	{
-		m_paths.clear();
-		auto path = StoragePath();
-		if (path.empty() || !std::filesystem::exists(path))
-			return;
-
-		std::ifstream f(path);
-		std::string line;
-		while (std::getline(f, line))
-		{
-			if (!line.empty())
-				m_paths.emplace_back(line);
-		}
-	}
-
-	void RecentFiles::Save() const
-	{
-		auto path = StoragePath();
-		if (path.empty())
-			return;
-
-		std::ofstream f(path);
-		for (auto const& p : m_paths)
-			f << p.string() << "\n";
-	}
-
-	// Add a path to the front (MRU order), removing duplicates and capping at max
-	void RecentFiles::Add(std::filesystem::path const& filepath)
-	{
-		// Remove any existing entry for this path
-		auto canonical = std::filesystem::weakly_canonical(filepath);
-		std::erase_if(m_paths, [&](auto const& p)
-		{
-			return std::filesystem::weakly_canonical(p) == canonical;
-		});
-
-		// Insert at front (most recent first)
-		m_paths.insert(m_paths.begin(), canonical);
-
-		// Cap at maximum
-		if (static_cast<int>(m_paths.size()) > MaxRecentFiles)
-			m_paths.resize(MaxRecentFiles);
-
-		Save();
-	}
-
-	// ===== SandboxUI implementation =====
-
 	SandboxUI::SandboxUI()
 		: Form(Params<>()
 			.name("physics-sandbox")
@@ -76,10 +12,11 @@ namespace physics_sandbox
 			.padding(0)
 			.menu({ {L"&File", Menu(Menu::EKind::Popup, {
 				MenuItem(L"&Open Scene...\tCtrl+O", MenuID::OpenFile),
+				MenuItem(MenuItem::Separator),
 				MenuItem(L"Recent Files", ::CreatePopupMenu()),
 				MenuItem(MenuItem::Separator),
 				MenuItem(L"E&xit", IDCLOSE),
-			})} })
+			})}})
 			.main_wnd(true)
 			.wndclass(RegisterWndClass<SandboxUI>()))
 		, m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
@@ -96,6 +33,7 @@ namespace physics_sandbox
 		, m_fps(0)
 		, m_title_elapsed(0)
 		, m_details_elapsed(0)
+		, m_status_elapsed(0)
 		, m_closing(false)
 	{
 		// Load the recent files list from disk and populate the submenu
@@ -189,14 +127,7 @@ namespace physics_sandbox
 	}
 	SandboxUI::~SandboxUI()
 	{
-		// Clear drawlists first so no models are referenced, then release all
-		// graphics objects before the renderer is destroyed.
-		m_view3d.m_scene.ClearDrawlists();
-
-		for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
-			m_scene.m_body[i].m_gfx = nullptr;
-
-		m_scene.m_ground_gfx = nullptr;
+		m_view3d.WaitForGpu();
 	}
 
 	// Override message processing to ensure clean shutdown
@@ -206,14 +137,6 @@ namespace physics_sandbox
 		{
 			// Set closing flag so the step/render lambdas stop accessing the renderer
 			m_closing = true;
-
-			// Clear drawlists before releasing objects to avoid RenderStep assert
-			m_view3d.m_scene.ClearDrawlists();
-
-			for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
-				m_scene.m_body[i].m_gfx = nullptr;
-
-			m_scene.m_ground_gfx = nullptr;
 		}
 
 		// Handle menu commands
@@ -253,20 +176,14 @@ namespace physics_sandbox
 			return;
 		}
 
-		// Clear the scene drawlists before resetting. Reset triggers ShapeChange events
-		// which destroy LdrObjects. If the previous frame's drawlists still reference
-		// those objects' models, the RenderStep asserts on model deletion.
-		m_view3d.m_scene.ClearDrawlists();
-
+		// Make sure the GPU has finished with the models before releasing them.
+		m_view3d.WaitForGpu();
 		m_scene.Reset();
 
 		// Frame the camera to see the whole scene: look from +Y toward origin, Z-up
-		m_view3d.m_cam.LookAt(
-			v4(0, -35, 10, 1),
-			v4::Origin(),
-			v4{0, 0, 1, 0});
+		m_view3d.m_cam.LookAt(v4(0, -35, 10, 1), v4::Origin(), v4{0, 0, 1, 0});
 
-		Render();
+		Render(0);
 	}
 
 	// Show the Open File dialog and load a JSON scene file
@@ -320,8 +237,8 @@ namespace physics_sandbox
 			for (int i = 0; i != static_cast<int>(m_recent.m_paths.size()); ++i)
 			{
 				// Format as "&1 filename.json" for keyboard accelerator
-				auto label = pr::FmtS(L"&%d %s", i + 1, m_recent.m_paths[i].filename().c_str());
-				::AppendMenuW(recent_menu, MF_STRING, MenuID::RecentFileBase + i, label);
+				auto label = std::format(L"&{} {}", i + 1, m_recent.m_paths[i].native());
+				::AppendMenuW(recent_menu, MF_STRING, MenuID::RecentFileBase + i, label.c_str());
 			}
 		}
 
@@ -342,10 +259,8 @@ namespace physics_sandbox
 			m_recent.Add(filepath);
 			RebuildRecentFilesMenu();
 
-			// Clear the scene drawlists before loading. LoadFromJson triggers ShapeChange
-			// events which destroy old LdrObjects. If the previous frame's drawlists still
-			// reference those objects' models, the RenderStep asserts on model deletion.
-			m_view3d.m_scene.ClearDrawlists();
+			// Wait for the GPU to finish before loading. LoadFromJson triggers ShapeChange events which destroy old LdrObjects. 
+			m_view3d.WaitForGpu();
 
 			// Load the scene from JSON (creates new body graphics automatically)
 			m_scene.LoadFromJson(filepath);
@@ -356,14 +271,18 @@ namespace physics_sandbox
 				v4{ 0, -1, 0, 0 },  // Forward direction
 				v4{ 0, 0, 1, 0 });  // Up direction (Z-up)
 
-			Render();
+			Render(0);
 		}
 		catch (std::exception const& ex)
 		{
-			auto msg = pr::FmtS("Failed to load scene:\n%s", ex.what());
-			OutputDebugStringA(msg);
-			if (auto f = fopen("dump\\load_error.log", "w")) { fputs(msg, f); fclose(f); }
-			::MessageBoxA(m_hwnd, msg, "Load Error", MB_OK | MB_ICONERROR);
+			auto msg = std::format("Failed to load scene:\n{}", ex.what());
+			OutputDebugStringA(msg.c_str());
+
+			auto log_path = AppDataPath() / "load_error.log";
+			if (std::ofstream log(log_path); log)
+				log << msg;
+			
+			::MessageBoxA(m_hwnd, msg.c_str(), "Load Error", MB_OK | MB_ICONERROR);
 		}
 	}
 
@@ -373,18 +292,6 @@ namespace physics_sandbox
 		// Don't step after close begins
 		if (m_closing)
 			return;
-
-		// Accumulate time for FPS measurement and rate-limited UI updates.
-		// These use wall-clock time (not scaled time) so the UI stays responsive.
-		m_fps_elapsed += elapsed_seconds;
-		m_title_elapsed += elapsed_seconds;
-		m_details_elapsed += elapsed_seconds;
-		if (m_fps_elapsed >= 1.0)
-		{
-			m_fps = m_frame_count / m_fps_elapsed;
-			m_frame_count = 0;
-			m_fps_elapsed = 0;
-		}
 
 		// Check if we should be stepping
 		if (m_scene.m_steps_remaining == 0)
@@ -407,7 +314,7 @@ namespace physics_sandbox
 
 	// Render a frame: sync graphics, rebuild overlays, update details panel.
 	// Expensive UI operations are rate-limited to avoid dominating frame time.
-	void SandboxUI::Render()
+	void SandboxUI::Render(double elapsed_seconds)
 	{
 		// Don't render after close begins
 		if (m_closing)
@@ -423,6 +330,21 @@ namespace physics_sandbox
 		// Render the 3D viewport. Objects are added to the scene via the
 		// OnAddToScene event during DoRender(), so no explicit Add/Remove needed.
 		m_view3d.DoRender();
+
+		// Accumulate time for FPS measurement and rate-limited UI updates.
+		// These use wall-clock time (not scaled time) so the UI stays responsive.
+		m_fps_elapsed += elapsed_seconds;
+		m_title_elapsed += elapsed_seconds;
+		m_details_elapsed += elapsed_seconds;
+		m_status_elapsed += elapsed_seconds;
+
+		// Update the FPS each second
+		if (m_fps_elapsed >= 1.0)
+		{
+			m_fps = m_frame_count / m_fps_elapsed;
+			m_frame_count = 0;
+			m_fps_elapsed = 0;
+		}
 
 		// Update the details panel text at reduced rate (~5 Hz).
 		if (m_details_elapsed >= 0.2)
@@ -440,26 +362,31 @@ namespace physics_sandbox
 			// Keep the slider's speed label text in sync with the trackbar position
 			m_media.UpdateSpeedLabel();
 
-			SetWindowTextA(*this, pr::FmtS("Physics Sandbox [%d: %s] t=%.3f col=%d  %s  FPS: %.0f",
+			SetWindowTextA(*this, std::format("Physics Sandbox [{}: {}] t={:.3f} col={}  {}  FPS: {:.0f}",
 				static_cast<int>(m_scene.m_scenario),
 				ScenarioName(m_scene.m_scenario),
 				m_scene.m_clock,
 				m_scene.m_diag.count,
 				m_scene.m_physics.UseGpu() ? "GPU" : "CPU",
-				m_fps));
+				m_fps).c_str());
 		}
 
 		// Update status bar (only when text changes to avoid flicker)
-		auto new_status = std::wstring(pr::FmtS(L"t=%.3f  %hs  Collisions: %d  %s  FPS: %.0f",
-			m_scene.m_clock,
-			ScenarioName(m_scene.m_scenario),
-			m_scene.m_diag.count,
-			m_scene.m_steps_remaining == 0 ? L"[Paused]" : L"[Running]",
-			m_fps));
-		if (new_status != m_last_status)
+		if (m_status_elapsed >= 0.2)
 		{
-			m_last_status = std::move(new_status);
-			m_status.Text(0, m_last_status.c_str());
+			m_status_elapsed = 0;
+			auto new_status = std::format(L"t={:.3f}  {}  Collisions: {}  {}  FPS: {:.0f}",
+				m_scene.m_clock,
+				pr::Widen(ScenarioName(m_scene.m_scenario)),
+				m_scene.m_diag.count,
+				m_scene.m_steps_remaining == 0 ? L"[Paused]" : L"[Running]",
+				m_fps);
+
+			if (new_status != m_last_status)
+			{
+				m_last_status = std::move(new_status);
+				m_status.Text(0, m_last_status.c_str());
+			}
 		}
 	}
 
@@ -470,38 +397,16 @@ namespace physics_sandbox
 		if (m_scene.m_body.empty())
 			return BBox{ v4{0, 0, 0, 1}, v4{5, 5, 5, 0} };
 
-		// Find the min/max extents of all dynamic body positions.
-		// Also include the ground plane height (Z=0 typically) so the camera
-		// can see the ground surface, not just the bodies floating in space.
-		auto lo = pr::v4{ +1e10f, +1e10f, +1e10f, 1 };
-		auto hi = pr::v4{ -1e10f, -1e10f, -1e10f, 1 };
-		for (int i = 0; i != std::ssize(m_scene.m_body); ++i)
-		{
-			// Skip static (ground) bodies — they're huge and would dominate the bbox
-			if (m_scene.m_body[i].Mass() > pr::physics::InfiniteMass * 0.5f)
-				continue;
-
-			auto pos = m_scene.m_body[i].O2W().pos;
-			lo.x = pr::Min(lo.x, pos.x - 2.0f);
-			lo.y = pr::Min(lo.y, pos.y - 2.0f);
-			lo.z = pr::Min(lo.z, pos.z - 2.0f);
-			hi.x = pr::Max(hi.x, pos.x + 2.0f);
-			hi.y = pr::Max(hi.y, pos.y + 2.0f);
-			hi.z = pr::Max(hi.z, pos.z + 2.0f);
-		}
+		auto bbox = BBox::Reset();
+		for (auto const& body : m_scene.m_body)
+			Grow(bbox, body.O2W().pos);
 
 		// If there's a ground visual, include the ground height in the bbox
 		// so the camera can see where objects will land.
 		if (m_scene.m_ground_gfx)
-		{
-			lo.z = pr::Min(lo.z, 0.0f);
-		}
+			Grow(bbox, v4::Origin());
 
-		auto centre = (lo + hi) * 0.5f;
-		auto radius = (hi - lo) * 0.5f;
-		centre.w = 1;
-		radius.w = 0;
-		return BBox{ centre, radius };
+		bbox *= 1.2f;
+		return bbox;
 	}
-
 }

@@ -253,6 +253,15 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
+    <ClInclude Include="src\ui\recent_files.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui\menu_id.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\scenario.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="scenes\box_vs_sphere.json">
@@ -295,6 +304,9 @@
     </ClCompile>
     <ClCompile Include="src\utils\scene_loader.cpp">
       <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\recent_files.cpp">
+      <Filter>src\ui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

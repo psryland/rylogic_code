@@ -48,6 +48,7 @@
   </ItemDefinitionGroup>
   <!-- Source -->
   <ItemGroup>
+    <ClCompile Include="src\ui\recent_files.cpp" />
     <ClCompile Include="src\utils\collision_dependency_check.cpp" />
     <ClCompile Include="src\diagnostics\diagnostics.cpp" />
     <ClCompile Include="src\scene\body.cpp" />
@@ -110,9 +111,12 @@
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\diagnostics\diagnostics.h" />
     <ClInclude Include="src\scene\body.h" />
+    <ClInclude Include="src\scene\scenario.h" />
     <ClInclude Include="src\scene\scene.h" />
     <ClInclude Include="src\ui\details_panel.h" />
     <ClInclude Include="src\ui\media_panel.h" />
+    <ClInclude Include="src\ui\menu_id.h" />
+    <ClInclude Include="src\ui\recent_files.h" />
     <ClInclude Include="src\ui\sandbox_ui.h" />
     <ClInclude Include="src\unittests\sandbox_tests.h" />
     <ClInclude Include="src\utils\scene_loader.h" />

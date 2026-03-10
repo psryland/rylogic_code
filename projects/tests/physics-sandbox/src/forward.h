@@ -13,6 +13,7 @@
 #include <memory>
 #include <deque>
 #include <filesystem>
+#include <format>
 #include <variant>
 #include <crtdbg.h>
 
@@ -39,5 +40,14 @@
 #include "pr/physics-2/physics.h"
 
 using namespace pr;
+using namespace pr::math;
 using namespace pr::gui;
 using namespace pr::math::spatial;
+
+namespace physics_sandbox
+{
+	struct SandboxUI;
+
+	// The user's app data directory.
+	std::filesystem::path AppDataPath();
+}

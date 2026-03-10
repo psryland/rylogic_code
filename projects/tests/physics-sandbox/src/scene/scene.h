@@ -3,35 +3,23 @@
 #include "src/scene/body.h"
 #include "src/diagnostics/diagnostics.h"
 #include "src/utils/scene_loader.h"
+#include "src/scene/scenario.h"
 
 namespace physics_sandbox
 {
-	// Test scenarios for validating physics behaviour progressively.
-	// Each scenario configures two bodies with specific initial conditions.
-	enum class EScenario : int
-	{
-		Sandbox = 0, // Free-form sandbox (default)
-		HeadOnEqualMass = 1, // Two equal-mass boxes, head-on along X
-		HeadOnDiffMass = 2, // Mass 10 vs Mass 5, head-on along X
-		StationaryTarget = 3, // Moving box hits stationary box
-		OffCenter = 4, // Off-center hit (induces rotation)
-		Oblique = 5, // Bodies approaching at an angle
-	};
-
-	char const* ScenarioName(EScenario s);
-
 	// The physics simulation scene. Owns the rigid bodies, physics engine, and all
 	// simulation state. Deliberately UI-independent so it can be reused by both
 	// the interactive sandbox and the headless unit test mode.
 	struct Scene
 	{
-		std::vector<Body> m_body;
-
 		// Broadphase — either brute-force (CPU) or GPU sort-and-sweep.
 		// Owned via unique_ptr to allow runtime selection based on GPU availability.
 		physics::MaterialMap m_materials;
 		physics::Engine m_physics;
 		collision::ShapeBox m_box;
+
+		// Bodies in the scene
+		std::vector<Body> m_body;
 
 		// Shapes owned by a loaded scene file. When loading from JSON, each body
 		// can have a unique shape, so we store them here to keep them alive for the
@@ -59,12 +47,12 @@ namespace physics_sandbox
 		rdr12::ldraw::LdrObjectPtr m_ground_gfx;
 
 		// Simulation state
-		double      m_clock;
-		int         m_steps_remaining; // 0 = paused, -1 = running, N = step N times
-		EScenario   m_scenario;
+		double m_clock;
+		int m_steps_remaining; // 0 = paused, -1 = running, N = step N times
+		EScenario m_scenario;
 
 		// Diagnostics
-		CollisionDiag   m_diag;
+		CollisionDiag m_diag;
 
 		explicit Scene(ID3D12Device4* existing_device = nullptr);
 

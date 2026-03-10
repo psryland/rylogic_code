@@ -3,20 +3,6 @@
 
 namespace physics_sandbox
 {
-	char const* ScenarioName(EScenario s)
-	{
-		switch (s)
-		{
-			case EScenario::Sandbox:          return "Sandbox";
-			case EScenario::HeadOnEqualMass:  return "Head-On Equal Mass";
-			case EScenario::HeadOnDiffMass:   return "Head-On Diff Mass";
-			case EScenario::StationaryTarget: return "Stationary Target";
-			case EScenario::OffCenter:        return "Off-Center (Rotation)";
-			case EScenario::Oblique:          return "Oblique Collision";
-			default: return "Unknown";
-		}
-	}
-
 	Scene::Scene(ID3D12Device4* existing_device)
 		: m_body()
 		, m_materials()
