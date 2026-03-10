@@ -167,6 +167,9 @@
     <ClInclude Include="src\utility\gpu.h">
       <Filter>src\utility</Filter>
     </ClInclude>
+    <ClInclude Include="src\collision\collision_shape_cache.h">
+      <Filter>src\collision</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl">

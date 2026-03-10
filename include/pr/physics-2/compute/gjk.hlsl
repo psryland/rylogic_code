@@ -21,9 +21,10 @@
 #include "pr/hlsl/vector.hlsli"
 
 // ---- Constants ----
-static const int MaxGjkIter = 64;
-static const int MaxEpaVerts = 64;
-static const int MaxEpaFaces = 128;
+static const int MaxGjkIter = 32;
+static const int MaxEpaVerts = 24;
+static const int MaxEpaFaces = 48;
+static const int MaxEpaEdges = 96;
 static const float GjkEps = 1e-8f;
 static const float EpaEps = 1e-6f;
 
@@ -520,7 +521,6 @@ bool Epa(
 		int ni = nv++;
 
 		// Remove faces visible from the new point, collecting horizon edges
-		static const int MaxEpaEdges = 256;
 		EpaEdge edges[MaxEpaEdges];
 		int ne = 0;
 
@@ -665,7 +665,7 @@ bool GjkCollide(
 // ---- Compute shader entry point ----
 // One thread per broadphase pair. Tests collision via GJK + EPA.
 // Colliding pairs write their contact to g_contacts atomically.
-[numthreads(64, 1, 1)]
+[numthreads(32, 1, 1)]
 void CSCollisionDetect(uint3 ThreadID : SV_DispatchThreadID)
 {
 	if (ThreadID.x >= g_pair_count)

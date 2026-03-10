@@ -42,6 +42,10 @@ namespace pr::physics
 		// Cached AABBs per body (world space, computed each frame)
 		mutable std::vector<pr::BBox> m_bboxes;
 
+		// Precomputed AABB min/max for the two secondary axes (avoids recomputing in inner loop)
+		struct AxisBounds { float lo_y, hi_y, lo_z, hi_z; };
+		mutable std::vector<AxisBounds> m_axis_bounds;
+
 		// The registered bodies for overlap testing
 		std::vector<RigidBody const*> m_entity;
 

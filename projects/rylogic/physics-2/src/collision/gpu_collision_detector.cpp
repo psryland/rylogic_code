@@ -10,7 +10,7 @@ namespace pr::physics
 	using namespace pr::rdr12;
 
 	// Thread group size matching the HLSL [numthreads(64, 1, 1)] declaration.
-	static constexpr int ThreadGroupSize = 64;
+	static constexpr int ThreadGroupSize = 32;
 
 	// Constant buffer layout matching the HLSL cbCollision declaration.
 	struct alignas(16) cbCollision
@@ -57,7 +57,8 @@ namespace pr::physics
 		std::span<GpuCollisionPair const> pairs,
 		std::span<GpuShape const> shapes,
 		std::span<v4 const> verts,
-		std::vector<GpuContact>& out_contacts)
+		std::vector<GpuContact>& out_contacts,
+		bool shapes_dirty)
 	{
 		auto shape_count = static_cast<int>(shapes.size());
 		auto vert_count = static_cast<int>(verts.size());
@@ -65,45 +66,51 @@ namespace pr::physics
 		if (pair_count == 0)
 			return 0;
 
-		ResizeBuffers(m_job.m_cmd_list, shape_count, vert_count, pair_count);
+		// If ResizeBuffers reallocated the shape/vert buffers, we must re-upload
+		// regardless of the caller's dirty flag (the new buffers contain garbage).
+		if (ResizeBuffers(m_job.m_cmd_list, shape_count, vert_count, pair_count))
+			shapes_dirty = true;
 
-		// Upload shapes buffer
+		// Only upload shapes and verts when they've changed. When the shape cache
+		// reports clean (no new shapes, no evictions), the previous frame's GPU
+		// buffers are still valid and we skip the upload entirely.
+		if (shapes_dirty)
 		{
+			// Upload shapes buffer
 			m_job.m_barriers.Transition(m_r_shapes.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 			m_job.m_barriers.Commit();
 
-			auto upload = m_job.m_upload.Alloc<GpuShape>(shape_count);
-			memcpy(upload.ptr<GpuShape>(), shapes.data(), shape_count * sizeof(GpuShape));
-			m_job.m_cmd_list.CopyBufferRegion(m_r_shapes.get(), 0, upload);
+			auto shape_upload = m_job.m_upload.Alloc<GpuShape>(shape_count);
+			memcpy(shape_upload.ptr<GpuShape>(), shapes.data(), shape_count * sizeof(GpuShape));
+			m_job.m_cmd_list.CopyBufferRegion(m_r_shapes.get(), 0, shape_upload);
+
+			// Upload vertices buffer (may be empty if no polytopes/triangles)
+			if (vert_count > 0)
+			{
+				m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+				m_job.m_barriers.Commit();
+
+				auto vert_upload = m_job.m_upload.Alloc<v4>(vert_count);
+				memcpy(vert_upload.ptr<v4>(), verts.data(), vert_count * sizeof(v4));
+				m_job.m_cmd_list.CopyBufferRegion(m_r_verts.get(), 0, vert_upload);
+			}
 
 			m_job.m_barriers.Transition(m_r_shapes.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			if (vert_count > 0)
+				m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			m_job.m_barriers.Commit();
 		}
 
-		// Upload pairs buffer
+		// Pairs change every frame — always upload
 		{
 			m_job.m_barriers.Transition(m_r_pairs.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 			m_job.m_barriers.Commit();
 
-			auto upload = m_job.m_upload.Alloc<GpuCollisionPair>(pair_count);
-			memcpy(upload.ptr<GpuCollisionPair>(), pairs.data(), pair_count * sizeof(GpuCollisionPair));
-			m_job.m_cmd_list.CopyBufferRegion(m_r_pairs.get(), 0, upload);
+			auto pair_upload = m_job.m_upload.Alloc<GpuCollisionPair>(pair_count);
+			memcpy(pair_upload.ptr<GpuCollisionPair>(), pairs.data(), pair_count * sizeof(GpuCollisionPair));
+			m_job.m_cmd_list.CopyBufferRegion(m_r_pairs.get(), 0, pair_upload);
 
 			m_job.m_barriers.Transition(m_r_pairs.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-			m_job.m_barriers.Commit();
-		}
-
-		// Upload vertices buffer (may be empty if no polytopes/triangles)
-		if (vert_count > 0)
-		{
-			m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_COPY_DEST);
-			m_job.m_barriers.Commit();
-
-			auto upload = m_job.m_upload.Alloc<v4>(vert_count);
-			memcpy(upload.ptr<v4>(), verts.data(), vert_count * sizeof(v4));
-			m_job.m_cmd_list.CopyBufferRegion(m_r_verts.get(), 0, upload);
-
-			m_job.m_barriers.Transition(m_r_verts.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			m_job.m_barriers.Commit();
 		}
 
@@ -205,22 +212,27 @@ namespace pr::physics
 	}
 
 	// Create GPU buffers for collision pipeline.
-	void GpuCollisionDetector::ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs)
+	// Returns true if shape or vertex buffers were reallocated (requiring re-upload).
+	bool GpuCollisionDetector::ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs)
 	{
 		max_shapes = std::max(1, max_shapes);
 		max_verts = std::max(1, max_verts);
 		max_pairs = std::max(1, max_pairs);
+
+		bool shapes_resized = false;
 
 		// SRV buffers (created in COMMON state, transitioned to SRV on first use)
 		if (m_r_shapes == nullptr || max_shapes > m_max_shapes)
 		{
 			m_r_shapes = m_gpu.CreateResource(ResDesc::Buf<GpuShape>(max_shapes, {}), cmd_list, "Physics:Shapes");
 			m_max_shapes = max_shapes;
+			shapes_resized = true;
 		}
 		if (m_r_verts == nullptr || max_verts > m_max_verts)
 		{
 			m_r_verts = m_gpu.CreateResource(ResDesc::Buf<v4>(max_verts, {}), cmd_list, "Physics:CollisionVerts");
 			m_max_verts = max_verts;
+			shapes_resized = true;
 		}
 		if (m_r_pairs == nullptr || max_pairs > m_max_pairs)
 		{
@@ -232,6 +244,7 @@ namespace pr::physics
 		{
 			m_r_counters = m_gpu.CreateResource(ResDesc::Buf<GpuCollisionCounters>(1, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:CollisionCounters");
 		}
+		return shapes_resized;
 	}
 
 	// Custom deleter implementation (GpuCollisionDetector is complete here)
