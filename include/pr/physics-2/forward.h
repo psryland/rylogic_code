@@ -19,6 +19,7 @@
 #include "pr/common/flags_enum.h"
 #include "pr/common/scope.h"
 #include "pr/common/event_handler.h"
+#include "pr/common/bit_fields.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/str/to_string.h"
 #include "pr/container/vector.h"

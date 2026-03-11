@@ -78,8 +78,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\collision\support.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\view3d_panel.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\constants.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\forward.h" />
@@ -108,6 +106,7 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h" />
     <ClInclude Include="..\..\..\include\pr\collision\forward.h" />
     <ClInclude Include="..\..\..\include\pr\collision\shapes.h" />
+    <ClInclude Include="..\..\..\include\pr\common\ldraw.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\diagnostics\diagnostics.h" />
     <ClInclude Include="src\scene\body.h" />

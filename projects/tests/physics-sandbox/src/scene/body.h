@@ -8,15 +8,10 @@ namespace physics_sandbox
 	// rebuilt from LDraw. UpdateGfx() syncs the graphics transform to the physics transform.
 	struct Body : physics::RigidBody
 	{
-		// The renderer used for creating graphics objects from LDraw script.
-		// Set once during UI initialization, before any Body instances are created.
-		static rdr12::Renderer* s_rdr;
-
-		// Graphics for the object (ref-counted)
 		rdr12::ldraw::LdrObjectPtr m_gfx;
 
-		Body();
-		~Body();
+		Body() = default;
+		Body(rdr12::Renderer& rdr, collision::Shape const* shape = nullptr, float mass = -1, m4x4 const& o2w = m4x4::Identity(), physics::Inertia const& inertia = {});
 
 		// Position the graphics at the rigid body location
 		void UpdateGfx();

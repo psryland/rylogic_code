@@ -5,7 +5,7 @@
 #pragma once
 #include "pr/math/math.h"
 #include "pr/gfx/colour.h"
-#include "pr/view3d-12/ldraw/ldraw_builder.h"
+#include "pr/common/ldraw.h"
 #include "pr/collision/shape.h"
 #include "pr/collision/shape_sphere.h"
 #include "pr/collision/shape_box.h"
@@ -16,107 +16,85 @@
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
 
-namespace pr::rdr12::ldraw
+namespace pr::ldraw
 {
-	struct LdrPhysicsShape : fluent::LdrBase<LdrPhysicsShape>
+	// Add a collision shape as LDraw children of 'target'
+	inline void AddShape(LdrBase& target, collision::Shape const& shape)
 	{
-		collision::Shape const* m_shape;
-
-		LdrPhysicsShape()
-			: m_shape()
-		{}
-
-		// Add a physics shape
-		LdrPhysicsShape& shape(collision::Shape const& shape)
+		using namespace collision;
+		switch (shape.m_type)
 		{
-			m_shape = &shape;
-			return *this;
-		}
-
-		// Write to 'out'
-		template <fluent::WriterType Writer, typename TOut>
-		void WriteTo(TOut& out) const
-		{
-			struct L
+			case EShape::Sphere:
 			{
-				TOut& m_out;
-				LdrPhysicsShape const& m_me;
-				L(LdrPhysicsShape const& me, TOut& out) :m_out(out), m_me(me) {}
-
-				void Write(collision::ShapeSphere const& shape) const
+				auto& s = shape_cast<ShapeSphere>(shape);
+				target.Sphere().radius(s.m_radius).o2w(s.m_base.m_s2p);
+				break;
+			}
+			case EShape::Box:
+			{
+				auto& s = shape_cast<ShapeBox>(shape);
+				target.Box().box(s.m_radius.x * 2, s.m_radius.y * 2, s.m_radius.z * 2).o2w(s.m_base.m_s2p);
+				break;
+			}
+			case EShape::Triangle:
+			{
+				auto& s = shape_cast<ShapeTriangle>(shape);
+				target.Triangle().tri(
+					seri::Vec3{s.m_v.x.x, s.m_v.x.y, s.m_v.x.z},
+					seri::Vec3{s.m_v.y.x, s.m_v.y.y, s.m_v.y.z},
+					seri::Vec3{s.m_v.z.x, s.m_v.z.y, s.m_v.z.z}
+				).o2w(s.m_base.m_s2p);
+				break;
+			}
+			case EShape::Line:
+			{
+				auto& s = shape_cast<ShapeLine>(shape);
+				auto r = s.m_radius * s.m_base.m_s2p.z;
+				auto a = s.m_base.m_s2p.pos - r;
+				auto b = s.m_base.m_s2p.pos + r;
+				target.Line().line(seri::Vec3{a.x, a.y, a.z}, seri::Vec3{b.x, b.y, b.z});
+				break;
+			}
+			case EShape::Polytope:
+			{
+				auto& s = shape_cast<ShapePolytope>(shape);
+				auto& tri = target.Triangle();
+				for (auto const& face : s.faces())
 				{
-					fluent::LdrSphere().radius(shape.m_radius).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
+					auto a = s.vertex(face.m_index[0]);
+					auto b = s.vertex(face.m_index[1]);
+					auto c = s.vertex(face.m_index[2]);
+					tri.tri(pr::ldraw::seri::Vec3{a.x, a.y, a.z}, pr::ldraw::seri::Vec3{b.x, b.y, b.z}, pr::ldraw::seri::Vec3{c.x, c.y, c.z});
 				}
-				void Write(collision::ShapeBox const& shape) const
-				{
-					fluent::LdrBox().dim(shape.m_radius).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
-				}
-				void Write(collision::ShapeTriangle const& shape) const
-				{
-					fluent::LdrTriangle().tri(shape.m_v.x, shape.m_v.y, shape.m_v.z).o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
-				}
-				void Write(collision::ShapeLine const& shape) const
-				{
-					auto const& s2p = shape.m_base.m_s2p;
-					auto r = shape.m_radius * s2p.z;
-					fluent::LdrLine().line(s2p.pos - r, s2p.pos + r).o2w(s2p).WriteTo<Writer>(m_out);
-				}
-				void Write(collision::ShapeArray const& shape) const
-				{
-					Writer::Write(m_out, EKeyword::Group, {}, {}, [&]
-					{
-						for (collision::Shape const* s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s))
-							Write(*s);
-
-						Writer::Append(m_out, O2W(shape.m_base.m_s2p));
-					});
-				}
-				void Write(collision::ShapePolytope const& shape) const
-				{
-					// Render the polytope as a triangle mesh from its face data
-					auto builder = fluent::LdrTriangle();
-					for (auto const& face : shape.faces())
-					{
-						builder.tri(
-							shape.vertex(face.m_index[0]),
-							shape.vertex(face.m_index[1]),
-							shape.vertex(face.m_index[2]));
-					}
-					builder.o2w(shape.m_base.m_s2p).WriteTo<Writer>(m_out);
-				}
-				void Write(collision::Shape const& shape) const
-				{
-					using namespace collision;
-					switch (shape.m_type)
-					{
-						case EShape::Sphere:     return Write(shape_cast<ShapeSphere>(shape));
-						case EShape::Box:        return Write(shape_cast<ShapeBox>(shape));
-						case EShape::Triangle:   return Write(shape_cast<ShapeTriangle>(shape));
-						case EShape::Line:       return Write(shape_cast<ShapeLine>(shape));
-						case EShape::Polytope:   return Write(shape_cast<ShapePolytope>(shape));
-						case EShape::Array:      return Write(shape_cast<ShapeArray>(shape));
-						default: throw std::runtime_error("Unknown shape type");
-					}
-				}
-			};
-
-			L helper(*this, out);
-			helper.Write(*m_shape);
-
-			LdrBase::WriteTo<Writer>(out);
+				tri.o2w(s.m_base.m_s2p);
+				break;
+			}
+			case EShape::Array:
+			{
+				auto& s = shape_cast<ShapeArray>(shape);
+				auto& grp = target.Group();
+				grp.o2w(s.m_base.m_s2p);
+				for (auto const* sub = s.begin(), *end = s.end(); sub != end; sub = next(sub))
+					AddShape(grp, *sub);
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown shape type");
+			}
 		}
-	};
+	}
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::rdr12::ldraw
+namespace pr::ldraw
 {
 	PRUnitTest(LdrPhysicsShapeTests)
 	{
 		Builder L;
-		auto& shape = L._<LdrPhysicsShape>();
-		(void)shape;
+		auto& grp = L.Group("Shape");
+		(void)grp;
 	}
 }
 #endif

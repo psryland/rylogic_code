@@ -21,17 +21,21 @@ namespace physics_sandbox
 		// Bodies in the scene
 		std::vector<Body> m_body;
 
-		// Shapes owned by a loaded scene file. When loading from JSON, each body
-		// can have a unique shape, so we store them here to keep them alive for the
-		// lifetime of the scene. The hardcoded scenarios use 'm_box' instead.
-		// Uses variant because collision shapes are value types (no virtual destructor).
-		using OwnedShape = std::variant<collision::ShapeBox, collision::ShapeSphere, collision::ShapeLine, collision::ShapeTriangle>;
-		std::vector<OwnedShape> m_owned_shapes;
+		// Storage for shapes loaded in the scene file.
+		byte_data<16> m_shape_buffer;
 
-		// Polytope shapes are variable-sized (trailing vertex/face/neighbour data),
-		// so they can't fit in the OwnedShape variant. Store them in separate byte
-		// buffers and access via: buf.as<ShapePolytope>()
-		std::vector<byte_data<16>> m_owned_polytopes;
+
+		//// Shapes owned by a loaded scene file. When loading from JSON, each body
+		//// can have a unique shape, so we store them here to keep them alive for the
+		//// lifetime of the scene. The hardcoded scenarios use 'm_box' instead.
+		//// Uses variant because collision shapes are value types (no virtual destructor).
+		//using OwnedShape = std::variant<collision::ShapeBox, collision::ShapeSphere, collision::ShapeLine, collision::ShapeTriangle>;
+		//std::vector<OwnedShape> m_owned_shapes;
+
+		//// Polytope shapes are variable-sized (trailing vertex/face/neighbour data),
+		//// so they can't fit in the OwnedShape variant. Store them in separate byte
+		//// buffers and access via: buf.as<ShapePolytope>()
+		//std::vector<byte_data<16>> m_owned_polytopes;
 
 		// Gravity acceleration vector (direction and magnitude, e.g. [0, -9.81, 0]).
 		// Applied each step to all non-static bodies as F = m * g.
@@ -61,7 +65,7 @@ namespace physics_sandbox
 
 		// Load a scene from a JSON file.
 		// Replaces the current scenario with bodies defined in the file.
-		void LoadFromJson(std::filesystem::path const& filepath);
+		void LoadFromJson(rdr12::Renderer& rdr, std::filesystem::path const& filepath);
 
 		// Advance the simulation by one time step.
 		// Returns true if a collision occurred during this step.
@@ -84,11 +88,5 @@ namespace physics_sandbox
 
 		// Compute the maximum extent of all scene bodies from the origin
 		float ComputeSceneExtent(int num_bodies) const;
-
-		// Create the visual ground plane as a large textured LDraw plane
-		void CreateGroundGfx(float height, float extent, std::string const& texture);
-
-		// Clean up the ground plane visual
-		void CleanupGroundGfx();
 	};
 }

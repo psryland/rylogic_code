@@ -167,7 +167,7 @@ namespace pr::physics
 				v4{1, 2, 0, 1},
 				v4{1, 1, 2, 1},
 			};
-			auto poly_buf = collision::BuildPolytopeFromPoints(tet_pts, 4);
+			auto poly_buf = collision::BuildPolytopeFromPoints(tet_pts);
 			auto const& poly = poly_buf.as<collision::ShapePolytope>();
 
 			auto sb = collision::ShapeBox{v4{2, 2, 2, 0}}; // half-extents = 1,1,1

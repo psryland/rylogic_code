@@ -217,41 +217,27 @@ namespace pr::rdr12::ldraw
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/view3d-12/ldraw/ldraw_writer_binary.h"
+#include "pr/common/ldraw.h"
 namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LDrawBinarySerialiserTests)
 	{
-		std::vector<char> data;
+		// Generate binary data using the new Builder API
+		pr::ldraw::Builder builder;
+		builder.Point("TestPoints", 0xFF00FF00)
+			.pt(v3(1,1,1)).pt(v3(2,2,2)).pt(v3(3,3,3));
+		builder.Line("TestLines", 0xFF0000FF)
+			.line(v3(-1,-1,0), v3(1,1,0))
+			.line(v3(-1,1,0), v3(1,-1,0));
+		builder.Sphere("TestSphere", 0xFFFF0000)
+			.radius(1.0f);
 
-		pr::mem_ostream<char> strm(data);
-		BinaryWriter::Write(strm, EKeyword::Point, [&]
-		{
-			BinaryWriter::Write(strm, EKeyword::Name, "TestPoints");
-			BinaryWriter::Write(strm, EKeyword::Colour, 0xFF00FF00);
-			BinaryWriter::Write(strm, EKeyword::Data, v3(1,1,1), v3(2,2,2), v3(3,3,3));
-			BinaryWriter::Write(strm, EKeyword::Line, [&]
-			{
-				BinaryWriter::Write(strm, EKeyword::Name, "TestLines");
-				BinaryWriter::Write(strm, EKeyword::Colour, 0xFF0000FF);
-				BinaryWriter::Write(strm, EKeyword::Data, v3(-1,-1,0), v3(1,1,0), v3(-1,1,0), v3(1,-1,0));
-			});
-			BinaryWriter::Write(strm, EKeyword::Sphere, [&]
-			{
-				BinaryWriter::Write(strm, EKeyword::Name, "TestSphere");
-				BinaryWriter::Write(strm, EKeyword::Colour, 0xFFFF0000);
-				BinaryWriter::Write(strm, EKeyword::Data, 1.0f);
-			});
-			BinaryWriter::Write(strm, EKeyword::Custom, [&]
-			{
-				std::string_view s = "ShortString";
-				BinaryWriter::Write(strm, EKeyword::Name, StringWithLength{ s }, StringWithLength{ s });
-			});
-		});
+		auto bin = builder.ToBinary();
+		std::vector<char> data(reinterpret_cast<char const*>(bin.data()), reinterpret_cast<char const*>(bin.data() + bin.size()));
 
 		PR_EXPECT(data.size() != 0);
 
-		#if 1
+		#if PR_UNITTESTS_VISUALISE
 		{
 			std::ofstream ofile(temp_dir() / "ldraw_test.lbr", std::ios::binary);
 			ofile.write(data.data(), data.size());

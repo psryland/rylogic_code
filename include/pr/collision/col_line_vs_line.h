@@ -113,7 +113,7 @@ namespace pr::collision::tests
 	{
 		PRUnitTestMethod(Visualise)
 		{
-			using namespace pr::rdr12::ldraw;
+			using namespace pr::ldraw;
 
 			#if PR_UNITTESTS_VISUALISE
 			auto line_a = ShapeLine{2.0f};
@@ -127,12 +127,12 @@ namespace pr::collision::tests
 				m4x4 r2w = m4x4::Random(rng, v4::Origin(), 0.5f);
 
 				Builder builder;
-				builder._<LdrPhysicsShape>("lineA", 0x30FF0000).shape(line_a).o2w(l2w);
-				builder._<LdrPhysicsShape>("lineB", 0x3000FF00).shape(line_b).o2w(r2w);
+				{ auto& g = builder.Group("lineA", 0x30FF0000); AddShape(g, line_a); g.o2w(l2w); }
+				{ auto& g = builder.Group("lineB", 0x3000FF00); AddShape(g, line_b); g.o2w(r2w); }
 				if (LineVsLine(line_a, l2w, line_b, r2w, c))
 				{
 					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
-					builder.Box("pt0", Colour32Yellow).dim(0.005f).pos(c.m_point);
+					builder.Box("pt0", Colour32Yellow).box(0.005f).pos(c.m_point);
 				}
 				builder.Write(L"collision_unittests.ldr");
 			}

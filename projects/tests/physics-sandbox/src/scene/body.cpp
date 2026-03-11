@@ -1,18 +1,16 @@
-#include "src/forward.h"
+#include "pr/physics-2/utility/ldraw.h"
 #include "src/scene/body.h"
 
 namespace physics_sandbox
 {
-	rdr12::Renderer* Body::s_rdr = nullptr;
-
-	Body::Body()
-		: physics::RigidBody()
+	Body::Body(rdr12::Renderer& rdr, collision::Shape const* shape, float mass, m4x4 const& o2w, physics::Inertia const& inertia)
+		: physics::RigidBody(shape, o2w, inertia)
 		, m_gfx()
 	{
 		// Rebuild graphics whenever the collision shape changes.
 		// The handler uses the sender reference (not a captured 'this') so that
 		// it remains valid after the Body is moved by std::vector reallocation.
-		ShapeChange += [](RigidBody& sender, auto args)
+		ShapeChange += [&rdr](RigidBody& sender, auto args)
 		{
 			auto& self = static_cast<Body&>(sender);
 			if (args.before())
@@ -23,25 +21,20 @@ namespace physics_sandbox
 			else
 			{
 				// Create new graphics from the physics shape using LDraw
-				if (self.HasShape() && s_rdr)
+				if (self.HasShape())
 				{
-					using namespace pr::rdr12::ldraw;
+					using namespace pr::ldraw;
 					static std::default_random_engine rng;
+
 					Builder builder;
-					builder._<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f)).rigid_body(self);
-					auto result = Parse(*s_rdr, builder.ToText(false));
+					builder.Add<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f).argb).rigid_body(self);
+					auto result = rdr12::ldraw::Parse(rdr, builder.ToString());
 					if (!result.m_objects.empty())
 						self.m_gfx = result.m_objects.front();
 				}
 				self.UpdateGfx();
 			}
 		};
-	}
-
-	Body::~Body()
-	{
-		// LdrObjectPtr ref-counting handles cleanup automatically
-		m_gfx = nullptr;
 	}
 
 	// Position the graphics at the rigid body location

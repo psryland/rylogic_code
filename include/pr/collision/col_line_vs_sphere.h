@@ -103,7 +103,7 @@ namespace pr::collision::tests
 		// Visual debugging: run with PR_UNITTESTS_VISUALISE defined to write LDraw output
 		PRUnitTestMethod(Visualise)
 		{
-			using namespace pr::rdr12::ldraw;
+			using namespace pr::ldraw;
 
 			#if PR_UNITTESTS_VISUALISE
 			auto line = ShapeLine{2.0f};    // length=2, half-length=1
@@ -127,13 +127,13 @@ namespace pr::collision::tests
 				m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 1.0f);
 
 				Builder builder;
-				builder._<LdrPhysicsShape>("line", 0x30FF0000).shape(line).o2w(l2w);
-				builder._<LdrPhysicsShape>("sph", 0x3000FF00).shape(sph).o2w(r2w);
+				{ auto& g = builder.Group("line", 0x30FF0000); AddShape(g, line); g.o2w(l2w); }
+				{ auto& g = builder.Group("sph", 0x3000FF00); AddShape(g, sph); g.o2w(r2w); }
 				if (LineVsSphere(line, l2w, sph, r2w, c))
 				{
 					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
-					builder.Box("pt0", Colour32Yellow).dim(0.01f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
-					builder.Box("pt1", Colour32Yellow).dim(0.01f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt0", Colour32Yellow).box(0.01f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt1", Colour32Yellow).box(0.01f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
 				}
 				builder.Write(L"collision_unittests.ldr");
 			}

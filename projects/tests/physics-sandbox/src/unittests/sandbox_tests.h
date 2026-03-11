@@ -465,7 +465,7 @@ namespace physics_sandbox::tests
 				v4{ 0.0f,  0.0f,  0.8f, 1},
 			};
 
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			// Compute mass properties (density=1 to get unit inertia, then override mass)
@@ -523,7 +523,7 @@ namespace physics_sandbox::tests
 				v4{ 0.0f,  0.0f,  0.8f, 1},
 			};
 
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			// This is the exact path the sandbox takes
@@ -560,7 +560,7 @@ namespace physics_sandbox::tests
 				v4{ 0.0f,  0.0f,  0.8f, 1},
 			};
 
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			physics::RigidBody rb;
@@ -728,7 +728,7 @@ namespace physics_sandbox::tests
 				v4{ 0.0f,  0.8f, -0.5f, 1},
 				v4{ 0.0f,  0.0f,  0.8f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("Tetra", collision::shape_cast(&poly), 10.0f,
@@ -746,7 +746,7 @@ namespace physics_sandbox::tests
 				v4{ 0.0f,  0.8f, -0.5f, 1},
 				v4{ 0.0f,  0.0f,  0.8f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("TetraNoSpin", collision::shape_cast(&poly), 10.0f,
@@ -773,7 +773,7 @@ namespace physics_sandbox::tests
 			for (int i = 0; i != 4; ++i)
 				pts[i] = raw[i] - centroid;
 
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("CentredTetra", collision::shape_cast(&poly), 10.0f,
@@ -799,7 +799,7 @@ namespace physics_sandbox::tests
 			for (int i = 0; i != 4; ++i)
 				pts[i] = raw[i] - centroid;
 
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("CentredNoSpin", collision::shape_cast(&poly), 10.0f,
@@ -821,7 +821,7 @@ namespace physics_sandbox::tests
 				v4{ 0.3f,  0.4f,  0.7f, 1},
 				v4{-0.5f,  0.3f,  0.4f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 8);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("IrregHex", collision::shape_cast(&poly), 10.0f,
@@ -841,7 +841,7 @@ namespace physics_sandbox::tests
 				v4{ 1.0f, -0.3f,  0.2f, 1},
 				v4{ 0.0f,  0.6f,  0.2f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 6);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("Wedge", collision::shape_cast(&poly), 10.0f,
@@ -862,7 +862,7 @@ namespace physics_sandbox::tests
 				v4{ 0.5f,  0.87f,  0.05f, 1},
 				v4{ 0.0f,  0.0f,  0.3f, 1},  // bump on top → off-centre CoM
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 7);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("Pancake", collision::shape_cast(&poly), 10.0f,
@@ -903,7 +903,7 @@ namespace physics_sandbox::tests
 				v4{-0.375f, -0.4f, 0.65f, 1},
 				v4{-0.375f, -0.4f, -0.65f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 4);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("GPU-Tetra", collision::shape_cast(&poly), 10.0f, v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000);
@@ -920,7 +920,7 @@ namespace physics_sandbox::tests
 				v4{ 1.0f, -0.5f,  0.3f, 1},
 				v4{ 0.0f,  0.5f,  0.3f, 1},
 			};
-			auto buf = pr::collision::BuildPolytopeFromPoints(pts, 6);
+			auto buf = pr::collision::BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<pr::collision::ShapePolytope>();
 
 			auto drift = RunDropTest("GPU-Wedge", collision::shape_cast(&poly), 10.0f, v4{0.0f, 0.0f, 0.5f, 0.0f}, 5.0f, 2000);

@@ -1,4 +1,5 @@
 #include "src/forward.h"
+#include "src/ui/menu_id.h"
 #include "src/ui/sandbox_ui.h"
 
 namespace physics_sandbox
@@ -107,9 +108,6 @@ namespace physics_sandbox
 			if (args.m_vk_key == 'D')
 				m_details.TogglePin();
 		};
-
-		// Give Body access to the renderer for creating graphics objects from LDraw script
-		Body::s_rdr = &m_view3d.m_rdr;
 
 		// Hook the scene population event — called each frame during DoRender() to add
 		// objects to the scene's drawlist before rendering.
@@ -263,7 +261,7 @@ namespace physics_sandbox
 			m_view3d.WaitForGpu();
 
 			// Load the scene from JSON (creates new body graphics automatically)
-			m_scene.LoadFromJson(filepath);
+			m_scene.LoadFromJson(m_view3d.m_rdr, filepath);
 
 			// Frame the camera to see all loaded bodies
 			auto bbox = ComputeSceneBBox();

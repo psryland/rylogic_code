@@ -23,6 +23,7 @@ namespace pr::physics
 		//    an issue.
 		//  - Careful with spatial vectors, transforming a spatial vector does not move it, it describes
 		//    it from a new position/orientation. Changing 'o2w' does move the spatial vectors though.
+		//  - Inertia is not automatically derived from the collision shape, that is left to the caller.
 
 		// World space position/orientation of the rigid body
 		// This is the position of the model origin in world space (not the CoM)
@@ -45,7 +46,7 @@ namespace pr::physics
 		InertiaInv m_os_inertia_inv;
 
 		// Collision shape
-		Shape const* m_shape;
+		collision::Shape const* m_shape;
 
 	public:
 
@@ -55,7 +56,7 @@ namespace pr::physics
 		explicit RigidBody(TShape const* shape, m4x4 const& o2w = m4x4::Identity(), Inertia const& inertia = {})
 			:RigidBody(shape_cast(shape), o2w, inertia)
 		{}
-		explicit RigidBody(Shape const* shape = nullptr, m4x4 const& o2w = m4x4::Identity(), Inertia const& inertia = {})
+		explicit RigidBody(collision::Shape const* shape = nullptr, m4x4 const& o2w = m4x4::Identity(), Inertia const& inertia = {})
 			:m_o2w(o2w)
 			,m_os_com()
 			,m_ws_momentum()
@@ -97,10 +98,19 @@ namespace pr::physics
 			// Set the shape
 			Shape(shape);
 
-			// Derive the mass properties from the shape
-			auto mp = CalcMassProperties(*m_shape, mass_is_actually_density ? mass : 1.0f);
-			if (!mass_is_actually_density) mp.m_mass = mass;
-			SetMassProperties(Inertia{mp}, mp.m_centre_of_mass);
+			if (mass > 0 && mass < InfiniteMass)
+			{
+				// Derive the mass properties from the shape
+				auto mp = CalcMassProperties(*m_shape, mass_is_actually_density ? mass : 1.0f);
+				if (!mass_is_actually_density) mp.m_mass = mass;
+				SetMassProperties(Inertia{ mp }, mp.m_centre_of_mass);
+			}
+			else
+			{
+				// Set the mass properties to be immovable
+				SetMassProperties(Inertia::Infinite());
+				m_os_com = v4{};
+			}
 		}
 
 		// Set the shape and mass properties explicitly

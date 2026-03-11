@@ -69,34 +69,25 @@ namespace pr::rdr12::ldraw
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/view3d-12/ldraw/ldraw_writer_text.h"
+#include "pr/common/ldraw.h"
 namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LDrawTextSerialiserTests)
 	{
-		std::ostringstream strm;
-		TextWriter::Write(strm, EKeyword::Point, "TestPoints", 0xFF00FF00, [&]
-		{
-			TextWriter::Write(strm, EKeyword::Data, v3(1, 1, 1), v3(2, 2, 2), v3(3, 3, 3));
-			TextWriter::Write(strm, EKeyword::Line, "TestLines", 0xFF0000FF, [&]
-			{
-				TextWriter::Write(strm, EKeyword::Data, v3(-1, -1, 0), v3(1, 1, 0), v3(-1, 1, 0), v3(1, -1, 0));
-			});
-			TextWriter::Write(strm, EKeyword::Sphere, "TestSphere", 0xFFFF0000, [&]
-			{
-				TextWriter::Write(strm, EKeyword::Data, 1.0f);
-			});
-			TextWriter::Write(strm, EKeyword::Custom, [&]
-			{
-				std::string_view s = "ShortString";
-				TextWriter::Write(strm, EKeyword::Name, StringWithLength{ s }, StringWithLength{ s });
-			});
-		});
+		// Generate text data using the new Builder API
+		pr::ldraw::Builder builder;
+		builder.Point("TestPoints", 0xFF00FF00)
+			.pt(v3(1, 1, 1)).pt(v3(2, 2, 2)).pt(v3(3, 3, 3));
+		builder.Line("TestLines", 0xFF0000FF)
+			.line(v3(-1, -1, 0), v3(1, 1, 0))
+			.line(v3(-1, 1, 0), v3(1, -1, 0));
+		builder.Sphere("TestSphere", 0xFFFF0000)
+			.radius(1.0f);
 
-		auto data = strm.str();
+		auto data = builder.ToString();
 		PR_EXPECT(data.size() != 0);
 
-		#if 0
+		#if PR_UNITTESTS_VISUALISE
 		{
 			std::ofstream ofile(temp_dir / "ldraw_test.lbr");
 			ofile.write(data.data(), data.size());

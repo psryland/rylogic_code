@@ -1,7 +1,6 @@
 #pragma once
 #include "src/forward.h"
 #include "src/scene/scene.h"
-#include "src/ui/menu_id.h"
 #include "src/ui/recent_files.h"
 #include "src/ui/media_panel.h"
 #include "src/ui/details_panel.h"

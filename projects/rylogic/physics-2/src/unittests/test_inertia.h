@@ -339,7 +339,7 @@ namespace pr::physics
 				v4{-s,-s,-s,1}, v4{+s,-s,-s,1}, v4{+s,+s,-s,1}, v4{-s,+s,-s,1},
 				v4{-s,-s,+s,1}, v4{+s,-s,+s,1}, v4{+s,+s,+s,1}, v4{-s,+s,+s,1},
 			};
-			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			// ShapeBox stores half-extents in m_radius, takes full dimensions
@@ -379,7 +379,7 @@ namespace pr::physics
 				v4{-hx,-hy,-hz,1}, v4{+hx,-hy,-hz,1}, v4{+hx,+hy,-hz,1}, v4{-hx,+hy,-hz,1},
 				v4{-hx,-hy,+hz,1}, v4{+hx,-hy,+hz,1}, v4{+hx,+hy,+hz,1}, v4{-hx,+hy,+hz,1},
 			};
-			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 			ShapeBox box(v4{2 * hx, 2 * hy, 2 * hz, 0});
 
@@ -414,7 +414,7 @@ namespace pr::physics
 				v4{ox-s,oy-s,oz-s,1}, v4{ox+s,oy-s,oz-s,1}, v4{ox+s,oy+s,oz-s,1}, v4{ox-s,oy+s,oz-s,1},
 				v4{ox-s,oy-s,oz+s,1}, v4{ox+s,oy-s,oz+s,1}, v4{ox+s,oy+s,oz+s,1}, v4{ox-s,oy+s,oz+s,1},
 			};
-			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			auto density = 1.0f;
@@ -461,7 +461,7 @@ namespace pr::physics
 				v4{-r / 2.0f, -a / 2.0f, -h / 4.0f, 1}, // base vertex 2
 				v4{ 0,          0,        3.0f * h / 4.0f, 1}, // apex
 			};
-			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			auto density = 1.0f;
