@@ -50,9 +50,10 @@ namespace pr::ldraw
 			if (!m_rb || !m_rb->HasShape())
 				return;
 
-			// Use a temporary builder to generate the shape, then append its output
 			Builder tmp;
-			AddShape(tmp.Group(m_name, m_colour), m_rb->Shape());
+			auto& grp = tmp.Group(m_name, m_colour);
+			grp.group_colour(m_colour);
+			AddShape(grp, m_rb->Shape());
 			tmp.ToString(out);
 			LdrBase::Write(out);
 		}
@@ -62,7 +63,9 @@ namespace pr::ldraw
 				return;
 
 			Builder tmp;
-			AddShape(tmp.Group(m_name, m_colour), m_rb->Shape());
+			auto& grp = tmp.Group(m_name, m_colour);
+			grp.group_colour(m_colour);
+			AddShape(grp, m_rb->Shape());
 			tmp.ToBinary(out);
 			LdrBase::Write(out);
 		}
