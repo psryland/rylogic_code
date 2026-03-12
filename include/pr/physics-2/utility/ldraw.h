@@ -26,13 +26,11 @@ namespace pr::ldraw
 	{
 		physics::RigidBody const* m_rb;
 		ERigidBodyFlags m_flags;
-		float m_scale;
 
 		LdrRigidBody(seri::Name name = {}, seri::Colour colour = {})
 			: LdrBase(name, colour)
 			, m_rb()
 			, m_flags(ERigidBodyFlags::Default)
-			, m_scale(0.1f)
 		{
 		}
 
@@ -46,11 +44,6 @@ namespace pr::ldraw
 			m_flags = f;
 			return *this;
 		}
-		LdrRigidBody& scale(float s)
-		{
-			m_scale = s;
-			return *this;
-		}
 
 		virtual void Write(textbuf& out) const override
 		{
@@ -59,7 +52,7 @@ namespace pr::ldraw
 
 			// Use a temporary builder to generate the shape, then append its output
 			Builder tmp;
-			AddShape(tmp, m_rb->Shape());
+			AddShape(tmp.Group(m_name, m_colour), m_rb->Shape());
 			tmp.ToString(out);
 			LdrBase::Write(out);
 		}
@@ -69,7 +62,7 @@ namespace pr::ldraw
 				return;
 
 			Builder tmp;
-			AddShape(tmp, m_rb->Shape());
+			AddShape(tmp.Group(m_name, m_colour), m_rb->Shape());
 			tmp.ToBinary(out);
 			LdrBase::Write(out);
 		}

@@ -176,7 +176,7 @@ namespace physics_sandbox
 
 		// Make sure the GPU has finished with the models before releasing them.
 		m_view3d.WaitForGpu();
-		m_scene.Reset();
+		m_scene.Reset(&m_view3d.m_rdr);
 
 		// Frame the camera to see the whole scene: look from +Y toward origin, Z-up
 		m_view3d.m_cam.LookAt(v4(0, -35, 10, 1), v4::Origin(), v4{0, 0, 1, 0});
@@ -261,7 +261,7 @@ namespace physics_sandbox
 			m_view3d.WaitForGpu();
 
 			// Load the scene from JSON (creates new body graphics automatically)
-			m_scene.LoadFromJson(m_view3d.m_rdr, filepath);
+			m_scene.LoadFromJson(&m_view3d.m_rdr, filepath);
 
 			// Frame the camera to see all loaded bodies
 			auto bbox = ComputeSceneBBox();

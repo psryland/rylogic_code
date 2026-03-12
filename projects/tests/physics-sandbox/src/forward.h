@@ -47,6 +47,7 @@ using namespace pr::math::spatial;
 namespace physics_sandbox
 {
 	struct SandboxUI;
+	namespace scene_loader { struct SceneDesc; }
 
 	// The user's app data directory.
 	std::filesystem::path AppDataPath();

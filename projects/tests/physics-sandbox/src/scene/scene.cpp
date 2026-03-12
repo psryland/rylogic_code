@@ -1,5 +1,6 @@
 #include "pr/physics-2/utility/ldraw.h"
 #include "src/scene/scene.h"
+#include "src/utils/scene_loader.h"
 
 namespace physics_sandbox
 {
@@ -43,7 +44,7 @@ namespace physics_sandbox
 	}
 
 	// Reset the simulation to the current scenario's initial conditions
-	void Scene::Reset()
+	void Scene::Reset(rdr12::Renderer* rdr)
 	{
 		m_steps_remaining = 0;
 		m_clock = 0;
@@ -70,7 +71,7 @@ namespace physics_sandbox
 		mat.m_friction_static = 0.0f;
 
 		// Configure bodies for the current scenario
-		SetupScenario();
+		SetupScenario(rdr);
 
 		// Rebuild the broadphase with the active bodies
 		m_physics.Broadphase().Clear();
@@ -92,7 +93,7 @@ namespace physics_sandbox
 	// Load a scene from a JSON file.
 	// Replaces the current scenario with bodies defined in the file.
 	// Shapes are heap-allocated and owned by m_owned_shapes.
-	void Scene::LoadFromJson(rdr12::Renderer& rdr, std::filesystem::path const& filepath)
+	void Scene::LoadFromJson(rdr12::Renderer* rdr, std::filesystem::path const& filepath)
 	{
 		// Load the scene
 		auto scene_desc = scene_loader::LoadFromFile(filepath);
@@ -130,8 +131,9 @@ namespace physics_sandbox
 		// Count total bodies: scene bodies + optional ground plane body
 		auto num_scene_bodies = static_cast<int>(scene_desc.bodies.size());
 		auto total_bodies = num_scene_bodies + (scene_desc.has_ground ? 1 : 0);
+		auto scene_bbox = CalculateSceneBBox(scene_desc);
 
-		// Create the shapes for the bodies in the scene
+		// Create the shapes for the bodies in the scene.
 		m_shape_buffer.reserve(total_bodies * 256);
 		for (auto const& bd : scene_desc.bodies)
 		{
@@ -167,15 +169,15 @@ namespace physics_sandbox
 					throw std::runtime_error("Unknown shape type in scene description");
 				}
 			}
+			assert((m_shape_buffer.size() % 16) == 0 && "All shapes should have a size that is a multiple of 16 bytes");
 		}
 
 		// Create a collision shape for the ground plane
 		const auto ground_thickness = 10.0f;
-		auto ground_half_extent = 100.0f;
+		auto ground_half_extent = Length(scene_bbox.Radius().xy);
 		if (scene_desc.has_ground)
 		{
 			// Create the ground plane body as a large thin box with infinite mass.
-			ground_half_extent = std::max(ComputeSceneExtent(num_scene_bodies) * 5.0f, 10.0f);
 			m_shape_buffer.push_back(collision::ShapeBox(v4{ ground_half_extent, ground_half_extent, ground_thickness, 0 }));
 		}
 
@@ -183,11 +185,13 @@ namespace physics_sandbox
 		auto shape_ptr = m_shape_buffer.data<collision::Shape>();
 		for (auto const& bd : scene_desc.bodies)
 		{
-			// mass == 0 means static (immovable) body
-			Body body(rdr, shape_ptr, bd.mass, m4x4::Translation(bd.position));
+			// Create body without shape first (so ShapeChange handler gets registered),
+			// then set transform and shape. Setting the shape fires ShapeChange which creates graphics.
+			Body body(rdr);
+			body.O2W(m4x4::Translation(bd.position));
+			body.Shape(shape_ptr, bd.mass);
 			body.VelocityWS(bd.angular_velocity, bd.velocity);
 			m_body.push_back(std::move(body));
-
 			shape_ptr = collision::next(shape_ptr);
 		}
 
@@ -195,26 +199,28 @@ namespace physics_sandbox
 		// The box is thin in Z (0.5 units) and wide in XY, centred at the ground height.
 		if (scene_desc.has_ground)
 		{
-			Body ground(rdr, shape_ptr, -1.0f, m4x4::Translation(v4{ 0, 0, scene_desc.ground.height - 0.5f*ground_thickness, 1 }));
+			Body ground(rdr);
+			ground.O2W(m4x4::Translation(v4{ 0, 0, scene_desc.ground.height - 0.5f*ground_thickness, 1 }));
+			ground.Shape(shape_ptr, physics::Inertia{});
 			m_body.push_back(std::move(ground));
 			shape_ptr = collision::next(shape_ptr);
 
 			// Replace the graphics for the ground plane with a large textured quad.
-			auto extent = ground_half_extent * 2;
+			if (rdr)
+			{
+				auto extent = ground_half_extent * 2;
+				auto scale = ground_half_extent / 8.0f;
+				ldraw::Builder ldr;
+				ldr.Plane("ground", 0xFFC8B078)
+					.wh({ extent, extent })
+					.texture([=](ldraw::seri::Texture& tex) { tex.filepath(scene_desc.ground.texture).t2s(m3x4::Scale(scale)); })
+					.axis(AxisId::PosZ)
+					.pos(v3{ 0, 0, scene_desc.ground.height });
 
-			// The plane is oriented in XY (horizontal) via AxisId +3 (Z-up).
-			// Use white base colour so the checker texture shows with full contrast.
-			auto scale = ground_half_extent / 8.0f;
-			ldraw::Builder ldr;
-			ldr.Plane("ground")
-				.wh({ extent, extent })
-				.texture([=](ldraw::seri::Texture& tex) { tex.filepath(scene_desc.ground.texture).t2s(m3x4::Scale(scale)); })
-				.axis(AxisId::PosZ)
-				.pos(v3{ 0, 0, scene_desc.ground.height });
-
-			auto result = rdr12::ldraw::Parse(rdr, ldr.ToBinary());
-			if (!result.m_objects.empty())
-				m_ground_gfx = result.m_objects.front();
+				auto result = rdr12::ldraw::Parse(*rdr, ldr.ToString());
+				if (!result.m_objects.empty())
+					m_ground_gfx = result.m_objects.front();
+			}
 		}
 
 		// Rebuild the broadphase with the new bodies
@@ -222,18 +228,21 @@ namespace physics_sandbox
 		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_physics.Broadphase().Add(m_body[i]);
 
-		DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
-		if (!scene_desc.description.empty())
-			DbgLog("  Description: %s\n", scene_desc.description.c_str());
-		DbgLog("  Bodies: %d\n", static_cast<int>(m_body.size()));
-		DbgLog("  Gravity: (%.2f, %.2f, %.2f)\n", m_gravity.x, m_gravity.y, m_gravity.z);
-		DbgLog("  Ground: %s (height=%.2f)\n", scene_desc.has_ground ? "yes" : "no", scene_desc.has_ground ? scene_desc.ground.height : 0.0f);
-		DbgLog("  Material: elasticity=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		for (int i = 0; i != std::ssize(m_body); ++i)
+		// Logging
 		{
-			auto snap = BodySnapshot::Capture(m_body[i]);
-			auto name = (i < static_cast<int>(scene_desc.bodies.size())) ? scene_desc.bodies[i].name.c_str() : "ground";
-			snap.Log(FmtS("Body %d '%s'", i, name));
+			DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
+			if (!scene_desc.description.empty())
+				DbgLog("  Description: %s\n", scene_desc.description.c_str());
+			DbgLog("  Bodies: %d\n", static_cast<int>(m_body.size()));
+			DbgLog("  Gravity: (%.2f, %.2f, %.2f)\n", m_gravity.x, m_gravity.y, m_gravity.z);
+			DbgLog("  Ground: %s (height=%.2f)\n", scene_desc.has_ground ? "yes" : "no", scene_desc.has_ground ? scene_desc.ground.height : 0.0f);
+			DbgLog("  Material: elasticity=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
+			for (int i = 0; i != std::ssize(m_body); ++i)
+			{
+				auto snap = BodySnapshot::Capture(m_body[i]);
+				auto name = (i < static_cast<int>(scene_desc.bodies.size())) ? scene_desc.bodies[i].name.c_str() : "ground";
+				snap.Log(FmtS("Body %d '%s'", i, name));
+			}
 		}
 	}
 
@@ -265,27 +274,17 @@ namespace physics_sandbox
 		m_physics.Step(dt, bodies);
 
 		#ifdef PR_PHYSICS_DIAGNOSTICS
-		// If a collision occurred this step, capture post-impulse snapshots.
-		// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
-		if (m_diag.occurred && std::ssize(m_body) == 2)
 		{
-			m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
-			m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
-			LogCollisionDiagnostics();
-		}
-		#endif
-
-		// NaN guard
-		for (int i = 0; i != std::ssize(m_body); ++i)
-		{
-			auto pos = m_body[i].O2W().pos;
-			if (!std::isfinite(pos.x) || !std::isfinite(pos.y) || !std::isfinite(pos.z))
+			// If a collision occurred this step, capture post-impulse snapshots.
+			// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
+			if (m_diag.occurred && std::ssize(m_body) == 2)
 			{
-				DbgLog("!!! NaN detected, resetting !!!\n");
-				Reset();
-				return false;
+				m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
+				m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
+				LogCollisionDiagnostics();
 			}
 		}
+		#endif
 
 		// Kill zone: freeze bodies that have fallen below the threshold.
 		// This prevents escaped bodies from accumulating extreme velocities
@@ -309,9 +308,11 @@ namespace physics_sandbox
 
 	// Configure bodies for the current scenario. All test scenarios use no external
 	// forces so that collisions can be validated against analytic predictions.
-	void Scene::SetupScenario()
+	void Scene::SetupScenario(rdr12::Renderer* rdr)
 	{
-		m_body.resize(2);
+		m_body.resize(0);
+		m_body.emplace_back(rdr);
+		m_body.emplace_back(rdr);
 		auto& objA = m_body[0];
 		auto& objB = m_body[1];
 
@@ -530,7 +531,7 @@ namespace physics_sandbox
 		for (int s = 1; s <= 5; ++s)
 		{
 			m_scenario = static_cast<EScenario>(s);
-			Reset();
+			Reset(nullptr);
 
 			for (int step = 0; step < max_steps && m_diag.count == 0; ++step)
 			{
@@ -576,33 +577,30 @@ namespace physics_sandbox
 		builder.Save(L"dump\\physics_dump.ldr");
 	}
 
-	// Compute the maximum extent of all scene bodies from the origin.
-	// Used to size the ground plane visual proportionally to the scene.
-	float Scene::ComputeSceneExtent(int num_bodies) const
+	// Calculate the bounding box for the scene (excluding terrain)
+	BBox Scene::CalculateSceneBBox(scene_loader::SceneDesc const& scene_desc) const
 	{
-		auto max_dist = 0.0f;
-		for (int i = 0; i != num_bodies; ++i)
+		auto bbox = BBox::Reset();
+		for (auto const& bd : scene_desc.bodies)
 		{
-			auto pos = m_body[i].O2W().pos;
-			auto dist = Length(v4{ pos.x, 0, pos.z, 0 });
-
-			// Include the shape size so the extent covers the body footprint
-			if (m_body[i].HasShape())
+			auto pos = bd.position;
+			auto rad = v4::Zero();
+			switch (bd.shape_type)
 			{
-				auto type = m_body[i].Shape().m_type;
-				if (type == collision::EShape::Box)
+				case scene_loader::BodyDesc::EShape::Box:      rad = bd.box_dimensions * 0.5f; break;
+				case scene_loader::BodyDesc::EShape::Sphere:   rad = v4(bd.sphere_radius, bd.sphere_radius, bd.sphere_radius, 0); break;
+				case scene_loader::BodyDesc::EShape::Line:     rad = v4(0, 0, bd.line_length * 0.5f, 0); break;
+				case scene_loader::BodyDesc::EShape::Triangle: rad = v4(1, 1, 1, 0); break;
+				case scene_loader::BodyDesc::EShape::Polytope:
 				{
-					auto const& box = m_body[i].Shape<collision::ShapeBox>();
-					dist += Length(v4{ box.m_radius.x, 0, box.m_radius.z, 0 });
+					for (auto const& v : bd.polytope_verts)
+						Grow(bbox, (pos + v.w0()).w1());
+					continue;
 				}
-				else if (type == collision::EShape::Sphere)
-				{
-					auto const& sphere = m_body[i].Shape<collision::ShapeSphere>();
-					dist += sphere.m_radius;
-				}
+				default: break;
 			}
-			max_dist = Max(max_dist, dist);
+			Grow(bbox, BBox(pos, rad));
 		}
-		return max_dist;
+		return bbox;
 	}
 }

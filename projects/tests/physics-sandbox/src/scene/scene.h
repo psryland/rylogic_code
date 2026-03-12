@@ -61,18 +61,18 @@ namespace physics_sandbox
 		explicit Scene(ID3D12Device4* existing_device = nullptr);
 
 		// Reset the simulation to the current scenario's initial conditions
-		void Reset();
+		void Reset(rdr12::Renderer* rdr);
 
 		// Load a scene from a JSON file.
 		// Replaces the current scenario with bodies defined in the file.
-		void LoadFromJson(rdr12::Renderer& rdr, std::filesystem::path const& filepath);
+		void LoadFromJson(rdr12::Renderer* rdr, std::filesystem::path const& filepath);
 
 		// Advance the simulation by one time step.
 		// Returns true if a collision occurred during this step.
 		bool Step(double elapsed_seconds);
 
 		// Configure bodies for the current scenario
-		void SetupScenario();
+		void SetupScenario(rdr12::Renderer* rdr);
 
 		// Log comprehensive collision diagnostics and analytic comparisons
 		void LogCollisionDiagnostics();
@@ -86,7 +86,7 @@ namespace physics_sandbox
 		// Export the scene as LDraw script
 		void Dump();
 
-		// Compute the maximum extent of all scene bodies from the origin
-		float ComputeSceneExtent(int num_bodies) const;
+		// Calculate the bounding box for the scene (excluding terrain)
+		BBox CalculateSceneBBox(scene_loader::SceneDesc const& scene_desc) const;
 	};
 }
