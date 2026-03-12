@@ -637,10 +637,10 @@ namespace pr::collision
 
 		size_t hull_vert_count = 0;
 		size_t hull_face_count = 0;
-		auto ok = ConvexHull(
+		auto ok = hull::ConvexHull(
 			points,
-			indices.data(), indices.data() + points_count,
-			face_buf.data(), face_buf.data() + face_buf.size(),
+			std::span<int>{indices},
+			std::span<int>{face_buf},
 			hull_vert_count, hull_face_count);
 
 		if (!ok || hull_vert_count < 4 || hull_face_count < 4)
