@@ -159,7 +159,7 @@ namespace pr::collision::tests
 	{
 		PRUnitTestMethod(Visualise)
 		{
-			using namespace pr::rdr12::ldraw;
+			using namespace pr::ldraw;
 
 			#if PR_UNITTESTS_VISUALISE
 			auto tri_a = ShapeTriangle{v4{-1, -1, 0, 0}, v4{1, -1, 0, 0}, v4{0, 1, 0, 0}};
@@ -173,13 +173,13 @@ namespace pr::collision::tests
 				m4x4 r2w = m4x4::Random(rng, v4::Origin(), 0.5f);
 
 				Builder builder;
-				builder._<LdrPhysicsShape>("tri_a", 0x30FF0000).shape(tri_a).o2w(l2w);
-				builder._<LdrPhysicsShape>("tri_b", 0x3000FF00).shape(tri_b).o2w(r2w);
+				{ auto& g = builder.Group("tri_a", 0x30FF0000); AddShape(g, tri_a); g.o2w(l2w); }
+				{ auto& g = builder.Group("tri_b", 0x3000FF00); AddShape(g, tri_b); g.o2w(r2w); }
 				if (TriangleVsTriangle(tri_a, l2w, tri_b, r2w, c))
 				{
 					builder.Line("sep_axis", Colour32Yellow).style(ELineStyle::Direction).line(c.m_point, c.m_axis);
-					builder.Box("pt0", Colour32Yellow).dim(0.005f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
-					builder.Box("pt1", Colour32Yellow).dim(0.005f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt0", Colour32Yellow).box(0.005f).pos(c.m_point - 0.5f * c.m_depth * c.m_axis);
+					builder.Box("pt1", Colour32Yellow).box(0.005f).pos(c.m_point + 0.5f * c.m_depth * c.m_axis);
 				}
 				builder.Write(L"collision_unittests.ldr");
 			}

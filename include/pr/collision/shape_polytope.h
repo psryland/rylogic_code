@@ -614,35 +614,32 @@ namespace pr::collision
 	// Returns the polytope packed into a byte_data<16> buffer suitable for use as a collision shape.
 	// The caller owns the buffer and can access the shape via: buf.as<ShapePolytope>()
 	// Note: ShapePolytope uses uint8_t vertex indices, so max 255 vertices.
-	inline byte_data<16> BuildPolytopeFromPoints(
-		v4 const* points, int point_count,
-		m4x4 const& shape_to_parent = m4x4::Identity(),
-		MaterialId material_id = 0,
-		Shape::EFlags flags = Shape::EFlags::None)
+	inline byte_data<16> BuildPolytopeFromPoints(std::span<v4 const> points, m4x4 const& shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 	{
 		using Idx  = ShapePolytope::Idx;
 		using Face = ShapePolytope::Face;
 		using Nbrs = ShapePolytope::Nbrs;
 
-		assert(point_count >= 4 && "Need at least 4 non-coplanar points for a polytope");
-		assert(point_count <= 255 && "ShapePolytope uses uint8_t indices, max 255 vertices");
+		int points_count = int(points.size());
+		assert(points_count >= 4 && "Need at least 4 non-coplanar points for a polytope");
+		assert(points_count <= 255 && "ShapePolytope uses uint8_t indices, max 255 vertices");
 
 		// Compute the convex hull of the point set.
 		// ConvexHull partitions the index array so hull vertices come first,
 		// and returns face index-triples referencing positions in the index array.
-		std::vector<int> indices(point_count);
-		for (int i = 0; i != point_count; ++i)
+		std::vector<int> indices(points_count);
+		for (int i = 0; i != points_count; ++i)
 			indices[i] = i;
 
 		// Allocate face buffer. A convex hull of N vertices has at most 2*(N-2) faces.
-		auto max_faces = 2 * (point_count - 2);
+		auto max_faces = 2 * (points_count - 2);
 		std::vector<int> face_buf(max_faces * 3);
 
 		size_t hull_vert_count = 0;
 		size_t hull_face_count = 0;
 		auto ok = ConvexHull(
 			points,
-			indices.data(), indices.data() + point_count,
+			indices.data(), indices.data() + points_count,
 			face_buf.data(), face_buf.data() + face_buf.size(),
 			hull_vert_count, hull_face_count);
 
@@ -807,7 +804,7 @@ namespace pr::collision::tests
 				v4{1, 1, 2, 1},
 			};
 
-			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			PR_EXPECT(poly.m_vert_count == 4);
@@ -829,7 +826,7 @@ namespace pr::collision::tests
 				v4{-1,  1,  1, 1}, v4{ 1,  1,  1, 1},
 			};
 
-			auto buf = BuildPolytopeFromPoints(pts, 8);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			PR_EXPECT(poly.m_vert_count == 8);
@@ -851,7 +848,7 @@ namespace pr::collision::tests
 				v4{1, 0.5f, 0.5f, 1}, // interior
 			};
 
-			auto buf = BuildPolytopeFromPoints(pts, 10);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			PR_EXPECT(poly.m_vert_count == 8);
@@ -870,7 +867,7 @@ namespace pr::collision::tests
 				v4{0, 0, 2, 1},
 			};
 
-			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			// BBox should contain all vertices
@@ -888,7 +885,7 @@ namespace pr::collision::tests
 				v4{0, 0, 3, 1},
 			};
 
-			auto buf = BuildPolytopeFromPoints(pts, 4);
+			auto buf = BuildPolytopeFromPoints(pts);
 			auto& poly = buf.as<ShapePolytope>();
 
 			// Support in +X direction should be the vertex at (3,0,0)

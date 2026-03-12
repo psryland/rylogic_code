@@ -9,9 +9,9 @@
 namespace pr::rdr12
 {
 	template <D3D12_COMMAND_LIST_TYPE ListType>
-	Gpu<ListType>::Gpu(ID3D12Device4* existing_device)
+	Gpu<ListType>::Gpu(ID3D12Device4* existing_device, ID3D12CommandQueue* existing_queue)
 		: m_device(existing_device, true)
-		, m_cmd_queue()
+		, m_cmd_queue(existing_queue, true)
 		, m_gsync()
 		, m_cmd_alloc_pool(m_gsync)
 		, m_cmd_list_pool(m_gsync)
@@ -56,13 +56,16 @@ namespace pr::rdr12
 		}
 
 		// Create the command queue
-		D3D12_COMMAND_QUEUE_DESC queue_desc = {
-			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
-			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-			.NodeMask = 0,
-		};
-		Check(m_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)m_cmd_queue.address_of()));
+		if (m_cmd_queue == nullptr)
+		{
+			D3D12_COMMAND_QUEUE_DESC queue_desc = {
+				.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+				.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+				.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+				.NodeMask = 0,
+			};
+			Check(m_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)m_cmd_queue.address_of()));
+		}
 
 		// Check feature support
 		D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = { .HighestShaderModel = D3D_SHADER_MODEL_5_1 };
@@ -72,35 +75,6 @@ namespace pr::rdr12
 
 		// Initialise the fence
 		m_gsync.Init(m_device.get());
-	}
-
-	// Allow use as a device
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	ID3D12Device4 const* Gpu<ListType>::operator -> () const
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	ID3D12Device4* Gpu<ListType>::operator ->()
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	Gpu<ListType>::operator ID3D12Device4 const* () const
-	{
-		return m_device.get();
-	}
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	Gpu<ListType>::operator ID3D12Device4* ()
-	{
-		return m_device.get();
-	}
-	
-	// Access the GPU upload buffer
-	template <D3D12_COMMAND_LIST_TYPE ListType>
-	GpuUploadBuffer& Gpu<ListType>::UploadBuffer()
-	{
-		return m_upload_buffer;
 	}
 
 	// Allocate a DX resource

@@ -18,7 +18,6 @@
 //   - Create LdrObjects via ldraw::Parse(m_rdr, script)
 //   - Add objects to the scene in your render loop
 #pragma once
-
 #include "pr/gui/wingui.h"
 #include "pr/gui/misc.h"
 #include "pr/view3d-12/main/renderer.h"
@@ -128,7 +127,7 @@ namespace pr::gui
 
 		// Render the scene. Call this after populating the drawlists.
 		// Follows the same ClearDrawlists → NewFrame → Render → Present pattern as app::Main.
-		void DoRender()
+		void DoRender(rdr12::EGpuFlush flush = rdr12::EGpuFlush::Block)
 		{
 			m_scene.ClearDrawlists();
 
@@ -137,7 +136,14 @@ namespace pr::gui
 
 			auto& frame = m_wnd.NewFrame();
 			m_scene.Render(frame);
-			m_wnd.Present(frame, rdr12::EGpuFlush::Block);
+			m_wnd.Present(frame, flush);
+		}
+
+		// Block until the GPU has finished processing all commands.
+		void WaitForGpu()
+		{
+			m_wnd.WaitForGpu();
+			m_scene.ClearDrawlists();
 		}
 
 		// Event raised during DoRender after ClearDrawlists, before Scene.Render.

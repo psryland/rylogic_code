@@ -51,6 +51,9 @@ namespace pr::ldraw
 	struct LdrMesh;
 	struct LdrConvexHull;
 	struct LdrModel;
+	struct LdrCommands;
+	struct LdrBinaryStream;
+	struct LdrTextStream;
 
 	using ObjPtr = std::shared_ptr<LdrBase>;
 	using textbuf = std::string;
@@ -307,46 +310,6 @@ namespace pr::ldraw
 		// AUTO-GENERATED-KEYWORDS-END
 		#pragma endregion
 	};
-	struct EPointStyle
-	{
-		char const* style;
-		EPointStyle() : style(Square) {}
-		EPointStyle(char const* style_) : style(style_) {}
-		explicit operator bool() const { return style != Square; }
-
-		inline static char const* Square = "Square";
-		inline static char const* Circle = "Circle";
-		inline static char const* Triangle = "Triangle";
-		inline static char const* Star = "Star";
-		inline static char const* Annulus = "Annulus";
-	};
-	struct ELineStyle
-	{
-		char const* style;
-		ELineStyle() : style(LineSegments) {}
-		ELineStyle(char const* style_) : style(style_) {}
-		explicit operator bool() const { return style != LineSegments; }
-
-		inline static char const* LineSegments = "LineSegments";
-		inline static char const* LineStrip = "LineStrip";
-		inline static char const* Direction = "Direction";
-		inline static char const* BezierSpline = "BezierSpline";
-		inline static char const* HermiteSpline = "HermiteSpline";
-		inline static char const* BSplineSpline = "BSplineSpline";
-		inline static char const* CatmullRom = "CatmullRom";
-	};
-	struct EArrowType
-	{
-		char const* type;
-		EArrowType() : type(Line) {}
-		EArrowType(char const* type_) : type(type_) {}
-		explicit operator bool() const { return type != Line; }
-
-		inline static char const* Line    = "Line";
-		inline static char const* Fwd     = "Fwd";
-		inline static char const* Back    = "Back";
-		inline static char const* FwdBack = "FwdBack";
-	};
 
 	// Serializing helpers
 	namespace seri
@@ -386,6 +349,27 @@ namespace pr::ldraw
 			if (ec != std::errc{}) throw std::system_error(std::make_error_code(ec));
 			return std::string_view{ &buf[0], static_cast<size_t>(ptr - &buf[0]) };
 		}
+		template <typename T> std::string conv(T value)
+		{
+			if constexpr (requires (T t) { { ToString(t) } -> std::convertible_to<std::string>; })
+				return ToString(value);
+			else if constexpr (requires (T t) { { To<std::string>(t) } -> std::convertible_to<std::string>; })
+				return To<std::string>(value);
+			else if constexpr (std::convertible_to<T, std::string_view>)
+				return std::string(std::string_view(value));
+			else
+				static_assert(false, "No conv() overload for type");
+		}
+		inline std::string conv(std::string_view value)
+		{
+			return std::string(value);
+		}
+
+		// Concept for types that can be converted to string via conv()
+		template <typename T> concept TToString = requires (T t)
+		{
+			{ conv(t) } -> std::convertible_to<std::string>;
+		};
 
 		// Append helpers 
 		template <typename T> struct no_overload;
@@ -598,30 +582,17 @@ namespace pr::ldraw
 		inline void Append(bytebuf& out, Name n)
 		{
 			if (!n) return;
-			if (!n.m_kw)
-			{
-				Append(out, *n.m_name);
-			}
-			else
-			{
-				Append(out, seri::Header{ n.m_kw }, *n.m_name);
-			}
+			auto kw = n.m_kw ? n.m_kw : EKeywords::Name;
+			Append(out, seri::Header{ kw }, *n.m_name);
 		}
 		inline void Append(bytebuf& out, Colour c)
 		{
 			if (!c) return;
-			if (!c.m_kw)
-			{
-				Append(out, *c.m_colour);
-			}
-			else if (c.m_kw == EKeywords::RandColour)
-			{
-				Append(out, seri::Header{ c.m_kw });
-			}
+			auto kw = c.m_kw ? c.m_kw : EKeywords::Colour;
+			if (kw == EKeywords::RandColour)
+				Append(out, seri::Header{ kw });
 			else
-			{
-				Append(out, seri::Header{ c.m_kw }, *c.m_colour);
-			}
+				Append(out, seri::Header{ kw }, *c.m_colour);
 		}
 
 		// Variadic Append for binary header + payload
@@ -999,34 +970,6 @@ namespace pr::ldraw
 				Append(out, EKeywords::Dashed, "{", *d.m_dash, "}");
 			}
 		};
-		struct DataPoints
-		{
-			std::optional<Vec2> m_size;
-			std::optional<Colour> m_colour;
-			std::optional<EPointStyle> m_style;
-			DataPoints() : m_size(), m_colour(), m_style() {}
-			DataPoints(Vec2 size, Colour colour, EPointStyle style) : m_size(size), m_colour(colour), m_style(style) {}
-			explicit operator bool() const { return m_size.has_value() || m_colour.has_value() || m_style.has_value(); }
-			friend void Append(bytebuf& out, seri::DataPoints dp)
-			{
-				if (!dp) return;
-				auto s = Append(out, seri::Header{ EKeywords::DataPoints });
-				throw std::runtime_error("todo");
-				//if (dp.m_size) Append(out, EKeywords::Size, "{", *dp.m_size, "}");
-				//if (dp.m_style) Append(out, EKeywords::Style, "{", dp.m_style->style, "}");
-				//if (dp.m_colour) Append(out, EKeywords::Colour, "{", *dp.m_colour, "}");
-
-			}
-			friend void Append(textbuf& out, seri::DataPoints dp)
-			{
-				if (!dp) return;
-				Append(out, EKeywords::DataPoints, "{");
-				if (dp.m_size) Append(out, EKeywords::Size, "{", *dp.m_size, "}");
-				if (dp.m_style) Append(out, EKeywords::Style, "{", dp.m_style->style, "}");
-				if (dp.m_colour) Append(out, EKeywords::Colour, "{", *dp.m_colour, "}");
-				Append(out, "}");
-			}
-		};
 		struct LeftHanded
 		{
 			std::optional<bool> m_lh;
@@ -1127,57 +1070,80 @@ namespace pr::ldraw
 		};
 		struct PointStyle
 		{
-			std::optional<EPointStyle> m_style;
+			static constexpr std::string_view Styles[] = { "Square", "Circle", "Triangle", "Star", "Annulus" };
+			std::optional<int> m_style;
 			PointStyle() : m_style() {}
-			PointStyle(EPointStyle style) : m_style(style) {}
+			PointStyle(TToString auto style) : m_style(static_cast<int>(std::distance(Styles, std::find(std::begin(Styles), std::end(Styles), conv(style))))) {}
 			explicit operator bool() const { return m_style.has_value(); }
 			friend void Append(bytebuf& out, seri::PointStyle p)
 			{
 				if (!p) return;
 				auto s = Append(out, seri::Header{ EKeywords::Style });
-				Append(out, p.m_style->style);
+				Append(out, *p.m_style);
 			}
 			friend void Append(textbuf& out, seri::PointStyle p)
 			{
 				if (!p) return;
-				Append(out, EKeywords::Style, "{", p.m_style->style, "}");
+				Append(out, EKeywords::Style, "{", Styles[*p.m_style], "}");
 			}
 		};
 		struct LineStyle
 		{
-			std::optional<ELineStyle> m_style;
+			static constexpr std::string_view Styles[] = { "LineSegments", "LineStrip", "Direction", "BezierSpline", "HermiteSpline", "BSplineSpline", "CatmullRom" };
+			std::optional<int> m_style;
 			LineStyle() : m_style() {}
-			LineStyle(ELineStyle style) : m_style(style) {}
+			LineStyle(TToString auto style) : m_style(static_cast<int>(std::distance(Styles, std::find(std::begin(Styles), std::end(Styles), conv(style))))) {}
 			explicit operator bool() const { return m_style.has_value(); }
 			friend void Append(bytebuf& out, seri::LineStyle l)
 			{
 				if (!l) return;
 				auto s = Append(out, seri::Header{ EKeywords::Style });
-				Append(out, l.m_style->style);
+				Append(out, *l.m_style);
 			}
 			friend void Append(textbuf& out, seri::LineStyle l)
 			{
 				if (!l) return;
-				Append(out, EKeywords::Style, "{", l.m_style->style, "}");
+				Append(out, EKeywords::Style, "{", Styles[*l.m_style], "}");
 			}
 		};
 		struct ArrowHeads
 		{
-			std::optional<EArrowType> m_type;
+			static constexpr std::string_view Styles[] = { "Line", "Fwd", "Back", "FwdBack" };
+			std::optional<int> m_style;
 			float m_size;
-			ArrowHeads() : m_type(), m_size() {}
-			ArrowHeads(EArrowType type, float size = 10) : m_type(type), m_size(size) {}
-			explicit operator bool() const { return m_type.has_value(); }
+			ArrowHeads() : m_style(), m_size() {}
+			ArrowHeads(TToString auto style, float size = 10) : m_style(static_cast<int>(std::distance(Styles, std::find(std::begin(Styles), std::end(Styles), conv(style))))), m_size(size) {}
+			explicit operator bool() const { return m_style.has_value(); }
 			friend void Append(bytebuf& out, seri::ArrowHeads a)
 			{
 				if (!a) return;
 				auto s = Append(out, seri::Header{ EKeywords::Arrow });
-				Append(out, a.m_type->type, a.m_size);
+				Append(out, *a.m_style, a.m_size);
 			}
 			friend void Append(textbuf& out, seri::ArrowHeads a)
 			{
 				if (!a) return;
-				Append(out, EKeywords::Arrow, "{", a.m_type->type, a.m_size, "}");
+				Append(out, EKeywords::Arrow, "{", Styles[*a.m_style], a.m_size, "}");
+			}
+		};
+		struct DataPoints
+		{
+			Size2 m_size;
+			Colour m_colour;
+			PointStyle m_style;
+
+			DataPoints() : m_size(), m_colour(), m_style() {}
+			DataPoints(Vec2 size, Colour colour, PointStyle style) : m_size(size), m_colour(colour), m_style(style) {}
+			explicit operator bool() const { return m_size || m_colour || m_style; }
+			friend void Append(bytebuf& out, seri::DataPoints dp)
+			{
+				if (!dp) return;
+				Append(out, seri::Header{ EKeywords::DataPoints }, dp.m_style, dp.m_size, dp.m_colour);
+			}
+			friend void Append(textbuf& out, seri::DataPoints dp)
+			{
+				if (!dp) return;
+				Append(out, EKeywords::DataPoints, "{", dp.m_style, dp.m_size, dp.m_colour, "}");
 			}
 		};
 		struct O2W
@@ -1386,6 +1352,9 @@ namespace pr::ldraw
 			using parts_t = std::variant<M4x4, M3x3, Align_, LookAt_, Quat_, Pos_, Scale_, Euler_, Rand4x4_, RandPos_, RandOri_, Normalise_, Orthonormalise_, Transpose_, Inverse_, NonAffine_>;
 			std::vector<parts_t> m_parts;
 
+			O2W() : m_parts() {}
+			O2W(TMat4 auto o2w) : m_parts{ M4x4{ o2w } } {}
+			O2W(TMat3 auto rot) : m_parts{ M3x3{ rot } } {}
 			O2W& o2w(Mat4 o2w)
 			{
 				m_parts.push_back(M4x4{ o2w });
@@ -1526,6 +1495,9 @@ namespace pr::ldraw
 			struct Addr_
 			{
 				std::string modeU, modeV;
+				Addr_() : modeU("Wrap"), modeV("Wrap") {}
+				Addr_(std::string u, std::string v) : modeU(u), modeV(v) {}
+				Addr_(TToString auto u, TToString auto v) : Addr_(conv(u), conv(v)) {}
 				friend void Append(bytebuf& out, Addr_ const& a)
 				{
 					auto s = Append(out, Header{ EKeywords::Addr });
@@ -1539,6 +1511,9 @@ namespace pr::ldraw
 			struct Filter_
 			{
 				std::string filter;
+				Filter_() : filter("Point") {}
+				Filter_(std::string f) : filter(f) {}
+				Filter_(TToString auto f) : Filter_(conv(f)) {}
 				friend void Append(bytebuf& out, Filter_ const& f)
 				{
 					auto s = Append(out, Header{ EKeywords::Filter });
@@ -1558,19 +1533,18 @@ namespace pr::ldraw
 				m_parts.push_back(FilePath{ std::string(filepath) });
 				return *this;
 			}
-			Texture& addr(std::string_view mode) // Wrap|Mirror|Clamp|Border|MirrorOnce
+			Texture& addr(TToString auto modeU, TToString auto modeV) // Wrap|Mirror|Clamp|Border|MirrorOnce
 			{
-				m_parts.push_back(Addr_{ std::string(mode), std::string(mode) });
+				m_parts.push_back(Addr_{ modeU, modeV });
 				return *this;
 			}
-			Texture& addr(std::string_view modeU, std::string_view modeV)
+			Texture& addr(TToString auto mode)
 			{
-				m_parts.push_back(Addr_{ std::string(modeU), std::string(modeV) });
-				return *this;
+				return addr(mode, mode);
 			}
-			Texture& filter(std::string_view filter) // Point|Linear|Anisotropic
+			Texture& filter(TToString auto filter) // Point|Linear|Anisotropic
 			{
-				m_parts.push_back(Filter_{ std::string(filter) });
+				m_parts.push_back(Filter_{ filter });
 				return *this;
 			}
 			Texture& alpha(bool on)
@@ -1583,6 +1557,16 @@ namespace pr::ldraw
 				O2W o2w;
 				cb(o2w);
 				m_parts.push_back(std::move(o2w));
+				return *this;
+			}
+			Texture& t2s(TMat4 auto o2w)
+			{
+				m_parts.push_back(O2W(o2w));
+				return *this;
+			}
+			Texture& t2s(TMat3 auto o2w)
+			{
+				m_parts.push_back(O2W(o2w));
 				return *this;
 			}
 			explicit operator bool() const
@@ -2053,6 +2037,40 @@ namespace pr::ldraw
 				Append(out, EKeywords::Padding, "{", p.m_left, p.m_top, p.m_right, p.m_bottom, "}");
 			}
 		};
+		struct VariableInt
+		{
+			int m_value;
+			VariableInt() : m_value() {}
+			VariableInt(int value) : m_value(value & 0x3FFFFFFF) {}
+			friend void Append(bytebuf& out, seri::VariableInt vi)
+			{
+				// Variable sized int, write 6 bits at a time: xx444444 33333322 22221111 11000000
+				uint8_t bits[5] = {}; int i = 5;
+				for (int val = vi.m_value; val != 0 && i-- != 0; val >>= 6)
+					bits[i] = static_cast<uint8_t>(0x80 | (val & 0b00111111));
+
+				Append(out, { byte_ptr(&bits[0] + i), static_cast<size_t>(5 - i) });
+			}
+			friend void Append(textbuf& out, seri::VariableInt vi)
+			{
+				Append(out, vi.m_value);
+			}
+		};
+		struct StringWithLength
+		{
+			std::string_view m_value;
+			StringWithLength() : m_value() {}
+			StringWithLength(std::string_view value) : m_value(value) {}
+			friend void Append(bytebuf& out, seri::StringWithLength sl)
+			{
+				Append(out, VariableInt{ static_cast<int>(sl.m_value.size()) }); // length in bytes, not utf8 codes
+				Append(out, sl.m_value);
+			}
+			friend void Append(textbuf& out, seri::StringWithLength sl)
+			{
+				Append(out, sl.m_value);
+			}
+		};
 
 		// Append Helpers (implementation)
 		inline void Append(bytebuf& out, std::span<std::byte const> data, int64_t ofs)
@@ -2124,6 +2142,13 @@ namespace pr::ldraw
 		LdrConvexHull& ConvexHull(seri::Name name = {}, seri::Colour colour = {});
 		LdrModel& Model(seri::Name name = {}, seri::Colour colour = {});
 
+		// Extension objects. Use: `builder._<LdrCustom>("name", 0xFFFFFFFF)`
+		template <typename LdrCustom> requires std::is_base_of_v<LdrBase, LdrCustom>
+		LdrCustom& Add(seri::Name name = {}, seri::Colour colour = {});
+
+		// Wrap the current children in a new group.
+		LdrBase& WrapAsGroup(seri::Name name = {}, seri::Colour colour = {});
+
 		// Object modifiers
 		LdrBase& name(seri::Name name)
 		{
@@ -2145,21 +2170,6 @@ namespace pr::ldraw
 		{
 			m_group_colour = colour;
 			m_group_colour.m_kw = EKeywords::GroupColour;
-			return *this;
-		}
-		LdrBase& o2w(std::invocable<seri::O2W&> auto&& cb)
-		{
-			cb(m_o2w);
-			return *this;
-		}
-		LdrBase& o2w(seri::Mat4 o2w)
-		{
-			m_o2w.o2w(o2w);
-			return *this;
-		}
-		LdrBase& pos(seri::Vec3 pos)
-		{
-			m_o2w.pos(pos);
 			return *this;
 		}
 		LdrBase& hide(bool hidden = true)
@@ -2207,13 +2217,42 @@ namespace pr::ldraw
 			m_no_zwrite.m_no_zwrite = nzw;
 			return *this;
 		}
+		LdrBase& root_animation(std::invocable<seri::RootAnimation&> auto&& cb)
+		{
+			cb(m_root_anim);
+			return *this;
+		}
 		seri::RootAnimation& root_animation()
 		{
 			return m_root_anim;
 		}
+		LdrBase& o2w(std::invocable<seri::O2W&> auto&& cb)
+		{
+			cb(m_o2w);
+			return *this;
+		}
+		LdrBase& o2w(TMat4 auto o2w)
+		{
+			m_o2w.o2w(o2w);
+			return *this;
+		}
 		seri::O2W& o2w()
 		{
 			return m_o2w;
+		}
+		LdrBase& euler(float pitch_deg, float yaw_deg, float roll_deg)
+		{
+			m_o2w.euler(pitch_deg, yaw_deg, roll_deg);
+			return *this;
+		}
+		LdrBase& pos(TVec3 auto pos)
+		{
+			m_o2w.pos(pos);
+			return *this;
+		}
+		LdrBase& pos(float x, float y, float z)
+		{
+			return pos(seri::Vec3{ x, y, z });
 		}
 
 		// Copy all modifiers from another object
@@ -2286,7 +2325,7 @@ namespace pr::ldraw
 			m_depth = d;
 			return *this;
 		}
-		LdrPoint& style(EPointStyle s) // Point style
+		LdrPoint& style(seri::PointStyle s) // Point style
 		{
 			m_style = s;
 			return *this;
@@ -2294,6 +2333,11 @@ namespace pr::ldraw
 		seri::Texture& texture() // Texture for point sprites
 		{
 			return m_tex;
+		}
+		LdrPoint& texture(std::invocable<seri::Texture&> auto&& cb)
+		{
+			cb(m_tex);
+			return *this;
 		}
 
 		virtual void Write(textbuf& out) const override
@@ -2364,9 +2408,9 @@ namespace pr::ldraw
 			: LdrBase(name, colour)
 		{}
 
-		LdrLine& style(ELineStyle sty)
+		LdrLine& style(seri::TToString auto sty)
 		{
-			m_current.m_style = sty;
+			m_current.m_style = seri::LineStyle{sty};
 			return *this;
 		}
 		LdrLine& per_item_colour(bool on = true)
@@ -2389,7 +2433,7 @@ namespace pr::ldraw
 			m_current.m_dashed = seri::Dashed(dash);
 			return *this;
 		}
-		LdrLine& arrow(EArrowType style = EArrowType::Fwd, float size = 10.0f)
+		LdrLine& arrow(seri::TToString auto style = "Fwd", float size = 10.0f)
 		{
 			m_current.m_arrow = seri::ArrowHeads(style, size);
 			return *this;
@@ -2397,7 +2441,7 @@ namespace pr::ldraw
 
 		LdrLine& line(seri::Vec3 a, seri::Vec3 b, seri::Colour colour = {})
 		{
-			style(ELineStyle::LineSegments);
+			// Don't overwrite style here, it could be direction or segments
 			m_current.m_lines.push_back({ a, b, colour });
 			if (colour) m_current.m_per_item_colour = true;
 			m_current.m_strip.clear();
@@ -2417,7 +2461,7 @@ namespace pr::ldraw
 		}
 		LdrLine& strip(seri::Vec3 start, seri::Colour colour = {})
 		{
-			style(ELineStyle::LineStrip);
+			// Don't overwrite style here
 			m_current.m_strip.push_back({ start, colour });
 			if (colour) m_current.m_per_item_colour = true;
 			m_current.m_lines.clear();
@@ -2472,6 +2516,41 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Line, m_name, m_colour });
+			{
+				auto WriteBlock = [](bytebuf& out, Block const& block)
+				{
+					Append(out, block.m_style, block.m_smooth, block.m_width, block.m_dashed, block.m_arrow, block.m_data_points, block.m_per_item_colour);
+					{
+						auto sd = Append(out, seri::Header{ EKeywords::Data });
+						{
+							for (auto& ln : block.m_lines)
+							{
+								Append(out, ln.a, ln.b);
+								if (block.m_per_item_colour)
+									Append(out, ln.col.m_colour ? *ln.col.m_colour : seri::Colour::Default);
+							}
+							for (auto& pt : block.m_strip)
+							{
+								Append(out, pt.a);
+								if (block.m_per_item_colour)
+									Append(out, pt.col.m_colour ? *pt.col.m_colour : seri::Colour::Default);
+							}
+						}
+					}
+				};
+
+				for (auto& block : m_blocks)
+					WriteBlock(out, block);
+				if (m_current)
+					WriteBlock(out, m_current);
+
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrPlane : LdrBase
 	{
@@ -2510,6 +2589,10 @@ namespace pr::ldraw
 			m_wh = wh;
 			return *this;
 		}
+		LdrPlane& wh(float w, float h)
+		{
+			return wh({ w, h });
+		}
 
 		LdrPlane& texture(std::invocable<seri::Texture&> auto&& cb)
 		{
@@ -2519,6 +2602,11 @@ namespace pr::ldraw
 		seri::Texture& texture()
 		{
 			return m_tex;
+		}
+		LdrPlane& axis(seri::AxisId axis)
+		{
+			m_axis = axis;
+			return *this;
 		}
 
 		virtual void Write(textbuf& out) const override
@@ -2531,6 +2619,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Plane, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh.x, m_wh.y);
+				Append(out, m_axis, m_tex);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrBox : LdrBase
@@ -2555,6 +2653,10 @@ namespace pr::ldraw
 		LdrBox& box(float x, float y, float z, seri::Vec3 pos = {}, seri::Colour col = {})
 		{
 			return box(seri::Vec3(x, y, z), pos, col);
+		}
+		LdrBox& box(float s)
+		{
+			return box(s, s, s);
 		}
 
 		virtual void Write(textbuf& out) const override
@@ -2586,6 +2688,36 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto single = m_boxes.size() == 1 && !m_boxes[0].m_pos && !m_boxes[0].m_col;
+			auto per_item_colour = std::ranges::any_of(m_boxes, [](auto const& x) { return !!x.m_col; });
+
+			auto s = Append(out, seri::Header{ single ? EKeywords::Box : EKeywords::BoxList, m_name, m_colour });
+			{
+				if (single)
+				{
+					Append(out, seri::Header{ EKeywords::Data }, m_boxes[0].m_whd);
+				}
+				else
+				{
+					if (per_item_colour)
+						Append(out, seri::Header{ EKeywords::PerItemColour });
+
+					{
+						auto sd = Append(out, seri::Header{ EKeywords::Data });
+						for (auto const& box : m_boxes)
+						{
+							Append(out, box.m_whd, box.m_pos);
+							if (per_item_colour)
+								Append(out, box.m_col);
+						}
+					}
+				}
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrModel : LdrBase
@@ -2626,6 +2758,17 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Model, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::FilePath }, m_filepath.string());
+				if (m_anim) Append(out, m_anim);
+				if (m_no_materials) Append(out, seri::Header{ EKeywords::NoMaterials });
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrGroup : LdrBase
 	{
@@ -2638,6 +2781,12 @@ namespace pr::ldraw
 			Append(out, EKeywords::Group, m_name, m_colour, "{");
 			LdrBase::Write(out);
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Group, m_name, m_colour });
+			LdrBase::Write(out);
 		}
 	};
 	struct LdrLineBox : LdrBase
@@ -2681,6 +2830,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::LineBox, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_dim);
+				Append(out, m_width, m_dashed);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrGrid : LdrBase
@@ -2735,6 +2894,18 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Grid, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh);
+				if (m_div_w != 0 || m_div_h != 0)
+				Append(out, seri::Header{ EKeywords::Divisions }, m_div_w, m_div_h);
+				Append(out, m_width, m_dashed);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCoordFrame : LdrBase
 	{
@@ -2765,6 +2936,15 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::CoordFrame, m_name, m_colour });
+			{
+				Append(out, m_scale, m_left_handed, m_width);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrTriangle : LdrBase
@@ -2805,6 +2985,24 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Triangle, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& t : m_tris)
+					{
+						Append(out, t.a, t.b, t.c);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, t.col ? *t.col.m_colour : seri::Colour::Default);
+					}
+				}
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrQuad : LdrBase
@@ -2851,6 +3049,25 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Quad, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& q : m_quads)
+					{
+						Append(out, q.a, q.b, q.c, q.d);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, q.col ? *q.col.m_colour : seri::Colour::Default);
+					}
+				}
+				Append(out, m_tex);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrRibbon : LdrBase
@@ -2914,6 +3131,25 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Ribbon, m_name, m_colour });
+			{
+				Append(out, m_width, m_smooth, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& p : m_points)
+					{
+						Append(out, p.pt);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, p.col ? *p.col.m_colour : seri::Colour::Default);
+					}
+				}
+				Append(out, m_tex);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCircle : LdrBase
 	{
@@ -2945,6 +3181,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Circle, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_radius);
+				Append(out, m_facets, m_axis_id, m_solid);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrPie : LdrBase
@@ -2997,6 +3243,17 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Pie, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_angle0, m_angle1, m_inner_radius, m_outer_radius);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrRect : LdrBase
 	{
@@ -3039,6 +3296,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Rect, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh);
+				Append(out, m_corner_radius, m_facets, m_solid);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrPolygon : LdrBase
@@ -3084,6 +3351,24 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Polygon, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& p : m_points)
+					{
+						Append(out, p.pt);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, p.col ? *p.col.m_colour : seri::Colour::Default);
+					}
+				}
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrSphere : LdrBase
 	{
@@ -3094,15 +3379,22 @@ namespace pr::ldraw
 		:LdrBase(name, colour)
 		{}
 
-		LdrSphere& radius(float r)
+		LdrSphere& radius(seri::Vec3 radius)
 		{
-			m_radius = {r, r, r};
+			m_radius = radius;
 			return *this;
+		}
+		LdrSphere& radius(seri::Vec4 r)
+		{
+			return radius({ r.x, r.y, r.z });
 		}
 		LdrSphere& radius(float rx, float ry, float rz)
 		{
-			m_radius = {rx, ry, rz};
-			return *this;
+			return radius({rx, ry, rz});
+		}
+		LdrSphere& radius(float r)
+		{
+			return radius(r, r, r);
 		}
 		LdrSphere& facets(int f)
 		{
@@ -3124,6 +3416,19 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Sphere, m_name, m_colour });
+			{
+				if (m_radius.x == m_radius.y && m_radius.y == m_radius.z)
+				Append(out, seri::Header{ EKeywords::Data }, m_radius.x);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_radius);
+				Append(out, m_facets);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCylinder : LdrBase
 	{
@@ -3138,6 +3443,12 @@ namespace pr::ldraw
 		:LdrBase(name, colour)
 		{}
 
+		LdrCylinder& hr(float h, float r)
+		{
+			m_height = h;
+			m_radius = r;
+			return *this;
+		}
 		LdrCylinder& height(float h)
 		{
 			m_height = h;
@@ -3180,6 +3491,20 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Cylinder, m_name, m_colour });
+			{
+				if (m_tip_radius >= 0)
+				Append(out, seri::Header{ EKeywords::Data }, m_height, m_radius, m_tip_radius);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_height, m_radius);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCone : LdrBase
 	{
@@ -3197,6 +3522,11 @@ namespace pr::ldraw
 		LdrCone& angle(float a)
 		{
 			m_angle = a;
+			return *this;
+		}
+		LdrCone& height(float h)
+		{
+			m_far = m_near + h;
 			return *this;
 		}
 		LdrCone& near_dist(float n)
@@ -3232,6 +3562,17 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Cone, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_angle, m_near, m_far);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrMesh : LdrBase
@@ -3357,6 +3698,50 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Mesh, m_name, m_colour });
+			{
+				if (!m_verts.empty())
+				{
+					auto sv = Append(out, seri::Header{ EKeywords::Verts });
+					for (auto& v : m_verts) Append(out, v);
+				}
+				if (!m_normals.empty())
+				{
+					auto sn = Append(out, seri::Header{ EKeywords::Normals });
+					for (auto& n : m_normals) Append(out, n);
+				}
+				if (!m_colours.empty())
+				{
+					auto sc = Append(out, seri::Header{ EKeywords::Colours });
+					for (auto c : m_colours) Append(out, c);
+				}
+				if (!m_tex_coords.empty())
+				{
+					auto st = Append(out, seri::Header{ EKeywords::TexCoords });
+					for (auto& tc : m_tex_coords) Append(out, tc);
+				}
+				if (!m_faces.empty())
+				{
+					auto sf = Append(out, seri::Header{ EKeywords::Faces });
+					for (auto i : m_faces) Append(out, i);
+				}
+				if (!m_lines.empty())
+				{
+					auto sl = Append(out, seri::Header{ EKeywords::Lines });
+					for (auto i : m_lines) Append(out, i);
+				}
+				if (!m_tetras.empty())
+				{
+					auto ste = Append(out, seri::Header{ EKeywords::Tetra });
+					for (auto i : m_tetras) Append(out, i);
+				}
+				Append(out, m_gen_normals, m_tex);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrConvexHull : LdrBase
 	{
@@ -3394,6 +3779,19 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::ConvexHull, m_name, m_colour });
+			{
+				{
+					auto sv = Append(out, seri::Header{ EKeywords::Verts });
+					for (auto& v : m_verts) Append(out, v);
+				}
+				Append(out, m_gen_normals);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrFrustum : LdrBase
@@ -3451,6 +3849,20 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto kw = m_mode == EMode::FA ? EKeywords::FrustumFA : EKeywords::FrustumWH;
+			auto s = Append(out, seri::Header{ kw, m_name, m_colour });
+			{
+				if (m_mode == EMode::WH)
+				Append(out, seri::Header{ EKeywords::Data }, m_width, m_height, m_near, m_far);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_fov_y, m_aspect, m_near, m_far);
+				Append(out, m_facets);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrInstance : LdrBase
 	{
@@ -3481,6 +3893,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Instance, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_address);
+				if (m_anim) Append(out, m_anim);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrText : LdrBase
@@ -3547,6 +3969,20 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Text, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_text);
+				if (!m_font.empty())
+				Append(out, seri::Header{ EKeywords::Font }, m_font);
+				if (!m_format.empty())
+				Append(out, seri::Header{ EKeywords::Format }, m_format);
+				Append(out, m_billboard, m_back_colour, m_anchor, m_padding);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrLightSource : LdrBase
@@ -3621,6 +4057,156 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::LightSource, m_name, m_colour });
+			{
+				if (!m_style.empty())
+				Append(out, seri::Header{ EKeywords::Style }, m_style);
+				if (m_ambient)
+				Append(out, seri::Header{ EKeywords::Ambient }, *m_ambient);
+				if (m_diffuse)
+				Append(out, seri::Header{ EKeywords::Diffuse }, *m_diffuse);
+				if (m_specular)
+				Append(out, seri::Header{ EKeywords::Specular }, *m_specular);
+				if (m_range)
+				Append(out, seri::Header{ EKeywords::Range }, *m_range);
+				if (m_cone_angle)
+				Append(out, seri::Header{ EKeywords::Fov }, *m_cone_angle);
+				if (m_cast_shadow)
+				Append(out, seri::Header{ EKeywords::CastShadow }, *m_cast_shadow);
+				LdrBase::Write(out);
+			}
+		}
+	};
+	struct LdrCommands :LdrBase
+	{
+		enum class ECmdId { AddToScene, CameraToWorld, CameraPosition, ObjectToWorld, Render };
+		static constexpr std::string_view Cmds[] = { "AddToScene", "CameraToWorld", "CameraPosition", "ObjectToWorld", "Render" };
+		using param_t = union param_t // Don't need type descrimination, the command implies the parameter types
+		{
+			seri::Mat4 mat4;
+			seri::Vec4 vec4;
+			seri::Vec2 vec2;
+			seri::StringWithLength nstr;
+			float f;
+			int i;
+			bool b;
+		};
+		using cmd_t = struct Cmd
+		{
+			ECmdId m_id;
+			std::vector<param_t> m_params;
+		};
+
+		std::vector<cmd_t> m_cmds;
+
+		// Add objects created by this script to scene 'scene_id'
+		LdrCommands& add_to_scene(int scene_id)
+		{
+			m_cmds.push_back({ ECmdId::AddToScene, {{.i = scene_id}} });
+			return *this;
+		}
+
+		// Apply a transform to an object with the given name
+		LdrCommands& object_transform(std::string_view object_name, TMat4 auto&& o2w)
+		{
+			m_cmds.push_back({ ECmdId::ObjectToWorld, {{.nstr = object_name}, {.mat4 = o2w}} });
+			return *this;
+		}
+
+		// Write to 'out'
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Commands, m_name, m_colour });
+			for (auto& cmd : m_cmds)
+			{
+				auto sd = Append(out, seri::Header{ EKeywords::Data });
+				{
+					Append(out, (int)cmd.m_id);
+					switch (cmd.m_id)
+					{
+						case ECmdId::AddToScene:
+						{
+							Append(out, cmd.m_params[0].i);
+							break;
+						}
+						case ECmdId::ObjectToWorld:
+						{
+							Append(out, cmd.m_params[0].nstr);
+							Append(out, cmd.m_params[1].mat4);
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Unknown command id");
+						}
+					}
+				}
+			}
+		}
+		virtual void Write(textbuf& out) const override
+		{
+			using namespace seri;
+			Append(out, EKeywords::Commands, m_name, m_colour, "{");
+			for (auto& cmd : m_cmds)
+			{
+				Append(out, EKeywords::Data, "{");
+				{
+					Append(out, (int)cmd.m_id);
+					switch (cmd.m_id)
+					{
+						case ECmdId::AddToScene:
+						{
+							Append(out, cmd.m_params[0].i);
+							break;
+						}
+						case ECmdId::ObjectToWorld:
+						{
+							Append(out, cmd.m_params[0].nstr);
+							Append(out, cmd.m_params[1].mat4);
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Unknown command id");
+						}
+					}
+				}
+				Append(out, "}");
+			}
+			Append(out, "}");
+		}
+	};
+	struct LdrBinaryStream :LdrBase
+	{
+		// Write to 'out'
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::BinaryStream, m_name, m_colour });
+		}
+		virtual void Write(textbuf& out) const override
+		{
+			using namespace seri;
+			Append(out, EKeywords::BinaryStream);
+		}
+	};
+	struct LdrTextStream :LdrBase
+	{
+		// Write to 'out'
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::TextStream, m_name, m_colour });
+		}
+		virtual void Write(textbuf& out) const override
+		{
+			using namespace seri;
+			Append(out, EKeywords::TextStream);
 		}
 	};
 	struct Builder : LdrBase
@@ -3911,6 +4497,23 @@ namespace pr::ldraw
 		m_children.push_back(ObjPtr{ new LdrLightSource(name, colour) });
 		return *static_cast<LdrLightSource*>(m_children.back().get());
 	}
+
+	// Extension objects. Use: `builder._<LdrCustom>("name", 0xFFFFFFFF)`
+	template <typename LdrCustom> requires std::is_base_of_v<LdrBase, LdrCustom>
+	inline LdrCustom& LdrBase::Add(seri::Name name, seri::Colour colour)
+	{
+		m_children.push_back(ObjPtr{ new LdrCustom(name, colour) });
+		return *static_cast<LdrCustom*>(m_children.back().get());
+	}
+
+	// Wrap the current children in a new group.
+	inline LdrBase& LdrBase::WrapAsGroup(seri::Name name, seri::Colour colour)
+	{
+		auto ptr = ObjPtr{ new LdrGroup(name, colour) };
+		swap(m_children, ptr->m_children);
+		m_children.emplace_back(ptr);
+		return *this;
+	}
 	#pragma endregion
 }
 
@@ -3924,7 +4527,7 @@ namespace pr::ldraw
 		{
 			Builder builder;
 			builder.Point("p", 0xFF00FF00)
-				.style(EPointStyle::Star)
+				.style("Star")
 				.pt(1, 2, 3)
 				.pt({ 2, 3, 4 }, 0xFFFF0000)
 				.size({ 0.1f, 0.3f })
@@ -3950,14 +4553,15 @@ namespace pr::ldraw
 		{
 			Builder builder;
 			builder.Line("l", 0xFF00FF00)
-				.style(ELineStyle::LineStrip)
+				.style("LineSegments")
 				.per_item_colour()
 				.width(10)
 				.dashed({ 0.2f, 0.4f })
-				.arrow(EArrowType::Fwd, 5.0f)
+				.arrow("Fwd", 5.0f)
 				.line({ -1, -1, -1 }, { +1, +1, +1 }, 0xFFFF0000)
 				.line({ -1, +1, -1 }, { +1, -1, +1 }, 0xFF0000FF)
 				.new_block()
+				.style("LineStrip")
 				.strip({ -1, -1, -1 })
 				.line_to({ +1, -1, -1 })
 				.line_to({ +1, +1, -1 })

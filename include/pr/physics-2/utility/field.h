@@ -3,7 +3,7 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-#include "pr/common/space_filling.h"
+#include "pr/algorithm/space_filling.h"
 #include "pr/physics-2/forward.h"
 
 namespace pr::physics

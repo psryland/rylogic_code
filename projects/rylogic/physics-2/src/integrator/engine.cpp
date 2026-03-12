@@ -8,11 +8,12 @@
 #include "pr/physics-2/collision/ibroadphase.h"
 #include "pr/physics-2/collision/contact.h"
 #include "pr/physics-2/materials/imaterials.h"
-#include "pr/physics-2/utility/ldraw.h"
-#include "src/integrator/gpu.h"
 #include "src/integrator/gpu_integrator.h"
+#include "src/collision/collision_shape_cache.h"
+#include "src/collision/gpu_sort_and_sweep.h"
 #include "src/collision/gpu_collision_detector.h"
 #include "src/collision/gpu_collision_types.h"
+#include "src/utility/gpu.h"
 
 namespace pr::physics
 {
@@ -22,34 +23,34 @@ namespace pr::physics
 		RigidBody const* objA;
 		RigidBody const* objB;
 	};
-	
+
 	struct EngineBufferCache
 	{
-		std::vector<GpuShape> m_col_shapes;
+		// Persists across frames
+		CollisionShapeCache m_shape_cache;
+
+		// Per-frame buffers
 		std::vector<GpuCollisionPair> m_col_pairs;
-		std::vector<v4> m_col_shape_verts;
 		std::vector<BodyPair> m_body_pairs;
 		std::vector<RbContact> m_collision_queue;
 		std::vector<GpuContact> m_gpu_contacts;
-		std::unordered_map<Shape const*, int> m_shape_map;
 
+		// Reset per-frame buffers
 		void Reset()
 		{
-			m_col_shapes.resize(0);
 			m_col_pairs.resize(0);
-			m_col_shape_verts.resize(0);
 			m_body_pairs.resize(0);
 			m_collision_queue.resize(0);
-			m_shape_map.clear();
+			m_gpu_contacts.resize(0);
 		}
 	};
 
-	Engine::Engine(IBroadphase& bp, IMaterials& mats, ID3D12Device4* existing_device)
-		: m_broadphase(bp)
-		, m_materials(mats)
-		, m_gpu(new Gpu(existing_device))
+	Engine::Engine(IMaterials& mats, ID3D12Device4* existing_device)
+		: m_gpu(new Gpu(existing_device))
 		, m_gpu_integrator(new GpuIntegrator(*m_gpu))
+		, m_gpu_sort_and_sweep(new GpuSortAndSweep(*m_gpu))
 		, m_gpu_collision_detector(new GpuCollisionDetector(*m_gpu))
+		, m_materials(mats)
 		, m_cache(new EngineBufferCache)
 		, m_rb_dynamics()
 		, m_use_gpu(true)
@@ -64,6 +65,12 @@ namespace pr::physics
 	void Engine::UseGpu(bool use_gpu)
 	{
 		m_use_gpu = use_gpu;
+	}
+	
+	// Access the broadphase for registering bodies and enumerating overlapping pairs.
+	IBroadphase& Engine::Broadphase() const
+	{
+		return *m_gpu_sort_and_sweep;
 	}
 
 	// CPU integration dispatch.
@@ -87,37 +94,23 @@ namespace pr::physics
 		// This is the core collision pipeline, called after all bodies have been evolved.
 		m_cache->Reset();
 
-		auto& col_shapes = m_cache->m_col_shapes;
-		auto& col_shape_verts = m_cache->m_col_shape_verts;
+		auto& shape_cache = m_cache->m_shape_cache;
 		auto& col_pairs = m_cache->m_col_pairs;
 		auto& body_pairs = m_cache->m_body_pairs;
 		auto& collision_queue = m_cache->m_collision_queue;
 		auto& gpu_contacts = m_cache->m_gpu_contacts;
-		auto& shape_map = m_cache->m_shape_map;
 
 		if (m_use_gpu)
 		{
-			// Phase 1: Broadphase on CPU — collect overlapping pairs and pack shapes for GPU.
-			
-			// Track body pointers per pair so we can build physics::Contact structs after readback.
-			// Shape deduplication: map shape pointer → index in col_shapes buffer
-			auto get_or_add_shape = [&](Shape const& shape) -> int
-			{
-				auto it = shape_map.find(&shape);
-				if (it != shape_map.end())
-					return it->second;
+			// Begin a new frame for shape cache tracking
+			shape_cache.BeginFrame();
 
-				auto idx = static_cast<int>(col_shapes.size());
-				col_shapes.push_back(PackShapeGeneric(shape, col_shape_verts));
-				shape_map[&shape] = idx;
-				return idx;
-			};
-
+			// Phase 1: Broadphase — collect overlapping pairs and look up cached shapes.
 			int pair_idx = 0;
-			m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
 			{
-				auto idx_a = get_or_add_shape(objA.Shape());
-				auto idx_b = get_or_add_shape(objB.Shape());
+				auto idx_a = shape_cache.GetOrAdd(objA.Shape());
+				auto idx_b = shape_cache.GetOrAdd(objB.Shape());
 
 				// Compute B-to-A transform (collision runs in A's object space)
 				auto w2a = InvertOrthonormal(objA.O2W());
@@ -143,8 +136,14 @@ namespace pr::physics
 			if (col_pairs.empty())
 				return;
 
+			// Periodically flush stale shapes (every 10 frames)
+			if (shape_cache.m_frame % CollisionShapeCache::StaleFrameLimit == 0)
+				shape_cache.Flush();
+
 			// Phase 2: Dispatch GPU GJK collision detection.
-			m_gpu_collision_detector->DetectCollisions(col_pairs, col_shapes, col_shape_verts, gpu_contacts);
+			// Pass the dirty flag so the detector knows whether to re-upload shapes.
+			m_gpu_collision_detector->DetectCollisions(col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
+			shape_cache.ClearDirty();
 
 			// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
 			for (auto const& gc : gpu_contacts)
@@ -182,7 +181,7 @@ namespace pr::physics
 		{
 			// Broad phase: find pairs of bodies whose bounding volumes overlap.
 			// Narrow phase: test each pair for actual geometric contact.
-			m_broadphase.EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
 			{
 				auto c = RbContact{ objA, objB };
 				if (NarrowPhaseCollision(dt, c))
@@ -332,7 +331,6 @@ namespace pr::physics
 			#endif
 		}
 	}
-
 
 	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
 	{

@@ -33,16 +33,52 @@ namespace pr::rdr12
 		
 	public:
 
-		Gpu(ID3D12Device4* existing_device = nullptr);
+		Gpu(ID3D12Device4* existing_device, ID3D12CommandQueue* existing_queue);
+		Gpu(ID3D12Device4* existing_device = nullptr)
+			: Gpu(existing_device, nullptr)
+		{}
+
+		ID3D12Device4 const* device() const
+		{
+			return m_device.get();
+		}
+		ID3D12Device4* device()
+		{
+			return m_device.get();
+		}
+
+		ID3D12CommandQueue const* queue() const
+		{
+			return m_cmd_queue.get();
+		}
+		ID3D12CommandQueue* queue()
+		{
+			return m_cmd_queue.get();
+		}
 
 		// Allow use as a device
-		ID3D12Device4 const* operator -> () const;
-		ID3D12Device4* operator ->();
-		operator ID3D12Device4 const* () const;
-		operator ID3D12Device4* ();
+		ID3D12Device4 const* operator -> () const
+		{
+			return device();
+		}
+		ID3D12Device4* operator ->()
+		{
+			return device();
+		}
+		operator ID3D12Device4 const* () const
+		{
+			return device();
+		}
+		operator ID3D12Device4* ()
+		{
+			return device();
+		}
 
 		// Access the GPU upload buffer
-		GpuUploadBuffer& UploadBuffer();
+		GpuUploadBuffer& UploadBuffer()
+		{
+			return m_upload_buffer;
+		}
 
 		// Allocate a DX resource
 		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, CmdList<ListType>& cmd_list, std::string_view name);

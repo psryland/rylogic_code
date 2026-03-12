@@ -6,8 +6,6 @@
 // Two modes:
 //   -unittest : Allocate a console, run embedded unit tests, and exit.
 //   (default) : Launch the interactive physics sandbox window.
-//
-
 #include "src/forward.h"
 #include "src/ui/sandbox_ui.h"
 #include "src/unittests/sandbox_tests.h"
@@ -21,26 +19,45 @@ using namespace pr;
 using namespace pr::gui;
 using namespace physics_sandbox;
 
-// Run embedded unit tests to a console window and exit.
-// Uses AllocConsole() to create a console for the WinApp process,
-// then redirects stdout so PR_EXPECT output is visible.
-static int RunUnitTests()
+namespace physics_sandbox
 {
-	// Attach to parent console (if launched from cmd) or allocate a new one
-	if (!AttachConsole(DWORD(-1)))
-		AllocConsole();
+	// Run embedded unit tests to a console window and exit.
+	int RunUnitTests()
+	{
+		// Uses AllocConsole() to create a console for the WinApp process,
+		// then redirects stdout so PR_EXPECT output is visible.
+		// Attach to parent console (if launched from cmd) or allocate a new one
+		if (!AttachConsole(DWORD(-1)))
+			AllocConsole();
 
-	// Redirect stdout/stderr to the console
-	FILE* fp = nullptr;
-	freopen_s(&fp, "CONOUT$", "w", stdout);
-	freopen_s(&fp, "CONOUT$", "w", stderr);
+		// Redirect stdout/stderr to the console
+		FILE* fp = nullptr;
+		freopen_s(&fp, "CONOUT$", "w", stdout);
+		freopen_s(&fp, "CONOUT$", "w", stderr);
 
-	printf("Physics-2 Sandbox: Running unit tests...\n");
+		printf("Physics-2 Sandbox: Running unit tests...\n");
 
-	// The PR_UNITTESTS framework collects tests via static initialisation.
-	// RunAllTests() executes them and prints results.
-	auto failed = pr::unittests::RunAllTests(true);
-	return failed > 0 ? 1 : 0;
+		// The PR_UNITTESTS framework collects tests via static initialisation.
+		// RunAllTests() executes them and prints results.
+		auto failed = pr::unittests::RunAllTests(true);
+		return failed > 0 ? 1 : 0;
+	}
+
+	// The user's app data directory.
+	std::filesystem::path AppDataPath()
+	{
+		size_t size;
+		getenv_s(&size, nullptr, 0, "APPDATA");
+
+		// Get the %APPDATA% directory for the current user, and create a subdirectory for our app.
+		std::string appdata(size, '\0');
+		getenv_s(&size, appdata.data(), appdata.size(), "APPDATA");
+		appdata.resize(size - 1); // Remove the trailing null character added by getenv_s
+		
+		auto path = std::filesystem::path{ appdata } / "RylogicPhysicsSandbox";
+		std::filesystem::create_directories(path);
+		return path;
+	}
 }
 
 // Entry point
@@ -54,7 +71,7 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 
 	// Check for -unittest mode before initialising any GUI resources
 	if (cmd.count("unittest"))
-		return RunUnitTests();
+		return physics_sandbox::RunUnitTests();
 
 	// Interactive sandbox mode.
 	// Must use STA (apartment-threaded) because COM UI components like IFileDialog
@@ -98,7 +115,7 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 		// target (1000 Hz) ensures the loop fires immediately after vsync
 		// completes, rather than waiting for MsgWaitForMultipleObjects timeout.
 		loop.AddLoop(60.0, false, [&](double dt) { sandbox.Step(dt); });
-		loop.AddLoop(1000.0, true, [&](double) { sandbox.Render(); });
+		loop.AddLoop(1000.0, true, [&](double dt) { sandbox.Render(dt); });
 		loop.AddMessageFilter(sandbox);
 		return loop.Run();
 	}

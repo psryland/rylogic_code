@@ -572,8 +572,8 @@ namespace pr::collision::tests
 				v4{0, 1, -1, 1}, v4{0, 0, 1, 1},
 			};
 
-			auto buf_a = BuildPolytopeFromPoints(pts_a, 4);
-			auto buf_b = BuildPolytopeFromPoints(pts_b, 4);
+			auto buf_a = BuildPolytopeFromPoints(pts_a);
+			auto buf_b = BuildPolytopeFromPoints(pts_b);
 			auto& pa = buf_a.as<ShapePolytope>();
 			auto& pb = buf_b.as<ShapePolytope>();
 

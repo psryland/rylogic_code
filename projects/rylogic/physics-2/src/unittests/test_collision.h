@@ -99,9 +99,8 @@ namespace pr::physics
 			body_b.VelocityWS(ang_vel_b, vel_b);
 
 			// Set up the engine with perfectly elastic, frictionless material
-			broadphase::Brute bp;
 			MaterialMap mats;
-			Engine engine(bp, mats);
+			Engine engine(mats);
 
 			auto& mat = mats(0);
 			mat.m_elasticity_norm = 1.0f;  // Perfectly elastic
@@ -109,8 +108,8 @@ namespace pr::physics
 			mat.m_elasticity_tors = 0.0f;
 			mat.m_friction_static = 0.0f;  // No friction
 
-			bp.Add(body_a);
-			bp.Add(body_b);
+			engine.Broadphase().Add(body_a);
+			engine.Broadphase().Add(body_b);
 
 			// Hook the PostCollisionDetection event to capture pre-impulse state.
 			// This fires after Evolve and collision detection, but before impulse resolution.

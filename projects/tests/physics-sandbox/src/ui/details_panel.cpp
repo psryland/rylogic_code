@@ -72,7 +72,7 @@ namespace physics_sandbox
 		ss << L"Collisions: " << scene.m_diag.count << L"\r\n";
 		ss << L"\r\n";
 
-		for (int i = 0; i != scene.m_body_count; ++i)
+		for (int i = 0; i != std::ssize(scene.m_body); ++i)
 		{
 			auto const& body = scene.m_body[i];
 			auto vel = body.VelocityWS();

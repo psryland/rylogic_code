@@ -4,7 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/physics-2/forward.h"
-#include "src/integrator/gpu.h"
+#include "src/utility/gpu.h"
 
 namespace pr::physics
 {

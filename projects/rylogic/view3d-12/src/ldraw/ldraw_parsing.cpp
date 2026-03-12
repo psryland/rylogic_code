@@ -6125,6 +6125,12 @@ namespace pr::rdr12::ldraw
 		rdr12::ldraw::TextReader reader(src, {});
 		return Parse(rdr, reader, context_id, std::move(stop_token));
 	}
+	ParseResult Parse(Renderer& rdr, std::span<std::byte const> data, Guid const& context_id, std::stop_token stop_token)
+	{
+		mem_istream<char> src{ data.data(), data.size() };
+		rdr12::ldraw::BinaryReader reader(src, {});
+		return Parse(rdr, reader, context_id, std::move(stop_token));
+	}
 	ParseResult ParseFile(Renderer& rdr, std::filesystem::path ldr_filepath, Guid const& context_id, std::stop_token stop_token)
 	{
 		if (ldr_filepath.extension() == ".ldr")

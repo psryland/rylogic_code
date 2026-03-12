@@ -82,6 +82,7 @@
   Source files
   -->
   <ItemGroup>
+    <ClCompile Include="src\collision\gpu_sort_and_sweep.cpp" />
     <ClCompile Include="src\collision\contact.cpp" />
     <ClCompile Include="src\collision\broadphase_brute.cpp" />
     <ClCompile Include="src\shape\inertia.cpp" />
@@ -111,6 +112,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\field.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\utility\misc.h" />
+    <ClInclude Include="src\collision\collision_shape_cache.h" />
+    <ClInclude Include="src\utility\gpu.h" />
   </ItemGroup>
   <!--
   Unit test headers
@@ -123,9 +126,9 @@
     <ClInclude Include="..\..\..\include\pr\physics-2\materials\material.h" />
     <ClInclude Include="..\..\..\include\pr\physics-2\materials\material_map.h" />
     <ClInclude Include="..\..\..\include\pr\physics-2\rigid_body\rigid_body_dynamics.h" />
+    <ClInclude Include="src\collision\gpu_sort_and_sweep.h" />
     <ClInclude Include="src\collision\gpu_collision_detector.h" />
     <ClInclude Include="src\collision\gpu_collision_types.h" />
-    <ClInclude Include="src\integrator\gpu.h" />
     <ClInclude Include="src\integrator\gpu_integrator.h" />
     <ClInclude Include="src\unittests\test_collision.h" />
     <ClInclude Include="src\unittests\test_field.h" />
@@ -137,14 +140,17 @@
     <ClInclude Include="src\unittests\test_gpu_collision.h" />
   </ItemGroup>
   <!--
+  Resources
+  -->
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\compute_shaders.rc" />
+  </ItemGroup>
+  <!--
   Targets
   -->
   <ItemGroup>
     <FxCompile Include="..\..\..\include\pr\physics-2\compute\gjk.hlsl" EntryPointName="CSCollisionDetect" />
     <FxCompile Include="..\..\..\include\pr\physics-2\compute\integrate.hlsl" EntryPointName="CSIntegrate" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\..\..\include\pr\physics-2\compute\physics_shaders.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

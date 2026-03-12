@@ -1,29 +1,14 @@
-#include "src/forward.h"
+#include "pr/physics-2/utility/ldraw.h"
 #include "src/scene/scene.h"
 
 namespace physics_sandbox
 {
-	char const* ScenarioName(EScenario s)
-	{
-		switch (s)
-		{
-			case EScenario::Sandbox:          return "Sandbox";
-			case EScenario::HeadOnEqualMass:  return "Head-On Equal Mass";
-			case EScenario::HeadOnDiffMass:   return "Head-On Diff Mass";
-			case EScenario::StationaryTarget: return "Stationary Target";
-			case EScenario::OffCenter:        return "Off-Center (Rotation)";
-			case EScenario::Oblique:          return "Oblique Collision";
-			default: return "Unknown";
-		}
-	}
-
 	Scene::Scene(ID3D12Device4* existing_device)
-		: m_body()
-		, m_body_count(2)
-		, m_broadphase()
-		, m_materials()
-		, m_physics(m_broadphase, m_materials, existing_device)
-		, m_box(pr::v4{ 2, 2, 2, 0 })
+		: m_materials()
+		, m_physics(m_materials, existing_device)
+		, m_box(v4{ 2, 2, 2, 0 })
+		, m_body()
+		, m_shape_buffer()
 		, m_gravity(v4::Zero())
 		, m_kill_zone_height(-100.0f)
 		, m_ground_gfx()
@@ -67,13 +52,15 @@ namespace physics_sandbox
 		m_kill_zone_height = -100.0f;
 
 		// Clean up the ground plane visual
-		CleanupGroundGfx();
+		m_ground_gfx = nullptr;
+
+		// Clear the broadphase before modifying bodies. The broadphase holds raw
+		// pointers to RigidBody objects, which become invalid if the vector resizes.
+		m_physics.Broadphase().Clear();
 
 		// Release any shapes owned by a previously loaded JSON scene.
-		// Must happen BEFORE SetupScenario assigns new shapes to bodies.
-		for (int i = 0; i != m_body_count; ++i)
-			m_body[i].Shape(nullptr);
-		m_owned_shapes.clear();
+		m_body.resize(0);
+		m_shape_buffer.resize(0);
 
 		// Set up perfectly elastic, frictionless material for clean collision tests
 		auto& mat = m_materials(0);
@@ -86,16 +73,16 @@ namespace physics_sandbox
 		SetupScenario();
 
 		// Rebuild the broadphase with the active bodies
-		m_broadphase.Clear();
-		for (int i = 0; i != m_body_count; ++i)
-			m_broadphase.Add(m_body[i]);
+		m_physics.Broadphase().Clear();
+		for (int i = 0; i != std::ssize(m_body); ++i)
+			m_physics.Broadphase().Add(m_body[i]);
 
 		DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
 		DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto snap = BodySnapshot::Capture(m_body[i]);
-			snap.Log(pr::FmtS("Body %d (initial)", i));
+			snap.Log(FmtS("Body %d (initial)", i));
 		}
 		auto total_p = m_body[0].MomentumWS().lin + m_body[1].MomentumWS().lin;
 		DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", total_p.x, total_p.y, total_p.z);
@@ -105,8 +92,9 @@ namespace physics_sandbox
 	// Load a scene from a JSON file.
 	// Replaces the current scenario with bodies defined in the file.
 	// Shapes are heap-allocated and owned by m_owned_shapes.
-	void Scene::LoadFromJson(std::filesystem::path const& filepath)
+	void Scene::LoadFromJson(rdr12::Renderer& rdr, std::filesystem::path const& filepath)
 	{
+		// Load the scene
 		auto scene_desc = scene_loader::LoadFromFile(filepath);
 
 		// Reset simulation state
@@ -115,12 +103,15 @@ namespace physics_sandbox
 		m_diag.Reset();
 
 		// Clean up ground plane visual from previous scene
-		CleanupGroundGfx();
+		m_ground_gfx = nullptr;
+
+		// Clear the broadphase before modifying bodies. The broadphase holds raw
+		// pointers to RigidBody objects, which become invalid if the vector resizes.
+		m_physics.Broadphase().Clear();
 
 		// Clear existing bodies and owned shapes
-		for (int i = 0; i != m_body_count; ++i)
-			m_body[i].Shape(nullptr);
-		m_owned_shapes.clear();
+		m_body.resize(0);
+		m_shape_buffer.resize(0);
 
 		// Apply gravity from the scene file
 		m_gravity = scene_desc.gravity;
@@ -137,163 +128,112 @@ namespace physics_sandbox
 		mat.m_friction_static = scene_desc.friction;
 
 		// Count total bodies: scene bodies + optional ground plane body
-		auto num_scene_bodies = static_cast<int>(std::min(scene_desc.bodies.size(), static_cast<size_t>(MaxBodies)));
-		auto ground_body_index = -1;
-		if (scene_desc.has_ground && num_scene_bodies < MaxBodies)
-			ground_body_index = num_scene_bodies;
+		auto num_scene_bodies = static_cast<int>(scene_desc.bodies.size());
+		auto total_bodies = num_scene_bodies + (scene_desc.has_ground ? 1 : 0);
 
-		m_body_count = num_scene_bodies + (ground_body_index >= 0 ? 1 : 0);
-
-		// Reserve shape storage upfront so that emplace_back doesn't relocate
-		// existing shapes (bodies hold raw pointers into the variant storage).
-		m_owned_shapes.reserve(m_body_count);
-
-		// Same for polytope buffers — bodies hold pointers into these byte_data buffers.
-		auto polytope_count = 0;
+		// Create the shapes for the bodies in the scene
+		m_shape_buffer.reserve(total_bodies * 256);
 		for (auto const& bd : scene_desc.bodies)
-			if (bd.shape_type == scene_loader::BodyDesc::EShape::Polytope) ++polytope_count;
-		m_owned_polytopes.reserve(polytope_count);
-
-		// Create dynamic bodies from the scene description
-		for (int i = 0; i != num_scene_bodies; ++i)
 		{
-			auto const& bd = scene_desc.bodies[i];
-			auto& body = m_body[i];
-
-			body.ZeroForces();
-			body.ZeroMomentum();
-
-			// Create the shape and store it in m_owned_shapes.
-			// The shape must outlive the body, so we store it first and then
-			// give the body a pointer via the implicit conversion operator.
 			switch (bd.shape_type)
 			{
 				case scene_loader::BodyDesc::EShape::Box:
 				{
-					m_owned_shapes.emplace_back(pr::collision::ShapeBox(bd.box_dimensions));
-					auto& shape = std::get<pr::collision::ShapeBox>(m_owned_shapes.back());
-
-					// mass == 0 means static (immovable) body
-					if (bd.mass <= 0.0f)
-						body.Shape(shape, pr::physics::Inertia::Infinite());
-					else
-						body.Shape(shape, bd.mass);
+					m_shape_buffer.push_back(collision::ShapeBox(bd.box_dimensions));
 					break;
 				}
 				case scene_loader::BodyDesc::EShape::Sphere:
 				{
-					m_owned_shapes.emplace_back(pr::collision::ShapeSphere(bd.sphere_radius));
-					auto& shape = std::get<pr::collision::ShapeSphere>(m_owned_shapes.back());
-
-					if (bd.mass <= 0.0f)
-						body.Shape(shape, pr::physics::Inertia::Infinite());
-					else
-						body.Shape(shape, bd.mass);
+					m_shape_buffer.push_back(collision::ShapeSphere(bd.sphere_radius));
 					break;
 				}
 				case scene_loader::BodyDesc::EShape::Line:
 				{
-					m_owned_shapes.emplace_back(pr::collision::ShapeLine(bd.line_length, bd.line_thickness));
-					auto& shape = std::get<pr::collision::ShapeLine>(m_owned_shapes.back());
-
-					if (bd.mass <= 0.0f)
-						body.Shape(shape, pr::physics::Inertia::Infinite());
-					else
-						body.Shape(shape, bd.mass);
+					m_shape_buffer.push_back(collision::ShapeLine(bd.line_length, bd.line_thickness));
 					break;
 				}
 				case scene_loader::BodyDesc::EShape::Triangle:
 				{
-					m_owned_shapes.emplace_back(pr::collision::ShapeTriangle(bd.tri_verts[0], bd.tri_verts[1], bd.tri_verts[2]));
-					auto& shape = std::get<pr::collision::ShapeTriangle>(m_owned_shapes.back());
-
-					if (bd.mass <= 0.0f)
-						body.Shape(shape, pr::physics::Inertia::Infinite());
-					else
-						body.Shape(shape, bd.mass);
+					m_shape_buffer.push_back(collision::ShapeTriangle(bd.tri_verts[0], bd.tri_verts[1], bd.tri_verts[2]));
 					break;
 				}
 				case scene_loader::BodyDesc::EShape::Polytope:
 				{
-					// Build the polytope from the convex hull of the given vertices.
-					// The byte_data buffer holds the variable-sized ShapePolytope + trailing data.
-					m_owned_polytopes.push_back(pr::collision::BuildPolytopeFromPoints(
-						bd.polytope_verts.data(), static_cast<int>(bd.polytope_verts.size())));
-					auto& shape = m_owned_polytopes.back().as<pr::collision::ShapePolytope>();
-
-					if (bd.mass <= 0.0f)
-						body.Shape(shape, pr::physics::Inertia::Infinite());
-					else
-						body.Shape(shape, bd.mass);
+					m_shape_buffer.push_back(collision::BuildPolytopeFromPoints(bd.polytope_verts));
 					break;
 				}
+				default:
+				{
+					throw std::runtime_error("Unknown shape type in scene description");
+				}
 			}
+		}
 
-			// Set position and velocity
-			body.O2W(pr::m4x4::Translation(bd.position));
+		// Create a collision shape for the ground plane
+		const auto ground_thickness = 10.0f;
+		auto ground_half_extent = 100.0f;
+		if (scene_desc.has_ground)
+		{
+			// Create the ground plane body as a large thin box with infinite mass.
+			ground_half_extent = std::max(ComputeSceneExtent(num_scene_bodies) * 5.0f, 10.0f);
+			m_shape_buffer.push_back(collision::ShapeBox(v4{ ground_half_extent, ground_half_extent, ground_thickness, 0 }));
+		}
+
+		// Create the bodies from the scene description
+		auto shape_ptr = m_shape_buffer.data<collision::Shape>();
+		for (auto const& bd : scene_desc.bodies)
+		{
+			// mass == 0 means static (immovable) body
+			Body body(rdr, shape_ptr, bd.mass, m4x4::Translation(bd.position));
 			body.VelocityWS(bd.angular_velocity, bd.velocity);
+			m_body.push_back(std::move(body));
+
+			shape_ptr = collision::next(shape_ptr);
 		}
 
 		// Create the ground plane body as a large thin box with infinite mass.
 		// The box is thin in Z (0.5 units) and wide in XY, centred at the ground height.
-		if (ground_body_index >= 0)
+		if (scene_desc.has_ground)
 		{
-			auto& ground_body = m_body[ground_body_index];
-			ground_body.ZeroForces();
-			ground_body.ZeroMomentum();
+			Body ground(rdr, shape_ptr, -1.0f, m4x4::Translation(v4{ 0, 0, scene_desc.ground.height - 0.5f*ground_thickness, 1 }));
+			m_body.push_back(std::move(ground));
+			shape_ptr = collision::next(shape_ptr);
 
-			// Compute the bounding box of all scene bodies to size the ground plane.
-			// The ground quad visual will be 10x this extent in XY.
-			auto scene_extent = ComputeSceneExtent(num_scene_bodies);
-			auto ground_half_extent = scene_extent * 10.0f;
-			if (ground_half_extent < 20.0f)
-				ground_half_extent = 20.0f;
+			// Replace the graphics for the ground plane with a large textured quad.
+			auto extent = ground_half_extent * 2;
 
-			// Create a thick box shape for the ground. The box is wide enough in XY that
-			// objects don't fall off the edges, and thick enough in Z (10 units) that
-			// fast-moving objects can't tunnel through it.
-			auto ground_thickness = 10.0f;
-			auto ground_dim = pr::v4{ ground_half_extent * 2, ground_half_extent * 2, ground_thickness, 0 };
-			m_owned_shapes.emplace_back(pr::collision::ShapeBox(ground_dim));
-			auto& ground_shape = std::get<pr::collision::ShapeBox>(m_owned_shapes.back());
+			// The plane is oriented in XY (horizontal) via AxisId +3 (Z-up).
+			// Use white base colour so the checker texture shows with full contrast.
+			auto scale = ground_half_extent / 8.0f;
+			ldraw::Builder ldr;
+			ldr.Plane("ground")
+				.wh({ extent, extent })
+				.texture([=](ldraw::seri::Texture& tex) { tex.filepath(scene_desc.ground.texture).t2s(m3x4::Scale(scale)); })
+				.axis(AxisId::PosZ)
+				.pos(v3{ 0, 0, scene_desc.ground.height });
 
-			// Static body: infinite mass, no velocity
-			ground_body.Shape(ground_shape, pr::physics::Inertia::Infinite());
-
-			// Suppress the auto-generated collision shape graphic for the ground body.
-			// The body's ShapeChange event creates a visual from the huge thin box, which
-			// would obscure the scene. We use a separate textured quad for the ground visual.
-			ground_body.m_gfx = nullptr;
-
-			// Position the ground box so its top surface is at the requested height.
-			// ShapeBox stores half-extents in m_radius, so the top face is at
-			// +half_thickness above the box centre.
-			auto ground_half_thickness = ground_thickness * 0.5f;
-			ground_body.O2W(pr::m4x4::Translation(pr::v4{ 0, 0, scene_desc.ground.height - ground_half_thickness, 1 }));
-			ground_body.VelocityWS(v4::Zero(), v4::Zero());
-
-			// Create the ground visual: a large textured quad.
-			// The visual is separate from the body's auto-generated collision shape graphic.
-			CreateGroundGfx(scene_desc.ground.height, ground_half_extent * 2, scene_desc.ground.texture);
+			auto result = rdr12::ldraw::Parse(rdr, ldr.ToBinary());
+			if (!result.m_objects.empty())
+				m_ground_gfx = result.m_objects.front();
 		}
 
 		// Rebuild the broadphase with the new bodies
-		m_broadphase.Clear();
-		for (int i = 0; i != m_body_count; ++i)
-			m_broadphase.Add(m_body[i]);
+		m_physics.Broadphase().Clear();
+		for (int i = 0; i != std::ssize(m_body); ++i)
+			m_physics.Broadphase().Add(m_body[i]);
 
 		DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
 		if (!scene_desc.description.empty())
 			DbgLog("  Description: %s\n", scene_desc.description.c_str());
-		DbgLog("  Bodies: %d\n", m_body_count);
+		DbgLog("  Bodies: %d\n", static_cast<int>(m_body.size()));
 		DbgLog("  Gravity: (%.2f, %.2f, %.2f)\n", m_gravity.x, m_gravity.y, m_gravity.z);
 		DbgLog("  Ground: %s (height=%.2f)\n", scene_desc.has_ground ? "yes" : "no", scene_desc.has_ground ? scene_desc.ground.height : 0.0f);
 		DbgLog("  Material: elasticity=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto snap = BodySnapshot::Capture(m_body[i]);
 			auto name = (i < static_cast<int>(scene_desc.bodies.size())) ? scene_desc.bodies[i].name.c_str() : "ground";
-			snap.Log(pr::FmtS("Body %d '%s'", i, name));
+			snap.Log(FmtS("Body %d '%s'", i, name));
 		}
 	}
 
@@ -310,24 +250,24 @@ namespace physics_sandbox
 		// Apply gravity as an external force: F = m * g.
 		// Static bodies (infinite mass) are skipped — they should not accelerate.
 		// Forces are cleared by Evolve() at the end of each step, so we re-apply each frame.
-		if (m_gravity != pr::v4::Zero())
+		if (m_gravity != v4::Zero())
 		{
-			for (int i = 0; i != m_body_count; ++i)
+			for (int i = 0; i != std::ssize(m_body); ++i)
 			{
 				auto mass = m_body[i].Mass();
-				if (mass < pr::physics::InfiniteMass * 0.5f)
-					m_body[i].ApplyForceWS(m_gravity * mass, pr::v4::Zero(), m_body[i].O2W().rot * m_body[i].CentreOfMassOS());
+				if (mass < physics::InfiniteMass * 0.5f)
+					m_body[i].ApplyForceWS(m_gravity * mass, v4::Zero(), m_body[i].O2W().rot * m_body[i].CentreOfMassOS());
 			}
 		}
 
 		// Step physics (Evolve → Broad Phase → Narrow Phase → PostCollisionDetection → Resolve)
-		auto bodies = std::span<Body>(m_body, m_body_count);
+		auto bodies = std::span(m_body);
 		m_physics.Step(dt, bodies);
 
 		#ifdef PR_PHYSICS_DIAGNOSTICS
 		// If a collision occurred this step, capture post-impulse snapshots.
 		// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
-		if (m_diag.occurred && m_body_count == 2)
+		if (m_diag.occurred && std::ssize(m_body) == 2)
 		{
 			m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
 			m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
@@ -336,7 +276,7 @@ namespace physics_sandbox
 		#endif
 
 		// NaN guard
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto pos = m_body[i].O2W().pos;
 			if (!std::isfinite(pos.x) || !std::isfinite(pos.y) || !std::isfinite(pos.z))
@@ -350,10 +290,10 @@ namespace physics_sandbox
 		// Kill zone: freeze bodies that have fallen below the threshold.
 		// This prevents escaped bodies from accumulating extreme velocities
 		// that corrupt float precision for the entire simulation.
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			auto mass = m_body[i].Mass();
-			if (mass >= pr::physics::InfiniteMass * 0.5f)
+			if (mass >= physics::InfiniteMass * 0.5f)
 				continue; // skip static bodies
 
 			auto pos = m_body[i].O2W().pos;
@@ -371,12 +311,12 @@ namespace physics_sandbox
 	// forces so that collisions can be validated against analytic predictions.
 	void Scene::SetupScenario()
 	{
-		m_body_count = 2;
+		m_body.resize(2);
 		auto& objA = m_body[0];
 		auto& objB = m_body[1];
 
 		// Common setup: zero forces/momentum
-		for (int i = 0; i != m_body_count; ++i)
+		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
 			m_body[i].ZeroForces();
 			m_body[i].ZeroMomentum();
@@ -387,24 +327,24 @@ namespace physics_sandbox
 			case EScenario::Sandbox:
 			{
 				// Default sandbox: two boxes approaching each other gently
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +2.0f, 0, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4{ -2.0f, 0, 0, 0 });
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +2.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -2.0f, 0, 0, 0 });
 				break;
 			}
 			case EScenario::HeadOnEqualMass:
 			{
 				// Two equal-mass boxes approaching each other along X.
 				// Elastic collision should swap velocities exactly.
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, 0, 0, 0 });
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
 				break;
 			}
 			case EScenario::HeadOnDiffMass:
@@ -412,23 +352,23 @@ namespace physics_sandbox
 				// Mass 10 hits mass 5 head-on along X.
 				// v1' = (m1-m2)/(m1+m2)*v1 + 2*m2/(m1+m2)*v2
 				// v2' = 2*m1/(m1+m2)*v1 + (m2-m1)/(m1+m2)*v2
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 5.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, 0, 0, 0 });
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 5.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
 				break;
 			}
 			case EScenario::StationaryTarget:
 			{
 				// Moving box hits a stationary box (classic billiard scenario)
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4::Zero());
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4::Zero());
 				break;
 			}
 			case EScenario::OffCenter:
@@ -436,23 +376,23 @@ namespace physics_sandbox
 				// Off-center hit: boxes offset in Y, collision induces rotation.
 				// Body A approaches along X but is offset in Y so the contact
 				// point is not aligned with the centres of mass.
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, +0.8f, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4::Zero());
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, +0.8f, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4::Zero());
 				break;
 			}
 			case EScenario::Oblique:
 			{
 				// Oblique collision: bodies approaching at an angle
-				objA.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, pr::physics::Inertia::Box(pr::v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(pr::m4x4::Translation(pr::v4{ -5.0f, -2.0f, 0, 1 }));
-				objB.O2W(pr::m4x4::Translation(pr::v4{ +5.0f, +2.0f, 0, 1 }));
-				objA.VelocityWS(pr::v4::Zero(), pr::v4{ +3.0f, +1.0f, 0, 0 });
-				objB.VelocityWS(pr::v4::Zero(), pr::v4{ -3.0f, -1.0f, 0, 0 });
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, -2.0f, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, +2.0f, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, +1.0f, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, -1.0f, 0, 0 });
 				break;
 			}
 		}
@@ -509,21 +449,21 @@ namespace physics_sandbox
 		auto dp = post_total_p - pre_total_p;
 		auto dL = post_total_L - pre_total_L;
 		auto dke = post_total_ke - pre_total_ke;
-		auto dL_pct = pr::Length(pre_total_L) > 0.01f ? 100.0f * pr::Length(dL) / pr::Length(pre_total_L) : 0.0f;
+		auto dL_pct = Length(pre_total_L) > 0.01f ? 100.0f * Length(dL) / Length(pre_total_L) : 0.0f;
 		DbgLog("Conservation:\n");
-		DbgLog("  Delta lin momentum: (%.6f, %.6f, %.6f) |dp|=%.6f\n", dp.x, dp.y, dp.z, pr::Length(dp));
-		DbgLog("  Delta ang momentum: (%.6f, %.6f, %.6f) |dL|=%.6f (%.2f%%)\n", dL.x, dL.y, dL.z, pr::Length(dL), dL_pct);
+		DbgLog("  Delta lin momentum: (%.6f, %.6f, %.6f) |dp|=%.6f\n", dp.x, dp.y, dp.z, Length(dp));
+		DbgLog("  Delta ang momentum: (%.6f, %.6f, %.6f) |dL|=%.6f (%.2f%%)\n", dL.x, dL.y, dL.z, Length(dL), dL_pct);
 		DbgLog("  Delta KE: %.6f (%.2f%%)\n", dke, pre_total_ke > 0 ? 100.0f * dke / pre_total_ke : 0.0f);
 
 		// Pass/fail thresholds.
 		// Angular momentum conservation is approximate due to sub-step time correction.
-		bool momentum_ok = pr::Length(dp) < 0.01f;
-		auto ang_tol = pr::Max(0.01f, pr::Length(pre_total_L) * 0.05f);
-		bool ang_momentum_ok = pr::Length(dL) < ang_tol;
-		bool ke_ok = pr::Abs(dke) < 0.01f * pre_total_ke;
+		bool momentum_ok = Length(dp) < 0.01f;
+		auto ang_tol = Max(0.01f, Length(pre_total_L) * 0.05f);
+		bool ang_momentum_ok = Length(dL) < ang_tol;
+		bool ke_ok = Abs(dke) < 0.01f * pre_total_ke;
 		DbgLog("  Lin Momentum conserved: %s\n", momentum_ok ? "PASS" : "*** FAIL ***");
 		DbgLog("  Ang Momentum conserved: %s%s\n", ang_momentum_ok ? "PASS" : "*** FAIL ***",
-			(pr::Length(dL) > 0.01f && ang_momentum_ok) ? " (within sub-step tolerance)" : "");
+			(Length(dL) > 0.01f && ang_momentum_ok) ? " (within sub-step tolerance)" : "");
 		DbgLog("  KE conserved (elastic): %s\n", ke_ok ? "PASS" : "*** FAIL ***");
 
 		// Analytic predictions for 1D head-on elastic collisions (scenarios 1-3)
@@ -555,8 +495,8 @@ namespace physics_sandbox
 		auto v2_actual = m_diag.after[1].lin_vel.x;
 
 		DbgLog("Analytic comparison (1D elastic, X component):\n");
-		DbgLog("  v1': predicted=%.4f  actual=%.4f  error=%.6f\n", v1_pred, v1_actual, pr::Abs(v1_pred - v1_actual));
-		DbgLog("  v2': predicted=%.4f  actual=%.4f  error=%.6f\n", v2_pred, v2_actual, pr::Abs(v2_pred - v2_actual));
+		DbgLog("  v1': predicted=%.4f  actual=%.4f  error=%.6f\n", v1_pred, v1_actual, Abs(v1_pred - v1_actual));
+		DbgLog("  v2': predicted=%.4f  actual=%.4f  error=%.6f\n", v2_pred, v2_actual, Abs(v2_pred - v2_actual));
 
 		auto vy1 = m_diag.after[0].lin_vel.y;
 		auto vz1 = m_diag.after[0].lin_vel.z;
@@ -569,9 +509,9 @@ namespace physics_sandbox
 		DbgLog("  ang_vel1: (%.6f, %.6f, %.6f)  ang_vel2: (%.6f, %.6f, %.6f)\n",
 			w1.x, w1.y, w1.z, w2.x, w2.y, w2.z);
 
-		bool x_ok = pr::Abs(v1_pred - v1_actual) < 0.05f && pr::Abs(v2_pred - v2_actual) < 0.05f;
-		bool yz_ok = pr::Abs(vy1) < 0.05f && pr::Abs(vz1) < 0.05f && pr::Abs(vy2) < 0.05f && pr::Abs(vz2) < 0.05f;
-		bool no_spin = pr::Length(w1) < 0.05f && pr::Length(w2) < 0.05f;
+		bool x_ok = Abs(v1_pred - v1_actual) < 0.05f && Abs(v2_pred - v2_actual) < 0.05f;
+		bool yz_ok = Abs(vy1) < 0.05f && Abs(vz1) < 0.05f && Abs(vy2) < 0.05f && Abs(vz2) < 0.05f;
+		bool no_spin = Length(w1) < 0.05f && Length(w2) < 0.05f;
 		DbgLog("  X velocity match: %s\n", x_ok ? "PASS" : "*** FAIL ***");
 		DbgLog("  Y/Z remain zero:  %s\n", yz_ok ? "PASS" : "*** FAIL ***");
 		DbgLog("  No angular vel:   %s\n", no_spin ? "PASS" : "*** FAIL ***");
@@ -596,7 +536,7 @@ namespace physics_sandbox
 			{
 				m_diag.occurred = false;
 
-				auto bodies = std::span<Body>(m_body, m_body_count);
+				auto bodies = std::span(m_body);
 				m_physics.Step(dt, bodies);
 				m_clock += dt;
 
@@ -628,12 +568,11 @@ namespace physics_sandbox
 	// Export the scene as LDraw script
 	void Scene::Dump()
 	{
-		using namespace pr::rdr12::ldraw;
-		auto flags = ERigidBodyFlags::All;
+		auto flags = ldraw::ERigidBodyFlags::All;
 
-		Builder builder;
-		builder._<LdrRigidBody>("body0", 0x8000FF00).rigid_body(m_body[0]).flags(flags);
-		builder._<LdrRigidBody>("body1", 0x10FF0000).rigid_body(m_body[1]).flags(flags);
+		ldraw::Builder builder;
+		builder.Add<ldraw::LdrRigidBody>("body0", 0x8000FF00).rigid_body(m_body[0]).flags(flags);
+		builder.Add<ldraw::LdrRigidBody>("body1", 0x10FF0000).rigid_body(m_body[1]).flags(flags);
 		builder.Save(L"dump\\physics_dump.ldr");
 	}
 
@@ -645,65 +584,25 @@ namespace physics_sandbox
 		for (int i = 0; i != num_bodies; ++i)
 		{
 			auto pos = m_body[i].O2W().pos;
-			auto dist = pr::Length(pr::v4{ pos.x, 0, pos.z, 0 });
+			auto dist = Length(v4{ pos.x, 0, pos.z, 0 });
 
 			// Include the shape size so the extent covers the body footprint
 			if (m_body[i].HasShape())
 			{
 				auto type = m_body[i].Shape().m_type;
-				if (type == pr::collision::EShape::Box)
+				if (type == collision::EShape::Box)
 				{
-					auto const& box = m_body[i].Shape<pr::collision::ShapeBox>();
-					dist += pr::Length(pr::v4{ box.m_radius.x, 0, box.m_radius.z, 0 });
+					auto const& box = m_body[i].Shape<collision::ShapeBox>();
+					dist += Length(v4{ box.m_radius.x, 0, box.m_radius.z, 0 });
 				}
-				else if (type == pr::collision::EShape::Sphere)
+				else if (type == collision::EShape::Sphere)
 				{
-					auto const& sphere = m_body[i].Shape<pr::collision::ShapeSphere>();
+					auto const& sphere = m_body[i].Shape<collision::ShapeSphere>();
 					dist += sphere.m_radius;
 				}
 			}
-			max_dist = pr::Max(max_dist, dist);
+			max_dist = Max(max_dist, dist);
 		}
 		return max_dist;
-	}
-
-	// Create the visual ground plane as a large textured LDraw plane.
-	// This is purely visual — the physics ground is a separate static body.
-	void Scene::CreateGroundGfx(float height, float extent, std::string const& texture)
-	{
-		// Use hand-crafted LDraw script matching the demo scene format.
-		// The plane is oriented in XY (horizontal) via AxisId +3 (Z-up).
-		// Use white base colour so the checker texture shows with full contrast.
-		auto scale = extent / 8.0f;
-		auto script = pr::FmtS(
-			"*Plane ground FFFFFFFF\n"
-			"{\n"
-			"  *Data {%f %f}\n"
-			"  *AxisId {+3}\n"
-			"  *Texture\n"
-			"  {\n"
-			"    *FilePath {\"%s\"}\n"
-			"    *Addr {Wrap Wrap}\n"
-			"    *o2w {*Scale {%f %f 1}}\n"
-			"  }\n"
-			"  *o2w {*pos {0 0 %f}}\n"
-			"}\n",
-			extent, extent,
-			texture.c_str(),
-			scale, scale,
-			height);
-
-		if (Body::s_rdr)
-		{
-			auto result = rdr12::ldraw::Parse(*Body::s_rdr, std::string_view(script));
-			if (!result.m_objects.empty())
-				m_ground_gfx = result.m_objects.front();
-		}
-	}
-
-	// Clean up the ground plane visual
-	void Scene::CleanupGroundGfx()
-	{
-		m_ground_gfx = nullptr;
 	}
 }

@@ -236,9 +236,7 @@ namespace pr::space_filling
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/view3d-12/ldraw/ldraw_builder.h"
-
-namespace pr::common
+namespace pr::algorithm::tests
 {
 	PRUnitTest(SpaceFillingTests)
 	{
@@ -248,7 +246,7 @@ namespace pr::common
 		// Generate the indices for points around the origin
 		constexpr int range = 1;
 		std::vector<int64_t> indices;
-		indices.reserve(Cube(2*range));
+		indices.reserve(Cube(2 * range));
 
 		auto i0 = COrder2D(iv2(-1, -1));
 		auto i1 = COrder3D(iv4(-1, -1, -1, 0));
@@ -259,24 +257,27 @@ namespace pr::common
 		for (int z = -range; z != range; ++z)
 			for (int y = -range; y != range; ++y)
 				for (int x = -range; x != range; ++x)
-					indices.push_back(COrder3D(iv4(x,y,z,1)));
+					indices.push_back(COrder3D(iv4(x, y, z, 1)));
 		//for (int i = -1000; i != 0; ++i)
 		//	indices.push_back(i);
 
 		// Convert to curve order
 		std::sort(std::begin(indices), std::end(indices));
 
-		// Plot them by converting indices to points.
-		rdr12::ldraw::Builder builder;
-		auto& line1 = builder.Line("COrder", Colour32Blue).strip(v4::Origin());
-		for (auto idx : indices)
+		#if PR_UNITTESTS_VISUALISE
 		{
-			auto pt = COrder3D(idx);
-			//line1.line_to(v4(To<v2>(pt), 0, 1));
-			line1.line_to(To<v4>(pt));
+			// Plot them by converting indices to points.
+			pr::ldraw::Builder builder;
+			auto& line1 = builder.Line("COrder", Colour32Blue).strip(v4::Origin());
+			for (auto idx : indices)
+			{
+				auto pt = COrder3D(idx);
+				//line1.line_to(v4(To<v2>(pt), 0, 1));
+				line1.line_to(To<v4>(pt));
+			}
+			builder.Save("E:\\dump\\space_filling.ldr");
 		}
-		builder.Save("E:\\dump\\space_filling.ldr");
-		//*/
+		#endif
 
 		// Round-trip tests
 
@@ -332,25 +333,26 @@ namespace pr::common
 		}
 		*/
 
-		/* // Draw the Hilbert curve
-		ldr::Builder builder;
-		builder.Box("bound", Colour32Green).dim(4,4,0.1).pos(2,2,0).wireframe();
-		auto& line1 = builder.Line("hilbert", Colour32Blue).strip(v4::Origin());
-		for (int32_t i = 0; i != 16; ++i)
+		#if PR_UNITTESTS_VISUALISE
 		{
-			auto pt = Hilbert2D<2>(i);
-			line1.line_to(v4(To<v2>(pt), 0, 1));
+			// Draw the Hilbert curve
+			ldr::Builder builder;
+			builder.Box("bound", Colour32Green).dim(4, 4, 0.1).pos(2, 2, 0).wireframe();
+			auto& line1 = builder.Line("hilbert", Colour32Blue).strip(v4::Origin());
+			for (int32_t i = 0; i != 16; ++i)
+			{
+				auto pt = Hilbert2D<2>(i);
+				line1.line_to(v4(To<v2>(pt), 0, 1));
+			}
+			auto& line2 = builder.Line("hilbert", Colour32Red).strip(v4::Origin());
+			for (int32_t i = 0; i != 64; ++i)
+			{
+				auto pt = Hilbert2D<3>(i);
+				line2.line_to(v4(To<v2>(pt) / 2, 0.1, 1));
+			}
+			builder.Write("E:\\dump\\hilbert.ldr");
 		}
-		auto& line2 = builder.Line("hilbert", Colour32Red).strip(v4::Origin());
-		for (int32_t i = 0; i != 64; ++i)
-		{
-			auto pt = Hilbert2D<3>(i);
-			line2.line_to(v4(To<v2>(pt) / 2, 0.1, 1));
-		}
-		builder.Write("E:\\dump\\hilbert.ldr");
-		//*/
-
-
+		#endif
 	}
 }
 #endif

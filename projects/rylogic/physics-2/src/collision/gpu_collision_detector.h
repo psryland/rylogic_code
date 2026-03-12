@@ -7,7 +7,7 @@
 // This header is safe to include from any physics-2 public header.
 #pragma once
 #include "pr/physics-2/forward.h"
-#include "src/integrator/gpu.h"
+#include "src/utility/gpu.h"
 
 namespace pr::physics
 {
@@ -29,11 +29,14 @@ namespace pr::physics
 
 		// Run collision detection on the GPU.
 		// Uploads shapes, pairs, and vertices → dispatches GJK shader → reads back contacts.
+		// When 'shapes_dirty' is false, the shapes and verts buffers are already on the GPU
+		// from a previous frame and the upload is skipped.
 		int DetectCollisions(
 			std::span<GpuCollisionPair const> pairs,
 			std::span<GpuShape const> shapes,
 			std::span<v4 const> verts,
-			std::vector<GpuContact>& out_contacts);
+			std::vector<GpuContact>& out_contacts,
+			bool shapes_dirty = true);
 
 	private:
 
@@ -41,6 +44,7 @@ namespace pr::physics
 		void CompileShader();
 
 		// Create GPU buffers for collision pipeline.
-		void ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs);
+		// Returns true if shape or vertex buffers were reallocated (requiring re-upload).
+		bool ResizeBuffers(CmdList& cmd_list, int max_shapes, int max_verts, int max_pairs);
 	};
 }

@@ -1,9 +1,10 @@
 #pragma once
-#include "pr/physics-2/forward.h"
+#include "pr/common/ldraw.h"
 #include "pr/collision/ldraw.h"
+#include "pr/physics-2/forward.h"
 #include "pr/physics-2/rigid_body/rigid_body.h"
 
-namespace pr::rdr12::ldraw
+namespace pr::ldraw
 {
 	enum class ERigidBodyFlags
 	{
@@ -21,14 +22,15 @@ namespace pr::rdr12::ldraw
 		_flags_enum = 0,
 	};
 
-	struct LdrRigidBody : fluent::LdrBase<LdrRigidBody>
+	struct LdrRigidBody : LdrBase
 	{
 		physics::RigidBody const* m_rb;
 		ERigidBodyFlags m_flags;
 		float m_scale;
 
-		LdrRigidBody()
-			: m_rb()
+		LdrRigidBody(seri::Name name = {}, seri::Colour colour = {})
+			: LdrBase(name, colour)
+			, m_rb()
 			, m_flags(ERigidBodyFlags::Default)
 			, m_scale(0.1f)
 		{
@@ -39,9 +41,9 @@ namespace pr::rdr12::ldraw
 			m_rb = &rb;
 			return *this;
 		}
-		LdrRigidBody& flags(ERigidBodyFlags flags)
+		LdrRigidBody& flags(ERigidBodyFlags f)
 		{
-			m_flags = flags;
+			m_flags = f;
 			return *this;
 		}
 		LdrRigidBody& scale(float s)
@@ -50,37 +52,26 @@ namespace pr::rdr12::ldraw
 			return *this;
 		}
 
-		// Write to 'out'
-		template <fluent::WriterType Writer, typename TOut>
-		void WriteTo(TOut& out) const
+		virtual void Write(textbuf& out) const override
 		{
 			if (!m_rb || !m_rb->HasShape())
 				return;
 
-			// Write the collision shape with this element's color
-			auto& shape = m_rb->Shape();
-			using namespace collision;
-			switch (shape.m_type)
-			{
-				case EShape::Box:
-				{
-					auto& box = shape_cast<ShapeBox>(shape);
-					fluent::LdrBox().colour(m_colour).dim(box.m_radius * 2).o2w(box.m_base.m_s2p).WriteTo<Writer>(out);
-					break;
-				}
-				case EShape::Sphere:
-				{
-					auto& sph = shape_cast<ShapeSphere>(shape);
-					fluent::LdrSphere().colour(m_colour).radius(sph.m_radius).o2w(sph.m_base.m_s2p).WriteTo<Writer>(out);
-					break;
-				}
-				default:
-				{
-					LdrPhysicsShape().shape(shape).WriteTo<Writer>(out);
-					break;
-				}
-			}
-			LdrBase::WriteTo<Writer>(out);
+			// Use a temporary builder to generate the shape, then append its output
+			Builder tmp;
+			AddShape(tmp, m_rb->Shape());
+			tmp.ToString(out);
+			LdrBase::Write(out);
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			if (!m_rb || !m_rb->HasShape())
+				return;
+
+			Builder tmp;
+			AddShape(tmp, m_rb->Shape());
+			tmp.ToBinary(out);
+			LdrBase::Write(out);
 		}
 	};
 }

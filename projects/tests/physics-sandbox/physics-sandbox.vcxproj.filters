@@ -35,9 +35,6 @@
     <Filter Include="pr\collision">
       <UniqueIdentifier>{74f19a98-ec3e-4080-af50-742308ee4069}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\ldraw">
-      <UniqueIdentifier>{4ddb25be-c541-41a0-a212-6ae4b70d0ff8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\physics\utility">
       <UniqueIdentifier>{9f24ebf5-b77b-42f0-b536-a3c844f33c79}</UniqueIdentifier>
     </Filter>
@@ -64,6 +61,12 @@
     </Filter>
     <Filter Include="pr\physics\compute">
       <UniqueIdentifier>{48da3655-f908-4ac8-ad93-f33464cec890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{deeecb5d-650d-4abf-8a66-d65a41dc0df3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{e222861f-dc20-4879-a5bb-3f324787147a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -126,12 +129,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h">
-      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\physics-2\broadphase\brute.h">
       <Filter>pr\physics\broadphase</Filter>
@@ -250,6 +247,18 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_triangle_vs_triangle.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
+    <ClInclude Include="src\ui\recent_files.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui\menu_id.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\scenario.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\ldraw.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="scenes\box_vs_sphere.json">
@@ -293,10 +302,13 @@
     <ClCompile Include="src\utils\scene_loader.cpp">
       <Filter>src\utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\recent_files.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="$(RylogicRoot)include\pr\physics-2\compute\physics_shaders.rc">
-      <Filter>pr\physics\compute</Filter>
+    <ResourceCompile Include="res\compute_shaders.rc">
+      <Filter>res</Filter>
     </ResourceCompile>
   </ItemGroup>
 </Project>

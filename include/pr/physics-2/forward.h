@@ -19,6 +19,7 @@
 #include "pr/common/flags_enum.h"
 #include "pr/common/scope.h"
 #include "pr/common/event_handler.h"
+#include "pr/common/bit_fields.h"
 #include "pr/algorithm/algorithm.h"
 #include "pr/str/to_string.h"
 #include "pr/container/vector.h"
@@ -61,10 +62,14 @@ namespace pr::physics
 	struct GpuShape;
 	struct GpuCollisionPair;
 	struct GpuContact;
+	struct EngineBufferCache;
+	struct GpuSortAndSweep;
 
 	using GpuPtr = std::unique_ptr<Gpu, Deleter<Gpu>>;
 	using GpuIntegratorPtr = std::unique_ptr<GpuIntegrator, Deleter<GpuIntegrator>>;
+	using GpuSortAndSweepPtr = std::unique_ptr<GpuSortAndSweep, Deleter<GpuSortAndSweep>>;
 	using GpuCollisionDetectorPtr = std::unique_ptr<GpuCollisionDetector, Deleter<GpuCollisionDetector>>;
+	using CachePtr = std::unique_ptr<EngineBufferCache, Deleter<EngineBufferCache>>;
 
 	// Traits
 	template <typename T>

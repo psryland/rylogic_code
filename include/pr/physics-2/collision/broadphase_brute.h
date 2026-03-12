@@ -6,9 +6,9 @@
 #include "pr/physics-2/forward.h"
 #include "pr/physics-2/collision/ibroadphase.h"
 
-namespace pr::physics::broadphase
+namespace pr::physics
 {
-	struct Brute : IBroadphase
+	struct BroadphaseBrute : IBroadphase
 	{
 		// Notes:
 		// A simple O(n²) broad phase implementation.
@@ -21,7 +21,7 @@ namespace pr::physics::broadphase
 
 	public:
 
-		Brute();
+		BroadphaseBrute();
 
 		// Remove all registered bodies
 		void Clear() override;
