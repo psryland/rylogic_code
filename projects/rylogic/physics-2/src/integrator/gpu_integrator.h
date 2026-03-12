@@ -11,7 +11,6 @@ namespace pr::physics
 	struct GpuIntegrator
 	{
 		Gpu& m_gpu;                        // Lightweight D3D12 wrapper (device + command queue)
-		GpuJob m_job;                      // GpuJob for running the integration compute shader
 		ComputeStep m_cs_integrate;        // Root signature + PSO for the integration shader
 		D3DPtr<ID3D12Resource> m_r_bodies; // GPU buffer: RWStructuredBuffer<RigidBodyDynamics>
 		D3DPtr<ID3D12Resource> m_r_output; // GPU buffer: RWStructuredBuffer<IntegrateOutput>
@@ -22,7 +21,7 @@ namespace pr::physics
 		// Integrate all bodies in the dynamics buffer on the GPU.
 		// Uploads the buffer → dispatches compute → reads back results.
 		// On return, 'dynamics' is updated in-place with the post-integration state.
-		void Integrate(std::span<RigidBodyDynamics> dynamics, float dt, std::span<IntegrateOutput> output);
+		void Integrate(GpuJob& job, std::span<RigidBodyDynamics> dynamics, float dt, std::span<IntegrateOutput> output);
 
 	private:
 

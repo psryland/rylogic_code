@@ -79,7 +79,7 @@ namespace pr::physics
 		m_integrate_output.resize(dynamics.size());
 		if (m_use_gpu)
 		{
-			m_gpu_integrator->Integrate(dynamics, dt, m_integrate_output);
+			m_gpu_integrator->Integrate(m_gpu->m_job, dynamics, dt, m_integrate_output);
 		}
 		else
 		{
@@ -107,7 +107,7 @@ namespace pr::physics
 
 			// Phase 1: Broadphase — collect overlapping pairs and look up cached shapes.
 			int pair_idx = 0;
-			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
+			m_gpu_sort_and_sweep->EnumOverlappingPairs(m_gpu->m_job, [&](RigidBody const& objA, RigidBody const& objB)
 			{
 				auto idx_a = shape_cache.GetOrAdd(objA.Shape());
 				auto idx_b = shape_cache.GetOrAdd(objB.Shape());
@@ -142,7 +142,7 @@ namespace pr::physics
 
 			// Phase 2: Dispatch GPU GJK collision detection.
 			// Pass the dirty flag so the detector knows whether to re-upload shapes.
-			m_gpu_collision_detector->DetectCollisions(col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
+			m_gpu_collision_detector->DetectCollisions(m_gpu->m_job, col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
 			shape_cache.ClearDirty();
 
 			// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
@@ -179,19 +179,20 @@ namespace pr::physics
 		}
 		else
 		{
-			// Broad phase: find pairs of bodies whose bounding volumes overlap.
-			// Narrow phase: test each pair for actual geometric contact.
-			Broadphase().EnumOverlappingPairs([&](RigidBody const& objA, RigidBody const& objB)
-			{
-				auto c = RbContact{ objA, objB };
-				if (NarrowPhaseCollision(dt, c))
-				{
-					#ifdef PR_PHYSICS_DUMP_CONTACTS
-					Dump(c);
-					#endif
-					collision_queue.push_back(c);
-				}
-			});
+			throw std::runtime_error("not implemented");
+			//// Broad phase: find pairs of bodies whose bounding volumes overlap.
+			//// Narrow phase: test each pair for actual geometric contact.
+			//m_gpu_collision_detector->EnumOverlappingPairs(m_gpu->m_job, [&](RigidBody const& objA, RigidBody const& objB)
+			//{
+			//	auto c = RbContact{ objA, objB };
+			//	if (NarrowPhaseCollision(dt, c))
+			//	{
+			//		#ifdef PR_PHYSICS_DUMP_CONTACTS
+			//		Dump(c);
+			//		#endif
+			//		collision_queue.push_back(c);
+			//	}
+			//});
 		}
 
 		// Sort the collisions by estimated time of impact so earlier collisions are resolved first.

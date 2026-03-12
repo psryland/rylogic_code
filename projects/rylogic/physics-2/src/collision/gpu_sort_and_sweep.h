@@ -27,8 +27,8 @@ namespace pr::physics
 	{
 	private:
 
-		// GpuJob for running the sort compute shader
-		mutable GpuJob m_job;
+		// Lightweight D3D12 wrapper (device + command queue)
+		Gpu& m_gpu;
 
 		// The GPU radix sorter — long-lived, resized as needed.
 		// Sorts float keys (AABB endpoints) with uint32 payloads (body_index << 1 | begin/end).
@@ -64,6 +64,6 @@ namespace pr::physics
 
 		// Enumerate all pairs of bodies whose bounding boxes overlap.
 		// Uses GPU radix sort for the primary axis, then CPU sweep with Y/Z filtering.
-		void EnumOverlappingPairs(std::function<void(RigidBody const&, RigidBody const&)> cb) const override;
+		void EnumOverlappingPairs(GpuJob& job, std::function<void(RigidBody const&, RigidBody const&)> cb) const;
 	};
 }
