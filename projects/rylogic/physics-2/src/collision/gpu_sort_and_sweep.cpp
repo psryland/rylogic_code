@@ -8,7 +8,7 @@
 namespace pr::physics
 {
 	GpuSortAndSweep::GpuSortAndSweep(Gpu& gpu)
-		: m_job(gpu, "BroadphaseSort", 0xFF40FF80, 2)
+		: m_gpu(gpu)
 		, m_sorter(gpu.m_gpu)
 		, m_keys()
 		, m_payloads()
@@ -38,7 +38,7 @@ namespace pr::physics
 
 	// Enumerate all pairs of bodies whose bounding boxes overlap.
 	// Uses GPU radix sort for the primary axis, then CPU sweep with Y/Z filtering.
-	void GpuSortAndSweep::EnumOverlappingPairs(std::function<void(pr::physics::RigidBody const&, pr::physics::RigidBody const&)> cb) const
+	void GpuSortAndSweep::EnumOverlappingPairs(GpuJob& job, std::function<void(pr::physics::RigidBody const&, pr::physics::RigidBody const&)> cb) const
 	{
 		auto n = static_cast<int>(m_entity.size());
 		if (n < 2) return;
@@ -99,8 +99,8 @@ namespace pr::physics
 
 		// Step 3: GPU radix sort by primary axis coordinate.
 		{
-			m_sorter.Resize(m_job.m_cmd_list, endpoint_count);
-			m_sorter.Sort(m_keys, m_payloads, m_job);
+			m_sorter.Resize(job.m_cmd_list, endpoint_count);
+			m_sorter.Sort(m_keys, m_payloads, job);
 		}
 
 		// Step 4: CPU sweep with full 3-axis AABB filtering.
