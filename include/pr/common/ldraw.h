@@ -4561,6 +4561,7 @@ namespace pr::ldraw
 				.line({ -1, -1, -1 }, { +1, +1, +1 }, 0xFFFF0000)
 				.line({ -1, +1, -1 }, { +1, -1, +1 }, 0xFF0000FF)
 				.new_block()
+				.style("LineStrip")
 				.strip({ -1, -1, -1 })
 				.line_to({ +1, -1, -1 })
 				.line_to({ +1, +1, -1 })
