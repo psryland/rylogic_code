@@ -52,6 +52,7 @@ namespace pr::physics
 	struct Engine;
 	struct RigidBodyDynamics;
 	struct IntegrateOutput;
+	struct IntegrateAABB;
 	struct Inertia;
 	struct InertiaInv;
 	struct RbContact;

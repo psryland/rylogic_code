@@ -36,8 +36,9 @@ namespace pr::physics
 		std::vector<GpuContact> m_gpu_contacts;
 
 		// Reset per-frame buffers
-		void Reset()
+		void BeginFrame()
 		{
+			m_shape_cache.BeginFrame();
 			m_col_pairs.resize(0);
 			m_body_pairs.resize(0);
 			m_collision_queue.resize(0);
@@ -53,18 +54,21 @@ namespace pr::physics
 		, m_materials(mats)
 		, m_cache(new EngineBufferCache)
 		, m_rb_dynamics()
-		, m_use_gpu(true)
+		, m_integrate_output()
+		, m_integrate_aabbs()
+		, m_cache_body_ptrs()
 		, PostCollisionDetection()
 	{}
 
 	// Get/Set whether the GPU is used for integration and collision detection.
 	bool Engine::UseGpu() const
 	{
-		return m_use_gpu;
+		return true;
 	}
 	void Engine::UseGpu(bool use_gpu)
 	{
-		m_use_gpu = use_gpu;
+		// Dropping non-gpu support
+		(void)use_gpu;
 	}
 	
 	// Access the broadphase for registering bodies and enumerating overlapping pairs.
@@ -73,26 +77,58 @@ namespace pr::physics
 		return *m_gpu_sort_and_sweep;
 	}
 
+	// Evolve the physics objects forward in time and resolve any collisions.
+	void Engine::Step(float dt, std::span<RigidBody*> bodies)
+	{
+		// Before here, callers should have set forces on the rigid bodies (including gravity).
+		// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
+
+		// Pack the required data into a GPU-friendly format. Skip static bodies (infinite mass) since they don't need integration.
+		m_rb_dynamics.resize(0);
+		for (auto body : bodies)
+		{
+			if (body->Mass() >= 0.5f * InfiniteMass) continue;
+			m_rb_dynamics.push_back(PackDynamics(*body));
+		}
+
+		// GPU split pipeline: integrate + readback AABBs → broadphase → GJK → readback bodies.
+		// Bodies stay GPU-resident between the integrate and GJK steps, avoiding a round trip.
+		Integrate(m_rb_dynamics, dt);
+
+		// For now, read back and update the RBs immediately so that collision detection and resolution
+		// apply to the updated dynamics. When the full pipeline is on the GPU, we'll do this after collision detection and resolution
+		ReadbackBodies();
+
+		// Unpack the integrated state back into the rigid bodies
+		for (auto [body, i] : with_index(bodies))
+		{
+			if (body->Mass() >= 0.5f * InfiniteMass) continue;
+			UnpackDynamics(*body, m_rb_dynamics[i]);
+		}
+
+		// Broadphase uses GPU-computed AABBs
+		DetectAndResolveCollisions(dt);
+
+
+		#if PR_DBG&&0
+		CompareIntegrationPaths(dt, bodies);
+		#endif
+	}
+
 	// CPU integration dispatch.
 	void Engine::Integrate(std::span<RigidBodyDynamics> dynamics, float dt)
 	{
+		// Split pipeline: integrate + readback AABBs only (bodies stay GPU-resident)
 		m_integrate_output.resize(dynamics.size());
-		if (m_use_gpu)
-		{
-			m_gpu_integrator->Integrate(m_gpu->m_job, dynamics, dt, m_integrate_output);
-		}
-		else
-		{
-			for (auto& body : dynamics)
-				Evolve(body, dt);
-		}
+		m_integrate_aabbs.resize(dynamics.size());
+		m_gpu_integrator->IntegrateAndReadbackAABBs(m_gpu->m_job, dynamics, dt, m_integrate_output, m_integrate_aabbs);
 	}
 
 	// Broad phase overlap query → narrow phase collision detection → impulse resolution.
 	void Engine::DetectAndResolveCollisions(float dt)
 	{
 		// This is the core collision pipeline, called after all bodies have been evolved.
-		m_cache->Reset();
+		m_cache->BeginFrame();
 
 		auto& shape_cache = m_cache->m_shape_cache;
 		auto& col_pairs = m_cache->m_col_pairs;
@@ -100,99 +136,71 @@ namespace pr::physics
 		auto& collision_queue = m_cache->m_collision_queue;
 		auto& gpu_contacts = m_cache->m_gpu_contacts;
 
-		if (m_use_gpu)
+		// Phase 1: Broadphase — collect overlapping pairs and look up cached shapes.
+		// Use GPU-computed AABBs when available to avoid recomputing on CPU.
+		int pair_idx = 0;
+		m_gpu_sort_and_sweep->EnumOverlappingPairs(m_gpu->m_job, std::span<IntegrateAABB const>(m_integrate_aabbs), [&](RigidBody const& objA, RigidBody const& objB)
 		{
-			// Begin a new frame for shape cache tracking
-			shape_cache.BeginFrame();
+			auto idx_a = shape_cache.GetOrAdd(objA.Shape());
+			auto idx_b = shape_cache.GetOrAdd(objB.Shape());
 
-			// Phase 1: Broadphase — collect overlapping pairs and look up cached shapes.
-			int pair_idx = 0;
-			m_gpu_sort_and_sweep->EnumOverlappingPairs(m_gpu->m_job, [&](RigidBody const& objA, RigidBody const& objB)
-			{
-				auto idx_a = shape_cache.GetOrAdd(objA.Shape());
-				auto idx_b = shape_cache.GetOrAdd(objB.Shape());
+			// Compute B-to-A transform (collision runs in A's object space)
+			auto w2a = InvertOrthonormal(objA.O2W());
+			auto b2a = w2a * objB.O2W();
 
-				// Compute B-to-A transform (collision runs in A's object space)
-				auto w2a = InvertOrthonormal(objA.O2W());
-				auto b2a = w2a * objB.O2W();
+			col_pairs.push_back(GpuCollisionPair{
+				.shape_idx_a = idx_a,
+				.shape_idx_b = idx_b,
+				.pair_index = pair_idx,
+				.pad0 = 0,
+				.b2a = b2a,
+			});				
 
-				col_pairs.push_back(GpuCollisionPair{
-					.shape_idx_a = idx_a,
-					.shape_idx_b = idx_b,
-					.pair_index = pair_idx,
-					.pad0 = 0,
-					.b2a = b2a,
-				});				
-
-				body_pairs.push_back(BodyPair{
-					b2a,
-					&objA,
-					&objB,
-				});
-
-				++pair_idx;
+			body_pairs.push_back(BodyPair{
+				.b2a = b2a,
+				.objA = &objA,
+				.objB = &objB,
 			});
 
-			if (col_pairs.empty())
-				return;
+			++pair_idx;
+		});
 
-			// Periodically flush stale shapes (every 10 frames)
-			if (shape_cache.m_frame % CollisionShapeCache::StaleFrameLimit == 0)
-				shape_cache.Flush();
+		// Nothing close enough to be colliding? Skip the GPU GJK step.
+		if (col_pairs.empty())
+			return;
 
-			// Phase 2: Dispatch GPU GJK collision detection.
-			// Pass the dirty flag so the detector knows whether to re-upload shapes.
-			m_gpu_collision_detector->DetectCollisions(m_gpu->m_job, col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
-			shape_cache.ClearDirty();
+		// Periodically flush stale shapes (every 10 frames)
+		if (shape_cache.m_frame % CollisionShapeCache::StaleFrameLimit == 0)
+			shape_cache.Flush();
 
-			// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
-			for (auto const& gc : gpu_contacts)
-			{
-				auto const& bp = body_pairs[gc.pair_index];
-				auto c = RbContact{*bp.objA, *bp.objB};
+		// Phase 2: Dispatch GPU GJK collision detection.
+		// Pass the dirty flag so the detector knows whether to re-upload shapes.
+		m_gpu_collision_detector->DetectCollisions(m_gpu->m_job, col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
+		shape_cache.ClearDirty();
 
-				// Copy geometric data from GPU contact (already in objA's space)
-				c.m_axis = gc.axis;
-				c.m_point = gc.pt;
-				c.m_depth = gc.depth;
-				c.m_mat_idA = gc.mat_id_a;
-				c.m_mat_idB = gc.mat_id_b;
-
-				// Check if the collision point is separating (relative velocity positive along axis)
-				auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
-				if (Dot(rel_vel_at_point, c.m_axis) > 0)
-					continue;
-
-				// Look up the combined material properties
-				c.m_mat = m_materials(c.m_mat_idA, c.m_mat_idB);
-
-				// Estimate sub-step collision time
-				auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
-				auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
-				auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
-
-				// Recompute contact data at the estimated collision time
-				c.Update(sub_step * dt);
-
-				collision_queue.push_back(c);
-			}
-		}
-		else
+		// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
+		for (auto const& gc : gpu_contacts)
 		{
-			throw std::runtime_error("not implemented");
-			//// Broad phase: find pairs of bodies whose bounding volumes overlap.
-			//// Narrow phase: test each pair for actual geometric contact.
-			//m_gpu_collision_detector->EnumOverlappingPairs(m_gpu->m_job, [&](RigidBody const& objA, RigidBody const& objB)
-			//{
-			//	auto c = RbContact{ objA, objB };
-			//	if (NarrowPhaseCollision(dt, c))
-			//	{
-			//		#ifdef PR_PHYSICS_DUMP_CONTACTS
-			//		Dump(c);
-			//		#endif
-			//		collision_queue.push_back(c);
-			//	}
-			//});
+			auto const& bp = body_pairs[gc.pair_index];
+			auto c = RbContact{*bp.objA, *bp.objB, gc};
+
+			// Check if the collision point is separating (relative velocity positive along axis)
+			auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
+			if (Dot(rel_vel_at_point, c.m_axis) > 0)
+				continue;
+
+			// Look up the combined material properties
+			c.m_mat = m_materials(c.m_mat_idA, c.m_mat_idB);
+
+			// Estimate sub-step collision time
+			auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
+			auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
+			auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
+
+			// Recompute contact data at the estimated collision time
+			c.Update(sub_step * dt);
+
+			collision_queue.push_back(c);
 		}
 
 		// Sort the collisions by estimated time of impact so earlier collisions are resolved first.
@@ -331,6 +339,12 @@ namespace pr::physics
 			}
 			#endif
 		}
+	}
+
+	// Deferred readback of bodies from the GPU after the collision pipeline.
+	void Engine::ReadbackBodies()
+	{
+		m_gpu_integrator->ReadbackBodies(m_gpu->m_job, m_rb_dynamics);
 	}
 
 	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
