@@ -85,8 +85,8 @@ int __stdcall WinMain(HINSTANCE, HINSTANCE, LPTSTR lpCmdLine, int)
 	auto autoplay = cmd.count("autoplay") > 0;
 	if (autoplay)
 	{
-		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
+		_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
 	}
 
 	try

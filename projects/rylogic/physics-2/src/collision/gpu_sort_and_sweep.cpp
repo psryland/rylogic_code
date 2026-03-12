@@ -50,6 +50,12 @@ namespace pr::physics
 		auto var_sq = pr::v4::Zero();
 		for (int i = 0; i != n; ++i)
 		{
+			if (!m_entity[i]->HasShape())
+			{
+				// Body has no shape — give it a degenerate bbox at its position
+				m_bboxes[i] = pr::BBox(m_entity[i]->O2W().pos, pr::v4::Zero());
+				continue;
+			}
 			m_bboxes[i] = m_entity[i]->BBoxWS();
 			auto c = m_bboxes[i].Centre();
 			var_sum += c;

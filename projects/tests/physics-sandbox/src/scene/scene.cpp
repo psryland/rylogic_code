@@ -134,9 +134,13 @@ namespace physics_sandbox
 		auto scene_bbox = CalculateSceneBBox(scene_desc);
 
 		// Create the shapes for the bodies in the scene.
-		m_shape_buffer.reserve(total_bodies * 256);
+		// Note: polytope shapes are variable-sized, so the reserve size is an estimate.
+		// The byte_data buffer will grow if needed, but we pre-reserve generously to avoid
+		// reallocations that would invalidate shape pointers held by earlier bodies.
+		m_shape_buffer.reserve(total_bodies * 512);
 		for (auto const& bd : scene_desc.bodies)
 		{
+			auto shape_ofs = m_shape_buffer.size();
 			switch (bd.shape_type)
 			{
 				case scene_loader::BodyDesc::EShape::Box:
@@ -169,7 +173,13 @@ namespace physics_sandbox
 					throw std::runtime_error("Unknown shape type in scene description");
 				}
 			}
-			assert((m_shape_buffer.size() % 16) == 0 && "All shapes should have a size that is a multiple of 16 bytes");
+
+			// Pad to 16-byte alignment and update the shape's m_size to include the padding.
+			// collision::next() uses m_size to advance the shape pointer, so it must account
+			// for any alignment padding between shapes.
+			m_shape_buffer.pad_to(16);
+			auto* shape = reinterpret_cast<collision::Shape*>(m_shape_buffer.data() + shape_ofs);
+			shape->m_size = m_shape_buffer.size() - shape_ofs;
 		}
 
 		// Create a collision shape for the ground plane
@@ -181,13 +191,15 @@ namespace physics_sandbox
 			m_shape_buffer.push_back(collision::ShapeBox(v4{ ground_half_extent, ground_half_extent, ground_thickness, 0 }));
 		}
 
-		// Create the bodies from the scene description
+		// Create the bodies from the scene description.
+		// Phase 1: Create bodies WITHOUT the renderer so the ShapeChange handler doesn't
+		// try to create graphics yet. This avoids dangling pointer issues during the
+		// construction loop (graphics creation calls AddShape which reads the shape data).
+		m_body.reserve(total_bodies);
 		auto shape_ptr = m_shape_buffer.data<collision::Shape>();
 		for (auto const& bd : scene_desc.bodies)
 		{
-			// Create body without shape first (so ShapeChange handler gets registered),
-			// then set transform and shape. Setting the shape fires ShapeChange which creates graphics.
-			Body body(rdr);
+			Body body(nullptr);
 			body.O2W(m4x4::Translation(bd.position));
 			body.Shape(shape_ptr, bd.mass);
 			body.VelocityWS(bd.angular_velocity, bd.velocity);
@@ -199,13 +211,13 @@ namespace physics_sandbox
 		// The box is thin in Z (0.5 units) and wide in XY, centred at the ground height.
 		if (scene_desc.has_ground)
 		{
-			Body ground(rdr);
+			Body ground(nullptr);
 			ground.O2W(m4x4::Translation(v4{ 0, 0, scene_desc.ground.height - 0.5f*ground_thickness, 1 }));
-			ground.Shape(shape_ptr, physics::Inertia{});
+			ground.Shape(shape_ptr, -1.0f);
 			m_body.push_back(std::move(ground));
 			shape_ptr = collision::next(shape_ptr);
 
-			// Replace the graphics for the ground plane with a large textured quad.
+			// Create the ground plane visual as a large textured quad
 			if (rdr)
 			{
 				auto extent = ground_half_extent * 2;
@@ -220,6 +232,28 @@ namespace physics_sandbox
 				auto result = rdr12::ldraw::Parse(*rdr, ldr.ToString());
 				if (!result.m_objects.empty())
 					m_ground_gfx = result.m_objects.front();
+			}
+		}
+
+		// Phase 2: Now that all bodies and shapes are stable in memory,
+		// create graphics for each body by re-triggering ShapeChange with the renderer.
+		if (rdr)
+		{
+			for (auto& body : m_body)
+			{
+				if (!body.HasShape())
+					continue;
+
+				using namespace pr::ldraw;
+				static std::default_random_engine rng;
+
+				Builder builder;
+				builder.Add<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f).argb).rigid_body(body);
+				auto result = rdr12::ldraw::Parse(*rdr, builder.ToString());
+				if (!result.m_objects.empty())
+					body.m_gfx = result.m_objects.front();
+
+				body.UpdateGfx();
 			}
 		}
 
