@@ -582,30 +582,17 @@ namespace pr::ldraw
 		inline void Append(bytebuf& out, Name n)
 		{
 			if (!n) return;
-			if (!n.m_kw)
-			{
-				Append(out, *n.m_name);
-			}
-			else
-			{
-				Append(out, seri::Header{ n.m_kw }, *n.m_name);
-			}
+			auto kw = n.m_kw ? n.m_kw : EKeywords::Name;
+			Append(out, seri::Header{ kw }, *n.m_name);
 		}
 		inline void Append(bytebuf& out, Colour c)
 		{
 			if (!c) return;
-			if (!c.m_kw)
-			{
-				Append(out, *c.m_colour);
-			}
-			else if (c.m_kw == EKeywords::RandColour)
-			{
-				Append(out, seri::Header{ c.m_kw });
-			}
+			auto kw = c.m_kw ? c.m_kw : EKeywords::Colour;
+			if (kw == EKeywords::RandColour)
+				Append(out, seri::Header{ kw });
 			else
-			{
-				Append(out, seri::Header{ c.m_kw }, *c.m_colour);
-			}
+				Append(out, seri::Header{ kw }, *c.m_colour);
 		}
 
 		// Variadic Append for binary header + payload
@@ -2454,7 +2441,7 @@ namespace pr::ldraw
 
 		LdrLine& line(seri::Vec3 a, seri::Vec3 b, seri::Colour colour = {})
 		{
-			style("LineSegments");
+			// Don't overwrite style here, it could be direction or segments
 			m_current.m_lines.push_back({ a, b, colour });
 			if (colour) m_current.m_per_item_colour = true;
 			m_current.m_strip.clear();
@@ -2474,7 +2461,7 @@ namespace pr::ldraw
 		}
 		LdrLine& strip(seri::Vec3 start, seri::Colour colour = {})
 		{
-			style("LineStrip");
+			// Don't overwrite style here
 			m_current.m_strip.push_back({ start, colour });
 			if (colour) m_current.m_per_item_colour = true;
 			m_current.m_lines.clear();
@@ -2528,6 +2515,41 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Line, m_name, m_colour });
+			{
+				auto WriteBlock = [](bytebuf& out, Block const& block)
+				{
+					Append(out, block.m_style, block.m_smooth, block.m_width, block.m_dashed, block.m_arrow, block.m_data_points, block.m_per_item_colour);
+					{
+						auto sd = Append(out, seri::Header{ EKeywords::Data });
+						{
+							for (auto& ln : block.m_lines)
+							{
+								Append(out, ln.a, ln.b);
+								if (block.m_per_item_colour)
+									Append(out, ln.col.m_colour ? *ln.col.m_colour : seri::Colour::Default);
+							}
+							for (auto& pt : block.m_strip)
+							{
+								Append(out, pt.a);
+								if (block.m_per_item_colour)
+									Append(out, pt.col.m_colour ? *pt.col.m_colour : seri::Colour::Default);
+							}
+						}
+					}
+				};
+
+				for (auto& block : m_blocks)
+					WriteBlock(out, block);
+				if (m_current)
+					WriteBlock(out, m_current);
+
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrPlane : LdrBase
@@ -2598,6 +2620,16 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Plane, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh.x, m_wh.y);
+				Append(out, m_axis, m_tex);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrBox : LdrBase
 	{
@@ -2657,6 +2689,36 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto single = m_boxes.size() == 1 && !m_boxes[0].m_pos && !m_boxes[0].m_col;
+			auto per_item_colour = std::ranges::any_of(m_boxes, [](auto const& x) { return !!x.m_col; });
+
+			auto s = Append(out, seri::Header{ single ? EKeywords::Box : EKeywords::BoxList, m_name, m_colour });
+			{
+				if (single)
+				{
+					Append(out, seri::Header{ EKeywords::Data }, m_boxes[0].m_whd);
+				}
+				else
+				{
+					if (per_item_colour)
+						Append(out, seri::Header{ EKeywords::PerItemColour });
+
+					{
+						auto sd = Append(out, seri::Header{ EKeywords::Data });
+						for (auto const& box : m_boxes)
+						{
+							Append(out, box.m_whd, box.m_pos);
+							if (per_item_colour)
+								Append(out, box.m_col);
+						}
+					}
+				}
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrModel : LdrBase
 	{
@@ -2696,6 +2758,17 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Model, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::FilePath }, m_filepath.string());
+				if (m_anim) Append(out, m_anim);
+				if (m_no_materials) Append(out, seri::Header{ EKeywords::NoMaterials });
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrGroup : LdrBase
 	{
@@ -2708,6 +2781,12 @@ namespace pr::ldraw
 			Append(out, EKeywords::Group, m_name, m_colour, "{");
 			LdrBase::Write(out);
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Group, m_name, m_colour });
+			LdrBase::Write(out);
 		}
 	};
 	struct LdrLineBox : LdrBase
@@ -2751,6 +2830,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::LineBox, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_dim);
+				Append(out, m_width, m_dashed);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrGrid : LdrBase
@@ -2805,6 +2894,18 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Grid, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh);
+				if (m_div_w != 0 || m_div_h != 0)
+				Append(out, seri::Header{ EKeywords::Divisions }, m_div_w, m_div_h);
+				Append(out, m_width, m_dashed);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCoordFrame : LdrBase
 	{
@@ -2835,6 +2936,15 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::CoordFrame, m_name, m_colour });
+			{
+				Append(out, m_scale, m_left_handed, m_width);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrTriangle : LdrBase
@@ -2875,6 +2985,24 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Triangle, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& t : m_tris)
+					{
+						Append(out, t.a, t.b, t.c);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, t.col ? *t.col.m_colour : seri::Colour::Default);
+					}
+				}
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrQuad : LdrBase
@@ -2921,6 +3049,25 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Quad, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& q : m_quads)
+					{
+						Append(out, q.a, q.b, q.c, q.d);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, q.col ? *q.col.m_colour : seri::Colour::Default);
+					}
+				}
+				Append(out, m_tex);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrRibbon : LdrBase
@@ -2984,6 +3131,25 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Ribbon, m_name, m_colour });
+			{
+				Append(out, m_width, m_smooth, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& p : m_points)
+					{
+						Append(out, p.pt);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, p.col ? *p.col.m_colour : seri::Colour::Default);
+					}
+				}
+				Append(out, m_tex);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCircle : LdrBase
 	{
@@ -3015,6 +3181,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Circle, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_radius);
+				Append(out, m_facets, m_axis_id, m_solid);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrPie : LdrBase
@@ -3067,6 +3243,17 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Pie, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_angle0, m_angle1, m_inner_radius, m_outer_radius);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrRect : LdrBase
 	{
@@ -3109,6 +3296,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Rect, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_wh);
+				Append(out, m_corner_radius, m_facets, m_solid);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrPolygon : LdrBase
@@ -3153,6 +3350,24 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Polygon, m_name, m_colour });
+			{
+				Append(out, m_per_item_colour);
+				{
+					auto sd = Append(out, seri::Header{ EKeywords::Data });
+					for (auto& p : m_points)
+					{
+						Append(out, p.pt);
+						if (m_per_item_colour && *m_per_item_colour.m_active)
+						Append(out, p.col ? *p.col.m_colour : seri::Colour::Default);
+					}
+				}
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrSphere : LdrBase
@@ -3200,6 +3415,19 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Sphere, m_name, m_colour });
+			{
+				if (m_radius.x == m_radius.y && m_radius.y == m_radius.z)
+				Append(out, seri::Header{ EKeywords::Data }, m_radius.x);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_radius);
+				Append(out, m_facets);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrCylinder : LdrBase
@@ -3263,6 +3491,20 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Cylinder, m_name, m_colour });
+			{
+				if (m_tip_radius >= 0)
+				Append(out, seri::Header{ EKeywords::Data }, m_height, m_radius, m_tip_radius);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_height, m_radius);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrCone : LdrBase
 	{
@@ -3320,6 +3562,17 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Cone, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_angle, m_near, m_far);
+				Append(out, m_facets);
+				if (m_scale_set) Append(out, m_scale);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrMesh : LdrBase
@@ -3445,6 +3698,50 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Mesh, m_name, m_colour });
+			{
+				if (!m_verts.empty())
+				{
+					auto sv = Append(out, seri::Header{ EKeywords::Verts });
+					for (auto& v : m_verts) Append(out, v);
+				}
+				if (!m_normals.empty())
+				{
+					auto sn = Append(out, seri::Header{ EKeywords::Normals });
+					for (auto& n : m_normals) Append(out, n);
+				}
+				if (!m_colours.empty())
+				{
+					auto sc = Append(out, seri::Header{ EKeywords::Colours });
+					for (auto c : m_colours) Append(out, c);
+				}
+				if (!m_tex_coords.empty())
+				{
+					auto st = Append(out, seri::Header{ EKeywords::TexCoords });
+					for (auto& tc : m_tex_coords) Append(out, tc);
+				}
+				if (!m_faces.empty())
+				{
+					auto sf = Append(out, seri::Header{ EKeywords::Faces });
+					for (auto i : m_faces) Append(out, i);
+				}
+				if (!m_lines.empty())
+				{
+					auto sl = Append(out, seri::Header{ EKeywords::Lines });
+					for (auto i : m_lines) Append(out, i);
+				}
+				if (!m_tetras.empty())
+				{
+					auto ste = Append(out, seri::Header{ EKeywords::Tetra });
+					for (auto i : m_tetras) Append(out, i);
+				}
+				Append(out, m_gen_normals, m_tex);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrConvexHull : LdrBase
 	{
@@ -3482,6 +3779,19 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::ConvexHull, m_name, m_colour });
+			{
+				{
+					auto sv = Append(out, seri::Header{ EKeywords::Verts });
+					for (auto& v : m_verts) Append(out, v);
+				}
+				Append(out, m_gen_normals);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrFrustum : LdrBase
@@ -3539,6 +3849,20 @@ namespace pr::ldraw
 			}
 			Append(out, "}");
 		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto kw = m_mode == EMode::FA ? EKeywords::FrustumFA : EKeywords::FrustumWH;
+			auto s = Append(out, seri::Header{ kw, m_name, m_colour });
+			{
+				if (m_mode == EMode::WH)
+				Append(out, seri::Header{ EKeywords::Data }, m_width, m_height, m_near, m_far);
+				else
+				Append(out, seri::Header{ EKeywords::Data }, m_fov_y, m_aspect, m_near, m_far);
+				Append(out, m_facets);
+				LdrBase::Write(out);
+			}
+		}
 	};
 	struct LdrInstance : LdrBase
 	{
@@ -3569,6 +3893,16 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Instance, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_address);
+				if (m_anim) Append(out, m_anim);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrText : LdrBase
@@ -3635,6 +3969,20 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::Text, m_name, m_colour });
+			{
+				Append(out, seri::Header{ EKeywords::Data }, m_text);
+				if (!m_font.empty())
+				Append(out, seri::Header{ EKeywords::Font }, m_font);
+				if (!m_format.empty())
+				Append(out, seri::Header{ EKeywords::Format }, m_format);
+				Append(out, m_billboard, m_back_colour, m_anchor, m_padding);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrLightSource : LdrBase
@@ -3709,6 +4057,28 @@ namespace pr::ldraw
 				LdrBase::Write(out);
 			}
 			Append(out, "}");
+		}
+		virtual void Write(bytebuf& out) const override
+		{
+			using namespace seri;
+			auto s = Append(out, seri::Header{ EKeywords::LightSource, m_name, m_colour });
+			{
+				if (!m_style.empty())
+				Append(out, seri::Header{ EKeywords::Style }, m_style);
+				if (m_ambient)
+				Append(out, seri::Header{ EKeywords::Ambient }, *m_ambient);
+				if (m_diffuse)
+				Append(out, seri::Header{ EKeywords::Diffuse }, *m_diffuse);
+				if (m_specular)
+				Append(out, seri::Header{ EKeywords::Specular }, *m_specular);
+				if (m_range)
+				Append(out, seri::Header{ EKeywords::Range }, *m_range);
+				if (m_cone_angle)
+				Append(out, seri::Header{ EKeywords::Fov }, *m_cone_angle);
+				if (m_cast_shadow)
+				Append(out, seri::Header{ EKeywords::CastShadow }, *m_cast_shadow);
+				LdrBase::Write(out);
+			}
 		}
 	};
 	struct LdrCommands :LdrBase
@@ -4183,7 +4553,7 @@ namespace pr::ldraw
 		{
 			Builder builder;
 			builder.Line("l", 0xFF00FF00)
-				.style("LineStrip")
+				.style("LineSegments")
 				.per_item_colour()
 				.width(10)
 				.dashed({ 0.2f, 0.4f })
