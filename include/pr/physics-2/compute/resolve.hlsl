@@ -92,9 +92,9 @@ float3x3 invert3x3(float3x3 m)
 float kinetic_energy(RigidBodyDynamics body)
 {
 	float inv_mass = body.os_com_and_invmass.w;
-	float3x3 os_iinv = build_symmetric_3x3(body.inertia_inv_diagonal.xyz, body.inertia_inv_products.xyz);
+	float3x3 os_iinv = inv_mass * build_symmetric_3x3(body.inertia_inv_diagonal.xyz, body.inertia_inv_products.xyz);
 	float3x3 rot = (float3x3)body.o2w;
-	float3x3 ws_iinv = inv_mass * rotate_inertia_inv(os_iinv, rot);
+	float3x3 ws_iinv = rotate_inertia_inv(os_iinv, rot);
 
 	float3 vel_ang = mul(ws_iinv, body.momentum_ang.xyz);
 	float3 vel_lin = inv_mass * body.momentum_lin.xyz;
@@ -130,9 +130,10 @@ void CSResolve(uint3 dtid : SV_DispatchThreadID)
 
 	// ----- Compute relative velocity at the contact point (in A's object space) -----
 	// Body A: A-space = A's object space, so rotation from OS to A-space is identity.
-	float3x3 os_iinv_a = build_symmetric_3x3(bodyA.inertia_inv_diagonal.xyz, bodyA.inertia_inv_products.xyz);
+	// Note: stored diagonal/products are unscaled — multiply by inv_mass to get actual Ic_inv.
+	float3x3 os_iinv_a = inv_mass_a * build_symmetric_3x3(bodyA.inertia_inv_diagonal.xyz, bodyA.inertia_inv_products.xyz);
 	float3x3 rot_a = (float3x3)bodyA.o2w;
-	float3x3 ws_iinv_a = inv_mass_a * rotate_inertia_inv(os_iinv_a, rot_a);
+	float3x3 ws_iinv_a = rotate_inertia_inv(os_iinv_a, rot_a);
 
 	// Compute A's velocity at model origin in world space, then transform to A-space.
 	// Momentum is at CoM, velocity at CoM: omega = I_inv * h_ang, v_com = h_lin / m
@@ -148,9 +149,9 @@ void CSResolve(uint3 dtid : SV_DispatchThreadID)
 	float3 v_a_at_pt = v_com_a + cross(omega_a, pt - com_a_in_a);
 
 	// Body B: need B's velocity in A-space
-	float3x3 os_iinv_b = build_symmetric_3x3(bodyB.inertia_inv_diagonal.xyz, bodyB.inertia_inv_products.xyz);
+	float3x3 os_iinv_b = inv_mass_b * build_symmetric_3x3(bodyB.inertia_inv_diagonal.xyz, bodyB.inertia_inv_products.xyz);
 	float3x3 rot_b = (float3x3)bodyB.o2w;
-	float3x3 ws_iinv_b = inv_mass_b * rotate_inertia_inv(os_iinv_b, rot_b);
+	float3x3 ws_iinv_b = rotate_inertia_inv(os_iinv_b, rot_b);
 
 	float3 omega_b_ws = mul(ws_iinv_b, bodyB.momentum_ang.xyz);
 	float3 v_com_b_ws = inv_mass_b * bodyB.momentum_lin.xyz;
@@ -238,16 +239,13 @@ void CSResolve(uint3 dtid : SV_DispatchThreadID)
 	// Pure force at contact point → torque = cross(r, F) about CoM
 
 	// For A: impulse wrench at CoM in A-space (negate — A receives the reaction)
-	float3 torqueA_in_a = cross(com_a_in_a - pt, impulse4); // shift: cross(com - pt, F) = -cross(pt - com, F)
-	float3 forceA_in_a = impulse4;
+	// Shift: torque = Cross(force, com - pt) per Featherstone RBDS 2.22
+	float3 forceA_in_a = -impulse4;
+	float3 torqueA_in_a = -cross(impulse4, com_a_in_a - pt);
 
-	// Negate for A (A receives the opposite impulse)
-	torqueA_in_a = -torqueA_in_a;
-	forceA_in_a = -forceA_in_a;
-
-	// For B: impulse wrench at B's CoM in A-space, then rotate to B-space
-	float3 torqueB_in_a = cross(com_b_in_a - pt, impulse4);
+	// For B: impulse wrench at B's CoM in A-space
 	float3 forceB_in_a = impulse4;
+	float3 torqueB_in_a = cross(impulse4, com_b_in_a - pt);
 
 	// Rotate from A-space to B's object space: a2b_rot = transpose(b2a_rot) in row-vector convention
 	float3x3 a2b_rot = transpose(b2a_rot);

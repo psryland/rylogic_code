@@ -63,7 +63,7 @@ namespace physics_sandbox
 
 		// Load a scene from a JSON file.
 		// Replaces the current scenario with bodies defined in the file.
-		void LoadFromJson(std::filesystem::path const& filepath);
+		void LoadScene(scene_loader::SceneDesc scene_desc);
 
 		// Log comprehensive collision diagnostics and analytic comparisons
 		void LogCollisionDiagnostics();

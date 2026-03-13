@@ -13,6 +13,7 @@
 #include <memory>
 #include <deque>
 #include <filesystem>
+#include <optional>
 #include <format>
 #include <variant>
 #include <crtdbg.h>
