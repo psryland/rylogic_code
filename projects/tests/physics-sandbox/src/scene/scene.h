@@ -44,11 +44,10 @@ namespace physics_sandbox
 
 		// Simulation state
 		double m_clock;
-		int m_steps_remaining; // 0 = paused, -1 = running, N = step N times
-		EScenario m_scenario;
 
 		// Diagnostics
 		CollisionDiag m_diag;
+		EScenario m_current_scenario;
 
 		explicit Scene(rdr12::Renderer* rdr);
 
@@ -59,12 +58,12 @@ namespace physics_sandbox
 		// Returns true if a collision occurred during this step.
 		bool Step(double elapsed_seconds);
 
+		// Configure bodies for the current scenario
+		void SetupScenario(EScenario scenario);
+
 		// Load a scene from a JSON file.
 		// Replaces the current scenario with bodies defined in the file.
 		void LoadFromJson(std::filesystem::path const& filepath);
-
-		// Configure bodies for the current scenario
-		void SetupScenario();
 
 		// Log comprehensive collision diagnostics and analytic comparisons
 		void LogCollisionDiagnostics();

@@ -16,9 +16,8 @@ namespace physics_sandbox
 		, m_ground_gfx()
 		, m_origin_gfx()
 		, m_clock()
-		, m_steps_remaining(0)
-		, m_scenario(EScenario::Sandbox)
 		, m_diag()
+		, m_current_scenario()
 	{
 		// Hook collision detection for diagnostics. This fires AFTER Evolve but BEFORE impulse resolution.
 		m_physics.PostCollisionDetection += [&](auto&, auto args)
@@ -63,7 +62,6 @@ namespace physics_sandbox
 		m_diag.Reset();
 		m_gravity = v4::Zero();
 		m_kill_zone_height = -100.0f;
-		m_steps_remaining = 0;
 
 		// Clean up the ground plane visual
 		m_ground_gfx = nullptr;
@@ -82,25 +80,6 @@ namespace physics_sandbox
 		mat.m_elasticity_tang = 0.0f;
 		mat.m_elasticity_tors = 0.0f;
 		mat.m_friction_static = 0.0f;
-
-		// Configure bodies for the current scenario
-		SetupScenario();
-
-		// Rebuild the broadphase with the active bodies
-		m_physics.Broadphase().Clear();
-		for (int i = 0; i != std::ssize(m_body); ++i)
-			m_physics.Broadphase().Add(m_body[i]);
-
-		//DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
-		//DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
-		//for (int i = 0; i != std::ssize(m_body); ++i)
-		//{
-		//	auto snap = BodySnapshot::Capture(m_body[i]);
-		//	snap.Log(FmtS("Body %d (initial)", i));
-		//}
-		//auto total_p = m_body[0].MomentumWS().lin + m_body[1].MomentumWS().lin;
-		//DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", total_p.x, total_p.y, total_p.z);
-		//DbgLog("  Total KE: %.6f\n", m_body[0].KineticEnergy() + m_body[1].KineticEnergy());
 	}
 
 	// Advance the simulation by one time step.
@@ -163,6 +142,120 @@ namespace physics_sandbox
 		return m_diag.occurred;
 	}
 
+	// Configure bodies for the current scenario. All test scenarios use no external
+	// forces so that collisions can be validated against analytic predictions.
+	void Scene::SetupScenario(EScenario scenario)
+	{
+		m_body.resize(0);
+		m_body.push_back(Body(m_rdr));
+		m_body.push_back(Body(m_rdr));
+		auto& objA = m_body[0];
+		auto& objB = m_body[1];
+
+		// Common setup: zero forces/momentum
+		for (int i = 0; i != std::ssize(m_body); ++i)
+		{
+			m_body[i].ZeroForces();
+			m_body[i].ZeroMomentum();
+		}
+
+		// Load the scenario
+		switch (scenario)
+		{
+			case EScenario::Sandbox:
+			{
+				// Default sandbox: two boxes approaching each other gently
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +2.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -2.0f, 0, 0, 0 });
+				break;
+			}
+			case EScenario::HeadOnEqualMass:
+			{
+				// Two equal-mass boxes approaching each other along X.
+				// Elastic collision should swap velocities exactly.
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
+				break;
+			}
+			case EScenario::HeadOnDiffMass:
+			{
+				// Mass 10 hits mass 5 head-on along X.
+				// v1' = (m1-m2)/(m1+m2)*v1 + 2*m2/(m1+m2)*v2
+				// v2' = 2*m1/(m1+m2)*v1 + (m2-m1)/(m1+m2)*v2
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 5.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
+				break;
+			}
+			case EScenario::StationaryTarget:
+			{
+				// Moving box hits a stationary box (classic billiard scenario)
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4::Zero());
+				break;
+			}
+			case EScenario::OffCenter:
+			{
+				// Off-center hit: boxes offset in Y, collision induces rotation.
+				// Body A approaches along X but is offset in Y so the contact
+				// point is not aligned with the centres of mass.
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, +0.8f, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4::Zero());
+				break;
+			}
+			case EScenario::Oblique:
+			{
+				// Oblique collision: bodies approaching at an angle
+				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
+				objA.O2W(m4x4::Translation(v4{ -5.0f, -2.0f, 0, 1 }));
+				objB.O2W(m4x4::Translation(v4{ +5.0f, +2.0f, 0, 1 }));
+				objA.VelocityWS(v4::Zero(), v4{ +3.0f, +1.0f, 0, 0 });
+				objB.VelocityWS(v4::Zero(), v4{ -3.0f, -1.0f, 0, 0 });
+				break;
+			}
+		}
+
+		// Rebuild the broadphase with the active bodies
+		m_physics.Broadphase().Clear();
+		for (int i = 0; i != std::ssize(m_body); ++i)
+			m_physics.Broadphase().Add(m_body[i]);
+
+		auto const& mat = m_materials(0);
+
+		DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(scenario), ScenarioName(scenario));
+		DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
+		for (int i = 0; i != std::ssize(m_body); ++i)
+		{
+			auto snap = BodySnapshot::Capture(m_body[i]);
+			snap.Log(FmtS("Body %d (initial)", i));
+		}
+		auto total_p = m_body[0].MomentumWS().lin + m_body[1].MomentumWS().lin;
+		DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", total_p.x, total_p.y, total_p.z);
+		DbgLog("  Total KE: %.6f\n", m_body[0].KineticEnergy() + m_body[1].KineticEnergy());
+
+		m_current_scenario = scenario;
+	}
+
 	// Load a scene from a JSON file.
 	// Replaces the current scenario with bodies defined in the file.
 	// Shapes are heap-allocated and owned by m_owned_shapes.
@@ -172,7 +265,6 @@ namespace physics_sandbox
 		auto scene_desc = scene_loader::LoadFromFile(filepath);
 
 		// Reset simulation state
-		m_steps_remaining = 0;
 		m_clock = 0;
 		m_diag.Reset();
 
@@ -372,104 +464,11 @@ namespace physics_sandbox
 		}
 	}
 
-	// Configure bodies for the current scenario. All test scenarios use no external
-	// forces so that collisions can be validated against analytic predictions.
-	void Scene::SetupScenario()
-	{
-		m_body.resize(0);
-		m_body.emplace_back(m_rdr);
-		m_body.emplace_back(m_rdr);
-		auto& objA = m_body[0];
-		auto& objB = m_body[1];
-
-		// Common setup: zero forces/momentum
-		for (int i = 0; i != std::ssize(m_body); ++i)
-		{
-			m_body[i].ZeroForces();
-			m_body[i].ZeroMomentum();
-		}
-
-		switch (m_scenario)
-		{
-			case EScenario::Sandbox:
-			{
-				// Default sandbox: two boxes approaching each other gently
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +2.0f, 0, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4{ -2.0f, 0, 0, 0 });
-				break;
-			}
-			case EScenario::HeadOnEqualMass:
-			{
-				// Two equal-mass boxes approaching each other along X.
-				// Elastic collision should swap velocities exactly.
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
-				break;
-			}
-			case EScenario::HeadOnDiffMass:
-			{
-				// Mass 10 hits mass 5 head-on along X.
-				// v1' = (m1-m2)/(m1+m2)*v1 + 2*m2/(m1+m2)*v2
-				// v2' = 2*m1/(m1+m2)*v1 + (m2-m1)/(m1+m2)*v2
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 5.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4{ -3.0f, 0, 0, 0 });
-				break;
-			}
-			case EScenario::StationaryTarget:
-			{
-				// Moving box hits a stationary box (classic billiard scenario)
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, 0, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4::Zero());
-				break;
-			}
-			case EScenario::OffCenter:
-			{
-				// Off-center hit: boxes offset in Y, collision induces rotation.
-				// Body A approaches along X but is offset in Y so the contact
-				// point is not aligned with the centres of mass.
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, +0.8f, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, 0, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +3.0f, 0, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4::Zero());
-				break;
-			}
-			case EScenario::Oblique:
-			{
-				// Oblique collision: bodies approaching at an angle
-				objA.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objB.Shape(m_box, physics::Inertia::Box(v4{ 1, 1, 1, 0 }, 10.0f));
-				objA.O2W(m4x4::Translation(v4{ -5.0f, -2.0f, 0, 1 }));
-				objB.O2W(m4x4::Translation(v4{ +5.0f, +2.0f, 0, 1 }));
-				objA.VelocityWS(v4::Zero(), v4{ +3.0f, +1.0f, 0, 0 });
-				objB.VelocityWS(v4::Zero(), v4{ -3.0f, -1.0f, 0, 0 });
-				break;
-			}
-		}
-	}
-
 	// Log comprehensive collision diagnostics and analytic comparisons
 	void Scene::LogCollisionDiagnostics()
 	{
 		DbgLog("\n========================================\n");
-		DbgLog("=== COLLISION #%d [%s] at t=%.4f ===\n", m_diag.count, ScenarioName(m_scenario), m_clock);
+		DbgLog("=== COLLISION #%d [%s] at t=%.4f ===\n", m_diag.count, ScenarioName(m_current_scenario), m_clock);
 		DbgLog("========================================\n");
 
 		// Contact info
@@ -529,14 +528,13 @@ namespace physics_sandbox
 		bool ang_momentum_ok = Length(dL) < ang_tol;
 		bool ke_ok = Abs(dke) < 0.01f * pre_total_ke;
 		DbgLog("  Lin Momentum conserved: %s\n", momentum_ok ? "PASS" : "*** FAIL ***");
-		DbgLog("  Ang Momentum conserved: %s%s\n", ang_momentum_ok ? "PASS" : "*** FAIL ***",
-			(Length(dL) > 0.01f && ang_momentum_ok) ? " (within sub-step tolerance)" : "");
+		DbgLog("  Ang Momentum conserved: %s%s\n", ang_momentum_ok ? "PASS" : "*** FAIL ***", (Length(dL) > 0.01f && ang_momentum_ok) ? " (within sub-step tolerance)" : "");
 		DbgLog("  KE conserved (elastic): %s\n", ke_ok ? "PASS" : "*** FAIL ***");
 
 		// Analytic predictions for 1D head-on elastic collisions (scenarios 1-3)
-		if (m_scenario == EScenario::HeadOnEqualMass ||
-			m_scenario == EScenario::HeadOnDiffMass ||
-			m_scenario == EScenario::StationaryTarget)
+		if (m_current_scenario == EScenario::HeadOnEqualMass ||
+			m_current_scenario == EScenario::HeadOnDiffMass ||
+			m_current_scenario == EScenario::StationaryTarget)
 		{
 			LogAnalyticComparison();
 		}
@@ -596,7 +594,7 @@ namespace physics_sandbox
 
 		for (int s = 1; s <= 5; ++s)
 		{
-			m_scenario = static_cast<EScenario>(s);
+			//m_scenario = static_cast<EScenario>(s);
 			Reset();
 
 			for (int step = 0; step < max_steps && m_diag.count == 0; ++step)
