@@ -4,22 +4,23 @@
 
 namespace physics_sandbox
 {
-	Scene::Scene(ID3D12Device4* existing_device)
-		: m_materials()
-		, m_physics(m_materials, existing_device)
+	Scene::Scene(rdr12::Renderer* rdr)
+		: m_rdr(rdr)
+		, m_materials()
+		, m_physics(m_materials, rdr ? rdr->d3d() : nullptr)
 		, m_box(v4{ 2, 2, 2, 0 })
 		, m_body()
 		, m_shape_buffer()
 		, m_gravity(v4::Zero())
 		, m_kill_zone_height(-100.0f)
 		, m_ground_gfx()
+		, m_origin_gfx()
 		, m_clock()
 		, m_steps_remaining(0)
 		, m_scenario(EScenario::Sandbox)
 		, m_diag()
 	{
-		// Hook collision detection for diagnostics.
-		// This fires AFTER Evolve but BEFORE impulse resolution.
+		// Hook collision detection for diagnostics. This fires AFTER Evolve but BEFORE impulse resolution.
 		m_physics.PostCollisionDetection += [&](auto&, auto args)
 		{
 			if (args.m_contacts.empty())
@@ -30,32 +31,44 @@ namespace physics_sandbox
 			m_diag.count++;
 
 			#ifdef PR_PHYSICS_DIAGNOSTICS
-			// Capture pre-impulse state for first two bodies
-			m_diag.before[0] = BodySnapshot::Capture(m_body[0]);
-			m_diag.before[1] = BodySnapshot::Capture(m_body[1]);
+			{
+				// Capture pre-impulse state for first two bodies
+				m_diag.before[0] = BodySnapshot::Capture(m_body[0]);
+				m_diag.before[1] = BodySnapshot::Capture(m_body[1]);
 
-			// Capture contact info (collision data is in objA space, transform to world)
-			auto const& c = collisions[0];
-			m_diag.contact_point_ws = m_body[0].O2W() * c.m_point_at_t;
-			m_diag.contact_normal_ws = (m_body[0].O2W().rot * c.m_axis).w0();
-			m_diag.depth = c.m_depth;
+				// Capture contact info (collision data is in objA space, transform to world)
+				auto const& c = collisions[0];
+				m_diag.contact_point_ws = m_body[0].O2W() * c.m_point_at_t;
+				m_diag.contact_normal_ws = (m_body[0].O2W().rot * c.m_axis).w0();
+				m_diag.depth = c.m_depth;
+			}
 			#endif
 		};
+
+		// Create a coordinate frame at the origin for visual reference
+		if (m_rdr)
+		{
+			ldraw::Builder ldr;
+			ldr.CoordFrame("origin").scale(3.0f).width(2.0f);
+			auto result = rdr12::ldraw::Parse(*m_rdr, ldr.ToBinary());
+			if (!result.m_objects.empty())
+				m_origin_gfx = result.m_objects.front();
+		}
 	}
 
 	// Reset the simulation to the current scenario's initial conditions
-	void Scene::Reset(rdr12::Renderer* rdr)
+	void Scene::Reset()
 	{
-		m_steps_remaining = 0;
 		m_clock = 0;
 		m_diag.Reset();
 		m_gravity = v4::Zero();
 		m_kill_zone_height = -100.0f;
+		m_steps_remaining = 0;
 
 		// Clean up the ground plane visual
 		m_ground_gfx = nullptr;
 
-		// Clear the broadphase before modifying bodies. The broadphase holds raw
+		// Clear the broadphasebefore modifying bodies. The broadphase holds raw
 		// pointers to RigidBody objects, which become invalid if the vector resizes.
 		m_physics.Broadphase().Clear();
 
@@ -71,29 +84,89 @@ namespace physics_sandbox
 		mat.m_friction_static = 0.0f;
 
 		// Configure bodies for the current scenario
-		SetupScenario(rdr);
+		SetupScenario();
 
 		// Rebuild the broadphase with the active bodies
 		m_physics.Broadphase().Clear();
 		for (int i = 0; i != std::ssize(m_body); ++i)
 			m_physics.Broadphase().Add(m_body[i]);
 
-		DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
-		DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
+		//DbgLog("\n--- Reset: Scenario %d [%s] ---\n", static_cast<int>(m_scenario), ScenarioName(m_scenario));
+		//DbgLog("  Material: elasticity_norm=%.2f friction=%.2f\n", mat.m_elasticity_norm, mat.m_friction_static);
+		//for (int i = 0; i != std::ssize(m_body); ++i)
+		//{
+		//	auto snap = BodySnapshot::Capture(m_body[i]);
+		//	snap.Log(FmtS("Body %d (initial)", i));
+		//}
+		//auto total_p = m_body[0].MomentumWS().lin + m_body[1].MomentumWS().lin;
+		//DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", total_p.x, total_p.y, total_p.z);
+		//DbgLog("  Total KE: %.6f\n", m_body[0].KineticEnergy() + m_body[1].KineticEnergy());
+	}
+
+	// Advance the simulation by one time step.
+	// Returns true if a collision occurred during this step.
+	bool Scene::Step(double elapsed_seconds)
+	{
+		m_clock += elapsed_seconds;
+		auto dt = float(elapsed_seconds);
+
+		// Reset per-step collision flag
+		m_diag.occurred = false;
+
+		// Apply gravity as an external force: F = m * g.
+		// Static bodies (infinite mass) are skipped — they should not accelerate.
+		// Forces are cleared by Evolve() at the end of each step, so we re-apply each frame.
+		if (m_gravity != v4::Zero())
+		{
+			for (int i = 0; i != std::ssize(m_body); ++i)
+			{
+				auto mass = m_body[i].Mass();
+				if (mass < physics::InfiniteMass * 0.5f)
+					m_body[i].ApplyForceWS(m_gravity * mass, v4::Zero(), m_body[i].O2W().rot * m_body[i].CentreOfMassOS());
+			}
+		}
+
+		// Step physics (Evolve → Broad Phase → Narrow Phase → PostCollisionDetection → Resolve)
+		auto bodies = std::span(m_body);
+		m_physics.Step(dt, bodies);
+
+		#ifdef PR_PHYSICS_DIAGNOSTICS
+		{
+			// If a collision occurred this step, capture post-impulse snapshots.
+			// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
+			if (m_diag.occurred && std::ssize(m_body) == 2)
+			{
+				m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
+				m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
+				LogCollisionDiagnostics();
+			}
+		}
+		#endif
+
+		// Kill zone: freeze bodies that have fallen below the threshold.
+		// This prevents escaped bodies from accumulating extreme velocities
+		// that corrupt float precision for the entire simulation.
 		for (int i = 0; i != std::ssize(m_body); ++i)
 		{
-			auto snap = BodySnapshot::Capture(m_body[i]);
-			snap.Log(FmtS("Body %d (initial)", i));
+			auto mass = m_body[i].Mass();
+			if (mass >= physics::InfiniteMass * 0.5f)
+				continue; // skip static bodies
+
+			auto pos = m_body[i].O2W().pos;
+			if (pos.z < m_kill_zone_height)
+			{
+				m_body[i].ZeroMomentum();
+				m_body[i].ZeroForces();
+			}
 		}
-		auto total_p = m_body[0].MomentumWS().lin + m_body[1].MomentumWS().lin;
-		DbgLog("  Total lin momentum: (%.4f, %.4f, %.4f)\n", total_p.x, total_p.y, total_p.z);
-		DbgLog("  Total KE: %.6f\n", m_body[0].KineticEnergy() + m_body[1].KineticEnergy());
+
+		return m_diag.occurred;
 	}
 
 	// Load a scene from a JSON file.
 	// Replaces the current scenario with bodies defined in the file.
 	// Shapes are heap-allocated and owned by m_owned_shapes.
-	void Scene::LoadFromJson(rdr12::Renderer* rdr, std::filesystem::path const& filepath)
+	void Scene::LoadFromJson(std::filesystem::path const& filepath)
 	{
 		// Load the scene
 		auto scene_desc = scene_loader::LoadFromFile(filepath);
@@ -218,7 +291,7 @@ namespace physics_sandbox
 			shape_ptr = collision::next(shape_ptr);
 
 			// Create the ground plane visual as a large textured quad
-			if (rdr)
+			if (m_rdr)
 			{
 				auto extent = ground_half_extent * 2;
 				auto scale = ground_half_extent / 8.0f;
@@ -229,7 +302,7 @@ namespace physics_sandbox
 					.axis(AxisId::PosZ)
 					.pos(v3{ 0, 0, scene_desc.ground.height });
 
-				auto result = rdr12::ldraw::Parse(*rdr, ldr.ToString());
+				auto result = rdr12::ldraw::Parse(*m_rdr, ldr.ToString());
 				if (!result.m_objects.empty())
 					m_ground_gfx = result.m_objects.front();
 			}
@@ -237,7 +310,7 @@ namespace physics_sandbox
 
 		// Phase 2: Now that all bodies and shapes are stable in memory,
 		// create graphics for each body by re-triggering ShapeChange with the renderer.
-		if (rdr)
+		if (m_rdr)
 		{
 			for (auto& body : m_body)
 			{
@@ -249,7 +322,7 @@ namespace physics_sandbox
 
 				Builder builder;
 				builder.Add<LdrRigidBody>("Body", RandomRGB(rng, 0.0f, 1.0f).argb).rigid_body(body);
-				auto result = rdr12::ldraw::Parse(*rdr, builder.ToString());
+				auto result = rdr12::ldraw::Parse(*m_rdr, builder.ToString());
 				if (!result.m_objects.empty())
 					body.m_gfx = result.m_objects.front();
 
@@ -280,73 +353,13 @@ namespace physics_sandbox
 		}
 	}
 
-	// Advance the simulation by one time step.
-	// Returns true if a collision occurred during this step.
-	bool Scene::Step(double elapsed_seconds)
-	{
-		m_clock += elapsed_seconds;
-		auto dt = float(elapsed_seconds);
-
-		// Reset per-step collision flag
-		m_diag.occurred = false;
-
-		// Apply gravity as an external force: F = m * g.
-		// Static bodies (infinite mass) are skipped — they should not accelerate.
-		// Forces are cleared by Evolve() at the end of each step, so we re-apply each frame.
-		if (m_gravity != v4::Zero())
-		{
-			for (int i = 0; i != std::ssize(m_body); ++i)
-			{
-				auto mass = m_body[i].Mass();
-				if (mass < physics::InfiniteMass * 0.5f)
-					m_body[i].ApplyForceWS(m_gravity * mass, v4::Zero(), m_body[i].O2W().rot * m_body[i].CentreOfMassOS());
-			}
-		}
-
-		// Step physics (Evolve → Broad Phase → Narrow Phase → PostCollisionDetection → Resolve)
-		auto bodies = std::span(m_body);
-		m_physics.Step(dt, bodies);
-
-		#ifdef PR_PHYSICS_DIAGNOSTICS
-		{
-			// If a collision occurred this step, capture post-impulse snapshots.
-			// Detailed logging is only done for the two-body test scenarios (not file-loaded scenes).
-			if (m_diag.occurred && std::ssize(m_body) == 2)
-			{
-				m_diag.after[0] = BodySnapshot::Capture(m_body[0]);
-				m_diag.after[1] = BodySnapshot::Capture(m_body[1]);
-				LogCollisionDiagnostics();
-			}
-		}
-		#endif
-
-		// Kill zone: freeze bodies that have fallen below the threshold.
-		// This prevents escaped bodies from accumulating extreme velocities
-		// that corrupt float precision for the entire simulation.
-		for (int i = 0; i != std::ssize(m_body); ++i)
-		{
-			auto mass = m_body[i].Mass();
-			if (mass >= physics::InfiniteMass * 0.5f)
-				continue; // skip static bodies
-
-			auto pos = m_body[i].O2W().pos;
-			if (pos.z < m_kill_zone_height)
-			{
-				m_body[i].ZeroMomentum();
-				m_body[i].ZeroForces();
-			}
-		}
-
-		return m_diag.occurred;
-	}
-
 	// Configure bodies for the current scenario. All test scenarios use no external
 	// forces so that collisions can be validated against analytic predictions.
-	void Scene::SetupScenario(rdr12::Renderer* rdr)
+	void Scene::SetupScenario()
 	{
 		m_body.resize(0);
-		m_body.emplace_back(rdr);
-		m_body.emplace_back(rdr);
+		m_body.emplace_back(m_rdr);
+		m_body.emplace_back(m_rdr);
 		auto& objA = m_body[0];
 		auto& objB = m_body[1];
 
@@ -565,7 +578,7 @@ namespace physics_sandbox
 		for (int s = 1; s <= 5; ++s)
 		{
 			m_scenario = static_cast<EScenario>(s);
-			Reset(nullptr);
+			Reset();
 
 			for (int step = 0; step < max_steps && m_diag.count == 0; ++step)
 			{

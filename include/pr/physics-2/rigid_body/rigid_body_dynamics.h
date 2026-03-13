@@ -67,7 +67,7 @@ namespace pr::physics
 	};
 	static_assert(sizeof(IntegrateOutput) == 16, "IntegrateOutput must be 16 bytes");
 
-	// Pack a RigidBody's dynamic state into the flat GPU buffer format.
+	// Pack/Unpack a RigidBody's dynamic state into the flat GPU buffer format.
 	inline RigidBodyDynamics PackDynamics(RigidBody const& rb)
 	{
 		auto const& o2w = rb.O2W();
@@ -75,7 +75,6 @@ namespace pr::physics
 		auto force = rb.ForceWS();
 		auto iinv = rb.InertiaInvOS();
 		auto com = rb.CentreOfMassOS();
-
 		return RigidBodyDynamics
 		{
 			.o2w = o2w,
@@ -90,14 +89,12 @@ namespace pr::physics
 			.os_bbox_radius = rb.Shape().m_bbox.m_radius,
 		};
 	}
-
-	// Unpack the flat GPU buffer back into a RigidBody, updating transform, momentum, and zeroing forces.
-	inline void UnpackDynamics(RigidBody& rb, RigidBodyDynamics const& dyn)
+	inline void UnpackDynamics(RigidBodyDynamics const& dyn, RigidBody& rb)
 	{
 		rb.O2W(dyn.o2w);
 
 		// Update momentum (the integrator advanced it by the full step)
-		rb.MomentumWS(v8force{dyn.momentum_ang, dyn.momentum_lin});
+		rb.MomentumWS(v8force{ dyn.momentum_ang, dyn.momentum_lin });
 
 		// Forces are zeroed by the integrator after the second half-kick
 		rb.ZeroForces();
