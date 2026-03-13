@@ -1221,6 +1221,21 @@
     <None Include="cpp.hint">
       <Filter>src</Filter>
     </None>
+    <None Include="..\..\..\include\pr\hlsl\interop.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\quaternions.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\spatial_algebra.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\interpolate.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
+    <None Include="..\..\..\include\pr\hlsl\hermite_spline.hlsli">
+      <Filter>pr\hlsl</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">
@@ -1231,5 +1246,10 @@
     <ClCompile Include="src\dependecy_check_new_math.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\include\pr\hlsl\pr_hlsl.rc">
+      <Filter>pr\hlsl</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

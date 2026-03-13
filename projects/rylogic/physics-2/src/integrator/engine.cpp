@@ -13,6 +13,7 @@
 #include "src/collision/gpu_sort_and_sweep.h"
 #include "src/collision/gpu_collision_detector.h"
 #include "src/collision/gpu_collision_types.h"
+#include "src/collision/gpu_resolver.h"
 #include "src/utility/gpu.h"
 
 namespace pr::physics
@@ -35,6 +36,9 @@ namespace pr::physics
 		std::vector<RbContact> m_collision_queue;
 		std::vector<GpuContact> m_gpu_contacts;
 
+		// Maps dynamics buffer index → body pointer (populated in Step, used by GPU resolve)
+		std::vector<RigidBody*> m_body_ptrs;
+
 		// Reset per-frame buffers
 		void BeginFrame()
 		{
@@ -51,6 +55,7 @@ namespace pr::physics
 		, m_gpu_integrator(new GpuIntegrator(*m_gpu))
 		, m_gpu_sort_and_sweep(new GpuSortAndSweep(*m_gpu))
 		, m_gpu_collision_detector(new GpuCollisionDetector(*m_gpu))
+		, m_gpu_resolver(new GpuResolver(*m_gpu))
 		, m_materials(mats)
 		, m_cache(new EngineBufferCache)
 		, m_rb_dynamics()
@@ -83,20 +88,23 @@ namespace pr::physics
 		// Before here, callers should have set forces on the rigid bodies (including gravity).
 		// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
 
-		// Pack the required data into a GPU-friendly format. Skip static bodies (infinite mass) since they don't need integration.
+		// Pack ALL bodies into a GPU-friendly format (including static bodies so the
+		// GPU resolver can reference them by index). Static bodies are no-ops during
+		// integration (zero inv_mass → zero velocity → no position change).
 		m_rb_dynamics.resize(0);
+		m_cache->m_body_ptrs.resize(0);
 		for (auto body : bodies)
 		{
-			if (body->Mass() >= 0.5f * InfiniteMass) continue;
 			m_rb_dynamics.push_back(PackDynamics(*body));
+			m_cache->m_body_ptrs.push_back(body);
 		}
 
 		// GPU split pipeline: integrate + readback AABBs → broadphase → GJK → readback bodies.
 		// Bodies stay GPU-resident between the integrate and GJK steps, avoiding a round trip.
 		Integrate(m_rb_dynamics, dt);
 
-		// For now, read back and update the RBs immediately so that collision detection and resolution
-		// apply to the updated dynamics. When the full pipeline is on the GPU, we'll do this after collision detection and resolution
+		// Read back and update the RBs so that collision detection and resolution
+		// apply to the updated dynamics. The GPU resolve path will readback again after impulse resolution.
 		ReadbackBodies();
 
 		// Unpack the integrated state back into the rigid bodies
@@ -212,9 +220,140 @@ namespace pr::physics
 		// Notify of detected collisions, and allow updates/additions
 		PostCollisionDetection(*this, { collision_queue });
 
-		// Apply restitution impulses to resolve each collision
-		for (auto& c : collision_queue)
-			ResolveCollision(c);
+		// GPU impulse resolution via graph-coloured batches
+		if (!collision_queue.empty())
+		{
+			auto& body_ptrs = m_cache->m_body_ptrs;
+
+			// Map RigidBody* → index in the dynamics buffer
+			auto find_body_index = [&body_ptrs](RigidBody const* body) -> int
+			{
+				for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+					if (body_ptrs[i] == body) return i;
+				return -1;
+			};
+
+			// Build GpuResolveContact buffer with body indices and materials
+			std::vector<GpuResolveContact> resolve_contacts;
+			resolve_contacts.reserve(collision_queue.size());
+			for (auto const& c : collision_queue)
+			{
+				auto idx_a = find_body_index(c.m_objA);
+				auto idx_b = find_body_index(c.m_objB);
+				assert(idx_a >= 0 && idx_b >= 0);
+
+				resolve_contacts.push_back(GpuResolveContact{
+					.axis = c.m_axis,
+					.point = c.m_point_at_t,
+					.b2a = c.m_b2a,
+					.body_idx_a = idx_a,
+					.body_idx_b = idx_b,
+					.elasticity = c.m_mat.m_elasticity_norm,
+					.friction = c.m_mat.m_friction_static,
+				});
+			}
+
+			// Graph-colour the contacts
+			auto [colours, max_colour] = GraphColourContacts(resolve_contacts);
+
+			if (m_gpu_resolve)
+			{
+				#if PR_DBG
+				// Save pre-resolve dynamics for comparison
+				auto pre_resolve_dynamics = m_rb_dynamics;
+				#endif
+
+				// GPU resolve path
+				m_gpu_resolver->Resolve(m_gpu->m_job, resolve_contacts, colours, max_colour, m_gpu_integrator->BodiesResource());
+
+				// Read back the post-resolve body state and unpack into RigidBodies
+				m_gpu_integrator->ReadbackBodies(m_gpu->m_job, m_rb_dynamics);
+				for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+				{
+					if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
+					UnpackDynamics(*body_ptrs[i], m_rb_dynamics[i]);
+				}
+
+				#if PR_DBG
+				{
+					// Run CPU resolve on the same contacts for comparison.
+					// Restore bodies to pre-resolve state first.
+					for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+					{
+						if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
+						UnpackDynamics(*body_ptrs[i], pre_resolve_dynamics[i]);
+					}
+
+					// Run CPU resolve
+					for (auto& c : collision_queue)
+						ResolveCollision(c);
+
+					// Save CPU-resolved momenta
+					auto cpu_dynamics = std::vector<RigidBodyDynamics>(body_ptrs.size());
+					for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+						cpu_dynamics[i] = PackDynamics(*body_ptrs[i]);
+
+					// Compare and log differences
+					auto f = fopen("dump\\resolve_compare.log", "w");
+					if (f)
+					{
+						fprintf(f, "=== Resolve comparison: %d contacts, %d colours ===\n",
+							static_cast<int>(collision_queue.size()), max_colour);
+
+						for (int i = 0; i != static_cast<int>(resolve_contacts.size()); ++i)
+						{
+							auto const& rc = resolve_contacts[i];
+							fprintf(f, "Contact[%d] colour=%d bodies=(%d,%d) e=%.3f mu=%.3f\n",
+								i, colours[i], rc.body_idx_a, rc.body_idx_b, rc.elasticity, rc.friction);
+							fprintf(f, "  axis=(%.6f, %.6f, %.6f) pt=(%.6f, %.6f, %.6f)\n",
+								rc.axis.x, rc.axis.y, rc.axis.z, rc.point.x, rc.point.y, rc.point.z);
+						}
+
+						fprintf(f, "\n--- Per-body momentum comparison ---\n");
+						for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+						{
+							auto const& gpu = m_rb_dynamics[i];
+							auto const& cpu = cpu_dynamics[i];
+							auto const& pre = pre_resolve_dynamics[i];
+
+							auto ang_diff = v4{gpu.momentum_ang.x - cpu.momentum_ang.x, gpu.momentum_ang.y - cpu.momentum_ang.y, gpu.momentum_ang.z - cpu.momentum_ang.z, 0};
+							auto lin_diff = v4{gpu.momentum_lin.x - cpu.momentum_lin.x, gpu.momentum_lin.y - cpu.momentum_lin.y, gpu.momentum_lin.z - cpu.momentum_lin.z, 0};
+							auto ang_err = Length(ang_diff);
+							auto lin_err = Length(lin_diff);
+
+							if (ang_err > 1e-4f || lin_err > 1e-4f)
+							{
+								fprintf(f, "Body[%d] mass=%.2f MISMATCH ang_err=%.6f lin_err=%.6f\n", i, 1.0f / body_ptrs[i]->InertiaInvOS().InvMass(), ang_err, lin_err);
+								fprintf(f, "  PRE  mom_ang=(%.6f, %.6f, %.6f) mom_lin=(%.6f, %.6f, %.6f)\n",
+									pre.momentum_ang.x, pre.momentum_ang.y, pre.momentum_ang.z,
+									pre.momentum_lin.x, pre.momentum_lin.y, pre.momentum_lin.z);
+								fprintf(f, "  GPU  mom_ang=(%.6f, %.6f, %.6f) mom_lin=(%.6f, %.6f, %.6f)\n",
+									gpu.momentum_ang.x, gpu.momentum_ang.y, gpu.momentum_ang.z,
+									gpu.momentum_lin.x, gpu.momentum_lin.y, gpu.momentum_lin.z);
+								fprintf(f, "  CPU  mom_ang=(%.6f, %.6f, %.6f) mom_lin=(%.6f, %.6f, %.6f)\n",
+									cpu.momentum_ang.x, cpu.momentum_ang.y, cpu.momentum_ang.z,
+									cpu.momentum_lin.x, cpu.momentum_lin.y, cpu.momentum_lin.z);
+							}
+						}
+						fclose(f);
+					}
+
+					// Restore to GPU-resolved state (since that's the active path)
+					for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
+					{
+						if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
+						UnpackDynamics(*body_ptrs[i], m_rb_dynamics[i]);
+					}
+				}
+				#endif
+			}
+			else
+			{
+				// CPU fallback path
+				for (auto& c : collision_queue)
+					ResolveCollision(c);
+			}
+		}
 	}
 
 	// Narrow phase collision detection.
@@ -267,6 +406,7 @@ namespace pr::physics
 	// stale velocity data causes catastrophic energy injection.
 	void Engine::ResolveCollision(RbContact& c)
 	{
+		// This is the CPU reference implementation. Keep.
 		auto& objA = const_cast<RigidBody&>(*c.m_objA);
 		auto& objB = const_cast<RigidBody&>(*c.m_objB);
 

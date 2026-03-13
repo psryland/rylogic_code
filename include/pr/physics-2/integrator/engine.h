@@ -33,6 +33,10 @@ namespace pr::physics
 		// GPU collision detector (opaque)
 		GpuCollisionDetectorPtr m_gpu_collision_detector;
 
+		// GPU collision resolver (opaque)
+		GpuResolverPtr m_gpu_resolver;
+		bool m_gpu_resolve = true;
+
 		// Material map for looking up combined material properties during collision resolution.
 		IMaterials& m_materials;
 
