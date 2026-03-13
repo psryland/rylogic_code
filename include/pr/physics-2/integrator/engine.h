@@ -33,6 +33,10 @@ namespace pr::physics
 		// GPU collision detector (opaque)
 		GpuCollisionDetectorPtr m_gpu_collision_detector;
 
+		// GPU collision resolver (opaque)
+		GpuResolverPtr m_gpu_resolver;
+		bool m_gpu_resolve = true;
+
 		// Material map for looking up combined material properties during collision resolution.
 		IMaterials& m_materials;
 
@@ -42,11 +46,10 @@ namespace pr::physics
 		// Staging buffer for packing body dynamics
 		std::vector<RigidBodyDynamics> m_rb_dynamics;
 		std::vector<IntegrateOutput> m_integrate_output;
+		std::vector<IntegrateAABB> m_integrate_aabbs;
 
-		// Runtime flag for GPU vs CPU integration. Set to true after calling InitGpu().
-		// When true, integration is dispatched to the GPU compute shader.
-		// When false, integration runs on the CPU via Evolve() (default).
-		bool m_use_gpu;
+		// Recycled buffer of rigid body pointers
+		std::vector<RigidBody*> m_cache_body_ptrs;
 
 	public:
 
@@ -64,41 +67,6 @@ namespace pr::physics
 		struct PostCollisionDetectionArgs { std::span<RbContact> m_contacts; };
 		EventHandler<Engine&, PostCollisionDetectionArgs> PostCollisionDetection;
 
-		// Evolve the physics objects forward in time and resolve any collisions.
-		void Step(float dt, RigidBodyRange auto&& bodies)
-		{
-			// Before here, callers should have set forces on the rigid bodies (including gravity).
-			// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
-			// Step() is a template so it can iterate containers of RigidBody-derived types
-			// (e.g. std::span<Body>) without slicing. The heavy collision work is in DetectAndResolve().
-			m_rb_dynamics.resize(0);
-			int i = 0;
-
-			// GPU path: pack bodies into flat dynamics buffer → dispatch compute → unpack results.
-			// CPU path: evolve each dynamic body directly using kick-drift-kick.
-			for (auto& body : bodies)
-			{
-				if (body.Mass() >= 0.5f * InfiniteMass) continue;
-				m_rb_dynamics.push_back(PackDynamics(body));
-			}
-
-			Integrate(m_rb_dynamics, dt);
-
-			// Unpack the integrated state back into the rigid bodies
-			for (auto& body : bodies)
-			{
-				if (body.Mass() >= 0.5f * InfiniteMass) continue;
-				UnpackDynamics(body, m_rb_dynamics[i++]);
-			}
-			
-			#if PR_DBG&&0
-			CompareIntegrationPaths(dt, bodies);
-			#endif
-
-			// Detect and resolve collisions
-			DetectAndResolveCollisions(dt);
-		}
-
 	private:
 
 		// Integration dispatch
@@ -113,6 +81,24 @@ namespace pr::physics
 
 		// Calculate and apply the restitution impulse to resolve a collision.
 		void ResolveCollision(RbContact& c);
+
+		// Deferred readback of bodies from the GPU after the collision pipeline.
+		void ReadbackBodies();
+
+	public:
+
+		// Evolve the physics objects forward in time and resolve any collisions.
+		void Step(float dt, std::span<RigidBody*> bodies);
+		void Step(float dt, RigidBodyRange auto&& bodies)
+		{
+			m_cache_body_ptrs.resize(0);
+			for (auto& body : bodies)
+				m_cache_body_ptrs.push_back(&body);
+
+			Step(dt, m_cache_body_ptrs);
+		}
+
+	private:
 
 		// Debug: stashed pre-integration state for A/B comparison between Evolve() and EvolveCPU().
 		#if PR_DBG&&0
