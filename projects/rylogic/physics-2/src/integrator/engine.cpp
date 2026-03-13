@@ -5,6 +5,8 @@
 #include "pr/physics-2/integrator/engine.h"
 #include "pr/physics-2/integrator/integrator.h"
 #include "pr/physics-2/integrator/impulse.h"
+#include "pr/physics-2/rigid_body/rigid_body.h"
+#include "pr/physics-2/rigid_body/rigid_body_dynamics.h"
 #include "pr/physics-2/collision/ibroadphase.h"
 #include "pr/physics-2/collision/contact.h"
 #include "pr/physics-2/materials/imaterials.h"
@@ -36,9 +38,6 @@ namespace pr::physics
 		std::vector<RbContact> m_collision_queue;
 		std::vector<GpuContact> m_gpu_contacts;
 
-		// Maps dynamics buffer index → body pointer (populated in Step, used by GPU resolve)
-		std::vector<RigidBody*> m_body_ptrs;
-
 		// Reset per-frame buffers
 		void BeginFrame()
 		{
@@ -61,9 +60,10 @@ namespace pr::physics
 		, m_rb_dynamics()
 		, m_integrate_output()
 		, m_integrate_aabbs()
-		, m_cache_body_ptrs()
+		, m_gpu_resolve(true)
 		, PostCollisionDetection()
-	{}
+	{
+	}
 
 	// Get/Set whether the GPU is used for integration and collision detection.
 	bool Engine::UseGpu() const
@@ -75,7 +75,7 @@ namespace pr::physics
 		// Dropping non-gpu support
 		(void)use_gpu;
 	}
-	
+
 	// Access the broadphase for registering bodies and enumerating overlapping pairs.
 	IBroadphase& Engine::Broadphase() const
 	{
@@ -88,56 +88,49 @@ namespace pr::physics
 		// Before here, callers should have set forces on the rigid bodies (including gravity).
 		// The simulation pipeline is: Evolve → Broad Phase → Narrow Phase → Resolve.
 
+		// This is the core collision pipeline, called after all bodies have been evolved.
+		m_cache->BeginFrame();
+
+		// 
+		if (m_body_ptrs.empty())
+			m_body_ptrs.append_range(bodies);
+
 		// Pack ALL bodies into a GPU-friendly format (including static bodies so the
 		// GPU resolver can reference them by index). Static bodies are no-ops during
 		// integration (zero inv_mass → zero velocity → no position change).
-		m_rb_dynamics.resize(0);
-		m_cache->m_body_ptrs.resize(0);
-		for (auto body : bodies)
 		{
-			m_rb_dynamics.push_back(PackDynamics(*body));
-			m_cache->m_body_ptrs.push_back(body);
+			m_rb_dynamics.resize(0);
+			for (auto body : m_body_ptrs)
+				m_rb_dynamics.push_back(PackDynamics(*body));
 		}
 
 		// GPU split pipeline: integrate + readback AABBs → broadphase → GJK → readback bodies.
 		// Bodies stay GPU-resident between the integrate and GJK steps, avoiding a round trip.
-		Integrate(m_rb_dynamics, dt);
+		{
+			// Split pipeline: integrate + readback AABBs only (bodies stay GPU-resident)
+			m_integrate_output.resize(m_rb_dynamics.size());
+			m_integrate_aabbs.resize(m_rb_dynamics.size());
+			m_gpu_integrator->IntegrateAndReadbackAABBs(m_gpu->m_job, m_rb_dynamics, dt, m_integrate_output, m_integrate_aabbs);
+		}
 
 		// Read back and update the RBs so that collision detection and resolution
 		// apply to the updated dynamics. The GPU resolve path will readback again after impulse resolution.
-		ReadbackBodies();
-
-		// Unpack the integrated state back into the rigid bodies
-		for (auto [body, i] : with_index(bodies))
 		{
-			if (body->Mass() >= 0.5f * InfiniteMass) continue;
-			UnpackDynamics(*body, m_rb_dynamics[i]);
+			m_gpu_integrator->ReadbackBodies(m_gpu->m_job, m_rb_dynamics);
+			for (auto [body, i] : with_index(bodies))
+				UnpackDynamics(m_rb_dynamics[i], *body);
 		}
 
 		// Broadphase uses GPU-computed AABBs
 		DetectAndResolveCollisions(dt);
 
-
-		#if PR_DBG&&0
-		CompareIntegrationPaths(dt, bodies);
-		#endif
+		m_body_ptrs.resize(0);
 	}
 
-	// CPU integration dispatch.
-	void Engine::Integrate(std::span<RigidBodyDynamics> dynamics, float dt)
-	{
-		// Split pipeline: integrate + readback AABBs only (bodies stay GPU-resident)
-		m_integrate_output.resize(dynamics.size());
-		m_integrate_aabbs.resize(dynamics.size());
-		m_gpu_integrator->IntegrateAndReadbackAABBs(m_gpu->m_job, dynamics, dt, m_integrate_output, m_integrate_aabbs);
-	}
 
 	// Broad phase overlap query → narrow phase collision detection → impulse resolution.
 	void Engine::DetectAndResolveCollisions(float dt)
 	{
-		// This is the core collision pipeline, called after all bodies have been evolved.
-		m_cache->BeginFrame();
-
 		auto& shape_cache = m_cache->m_shape_cache;
 		auto& col_pairs = m_cache->m_col_pairs;
 		auto& body_pairs = m_cache->m_body_pairs;
@@ -187,8 +180,18 @@ namespace pr::physics
 		shape_cache.ClearDirty();
 
 		// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
-		for (auto const& gc : gpu_contacts)
+		for (int ci = 0; ci != static_cast<int>(gpu_contacts.size()); ++ci)
 		{
+			auto const& gc = gpu_contacts[ci];
+
+			// Validate the pair_index from GPU readback
+			if (gc.pair_index < 0 || gc.pair_index >= static_cast<int>(body_pairs.size()))
+			{
+				OutputDebugStringA(FmtS("GPU contact[%d/%d]: pair_index=%d (out of range 0..%d), depth=%f\n",
+					ci, static_cast<int>(gpu_contacts.size()), gc.pair_index, static_cast<int>(body_pairs.size()), gc.depth));
+				continue;
+			}
+
 			auto const& bp = body_pairs[gc.pair_index];
 			auto c = RbContact{*bp.objA, *bp.objB, gc};
 
@@ -223,7 +226,7 @@ namespace pr::physics
 		// GPU impulse resolution via graph-coloured batches
 		if (!collision_queue.empty())
 		{
-			auto& body_ptrs = m_cache->m_body_ptrs;
+			auto& body_ptrs = m_body_ptrs;
 
 			// Map RigidBody* → index in the dynamics buffer
 			auto find_body_index = [&body_ptrs](RigidBody const* body) -> int
@@ -271,7 +274,7 @@ namespace pr::physics
 				for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
 				{
 					if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
-					UnpackDynamics(*body_ptrs[i], m_rb_dynamics[i]);
+					UnpackDynamics(m_rb_dynamics[i], *body_ptrs[i]);
 				}
 
 				#if PR_DBG
@@ -281,7 +284,7 @@ namespace pr::physics
 					for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
 					{
 						if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
-						UnpackDynamics(*body_ptrs[i], pre_resolve_dynamics[i]);
+						UnpackDynamics(pre_resolve_dynamics[i], *body_ptrs[i]);
 					}
 
 					// Run CPU resolve
@@ -342,7 +345,7 @@ namespace pr::physics
 					for (int i = 0; i != static_cast<int>(body_ptrs.size()); ++i)
 					{
 						if (body_ptrs[i]->Mass() >= 0.5f * InfiniteMass) continue;
-						UnpackDynamics(*body_ptrs[i], m_rb_dynamics[i]);
+						UnpackDynamics(m_rb_dynamics[i], *body_ptrs[i]);
 					}
 				}
 				#endif
@@ -481,12 +484,6 @@ namespace pr::physics
 		}
 	}
 
-	// Deferred readback of bodies from the GPU after the collision pipeline.
-	void Engine::ReadbackBodies()
-	{
-		m_gpu_integrator->ReadbackBodies(m_gpu->m_job, m_rb_dynamics);
-	}
-
 	void Deleter<EngineBufferCache>::operator()(EngineBufferCache* cache) const
 	{
 		delete cache;
@@ -495,5 +492,88 @@ namespace pr::physics
 	{
 		delete p;
 	}
-
 }
+
+
+
+
+
+
+
+// Debug: stashed pre-integration state for A/B comparison between Evolve() and EvolveCPU().
+#if PR_DBG&&0
+std::vector<RigidBodyDynamics> m_compare_dynamics;
+std::vector<int> m_compare_indices;
+float m_compare_dt = 0;
+
+// A/B comparison: replay the last integration step through EvolveCPU and compare.
+// Uses the pre-integration state (stashed below) to run EvolveCPU independently.
+void CompareIntegrationPaths([[maybe_unused]] float dt, [[maybe_unused]] RigidBodyRange auto& bodies)
+{
+	#if PR_DBG
+	// Stash pre-integration state for comparison on the NEXT step.
+	// On the first call, m_compare_dynamics is empty so we skip comparison.
+	if (!m_compare_dynamics.empty())
+	{
+		// Run EvolveCPU on the stashed pre-integration dynamics
+		for (auto& dyn : m_compare_dynamics)
+			Evolve(dyn, m_compare_dt);
+
+		// Compare EvolveCPU results with what Evolve() produced (now stored in bodies).
+		// m_compare_indices maps dynamics[i] to bodies[idx].
+		for (int i = 0; i != static_cast<int>(m_compare_dynamics.size()); ++i)
+		{
+			auto body_it = std::next(std::begin(bodies), m_compare_indices[i]);
+			auto const& ref = *body_it; // Evolve() result
+			auto const& gpu = m_compare_dynamics[i]; // EvolveCPU result
+
+			// Compare transforms
+			auto pos_err = Length(ref.O2W().pos - gpu.o2w.pos);
+			auto rot_err = Length(ref.O2W().x - gpu.o2w.x)
+					        + Length(ref.O2W().y - gpu.o2w.y)
+					        + Length(ref.O2W().z - gpu.o2w.z);
+			auto mom_ang_err = Length(ref.MomentumWS().ang - gpu.momentum_ang);
+			auto mom_lin_err = Length(ref.MomentumWS().lin - gpu.momentum_lin);
+
+			if (pos_err > 1e-4f || rot_err > 1e-4f || mom_ang_err > 1e-4f || mom_lin_err > 1e-4f)
+			{
+				auto f = fopen("dump\\evolve_compare.log", "a");
+				if (f)
+				{
+					auto const& com = ref.InertiaInvOS().CoM();
+					fprintf(f, "[MISMATCH] body=%d com=(%.4f,%.4f,%.4f) pos_err=%.6f rot_err=%.6f mom_ang_err=%.6f mom_lin_err=%.6f\n",
+						m_compare_indices[i], com.x, com.y, com.z, pos_err, rot_err, mom_ang_err, mom_lin_err);
+					fprintf(f, "  Evolve   pos=(%.6f,%.6f,%.6f) mom_ang=(%.6f,%.6f,%.6f) mom_lin=(%.6f,%.6f,%.6f)\n",
+						ref.O2W().pos.x, ref.O2W().pos.y, ref.O2W().pos.z,
+						ref.MomentumWS().ang.x, ref.MomentumWS().ang.y, ref.MomentumWS().ang.z,
+						ref.MomentumWS().lin.x, ref.MomentumWS().lin.y, ref.MomentumWS().lin.z);
+					fprintf(f, "  EvolveCPU pos=(%.6f,%.6f,%.6f) mom_ang=(%.6f,%.6f,%.6f) mom_lin=(%.6f,%.6f,%.6f)\n",
+						gpu.o2w.pos.x, gpu.o2w.pos.y, gpu.o2w.pos.z,
+						gpu.momentum_ang.x, gpu.momentum_ang.y, gpu.momentum_ang.z,
+						gpu.momentum_lin.x, gpu.momentum_lin.y, gpu.momentum_lin.z);
+					fclose(f);
+				}
+			}
+		}
+	}
+
+	// Stash current pre-integration state for next step's comparison.
+	// We pack dynamics NOW (before the next Evolve) so we have the same starting state.
+	m_compare_dynamics.clear();
+	m_compare_indices.clear();
+	m_compare_dt = dt;
+	{
+		int idx = 0;
+		for (auto& body : bodies)
+		{
+			if (body.Mass() < InfiniteMass * 0.5f)
+			{
+				m_compare_dynamics.push_back(PackDynamics(body));
+				m_compare_indices.push_back(idx);
+			}
+			++idx;
+		}
+	}
+	#endif
+}
+#endif

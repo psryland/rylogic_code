@@ -27,7 +27,7 @@ namespace physics_sandbox
 			.parent(this_)
 			.bkgd_colour(Colour(0xFF808080))
 			.dock(EDock::Fill))
-		, m_scene(m_view3d.D3DDevice())
+		, m_scene(&m_view3d.m_rdr)
 		, m_pause_on_collision(false)
 		, m_frame_count(0)
 		, m_fps_elapsed(0)
@@ -118,6 +118,8 @@ namespace physics_sandbox
 
 			if (m_scene.m_ground_gfx)
 				m_scene.m_ground_gfx->AddToScene(scene);
+			if (m_scene.m_origin_gfx)
+				m_scene.m_origin_gfx->AddToScene(scene);
 		};
 
 		// Start with the sandbox scenario
@@ -176,7 +178,7 @@ namespace physics_sandbox
 
 		// Make sure the GPU has finished with the models before releasing them.
 		m_view3d.WaitForGpu();
-		m_scene.Reset(&m_view3d.m_rdr);
+		m_scene.Reset();
 
 		// Frame the camera to see the whole scene: look from +Y toward origin, Z-up
 		m_view3d.m_cam.LookAt(v4(0, -35, 10, 1), v4::Origin(), v4{0, 0, 1, 0});
@@ -261,7 +263,7 @@ namespace physics_sandbox
 			m_view3d.WaitForGpu();
 
 			// Load the scene from JSON (creates new body graphics automatically)
-			m_scene.LoadFromJson(&m_view3d.m_rdr, filepath);
+			m_scene.LoadFromJson(filepath);
 
 			// Frame the camera to see all loaded bodies
 			auto bbox = ComputeSceneBBox();
