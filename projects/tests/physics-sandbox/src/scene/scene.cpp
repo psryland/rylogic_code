@@ -259,11 +259,8 @@ namespace physics_sandbox
 	// Load a scene from a JSON file.
 	// Replaces the current scenario with bodies defined in the file.
 	// Shapes are heap-allocated and owned by m_owned_shapes.
-	void Scene::LoadFromJson(std::filesystem::path const& filepath)
+	void Scene::LoadScene(scene_loader::SceneDesc scene_desc)
 	{
-		// Load the scene
-		auto scene_desc = scene_loader::LoadFromFile(filepath);
-
 		// Reset simulation state
 		m_clock = 0;
 		m_diag.Reset();
@@ -448,7 +445,7 @@ namespace physics_sandbox
 
 		// Logging
 		{
-			DbgLog("\n--- Loaded scene from: %ls ---\n", filepath.c_str());
+			DbgLog("\n--- Loaded scene from: %ls ---\n", scene_desc.filepath.c_str());
 			if (!scene_desc.description.empty())
 				DbgLog("  Description: %s\n", scene_desc.description.c_str());
 			DbgLog("  Bodies: %d\n", static_cast<int>(m_body.size()));

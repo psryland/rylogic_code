@@ -277,13 +277,21 @@ namespace physics_sandbox
 			m_view3d.WaitForGpu();
 
 			// Load the scene from JSON (creates new body graphics automatically)
-			m_scene.LoadFromJson(filepath);
+			auto scene_desc = scene_loader::LoadFromFile(filepath);
+			m_scene.LoadScene(scene_desc);
 
 			// Frame the camera to see all loaded bodies
 			auto bbox = ComputeSceneBBox();
-			m_view3d.m_cam.View(bbox,
-				v4{ 0, -1, 0, 0 },  // Forward direction
-				v4{ 0, 0, 1, 0 });  // Up direction (Z-up)
+			if (scene_desc.camera)
+			{
+				m_view3d.m_cam.LookAt(scene_desc.camera->position, scene_desc.camera->lookat, ZAxis<v4>());
+			}
+			else
+			{
+				m_view3d.m_cam.View(bbox,
+					v4{ 0, -1, 0, 0 },  // Forward direction
+					v4{ 0, 0, 1, 0 });  // Up direction (Z-up)
+			}
 
 			Render(0);
 		}

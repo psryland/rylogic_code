@@ -121,6 +121,21 @@ namespace physics_sandbox::scene_loader
 		return ground;
 	}
 
+	// Parse a ground plane definition from a JSON object
+	CameraDesc ReadCamera(pr::json::Value const& jcam)
+	{
+		CameraDesc camera;
+		auto const& jcam_obj = jcam.to_object();
+
+		if (auto* jposition = jcam_obj.find("position"))
+			camera.position = ReadVec3(*jposition, 1.0f);
+
+		if (auto* jlookat = jcam_obj.find("lookat"))
+			camera.lookat = ReadVec3(*jlookat, 1.0f);
+
+		return camera;
+	}
+
 	// Parse a scene description from a JSON file
 	SceneDesc LoadFromFile(std::filesystem::path const& filepath)
 	{
@@ -128,6 +143,7 @@ namespace physics_sandbox::scene_loader
 		auto const& jscene = doc.to_object()["scene"].to_object();
 
 		SceneDesc desc;
+		desc.filepath = filepath;
 
 		// Description
 		if (auto* jdesc = jscene.find("description"))
@@ -156,6 +172,12 @@ namespace physics_sandbox::scene_loader
 		{
 			for (auto const& jbody : jscene["bodies"].to_array())
 				desc.bodies.push_back(ReadBody(jbody));
+		}
+
+		// Camera
+		if (auto* jcamera = jscene.find("camera"))
+		{
+			desc.camera = ReadCamera(*jcamera);
 		}
 
 		return desc;

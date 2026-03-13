@@ -66,9 +66,17 @@ namespace physics_sandbox::scene_loader
 		std::optional<std::string> texture = {}; // Stock texture name (e.g. "#checker3")
 	};
 
+	// Parsed description of camera settings
+	struct CameraDesc
+	{
+		v4 position = v4(0, 0, 1, 1);
+		v4 lookat = Origin<v4>();
+	};
+
 	// Parsed scene description
 	struct SceneDesc
 	{
+		std::filesystem::path filepath;
 		std::string description;
 
 		// Gravity acceleration vector (direction and magnitude)
@@ -78,7 +86,10 @@ namespace physics_sandbox::scene_loader
 		float elasticity = 1.0f;
 		float friction = 0.0f;
 
-		// Optional ground plane
+		// Camera settings
+		std::optional<CameraDesc> camera;
+
+		// Ground plane
 		std::optional<GroundPlaneDesc> ground;
 
 		// Bodies in the scene
