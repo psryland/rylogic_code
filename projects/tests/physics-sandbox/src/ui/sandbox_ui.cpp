@@ -230,7 +230,7 @@ namespace physics_sandbox
 			return;
 
 		// The "Recent Files" item is at position 1 (after "Open Scene...")
-		auto recent_menu = ::GetSubMenu(file_menu, 1);
+		auto recent_menu = ::GetSubMenu(file_menu, MenuItemIndex::RecentFiles);
 		if (!recent_menu)
 			return;
 
