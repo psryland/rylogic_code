@@ -247,17 +247,12 @@ void CSResolve(uint3 dtid : SV_DispatchThreadID)
 	float3 forceB_in_a = impulse4;
 	float3 torqueB_in_a = cross(impulse4, com_b_in_a - pt);
 
-	// Rotate from A-space to B's object space: a2b_rot = transpose(b2a_rot) in row-vector convention
-	float3x3 a2b_rot = transpose(b2a_rot);
-	float3 torqueB_in_b = mul(a2b_rot, torqueB_in_a);
-	float3 forceB_in_b = mul(a2b_rot, forceB_in_a);
-
-	// Transform OS wrenches to world space for momentum update
-	// Momentum is stored in world space, wrenches are in OS → rotate by o2w
-	float3 torqueA_ws = mul(torqueA_in_a, rot_a); // mul(v, rot) in row-vector = rotate v by rot
+	// Transform wrenches to world space for momentum update.
+	// Both wrenches are in A-space. Momentum is stored in world space.
+	float3 torqueA_ws = mul(torqueA_in_a, rot_a);
 	float3 forceA_ws = mul(forceA_in_a, rot_a);
-	float3 torqueB_ws = mul(torqueB_in_b, rot_b);
-	float3 forceB_ws = mul(forceB_in_b, rot_b);
+	float3 torqueB_ws = mul(torqueB_in_a, rot_a); // B's wrench is also in A-space
+	float3 forceB_ws = mul(forceB_in_a, rot_a);
 
 	// ----- Pre-compute impulse KE coefficient for energy guard -----
 	// A = 0.5 * (vAj·jA + vBj·jB) where vXj = IinvX * jX

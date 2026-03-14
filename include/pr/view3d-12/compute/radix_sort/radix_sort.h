@@ -318,8 +318,8 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				cmd_list.CopyBufferRegion(m_payload[0].get(), 0, buf.m_res, buf.m_ofs, buf.m_size);
 			}
 
-			barriers.Transition(m_sort[0].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-			barriers.Transition(m_payload[0].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			barriers.Transition(m_sort[0].get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			barriers.Transition(m_payload[0].get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			barriers.Commit();
 
 			// Sort the buffers on the GPU

@@ -12,6 +12,7 @@
 #include <ranges>
 #include <unordered_map>
 #include <algorithm>
+#include <numeric>
 #include <cassert>
 
 #include "pr/common/to.h"

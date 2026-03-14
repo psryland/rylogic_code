@@ -93,6 +93,7 @@ namespace pr::physics
 			m_sorter.Sort(m_keys, m_payloads, job);
 		}
 
+
 		m_sweep.reserve(n);
 		m_sweep.resize(0);
 

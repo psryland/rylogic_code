@@ -44,6 +44,8 @@ namespace pr::physics
 		// The registered bodies for overlap testing
 		std::vector<RigidBody const*> m_entity;
 
+		bool m_gpu_sorter = false;
+
 	public:
 
 		explicit GpuSortAndSweep(Gpu& gpu);

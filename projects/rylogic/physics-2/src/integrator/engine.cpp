@@ -60,7 +60,6 @@ namespace pr::physics
 		, m_rb_dynamics()
 		, m_integrate_output()
 		, m_integrate_aabbs()
-		, m_gpu_resolve(true)
 		, PostCollisionDetection()
 	{
 	}
@@ -74,6 +73,26 @@ namespace pr::physics
 	{
 		// Dropping non-gpu support
 		(void)use_gpu;
+	}
+
+	// Get/Set whether the GPU is used for narrow-phase collision detection (GJK).
+	bool Engine::UseGpuDetect() const
+	{
+		return m_gpu_detect;
+	}
+	void Engine::UseGpuDetect(bool use)
+	{
+		m_gpu_detect = use;
+	}
+
+	// Get/Set whether the GPU is used for collision resolution (impulse application).
+	bool Engine::UseGpuResolve() const
+	{
+		return m_gpu_resolve;
+	}
+	void Engine::UseGpuResolve(bool use)
+	{
+		m_gpu_resolve = use;
 	}
 
 	// Access the broadphase for registering bodies and enumerating overlapping pairs.
@@ -139,9 +158,17 @@ namespace pr::physics
 
 		// Phase 1: Broadphase — collect overlapping pairs and look up cached shapes.
 		// Use GPU-computed AABBs when available to avoid recomputing on CPU.
+		// Maximum collision pairs per frame to prevent GPU TDR.
+		// The GJK compute shader runs one thread per pair. For dense scenes where
+		// many bodies cluster together (e.g., 1000 bodies falling onto a ground plane),
+		// the broadphase can produce thousands of pairs. Capping prevents the GPU
+		// dispatch from exceeding the Windows TDR timeout (~2s).
+		static constexpr int MaxPairsPerFrame = 8192;
 		int pair_idx = 0;
 		m_gpu_sort_and_sweep->EnumOverlappingPairs(m_gpu->m_job, std::span<IntegrateAABB const>(m_integrate_aabbs), [&](RigidBody const& objA, RigidBody const& objB)
 		{
+			if (pair_idx >= MaxPairsPerFrame)
+				return;
 			auto idx_a = shape_cache.GetOrAdd(objA.Shape());
 			auto idx_b = shape_cache.GetOrAdd(objB.Shape());
 
@@ -174,47 +201,129 @@ namespace pr::physics
 		if (shape_cache.m_frame % CollisionShapeCache::StaleFrameLimit == 0)
 			shape_cache.Flush();
 
-		// Phase 2: Dispatch GPU GJK collision detection.
-		// Pass the dirty flag so the detector knows whether to re-upload shapes.
-		m_gpu_collision_detector->DetectCollisions(m_gpu->m_job, col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
-		shape_cache.ClearDirty();
-
-		// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
-		for (int ci = 0; ci != static_cast<int>(gpu_contacts.size()); ++ci)
+		// Phase 2: Narrow phase collision detection.
+		if (m_gpu_detect)
 		{
-			auto const& gc = gpu_contacts[ci];
-
-			// Validate the pair_index from GPU readback
-			if (gc.pair_index < 0 || gc.pair_index >= static_cast<int>(body_pairs.size()))
+			// GPU GJK path
+			m_gpu_collision_detector->DetectCollisions(m_gpu->m_job, col_pairs, shape_cache.m_shapes, shape_cache.m_verts, gpu_contacts, shape_cache.IsDirty());
+			shape_cache.ClearDirty();
+		}
+		else
+		{
+			// CPU narrow phase path — use SAT-based Collide() for each broadphase pair
+			for (auto const& bp : body_pairs)
 			{
-				OutputDebugStringA(FmtS("GPU contact[%d/%d]: pair_index=%d (out of range 0..%d), depth=%f\n",
-					ci, static_cast<int>(gpu_contacts.size()), gc.pair_index, static_cast<int>(body_pairs.size()), gc.depth));
-				continue;
+				auto c = RbContact{*bp.objA, *bp.objB};
+				if (NarrowPhaseCollision(dt, c))
+				{
+					// Compare with CPU GJK for debugging
+					#if PR_DBG
+					{
+						collision::Contact gjk_c;
+						auto w2a = InvertOrthonormal(bp.objA->O2W());
+						auto b2a = w2a * bp.objB->O2W();
+						auto& sA = bp.objA->Shape();
+						auto& sB = bp.objB->Shape();
+						if (collision::GjkCollide(sA, m4x4::Identity(), sB, b2a, gjk_c))
+						{
+							static FILE* f = nullptr;
+							if (!f) f = fopen("dump\\sat_vs_gjk.log", "w");
+							if (f)
+							{
+								fprintf(f, "SAT: axis=(%.4f,%.4f,%.4f) depth=%.6f pt=(%.4f,%.4f,%.4f)\n",
+									c.m_axis.x, c.m_axis.y, c.m_axis.z, c.m_depth, c.m_point.x, c.m_point.y, c.m_point.z);
+								fprintf(f, "GJK: axis=(%.4f,%.4f,%.4f) depth=%.6f pt=(%.4f,%.4f,%.4f)\n",
+									gjk_c.m_axis.x, gjk_c.m_axis.y, gjk_c.m_axis.z, gjk_c.m_depth, gjk_c.m_point.x, gjk_c.m_point.y, gjk_c.m_point.z);
+								fprintf(f, "  bodyA pos=(%.4f,%.4f,%.4f) bodyB pos=(%.4f,%.4f,%.4f)\n\n",
+									bp.objA->O2W().pos.x, bp.objA->O2W().pos.y, bp.objA->O2W().pos.z,
+									bp.objB->O2W().pos.x, bp.objB->O2W().pos.y, bp.objB->O2W().pos.z);
+								fflush(f);
+							}
+						}
+					}
+					#endif
+					collision_queue.push_back(c);
+				}
 			}
-
-			auto const& bp = body_pairs[gc.pair_index];
-			auto c = RbContact{*bp.objA, *bp.objB, gc};
-
-			// Check if the collision point is separating (relative velocity positive along axis)
-			auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
-			if (Dot(rel_vel_at_point, c.m_axis) > 0)
-				continue;
-
-			// Look up the combined material properties
-			c.m_mat = m_materials(c.m_mat_idA, c.m_mat_idB);
-
-			// Estimate sub-step collision time
-			auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
-			auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
-			auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
-
-			// Recompute contact data at the estimated collision time
-			c.Update(sub_step * dt);
-
-			collision_queue.push_back(c);
 		}
 
-		// Sort the collisions by estimated time of impact so earlier collisions are resolved first.
+		// Phase 3: Convert GPU contacts to physics::Contact structs and resolve.
+		if (m_gpu_detect)
+		{
+			for (int ci = 0; ci != static_cast<int>(gpu_contacts.size()); ++ci)
+			{
+				auto const& gc = gpu_contacts[ci];
+
+				// Log GPU contact data for debugging
+				{
+					static FILE* f = nullptr;
+					if (!f) f = fopen("dump\\gpu_contacts.log", "w");
+					if (f)
+					{
+						auto const& bp = (gc.pair_index >= 0 && gc.pair_index < static_cast<int>(body_pairs.size())) ? body_pairs[gc.pair_index] : body_pairs[0];
+						fprintf(f, "Contact[%d] pair=%d axis=(%.4f,%.4f,%.4f) pt=(%.4f,%.4f,%.4f) depth=%.6f\n",
+							ci, gc.pair_index, gc.axis.x, gc.axis.y, gc.axis.z, gc.pt.x, gc.pt.y, gc.pt.z, gc.depth);
+						fprintf(f, "  bodyA pos=(%.4f,%.4f,%.4f) bodyB pos=(%.4f,%.4f,%.4f)\n",
+							bp.objA->O2W().pos.x, bp.objA->O2W().pos.y, bp.objA->O2W().pos.z,
+							bp.objB->O2W().pos.x, bp.objB->O2W().pos.y, bp.objB->O2W().pos.z);
+						fflush(f);
+					}
+				}
+
+				// Validate the pair_index from GPU readback
+				if (gc.pair_index < 0 || gc.pair_index >= static_cast<int>(body_pairs.size()))
+				{
+					OutputDebugStringA(FmtS("GPU contact[%d/%d]: pair_index=%d (out of range 0..%d), depth=%f\n",
+						ci, static_cast<int>(gpu_contacts.size()), gc.pair_index, static_cast<int>(body_pairs.size()), gc.depth));
+					continue;
+				}
+
+				auto const& bp = body_pairs[gc.pair_index];
+
+				// Compare GPU GJK depth with CPU GJK depth
+				{
+					collision::Contact cpu_c;
+					auto b2a_cmp = InvertOrthonormal(bp.objA->O2W()) * bp.objB->O2W();
+					bool cpu_hit = collision::GjkCollide(bp.objA->Shape(), m4x4::Identity(), bp.objB->Shape(), b2a_cmp, cpu_c);
+					static FILE* fcmp = nullptr;
+					if (!fcmp) fcmp = fopen("dump\\gpu_vs_cpu_gjk.log", "w");
+					if (fcmp)
+					{
+						fprintf(fcmp, "GPU: axis=(%.4f,%.4f,%.4f) depth=%.6f pt=(%.4f,%.4f,%.4f)\n",
+							gc.axis.x, gc.axis.y, gc.axis.z, gc.depth, gc.pt.x, gc.pt.y, gc.pt.z);
+						if (cpu_hit)
+							fprintf(fcmp, "CPU: axis=(%.4f,%.4f,%.4f) depth=%.6f pt=(%.4f,%.4f,%.4f)\n",
+								cpu_c.m_axis.x, cpu_c.m_axis.y, cpu_c.m_axis.z, cpu_c.m_depth, cpu_c.m_point.x, cpu_c.m_point.y, cpu_c.m_point.z);
+						else
+							fprintf(fcmp, "CPU: NO COLLISION\n");
+						fprintf(fcmp, "  bodyB pos=(%.4f,%.4f,%.4f)\n\n", bp.objB->O2W().pos.x, bp.objB->O2W().pos.y, bp.objB->O2W().pos.z);
+						fflush(fcmp);
+					}
+				}
+
+				auto c = RbContact{ *bp.objA, *bp.objB, gc };
+
+				// Check if the collision point is separating (relative velocity positive along axis)
+				auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
+				if (Dot(rel_vel_at_point, c.m_axis) > 0)
+					continue;
+
+				// Look up the combined material properties
+				c.m_mat = m_materials(c.m_mat_idA, c.m_mat_idB);
+
+				// Estimate sub-step collision time
+				auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
+				auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
+				auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
+
+				// Recompute contact data at the estimated collision time
+				c.Update(sub_step * dt);
+
+				collision_queue.push_back(c);
+			}
+		}
+
+		// Sort the collisionsby estimated time of impact so earlier collisions are resolved first.
 		std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs)
 		{
 			return lhs.m_time < rhs.m_time;
@@ -366,6 +475,7 @@ namespace pr::physics
 	// the contact is approaching (not separating).
 	bool Engine::NarrowPhaseCollision(float dt, RbContact& c)
 	{
+		// This is the CPU reference implementation. Keep.
 		auto& objA = *c.m_objA;
 		auto& objB = *c.m_objB;
 

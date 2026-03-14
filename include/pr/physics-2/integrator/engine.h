@@ -48,7 +48,8 @@ namespace pr::physics
 
 		// Recycled buffer of rigid body pointers
 		std::vector<RigidBody*> m_body_ptrs;
-		bool m_gpu_resolve; // TODO: GPU resolve has bugs — using CPU fallback for now
+		bool m_gpu_resolve = false;
+		bool m_gpu_detect = false; // Use GPU GJK for narrow phase (false = CPU SAT)
 
 	public:
 
@@ -57,6 +58,14 @@ namespace pr::physics
 		// Get/Set whether the GPU is used for integration and collision detection.
 		bool UseGpu() const;
 		void UseGpu(bool use_gpu);
+
+		// Get/Set whether the GPU is used for narrow-phase collision detection (GJK).
+		bool UseGpuDetect() const;
+		void UseGpuDetect(bool use);
+
+		// Get/Set whether the GPU is used for collision resolution (impulse application).
+		bool UseGpuResolve() const;
+		void UseGpuResolve(bool use);
 
 		// Access the broadphase for registering bodies and enumerating overlapping pairs.
 		IBroadphase& Broadphase() const;

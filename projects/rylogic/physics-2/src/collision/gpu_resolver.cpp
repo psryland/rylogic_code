@@ -123,6 +123,8 @@ namespace pr::physics
 
 		// Dispatch one compute pass per colour batch.
 		// Bodies buffer is assumed to be in UNORDERED_ACCESS state from the integrator.
+		// Flush the GPU every N colour batches to avoid TDR on large scenes.
+		static constexpr int FlushInterval = 32;
 		auto dispatch_count = (contact_count + ResolveThreadGroupSize - 1) / ResolveThreadGroupSize;
 		for (int colour = 0; colour != max_colour; ++colour)
 		{
@@ -144,6 +146,10 @@ namespace pr::physics
 			// before the next batch reads them
 			job.m_barriers.UAV(bodies_resource);
 			job.m_barriers.Commit();
+
+			// Periodically flush the command list to avoid TDR on large scenes
+			if ((colour + 1) % FlushInterval == 0 && colour + 1 < max_colour)
+				job.Run();
 		}
 	}
 
