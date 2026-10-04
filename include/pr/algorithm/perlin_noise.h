@@ -73,15 +73,18 @@ namespace pr::algorithm
 
 		float Noise(float x, float y, float z) const
 		{
-			// Pick valid points within the permutation table
-			int X = (int)(x) & PermTableMask;
-			int Y = (int)(y) & PermTableMask;
-			int Z = (int)(z) & PermTableMask;
+			// Use the same lower lattice corner for hashing and fractional coordinates, including below zero.
+			auto const floor_x = std::floor(x);
+			auto const floor_y = std::floor(y);
+			auto const floor_z = std::floor(z);
+			int X = static_cast<int>(floor_x) & PermTableMask;
+			int Y = static_cast<int>(floor_y) & PermTableMask;
+			int Z = static_cast<int>(floor_z) & PermTableMask;
 			
 			// Find the relative x, y, z of the point in the cube
-			x -= std::floor(x);
-			y -= std::floor(y);
-			z -= std::floor(z);
+			x -= floor_x;
+			y -= floor_y;
+			z -= floor_z;
 			
 			// Compute the Fade curves for each axis
 			float u = Fade(x);
@@ -122,3 +125,27 @@ namespace pr::algorithm
 		}
 	};
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::algorithm::tests
+{
+	PRUnitTest(PerlinNoiseTests)
+	{
+		std::default_random_engine rng(17);
+		PerlinNoiseGenerator perlin(rng);
+
+		// The permutation field repeats exactly, so equivalent positive and negative positions must agree.
+		constexpr auto period = 1024.0f;
+		for (auto const& position : { -4.75f, -1.25f, -0.75f, -0.25f })
+		{
+			auto const negative = perlin.Noise(position, position * 0.37f, position * 0.61f);
+			auto const wrapped = perlin.Noise(
+				position + period,
+				position * 0.37f + period,
+				position * 0.61f + period);
+			PR_EXPECT(std::abs(negative - wrapped) < 1.0e-4f);
+		}
+	}
+}
+#endif
