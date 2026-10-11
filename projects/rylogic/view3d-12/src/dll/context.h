@@ -85,6 +85,7 @@ namespace pr::rdr12
 
 		// Replace the detail-normal layers of every nugget of 'object' that has detail normals.
 		void ObjectDetailNormalLayers(ldraw::LdrObject* object, std::span<materials::DetailNormalLayer const> layers, float base_slope_variance);
+		void ObjectDetailStrengthMap(ldraw::LdrObject* object, materials::DetailStrengthMapPtr map);
 
 		// Load/Add ldr objects and return the first object from the script
 		template <typename Char>

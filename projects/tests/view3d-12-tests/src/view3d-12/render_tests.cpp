@@ -3169,6 +3169,109 @@ namespace fade_tests
 		std::cout << "PASS detail normals\n";
 	}
 
+	// Check that a detail strength map scales the layers over the surface, can be visualised, and can be removed.
+	void DetailStrengthMapTests()
+	{
+		// The same lit quad and uniform slope map as DetailNormalsTests, with one layer of gradient 0.5.
+		auto fixture = Fixture(1);
+		auto object = fixture.Quad(10, 0xFFFFFFFF, 45, nullptr, 0, 0xFFFFFFFF, false, true);
+		auto light = SceneLightingGet(fixture.m_window);
+		light.m_type = api::ELight::Directional;
+		light.m_direction = api::Vec4{0.70710678f, 0, -0.70710678f, 0};
+		light.m_ambient = 0xFF000000;
+		light.m_diffuse = 0xFFFFFFFF;
+		light.m_specular = 0xFF000000;
+		light.m_intensity = 1;
+		light.m_cast_shadow = 0;
+		light.m_on = TRUE;
+		SceneLightingSet(fixture.m_window, light);
+		auto brightness = [](std::vector<unsigned char> const& image)
+		{
+			// The quad is grey, so one channel at the centre measures its lighting.
+			return Linear(image[(64 * ImageSize + 64) * 4 + 1]);
+		};
+		auto flat = fixture.Image();
+
+		auto options = api::TextureOptions{};
+		options.m_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		options.m_resource_state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		options.m_mips = 0;
+		options.m_multisamp = {1, 0};
+		options.m_t2s = {{1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
+		std::array<uint32_t, 4> pixels; pixels.fill(0xFF8080FFU);
+		auto texture = api::TexturePtr(View3D_TextureCreate(2, 2, pixels.data(), sizeof(pixels), options));
+		auto sampler = api::SamplerPtr(View3D_SamplerCreate(api::SamplerOptions{D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, "DetailNormals"}));
+		View3D_ObjectNuggetDetailNormalsSet(object, texture.get(), sampler.get(), nullptr, 0);
+		auto layer = api::DetailNormalLayer{};
+		layer.m_row_u = api::Vec4{1, 0, 0, 0};
+		layer.m_row_v = api::Vec4{0, 1, 0, 0};
+		layer.m_height_scale = 0.5f;
+		View3D_ObjectDetailNormalLayersSet(object, &layer, 1, 0.0f);
+		fixture.CheckErrors();
+		auto tilted = fixture.Image();
+
+		// A new map has strength (1, 0) everywhere, so it leaves the layers unchanged.
+		auto map = api::DetailStrengthMapPtr(View3D_DetailStrengthMapCreate(2, 1));
+		Require(map != nullptr, "Detail strength map was not created");
+		View3D_ObjectDetailStrengthMapSet(object, map.get());
+		fixture.CheckErrors();
+		Require(ImageDifference(tilted, fixture.Image()) < 100, "A default detail strength map changed the surface");
+
+		// Strength 2 doubles the gradient to 1, tilting the normal to (-1, 0, 1), so the 45 degree light hits it face on: 1 / cos(45) = 1.414.
+		auto strong = std::array<api::Vec2, 2>{api::Vec2{2, 0}, api::Vec2{2, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), strong.data(), 2);
+		fixture.CheckErrors();
+		auto doubled = fixture.Image();
+		Require(std::abs(brightness(doubled) / brightness(flat) - 1.414f) < 0.03f, (std::string("Detail strength 2 scaled the tilt incorrectly: flat ") + std::to_string(brightness(flat)) + ", doubled " + std::to_string(brightness(doubled))).c_str());
+
+		// Strength 0 removes the tilt.
+		auto none = std::array<api::Vec2, 2>{api::Vec2{0, 0}, api::Vec2{0, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), none.data(), 2);
+		fixture.CheckErrors();
+		Require(ImageDifference(flat, fixture.Image()) < 100, "Detail strength 0 did not remove the tilt");
+
+		// Texels of strength 0 and 2 across the quad are filtered to 1 at its centre, which the projection puts midway between the texel centres.
+		auto ramp = std::array<api::Vec2, 2>{api::Vec2{0, 0}, api::Vec2{2, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), ramp.data(), 2);
+		View3D_DetailStrengthMapProjectionSet(map.get(), api::Vec4{0.1f, 0, 0, 0.5f}, api::Vec4{0, 0.1f, 0, 0.5f});
+		fixture.CheckErrors();
+		auto ramped = fixture.Image();
+		Require(std::abs(brightness(ramped) / brightness(tilted) - 1.0f) < 0.03f, (std::string("Detail strength was not filtered across the map: tilted ") + std::to_string(brightness(tilted)) + ", ramped " + std::to_string(brightness(ramped))).c_str());
+		Require(ImageDifference(tilted, ramped) > 100, "Detail strength did not vary across the surface");
+
+		// Visualisation replaces the shaded colour, and turning it off restores the shading.
+		View3D_DetailStrengthMapVisualiseSet(map.get(), TRUE);
+		fixture.CheckErrors();
+		Require(ImageDifference(ramped, fixture.Image()) > 100, "Detail strength visualisation did not change the surface");
+		View3D_DetailStrengthMapVisualiseSet(map.get(), FALSE);
+		fixture.CheckErrors();
+		Require(ImageDifference(ramped, fixture.Image()) < 100, "Turning off detail strength visualisation did not restore the surface");
+
+		// Invalid inputs are reported and leave the map unchanged.
+		auto negative = std::array<api::Vec2, 2>{api::Vec2{-1, 0}, api::Vec2{1, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), negative.data(), 2);
+		Require(!fixture.m_errors.empty(), "A negative detail strength was accepted");
+		fixture.m_errors.clear();
+		View3D_DetailStrengthMapUpload(map.get(), strong.data(), 1);
+		Require(!fixture.m_errors.empty(), "A detail strength upload of the wrong size was accepted");
+		fixture.m_errors.clear();
+		Require(View3D_DetailStrengthMapCreate(0, 1) == nullptr && !fixture.m_errors.empty(), "A zero-width detail strength map was accepted");
+		fixture.m_errors.clear();
+		Require(ImageDifference(ramped, fixture.Image()) < 100, "Invalid detail strength inputs changed the surface");
+
+		// Removing the map restores the unscaled layers. The object keeps its own reference, so releasing the handle first is safe.
+		map.reset();
+		fixture.CheckErrors();
+		Require(ImageDifference(ramped, fixture.Image()) < 100, "Releasing the detail strength map handle changed the surface");
+		View3D_ObjectDetailStrengthMapSet(object, nullptr);
+		fixture.CheckErrors();
+		Require(ImageDifference(tilted, fixture.Image()) < 100, "Removing the detail strength map did not restore the layers");
+
+		// Any GPU validation error fails the fixture.
+		fixture.CheckDebugLayer();
+		std::cout << "PASS detail strength map\n";
+	}
+
 	// Check that a model-space normal map replaces the vertex normal, and that removing it restores the surface.
 	void ModelNormalMapTests()
 	{
@@ -3491,6 +3594,10 @@ namespace pr::unittests::view3d12
 	PRUnitTest(View3d12_DetailNormals, Extended)
 	{
 		fade_tests::DetailNormalsTests();
+	}
+	PRUnitTest(View3d12_DetailStrengthMap, Extended)
+	{
+		fade_tests::DetailStrengthMapTests();
 	}
 	PRUnitTest(View3d12_ModelNormalMap, Extended)
 	{

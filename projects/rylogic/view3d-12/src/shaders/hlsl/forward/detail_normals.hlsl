@@ -2,8 +2,20 @@
 // The stock entry points shade the perturbed fragment unchanged, so materials without detail normals pay nothing.
 #include "pr/view3d-12/shaders/forward_pixel.hlsli"
 
-// Detail-normal layer constants. The slope map uses the PBR normal-map slot (t12/s7), which simple materials do not otherwise use.
+// Detail-normal layer constants. The slope map uses the PBR normal-map slot (t12/s7), and the optional strength map uses the PBR
+// roughness slot (t5/s5). Simple materials do not otherwise use either slot.
 ConstantBuffer<CBufDetailNormals> g_detail : register(b7);
+
+// Return the (height scale, added slope variance) strength at world position 'ws'. Without a strength map the layers are unchanged.
+float2 DetailStrength(float3 ws)
+{
+	// The map's projection puts [0,1] across the grid, and its clamp sampler extends the edge texels beyond it.
+	if (g_detail.info.y == 0)
+		return float2(1, 0);
+
+	float2 uv = float2(dot(ws, g_detail.strength_row_u.xyz) + g_detail.strength_row_u.w, dot(ws, g_detail.strength_row_v.xyz) + g_detail.strength_row_v.w);
+	return max(g_roughness_texture.SampleLevel(g_roughness_sampler, uv, 0).xy, 0.0f);
+}
 
 // Return a pseudo-random value in [0,1) for lattice cell 'cell' of the noise pattern selected by 'seed'.
 float DetailNoiseHash(int2 cell, uint seed)
@@ -49,11 +61,14 @@ PSIn ApplyDetailNormals(PSIn In)
 
 	normal = normalize(normal);
 
+	// The strength map scales every layer's height and adds to the base variance at this position.
+	float2 strength = DetailStrength(In.ws_vert.xyz);
+
 	// Each layer's map slope is per texture unit, so the chain rule through the projection rows gives the world-space height gradient.
 	// The map's blue channel holds half the mean square slope. Mip filtering averages it as well as the slopes, so the gap between the mean
 	// square and the square of the mean is the slope variance that the filtered normal no longer shows.
 	float3 gradient = float3(0, 0, 0);
-	float variance = g_detail.surface.x;
+	float variance = g_detail.surface.x + strength.y;
 	for (int i = 0; i != g_detail.info.x; ++i)
 	{
 		// Find the layer's texture coordinates in its own projection. The noise coordinates ignore the rows' offsets, so a layer that scrolls
@@ -67,7 +82,7 @@ PSIn ApplyDetailNormals(PSIn In)
 		// World noise varies the layer's weight about 1 so that different layers dominate in different places. Each layer uses its own
 		// noise pattern, selected by the layer index.
 		float noise = DetailValueNoise(noise_uv, uint(i));
-		float scale = g_detail.height_scale[i] * (1.0f + g_detail.weight_noise[i] * (2.0f * noise - 1.0f));
+		float scale = strength.x * g_detail.height_scale[i] * (1.0f + g_detail.weight_noise[i] * (2.0f * noise - 1.0f));
 
 		// Two more noise patterns shift the texture coordinates smoothly, which bends the rows of repeated tiles so they do not line up over
 		// large areas. Seeds above the layer limit keep these patterns independent of every layer's weight noise.
@@ -94,7 +109,15 @@ float4 DetailShade(inout PSIn In, bool is_front_face)
 {
 	// Keep the tilted normal in 'In' so the reflection attributes use it too.
 	In = ApplyDetailNormals(In);
-	return ForwardShade(In, is_front_face).diff;
+	float4 diff = ForwardShade(In, is_front_face).diff;
+
+	// The visualisation replaces the shaded colour with the height strength, from blue at 0 through green at 1 to red at 2 or more.
+	if (g_detail.info.z != 0)
+	{
+		float t = saturate(DetailStrength(In.ws_vert.xyz).x * 0.5f);
+		diff.rgb = saturate(float3(2.0f * t - 1.0f, 1.0f - abs(2.0f * t - 1.0f), 1.0f - 2.0f * t));
+	}
+	return diff;
 }
 
 // Generate the forward pixel family for detail-normal materials.

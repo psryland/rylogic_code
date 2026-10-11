@@ -83,9 +83,10 @@ public sealed class Atmosphere :IDisposable
 	/// Submit one step of 'dt' seconds, and tracer advection when tracers exist, without waiting for the GPU. The heat sources are copied and
 	/// apply to this step only; at most 64. Floor temperatures and outside air persist from <see cref="SetFloorTemperatures"/> and <see cref="SetOutsideAir"/>.
 	/// The air is sampled at each of 'probes' (world points, w = 1, at most 64) once the step has updated it; read the samples with <see cref="CopyProbes"/> after the step finishes.
+	/// When 'surface_wind_height' is positive, the horizontal wind at that height (m) above each column floor is also sampled; read it with <see cref="CopySurfaceWind"/>.
 	/// Fails with <see cref="EStatus.StepPending"/> while a step is in flight.
 	/// </summary>
-	public unsafe void BeginStep(float dt, ReadOnlySpan<AtmosphereHeatSource> heat_sources = default, ReadOnlySpan<v4> probes = default)
+	public unsafe void BeginStep(float dt, ReadOnlySpan<AtmosphereHeatSource> heat_sources = default, ReadOnlySpan<v4> probes = default, float surface_wind_height = 0f)
 	{
 		Engine.EnsureOwner();
 		fixed (AtmosphereHeatSource* heat_ptr = heat_sources)
@@ -98,9 +99,25 @@ public sealed class Atmosphere :IDisposable
 				m_heat_source_count = heat_sources.Length,
 				m_heat_sources = heat_ptr,
 				m_probe_count = probes.Length,
+				m_surface_wind_height = surface_wind_height,
 				m_probes = probe_ptr,
 			};
 			Native.Check(Native.Physics_AtmosphereBeginStep(Engine.Handle, Handle, &step));
+		}
+	}
+
+	/// <summary>
+	/// Copy the surface wind of the last finished step into 'wind': the horizontal wind (m/s) at the requested height above each column floor, one per
+	/// column in row-major order. Inactive columns report their outside air's wind; solid columns report zero. Returns the column count, which is zero
+	/// before the first finished step and after a step that did not sample the surface wind. Does not wait, and may be called while a step is in flight.
+	/// </summary>
+	public unsafe int CopySurfaceWind(Span<v2> wind)
+	{
+		Engine.EnsureOwner();
+		fixed (v2* wind_ptr = wind)
+		{
+			Native.Check(Native.Physics_AtmosphereSurfaceWindCopy(Engine.Handle, Handle, wind_ptr, checked((uint)wind.Length), out var required));
+			return checked((int)required);
 		}
 	}
 

@@ -3451,6 +3451,93 @@ VIEW3D_API void __stdcall View3D_ObjectDetailNormalLayersSet(view3d::Object obje
 	CatchAndReport(View3D_ObjectDetailNormalLayersSet, ,);
 }
 
+// Create a detail strength map. Release using View3D_DetailStrengthMapRelease.
+VIEW3D_API view3d::DetailStrengthMap __stdcall View3D_DetailStrengthMapCreate(int width, int height)
+{
+	// The handle owns one reference, which View3D_DetailStrengthMapRelease drops.
+	try
+	{
+		DllLockGuard;
+		auto map = materials::DetailStrengthMapPtr(new materials::DetailStrengthMap(Dll().m_rdr, width, height), true);
+		return map.release();
+	}
+	CatchAndReport(View3D_DetailStrengthMapCreate, , nullptr);
+}
+
+// Release a detail strength map handle. Objects using the map keep their own references.
+VIEW3D_API void __stdcall View3D_DetailStrengthMapRelease(view3d::DetailStrengthMap map)
+{
+	// Release is idempotent
+	try
+	{
+		if (!map) return;
+		DllLockGuard;
+		map->Release();
+	}
+	CatchAndReport(View3D_DetailStrengthMapRelease, , );
+}
+
+// Set the world-space projection of a detail strength map.
+VIEW3D_API void __stdcall View3D_DetailStrengthMapProjectionSet(view3d::DetailStrengthMap map, view3d::Vec4 row_u, view3d::Vec4 row_v)
+{
+	// The map validates the rows.
+	try
+	{
+		if (map == nullptr)
+			throw std::invalid_argument("Detail strength map is null");
+
+		DllLockGuard;
+		map->Projection(To<v4>(row_u), To<v4>(row_v));
+	}
+	CatchAndReport(View3D_DetailStrengthMapProjectionSet, , );
+}
+
+// Copy texels to a detail strength map.
+VIEW3D_API void __stdcall View3D_DetailStrengthMapUpload(view3d::DetailStrengthMap map, view3d::Vec2 const* texels, int count)
+{
+	// The public Vec2 layout matches v2, so the texels are passed through without a copy; the map validates the count and values.
+	try
+	{
+		static_assert(sizeof(view3d::Vec2) == sizeof(v2));
+		if (map == nullptr)
+			throw std::invalid_argument("Detail strength map is null");
+		if (count < 0 || (count != 0 && texels == nullptr))
+			throw std::invalid_argument("Detail strength map texels are invalid");
+
+		DllLockGuard;
+		map->Upload(std::span(reinterpret_cast<v2 const*>(texels), static_cast<size_t>(count)));
+	}
+	CatchAndReport(View3D_DetailStrengthMapUpload, , );
+}
+
+// Show the height strength of a detail strength map as colour.
+VIEW3D_API void __stdcall View3D_DetailStrengthMapVisualiseSet(view3d::DetailStrengthMap map, BOOL visualise)
+{
+	// Draws recorded after this use the new mode.
+	try
+	{
+		if (map == nullptr)
+			throw std::invalid_argument("Detail strength map is null");
+
+		DllLockGuard;
+		map->m_visualise = visualise != FALSE;
+	}
+	CatchAndReport(View3D_DetailStrengthMapVisualiseSet, , );
+}
+
+// Use a detail strength map for an object's own detail normals.
+VIEW3D_API void __stdcall View3D_ObjectDetailStrengthMapSet(view3d::Object object, view3d::DetailStrengthMap map)
+{
+	// The layers hold their own reference to the map.
+	try
+	{
+		Validate(object);
+		DllLockGuard;
+		Dll().ObjectDetailStrengthMap(object, materials::DetailStrengthMapPtr(map, true));
+	}
+	CatchAndReport(View3D_ObjectDetailStrengthMapSet, , );
+}
+
 // Materials ******************************
 
 // Create a texture from data in memory.

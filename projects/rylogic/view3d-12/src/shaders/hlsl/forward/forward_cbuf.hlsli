@@ -183,7 +183,9 @@ struct CBufDetailNormals// :reg(b7)
 	float4 noise_frequency;               // Noise cells per texture unit, per layer
 	float4 warp;                          // Largest shift of each layer's texture coordinates by world noise, in texture units
 	float4 surface;                       // x = base slope variance added to every fragment
-	int4 info;                            // x = layer count
+	float4 strength_row_u;                // Strength-map u = dot(ws.xyz, strength_row_u.xyz) + strength_row_u.w
+	float4 strength_row_v;                // Strength-map v = dot(ws.xyz, strength_row_v.xyz) + strength_row_v.w
+	int4 info;                            // x = layer count, y = 1 when a strength map is bound, z = 1 to show the height strength as colour
 };
 
 #endif

@@ -728,7 +728,8 @@ namespace pr::physics
 
 	// The inputs to one atmosphere step of 'dt' seconds; the heat sources are copied and apply to this step only. At most 64 heat sources.
 	// The air is sampled at the 'probe_count' world-space probe points (m, w = 1; at most 64) once the step has updated it; read the samples with
-	// Physics_AtmosphereProbesCopy.
+	// Physics_AtmosphereProbesCopy. When 'surface_wind_height' is positive, the horizontal wind at that height (m) above the floor of every column
+	// is also sampled once the step has updated it; read it with Physics_AtmosphereSurfaceWindCopy. Zero skips the surface wind.
 	struct AtmosphereStepDesc
 	{
 		StructHeader header;
@@ -736,7 +737,7 @@ namespace pr::physics
 		std::int32_t heat_source_count;
 		AtmosphereHeatSource const* heat_sources;
 		std::int32_t probe_count;
-		std::int32_t reserved;
+		float surface_wind_height;
 		Vector4 const* probes;
 	};
 	static_assert(sizeof(AtmosphereStepDesc) == 40);
@@ -1101,6 +1102,12 @@ extern "C"
 	// Copy the probe samples of the last finished step, in the order of its probes. 'required' is the sample count, which is zero before the
 	// first finished step and after a step without probes. Does not wait, and may be called while a step is in flight.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_AtmosphereProbesCopy(pr::physics::EngineHandle engine, pr::physics::AtmosphereHandle atmosphere, pr::physics::AtmosphereProbeSample* samples, std::uint32_t capacity, std::uint32_t* required);
+
+	// Copy the surface wind of the last finished step: the horizontal wind (m/s) at the requested height above each column floor, one entry per column
+	// in the order of AtmosphereDesc's columns. Inactive columns report their outside air's wind; solid columns report zero. 'required' is the column
+	// count, or zero before the first finished step and after a step that did not sample the surface wind. Does not wait, and may be called while
+	// a step is in flight.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_AtmosphereSurfaceWindCopy(pr::physics::EngineHandle engine, pr::physics::AtmosphereHandle atmosphere, pr::physics::Vector2* wind, std::uint32_t capacity, std::uint32_t* required);
 
 	// Wait for and finish the step in flight. Fails with NoStepPending when there is none.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_AtmosphereCompleteStep(pr::physics::EngineHandle engine, pr::physics::AtmosphereHandle atmosphere);

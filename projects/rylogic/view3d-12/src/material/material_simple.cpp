@@ -5,9 +5,13 @@
 #include "pr/view3d-12/material/material_simple.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/main/window.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/render/drawlist_element.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/sampler/sampler.h"
+#include "pr/view3d-12/sampler/sampler_desc.h"
+#include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/shaders/shader_forward.h"
 #include "pr/view3d-12/shaders/shader_procedural.h"
@@ -84,6 +88,76 @@ namespace pr::rdr12
 		std::copy(layers.begin(), layers.end(), m_layers.begin());
 		m_count = static_cast<int>(layers.size());
 		m_base_slope_variance = base_slope_variance;
+	}
+
+	// Create a 'width' x 'height' grid with strength (1, 0) everywhere.
+	materials::DetailStrengthMap::DetailStrengthMap(Renderer& rdr, int width, int height)
+		: m_tex()
+		, m_sam()
+		, m_factory(new ResourceFactory(rdr))
+		, m_width(width)
+		, m_height(height)
+		, m_row_u(v4::XAxis())
+		, m_row_v(v4::YAxis())
+		, m_visualise(false)
+	{
+		// The texture dimensions must be valid for a 2D texture.
+		if (width < 1 || height < 1 || width > 4096 || height > 4096)
+			throw std::invalid_argument("Detail strength map dimensions must be in [1,4096]");
+
+		// The factory persists because a temporary factory blocks until the GPU finishes when it is destroyed.
+		auto texels = std::vector<v2>(s_cast<size_t>(width) * s_cast<size_t>(height), v2(1, 0));
+		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32_FLOAT);
+		m_tex = m_factory->CreateTexture2D(TextureDesc(AutoId, ResDesc::Tex2D(image, 1)).name("DetailStrengthMap"));
+		m_sam = m_factory->CreateSampler(EStockSampler::LinearClamp);
+		m_factory->FlushToGpu(EGpuFlush::Async);
+	}
+
+	// Release the texture through the renderer so frames still in flight remain valid.
+	materials::DetailStrengthMap::~DetailStrengthMap()
+	{
+		// The factory destructor waits for any queued upload to finish.
+		m_tex = nullptr;
+		m_sam = nullptr;
+		m_factory.reset();
+	}
+
+	// Set the world-space projection.
+	void materials::DetailStrengthMap::Projection(v4 const& row_u, v4 const& row_v)
+	{
+		// Non-finite rows would produce undefined texture coordinates.
+		if (!IsFinite(row_u) || !IsFinite(row_v))
+			throw std::invalid_argument("Detail strength map projection must be finite");
+
+		m_row_u = row_u;
+		m_row_v = row_v;
+	}
+
+	// Copy 'texels' to the GPU.
+	void materials::DetailStrengthMap::Upload(std::span<v2 const> texels)
+	{
+		// Validate the texel count and domain at the public boundary.
+		if (texels.size() != s_cast<size_t>(m_width) * s_cast<size_t>(m_height))
+			throw std::invalid_argument("Detail strength map texel count must equal width * height");
+		for (auto const& t : texels)
+		{
+			// Strengths scale heights and add variance, so both must be finite and non-negative.
+			if (!std::isfinite(t.x) || !std::isfinite(t.y) || t.x < 0.0f || t.y < 0.0f)
+				throw std::invalid_argument("Detail strength map texels must be finite and non-negative");
+		}
+
+		// Queue on the graphics queue so the copy is ordered before later frames that sample it.
+		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32_FLOAT);
+		::pr::compute::UpdateSubresourceScope map(m_factory->CmdList(), m_factory->UploadBuffer(), m_tex->m_res.get(), 0, 0, 1, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		map.Write(image);
+		map.Commit(::pr::compute::EFinalState::Restore);
+		m_factory->FlushToGpu(EGpuFlush::Async);
+	}
+
+	// Ref-counting clean up function
+	void materials::DetailStrengthMap::RefCountZero(RefCounted<DetailStrengthMap>* doomed)
+	{
+		delete static_cast<DetailStrengthMap*>(doomed);
 	}
 
 	// Replace a stock forward pixel shader in 'desc' with the matching entry point of 'family'.
@@ -328,6 +402,17 @@ namespace pr::rdr12
 				}
 				cb.surface.x = layers.m_base_slope_variance;
 				cb.info.x = layers.m_count;
+
+				// The optional strength map uses the otherwise idle PBR roughness slot.
+				if (auto const* strength = layers.m_strength.get(); strength != nullptr)
+				{
+					BindMaterialDescriptor(ctx.m_cmd_list, ctx.m_wnd.m_heap_view, shaders::fwd::ERootParam::PbrRoughnessTexture, strength->m_tex->m_srv, nullptr);
+					BindMaterialDescriptor(ctx.m_cmd_list, ctx.m_wnd.m_heap_samp, shaders::fwd::ERootParam::PbrRoughnessSampler, strength->m_sam->m_samp, nullptr);
+					cb.strength_row_u = strength->m_row_u;
+					cb.strength_row_v = strength->m_row_v;
+					cb.info.y = 1;
+					cb.info.z = strength->m_visualise ? 1 : 0;
+				}
 
 				auto gpu_address = ctx.m_upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 				ctx.m_cmd_list.SetGraphicsRootConstantBufferView((UINT)shaders::fwd::ERootParam::CBufDetailNormals, gpu_address);
