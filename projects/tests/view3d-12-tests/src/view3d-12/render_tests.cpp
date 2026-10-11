@@ -3218,20 +3218,20 @@ namespace fade_tests
 		Require(ImageDifference(tilted, fixture.Image()) < 100, "A default detail strength map changed the surface");
 
 		// Strength 2 doubles the gradient to 1, tilting the normal to (-1, 0, 1), so the 45 degree light hits it face on: 1 / cos(45) = 1.414.
-		auto strong = std::array<api::Vec2, 2>{api::Vec2{2, 0}, api::Vec2{2, 0}};
+		auto strong = std::array<api::Vec4, 2>{api::Vec4{2, 0, 1, 0}, api::Vec4{2, 0, 1, 0}};
 		View3D_DetailStrengthMapUpload(map.get(), strong.data(), 2);
 		fixture.CheckErrors();
 		auto doubled = fixture.Image();
 		Require(std::abs(brightness(doubled) / brightness(flat) - 1.414f) < 0.03f, (std::string("Detail strength 2 scaled the tilt incorrectly: flat ") + std::to_string(brightness(flat)) + ", doubled " + std::to_string(brightness(doubled))).c_str());
 
 		// Strength 0 removes the tilt.
-		auto none = std::array<api::Vec2, 2>{api::Vec2{0, 0}, api::Vec2{0, 0}};
+		auto none = std::array<api::Vec4, 2>{api::Vec4{0, 0, 1, 0}, api::Vec4{0, 0, 1, 0}};
 		View3D_DetailStrengthMapUpload(map.get(), none.data(), 2);
 		fixture.CheckErrors();
 		Require(ImageDifference(flat, fixture.Image()) < 100, "Detail strength 0 did not remove the tilt");
 
 		// Texels of strength 0 and 2 across the quad are filtered to 1 at its centre, which the projection puts midway between the texel centres.
-		auto ramp = std::array<api::Vec2, 2>{api::Vec2{0, 0}, api::Vec2{2, 0}};
+		auto ramp = std::array<api::Vec4, 2>{api::Vec4{0, 0, 1, 0}, api::Vec4{2, 0, 1, 0}};
 		View3D_DetailStrengthMapUpload(map.get(), ramp.data(), 2);
 		View3D_DetailStrengthMapProjectionSet(map.get(), api::Vec4{0.1f, 0, 0, 0.5f}, api::Vec4{0, 0.1f, 0, 0.5f});
 		fixture.CheckErrors();
@@ -3247,13 +3247,37 @@ namespace fade_tests
 		fixture.CheckErrors();
 		Require(ImageDifference(ramped, fixture.Image()) < 100, "Turning off detail strength visualisation did not restore the surface");
 
+		// A half turn reverses the gradient to (-0.5, 0, 0), tilting the normal away from the light: (1 - 0.5) / sqrt(1.25) / cos(45) = 0.447.
+		auto reversed = std::array<api::Vec4, 2>{api::Vec4{1, 0, -1, 0}, api::Vec4{1, 0, -1, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), reversed.data(), 2);
+		fixture.CheckErrors();
+		auto turned = fixture.Image();
+		Require(std::abs(brightness(turned) / brightness(flat) - 0.447f) < 0.03f, (std::string("A detail strength half turn did not reverse the tilt: flat ") + std::to_string(brightness(flat)) + ", turned " + std::to_string(brightness(turned))).c_str());
+
+		// Texels turned by a quarter turn either way blend almost equally at the centre, where their sideways gradients nearly cancel. Either
+		// texel alone tilts the normal across the light (1 / sqrt(1.25) = 0.894), and an unturned layer tilts it toward the light (1.342).
+		auto opposed = std::array<api::Vec4, 2>{api::Vec4{1, 0, 0, 1}, api::Vec4{1, 0, 0, -1}};
+		View3D_DetailStrengthMapUpload(map.get(), opposed.data(), 2);
+		fixture.CheckErrors();
+		auto blended = fixture.Image();
+		Require(std::abs(brightness(blended) / brightness(flat) - 1.0f) < 0.03f, (std::string("Turned detail strength texels were not blended: flat ") + std::to_string(brightness(flat)) + ", blended " + std::to_string(brightness(blended))).c_str());
+		View3D_DetailStrengthMapUpload(map.get(), ramp.data(), 2);
+		fixture.CheckErrors();
+
 		// Invalid inputs are reported and leave the map unchanged.
-		auto negative = std::array<api::Vec2, 2>{api::Vec2{-1, 0}, api::Vec2{1, 0}};
+		auto negative = std::array<api::Vec4, 2>{api::Vec4{-1, 0, 1, 0}, api::Vec4{1, 0, 1, 0}};
 		View3D_DetailStrengthMapUpload(map.get(), negative.data(), 2);
 		Require(!fixture.m_errors.empty(), "A negative detail strength was accepted");
 		fixture.m_errors.clear();
 		View3D_DetailStrengthMapUpload(map.get(), strong.data(), 1);
 		Require(!fixture.m_errors.empty(), "A detail strength upload of the wrong size was accepted");
+		fixture.m_errors.clear();
+		auto unnormalised = std::array<api::Vec4, 2>{api::Vec4{1, 0, 2, 0}, api::Vec4{1, 0, 1, 0}};
+		View3D_DetailStrengthMapUpload(map.get(), unnormalised.data(), 2);
+		Require(!fixture.m_errors.empty(), "A detail strength turn that is not a unit vector was accepted");
+		fixture.m_errors.clear();
+		View3D_DetailStrengthMapProjectionSet(map.get(), api::Vec4{0.1f, 0, 0, 0}, api::Vec4{0.2f, 0, 0, 0});
+		Require(!fixture.m_errors.empty(), "A detail strength projection with parallel rows was accepted");
 		fixture.m_errors.clear();
 		Require(View3D_DetailStrengthMapCreate(0, 1) == nullptr && !fixture.m_errors.empty(), "A zero-width detail strength map was accepted");
 		fixture.m_errors.clear();

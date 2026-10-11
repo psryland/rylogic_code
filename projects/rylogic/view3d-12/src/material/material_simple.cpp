@@ -90,7 +90,7 @@ namespace pr::rdr12
 		m_base_slope_variance = base_slope_variance;
 	}
 
-	// Create a 'width' x 'height' grid with strength (1, 0) everywhere.
+	// Create a 'width' x 'height' grid with texels (1, 0, 1, 0) everywhere.
 	materials::DetailStrengthMap::DetailStrengthMap(Renderer& rdr, int width, int height)
 		: m_tex()
 		, m_sam()
@@ -106,8 +106,8 @@ namespace pr::rdr12
 			throw std::invalid_argument("Detail strength map dimensions must be in [1,4096]");
 
 		// The factory persists because a temporary factory blocks until the GPU finishes when it is destroyed.
-		auto texels = std::vector<v2>(s_cast<size_t>(width) * s_cast<size_t>(height), v2(1, 0));
-		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32_FLOAT);
+		auto texels = std::vector<v4>(s_cast<size_t>(width) * s_cast<size_t>(height), v4(1, 0, 1, 0));
+		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32B32A32_FLOAT);
 		m_tex = m_factory->CreateTexture2D(TextureDesc(AutoId, ResDesc::Tex2D(image, 1)).name("DetailStrengthMap"));
 		m_sam = m_factory->CreateSampler(EStockSampler::LinearClamp);
 		m_factory->FlushToGpu(EGpuFlush::Async);
@@ -125,29 +125,33 @@ namespace pr::rdr12
 	// Set the world-space projection.
 	void materials::DetailStrengthMap::Projection(v4 const& row_u, v4 const& row_v)
 	{
-		// Non-finite rows would produce undefined texture coordinates.
+		// Non-finite rows would produce undefined texture coordinates, and parallel rows leave texel centres without world positions.
 		if (!IsFinite(row_u) || !IsFinite(row_v))
 			throw std::invalid_argument("Detail strength map projection must be finite");
+		if (LengthSq(Cross(row_u.w0(), row_v.w0())) == 0.0f)
+			throw std::invalid_argument("Detail strength map projection rows must not be parallel");
 
 		m_row_u = row_u;
 		m_row_v = row_v;
 	}
 
 	// Copy 'texels' to the GPU.
-	void materials::DetailStrengthMap::Upload(std::span<v2 const> texels)
+	void materials::DetailStrengthMap::Upload(std::span<v4 const> texels)
 	{
 		// Validate the texel count and domain at the public boundary.
 		if (texels.size() != s_cast<size_t>(m_width) * s_cast<size_t>(m_height))
 			throw std::invalid_argument("Detail strength map texel count must equal width * height");
 		for (auto const& t : texels)
 		{
-			// Strengths scale heights and add variance, so both must be finite and non-negative.
-			if (!std::isfinite(t.x) || !std::isfinite(t.y) || t.x < 0.0f || t.y < 0.0f)
-				throw std::invalid_argument("Detail strength map texels must be finite and non-negative");
+			// Strengths scale heights and add variance, so both must be finite and non-negative. The angle must be a unit vector.
+			if (!IsFinite(t) || t.x < 0.0f || t.y < 0.0f)
+				throw std::invalid_argument("Detail strength map texels must be finite with non-negative strengths");
+			if (std::abs(t.z * t.z + t.w * t.w - 1.0f) > 1e-3f)
+				throw std::invalid_argument("Detail strength map texel angles must be unit vectors");
 		}
 
 		// Queue on the graphics queue so the copy is ordered before later frames that sample it.
-		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32_FLOAT);
+		auto image = ::pr::compute::Image(m_width, m_height, texels.data(), DXGI_FORMAT_R32G32B32A32_FLOAT);
 		::pr::compute::UpdateSubresourceScope map(m_factory->CmdList(), m_factory->UploadBuffer(), m_tex->m_res.get(), 0, 0, 1, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 		map.Write(image);
 		map.Commit(::pr::compute::EFinalState::Restore);

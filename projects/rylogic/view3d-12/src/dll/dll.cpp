@@ -3493,19 +3493,19 @@ VIEW3D_API void __stdcall View3D_DetailStrengthMapProjectionSet(view3d::DetailSt
 }
 
 // Copy texels to a detail strength map.
-VIEW3D_API void __stdcall View3D_DetailStrengthMapUpload(view3d::DetailStrengthMap map, view3d::Vec2 const* texels, int count)
+VIEW3D_API void __stdcall View3D_DetailStrengthMapUpload(view3d::DetailStrengthMap map, view3d::Vec4 const* texels, int count)
 {
-	// The public Vec2 layout matches v2, so the texels are passed through without a copy; the map validates the count and values.
+	// The public Vec4 layout matches v4, so the texels are passed through without a copy; the map validates the count and values.
 	try
 	{
-		static_assert(sizeof(view3d::Vec2) == sizeof(v2));
+		static_assert(sizeof(view3d::Vec4) == sizeof(v4));
 		if (map == nullptr)
 			throw std::invalid_argument("Detail strength map is null");
 		if (count < 0 || (count != 0 && texels == nullptr))
 			throw std::invalid_argument("Detail strength map texels are invalid");
 
 		DllLockGuard;
-		map->Upload(std::span(reinterpret_cast<v2 const*>(texels), static_cast<size_t>(count)));
+		map->Upload(std::span(reinterpret_cast<v4 const*>(texels), static_cast<size_t>(count)));
 	}
 	CatchAndReport(View3D_DetailStrengthMapUpload, , );
 }

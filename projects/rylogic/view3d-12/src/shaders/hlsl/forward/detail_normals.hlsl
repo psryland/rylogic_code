@@ -6,7 +6,7 @@
 // roughness slot (t5/s5). Simple materials do not otherwise use either slot.
 ConstantBuffer<CBufDetailNormals> g_detail : register(b7);
 
-// Return the (height scale, added slope variance) strength at world position 'ws'. Without a strength map the layers are unchanged.
+// Return the bilinearly filtered (height scale, added slope variance) strength at world position 'ws'. Without a strength map it is (1, 0).
 float2 DetailStrength(float3 ws)
 {
 	// The map's projection puts [0,1] across the grid, and its clamp sampler extends the edge texels beyond it.
@@ -50,6 +50,48 @@ float DetailNoiseWarp(float2 p, uint seed)
 	return 2.0f * DetailValueNoise(p, seed) - 1.0f;
 }
 
+// Add the layers at world position 'ws' to 'gradient' and 'variance', scaled by 'weight'. The layers are drawn at height scale 'strength' and turned
+// by 'turn' = (cos a, sin a) from their u direction toward their v direction about world point 'pivot'. 'ws_dx' and 'ws_dy' are the screen
+// derivatives of 'ws', which select the mip level, because callers may run this in non-uniform flow control.
+void AccumulateDetailLayers(float3 ws, float3 ws_dx, float3 ws_dy, float3 pivot, float2 turn, float strength, float weight, inout float3 gradient, inout float variance)
+{
+	// Turning the pattern about 'pivot' turns the projection rows and leaves the pivot's own texture coordinates unchanged. Keeping the pivot
+	// near the fragment keeps patterns of nearly equal angles nearly equal, so the blend between neighbouring texels stays coherent.
+	float3 rel = ws - pivot;
+	for (int i = 0; i != g_detail.info.x; ++i)
+	{
+		// Find the layer's texture coordinates in its turned projection. The noise coordinates ignore the rows' offsets, so a layer that scrolls
+		// (and wraps its offset) does not move or jump its noise.
+		float4 row_u = g_detail.row_u[i];
+		float4 row_v = g_detail.row_v[i];
+		float3 turned_u = turn.x * row_u.xyz + turn.y * row_v.xyz;
+		float3 turned_v = turn.x * row_v.xyz - turn.y * row_u.xyz;
+		float2 proj = float2(dot(rel, turned_u) + dot(pivot, row_u.xyz), dot(rel, turned_v) + dot(pivot, row_v.xyz));
+		float2 uv = proj + float2(row_u.w, row_v.w);
+		float2 noise_uv = proj * g_detail.noise_frequency[i];
+
+		// World noise varies the layer's weight about 1 so that different layers dominate in different places. Each layer uses its own
+		// noise pattern, selected by the layer index.
+		float noise = DetailValueNoise(noise_uv, uint(i));
+		float scale = strength * g_detail.height_scale[i] * (1.0f + g_detail.weight_noise[i] * (2.0f * noise - 1.0f));
+
+		// Two more noise patterns shift the texture coordinates smoothly, which bends the rows of repeated tiles so they do not line up over
+		// large areas. Seeds above the layer limit keep these patterns independent of every layer's weight noise.
+		float2 warp = float2(DetailNoiseWarp(noise_uv, uint(DetailNormalsMaxLayers + 2 * i)), DetailNoiseWarp(noise_uv, uint(DetailNormalsMaxLayers + 2 * i + 1)));
+		uv += g_detail.warp[i] * warp;
+
+		// Each layer's map slope is per texture unit, so the chain rule through the turned rows gives the world-space height gradient.
+		// The map's blue channel holds half the mean square slope. Mip filtering averages it as well as the slopes, so the gap between the mean
+		// square and the square of the mean is the slope variance that the filtered normal no longer shows. It is scaled by the mean squared
+		// length of the rows. The warp's own derivatives are small, so the turned rows give the texture-coordinate derivatives.
+		float4 texel = g_normal_texture.SampleGrad(g_normal_sampler, uv, float2(dot(ws_dx, turned_u), dot(ws_dx, turned_v)), float2(dot(ws_dy, turned_u), dot(ws_dy, turned_v)));
+		float2 slope = texel.xy * 2.0f - 1.0f;
+		float unresolved = max(2.0f * texel.z - dot(slope, slope), 0.0f);
+		gradient += weight * scale * (slope.x * turned_u + slope.y * turned_v);
+		variance += weight * scale * scale * 0.5f * (dot(turned_u, turned_u) + dot(turned_v, turned_v)) * unresolved;
+	}
+}
+
 // Return 'In' with its world normal tilted by the summed height gradient of the detail-normal layers. Also sets the unresolved slope
 // variance used by the shading, from the layers' detail that the mip filtering has averaged away plus the base variance.
 PSIn ApplyDetailNormals(PSIn In)
@@ -61,40 +103,56 @@ PSIn ApplyDetailNormals(PSIn In)
 
 	normal = normalize(normal);
 
-	// The strength map scales every layer's height and adds to the base variance at this position.
-	float2 strength = DetailStrength(In.ws_vert.xyz);
-
-	// Each layer's map slope is per texture unit, so the chain rule through the projection rows gives the world-space height gradient.
-	// The map's blue channel holds half the mean square slope. Mip filtering averages it as well as the slopes, so the gap between the mean
-	// square and the square of the mean is the slope variance that the filtered normal no longer shows.
+	// Without a strength map the layers are drawn once, unscaled and unturned. The screen derivatives are taken here, in uniform flow control.
+	float3 ws = In.ws_vert.xyz;
+	float3 ws_dx = ddx(ws);
+	float3 ws_dy = ddy(ws);
 	float3 gradient = float3(0, 0, 0);
-	float variance = g_detail.surface.x + strength.y;
-	for (int i = 0; i != g_detail.info.x; ++i)
+	float variance = g_detail.surface.x;
+	if (g_detail.info.y == 0)
 	{
-		// Find the layer's texture coordinates in its own projection. The noise coordinates ignore the rows' offsets, so a layer that scrolls
-		// (and wraps its offset) does not move or jump its noise.
-		float4 row_u = g_detail.row_u[i];
-		float4 row_v = g_detail.row_v[i];
-		float2 proj = float2(dot(In.ws_vert.xyz, row_u.xyz), dot(In.ws_vert.xyz, row_v.xyz));
-		float2 uv = proj + float2(row_u.w, row_v.w);
-		float2 noise_uv = proj * g_detail.noise_frequency[i];
+		AccumulateDetailLayers(ws, ws_dx, ws_dy, float3(0, 0, 0), float2(1, 0), 1.0f, 1.0f, gradient, variance);
+	}
+	else
+	{
+		// Find the 2x2 texels around the fragment and their bilinear weights. Outside the grid both texels of a column or row clamp to the edge
+		// texel, so that texel takes the whole weight and is drawn once.
+		uint width, height;
+		g_roughness_texture.GetDimensions(width, height);
+		int2 last = int2(width, height) - 1;
+		float2 size = float2(width, height);
+		float2 uv = float2(dot(ws, g_detail.strength_row_u.xyz) + g_detail.strength_row_u.w, dot(ws, g_detail.strength_row_v.xyz) + g_detail.strength_row_v.w);
+		float2 t = uv * size - 0.5f;
+		float2 f = t - floor(t);
+		int2 c0 = clamp(int2(floor(t)), 0, last);
+		int2 c1 = clamp(int2(floor(t)) + 1, 0, last);
+		if (c0.x == c1.x) f.x = 0.0f;
+		if (c0.y == c1.y) f.y = 0.0f;
 
-		// World noise varies the layer's weight about 1 so that different layers dominate in different places. Each layer uses its own
-		// noise pattern, selected by the layer index.
-		float noise = DetailValueNoise(noise_uv, uint(i));
-		float scale = strength.x * g_detail.height_scale[i] * (1.0f + g_detail.weight_noise[i] * (2.0f * noise - 1.0f));
+		// A texture-coordinate offset maps to the world offset in the plane of the map's rows by inverting their 2x2 Gram matrix.
+		// The projection rows are not parallel, so the determinant is positive.
+		float3 su = g_detail.strength_row_u.xyz;
+		float3 sv = g_detail.strength_row_v.xyz;
+		float suu = dot(su, su), suv = dot(su, sv), svv = dot(sv, sv);
+		float inv_det = 1.0f / (suu * svv - suv * suv);
 
-		// Two more noise patterns shift the texture coordinates smoothly, which bends the rows of repeated tiles so they do not line up over
-		// large areas. Seeds above the layer limit keep these patterns independent of every layer's weight noise.
-		float2 warp = float2(DetailNoiseWarp(noise_uv, uint(DetailNormalsMaxLayers + 2 * i)), DetailNoiseWarp(noise_uv, uint(DetailNormalsMaxLayers + 2 * i + 1)));
-		uv += g_detail.warp[i] * warp;
+		// Draw each texel's layers at its own strength and angle, turned about its centre. Texels without weight or strength add nothing.
+		for (int k = 0; k != 4; ++k)
+		{
+			// Select the corner's texel and bilinear weight, and add its base slope variance.
+			int2 cell = int2((k & 1) != 0 ? c1.x : c0.x, (k & 2) != 0 ? c1.y : c0.y);
+			float weight = ((k & 1) != 0 ? f.x : 1.0f - f.x) * ((k & 2) != 0 ? f.y : 1.0f - f.y);
+			float4 texel = g_roughness_texture.Load(int3(cell, 0));
+			variance += weight * max(texel.y, 0.0f);
+			if (weight == 0.0f || texel.x <= 0.0f)
+				continue;
 
-		// Accumulate the world gradient, and the unresolved variance scaled by the mean squared length of the projection rows.
-		float4 texel = g_normal_texture.Sample(g_normal_sampler, uv);
-		float2 slope = texel.xy * 2.0f - 1.0f;
-		float unresolved = max(2.0f * texel.z - dot(slope, slope), 0.0f);
-		gradient += scale * (slope.x * row_u.xyz + slope.y * row_v.xyz);
-		variance += scale * scale * 0.5f * (dot(row_u.xyz, row_u.xyz) + dot(row_v.xyz, row_v.xyz)) * unresolved;
+			// The texel centre's world position, in the plane of the map's rows through the fragment, is the pivot of its turn.
+			float2 duv = (float2(cell) + 0.5f) / size - uv;
+			float2 ab = inv_det * float2(svv * duv.x - suv * duv.y, suu * duv.y - suv * duv.x);
+			float3 pivot = ws + ab.x * su + ab.y * sv;
+			AccumulateDetailLayers(ws, ws_dx, ws_dy, pivot, texel.zw, texel.x, weight, gradient, variance);
+		}
 	}
 	g_unresolved_slope_variance = variance;
 

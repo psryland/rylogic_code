@@ -1730,19 +1730,20 @@ extern "C"
 	// has no detail normals.
 	VIEW3D_API void __stdcall View3D_ObjectDetailNormalLayersSet(pr::view3d::Object object, pr::view3d::DetailNormalLayer const* layers, int count, float base_slope_variance);
 
-	// A detail strength map varies an object's detail-normal layers over its surface. Each texel holds (x, y): x scales the height of every layer,
-	// and y adds to the base slope variance. Both must be finite and non-negative. The texture coordinates of a world position 'p' are
-	// u = dot(p.xyz, row_u.xyz) + row_u.w and v = dot(p.xyz, row_v.xyz) + row_v.w, where [0,1] spans the grid. Values are filtered bilinearly
-	// between texel centres, and positions outside the grid use the nearest edge texels. A new map is (1, 0) everywhere with the identity XY
-	// projection. Release using View3D_DetailStrengthMapRelease. Returns null on failure.
+	// A detail strength map varies an object's detail-normal layers over its surface. Each texel holds (x, y, z, w): x scales the height of every
+	// layer and y adds to the base slope variance, both finite and non-negative; (z, w) = (cos a, sin a) is a unit vector that turns the layers'
+	// pattern by angle 'a' from their u direction toward their v direction, about the texel's centre. The texture coordinates of a world position
+	// 'p' are u = dot(p.xyz, row_u.xyz) + row_u.w and v = dot(p.xyz, row_v.xyz) + row_v.w, where [0,1] spans the grid. Each fragment blends the
+	// layers of the nearest 2x2 texels with bilinear weights, and positions outside the grid use the nearest edge texels. A new map is
+	// (1, 0, 1, 0) everywhere with the identity XY projection. Release using View3D_DetailStrengthMapRelease. Returns null on failure.
 	VIEW3D_API pr::view3d::DetailStrengthMap __stdcall View3D_DetailStrengthMapCreate(int width, int height);
 	VIEW3D_API void __stdcall View3D_DetailStrengthMapRelease(pr::view3d::DetailStrengthMap map);
 
-	// Set the world-space projection of the map. Both rows must be finite.
+	// Set the world-space projection of the map. Both rows must be finite and their xyz parts must not be parallel.
 	VIEW3D_API void __stdcall View3D_DetailStrengthMapProjectionSet(pr::view3d::DetailStrengthMap map, pr::view3d::Vec4 row_u, pr::view3d::Vec4 row_v);
 
 	// Copy 'count' (= width * height) row-major texels to the GPU, visible from the next render.
-	VIEW3D_API void __stdcall View3D_DetailStrengthMapUpload(pr::view3d::DetailStrengthMap map, pr::view3d::Vec2 const* texels, int count);
+	VIEW3D_API void __stdcall View3D_DetailStrengthMapUpload(pr::view3d::DetailStrengthMap map, pr::view3d::Vec4 const* texels, int count);
 
 	// Show the height strength as colour, from blue at 0 through green at 1 to red at 2 or more, instead of the shaded surface.
 	VIEW3D_API void __stdcall View3D_DetailStrengthMapVisualiseSet(pr::view3d::DetailStrengthMap map, BOOL visualise);
