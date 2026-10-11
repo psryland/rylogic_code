@@ -292,11 +292,11 @@ namespace pr::physics
 			.m_centre_x = boundary.m_centre_x, .m_centre_y = boundary.m_centre_y, .m_radius = boundary.m_radius,
 			.m_spacing = boundary.m_surface_spacing, .m_pad = 0});
 		for (auto resource : {bodies, shapes, m_recipe.get(), m_plans.get(), m_patch_buffer.get(), m_instance_buffer.get(), sleep_islands})
-			job.m_cmd_list.AddComputeRootShaderResourceView(resource->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootShaderResourceView(resource);
 
 		// Bind append destinations after the read-only streams in root-signature order.
 		for (auto resource : {counters, contacts, m_status.get()})
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(resource->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(resource);
 
 		// Finish world-contact writes before deriving the solver's indirect dispatch from the combined count.
 		job.m_cmd_list.Dispatch(s_cast<int>(m_instances.size()), 1, 1);
@@ -308,8 +308,8 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(m_dispatch.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_dispatch.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(Constants{s_cast<uint32_t>(max_contacts), 0, 0, 0});
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(dispatch->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(dispatch);
 		job.m_cmd_list.Dispatch(1, 1, 1);
 		job.m_barriers.UAV(dispatch);
 		job.m_barriers.Commit();

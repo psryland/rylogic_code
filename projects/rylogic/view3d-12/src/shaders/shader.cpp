@@ -124,7 +124,7 @@ namespace pr::rdr12
 	void ProceduralShader::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const&, CameraTransforms const&, DrawListElement const*)
 	{
 		// Upload the current copy each draw; identical content is shared within the frame.
-		auto gpu_address = upload.Add(m_constants, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(m_constants, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		auto buffer_address = m_buffer != nullptr ? m_buffer->GetGPUVirtualAddress() : D3D12_GPU_VIRTUAL_ADDRESS{};
 		auto Bind = [&](UINT cbuf_slot, UINT buffer_slot)
 		{

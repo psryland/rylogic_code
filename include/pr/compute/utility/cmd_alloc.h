@@ -121,14 +121,29 @@ namespace pr::compute
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdAllocPool
 	{
+		// Notes:
+		//  - Command lists record raw resource pointers. When a list that uses allocators from this pool is closed, it moves its
+		//    references to the resources it used into this pool (see 'Retain'). The pool releases them once 'm_gsync' reports that
+		//    the GPU has completed the sync point that follows the list's execution.
+		//  - Retained references are released whenever 'Get' or 'Sweep' is called. Call 'Sweep' after waiting for the GPU when the
+		//    resources must be released immediately, e.g. before resizing swap chain buffers.
+		//  - Released entries are removed without freeing memory, so steady-state recording does not allocate.
+		struct Retained
+		{
+			D3DPtr<ID3D12Resource> m_res; // A resource used by a closed command list
+			uint64_t m_sync_point;        // The sync point after which the GPU no longer uses 'm_res'
+		};
 		using pool_t = pr::vector<CmdAlloc<ListType>, 4, false>;
+		using retained_t = std::vector<Retained>;
 
 		GpuSync* m_gsync;
 		pool_t m_pool;
+		retained_t m_retained;
 
 		explicit CmdAllocPool(GpuSync& gsync)
 			:m_gsync(&gsync)
 			,m_pool()
+			,m_retained()
 		{}
 		CmdAllocPool(CmdAllocPool&&) = default;
 		CmdAllocPool(CmdAllocPool const&) = delete;
@@ -136,12 +151,19 @@ namespace pr::compute
 		CmdAllocPool& operator =(CmdAllocPool const&) = delete;
 		~CmdAllocPool()
 		{
+			// The GPU may still be using the retained resources
+			if (m_gsync != nullptr && !m_retained.empty())
+				m_gsync->Wait();
+
 			m_gsync = nullptr; // Used to catch return to destructed pool
 		}
 
 		// Get an allocator that's available to be used
 		CmdAlloc<ListType> Get()
 		{
+			// Release the resources that the GPU has finished with
+			Sweep();
+
 			// Move the available allocators to the back of the pool.
 			auto sync_point = m_gsync->CompletedSyncPoint();
 			auto iter = std::partition(m_pool.begin(), m_pool.end(), [=](auto& alloc) { return alloc.m_sync_point > sync_point; });
@@ -169,6 +191,27 @@ namespace pr::compute
 			alloc.m_pool = this;
 			Check(alloc->Reset()); // Reset it ready for use
 			return std::move(alloc);
+		}
+
+		// Hold the references in 'resources' until the GPU has completed the sync point that follows the commands that use them.
+		// 'resources' is left empty, but keeps its capacity so the caller can reuse it without allocating.
+		void Retain(std::vector<D3DPtr<ID3D12Resource>>& resources)
+		{
+			// Lists are executed before the next sync point is added, so their commands complete by 'NextSyncPoint'
+			auto sync_point = m_gsync->NextSyncPoint();
+			for (auto& res : resources)
+				m_retained.push_back(Retained{ std::move(res), sync_point });
+
+			resources.resize(0);
+		}
+
+		// Release the retained resources that the GPU has finished with
+		void Sweep()
+		{
+			// Unordered removal, because the release order does not matter. 'erase' keeps the capacity for reuse.
+			auto sync_point = m_gsync->CompletedSyncPoint();
+			auto end = std::partition(m_retained.begin(), m_retained.end(), [=](auto const& r) { return r.m_sync_point > sync_point; });
+			m_retained.erase(end, m_retained.end());
 		}
 
 		// Return an allocator to the pool

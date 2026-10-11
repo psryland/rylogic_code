@@ -373,16 +373,16 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(step.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(constants);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_endpoints->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_descriptors->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_blocks->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_rows->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_state->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_endpoints);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_descriptors);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_blocks);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_rows);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_state);
 		auto* pseudo_velocities = m_r_pseudo_velocities != nullptr ? m_r_pseudo_velocities.get() : m_r_state.get();
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(pseudo_velocities->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(pseudo_velocities);
 		auto* break_states = m_r_break_states != nullptr ? m_r_break_states.get() : m_r_state.get();
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(break_states->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(break_states);
 	}
 
 	// Insert UAV ordering between dependent compiler, colouring, and solver passes.

@@ -269,9 +269,9 @@ namespace pr::compute::particle_collision
 			job.m_cmd_list.SetPipelineState(m_cs_integrate.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_integrate.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sim, 0);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_sim.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(positions.get());
@@ -288,9 +288,9 @@ namespace pr::compute::particle_collision
 			job.m_cmd_list.SetPipelineState(m_cs_boundaries.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_boundaries.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_bound, 0);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_bound.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(dynamics.get());
@@ -306,7 +306,7 @@ namespace pr::compute::particle_collision
 			job.m_cmd_list.SetPipelineState(m_cs_culldead.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_culldead.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_cull, 0);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_cull.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(positions.get());

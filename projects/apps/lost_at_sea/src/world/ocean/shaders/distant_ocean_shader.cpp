@@ -56,7 +56,7 @@ namespace las
 			return;
 
 		auto& cbuf = storage_cast<CBufDistantOcean>(m_cbuf);
-		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(ERootParam::CBufDistantOcean), gpu_address);
 	}
 

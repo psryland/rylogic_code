@@ -76,7 +76,14 @@ namespace pr::physics
 
 	using BBox = math::BoundingBox<float>;
 	using IShaderCache = ::pr::compute::shader_cache::IShaderCache;
-	using GpuJob = ::pr::compute::GpuJob<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+
+	// Physics work is submitted to DIRECT queues, not COMPUTE queues. NVIDIA drivers (seen on RTX 3080 Ti/4090 with drivers 610.60-616.64)
+	// can corrupt the private (local) memory of a compute shader running on a COMPUTE queue while another DIRECT queue renders with pixel shaders
+	// that use dynamically indexed private arrays. The physics solvers keep matrices in private arrays, so the corruption causes random solver
+	// failures and GPU hangs. A second DIRECT queue does not show the problem. See https://github.com/dsvensson/nvidia-bug for a minimal reproducer.
+	inline constexpr D3D12_COMMAND_LIST_TYPE GpuQueueType = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	using GpuJob = ::pr::compute::GpuJob<GpuQueueType>;
+	using GpuAddress = ::pr::compute::GpuAddress;
 
 	// Custom deleter for smart pointers
 	template <typename T> struct Deleter {

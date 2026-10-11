@@ -753,12 +753,12 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetPipelineState(m_cs_apply_forces.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_forces.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 		
 			job.m_barriers.UAV(m_r_particles.get());
@@ -780,8 +780,8 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetPipelineState(m_cs_apply_probe.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_probe.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_probe);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_probe.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -802,12 +802,12 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetPipelineState(m_cs_cull_particles.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_cull_particles.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -839,8 +839,8 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetPipelineState(m_cs_colour.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_colour.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_colours);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_colours.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -861,11 +861,11 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetPipelineState(m_cs_gen_map.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_gen_map.m_sig.get());
 			job.m_cmd_list.AddComputeRootConstantBufferView(job.m_upload.Add(cb_map, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true));
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count);
 			job.m_cmd_list.AddComputeRootDescriptorTable(job.m_view_heap.Add(tex_map->m_uav));
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_map.TexDim, 1 }, { 32, 32, 1 }));
 
@@ -892,12 +892,12 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_debugging.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sim);
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_probe);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output);
 			job.m_cmd_list.Dispatch(DispatchCount({ 1, 1, 1 }, { 1, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_output.get());

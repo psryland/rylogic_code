@@ -34,7 +34,7 @@ namespace pr::rdr12::shaders
 				.colour = Colour(diag.m_normal_colour).rgba,
 				.length = diag.m_normal_lengths,
 			};
-			auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+			auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufDiag, gpu_address);
 		}
 	}

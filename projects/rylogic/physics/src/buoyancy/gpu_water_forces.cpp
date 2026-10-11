@@ -55,8 +55,8 @@ namespace pr::physics
 		, m_config(std::move(config))
 		, m_step()
 		, m_candidates()
-		, m_candidates_va()
-		, m_elements_va()
+		, m_candidates_addr(nullptr)
+		, m_elements_addr(nullptr)
 	{
 		// Root parameter order must match the binding order used in Apply.
 		m_config.Validate();
@@ -116,8 +116,8 @@ namespace pr::physics
 		if (!elements.empty())
 			memcpy(upload_elements.ptr<std::byte>(), elements.data(), elements.size_bytes());
 
-		m_candidates_va = upload_candidates.m_res->GetGPUVirtualAddress() + upload_candidates.m_ofs;
-		m_elements_va = upload_elements.m_res->GetGPUVirtualAddress() + upload_elements.m_ofs;
+		m_candidates_addr = upload_candidates;
+		m_elements_addr = upload_elements;
 	}
 
 	// Wake sleeping bodies that the moving surface may reach.
@@ -168,9 +168,9 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(m_step.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_step.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_candidates_va);
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_elements_va);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_candidates_addr);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_elements_addr);
 		job.m_cmd_list.Dispatch((cb.m_candidate_count + WaterForcesThreadCount - 1) / WaterForcesThreadCount, 1, 1);
 		job.m_barriers.UAV(bodies).Commit();
 	}

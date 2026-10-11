@@ -17,14 +17,14 @@
 
 namespace pr::physics
 {
-	using ComGpu = ::pr::compute::Gpu<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
-	using CmdList = ::pr::compute::CmdList<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+	using ComGpu = ::pr::compute::Gpu<GpuQueueType>;
+	using CmdList = ::pr::compute::CmdList<GpuQueueType>;
 	using ComputeStep = ::pr::compute::ComputeStep;
 	using GpuUploadBuffer = ::pr::compute::GpuUploadBuffer;
 	using ReadbackAlloc = ::pr::compute::GpuReadbackBuffer::Allocation;
-	using BoundsSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<float, uint32_t, true, D3D12_COMMAND_LIST_TYPE_COMPUTE>;
-	using ContactSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<float, uint32_t, true, D3D12_COMMAND_LIST_TYPE_COMPUTE>;
-	using ContactEndpointSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<uint32_t, uint32_t, true, D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+	using BoundsSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<float, uint32_t, true, GpuQueueType>;
+	using ContactSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<float, uint32_t, true, GpuQueueType>;
+	using ContactEndpointSorter = ::pr::compute::gpu_radix_sort::GpuRadixSort<uint32_t, uint32_t, true, GpuQueueType>;
 
 	struct Gpu
 	{
@@ -62,7 +62,7 @@ namespace pr::physics
 		}
 
 		// Allocate a DX resource
-		D3DPtr<ID3D12Resource> CreateResource(::pr::compute::ResDesc const& desc, ::pr::compute::ComCmdList& cmd_list, std::string_view name)
+		D3DPtr<ID3D12Resource> CreateResource(::pr::compute::ResDesc const& desc, CmdList& cmd_list, std::string_view name)
 		{
 			return m_gpu.CreateResource(desc, cmd_list, name);
 		}

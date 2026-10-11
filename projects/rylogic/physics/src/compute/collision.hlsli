@@ -171,8 +171,7 @@ odr int LineSupportFeature(float3 line_pos, float3 line_dir, float hlength, floa
 	float d = dot(axis, line_dir);
 
 	// Hemispherical thickness offset: add line_r * axis_hat (axis normalised).
-	// Note: ShapeLine has cylindrical sides (no hemispherical end-caps), but the support
-	// point for SAT still shifts by the thickness in the axis direction.
+	// A thick ShapeLine is a sphere-swept segment (a capsule), so its support point is the segment support shifted by the radius along the axis.
 	float3 thick_off = float3(0, 0, 0);
 	if (line_r > 0)
 	{

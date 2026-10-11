@@ -999,12 +999,12 @@ namespace pr::rdr12
 		return m_stats;
 	}
 
-	// Return the TLAS GPU virtual address, or zero if no TLAS is built.
-	D3D12_GPU_VIRTUAL_ADDRESS RayTracingScene::AccelerationStructureAddress() const
+	// Return the TLAS resource, or null if no TLAS is built.
+	ID3D12Resource* RayTracingScene::AccelerationStructure() const
 	{
 		return Built()
-			? m_data->m_tlas->GetGPUVirtualAddress()
-			: D3D12_GPU_VIRTUAL_ADDRESS{};
+			? m_data->m_tlas.get()
+			: nullptr;
 	}
 
 	// Return the material buffer used by reflection closest-hit shaders.

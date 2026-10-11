@@ -68,7 +68,7 @@ namespace las
 
 		// Upload the ocean constant buffer and bind to root parameter CBufScreenSpace (b3).
 		// The ocean shader reuses this slot since it doesn't need screen-space geometry params.
-		auto gpu_address = upload.Add(m_cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(m_cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(ERootParam::CBufOcean), gpu_address);
 	}
 

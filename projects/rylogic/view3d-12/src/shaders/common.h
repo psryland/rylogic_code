@@ -297,10 +297,10 @@ namespace pr::rdr12
 		};
 	}
 
-	// Upload the scene's resolved lights for the current frame and return the GPU address of the light array.
+	// Upload the scene's resolved lights for the current frame and return the GPU location of the light array.
 	// At least one element is always uploaded so the address is valid even when the scene has no lights.
 	template <typename TUploadBuffer>
-	D3D12_GPU_VIRTUAL_ADDRESS UploadLights(TUploadBuffer& upload, Scene const& scene)
+	GpuAddress UploadLights(TUploadBuffer& upload, Scene const& scene)
 	{
 		// Allocate space for the light array in the upload buffer
 		auto lights = scene.ResolvedLights();
@@ -320,7 +320,7 @@ namespace pr::rdr12
 			dst[i] = ToShaderLight(lights[i], views);
 		}
 
-		return alex.m_res->GetGPUVirtualAddress() + alex.m_ofs;
+		return alex;
 	}
 
 	// Upload shadow views and return the GPU address of the view array. 'settings' gives the atlas size and filter width.

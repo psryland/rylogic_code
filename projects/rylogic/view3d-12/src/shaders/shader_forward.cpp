@@ -158,11 +158,11 @@ namespace pr::rdr12::shaders
 			cb0.far_fade = v4(range.x, range.y, 1, 0);
 		}
 
-		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 
 		// Bind the frame's lights as a root structured buffer
-		auto lights_address = UploadLights(upload, scene);
+		auto lights_address = UploadLights(upload, scene).VirtualAddress();
 		cmd_list->SetGraphicsRootShaderResourceView((UINT)ERootParam::Lights, lights_address);
 
 		// Bind the frame's shadow views as a root structured buffer. The shadow atlas is bound by the render step.

@@ -251,6 +251,7 @@
     <ClInclude Include="..\..\..\include\pr\compute\resource\descriptor.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\descriptor_store.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_descriptor_heap.h" />
+    <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_address.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_allocation.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_buffer.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_buffer_page.h" />

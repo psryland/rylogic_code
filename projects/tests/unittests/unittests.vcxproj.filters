@@ -1366,6 +1366,9 @@
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_descriptor_heap.h">
       <Filter>pr\compute\resource</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_address.h">
+      <Filter>pr\compute\resource</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_allocation.h">
       <Filter>pr\compute\resource</Filter>
     </ClInclude>

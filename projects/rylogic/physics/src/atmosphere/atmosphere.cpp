@@ -1040,7 +1040,7 @@ namespace pr::physics::atmosphere
 
 		// Transition the ping-pong fields for one 'src'/'dst' arrangement and bind the shared root signature and every field view.
 		// Field views stay bound until the next call, so call this only when the arrangement changes. Run then only changes the pipeline and constants.
-		void BindFields(GpuJob& job, int src, int dst, D3D12_GPU_VIRTUAL_ADDRESS source_buffer)
+		void BindFields(GpuJob& job, int src, int dst, GpuAddress source_buffer)
 		{
 			// The ping-pong fields default to UAV state but 'src' is bound as root SRVs. The barrier batch tracks the current state so repeated transitions are dropped.
 			// A UAV-to-SRV transition also orders the previous kernel's writes before the next kernel's reads, so velocity writes need no separate UAV barrier.
@@ -1061,9 +1061,9 @@ namespace pr::physics::atmosphere
 			auto const uav = [&](int i, ID3D12Resource* res)
 			{
 				// UAV root parameters follow the constants in register order.
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(s_cast<int>(ERootParam::FieldsOut) + i, res->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(s_cast<int>(ERootParam::FieldsOut) + i, res);
 			};
-			auto const srv = [&](int i, D3D12_GPU_VIRTUAL_ADDRESS address)
+			auto const srv = [&](int i, GpuAddress address)
 			{
 				// SRV root parameters follow the UAVs in register order.
 				job.m_cmd_list.SetComputeRootShaderResourceView(s_cast<int>(ERootParam::FieldsIn) + i, address);
@@ -1076,14 +1076,14 @@ namespace pr::physics::atmosphere
 			uav(4, m_pressure.get());
 			uav(5, m_divergence_buffer.get());
 			uav(6, m_residual_buffer.get());
-			srv(0, m_u[src]->GetGPUVirtualAddress());
-			srv(1, m_v[src]->GetGPUVirtualAddress());
-			srv(2, m_w[src]->GetGPUVirtualAddress());
-			srv(3, m_temperature[src]->GetGPUVirtualAddress());
-			srv(4, m_floor_temperature->GetGPUVirtualAddress());
+			srv(0, m_u[src].get());
+			srv(1, m_v[src].get());
+			srv(2, m_w[src].get());
+			srv(3, m_temperature[src].get());
+			srv(4, m_floor_temperature.get());
 			srv(5, source_buffer);
-			srv(6, m_floor_height->GetGPUVirtualAddress());
-			srv(7, m_outside_air->GetGPUVirtualAddress());
+			srv(6, m_floor_height.get());
+			srv(7, m_outside_air.get());
 		}
 
 		// Forget the recorded pipeline state. Call before recording into a command list that other code may have used since the last atmosphere dispatch.
@@ -1141,10 +1141,10 @@ namespace pr::physics::atmosphere
 			auto const cb = Constants(0.0f, 0, 0);
 			auto const all = EFieldWrites::Velocity | EFieldWrites::Pressure | EFieldWrites::Divergence | EFieldWrites::Residual;
 			ResetBinding();
-			BindFields(job, 1, 0, m_source_sentinel->GetGPUVirtualAddress());
+			BindFields(job, 1, 0, m_source_sentinel.get());
 			Dispatch(job, m_initialise, cb);
 			Barrier(job, all);
-			BindFields(job, 0, 1, m_source_sentinel->GetGPUVirtualAddress());
+			BindFields(job, 0, 1, m_source_sentinel.get());
 			Dispatch(job, m_initialise, cb);
 			Barrier(job, all);
 			m_current = 0;
@@ -1359,7 +1359,7 @@ namespace pr::physics::atmosphere
 			throw std::invalid_argument("Atmosphere heat-source count exceeds the per-step limit");
 
 		// Convert heat sources to the shader layout in upload memory.
-		auto source_buffer = m_impl->m_source_sentinel->GetGPUVirtualAddress();
+		auto source_buffer = GpuAddress(m_impl->m_source_sentinel);
 		if (!heat_sources.empty())
 		{
 			auto upload = job.m_upload.Alloc<GpuHeatSource>(isize(heat_sources));
@@ -1371,7 +1371,7 @@ namespace pr::physics::atmosphere
 
 				upload.ptr<GpuHeatSource>()[i] = GpuHeatSource{ .m_centre = src.m_centre, .m_radius = src.m_radius, .m_heating_rate = src.m_heating_rate, .m_target_temperature = src.m_target_temperature, .m_relaxation_rate = src.m_relaxation_rate };
 			}
-			source_buffer = upload.m_res->GetGPUVirtualAddress() + upload.m_ofs;
+			source_buffer = upload;
 		}
 
 		// Floor temperatures and outside air are uploaded only when they changed since the last step.
@@ -1678,13 +1678,13 @@ namespace pr::physics::atmosphere
 			job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb);
 			job.m_cmd_list.AddComputeRoot32BitConstants(tracer_cb);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_particles[dst]->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_u[solver_src]->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_v[solver_src]->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_w[solver_src]->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_temperature[solver_src]->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_floor_height->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_particles[src]->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_particles[dst]);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_u[solver_src]);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_v[solver_src]);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_w[solver_src]);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_temperature[solver_src]);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_solver.m_impl->m_floor_height);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_particles[src]);
 			job.m_cmd_list.Dispatch(dispatch_x, 1, 1);
 		}
 
@@ -1938,13 +1938,13 @@ namespace pr::physics::atmosphere
 		job.m_cmd_list.SetComputeRootSignature(impl.m_sample.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
 		job.m_cmd_list.AddComputeRoot32BitConstants(probe_cb);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(impl.m_samples->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_u[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_v[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_w[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_temperature[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_floor_height->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(upload.m_res->GetGPUVirtualAddress() + upload.m_ofs);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(impl.m_samples);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_u[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_v[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_w[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_temperature[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_floor_height);
+		job.m_cmd_list.AddComputeRootShaderResourceView(upload);
 		job.m_cmd_list.Dispatch((isize(points) + AtmosphereTracerThreadGroup - 1) / AtmosphereTracerThreadGroup, 1, 1);
 
 		// Copy only the written samples to readback memory. The buffer returns to UAV state for the next record.

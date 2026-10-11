@@ -54,7 +54,6 @@ namespace pr::rdr12
 		using GfxCmdAllocPool = ::pr::compute::GfxCmdAllocPool;
 		using GfxCmdListPool = ::pr::compute::GfxCmdListPool;
 		using GfxCmdList = ::pr::compute::GfxCmdList;
-		using ResStateStore = ::pr::compute::ResStateStore;
 		using OpenXRPtr = std::unique_ptr<openxr::OpenXR>;
 
 		GpuSync                      m_gsync;            // GPU fence for frames
@@ -69,7 +68,6 @@ namespace pr::rdr12
 		GfxCmdListPool               m_cmd_list_pool;    // A pool of command lists
 		GpuViewHeap                  m_heap_view;        // Shader visible heap for CBV/SRV/UAV
 		GpuSampHeap                  m_heap_samp;        // Shader visible heap for Samplers
-		ResStateStore                m_res_state;        // Tracks the resource state of render targets and depth stencil resources
 		AlphaKBuffer                 m_alpha_kbuffer;    // 1x K-buffer resources used for alpha sorting
 		Frame                        m_frame;            // Class for managing the rendering of a frame (for reuse)
 		DiagState                    m_diag;             // Diagnostic variables

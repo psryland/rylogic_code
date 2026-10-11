@@ -448,13 +448,13 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(step.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_warm_start_prev->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(warm_start_curr->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_warm_start_prev);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(warm_start_curr);
 			}
 
 			// Make warm-start writes visible to the next resolver phase.
@@ -497,11 +497,11 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_compute_times.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_compute_times.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_times->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_times);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
 
 				// CSCalcResolveDispatch always records at least one group so colour masks and contact times are initialised for empty GPU counts.
 				m_job.m_cmd_list.ExecuteIndirect(m_resolver.m_cmd_sig.get(), 1, m_dispatch.get());
@@ -520,15 +520,15 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(step.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_times->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_body_contact_head->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_next_a->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_next_b->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_times);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_body_contact_head);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_next_a);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_next_b);
 			}
 
 			// Make shock-priority graph writes visible to the next propagation phase.
@@ -605,12 +605,12 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_assign_colours.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_assign_colours.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colour_dispatch->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colour_dispatch);
 				m_job.m_cmd_list.Dispatch(1, 1, 1);
 
 				m_job.m_barriers.UAV(m_bodies.get());
@@ -723,12 +723,12 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_position_solve.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_position_solve.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(pseudo_buffer->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(pseudo_buffer);
 			}
 
 			// Solve detached position correction without changing physical momentum.
@@ -807,12 +807,12 @@ namespace pr::physics
 				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_resolve.m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_resolve.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_resolver.m_r_materials->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts->GetGPUVirtualAddress());
-				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order->GetGPUVirtualAddress());
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
+				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_resolver.m_r_materials);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_bodies);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_colours);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_contacts);
+				m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_resolver.m_r_contact_order);
 			}
 
 			// Solve physical contact impulses and body momentum.

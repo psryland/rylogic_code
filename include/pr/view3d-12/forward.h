@@ -169,6 +169,7 @@ namespace pr::rdr12
 	// Compute types
 	using ResDesc = compute::ResDesc;
 	using Descriptor = compute::Descriptor;
+	using GpuAddress = compute::GpuAddress;
 
 	// Enumerations
 	using EGeom = geometry::EGeom;

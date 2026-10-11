@@ -287,8 +287,8 @@ namespace pr::compute::spatial_partition
 				job.m_cmd_list.SetPipelineState(m_init.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_init.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_idx_start->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_count->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_idx_start);
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_count);
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.CellCount, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 				job.m_barriers.UAV(m_idx_start.get());
@@ -302,9 +302,9 @@ namespace pr::compute::spatial_partition
 				job.m_cmd_list.SetPipelineState(m_populate.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_populate.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-				job.m_cmd_list.SetComputeRootShaderResourceView(1, positions->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootShaderResourceView(1, positions);
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash);
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial);
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 				job.m_barriers.UAV(m_grid_hash.get());
@@ -328,9 +328,9 @@ namespace pr::compute::spatial_partition
 				job.m_cmd_list.SetPipelineState(m_build.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_build.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_grid_hash->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_start->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_idx_count->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_grid_hash);
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_start);
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_idx_count);
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 				job.m_barriers.UAV(m_idx_start.get());

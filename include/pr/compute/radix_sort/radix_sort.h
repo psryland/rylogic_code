@@ -558,8 +558,8 @@ namespace pr::compute::gpu_radix_sort
 			cmd_list.SetPipelineState(m_indirect_setup.m_pso.get());
 			cmd_list.SetComputeRootSignature(m_indirect_setup.m_sig.get());
 			cmd_list.SetComputeRoot32BitConstants(0, isize(constants), constants.data(), 0);
-			cmd_list.SetComputeRootShaderResourceView(1, counter->GetGPUVirtualAddress() + view_offset);
-			cmd_list.SetComputeRootUnorderedAccessView(2, m_indirect_arguments->GetGPUVirtualAddress());
+			cmd_list.SetComputeRootShaderResourceView(1, { counter, s_cast<int64_t>(view_offset) });
+			cmd_list.SetComputeRootUnorderedAccessView(2, m_indirect_arguments);
 			cmd_list.Dispatch(1, 1, 1);
 
 			// Publish complete records before ExecuteIndirect and leave counter ownership with the caller.
@@ -581,7 +581,7 @@ namespace pr::compute::gpu_radix_sort
 			auto const thread_blocks = PartitionCount(m_size);
 			cmd_list.SetPipelineState(m_init_payload.m_pso.get());
 			cmd_list.SetComputeRootSignature(m_init_payload.m_sig.get());
-			cmd_list.SetComputeRootUnorderedAccessView(1, m_payload[0]->GetGPUVirtualAddress());
+			cmd_list.SetComputeRootUnorderedAccessView(1, m_payload[0]);
 
 			const auto full_blocks = s_cast<uint32_t>(thread_blocks / MaxDispatchDimension);
 			if (full_blocks)
@@ -696,7 +696,7 @@ namespace pr::compute::gpu_radix_sort
 		{
 			// CBVs need 256-byte alignment; constants and dispatch arguments share one read-only resource state.
 			auto const offset = record * IndirectArgumentStride;
-			cmd_list.SetComputeRootConstantBufferView(0, m_indirect_arguments->GetGPUVirtualAddress() + offset);
+			cmd_list.SetComputeRootConstantBufferView(0, { m_indirect_arguments, offset });
 			cmd_list.ExecuteIndirect(m_indirect_dispatch.get(), 1, m_indirect_arguments.get(), offset + IndirectDispatchOffset);
 		}
 
@@ -757,7 +757,7 @@ namespace pr::compute::gpu_radix_sort
 				pix::DetailMarker(cmd_list.get(), "groups_x=1 groups_y=1 groups_z=1");
 				cmd_list.SetPipelineState(m_init.m_pso.get());
 				cmd_list.SetComputeRootSignature(m_init.m_sig.get());
-				cmd_list.SetComputeRootUnorderedAccessView(0, m_global_histogram->GetGPUVirtualAddress());
+				cmd_list.SetComputeRootUnorderedAccessView(0, m_global_histogram);
 				cmd_list.Dispatch(1, 1, 1);
 			}
 
@@ -779,9 +779,9 @@ namespace pr::compute::gpu_radix_sort
 					pix::DetailScope detail(cmd_list.get(), "RadixSort::SweepUp");
 					cmd_list.SetPipelineState(sweep_up.m_pso.get());
 					cmd_list.SetComputeRootSignature(sweep_up.m_sig.get());
-					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(2, m_global_histogram->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(3, m_pass_histogram->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]);
+					cmd_list.SetComputeRootUnorderedAccessView(2, m_global_histogram);
+					cmd_list.SetComputeRootUnorderedAccessView(3, m_pass_histogram);
 
 					DispatchSweep(cmd_list, radix_shift, thread_blocks, gpu_counted);
 				}
@@ -797,7 +797,7 @@ namespace pr::compute::gpu_radix_sort
 					pix::DetailScope detail(cmd_list.get(), "RadixSort::Scan");
 					cmd_list.SetPipelineState(scan.m_pso.get());
 					cmd_list.SetComputeRootSignature(scan.m_sig.get());
-					cmd_list.SetComputeRootUnorderedAccessView(1, m_pass_histogram->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(1, m_pass_histogram);
 					if (gpu_counted)
 					{
 						auto const offset = (radix_shift / RadixBits * IndirectArgumentsPerPass + 2) * IndirectArgumentStride;
@@ -825,12 +825,12 @@ namespace pr::compute::gpu_radix_sort
 					pix::DetailScope detail(cmd_list.get(), "RadixSort::SweepDown");
 					cmd_list.SetPipelineState(sweep_down.m_pso.get());
 					cmd_list.SetComputeRootSignature(sweep_down.m_sig.get());
-					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(2, m_sort[j]->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(3, m_payload[i]->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(4, m_payload[j]->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(5, m_global_histogram->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(6, m_pass_histogram->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]);
+					cmd_list.SetComputeRootUnorderedAccessView(2, m_sort[j]);
+					cmd_list.SetComputeRootUnorderedAccessView(3, m_payload[i]);
+					cmd_list.SetComputeRootUnorderedAccessView(4, m_payload[j]);
+					cmd_list.SetComputeRootUnorderedAccessView(5, m_global_histogram);
+					cmd_list.SetComputeRootUnorderedAccessView(6, m_pass_histogram);
 
 					DispatchSweep(cmd_list, radix_shift, thread_blocks, gpu_counted);
 				}
@@ -1151,8 +1151,8 @@ namespace pr::compute::gpu_radix_sort::tests
 					cmd_list.SetPipelineState(sorter.m_indirect_setup.m_pso.get());
 					cmd_list.SetComputeRootSignature(sorter.m_indirect_setup.m_sig.get());
 					cmd_list.SetComputeRoot32BitConstants(0, isize(constants), constants.data(), 0);
-					cmd_list.SetComputeRootShaderResourceView(1, fixture.m_counter->GetGPUVirtualAddress());
-					cmd_list.SetComputeRootUnorderedAccessView(2, sorter.m_indirect_arguments->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootShaderResourceView(1, fixture.m_counter);
+					cmd_list.SetComputeRootUnorderedAccessView(2, sorter.m_indirect_arguments);
 					cmd_list.Dispatch(1, 1, 1);
 					auto arguments = fixture.Readback(sorter.m_indirect_arguments.get());
 					fixture.m_job.Run();
