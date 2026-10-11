@@ -665,6 +665,29 @@ namespace pr::rdr12
 			throw std::invalid_argument("Object has no detail normals");
 	}
 
+	// Use 'map' for every nugget of 'object' that has detail normals. Null removes the map.
+	void Context::ObjectDetailStrengthMap(ldraw::LdrObject* object, materials::DetailStrengthMapPtr map)
+	{
+		// Only the object's own model is updated; children keep their own maps.
+		auto& model = object->m_model;
+		if (model == nullptr)
+			throw std::invalid_argument("Object has no model with detail normals");
+
+		auto updated = 0;
+		for (auto* nugget = model->m_nuggets.get(); nugget != nullptr; nugget = nugget->m_next.get())
+		{
+			// The map is held by the shared layers, so every copy of the material uses it.
+			auto const* detail = nugget->mat().Component<materials::DetailNormals>();
+			if (detail == nullptr)
+				continue;
+
+			detail->m_layers->m_strength = map;
+			++updated;
+		}
+		if (updated == 0)
+			throw std::invalid_argument("Object has no detail normals");
+	}
+
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
 	ldraw::LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)

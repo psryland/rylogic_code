@@ -55,6 +55,7 @@ public sealed class TestPhysics
 		Assert.Equal(16, sizeof(AtmosphereOutsideAir));
 		Assert.Equal(32, sizeof(AtmosphereTracerParticle));
 		Assert.Equal(24, sizeof(AtmosphereProbeSample));
+		Assert.Equal(28, Marshal.OffsetOf<Native.AtmosphereStepDesc>(nameof(Native.AtmosphereStepDesc.m_surface_wind_height)).ToInt32());
 		Assert.Equal(32, Marshal.OffsetOf<Native.AtmosphereStepDesc>(nameof(Native.AtmosphereStepDesc.m_probes)).ToInt32());
 		Assert.Equal(20, sizeof(AtmosphereCellState));
 		Assert.Equal(56, Marshal.OffsetOf<Native.AtmosphereDesc>(nameof(Native.AtmosphereDesc.m_floor_heights)).ToInt32());
@@ -224,6 +225,18 @@ public sealed class TestPhysics
 		Assert.True(samples[0].Inside && samples[0].m_temperature > 250 && samples[0].m_temperature < 330);
 		Assert.True(!samples[1].Inside && samples[1].m_temperature == 0);
 		ExpectStatus(EStatus.BufferTooSmall, () => atmosphere.CopyProbes(samples.AsSpan(1)));
+
+		// The surface wind covers every column after a sampling step, with the calm outside air reported for the inactive column, and is empty after a step without it.
+		var wind = new v2[options.CellCountX * options.CellCountY];
+		ExpectStatus(EStatus.InvalidArgument, () => atmosphere.BeginStep(0.1f, heat_sources: heat, surface_wind_height: -1f));
+		atmosphere.BeginStep(0.1f, heat_sources: heat, surface_wind_height: 1.5f);
+		atmosphere.CompleteStep();
+		Assert.Equal(wind.Length, atmosphere.CopySurfaceWind(wind));
+		Assert.True(wind[0] == v2.Zero && wind.All(w => !float.IsNaN(w.x) && !float.IsInfinity(w.x) && !float.IsNaN(w.y) && !float.IsInfinity(w.y)));
+		ExpectStatus(EStatus.BufferTooSmall, () => atmosphere.CopySurfaceWind(wind.AsSpan(1)));
+		atmosphere.BeginStep(0.1f, heat_sources: heat);
+		atmosphere.CompleteStep();
+		Assert.Equal(0, atmosphere.CopySurfaceWind(wind));
 
 		// Tracer reads and mutation from a worker thread are rejected before reaching native code.
 		var particles = new AtmosphereTracerParticle[atmosphere.TracerCount];

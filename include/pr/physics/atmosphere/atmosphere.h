@@ -291,6 +291,7 @@ namespace pr::physics::atmosphere
 
 	class AtmosphereTracers;
 	class AtmosphereProbes;
+	class AtmosphereSurfaceWind;
 
 	// Standalone GPU atmosphere solver for a terrain-following MAC-grid domain.
 	class AtmosphereSolver
@@ -341,6 +342,7 @@ namespace pr::physics::atmosphere
 	private:
 		friend class AtmosphereTracers;
 		friend class AtmosphereProbes;
+		friend class AtmosphereSurfaceWind;
 		struct Impl;
 		std::unique_ptr<Impl> m_impl;
 	};
@@ -434,6 +436,33 @@ namespace pr::physics::atmosphere
 
 		// Return the samples copied by the last 'Record', in point order. Call after that submission has completed and before 'job' records another read back.
 		std::vector<AtmosphereProbeSample> Resolve();
+
+	private:
+		struct Impl;
+		std::unique_ptr<Impl> m_impl;
+	};
+
+	// Samples the horizontal wind at a fixed height above the floor of every column of an AtmosphereSolver on the GPU, without reading back the whole field.
+	// 'Record' adds the sampling and a copy to a caller-owned job, so the result can be collected without waiting once that job has run.
+	// Columns that are inactive report the wind of their outside air (see AtmosphereSolver::SetOutsideAir). Solid columns report zero.
+	class AtmosphereSurfaceWind
+	{
+	public:
+		// Compile the sampling kernel and allocate the result buffer for 'solver'.
+		// 'shader_cache' is optional; when given, the compiled kernel is reused across runs.
+		AtmosphereSurfaceWind(AtmosphereSolver& solver, Gpu& gpu, IShaderCache* shader_cache = nullptr);
+
+		// Release GPU resources owned by the sampler.
+		~AtmosphereSurfaceWind();
+
+		// Record a sample of the solver's current field at 'height' metres (finite, > 0) above the floor of each column, and a copy of the result, into 'job'.
+		// Heights above the lid sample the top of the air. The sample sees all solver work recorded into 'job' before this call.
+		// Collect it with 'Resolve' once the submission has completed.
+		void Record(GpuJob& job, float height);
+
+		// Return the horizontal wind copied by the last 'Record', m/s, one entry per column in AtmosphereGrid column order. Returns an empty result when
+		// nothing was recorded since the last 'Resolve'. Call after that submission has completed and before 'job' records another read back.
+		std::vector<v2> Resolve();
 
 	private:
 		struct Impl;

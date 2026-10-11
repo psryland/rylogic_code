@@ -267,6 +267,7 @@ namespace pr::physics
 			atmosphere::AtmosphereSolver m_solver;
 			std::unique_ptr<atmosphere::AtmosphereTracers> m_tracers;
 			atmosphere::AtmosphereProbes m_probes;
+			atmosphere::AtmosphereSurfaceWind m_surface_wind;
 
 			// The tracer slot holding the particles from the last finished step, or from creation. A step in flight writes a different slot.
 			int m_published_slot;
@@ -277,14 +278,19 @@ namespace pr::physics
 			// The probe samples of the last finished step.
 			std::vector<atmosphere::AtmosphereProbeSample> m_probe_samples;
 
+			// The surface wind of the last finished step, one per column, or empty when that step did not sample it.
+			std::vector<v2> m_surface_wind_field;
+
 			AtmosphereRecord(ID3D12Device4* device, atmosphere::AtmosphereConfig config, atmosphere::AtmosphereTracerConfig const& tracers, IShaderCache* shader_cache)
 				: m_gpu(device)
 				, m_solver(m_gpu, std::move(config), shader_cache)
 				, m_tracers()
 				, m_probes(m_solver, m_gpu, shader_cache)
+				, m_surface_wind(m_solver, m_gpu, shader_cache)
 				, m_published_slot(-1)
 				, m_pending()
 				, m_probe_samples()
+				, m_surface_wind_field()
 			{
 				// Tracers are optional so field-only atmospheres pay no particle cost.
 				if (tracers.m_particle_count > 0)
@@ -322,15 +328,16 @@ namespace pr::physics
 				return m_gpu.m_job.m_gsync.CompletedSyncPoint() >= m_pending.m_sync_point;
 			}
 
-			// Wait for the submitted step, then publish the tracer slot and probe samples it wrote.
+			// Wait for the submitted step, then publish the tracer slot, probe samples, and surface wind it wrote.
 			void FinishStep()
 			{
 				m_gpu.m_job.Complete(m_pending);
 				if (m_tracers)
 					m_published_slot = m_tracers->CurrentSlot();
 
-				// Every step records its probes, possibly none, so stale samples never describe a later field.
+				// Every step replaces its probes and surface wind, possibly with none, so stale samples never describe a later field.
 				m_probe_samples = m_probes.Resolve();
+				m_surface_wind_field = m_surface_wind.Resolve();
 			}
 		};
 
@@ -3942,8 +3949,8 @@ extern "C"
 			// Probe points enter the engine here, so reject anything the sampler cannot accept before any work is recorded.
 			if (s.probe_count < 0 || s.probe_count > pr::physics::atmosphere::AtmosphereProbes::MaxPoints || (s.probe_count != 0) != (s.probes != nullptr))
 				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Atmosphere probe pointer and count disagree, or the count exceeds the limit");
-			if (s.reserved != 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid atmosphere step reserved field");
+			if (!std::isfinite(s.surface_wind_height) || s.surface_wind_height < 0.0f)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Atmosphere surface wind height must be finite and not negative");
 
 			auto probes = std::vector<pr::v4>{};
 			probes.reserve(static_cast<size_t>(s.probe_count));
@@ -3955,7 +3962,7 @@ extern "C"
 				probes.push_back(pr::v4{ p.x, p.y, p.z, p.w });
 			}
 
-			// Record the step, tracer advection, and probe samples. The finishing call collects the probe copy. The solver validates before recording.
+			// Record the step, tracer advection, probe samples, and surface wind. The finishing call collects the copies. The solver validates before recording.
 			auto& job = object.m_gpu.m_job;
 			try
 			{
@@ -3969,6 +3976,9 @@ extern "C"
 				object.m_tracers->Advect(job, s.dt);
 
 			object.m_probes.Record(job, probes);
+			if (s.surface_wind_height > 0.0f)
+				object.m_surface_wind.Record(job, s.surface_wind_height);
+
 			object.m_pending = job.Submit();
 		});
 	}
@@ -4020,6 +4030,30 @@ extern "C"
 					.inside = p.m_inside ? 1 : 0,
 				};
 			}
+		});
+	}
+
+	PhysicsStatus __stdcall Physics_AtmosphereSurfaceWindCopy(PhysicsEngineHandle engine, pr::physics::AtmosphereHandle atmosphere, pr::physics::Vector2* wind, std::uint32_t capacity, std::uint32_t* required)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			// The published wind is CPU memory owned by the record, so copying it never touches the GPU or the step in flight.
+			auto scope = pr::physics::EngineScope(engine);
+			auto& record = *scope;
+			pr::physics::RequireOwner(record);
+			auto& object = pr::physics::RequireAtmosphere(record, atmosphere);
+			if (required == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Surface wind required-count pointer is null");
+
+			// Report the size first so a sizing call succeeds with no buffer.
+			auto const count = static_cast<std::uint32_t>(object.m_surface_wind_field.size());
+			*required = count;
+			if (capacity < count || (count != 0 && wind == nullptr))
+				throw pr::physics::ApiException(PhysicsStatus::BufferTooSmall, "Surface wind buffer is too small");
+
+			// Convert to the ABI layout.
+			for (auto i = std::uint32_t{}; i != count; ++i)
+				wind[i] = pr::physics::Vector2{ object.m_surface_wind_field[i].x, object.m_surface_wind_field[i].y };
 		});
 	}
 
