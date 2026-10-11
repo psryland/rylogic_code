@@ -88,6 +88,7 @@
 #include "pr/container/ring.h"
 #include "pr/container/suffix_array.h"
 #include "pr/container/tri_table.h"
+#include "pr/container/vector_hash_map.h"
 #include "pr/container/vector_map.h"
 #include "pr/container/vector.h"
 #include "pr/crypt/blake2b.h"
