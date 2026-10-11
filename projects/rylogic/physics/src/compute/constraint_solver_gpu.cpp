@@ -46,6 +46,7 @@ namespace pr::physics
 			inline static constexpr auto State = EUAVReg::u3;
 			inline static constexpr auto PseudoVelocities = EUAVReg::u4;
 			inline static constexpr auto BreakStates = EUAVReg::u5;
+			inline static constexpr auto ColourDispatch = EUAVReg::u6;
 		};
 
 		// Compare endpoint semantics while ignoring frame-local body-index changes caused only by submission order.
@@ -79,6 +80,8 @@ namespace pr::physics
 		, m_r_state()
 		, m_r_pseudo_velocities()
 		, m_r_break_states()
+		, m_r_colour_dispatch()
+		, m_cmd_sig()
 		, m_endpoint_shadow()
 		, m_endpoint_identity_shadow()
 		, m_descriptor_shadow()
@@ -106,7 +109,8 @@ namespace pr::physics
 			.UAV(EReg::Rows)
 			.UAV(EReg::State)
 			.UAV(EReg::PseudoVelocities)
-			.UAV(EReg::BreakStates);
+			.UAV(EReg::BreakStates)
+			.UAV(EReg::ColourDispatch);
 		auto const root_sig = sig.Create(m_gpu, "Physics:ConstraintSolverSig");
 
 		auto compile_step = [&](ComputeStep& step, shader_code::ByteCode const& bytecode, char const* name)
@@ -123,11 +127,26 @@ namespace pr::physics
 		compile_step(m_cs_apply_position, shader_code::apply_constraint_position, "ApplyConstraintPosition");
 		compile_step(m_cs_solve_velocity, shader_code::solve_constraint_velocity, "SolveConstraintVelocity");
 		compile_step(m_cs_detect_breakage, shader_code::detect_broken_constraints, "DetectBrokenConstraints");
+
+		// Colour sweeps read their per-colour group counts from the colouring pass output.
+		D3D12_INDIRECT_ARGUMENT_DESC arg = {
+			.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH
+		};
+		D3D12_COMMAND_SIGNATURE_DESC desc = {
+			.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS),
+			.NumArgumentDescs = 1,
+			.pArgumentDescs = &arg,
+		};
+		Check(m_gpu->CreateCommandSignature(&desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)m_cmd_sig.address_of()));
 	}
 
 	// Create or grow feature-dependent buffers while preserving stable-slot capacity.
 	bool GpuConstraintSolver::ResizeBuffers(CmdList& cmd_list, int capacity)
 	{
+		// Dispatch arguments have fixed size, independent of retained slot capacity.
+		if (m_r_colour_dispatch == nullptr)
+			m_r_colour_dispatch = m_gpu.CreateResource(ResDesc::Buf<DispatchArguments>(MaxColours, {}).usage(EUsage::UnorderedAccess), cmd_list, "Physics:ConstraintColourDispatch");
+
 		capacity = std::max(1, capacity);
 		if (m_r_endpoints != nullptr && m_capacity >= capacity)
 			return false;
@@ -350,7 +369,7 @@ namespace pr::physics
 	}
 
 	// Bind the common constraint root signature and resources for one compute step.
-	void GpuConstraintSolver::Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies)
+	void GpuConstraintSolver::Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies, ID3D12Resource* colour_dispatch)
 	{
 		auto const constants = cbConstraintSolve{
 			.block_count = m_slot_count,
@@ -383,6 +402,7 @@ namespace pr::physics
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(pseudo_velocities);
 		auto* break_states = m_r_break_states != nullptr ? m_r_break_states.get() : m_r_state.get();
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(break_states);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(colour_dispatch);
 	}
 
 	// Insert UAV ordering between dependent compiler, colouring, and solver passes.
@@ -394,6 +414,43 @@ namespace pr::physics
 		job.m_barriers.UAV(m_r_state.get());
 		job.m_barriers.UAV(m_r_pseudo_velocities.get());
 		job.m_barriers.Commit();
+	}
+
+	// Record one pass per colour in the established colour order, using the indirect arguments written by the colouring pass.
+	void GpuConstraintSolver::RecordColourSweep(GpuJob& job, ComputeStep& step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies)
+	{
+		// Bind once and flush pending transitions. Only the colour root constant changes between colours.
+		Bind(job, step, timestep, body_count, 0, position_iterations, bodies, m_r_state.get());
+		job.m_barriers.Commit();
+
+		// Every colour has the same dependency set, so the UAV barriers are prepared once.
+		auto const uav_barrier = [](ID3D12Resource* resource)
+		{
+			// UAV ordering does not need the state tracking done by BarrierBatch.
+			return D3D12_RESOURCE_BARRIER{
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.UAV = {.pResource = resource},
+			};
+		};
+		auto const barriers = std::array{
+			uav_barrier(bodies.get()),
+			uav_barrier(m_r_blocks.get()),
+			uav_barrier(m_r_rows.get()),
+			uav_barrier(m_r_state.get()),
+			uav_barrier(m_r_pseudo_velocities.get()),
+		};
+
+		// Empty colours have zero groups. Occupied colours keep the full stable-slot grid, so the solve order and results are unchanged.
+		job.m_cmd_list.Use(m_r_colour_dispatch.get());
+		auto* cmd_list = job.m_cmd_list.get();
+		for (int colour = 0; colour != MaxColours; ++colour)
+		{
+			cmd_list->SetComputeRoot32BitConstants(0, 1, &colour, offsetof(cbConstraintSolve, colour) / sizeof(uint32_t));
+			cmd_list->ExecuteIndirect(m_cmd_sig.get(), 1, m_r_colour_dispatch.get(), colour * sizeof(DispatchArguments), nullptr, 0);
+			cmd_list->ResourceBarrier(static_cast<UINT>(barriers.size()), barriers.data());
+			++m_dispatch_count;
+		}
 	}
 
 	// Compile rows, assign colours, and clear pseudo velocity before any position producer writes; optionally retain applied physical impulses.
@@ -434,21 +491,24 @@ namespace pr::physics
 		job.m_barriers.Transition(m_r_rows.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Transition(m_r_state.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Transition(m_r_pseudo_velocities.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(m_r_colour_dispatch.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Commit();
 
 		auto const group_count = static_cast<UINT>((m_slot_count + ConstraintThreadCount - 1) / ConstraintThreadCount);
-		Bind(job, m_cs_compile, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies);
+		Bind(job, m_cs_compile, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies, m_r_state.get());
 		job.m_cmd_list.Dispatch(group_count, 1, 1);
 		++m_dispatch_count;
 		CommitUavBarriers(job, bodies);
 
-		Bind(job, m_cs_assign_colours, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies);
+		// Colouring also writes the per-colour indirect arguments that every later sweep in this frame reads.
+		Bind(job, m_cs_assign_colours, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies, m_r_colour_dispatch.get());
 		job.m_cmd_list.Dispatch(1, 1, 1);
 		++m_dispatch_count;
+		job.m_barriers.Transition(m_r_colour_dispatch.get(), D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
 		CommitUavBarriers(job, bodies);
 
 		// Each constrained frame starts with zero pseudo velocity independently of physical momentum.
-		Bind(job, m_cs_clear_pseudo_velocity, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies);
+		Bind(job, m_cs_clear_pseudo_velocity, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies, m_r_state.get());
 		job.m_cmd_list.Dispatch(static_cast<UINT>((body_count + ConstraintThreadCount - 1) / ConstraintThreadCount), 1, 1);
 		++m_dispatch_count;
 		CommitUavBarriers(job, bodies);
@@ -461,14 +521,7 @@ namespace pr::physics
 		if (!Active() || m_retain_current_impulses || m_config.constraint_warm_start_factor <= 0.0f)
 			return;
 
-		auto const group_count = static_cast<UINT>((m_slot_count + ConstraintThreadCount - 1) / ConstraintThreadCount);
-		for (int colour = 0; colour != MaxColours; ++colour)
-		{
-			Bind(job, m_cs_apply_warm_start, timestep, body_count, colour, std::max(1, m_config.push_out_iterations), bodies);
-			job.m_cmd_list.Dispatch(group_count, 1, 1);
-			++m_dispatch_count;
-			CommitUavBarriers(job, bodies);
-		}
+		RecordColourSweep(job, m_cs_apply_warm_start, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
 	}
 
 	// Execute one coloured split-position sweep against initialized shared pseudo velocity without clearing accumulated corrections.
@@ -477,14 +530,7 @@ namespace pr::physics
 		if (!Active() || position_iterations <= 0)
 			return;
 
-		auto const group_count = static_cast<UINT>((m_slot_count + ConstraintThreadCount - 1) / ConstraintThreadCount);
-		for (int colour = 0; colour != MaxColours; ++colour)
-		{
-			Bind(job, m_cs_solve_position, timestep, body_count, colour, position_iterations, bodies);
-			job.m_cmd_list.Dispatch(group_count, 1, 1);
-			++m_dispatch_count;
-			CommitUavBarriers(job, bodies);
-		}
+		RecordColourSweep(job, m_cs_solve_position, timestep, body_count, position_iterations, bodies);
 	}
 
 	// Integrate converged split pseudo twists once while preserving physical momentum.
@@ -493,7 +539,7 @@ namespace pr::physics
 		if (!Active() || position_iterations <= 0 || body_count == 0)
 			return;
 
-		Bind(job, m_cs_apply_position, timestep, body_count, 0, position_iterations, bodies);
+		Bind(job, m_cs_apply_position, timestep, body_count, 0, position_iterations, bodies, m_r_state.get());
 		job.m_cmd_list.Dispatch(static_cast<UINT>((body_count + ConstraintThreadCount - 1) / ConstraintThreadCount), 1, 1);
 		++m_dispatch_count;
 		CommitUavBarriers(job, bodies);
@@ -505,14 +551,7 @@ namespace pr::physics
 		if (!Active())
 			return;
 
-		auto const group_count = static_cast<UINT>((m_slot_count + ConstraintThreadCount - 1) / ConstraintThreadCount);
-		for (int colour = 0; colour != MaxColours; ++colour)
-		{
-			Bind(job, m_cs_solve_velocity, timestep, body_count, colour, std::max(1, m_config.push_out_iterations), bodies);
-			job.m_cmd_list.Dispatch(group_count, 1, 1);
-			++m_dispatch_count;
-			CommitUavBarriers(job, bodies);
-		}
+		RecordColourSweep(job, m_cs_solve_velocity, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
 	}
 
 	// Latch force or torque threshold crossings after one main or selective velocity solve.
@@ -536,7 +575,7 @@ namespace pr::physics
 		job.m_barriers.Transition(m_r_break_states.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Commit();
 
-		Bind(job, m_cs_detect_breakage, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies);
+		Bind(job, m_cs_detect_breakage, timestep, body_count, 0, std::max(1, m_config.push_out_iterations), bodies, m_r_state.get());
 		auto const group_count = static_cast<UINT>((m_slot_count + ConstraintThreadCount - 1) / ConstraintThreadCount);
 		job.m_cmd_list.Dispatch(group_count, 1, 1);
 		++m_dispatch_count;

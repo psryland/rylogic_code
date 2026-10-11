@@ -60,6 +60,8 @@ namespace pr::physics
 		D3DPtr<ID3D12Resource> m_r_state;
 		D3DPtr<ID3D12Resource> m_r_pseudo_velocities;
 		D3DPtr<ID3D12Resource> m_r_break_states;
+		D3DPtr<ID3D12Resource> m_r_colour_dispatch;
+		D3DPtr<ID3D12CommandSignature> m_cmd_sig;
 		std::vector<GpuConstraintEndpoint> m_endpoint_shadow;
 		std::vector<ConstraintEndpointIdentity> m_endpoint_identity_shadow;
 		std::vector<GpuD6ConstraintDesc> m_descriptor_shadow;
@@ -142,9 +144,14 @@ namespace pr::physics
 		void EnsureBreakStateStorage(CmdList& cmd_list, int slot_count);
 
 		// Bind the common constraint root signature and resources for one compute step.
-		void Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies);
+		// 'colour_dispatch' is written only by the colouring step. Other steps must pass a UAV-state placeholder, because the arguments buffer is
+		// in the indirect-argument state while the colour sweeps read it.
+		void Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies, ID3D12Resource* colour_dispatch);
 
 		// Insert UAV ordering between dependent compiler, colouring, and solver passes.
 		void CommitUavBarriers(GpuJob& job, D3DPtr<ID3D12Resource> bodies);
+
+		// Record one pass per colour in the established colour order, using the indirect arguments written by the colouring pass.
+		void RecordColourSweep(GpuJob& job, ComputeStep& step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies);
 	};
 }

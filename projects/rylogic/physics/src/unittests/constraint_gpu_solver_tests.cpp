@@ -62,6 +62,43 @@ namespace pr::physics::tests
 			return SharedTestGpu();
 		}
 
+		// Return a short velocity-only solve configuration for hub topology tests.
+		CpuConstraintSolverConfig MakeConstraintGpuHubConfig()
+		{
+			auto config = CpuConstraintSolverConfig{};
+			config.m_velocity_iterations = 2;
+			config.m_position_iterations = 0;
+			config.m_warm_start_factor = 0.0f;
+			return config;
+		}
+
+		// Solve one frame of a hub where every leaf body is locked to body zero, so each constraint needs a distinct colour.
+		void RunConstraintGpuHub(ConstraintInteropRunner& runner, int leaf_count, std::vector<GpuRigidBody>& bodies)
+		{
+			// Bodies are slightly separated so every locked axis has a finite, well-defined frame.
+			bodies.clear();
+			for (int body_idx = 0; body_idx != leaf_count + 1; ++body_idx)
+			{
+				auto const rigid_body = MakeConstraintGpuBody(1.0f, m4x4::Translation(0.01f * body_idx, 0, 0));
+				bodies.push_back(PackDynamics(rigid_body, body_idx));
+			}
+
+			// Each slot couples the shared hub to its own leaf.
+			auto endpoints = std::vector<GpuConstraintEndpoint>(leaf_count);
+			auto descriptors = std::vector<GpuD6ConstraintDesc>(leaf_count);
+			for (int slot_idx = 0; slot_idx != leaf_count; ++slot_idx)
+			{
+				endpoints[slot_idx].body_idx_a = 0;
+				endpoints[slot_idx].body_idx_b = slot_idx + 1;
+				endpoints[slot_idx].flags = GpuConstraintEndpointFlags_Enabled;
+				descriptors[slot_idx].frame_a.rotation = float4{0, 0, 0, 1};
+				descriptors[slot_idx].frame_b.rotation = float4{0, 0, 0, 1};
+				descriptors[slot_idx].axes[0].mode = GpuConstraintAxisMode_Locked;
+				descriptors[slot_idx].axes[0].max_force = 1000.0f;
+			}
+			runner.Run(ConstraintRunnerBuffers{1.0f / 60.0f, bodies, endpoints, descriptors});
+		}
+
 		// Build a minimal floating tree for testing the unsupported coupled-solver boundary.
 		std::pair<Articulation, LinkHandle> MakeConstraintGpuArticulation()
 		{
@@ -955,37 +992,40 @@ namespace pr::physics::tests
 		// A degree-33 dynamic hub exhausts the 32-colour mask and remains finite under coherent serial fallback.
 		PRUnitTestMethod(HighDegreeHubUsesSerialFallback, Quick)
 		{
-			constexpr int LeafCount = 33;
-			auto rigid_bodies = std::vector<RigidBody>{};
-			rigid_bodies.reserve(LeafCount + 1);
-			for (int body_idx = 0; body_idx != LeafCount + 1; ++body_idx)
-				rigid_bodies.push_back(MakeConstraintGpuBody(1.0f, m4x4::Translation(0.01f * body_idx, 0, 0)));
-
 			auto bodies = std::vector<GpuRigidBody>{};
-			for (int body_idx = 0; body_idx != LeafCount + 1; ++body_idx)
-				bodies.push_back(PackDynamics(rigid_bodies[body_idx], body_idx));
-			auto endpoints = std::vector<GpuConstraintEndpoint>(LeafCount);
-			auto descriptors = std::vector<GpuD6ConstraintDesc>(LeafCount);
-			for (int slot_idx = 0; slot_idx != LeafCount; ++slot_idx)
-			{
-				endpoints[slot_idx].body_idx_a = 0;
-				endpoints[slot_idx].body_idx_b = slot_idx + 1;
-				endpoints[slot_idx].flags = GpuConstraintEndpointFlags_Enabled;
-				descriptors[slot_idx].frame_a.rotation = float4{0, 0, 0, 1};
-				descriptors[slot_idx].frame_b.rotation = float4{0, 0, 0, 1};
-				descriptors[slot_idx].axes[0].mode = GpuConstraintAxisMode_Locked;
-				descriptors[slot_idx].axes[0].max_force = 1000.0f;
-			}
-			auto config = CpuConstraintSolverConfig{};
-			config.m_velocity_iterations = 2;
-			config.m_position_iterations = 0;
-			config.m_warm_start_factor = 0.0f;
-			auto runner = ConstraintInteropRunner{config};
-			runner.Run(ConstraintRunnerBuffers{1.0f / 60.0f, bodies, endpoints, descriptors});
+			auto runner = ConstraintInteropRunner{MakeConstraintGpuHubConfig()};
+			RunConstraintGpuHub(runner, MaxColours + 1, bodies);
 
 			PR_EXPECT(runner.ColourOverflow());
 			for (auto const& body : bodies)
 				PR_EXPECT(ConstraintGpuBodyFinite(body));
+
+			// The serial fallback runs on one thread in colour zero, so every other colour dispatches no groups.
+			for (int colour = 0; colour != MaxColours; ++colour)
+			{
+				auto const& args = runner.ColourDispatch()[colour];
+				PR_EXPECT(args.ThreadGroupCountX == (colour == 0 ? 1u : 0u));
+				PR_EXPECT(args.ThreadGroupCountY == 1u && args.ThreadGroupCountZ == 1u);
+			}
+		}
+
+		// Occupied colours dispatch the full stable-slot grid and empty colours dispatch nothing.
+		PRUnitTestMethod(ColourDispatchMatchesOccupiedColours, Quick)
+		{
+			auto bodies = std::vector<GpuRigidBody>{};
+			auto runner = ConstraintInteropRunner{MakeConstraintGpuHubConfig()};
+			RunConstraintGpuHub(runner, 5, bodies);
+			PR_EXPECT(!runner.ColourOverflow());
+
+			// Derive occupancy independently from the colour assignments, rather than trusting the shader that wrote the arguments.
+			auto const groups = static_cast<uint32_t>((5 + ConstraintThreadCount - 1) / ConstraintThreadCount);
+			for (int colour = 0; colour != MaxColours; ++colour)
+			{
+				auto const occupied = std::ranges::find(runner.Colours(), static_cast<uint32_t>(colour)) != runner.Colours().end();
+				auto const& args = runner.ColourDispatch()[colour];
+				PR_EXPECT(args.ThreadGroupCountX == (occupied ? groups : 0u));
+				PR_EXPECT(args.ThreadGroupCountY == 1u && args.ThreadGroupCountZ == 1u);
+			}
 		}
 
 		// Preserve quiet-time accumulation for awake loaded bodies while still invalidating persisted sleeping state after an impulse.
