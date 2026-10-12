@@ -68,7 +68,7 @@ namespace pr::physics::tests
 			: m_bodies()
 			, m_engine(
 				EngineConfig{},
-				nullptr,
+				&SharedTestShaderCache(),
 				SharedTestGpu().m_gpu.device(),
 				SharedTestGpu().m_gpu.queue())
 			, m_buoyancy(
@@ -98,16 +98,14 @@ namespace pr::physics::tests
 	};
 
 	// Return independent retained fixtures for diagnostic and production configurations.
+	// Fixtures are per-class because they use the class's GPU fixture (see SharedTestGpu).
 	static HarnessStorage& SharedHarnessStorage(bool enable_diagnostics)
 	{
-		if (enable_diagnostics)
-		{
-			static auto storage = HarnessStorage(true);
-			return storage;
-		}
-
-		static auto storage = HarnessStorage(false);
-		return storage;
+		// One fixture per configuration, shared by the tests of the class running on the calling thread.
+		thread_local auto diagnostic = std::unique_ptr<HarnessStorage>{};
+		thread_local auto production = std::unique_ptr<HarnessStorage>{};
+		auto& slot = enable_diagnostics ? diagnostic : production;
+		return ClassFixture(slot, [=] { return std::make_unique<HarnessStorage>(enable_diagnostics); });
 	}
 
 	// Present isolated per-method body state while reusing the configuration's long-lived GPU resources.
