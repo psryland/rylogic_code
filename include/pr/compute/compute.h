@@ -38,6 +38,7 @@
 #include "pr/compute/shaders/shader_cache_fs.h"
 #include "pr/compute/shaders/source_resolver.h"
 #include "pr/compute/shaders/shader_compiler.h"
+#include "pr/compute/shaders/shader_precompile.h"
 #include "pr/compute/radix_sort/radix_sort.h"
 #include "pr/compute/spatial_partition/spatial_partition.h"
 #include "pr/compute/particle_collision/collision_builder.h"

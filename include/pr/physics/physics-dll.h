@@ -1009,6 +1009,11 @@ extern "C"
 	// Each engine keeps the cache that was current when it was created. The cache is shared by every context token.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShaderCacheDirectorySet(pr::physics::DllHandle context, wchar_t const* directory);
 
+	// Compile every runtime GPU kernel into the current shader cache using 'thread_count' worker threads, so later engine creation does not invoke the
+	// shader compiler. Blocks until done. 'progress' is optional; it is called on the calling thread with the number of completed and total kernels,
+	// and returning zero cancels the remaining work (the call still returns Success). Requires a shader cache directory to have been set.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShaderPrecompile(pr::physics::DllHandle context, int thread_count, int(__stdcall* progress)(void* ctx, int completed, int total), void* ctx);
+
 	// ABI discovery and error reporting.
 	PHYSICS_API std::uint32_t __stdcall Physics_ApiVersion();
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_StructSize(pr::physics::EStructId struct_id, std::uint32_t* size);

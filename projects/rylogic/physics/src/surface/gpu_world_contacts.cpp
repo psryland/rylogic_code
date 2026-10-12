@@ -5,6 +5,7 @@
 #include "src/surface/gpu_world_contacts.h"
 #include "src/collision/shape_cache.h"
 #include "src/compute/shader_code.h"
+#include "src/utility/shader_recipes.h"
 #include "pr/physics/materials/material.h"
 
 namespace pr::physics
@@ -50,6 +51,14 @@ namespace pr::physics
 			job.m_barriers.Transition(resource.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			job.m_barriers.Commit();
 		}
+
+		// Compile one sampled world-contact kernel. The pipeline and precompilation share this so their cache keys match.
+		std::vector<uint8_t> CompileWorldContactKernel(wchar_t const* entry_point, IShaderCache* shader_cache)
+		{
+			// The optional cache skips DXC when the source is unchanged.
+			auto resolver = shader_cache::ResourceSourceResolver{};
+			return ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).Cache(shader_cache).EntryPoint(entry_point).ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
+		}
 	}
 
 	// Compile the source-independent kernels once for every set of world sources.
@@ -67,20 +76,27 @@ namespace pr::physics
 			throw std::runtime_error("Sampled world collision requires FP64 and Int64ShaderOps");
 
 		// Compile the sample and selection stages, which share one root layout, and the shared dispatch update against its own layout.
-		auto resolver = shader_cache::ResourceSourceResolver{};
-		auto compile = [&](wchar_t const* entry_point)
-		{
-			// The optional cache skips DXC when the source is unchanged.
-			return ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).Cache(shader_cache).EntryPoint(entry_point).ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
-		};
 		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0)
 			.SRV(ESRVReg::t0).SRV(ESRVReg::t1).SRV(ESRVReg::t2).SRV(ESRVReg::t3).SRV(ESRVReg::t4).SRV(ESRVReg::t5).SRV(ESRVReg::t6)
 			.UAV(EUAVReg::u0).UAV(EUAVReg::u1).UAV(EUAVReg::u2).UAV(EUAVReg::u3).Create(gpu, "WorldContacts:Signature");
-		m_step.m_pso = ComputePSO(m_step.m_sig.get(), compile(L"CSWorldContacts")).Cache(shader_cache).Create(gpu, "WorldContacts:Contacts");
+		m_step.m_pso = ComputePSO(m_step.m_sig.get(), CompileWorldContactKernel(L"CSWorldContacts", shader_cache)).Cache(shader_cache).Create(gpu, "WorldContacts:Contacts");
 		m_samples.m_sig = m_step.m_sig;
-		m_samples.m_pso = ComputePSO(m_samples.m_sig.get(), compile(L"CSWorldSamples")).Cache(shader_cache).Create(gpu, "WorldContacts:Samples");
+		m_samples.m_pso = ComputePSO(m_samples.m_sig.get(), CompileWorldContactKernel(L"CSWorldSamples", shader_cache)).Cache(shader_cache).Create(gpu, "WorldContacts:Samples");
 		m_dispatch.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0).UAV(EUAVReg::u0).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:DispatchSignature");
 		m_dispatch.m_pso = ComputePSO(m_dispatch.m_sig.get(), shader_code::calc_resolve_dispatch).Cache(shader_cache).Create(gpu, "WorldContacts:Dispatch");
+	}
+
+	// Add recipes for the runtime-compiled sampled world-contact kernels.
+	void AppendWorldContactShaderRecipes(std::vector<ShaderRecipe>& recipes)
+	{
+		// The dispatch kernel is compiled at build time, so only the sample and selection stages need recipes.
+		for (auto entry_point : { L"CSWorldContacts", L"CSWorldSamples" })
+		{
+			recipes.push_back({
+				.m_name = std::format("WorldContacts.{}", Narrow(std::wstring_view(entry_point))),
+				.m_compile = [entry_point](IShaderCache* cache) { return CompileWorldContactKernel(entry_point, cache); },
+			});
+		}
 	}
 
 	// Own validated world sources that use a shared sampled contact pipeline.

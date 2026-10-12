@@ -133,6 +133,7 @@
     <ClCompile Include="src\atmosphere\atmosphere.cpp" />
     <ClCompile Include="src\buoyancy\gpu_buoyancy.cpp" />
     <ClCompile Include="src\buoyancy\gpu_water_forces.cpp" />
+    <ClCompile Include="src\utility\shader_recipes.cpp" />
     <ClCompile Include="src\collision\broadphase_brute.cpp" />
     <ClCompile Include="src\collision\contact.cpp" />
     <ClCompile Include="src\constraint\constraint_compiler.cpp" />
@@ -271,6 +272,7 @@
     <ClInclude Include="src\integrator\engine_buffer_cache.h" />
     <ClInclude Include="src\materials\material_map.h" />
     <ClInclude Include="src\utility\gpu.h" />
+    <ClInclude Include="src\utility\shader_recipes.h" />
   </ItemGroup>
   <!--
   Resources

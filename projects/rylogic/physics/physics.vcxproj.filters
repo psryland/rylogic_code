@@ -81,6 +81,9 @@
     <ClCompile Include="src\buoyancy\gpu_water_forces.cpp">
       <Filter>src\buoyancy</Filter>
     </ClCompile>
+    <ClCompile Include="src\utility\shader_recipes.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
     <ClCompile Include="src\buoyancy\gpu_buoyancy.cpp">
       <Filter>src\buoyancy</Filter>
     </ClCompile>
@@ -315,6 +318,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\utility\gpu.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utility\shader_recipes.h">
       <Filter>src\utility</Filter>
     </ClInclude>
     <ClInclude Include="src\collision\shape_cache.h">

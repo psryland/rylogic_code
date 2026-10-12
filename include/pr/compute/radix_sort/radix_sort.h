@@ -13,6 +13,7 @@
 #include "pr/compute/compute_pso.h"
 #include "pr/compute/compute_step.h"
 #include "pr/compute/shaders/shader_compiler.h"
+#include "pr/compute/shaders/shader_precompile.h"
 #include "pr/compute/utility/root_signature.h"
 #include "pr/compute/utility/barrier_batch.h"
 #include "pr/compute/utility/pix.h"
@@ -100,6 +101,7 @@ namespace pr::compute::gpu_radix_sort
 		D3DPtr<ID3D12Resource> m_indirect_arguments;
 
 		TuningParams m_tuning;
+		IShaderCache* m_shader_cache; // Optional; used for the GPU-counted kernels, which are compiled on first use.
 		int64_t m_size; // Bound capacity; GPU-counted sorts supply a separate logical length through GPU-written constant buffers.
 		bool m_bound_to_external;
 
@@ -109,6 +111,7 @@ namespace pr::compute::gpu_radix_sort
 			GpuReadbackBuffer::Allocation values;
 		};
 
+		// 'shader_cache' is optional. When given, it must outlive the sorter because the GPU-counted kernels are compiled on first use.
 		explicit GpuRadixSort(Gpu& gpu, TuningParams const& tuning = {}, IShaderCache* shader_cache = nullptr)
 			: m_gpu(&gpu)
 			, m_init()
@@ -128,28 +131,60 @@ namespace pr::compute::gpu_radix_sort
 			, m_error_count()
 			, m_indirect_arguments()
 			, m_tuning(tuning)
+			, m_shader_cache(shader_cache)
 			, m_size()
 			, m_bound_to_external()
 		{
 			// CPU-known use does not create the count-source pipeline variants.
-			CreateKernels(false, shader_cache);
+			CreateKernels(false);
+		}
+
+		// Return every runtime-compiled shader that sorters of this type with 'tuning' can use, including the GPU-counted variants.
+		static std::vector<ShaderRecipe> ShaderRecipes(TuningParams const& tuning = {})
+		{
+			// The GPU-counted kernels use the same bytecode as the CPU-counted ones, so only the indirect setup kernel is extra.
+			auto type_name = std::format("RadixSort<{},{}>", SortTypeName<Key>(), SortTypeName<Value>());
+			auto recipes = std::vector<ShaderRecipe>{};
+			for (auto entry_point : { L"InitRadixSort", L"InitPayload", L"SweepUp", L"Scan", L"SweepDown" })
+			{
+				recipes.push_back(ShaderRecipe{
+					.m_name = std::format("{}.{}", type_name, Narrow(std::wstring_view(entry_point))),
+					.m_compile = [tuning, entry_point](IShaderCache* cache) { return CompileKernel(tuning, entry_point, cache); },
+				});
+			}
+			recipes.push_back(ShaderRecipe{
+				.m_name = std::format("{}.SetupIndirectSort", type_name),
+				.m_compile = [tuning](IShaderCache* cache) { return CompileIndirectSetup(tuning, cache); },
+			});
+			return recipes;
 		}
 
 	private:
 
-		// Compile the same kernels with CPU root constants or GPU constant-buffer bindings; sorting arithmetic is identical.
-		void CreateKernels(bool gpu_counted, IShaderCache* shader_cache)
+		// Return a short display name for a sortable key or payload type.
+		template <typename T> static constexpr char const* SortTypeName()
 		{
-			// Keep compilation options identical for both parameter sources.
+			// Names are only used to label shader recipes.
+			if      constexpr (std::is_same_v<T, int>)      return "int";
+			else if constexpr (std::is_same_v<T, uint32_t>) return "uint";
+			else if constexpr (std::is_same_v<T, float>)    return "float";
+			else if constexpr (std::is_same_v<T, void>)     return "void";
+			else static_assert(false, "Unsupported sort type");
+		}
+
+		// Compile one sort kernel. Every sort kernel of this type and tuning uses the same compile options, so all share cache entries.
+		static std::vector<uint8_t> CompileKernel(TuningParams const& tuning, std::wstring_view entry_point, IShaderCache* shader_cache)
+		{
+			// The resolver must outlive the compiler, which keeps a pointer to it for include lookup.
 			shader_cache::ResourceSourceResolver resolver;
 			auto compiler = ShaderCompiler{}
 				.Cache(shader_cache)
 				.Source("src/compute/radix_sort/radix_sort.hlsl", resolver)
 				.HlslVersion(EHlslVersion::Hlsl2021)
-				.ShaderModel(m_tuning.shader_model)
+				.ShaderModel(tuning.shader_model)
 				.Optimise()
-				.Define(L"KEYS_PER_THREAD", std::to_wstring(m_tuning.keys_per_thread))
-				.Define(L"PART_SIZE", std::to_wstring(m_tuning.part_size));
+				.Define(L"KEYS_PER_THREAD", std::to_wstring(tuning.keys_per_thread))
+				.Define(L"PART_SIZE", std::to_wstring(tuning.part_size));
 
 			if      constexpr (std::is_same_v<Key, int>)      compiler.Define(L"KEY_TYPE_ID", L"0");
 			else if constexpr (std::is_same_v<Key, uint32_t>) compiler.Define(L"KEY_TYPE_ID", L"1");
@@ -164,18 +199,40 @@ namespace pr::compute::gpu_radix_sort
 			if constexpr (Ascending)  compiler.Define(L"SHOULD_ASCEND");
 			if constexpr (HasPayload) compiler.Define(L"SORT_PAIRS", L"1");
 
-			if (m_tuning.use_16bit)
+			if (tuning.use_16bit)
 			{
 				compiler.Define(L"DIGIT_TYPE", L"uint16_t");
 				compiler.Arg(L"-enable-16bit-types");
 			}
+			return compiler.EntryPoint(entry_point).Compile();
+		}
 
+		// Compile the kernel that converts a GPU-written element count into per-pass constants and dispatch arguments.
+		static std::vector<uint8_t> CompileIndirectSetup(TuningParams const& tuning, IShaderCache* shader_cache)
+		{
+			// The setup kernel does not depend on the key or payload types.
+			shader_cache::ResourceSourceResolver resolver;
+			return ShaderCompiler{}
+				.Cache(shader_cache)
+				.Source("src/compute/radix_sort/radix_sort.hlsl", resolver)
+				.HlslVersion(EHlslVersion::Hlsl2021)
+				.ShaderModel(tuning.shader_model)
+				.Optimise()
+				.Define(L"RADIX_SORT_INDIRECT_SETUP", L"1")
+				.EntryPoint(L"SetupIndirectSort")
+				.Compile();
+		}
+
+		// Compile the same kernels with CPU root constants or GPU constant-buffer bindings; sorting arithmetic is identical.
+		void CreateKernels(bool gpu_counted)
+		{
 			// Initialization is shared by both parameter sources.
+			auto shader_cache = m_shader_cache;
 			if (!gpu_counted)
 			{
 				// InitRadixSort
 				{
-					auto bytecode = compiler.EntryPoint(L"InitRadixSort").Compile();
+					auto bytecode = CompileKernel(m_tuning, L"InitRadixSort", shader_cache);
 					m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 						.UAV(EReg::GlobalHistogram)
 						.Create(*m_gpu, "GpuRadixSort:InitSig");
@@ -186,7 +243,7 @@ namespace pr::compute::gpu_radix_sort
 
 				// InitPayload
 				{
-					auto bytecode = compiler.EntryPoint(L"InitPayload").Compile();
+					auto bytecode = CompileKernel(m_tuning, L"InitPayload", shader_cache);
 					m_init_payload.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 						.U32(EReg::Constants, 4)
 						.UAV(EReg::Payload0)
@@ -207,7 +264,7 @@ namespace pr::compute::gpu_radix_sort
 			// Sweep Up
 			{
 				// Bind the input keys and histograms for the upward sweep.
-				auto bytecode = compiler.EntryPoint(L"SweepUp").Compile();
+				auto bytecode = CompileKernel(m_tuning, L"SweepUp", shader_cache);
 				auto layout = constants;
 				auto& step = gpu_counted ? m_counted_sweep_up : m_sweep_up;
 				step.m_sig = layout
@@ -223,7 +280,7 @@ namespace pr::compute::gpu_radix_sort
 			// Scan
 			{
 				// Scan the same partition histogram regardless of the count source.
-				auto bytecode = compiler.EntryPoint(L"Scan").Compile();
+				auto bytecode = CompileKernel(m_tuning, L"Scan", shader_cache);
 				auto layout = constants;
 				auto& step = gpu_counted ? m_counted_scan : m_scan;
 				step.m_sig = layout
@@ -237,7 +294,7 @@ namespace pr::compute::gpu_radix_sort
 			// Sweep Down
 			{
 				// Preserve the stable key/payload scatter and its ping-pong bindings.
-				auto bytecode = compiler.EntryPoint(L"SweepDown").Compile();
+				auto bytecode = CompileKernel(m_tuning, L"SweepDown", shader_cache);
 				auto layout = constants;
 				auto& step = gpu_counted ? m_counted_sweep_down : m_sweep_down;
 				step.m_sig = layout
@@ -613,20 +670,12 @@ namespace pr::compute::gpu_radix_sort
 			if (m_indirect_arguments != nullptr)
 				return;
 
-			// The constructor's shader cache is borrowed only during construction, not retained for deferred compilation.
+			// The count-source kernels are created on first use and use the constructor's shader cache.
 			if (m_indirect_setup.m_pso == nullptr)
 			{
 				// The count-source variants use the same compiled shader logic with CBVs in place of root constants.
-				CreateKernels(true, nullptr);
-				shader_cache::ResourceSourceResolver resolver;
-				auto bytecode = ShaderCompiler{}
-					.Source("src/compute/radix_sort/radix_sort.hlsl", resolver)
-					.HlslVersion(EHlslVersion::Hlsl2021)
-					.ShaderModel(m_tuning.shader_model)
-					.Optimise()
-					.Define(L"RADIX_SORT_INDIRECT_SETUP", L"1")
-					.EntryPoint(L"SetupIndirectSort")
-					.Compile();
+				CreateKernels(true);
+				auto bytecode = CompileIndirectSetup(m_tuning, m_shader_cache);
 				auto setup = ComputeStep{};
 				setup.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
@@ -634,6 +683,7 @@ namespace pr::compute::gpu_radix_sort
 					.UAV(hlsl::EUAVReg::u0)
 					.Create(*m_gpu, "GpuRadixSort:IndirectSetupSig");
 				setup.m_pso = ComputePSO(setup.m_sig.get(), bytecode)
+					.Cache(m_shader_cache)
 					.Create(*m_gpu, "GpuRadixSort:IndirectSetupPSO");
 				auto dispatch = CreateIndirectSignature();
 
