@@ -6,7 +6,6 @@
 #include "pr/compute/forward.h"
 #include "pr/compute/resource/gpu_transfer_allocation.h"
 #include "pr/compute/resource/gpu_transfer_buffer_page.h"
-#include "pr/compute/utility/lookup.h"
 #include "pr/compute/utility/wrappers.h"
 #include "pr/compute/utility/gpu_sync.h"
 
@@ -25,9 +24,29 @@ namespace pr::compute
 		//  - This type is used for uploading constant buffers for shaders, initialising textures, initialising V/I buffers, etc.
 		//  - The 'block_size' parameter only controls the default size of each block. Larger blocks are created as needed.
 
+		// Hashes the bytes of a cached item. Lookups can pass a span, so a cache hit does not allocate.
+		struct BytesHash
+		{
+			using is_transparent = void;
+			size_t operator()(std::span<std::byte const> bytes) const
+			{
+				return s_cast<size_t>(hash::HashBytes32(bytes.data(), bytes.data() + bytes.size()));
+			}
+		};
+
+		// Compares cached item bytes exactly, so two different items that have the same hash never share an upload.
+		struct BytesEqual
+		{
+			using is_transparent = void;
+			bool operator()(std::span<std::byte const> lhs, std::span<std::byte const> rhs) const
+			{
+				return std::ranges::equal(lhs, rhs);
+			}
+		};
+
 		// A 'page' in the upload buffer
 		using Block = GpuTransferBufferPage;
-		using Lookup = Lookup<int, D3D12_GPU_VIRTUAL_ADDRESS>;
+		using Lookup = std::unordered_map<std::vector<std::byte>, D3D12_GPU_VIRTUAL_ADDRESS, BytesHash, BytesEqual>;
 		using SyncPoint = struct { Block const* m_block; int64_t m_offset; };
 		using SyncPoints = pr::deque<SyncPoint, 4>;
 		using UsedBlocks = pr::deque<Block, 4>;
@@ -133,19 +152,17 @@ namespace pr::compute
 			return Alloc(count * sizeof(T), alignof(T));
 		}
 
-		// Copy an object into upload buffer memory, and return the GPU pointer to it's location
+		// Copy an object into upload buffer memory, and return the GPU pointer to its location.
+		// When 'might_reuse' is true, an earlier upload is returned only if it has identical bytes (padding included) and satisfies 'alignment'.
 		template <typename Item>
-		D3D12_GPU_VIRTUAL_ADDRESS Add(Item const& item, int alignment, bool might_reuse)
+		D3D12_GPU_VIRTUAL_ADDRESS Add(Item const& item, int alignment, bool might_reuse) requires (std::is_trivially_copyable_v<Item> && std::is_standard_layout_v<Item>)
 		{
-			auto key = 0;
-
-			// See if 'item' is already in the buffer
+			// Reuse an identical upload made since the last sync point
+			auto bytes = std::as_bytes(std::span{ &item, 1 });
 			if (might_reuse)
 			{
-				// Generate a key
-				key = hash::HashBytes32(&item, &item + 1);
-				auto iter = m_lookup.find(key);
-				if (iter != end(m_lookup))
+				auto iter = m_lookup.find(bytes);
+				if (iter != end(m_lookup) && iter->second % alignment == 0)
 					return iter->second;
 			}
 
@@ -157,7 +174,7 @@ namespace pr::compute
 			// Save in the lookup if this object might be reused
 			if (might_reuse)
 			{
-				m_lookup[key] = gpu_address;
+				m_lookup.insert_or_assign(std::vector<std::byte>(bytes.begin(), bytes.end()), gpu_address);
 			}
 
 			// Return the handle to the GPU memory
