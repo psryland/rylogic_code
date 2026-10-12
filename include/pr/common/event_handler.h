@@ -842,17 +842,18 @@ namespace pr::common
 			{ // Thread safety
 				Thing thg;
 				std::atomic_int c0 = 0, c1 = 0;
-				auto t0 = std::thread([&]
+				// 'jthread' stops and joins the subscriber threads if an expectation throws.
+				auto t0 = std::jthread([&](std::stop_token stop)
 				{
-					for (; c0 == 0;)
+					for (; c0 == 0 && !stop.stop_requested();)
 					{
 						AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c0; };
 						std::this_thread::yield();
 					}
 				});
-				auto t1 = std::thread([&]
+				auto t1 = std::jthread([&](std::stop_token stop)
 				{
-					for (; c1 == 0;)
+					for (; c1 == 0 && !stop.stop_requested();)
 					{
 						AutoSub sub = thg.Event2 += [&](Thing&, EmptyArgs const&) { ++c1; };
 						std::this_thread::yield();
@@ -861,12 +862,14 @@ namespace pr::common
 
 				int c2 = 0;
 				{
+					// Bound the wait by time rather than iterations, because a loaded machine may not schedule the subscriber threads promptly.
 					AutoSub sub = thg.Event2 += [&](Thing& t, EmptyArgs const&) { ++c2; ++t.m_count; };
-					for (int i = 0; c0 == 0 || c1 == 0; ++i)
+					auto const deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+					for (; c0 == 0 || c1 == 0;)
 					{
 						thg.Call2();
 						std::this_thread::yield();
-						PR_EXPECT(i < 100000);
+						PR_EXPECT(std::chrono::steady_clock::now() < deadline);
 					}
 				}
 
@@ -977,17 +980,18 @@ namespace pr::common
 			{// thread safety
 				Thing thg;
 				std::atomic_int c0 = 0, c1 = 0;
-				auto t0 = std::thread([&]
+				// 'jthread' stops and joins the subscriber threads if an expectation throws.
+				auto t0 = std::jthread([&](std::stop_token stop)
 					{
-						for (; c0 == 0;)
+						for (; c0 == 0 && !stop.stop_requested();)
 						{
 							AutoSub sub = thg.Action2 += [&](int*) { ++c0; };
 							std::this_thread::yield();
 						}
 					});
-				auto t1 = std::thread([&]
+				auto t1 = std::jthread([&](std::stop_token stop)
 					{
-						for (; c1 == 0;)
+						for (; c1 == 0 && !stop.stop_requested();)
 						{
 							AutoSub sub = thg.Action2 += [&](int*) { ++c1; };
 							std::this_thread::yield();
@@ -996,12 +1000,14 @@ namespace pr::common
 
 				int c2 = 0;
 				{
+					// Bound the wait by time rather than iterations, because a loaded machine may not schedule the subscriber threads promptly.
 					AutoSub sub = thg.Action2 += [&](int* c) { ++c2; ++(*c); };
-					for (int i = 0; c0 == 0 || c1 == 0; ++i)
+					auto const deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+					for (; c0 == 0 || c1 == 0;)
 					{
 						thg.Call4();
 						std::this_thread::yield();
-						PR_EXPECT(i < 100000);
+						PR_EXPECT(std::chrono::steady_clock::now() < deadline);
 					}
 				}
 

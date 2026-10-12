@@ -1515,7 +1515,7 @@ namespace pr::physics::tests
 			auto constraints = ConstraintSet{};
 			auto engine = Engine{
 				EngineConfig{},
-				nullptr,
+				&SharedTestShaderCache(),
 				SharedTestGpu().m_gpu.device(),
 				SharedTestGpu().m_gpu.queue(),
 			};

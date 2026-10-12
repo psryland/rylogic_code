@@ -271,7 +271,7 @@ namespace pr::physics::tests
 									accepted = accepted && error.m_height < 1e-8 && error.m_dx < 1e-10 && error.m_dy < 1e-10 && error.m_normal < 1e-10;
 
 								if (!accepted && failed + recipe_failed < 8)
-									pr::unittests::TestFramework::out() << std::format("Terrain FAILED seed={} variant={} xy=({:.17g},{:.17g}) height={:.9g} dx={:.9g} dy={:.9g} normal_length={:.9g}\n",
+									log_stream() << std::format("Terrain FAILED seed={} variant={} xy=({:.17g},{:.17g}) height={:.9g} dx={:.9g} dy={:.9g} normal_length={:.9g}\n",
 										seed, static_cast<int>(variant), positions[index].x, positions[index].y, error.m_height, error.m_dx, error.m_dy, error.m_normal);
 
 								recipe_failed += !accepted;
