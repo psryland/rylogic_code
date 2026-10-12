@@ -30,6 +30,14 @@ namespace pr::physics
 			uint32_t m_body, m_shape, m_child, m_pad;
 		};
 
+		// Stored sample result; matches WorldCandidate in gpu_world_contacts.hlsl.
+		struct Candidate
+		{
+			float m_position[4];
+			float m_normal_depth[4];
+			uint32_t m_valid;
+		};
+
 		Gpu& m_gpu;
 		std::optional<terrain::landscape::BaselineSurface> m_surface;
 		std::optional<CylindricalBoundaryConfig> m_boundary;
@@ -38,6 +46,7 @@ namespace pr::physics
 		uint32_t m_boundary_plan_offset = 0;
 		float m_height_upper;
 		RigidBody m_endpoint;
+		ComputeStep m_samples;
 		ComputeStep m_step;
 		ComputeStep m_dispatch;
 		std::vector<surface::SurfacePatch> m_patches;
@@ -46,7 +55,8 @@ namespace pr::physics
 		std::vector<Shape const*> m_sources;
 		std::vector<bool> m_planned;
 		size_t m_shape_count = 0;
-		D3DPtr<ID3D12Resource> m_recipe, m_plans, m_patch_buffer, m_instance_buffer, m_status;
+		uint32_t m_max_samples[2] = {}; // Largest per-instance sample count for terrain (0) and cylinder (1) plans in this frame.
+		D3DPtr<ID3D12Resource> m_recipe, m_plans, m_patch_buffer, m_instance_buffer, m_status, m_candidates;
 		D3DPtr<ID3D12QueryHeap> m_queries;
 		D3DPtr<ID3D12Resource> m_query_readback;
 		uint32_t m_query_capacity = 0, m_query_count = 0;
