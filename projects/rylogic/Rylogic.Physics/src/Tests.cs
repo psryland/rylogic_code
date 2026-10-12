@@ -51,6 +51,7 @@ public sealed class TestPhysics
 		AssertNativeSize(24, sizeof(Native.AtmosphereDesc));
 		AssertNativeSize(25, Marshal.SizeOf<Native.AtmosphereStepDesc>());
 		AssertNativeSize(26, Marshal.SizeOf<Native.AtmosphereStats>());
+		AssertNativeSize(27, Marshal.SizeOf<Native.WindSeaDesc>());
 		Assert.Equal(32, sizeof(AtmosphereHeatSource));
 		Assert.Equal(16, sizeof(AtmosphereOutsideAir));
 		Assert.Equal(32, sizeof(AtmosphereTracerParticle));
@@ -65,6 +66,7 @@ public sealed class TestPhysics
 		Assert.Equal(8, Marshal.OffsetOf<Native.WaterDesc>(nameof(Native.WaterDesc.m_level)).ToInt32());
 		Assert.Equal(40, Marshal.OffsetOf<Native.WaterDesc>(nameof(Native.WaterDesc.m_elements)).ToInt32());
 		Assert.Equal(40, Marshal.OffsetOf<Native.WaterBathymetryDesc>(nameof(Native.WaterBathymetryDesc.m_heights)).ToInt32());
+		Assert.Equal(48, Marshal.OffsetOf<Native.WindSeaDesc>(nameof(Native.WindSeaDesc.m_table)).ToInt32());
 		Assert.Equal(8, Marshal.OffsetOf<CylindricalBoundaryConfiguration>(nameof(CylindricalBoundaryConfiguration.m_centre)).ToInt32());
 		Assert.Equal(32, Marshal.OffsetOf<CylindricalBoundaryConfiguration>(nameof(CylindricalBoundaryConfiguration.m_material_id)).ToInt32());
 		Assert.Equal(36, Marshal.OffsetOf<CylindricalBoundaryConfiguration>(nameof(CylindricalBoundaryConfiguration.m_surface_spacing)).ToInt32());
@@ -131,44 +133,45 @@ public sealed class TestPhysics
 		Assert.True(body.GetState().m_object_to_world.pos.z < 0);
 	}
 
-	/// <summary>Wind-driven waves build towards their targets, marshal as elements, and apply with terrain heights through the engine.</summary>
+	/// <summary>A wind-sea table marshals as elements, and applies with terrain heights and local winds through the engine.</summary>
 	[Test]
 	public void Waves()
 	{
 		// Calm air makes no waves, and wind makes waves.
-		var layout = new WaveSpectrumLayout(9.81f, 1024f, 0.5f, 256f, 16, 4);
-		var targets = new float[layout.ComponentCount];
-		WaveSpectrum.Targets(layout, new WaveWeather(0, 10_000), targets);
-		Assert.True(Array.TrueForAll(targets, a => a == 0));
-		WaveSpectrum.Targets(layout, new WaveWeather(10, 10_000), targets);
-		Assert.True(Array.Exists(targets, a => a > 0));
+		var layout = new WaveSpectrumLayout(9.81f, 1024f, 0.5f, 256f, 8, 12);
+		const int speed_count = 41;
+		var table = new v4[layout.Bands * speed_count];
+		WaveSpectrum.SeaTable(layout, 10_000, 0.5f, table);
+		Assert.True(table[0].x == 0 && table[(layout.Bands - 1) * speed_count].x == 0);
+		Assert.True(Array.Exists(table, row => row.x > 0));
 
 		// Relaxation reaches the targets, and a minimum wavelength removes short components.
-		var amplitudes = new float[layout.ComponentCount];
-		WaveSpectrum.Relax(amplitudes, targets, 1e4f, 20f);
-		Assert.Equal(targets[targets.Length - 1], amplitudes[amplitudes.Length - 1]);
+		var values = new float[] { 0, 0 };
+		WaveSpectrum.Relax(values, new float[] { 1, 2 }, 1e4f, 20f);
+		Assert.Equal(2f, values[1]);
 		var elements = new WaterFieldElement[layout.ComponentCount];
-		var all = WaveSpectrum.Elements(layout, amplitudes, 0, 0, 0, elements);
-		var sharpness = WaveSpectrum.CrestSharpness(10);
-		var long_only = WaveSpectrum.Elements(layout, amplitudes, 0, sharpness, 4, elements);
+		var all = WaveSpectrum.Elements(layout, table, 0, elements);
+		var long_only = WaveSpectrum.Elements(layout, table, 4, elements);
 		Assert.True(all > long_only && long_only > 0);
 		Assert.Equal(WaterFieldElement.TypeGerstnerWave, elements[0].m_info.x);
 		Assert.True(elements[0].m_wave.y >= 4);
+		Assert.True(elements[0].m_info.y > 0);
+		ExpectStatus(EStatus.InvalidArgument, () => WaveSpectrum.Elements(layout, table.AsSpan(1), 4, elements));
 
-		// Light wind gives sine-shaped waves, and stronger wind sharpens the crests.
-		Assert.Equal(0f, WaveSpectrum.CrestSharpness(4));
-		Assert.True(sharpness > 0 && sharpness < WaveSpectrum.CrestSharpness(40));
-		Assert.Equal(sharpness, elements[0].m_timing.x);
-		ExpectStatus(EStatus.InvalidArgument, () => WaveSpectrum.Elements(layout, amplitudes, 0, 0.95f, 4, elements));
-
-		// The engine accepts the waves with terrain heights, and rejects a grid that does not match its heights.
+		// The engine accepts the waves with terrain heights and local winds, and rejects grids that do not match their arrays.
 		using var runtime = new Physics();
 		using var engine = runtime.CreateEngine();
 		var heights = new float[] { -20, -20, 5, 5 };
+		var grid = new WindSeaGrid(new v2(-100, -100), 200, 0.5f, 2, 2, layout.Bands, speed_count, layout.Bands);
+		var winds = new v2[2 * 2 * layout.Bands];
+		winds.AsSpan().Fill(new v2(10, 0));
 		engine.SetWaterBathymetry(new Vector2d(-100, -100), 200, 2, 2, heights);
+		engine.SetWaterWindSea(grid, table, winds);
 		engine.SetWater(new WaterConfiguration(0, repeat_period: 1024), elements.AsSpan(0, long_only));
 		Assert.Throws<ArgumentException>(() => engine.SetWaterBathymetry(new Vector2d(0, 0), 1, 3, 3, heights));
+		Assert.Throws<ArgumentException>(() => engine.SetWaterWindSea(grid, table, winds.AsSpan(1)));
 		ExpectStatus(EStatus.InvalidArgument, () => engine.SetWater(new WaterConfiguration(0, breaking_ratio: 0), elements.AsSpan(0, long_only)));
+		engine.ClearWaterWindSea();
 		engine.ClearWaterBathymetry();
 		engine.SetWater(null);
 	}

@@ -642,6 +642,23 @@ namespace pr::rdr12
 		});
 	}
 
+	// Overwrite part of each distinct buffer used by the procedural shaders of 'object'.
+	void Context::ObjectProceduralBufferWrite(ldraw::LdrObject* object, size_t offset, std::span<std::byte const> data)
+	{
+		// Shaders may share one buffer, which needs only one copy.
+		auto written = pr::vector<ID3D12Resource*, 4>{};
+		ForEachProceduralShader(object, [&](ProceduralShader& shader)
+		{
+			// Each buffer is written once, by the first shader that binds it.
+			auto* buffer = shader.m_buffer.get();
+			if (std::find(written.begin(), written.end(), buffer) != written.end())
+				return;
+
+			shader.BufferWrite(offset, data);
+			written.push_back(buffer);
+		});
+	}
+
 	// Replace the detail-normal layers of every nugget of 'object' that has detail normals.
 	void Context::ObjectDetailNormalLayers(ldraw::LdrObject* object, std::span<materials::DetailNormalLayer const> layers, float base_slope_variance)
 	{

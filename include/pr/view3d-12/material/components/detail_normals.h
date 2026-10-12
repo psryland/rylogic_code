@@ -32,11 +32,12 @@ namespace pr::rdr12::materials
 	// A grid of detail-normal strengths that varies the layers of every DetailNormalLayers set referring to it over the surface.
 	// Each texel holds (x, y, z, w): x scales the height of every layer and y adds to the base slope variance; both are non-negative.
 	// (z, w) = (cos a, sin a) is a unit vector that turns every layer's pattern by angle 'a' from its u direction toward its v direction,
-	// about the texel's centre; (1, 0) leaves the layers unturned. The texture coordinates of a world position 'p' are
+	// about the world origin; (1, 0) leaves the layers unturned. Patterns are drawn only in 16 fixed directions, so an angle between two of them
+	// cross-fades their patterns, and a changing angle fades between patterns instead of moving them. The texture coordinates of a world position 'p' are
 	// u = dot(p.xyz, m_row_u.xyz) + m_row_u.w and v = dot(p.xyz, m_row_v.xyz) + m_row_v.w, where [0,1] spans the grid with texel (0,0) at
 	// u,v = 0. Each fragment blends the layers of the nearest 2x2 texels with bilinear weights, each texel's layers drawn at its own strength
-	// and angle, and positions outside the grid use the nearest edge texels. Texels with different angles draw different patterns, so the
-	// blend between them is less contrasted than either. When 'm_visualise' is set, the shaded colour is replaced by the height strength,
+	// and angle, and positions outside the grid use the nearest edge texels. Texels that share a fixed direction share its pattern. The slopes of
+	// a blend of different directions are scaled up so that it is as contrasted as one pattern. When 'm_visualise' is set, the shaded colour is replaced by the height strength,
 	// from blue at 0 to red at 2 or more. Use on the renderer owner thread.
 	struct DetailStrengthMap : RefCounted<DetailStrengthMap>
 	{

@@ -6,6 +6,8 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics/physics.h"
+#include "pr/physics/terrain/water/wave_spectrum.h"
+#include "pr/physics/terrain/water/wind_sea.h"
 #include "src/buoyancy/gpu_water_forces.h"
 #include "src/unittests/shared_engine.h"
 
@@ -281,6 +283,71 @@ namespace pr::physics::tests
 			auto const velocity = body.VelocityWS();
 			PR_EXPECT(velocity.lin.x >= 0.0f && velocity.lin.x < 20.0f);
 			PR_EXPECT(velocity.ang.z >= 0.0f && velocity.ang.z < 5.0f);
+		}
+
+		PRUnitTestMethod(WindSeaUsesLocalWaves, Quick)
+		{
+			using namespace terrain::water;
+
+			// Build the sea for a steady 10 m/s east wind over the origin.
+			auto const spectrum = WaveSpectrum{};
+			auto const bands = spectrum.Layout().m_bands;
+			constexpr int speed_count = 81;
+			auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(bands) * speed_count);
+			spectrum.SeaTable(10000.0f, 0.5f, table);
+			auto elements = std::vector<WaterFieldElement>(static_cast<size_t>(spectrum.ComponentCount()));
+			elements.resize(static_cast<size_t>(spectrum.Elements(table, 0.0f, elements)));
+			auto const grid = WindSeaGrid{.origin = {-100.0f, -100.0f}, .cell_size = 200.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = bands, .speed_count = speed_count, .level_count = bands};
+			auto const winds = std::vector<v2>(static_cast<size_t>(4 * bands), v2{10.0f, 0.0f});
+			auto const sea = std::make_shared<WindSea const>(grid, table, winds);
+
+			// Keep the element with the largest local amplitude, so its wave force is clear of sampling noise.
+			auto all = WaterField(0.0, elements);
+			all.WindSea(sea);
+			auto locals = std::vector<v2>(elements.size());
+			all.LocalWaves(terrain::v2d{0.0, 0.0}, locals);
+			auto const strongest = static_cast<size_t>(std::ranges::max_element(locals, {}, &v2::x) - locals.begin());
+			auto const element = elements[strongest];
+			auto const local = locals[strongest];
+			PR_EXPECT(local.x > 0.05f && local.x < 0.5f * element.wave.x);
+
+			// The same element as a plain wave, holding either the local values or the bounds.
+			auto plain = element;
+			plain.info.y = 0;
+			plain.wave.x = local.x;
+			plain.timing.x = local.y;
+			auto bound = element;
+			bound.info.y = 0;
+
+			// Run a neutrally buoyant submerged box without drag, so only the wave pressure moves it.
+			auto const run = [](WaterField const& field)
+			{
+				// One second of motion from rest.
+				auto box = collision::ShapeBox(v4{ 2, 2, 1, 0 });
+				auto body = RigidBody{};
+				body.Shape(collision::shape_cast(&box), 4.0f * Density);
+				body.O2W(m4x4::Translation(0, 0, -5));
+
+				auto& engine = SharedEngine();
+				ResetEngineForNextTest(engine);
+				auto config = engine.Config();
+				config.sleeping_enabled = false;
+				engine.Config(config);
+				engine.Water(WaterConfig{ .m_field = field, .m_density = Density });
+				Run(engine, body, 60, 1);
+				ClearWater(engine);
+				return body.VelocityWS().lin;
+			};
+			auto sea_field = WaterField(0.0, std::span{ &element, 1 });
+			sea_field.WindSea(sea);
+			auto const sea_velocity = run(sea_field);
+			auto const plain_velocity = run(WaterField(0.0, std::span{ &plain, 1 }));
+			auto const bound_velocity = run(WaterField(0.0, std::span{ &bound, 1 }));
+
+			// The wind sea moves the body as the local wave does, and not as the bound would.
+			auto const separation = Length(bound_velocity - plain_velocity);
+			PR_EXPECT(separation > 1e-2f);
+			PR_EXPECT(Length(sea_velocity - plain_velocity) < 0.01f * separation);
 		}
 	};
 }

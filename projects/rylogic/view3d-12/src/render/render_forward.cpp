@@ -41,10 +41,10 @@ namespace pr::rdr12
 		Texture2DPtr m_tex[2];
 		iv2 m_size;
 
-		// The previous frame's viewport, world to screen transform, and low cloud offset, and whether the previous frame wrote the history.
+		// The previous frame's viewport, world to screen transform, and low cloud drift (see ProceduralSky::m_low_cloud_drift), and whether the previous frame wrote the history.
 		v4 m_prev_viewport;
 		m4x4 m_prev_w2s;
-		v2 m_prev_cloud_offset;
+		std::array<double, 2> m_prev_cloud_drift;
 		bool m_valid;
 
 		// The number of frames accumulated, which selects each frame's offset along the march steps.
@@ -58,7 +58,7 @@ namespace pr::rdr12
 			, m_size()
 			, m_prev_viewport()
 			, m_prev_w2s(m4x4::Identity())
-			, m_prev_cloud_offset()
+			, m_prev_cloud_drift()
 			, m_valid()
 			, m_frame()
 			, m_constants()
@@ -517,11 +517,11 @@ namespace pr::rdr12
 		// Each frame moves the march samples along their steps by the golden ratio, which spreads the samples of consecutive frames evenly.
 		auto const& cam = scn().m_cam;
 		auto const w2s = cam.CameraToScreen() * InvertOrthonormal(cam.CameraToWorld());
-		auto const cloud_offset = sky->m_cloud_offset[0];
+		auto const cloud_drift = std::array<double, 2>{ sky->m_low_cloud_drift[0], sky->m_low_cloud_drift[1] };
 		history.m_constants = shaders::fwd::SkyHistory{
 			.prev_w2s = history.m_prev_w2s,
 			.viewport = viewport,
-			.prev_cloud_offset = history.m_prev_cloud_offset,
+			.cloud_shift = v2(s_cast<float>(cloud_drift[0] - history.m_prev_cloud_drift[0]), s_cast<float>(cloud_drift[1] - history.m_prev_cloud_drift[1])),
 			.frame_jitter = s_cast<float>(std::fmod(s_cast<double>(history.m_frame) * 0.6180339887, 1.0)),
 			.valid = history.m_valid ? 1.0f : 0.0f,
 			.enabled = 1,
@@ -529,7 +529,7 @@ namespace pr::rdr12
 		m_shader.m_sky_history = &history.m_constants;
 		history.m_prev_viewport = viewport;
 		history.m_prev_w2s = w2s;
-		history.m_prev_cloud_offset = cloud_offset;
+		history.m_prev_cloud_drift = cloud_drift;
 		history.m_valid = true;
 		++history.m_frame;
 	}

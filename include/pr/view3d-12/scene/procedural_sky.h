@@ -28,7 +28,8 @@ namespace pr::rdr12
 		// Speed (>= 0) of the lowest cloud layer in world units per second. Higher layers move proportionally slower.
 		float m_wind_speed = 0.0f;
 
-		// Azimuth of cloud travel in radians, measured from +X toward +Y.
+		// Azimuth of cloud travel in radians, measured from +X toward +Y. Changes never make the clouds jump: they always move with the current wind,
+		// and their streaks turn to follow a new direction by cross-fading to clouds aligned with it (see ProceduralSky::WindFrameTurn).
 		float m_wind_direction = 0.0f;
 
 		// Absolute time in seconds. Clouds move by the wind over the change in time since the previous update, so wind changes never make the clouds jump.
@@ -61,11 +62,27 @@ namespace pr::rdr12
 			#undef PR_RDR_INST
 		};
 
+		// The clouds are drawn in two wind frames, each aligned with a wind direction (see CloudConstants::frame_axes). Frame 1 follows the wind.
+		// When the wind turns more than 'WindFrameTurn' (radians) away from frame 1, frame 1 becomes frame 0, a new frame 1 is aligned with
+		// the wind, and the clouds cross-fade to it over 'WindFrameFade' seconds of sky time.
+		static constexpr double WindFrameTurn = 10.0 * constants<double>::tau / 360.0;
+		static constexpr double WindFrameFade = 20.0;
+		struct WindFrame
+		{
+			// The frame's x axis azimuth (radians from +X toward +Y), and each cloud layer's offset in noise tiles of the frame.
+			double m_angle;
+			v2 m_offset[3];
+		};
+
 		Instance m_inst;
 		ProceduralSkyShader* m_shader;
 		std::optional<double> m_last_time;
-		v2 m_cloud_offset[3];
+		WindFrame m_frames[2];
+		double m_frame_blend;
 		float m_cloud_evolve[3];
+
+		// The total distance the low cloud has moved with the wind, in world units in the sky frame. Views use it to follow the cloud between frames.
+		double m_low_cloud_drift[2];
 
 		// Create the model and shader once; no image files or runtime shader compiler are required.
 		explicit ProceduralSky(Renderer& rdr);

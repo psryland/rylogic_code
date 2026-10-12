@@ -10,7 +10,7 @@ namespace Rylogic.Physics;
 internal static unsafe partial class Native
 {
 	internal const string Dll = "physics";
-	internal const uint ApiVersion = 0x00050000U;
+	internal const uint ApiVersion = 0x00060000U;
 	internal const uint StructVersion = 2U;
 	private static IntPtr m_module;
 
@@ -240,6 +240,24 @@ internal static unsafe partial class Native
 		internal float* m_heights;
 	}
 
+	/// <summary>Native wind sea; see WindSeaDesc in physics-dll.h. The arrays are borrowed for the duration of the call.</summary>
+	[StructLayout(LayoutKind.Sequential)]
+	internal struct WindSeaDesc
+	{
+		internal NativeHeader m_header;
+		internal v2 m_origin;
+		internal float m_cell_size;
+		internal float m_speed_step;
+		internal int m_width;
+		internal int m_height;
+		internal int m_band_count;
+		internal int m_speed_count;
+		internal int m_level_count;
+		internal int m_pad;
+		internal v4* m_table;
+		internal v2* m_winds;
+	}
+
 	[StructLayout(LayoutKind.Sequential)]
 	internal struct ShapeCommon
 	{
@@ -400,10 +418,10 @@ internal static unsafe partial class Native
 	/// <summary>Copy a water configuration into an idle engine, or remove water with a null pointer.</summary>
 	[DllImport(Dll)] internal static extern EStatus Physics_EngineWaterSet(ulong engine, WaterDesc* water);
 	[DllImport(Dll)] internal static extern EStatus Physics_EngineWaterBathymetrySet(ulong engine, WaterBathymetryDesc* bathymetry);
-	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumTargets(WaveSpectrumLayout* spectrum, float wind_speed, float fetch, float* amplitudes, int count);
-	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumRelax(float* amplitudes, float* targets, int count, float dt, float time_constant);
-	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumCrestSharpness(float wind_speed, float* sharpness);
-	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumElements(WaveSpectrumLayout* spectrum, float* amplitudes, int count, float heading, float sharpness, float min_wavelength, WaterFieldElement* elements, int capacity, int* element_count);
+	[DllImport(Dll)] internal static extern EStatus Physics_EngineWaterWindSeaSet(ulong engine, WindSeaDesc* wind_sea);
+	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumSeaTable(WaveSpectrumLayout* spectrum, float fetch, float speed_step, v4* rows, int row_count);
+	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumRelax(float* values, float* targets, int count, float dt, float time_constant);
+	[DllImport(Dll)] internal static extern EStatus Physics_WaveSpectrumElements(WaveSpectrumLayout* spectrum, v4* rows, int row_count, float min_wavelength, WaterFieldElement* elements, int capacity, int* element_count);
 	[DllImport(Dll)] internal static extern EStatus Physics_MaterialGet(ulong engine, int material_id, MaterialValue* material);
 	[DllImport(Dll)] internal static extern EStatus Physics_MaterialSet(ulong engine, MaterialValue* material);
 

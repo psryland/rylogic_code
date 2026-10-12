@@ -61,23 +61,6 @@ public struct WaterFieldElement
 	public v4 m_timing;
 }
 
-/// <summary>Wind conditions that drive a <see cref="WaveSpectrum"/>. Spectrum directions are relative to downwind, so no direction is needed.</summary>
-public readonly struct WaveWeather
-{
-	/// <summary>Wind speed 10 m above the water, in m/s. Speeds below 0.1 m/s produce no waves.</summary>
-	public readonly float WindSpeed;
-
-	/// <summary>Distance over which the wind has blown across open water, in metres. Longer fetches produce longer, higher waves.</summary>
-	public readonly float Fetch;
-
-	/// <summary>Specify the wind speed (m/s) and the fetch (m).</summary>
-	public WaveWeather(float wind_speed, float fetch)
-	{
-		WindSpeed = wind_speed;
-		Fetch = fetch;
-	}
-}
-
 /// <summary>The fixed component layout of a <see cref="WaveSpectrum"/>; see WaveSpectrumDesc in physics-dll.h.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct WaveSpectrumLayout
@@ -97,10 +80,10 @@ public readonly struct WaveSpectrumLayout
 	/// <summary>The wavelength range is split into this many equal log-wavelength bands.</summary>
 	public readonly int Bands;
 
-	/// <summary>The number of components in each band, each travelling in a different direction relative to downwind.</summary>
+	/// <summary>The number of components in each band, spread evenly around the full circle.</summary>
 	public readonly int Directions;
 
-	/// <summary>Describe a spectrum of 'bands' * 'directions' components (at most 64) between 'min_wavelength' and 'max_wavelength'.</summary>
+	/// <summary>Describe a spectrum of 'bands' * 'directions' components (at most 96) between 'min_wavelength' and 'max_wavelength'.</summary>
 	public WaveSpectrumLayout(float gravity, float repeat_period, float min_wavelength, float max_wavelength, int bands, int directions)
 	{
 		Gravity = gravity;
@@ -111,7 +94,7 @@ public readonly struct WaveSpectrumLayout
 		Directions = directions;
 	}
 
-	/// <summary>The number of components, and the length of every amplitude array.</summary>
+	/// <summary>The number of components.</summary>
 	public int ComponentCount
 	{
 		get
@@ -122,59 +105,82 @@ public readonly struct WaveSpectrumLayout
 }
 
 /// <summary>
-/// A fixed set of wind-driven wave components whose amplitudes follow the weather. The components depend only on the layout, so changing the
-/// wind strength only changes amplitudes and the surface never jumps. Component directions are relative to downwind and are rotated to the
-/// actual wind direction by <see cref="Elements"/>. Every component repeats after the layout's repeat period.
+/// The layout of a wind sea (see <see cref="Engine.SetWaterWindSea"/> and pr/physics/terrain/water/wind_sea.hlsli). Node (i, j) is at
+/// Origin + (i, j) * CellSize and node n = j * Width + i holds LevelCount downwind wind vectors (m/s) at winds[n * LevelCount + l].
+/// The levels are spread evenly from the first band to the last, and each band uses the wind interpolated between its two nearest levels.
+/// The table holds BandCount * SpeedCount rows from <see cref="WaveSpectrum.SeaTable"/>, where row r describes a wind of r * SpeedStep m/s.
+/// Width, Height and SpeedCount are at least two, and LevelCount is in [1, BandCount].
+/// </summary>
+public readonly struct WindSeaGrid
+{
+	public readonly v2 Origin;
+	public readonly float CellSize;
+	public readonly float SpeedStep;
+	public readonly int Width;
+	public readonly int Height;
+	public readonly int BandCount;
+	public readonly int SpeedCount;
+	public readonly int LevelCount;
+
+	/// <summary>Describe a wind-sea grid.</summary>
+	public WindSeaGrid(v2 origin, float cell_size, float speed_step, int width, int height, int band_count, int speed_count, int level_count)
+	{
+		Origin = origin;
+		CellSize = cell_size;
+		SpeedStep = speed_step;
+		Width = width;
+		Height = height;
+		BandCount = band_count;
+		SpeedCount = speed_count;
+		LevelCount = level_count;
+	}
+}
+
+/// <summary>
+/// A fixed set of wind-driven wave components spread around the full circle, whose local amplitudes follow the local wind (see
+/// <see cref="WindSeaGrid"/>). The components depend only on the layout, so changes in wind speed or direction only change amplitudes and the
+/// surface never jumps. Every component repeats after the layout's repeat period.
 /// </summary>
 public static unsafe class WaveSpectrum
 {
-	/// <summary>Write the equilibrium amplitude (m) of every component of 'layout' for 'weather' into 'amplitudes'.</summary>
-	public static void Targets(in WaveSpectrumLayout layout, WaveWeather weather, Span<float> amplitudes)
+	/// <summary>
+	/// Write the wind-sea table of 'layout' for a wind blowing over 'fetch' metres of open water. 'rows' holds Bands * speed_count rows, where
+	/// row r of band b is at [b * speed_count + r] and describes a steady wind of r * 'speed_step' m/s. Each row is (amplitude of an element
+	/// travelling downwind (m), alignment exponent, crest sharpness, sum of alignment weights).
+	/// </summary>
+	public static void SeaTable(in WaveSpectrumLayout layout, float fetch, float speed_step, Span<v4> rows)
 	{
 		Native.EnsureLoaded();
 		fixed (WaveSpectrumLayout* desc = &layout)
-		fixed (float* amps = amplitudes)
-			Native.Check(Native.Physics_WaveSpectrumTargets(desc, weather.WindSpeed, weather.Fetch, amps, amplitudes.Length));
+		fixed (v4* out_rows = rows)
+			Native.Check(Native.Physics_WaveSpectrumSeaTable(desc, fetch, speed_step, out_rows, rows.Length));
 	}
 
-	/// <summary>Move 'amplitudes' towards 'targets' over 'dt' seconds with an exponential time constant of 'time_constant' seconds.</summary>
-	public static void Relax(Span<float> amplitudes, ReadOnlySpan<float> targets, float dt, float time_constant)
+	/// <summary>Move 'values' towards 'targets' over 'dt' seconds with an exponential time constant of 'time_constant' seconds.</summary>
+	public static void Relax(Span<float> values, ReadOnlySpan<float> targets, float dt, float time_constant)
 	{
-		if (amplitudes.Length != targets.Length)
-			throw new ArgumentException("Wave amplitudes and targets must have the same length");
+		if (values.Length != targets.Length)
+			throw new ArgumentException("Relax values and targets must have the same length");
 
 		Native.EnsureLoaded();
-		fixed (float* amps = amplitudes)
+		fixed (float* vals = values)
 		fixed (float* tgts = targets)
-			Native.Check(Native.Physics_WaveSpectrumRelax(amps, tgts, amplitudes.Length, dt, time_constant));
+			Native.Check(Native.Physics_WaveSpectrumRelax(vals, tgts, values.Length, dt, time_constant));
 	}
 
 	/// <summary>
-	/// Return the crest sharpness of wind-driven waves for 'wind_speed' (m/s, finite and non-negative), for use with <see cref="Elements"/>.
-	/// Light winds (up to 4 m/s) make sine-shaped waves; stronger winds make narrower crests and flatter troughs, approaching 0.7 in storms.
+	/// Write a wind-sea Gerstner element, in component order, for each component of 'layout' with a wavelength of at least 'min_wavelength'
+	/// whose band can have waves in 'table' (from <see cref="SeaTable"/>). Each element holds its band's largest table amplitude and crest
+	/// sharpness; a wind sea supplies the local values. Steepness is zero. Returns the number of elements written.
 	/// </summary>
-	public static float CrestSharpness(float wind_speed)
-	{
-		Native.EnsureLoaded();
-		var sharpness = 0f;
-		Native.Check(Native.Physics_WaveSpectrumCrestSharpness(wind_speed, &sharpness));
-		return sharpness;
-	}
-
-	/// <summary>
-	/// Write Gerstner elements, in component order, for the components of 'layout' with a positive amplitude and a wavelength of at least
-	/// 'min_wavelength'. 'heading' is the direction the wind blows towards, in radians anticlockwise from +X; component directions are rotated
-	/// by it. 'sharpness' in [0, 0.9] narrows crests and flattens troughs (see <see cref="CrestSharpness"/>) and is stored in each element's
-	/// timing.x. Steepness is zero. Returns the number of elements written.
-	/// </summary>
-	public static int Elements(in WaveSpectrumLayout layout, ReadOnlySpan<float> amplitudes, float heading, float sharpness, float min_wavelength, Span<WaterFieldElement> elements)
+	public static int Elements(in WaveSpectrumLayout layout, ReadOnlySpan<v4> table, float min_wavelength, Span<WaterFieldElement> elements)
 	{
 		Native.EnsureLoaded();
 		var count = 0;
 		fixed (WaveSpectrumLayout* desc = &layout)
-		fixed (float* amps = amplitudes)
+		fixed (v4* rows = table)
 		fixed (WaterFieldElement* out_elements = elements)
-			Native.Check(Native.Physics_WaveSpectrumElements(desc, amps, amplitudes.Length, heading, sharpness, min_wavelength, out_elements, elements.Length, &count));
+			Native.Check(Native.Physics_WaveSpectrumElements(desc, rows, table.Length, min_wavelength, out_elements, elements.Length, &count));
 
 		return count;
 	}

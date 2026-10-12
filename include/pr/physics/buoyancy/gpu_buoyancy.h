@@ -162,6 +162,7 @@ namespace pr::physics
 
 		// Set the water field used by subsequent buoyancy force dispatches. The field is copied; the shader
 		// evaluates the same elements as terrain::water::WaterField, and the dry cull uses its MaxHeight.
+		// Wind seas are not supported; throws invalid_argument when the field has one.
 		void SetWaterField(terrain::water::WaterField const& water_field);
 
 		// Return the water field used by buoyancy force dispatches.
