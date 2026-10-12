@@ -438,7 +438,7 @@ namespace pr::physics::tests
 			PR_EXPECT(after_stats.m_max_divergence < before_stats.m_max_divergence * 0.01f);
 		}
 
-		PRUnitTestMethod(SharedGpuStepCost, Quick)
+		PRUnitTestMethod(SharedGpuStepCost, Stress)
 		{
 			// The solver records into a job that shares the same compute device and queue wrapper used by physics GPU work.
 			auto& gpu = SharedTestGpu();
