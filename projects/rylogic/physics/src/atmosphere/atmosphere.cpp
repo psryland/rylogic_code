@@ -738,7 +738,7 @@ namespace pr::physics::atmosphere
 				auto code = compile(entry_point);
 				auto pso_name = std::format("Physics.Atmosphere.{}.PSO", name);
 				step.m_sig = m_sig;
-				step.m_pso = ComputePSO(m_sig.get(), code).Create(gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(m_sig.get(), code).Cache(cache).Create(gpu, pso_name.c_str());
 				return step;
 			};
 
@@ -1629,7 +1629,7 @@ namespace pr::physics::atmosphere
 					.UAV(hlsl::EUAVReg::u7)
 					.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t3).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t9)
 					.Create(gpu, sig_name.c_str());
-				step.m_pso = ComputePSO(step.m_sig.get(), code).Create(gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(step.m_sig.get(), code).Cache(cache).Create(gpu, pso_name.c_str());
 				return step;
 			};
 
@@ -1892,7 +1892,7 @@ namespace pr::physics::atmosphere
 				.UAV(hlsl::EUAVReg::u8)
 				.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t3).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t8)
 				.Create(gpu, "Physics.Atmosphere.Probes.RootSig");
-			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Create(gpu, "Physics.Atmosphere.Probes.PSO");
+			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Cache(cache).Create(gpu, "Physics.Atmosphere.Probes.PSO");
 			m_samples = CreateBuffer<GpuProbeSample>(gpu, gpu.m_job, MaxPoints, "Atmosphere:ProbeSamples");
 			gpu.m_job.RetireRecordedWork();
 		}
@@ -2009,7 +2009,7 @@ namespace pr::physics::atmosphere
 				.UAV(hlsl::EUAVReg::u9)
 				.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t7)
 				.Create(gpu, "Physics.Atmosphere.SurfaceWind.RootSig");
-			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Create(gpu, "Physics.Atmosphere.SurfaceWind.PSO");
+			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Cache(cache).Create(gpu, "Physics.Atmosphere.SurfaceWind.PSO");
 			m_wind = CreateBuffer<v2>(gpu, gpu.m_job, solver.Config().m_grid.ColumnCount(), "Atmosphere:SurfaceWind");
 			gpu.m_job.RetireRecordedWork();
 		}

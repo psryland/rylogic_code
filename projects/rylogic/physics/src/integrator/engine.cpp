@@ -185,10 +185,23 @@ namespace pr::physics
 		bool read_collision_events = false;
 	};
 
-	// Destroy the owned world surfaces where their complete type is available.
+	// Destroy the owned world surfaces and their kernels where their complete types are available.
+	void Deleter<GpuWorldContactPipeline>::operator()(GpuWorldContactPipeline* value) const
+	{
+		delete value;
+	}
 	void Deleter<GpuWorldContacts>::operator()(GpuWorldContacts* value) const
 	{
 		delete value;
+	}
+
+	// Create the world-contact kernels once; every later set of world sources reuses them.
+	GpuWorldContactPipeline& Engine::WorldContactPipeline()
+	{
+		if (m_gpu_world_contact_pipeline == nullptr)
+			m_gpu_world_contact_pipeline.reset(new GpuWorldContactPipeline(*m_gpu, m_shader_cache));
+
+		return *m_gpu_world_contact_pipeline;
 	}
 
 	// Replace or disable the owned terrain between completed frames; validate a replacement before discarding the current source.
@@ -205,7 +218,7 @@ namespace pr::physics
 		auto replacement = decltype(m_gpu_world_contacts){};
 		auto const boundary = m_gpu_world_contacts ? m_gpu_world_contacts->m_boundary : std::nullopt;
 		if (surface || boundary)
-			replacement.reset(new GpuWorldContacts(*m_gpu, std::move(surface), spacing, boundary));
+			replacement.reset(new GpuWorldContacts(*m_gpu, WorldContactPipeline(), std::move(surface), spacing, boundary));
 
 		// Retire cached support and request a wake only when a terrain source is added, removed, or replaced.
 		ResetCaches();
@@ -228,7 +241,7 @@ namespace pr::physics
 		auto const surface = m_gpu_world_contacts ? m_gpu_world_contacts->m_surface : std::nullopt;
 		auto const spacing = m_gpu_world_contacts ? m_gpu_world_contacts->m_terrain_spacing : surface::DefaultSpacing;
 		if (surface || boundary)
-			replacement.reset(new GpuWorldContacts(*m_gpu, surface, spacing, boundary));
+			replacement.reset(new GpuWorldContacts(*m_gpu, WorldContactPipeline(), surface, spacing, boundary));
 
 		// Cached contacts cannot outlive their static endpoint or changed world geometry.
 		ResetCaches();
@@ -272,7 +285,7 @@ namespace pr::physics
 		{
 			water->Validate();
 			if (m_gpu_water_forces == nullptr)
-				m_gpu_water_forces.reset(new GpuWaterForces(*m_gpu, std::move(*water)));
+				m_gpu_water_forces.reset(new GpuWaterForces(*m_gpu, std::move(*water), m_shader_cache));
 			else
 				m_gpu_water_forces->m_config = std::move(*water);
 		}
@@ -393,6 +406,7 @@ namespace pr::physics
 
 	Engine::Engine(EngineConfig const& config, IShaderCache* shader_cache, ID3D12Device4* existing_device, ID3D12CommandQueue* existing_queue)
 		: m_config(config)
+		, m_shader_cache(shader_cache)
 		, m_gpu(new Gpu(existing_device, existing_queue))
 		, m_gpu_integrator(new GpuIntegrator(*m_gpu, m_config))
 		, m_gpu_sleep_manager(new GpuSleepManager(*m_gpu, m_config))

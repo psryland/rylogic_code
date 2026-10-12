@@ -180,6 +180,7 @@ namespace pr::compute::gpu_radix_sort
 						.UAV(EReg::GlobalHistogram)
 						.Create(*m_gpu, "GpuRadixSort:InitSig");
 					m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
+						.Cache(shader_cache)
 						.Create(*m_gpu, "GpuRadixSort:InitPSO");
 				}
 
@@ -191,6 +192,7 @@ namespace pr::compute::gpu_radix_sort
 						.UAV(EReg::Payload0)
 						.Create(*m_gpu, "GpuRadixSort:InitPayloadSig");
 					m_init_payload.m_pso = ComputePSO(m_init_payload.m_sig.get(), bytecode)
+						.Cache(shader_cache)
 						.Create(*m_gpu, "GpuRadixSort:InitPayloadPSO");
 				}
 			}
@@ -214,6 +216,7 @@ namespace pr::compute::gpu_radix_sort
 					.UAV(EReg::PassHistogram)
 					.Create(*m_gpu, "GpuRadixSort:SweepUpSig");
 				step.m_pso = ComputePSO(step.m_sig.get(), bytecode)
+					.Cache(shader_cache)
 					.Create(*m_gpu, "GpuRadixSort:SweepUpPSO");
 			}
 
@@ -227,6 +230,7 @@ namespace pr::compute::gpu_radix_sort
 					.UAV(EReg::PassHistogram)
 					.Create(*m_gpu, "GpuRadixSort:ScanSig");
 				step.m_pso = ComputePSO(step.m_sig.get(), bytecode)
+					.Cache(shader_cache)
 					.Create(*m_gpu, "GpuRadixSort:ScanPSO");
 			}
 
@@ -245,6 +249,7 @@ namespace pr::compute::gpu_radix_sort
 					.UAV(EReg::PassHistogram)
 					.Create(*m_gpu, "GpuRadixSort:SweepDownSig");
 				step.m_pso = ComputePSO(step.m_sig.get(), bytecode)
+					.Cache(shader_cache)
 					.Create(*m_gpu, "GpuRadixSort:SweepDownPSO");
 			}
 

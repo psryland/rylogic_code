@@ -99,14 +99,25 @@ namespace pr::compute::shader_cache
 		};
 	}
 
-	// Return timestamp and size metadata for a module-backed resource.
+	// Return content metadata for the resource named 'identity' in 'module'.
+	// The resource is identified by its bytes rather than by the module file's timestamp, so rebuilding the module does not invalidate unchanged resources.
 	inline Dependency ResourceDependency(std::string identity, std::wstring type, HMODULE module = nullptr)
 	{
-		auto path = CanonicalPath(win32::ModuleFileName(module));
-		auto dep = FileDependency(path, std::move(identity));
-		dep.m_kind = Dependency::EKind::Resource;
-		dep.m_type = std::move(type);
-		return dep;
+		// Hash the embedded bytes; the module path distinguishes resources with the same name in different modules.
+		auto data = resource::Read<char>(Widen(identity), type, module);
+		auto const hash_value = data.m_len != 0
+			? static_cast<uint64_t>(hash::HashBytes64(data.m_data, data.m_data + data.m_len))
+			: uint64_t{};
+
+		return Dependency{
+			.m_kind = Dependency::EKind::Resource,
+			.m_identity = std::move(identity),
+			.m_path = CanonicalPath(win32::ModuleFileName(module)),
+			.m_type = std::move(type),
+			.m_size = static_cast<uint64_t>(data.m_len),
+			.m_last_write = 0,
+			.m_hash = hash_value,
+		};
 	}
 
 	// Return metadata for source text that is not backed by a timestamped source.
@@ -144,10 +155,13 @@ namespace pr::compute::shader_cache
 				}
 				case Dependency::EKind::Resource:
 				{
-					auto current = FileDependency(dep.m_path, dep.m_identity);
-					current.m_kind = Dependency::EKind::Resource;
-					current.m_type = dep.m_type;
-					return current;
+					// Only modules already loaded in this process are checked; a module that is not loaded cannot be the source of the current request.
+					HMODULE module = nullptr;
+					auto flags = GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+					if (!::GetModuleHandleExW(flags, dep.m_path.c_str(), &module))
+						return std::nullopt;
+
+					return ResourceDependency(dep.m_identity, dep.m_type, module);
 				}
 				default:
 				{

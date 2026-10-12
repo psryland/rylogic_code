@@ -51,7 +51,7 @@ namespace pr::physics
 	}
 
 	// Compile the pipeline once; changing the water configuration later does not need a new pipeline.
-	GpuWaterForces::GpuWaterForces(Gpu& gpu, WaterConfig config)
+	GpuWaterForces::GpuWaterForces(Gpu& gpu, WaterConfig config, IShaderCache* shader_cache)
 		: m_gpu(gpu)
 		, m_config(std::move(config))
 		, m_step()
@@ -65,6 +65,7 @@ namespace pr::physics
 		auto resolver = shader_cache::ResourceSourceResolver{};
 		auto code = ShaderCompiler{}
 			.Source("src/buoyancy/gpu_water_forces.hlsl", resolver)
+			.Cache(shader_cache)
 			.HlslVersion(EHlslVersion::Hlsl2021)
 			.Define(L"SHADER_BUILD")
 			.Optimise(true)
@@ -78,7 +79,7 @@ namespace pr::physics
 			.SRV(hlsl::ESRVReg::t1)
 			.SRV(hlsl::ESRVReg::t2)
 			.Create(gpu, "Physics.WaterForces.RootSig");
-		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Create(gpu, "Physics.WaterForces.PSO");
+		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Cache(shader_cache).Create(gpu, "Physics.WaterForces.PSO");
 	}
 
 	// Select candidates on the host so that dry bodies cost one bounds test per frame and no GPU work.

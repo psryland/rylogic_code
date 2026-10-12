@@ -42,8 +42,8 @@ namespace pr::physics
 		GpuAddress m_elements_addr;
 		GpuAddress m_local_waves_addr;
 
-		// Compile the water-force pipeline for 'config'.
-		GpuWaterForces(Gpu& gpu, WaterConfig config);
+		// Compile the water-force pipeline for 'config'. 'shader_cache' is optional; when given, the compiled kernel is reused across runs.
+		GpuWaterForces(Gpu& gpu, WaterConfig config, IShaderCache* shader_cache);
 
 		// Select the bodies that may be wet during a frame of 'elapsed_s' seconds and stage their proxies for every substep.
 		// 'bodies' are in GPU body order. Static and sleeping bodies are never candidates.

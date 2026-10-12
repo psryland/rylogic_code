@@ -80,7 +80,7 @@ namespace pr::physics
 			auto sig = make_sweep_sig();
 
 			m_cs_sweep.m_sig = sig.Create(m_gpu, "Physics:SweepSig");
-			m_cs_sweep.m_pso = ComputePSO(m_cs_sweep.m_sig.get(), shader_code::sweep).Create(m_gpu, "Physics:SweepPSO");
+			m_cs_sweep.m_pso = ComputePSO(m_cs_sweep.m_sig.get(), shader_code::sweep).Cache(shader_cache).Create(m_gpu, "Physics:SweepPSO");
 		}
 
 		// m_cs_calc_dispatch: Root signature: constants + 1 SRV (Counters) + 1 UAV (DispatchArgs)
@@ -91,7 +91,7 @@ namespace pr::physics
 				.UAV(EReg::DispatchArgs);
 
 			m_cs_calc_dispatch.m_sig = sig.Create(m_gpu, "Physics:CalcCDDispatchSig");
-			m_cs_calc_dispatch.m_pso = ComputePSO(m_cs_calc_dispatch.m_sig.get(), shader_code::calc_cd_dispatch).Create(m_gpu, "Physics:CalcCDDispatchPSO");
+			m_cs_calc_dispatch.m_pso = ComputePSO(m_cs_calc_dispatch.m_sig.get(), shader_code::calc_cd_dispatch).Cache(shader_cache).Create(m_gpu, "Physics:CalcCDDispatchPSO");
 		}
 	}
 

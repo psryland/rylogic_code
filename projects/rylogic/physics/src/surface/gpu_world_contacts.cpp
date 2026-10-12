@@ -52,9 +52,40 @@ namespace pr::physics
 		}
 	}
 
-	// Own validated world sources and their shared sampled contact pipeline.
-	GpuWorldContacts::GpuWorldContacts(Gpu& gpu, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary)
-		: m_gpu(gpu), m_surface(std::move(surface)), m_boundary(boundary), m_terrain_spacing(spacing)
+	// Compile the source-independent kernels once for every set of world sources.
+	GpuWorldContactPipeline::GpuWorldContactPipeline(Gpu& gpu, IShaderCache* shader_cache)
+		: m_samples()
+		, m_step()
+		, m_dispatch()
+	{
+		// The pipeline includes the canonical terrain evaluator and requires double arithmetic and 64-bit integer shader operations.
+		auto options = D3D12_FEATURE_DATA_D3D12_OPTIONS{};
+		auto options1 = D3D12_FEATURE_DATA_D3D12_OPTIONS1{};
+		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
+		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &options1, sizeof(options1)));
+		if (!options.DoublePrecisionFloatShaderOps || !options1.Int64ShaderOps)
+			throw std::runtime_error("Sampled world collision requires FP64 and Int64ShaderOps");
+
+		// Compile the sample and selection stages, which share one root layout, and the shared dispatch update against its own layout.
+		auto resolver = shader_cache::ResourceSourceResolver{};
+		auto compile = [&](wchar_t const* entry_point)
+		{
+			// The optional cache skips DXC when the source is unchanged.
+			return ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).Cache(shader_cache).EntryPoint(entry_point).ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
+		};
+		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0)
+			.SRV(ESRVReg::t0).SRV(ESRVReg::t1).SRV(ESRVReg::t2).SRV(ESRVReg::t3).SRV(ESRVReg::t4).SRV(ESRVReg::t5).SRV(ESRVReg::t6)
+			.UAV(EUAVReg::u0).UAV(EUAVReg::u1).UAV(EUAVReg::u2).UAV(EUAVReg::u3).Create(gpu, "WorldContacts:Signature");
+		m_step.m_pso = ComputePSO(m_step.m_sig.get(), compile(L"CSWorldContacts")).Cache(shader_cache).Create(gpu, "WorldContacts:Contacts");
+		m_samples.m_sig = m_step.m_sig;
+		m_samples.m_pso = ComputePSO(m_samples.m_sig.get(), compile(L"CSWorldSamples")).Cache(shader_cache).Create(gpu, "WorldContacts:Samples");
+		m_dispatch.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0).UAV(EUAVReg::u0).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:DispatchSignature");
+		m_dispatch.m_pso = ComputePSO(m_dispatch.m_sig.get(), shader_code::calc_resolve_dispatch).Cache(shader_cache).Create(gpu, "WorldContacts:Dispatch");
+	}
+
+	// Own validated world sources that use a shared sampled contact pipeline.
+	GpuWorldContacts::GpuWorldContacts(Gpu& gpu, GpuWorldContactPipeline& pipeline, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary)
+		: m_gpu(gpu), m_pipeline(pipeline), m_surface(std::move(surface)), m_boundary(boundary), m_terrain_spacing(spacing)
 		, m_spacing(m_surface ? spacing : boundary ? boundary->m_surface_spacing : spacing), m_height_upper(), m_endpoint()
 	{
 		surface::ValidateSpacing(spacing);
@@ -91,29 +122,6 @@ namespace pr::physics
 
 		// Round the rejection height outward so float conversion cannot lower the bound.
 		m_height_upper = std::nextafter(static_cast<float>(upper), std::numeric_limits<float>::infinity());
-
-		// The shared pipeline includes the canonical terrain evaluator and requires double arithmetic and 64-bit integer shader operations.
-		auto options = D3D12_FEATURE_DATA_D3D12_OPTIONS{};
-		auto options1 = D3D12_FEATURE_DATA_D3D12_OPTIONS1{};
-		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
-		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &options1, sizeof(options1)));
-		if (!options.DoublePrecisionFloatShaderOps || !options1.Int64ShaderOps)
-			throw std::runtime_error("Sampled world collision requires FP64 and Int64ShaderOps");
-
-		// Compile the sample and selection stages, which share one root layout, and the shared dispatch update against its own layout.
-		auto resolver = shader_cache::ResourceSourceResolver{};
-		auto compile = [&](wchar_t const* entry_point)
-		{
-			return ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).EntryPoint(entry_point).ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
-		};
-		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0)
-			.SRV(ESRVReg::t0).SRV(ESRVReg::t1).SRV(ESRVReg::t2).SRV(ESRVReg::t3).SRV(ESRVReg::t4).SRV(ESRVReg::t5).SRV(ESRVReg::t6)
-			.UAV(EUAVReg::u0).UAV(EUAVReg::u1).UAV(EUAVReg::u2).UAV(EUAVReg::u3).Create(gpu, "WorldContacts:Signature");
-		m_step.m_pso = ComputePSO(m_step.m_sig.get(), compile(L"CSWorldContacts")).Create(gpu, "WorldContacts:Contacts");
-		m_samples.m_sig = m_step.m_sig;
-		m_samples.m_pso = ComputePSO(m_samples.m_sig.get(), compile(L"CSWorldSamples")).Create(gpu, "WorldContacts:Samples");
-		m_dispatch.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0).UAV(EUAVReg::u0).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:DispatchSignature");
-		m_dispatch.m_pso = ComputePSO(m_dispatch.m_sig.get(), shader_code::calc_resolve_dispatch).Create(gpu, "WorldContacts:Dispatch");
 	}
 
 	// Invalidate shape-indexed plans after their submitted work has retired.
@@ -318,7 +326,7 @@ namespace pr::physics
 
 		// Both stages bind the same constants and resources. The sample stage evaluates every sample in parallel; selection then
 		// reads the stored candidates after a UAV barrier, so results match a serial walk of each plan.
-		for (auto* step : {&m_samples, &m_step})
+		for (auto* step : {&m_pipeline.m_samples, &m_pipeline.m_step})
 		{
 			job.m_cmd_list.SetPipelineState(step->m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(step->m_sig.get());
@@ -331,7 +339,7 @@ namespace pr::physics
 				job.m_cmd_list.AddComputeRootUnorderedAccessView(resource);
 
 			// One group per leaf for selection; the sample stage adds one Y group per 64-sample block.
-			auto const blocks = step == &m_samples ? s_cast<int>((max_samples + 63) / 64) : 1;
+			auto const blocks = step == &m_pipeline.m_samples ? s_cast<int>((max_samples + 63) / 64) : 1;
 			job.m_cmd_list.Dispatch(s_cast<int>(m_instances.size()), blocks, 1);
 			job.m_barriers.UAV(m_candidates.get());
 			job.m_barriers.UAV(m_status.get());
@@ -343,8 +351,8 @@ namespace pr::physics
 		job.m_barriers.UAV(contacts);
 		job.m_barriers.Transition(dispatch, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Commit();
-		job.m_cmd_list.SetPipelineState(m_dispatch.m_pso.get());
-		job.m_cmd_list.SetComputeRootSignature(m_dispatch.m_sig.get());
+		job.m_cmd_list.SetPipelineState(m_pipeline.m_dispatch.m_pso.get());
+		job.m_cmd_list.SetComputeRootSignature(m_pipeline.m_dispatch.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(Constants{s_cast<uint32_t>(max_contacts), 0, 0, 0});
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(dispatch);

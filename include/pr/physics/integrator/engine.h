@@ -185,6 +185,9 @@ namespace pr::physics
 		// Engine configuration parameters.
 		EngineConfig m_config;
 
+		// Optional caller-owned cache of compiled kernels for lazily created pipelines. It must outlive the engine.
+		IShaderCache* m_shader_cache;
+
 		// GPU device and command queue wrapper, shared by the integrator and collision detector.
 		GpuPtr m_gpu;
 
@@ -199,6 +202,12 @@ namespace pr::physics
 
 		// GPU collision detector
 		GpuCollisionDetectorPtr m_gpu_collision_detector;
+
+		// Lazily created world-contact kernels, kept while the world sources are replaced or removed so a replacement does not recompile them.
+		std::unique_ptr<struct GpuWorldContactPipeline, Deleter<struct GpuWorldContactPipeline>> m_gpu_world_contact_pipeline;
+
+		// Return the world-contact kernels, creating them on first use.
+		GpuWorldContactPipeline& WorldContactPipeline();
 
 		// Owned sampled world surfaces and deferred wake request for the next nonempty frame.
 		std::unique_ptr<struct GpuWorldContacts, Deleter<struct GpuWorldContacts>> m_gpu_world_contacts;

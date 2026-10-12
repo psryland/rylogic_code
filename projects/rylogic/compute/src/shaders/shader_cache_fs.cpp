@@ -396,6 +396,66 @@ namespace pr::compute::shader_cache
 
 			cleanup.m_dont = true;
 		}
+
+		// Return the file that persists the pipeline library for a cache namespace.
+		std::filesystem::path PipelineLibraryPath(ShaderCacheFS::Config const& config)
+		{
+			return config.m_cache_dir / CacheNamespace(config.m_namespace) / L"pipelines.bin";
+		}
+
+		// Return the library key for a pipeline. The bytecode hash stops a changed shader from matching a pipeline stored for older bytecode.
+		std::wstring PipelineKey(D3D12_COMPUTE_PIPELINE_STATE_DESC const& desc, std::string_view name)
+		{
+			auto bytes = static_cast<uint8_t const*>(desc.CS.pShaderBytecode);
+			auto hash_value = static_cast<uint64_t>(hash::HashBytes64(bytes, bytes + desc.CS.BytecodeLength));
+			return Widen(std::format("{}#{:016X}", name, hash_value));
+		}
+
+		// Create a compute pipeline without the cache.
+		D3DPtr<ID3D12PipelineState> CreatePipeline(ID3D12Device* device, D3D12_COMPUTE_PIPELINE_STATE_DESC const& desc)
+		{
+			D3DPtr<ID3D12PipelineState> pso;
+			Check(device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)pso.address_of()));
+			return pso;
+		}
+
+		// Hides the debug layer messages for expected pipeline library misses while in scope. Devices that break on warnings
+		// would otherwise stop on every first-time pipeline. Does nothing when the debug layer is not enabled.
+		struct ScopedLibraryMessageFilter
+		{
+			D3DPtr<ID3D12InfoQueue> m_info;
+
+			explicit ScopedLibraryMessageFilter(ID3D12Device* device)
+				: m_info()
+			{
+				// Push a deny filter for the messages that report a missing or mismatched library entry.
+				if (FAILED(device->QueryInterface(__uuidof(ID3D12InfoQueue), (void**)m_info.address_of())))
+					return;
+
+				D3D12_MESSAGE_ID hide[] = {
+					D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND,
+					D3D12_MESSAGE_ID_LOADPIPELINE_INVALIDDESC,
+					D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME,
+				};
+				auto filter = D3D12_INFO_QUEUE_FILTER{
+					.AllowList = D3D12_INFO_QUEUE_FILTER_DESC{},
+					.DenyList = D3D12_INFO_QUEUE_FILTER_DESC{
+						.NumIDs = _countof(hide),
+						.pIDList = &hide[0],
+					},
+				};
+				if (FAILED(m_info->PushStorageFilter(&filter)))
+					m_info = nullptr;
+			}
+			ScopedLibraryMessageFilter(ScopedLibraryMessageFilter const&) = delete;
+			ScopedLibraryMessageFilter& operator = (ScopedLibraryMessageFilter const&) = delete;
+			~ScopedLibraryMessageFilter()
+			{
+				// Restore the filters that were active before this scope.
+				if (m_info != nullptr)
+					m_info->PopStorageFilter();
+			}
+		};
 	}
 
 	ShaderCacheFS::ShaderCacheFS(std::filesystem::path cache_dir, std::string cache_namespace)
@@ -409,7 +469,23 @@ namespace pr::compute::shader_cache
 		: m_config(std::move(config))
 		, m_mutex()
 		, m_stats()
+		, m_library_mutex()
+		, m_library_blob()
+		, m_library_device()
+		, m_library()
+		, m_library_dirty()
 	{
+	}
+	ShaderCacheFS::~ShaderCacheFS()
+	{
+		// Saving is best-effort; a failed save only costs driver compiles in the next run.
+		try
+		{
+			SavePipelines();
+		}
+		catch (...)
+		{
+		}
 	}
 
 	// Return cached output or compile and publish a new cache entry.
@@ -505,9 +581,129 @@ namespace pr::compute::shader_cache
 		return std::move(result.m_output);
 	}
 
+	// Return a compute pipeline state, loading it from the persisted pipeline library when possible.
+	D3DPtr<ID3D12PipelineState> ShaderCacheFS::GetOrCreatePipeline(ID3D12Device* device, D3D12_COMPUTE_PIPELINE_STATE_DESC const& desc, std::string_view name)
+	{
+		// Look for a pipeline stored by this or an earlier run. Loading fails with E_INVALIDARG if the key is missing or was stored with a different description.
+		auto const key = PipelineKey(desc, name);
+		{
+			auto lock = std::scoped_lock(m_library_mutex);
+			auto library = Library(device);
+			if (library == nullptr)
+			{
+				Count(&CacheStats::m_pipeline_uncached);
+				return CreatePipeline(device, desc);
+			}
+
+			D3DPtr<ID3D12PipelineState> pso;
+			auto filter = ScopedLibraryMessageFilter(device);
+			if (SUCCEEDED(library->LoadComputePipeline(key.c_str(), &desc, __uuidof(ID3D12PipelineState), (void**)pso.address_of())))
+			{
+				Count(&CacheStats::m_pipeline_hit);
+				return pso;
+			}
+		}
+
+		// Compile outside the lock so other threads can create pipelines concurrently.
+		auto pso = CreatePipeline(device, desc);
+
+		// Store the new pipeline. This fails if another thread stored the same key first, or if the key belongs to a different description,
+		// in which case the pipeline is still valid but is not cached.
+		{
+			auto lock = std::scoped_lock(m_library_mutex);
+			auto filter = ScopedLibraryMessageFilter(device);
+			if (m_library != nullptr && m_library_device == device && SUCCEEDED(m_library->StorePipeline(key.c_str(), pso.get())))
+			{
+				m_library_dirty = true;
+				Count(&CacheStats::m_pipeline_miss);
+			}
+			else
+			{
+				Count(&CacheStats::m_pipeline_uncached);
+			}
+		}
+		return pso;
+	}
+
+	// Write pipelines created since the library was loaded to the cache directory. Does nothing if there are none.
+	void ShaderCacheFS::SavePipelines()
+	{
+		// Serialise the whole library, which includes the pipelines loaded from the previous file.
+		auto lock = std::scoped_lock(m_library_mutex);
+		if (!m_library_dirty || m_library == nullptr)
+			return;
+
+		auto blob = std::vector<uint8_t>(m_library->GetSerializedSize());
+		Check(m_library->Serialize(blob.data(), blob.size()));
+
+		// Replace the file atomically so concurrent readers never see a partial library. With several processes, the last writer wins.
+		auto const path = PipelineLibraryPath(m_config);
+		std::filesystem::create_directories(path.parent_path());
+		auto tmp_path = path;
+		tmp_path += std::format(L".tmp.{}.{}", ::GetCurrentProcessId(), ::GetCurrentThreadId());
+		WriteBytes(tmp_path, blob);
+		if (!::MoveFileExW(tmp_path.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+		{
+			auto error = ::GetLastError();
+			std::error_code ec;
+			std::filesystem::remove(tmp_path, ec);
+			throw std::runtime_error(std::format("Failed to publish pipeline library '{}': {}", path.string(), error));
+		}
+		m_library_dirty = false;
+	}
+
+	// Return the pipeline library for 'device', or null if pipelines on 'device' cannot be cached. Requires 'm_library_mutex'.
+	ID3D12PipelineLibrary* ShaderCacheFS::Library(ID3D12Device* device)
+	{
+		// The library is bound to the first device that asks for it. Pipelines on other devices are not cached.
+		if (m_library_device != nullptr)
+			return m_library_device == device ? m_library.get() : nullptr;
+
+		m_library_device = D3DPtr<ID3D12Device>(device, true);
+
+		// Pipeline libraries need ID3D12Device1. Without it, pipelines on this device are never cached.
+		D3DPtr<ID3D12Device1> device1;
+		if (FAILED(device->QueryInterface(__uuidof(ID3D12Device1), (void**)device1.address_of())))
+			return nullptr;
+
+		// Load the library saved by an earlier run. Read or format failures just mean an empty cache.
+		try
+		{
+			auto const path = PipelineLibraryPath(m_config);
+			if (std::filesystem::exists(path))
+				m_library_blob = ReadBytes(path);
+		}
+		catch (...)
+		{
+			Count(&CacheStats::m_io_error_uncached);
+			m_library_blob.clear();
+		}
+
+		// The driver rejects a saved library from a different adapter or driver version, or a corrupt one. Start an empty library in that case.
+		// The library is replaced on the next save.
+		if (!m_library_blob.empty() && FAILED(device1->CreatePipelineLibrary(m_library_blob.data(), m_library_blob.size(), __uuidof(ID3D12PipelineLibrary), (void**)m_library.address_of())))
+		{
+			m_library = nullptr;
+			m_library_blob.clear();
+		}
+		if (m_library == nullptr && FAILED(device1->CreatePipelineLibrary(nullptr, 0, __uuidof(ID3D12PipelineLibrary), (void**)m_library.address_of())))
+			m_library = nullptr;
+
+		return m_library.get();
+	}
+
 	// Delete entries owned by this cache namespace.
 	void ShaderCacheFS::Clear()
 	{
+		// Forget the in-memory pipeline library so it is not saved again after the clear. Pipelines already created remain valid.
+		{
+			auto lock = std::scoped_lock(m_library_mutex);
+			m_library = nullptr;
+			m_library_device = nullptr;
+			m_library_dirty = false;
+			m_library_blob.clear();
+		}
+
 		std::error_code ec;
 		std::filesystem::remove_all(m_config.m_cache_dir / CacheNamespace(m_config.m_namespace), ec);
 		if (ec)
