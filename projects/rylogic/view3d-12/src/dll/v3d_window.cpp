@@ -1710,6 +1710,7 @@ namespace pr::rdr12
 			auto* rendered = m_wnd.FrameOutput().m_render_target.get();
 			auto& cmd_list = m_factory.CmdList();
 			auto const store_distance = cube.m_distance_scale > 0.0f;
+			auto pix_face = std::optional<pix::EventScope<ID3D12GraphicsCommandList>>(std::in_place, cmd_list.get(), 0xFF90EE90, "EnvMapCapture::FaceCopy");
 			if (store_distance)
 			{
 				// Give the cube a distance cube the first time it stores distances. It has the same size and mips as the colour cube.
@@ -1781,12 +1782,18 @@ namespace pr::rdr12
 				auto src_loc = D3D12_TEXTURE_COPY_LOCATION{ .pResource = rendered, .Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, .SubresourceIndex = 0 };
 				cmd_list.CopyTextureRegion(&dst, 0, 0, 0, &src_loc, nullptr);
 			}
-			m_factory.GenerateMips(m_scratch.get());
-			if (store_distance)
-				m_factory.GenerateMips(m_scratch_distance.get());
+			pix_face.reset();
+			{
+				// Measure the mip generation separately from the face copy and the cube copy.
+				auto pix_mips = pix::EventScope<ID3D12GraphicsCommandList>(cmd_list.get(), 0xFF90EE90, "EnvMapCapture::Mips");
+				m_factory.GenerateMips(m_scratch.get());
+				if (store_distance)
+					m_factory.GenerateMips(m_scratch_distance.get());
+			}
 
 			// Copy every mip of the face into the cube, and its distances into the distance cube. Cube subresources are ordered by face (array slice), then mip.
 			{
+				auto pix_copy = pix::EventScope<ID3D12GraphicsCommandList>(cmd_list.get(), 0xFF90EE90, "EnvMapCapture::CubeCopy");
 				BarrierBatch barriers(cmd_list);
 				barriers.Transition(m_scratch.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 				barriers.Transition(cube.m_res.get(), D3D12_RESOURCE_STATE_COPY_DEST);

@@ -753,6 +753,7 @@ namespace pr::rdr12
 		};
 
 		// Read the opaque depth in the pixel shader and write only the main colour target.
+		auto pix_weight = std::optional<pix::EventScope<ID3D12GraphicsCommandList>>(std::in_place, m_cmd_list.get(), 0xFF5FA8D3, "View3D::FarClipFade::Weight");
 		{
 			BarrierBatch bb(m_cmd_list);
 			bb.Transition(bb_main.m_depth_stencil.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -774,8 +775,11 @@ namespace pr::rdr12
 			bb.Transition(bb_main.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 			bb.Commit();
 		}
+		pix_weight.reset();
 		if (background.empty())
 			return;
+
+		auto pix_background = pix::EventScope<ID3D12GraphicsCommandList>(m_cmd_list.get(), 0xFF5FA8D3, "View3D::FarClipFade::Background");
 
 		// Draw the background objects at the fade start depth. A depth range of one value gives every background fragment that depth,
 		// so the reversed-depth GREATER_EQUAL test passes only on samples at or beyond the fade start (farther samples have smaller depth).
