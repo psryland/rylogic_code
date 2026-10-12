@@ -52,13 +52,18 @@ float CloudLayerAltitude(int layer, float lower_scale)
 	return layer == 2 ? CloudLayers[2].x : CloudLayers[layer].x * lower_scale;
 }
 
-// Map a horizontal vector in the atmosphere frame into the wind frame, where x points along the wind.
-float2 CloudWindFrame(CloudConstants clouds, float2 v)
+// The noise coordinates of a layer at one point, in both wind frames (see CloudConstants::frame_axes and CloudUV).
+struct CloudCoords
 {
-	// Rotate by the wind direction.
-	float2 wind;
-	sincos(clouds.wind_direction, wind.y, wind.x);
-	return float2(dot(v, wind), dot(v, float2(-wind.y, wind.x)));
+	float4 uv1; // The first noise sample. xy = frame 0, zw = frame 1.
+	float4 uv2; // The second noise sample. xy = frame 0, zw = frame 1.
+};
+
+// Map a horizontal vector in the atmosphere frame into a wind frame whose x axis is the unit vector 'axis'.
+float2 CloudWindFrame(float2 axis, float2 v)
+{
+	// Project onto the frame's axes.
+	return float2(dot(v, axis), dot(v, float2(-axis.y, axis.x)));
 }
 
 // Map a change in the first noise coordinate of a layer to the matching change in the second. See CloudUV.
@@ -68,16 +73,31 @@ float2 CloudUV2Delta(float2 duv1)
 	return float2(duv1.x + duv1.y, duv1.y - duv1.x);
 }
 
-// Noise coordinates of the two samples of 'layer' at 'xy' in the atmosphere frame.
-// The coordinates are in noise tiles of a wind-aligned frame (x along the wind), so stretched clouds streak along the wind in every layer.
+// Noise coordinates of the two samples of 'layer' at 'xy' in the atmosphere frame, in both wind frames.
+// The coordinates are in noise tiles of each wind frame, so stretched clouds streak along that frame's x axis in every layer.
 // The second sample is rotated by 45 degrees, scaled by sqrt(2), and drifts with the evolution phase, so the sum of the two samples changes
 // shape over time and hides the tiling of each. Its integer matrix maps whole tiles to whole tiles, so it repeats with the CPU's offset wrapping.
-void CloudUV(CloudConstants clouds, int layer, float2 xy, out float2 uv1, out float2 uv2)
+CloudCoords CloudUV(CloudConstants clouds, int layer, float2 xy)
 {
-	// Move with the layer's wind offset, then derive the evolving second sample.
-	float2 offset = layer == 0 ? clouds.offset01.xy : layer == 1 ? clouds.offset01.zw : clouds.offset2;
-	uv1 = CloudWindFrame(clouds, xy) / CloudLayers[layer].yz - offset;
-	uv2 = CloudUV2Delta(uv1) + clouds.evolve[layer] * float2(1.0, 0.5) + float2(0.37, 0.61);
+	// Move with the layer's offset in each frame, then derive the evolving second sample.
+	float4 offset = clouds.offsets[layer];
+	float2 tile = CloudLayers[layer].yz;
+	float2 evolve = clouds.evolve[layer] * float2(1.0, 0.5) + float2(0.37, 0.61);
+	CloudCoords c;
+	c.uv1.xy = CloudWindFrame(clouds.frame_axes.xy, xy) / tile - offset.xy;
+	c.uv1.zw = CloudWindFrame(clouds.frame_axes.zw, xy) / tile - offset.zw;
+	c.uv2.xy = CloudUV2Delta(c.uv1.xy) + evolve;
+	c.uv2.zw = CloudUV2Delta(c.uv1.zw) + evolve;
+	return c;
+}
+
+// Blend the deviations from the mean, 'dev0' and 'dev1', of a noise value read in wind frames 0 and 1.
+// The frames' noise is unrelated, so a plain blend would have less contrast part way through. The blend is rescaled to keep the spread of one frame.
+float CloudFrameBlend(CloudConstants clouds, float dev0, float dev1)
+{
+	// Weight the frames, then restore the spread.
+	float w = clouds.frame_blend;
+	return (dev0 * (1.0 - w) + dev1 * w) * rsqrt((1.0 - w) * (1.0 - w) + w * w);
 }
 
 // The cloud field from the two noise samples of a layer. Masses come from the broad noise (R, G); lumps add rounded bulges from the heaped noise (B, A),
@@ -88,8 +108,8 @@ float CloudFieldFromNoise(float4 n1, float4 n2, float lump_scale)
 	return 0.5 + 0.72 * (n1.r + n2.g - 1.0) + lump_scale * (n1.b + n2.a - 1.0);
 }
 
-// The cloud field at the noise coordinates 'uv1' and 'uv2' of a layer, at mip level 'lod'.
-float CloudField(float2 uv1, float2 uv2, float lod, float lump_scale)
+// The cloud field of one wind frame at the noise coordinates 'uv1' and 'uv2' of a layer, at mip level 'lod'.
+float CloudFieldInFrame(float2 uv1, float2 uv2, float lod, float lump_scale)
 {
 	// Read both noise samples. The second sample's tiles are larger, so it is read half a level coarser.
 	float4 n1 = g_cloud_noise.SampleLevel(g_noise_sampler, uv1, lod);
@@ -97,11 +117,46 @@ float CloudField(float2 uv1, float2 uv2, float lod, float lump_scale)
 	return CloudFieldFromNoise(n1, n2, lump_scale);
 }
 
-// Fine lumpy noise in [-0.5, 0.5] that frays the edges of low and mid-level cloud. Cirrus is not frayed.
-float CloudFray(int layer, float2 uv1, float lod)
+// The cloud field of a layer at the noise coordinates 'c', at mip level 'lod'. The field's mean is 0.5.
+float CloudField(CloudConstants clouds, CloudCoords c, float lod, float lump_scale)
 {
-	// A finer, offset copy of the heaped noise.
-	return layer == 2 ? 0.0 : g_cloud_noise.SampleLevel(g_noise_sampler, uv1 * 3.0 + float2(0.21, 0.43), lod + 1.585).b - 0.5;
+	// Frame 0 is only read while it fades out.
+	float field1 = CloudFieldInFrame(c.uv1.zw, c.uv2.zw, lod, lump_scale);
+	if (clouds.frame_blend >= 1)
+		return field1;
+
+	float field0 = CloudFieldInFrame(c.uv1.xy, c.uv2.xy, lod, lump_scale);
+	return 0.5 + CloudFrameBlend(clouds, field0 - 0.5, field1 - 0.5);
+}
+
+// Fine lumpy noise in [-0.5, 0.5] that frays the edges of low and mid-level cloud, read at the noise coordinates 'c' moved by 'nudge' (in noise tiles).
+// Cirrus is not frayed.
+float CloudFray(CloudConstants clouds, int layer, CloudCoords c, float2 nudge, float lod)
+{
+	// A finer, offset copy of the heaped noise. Frame 0 is only read while it fades out.
+	if (layer == 2)
+		return 0.0;
+
+	float4 uv = (c.uv1 + nudge.xyxy) * 3.0 + float2(0.21, 0.43).xyxy;
+	float fray1 = g_cloud_noise.SampleLevel(g_noise_sampler, uv.zw, lod + 1.585).b - 0.5;
+	if (clouds.frame_blend >= 1)
+		return fray1;
+
+	float fray0 = g_cloud_noise.SampleLevel(g_noise_sampler, uv.xy, lod + 1.585).b - 0.5;
+	return CloudFrameBlend(clouds, fray0, fray1);
+}
+
+// The broad, slowly changing noise in [-0.5, 0.5] that groups clouds into fields, at the noise coordinates 'c' and mip level 'lod'.
+float CloudCluster(CloudConstants clouds, CloudCoords c, float lod)
+{
+	// Frame 0 is only read while it fades out.
+	float4 uv = c.uv1 * 0.18;
+	float cluster1 = g_cloud_noise.SampleLevel(g_noise_sampler, uv.zw, lod).g - 0.5;
+	if (clouds.frame_blend >= 1)
+		return cluster1;
+
+	float cluster0 = g_cloud_noise.SampleLevel(g_noise_sampler, uv.xy, lod).g - 0.5;
+	return CloudFrameBlend(clouds, cluster0, cluster1);
 }
 
 // The parameters that turn a layer's cloud field into cloud. They depend on the local cover, but not on the exact point in the layer.
@@ -120,15 +175,15 @@ struct CloudShape
 	float opacity;     // Mid-level and cirrus only: the optical thickness of the sheet's densest cloud, seen straight up.
 };
 
-// The shape of 'layer' where the cover is 'cover' and the wind speed is 'wind_speed'. 'uv1' is the layer's first noise coordinate there, and 'lod' its mip level.
-CloudShape CloudLayerShape(int layer, float cover, float wind_speed, float2 uv1, float lod, float lower_scale)
+// The shape of 'layer' where the cover is 'cover'. 'c' is the layer's noise coordinates there, and 'lod' its mip level.
+CloudShape CloudLayerShape(CloudConstants clouds, int layer, float cover, CloudCoords c, float lod, float lower_scale)
 {
 	CloudShape s;
 
 	// Cover is adjusted per layer. Zero cover is always clear sky. Mid-level cloud starts as sparse, faint patches, and grows in extent and opacity
 	// until PR_SKY_MID_CLOUD_FULL_COVER. Cirrus needs strong wind (see PR_SKY_CIRRUS_WIND_MIN), grows with cover up to 0.25, then stays light.
 	float mid_ramp = saturate(cover / PR_SKY_MID_CLOUD_FULL_COVER);
-	float cirrus_wind = saturate((wind_speed - PR_SKY_CIRRUS_WIND_MIN) / (PR_SKY_CIRRUS_WIND_FULL - PR_SKY_CIRRUS_WIND_MIN));
+	float cirrus_wind = saturate((clouds.wind_speed - PR_SKY_CIRRUS_WIND_MIN) / (PR_SKY_CIRRUS_WIND_FULL - PR_SKY_CIRRUS_WIND_MIN));
 	s.layer_cover = layer == 0 ? cover : layer == 1 ? cover * mid_ramp : min(cover * 1.5, 0.375) * cirrus_wind;
 	s.storm = smoothstep(0.7, 1.0, cover);
 	s.build = smoothstep(0.2, 0.6, cover);
@@ -138,9 +193,9 @@ CloudShape CloudLayerShape(int layer, float cover, float wind_speed, float2 uv1,
 	// Threshold the noise by cover: none at 0, about half the sky at 0.5, and all of it at 1. Storms fill in the gaps.
 	// At mid cover the threshold is near the middle of the noise, so every small wiggle would cross it and scatter many small clouds.
 	// Grouping is strongest there, so low and mid-level clouds gather into large masses with wide gaps. Cirrus keeps light grouping.
-	float cluster = g_cloud_noise.SampleLevel(g_noise_sampler, uv1 * 0.18, max(lod - 2.5, 4.0)).g;
+	float cluster = CloudCluster(clouds, c, max(lod - 2.5, 4.0));
 	float mid_cover = layer == 2 ? 0.0 : smoothstep(0.1, 0.35, cover) * (1.0 - smoothstep(0.55, 0.8, cover));
-	s.threshold = s.layer_cover > 0 ? lerp(0.85, 0.15, s.layer_cover) + lerp(0.3, 1.3, mid_cover) * (0.5 - cluster) * s.fluff : 2.0;
+	s.threshold = s.layer_cover > 0 ? lerp(0.85, 0.15, s.layer_cover) - lerp(0.3, 1.3, mid_cover) * cluster * s.fluff : 2.0;
 
 	// Opacity rises over a soft band above the threshold. Cirrus has a wide band, so it is wispy. Low and mid-level cloud are fluffy: their band is
 	// widened, and fine lumpy noise frays their edges. Storm cloud has a narrow band and no fraying, so it has well defined edges.
@@ -204,15 +259,14 @@ float CloudSlabDensity(CloudShape s, float2 column, float hz)
 float CloudSlabDensityAt(CloudConstants clouds, CloudShape s, float2 xy, float hz, float lod, bool frayed)
 {
 	// Read the field for the column through 'xy', then the density at its height.
-	float2 uv1, uv2;
-	CloudUV(clouds, 0, xy, uv1, uv2);
-	float field = CloudField(uv1, uv2, lod, s.lump_scale);
+	CloudCoords c = CloudUV(clouds, 0, xy);
+	float field = CloudField(clouds, c, lod, s.lump_scale);
 
 	// The fraying is read at a point that circles as the height rises, so the frayed edges change with height. Without this, the fraying would be
 	// the same at every height and the sides of the cloud would look like vertical streaks. One circle spans the slab height, and its radius is
 	// about the size of the fraying's lumps.
 	float turn = 6.2832 * hz / s.height;
-	float fray = frayed ? CloudFray(0, uv1 + 0.012 * float2(cos(turn), sin(turn)), lod) : 0.0;
+	float fray = frayed ? CloudFray(clouds, 0, c, 0.012 * float2(cos(turn), sin(turn)), lod) : 0.0;
 	return CloudSlabDensity(s, CloudSlabColumn(s, CloudEdge(s, field, fray), field), hz);
 }
 
@@ -245,18 +299,17 @@ float CloudShadow(CloudConstants clouds, float3 ws_pos, float3 ws_to_light, floa
 		// The low cloud's shape is set by the cover where the light enters its base.
 		float altitude = CloudLayerAltitude(0, lower_scale);
 		float2 xy = pos.xy + travel * (altitude - pos.z);
-		float2 uv1, uv2;
-		CloudUV(clouds, 0, xy, uv1, uv2);
+		CloudCoords c = CloudUV(clouds, 0, xy);
 		float cover = CloudCover(clouds, xy);
-		CloudShape s = CloudLayerShape(0, cover, clouds.wind_speed, uv1, lod, lower_scale);
+		CloudShape s = CloudLayerShape(clouds, 0, cover, c, lod, lower_scale);
 		storm = s.storm;
 
 		// Average the column thickness at two heights along the light, which softens the shadow edges where the light crosses the slab at an angle.
 		[unroll] for (int i = 0; i != 2; ++i)
 		{
 			// The second sample is half way up the slab.
-			float2 duv1 = CloudWindFrame(clouds, travel * (0.5 * i * s.height)) / CloudLayers[0].yz;
-			float field = CloudField(uv1 + duv1, uv2 + CloudUV2Delta(duv1), lod, s.lump_scale);
+			CloudCoords ci = CloudUV(clouds, 0, xy + travel * (0.5 * i * s.height));
+			float field = CloudField(clouds, ci, lod, s.lump_scale);
 			float2 column = CloudSlabColumn(s, CloudEdge(s, field, 0.0), field);
 			float2 bounds = CloudSlabBounds(s, column.y);
 			optical += 0.5 * s.sigma * column.x * (bounds.y - bounds.x);
@@ -268,10 +321,9 @@ float CloudShadow(CloudConstants clouds, float3 ws_pos, float3 ws_to_light, floa
 		// Mid-level cloud is thin, so it casts weaker shadows than the low cloud.
 		float altitude = CloudLayerAltitude(1, lower_scale);
 		float2 xy = pos.xy + travel * (altitude - pos.z);
-		float2 uv1, uv2;
-		CloudUV(clouds, 1, xy, uv1, uv2);
-		CloudShape s = CloudLayerShape(1, CloudCover(clouds, xy), clouds.wind_speed, uv1, lod, lower_scale);
-		float coverage = saturate(CloudEdge(s, CloudField(uv1, uv2, lod, s.lump_scale), 0.0) / s.softness);
+		CloudCoords c = CloudUV(clouds, 1, xy);
+		CloudShape s = CloudLayerShape(clouds, 1, CloudCover(clouds, xy), c, lod, lower_scale);
+		float coverage = saturate(CloudEdge(s, CloudField(clouds, c, lod, s.lump_scale), 0.0) / s.softness);
 		float alpha = 1.0 - exp(-coverage * coverage * s.opacity * slant);
 		transmit *= 1.0 - 0.4 * alpha;
 	}

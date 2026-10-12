@@ -334,3 +334,81 @@ namespace pr::compute
 		return (total + group_size - iv3(1)) / group_size;
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::compute::tests
+{
+	// Check that the per-job reuse caches return a cached GPU location only for an exact match.
+	PRUnitTestClass(GpuJobReuseCacheTests)
+	{
+		// Two different 8-byte values with the same 32-bit FNV-1a hash.
+		struct HashCollisionPair
+		{
+			int32_t a;
+			int32_t b;
+		};
+		static constexpr HashCollisionPair CollisionA = { 1785990244, 450153144 };
+		static constexpr HashCollisionPair CollisionB = { 989274597, 444590511 };
+
+		// The upload buffer must not share an upload between different items whose bytes have the same hash.
+		PRUnitTestMethod(UploadBufferReusesOnlyIdenticalItems, Extended)
+		{
+			// Confirm the test values really collide, otherwise the test proves nothing
+			PR_EXPECT(hash::HashBytes32(&CollisionA, &CollisionA + 1) == hash::HashBytes32(&CollisionB, &CollisionB + 1));
+
+			ComGpu gpu;
+			ComputeJob job(gpu, "UploadBufferReuse", 0xFF000000);
+			auto addr_a = job.m_upload.Add(CollisionA, 8, true).VirtualAddress();
+			auto addr_b = job.m_upload.Add(CollisionB, 8, true).VirtualAddress();
+			PR_EXPECT(addr_a != addr_b);
+			PR_EXPECT(job.m_upload.Add(CollisionA, 8, true).VirtualAddress() == addr_a);
+
+			// A cached upload that does not satisfy a stricter alignment must not be reused. Pad the buffer so the next 4-byte aligned
+			// allocation starts at an address that is not 8-byte aligned.
+			auto pad = job.m_upload.Add(int32_t{0}, 4, false).VirtualAddress();
+			if (pad % 8 == 4)
+				job.m_upload.Add(int32_t{0}, 4, false);
+
+			auto const item = HashCollisionPair{ 1, 2 };
+			auto addr_4 = job.m_upload.Add(item, 4, true).VirtualAddress();
+			PR_EXPECT(addr_4 % 8 == 4);
+			auto addr_8 = job.m_upload.Add(item, 8, true).VirtualAddress();
+			PR_EXPECT(addr_8 % 8 == 0 && addr_8 != addr_4);
+
+			// Complete the job so the upload buffer's pending sync point is signalled before it is destroyed
+			job.Run();
+		}
+
+		// The view heap must not share a GPU block between descriptor tables for different descriptor-store slot generations.
+		PRUnitTestMethod(ViewHeapReusesOnlyIdenticalTables, Extended)
+		{
+			ComGpu gpu;
+			ComputeJob job(gpu, "ViewHeapReuse", 0xFF000000, 8);
+
+			// Create two null SRVs in a CPU-only heap to act as descriptor sources
+			auto type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			auto heap_desc = D3D12_DESCRIPTOR_HEAP_DESC{ .Type = type, .NumDescriptors = 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+			D3DPtr<ID3D12DescriptorHeap> cpu_heap;
+			Check(gpu->CreateDescriptorHeap(&heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)cpu_heap.address_of()));
+			auto des_size = gpu->GetDescriptorHandleIncrementSize(type);
+			auto cpu0 = cpu_heap->GetCPUDescriptorHandleForHeapStart();
+			auto cpu1 = D3D12_CPU_DESCRIPTOR_HANDLE{ cpu0.ptr + des_size };
+			auto srv_desc = D3D12_SHADER_RESOURCE_VIEW_DESC{ .Format = DXGI_FORMAT_R32_FLOAT, .ViewDimension = D3D12_SRV_DIMENSION_BUFFER, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .Buffer = { .FirstElement = 0, .NumElements = 1 } };
+			gpu->CreateShaderResourceView(nullptr, &srv_desc, cpu0);
+			gpu->CreateShaderResourceView(nullptr, &srv_desc, cpu1);
+
+			// Tables with the same indices but a different generation must get separate GPU blocks
+			Descriptor const seq_a[] = { Descriptor(0, type, cpu0, 1), Descriptor(1, type, cpu1, 1) };
+			Descriptor const seq_b[] = { Descriptor(0, type, cpu0, 1), Descriptor(1, type, cpu1, 2) };
+			auto handle_a = job.m_view_heap.Add(std::span{ seq_a });
+			auto handle_b = job.m_view_heap.Add(std::span{ seq_b });
+			PR_EXPECT(handle_a.ptr != handle_b.ptr);
+			PR_EXPECT(job.m_view_heap.Add(std::span{ seq_a }).ptr == handle_a.ptr);
+
+			// Complete the job so the view heap's pending sync point is signalled before it is destroyed
+			job.Run();
+		}
+	};
+}
+#endif

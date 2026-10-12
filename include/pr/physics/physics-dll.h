@@ -48,7 +48,7 @@ namespace pr::physics
 
 namespace pr::physics
 {
-	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00050000U;
+	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00060000U;
 	inline constexpr std::uint32_t PHYSICS_STRUCT_VERSION = 2U;
 	inline constexpr std::uint32_t PHYSICS_CHECKPOINT_VERSION = 3U;
 
@@ -109,6 +109,7 @@ namespace pr::physics
 		AtmosphereDesc = 24,
 		AtmosphereStep = 25,
 		AtmosphereStats = 26,
+		WindSea = 27,
 	};
 
 	struct StructHeader
@@ -633,8 +634,8 @@ namespace pr::physics
 	static_assert(sizeof(WaterBathymetryDesc) == 48);
 
 	// The fixed component layout of a wind-driven wave spectrum. Gravity (m/s²) and the repeat period (s) are positive. The wavelength range
-	// [min_wavelength, max_wavelength] (m, 0 < min < max) is split into 'bands' equal log-wavelength bands of 'directions' components each.
-	// The component count, bands * directions, is at most 64.
+	// [min_wavelength, max_wavelength] (m, 0 < min < max) is split into 'bands' equal log-wavelength bands of 'directions' components each,
+	// spread evenly around the full circle. The component count, bands * directions, is at most 96.
 	struct WaveSpectrumDesc
 	{
 		float gravity, repeat_period;
@@ -642,6 +643,26 @@ namespace pr::physics
 		std::int32_t bands, directions;
 	};
 	static_assert(sizeof(WaveSpectrumDesc) == 24);
+
+	// A wind sea: winds on a regular world-space grid that set the local amplitude and crest sharpness of the wind-sea elements
+	// (see Physics_WaveSpectrumElements). Node (i, j) is at origin + (i, j) * cell_size, and node n = j * width + i holds 'level_count' winds
+	// at winds[n * level_count + l], in m/s, pointing downwind. The levels are spread evenly from the first band to the last, and each band
+	// uses the wind interpolated between its two nearest levels (see wind_sea.hlsli). 'table' holds band_count * speed_count rows from
+	// Physics_WaveSpectrumSeaTable, where row r describes a wind of r * speed_step m/s. Width, height and speed_count are at least two, and
+	// level_count is in [1, band_count]. The engine copies the arrays.
+	struct WindSeaDesc
+	{
+		StructHeader header;
+		Vector2 origin;
+		float cell_size;
+		float speed_step;
+		std::int32_t width, height;
+		std::int32_t band_count, speed_count;
+		std::int32_t level_count, pad;
+		Vector4 const* table;
+		Vector2 const* winds;
+	};
+	static_assert(sizeof(WindSeaDesc) == 64);
 
 	#pragma endregion
 
@@ -1013,22 +1034,23 @@ extern "C"
 	// later Physics_EngineWaterSet calls. Only valid between completed frames.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_EngineWaterBathymetrySet(pr::physics::EngineHandle engine, pr::physics::WaterBathymetryDesc const* bathymetry);
 
-	// Wind-driven wave spectrum with the fixed components described by 'spectrum'. 'count' must equal the component count, bands * directions.
-	// Wind speed is m/s and fetch is metres. Amplitudes are for component directions relative to downwind; see Physics_WaveSpectrumElements.
-	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumTargets(pr::physics::WaveSpectrumDesc const* spectrum, float wind_speed, float fetch, float* amplitudes, std::int32_t count);
+	// Replace the wind sea that sets the local amplitude of wind-sea water elements; null leaves those elements at their table-maximum amplitude.
+	// Applies to the current water and to later Physics_EngineWaterSet calls. Only valid between completed frames.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_EngineWaterWindSeaSet(pr::physics::EngineHandle engine, pr::physics::WindSeaDesc const* wind_sea);
 
-	// Move each amplitude towards its target over 'dt' seconds with exponential time constant 'time_constant' seconds.
-	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumRelax(float* amplitudes, float const* targets, std::int32_t count, float dt, float time_constant);
+	// Write the wind-sea table of 'spectrum' for a wind blowing over 'fetch' metres of open water. 'rows' holds bands * speed_count rows, where
+	// row r of band b is at [b * speed_count + r] and describes a steady wind of r * 'speed_step' m/s. Each row is (amplitude of an element
+	// travelling downwind (m), alignment exponent, crest sharpness, sum of alignment weights); see wind_sea.hlsli.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumSeaTable(pr::physics::WaveSpectrumDesc const* spectrum, float fetch, float speed_step, pr::physics::Vector4* rows, std::int32_t row_count);
 
-	// Return the crest sharpness of wind-driven waves for 'wind_speed' (m/s), for use with Physics_WaveSpectrumElements. Zero up to 4 m/s, rising
-	// towards 0.7 in storms.
-	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumCrestSharpness(float wind_speed, float* sharpness);
+	// Move each value towards its target over 'dt' seconds with exponential time constant 'time_constant' seconds.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumRelax(float* values, float const* targets, std::int32_t count, float dt, float time_constant);
 
-	// Write Gerstner elements for the components with a positive amplitude and a wavelength of at least 'min_wavelength', in component order.
-	// 'heading' is the direction the wind blows towards, in radians anticlockwise from +X; component directions are rotated by it.
-	// 'sharpness' in [0, 0.9] narrows wave crests and flattens troughs (see shared::WaterFieldWaveProfile) and is stored in each element's timing.x.
-	// Steepness is zero. Fails when more than 'capacity' elements are needed.
-	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumElements(pr::physics::WaveSpectrumDesc const* spectrum, float const* amplitudes, std::int32_t count, float heading, float sharpness, float min_wavelength, pr::physics::WaterElement* elements, std::int32_t capacity, std::int32_t* element_count);
+	// Write a wind-sea Gerstner element for each component with a wavelength of at least 'min_wavelength' whose band can have waves in 'rows'
+	// (the table from Physics_WaveSpectrumSeaTable), in component order. Each element holds the band's largest table amplitude and crest
+	// sharpness; a wind sea (see Physics_EngineWaterWindSeaSet) supplies the local values. Steepness is zero. Fails when more than 'capacity'
+	// elements are needed.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumElements(pr::physics::WaveSpectrumDesc const* spectrum, pr::physics::Vector4 const* rows, std::int32_t row_count, float min_wavelength, pr::physics::WaterElement* elements, std::int32_t capacity, std::int32_t* element_count);
 
 	// Material properties.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_MaterialGet(pr::physics::EngineHandle engine, std::int32_t material_id, pr::physics::MaterialProperties* material);

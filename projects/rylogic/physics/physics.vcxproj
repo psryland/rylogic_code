@@ -180,12 +180,15 @@
     <ClCompile Include="src\terrain\water\water_field.cpp" />
     <ClCompile Include="src\terrain\water\bathymetry.cpp" />
     <ClCompile Include="src\terrain\water\wave_spectrum.cpp" />
+    <ClCompile Include="src\terrain\water\wind_sea.cpp" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field_types.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_depth.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\bathymetry.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wave_spectrum.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wind_sea.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wind_sea.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_types.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_surface.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\height_bounds.h" />
@@ -322,7 +325,7 @@
   -->
   <!-- Incremental so an unchanged build does not rewrite the library; lib.exe embeds timestamps, so a needless rewrite looks like a content change to anything that consumes the library. -->
   <ItemGroup>
-    <LandscapeLibraryObj Include="$(IntDir)baseline_surface.obj;$(IntDir)height_bounds.obj;$(IntDir)water_field.obj;$(IntDir)bathymetry.obj;$(IntDir)wave_spectrum.obj" />
+    <LandscapeLibraryObj Include="$(IntDir)baseline_surface.obj;$(IntDir)height_bounds.obj;$(IntDir)water_field.obj;$(IntDir)bathymetry.obj;$(IntDir)wave_spectrum.obj;$(IntDir)wind_sea.obj" />
   </ItemGroup>
   <Target Name="BuildLandscapeLibrary" AfterTargets="Lib" Condition="Exists('$(IntDir)baseline_surface.obj')" Inputs="@(LandscapeLibraryObj)" Outputs="$(OutDir)physics-landscape.lib">
     <Exec Command="lib.exe /nologo /out:&quot;$(OutDir)physics-landscape.lib&quot; @(LandscapeLibraryObj->'&quot;%(Identity)&quot;', ' ')" />

@@ -2432,6 +2432,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_ObjectDetailNormalLayersSet(HObject obj, [MarshalAs(UnmanagedType.LPArray)] DetailNormalLayer[]? layers, int count, float base_slope_variance);
 		[DllImport(Dll)] private static extern void View3D_ObjectDetailStrengthMapSet(HObject obj, IntPtr map);
 		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferSet(HObject obj, IntPtr buffer);
+		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferWrite(HObject obj, nuint offset, IntPtr data, nuint data_size);
 
 		// Materials ******************************
 

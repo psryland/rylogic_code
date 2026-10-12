@@ -9,6 +9,8 @@
 #include "pr/physics/buoyancy/gpu_buoyancy.h"
 #include "pr/physics/buoyancy/buoyancy_sampler.h"
 #include "pr/physics/shape/shape_builder.h"
+#include "pr/physics/terrain/water/wave_spectrum.h"
+#include "pr/physics/terrain/water/wind_sea.h"
 #include "pr/collision/shape_line.h"
 #include "pr/collision/shape_sphere.h"
 #include "pr/collision/shape_array.h"
@@ -1122,6 +1124,28 @@ namespace pr::physics::tests
 			PR_EXPECT(FEqlAbsolute(diag.m_force_ws.x, expected_force_x, std::max(std::abs(expected_force_x) * 0.02f, 25.0f)));
 			PR_EXPECT(FEqlAbsolute(diag.m_force_ws.y, 0.0f, 25.0f));
 			PR_EXPECT(FEqlAbsolute(diag.m_force_ws.z, rho_g_v, std::abs(rho_g_v) * 0.01f));
+		}
+
+		// The composite shaders read element amplitudes directly, so a field with a wind sea is rejected rather than evaluated at its bounds.
+		PRUnitTestMethod(WindSeaFieldIsRejected, Extended)
+		{
+			using namespace terrain::water;
+
+			// A minimal wind sea: one band's table and a calm 2x2 grid.
+			auto const spectrum = WaveSpectrum{};
+			auto const bands = spectrum.Layout().m_bands;
+			constexpr int speed_count = 2;
+			auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(bands) * speed_count);
+			spectrum.SeaTable(10000.0f, 0.5f, table);
+			auto const grid = WindSeaGrid{.origin = {0.0f, 0.0f}, .cell_size = 100.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = bands, .speed_count = speed_count, .level_count = bands};
+			auto const winds = std::vector<v2>(static_cast<size_t>(4 * bands), v2{0.0f, 0.0f});
+			auto field = WaterField(0.0);
+			field.WindSea(std::make_shared<WindSea const>(grid, table, winds));
+
+			// The previous field is kept when the new one is rejected.
+			Harness h;
+			PR_THROWS(h.m_buoyancy.SetWaterField(field), std::invalid_argument);
+			PR_EXPECT(h.m_buoyancy.GetWaterField().WindSea() == nullptr);
 		}
 
 		// Composite port of the legacy GpuLinearDragForce check, asserting the wet-volume linear-drag closed form.

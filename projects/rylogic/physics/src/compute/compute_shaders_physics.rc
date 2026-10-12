@@ -38,4 +38,5 @@ pr/physics/surface/surface_sampling.hlsli TEXT DISCARDABLE "..\\..\\..\\include\
 pr/physics/terrain/water/water_field_types.hlsli TEXT DISCARDABLE "..\\..\\..\\include\\pr\\physics\\terrain\\water\\water_field_types.hlsli"
 pr/physics/terrain/water/water_field.hlsli TEXT DISCARDABLE "..\\..\\..\\include\\pr\\physics\\terrain\\water\\water_field.hlsli"
 pr/physics/terrain/water/water_depth.hlsli TEXT DISCARDABLE "..\\..\\..\\include\\pr\\physics\\terrain\\water\\water_depth.hlsli"
+pr/physics/terrain/water/wind_sea.hlsli TEXT DISCARDABLE "..\\..\\..\\include\\pr\\physics\\terrain\\water\\wind_sea.hlsli"
  

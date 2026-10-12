@@ -6,6 +6,7 @@
 #include "pr/physics/terrain/forward.h"
 #include "pr/physics/terrain/water/water_field_types.hlsli"
 #include "pr/physics/terrain/water/bathymetry.h"
+#include "pr/physics/terrain/water/wind_sea.h"
 
 namespace pr::physics::terrain::water
 {
@@ -33,6 +34,7 @@ namespace pr::physics::terrain::water
 	// The surface is a height field over world XY with +Z up. Sampling returns the water surface height even where terrain lies above it;
 	// callers decide wetness by comparing against their own terrain or body geometry.
 	// The same elements are evaluated by the stage-neutral HLSL in water_field.hlsli, so CPU and GPU consumers see the same surface.
+	// With a wind sea, the amplitude and crest sharpness of each band-tagged element follow the local wind (see wind_sea.hlsli).
 	// With a bathymetry, element amplitudes are corrected for the local water depth (see water_depth.hlsli): waves grow in shallow water,
 	// are limited to the breaking height, run a little way up the shore, and vanish on dry land beyond the swash allowance.
 	// Times are simulation seconds. With a repeat period, times are wrapped into [0, period) before evaluation (see LocalTime).
@@ -43,6 +45,7 @@ namespace pr::physics::terrain::water
 		double m_amplitude_bound;
 		double m_swash_depth;
 		std::shared_ptr<Bathymetry const> m_bathymetry;
+		std::shared_ptr<water::WindSea const> m_wind_sea;
 		float m_breaking_ratio;
 		double m_repeat_period;
 
@@ -69,6 +72,15 @@ namespace pr::physics::terrain::water
 		// The terrain heights used for depth correction, or null for deep water everywhere.
 		std::shared_ptr<Bathymetry const> const& TerrainHeights() const noexcept;
 		void TerrainHeights(std::shared_ptr<Bathymetry const> bathymetry);
+
+		// The local winds that set the amplitude and sharpness of band-tagged elements, or null to use each element's own values.
+		// Throws invalid_argument when an element's band is not in the wind sea.
+		std::shared_ptr<water::WindSea const> const& WindSea() const noexcept;
+		void WindSea(std::shared_ptr<water::WindSea const> wind_sea);
+
+		// Write the local amplitude (x) and crest sharpness (y) of every element at 'xy' into 'waves' (one per element, in element order),
+		// before any depth correction. Elements that do not follow a wind sea report zero; they keep their own values.
+		void LocalWaves(v2d xy, std::span<v2> waves) const;
 
 		// Ratio of the largest wave height (crest to trough) to the water depth. Only used with a bathymetry.
 		float BreakingRatio() const noexcept;
@@ -112,10 +124,16 @@ namespace pr::physics::terrain::water
 
 	private:
 
+		// Recompute the amplitude bound and swash depth for the current elements and wind sea.
+		void UpdateBounds();
+
+		// Return the elements with their local amplitude and sharpness at 'xy', using 'buffer' when they differ from the stored elements.
+		std::span<WaterFieldElement const> Localise(v2 xy, std::span<WaterFieldElement, MaxElementCount> buffer) const;
+
 		// Return the amplitude bound near a point whose deepest water, including the swash allowance, is 'max_depth'.
 		double AmplitudeBound(double max_depth) const noexcept;
 
-		// Return the breaking scale for 'depth'. See water_depth.hlsli.
-		float BreakingScale(float depth) const;
+		// Return the breaking scale of 'elements' for 'depth'. See water_depth.hlsli.
+		float BreakingScale(std::span<WaterFieldElement const> elements, float depth) const;
 	};
 }

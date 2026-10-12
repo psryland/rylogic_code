@@ -631,6 +631,7 @@ namespace pr
 		// Procedural sky state. The sky is Z-up. 'm_sun_direction' points toward the sun; the finite sun colour and intensity must be nonnegative.
 		// 'm_cloud_cover' in [0,1] is the default cover (0 = clear, 0.5 = scattered white cloud, 1 = dark overcast), used where no weather map applies.
 		// 'm_wind_speed' (>= 0, world units per second) and 'm_wind_direction' (radians from +X toward +Y) move the clouds; lower layers move faster.
+		// Direction changes are smooth: the clouds keep their positions, and their streaks turn by cross-fading to clouds aligned with the new direction.
 		// 'm_time' is the caller's absolute time in seconds; clouds advance by the change in time between updates, and time may not go backwards.
 		// 'm_hidden_cloud_layers' is a bit mask: bit i hides cloud layer i (0 = low, 1 = mid, 2 = cirrus). Zero shows all layers.
 		// 'm_lightning' are flashes inside the cloud: xy = position in the sky frame, z = radius (> 0), w = finite brightness (>= 0, 0 = no flash).
@@ -1532,6 +1533,11 @@ extern "C"
 	// valid until the frames that use them have finished on the graphics queue (see View3D_GfxQueueSyncPointAdd). Shaders are shared by reference,
 	// so other objects that use the same shader handles also see the change. A shader that declares the buffer must not be drawn while none is bound.
 	VIEW3D_API void __stdcall View3D_ObjectProceduralBufferSet(pr::view3d::Object object, void* buffer);
+
+	// Overwrite 'data_size' bytes at byte 'offset' of each distinct buffer bound to the procedural shaders on the object's own nuggets. The copy runs
+	// on the graphics queue after the frames already submitted and before later frames, so no frame sees a partial write. 'offset' and 'data_size'
+	// must be multiples of 4, with 'data_size' non-zero, inside every such buffer. Only buffers copied by View3D_ShaderCreate may be written.
+	VIEW3D_API void __stdcall View3D_ObjectProceduralBufferWrite(pr::view3d::Object object, size_t offset, void const* data, size_t data_size);
 
 	// Create an graphics object from ldr script, either a string or a file 
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);

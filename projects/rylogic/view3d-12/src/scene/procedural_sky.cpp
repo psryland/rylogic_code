@@ -176,7 +176,7 @@ namespace pr::rdr12
 				},
 			}
 		{
-			static_assert(sizeof(m_cbuf) == 320);
+			static_assert(sizeof(m_cbuf) == 368);
 			m_code.VS = shader_code::procedural_sky_vs;
 			m_code.PS = shader_code::procedural_sky_ps;
 
@@ -248,8 +248,10 @@ namespace pr::rdr12
 		: m_inst()
 		, m_shader()
 		, m_last_time()
-		, m_cloud_offset()
+		, m_frames()
+		, m_frame_blend(1.0)
 		, m_cloud_evolve()
+		, m_low_cloud_drift()
 	{
 		// A full-screen triangle covers perspective and orthographic views without cube seams or clip-distance dependence.
 		rdr12::ModelGenerator::Buffers<Vert> buf;
@@ -323,18 +325,44 @@ namespace pr::rdr12
 				throw std::invalid_argument("Procedural sky lightning requires a finite nonnegative brightness, and a finite position and positive radius when visible");
 		}
 
-		// Move the clouds by the wind over the elapsed time. The first update, and time going backwards, do not move them.
+		// Align the wind frames with the wind. The first update aligns frame 1 immediately. Later, once any cross-fade has finished, a wind that
+		// has turned too far from frame 1 starts a cross-fade to a new frame. The new frame keeps the old frame's offsets, which is harmless
+		// because its noise is read along different axes, and it starts with no weight.
+		auto wind_direction = std::fmod(s_cast<double>(settings.m_wind_direction), constants<double>::tau);
 		auto dt = m_last_time ? std::max(settings.m_time - *m_last_time, 0.0) : 0.0;
+		if (!m_last_time)
+		{
+			m_frames[1].m_angle = wind_direction;
+			m_frame_blend = 1.0;
+		}
 		m_last_time = settings.m_time;
+		m_frame_blend = std::min(m_frame_blend + dt / WindFrameFade, 1.0);
+		if (m_frame_blend >= 1.0 && std::abs(std::remainder(wind_direction - m_frames[1].m_angle, constants<double>::tau)) > WindFrameTurn)
+		{
+			m_frames[0] = m_frames[1];
+			m_frames[1].m_angle = wind_direction;
+			m_frame_blend = 0.0;
+		}
+
+		// Move the clouds by the wind over the elapsed time. The first update, and time going backwards, do not move them.
+		auto wind = settings.m_wind_speed * dt * v2(s_cast<float>(std::cos(wind_direction)), s_cast<float>(std::sin(wind_direction)));
 		v4 const layers[] = { v4(PR_SKY_CLOUD_LAYER0), v4(PR_SKY_CLOUD_LAYER1), v4(PR_SKY_CLOUD_LAYER2) };
+		m_low_cloud_drift[0] += s_cast<double>(wind.x * layers[0].w);
+		m_low_cloud_drift[1] += s_cast<double>(wind.y * layers[0].w);
 		for (int i = 0; i != 3; ++i)
 		{
-			// Offsets are in noise tiles of the wind-aligned frame, so the wind moves only the along-wind component.
-			// They are wrapped at the noise period, so they stay precise over long run times.
-			auto& offset = m_cloud_offset[i];
 			auto const& layer = layers[i];
-			auto period = s_cast<double>(PR_SKY_CLOUD_PERIOD);
-			offset.x = s_cast<float>(std::fmod(offset.x + settings.m_wind_speed * layer.w * dt / layer.y, period));
+			for (auto& frame : m_frames)
+			{
+				// Both frames move with the wind, along and across their axes, so the clouds never jump while the frames cross-fade.
+				// Offsets are wrapped at the noise period, so they stay precise over long run times.
+				auto axis = v2(s_cast<float>(std::cos(frame.m_angle)), s_cast<float>(std::sin(frame.m_angle)));
+				auto move = layer.w * v2(Dot(wind, axis) / layer.y, Dot(wind, v2(-axis.y, axis.x)) / layer.z);
+				auto period = s_cast<double>(PR_SKY_CLOUD_PERIOD);
+				auto& offset = frame.m_offset[i];
+				offset.x = s_cast<float>(std::fmod(s_cast<double>(offset.x) + move.x, period));
+				offset.y = s_cast<float>(std::fmod(s_cast<double>(offset.y) + move.y, period));
+			}
 
 			// Shapes change slowly in still air, and faster in wind: a quarter of an evolution unit per tile travelled.
 			auto evolve_rate = PR_SKY_CLOUD_EVOLVE_RATE + 0.25 * settings.m_wind_speed * layer.w / std::min(layer.y, layer.z);
@@ -344,10 +372,14 @@ namespace pr::rdr12
 		auto& clouds = m_shader->m_cbuf.clouds;
 		clouds.sun_direction = Normalise(sun_direction);
 		clouds.cover = settings.m_cloud_cover;
-		clouds.wind_direction = s_cast<float>(std::fmod(settings.m_wind_direction, constants<double>::tau));
+		clouds.frame_blend = s_cast<float>(m_frame_blend);
 		clouds.shadow_strength = settings.m_cloud_shadow_strength;
-		clouds.offset01 = v4(m_cloud_offset[0].x, m_cloud_offset[0].y, m_cloud_offset[1].x, m_cloud_offset[1].y);
-		clouds.offset2 = m_cloud_offset[2];
+		clouds.frame_axes = v4(
+			s_cast<float>(std::cos(m_frames[0].m_angle)), s_cast<float>(std::sin(m_frames[0].m_angle)),
+			s_cast<float>(std::cos(m_frames[1].m_angle)), s_cast<float>(std::sin(m_frames[1].m_angle)));
+		for (int i = 0; i != 3; ++i)
+			clouds.offsets[i] = v4(m_frames[0].m_offset[i], m_frames[1].m_offset[i]);
+
 		clouds.hidden_layers = settings.m_hidden_cloud_layers;
 		clouds.wind_speed = settings.m_wind_speed;
 		clouds.evolve = v4(m_cloud_evolve[0], m_cloud_evolve[1], m_cloud_evolve[2], 0);

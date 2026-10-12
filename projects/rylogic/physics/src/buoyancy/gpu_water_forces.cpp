@@ -30,6 +30,7 @@ namespace pr::physics
 			float m_quadratic_drag_coefficient;
 			float m_angular_drag_rate;
 			float m_breaking_ratio;
+			int m_wind_sea;
 		};
 		static_assert(sizeof(CBufWaterForces) % sizeof(uint32_t) == 0);
 		static_assert(sizeof(GpuWaterForces::Candidate) == 96);
@@ -57,6 +58,7 @@ namespace pr::physics
 		, m_candidates()
 		, m_candidates_addr(nullptr)
 		, m_elements_addr(nullptr)
+		, m_local_waves_addr(nullptr)
 	{
 		// Root parameter order must match the binding order used in Apply.
 		m_config.Validate();
@@ -74,6 +76,7 @@ namespace pr::physics
 			.UAV(hlsl::EUAVReg::u0)
 			.SRV(hlsl::ESRVReg::t0)
 			.SRV(hlsl::ESRVReg::t1)
+			.SRV(hlsl::ESRVReg::t2)
 			.Create(gpu, "Physics.WaterForces.RootSig");
 		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Create(gpu, "Physics.WaterForces.PSO");
 	}
@@ -116,8 +119,26 @@ namespace pr::physics
 		if (!elements.empty())
 			memcpy(upload_elements.ptr<std::byte>(), elements.data(), elements.size_bytes());
 
+		// Find the local wind-sea waves at each candidate's proxy centre, where its depth was sampled. Without a wind sea the shader
+		// ignores this buffer, so it only holds the one entry needed for binding.
+		auto const element_count = isize(elements);
+		auto const local_count = field.WindSea() != nullptr ? isize(m_candidates) * element_count : 0;
+		auto upload_local_waves = job.m_upload.Alloc<v2>(std::max(local_count, 1));
+		memset(upload_local_waves.ptr<std::byte>(), 0, sizeof(v2));
+		if (local_count != 0)
+		{
+			auto const local_waves = std::span<v2>{upload_local_waves.ptr<v2>(), static_cast<size_t>(local_count)};
+			for (int c = 0, cend = isize(m_candidates); c != cend; ++c)
+			{
+				auto const& candidate = m_candidates[c];
+				auto const centre_ws = bodies[candidate.m_body_index]->O2W() * candidate.m_centre_os.w1();
+				field.LocalWaves(terrain::v2d{centre_ws.x, centre_ws.y}, local_waves.subspan(static_cast<size_t>(c) * element_count, element_count));
+			}
+		}
+
 		m_candidates_addr = upload_candidates;
 		m_elements_addr = upload_elements;
+		m_local_waves_addr = upload_local_waves;
 	}
 
 	// Wake sleeping bodies that the moving surface may reach.
@@ -164,6 +185,7 @@ namespace pr::physics
 			.m_quadratic_drag_coefficient = m_config.m_quadratic_drag_coefficient,
 			.m_angular_drag_rate = m_config.m_angular_drag_rate,
 			.m_breaking_ratio = m_config.m_field.BreakingRatio(),
+			.m_wind_sea = m_config.m_field.WindSea() != nullptr ? 1 : 0,
 		};
 		job.m_cmd_list.SetPipelineState(m_step.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_step.m_sig.get());
@@ -171,6 +193,7 @@ namespace pr::physics
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
 		job.m_cmd_list.AddComputeRootShaderResourceView(m_candidates_addr);
 		job.m_cmd_list.AddComputeRootShaderResourceView(m_elements_addr);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_local_waves_addr);
 		job.m_cmd_list.Dispatch((cb.m_candidate_count + WaterForcesThreadCount - 1) / WaterForcesThreadCount, 1, 1);
 		job.m_barriers.UAV(bodies).Commit();
 	}

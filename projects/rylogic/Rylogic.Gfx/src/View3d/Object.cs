@@ -698,6 +698,18 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>
+			/// Overwrite part of each distinct buffer bound to the procedural shaders on this object's own nuggets, starting at byte 'offset'.
+			/// The copy runs on the graphics queue between the frames already submitted and later frames, so no frame sees a partial write.
+			/// 'offset' and the byte size of 'data' must be multiples of 4, with 'data' not empty, inside every such buffer. Only buffers that
+			/// View3D copied at shader creation may be written.</summary>
+			public unsafe void ProceduralBufferWrite<T>(long offset, ReadOnlySpan<T> data) where T : unmanaged
+			{
+				// The data is pinned only for the call; View3D copies it to its upload memory.
+				fixed (T* ptr = data)
+					View3D_ObjectProceduralBufferWrite(Handle, checked((nuint)offset), (IntPtr)ptr, checked((nuint)(data.Length * sizeof(T))));
+			}
+
+			/// <summary>
 			/// Get/Set the colour of this object or the first child object that matches 'name'.
 			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour.
 			/// If 'name' is null, then the state change is applied to this object only

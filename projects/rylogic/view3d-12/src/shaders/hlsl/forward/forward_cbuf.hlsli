@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -19,9 +19,9 @@ struct SkyHistory
 	// The viewport of both frames, in pixels: (x, y, width, height).
 	float4 viewport;
 
-	// The previous frame's low cloud offset in noise tiles (see CloudConstants::offset01), the offset along each march step for this frame in [0,1),
-	// and 1 when the history holds the previous frame, otherwise 0.
-	float2 prev_cloud_offset;
+	// How far the low cloud moved with the wind since the previous frame, in world units in the atmosphere frame, the offset along each march step
+	// for this frame in [0,1), and 1 when the history holds the previous frame, otherwise 0.
+	float2 cloud_shift;
 	float frame_jitter;
 	float valid;
 

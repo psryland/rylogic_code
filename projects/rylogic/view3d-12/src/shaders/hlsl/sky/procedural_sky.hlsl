@@ -317,16 +317,15 @@ float4 CloudSheet(int layer, float3 cam, float3 dir, float pixel_angle, float lo
 		return 0;
 
 	float3 hit = cam + dir * t;
-	float2 uv1, uv2;
-	CloudUV(clouds, layer, hit.xy, uv1, uv2);
+	CloudCoords c = CloudUV(clouds, layer, hit.xy);
 	float lod = CloudLod(layer, t, pixel_angle, mu);
-	CloudShape s = CloudLayerShape(layer, CloudCover(clouds, hit.xy), clouds.wind_speed, uv1, lod, lower_scale);
+	CloudShape s = CloudLayerShape(clouds, layer, CloudCover(clouds, hit.xy), c, lod, lower_scale);
 	if (s.layer_cover <= 0)
 		return 0;
 
 	// Opacity rises over the soft band above the cloud edge.
-	float field = CloudField(uv1, uv2, lod, s.lump_scale);
-	float coverage = saturate(CloudEdge(s, field, CloudFray(layer, uv1, lod)) / s.softness);
+	float field = CloudField(clouds, c, lod, s.lump_scale);
+	float coverage = saturate(CloudEdge(s, field, CloudFray(clouds, layer, c, 0, lod)) / s.softness);
 	if (coverage <= 0)
 		return 0;
 
@@ -381,10 +380,9 @@ float4 CloudSlab(float3 cam, float3 dir, float pixel_angle, float quad_slot, flo
 
 	anchor = cam + dir * t_plane;
 	float2 plane_xy = anchor.xy;
-	float2 uv1, uv2;
-	CloudUV(clouds, 0, plane_xy, uv1, uv2);
+	CloudCoords c = CloudUV(clouds, 0, plane_xy);
 	float lod = CloudLod(0, t_plane, pixel_angle, mu);
-	CloudShape s = CloudLayerShape(0, CloudCover(clouds, plane_xy), clouds.wind_speed, uv1, lod, lower_scale);
+	CloudShape s = CloudLayerShape(clouds, 0, CloudCover(clouds, plane_xy), c, lod, lower_scale);
 	if (s.layer_cover <= 0)
 		return 0;
 
@@ -412,7 +410,7 @@ float4 CloudSlab(float3 cam, float3 dir, float pixel_angle, float quad_slot, flo
 	// longest footprint on the layer, which is across the horizon where the ray grazes it, so they are no bigger than a pixel in any
 	// direction. Larger cells would share one offset along a row of pixels and show as horizontal streaks.
 	float grain_lod = lod - 0.5 * log2(max(mu, 1e-4));
-	float jitter = frac((quad_slot + CloudGrain(uv1, grain_lod)) * 0.25 + frame_jitter);
+	float jitter = frac((quad_slot + CloudGrain(c.uv1.zw, grain_lod)) * 0.25 + frame_jitter);
 
 	// Lighting that is the same for the whole ray. Light is scattered mainly forward, which makes thin cloud glow near the sun (silver lining),
 	// with some even scattering. Sky light is weaker low in the cloud, because the cloud above blocks it, and weaker in larger and storm cloud.
@@ -533,17 +531,9 @@ float4 AccumulateLowCloud(float4 low_cloud, float4 lo, float4 hi, float3 anchor,
 	if (history.enabled == 0)
 		return low_cloud;
 
-	// Move the anchor back to where the cloud was in the previous frame. The low cloud's offset is in noise tiles of the wind frame (see CloudUV),
-	// so a change in the offset moves the cloud by the change times the tile size, along and across the wind. The change is wrapped, because
-	// the offset wraps at the noise period.
+	// Move the anchor back to where the cloud was in the previous frame.
 	CloudConstants clouds = g_sky.clouds;
-	float2 wind;
-	sincos(clouds.wind_direction, wind.y, wind.x);
-	float2 moved = clouds.offset01.xy - history.prev_cloud_offset;
-	moved -= PR_SKY_CLOUD_PERIOD * round(moved / PR_SKY_CLOUD_PERIOD);
-	moved *= CloudLayers[0].yz;
-	float2 shift = moved.x * wind + moved.y * float2(-wind.y, wind.x);
-	float3 prev_anchor = anchor - drifts * float3(shift, 0);
+	float3 prev_anchor = anchor - drifts * float3(history.cloud_shift, 0);
 
 	// Find where that point was on screen in the previous frame. The atmosphere frame is a rotation of the world frame, so the transpose of
 	// 'world_to_sky' maps it back to the world. History texel 'i' holds the quad covering pixels 2i and 2i+1, so its centre is at pixel 2i+1.

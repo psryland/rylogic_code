@@ -774,6 +774,10 @@ namespace pr::physics
 		// Set the water field used by subsequent buoyancy force dispatches.
 		void SetWaterField(terrain::water::WaterField const& water_field)
 		{
+			// The shaders read element amplitudes directly, so a wind sea's local amplitudes would be silently replaced by its bounds.
+			if (water_field.WindSea() != nullptr)
+				throw std::invalid_argument("GpuBuoyancy does not support water fields with a wind sea");
+
 			m_water_field = water_field;
 		}
 

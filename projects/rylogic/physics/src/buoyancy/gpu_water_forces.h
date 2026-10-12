@@ -13,6 +13,7 @@ namespace pr::physics
 	// The host selects candidate bodies once per frame. Each internal substep then evaluates the candidates on the GPU from their current poses,
 	// so the forces follow the body between substeps. Frames without candidates record no GPU work.
 	// Each candidate samples the water depth once per frame at its proxy centre; wave amplitudes are corrected for that depth (see water_depth.hlsli).
+	// With a wind sea, each candidate also takes the local amplitude and sharpness of the wind-sea elements at its proxy centre once per frame.
 	struct GpuWaterForces
 	{
 		// One candidate's volume proxy in model space. Must match 'GpuWaterCandidate' in gpu_water_forces.hlsl.
@@ -39,6 +40,7 @@ namespace pr::physics
 		std::vector<Candidate> m_candidates;
 		GpuAddress m_candidates_addr;
 		GpuAddress m_elements_addr;
+		GpuAddress m_local_waves_addr;
 
 		// Compile the water-force pipeline for 'config'.
 		GpuWaterForces(Gpu& gpu, WaterConfig config);

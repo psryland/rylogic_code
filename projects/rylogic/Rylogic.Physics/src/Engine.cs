@@ -155,6 +155,47 @@ public sealed class Engine :IDisposable
 		Native.Check(Native.Physics_EngineWaterBathymetrySet(Handle, null));
 	}
 
+	/// <summary>
+	/// Supply the wind sea that sets the local amplitude and crest sharpness of the wind-sea water elements (see <see cref="WaveSpectrum.Elements"/>).
+	/// See <see cref="WindSeaGrid"/> for the layout of 'table' and 'winds'. The engine copies both and applies them to current and later water.
+	/// </summary>
+	public unsafe void SetWaterWindSea(in WindSeaGrid grid, ReadOnlySpan<v4> table, ReadOnlySpan<v2> winds)
+	{
+		EnsureOwner();
+		if ((long)grid.BandCount * grid.SpeedCount != table.Length)
+			throw new ArgumentException("Wind sea table must contain band_count * speed_count rows");
+		if ((long)grid.Width * grid.Height * grid.LevelCount != winds.Length)
+			throw new ArgumentException("Wind sea winds must contain width * height * level_count values");
+
+		// Borrow the caller's arrays for the duration of the call.
+		fixed (v4* table_ptr = table)
+		fixed (v2* winds_ptr = winds)
+		{
+			var desc = new Native.WindSeaDesc
+			{
+				m_header = NativeHeader.Create<Native.WindSeaDesc>(),
+				m_origin = grid.Origin,
+				m_cell_size = grid.CellSize,
+				m_speed_step = grid.SpeedStep,
+				m_width = grid.Width,
+				m_height = grid.Height,
+				m_band_count = grid.BandCount,
+				m_speed_count = grid.SpeedCount,
+				m_level_count = grid.LevelCount,
+				m_table = table_ptr,
+				m_winds = winds_ptr,
+			};
+			Native.Check(Native.Physics_EngineWaterWindSeaSet(Handle, &desc));
+		}
+	}
+
+	/// <summary>Remove the wind sea so wind-sea elements keep their table-maximum amplitude everywhere.</summary>
+	public unsafe void ClearWaterWindSea()
+	{
+		EnsureOwner();
+		Native.Check(Native.Physics_EngineWaterWindSeaSet(Handle, null));
+	}
+
 	/// <summary>Create a sphere collision shape.</summary>
 	public unsafe Shape CreateSphere(float radius, ShapeOptions? options = null, bool hollow = false)
 	{

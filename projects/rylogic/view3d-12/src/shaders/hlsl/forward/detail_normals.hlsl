@@ -6,6 +6,9 @@
 // roughness slot (t5/s5). Simple materials do not otherwise use either slot.
 ConstantBuffer<CBufDetailNormals> g_detail : register(b7);
 
+// The number of fixed, evenly spaced directions that a strength map's turns are drawn in. A turn between two of them cross-fades their patterns.
+static const int DetailTurnDirections = 16;
+
 // Return the bilinearly filtered (height scale, added slope variance) strength at world position 'ws'. Without a strength map it is (1, 0).
 float2 DetailStrength(float3 ws)
 {
@@ -50,14 +53,12 @@ float DetailNoiseWarp(float2 p, uint seed)
 	return 2.0f * DetailValueNoise(p, seed) - 1.0f;
 }
 
-// Add the layers at world position 'ws' to 'gradient' and 'variance', scaled by 'weight'. The layers are drawn at height scale 'strength' and turned
-// by 'turn' = (cos a, sin a) from their u direction toward their v direction about world point 'pivot'. 'ws_dx' and 'ws_dy' are the screen
-// derivatives of 'ws', which select the mip level, because callers may run this in non-uniform flow control.
-void AccumulateDetailLayers(float3 ws, float3 ws_dx, float3 ws_dy, float3 pivot, float2 turn, float strength, float weight, inout float3 gradient, inout float variance)
+// Add the layers at world position 'ws' to 'gradient', scaled by 'gradient_weight', and to 'variance', scaled by 'variance_weight'. The layers are
+// drawn at height scale 'strength' and turned by 'turn' = (cos a, sin a) from their u direction toward their v direction about the world origin.
+// 'ws_dx' and 'ws_dy' are the screen derivatives of 'ws', which select the mip level, because callers may run this in non-uniform flow control.
+void AccumulateDetailLayers(float3 ws, float3 ws_dx, float3 ws_dy, float2 turn, float strength, float gradient_weight, float variance_weight, inout float3 gradient, inout float variance)
 {
-	// Turning the pattern about 'pivot' turns the projection rows and leaves the pivot's own texture coordinates unchanged. Keeping the pivot
-	// near the fragment keeps patterns of nearly equal angles nearly equal, so the blend between neighbouring texels stays coherent.
-	float3 rel = ws - pivot;
+	// Turning the pattern turns the projection rows, so the turned rows give the texture coordinates directly.
 	for (int i = 0; i != g_detail.info.x; ++i)
 	{
 		// Find the layer's texture coordinates in its turned projection. The noise coordinates ignore the rows' offsets, so a layer that scrolls
@@ -66,7 +67,7 @@ void AccumulateDetailLayers(float3 ws, float3 ws_dx, float3 ws_dy, float3 pivot,
 		float4 row_v = g_detail.row_v[i];
 		float3 turned_u = turn.x * row_u.xyz + turn.y * row_v.xyz;
 		float3 turned_v = turn.x * row_v.xyz - turn.y * row_u.xyz;
-		float2 proj = float2(dot(rel, turned_u) + dot(pivot, row_u.xyz), dot(rel, turned_v) + dot(pivot, row_v.xyz));
+		float2 proj = float2(dot(ws, turned_u), dot(ws, turned_v));
 		float2 uv = proj + float2(row_u.w, row_v.w);
 		float2 noise_uv = proj * g_detail.noise_frequency[i];
 
@@ -87,8 +88,8 @@ void AccumulateDetailLayers(float3 ws, float3 ws_dx, float3 ws_dy, float3 pivot,
 		float4 texel = g_normal_texture.SampleGrad(g_normal_sampler, uv, float2(dot(ws_dx, turned_u), dot(ws_dx, turned_v)), float2(dot(ws_dy, turned_u), dot(ws_dy, turned_v)));
 		float2 slope = texel.xy * 2.0f - 1.0f;
 		float unresolved = max(2.0f * texel.z - dot(slope, slope), 0.0f);
-		gradient += weight * scale * (slope.x * turned_u + slope.y * turned_v);
-		variance += weight * scale * scale * 0.5f * (dot(turned_u, turned_u) + dot(turned_v, turned_v)) * unresolved;
+		gradient += gradient_weight * scale * (slope.x * turned_u + slope.y * turned_v);
+		variance += variance_weight * scale * scale * 0.5f * (dot(turned_u, turned_u) + dot(turned_v, turned_v)) * unresolved;
 	}
 }
 
@@ -111,7 +112,7 @@ PSIn ApplyDetailNormals(PSIn In)
 	float variance = g_detail.surface.x;
 	if (g_detail.info.y == 0)
 	{
-		AccumulateDetailLayers(ws, ws_dx, ws_dy, float3(0, 0, 0), float2(1, 0), 1.0f, 1.0f, gradient, variance);
+		AccumulateDetailLayers(ws, ws_dx, ws_dy, float2(1, 0), 1.0f, 1.0f, 1.0f, gradient, variance);
 	}
 	else
 	{
@@ -129,17 +130,16 @@ PSIn ApplyDetailNormals(PSIn In)
 		if (c0.x == c1.x) f.x = 0.0f;
 		if (c0.y == c1.y) f.y = 0.0f;
 
-		// A texture-coordinate offset maps to the world offset in the plane of the map's rows by inverting their 2x2 Gram matrix.
-		// The projection rows are not parallel, so the determinant is positive.
-		float3 su = g_detail.strength_row_u.xyz;
-		float3 sv = g_detail.strength_row_v.xyz;
-		float suu = dot(su, su), suv = dot(su, sv), svv = dot(sv, sv);
-		float inv_det = 1.0f / (suu * svv - suv * suv);
-
-		// Draw each texel's layers at its own strength and angle, turned about its centre. Texels without weight or strength add nothing.
+		// Patterns are drawn only in fixed directions, so a changing angle cross-fades between fixed patterns instead of moving one.
+		// Each texel splits its weight between the two fixed directions either side of its angle, and texels that share a direction share its
+		// pattern, so each distinct direction is gathered once: its total weight, and its total of weight times strength.
+		int dir_index[8];
+		float dir_weight[8];
+		float dir_strength[8];
+		int dir_count = 0;
 		for (int k = 0; k != 4; ++k)
 		{
-			// Select the corner's texel and bilinear weight, and add its base slope variance.
+			// Select the corner's texel and bilinear weight, and add its base slope variance. Texels without weight or strength add no pattern.
 			int2 cell = int2((k & 1) != 0 ? c1.x : c0.x, (k & 2) != 0 ? c1.y : c0.y);
 			float weight = ((k & 1) != 0 ? f.x : 1.0f - f.x) * ((k & 2) != 0 ? f.y : 1.0f - f.y);
 			float4 texel = g_roughness_texture.Load(int3(cell, 0));
@@ -147,11 +147,58 @@ PSIn ApplyDetailNormals(PSIn In)
 			if (weight == 0.0f || texel.x <= 0.0f)
 				continue;
 
-			// The texel centre's world position, in the plane of the map's rows through the fragment, is the pivot of its turn.
-			float2 duv = (float2(cell) + 0.5f) / size - uv;
-			float2 ab = inv_det * float2(svv * duv.x - suv * duv.y, suu * duv.y - suv * duv.x);
-			float3 pivot = ws + ab.x * su + ab.y * sv;
-			AccumulateDetailLayers(ws, ws_dx, ws_dy, pivot, texel.zw, texel.x, weight, gradient, variance);
+			// Measure the angle in steps between fixed directions. atan2 is in [-pi, pi], so adding a full turn keeps the steps positive.
+			float steps = atan2(texel.w, texel.z) * (DetailTurnDirections / 6.28318530718f) + DetailTurnDirections;
+			float first = floor(steps);
+			float fade = steps - first;
+			for (int j = 0; j != 2; ++j)
+			{
+				// Add this side's share to its direction's totals, adding the direction if no other texel uses it yet.
+				float share = weight * (j == 0 ? 1.0f - fade : fade);
+				if (share == 0.0f)
+					continue;
+
+				int dir = (int(first) + j) % DetailTurnDirections;
+				int slot = dir_count;
+				for (int s = 0; s != dir_count; ++s)
+				{
+					// Find the direction among those already gathered.
+					if (dir_index[s] == dir)
+						slot = s;
+				}
+				if (slot == dir_count)
+				{
+					// Start the totals of a new direction.
+					dir_index[slot] = dir;
+					dir_weight[slot] = 0.0f;
+					dir_strength[slot] = 0.0f;
+					++dir_count;
+				}
+				dir_weight[slot] += share;
+				dir_strength[slot] += share * texel.x;
+			}
+		}
+
+		// Patterns in different directions are unrelated, so a weighted sum of them has a smaller spread of slopes than any one of them: the
+		// square root of the sum of the squared weights, instead of the sum of the weights. Scaling the slopes by the ratio of the two keeps the
+		// contrast steady through a cross-fade. The unresolved variance is an average, so it keeps the plain weights.
+		float total_weight = 0.0f;
+		float total_square = 0.0f;
+		for (int d = 0; d != dir_count; ++d)
+		{
+			// Sum the weights and their squares.
+			total_weight += dir_weight[d];
+			total_square += dir_weight[d] * dir_weight[d];
+		}
+		float contrast = dir_count != 0 ? total_weight * rsqrt(total_square) : 1.0f;
+
+		// Draw each direction once, at the weighted mean strength of the texels that share it.
+		for (int n = 0; n != dir_count; ++n)
+		{
+			// Find the direction's turn, then draw its layers.
+			float2 turn;
+			sincos(dir_index[n] * (6.28318530718f / DetailTurnDirections), turn.y, turn.x);
+			AccumulateDetailLayers(ws, ws_dx, ws_dy, turn, dir_strength[n] / dir_weight[n], contrast * dir_weight[n], dir_weight[n], gradient, variance);
 		}
 	}
 	g_unresolved_slope_variance = variance;

@@ -58,20 +58,25 @@ struct CloudConstants
 	// Sun direction in the atmosphere frame (normalised, points toward the sun).
 	float4 sun_direction;
 
-	// The default cloud cover in [0,1], nonzero when a weather map is bound, the direction the wind blows toward (radians, counter-clockwise
-	// from the atmosphere frame's +X axis), and the strength of cloud shadows on the scene in [0,1] (0 = no cloud shadows).
+	// The default cloud cover in [0,1], nonzero when a weather map is bound, the weight of wind frame 1 in [0,1] (see 'frame_axes'),
+	// and the strength of cloud shadows on the scene in [0,1] (0 = no cloud shadows).
 	float cover;
 	float has_weather;
-	float wind_direction;
+	float frame_blend;
 	float shadow_strength;
 
-	// Cloud layer offsets in noise tiles, in [0, PR_SKY_CLOUD_PERIOD). Layer 0 = xy, layer 1 = zw.
-	float4 offset01;
+	// The clouds are drawn in two wind frames, each with its x axis along a wind direction, so stretched clouds streak along that direction.
+	// Frame 1 follows the wind. Frame 0 is the frame it replaced, which fades out while frame 1 fades in. Frame 0 is unused when 'frame_blend' is 1.
+	// xy = frame 0's x axis, zw = frame 1's x axis, as unit vectors in the atmosphere frame.
+	float4 frame_axes;
 
-	// Layer 2 offset in noise tiles, a bit mask where bit i hides cloud layer i, and the wind speed (world units per second, assumed m/s).
-	float2 offset2;
+	// Cloud layer offsets in noise tiles of each wind frame, in (-PR_SKY_CLOUD_PERIOD, PR_SKY_CLOUD_PERIOD). xy = frame 0, zw = frame 1.
+	float4 offsets[3];
+
+	// A bit mask where bit i hides cloud layer i, and the wind speed (world units per second, assumed m/s).
 	uint hidden_layers;
 	float wind_speed;
+	float2 pad0;
 
 	// Cloud evolution phase per layer (xyz) in [0, PR_SKY_CLOUD_EVOLVE_PERIOD).
 	float4 evolve;

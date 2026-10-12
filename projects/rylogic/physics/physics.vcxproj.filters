@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="src">
@@ -214,6 +214,9 @@
       <Filter>src\terrain\water</Filter>
     </ClCompile>
     <ClCompile Include="src\terrain\water\wave_spectrum.cpp">
+      <Filter>src\terrain\water</Filter>
+    </ClCompile>
+    <ClCompile Include="src\terrain\water\wind_sea.cpp">
       <Filter>src\terrain\water</Filter>
     </ClCompile>
     <ClCompile Include="src\terrain\landscape\height_bounds.cpp">
@@ -471,6 +474,12 @@
       <Filter>src\terrain\water</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wave_spectrum.h">
+      <Filter>src\terrain\water</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wind_sea.h">
+      <Filter>src\terrain\water</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wind_sea.hlsli">
       <Filter>src\terrain\water</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\height_bounds.h">
