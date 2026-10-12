@@ -175,12 +175,13 @@
     <ClCompile Include="src\integrator\integrator.cpp" />
     <ClCompile Include="src\rigid_body\rigid_body.cpp" />
     <ClCompile Include="src\shape\inertia.cpp" />
-    <ClCompile Include="src\terrain\landscape\baseline_surface.cpp" />
-    <ClCompile Include="src\terrain\landscape\height_bounds.cpp" />
-    <ClCompile Include="src\terrain\water\water_field.cpp" />
-    <ClCompile Include="src\terrain\water\bathymetry.cpp" />
-    <ClCompile Include="src\terrain\water\wave_spectrum.cpp" />
-    <ClCompile Include="src\terrain\water\wind_sea.cpp" />
+    <!-- These sources are also packaged as the standalone physics-landscape.lib, so they must not contain header unit tests that need the rest of the physics and compute libraries. -->
+    <ClCompile Include="src\terrain\landscape\baseline_surface.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\landscape\height_bounds.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\water\water_field.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\water\bathymetry.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\water\wave_spectrum.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\water\wind_sea.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field_types.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.hlsli" />
