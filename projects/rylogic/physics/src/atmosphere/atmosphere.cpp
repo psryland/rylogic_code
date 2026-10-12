@@ -2052,12 +2052,12 @@ namespace pr::physics::atmosphere
 		job.m_cmd_list.SetComputeRootSignature(impl.m_sample.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
 		job.m_cmd_list.AddComputeRoot32BitConstants(wind_cb);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(impl.m_wind->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_u[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_v[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_w[current]->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_floor_height->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_outside_air->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(impl.m_wind);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_u[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_v[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_w[current]);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_floor_height);
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_outside_air);
 		job.m_cmd_list.Dispatch(dispatch.x, dispatch.y, dispatch.z);
 
 		// Copy the result to readback memory. The buffer returns to UAV state for the next record.

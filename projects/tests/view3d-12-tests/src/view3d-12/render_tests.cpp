@@ -3396,7 +3396,7 @@ namespace pr::unittests::view3d12
 	}
 	PRUnitTest(View3d12_DetailStrengthMap, Extended)
 	{
-		fade_tests::DetailStrengthMapTests();
+		render_tests::DetailStrengthMapTests();
 	}
 	PRUnitTest(View3d12_ModelNormalMap, Extended)
 	{
