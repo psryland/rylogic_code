@@ -294,7 +294,7 @@ public class TestWin32Application
 	}
 
 	/// <summary>Prove a mode-change callback failure is surfaced before the requested mode is committed.</summary>
-	[Test]
+	[Test, TestFlags(EUnitTestFlags.Stress)]
 	public void WindowModeSurfacesCallbackFailure()
 	{
 		using var application = new Win32Application(new Win32ApplicationOptions { Title = "Rylogic Win32 mode failure test" });
@@ -310,7 +310,7 @@ public class TestWin32Application
 	}
 
 	/// <summary>Prove constructor unwind preserves the managed callback failure that rejected initial fullscreen setup.</summary>
-	[Test]
+	[Test, TestFlags(EUnitTestFlags.Stress)]
 	public void ConstructorPreservesCreationCallbackFailure()
 	{
 		InvalidOperationException? observed = null;
@@ -352,7 +352,7 @@ public class TestWin32Application
 	}
 
 	/// <summary>Prove borderless desktop fullscreen restores native window styles and placement.</summary>
-	[Test]
+	[Test, TestFlags(EUnitTestFlags.Stress)]
 	public void BorderlessFullscreenRestoresWindowedState()
 	{
 		using var application = new Win32Application(new Win32ApplicationOptions
@@ -383,7 +383,7 @@ public class TestWin32Application
 	}
 
 	/// <summary>Prove display topology changes refit a borderless window to its current monitor.</summary>
-	[Test]
+	[Test, TestFlags(EUnitTestFlags.Stress)]
 	public void BorderlessFullscreenRefitsAfterDisplayChange()
 	{
 		using var application = new Win32Application(new Win32ApplicationOptions { Title = "Rylogic Win32 display change test" });
