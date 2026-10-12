@@ -476,6 +476,34 @@ namespace Rylogic.Gfx
 				View3D_ObjectO2PSet(Handle, ref o2p, name);
 				NotifyPropertyChanged(nameof(O2P));
 			}
+			/// <summary>
+			/// Get/Set the animation time of this object or any of its child objects that match 'name' (see O2PGet for the format of 'name').
+			/// Animated objects in a window have their time set from the window's animation clock each animation step.</summary>
+			public double AnimTimeGet(string? name = null)
+			{
+				return View3D_ObjectAnimTimeGet(Handle, name);
+			}
+			public void AnimTimeSet(double time_s, string? name = null)
+			{
+				View3D_ObjectAnimTimeSet(Handle, time_s, name);
+			}
+
+			/// <summary>
+			/// Drive the skinned model of this object, or of child objects that match 'name', from bone poses published with 'PoseSnapshotPublish'.
+			/// Rendering interpolates between the two most recent snapshots using the object's animation time, and holds the pose outside that interval.
+			/// Each object needs its own snapshots, so call this on each instance rather than on a shared source object.</summary>
+			public void PoseSnapshotsCreate(string? name = null)
+			{
+				View3D_ObjectPoseSnapshotsCreate(Handle, name);
+			}
+
+			/// <summary>
+			/// Publish a bone pose at 'time_s', in object animation time. 'time_s' must increase with each call.
+			/// 'bones' are bone-to-parent transforms without scale, in skeleton bone order, with one entry per skeleton bone.</summary>
+			public void PoseSnapshotPublish(ReadOnlySpan<m4x4> bones, double time_s, string? name = null)
+			{
+				View3D_ObjectPoseSnapshotPublish(Handle, ref MemoryMarshal.GetReference(bones), bones.Length, time_s, name);
+			}
 
 			/// <summary>
 			/// Get/Set the visibility of this object or any of its child objects that match 'name'.

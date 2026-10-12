@@ -2385,6 +2385,14 @@ namespace Rylogic.Gfx
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ObjectO2PGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
 
+		// Get/Set the animation time to apply to an object
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern double View3D_ObjectAnimTimeGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectAnimTimeSet(HObject obj, double time_s, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Drive the skinned model of an object from caller-published bone poses
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectPoseSnapshotsCreate(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectPoseSnapshotPublish(HObject obj, ref m4x4 bones, int bone_count, double time_s, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
 		// Return the model space bounding box for 'object'
 		[DllImport(Dll)] private static extern BBox View3D_ObjectBBoxMS(HObject obj, EBBoxFlags bbox_flags);
 

@@ -53,7 +53,7 @@ namespace pr::rdr12
 	{
 		// Use the same 'm_flags' that are used for 'Update' because this will give the current root bone position
 		m4x4 root;
-		m_animator->Animate({ &root, 1ULL }, static_cast<float>(SrcAnimTime(time)), flags);
+		m_animator->Animate({ &root, 1ULL }, SrcAnimTime(time), flags);
 		return root;
 	}
 	m4x4 Pose::RootToAnim() const
@@ -136,7 +136,7 @@ namespace pr::rdr12
 
 		// Read the deformed bone transforms into the buffer to start with.
 		// These are bone-to-parent transforms for each bone.
-		m_animator->Animate(pose, static_cast<float>(SrcAnimTime(m_time1)), m_flags);
+		m_animator->Animate(pose, SrcAnimTime(m_time1), m_flags);
 
 		// Convert the pose into object space transforms
 		m_skeleton->WalkHierarchy<m4x4>([ptr = pose.data(), &o2bp = m_skeleton->m_o2bp](int idx, m4x4 const* p2o) -> m4x4

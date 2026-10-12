@@ -67,7 +67,8 @@ namespace pr::rdr12
 		// Record updated bone transforms. InvalidateGpuData must be called if these commands are abandoned before execution.
 		void Update(GfxCmdList& cmd_list, GpuUploadBuffer& upload_buffer);
 
-		// Require a fresh upload after the caller abandons unsubmitted pose commands. Does not alter or free in-flight resources.
+		// Require a fresh evaluation and upload at the next Update, even if the animation time is unchanged. Use this after abandoning unsubmitted
+		// pose commands, or after the animator's source data changes. Does not alter or free in-flight resources.
 		void InvalidateGpuData();
     
 		// Raised after CPU pose matrices are calculated.

@@ -1654,8 +1654,15 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_ObjectO2PSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2p, char const* name);
 
 	// Get/Set the animation time to apply to 'object'
-	VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
-	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name);
+	VIEW3D_API double __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, double time_s, char const* name);
+
+	// Drive the skinned model of 'object' (or children matching 'name') from caller-published bone poses.
+	// Rendering interpolates between the two most recent snapshots using the object's animation time, and holds the pose outside that interval.
+	VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotsCreate(pr::view3d::Object object, char const* name);
+
+	// Publish a bone pose at 'time_s' (in object animation time, increasing with each call). 'bones' are bone-to-parent transforms without scale, in skeleton bone order.
+	VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotPublish(pr::view3d::Object object, pr::view3d::Mat4x4 const* bones, int bone_count, double time_s, char const* name);
 
 	// Return the model space bounding box for 'object'
 	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, pr::view3d::EBBoxFlags bbox_flags);

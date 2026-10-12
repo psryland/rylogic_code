@@ -198,8 +198,8 @@ namespace pr::rdr12::ldraw
 		void O2P(m4x4 const& o2p, char const* name = nullptr);
 
 		// Get/Set the animation time of this object or child objects matching 'name' (see Apply)
-		float AnimTime(char const* name = nullptr) const;
-		void AnimTime(float time_s, char const* name = nullptr);
+		double AnimTime(char const* name = nullptr) const;
+		void AnimTime(double time_s, char const* name = nullptr);
 
 		// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
 		bool Visible(char const* name = nullptr) const;

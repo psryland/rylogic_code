@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/skeleton.h"
 
 namespace pr::rdr12
 {
@@ -22,7 +23,7 @@ namespace pr::rdr12
 		// See description in "animation.h"
 		D3DPtr<ID3D12Resource> m_res;     // Buffer of 'Skinfluence[]'
 		Descriptor m_srv;                 // SRV of the skin influence buffer
-		uint32_t m_skel_id;               // The skeleton that this skin is matched with.
+		SkeletonPtr m_skeleton;           // The skeleton (in rest pose) that this skin is matched with
 		int m_influence_count;            // The number of influence records in 'm_res'
 		int m_max_bone_index;             // The maximum bone index referenced by the packed influence data
 		int m_min_skin_index;             // The minimum influence index referenced by the model vertices. Can be -1 for dead vertices.
@@ -31,7 +32,7 @@ namespace pr::rdr12
 		vector<v4> m_bound_spheres;       // Bone-bound spheres in rest object space. xyz = centre, w = radius
 
 		Skin();
-		Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint32_t skel_id, int min_skin_index, int max_skin_index, std::span<int const> bound_bone_indices = {}, std::span<v4 const> bound_spheres = {});
+		Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, SkeletonPtr skeleton, int min_skin_index, int max_skin_index, std::span<int const> bound_bone_indices = {}, std::span<v4 const> bound_spheres = {});
 
 		// True if 'has skin'
 		explicit operator bool() const

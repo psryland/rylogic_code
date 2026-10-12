@@ -1932,7 +1932,8 @@ namespace pr::rdr12
 					assert(m_skels.contains(skin.m_skel_id) && m_skels[skin.m_skel_id] != nullptr);
 					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
 
-					auto const& skel = *m_skels[skin.m_skel_id].get();
+					auto skeleton = m_skels[skin.m_skel_id];
+					auto const& skel = *skeleton.get();
 					auto id_to_idx16 = [&skel](uint32_t id)
 					{
 						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
@@ -1964,7 +1965,7 @@ namespace pr::rdr12
 
 					auto skin_index_range = model_generator::SkinIndexRange(std::span<Vert const>(m_cache.m_vcont));
 					auto skin_bone_bounds = model_generator::SkinBoneBounds(std::span<Vert const>(m_cache.m_vcont), influences, m_cache.m_m2root);
-					model->m_skin = Skin(m_factory, influences, skin.m_skel_id, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
+					model->m_skin = Skin(m_factory, influences, skeleton, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
 				}
 
 				// Store the created mesh
@@ -2195,7 +2196,8 @@ namespace pr::rdr12
 					assert(m_skels.contains(skin.m_skel_id) && m_skels[skin.m_skel_id] != nullptr);
 					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
 
-					auto const& skel = *m_skels[skin.m_skel_id].get();
+					auto skeleton = m_skels[skin.m_skel_id];
+					auto const& skel = *skeleton.get();
 					auto id_to_idx16 = [&skel](uint32_t id)
 					{
 						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
@@ -2226,7 +2228,7 @@ namespace pr::rdr12
 
 					auto skin_index_range = model_generator::SkinIndexRange(std::span<Vert const>(m_cache.m_vcont));
 					auto skin_bone_bounds = model_generator::SkinBoneBounds(std::span<Vert const>(m_cache.m_vcont), influences, m_cache.m_m2root);
-					model->m_skin = Skin(m_factory, influences, skin.m_skel_id, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
+					model->m_skin = Skin(m_factory, influences, skeleton, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
 				}
 
 				// Store the created mesh

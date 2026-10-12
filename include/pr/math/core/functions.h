@@ -2008,7 +2008,7 @@ namespace pr::math
 	}
 
 	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
-	template <VectorTypeFP Vec> inline Vec pr_vectorcall Slerp(Vec a, Vec b, typename vector_traits<Vec>::element_t frac) noexcept
+	template <VectorTypeFP Vec> requires (IsRank1<Vec>) inline Vec pr_vectorcall Slerp(Vec a, Vec b, typename vector_traits<Vec>::element_t frac) noexcept
 	{
 		pr_assert("Cannot spherically interpolate to/from the zero vector" && LengthSq(a) != 0 && LengthSq(b) != 0);
 

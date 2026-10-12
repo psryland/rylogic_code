@@ -314,12 +314,12 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Get/Set the animation time of this object or child objects matching 'name' (see Apply)
-	float LdrObject::AnimTime(char const* name) const
+	double LdrObject::AnimTime(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? s_cast<float>(obj->m_root_anim.m_time_s) : 0.0f;
+		return obj ? obj->m_root_anim.m_time_s : 0.0;
 	}
-	void LdrObject::AnimTime(float time_s, char const* name)
+	void LdrObject::AnimTime(double time_s, char const* name)
 	{
 		Apply([&](LdrObject* o)
 		{

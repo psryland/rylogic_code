@@ -113,7 +113,7 @@ namespace pr::rdr12
 			assert(model.m_vstride.size() == sizeof(Vert) && "Skinned geometry compute path requires the standard View3D vertex layout");
 			assert(model.m_skin.m_min_skin_index >= -1 && "Skinned geometry skin index is below the dead-vertex sentinel");
 			assert(model.m_skin.m_max_skin_index < model.m_skin.m_influence_count && "Skinned geometry skin index exceeds the skin influence buffer");
-			assert(model.m_skin.m_skel_id == pose->m_skeleton->Id() && "Skinned geometry pose skeleton mismatch");
+			assert(model.m_skin.m_skeleton->Id() == pose->m_skeleton->Id() && "Skinned geometry pose skeleton mismatch");
 			assert(model.m_skin.m_max_bone_index < pose->BoneCount() && "Skinned geometry pose bone index mismatch");
 		}
 
