@@ -46,7 +46,7 @@ namespace las
 		}
 
 		printf("Lost at Sea: Running unit tests...\n");
-		exit_code = pr::unittests::RunAllTests(true, class_filters) != 0 ? 1 : 0;
+		exit_code = pr::unittests::RunAllTests({ .wordy = true, .filters = class_filters }) != 0 ? 1 : 0;
 
 		#else
 

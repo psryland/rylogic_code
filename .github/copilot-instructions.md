@@ -75,7 +75,9 @@ Run tests via:
 # Build + run tests in one step (tests auto-run on Debug build via the RunRylogicUnitTests MSBuild task)
 dotnet build projects/rylogic/Rylogic.Core/Rylogic.Core.csproj -c Debug
 ```
-Individual test filtering is not supported — tests run as a batch per assembly.
+Individual test filtering is not supported — tests run as a batch per assembly. Fixtures run in parallel (one fixture per worker thread);
+`UnitTest.RunTests(assembly, threads: N)` controls the thread count, and a fixture flagged `EUnitTestFlags.Serial` runs alone after the parallel
+fixtures. Each run writes per-test durations to `obj/unittests/<assembly>/timings.csv`.
 
 ### C++ Unit Tests
 Tests use a lightweight custom framework (`include/pr/common/unittests.h`), also inline:
@@ -93,6 +95,18 @@ namespace pr::unittests
 #endif
 ```
 Compile with `/DPR_UNITTESTS=1`. The `projects/tests/unittests/` project includes all test headers.
+
+Test classes run in parallel, one class per worker thread. Mark a class `PRUnitTestClass(Name, Serial)` if it cannot share the process with other running
+classes, and register per-class shared state (GPU devices, engines) with `TestFramework::AddClassFixture` so it is released after the class. Runner arguments:
+```powershell
+# Quick group only, 16 worker threads, skipping a class
+& projects\tests\unittests\obj\x64\Debug\unittests.exe -flags:Quick -threads:16 -exclude:AtmosphereTests
+# Only the named classes
+& projects\tests\unittests\obj\x64\Debug\unittests.exe CoupledConstraintEngineTests EngineWaterTests
+```
+Every run writes `obj/unittests/<runner>/timings.csv` (class, test, flags, result, duration) and prints the slowest tests. Keep the `Quick` group
+fast (the whole Quick run should take about 20 s of wall time); move tests that take seconds to `Extended`. Physics tests share compiled shaders through
+the on-disk cache in `obj/unittests/shader-cache` (see `SharedTestShaderCache`).
 
 ### Python Tests (py-rylogic)
 ```powershell
