@@ -125,6 +125,10 @@
 			<PhysicsUnitTest>true</PhysicsUnitTest>
 			<Filter Condition="'$(MSBuildProjectExtension)' == '.filters'">src\physics</Filter>
 		</ClCompile>
+		<ClCompile Include="$(MSBuildThisFileDirectory)gpu_tests.cpp">
+			<PhysicsUnitTest>true</PhysicsUnitTest>
+			<Filter Condition="'$(MSBuildProjectExtension)' == '.filters'">src\physics</Filter>
+		</ClCompile>
 		<ClCompile Include="$(MSBuildThisFileDirectory)impulse_tests.cpp">
 			<PhysicsUnitTest>true</PhysicsUnitTest>
 			<Filter Condition="'$(MSBuildProjectExtension)' == '.filters'">src\physics</Filter>

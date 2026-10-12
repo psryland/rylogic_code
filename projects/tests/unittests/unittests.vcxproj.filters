@@ -481,6 +481,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vector_hash_map.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -1364,6 +1367,9 @@
       <Filter>pr\compute\resource</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_descriptor_heap.h">
+      <Filter>pr\compute\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_address.h">
       <Filter>pr\compute\resource</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_allocation.h">

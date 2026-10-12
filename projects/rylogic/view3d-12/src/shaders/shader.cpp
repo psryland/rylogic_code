@@ -149,7 +149,7 @@ namespace pr::rdr12
 	void ProceduralShader::SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const&, CameraTransforms const&, DrawListElement const*)
 	{
 		// Upload the current copy each draw; identical content is shared within the frame.
-		auto gpu_address = upload.Add(m_constants, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(m_constants, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		auto buffer_address = m_buffer != nullptr ? m_buffer->GetGPUVirtualAddress() : D3D12_GPU_VIRTUAL_ADDRESS{};
 		auto Bind = [&](UINT cbuf_slot, UINT buffer_slot)
 		{
@@ -214,9 +214,6 @@ namespace pr::rdr12
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_detail_ps.h)
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_reflection_attrs_detail_ps.h)
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_alpha_collect_detail_ps.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_vs.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_weight_ps.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_clear_ps.h)
 			#include PR_RDR_SHADER_COMPILED_DIR(kbuffer_resolve_vs.h)
 			#include PR_RDR_SHADER_COMPILED_DIR(kbuffer_alpha_resolve_ps.h)
 		}
@@ -235,9 +232,6 @@ namespace pr::rdr12
 	    ByteCode const forward_detail_ps(compiled::forward_detail_ps);
 	    ByteCode const forward_reflection_attrs_detail_ps(compiled::forward_reflection_attrs_detail_ps);
 	    ByteCode const forward_alpha_collect_detail_ps(compiled::forward_alpha_collect_detail_ps);
-		ByteCode const background_fade_vs(compiled::background_fade_vs);
-		ByteCode const background_fade_weight_ps(compiled::background_fade_weight_ps);
-		ByteCode const background_fade_clear_ps(compiled::background_fade_clear_ps);
 		ByteCode const kbuffer_resolve_vs(compiled::kbuffer_resolve_vs);
 		ByteCode const kbuffer_alpha_resolve_ps(compiled::kbuffer_alpha_resolve_ps);
 

@@ -40,6 +40,15 @@ namespace pr::physics
 	{
 		using Clock = std::chrono::steady_clock;
 
+		// Choose the contact colour-sweep form for an expected contact count. Both forms give the same results; see EngineConfig::fused_colour_sweep_limit.
+		EColourSweep ColourSweepFor(EngineConfig const& config, int expected_contacts)
+		{
+			// Fused sweeps run in one thread group, so they are used only when the expected work is small.
+			return config.fused_colour_sweep_limit > 0 && expected_contacts <= config.fused_colour_sweep_limit
+				? EColourSweep::Fused
+				: EColourSweep::PerColour;
+		}
+
 		double ElapsedMs(Clock::time_point beg, Clock::time_point end)
 		{
 			return std::chrono::duration<double, std::milli>(end - beg).count();
@@ -176,10 +185,23 @@ namespace pr::physics
 		bool read_collision_events = false;
 	};
 
-	// Destroy the owned world surfaces where their complete type is available.
+	// Destroy the owned world surfaces and their kernels where their complete types are available.
+	void Deleter<GpuWorldContactPipeline>::operator()(GpuWorldContactPipeline* value) const
+	{
+		delete value;
+	}
 	void Deleter<GpuWorldContacts>::operator()(GpuWorldContacts* value) const
 	{
 		delete value;
+	}
+
+	// Create the world-contact kernels once; every later set of world sources reuses them.
+	GpuWorldContactPipeline& Engine::WorldContactPipeline()
+	{
+		if (m_gpu_world_contact_pipeline == nullptr)
+			m_gpu_world_contact_pipeline.reset(new GpuWorldContactPipeline(*m_gpu, m_shader_cache));
+
+		return *m_gpu_world_contact_pipeline;
 	}
 
 	// Replace or disable the owned terrain between completed frames; validate a replacement before discarding the current source.
@@ -196,7 +218,7 @@ namespace pr::physics
 		auto replacement = decltype(m_gpu_world_contacts){};
 		auto const boundary = m_gpu_world_contacts ? m_gpu_world_contacts->m_boundary : std::nullopt;
 		if (surface || boundary)
-			replacement.reset(new GpuWorldContacts(*m_gpu, std::move(surface), spacing, boundary));
+			replacement.reset(new GpuWorldContacts(*m_gpu, WorldContactPipeline(), std::move(surface), spacing, boundary));
 
 		// Retire cached support and request a wake only when a terrain source is added, removed, or replaced.
 		ResetCaches();
@@ -219,7 +241,7 @@ namespace pr::physics
 		auto const surface = m_gpu_world_contacts ? m_gpu_world_contacts->m_surface : std::nullopt;
 		auto const spacing = m_gpu_world_contacts ? m_gpu_world_contacts->m_terrain_spacing : surface::DefaultSpacing;
 		if (surface || boundary)
-			replacement.reset(new GpuWorldContacts(*m_gpu, surface, spacing, boundary));
+			replacement.reset(new GpuWorldContacts(*m_gpu, WorldContactPipeline(), surface, spacing, boundary));
 
 		// Cached contacts cannot outlive their static endpoint or changed world geometry.
 		ResetCaches();
@@ -263,7 +285,7 @@ namespace pr::physics
 		{
 			water->Validate();
 			if (m_gpu_water_forces == nullptr)
-				m_gpu_water_forces.reset(new GpuWaterForces(*m_gpu, std::move(*water)));
+				m_gpu_water_forces.reset(new GpuWaterForces(*m_gpu, std::move(*water), m_shader_cache));
 			else
 				m_gpu_water_forces->m_config = std::move(*water);
 		}
@@ -384,6 +406,7 @@ namespace pr::physics
 
 	Engine::Engine(EngineConfig const& config, IShaderCache* shader_cache, ID3D12Device4* existing_device, ID3D12CommandQueue* existing_queue)
 		: m_config(config)
+		, m_shader_cache(shader_cache)
 		, m_gpu(new Gpu(existing_device, existing_queue))
 		, m_gpu_integrator(new GpuIntegrator(*m_gpu, m_config))
 		, m_gpu_sleep_manager(new GpuSleepManager(*m_gpu, m_config))
@@ -557,6 +580,7 @@ namespace pr::physics
 		m_last_collision_stats = {};
 		m_selective_refresh_hold_steps = 0;
 		m_selective_refresh_previous_contact_count = 0;
+		m_colour_sweep_contact_estimate = std::numeric_limits<int>::max();
 	}
 
 	// Evolve the physics objects forward in time and resolve any collisions.
@@ -580,7 +604,7 @@ namespace pr::physics
 		});
 	}
 
-	// Evolve a complete frame using one GPU submission regardless of the requested internal substep count.
+	// Evolve a complete frame with one GPU wait and readback regardless of the requested internal substep count.
 	void Engine::Step(StepInput const& input)
 	{
 		BeginStep(input);
@@ -597,7 +621,7 @@ namespace pr::physics
 		});
 	}
 
-	// Begin a constrained step while retaining the same single GPU submission and gathered readback contract.
+	// Begin a constrained step while retaining the same single GPU wait and gathered readback contract.
 	void Engine::BeginStep(float dt, std::span<RigidBody*> rigid_bodies, ConstraintSet const& constraints, double time_s)
 	{
 		BeginStep(StepInput{
@@ -732,10 +756,15 @@ namespace pr::physics
 		m_last_step_profile = {};
 		m_last_step_profile.m_substep_count = input.m_substep_count;
 		m_selective_refresh_previous_contact_count = m_last_collision_stats.m_contact_count;
+
+		// An unknown count (no completed readback) selects the per-colour form so a large first frame never runs in a single thread group.
+		m_colour_sweep_contact_estimate = m_last_collision_stats.m_max_contacts != 0 ? m_last_collision_stats.m_contact_count : std::numeric_limits<int>::max();
 		m_last_collision_stats = {};
 		{
-			// Keep the step marker balanced even if command recording fails before submission.
-			auto pix_step = pr::compute::pix::EventScope<ID3D12GraphicsCommandList>(m_gpu->m_job.m_cmd_list.get(), 0xFF45BCF2, "Physics::Step");
+			// Keep the step marker balanced even if command recording fails before submission. Each flushed segment carries its own marker,
+			// because a command list's events must begin and end within that list.
+			auto pix_step = std::optional<pr::compute::pix::EventScope<ID3D12GraphicsCommandList>>{};
+			pix_step.emplace(m_gpu->m_job.m_cmd_list.get(), 0xFF45BCF2, "Physics::Step");
 			pr::compute::pix::DetailMarker(m_gpu->m_job.m_cmd_list.get(), "engine=%p time_s=%.9f dt=%.9f substeps=%d", this, input.m_time_s, input.m_elapsed_seconds, input.m_substep_count);
 
 			{
@@ -949,10 +978,19 @@ namespace pr::physics
 			auto const capture_substep_state = !bodies.empty() || articulation_contacts_active;
 			m_gpu_frame_output->BeginFrame(m_gpu->m_job, m_cache->RigidBodyCount(), event_capacity, input.m_substep_count, articulation_output, constraint_break_output, coupled_failure_output, capture_substep_state);
 
-			// Record every substep into the same command list so state, warm starts, and counters stay GPU-resident.
+			// Record every substep with GPU-resident state, warm starts, and counters, submitting each completed substep so the GPU executes it while the CPU records the next.
 			for (int substep_index = 0; substep_index != input.m_substep_count; ++substep_index)
 			{
-				// Keep each internal integration pass distinct while retaining the one-job frame submission.
+				// Submit the previous substep. The last substep is submitted with the readback by 'SubmitGpuJob'.
+				if (substep_index != 0)
+				{
+					pix_step.reset();
+					m_gpu->m_job.Flush();
+					pix_step.emplace(m_gpu->m_job.m_cmd_list.get(), 0xFF45BCF2, "Physics::Step");
+					pr::compute::pix::DetailMarker(m_gpu->m_job.m_cmd_list.get(), "engine=%p time_s=%.9f segment=%d", this, input.m_time_s, substep_index);
+				}
+
+				// Keep each internal integration pass distinct within its submitted segment.
 				auto pix_substep = pr::compute::pix::EventScope<ID3D12GraphicsCommandList>(m_gpu->m_job.m_cmd_list.get(), 0xFF7EB8E5, "Physics::Substep");
 				pr::compute::pix::DetailMarker(m_gpu->m_job.m_cmd_list.get(), "substep=%d", substep_index);
 				if (m_cache->BodyCount() != 0)
@@ -1382,6 +1420,7 @@ namespace pr::physics
 		auto* constraint_solver = m_constraints_active ? m_gpu_constraint_solver.get() : nullptr;
 		auto* coupled_constraint_solver = m_coupled_constraints_active ? m_gpu_coupled_constraint_solver.get() : nullptr;
 		auto* coupled_contact_solver = m_coupled_contacts_active ? m_gpu_coupled_contact_solver.get() : nullptr;
+		m_gpu_resolver->m_colour_sweep = ColourSweepFor(m_config, std::min(m_config.max_collision_pairs, m_colour_sweep_contact_estimate));
 		m_gpu_resolver->Resolve(m_gpu->m_job, dt, body_count, rigid_body_count, m_config.max_collision_pairs, dispatch, counters, contacts, bodies, m_materials->span(), 1.0f, -1, -1, 1.0f, false, constraint_solver, coupled_constraint_solver, coupled_contact_solver, false, substep_index);
 		if (m_gpu_constraint_solver != nullptr)
 			m_gpu_constraint_solver->DetectBreakage(m_gpu->m_job, dt, substep_index, body_count, bodies);
@@ -1447,6 +1486,8 @@ namespace pr::physics
 				full_pairs,
 				bodies);
 
+			// The work set holds at most max_contacts of the previous step's contacts, so the smaller bound estimates its size.
+			m_gpu_selective_resolver->m_colour_sweep = ColourSweepFor(m_config, std::min(work_set.m_max_contacts, m_colour_sweep_contact_estimate));
 			m_gpu_collision_detector->DetectCollisions(
 				m_gpu->m_job,
 				work_set.m_max_contacts,

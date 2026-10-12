@@ -33,7 +33,7 @@ namespace pr::rdr12::shaders
 			.size = m_size, // Default if 'size' is not read from 'tex0' in the vertex
 			.depth = m_depth,
 		};
-		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);
 	}
 }

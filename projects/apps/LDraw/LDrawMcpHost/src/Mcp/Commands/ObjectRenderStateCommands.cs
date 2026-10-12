@@ -73,7 +73,7 @@ internal sealed partial class LDrawTools
 		[Description("Optional wireframe state to assign.")] bool? wireframe = null,
 		[Description("Optional per-object normal-display state to assign.")] bool? show_normals = null,
 		[Description("Optional reflectivity value to assign.")] double? reflectivity = null,
-		[Description("Optional sort group name, for example Default, AlphaBack, or AlphaFront.")] string? sort_group = null,
+		[Description("Optional sort group name, for example Default, Alpha, or PostAlpha.")] string? sort_group = null,
 		[Description("Optional first-nugget tint colour, e.g. FFFFFFFF or Red.")] string? nugget_tint = null,
 		[Description("Optional object SceneBoundsExclude flag state.")] bool? scene_bounds_excluded = null,
 		[Description("Optional object HitTestExclude flag state.")] bool? hit_test_excluded = null,

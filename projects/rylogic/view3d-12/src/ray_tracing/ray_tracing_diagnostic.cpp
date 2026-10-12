@@ -375,7 +375,7 @@ namespace pr::rdr12
 		auto const shading_indices32 = ray_tracing_scene.ShadingIndex32Buffer();
 		auto const shading_geometry = ray_tracing_scene.ShadingGeometryBuffer();
 		auto const material_textures = ray_tracing_scene.MaterialTextures();
-		auto const tlas_address = ray_tracing_scene.AccelerationStructureAddress();
+		auto const tlas = ray_tracing_scene.AccelerationStructure();
 		if (input == nullptr || target == nullptr)
 			return;
 		if ((pass == ERayTracingScreenPass::HardShadows || pass == ERayTracingScreenPass::Caustics) && depth == nullptr)
@@ -590,7 +590,7 @@ namespace pr::rdr12
 
 			cmd_list.SetComputeRootSignature(data.m_trace_signature.get());
 			cmd_list.SetComputeRootConstantBufferView(ETraceRootParam::CBufFrame, frame.m_upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false));
-			cmd_list.SetComputeRootShaderResourceView(ETraceRootParam::Scene, tlas_address);
+			cmd_list.SetComputeRootShaderResourceView(ETraceRootParam::Scene, tlas);
 			cmd_list.SetComputeRootDescriptorTable(ETraceRootParam::InputColour, input_srv);
 			cmd_list.SetComputeRootDescriptorTable(ETraceRootParam::Depth, depth_srv);
 			cmd_list.SetComputeRootDescriptorTable(ETraceRootParam::ReflectionAttrs, reflection_attrs_srv);

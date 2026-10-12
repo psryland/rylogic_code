@@ -5,6 +5,7 @@
 #include "src/surface/gpu_world_contacts.h"
 #include "src/collision/shape_cache.h"
 #include "src/compute/shader_code.h"
+#include "src/utility/shader_recipes.h"
 #include "pr/physics/materials/material.h"
 
 namespace pr::physics
@@ -20,8 +21,10 @@ namespace pr::physics
 			int m_sleeping_enabled, m_island_count;
 			uint32_t m_mode, m_material;
 			double m_centre_x, m_centre_y, m_radius;
-			float m_spacing, m_pad;
+			float m_spacing;
+			uint32_t m_stride;
 		};
+		static_assert(sizeof(GpuWorldContacts::Candidate) == 36, "Candidate must match the HLSL WorldCandidate stride");
 
 		// Upload a complete bounded stream; callers retain buffers until the recorded job completes.
 		// Empty input reserves one addressable element without defining its contents.
@@ -48,11 +51,57 @@ namespace pr::physics
 			job.m_barriers.Transition(resource.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			job.m_barriers.Commit();
 		}
+
+		// Compile one sampled world-contact kernel. The pipeline and precompilation share this so their cache keys match.
+		std::vector<uint8_t> CompileWorldContactKernel(wchar_t const* entry_point, IShaderCache* shader_cache)
+		{
+			// The optional cache skips DXC when the source is unchanged.
+			auto resolver = shader_cache::ResourceSourceResolver{};
+			return ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).Cache(shader_cache).EntryPoint(entry_point).ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
+		}
 	}
 
-	// Own validated world sources and their shared sampled contact pipeline.
-	GpuWorldContacts::GpuWorldContacts(Gpu& gpu, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary)
-		: m_gpu(gpu), m_surface(std::move(surface)), m_boundary(boundary), m_terrain_spacing(spacing)
+	// Compile the source-independent kernels once for every set of world sources.
+	GpuWorldContactPipeline::GpuWorldContactPipeline(Gpu& gpu, IShaderCache* shader_cache)
+		: m_samples()
+		, m_step()
+		, m_dispatch()
+	{
+		// The pipeline includes the canonical terrain evaluator and requires double arithmetic and 64-bit integer shader operations.
+		auto options = D3D12_FEATURE_DATA_D3D12_OPTIONS{};
+		auto options1 = D3D12_FEATURE_DATA_D3D12_OPTIONS1{};
+		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
+		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &options1, sizeof(options1)));
+		if (!options.DoublePrecisionFloatShaderOps || !options1.Int64ShaderOps)
+			throw std::runtime_error("Sampled world collision requires FP64 and Int64ShaderOps");
+
+		// Compile the sample and selection stages, which share one root layout, and the shared dispatch update against its own layout.
+		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0)
+			.SRV(ESRVReg::t0).SRV(ESRVReg::t1).SRV(ESRVReg::t2).SRV(ESRVReg::t3).SRV(ESRVReg::t4).SRV(ESRVReg::t5).SRV(ESRVReg::t6)
+			.UAV(EUAVReg::u0).UAV(EUAVReg::u1).UAV(EUAVReg::u2).UAV(EUAVReg::u3).Create(gpu, "WorldContacts:Signature");
+		m_step.m_pso = ComputePSO(m_step.m_sig.get(), CompileWorldContactKernel(L"CSWorldContacts", shader_cache)).Cache(shader_cache).Create(gpu, "WorldContacts:Contacts");
+		m_samples.m_sig = m_step.m_sig;
+		m_samples.m_pso = ComputePSO(m_samples.m_sig.get(), CompileWorldContactKernel(L"CSWorldSamples", shader_cache)).Cache(shader_cache).Create(gpu, "WorldContacts:Samples");
+		m_dispatch.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0).UAV(EUAVReg::u0).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:DispatchSignature");
+		m_dispatch.m_pso = ComputePSO(m_dispatch.m_sig.get(), shader_code::calc_resolve_dispatch).Cache(shader_cache).Create(gpu, "WorldContacts:Dispatch");
+	}
+
+	// Add recipes for the runtime-compiled sampled world-contact kernels.
+	void AppendWorldContactShaderRecipes(std::vector<ShaderRecipe>& recipes)
+	{
+		// The dispatch kernel is compiled at build time, so only the sample and selection stages need recipes.
+		for (auto entry_point : { L"CSWorldContacts", L"CSWorldSamples" })
+		{
+			recipes.push_back({
+				.m_name = std::format("WorldContacts.{}", Narrow(std::wstring_view(entry_point))),
+				.m_compile = [entry_point](IShaderCache* cache) { return CompileWorldContactKernel(entry_point, cache); },
+			});
+		}
+	}
+
+	// Own validated world sources that use a shared sampled contact pipeline.
+	GpuWorldContacts::GpuWorldContacts(Gpu& gpu, GpuWorldContactPipeline& pipeline, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary)
+		: m_gpu(gpu), m_pipeline(pipeline), m_surface(std::move(surface)), m_boundary(boundary), m_terrain_spacing(spacing)
 		, m_spacing(m_surface ? spacing : boundary ? boundary->m_surface_spacing : spacing), m_height_upper(), m_endpoint()
 	{
 		surface::ValidateSpacing(spacing);
@@ -89,24 +138,6 @@ namespace pr::physics
 
 		// Round the rejection height outward so float conversion cannot lower the bound.
 		m_height_upper = std::nextafter(static_cast<float>(upper), std::numeric_limits<float>::infinity());
-
-		// The shared pipeline includes the canonical terrain evaluator and requires double arithmetic and 64-bit integer shader operations.
-		auto options = D3D12_FEATURE_DATA_D3D12_OPTIONS{};
-		auto options1 = D3D12_FEATURE_DATA_D3D12_OPTIONS1{};
-		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
-		Check(gpu->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &options1, sizeof(options1)));
-		if (!options.DoublePrecisionFloatShaderOps || !options1.Int64ShaderOps)
-			throw std::runtime_error("Sampled world collision requires FP64 and Int64ShaderOps");
-
-		// Compile the sampled surface stage and the shared dispatch update against their respective root layouts.
-		auto resolver = shader_cache::ResourceSourceResolver{};
-		auto code = ShaderCompiler().Source("src/surface/gpu_world_contacts.hlsl", resolver).EntryPoint(L"CSWorldContacts").ShaderModel(L"cs_6_0").HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Optimise(true).Compile();
-		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0)
-			.SRV(ESRVReg::t0).SRV(ESRVReg::t1).SRV(ESRVReg::t2).SRV(ESRVReg::t3).SRV(ESRVReg::t4).SRV(ESRVReg::t5).SRV(ESRVReg::t6)
-			.UAV(EUAVReg::u0).UAV(EUAVReg::u1).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:Signature");
-		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Create(gpu, "WorldContacts:Contacts");
-		m_dispatch.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<Constants>(ECBufReg::b0).UAV(EUAVReg::u0).UAV(EUAVReg::u2).Create(gpu, "WorldContacts:DispatchSignature");
-		m_dispatch.m_pso = ComputePSO(m_dispatch.m_sig.get(), shader_code::calc_resolve_dispatch).Create(gpu, "WorldContacts:Dispatch");
 	}
 
 	// Invalidate shape-indexed plans after their submitted work has retired.
@@ -195,6 +226,7 @@ namespace pr::physics
 
 		// Skip infinite-mass bodies and generate missing plans only when a shape first becomes dynamic.
 		m_instances.clear();
+		m_max_samples[0] = m_max_samples[1] = 0;
 		for (uint32_t i = 0; i != bodies.size(); ++i)
 		{
 			auto const& body = bodies[i];
@@ -224,10 +256,27 @@ namespace pr::physics
 					if (m_instances.size() == 65535)
 						throw std::runtime_error("World contacts exceed 65535 convex instance groups");
 
-					// One dispatch group owns each sampled leaf, within the API's X-dimension limit.
+					// One dispatch group per sampled leaf in X, within the API's dimension limit; sample blocks use Y.
 					m_instances.push_back(Instance{i, s_cast<uint32_t>(begin + child), s_cast<uint32_t>(child), 0});
+					m_max_samples[0] = std::max(m_max_samples[0], m_ranges[begin + child].m_sample_count);
+					m_max_samples[1] = std::max(m_max_samples[1], m_ranges[begin + child + m_boundary_plan_offset].m_sample_count);
 				}
 			}
+		}
+
+		// Reserve one candidate slot per sample for every instance, using the larger of the two plans' strides.
+		// Each dispatch's 64-sample blocks must also fit within the API's Y-dimension limit.
+		auto const max_samples = std::max(m_max_samples[0], m_max_samples[1]);
+		if ((uint64_t(max_samples) + 63) / 64 > 65535)
+			throw std::runtime_error("World-contact sample blocks exceed the dispatch Y-dimension limit");
+		if (uint64_t(m_instances.size()) * max_samples * sizeof(Candidate) > INT_MAX)
+			throw std::runtime_error("World-contact candidate storage exceeds addressable resource size");
+		auto const candidate_count = std::max<size_t>(1, m_instances.size() * max_samples);
+		if (!m_candidates || m_candidates->GetDesc().Width < candidate_count * sizeof(Candidate))
+		{
+			m_candidates = m_gpu.CreateResource(ResDesc::Buf<Candidate>(candidate_count, {}).usage(EUsage::UnorderedAccess), job.m_cmd_list, "WorldContacts:Candidates");
+			job.m_barriers.Transition(m_candidates.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Commit();
 		}
 
 		// Refresh immutable shader streams only when packed indices or prepared plans have changed.
@@ -282,34 +331,47 @@ namespace pr::physics
 		job.m_barriers.Transition(counters, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Transition(m_status.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Commit();
-		job.m_cmd_list.SetPipelineState(m_step.m_pso.get());
-		job.m_cmd_list.SetComputeRootSignature(m_step.m_sig.get());
 		auto const boundary = m_boundary.value_or(CylindricalBoundaryConfig{});
-		job.m_cmd_list.AddComputeRoot32BitConstants(Constants{
+		auto const max_samples = m_max_samples[mode];
+		auto const constants = Constants{
 			.m_endpoint = s_cast<uint32_t>(endpoint), .m_max_contacts = s_cast<uint32_t>(max_contacts), .m_plan_offset = mode == 0 ? 0 : m_boundary_plan_offset,
 			.m_height_upper = m_height_upper, .m_sleeping_enabled = sleeping_enabled ? 1 : 0, .m_island_count = island_count,
 			.m_mode = s_cast<uint32_t>(mode), .m_material = s_cast<uint32_t>(boundary.m_material_id),
 			.m_centre_x = boundary.m_centre_x, .m_centre_y = boundary.m_centre_y, .m_radius = boundary.m_radius,
-			.m_spacing = boundary.m_surface_spacing, .m_pad = 0});
-		for (auto resource : {bodies, shapes, m_recipe.get(), m_plans.get(), m_patch_buffer.get(), m_instance_buffer.get(), sleep_islands})
-			job.m_cmd_list.AddComputeRootShaderResourceView(resource->GetGPUVirtualAddress());
+			.m_spacing = boundary.m_surface_spacing, .m_stride = max_samples};
 
-		// Bind append destinations after the read-only streams in root-signature order.
-		for (auto resource : {counters, contacts, m_status.get()})
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(resource->GetGPUVirtualAddress());
+		// Both stages bind the same constants and resources. The sample stage evaluates every sample in parallel; selection then
+		// reads the stored candidates after a UAV barrier, so results match a serial walk of each plan.
+		for (auto* step : {&m_pipeline.m_samples, &m_pipeline.m_step})
+		{
+			job.m_cmd_list.SetPipelineState(step->m_pso.get());
+			job.m_cmd_list.SetComputeRootSignature(step->m_sig.get());
+			job.m_cmd_list.AddComputeRoot32BitConstants(constants);
+			for (auto resource : {bodies, shapes, m_recipe.get(), m_plans.get(), m_patch_buffer.get(), m_instance_buffer.get(), sleep_islands})
+				job.m_cmd_list.AddComputeRootShaderResourceView(resource);
+
+			// Bind append destinations and candidate storage after the read-only streams in root-signature order.
+			for (auto resource : {counters, contacts, m_status.get(), m_candidates.get()})
+				job.m_cmd_list.AddComputeRootUnorderedAccessView(resource);
+
+			// One group per leaf for selection; the sample stage adds one Y group per 64-sample block.
+			auto const blocks = step == &m_pipeline.m_samples ? s_cast<int>((max_samples + 63) / 64) : 1;
+			job.m_cmd_list.Dispatch(s_cast<int>(m_instances.size()), blocks, 1);
+			job.m_barriers.UAV(m_candidates.get());
+			job.m_barriers.UAV(m_status.get());
+			job.m_barriers.Commit();
+		}
 
 		// Finish world-contact writes before deriving the solver's indirect dispatch from the combined count.
-		job.m_cmd_list.Dispatch(s_cast<int>(m_instances.size()), 1, 1);
 		job.m_barriers.UAV(counters);
 		job.m_barriers.UAV(contacts);
-		job.m_barriers.UAV(m_status.get());
 		job.m_barriers.Transition(dispatch, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		job.m_barriers.Commit();
-		job.m_cmd_list.SetPipelineState(m_dispatch.m_pso.get());
-		job.m_cmd_list.SetComputeRootSignature(m_dispatch.m_sig.get());
+		job.m_cmd_list.SetPipelineState(m_pipeline.m_dispatch.m_pso.get());
+		job.m_cmd_list.SetComputeRootSignature(m_pipeline.m_dispatch.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(Constants{s_cast<uint32_t>(max_contacts), 0, 0, 0});
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(dispatch->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(dispatch);
 		job.m_cmd_list.Dispatch(1, 1, 1);
 		job.m_barriers.UAV(dispatch);
 		job.m_barriers.Commit();

@@ -59,6 +59,7 @@
     <ClCompile Include="src\resource\descriptor_store.cpp" />
     <ClCompile Include="src\shaders\shader_cache_fs.cpp" />
     <ClCompile Include="src\shaders\shader_compiler.cpp" />
+    <ClCompile Include="src\shaders\shader_precompile.cpp" />
     <ClCompile Include="src\shaders\source_resolver.cpp" />
     <ClCompile Include="src\utility\cmd_list.cpp" />
     <ClCompile Include="src\utility\pix.cpp" />
@@ -79,6 +80,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\descriptor_store.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\descriptor.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\gpu_descriptor_heap.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\gpu_address.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\gpu_transfer_allocation.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\gpu_transfer_buffer_page.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\resource\gpu_transfer_buffer.h" />
@@ -89,6 +91,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\compute\shaders\shader_cache_fs.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\shaders\shader_cache.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\shaders\shader_compiler.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\compute\shaders\shader_precompile.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\shaders\source_resolver.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\utility\barrier_batch.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\compute\utility\cmd_alloc.h" />

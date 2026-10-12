@@ -2,7 +2,7 @@
 // View3d-12 Tests
 //  Copyright (C) Rylogic Ltd 2026
 //*********************************************
-// Demos of screen effects: far clip fading, the underwater post effect, and output dithering.
+// Demos of screen effects: the underwater post effect and output dithering.
 #include <format>
 #include <stdexcept>
 #include <string>
@@ -38,88 +38,6 @@ namespace view3d_test
 			script += "} }";
 			scene.Add(script.c_str());
 		}
-
-		// Objects fade out as they approach the far clip plane, instead of being cut off abruptly
-		struct FarClipFadeDemo :IDemo
-		{
-			DemoContext m_ctx;
-			demo::SceneObjects m_scene;
-			view3d::FarClipFadeProps m_props;
-			view3d::Object m_sky;
-			float m_far;
-
-			explicit FarClipFadeDemo(DemoContext const& ctx)
-				: m_ctx(ctx)
-				, m_scene(ctx.m_window)
-				, m_props{ .m_enabled = TRUE, .m_start_fraction = 0.7f, .m_end_fraction = 0.99f }
-				, m_sky()
-				, m_far(60.0f)
-			{
-				// A large field of boxes extends beyond the far plane
-				AddBoxField(m_scene, 25, 5.0f);
-				m_scene.Add("*Plane ground FF406040 { *Data {200 200} *AxisId {+3} }");
-				View3D_CameraPositionSet(ctx.m_window, { 0, -60, 6, 1 }, { 0, 0, 0, 1 }, { 0, 0, 1, 0 });
-				Apply();
-
-				// Fade controls
-				auto& ui = ctx.m_controls;
-				ui.AddCheckBox(L"Fade enabled", true, [this](bool on)
-				{
-					m_props.m_enabled = on ? TRUE : FALSE;
-					Apply();
-				});
-				ui.AddSlider(L"Start fraction", 0, 1, m_props.m_start_fraction, [this](float v)
-				{
-					m_props.m_start_fraction = v;
-					Apply();
-				});
-				ui.AddSlider(L"End fraction", 0, 1, m_props.m_end_fraction, [this](float v)
-				{
-					m_props.m_end_fraction = v;
-					Apply();
-				});
-				ui.AddSlider(L"Far plane", 10, 200, m_far, [this](float v)
-				{
-					m_far = v;
-					Apply();
-				}, 190);
-				ui.AddCheckBox(L"Procedural sky", false, [this](bool on)
-				{
-					SetSky(on);
-				});
-				ui.AddLabel(L"Invalid settings (start > end) are rejected and shown in the log.");
-			}
-			~FarClipFadeDemo()
-			{
-				// The sky is not part of the scene objects because it can be toggled
-				SetSky(false);
-			}
-
-			// Apply the fade properties and the far plane
-			void Apply()
-			{
-				// The DLL rejects invalid fractions and leaves the previous settings in place
-				View3D_FarClipFadePropertiesSet(m_ctx.m_window, m_props);
-				auto clip = View3D_CameraClipPlanesGet(m_ctx.m_window, view3d::EClipPlanes::Both);
-				View3D_CameraClipPlanesSet(m_ctx.m_window, clip.x, m_far, view3d::EClipPlanes::Both);
-			}
-
-			// Show or hide a procedural sky behind the fading objects
-			void SetSky(bool on)
-			{
-				// Fading objects should blend into the sky as well as into the background colour
-				if (on && m_sky == nullptr)
-				{
-					m_sky = View3D_ObjectCreateProceduralSky("sky", view3d::ProceduralSkySettings{}, nullptr);
-					View3D_WindowAddObject(m_ctx.m_window, m_sky);
-				}
-				else if (!on && m_sky != nullptr)
-				{
-					View3D_ObjectDelete(m_sky);
-					m_sky = nullptr;
-				}
-			}
-		};
 
 		// The underwater post effect, with an adjustable water surface
 		struct UnderwaterDemo :IDemo
@@ -237,10 +155,6 @@ namespace view3d_test
 	}
 
 	// Demo factories
-	std::unique_ptr<IDemo> CreateFarClipFadeDemo(DemoContext const& ctx)
-	{
-		return std::make_unique<FarClipFadeDemo>(ctx);
-	}
 	std::unique_ptr<IDemo> CreateUnderwaterDemo(DemoContext const& ctx)
 	{
 		return std::make_unique<UnderwaterDemo>(ctx);

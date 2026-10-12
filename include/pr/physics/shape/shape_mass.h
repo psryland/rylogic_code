@@ -59,9 +59,8 @@ namespace pr::physics
 	}
 
 	// Return the unit inertia for the line shape.
-	// Modelled as a thin rod along Z (length = 2*m_radius) with optional cylindrical thickness.
-	// When thickness > 0, uses a solid cylinder inertia: Ixx = Iyy = (1/12)*(3r^2 + L^2), Izz = (1/2)*r^2
-	// When thickness == 0, uses a thin rod: Ixx = Iyy = (1/12)*L^2, Izz ≈ 0
+	// A line with radius is a solid capsule along Z: a cylinder of length L = 2*m_hlength with a hemisphere of radius r at each end.
+	// A line with zero radius is a thin rod: Ixx = Iyy = (1/12)*L^2, Izz ≈ 0
 	inline m3x3 UnitInertia(ShapeLine const& shape)
 	{
 		auto L = 2.0f * shape.m_hlength; // Full length
@@ -69,10 +68,17 @@ namespace pr::physics
 		auto inertia = m3x3{};
 		if (r > math::tiny<float>)
 		{
-			// Solid cylinder inertia (per unit mass)
-			inertia.x.x = (1.0f / 12.0f) * (3.0f * Sqr(r) + Sqr(L));
+			// Split the unit mass between the cylinder and the two hemispheres in proportion to their volumes.
+			auto cylinder_volume = L;
+			auto ends_volume = (4.0f / 3.0f) * r;
+			auto m_cyl = cylinder_volume / (cylinder_volume + ends_volume);
+			auto m_ends = 1.0f - m_cyl;
+
+			// The cylinder uses the solid cylinder formula. Each hemisphere has inertia (2/5)r^2 about its flat face, and its centroid sits
+			// 3r/8 from that face. Moving that inertia to the capsule centre, a distance L/2 + 3r/8 away, gives (2/5)r^2 + L^2/4 + 3Lr/8.
+			inertia.x.x = m_cyl * (1.0f / 12.0f) * (3.0f * Sqr(r) + Sqr(L)) + m_ends * ((2.0f / 5.0f) * Sqr(r) + 0.25f * Sqr(L) + (3.0f / 8.0f) * L * r);
 			inertia.y.y = inertia.x.x;
-			inertia.z.z = 0.5f * Sqr(r);
+			inertia.z.z = m_cyl * 0.5f * Sqr(r) + m_ends * (2.0f / 5.0f) * Sqr(r);
 		}
 		else
 		{
@@ -202,13 +208,13 @@ namespace pr::physics
 	// Return the mass properties for the line shape
 	inline MassProperties CalcMassProperties(ShapeLine const& shape, float density)
 	{
-		// Volume depends on thickness: cylinder of radius m_thickness and length 2*m_radius.
+		// A line with radius is a capsule: a cylinder of length 2*m_hlength plus a sphere made of its two hemispherical ends.
 		// For zero-thickness lines, use a small minimum volume to avoid zero mass.
 		auto L = 2.0f * shape.m_hlength;
 		auto r = shape.m_radius;
 		auto volume = (r > math::tiny<float>)
-			? float(constants<double>::tau_by_2) * Sqr(r) * L  // pi * r^2 * L
-			: L * math::tiny<float>;                          // Fallback: thin rod with minimal cross-section
+			? float(constants<double>::tau_by_2) * Sqr(r) * (L + (4.0f / 3.0f) * r)  // pi * r^2 * L + (4/3) * pi * r^3
+			: L * math::tiny<float>;                                                 // Fallback: thin rod with minimal cross-section
 
 		MassProperties mp;
 		mp.m_centre_of_mass  = v4{};

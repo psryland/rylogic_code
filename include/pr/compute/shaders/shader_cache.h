@@ -50,6 +50,9 @@ namespace pr::compute::shader_cache
 		uint64_t m_hit_pdb_materialised = 0;
 		uint64_t m_lock_timeout_uncached = 0;
 		uint64_t m_io_error_uncached = 0;
+		uint64_t m_pipeline_hit = 0;
+		uint64_t m_pipeline_miss = 0;
+		uint64_t m_pipeline_uncached = 0;
 	};
 
 	// Interface for compiled shader caches.
@@ -61,6 +64,10 @@ namespace pr::compute::shader_cache
 
 		// Return cached output or call 'compile' once to produce and store it.
 		virtual CompileOutput GetOrCompile(CompileRequest const& request, CompileFunc compile) = 0;
+
+		// Return a compute pipeline state for 'desc', reusing driver-compiled pipelines from earlier runs where possible.
+		// 'name' identifies the pipeline within the cache; pipelines with the same name and shader bytecode must use the same root signature.
+		virtual D3DPtr<ID3D12PipelineState> GetOrCreatePipeline(ID3D12Device* device, D3D12_COMPUTE_PIPELINE_STATE_DESC const& desc, std::string_view name) = 0;
 
 		// Return diagnostic counters for this cache instance.
 		virtual CacheStats Stats() const = 0;

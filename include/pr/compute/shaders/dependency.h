@@ -99,14 +99,14 @@ namespace pr::compute::shader_cache
 		};
 	}
 
-	// Return content metadata for a resource embedded in 'module'.
-	// The version is the size and hash of the resource bytes, so relinking the module without changing the resource keeps cached outputs valid.
+	// Return content metadata for the resource named 'identity' in 'module'.
+	// The resource is identified by its bytes rather than by the module file's timestamp, so rebuilding the module does not invalidate unchanged resources.
 	inline Dependency ResourceDependency(std::string identity, std::wstring type, HMODULE module = nullptr)
 	{
-		// Hash the resource bytes rather than using the module's timestamp, which changes whenever any code in the module changes.
-		auto const res = resource::Read<char>(Widen(identity), type, module);
-		auto const hash_value = res.m_len != 0
-			? static_cast<uint64_t>(hash::HashBytes64(res.m_data, res.m_data + res.m_len))
+		// Hash the embedded bytes; the module path distinguishes resources with the same name in different modules.
+		auto data = resource::Read<char>(Widen(identity), type, module);
+		auto const hash_value = data.m_len != 0
+			? static_cast<uint64_t>(hash::HashBytes64(data.m_data, data.m_data + data.m_len))
 			: uint64_t{};
 
 		return Dependency{
@@ -114,7 +114,7 @@ namespace pr::compute::shader_cache
 			.m_identity = std::move(identity),
 			.m_path = CanonicalPath(win32::ModuleFileName(module)),
 			.m_type = std::move(type),
-			.m_size = static_cast<uint64_t>(res.m_len),
+			.m_size = static_cast<uint64_t>(data.m_len),
 			.m_last_write = 0,
 			.m_hash = hash_value,
 		};
@@ -155,15 +155,10 @@ namespace pr::compute::shader_cache
 				}
 				case Dependency::EKind::Resource:
 				{
-					// Read the resource from the module in this process if it is loaded, otherwise load the module image as data only.
-					auto module = ::GetModuleHandleW(dep.m_path.c_str());
-					auto loaded = std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&::FreeLibrary)>{nullptr, &::FreeLibrary};
-					if (module == nullptr)
-					{
-						loaded.reset(::LoadLibraryExW(dep.m_path.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-						module = loaded.get();
-					}
-					if (module == nullptr)
+					// Only modules already loaded in this process are checked; a module that is not loaded cannot be the source of the current request.
+					HMODULE module = nullptr;
+					auto flags = GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+					if (!::GetModuleHandleExW(flags, dep.m_path.c_str(), &module))
 						return std::nullopt;
 
 					return ResourceDependency(dep.m_identity, dep.m_type, module);

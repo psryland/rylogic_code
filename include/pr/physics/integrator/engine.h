@@ -185,6 +185,9 @@ namespace pr::physics
 		// Engine configuration parameters.
 		EngineConfig m_config;
 
+		// Optional caller-owned cache of compiled kernels for lazily created pipelines. It must outlive the engine.
+		IShaderCache* m_shader_cache;
+
 		// GPU device and command queue wrapper, shared by the integrator and collision detector.
 		GpuPtr m_gpu;
 
@@ -199,6 +202,12 @@ namespace pr::physics
 
 		// GPU collision detector
 		GpuCollisionDetectorPtr m_gpu_collision_detector;
+
+		// Lazily created world-contact kernels, kept while the world sources are replaced or removed so a replacement does not recompile them.
+		std::unique_ptr<struct GpuWorldContactPipeline, Deleter<struct GpuWorldContactPipeline>> m_gpu_world_contact_pipeline;
+
+		// Return the world-contact kernels, creating them on first use.
+		GpuWorldContactPipeline& WorldContactPipeline();
 
 		// Owned sampled world surfaces and deferred wake request for the next nonempty frame.
 		std::unique_ptr<struct GpuWorldContacts, Deleter<struct GpuWorldContacts>> m_gpu_world_contacts;
@@ -252,6 +261,9 @@ namespace pr::physics
 		int m_selective_refresh_hold_steps = 0;
 		int m_selective_refresh_previous_contact_count = 0;
 
+		// Peak contact count of the previous completed step, or int max when no step has completed since the last reset. Chooses the contact colour-sweep form.
+		int m_colour_sweep_contact_estimate = std::numeric_limits<int>::max();
+
 		// Diagnostics
 		StepProfile m_last_step_profile;
 		CollisionStats m_last_collision_stats;
@@ -295,7 +307,7 @@ namespace pr::physics
 		// Evolve bodies with persistent constraints; every enabled rigid endpoint must occur in 'bodies'.
 		void Step(float dt, std::span<RigidBody*> bodies, ConstraintSet const& constraints, double time_s = 0.0);
 
-		// Evolve a complete frame using one GPU submission regardless of the requested internal substep count.
+		// Evolve a complete frame with one GPU wait and readback regardless of the requested internal substep count.
 		void Step(StepInput const& input);
 		void Step(float dt, RigidBodyRange auto&& bodies, double time_s = 0.0)
 		{

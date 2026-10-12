@@ -8,6 +8,17 @@
 
 namespace pr::physics
 {
+	// How the colour-batched solver phases are recorded. Both forms process the colours in the same order and give the same results.
+	enum class EColourSweep
+	{
+		// One indirect dispatch and one UAV barrier per colour. Suits large contact sets that need many thread groups.
+		PerColour,
+
+		// One single-group dispatch per sweep that walks the occupied colours internally. Removes per-colour dispatch and barrier
+		// overhead, but all work runs in one thread group, so it suits small contact sets only.
+		Fused,
+	};
+
 	struct GpuResolver
 	{
 		Gpu& m_gpu;                               // Lightweight D3D12 wrapper (device + command queue)
@@ -26,6 +37,9 @@ namespace pr::physics
 		ComputeStep m_cs_store_warm_start;        // Parallel: store final physical impulses for next frame
 		ComputeStep m_cs_position_solve;          // Parallel: split position correction in colour batches
 		ComputeStep m_cs_resolve;                 // Parallel: resolve contacts in colour batches
+		ComputeStep m_cs_apply_warm_start_fused;  // Single group: apply cached impulses for every colour
+		ComputeStep m_cs_position_solve_fused;    // Single group: one position sweep over every colour
+		ComputeStep m_cs_resolve_fused;           // Single group: one velocity sweep over every colour
 		D3DPtr<ID3D12CommandSignature> m_cmd_sig; // Command signature for indirect dispatch
 		D3DPtr<ID3D12Resource> m_r_materials;     // GPU buffer: StructuredBuffer<GpuMaterial>
 		D3DPtr<ID3D12Resource> m_r_colours;       // GPU buffer: RWStructuredBuffer<uint> per-contact colour assignment
@@ -43,6 +57,9 @@ namespace pr::physics
 		int m_warm_start_capacity;
 		bool m_reset_warm_start_cache;
 		bool m_materials_dirty;
+
+		// The sweep form used by the next Resolve call. Callers choose Fused only when they expect a small contact count; see EColourSweep.
+		EColourSweep m_colour_sweep;
 
 		explicit GpuResolver(Gpu& gpu, EngineConfig const& config, IShaderCache* shader_cache);
 

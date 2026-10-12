@@ -28,6 +28,10 @@ internal static unsafe partial class Native
 	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 	internal delegate void ReportErrorFn(IntPtr context, [MarshalAs(UnmanagedType.LPStr)] string message, [MarshalAs(UnmanagedType.LPStr)] string filepath, int line, long position);
 
+	// Shader precompile progress; return nonzero to continue or zero to cancel the remaining kernels.
+	[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+	internal delegate int ShaderPrecompileProgressFn(IntPtr context, int completed, int total);
+
 	[StructLayout(LayoutKind.Sequential)]
 	internal struct ReportErrorCallback
 	{
@@ -403,6 +407,7 @@ internal static unsafe partial class Native
 	[DllImport(Dll)] internal static extern IntPtr Physics_Initialise(ReportErrorCallback callback);
 	[DllImport(Dll)] internal static extern void Physics_Shutdown(IntPtr context);
 	[DllImport(Dll, CharSet = CharSet.Unicode)] internal static extern EStatus Physics_ShaderCacheDirectorySet(IntPtr context, string? directory);
+	[DllImport(Dll)] internal static extern EStatus Physics_ShaderPrecompile(IntPtr context, int thread_count, ShaderPrecompileProgressFn? progress, IntPtr ctx);
 	[DllImport(Dll)] private static extern EStatus Physics_LastError(byte* buffer, uint capacity, out uint required);
 	[DllImport(Dll)] internal static extern EStatus Physics_StructSize(int struct_id, out uint size);
 

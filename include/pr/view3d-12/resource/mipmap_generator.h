@@ -16,12 +16,10 @@ namespace pr::rdr12
 		using GpuViewHeap = ::pr::compute::GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
 		using GpuSync = ::pr::compute::GpuSync;
 		using GfxCmdList = ::pr::compute::GfxCmdList;
-		using KeepAlive = ::pr::compute::KeepAlive;
 
 		Renderer&        m_rdr;            // The owning renderer instance
 		GpuSync&         m_gsync;          // The GPU fence
 		GfxCmdList&      m_cmd_list;       // Command list for mip generator operations.
-		KeepAlive        m_keep_alive;     // Keeps D3D objects alive until the GPU has finished with them
 		GpuViewHeap      m_view_heap;      // GPU visible descriptor heap for CBV/SRV/UAV
 		SignaturePtr     m_mipmap_sig;     // Root signature for the mip map generator
 		PipelineStatePtr m_mipmap_pso;     // Pipeline state for the mip map generator

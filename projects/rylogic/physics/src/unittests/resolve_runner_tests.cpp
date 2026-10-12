@@ -37,7 +37,7 @@ namespace pr::physics::tests
 	PRUnitTestClass(ResolveRootStateTests)
 	{
 		// Compare independent axis contacts with the shader interop oracle, including nonzero cached support on the second frame.
-		static void CheckColours(int contact_count, int island_count = 1)
+		static void CheckColours(int contact_count, int island_count = 1, EColourSweep sweep = EColourSweep::PerColour)
 		{
 			// Independent hubs retain the same three-axis oracle while covering more than one indirect thread group.
 			assert(contact_count >= 1 && contact_count <= 3);
@@ -97,7 +97,8 @@ namespace pr::physics::tests
 
 			// Keep the resolver cache but restore identical body/contact input so each colour must apply only its own support.
 			auto& gpu = SharedTestGpu();
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
+			resolver.m_colour_sweep = sweep;
 			for (int frame = 0; frame != 2; ++frame)
 			{
 				// The second frame exercises retained warm-start caches with exactly the same input bodies.
@@ -138,7 +139,7 @@ namespace pr::physics::tests
 			auto& job = gpu.m_job;
 			auto config = EngineConfig{};
 			config.contact_sort_propagation_scale = 0.0f;
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			auto shape = collision::ShapeBox{v4{1, 1, 1, 0}};
 			auto body = RigidBody{&shape, m4x4::Identity(), Inertia::Box(shape.m_radius, 1.0f)};
 			auto bodies = std::array{PackDynamics(body, 0), PackDynamics(body, 1)};
@@ -205,6 +206,15 @@ namespace pr::physics::tests
 			// Cover 4,096 bodies and 3,072 contacts through position, velocity, and retained warm-start phases.
 			TestClass_ResolveRootStateTests::CheckColours(3, 1024);
 		}
+
+		// The single-group fused sweep must reproduce the per-colour oracle, including contacts strided over several passes of the group.
+		PRUnitTestMethod(FusedColourSweepsMatchInterop, Extended)
+		{
+			// Cover one colour, several colours, and more contacts than the group has threads.
+			TestClass_ResolveRootStateTests::CheckColours(1, 1, EColourSweep::Fused);
+			TestClass_ResolveRootStateTests::CheckColours(3, 1, EColourSweep::Fused);
+			TestClass_ResolveRootStateTests::CheckColours(3, 100, EColourSweep::Fused);
+		}
 	};
 
 	// Hardware coverage for GPU-counted contact sorting with retained allocation and changing current-pass limits.
@@ -222,7 +232,7 @@ namespace pr::physics::tests
 			config.push_out_iterations = 0;
 			config.warm_start_scale = 0;
 			config.contact_sort_propagation_scale = 0;
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			auto const capacity = 65536;
 			auto shape = collision::ShapeBox{v4{1, 1, 1, 0}};
 			auto body = RigidBody{&shape, m4x4::Identity(), Inertia::Box(shape.m_radius, 1.0f)};
@@ -779,7 +789,7 @@ namespace pr::physics::tests
 
 			// Run the complete production D3D12 path to prove its sorted graph also selects the fallback and resolves the enabled closing contact.
 			auto& gpu = SharedTestGpu();
-			auto gpu_resolver = GpuResolver{gpu, config, nullptr};
+			auto gpu_resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			gpu_resolver.Resolve(gpu.m_job, buffers.m_dt, contacts, gpu_bodies, materials);
 
 			// Read only the reserved diagnostic slot after the test resolve; production frames never add this readback.

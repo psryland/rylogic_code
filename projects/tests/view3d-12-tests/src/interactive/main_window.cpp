@@ -121,7 +121,6 @@ namespace view3d_test
 		std::vector<view3d::Light> m_lights;
 		view3d::Colour m_ambient;
 		view3d::ShadowSettings m_shadows;
-		view3d::FarClipFadeProps m_far_clip_fade;
 		view3d::UnderwaterProps m_underwater;
 		float m_dither;
 		view3d::Vec2 m_clip_planes;
@@ -136,7 +135,6 @@ namespace view3d_test
 
 			defaults.m_ambient = View3D_AmbientGet(window);
 			defaults.m_shadows = View3D_ShadowSettingsGet(window);
-			defaults.m_far_clip_fade = View3D_FarClipFadePropertiesGet(window);
 			defaults.m_underwater = View3D_PostEffectUnderwaterGet(window);
 			defaults.m_dither = View3D_DitherAmountGet(window);
 			defaults.m_clip_planes = View3D_CameraClipPlanesGet(window, view3d::EClipPlanes::Both);
@@ -157,7 +155,6 @@ namespace view3d_test
 			// Restore the remaining scene settings
 			View3D_AmbientSet(window, m_ambient);
 			View3D_ShadowSettingsSet(window, m_shadows);
-			View3D_FarClipFadePropertiesSet(window, m_far_clip_fade);
 			View3D_PostEffectUnderwaterSet(window, m_underwater);
 			View3D_DitherAmountSet(window, m_dither);
 			View3D_CameraClipPlanesSet(window, m_clip_planes.x, m_clip_planes.y, view3d::EClipPlanes::Both);

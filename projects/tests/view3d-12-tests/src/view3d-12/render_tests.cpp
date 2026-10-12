@@ -1,6 +1,6 @@
 #include "forward.h"
 
-namespace fade_tests
+namespace render_tests
 {
 	namespace api = pr::view3d;
 	namespace ui = pr::view3d::ui;
@@ -134,11 +134,11 @@ namespace fade_tests
 		// Set up a deterministic orthographic camera and the existing alpha/MSAA configuration.
 		explicit Fixture(int samples)
 		{
-			m_hwnd = CreateWindowExW(0, L"STATIC", L"Far clip fade test", WS_POPUP, 0, 0, ImageSize, ImageSize, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+			m_hwnd = CreateWindowExW(0, L"STATIC", L"View3d render test", WS_POPUP, 0, 0, ImageSize, ImageSize, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
 			Require(m_hwnd != nullptr, "CreateWindowEx failed");
 			m_context = View3D_Initialise({&m_errors, ReportError});
 			Require(m_context != nullptr, "View3D_Initialise failed");
-			m_window = View3D_WindowCreate(m_hwnd, api::WindowOptions().error_cb({&m_errors, ReportError}).back_colour(0xFF000000).multisamp(samples).name("FarClipFadeTests"));
+			m_window = View3D_WindowCreate(m_hwnd, api::WindowOptions().error_cb({&m_errors, ReportError}).back_colour(0xFF000000).multisamp(samples).name("RenderTests"));
 			Require(m_window != nullptr, "View3D_WindowCreate failed");
 			m_device.Attach(static_cast<ID3D12Device*>(View3D_DeviceLeaseAcquire(m_context)));
 			m_device.As(&m_info);
@@ -218,7 +218,7 @@ namespace fade_tests
 			if (shader != nullptr)
 				nugget.m_shaders[0] = api::Nugget::Shader{shader, api::ERenderStep::ForwardRender, 0};
 
-			auto object = View3D_ObjectCreate("FadeQuad", 0xFFFFFFFF, 4, 6, 1, verts, indices, &nugget, GUID{});
+			auto object = View3D_ObjectCreate("TestQuad", 0xFFFFFFFF, 4, 6, 1, verts, indices, &nugget, GUID{});
 			Require(object != nullptr, "Quad creation failed");
 			m_objects.push_back(object);
 			View3D_WindowAddObject(m_window, object);
@@ -256,13 +256,6 @@ namespace fade_tests
 		void Clear()
 		{
 			View3D_WindowRemoveAllObjects(m_window);
-		}
-
-		// Apply the same opt-in API used by managed consumers.
-		void Fade(bool enabled)
-		{
-			Require(View3D_FarClipFadePropertiesSet(m_window, api::FarClipFadeProps{enabled, 0.9f, 0.99f}) != FALSE, "Fade settings rejected");
-			CheckErrors();
 		}
 
 		// Attach a fixed retained-overlay host marker for pixel-invariance checks.
@@ -1109,12 +1102,6 @@ namespace fade_tests
 		// Opaque and transparent materials use the family's opaque and alpha-collect entry points.
 		Expect(draw(10, 0xFFFFFFFF), 1, 0, 0);
 		Expect(draw(10, 0x80FFFFFF), 0.5f, 0, 0);
-
-		// Far-fade variants keep the stock fade: half opacity at 94.5 of 100, multiplied by material opacity.
-		fixture.Fade(true);
-		Expect(draw(94.5f, 0xFFFFFFFF), 0.5f, 0, 0);
-		Expect(draw(94.5f, 0x80FFFFFF), 0.25f, 0, 0);
-		fixture.Fade(false);
 		fixture.CheckErrors();
 
 		// A pixel-only family keeps the stock vertex shader, so it shades an ordinary buffered mesh.
@@ -1158,23 +1145,15 @@ namespace fade_tests
 			fixture.CheckErrors();
 			return fixture.Image();
 		};
-		auto expect_rotated = [](std::vector<unsigned char> const& image, std::vector<unsigned char> const& stock, float scale)
+		auto expect_rotated = [](std::vector<unsigned char> const& image, std::vector<unsigned char> const& stock)
 		{
-			// Compare in linear colour so the expected values can be scaled by the far-fade opacity.
+			// Compare the centre pixel in linear colour.
 			auto pixel = (ImageSize / 2 * ImageSize + ImageSize / 2) * 4;
 			Require(Linear(stock[pixel + 1]) > 0.1f, "Stock PBR procedural surface did not render its colour");
-			Expect(image, scale * Linear(stock[pixel + 1]), scale * Linear(stock[pixel + 2]), scale * Linear(stock[pixel + 0]));
+			Expect(image, Linear(stock[pixel + 1]), Linear(stock[pixel + 2]), Linear(stock[pixel + 0]));
 		};
 		auto stock_image = draw_surface(nullptr, 10);
-		expect_rotated(draw_surface(pbr_shader, 10), stock_image, 1.0f);
-
-		// The PBR family's far-fade variants keep the stock fade: half opacity at 94.5 of 100, matching the faded stock output.
-		fixture.Fade(true);
-		auto stock_faded = draw_surface(nullptr, 94.5f);
-		auto centre = (ImageSize / 2 * ImageSize + ImageSize / 2) * 4;
-		Expect(stock_faded, 0.5f * Linear(stock_image[centre + 0]), 0.5f * Linear(stock_image[centre + 1]), 0.5f * Linear(stock_image[centre + 2]));
-		expect_rotated(draw_surface(pbr_shader, 94.5f), stock_faded, 1.0f);
-		fixture.Fade(false);
+		expect_rotated(draw_surface(pbr_shader, 10), stock_image);
 		fixture.CheckErrors();
 
 		// Promotion to PBR rejects a family written for simple materials.
@@ -2064,235 +2043,7 @@ namespace fade_tests
 		}
 	}
 
-	// Validate defaults, invalid ranges, and absolute far-depth resolution without a GPU.
-	void NumericTests()
-	{
-		auto props = pr::rdr12::FarClipFadeProps{};
-		Require(!props.m_enabled, "Default must be disabled");
-		auto range = props.DepthRange(100);
-		Require(range.x == 90 && range.y == 99, "Depth range incorrect");
-		float invalid[][2] = {{-1,0.99f}, {0.9f,0.9f}, {0.9f,1}, {0.9f,std::numeric_limits<float>::infinity()}, {std::numeric_limits<float>::quiet_NaN(),0.99f}};
-		for (auto const& pair : invalid)
-		{
-			props.m_start_fraction = pair[0];
-			props.m_end_fraction = pair[1];
-			auto rejected = false;
-			try { props.Validate(); }
-			catch (std::invalid_argument const&) { rejected = true; }
-			Require(rejected, "Invalid range accepted");
-		}
-
-		// Camera-dependent validation also rejects intervals that cannot end before hardware clipping.
-		props = {};
-		float invalid_depths[] = {0, -1, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::denorm_min()};
-		for (auto depth : invalid_depths)
-		{
-			auto rejected = false;
-			try { props.DepthRange(depth); }
-			catch (std::invalid_argument const&) { rejected = true; }
-			Require(rejected, "Invalid camera depth accepted");
-		}
-	}
-
-	// Exercise the real opaque/alpha renderer at 1x and MSAA without showing or controlling a user window.
-	void RenderTests(int samples)
-	{
-		Fixture fixture(samples);
-		auto defaults = View3D_FarClipFadePropertiesGet(fixture.m_window);
-		Require(!defaults.m_enabled && defaults.m_start_fraction == 0.9f && defaults.m_end_fraction == 0.99f, "DLL defaults differ");
-		Require(!View3D_FarClipFadePropertiesSet(fixture.m_window, api::FarClipFadeProps{TRUE,0.9f,1}), "DLL accepted invalid range");
-		Require(!fixture.m_errors.empty(), "DLL did not report invalid range");
-		fixture.m_errors.clear();
-		Require(!View3D_FarClipFadePropertiesGet(fixture.m_window).m_enabled, "Failed setter mutated settings");
-
-		// Disabled settings preserve full-image output; re-enabling cannot leave stale alpha or depth.
-		std::cout << "Defaults and toggle, MSAA " << samples << std::endl;
-		fixture.Quad(94.5f, 0xFFFF0000);
-		auto disabled = fixture.Image();
-		Expect(disabled, 1,0,0);
-		fixture.Fade(true);
-		Expect(fixture.Image(), 0.5f,0,0);
-		fixture.Fade(false);
-		Require(disabled == fixture.Image(), "Disable did not restore original pixels");
-
-		// Planar off-axis pixels must use forward depth rather than radial distance.
-		std::cout << "Forward depth and ramp" << std::endl;
-		fixture.Fade(true);
-		Expect(fixture.Image(), 0.5f,0,0, 105,64);
-		float depths[] = {89,90,92.25f,94.5f,96.75f,99,99.5f};
-		float opacity[] = {1,1,0.84375f,0.5f,0.15625f,0,0};
-		for (auto i = 0; i != 7; ++i)
-		{
-			fixture.Clear();
-			fixture.Quad(depths[i], 0xFFFF0000);
-			Expect(fixture.Image(), opacity[i],0,0);
-		}
-
-		// A single primitive crossing the interval must partition per fragment, not per object.
-		fixture.Clear();
-		fixture.Quad(89, 0xFFFF0000, 45, nullptr, 100);
-		auto crossing = fixture.Image();
-		Expect(crossing, 1,0,0, 8,64);
-		Expect(crossing, 0.49f,0,0);
-		Expect(crossing, 0,0,0, 118,64);
-
-		// Camera motion and clipping updates remain the only authority for the world-depth interval.
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000);
-		View3D_CameraClipPlanesSet(fixture.m_window, 1, 105, api::EClipPlanes::Both);
-		Expect(fixture.Image(), 1,0,0);
-		View3D_CameraClipPlanesSet(fixture.m_window, 1, 100, api::EClipPlanes::Both);
-		api::Mat4x4 camera{{1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,-4.5f,1}};
-		View3D_CameraToWorldSet(fixture.m_window, camera);
-		Expect(fixture.Image(), 1,0,0);
-		camera.w.z = 0;
-		View3D_CameraToWorldSet(fixture.m_window, camera);
-		Expect(fixture.Image(), 0.5f,0,0);
-
-		// Originally transparent material opacity is multiplied, not replaced by fade opacity.
-		std::cout << "Material opacity and overlap" << std::endl;
-		fixture.Clear();
-		fixture.Quad(94.5f, 0x80FF0000);
-		Expect(fixture.Image(), 0.25f,0,0);
-
-		// Perspective off-axis coverage uses the same forward-depth interval.
-		std::cout << "Perspective" << std::endl;
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000);
-		View3D_CameraOrthographicSet(fixture.m_window, FALSE);
-		View3D_CameraFovSet(fixture.m_window, api::Vec2{1.5707963268f,1.5707963268f});
-		Expect(fixture.Image(), 0.5f,0,0, 90,64);
-		View3D_CameraOrthographicSet(fixture.m_window, TRUE);
-		View3D_CameraViewRectAtDistanceSet(fixture.m_window, api::Vec2{100,100}, 1.0f);
-
-		// A deformed custom vertex shader retains stock lighting and fades at its emitted world depth.
-		std::cout << "Custom vertex shader" << std::endl;
-		fixture.Clear();
-		fixture.Quad(90, 0xFFFF0000, 45, fixture.CustomShader(true));
-		Expect(fixture.Image(), 0.5f,0,0);
-
-		// An emissive PBR material reaches the same fade through its stock PBR output variant.
-		std::cout << "PBR" << std::endl;
-		fixture.Clear();
-		auto pbr = View3D_ObjectCreateLdrA("*Plane PbrFade { *Data {90 90} *Material { *BaseColour {FF000000} *Emissive {FFFF0000} } *o2w {*pos {0 0 -94.5}} }", FALSE, nullptr, nullptr);
-		Require(pbr != nullptr, "PBR fixture creation failed");
-		fixture.m_objects.push_back(pbr);
-		View3D_WindowAddObject(fixture.m_window, pbr);
-		Expect(fixture.Image(), 0.5f,0,0);
-
-		// Faded opaque geometry keeps its MSAA edge coverage; the fade scales each resolved edge pixel like an interior pixel.
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000, 31.125f);
-		auto faded_edge = fixture.Image();
-		fixture.Clear();
-		fixture.Quad(89, 0xFFFF0000, 31.125f);
-		auto solid_edge = fixture.Image();
-		for (auto x = 0; x != ImageSize; ++x)
-			Expect(faded_edge, 0.5f * Linear(solid_edge[(64 * ImageSize + x) * 4 + 0]), 0, 0, x, 64);
-
-		std::cout << "Edge coverage fades with MSAA " << samples << std::endl;
-
-		// Faded opaque geometry still writes depth, so it hides farther alpha layers, while nearer layers fade by their own depth.
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000);
-		fixture.Quad(96.75f, 0x800000FF);
-		Expect(fixture.Image(), 0.5f,0,0);
-		fixture.Clear();
-		auto front = fixture.Quad(92.25f, 0x800000FF);
-		auto back = fixture.Quad(94.5f, 0xFFFF0000);
-		auto ordered = fixture.Image();
-		Expect(ordered, 0.2882f,0,0.4235f);
-		fixture.Clear();
-		View3D_WindowAddObject(fixture.m_window, back);
-		View3D_WindowAddObject(fixture.m_window, front);
-		Require(ordered == fixture.Image(), "Submission order changed sorted alpha output");
-
-		// Near opaque geometry must still hide every farther alpha layer.
-		fixture.Quad(80, 0xFF00FF00);
-		Expect(fixture.Image(), 0,1,0);
-
-		// Background and retained final overlays stay outside the world fade.
-		std::cout << "Background and UI" << std::endl;
-		fixture.Clear();
-		auto procedural_sky = View3D_ObjectCreateProceduralSky("FadeProceduralSky", api::ProceduralSkySettings{}, nullptr);
-		Require(procedural_sky != nullptr, "Procedural sky creation failed");
-		fixture.m_objects.push_back(procedural_sky);
-		Require(View3D_ObjectSortGroupGet(procedural_sky, nullptr) == api::ESortGroup::Skybox, "Procedural sky lost its background classification");
-		View3D_ObjectFlagsSet(procedural_sky, api::ELdrFlags::Hidden, TRUE, nullptr);
-		View3D_ObjectFlagsSet(procedural_sky, api::ELdrFlags::Hidden, FALSE, nullptr);
-		View3D_ObjectFlagsSet(procedural_sky, api::ELdrFlags::NoZWrite, FALSE, nullptr);
-		Require(View3D_ObjectSortGroupGet(procedural_sky, nullptr) == api::ESortGroup::Skybox, "Unrelated or unchanged flags erased the sky sort group");
-		View3D_WindowAddObject(fixture.m_window, procedural_sky);
-		auto faded_sky = fixture.Image();
-		fixture.Fade(false);
-		Require(faded_sky == fixture.Image(), "Procedural sky changed with fade enabled");
-		fixture.Clear();
-		fixture.Fade(true);
-
-		// A plain skybox-group object is not faded itself, and faded world geometry blends into it rather than the clear colour.
-		auto sky = fixture.Quad(99.5f, 0xFF0000FF);
-		View3D_ObjectSortGroupSet(sky, api::ESortGroup::Skybox, nullptr);
-		Expect(fixture.Image(), 0,0,1);
-		fixture.Quad(94.5f, 0xFFFF0000);
-		Expect(fixture.Image(), 0.5f,0,0.5f);
-		fixture.Clear();
-
-		// World geometry beyond the fade end is fully replaced by the sky.
-		View3D_WindowAddObject(fixture.m_window, sky);
-		fixture.Quad(99.5f, 0xFF00FF00);
-		Expect(fixture.Image(), 0,0,1);
-		fixture.Clear();
-
-		// Without background objects, faded geometry blends into the window's clear colour.
-		View3D_WindowBackgroundColourSet(fixture.m_window, 0xFFFFFFFF);
-		fixture.Quad(94.5f, 0xFFFF0000);
-		Expect(fixture.Image(), 1,0.5f,0.5f);
-		View3D_WindowBackgroundColourSet(fixture.m_window, 0xFF000000);
-		fixture.Clear();
-		auto post_alpha = fixture.Quad(94.5f, 0xFF0000FF);
-		View3D_ObjectSortGroupSet(post_alpha, api::ESortGroup::PostAlpha, nullptr);
-		View3D_ObjectFlagsSet(post_alpha, api::ELdrFlags::HitTestExclude, TRUE, nullptr);
-		Require(View3D_ObjectSortGroupGet(post_alpha, nullptr) == api::ESortGroup::PostAlpha, "Unrelated flags erased the overlay sort group");
-		Expect(fixture.Image(), 0,0,1);
-		fixture.Clear();
-
-		// Invisible world geometry remains available to geometric picking.
-		auto invisible = fixture.Quad(99.5f, 0xFFFF0000);
-		Expect(fixture.Image(), 0,0,0);
-		api::HitTestRay ray{};
-		ray.m_ws_origin = {0,0,0,1};
-		ray.m_ws_direction = {0,0,-1,0};
-		api::HitTestResult hit{};
-		View3D_WindowHitTestObjects(fixture.m_window, &ray, &hit, 1, &invisible, 1);
-		fixture.CheckErrors();
-		Require(hit.m_obj == invisible && std::abs(hit.m_distance - 99.5f) < 0.01f, "Fade changed geometric picking");
-
-		// Final retained UI coverage is byte-identical with the world fade enabled or disabled.
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000);
-		fixture.AttachOverlay();
-		auto faded_ui = fixture.Image();
-		Expect(faded_ui, 0,1,0, 10,10);
-		fixture.Fade(false);
-		auto solid_ui = fixture.Image();
-		for (auto y = 4; y != 20; ++y)
-			for (auto x = 4; x != 20; ++x)
-				for (auto c = 0; c != 4; ++c)
-					Require(faded_ui[(y*ImageSize+x)*4+c] == solid_ui[(y*ImageSize+x)*4+c], "Retained overlay changed");
-
-		fixture.CheckDebugLayer();
-
-		// The fade is a separate pass over the depth buffer, so custom pixel shaders fade without needing a stock pixel family.
-		std::cout << "Custom pixel shader" << std::endl;
-		fixture.Fade(true);
-		fixture.Clear();
-		fixture.Quad(94.5f, 0xFFFF0000, 45, fixture.CustomShader(false));
-		Expect(fixture.Image(), 0.5f,0,0);
-		fixture.CheckErrors();
-		std::cout << "PASS fade ramp/crossing, camera, material alpha, custom VS/PS, PBR, overlap, coverage, sky/clear colour/PostAlpha/UI, picking: MSAA " << samples << '\n';
-	}
-
-	// Validate the RGB override API and GPU output without running the unrelated fade cases.
+	// Validate the RGB override API and GPU output.
 	void ColourBlendTests(int samples)
 	{
 		// The shared shader expression preserves alpha and the disabled value exactly, including HDR RGB.
@@ -2479,35 +2230,39 @@ namespace fade_tests
 		Fixture fixture(samples);
 		for (auto cycle = 0; cycle != 2; ++cycle)
 		{
-			// Custom pixel shaders do not block enabling the fade, because the fade does not replace pixel shaders.
-			fixture.Fade(false);
+			// Render a custom pixel shader scene, then replace it.
 			fixture.Clear();
 			auto custom = fixture.Quad(89, 0xFFFF0000, 45, fixture.CustomShader(false));
 			fixture.Image();
-			fixture.Fade(true);
-			fixture.Image();
 			View3D_WindowRemoveObject(fixture.m_window, custom);
 
-			// Sky creation and repeated toggling must preserve its exclusion with populated draw lists.
+			// Sky creation and flag changes must preserve its background classification.
 			auto sky = View3D_ObjectCreateProceduralSky("HandoffSky", api::ProceduralSkySettings{}, nullptr);
 			Require(sky != nullptr, "Handoff sky creation failed");
 			fixture.m_objects.push_back(sky);
+			Require(View3D_ObjectSortGroupGet(sky, nullptr) == api::ESortGroup::Skybox, "Procedural sky lost its background classification");
+			View3D_ObjectFlagsSet(sky, api::ELdrFlags::Hidden, TRUE, nullptr);
+			View3D_ObjectFlagsSet(sky, api::ELdrFlags::Hidden, FALSE, nullptr);
+			View3D_ObjectFlagsSet(sky, api::ELdrFlags::NoZWrite, FALSE, nullptr);
+			Require(View3D_ObjectSortGroupGet(sky, nullptr) == api::ESortGroup::Skybox, "Unrelated or unchanged flags erased the sky sort group");
 			View3D_WindowAddObject(fixture.m_window, sky);
-			auto sky_image = fixture.Image();
-			fixture.Fade(false);
-			Require(sky_image == fixture.Image(), "Scene handoff changed sky pixels");
-			fixture.Fade(true);
+			fixture.Image();
 
-			// Faded opaque geometry blends into the sky by its fade weight and hides the farther alpha layer.
+			// Distant opaque geometry hides the sky and the farther alpha layer.
 			fixture.Quad(94.5f, 0xFFFF0000);
 			fixture.Quad(96.75f, 0x800000FF);
-			auto pixel = sky_image.data() + (64 * ImageSize + 64) * 4;
-			Expect(fixture.Image(), 0.5f + 0.5f * Linear(pixel[0]), 0.5f * Linear(pixel[1]), 0.5f * Linear(pixel[2]));
+			Expect(fixture.Image(), 1,0,0);
 			fixture.CheckDebugLayer();
 		}
 
+		// Unrelated flags do not erase an explicit overlay sort group.
+		fixture.Clear();
+		auto post_alpha = fixture.Quad(94.5f, 0xFF0000FF);
+		View3D_ObjectSortGroupSet(post_alpha, api::ESortGroup::PostAlpha, nullptr);
+		View3D_ObjectFlagsSet(post_alpha, api::ELdrFlags::HitTestExclude, TRUE, nullptr);
+		Require(View3D_ObjectSortGroupGet(post_alpha, nullptr) == api::ESortGroup::PostAlpha, "Unrelated flags erased the overlay sort group");
+
 		// Automatic depth ordering changes only on depth-policy transitions, with no-test overlays taking precedence.
-		fixture.Fade(false);
 		fixture.Clear();
 		auto quad = fixture.Quad(89, 0xFFFFFFFF);
 		auto default_group = View3D_ObjectSortGroupGet(quad, nullptr);
@@ -3021,7 +2776,36 @@ namespace fade_tests
 		std::cout << "PASS environment map capture exclusion\n";
 	}
 
-	// Check that detail normals tilt lighting only while layers are set, in both forward and far-fade variants, and can be removed.
+	// Check that translucent surfaces composite in depth order regardless of add order, and that back faces are still drawn.
+	void AlphaLayeringTests(int samples)
+	{
+		// Half-transparent red behind half-transparent green, over black: red = 0.5 * 0.5, green = 0.5.
+		auto fixture = Fixture(samples);
+		fixture.Quad(20, 0x80FF0000);
+		fixture.Quad(10, 0x8000FF00);
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Reversing the add order must not change the depth-ordered result.
+		fixture.Clear();
+		fixture.Quad(10, 0x8000FF00);
+		fixture.Quad(20, 0x80FF0000);
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Turn the near quad around so it faces away from the camera; a single cull-none alpha draw must still include it.
+		fixture.Clear();
+		fixture.Quad(20, 0x80FF0000);
+		auto back = fixture.Quad(10, 0x8000FF00);
+		api::Mat4x4 turned{{-1,0,0,0}, {0,1,0,0}, {0,0,-1,0}, {0,0,-20,1}};
+		View3D_ObjectO2WSet(back, turned, nullptr);
+		fixture.CheckErrors();
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Any GPU validation error fails the fixture.
+		fixture.CheckDebugLayer();
+		std::cout << "PASS alpha layering (" << samples << "x)\n";
+	}
+
+	// Check that detail normals tilt lighting only while layers are set, and can be removed.
 	void DetailNormalsTests()
 	{
 		// A lit white quad faces the camera, with a directional light from the -X side so a normal tilt along X changes its brightness.
@@ -3073,11 +2857,6 @@ namespace fade_tests
 		fixture.CheckErrors();
 		auto tilted = fixture.Image();
 		Require(std::abs(brightness(tilted) / brightness(flat) - 1.342f) < 0.03f, (std::string("Detail-normal layer tilted the lighting normal incorrectly: flat ") + std::to_string(brightness(flat)) + ", tilted " + std::to_string(brightness(tilted))).c_str());
-
-		// The far-fade variant applies the same tilt when the surface is nearer than the fade band.
-		fixture.Fade(true);
-		Require(ImageDifference(tilted, fixture.Image()) < 100, "Far-fade detail-normal variant differs from the forward variant");
-		fixture.Fade(false);
 
 		// Weight noise varies the tilt across the quad, which spans several noise cells. Without weight noise the frequency has no effect.
 		auto noisy_layer = layer;
@@ -3535,113 +3314,109 @@ namespace fade_tests
 // Tests with an MSAA-dependent path run both single-sampled and 4x multisampled.
 namespace pr::unittests::view3d12
 {
-	PRUnitTest(View3d12_FarClipFadeNumeric, Quick)
-	{
-		fade_tests::NumericTests();
-	}
 	PRUnitTest(View3d12_NormalTransform, Quick)
 	{
-		fade_tests::NormalTransformTests();
+		render_tests::NormalTransformTests();
 	}
 	PRUnitTest(View3d12_DescriptorBinding, Quick)
 	{
-		fade_tests::DescriptorBindingTests();
+		render_tests::DescriptorBindingTests();
 	}
 	PRUnitTest(View3d12_DescriptorBindingRender, Extended)
 	{
-		fade_tests::DescriptorBindingRenderTests(1);
-		fade_tests::DescriptorBindingRenderTests(4);
+		render_tests::DescriptorBindingRenderTests(1);
+		render_tests::DescriptorBindingRenderTests(4);
 	}
 	PRUnitTest(View3d12_CameraTransform, Extended)
 	{
-		fade_tests::CameraTransformTests();
-	}
-	PRUnitTest(View3d12_FarClipFadeRender, Extended)
-	{
-		fade_tests::RenderTests(1);
-		fade_tests::RenderTests(4);
+		render_tests::CameraTransformTests();
 	}
 	PRUnitTest(View3d12_SceneHandoff, Extended)
 	{
-		fade_tests::SceneHandoffTests(1);
-		fade_tests::SceneHandoffTests(4);
+		render_tests::SceneHandoffTests(1);
+		render_tests::SceneHandoffTests(4);
 	}
 	PRUnitTest(View3d12_Shadows, Extended)
 	{
-		fade_tests::ShadowTests(1);
-		fade_tests::ShadowTests(4);
+		render_tests::ShadowTests(1);
+		render_tests::ShadowTests(4);
 	}
 	PRUnitTest(View3d12_DirectionalShadows, Extended)
 	{
-		fade_tests::DirectionalShadowTests(1);
-		fade_tests::DirectionalShadowTests(4);
+		render_tests::DirectionalShadowTests(1);
+		render_tests::DirectionalShadowTests(4);
 	}
 	PRUnitTest(View3d12_ColourBlend, Extended)
 	{
-		fade_tests::ColourBlendTests(1);
-		fade_tests::ColourBlendTests(4);
+		render_tests::ColourBlendTests(1);
+		render_tests::ColourBlendTests(4);
 	}
 	PRUnitTest(View3d12_ProceduralSurface, Extended)
 	{
-		fade_tests::ProceduralSurfaceTests();
+		render_tests::ProceduralSurfaceTests();
 	}
 	PRUnitTest(View3d12_ProceduralVertexAbi, Extended)
 	{
-		fade_tests::ProceduralVertexAbiTests();
-		fade_tests::ProceduralVertexBufferTests();
+		render_tests::ProceduralVertexAbiTests();
+		render_tests::ProceduralVertexBufferTests();
 	}
 	PRUnitTest(View3d12_GeneratedVertexInput, Extended)
 	{
-		fade_tests::GeneratedVertexInputTests();
+		render_tests::GeneratedVertexInputTests();
 	}
 	PRUnitTest(View3d12_ProceduralPixelFamily, Extended)
 	{
-		fade_tests::ProceduralPixelFamilyTests();
+		render_tests::ProceduralPixelFamilyTests();
 	}
 	PRUnitTest(View3d12_ProceduralVertexLighting, Extended)
 	{
-		fade_tests::ProceduralVertexLightingTests();
+		render_tests::ProceduralVertexLightingTests();
 	}
 	PRUnitTest(View3d12_RayCastLifetime, Extended)
 	{
-		fade_tests::RayCastLifetimeTests();
+		render_tests::RayCastLifetimeTests();
 	}
 	PRUnitTest(View3d12_PostEffects, Extended)
 	{
-		fade_tests::PostEffectTests(1);
-		fade_tests::PostEffectTests(4);
+		render_tests::PostEffectTests(1);
+		render_tests::PostEffectTests(4);
 	}
 	PRUnitTest(View3d12_EnvMapCaptureExclude, Extended)
 	{
-		fade_tests::EnvMapCaptureExcludeTests();
+		render_tests::EnvMapCaptureExcludeTests();
+	}
+	PRUnitTest(View3d12_AlphaLayering, Extended)
+	{
+		render_tests::AlphaLayeringTests(1);
+		render_tests::AlphaLayeringTests(4);
 	}
 	PRUnitTest(View3d12_DetailNormals, Extended)
 	{
-		fade_tests::DetailNormalsTests();
+		render_tests::DetailNormalsTests();
 	}
 	PRUnitTest(View3d12_DetailStrengthMap, Extended)
 	{
-		fade_tests::DetailStrengthMapTests();
+		render_tests::DetailStrengthMapTests();
 	}
 	PRUnitTest(View3d12_ModelNormalMap, Extended)
 	{
-		fade_tests::ModelNormalMapTests();
+		render_tests::ModelNormalMapTests();
 	}
 	PRUnitTest(View3d12_EnvMapProbe, Extended)
 	{
-		fade_tests::EnvMapProbeTests();
+		render_tests::EnvMapProbeTests();
 	}
 	PRUnitTest(View3d12_UIProviderOrder, Extended)
 	{
-		fade_tests::UIProviderOrderTests();
+		render_tests::UIProviderOrderTests();
 	}
 	PRUnitTest(View3d12_ImGuiProvider, Extended)
 	{
-		fade_tests::ImGuiProviderTests();
+		render_tests::ImGuiProviderTests();
 	}
 	PRUnitTest(View3d12_Dither, Extended)
 	{
-		fade_tests::DitherTests(1);
-		fade_tests::DitherTests(4);
+		render_tests::DitherTests(1);
+		render_tests::DitherTests(4);
 	}
 }

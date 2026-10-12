@@ -53,6 +53,9 @@ namespace pr::physics
 		ComputeStep m_cs_apply_position;
 		ComputeStep m_cs_solve_velocity;
 		ComputeStep m_cs_detect_breakage;
+		ComputeStep m_cs_apply_warm_start_fused;
+		ComputeStep m_cs_solve_position_fused;
+		ComputeStep m_cs_solve_velocity_fused;
 		D3DPtr<ID3D12Resource> m_r_endpoints;
 		D3DPtr<ID3D12Resource> m_r_descriptors;
 		D3DPtr<ID3D12Resource> m_r_blocks;
@@ -60,6 +63,8 @@ namespace pr::physics
 		D3DPtr<ID3D12Resource> m_r_state;
 		D3DPtr<ID3D12Resource> m_r_pseudo_velocities;
 		D3DPtr<ID3D12Resource> m_r_break_states;
+		D3DPtr<ID3D12Resource> m_r_colour_dispatch;
+		D3DPtr<ID3D12CommandSignature> m_cmd_sig;
 		std::vector<GpuConstraintEndpoint> m_endpoint_shadow;
 		std::vector<ConstraintEndpointIdentity> m_endpoint_identity_shadow;
 		std::vector<GpuD6ConstraintDesc> m_descriptor_shadow;
@@ -142,9 +147,14 @@ namespace pr::physics
 		void EnsureBreakStateStorage(CmdList& cmd_list, int slot_count);
 
 		// Bind the common constraint root signature and resources for one compute step.
-		void Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies);
+		// 'colour_dispatch' is written only by the colouring step. Other steps must pass a UAV-state placeholder, because the arguments buffer is
+		// in the indirect-argument state while the colour sweeps read it.
+		void Bind(GpuJob& job, ComputeStep& step, float timestep, int body_count, int colour, int position_iterations, D3DPtr<ID3D12Resource> bodies, ID3D12Resource* colour_dispatch);
 
 		// Insert UAV ordering between dependent compiler, colouring, and solver passes.
 		void CommitUavBarriers(GpuJob& job, D3DPtr<ID3D12Resource> bodies);
+
+		// Record one colour sweep in the established colour order. Small slot sets use the single-group fused step; larger sets use one indirect pass per colour.
+		void RecordColourSweep(GpuJob& job, ComputeStep& per_colour_step, ComputeStep& fused_step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies);
 	};
 }

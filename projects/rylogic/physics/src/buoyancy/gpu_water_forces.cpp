@@ -8,6 +8,7 @@
 #include "pr/compute/compute_step.h"
 #include "pr/compute/shaders/shader_compiler.h"
 #include "pr/compute/utility/root_signature.h"
+#include "src/utility/shader_recipes.h"
 
 namespace pr::physics
 {
@@ -34,6 +35,22 @@ namespace pr::physics
 		};
 		static_assert(sizeof(CBufWaterForces) % sizeof(uint32_t) == 0);
 		static_assert(sizeof(GpuWaterForces::Candidate) == 96);
+
+		// Compile the water-force kernel. The constructor and precompilation share this so their cache keys match.
+		std::vector<uint8_t> CompileWaterForcesKernel(IShaderCache* shader_cache)
+		{
+			// The optional cache skips DXC when the source is unchanged.
+			auto resolver = shader_cache::ResourceSourceResolver{};
+			return ShaderCompiler{}
+				.Source("src/buoyancy/gpu_water_forces.hlsl", resolver)
+				.Cache(shader_cache)
+				.HlslVersion(EHlslVersion::Hlsl2021)
+				.Define(L"SHADER_BUILD")
+				.Optimise(true)
+				.ShaderModel(L"cs_6_6")
+				.EntryPoint(L"CSWaterForces")
+				.Compile();
+		}
 	}
 
 	// Validate the water parameters. The field validates itself on construction.
@@ -51,26 +68,18 @@ namespace pr::physics
 	}
 
 	// Compile the pipeline once; changing the water configuration later does not need a new pipeline.
-	GpuWaterForces::GpuWaterForces(Gpu& gpu, WaterConfig config)
+	GpuWaterForces::GpuWaterForces(Gpu& gpu, WaterConfig config, IShaderCache* shader_cache)
 		: m_gpu(gpu)
 		, m_config(std::move(config))
 		, m_step()
 		, m_candidates()
-		, m_candidates_va()
-		, m_elements_va()
-		, m_local_waves_va()
+		, m_candidates_addr(nullptr)
+		, m_elements_addr(nullptr)
+		, m_local_waves_addr(nullptr)
 	{
 		// Root parameter order must match the binding order used in Apply.
 		m_config.Validate();
-		auto resolver = shader_cache::ResourceSourceResolver{};
-		auto code = ShaderCompiler{}
-			.Source("src/buoyancy/gpu_water_forces.hlsl", resolver)
-			.HlslVersion(EHlslVersion::Hlsl2021)
-			.Define(L"SHADER_BUILD")
-			.Optimise(true)
-			.ShaderModel(L"cs_6_6")
-			.EntryPoint(L"CSWaterForces")
-			.Compile();
+		auto code = CompileWaterForcesKernel(shader_cache);
 		m_step.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 			.U32<CBufWaterForces>(hlsl::ECBufReg::b0)
 			.UAV(hlsl::EUAVReg::u0)
@@ -78,7 +87,14 @@ namespace pr::physics
 			.SRV(hlsl::ESRVReg::t1)
 			.SRV(hlsl::ESRVReg::t2)
 			.Create(gpu, "Physics.WaterForces.RootSig");
-		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Create(gpu, "Physics.WaterForces.PSO");
+		m_step.m_pso = ComputePSO(m_step.m_sig.get(), code).Cache(shader_cache).Create(gpu, "Physics.WaterForces.PSO");
+	}
+
+	// Add the recipe for the water-force kernel.
+	void AppendWaterForceShaderRecipes(std::vector<ShaderRecipe>& recipes)
+	{
+		// The kernel does not depend on the water configuration.
+		recipes.push_back({ .m_name = "WaterForces.CSWaterForces", .m_compile = CompileWaterForcesKernel });
 	}
 
 	// Select candidates on the host so that dry bodies cost one bounds test per frame and no GPU work.
@@ -136,9 +152,9 @@ namespace pr::physics
 			}
 		}
 
-		m_candidates_va = upload_candidates.m_res->GetGPUVirtualAddress() + upload_candidates.m_ofs;
-		m_elements_va = upload_elements.m_res->GetGPUVirtualAddress() + upload_elements.m_ofs;
-		m_local_waves_va = upload_local_waves.m_res->GetGPUVirtualAddress() + upload_local_waves.m_ofs;
+		m_candidates_addr = upload_candidates;
+		m_elements_addr = upload_elements;
+		m_local_waves_addr = upload_local_waves;
 	}
 
 	// Wake sleeping bodies that the moving surface may reach.
@@ -190,10 +206,10 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(m_step.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_step.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_candidates_va);
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_elements_va);
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_local_waves_va);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_candidates_addr);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_elements_addr);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_local_waves_addr);
 		job.m_cmd_list.Dispatch((cb.m_candidate_count + WaterForcesThreadCount - 1) / WaterForcesThreadCount, 1, 1);
 		job.m_barriers.UAV(bodies).Commit();
 	}

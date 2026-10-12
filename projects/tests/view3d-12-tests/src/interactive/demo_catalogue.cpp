@@ -15,20 +15,18 @@ namespace view3d_test
 	std::unique_ptr<IDemo> CreateHitTestDemo(DemoContext const& ctx);
 	std::unique_ptr<IDemo> CreateShadowsDemo(DemoContext const& ctx);
 	std::unique_ptr<IDemo> CreateSkyboxDemo(DemoContext const& ctx);
-	std::unique_ptr<IDemo> CreateFarClipFadeDemo(DemoContext const& ctx);
 	std::unique_ptr<IDemo> CreateUnderwaterDemo(DemoContext const& ctx);
 	std::unique_ptr<IDemo> CreateDitherDemo(DemoContext const& ctx);
 	std::unique_ptr<IDemo> CreateWaveGridDemo(DemoContext const& ctx);
 
 	// All demos, in menu order
-	static std::array<DemoInfo, 9> const s_catalogue =
+	static std::array<DemoInfo, 8> const s_catalogue =
 	{{
 		{L"Scene", "audio_box", L"Spatial Audio", L"A tone plays from the rotating box. O toggles occlusion. E/R/T/Space change the step mode.", &CreateAudioBoxDemo},
 		{L"Scene", "ui_gallery", L"UI Gallery", L"The view3d UI controls. The slider changes the size of the box.", &CreateUiGalleryDemo},
 		{L"Scene", "hit_test", L"Hit Testing", L"Shift+Left Click on an object to move the coordinate frame to the hit point.", &CreateHitTestDemo},
 		{L"Lighting", "shadows", L"Shadows", L"Shadow casting from directional, point, and spot lights. Use the controls to change the light and shadow settings.", &CreateShadowsDemo},
 		{L"Lighting", "skybox", L"Sky and Reflections", L"Cube map and procedural skies, with optional environment map reflections on the spheres.", &CreateSkyboxDemo},
-		{L"Effects", "far_clip_fade", L"Far Clip Fade", L"Objects fade out as they approach the far clip plane. Zoom out to see the effect.", &CreateFarClipFadeDemo},
 		{L"Effects", "underwater", L"Underwater", L"The underwater post effect, with a water surface plane at a controllable height.", &CreateUnderwaterDemo},
 		{L"Effects", "dither", L"Dither", L"Dithering to hide colour banding in smooth gradients.", &CreateDitherDemo},
 		{L"Procedural", "wave_grid", L"Wave Grid", L"A grid animated by a procedural vertex shader. Vertex positions are computed from the vertex index.", &CreateWaveGridDemo},
@@ -119,9 +117,9 @@ namespace view3d_test::unittests
 		}
 
 		// Lookup ignores case and separator style, and rejects unknown or partial names
-		PR_EXPECT(FindDemo("Far-Clip_FADE") == FindDemo("far_clip_fade"));
-		PR_EXPECT(FindDemo("far_clip_fade") != nullptr);
-		PR_EXPECT(FindDemo("far_clip") == nullptr);
+		PR_EXPECT(FindDemo("Wave-GRID") == FindDemo("wave_grid"));
+		PR_EXPECT(FindDemo("wave_grid") != nullptr);
+		PR_EXPECT(FindDemo("wave") == nullptr);
 		PR_EXPECT(FindDemo("") == nullptr);
 	}
 }

@@ -55,7 +55,7 @@ namespace pr::compute
 
 			// If all of the sub resources of 'resource' are in the same state, then we can simply transition from that one state to 'state'.
 			// If the sub resources are in different states, we need to transition each back to the default state first.
-			auto& res_state = m_cmd_list.ResState(resource);
+			auto res_state = m_cmd_list.ResState(resource);
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && res_state != state) // Tests all subresource states for any != 'state'
 			{
 				// Transition all mips to the mip0 state, then transition all mips to 'state' in one command
@@ -161,8 +161,8 @@ namespace pr::compute
 				if (barrier.Type != D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
 					continue;
 
-				// Get the current resource state
-				auto& res_state = m_cmd_list.ResState(barrier.Transition.pResource);
+				// Get the current resource state. 'ResourceBarrier' has added the resource to the list's use set.
+				auto& res_state = m_cmd_list.m_res_state.Get(barrier.Transition.pResource);
 				
 				// Trace state changes
 				#if 0 // Enable resource state tracing

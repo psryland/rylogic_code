@@ -63,8 +63,8 @@ namespace pr::rdr12
 		// Return the latest TLAS build diagnostics.
 		RayTracingSceneStats const& Stats() const;
 
-		// Return the TLAS GPU virtual address, or zero if no TLAS is built.
-		D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructureAddress() const;
+		// Return the TLAS resource, or null if no TLAS is built.
+		ID3D12Resource* AccelerationStructure() const;
 
 		// Return the material buffer used by reflection closest-hit shaders.
 		ID3D12Resource* MaterialBuffer() const;

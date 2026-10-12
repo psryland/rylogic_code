@@ -54,7 +54,7 @@ namespace physics_sandbox
 
 				auto cbuf = m_cbuf;
 				cbuf.m_time_s = dle->m_instance->get<float>(rdr12::EInstComp::Float1);
-				auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+				auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 				cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(ERootParam::CBufWater), gpu_address);
 			}
 		};

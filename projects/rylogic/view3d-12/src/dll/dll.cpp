@@ -600,32 +600,6 @@ VIEW3D_API void __stdcall View3D_RayTracingPropertiesSet(view3d::Window window, 
 	CatchAndReport(View3D_RayTracingPropertiesSet, window,);
 }
 
-// Return the scene-owned far clip fade settings through the stable DLL layout.
-VIEW3D_API view3d::FarClipFadeProps __stdcall View3D_FarClipFadePropertiesGet(view3d::Window window)
-{
-	try
-	{
-		Validate(window);
-		DllLockGuard;
-		auto props = window->FarClipFadeProperties();
-		return view3d::FarClipFadeProps{props.m_enabled, props.m_start_fraction, props.m_end_fraction};
-	}
-	CatchAndReport(View3D_FarClipFadePropertiesGet, window, {});
-}
-
-// Set a complete validated fade range, reporting failure without partially applying it.
-VIEW3D_API BOOL __stdcall View3D_FarClipFadePropertiesSet(view3d::Window window, view3d::FarClipFadeProps const& props)
-{
-	try
-	{
-		Validate(window);
-		DllLockGuard;
-		window->FarClipFadeProperties(rdr12::FarClipFadeProps{props.m_enabled != FALSE, props.m_start_fraction, props.m_end_fraction});
-		return TRUE;
-	}
-	CatchAndReport(View3D_FarClipFadePropertiesSet, window, FALSE);
-}
-
 // Return the scene-owned underwater post effect settings through the stable DLL layout.
 VIEW3D_API view3d::UnderwaterProps __stdcall View3D_PostEffectUnderwaterGet(view3d::Window window)
 {

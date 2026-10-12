@@ -127,7 +127,8 @@ namespace pr::physics::tests
 			auto index = cache.GetOrAdd(shape);
 			auto body = RigidBody(&shape, m4x4::Translation(0, 0, 20), Inertia::Sphere(0.5f, 1));
 			auto bodies = std::array{PackDynamics(body, index)};
-			auto world = GpuWorldContacts(gpu, FlatTerrain(), surface::DefaultSpacing, CylindricalBoundaryConfig{});
+			auto pipeline = GpuWorldContactPipeline(gpu, &SharedTestShaderCache());
+			auto world = GpuWorldContacts(gpu, pipeline, FlatTerrain(), surface::DefaultSpacing, CylindricalBoundaryConfig{});
 			world.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			auto terrain_count = world.m_ranges[index].m_sample_count;
@@ -146,7 +147,7 @@ namespace pr::physics::tests
 			world.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			PR_EXPECT(world.m_plans.get() == plans && world.m_patch_buffer.get() == patches && world.m_patches.data() == patch_data);
-			auto terrain_only = GpuWorldContacts(gpu, FlatTerrain(), surface::DefaultSpacing);
+			auto terrain_only = GpuWorldContacts(gpu, pipeline, FlatTerrain(), surface::DefaultSpacing);
 			terrain_only.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			PR_EXPECT(terrain_only.m_ranges[index].m_sample_count == terrain_count);

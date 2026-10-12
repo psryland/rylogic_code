@@ -65,6 +65,7 @@ namespace pr::physics
 		, m_break_states()
 		, m_pseudo_velocities()
 		, m_colours()
+		, m_colour_dispatch(MaxColours, DispatchArguments{})
 		, m_state(1, GpuConstraintSolverState{})
 	{
 	}
@@ -192,6 +193,7 @@ namespace pr::physics
 		g_constraint_bodies.assign(ConstraintSpanOf(m_bodies));
 		g_blocks.assign(ConstraintSpanOf(m_blocks));
 		g_constraint_state.assign(ConstraintSpanOf(m_state));
+		g_constraint_colour_dispatch.assign(ConstraintSpanOf(m_colour_dispatch));
 
 		hlsl::GpuEmulator emulator(CSAssignConstraintColours, CSAssignConstraintColours_NumThreads);
 		emulator.Dispatch({1, 1, 1});
@@ -199,15 +201,21 @@ namespace pr::physics
 		m_bodies.assign(g_constraint_bodies.begin(), g_constraint_bodies.end());
 		m_blocks.assign(g_blocks.begin(), g_blocks.end());
 		m_state.assign(g_constraint_state.begin(), g_constraint_state.end());
+		m_colour_dispatch.assign(g_constraint_colour_dispatch.begin(), g_constraint_colour_dispatch.end());
 		for (int slot_idx = 0; slot_idx != m_slot_count; ++slot_idx)
 			m_colours[slot_idx] = m_blocks[slot_idx].colour;
 	}
 
-	// Dispatch every colour so the shader can select either parallel batches or the colour-zero serial fallback.
+	// Replay each colour with the colouring pass's indirect arguments, as the D3D12 host does.
 	void ConstraintInteropRunner::ApplyWarmStart()
 	{
 		for (int colour = 0; colour != MaxColours; ++colour)
 		{
+			// Empty colours record a zero-group dispatch on the GPU, so they do no work here either.
+			auto const& args = m_colour_dispatch[colour];
+			if (args.ThreadGroupCountX == 0)
+				continue;
+
 			g = MakeConstraintConstants(m_config, m_dt, m_previous_dt, m_body_count, m_slot_count, colour);
 			g_constraint_bodies.assign(ConstraintSpanOf(m_bodies));
 			g_blocks.assign(ConstraintSpanOf(m_blocks));
@@ -215,7 +223,7 @@ namespace pr::physics
 			g_constraint_state.assign(ConstraintSpanOf(m_state));
 
 			hlsl::GpuEmulator emulator(CSApplyConstraintWarmStart, CSApplyConstraintWarmStart_NumThreads);
-			emulator.Dispatch({ConstraintThreadGroupCount(m_slot_count), 1, 1});
+			emulator.Dispatch({static_cast<int>(args.ThreadGroupCountX), 1, 1});
 			m_bodies.assign(g_constraint_bodies.begin(), g_constraint_bodies.end());
 		}
 	}
@@ -225,6 +233,11 @@ namespace pr::physics
 	{
 		for (int colour = 0; colour != MaxColours; ++colour)
 		{
+			// Empty colours record a zero-group dispatch on the GPU, so they do no work here either.
+			auto const& args = m_colour_dispatch[colour];
+			if (args.ThreadGroupCountX == 0)
+				continue;
+
 			g = MakeConstraintConstants(m_config, m_dt, m_previous_dt, m_body_count, m_slot_count, colour);
 			g_constraint_bodies.assign(ConstraintSpanOf(m_bodies));
 			g_blocks.assign(ConstraintSpanOf(m_blocks));
@@ -232,7 +245,7 @@ namespace pr::physics
 			g_constraint_state.assign(ConstraintSpanOf(m_state));
 
 			hlsl::GpuEmulator emulator(CSSolveConstraintVelocity, CSSolveConstraintVelocity_NumThreads);
-			emulator.Dispatch({ConstraintThreadGroupCount(m_slot_count), 1, 1});
+			emulator.Dispatch({static_cast<int>(args.ThreadGroupCountX), 1, 1});
 			m_bodies.assign(g_constraint_bodies.begin(), g_constraint_bodies.end());
 			m_blocks.assign(g_blocks.begin(), g_blocks.end());
 			m_rows.assign(g_rows.begin(), g_rows.end());
@@ -269,6 +282,11 @@ namespace pr::physics
 	{
 		for (int colour = 0; colour != MaxColours; ++colour)
 		{
+			// Empty colours record a zero-group dispatch on the GPU, so they do no work here either.
+			auto const& args = m_colour_dispatch[colour];
+			if (args.ThreadGroupCountX == 0)
+				continue;
+
 			g = MakeConstraintConstants(m_config, m_dt, m_previous_dt, m_body_count, m_slot_count, colour);
 			g_constraint_bodies.assign(ConstraintSpanOf(m_bodies));
 			g_blocks.assign(ConstraintSpanOf(m_blocks));
@@ -277,7 +295,7 @@ namespace pr::physics
 			g_pseudo_velocities.assign(ConstraintSpanOf(m_pseudo_velocities));
 
 			hlsl::GpuEmulator emulator(CSSolveConstraintPosition, CSSolveConstraintPosition_NumThreads);
-			emulator.Dispatch({ConstraintThreadGroupCount(m_slot_count), 1, 1});
+			emulator.Dispatch({static_cast<int>(args.ThreadGroupCountX), 1, 1});
 			m_blocks.assign(g_blocks.begin(), g_blocks.end());
 			m_rows.assign(g_rows.begin(), g_rows.end());
 			m_pseudo_velocities.assign(g_pseudo_velocities.begin(), g_pseudo_velocities.end());
@@ -319,6 +337,12 @@ namespace pr::physics
 	std::span<uint32_t const> ConstraintInteropRunner::Colours() const
 	{
 		return m_colours;
+	}
+
+	// Return the per-colour indirect dispatch arguments written by the colouring pass.
+	std::span<DispatchArguments const> ConstraintInteropRunner::ColourDispatch() const
+	{
+		return m_colour_dispatch;
 	}
 
 	// Return whether this frame selected coherent serial execution.

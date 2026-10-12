@@ -361,21 +361,21 @@ namespace pr::physics
 			int m_body_generation;
 		};
 
-		// GPU virtual addresses for the transient upload blocks consumed by the sampled-composite passes.
+		// GPU locations of the transient upload blocks consumed by the sampled-composite passes.
 		struct DispatchAddresses
 		{
-			D3D12_GPU_VIRTUAL_ADDRESS m_water_field;
-			D3D12_GPU_VIRTUAL_ADDRESS m_volume_headers;
-			D3D12_GPU_VIRTUAL_ADDRESS m_volume_primitives;
-			D3D12_GPU_VIRTUAL_ADDRESS m_volume_records;
-			D3D12_GPU_VIRTUAL_ADDRESS m_volume_verts;
-			D3D12_GPU_VIRTUAL_ADDRESS m_tets;
-			D3D12_GPU_VIRTUAL_ADDRESS m_tet_cdf;
-			D3D12_GPU_VIRTUAL_ADDRESS m_face_planes;
-			D3D12_GPU_VIRTUAL_ADDRESS m_surface_headers;
-			D3D12_GPU_VIRTUAL_ADDRESS m_surface_primitives;
-			D3D12_GPU_VIRTUAL_ADDRESS m_surface_records;
-			D3D12_GPU_VIRTUAL_ADDRESS m_surface_patches;
+			GpuAddress m_water_field;
+			GpuAddress m_volume_headers;
+			GpuAddress m_volume_primitives;
+			GpuAddress m_volume_records;
+			GpuAddress m_volume_verts;
+			GpuAddress m_tets;
+			GpuAddress m_tet_cdf;
+			GpuAddress m_face_planes;
+			GpuAddress m_surface_headers;
+			GpuAddress m_surface_primitives;
+			GpuAddress m_surface_records;
+			GpuAddress m_surface_patches;
 		};
 
 		// Device services and callbacks remain valid for the lifetime of this implementation.
@@ -1045,7 +1045,7 @@ namespace pr::physics
 			args.m_job.m_cmd_list.SetPipelineState(m_volume_step.m_pso.get());
 			args.m_job.m_cmd_list.SetComputeRootSignature(m_volume_step.m_sig.get());
 			args.m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_water_field);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_volume_headers);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_volume_primitives);
@@ -1054,7 +1054,7 @@ namespace pr::physics
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_face_planes);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_volume_records);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_tet_cdf);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials);
 			args.m_job.m_cmd_list.Dispatch(cb.m_hull_count * cb.m_groups_per_hull, 1, 1);
 			args.m_job.m_barriers.UAV(m_r_partials.get()).Commit();
 
@@ -1063,10 +1063,10 @@ namespace pr::physics
 			args.m_job.m_cmd_list.SetPipelineState(m_volume_reduce_step.m_pso.get());
 			args.m_job.m_cmd_list.SetComputeRootSignature(m_volume_reduce_step.m_sig.get());
 			args.m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_volume_headers);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials->GetGPUVirtualAddress());
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_diagnostics->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials);
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_diagnostics);
 			args.m_job.m_cmd_list.Dispatch(cb.m_hull_count, 1, 1);
 			args.m_job.m_barriers.UAV(args.m_bodies);
 			if (cb.m_enable_diagnostics != 0)
@@ -1085,14 +1085,14 @@ namespace pr::physics
 			args.m_job.m_cmd_list.SetPipelineState(m_surface_step.m_pso.get());
 			args.m_job.m_cmd_list.SetComputeRootSignature(m_surface_step.m_sig.get());
 			args.m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_water_field);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_surface_primitives);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_face_planes);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_surface_headers);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_surface_patches);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_surface_records);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials);
 			args.m_job.m_cmd_list.Dispatch(cb.m_groups_per_hull, cb.m_hull_count, 1);
 			args.m_job.m_barriers.UAV(m_r_partials.get()).Commit();
 
@@ -1102,11 +1102,11 @@ namespace pr::physics
 			args.m_job.m_cmd_list.SetPipelineState(m_surface_reduce_step.m_pso.get());
 			args.m_job.m_cmd_list.SetComputeRootSignature(m_surface_reduce_step.m_sig.get());
 			args.m_job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(args.m_bodies);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_water_field);
 			args.m_job.m_cmd_list.AddComputeRootShaderResourceView(addresses.m_surface_headers);
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials->GetGPUVirtualAddress());
-			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_diagnostics->GetGPUVirtualAddress());
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_partials);
+			args.m_job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_diagnostics);
 			args.m_job.m_cmd_list.Dispatch(cb.m_hull_count, 1, 1);
 			args.m_job.m_barriers.UAV(args.m_bodies);
 			if (cb.m_enable_diagnostics != 0)
@@ -1317,23 +1317,19 @@ namespace pr::physics
 			memset(upload_water_field.ptr<std::byte>(), 0, static_cast<std::size_t>(upload_water_field.m_size));
 			memcpy(upload_water_field.ptr<std::byte>(), water_elements.data(), water_elements.size_bytes());
 
-			auto const gpu_va = [](auto const& alloc)
-			{
-				return alloc.m_res->GetGPUVirtualAddress() + alloc.m_ofs;
-			};
 			auto const addresses = DispatchAddresses{
-				.m_water_field = gpu_va(upload_water_field),
-				.m_volume_headers = gpu_va(upload_headers),
-				.m_volume_primitives = gpu_va(upload_prims),
-				.m_volume_records = gpu_va(upload_records),
-				.m_volume_verts = gpu_va(upload_volume_verts),
-				.m_tets = gpu_va(upload_tets),
-				.m_tet_cdf = gpu_va(upload_tet_cdf),
-				.m_face_planes = gpu_va(upload_face_planes),
-				.m_surface_headers = gpu_va(upload_surf_headers),
-				.m_surface_primitives = gpu_va(upload_surf_prims),
-				.m_surface_records = gpu_va(upload_surf_records),
-				.m_surface_patches = gpu_va(upload_patches),
+				.m_water_field = upload_water_field,
+				.m_volume_headers = upload_headers,
+				.m_volume_primitives = upload_prims,
+				.m_volume_records = upload_records,
+				.m_volume_verts = upload_volume_verts,
+				.m_tets = upload_tets,
+				.m_tet_cdf = upload_tet_cdf,
+				.m_face_planes = upload_face_planes,
+				.m_surface_headers = upload_surf_headers,
+				.m_surface_primitives = upload_surf_prims,
+				.m_surface_records = upload_surf_records,
+				.m_surface_patches = upload_patches,
 			};
 
 			// Translational and rotational damping share the wet-volume samples but have independent

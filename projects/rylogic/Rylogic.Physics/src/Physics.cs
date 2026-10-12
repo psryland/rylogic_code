@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Rylogic.D3D12;
 
@@ -51,6 +52,40 @@ public sealed class Physics :IDisposable
 	{
 		EnsureOwner();
 		Native.Check(Native.Physics_ShaderCacheDirectorySet(Context, directory));
+	}
+
+	/// <summary>
+	/// Compile every runtime GPU kernel into the current shader cache using 'thread_count' worker threads, so later engine creation does not
+	/// invoke the shader compiler. Blocks until done. 'progress' receives the completed and total kernel counts on the calling thread.
+	/// Requires a shader cache directory. Throws OperationCanceledException when 'cancel' stops the remaining work.
+	/// </summary>
+	public void PrecompileShaders(int thread_count, Action<int, int>? progress = null, CancellationToken cancel = default)
+	{
+		EnsureOwner();
+
+		// The callback stops native work on cancellation and never lets a managed exception cross the native boundary.
+		var error = (Exception?)null;
+		Native.ShaderPrecompileProgressFn callback = (_, completed, total) =>
+		{
+			// Report progress, then decide whether to continue.
+			try
+			{
+				progress?.Invoke(completed, total);
+			}
+			catch (Exception ex)
+			{
+				error = ex;
+			}
+			return error == null && !cancel.IsCancellationRequested ? 1 : 0;
+		};
+		Native.Check(Native.Physics_ShaderPrecompile(Context, thread_count, callback, IntPtr.Zero));
+		GC.KeepAlive(callback);
+
+		// Surface a callback failure or cancellation after native work has stopped.
+		if (error != null)
+			throw new AggregateException("Shader precompile progress callback failed.", error);
+
+		cancel.ThrowIfCancellationRequested();
 	}
 
 	/// <summary>Create a physics engine using either its own D3D12 device or an externally leased device.</summary>

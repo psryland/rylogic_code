@@ -230,16 +230,16 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(m_cs_prepare.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_cs_prepare.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(constants);
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_ranges->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_articulations->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_links->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_dof_count != 0 ? m_aba.m_r_dofs : m_aba.m_r_srv_sentinel)->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_position_count != 0 ? m_aba.m_r_positions : m_aba.m_r_srv_sentinel)->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_child_count != 0 ? m_aba.m_r_children : m_aba.m_r_srv_sentinel)->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_aba.m_r_scratch->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_dof_count != 0 ? m_aba.m_r_dof_scratch : m_aba.m_r_uav_sentinel)->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_joint_matrix_count != 0 ? m_aba.m_r_joint_matrix_scratch : m_aba.m_r_uav_sentinel)->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_mobilities->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_r_ranges);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_articulations);
+		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_links);
+		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_dof_count != 0 ? m_aba.m_r_dofs : m_aba.m_r_srv_sentinel));
+		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_position_count != 0 ? m_aba.m_r_positions : m_aba.m_r_srv_sentinel));
+		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_child_count != 0 ? m_aba.m_r_children : m_aba.m_r_srv_sentinel));
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_aba.m_r_scratch);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_dof_count != 0 ? m_aba.m_r_dof_scratch : m_aba.m_r_uav_sentinel));
+		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_joint_matrix_count != 0 ? m_aba.m_r_joint_matrix_scratch : m_aba.m_r_uav_sentinel));
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_mobilities);
 		job.m_cmd_list.Dispatch(MobilityThreadGroupCount(isize(m_ranges)), 1, 1);
 		++m_stats.m_dispatch_count;
 

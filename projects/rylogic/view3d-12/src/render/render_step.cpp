@@ -63,23 +63,13 @@ namespace pr::rdr12
 		// Sort by sort key
 		std::sort(std::begin(*drawlist), std::end(*drawlist));
 
-		// Find the background range, which steps such as the far clip fade draw separately.
-		auto skybox = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::Skybox));
-		auto post_opaques = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::PostOpaques));
-
-		// Find the AlphaFront and AlphaBack range, and sort them by distance from the camera
-		auto alpha_back = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::AlphaBack));
-		auto alpha_front = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::AlphaFront));
+		// Find the alpha range, and sort it back to front by instance distance from the camera. The K-buffer orders fragments itself,
+		// but fragments beyond its layer count merge in arrival order, so far-to-near arrival keeps that approximation closest.
+		auto alpha_start = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::Alpha));
 		auto alpha_end = std::lower_bound(drawlist->begin(), drawlist->end(), SortKey(ESortGroup::PostAlpha));
 
 		auto cam_pos = scn().m_cam.CameraToWorld().pos;
-		std::sort(alpha_back, alpha_front, [=](DrawListElement const& lhs, DrawListElement const& rhs)
-		{
-			auto dl = LengthSq(GetO2W(*lhs.m_instance).pos - cam_pos);
-			auto dr = LengthSq(GetO2W(*rhs.m_instance).pos - cam_pos);
-			return dl > dr; // back to front
-		});
-		std::sort(alpha_front, alpha_end, [=](DrawListElement const& lhs, DrawListElement const& rhs)
+		std::sort(alpha_start, alpha_end, [=](DrawListElement const& lhs, DrawListElement const& rhs)
 		{
 			auto dl = LengthSq(GetO2W(*lhs.m_instance).pos - cam_pos);
 			auto dr = LengthSq(GetO2W(*rhs.m_instance).pos - cam_pos);
@@ -87,10 +77,7 @@ namespace pr::rdr12
 		});
 
 		// Sorting done
-		m_boundaries[ESortGroup::Skybox] = s_cast<int>(std::distance(drawlist->begin(), skybox));
-		m_boundaries[ESortGroup::PostOpaques] = s_cast<int>(std::distance(drawlist->begin(), post_opaques));
-		m_boundaries[ESortGroup::AlphaBack] = s_cast<int>(std::distance(drawlist->begin(), alpha_back));
-		m_boundaries[ESortGroup::AlphaFront] = s_cast<int>(std::distance(drawlist->begin(), alpha_front));
+		m_boundaries[ESortGroup::Alpha] = s_cast<int>(std::distance(drawlist->begin(), alpha_start));
 		m_boundaries[ESortGroup::PostAlpha] = s_cast<int>(std::distance(drawlist->begin(), alpha_end));
 		m_sort_needed = false;
 	}

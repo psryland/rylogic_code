@@ -135,58 +135,9 @@ namespace pr::rdr12
 		psdesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
 		psdesc.SampleDesc = MultiSamp(1, 0);
 		m_post_alpha_pipe_state = psdesc;
-
-		// The far clip fade passes read the depth buffer (t0) and take their constants as root values (b0). See 'background_fade.hlsl'.
-		m_fade_signature = RootSig(ERootSigFlags::GraphicsOnly)
-			.SRV(ESRVReg::t0, 1, D3D12_SHADER_VISIBILITY_PIXEL)
-			.U32(ECBufReg::b0, sizeof(float4_t) * 3 / sizeof(uint32_t), D3D12_SHADER_VISIBILITY_PIXEL)
-			.Create(scene.d3d(), "BackgroundFadeSig");
-
-		// Both fade passes draw a full-screen triangle into the main MSAA render target without depth.
-		auto fade_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC{
-			.pRootSignature = m_fade_signature.get(),
-			.VS = shader_code::background_fade_vs,
-			.PS = shader_code::background_fade_weight_ps,
-			.DS = shader_code::none,
-			.HS = shader_code::none,
-			.GS = shader_code::none,
-			.StreamOutput = StreamOutputDesc{},
-			.BlendState = BlendStateDesc{},
-			.SampleMask = UINT_MAX,
-			.RasterizerState = RasterStateDesc{},
-			.DepthStencilState = DepthStateDesc{}.Enabled(false),
-			.InputLayout = {},
-			.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-			.NumRenderTargets = 1U,
-			.RTVFormats = { ::pr::compute::ToSRGB(scene.wnd().m_rt_props.Format) },
-			.DSVFormat = DXGI_FORMAT_UNKNOWN,
-			.SampleDesc = scene.wnd().MultiSampling(),
-			.NodeMask = 0U,
-			.CachedPSO = {},
-			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
-		};
-
-		// The weight pass replaces only destination alpha, leaving the opaque colour for the background blend.
-		fade_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALPHA;
-		Check(scene.d3d()->CreateGraphicsPipelineState(&fade_desc, __uuidof(ID3D12PipelineState), (void**)m_fade_weight_pso.address_of()));
-		DebugName(m_fade_weight_pso, "BackgroundFadeWeightPSO");
-
-		// The clear pass blends the clear colour by source alpha and keeps destination alpha.
-		fade_desc.PS = shader_code::background_fade_clear_ps;
-		fade_desc.BlendState = BlendStateDesc{}
-			.enable(0)
-			.blend(0, D3D12_BLEND_OP_ADD, D3D12_BLEND_SRC_ALPHA, D3D12_BLEND_INV_SRC_ALPHA)
-			.blend_alpha(0, D3D12_BLEND_OP_ADD, D3D12_BLEND_ZERO, D3D12_BLEND_ONE);
-		Check(scene.d3d()->CreateGraphicsPipelineState(&fade_desc, __uuidof(ID3D12PipelineState), (void**)m_fade_clear_pso.address_of()));
-		DebugName(m_fade_clear_pso, "BackgroundFadeClearPSO");
 	}
 	RenderForward::~RenderForward()
 	{
-		// In-flight frames may still reference the fade pipeline objects.
-		rdr().DeferRelease(m_fade_weight_pso);
-		rdr().DeferRelease(m_fade_clear_pso);
-		rdr().DeferRelease(m_fade_signature);
 		m_default_tex = nullptr;
 		m_default_sam = nullptr;
 	}
@@ -226,10 +177,6 @@ namespace pr::rdr12
 				auto sk = nug.m_sort_key;
 				if (auto* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride))
 					sk = sko->Combine(sk);
-
-				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.FillMode() == EFillMode::Points && sk.Group() == ESortGroup::AlphaBack)
-					break;
 
 				// Let the material add pass-specific sort key information.
 				sk = pass->AddSortKey(m_step_id, inst, material, nug, sk);
@@ -380,27 +327,9 @@ namespace pr::rdr12
 
 			// Draw the opaques
 			auto drawlist = m_drawlist.lock();
-			auto opaques = std::span{ *drawlist }.subspan(0, s_cast<size_t>(kbuf ? boundaries[ESortGroup::AlphaBack] : s_cast<int>(drawlist->size())));
+			auto opaques = std::span{ *drawlist }.subspan(0, s_cast<size_t>(kbuf ? boundaries[ESortGroup::Alpha] : s_cast<int>(drawlist->size())));
 			auto pix_opaque = pix::EventScope<ID3D12GraphicsCommandList>(m_cmd_list.get(), 0xFF7EB8E5, "View3D::Opaque");
-			if (scn().FarClipFadeProperties().m_enabled)
-			{
-				// Blend distant scene geometry into the background. The background groups draw after the fade pass so they only fill the faded samples.
-				auto background_beg = boundaries[ESortGroup::Skybox];
-				auto background_end = boundaries[ESortGroup::PostOpaques];
-				DrawNuggets(frame, m_cmd_list, pipe_state, opaques.subspan(0, s_cast<size_t>(background_beg)), 0, ESubPass::Opaque);
-				DrawBackgroundFade(frame, opaques.subspan(s_cast<size_t>(background_beg), s_cast<size_t>(background_end - background_beg)), background_beg);
-
-				// The fade pass changed the render targets, viewport, and root signature. Restore them for the remaining opaque groups.
-				BindFrameResources(m_cmd_list);
-				bind_render_targets();
-				m_cmd_list.RSSetViewports({ &vp, 1 });
-				m_cmd_list.RSSetScissorRects(vp.m_clip);
-				DrawNuggets(frame, m_cmd_list, pipe_state, opaques.subspan(s_cast<size_t>(background_end)), background_end, ESubPass::Opaque);
-			}
-			else
-			{
-				DrawNuggets(frame, m_cmd_list, pipe_state, opaques, 0, ESubPass::Opaque);
-			}
+			DrawNuggets(frame, m_cmd_list, pipe_state, opaques, 0, ESubPass::Opaque);
 		}
 
 		// Render the alpha nuggets
@@ -423,7 +352,7 @@ namespace pr::rdr12
 
 			// Draw the alphas
 			auto drawlist = m_drawlist.lock();
-			auto alpha_start = boundaries[ESortGroup::AlphaBack];
+			auto alpha_start = boundaries[ESortGroup::Alpha];
 			auto alpha_end = boundaries[ESortGroup::PostAlpha];
 
 			// Use the alpha collect shader and disable depth writes for the alpha pass
@@ -619,7 +548,7 @@ namespace pr::rdr12
 		for (auto& dle : drawlist)
 		{
 			// The alpha collection must never collect background or overlay fragments.
-			if (sub_pass == ESubPass::Alpha && dle.m_sort_key.Group() < ESortGroup::AlphaBack)
+			if (sub_pass == ESubPass::Alpha && dle.m_sort_key.Group() < ESortGroup::Alpha)
 				continue;
 
 			// Something not rendering?
@@ -693,37 +622,6 @@ namespace pr::rdr12
 			// Let the material apply shader or PSO changes after caller-owned overrides.
 			pass->ApplyPipeline(ctx);
 
-			// Background objects fill only the samples the fade pass marked, by the weight stored in destination alpha.
-			// Depth testing against the fade start depth (held in the viewport depth range) keeps them off unfaded samples.
-			switch (sub_pass)
-			{
-				case ESubPass::Opaque:
-				case ESubPass::Alpha:
-				{
-					break;
-				}
-				case ESubPass::Background:
-				{
-					auto blend = RenderTargetBlendDesc{};
-					blend.BlendEnable = TRUE;
-					blend.SrcBlend = D3D12_BLEND_INV_DEST_ALPHA;
-					blend.DestBlend = D3D12_BLEND_DEST_ALPHA;
-					blend.BlendOp = D3D12_BLEND_OP_ADD;
-					blend.SrcBlendAlpha = D3D12_BLEND_ONE;
-					blend.DestBlendAlpha = D3D12_BLEND_ONE;
-					blend.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-					desc.Apply(PSO<EPipeState::DepthEnable>(TRUE));
-					desc.Apply(PSO<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO));
-					desc.Apply(PSO<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
-					desc.Apply(PSO<EPipeState::BlendState0>(blend));
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown forward sub-pass");
-				}
-			}
-
 			// Even a bounds-rejected draw can have changed the material's root bindings.
 			if (ctx.m_root_signature_changed)
 				frame_resources_bound = false;
@@ -731,64 +629,6 @@ namespace pr::rdr12
 			// Draw the nugget.
 			DrawNugget(cmd_list, nugget, desc, pipe_state_bound, pipe_state_hash);
 		}
-	}
-
-	// Blend samples beyond the far clip fade start towards the background. See 'far_clip_fade.md'.
-	void RenderForward::DrawBackgroundFade(Frame& frame, std::span<DrawListElement const> background, int first_index)
-	{
-		// Distinguish the fade from the surrounding opaque work in captures.
-		auto pix_fade = pix::EventScope<ID3D12GraphicsCommandList>(m_cmd_list.get(), 0xFF5FA8D3, "View3D::FarClipFade");
-		auto const& bb_main = frame.bb_main();
-		auto const& vp = scn().m_viewport;
-		auto const c2s = scn().m_cam.CameraToScreen();
-		auto const fade_range = scn().FarClipFadeProperties().DepthRange(scn().m_cam.ClipPlanes(false).y);
-
-		// The depth conversion uses only the z and w rows of the screen-to-camera transform, because view depth is -z/w after the inverse projection.
-		auto const s2c = Invert(c2s);
-		auto const& clear = bb_main.rt_clear();
-		float const constants[] = {
-			s2c.z.z, s2c.w.z, s2c.z.w, s2c.w.w,
-			fade_range.x, fade_range.y, 0.0f, 0.0f,
-			clear[0], clear[1], clear[2], clear[3],
-		};
-
-		// Read the opaque depth in the pixel shader and write only the main colour target.
-		{
-			BarrierBatch bb(m_cmd_list);
-			bb.Transition(bb_main.m_depth_stencil.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			bb.Commit();
-		}
-		m_cmd_list.OMSetRenderTargets({ &bb_main.m_rtv, 1 }, FALSE, nullptr);
-		m_cmd_list.SetPipelineState(background.empty() ? m_fade_clear_pso.get() : m_fade_weight_pso.get());
-		m_cmd_list.SetGraphicsRootSignature(m_fade_signature.get());
-		m_cmd_list.SetGraphicsRootDescriptorTable(0, wnd().m_heap_view.Add(bb_main.m_depth_srv));
-		m_cmd_list.SetGraphicsRoot32BitConstants(1, _countof(constants), &constants[0], 0);
-		m_cmd_list.RSSetViewports({ &vp, 1 });
-		m_cmd_list.RSSetScissorRects(vp.m_clip);
-		m_cmd_list.IASetPrimitiveTopology(ETopo::TriList);
-		m_cmd_list.DrawInstanced(3U, 1U, 0U, 0U);
-
-		// Restore depth for testing; the caller restores the remaining bindings.
-		{
-			BarrierBatch bb(m_cmd_list);
-			bb.Transition(bb_main.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			bb.Commit();
-		}
-		if (background.empty())
-			return;
-
-		// Draw the background objects at the fade start depth. A depth range of one value gives every background fragment that depth,
-		// so the reversed-depth GREATER_EQUAL test passes only on samples at or beyond the fade start (farther samples have smaller depth).
-		// All other samples keep their opaque colour.
-		auto start_ss = c2s * v4(0, 0, -fade_range.x, 1);
-		auto start_z = std::clamp(start_ss.z / start_ss.w, 0.0f, 1.0f);
-		auto background_vp = vp;
-		background_vp.MinDepth = start_z;
-		background_vp.MaxDepth = start_z;
-		m_cmd_list.RSSetViewports({ &background_vp, 1 });
-		m_cmd_list.OMSetRenderTargets({ &bb_main.m_rtv, 1 }, FALSE, &bb_main.m_dsv);
-		BindFrameResources(m_cmd_list);
-		DrawNuggets(frame, m_cmd_list, m_default_pipe_state, background, first_index, ESubPass::Background);
 	}
 
 	// Draw a single nugget

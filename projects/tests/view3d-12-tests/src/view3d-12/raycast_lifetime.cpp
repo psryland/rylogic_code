@@ -1,6 +1,6 @@
 #include "forward.h"
 
-namespace fade_tests
+namespace render_tests
 {
 	namespace rdr = pr::rdr12;
 	namespace gpu = pr::compute;

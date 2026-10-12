@@ -55,7 +55,7 @@ namespace pr::compute::shader_cache
 		// Return a stable key for the resource module and resource type.
 		std::string CacheKey() const override;
 
-		// Resolve a resource name to source text and module timestamp metadata.
+		// Resolve a resource name to source text and resource content metadata.
 		Source Resolve(std::string_view source_name) const override;
 	};
 
@@ -63,3 +63,32 @@ namespace pr::compute::shader_cache
 	std::vector<uint8_t> ReadBytes(std::filesystem::path const& path);
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::compute::shader_cache::tests
+{
+	PRUnitTestClass(ShaderDependencyTests)
+	{
+		// An embedded shader is identified by its content, so the cache entry survives a rebuild of its module that does not change the shader.
+		PRUnitTestMethod(ResourceDependencyUsesContent, Quick)
+		{
+			// Resolve a shader embedded in this module and check that no module timestamp is recorded.
+			auto source = ResourceSourceResolver{}.Resolve("src/compute/radix_sort/radix_sort.hlsl");
+			auto const& dep = source.m_dependency;
+			PR_EXPECT(dep.m_kind == Dependency::EKind::Resource);
+			PR_EXPECT(dep.m_last_write == 0);
+			PR_EXPECT(dep.m_size == source.m_code.size());
+			PR_EXPECT(dep.m_hash == static_cast<uint64_t>(hash::HashBytes64(source.m_code.data(), source.m_code.data() + source.m_code.size())));
+
+			// Revalidating against the loaded module finds the same content.
+			auto current = CurrentDependency(dep);
+			PR_EXPECT(current.has_value() && dep.SameContentVersion(*current));
+
+			// A dependency on a module that is not loaded cannot be validated.
+			auto missing = dep;
+			missing.m_path = std::filesystem::temp_directory_path() / L"pr_not_a_loaded_module.dll";
+			PR_EXPECT(!CurrentDependency(missing).has_value());
+		}
+	};
+}
+#endif

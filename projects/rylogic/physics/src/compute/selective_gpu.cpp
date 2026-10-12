@@ -216,10 +216,10 @@ namespace pr::physics
 		job.m_cmd_list.SetPipelineState(m_cs_detect_need.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_cs_detect_need.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(frame_header->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(counters->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(contacts->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(frame_header);
+		job.m_cmd_list.AddComputeRootShaderResourceView(counters);
+		job.m_cmd_list.AddComputeRootShaderResourceView(contacts);
 		job.m_cmd_list.ExecuteIndirect(m_cmd_sig.get(), 1, dispatch);
 		job.m_barriers.UAV(frame_header).Commit();
 	}
@@ -278,10 +278,10 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_prepare.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_prepare.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_selective);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_cd_dispatch->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_cd_dispatch);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics);
 
 			auto dispatch_count = (std::max(1, body_count) + SelectiveRefreshThreadCount - 1) / SelectiveRefreshThreadCount;
 			job.m_cmd_list.Dispatch(dispatch_count, 1, 1);
@@ -302,11 +302,11 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_score_contacts.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_score_contacts.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_selective);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(source_counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(source_contacts->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+			job.m_cmd_list.AddComputeRootShaderResourceView(source_counters);
+			job.m_cmd_list.AddComputeRootShaderResourceView(source_contacts);
 			job.m_cmd_list.ExecuteIndirect(m_cmd_sig.get(), 1, source_contact_dispatch.get());
 
 			job.m_barriers.UAV(m_r_problem_bodies.get());
@@ -326,13 +326,13 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_compact_pairs.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_compact_pairs.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_selective);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_pairs->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(full_counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(full_pairs->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_pairs);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_problem_bodies);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_metrics);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+			job.m_cmd_list.AddComputeRootShaderResourceView(full_counters);
+			job.m_cmd_list.AddComputeRootShaderResourceView(full_pairs);
 
 			job.m_cmd_list.ExecuteIndirect(m_cmd_sig.get(), 1, full_pair_dispatch.get());
 
@@ -346,8 +346,8 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_build_dispatch.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_build_dispatch.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_selective);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_cd_dispatch->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(work_set.m_cd_dispatch);
 			job.m_cmd_list.Dispatch(1, 1, 1);
 
 			job.m_barriers.UAV(work_set.m_cd_dispatch.get());
