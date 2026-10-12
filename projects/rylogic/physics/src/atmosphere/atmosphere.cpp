@@ -147,6 +147,13 @@ namespace pr::physics::atmosphere
 		};
 		static_assert(sizeof(GpuProbeSample) == 32);
 
+		// Root constants of the surface wind kernel. Must match CBufAtmosphereSurfaceWind in atmosphere.hlsl.
+		struct CBufAtmosphereSurfaceWind
+		{
+			float m_surface_wind_height;
+		};
+		static_assert(sizeof(CBufAtmosphereSurfaceWind) == 1 * sizeof(uint32_t));
+
 		// Create a structured UAV buffer in the requested default state.
 		template <typename Type> D3DPtr<ID3D12Resource> CreateBuffer(Gpu& gpu, GpuJob& job, int count, char const* name)
 		{
@@ -1976,5 +1983,102 @@ namespace pr::physics::atmosphere
 		impl.m_pending_readback = {};
 		impl.m_pending_count = 0;
 		return samples;
+	}
+
+	// Private implementation for GPU surface wind samples.
+	struct AtmosphereSurfaceWind::Impl
+	{
+		AtmosphereSolver& m_solver;
+		ComputeStep m_sample;
+		D3DPtr<ID3D12Resource> m_wind;                    // result of the last recorded sampling, one entry per column
+		GpuReadbackBuffer::Allocation m_pending_readback; // destination of the last recorded copy, valid until resolved
+
+		// Compile the sampling kernel and allocate the result buffer.
+		Impl(AtmosphereSolver& solver, Gpu& gpu, IShaderCache* cache)
+			: m_solver(solver)
+			, m_sample()
+			, m_wind()
+			, m_pending_readback()
+		{
+			// The kernel reads the solver's wind, floors, and outside air, and writes only the per-column result.
+			auto resolver = shader_cache::ResourceSourceResolver{};
+			auto code = ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(L"CSSampleSurfaceWind").Compile();
+			m_sample.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+				.U32<CBufAtmosphere>(hlsl::ECBufReg::b0)
+				.U32<CBufAtmosphereSurfaceWind>(hlsl::ECBufReg::b3)
+				.UAV(hlsl::EUAVReg::u9)
+				.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t7)
+				.Create(gpu, "Physics.Atmosphere.SurfaceWind.RootSig");
+			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Create(gpu, "Physics.Atmosphere.SurfaceWind.PSO");
+			m_wind = CreateBuffer<v2>(gpu, gpu.m_job, solver.Config().m_grid.ColumnCount(), "Atmosphere:SurfaceWind");
+			gpu.m_job.RetireRecordedWork();
+		}
+	};
+
+	// Compile the sampling kernel and allocate the result buffer for 'solver'.
+	AtmosphereSurfaceWind::AtmosphereSurfaceWind(AtmosphereSolver& solver, Gpu& gpu, IShaderCache* shader_cache)
+		: m_impl(std::make_unique<Impl>(solver, gpu, shader_cache))
+	{
+		// Construction is fully delegated to the implementation object.
+	}
+
+	// Release GPU resources owned by the sampler.
+	AtmosphereSurfaceWind::~AtmosphereSurfaceWind() = default;
+
+	// Record a sample of the horizontal wind at 'height' above every column floor, and a copy of the result, into 'job'.
+	void AtmosphereSurfaceWind::Record(GpuJob& job, float height)
+	{
+		// Callers own height validation; recording cannot be undone once the solver step is in the job.
+		assert(std::isfinite(height) && height > 0.0f && "Atmosphere surface wind height must be finite and positive");
+
+		// Bind the solver's current wind as read-only input. The transitions also order the solver's earlier writes before these reads.
+		// Floors and outside air are persistent inputs that already stay in shader-resource state.
+		auto& impl = *m_impl;
+		auto& solver = *impl.m_solver.m_impl;
+		auto const current = solver.m_current;
+		job.m_barriers
+			.Transition(impl.m_wind.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+			.Transition(solver.m_u[current].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+			.Transition(solver.m_v[current].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+			.Transition(solver.m_w[current].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+			.Commit();
+
+		// Dispatch one thread per column.
+		auto const& grid = impl.m_solver.Config().m_grid;
+		auto const cb = solver.Constants(0.0f, 0, 0);
+		auto const wind_cb = CBufAtmosphereSurfaceWind{ .m_surface_wind_height = height };
+		auto const dispatch = DispatchCount(iv3{ grid.m_cell_count.x, grid.m_cell_count.y, 1 }, AtmosphereColumnThreadGroup);
+		job.m_cmd_list.SetPipelineState(impl.m_sample.m_pso.get());
+		job.m_cmd_list.SetComputeRootSignature(impl.m_sample.m_sig.get());
+		job.m_cmd_list.AddComputeRoot32BitConstants(cb);
+		job.m_cmd_list.AddComputeRoot32BitConstants(wind_cb);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(impl.m_wind->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_u[current]->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_v[current]->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_w[current]->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_floor_height->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(solver.m_outside_air->GetGPUVirtualAddress());
+		job.m_cmd_list.Dispatch(dispatch.x, dispatch.y, dispatch.z);
+
+		// Copy the result to readback memory. The buffer returns to UAV state for the next record.
+		job.m_barriers.Transition(impl.m_wind.get(), D3D12_RESOURCE_STATE_COPY_SOURCE).Commit();
+		impl.m_pending_readback = job.m_readback.Alloc<v2>(grid.ColumnCount());
+		job.m_cmd_list.CopyBufferRegion(impl.m_pending_readback, impl.m_wind.get(), 0);
+		job.m_barriers.Transition(impl.m_wind.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS).Commit();
+	}
+
+	// Return the wind copied by the last 'Record', in column order.
+	std::vector<v2> AtmosphereSurfaceWind::Resolve()
+	{
+		// An empty result marks that no sample was recorded, so a consumer never mistakes an older field for a newer one.
+		auto& impl = *m_impl;
+		if (impl.m_pending_readback.m_mem == nullptr)
+			return {};
+
+		auto const count = impl.m_solver.Config().m_grid.ColumnCount();
+		auto const* src = impl.m_pending_readback.ptr<v2>();
+		auto wind = std::vector<v2>(src, src + count);
+		impl.m_pending_readback = {};
+		return wind;
 	}
 }

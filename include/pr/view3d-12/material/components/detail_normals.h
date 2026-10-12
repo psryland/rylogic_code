@@ -29,6 +29,42 @@ namespace pr::rdr12::materials
 		float m_warp = 0.0f;            // Finite and non-negative.
 	};
 
+	// A grid of detail-normal strengths that varies the layers of every DetailNormalLayers set referring to it over the surface.
+	// Each texel holds (x, y, z, w): x scales the height of every layer and y adds to the base slope variance; both are non-negative.
+	// (z, w) = (cos a, sin a) is a unit vector that turns every layer's pattern by angle 'a' from its u direction toward its v direction,
+	// about the texel's centre; (1, 0) leaves the layers unturned. The texture coordinates of a world position 'p' are
+	// u = dot(p.xyz, m_row_u.xyz) + m_row_u.w and v = dot(p.xyz, m_row_v.xyz) + m_row_v.w, where [0,1] spans the grid with texel (0,0) at
+	// u,v = 0. Each fragment blends the layers of the nearest 2x2 texels with bilinear weights, each texel's layers drawn at its own strength
+	// and angle, and positions outside the grid use the nearest edge texels. Texels with different angles draw different patterns, so the
+	// blend between them is less contrasted than either. When 'm_visualise' is set, the shaded colour is replaced by the height strength,
+	// from blue at 0 to red at 2 or more. Use on the renderer owner thread.
+	struct DetailStrengthMap : RefCounted<DetailStrengthMap>
+	{
+		Texture2DPtr m_tex;
+		SamplerPtr m_sam;
+		std::unique_ptr<ResourceFactory> m_factory;
+		int m_width;
+		int m_height;
+		v4 m_row_u;
+		v4 m_row_v;
+		bool m_visualise;
+
+		// Create a 'width' x 'height' grid, each in [1,4096], with texels (1, 0, 1, 0) everywhere, which leaves the layers unchanged.
+		DetailStrengthMap(Renderer& rdr, int width, int height);
+		DetailStrengthMap(DetailStrengthMap const&) = delete;
+		DetailStrengthMap& operator=(DetailStrengthMap const&) = delete;
+		~DetailStrengthMap();
+
+		// Set the world-space projection. Both rows must be finite, and their xyz parts must not be parallel so texel centres have world positions.
+		void Projection(v4 const& row_u, v4 const& row_v);
+
+		// Copy 'texels' (row-major, width * height; see the type comment for their domain) to the GPU. The copy is visible from the next render.
+		void Upload(std::span<v4 const> texels);
+
+		// Ref-counting clean up function
+		static void RefCountZero(RefCounted<DetailStrengthMap>* doomed);
+	};
+
 	// A set of detail-normal layers shared by every material copy that refers to it.
 	struct DetailNormalLayers
 	{
@@ -37,6 +73,8 @@ namespace pr::rdr12::materials
 		std::array<DetailNormalLayer, MaxLayers> m_layers = {}; // Layers in use are [0, m_count).
 		int m_count = 0;                                        // Number of layers in use, in [0, MaxLayers].
 		float m_base_slope_variance = 0.0f;                     // Mean square slope of detail finer than every layer. Non-negative.
+
+		DetailStrengthMapPtr m_strength;                        // Optional strengths that vary the layers over the surface.
 
 		// Replace the layers in use and the base slope variance. 'layers' must contain at most MaxLayers valid entries.
 		void Set(std::span<DetailNormalLayer const> layers, float base_slope_variance);

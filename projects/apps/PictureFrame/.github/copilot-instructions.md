@@ -44,6 +44,8 @@ pip install python-mpv pathspec
 |------|---------|
 | `config.json` | Runtime settings (display period, fullscreen, paths) |
 | `image_list.txt` | Generated list of media file paths (created by `--scan`) |
+| `playlist.txt` | Persisted shuffled display order for the current cycle |
+| `playlist_position.txt` | Last displayed item, so restarts resume the current cycle |
 | `ignore_patterns.txt` | Gitignore-style patterns for files to skip |
 | `displayed_image_log.txt` | Log of recently displayed media |
 

@@ -98,7 +98,7 @@ internal static unsafe partial class Native
 		internal int m_heat_source_count;
 		internal AtmosphereHeatSource* m_heat_sources;
 		internal int m_probe_count;
-		private int m_reserved;
+		internal float m_surface_wind_height;
 		internal v4* m_probes;
 	}
 
@@ -129,6 +129,7 @@ internal static unsafe partial class Native
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereBeginStep(ulong engine, ulong atmosphere, AtmosphereStepDesc* step);
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmospherePollStep(ulong engine, ulong atmosphere, out int idle);
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereProbesCopy(ulong engine, ulong atmosphere, AtmosphereProbeSample* samples, uint capacity, out uint required);
+	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereSurfaceWindCopy(ulong engine, ulong atmosphere, v2* wind, uint capacity, out uint required);
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereCompleteStep(ulong engine, ulong atmosphere);
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereFloorsSet(ulong engine, ulong atmosphere, float* floor_heights, int count);
 	[DllImport(Dll)] internal static extern EStatus Physics_AtmosphereFloorTemperaturesSet(ulong engine, ulong atmosphere, float* floor_temperatures, int count);

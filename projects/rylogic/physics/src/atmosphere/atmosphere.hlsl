@@ -209,9 +209,18 @@ struct CBufAtmosphereProbes
 RWStructuredBuffer<ProbeSample> resource(g_probes_out, u8);         // output probe samples
 StructuredBuffer<float4> resource(g_probe_points, t8);              // world-space probe points, metres; w is unused
 
+// Root constants of the surface wind kernel. Must match CBufAtmosphereSurfaceWind in atmosphere.cpp.
+struct CBufAtmosphereSurfaceWind
+{
+	float surface_wind_height;      // sample height above each column floor, metres
+};
+
+RWStructuredBuffer<float2> resource(g_surface_wind_out, u9);        // output horizontal wind, one per column, m/s
+
 ConstantBuffer<CBufAtmosphere> resource(g, b0);                   // per-dispatch constants
 ConstantBuffer<CBufAtmosphereTracers> resource(gt, b1);             // per-dispatch tracer constants
 ConstantBuffer<CBufAtmosphereProbes> resource(gp, b2);              // per-dispatch probe constants
+ConstantBuffer<CBufAtmosphereSurfaceWind> resource(gs, b3);         // per-dispatch surface wind constants
 
 static const int BoundarySolid = 0;
 static const int BoundaryOpen = 1;
@@ -2189,4 +2198,28 @@ void CSSampleProbes(uint3 dtid : SV_DispatchThreadID)
 		sample.inside = 1u;
 	}
 	g_probes_out[probe_index] = sample;
+}
+
+// Sample the horizontal wind at a fixed height above the floor of every column.
+numthreads(CSSampleSurfaceWind, ATMOSPHERE_COLUMN_THREAD_X, ATMOSPHERE_COLUMN_THREAD_Y, 1)
+void CSSampleSurfaceWind(uint3 dtid : SV_DispatchThreadID)
+{
+	// One thread samples one column. Inactive columns report their outside air, which is the wind the solve sees at their faces at every height.
+	// Solid columns hold no air and report calm. The height is clamped to the lid, so low lids report the top of the air.
+	int2 col = (int2)dtid.xy;
+	if (!InColumns(col))
+		return;
+
+	float2 wind = float2(0.0f, 0.0f);
+	if (ColumnInactive(col))
+	{
+		wind = g_outside_air[ColumnIndex(col)].wind;
+	}
+	else if (ColumnAir(col))
+	{
+		float z = min(FloorHeight(col) + gs.surface_wind_height, g.lid_z);
+		float3 pos = float3(g.origin.x + (col.x + 0.5f) * g.dx, g.origin.y + (col.y + 0.5f) * g.dx, z);
+		wind = float2(SampleU(pos), SampleV(pos));
+	}
+	g_surface_wind_out[ColumnIndex(col)] = wind;
 }

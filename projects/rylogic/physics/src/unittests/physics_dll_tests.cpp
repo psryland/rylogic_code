@@ -81,6 +81,7 @@ namespace pr::unittests
 			decltype(&Physics_AtmosphereBeginStep) AtmosphereBeginStep;
 			decltype(&Physics_AtmospherePollStep) AtmospherePollStep;
 			decltype(&Physics_AtmosphereProbesCopy) AtmosphereProbesCopy;
+			decltype(&Physics_AtmosphereSurfaceWindCopy) AtmosphereSurfaceWindCopy;
 			decltype(&Physics_AtmosphereCompleteStep) AtmosphereCompleteStep;
 			decltype(&Physics_AtmosphereFloorsSet) AtmosphereFloorsSet;
 			decltype(&Physics_AtmosphereFloorTemperaturesSet) AtmosphereFloorTemperaturesSet;
@@ -150,6 +151,7 @@ namespace pr::unittests
 				, AtmosphereBeginStep(m_module.Proc<decltype(AtmosphereBeginStep)>("Physics_AtmosphereBeginStep"))
 				, AtmospherePollStep(m_module.Proc<decltype(AtmospherePollStep)>("Physics_AtmospherePollStep"))
 				, AtmosphereProbesCopy(m_module.Proc<decltype(AtmosphereProbesCopy)>("Physics_AtmosphereProbesCopy"))
+				, AtmosphereSurfaceWindCopy(m_module.Proc<decltype(AtmosphereSurfaceWindCopy)>("Physics_AtmosphereSurfaceWindCopy"))
 				, AtmosphereCompleteStep(m_module.Proc<decltype(AtmosphereCompleteStep)>("Physics_AtmosphereCompleteStep"))
 				, AtmosphereFloorsSet(m_module.Proc<decltype(AtmosphereFloorsSet)>("Physics_AtmosphereFloorsSet"))
 				, AtmosphereFloorTemperaturesSet(m_module.Proc<decltype(AtmosphereFloorTemperaturesSet)>("Physics_AtmosphereFloorTemperaturesSet"))
@@ -1676,6 +1678,48 @@ namespace pr::unittests
 			PR_EXPECT(api.AtmosphereBeginStep(fix.m_engine, atmosphere, &step) == EStatus::Success);
 			PR_EXPECT(api.AtmosphereCompleteStep(fix.m_engine, atmosphere) == EStatus::Success);
 			PR_EXPECT(api.AtmosphereProbesCopy(fix.m_engine, atmosphere, nullptr, 0, &required) == EStatus::Success);
+			PR_EXPECT(required == 0U);
+			PR_EXPECT(api.AtmosphereDestroy(fix.m_engine, atmosphere) == EStatus::Success);
+		}
+		PRUnitTestMethod(SurfaceWindSamplesEveryColumn, Extended)
+		{
+			auto fix = PhysicsFixture{};
+			auto& api = fix.m_api;
+			auto desc = MakeAtmosphereDesc();
+			desc.tracer_count = 0;
+			auto atmosphere = AtmosphereHandle{};
+			PR_EXPECT(api.AtmosphereCreate(fix.m_engine, &desc, &atmosphere) == EStatus::Success);
+
+			// No step has finished, so there is no surface wind.
+			auto required = std::uint32_t{ 1 };
+			PR_EXPECT(api.AtmosphereSurfaceWindCopy(fix.m_engine, atmosphere, nullptr, 0, nullptr) == EStatus::InvalidArgument);
+			PR_EXPECT(api.AtmosphereSurfaceWindCopy(fix.m_engine, atmosphere, nullptr, 0, &required) == EStatus::Success);
+			PR_EXPECT(required == 0U);
+
+			// Negative and non-finite heights are rejected without starting a step.
+			auto const source = AtmosphereHeatSource{ .centre = { 4.0f, 4.0f, 1.0f, 1.0f }, .radius = 1.5f, .heating_rate = 5.0f, .target_temperature = 320.0f, .relaxation_rate = 1.0f };
+			auto step = MakeStepDesc(source);
+			step.surface_wind_height = -1.0f;
+			PR_EXPECT(api.AtmosphereBeginStep(fix.m_engine, atmosphere, &step) == EStatus::InvalidArgument);
+			step.surface_wind_height = std::numeric_limits<float>::quiet_NaN();
+			PR_EXPECT(api.AtmosphereBeginStep(fix.m_engine, atmosphere, &step) == EStatus::InvalidArgument);
+
+			// A sampling step publishes one finite wind per column once it finishes.
+			step.surface_wind_height = 1.5f;
+			PR_EXPECT(api.AtmosphereBeginStep(fix.m_engine, atmosphere, &step) == EStatus::Success);
+			PR_EXPECT(api.AtmosphereCompleteStep(fix.m_engine, atmosphere) == EStatus::Success);
+			auto wind = std::vector<Vector2>(8 * 8);
+			PR_EXPECT(api.AtmosphereSurfaceWindCopy(fix.m_engine, atmosphere, wind.data(), 1, &required) == EStatus::BufferTooSmall);
+			PR_EXPECT(required == 64U);
+			PR_EXPECT(api.AtmosphereSurfaceWindCopy(fix.m_engine, atmosphere, wind.data(), static_cast<std::uint32_t>(wind.size()), &required) == EStatus::Success);
+			for (auto const& w : wind)
+				PR_EXPECT(std::isfinite(w.x) && std::isfinite(w.y));
+
+			// A step that does not sample publishes an empty field.
+			step.surface_wind_height = 0.0f;
+			PR_EXPECT(api.AtmosphereBeginStep(fix.m_engine, atmosphere, &step) == EStatus::Success);
+			PR_EXPECT(api.AtmosphereCompleteStep(fix.m_engine, atmosphere) == EStatus::Success);
+			PR_EXPECT(api.AtmosphereSurfaceWindCopy(fix.m_engine, atmosphere, nullptr, 0, &required) == EStatus::Success);
 			PR_EXPECT(required == 0U);
 			PR_EXPECT(api.AtmosphereDestroy(fix.m_engine, atmosphere) == EStatus::Success);
 		}

@@ -234,6 +234,8 @@ namespace pr::rdr12
 		struct ProceduralSurface;
 		struct DetailNormalLayer;
 		struct DetailNormals;
+		struct DetailStrengthMap;
+		using DetailStrengthMapPtr = RefPtr<DetailStrengthMap>;
 		struct BaseColour;
 		struct Optics;
 		struct PbrAlpha;

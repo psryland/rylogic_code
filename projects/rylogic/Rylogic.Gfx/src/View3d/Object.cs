@@ -674,6 +674,13 @@ namespace Rylogic.Gfx
 				View3D_ObjectDetailNormalLayersSet(Handle, layers, layers.Length, base_slope_variance);
 			}
 
+			/// <summary>Vary this object's detail-normal layers over its surface with 'map', or remove the map with null. The object keeps its own reference.</summary>
+			public void DetailStrengthMapSet(DetailStrengthMap? map)
+			{
+				// The layers are shared by the materials, so no material is replaced.
+				View3D_ObjectDetailStrengthMapSet(Handle, map?.Handle ?? IntPtr.Zero);
+			}
+
 			/// <summary>
 			/// Replace the buffer of every procedural shader on this object's own nuggets, or unbind it with null. Later frames bind the new buffer.
 			/// The shaders take their own references. The caller keeps the buffer contents valid until the frames that use them have finished on the
