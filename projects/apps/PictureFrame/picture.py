@@ -105,7 +105,7 @@ class PictureFrame:
 			sys.__excepthook__(exc_type, exc_value, exc_tb)
 		sys.excepthook = _unhandled_exception
 
-		self.image_list = []
+		self.playlist = []  # Shuffled display order. Items before and at 'image_index' have been shown in the current cycle
 		self.image_index = -1
 		self.ui_visible = False
 		self.menu_visible = False
@@ -169,7 +169,7 @@ class PictureFrame:
 			self.options_panel,
 			text="Shuffle", bg="black", fg="white",
 			border=0, borderwidth=0, highlightthickness=0,
-			command=self._Shuffle)
+			command=self._ShuffleRemaining)
 		self.options_fullscreen = Tk.Button(
 			self.options_panel,
 			text="FullScreen", bg="black", fg="white",
@@ -371,10 +371,8 @@ class PictureFrame:
 		self.no_images_label.place_forget()
 		self.log.info(f"Image directory available: {self.image_dir}")
 
-		# Load the image list
-		self.image_list = self._LoadImageList()
-		self.log.info(f"Loaded {len(self.image_list)} images")
-		self._Shuffle()
+		# Resume the saved playlist so restarts continue the current cycle
+		self._LoadPlaylist()
 
 		# Wait for the window to be viewable before starting playback
 		def WaitTillShown():
@@ -394,7 +392,7 @@ class PictureFrame:
 	# Current image relative path (or None)
 	@property
 	def CurrentImageRelpath(self):
-		return self.image_list[self.image_index].strip() if self.image_index >= 0 and self.image_index < len(self.image_list) else None
+		return self.playlist[self.image_index] if self.image_index >= 0 and self.image_index < len(self.playlist) else None
 
 	# Display the next image
 	def _NextImage(self):
@@ -410,6 +408,10 @@ class PictureFrame:
 
 	# Display the previous image
 	def _PrevImage(self):
+		# Previous cycles are not kept, so there is nothing before the first item
+		if self.image_index <= 0:
+			return
+
 		self._CancelPendingAfterCallbacks()  # Cancel any pending timers before showing new image
 		self.issue_number += 1
 		try:
@@ -434,16 +436,24 @@ class PictureFrame:
 			return Path(), Path()
 
 		# Limit the search to test every image in the list
-		for i in range(len(self.image_list)):
+		for i in range(len(self.playlist)):
 
-			# Increment the image index
-			self.image_index = (self.image_index + len(self.image_list) + increment) % len(self.image_list)
+			# Step through the playlist. Moving past the end means every item has been shown, so start a new cycle.
+			# Moving before the start is not possible because previous cycles are not kept.
+			index = self.image_index + increment
+			if index >= len(self.playlist):
+				self._StartNewCycle()
+				index = 0
+			elif index < 0:
+				break
 
+			self.image_index = index
 			relpath = self.CurrentImageRelpath
 			fullpath = (self.image_dir / relpath).resolve()
 
 			try:
 				if fullpath.exists():
+					self._SavePlaylistPosition()
 					return fullpath, relpath
 			except OSError:
 				# Network path errors should not block the loop
@@ -680,26 +690,110 @@ class PictureFrame:
 	# Stop an image from being displayed again
 	def _DontShowAgain(self):
 		# Add the current image to the ignore list
-		current_relpath = self.image_list[self.image_index].strip()
+		current_relpath = self.CurrentImageRelpath
+		if current_relpath is None:
+			return
 
 		# Update the ignore list
 		ignore_patterns = set(self._LoadIgnorePatterns())
 		ignore_patterns.add(current_relpath)
-		self._SaveIgnorePatterns(ignore_patterns)
+		self._SaveIgnorePatterns(list(ignore_patterns))
 
 		# Remove the image from the image list
 		image_list = self._LoadImageList()
-		image_list.remove(current_relpath)
-		self._SaveImageList(image_list)
+		if current_relpath in image_list:
+			image_list.remove(current_relpath)
+			self._SaveImageList(image_list)
 
-		# Remove the image from the loaded image list
-		self.image_list.remove(current_relpath)
+		# Remove the image from the playlist. Step back one so that 'next' shows the item that followed it.
+		del self.playlist[self.image_index]
+		self.image_index -= 1
+		self._SavePlaylist()
 		self._NextImage()
 		return
 
-	# Shuffle the image list
-	def _Shuffle(self):
-		random.shuffle(self.image_list)
+	# Shuffle the items not yet shown in the current cycle. Shown items stay where they are, so nothing repeats before the cycle ends.
+	def _ShuffleRemaining(self):
+		# Shuffle only the part of the playlist after the current item
+		remaining = self.playlist[self.image_index + 1:]
+		random.shuffle(remaining)
+		self.playlist[self.image_index + 1:] = remaining
+		self._SavePlaylist()
+		return
+
+	# Start a new display cycle with a fresh shuffle of the whole playlist
+	def _StartNewCycle(self):
+		# Shuffle, but avoid showing the last item of the previous cycle twice in a row
+		last_relpath = self.playlist[-1] if self.playlist else None
+		random.shuffle(self.playlist)
+		if len(self.playlist) > 1 and self.playlist[0] == last_relpath:
+			swap = random.randrange(1, len(self.playlist))
+			self.playlist[0], self.playlist[swap] = self.playlist[swap], self.playlist[0]
+
+		self.image_index = -1
+		self._SavePlaylist()
+		self.log.info(f"Started a new display cycle ({len(self.playlist)} items)")
+		return
+
+	# Load the saved playlist and position, and reconcile them with the current image list.
+	# Shown items keep their order. Items not yet shown, plus any new items from the image list, are shuffled to form the rest of the cycle.
+	def _LoadPlaylist(self):
+		# Read the image list, the saved playlist order, and the last shown item
+		image_list = self._LoadImageList()
+		order = self._ReadLines(self.root_dir / self.config['Playlist'])
+		position = self._ReadLines(self.root_dir / self.config['PlaylistPosition'])
+		current_relpath = position[0] if position else None
+		index = order.index(current_relpath) if current_relpath in order else -1
+
+		# Drop items that are no longer in the image list, keeping the shown/not-shown split
+		available = set(image_list)
+		shown = [relpath for relpath in order[:index + 1] if relpath in available]
+		remaining = [relpath for relpath in order[index + 1:] if relpath in available]
+
+		# Mix any new items into the not-yet-shown part of the cycle
+		known = set(shown) | set(remaining)
+		added = [relpath for relpath in image_list if relpath not in known]
+		if added:
+			remaining += added
+			random.shuffle(remaining)
+
+		self.playlist = shown + remaining
+		self.image_index = len(shown) - 1
+		self._SavePlaylist()
+		self._SavePlaylistPosition()
+		self.log.info(f"Loaded playlist: {len(self.playlist)} items, {len(shown)} shown this cycle, {len(added)} new")
+		return
+
+	# Save the playlist order. Only needed when the order changes.
+	def _SavePlaylist(self):
+		self._WriteLinesAtomic(self.root_dir / self.config['Playlist'], self.playlist)
+		return
+
+	# Save the current item so that a restart resumes from it. A path is stored rather than an index so the position stays valid if the playlist changes.
+	def _SavePlaylistPosition(self):
+		current_relpath = self.CurrentImageRelpath
+		self._WriteLinesAtomic(self.root_dir / self.config['PlaylistPosition'], [current_relpath] if current_relpath is not None else [])
+		return
+
+	# Read non-empty lines from a text file. Returns an empty list if the file does not exist.
+	def _ReadLines(self, filepath):
+		if not filepath.exists():
+			return []
+
+		with open(filepath, "r", encoding="utf-8") as file:
+			return [line.strip() for line in file if line.strip()]
+
+	# Write lines to a text file. Writes to a temporary file then replaces the target, so a power cut cannot leave a partial file.
+	def _WriteLinesAtomic(self, filepath, lines):
+		temp_filepath = filepath.with_name(filepath.name + ".tmp")
+		with open(temp_filepath, "w", encoding="utf-8") as file:
+			for line in lines:
+				file.write(f"{line}\n")
+
+			file.flush()
+			os.fsync(file.fileno())
+
+		os.replace(temp_filepath, filepath)
 		return
 
 	# Load the config
@@ -790,11 +884,11 @@ class PictureFrame:
 	# Prefetch a single file at the given offset from current index
 	def _PrefetchFile(self, increment):
 		# Calculate what the target image index will be
-		target_index = (self.image_index + len(self.image_list) + increment) % len(self.image_list)
-		if target_index < 0 or target_index >= len(self.image_list):
+		target_index = (self.image_index + len(self.playlist) + increment) % len(self.playlist)
+		if target_index < 0 or target_index >= len(self.playlist):
 			return
 		
-		target_relpath = self.image_list[target_index].strip()
+		target_relpath = self.playlist[target_index]
 		target_fullpath = (self.image_dir / target_relpath).resolve()
 		
 		if not target_fullpath.exists():
