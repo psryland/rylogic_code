@@ -8,6 +8,7 @@
 #include "pr/compute/resource/descriptor.h"
 #include "pr/compute/resource/descriptor_store.h"
 #include "pr/compute/resource/gpu_descriptor_heap.h"
+#include "pr/compute/resource/gpu_address.h"
 #include "pr/compute/resource/gpu_transfer_allocation.h"
 #include "pr/compute/resource/gpu_transfer_buffer_page.h"
 #include "pr/compute/resource/gpu_transfer_buffer.h"

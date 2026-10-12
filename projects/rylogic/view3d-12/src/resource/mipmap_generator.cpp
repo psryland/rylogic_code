@@ -24,7 +24,6 @@ namespace pr::rdr12
 		:m_rdr(rdr)
 		,m_gsync(gsync)
 		,m_cmd_list(cmd_list)
-		,m_keep_alive(m_gsync)
 		,m_view_heap(HeapCapacityView, m_gsync)
 		,m_mipmap_sig()
 		,m_mipmap_pso()
@@ -92,7 +91,6 @@ namespace pr::rdr12
 
 		// Otherwise, we need to generate the mip-maps in a staging resource.
 		auto device = m_rdr.D3DDevice();
-		auto next_sync_point = m_gsync.NextSyncPoint();
 		auto initial_res_state = m_cmd_list.ResState(texture).Mip0State();
 
 		// Describe a resource the same as 'texture' but with UAV support and not RT/DS support.
@@ -106,6 +104,7 @@ namespace pr::rdr12
 		uav_desc.Format = ToUAVCompatable(desc.Format);
 
 		// Create a heap to contain the alias of the staging and UAV resource.
+		// The command list keeps the placed resources alive until the GPU has finished with them, and placed resources keep their heap alive.
 		D3DPtr<ID3D12Heap> heap;
 		auto descs = { staging_desc, uav_desc };
 		auto info = device->GetResourceAllocationInfo(0, s_cast<UINT>(descs.size()), descs.begin());
@@ -123,22 +122,17 @@ namespace pr::rdr12
 		};
 		Check(device->CreateHeap(&heap_desc, __uuidof(ID3D12Heap), (void**)heap.address_of()));
 		DebugName(heap, "MipMapGenHeap");
-		m_keep_alive.Add(heap.get(), next_sync_point);
 
 		// Create a placed resource that matches the description of the original resource.
 		// The original texture is copied to this resource, which is then aliased as a UAV resource.
 		D3DPtr<ID3D12Resource> staging;
 		Check(device->CreatePlacedResource(heap.get(), 0, &staging_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)staging.address_of()));
 		DebugName(staging, "MipMapStagingAliasRes");
-		m_cmd_list.ResState(staging.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
-		m_keep_alive.Add(staging.get(), next_sync_point);
 
 		// Create a UAV resource that is an alias of 'staging'.
 		D3DPtr<ID3D12Resource> uav_resource;
 		Check(device->CreatePlacedResource(heap.get(), 0, &uav_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)uav_resource.address_of()));
 		DebugName(uav_resource, "MipMapStagingUAVRes");
-		m_cmd_list.ResState(uav_resource.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
-		m_keep_alive.Add(uav_resource.get(), next_sync_point);
 
 		// Add an aliasing barrier to say that 'staging' is the currently valid resource.
 		// Aliasing textures must have compatible resource states in order to inherit data.

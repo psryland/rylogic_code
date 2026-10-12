@@ -5,7 +5,6 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/scene/scene_camera.h"
-#include "pr/view3d-12/scene/far_clip_fade.h"
 #include "pr/view3d-12/postprocessing/post_processing.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
@@ -147,10 +146,6 @@ namespace pr::rdr12
 		RayTracingProps RayTracingProperties() const;
 		void RayTracingProperties(RayTracingProps props);
 
-		// Get/Set the opt-in forward world fade; camera projection remains unchanged.
-		FarClipFadeProps FarClipFadeProperties() const;
-		void FarClipFadeProperties(FarClipFadeProps props);
-
 		// Access the screen-space effects applied to this scene's output. See post_processing.h.
 		PostProcessing const& PostEffects() const;
 		PostProcessing& PostEffects();
@@ -181,9 +176,6 @@ namespace pr::rdr12
 	private:
 
 		friend struct Window;
-
-		// The scene is the sole authority for this view-dependent rendering option.
-		FarClipFadeProps m_far_clip_fade;
 
 		// Scene-wide shadow settings. See 'Shadows'.
 		ShadowSettings m_shadow_settings;

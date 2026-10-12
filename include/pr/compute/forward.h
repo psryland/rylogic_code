@@ -80,6 +80,7 @@
 #include "pr/container/deque.h"
 #include "pr/container/ring.h"
 #include "pr/container/vector.h"
+#include "pr/container/vector_hash_map.h"
 #include "pr/container/vector_map.h"
 #include "pr/geometry/geometry.h"
 #include "pr/gfx/colour.h"

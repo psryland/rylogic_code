@@ -36,9 +36,7 @@ namespace pr::rdr12
 	//
 	//       Model--> Nugget(Default) ---> Nugget(Default) ---> ...
 	//                   |                    |
-	//                Nugget(AlphaFront)   Nugget(AlphaFront)
-	//                   |                    |
-	//                Nugget(AlphaBack)    Nugget(AlphaBack)
+	//                Nugget(Alpha)        Nugget(Alpha)
 	//
 	//  - Shader/Nugget Requirements:
 	//    There is some data that is model specific and used by multiple shaders (e.g. topology, geom type, diffuse texture),

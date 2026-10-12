@@ -55,7 +55,6 @@ namespace pr::rdr12
 		, m_inst_exclude(EInstFlag::None)
 		, m_sky_history(true)
 		, m_eh_resize()
-		, m_far_clip_fade()
 		, m_shadow_settings()
 		, m_frame_lights()
 		, m_resolved_lights()
@@ -87,23 +86,6 @@ namespace pr::rdr12
 	Scene::~Scene()
 	{
 		SetRenderSteps({});
-	}
-
-	// Return the forward world fade settings for this scene.
-	FarClipFadeProps Scene::FarClipFadeProperties() const
-	{
-		return m_far_clip_fade;
-	}
-
-	// Validate the complete range before replacing the current scene settings.
-	void Scene::FarClipFadeProperties(FarClipFadeProps props)
-	{
-		// An invalid range leaves the current option unchanged.
-		props.Validate();
-		if (props.m_enabled)
-			props.DepthRange(m_cam.ClipPlanes(false).y);
-
-		m_far_clip_fade = props;
 	}
 
 	// Access the screen-space effects applied to this scene's output.

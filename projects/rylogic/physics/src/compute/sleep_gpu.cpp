@@ -171,8 +171,8 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_disturb_islands.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_disturb_islands.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sleep);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_islands->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(bodies->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_islands);
+			job.m_cmd_list.AddComputeRootShaderResourceView(bodies);
 
 			auto pair_count = body_count * island_count;
 			auto dispatch_count = (pair_count + SleepThreadCount - 1) / SleepThreadCount;
@@ -226,12 +226,12 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(step.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sleep);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_islands->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_parents->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_stats->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(contacts->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_islands);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(bodies);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_parents);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_sleep_stats);
+			job.m_cmd_list.AddComputeRootShaderResourceView(counters);
+			job.m_cmd_list.AddComputeRootShaderResourceView(contacts);
 		};
 		auto commit_scratch_barriers = [&]()
 		{

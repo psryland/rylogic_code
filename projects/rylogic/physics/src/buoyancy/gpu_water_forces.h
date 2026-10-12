@@ -38,9 +38,9 @@ namespace pr::physics
 		WaterConfig m_config;
 		ComputeStep m_step;
 		std::vector<Candidate> m_candidates;
-		D3D12_GPU_VIRTUAL_ADDRESS m_candidates_va;
-		D3D12_GPU_VIRTUAL_ADDRESS m_elements_va;
-		D3D12_GPU_VIRTUAL_ADDRESS m_local_waves_va;
+		GpuAddress m_candidates_addr;
+		GpuAddress m_elements_addr;
+		GpuAddress m_local_waves_addr;
 
 		// Compile the water-force pipeline for 'config'.
 		GpuWaterForces(Gpu& gpu, WaterConfig config);

@@ -78,7 +78,6 @@ namespace pr::rdr12
 		, m_cmd_list_pool(m_gsync)
 		, m_heap_view(HeapCapacityView, m_gsync)
 		, m_heap_samp(HeapCapacitySamp, m_gsync)
-		, m_res_state()
 		, m_alpha_kbuffer()
 		, m_frame(rdr.d3d(), m_gsync, m_cmd_alloc_pool, m_msaa_bb, BackBuffer::Null())
 		, m_diag(*this)
@@ -343,10 +342,12 @@ namespace pr::rdr12
 		// A recreated target contains no submitted frame yet.
 		m_frame_output = nullptr;
 
-		// Flush any GPU commands that are still in flight
+		// Flush any GPU commands that are still in flight. Swap chain buffers can only be resized when nothing references them,
+		// so release the references held for completed command lists.
 		auto queue = rdr().GfxQueue();
 		m_gsync.AddSyncPoint(queue);
 		m_gsync.Wait();
+		m_cmd_alloc_pool.Sweep();
 
 		for (auto& bb : m_swap_bb)
 		{
@@ -361,7 +362,6 @@ namespace pr::rdr12
 		// on demand by the next pass that needs it.
 		if (m_resolved_depth != nullptr)
 		{
-			m_res_state.Forget(m_resolved_depth.get());
 			m_resolved_depth = nullptr;
 			m_resolved_depth_size = iv2{};
 			m_resolved_depth_format = DXGI_FORMAT_UNKNOWN;
@@ -466,9 +466,6 @@ namespace pr::rdr12
 		// Release references to swap chain resources
 		for (auto& bb : m_swap_bb)
 		{
-			m_res_state.Forget(bb.m_render_target.get());
-			m_res_state.Forget(bb.m_depth_stencil.get());
-
 			bb.m_render_target = nullptr;
 			bb.m_depth_stencil = nullptr;
 			bb.m_d2d_target = nullptr;
@@ -837,7 +834,6 @@ namespace pr::rdr12
 
 		if (m_resolved_depth != nullptr)
 		{
-			m_res_state.Forget(m_resolved_depth.get());
 			m_resolved_depth = nullptr;
 		}
 

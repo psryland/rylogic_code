@@ -324,32 +324,32 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(step.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_collision);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(contacts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(resolve_dispatch->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_counts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_pair_indices->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_dispatch->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(pairs->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_shapes->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_verts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_faces->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_edges->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(contacts);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(resolve_dispatch);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_counts);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_pair_indices);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_dispatch);
+			job.m_cmd_list.AddComputeRootShaderResourceView(pairs);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_shapes);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_verts);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_faces);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_edges);
 		};
 		auto bind_collide = [&](ComputeStep& step)
 		{
 			job.m_cmd_list.SetPipelineState(step.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_collision);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(contacts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_counts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_pair_indices->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(pairs->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_shapes->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_verts->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_faces->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_edges->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(contacts);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_counts);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_bin_pair_indices);
+			job.m_cmd_list.AddComputeRootShaderResourceView(pairs);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_shapes);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_verts);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_faces);
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_edges);
 		};
 
 		// Clear all exact pair bins.
@@ -398,8 +398,8 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_calc_dispatch.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_calc_dispatch.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_collision);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(resolve_dispatch->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(resolve_dispatch);
 
 			job.m_cmd_list.Dispatch(1, 1, 1);
 

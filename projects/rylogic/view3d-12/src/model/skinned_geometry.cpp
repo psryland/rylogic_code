@@ -161,10 +161,10 @@ namespace pr::rdr12
 			cmd_list.SetPipelineState(m_pso.get());
 			cmd_list.SetComputeRootSignature(m_signature.get());
 			cmd_list.SetComputeRoot32BitConstants(ERootParam::Constants, cb);
-			cmd_list.SetComputeRootShaderResourceView(ERootParam::RestVertices, model.m_vb->GetGPUVirtualAddress());
-			cmd_list.SetComputeRootShaderResourceView(ERootParam::Skin, model.m_skin.m_res->GetGPUVirtualAddress());
-			cmd_list.SetComputeRootShaderResourceView(ERootParam::Pose, pose->m_res->GetGPUVirtualAddress());
-			cmd_list.SetComputeRootUnorderedAccessView(ERootParam::OutputVertices, entry.m_vb->GetGPUVirtualAddress());
+			cmd_list.SetComputeRootShaderResourceView(ERootParam::RestVertices, model.m_vb);
+			cmd_list.SetComputeRootShaderResourceView(ERootParam::Skin, model.m_skin.m_res);
+			cmd_list.SetComputeRootShaderResourceView(ERootParam::Pose, pose->m_res);
+			cmd_list.SetComputeRootUnorderedAccessView(ERootParam::OutputVertices, entry.m_vb);
 			cmd_list.Dispatch(DispatchCount(s_cast<int>(model.m_vcount), 128), 1, 1);
 
 			barriers.UAV(entry.m_vb.get());

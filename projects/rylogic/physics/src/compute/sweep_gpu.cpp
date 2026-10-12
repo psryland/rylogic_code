@@ -214,16 +214,16 @@ namespace pr::physics
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sweep);
 			if (filtered)
 				job.m_cmd_list.AddComputeRoot32BitConstants(cb_filter);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_col_pairs->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_cd_dispatch->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(bodies->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(aabb_idx->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(aabb_box->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(sleep_islands->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootShaderResourceView(shapes->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_col_pairs);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_cd_dispatch);
+			job.m_cmd_list.AddComputeRootShaderResourceView(bodies);
+			job.m_cmd_list.AddComputeRootShaderResourceView(aabb_idx);
+			job.m_cmd_list.AddComputeRootShaderResourceView(aabb_box);
+			job.m_cmd_list.AddComputeRootShaderResourceView(sleep_islands);
+			job.m_cmd_list.AddComputeRootShaderResourceView(shapes);
 			if (filtered)
-				job.m_cmd_list.AddComputeRootShaderResourceView(m_r_collision_exclusions->GetGPUVirtualAddress());
+				job.m_cmd_list.AddComputeRootShaderResourceView(m_r_collision_exclusions);
 
 			// One thread for each array element in the AABB index buffer
 			auto dispatch_count = (2*body_count + SweepThreadCount - 1) / SweepThreadCount;
@@ -239,8 +239,8 @@ namespace pr::physics
 			job.m_cmd_list.SetPipelineState(m_cs_calc_dispatch.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_calc_dispatch.m_sig.get());
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sweep);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_cd_dispatch->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(counters);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_cd_dispatch);
 
 			job.m_cmd_list.Dispatch(1, 1, 1);
 

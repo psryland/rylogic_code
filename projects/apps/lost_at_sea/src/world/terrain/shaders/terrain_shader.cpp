@@ -76,7 +76,7 @@ namespace las
 		cbuf.patch_config.y = patch_size * cdlod::SubdivFactor * 2.0f;  // morph_end (outer edge = parent's threshold)
 		cbuf.patch_config.z = static_cast<float>(cdlod::GridN);     // grid subdivisions
 
-		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
+		auto gpu_address = upload.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView(static_cast<UINT>(ERootParam::CBufTerrain), gpu_address);
 	}
 

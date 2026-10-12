@@ -503,6 +503,23 @@ namespace pr::physics::tests
 			// Roundtrip through 6x6 construction
 			PR_EXPECT(FEql(I, Inertia{I.To6x6()}));
 		}
+		PRUnitTestMethod(ThickLineMassPropertiesIncludeHemisphericalEnds, Extended)
+		{
+			// A zero-length thick line is a sphere, so its volume and inertia must match a solid sphere of the same radius.
+			auto pi = float(constants<double>::tau_by_2);
+			auto sphere = CalcMassProperties(ShapeLine(0.0f, 0.5f), 1.0f);
+			PR_EXPECT(FEqlRelative(sphere.m_mass, (4.0f / 3.0f) * pi * 0.125f, 0.0001f));
+			PR_EXPECT(FEqlRelative(sphere.m_os_unit_inertia.x.x, 0.4f * 0.25f, 0.0001f));
+			PR_EXPECT(FEqlRelative(sphere.m_os_unit_inertia.z.z, 0.4f * 0.25f, 0.0001f));
+
+			// A capsule's volume is its cylinder plus one sphere. Its axial inertia is the volume-weighted mix of cylinder and sphere values.
+			auto capsule = CalcMassProperties(ShapeLine(0.5f, 0.25f), 1.0f);
+			auto cylinder_volume = pi * 0.0625f * 0.5f;
+			auto ends_volume = (4.0f / 3.0f) * pi * 0.015625f;
+			PR_EXPECT(FEqlRelative(capsule.m_mass, cylinder_volume + ends_volume, 0.0001f));
+			auto axial = (cylinder_volume * 0.5f * 0.0625f + ends_volume * 0.4f * 0.0625f) / (cylinder_volume + ends_volume);
+			PR_EXPECT(FEqlRelative(capsule.m_os_unit_inertia.z.z, axial, 0.0001f));
+		}
 		PRUnitTestMethod(TriangleInertia_RightTriangleXY, Extended)
 		{
 			// Right triangle in XY plane: (0,0,0), (3,0,0), (0,4,0)

@@ -81,6 +81,9 @@ namespace pr::physics
 		// Return stable-slot colour assignments.
 		std::span<uint32_t const> Colours() const;
 
+		// Return the per-colour indirect dispatch arguments written by the colouring pass.
+		std::span<DispatchArguments const> ColourDispatch() const;
+
 		// Return whether this frame selected coherent serial execution.
 		bool ColourOverflow() const;
 
@@ -102,6 +105,7 @@ namespace pr::physics
 		std::vector<GpuConstraintBreakState> m_break_states;
 		std::vector<GpuConstraintPseudoVelocity> m_pseudo_velocities;
 		std::vector<uint32_t> m_colours;
+		std::vector<DispatchArguments> m_colour_dispatch;
 		std::vector<GpuConstraintSolverState> m_state;
 	};
 }

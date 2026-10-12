@@ -81,10 +81,10 @@ namespace pr::rdr12
 
 			command_list.SetPipelineState(pipeline.get());
 			command_list.SetComputeRootSignature(root_signature.get());
-			command_list.SetComputeRootConstantBufferView(0, cbuf.m_res->GetGPUVirtualAddress() + cbuf.m_ofs);
-			command_list.SetComputeRootUnorderedAccessView(1, vertex_buffer->GetGPUVirtualAddress());
+			command_list.SetComputeRootConstantBufferView(0, cbuf);
+			command_list.SetComputeRootUnorderedAccessView(1, vertex_buffer);
 			if (input_buffer != nullptr)
-				command_list.SetComputeRootShaderResourceView(2, input_buffer->GetGPUVirtualAddress());
+				command_list.SetComputeRootShaderResourceView(2, input_buffer);
 			command_list.Dispatch(s_cast<UINT>(group_count), 1, 1);
 
 			// Make all generated records visible to the input assembler and retain that as the resting state.

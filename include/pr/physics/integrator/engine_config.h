@@ -34,6 +34,11 @@ namespace pr::physics
 		// Number of coloured Gauss-Seidel contact solver iterations.
 		int solver_iterations = 8;
 
+		// Largest work set that runs each colour sweep as one single-group dispatch instead of one dispatch and barrier per colour.
+		// Both forms give the same results; the single-group form is faster for small sets but runs all work in one thread group.
+		// Contacts are compared using the previous frame's contact count; constraints use their exact slot count. Zero or less disables the single-group form.
+		int fused_colour_sweep_limit = 256;
+
 		// Number of iterations that push-out is distributed over. Each coloured group pushes
 		// apart a small amount each iteration so that push out is spread out more evenly.
 		int push_out_iterations = 4;

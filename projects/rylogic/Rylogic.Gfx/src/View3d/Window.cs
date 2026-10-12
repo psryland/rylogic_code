@@ -405,21 +405,6 @@ namespace Rylogic.Gfx
 				set => View3D_RayTracingPropertiesSet(Handle, ref value);
 			}
 
-			/// <summary>Opt-in world fade; retained overlays are unchanged. Picking and shadows remain geometric.</summary>
-			public FarClipFadeProps FarClipFadeProperties
-			{
-				get
-				{
-					return View3D_FarClipFadePropertiesGet(Handle);
-				}
-				set
-				{
-					value.Validate();
-					if (!View3D_FarClipFadePropertiesSet(Handle, ref value))
-						throw new InvalidOperationException("The renderer rejected the far clip fade settings.");
-				}
-			}
-
 			/// <summary>Whole-screen underwater post effect. Overlays and UI are not affected.</summary>
 			public UnderwaterProps PostEffectUnderwater
 			{

@@ -131,11 +131,6 @@ namespace pr::rdr12
 	    extern ByteCode const forward_reflection_attrs_detail_ps;
 	    extern ByteCode const forward_alpha_collect_detail_ps;
 
-		// Far clip fade to the background. See scene/far_clip_fade.md.
-		extern ByteCode const background_fade_vs;
-		extern ByteCode const background_fade_weight_ps;
-		extern ByteCode const background_fade_clear_ps;
-
 		// The stock forward pixel families. Each groups the entries above that share one shading function.
 		extern ForwardPixelFamily const forward_family;
 		extern ForwardPixelFamily const forward_pbr_family;

@@ -20,8 +20,8 @@ namespace pr::rdr12
 	//   Stereoscopic rendering requires everything to have correct depth
 	//   Render the sky box after all opaques to reduce overdraw
 	// Alpha:
-	//   Two sided objects should be rendered twice, 1st with front face
-	//   culling, 2nd with back face culling
+	//   Alpha nuggets are drawn once without culling. The K-buffer sorts their fragments by depth per pixel,
+	//   so front and back faces do not need separate, ordered draws.
 	//
 
 	// Define sort groups
@@ -37,10 +37,9 @@ namespace pr::rdr12
 		Default = 64,          // Make opaques the middle group
 		Skybox,                // Sky-box after opaques
 		PostOpaques,           // 
-		PreAlpha = Default+16, // Last group before the alpha groups
-		AlphaBack,             // 
-		AlphaFront,            // 
-		PostAlpha,             // First group after the alpha groups
+		PreAlpha = Default+16, // Last group before the alpha group
+		Alpha,                 // Alpha nuggets, collected into the K-buffer
+		PostAlpha,             // First group after the alpha group
 		Max = 127,             // The maximum sort group value
 
 		_arith_enum = 0,

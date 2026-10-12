@@ -98,9 +98,9 @@ namespace pr::physics::tests::terrain_probe
 		job.m_cmd_list.SetPipelineState(step.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(step.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(count);
-		job.m_cmd_list.AddComputeRootShaderResourceView(recipe_buffer->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootShaderResourceView(positions_buffer->GetGPUVirtualAddress());
-		job.m_cmd_list.AddComputeRootUnorderedAccessView(results_buffer->GetGPUVirtualAddress());
+		job.m_cmd_list.AddComputeRootShaderResourceView(recipe_buffer);
+		job.m_cmd_list.AddComputeRootShaderResourceView(positions_buffer);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(results_buffer);
 		job.m_cmd_list.get()->EndQuery(heap.get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
 		job.m_cmd_list.Dispatch(static_cast<int>((count + 31) / 32), 1, 1);
 		job.m_cmd_list.get()->EndQuery(heap.get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);

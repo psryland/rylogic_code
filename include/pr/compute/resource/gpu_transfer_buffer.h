@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/compute/forward.h"
 #include "pr/compute/resource/gpu_transfer_allocation.h"
+#include "pr/compute/resource/gpu_address.h"
 #include "pr/compute/resource/gpu_transfer_buffer_page.h"
 #include "pr/compute/utility/wrappers.h"
 #include "pr/compute/utility/gpu_sync.h"
@@ -46,7 +47,7 @@ namespace pr::compute
 
 		// A 'page' in the upload buffer
 		using Block = GpuTransferBufferPage;
-		using Lookup = std::unordered_map<std::vector<std::byte>, D3D12_GPU_VIRTUAL_ADDRESS, BytesHash, BytesEqual>;
+		using Lookup = std::unordered_map<std::vector<std::byte>, GpuAddress, BytesHash, BytesEqual>;
 		using SyncPoint = struct { Block const* m_block; int64_t m_offset; };
 		using SyncPoints = pr::deque<SyncPoint, 4>;
 		using UsedBlocks = pr::deque<Block, 4>;
@@ -152,24 +153,24 @@ namespace pr::compute
 			return Alloc(count * sizeof(T), alignof(T));
 		}
 
-		// Copy an object into upload buffer memory, and return the GPU pointer to its location.
+		// Copy an object into upload buffer memory, and return its GPU location.
 		// When 'might_reuse' is true, an earlier upload is returned only if it has identical bytes (padding included) and satisfies 'alignment'.
 		template <typename Item>
-		D3D12_GPU_VIRTUAL_ADDRESS Add(Item const& item, int alignment, bool might_reuse) requires (std::is_trivially_copyable_v<Item> && std::is_standard_layout_v<Item>)
+		GpuAddress Add(Item const& item, int alignment, bool might_reuse) requires (std::is_trivially_copyable_v<Item> && std::is_standard_layout_v<Item>)
 		{
 			// Reuse an identical upload made since the last sync point
 			auto bytes = std::as_bytes(std::span{ &item, 1 });
 			if (might_reuse)
 			{
 				auto iter = m_lookup.find(bytes);
-				if (iter != end(m_lookup) && iter->second % alignment == 0)
+				if (iter != end(m_lookup) && iter->second.VirtualAddress() % alignment == 0)
 					return iter->second;
 			}
 
 			// Add 'item' to the upload buffer
 			auto alex = Alloc(sizeof(item), alignment);
 			memcpy(alex.m_mem + alex.m_ofs, &item, sizeof(item));
-			auto gpu_address = alex.m_res->GetGPUVirtualAddress() + alex.m_ofs;
+			auto gpu_address = GpuAddress(alex);
 
 			// Save in the lookup if this object might be reused
 			if (might_reuse)

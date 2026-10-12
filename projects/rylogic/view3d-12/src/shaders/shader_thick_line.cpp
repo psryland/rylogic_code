@@ -31,7 +31,7 @@ namespace pr::rdr12::shaders
 		cb.size = v2(m_width, m_width);
 		cb.screen_dim = To<v2>(scene.wnd().BackBufferSize());
 		cb.depth = false;
-		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);
 	}
 
@@ -55,7 +55,7 @@ namespace pr::rdr12::shaders
 		cb.size = v2(m_width, m_width);
 		cb.screen_dim = To<v2>(scene.wnd().BackBufferSize());
 		cb.depth = false;
-		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
+		auto gpu_address = upload.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)fwd::ERootParam::CBufScreenSpace, gpu_address);
 	}
 }

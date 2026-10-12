@@ -1390,6 +1390,107 @@ void CSResolve(int3 DTID(dtid))
 	ResolveContact(idx);
 }
 
+// ----- Fused colour sweeps -----
+// A single thread group walks every occupied colour in the same order as the per-colour dispatches, with a group-wide device-memory barrier between colours.
+// This removes one dispatch and one UAV barrier per colour, which dominate small contact sets. The CPU chooses this path only for small sets because one
+// group processes every contact. UAV writes are coherent within one thread group, so the barrier makes each colour's body writes visible to the next colour.
+// These entry points exist only in HLSL because the C++ replay emulator cannot synchronise the threads of a group.
+#ifndef __cplusplus
+
+// Solver operations shared by the fused entry points.
+static const uint EFusedContactOp_ApplyWarmStart = 0;
+static const uint EFusedContactOp_PositionSolve = 1;
+static const uint EFusedContactOp_Resolve = 2;
+
+groupshared uint gs_fused_used_colours;
+
+// Apply one solver operation to one contact.
+void ApplyFusedContactOp(uint op, uint idx)
+{
+	// 'op' is a compile-time constant in each entry point, so this switch is removed after inlining.
+	switch (op)
+	{
+		case EFusedContactOp_ApplyWarmStart: { ApplyWarmStartContact(idx); break; }
+		case EFusedContactOp_PositionSolve: { ApplyPositionCorrection(g_contacts[idx]); break; }
+		case EFusedContactOp_Resolve: { ResolveContact(idx); break; }
+	}
+}
+
+// Run one complete colour sweep inside one thread group. Must be called by every thread of a group of ResolveThreadCount threads.
+void FusedContactSweep(uint op, uint thread)
+{
+	// The overflow flag is the same for every thread, so the serial fallback keeps the whole group on one path. It matches the per-colour colour-zero fallback.
+	if (ColourOverflow())
+	{
+		if (thread != 0)
+			return;
+
+		for (int contact_order_idx = 0; contact_order_idx != ContactCount(); ++contact_order_idx)
+		{
+			uint idx = g_contact_order[contact_order_idx];
+			if (ContactEnabledAt(idx))
+				ApplyFusedContactOp(op, idx);
+		}
+		return;
+	}
+
+	// Collect the occupied colours so empty colours cost no group barrier. Colour assignments do not change during a sweep.
+	int contact_count = ContactCount();
+	if (thread == 0)
+		gs_fused_used_colours = 0;
+
+	GroupMemoryBarrierWithGroupSync();
+	for (int i = (int)thread; i < contact_count; i += ResolveThreadCount)
+	{
+		uint colour = g_colours[g_contact_order[i]];
+		if (colour < MaxColours)
+			InterlockedOr(gs_fused_used_colours, 1u << colour);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Process the colours in ascending order, as the per-colour dispatches do. 'used' is the same in every thread, so every thread reaches each barrier.
+	uint used = gs_fused_used_colours;
+	while (used != 0)
+	{
+		// Contacts within one colour never share a dynamic body, so threads can process them in any order.
+		uint colour = firstbitlow(used);
+		used &= used - 1;
+		for (int j = (int)thread; j < contact_count; j += ResolveThreadCount)
+		{
+			uint idx = g_contact_order[j];
+			if (g_colours[idx] == colour)
+				ApplyFusedContactOp(op, idx);
+		}
+		DeviceMemoryBarrierWithGroupSync();
+	}
+}
+
+// ----- CSApplyWarmStartFused -----
+// Single-group form of CSApplyWarmStart. Dispatch exactly one group.
+numthreads(CSApplyWarmStartFused, ResolveThreadCount, 1, 1)
+void CSApplyWarmStartFused(int3 GTID(gtid))
+{
+	FusedContactSweep(EFusedContactOp_ApplyWarmStart, gtid.x);
+}
+
+// ----- CSPositionSolveFused -----
+// Single-group form of CSPositionSolve. Dispatch exactly one group.
+numthreads(CSPositionSolveFused, ResolveThreadCount, 1, 1)
+void CSPositionSolveFused(int3 GTID(gtid))
+{
+	FusedContactSweep(EFusedContactOp_PositionSolve, gtid.x);
+}
+
+// ----- CSResolveFused -----
+// Single-group form of CSResolve. Dispatch exactly one group.
+numthreads(CSResolveFused, ResolveThreadCount, 1, 1)
+void CSResolveFused(int3 GTID(gtid))
+{
+	FusedContactSweep(EFusedContactOp_Resolve, gtid.x);
+}
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

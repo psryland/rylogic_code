@@ -6,6 +6,7 @@
 #include "pr/compute/forward.h"
 #include "pr/compute/resource/resource_state_store.h"
 #include "pr/compute/resource/gpu_transfer_buffer.h"
+#include "pr/compute/resource/gpu_address.h"
 #include "pr/compute/utility/conversion.h"
 #include "pr/compute/utility/cmd_alloc.h"
 #include "pr/compute/utility/wrappers.h"
@@ -16,9 +17,11 @@ namespace pr::compute
 {
 	template <typename Idx> concept RootParamIdx = std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>;
 
-	// Forward declaration
+	// Forward declarations
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdListPool;
+	template <D3D12_COMMAND_LIST_TYPE ListType>
+	struct BarrierBatch;
 
 	// A command list instance
 	template <D3D12_COMMAND_LIST_TYPE ListType>
@@ -31,6 +34,10 @@ namespace pr::compute
 		//  - Can reset a command list immediately after executing it, but it has to use a different allocator.
 		//  - Need to wrap the command list because state (such as Resource States) needs to be buffered per command list.
 		//  - Not storing a ref to a cmd_alloc_pool in here, because not all CmdLists are used where there is an allocator pool.
+		//  - D3D12 command lists record raw resource pointers. Every resource that a recording method references is added
+		//    to the list's use set (see 'Use'), and the list holds a reference to it. 'Close' moves these references to the
+		//    allocator's pool, which releases them when the GPU has completed the commands (see 'CmdAllocPool::Retain').
+		//    Owners can therefore release or replace a resource at any time after recording a command that uses it.
 
 		// Dx12 uses 'ID3D12GraphicsCommandList' for all command list types.
 		using ICommandList = ID3D12GraphicsCommandList;
@@ -38,15 +45,18 @@ namespace pr::compute
 	private:
 
 		friend CmdListPool<ListType>;
+		friend BarrierBatch<ListType>;
 		using CmdAlloc = typename CmdAlloc<ListType>;
 		using CmdListPool = typename CmdListPool<ListType>;
+		using UsedList = std::vector<D3DPtr<ID3D12Resource>>;
 
 	private:
 
 		D3DPtr<ICommandList> m_list; // The interface for buffering GPU commands.
 		CmdAlloc m_cmd_allocator;    // The current allocator in use by this cmd list.
 		std::thread::id m_thread_id; // The thread id of the thread that called Reset.
-		ResStateStore m_res_state;   // Track the state of resources used in this command list
+		ResStateStore m_res_state;   // The resources used in this command list, and their states
+		UsedList m_used;             // References to the resources used in this command list, until 'Close'
 		CmdListPool* m_pool;         // The pool to return this list too. (can be null)
 		UINT m_root_sig_idx;         // The index of the next root parameter to add
 
@@ -54,6 +64,8 @@ namespace pr::compute
 			: m_list(list)
 			, m_cmd_allocator(std::move(cmd_alloc))
 			, m_thread_id(std::this_thread::get_id())
+			, m_res_state()
+			, m_used()
 			, m_pool(pool)
 			, m_root_sig_idx()
 		{}
@@ -84,6 +96,7 @@ namespace pr::compute
 			, m_cmd_allocator(std::move(rhs.m_cmd_allocator))
 			, m_thread_id(rhs.m_thread_id)
 			, m_res_state(std::move(rhs.m_res_state))
+			, m_used(std::move(rhs.m_used))
 			, m_pool(rhs.m_pool)
 			, m_root_sig_idx(rhs.m_root_sig_idx)
 		{
@@ -104,6 +117,7 @@ namespace pr::compute
 			m_cmd_allocator = std::move(rhs.m_cmd_allocator);
 			m_thread_id = std::move(rhs.m_thread_id);
 			m_res_state = std::move(rhs.m_res_state);
+			m_used = std::move(rhs.m_used);
 			m_pool = std::move(rhs.m_pool);
 			m_root_sig_idx = rhs.m_root_sig_idx;
 
@@ -155,10 +169,20 @@ namespace pr::compute
 			return get();
 		}
 
-		// Get the current state (according to this command list) of a resource
-		ResStateData& ResState(ID3D12Resource const* res)
+		// Record that the commands in this list use 'res'. A reference to 'res' is held until the GPU has completed the commands.
+		// Recording methods that take a resource call this automatically. Call it directly for resources that commands reference indirectly, such as through descriptor tables.
+		void Use(ID3D12Resource const* res)
 		{
-			return m_res_state.Get(res);
+			// Reference each resource once per recording. The use set is reset when the list is reset.
+			if (m_res_state.Track(res))
+				m_used.push_back(D3DPtr<ID3D12Resource>(const_cast<ID3D12Resource*>(res), true));
+		}
+
+		// The state of 'res' according to the commands recorded so far. Resources not used by this list are in their default state.
+		ResStateData ResState(ID3D12Resource const* res) const
+		{
+			auto state = m_res_state.Find(res);
+			return state != nullptr ? *state : ResStateData(DefaultResState(res));
 		}
 
 		// Assign the shader pipeline state to the command list
@@ -178,12 +202,16 @@ namespace pr::compute
 		void CopyResource(ID3D12Resource* destination, ID3D12Resource* source)
 		{
 			ThrowOnCrossThreadUse();
+			Use(destination);
+			Use(source);
 			m_list->CopyResource(destination, source);
 		}
 
 		// Copy a region within a resource
 		void CopyBufferRegion(ID3D12Resource *pDstBuffer, UINT64 DstOffset, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset, UINT64 NumBytes)
 		{
+			Use(pDstBuffer);
+			Use(pSrcBuffer);
 			m_list->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
 		}
 		void CopyBufferRegion(GpuTransferAllocation& DstBuffer, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset = 0)
@@ -198,6 +226,8 @@ namespace pr::compute
 		// Copy a region within a texture
 		void CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION const* pDst, UINT DstX, UINT DstY, UINT DstZ, D3D12_TEXTURE_COPY_LOCATION const* pSrc, D3D12_BOX const* pSrcBox)
 		{
+			Use(pDst->pResource);
+			Use(pSrc->pResource);
 			m_list->CopyTextureRegion(pDst, DstX, DstY, DstZ, pSrc, pSrcBox);
 		}
 
@@ -209,6 +239,34 @@ namespace pr::compute
 		void ResourceBarrier(std::span<D3D12_RESOURCE_BARRIER const> barriers)
 		{
 			ThrowOnCrossThreadUse();
+
+			// Barriers reference their resources until the GPU executes them. Null aliasing and UAV resources mean 'any resource'.
+			for (auto const& barrier : barriers)
+			{
+				switch (barrier.Type)
+				{
+					case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
+					{
+						Use(barrier.Transition.pResource);
+						break;
+					}
+					case D3D12_RESOURCE_BARRIER_TYPE_ALIASING:
+					{
+						if (barrier.Aliasing.pResourceBefore != nullptr) Use(barrier.Aliasing.pResourceBefore);
+						if (barrier.Aliasing.pResourceAfter != nullptr) Use(barrier.Aliasing.pResourceAfter);
+						break;
+					}
+					case D3D12_RESOURCE_BARRIER_TYPE_UAV:
+					{
+						if (barrier.UAV.pResource != nullptr) Use(barrier.UAV.pResource);
+						break;
+					}
+					default:
+					{
+						throw std::runtime_error("Unknown resource barrier type");
+					}
+				}
+			}
 			m_list->ResourceBarrier(s_cast<UINT>(barriers.size()), barriers.data());
 		}
 
@@ -221,7 +279,15 @@ namespace pr::compute
 				RestoreResourceStateDefaults(*this);
 			}
 			pix::EndEvent(m_list.get());
-			return m_list->Close();
+			auto result = m_list->Close();
+
+			// The recording is complete, so the allocator's pool holds the used resources until the GPU has executed the commands
+			if (!m_used.empty())
+			{
+				PR_ASSERT(PR_DBG_RDR, m_cmd_allocator.m_pool != nullptr, "Command list resources can only be retained by an allocator from a pool");
+				m_cmd_allocator.m_pool->Retain(m_used);
+			}
+			return result;
 		}
 
 		// Set the sync point for when the GPU is finished with this command list
@@ -236,6 +302,7 @@ namespace pr::compute
 		void Reset(CmdAlloc&& cmd_alloc, ID3D12PipelineState* pipeline_state = nullptr)
 		{
 			ThrowOnCrossThreadUse();
+			PR_ASSERT(PR_DBG_RDR, m_used.empty(), "Command lists must be closed before they are reset");
 			m_cmd_allocator = std::move(cmd_alloc);
 			Check(m_list->Reset(m_cmd_allocator, pipeline_state));
 			m_res_state.Reset();
@@ -260,12 +327,14 @@ namespace pr::compute
 		// Reset an unordered access view to a single value
 		void ClearUnorderedAccessViewUint(D3D12_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE ViewCPUHandle, ID3D12Resource* pResource, UINT const (&clear_value)[4], std::span<D3D12_RECT const> rects = {})
 		{
+			Use(pResource);
 			m_list->ClearUnorderedAccessViewUint(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, clear_value, s_cast<UINT>(rects.size()), rects.data());
 		}
 
 		// Reset an unordered access view to a single value
 		void ClearUnorderedAccessViewFloat(D3D12_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap, D3D12_CPU_DESCRIPTOR_HANDLE ViewCPUHandle, ID3D12Resource* pResource, float const (&clear_value)[4], std::span<D3D12_RECT const> rects = {})
 		{
+			Use(pResource);
 			m_list->ClearUnorderedAccessViewFloat(ViewGPUHandleInCurrentHeap, ViewCPUHandle, pResource, clear_value, s_cast<UINT>(rects.size()), rects.data());
 		}
 
@@ -340,16 +409,20 @@ namespace pr::compute
 		// Dispatch indirect (thread counts provided by a GPU buffer)
 		void ExecuteIndirect(ID3D12CommandSignature* pCommandSignature, UINT MaxCommandCount, ID3D12Resource* pArgumentBuffer, UINT64 ArgumentBufferOffset = 0, ID3D12Resource* pCountBuffer = nullptr, UINT64 CountBufferOffset = 0)
 		{
+			Use(pArgumentBuffer);
+			if (pCountBuffer != nullptr) Use(pCountBuffer);
 			m_list->ExecuteIndirect(pCommandSignature, MaxCommandCount, pArgumentBuffer, ArgumentBufferOffset, pCountBuffer, CountBufferOffset);
 		}
 
 		// Resolve an MSAA texture to a non-MSAA texture
 		void ResolveSubresource(ID3D12Resource* pDstResource, ID3D12Resource* pSrcResource, DXGI_FORMAT Format)
 		{
-			m_list->ResolveSubresource(pDstResource, 0U, pSrcResource, 0U, Format);
+			ResolveSubresource(pDstResource, 0, pSrcResource, 0, Format);
 		}
 		void ResolveSubresource(ID3D12Resource* pDstResource, int DstSubresource, ID3D12Resource* pSrcResource, int SrcSubresource, DXGI_FORMAT Format)
 		{
+			Use(pDstResource);
+			Use(pSrcResource);
 			m_list->ResolveSubresource(pDstResource, s_cast<UINT>(DstSubresource), pSrcResource, s_cast<UINT>(SrcSubresource), Format);
 		}
 
@@ -425,44 +498,48 @@ namespace pr::compute
 			SetGraphicsRoot32BitConstants(RootParameterIndex, count, &cb, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
 
-		// Set a GPU descriptor handle for a constant buffer view
-		template <RootParamIdx Idx> void SetGraphicsRootConstantBufferView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
+		// Bind a constant buffer to a graphics root parameter
+		template <RootParamIdx Idx> void SetGraphicsRootConstantBufferView(Idx RootParameterIndex, GpuAddress address)
 		{
-			m_list->SetGraphicsRootConstantBufferView(s_cast<UINT>(RootParameterIndex), BufferLocation);
+			Use(address.m_res);
+			m_list->SetGraphicsRootConstantBufferView(s_cast<UINT>(RootParameterIndex), address.VirtualAddress());
 		}
-		void AddGraphicsRootConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
+		void AddGraphicsRootConstantBufferView(GpuAddress address)
 		{
-			SetGraphicsRootConstantBufferView(m_root_sig_idx++, BufferLocation);
-		}
-
-		// Set a GPU descriptor handle for a constant buffer view
-		template <RootParamIdx Idx> void SetComputeRootConstantBufferView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
-		{
-			m_list->SetComputeRootConstantBufferView(s_cast<UINT>(RootParameterIndex), BufferLocation);
-		}
-		void AddComputeRootConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
-		{
-			SetComputeRootConstantBufferView(m_root_sig_idx++, BufferLocation);
+			SetGraphicsRootConstantBufferView(m_root_sig_idx++, address);
 		}
 
-		// Sets a GPU descriptor handle for the unordered-access-view resource in the compute root signature.
-		template <RootParamIdx Idx> void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		// Bind a constant buffer to a compute root parameter
+		template <RootParamIdx Idx> void SetComputeRootConstantBufferView(Idx RootParameterIndex, GpuAddress address)
 		{
-			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), buffer_address);
+			Use(address.m_res);
+			m_list->SetComputeRootConstantBufferView(s_cast<UINT>(RootParameterIndex), address.VirtualAddress());
 		}
-		void AddComputeRootUnorderedAccessView(D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		void AddComputeRootConstantBufferView(GpuAddress address)
 		{
-			SetComputeRootUnorderedAccessView(m_root_sig_idx++, buffer_address);
+			SetComputeRootConstantBufferView(m_root_sig_idx++, address);
 		}
 
-		// Sets a GPU descriptor handle for the shared-resource-view resource in the compute root signature.
-		template <RootParamIdx Idx> void SetComputeRootShaderResourceView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		// Bind an unordered access buffer to a compute root parameter
+		template <RootParamIdx Idx> void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, GpuAddress address)
 		{
-			m_list->SetComputeRootShaderResourceView(s_cast<UINT>(RootParameterIndex), buffer_address);
+			Use(address.m_res);
+			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), address.VirtualAddress());
 		}
-		void AddComputeRootShaderResourceView(D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		void AddComputeRootUnorderedAccessView(GpuAddress address)
 		{
-			SetComputeRootShaderResourceView(m_root_sig_idx++, buffer_address);
+			SetComputeRootUnorderedAccessView(m_root_sig_idx++, address);
+		}
+
+		// Bind a shader resource buffer to a compute root parameter
+		template <RootParamIdx Idx> void SetComputeRootShaderResourceView(Idx RootParameterIndex, GpuAddress address)
+		{
+			Use(address.m_res);
+			m_list->SetComputeRootShaderResourceView(s_cast<UINT>(RootParameterIndex), address.VirtualAddress());
+		}
+		void AddComputeRootShaderResourceView(GpuAddress address)
+		{
+			SetComputeRootShaderResourceView(m_root_sig_idx++, address);
 		}
 
 		// Set a compute shader's root parameter descriptor table

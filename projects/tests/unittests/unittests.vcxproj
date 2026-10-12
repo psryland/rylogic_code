@@ -158,6 +158,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\container\vector_hash_map.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h" />
@@ -251,6 +252,7 @@
     <ClInclude Include="..\..\..\include\pr\compute\resource\descriptor.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\descriptor_store.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_descriptor_heap.h" />
+    <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_address.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_allocation.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_buffer.h" />
     <ClInclude Include="..\..\..\include\pr\compute\resource\gpu_transfer_buffer_page.h" />

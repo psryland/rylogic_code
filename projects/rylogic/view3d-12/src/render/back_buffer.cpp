@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -37,8 +37,6 @@ namespace pr::rdr12
 	// Release back buffer resources
 	void BackBuffer::Release(Window& wnd)
 	{
-		wnd.m_res_state.Forget(m_render_target.get());
-		wnd.m_res_state.Forget(m_depth_stencil.get());
 		if (m_depth_srv)
 		{
 			ResourceStore::Access store(wnd.rdr());
