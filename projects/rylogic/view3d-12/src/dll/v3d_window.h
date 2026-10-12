@@ -154,10 +154,6 @@ namespace pr::rdr12
 		RayTracingProps RayTracingProperties() const;
 		void RayTracingProperties(RayTracingProps props);
 
-		// Forward world fade settings, owned by this window's scene.
-		FarClipFadeProps FarClipFadeProperties() const;
-		void FarClipFadeProperties(FarClipFadeProps props);
-
 		// Underwater post effect settings, owned by this window's scene.
 		UnderwaterProps PostEffectUnderwater() const;
 		void PostEffectUnderwater(UnderwaterProps const& props);

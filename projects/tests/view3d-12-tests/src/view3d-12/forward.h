@@ -18,7 +18,6 @@
 #include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/model/skeleton.h"
 #include "pr/view3d-12/model/animator.h"
-#include "pr/view3d-12/scene/far_clip_fade.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/material/material_simple.h"
 #include "pr/view3d-12/resource/resource_factory.h"
@@ -45,7 +44,7 @@ namespace colour_blend_tests
 }
 
 // Fixture-owned bytecode exercises the custom-stage boundary without a renderer library dependency.
-namespace fade_tests::compiled
+namespace render_tests::compiled
 {
 	#include "fade_vertex.h"
 	#include "procedural_vertex_forward.h"
@@ -62,7 +61,7 @@ namespace fade_tests::compiled
 	#include "generated_vertex_input.h"
 }
 
-namespace fade_tests
+namespace render_tests
 {
 	// Exercise native RayCast cancellation and teardown independently of DLL-owned resources.
 	void RayCastLifetimeNativeTests();

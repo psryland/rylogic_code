@@ -151,13 +151,6 @@ namespace pr::rdr12::shaders
 			cb0.clouds.shadow_strength = 0;
 		}
 
-		// Transparent layers fade over the same depth interval as the opaque scene. See 'far_clip_fade.md'.
-		if (auto const fade = scene.FarClipFadeProperties(); fade.m_enabled)
-		{
-			auto range = fade.DepthRange(scene.m_cam.ClipPlanes(false).y);
-			cb0.far_fade = v4(range.x, range.y, 1, 0);
-		}
-
 		auto gpu_address = upload.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true).VirtualAddress();
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 

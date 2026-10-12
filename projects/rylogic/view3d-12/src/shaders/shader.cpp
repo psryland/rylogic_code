@@ -189,9 +189,6 @@ namespace pr::rdr12
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_detail_ps.h)
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_reflection_attrs_detail_ps.h)
 	        #include PR_RDR_SHADER_COMPILED_DIR(forward_alpha_collect_detail_ps.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_vs.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_weight_ps.h)
-			#include PR_RDR_SHADER_COMPILED_DIR(background_fade_clear_ps.h)
 			#include PR_RDR_SHADER_COMPILED_DIR(kbuffer_resolve_vs.h)
 			#include PR_RDR_SHADER_COMPILED_DIR(kbuffer_alpha_resolve_ps.h)
 		}
@@ -210,9 +207,6 @@ namespace pr::rdr12
 	    ByteCode const forward_detail_ps(compiled::forward_detail_ps);
 	    ByteCode const forward_reflection_attrs_detail_ps(compiled::forward_reflection_attrs_detail_ps);
 	    ByteCode const forward_alpha_collect_detail_ps(compiled::forward_alpha_collect_detail_ps);
-		ByteCode const background_fade_vs(compiled::background_fade_vs);
-		ByteCode const background_fade_weight_ps(compiled::background_fade_weight_ps);
-		ByteCode const background_fade_clear_ps(compiled::background_fade_clear_ps);
 		ByteCode const kbuffer_resolve_vs(compiled::kbuffer_resolve_vs);
 		ByteCode const kbuffer_alpha_resolve_ps(compiled::kbuffer_alpha_resolve_ps);
 
