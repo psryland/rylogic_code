@@ -35,6 +35,39 @@ namespace pr::physics::tests
 			job.Run();
 			PR_EXPECT(raw->Release() == 0);
 		}
+
+		// Work executed by 'Flush' must precede later recorded work, and the final handle must cover both segments.
+		PRUnitTestMethod(FlushExecutesRecordedPrefix, Quick)
+		{
+			// Two buffers in the COMMON state, so the state tracking restarted by 'Flush' matches the decayed GPU state.
+			auto& gpu = SharedTestGpu();
+			auto& job = gpu.m_job;
+			auto desc = compute::ResDesc::Buf<uint32_t>(4, {}).def_state(D3D12_RESOURCE_STATE_COMMON);
+			auto src = gpu.CreateResource(desc, job.m_cmd_list, "GpuTests:FlushSrc");
+			auto dst = gpu.CreateResource(desc, job.m_cmd_list, "GpuTests:FlushDst");
+			std::array<uint32_t, 4> const values = { 1, 2, 3, 0xDEADBEEF };
+
+			// First segment: upload into 'src' and execute it without waiting.
+			job.m_barriers.Transition(src.get(), D3D12_RESOURCE_STATE_COPY_DEST).Commit();
+			UploadData<uint32_t>(job, src.get(), values);
+			job.Flush();
+
+			// Second segment: copy 'src' into 'dst' using the data written by the flushed segment, then read it back.
+			job.m_barriers.Transition(src.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			job.m_barriers.Transition(dst.get(), D3D12_RESOURCE_STATE_COPY_DEST).Commit();
+			job.m_cmd_list.CopyResource(dst.get(), src.get());
+			job.m_barriers.Transition(dst.get(), D3D12_RESOURCE_STATE_COPY_SOURCE).Commit();
+			auto readback = job.m_readback.Alloc<uint32_t>(static_cast<int>(values.size()));
+			job.m_cmd_list.CopyBufferRegion(readback, dst.get(), 0);
+
+			// Completing the final handle also completes the flushed segment, and flushing is invalid while a submission is pending.
+			auto handle = job.Submit();
+			PR_THROWS(job.Flush(), std::runtime_error);
+			job.Complete(handle);
+			auto const* result = readback.ptr<uint32_t>();
+			for (size_t i = 0; i != values.size(); ++i)
+				PR_EXPECT(result[i] == values[i]);
+		}
 	};
 }
 #endif

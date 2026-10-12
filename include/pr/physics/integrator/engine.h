@@ -252,6 +252,9 @@ namespace pr::physics
 		int m_selective_refresh_hold_steps = 0;
 		int m_selective_refresh_previous_contact_count = 0;
 
+		// Peak contact count of the previous completed step, or int max when no step has completed since the last reset. Chooses the contact colour-sweep form.
+		int m_colour_sweep_contact_estimate = std::numeric_limits<int>::max();
+
 		// Diagnostics
 		StepProfile m_last_step_profile;
 		CollisionStats m_last_collision_stats;
@@ -295,7 +298,7 @@ namespace pr::physics
 		// Evolve bodies with persistent constraints; every enabled rigid endpoint must occur in 'bodies'.
 		void Step(float dt, std::span<RigidBody*> bodies, ConstraintSet const& constraints, double time_s = 0.0);
 
-		// Evolve a complete frame using one GPU submission regardless of the requested internal substep count.
+		// Evolve a complete frame with one GPU wait and readback regardless of the requested internal substep count.
 		void Step(StepInput const& input);
 		void Step(float dt, RigidBodyRange auto&& bodies, double time_s = 0.0)
 		{

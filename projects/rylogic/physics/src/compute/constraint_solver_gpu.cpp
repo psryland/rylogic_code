@@ -73,6 +73,9 @@ namespace pr::physics
 		, m_cs_apply_position()
 		, m_cs_solve_velocity()
 		, m_cs_detect_breakage()
+		, m_cs_apply_warm_start_fused()
+		, m_cs_solve_position_fused()
+		, m_cs_solve_velocity_fused()
 		, m_r_endpoints()
 		, m_r_descriptors()
 		, m_r_blocks()
@@ -127,6 +130,9 @@ namespace pr::physics
 		compile_step(m_cs_apply_position, shader_code::apply_constraint_position, "ApplyConstraintPosition");
 		compile_step(m_cs_solve_velocity, shader_code::solve_constraint_velocity, "SolveConstraintVelocity");
 		compile_step(m_cs_detect_breakage, shader_code::detect_broken_constraints, "DetectBrokenConstraints");
+		compile_step(m_cs_apply_warm_start_fused, shader_code::apply_constraint_warm_start_fused, "ApplyConstraintWarmStartFused");
+		compile_step(m_cs_solve_position_fused, shader_code::solve_constraint_position_fused, "SolveConstraintPositionFused");
+		compile_step(m_cs_solve_velocity_fused, shader_code::solve_constraint_velocity_fused, "SolveConstraintVelocityFused");
 
 		// Colour sweeps read their per-colour group counts from the colouring pass output.
 		D3D12_INDIRECT_ARGUMENT_DESC arg = {
@@ -416,9 +422,13 @@ namespace pr::physics
 		job.m_barriers.Commit();
 	}
 
-	// Record one pass per colour in the established colour order, using the indirect arguments written by the colouring pass.
-	void GpuConstraintSolver::RecordColourSweep(GpuJob& job, ComputeStep& step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies)
+	// Record one colour sweep in the established colour order. Small slot sets use the single-group fused step; larger sets use one indirect pass per colour.
+	void GpuConstraintSolver::RecordColourSweep(GpuJob& job, ComputeStep& per_colour_step, ComputeStep& fused_step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies)
 	{
+		// The slot count is exact on the CPU, so the form is chosen without a GPU readback. Both forms visit the colours in the same order.
+		auto const fused = m_config.fused_colour_sweep_limit > 0 && m_slot_count <= m_config.fused_colour_sweep_limit;
+		auto& step = fused ? fused_step : per_colour_step;
+
 		// Bind once and flush pending transitions. Only the colour root constant changes between colours.
 		Bind(job, step, timestep, body_count, 0, position_iterations, bodies, m_r_state.get());
 		job.m_barriers.Commit();
@@ -441,9 +451,18 @@ namespace pr::physics
 			uav_barrier(m_r_pseudo_velocities.get()),
 		};
 
+		// The fused kernel walks every occupied colour inside one group; the trailing barrier orders the whole sweep before later work.
+		auto* cmd_list = job.m_cmd_list.get();
+		if (fused)
+		{
+			cmd_list->Dispatch(1, 1, 1);
+			cmd_list->ResourceBarrier(static_cast<UINT>(barriers.size()), barriers.data());
+			++m_dispatch_count;
+			return;
+		}
+
 		// Empty colours have zero groups. Occupied colours keep the full stable-slot grid, so the solve order and results are unchanged.
 		job.m_cmd_list.Use(m_r_colour_dispatch.get());
-		auto* cmd_list = job.m_cmd_list.get();
 		for (int colour = 0; colour != MaxColours; ++colour)
 		{
 			cmd_list->SetComputeRoot32BitConstants(0, 1, &colour, offsetof(cbConstraintSolve, colour) / sizeof(uint32_t));
@@ -521,7 +540,7 @@ namespace pr::physics
 		if (!Active() || m_retain_current_impulses || m_config.constraint_warm_start_factor <= 0.0f)
 			return;
 
-		RecordColourSweep(job, m_cs_apply_warm_start, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
+		RecordColourSweep(job, m_cs_apply_warm_start, m_cs_apply_warm_start_fused, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
 	}
 
 	// Execute one coloured split-position sweep against initialized shared pseudo velocity without clearing accumulated corrections.
@@ -530,7 +549,7 @@ namespace pr::physics
 		if (!Active() || position_iterations <= 0)
 			return;
 
-		RecordColourSweep(job, m_cs_solve_position, timestep, body_count, position_iterations, bodies);
+		RecordColourSweep(job, m_cs_solve_position, m_cs_solve_position_fused, timestep, body_count, position_iterations, bodies);
 	}
 
 	// Integrate converged split pseudo twists once while preserving physical momentum.
@@ -551,7 +570,7 @@ namespace pr::physics
 		if (!Active())
 			return;
 
-		RecordColourSweep(job, m_cs_solve_velocity, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
+		RecordColourSweep(job, m_cs_solve_velocity, m_cs_solve_velocity_fused, timestep, body_count, std::max(1, m_config.push_out_iterations), bodies);
 	}
 
 	// Latch force or torque threshold crossings after one main or selective velocity solve.

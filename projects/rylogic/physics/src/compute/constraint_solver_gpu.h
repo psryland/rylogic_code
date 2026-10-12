@@ -53,6 +53,9 @@ namespace pr::physics
 		ComputeStep m_cs_apply_position;
 		ComputeStep m_cs_solve_velocity;
 		ComputeStep m_cs_detect_breakage;
+		ComputeStep m_cs_apply_warm_start_fused;
+		ComputeStep m_cs_solve_position_fused;
+		ComputeStep m_cs_solve_velocity_fused;
 		D3DPtr<ID3D12Resource> m_r_endpoints;
 		D3DPtr<ID3D12Resource> m_r_descriptors;
 		D3DPtr<ID3D12Resource> m_r_blocks;
@@ -151,7 +154,7 @@ namespace pr::physics
 		// Insert UAV ordering between dependent compiler, colouring, and solver passes.
 		void CommitUavBarriers(GpuJob& job, D3DPtr<ID3D12Resource> bodies);
 
-		// Record one pass per colour in the established colour order, using the indirect arguments written by the colouring pass.
-		void RecordColourSweep(GpuJob& job, ComputeStep& step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies);
+		// Record one colour sweep in the established colour order. Small slot sets use the single-group fused step; larger sets use one indirect pass per colour.
+		void RecordColourSweep(GpuJob& job, ComputeStep& per_colour_step, ComputeStep& fused_step, float timestep, int body_count, int position_iterations, D3DPtr<ID3D12Resource> bodies);
 	};
 }

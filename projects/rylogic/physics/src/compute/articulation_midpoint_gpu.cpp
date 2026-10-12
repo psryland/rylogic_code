@@ -189,10 +189,38 @@ namespace pr::physics
 			.link_count = m_aba.m_link_count,
 			.proxy_body_count = proxy_bodies != nullptr ? static_cast<int>(proxy_bodies->GetDesc().Width / sizeof(GpuRigidBody)) : 0,
 		};
+		// Declare every bound state here, because a flush between substeps restarts state tracking and earlier per-step transitions no longer apply.
+		auto* dofs = m_aba.m_dof_count != 0 ? m_aba.m_r_dofs.get() : m_aba.m_r_srv_sentinel.get();
+		auto* forces = m_aba.m_force_count != 0 ? m_aba.m_r_forces.get() : m_aba.m_r_srv_sentinel.get();
+		auto* children = m_aba.m_child_count != 0 ? m_aba.m_r_children.get() : m_aba.m_r_srv_sentinel.get();
+		auto* positions = m_aba.m_position_count != 0 ? m_aba.m_r_positions.get() : m_aba.m_r_uav_sentinel.get();
+		auto* velocities = m_aba.m_velocity_count != 0 ? m_aba.m_r_velocities.get() : m_aba.m_r_uav_sentinel.get();
+		auto* accelerations = m_aba.m_acceleration_count != 0 ? m_aba.m_r_accelerations.get() : m_aba.m_r_uav_sentinel.get();
+		auto* dof_scratch = m_aba.m_dof_count != 0 ? m_aba.m_r_dof_scratch.get() : m_aba.m_r_uav_sentinel.get();
+		auto* joint_matrix_scratch = m_aba.m_joint_matrix_count != 0 ? m_aba.m_r_joint_matrix_scratch.get() : m_aba.m_r_uav_sentinel.get();
+		auto* position_start = m_aba.m_position_count != 0 ? m_r_position_start.get() : m_aba.m_r_uav_sentinel.get();
+		auto* velocity_start = m_aba.m_velocity_count != 0 ? m_r_velocity_start.get() : m_aba.m_r_uav_sentinel.get();
+		auto* midpoint_velocity = m_aba.m_velocity_count != 0 ? m_r_midpoint_velocity.get() : m_aba.m_r_uav_sentinel.get();
+		job.m_barriers.Transition(m_aba.m_r_links.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		job.m_barriers.Transition(dofs, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		job.m_barriers.Transition(forces, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		job.m_barriers.Transition(children, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		job.m_barriers.Transition(external_forces, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		job.m_barriers.Transition(m_aba.m_r_world_forces.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		if (proxy_bodies != nullptr)
 			job.m_barriers.Transition(proxy_bodies, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		job.m_barriers.Transition(m_aba.m_r_articulations.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(positions, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(velocities, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(accelerations, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(m_aba.m_r_scratch.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(dof_scratch, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(joint_matrix_scratch, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(position_start, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(velocity_start, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(midpoint_velocity, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		job.m_barriers.Transition(m_r_integration_state.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		// The absent-body binding is never indexed; the world-force stream supplies a valid SRV address without another sentinel.
 		job.m_barriers.Commit();
@@ -200,22 +228,22 @@ namespace pr::physics
 		job.m_cmd_list.SetComputeRootSignature(m_cs_midpoint.m_sig.get());
 		job.m_cmd_list.AddComputeRoot32BitConstants(constants);
 		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_links);
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_dof_count != 0 ? m_aba.m_r_dofs : m_aba.m_r_srv_sentinel));
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_force_count != 0 ? m_aba.m_r_forces : m_aba.m_r_srv_sentinel));
+		job.m_cmd_list.AddComputeRootShaderResourceView(dofs);
+		job.m_cmd_list.AddComputeRootShaderResourceView(forces);
 		job.m_cmd_list.AddComputeRootShaderResourceView(external_forces);
-		job.m_cmd_list.AddComputeRootShaderResourceView((m_aba.m_child_count != 0 ? m_aba.m_r_children : m_aba.m_r_srv_sentinel));
+		job.m_cmd_list.AddComputeRootShaderResourceView(children);
 		job.m_cmd_list.AddComputeRootShaderResourceView(m_aba.m_r_world_forces);
 		job.m_cmd_list.AddComputeRootShaderResourceView((proxy_bodies != nullptr ? proxy_bodies : m_aba.m_r_world_forces.get()));
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_aba.m_r_articulations);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_position_count != 0 ? m_aba.m_r_positions : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_velocity_count != 0 ? m_aba.m_r_velocities : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_acceleration_count != 0 ? m_aba.m_r_accelerations : m_aba.m_r_uav_sentinel));
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(positions);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(velocities);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(accelerations);
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_aba.m_r_scratch);
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_dof_count != 0 ? m_aba.m_r_dof_scratch : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_joint_matrix_count != 0 ? m_aba.m_r_joint_matrix_scratch : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_position_count != 0 ? m_r_position_start : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_velocity_count != 0 ? m_r_velocity_start : m_aba.m_r_uav_sentinel));
-		job.m_cmd_list.AddComputeRootUnorderedAccessView((m_aba.m_velocity_count != 0 ? m_r_midpoint_velocity : m_aba.m_r_uav_sentinel));
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(dof_scratch);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(joint_matrix_scratch);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(position_start);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(velocity_start);
+		job.m_cmd_list.AddComputeRootUnorderedAccessView(midpoint_velocity);
 		job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_integration_state);
 		job.m_cmd_list.Dispatch(MidpointThreadGroupCount(m_aba.m_articulation_count), 1, 1);
 		++m_stats.m_dispatch_count;

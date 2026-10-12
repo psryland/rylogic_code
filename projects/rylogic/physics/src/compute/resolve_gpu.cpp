@@ -99,6 +99,9 @@ namespace pr::physics
 		, m_cs_store_warm_start()
 		, m_cs_position_solve()
 		, m_cs_resolve()
+		, m_cs_apply_warm_start_fused()
+		, m_cs_position_solve_fused()
+		, m_cs_resolve_fused()
 		, m_cmd_sig()
 		, m_r_materials()
 		, m_r_colours()
@@ -116,6 +119,7 @@ namespace pr::physics
 		, m_warm_start_capacity()
 		, m_reset_warm_start_cache(true)
 		, m_materials_dirty(true)
+		, m_colour_sweep(EColourSweep::PerColour)
 	{
 		// m_cs_compute_times: parallel, one thread per contact — writes collision_time + zeroes body colour_used
 		{
@@ -228,6 +232,16 @@ namespace pr::physics
 
 			m_cs_resolve.m_sig = sig.Create(m_gpu, "Physics:ResolveSig");
 			m_cs_resolve.m_pso = ComputePSO(m_cs_resolve.m_sig.get(), shader_code::resolve).Create(m_gpu, "Physics:ResolvePSO");
+		}
+
+		// Fused colour sweeps bind exactly the same resources as their per-colour forms, so they share those root signatures.
+		{
+			m_cs_apply_warm_start_fused.m_sig = m_cs_apply_warm_start.m_sig;
+			m_cs_apply_warm_start_fused.m_pso = ComputePSO(m_cs_apply_warm_start_fused.m_sig.get(), shader_code::apply_warm_start_fused).Create(m_gpu, "Physics:ApplyWarmStartFusedPSO");
+			m_cs_position_solve_fused.m_sig = m_cs_position_solve.m_sig;
+			m_cs_position_solve_fused.m_pso = ComputePSO(m_cs_position_solve_fused.m_sig.get(), shader_code::position_solve_fused).Create(m_gpu, "Physics:PositionSolveFusedPSO");
+			m_cs_resolve_fused.m_sig = m_cs_resolve.m_sig;
+			m_cs_resolve_fused.m_pso = ComputePSO(m_cs_resolve_fused.m_sig.get(), shader_code::resolve_fused).Create(m_gpu, "Physics:ResolveFusedPSO");
 		}
 
 		// Create a command signature for indirect dispatch
@@ -656,7 +670,7 @@ namespace pr::physics
 						UavBarrier(m_resolver.m_r_warm_start_prev.get()),
 						UavBarrier(m_resolver.m_r_warm_start_curr.get()),
 					};
-					BindWarmStartStep(m_resolver.m_cs_apply_warm_start, m_resolver.m_r_warm_start_curr.get());
+					BindWarmStartStep(SweepStep(m_resolver.m_cs_apply_warm_start, m_resolver.m_cs_apply_warm_start_fused), m_resolver.m_r_warm_start_curr.get());
 					RecordColourSweep(barriers, "Resolve::WarmStartColour", "Resolve::WarmStartBarrier");
 					if (m_coupled_contact_solver != nullptr)
 						m_coupled_contact_solver->ApplyWarmStart(m_job);
@@ -681,11 +695,47 @@ namespace pr::physics
 				};
 			}
 
+			// Select the compute step that matches the resolver's colour-sweep form.
+			ComputeStep& SweepStep(ComputeStep& per_colour, ComputeStep& fused) const
+			{
+				switch (m_resolver.m_colour_sweep)
+				{
+					case EColourSweep::PerColour: { return per_colour; }
+					case EColourSweep::Fused: { return fused; }
+					default: throw std::runtime_error("Unknown colour sweep form");
+				}
+			}
+
 			// Record the established colour order and dependencies without per-colour CPU setup.
 			void RecordColourSweep(std::span<D3D12_RESOURCE_BARRIER const> barriers, char const* colour_name, char const* barrier_name)
 			{
 				// Validate command-list ownership and flush earlier transitions once at this recording boundary. Resource addresses and barriers stay fixed.
 				m_job.m_barriers.Commit();
+				auto* cmd_list = m_job.m_cmd_list.get();
+				auto const barrier_count = static_cast<UINT>(barriers.size());
+				switch (m_resolver.m_colour_sweep)
+				{
+					case EColourSweep::PerColour:
+					{
+						RecordPerColourSweep(barriers, colour_name, barrier_name);
+						return;
+					}
+					case EColourSweep::Fused:
+					{
+						// The bound fused kernel walks every colour in one group; the trailing barrier orders the whole sweep before later work.
+						pix::DetailScope detail(cmd_list, colour_name);
+						cmd_list->Dispatch(1, 1, 1);
+						cmd_list->ResourceBarrier(barrier_count, barriers.data());
+						return;
+					}
+					default: throw std::runtime_error("Unknown colour sweep form");
+				}
+			}
+
+			// Record one indirect dispatch and one barrier per colour.
+			void RecordPerColourSweep(std::span<D3D12_RESOURCE_BARRIER const> barriers, char const* colour_name, char const* barrier_name)
+			{
+				// Resource addresses and barriers stay fixed, so only the colour root constant changes between dispatches.
 				auto* cmd_list = m_job.m_cmd_list.get();
 				auto* signature = m_resolver.m_cmd_sig.get();
 				auto* dispatch_args = m_resolver.m_r_colour_dispatch.get();
@@ -720,7 +770,7 @@ namespace pr::physics
 			{
 				// Contact-only solving aliases existing UAV scratch rather than allocating an unused pseudo-state sentinel.
 				m_job.m_barriers.Transition(pseudo_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS).Commit();
-				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_position_solve.m_pso.get());
+				m_job.m_cmd_list.SetPipelineState(SweepStep(m_resolver.m_cs_position_solve, m_resolver.m_cs_position_solve_fused).m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_position_solve.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
 				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);
@@ -804,7 +854,7 @@ namespace pr::physics
 			void BindVelocitySolve()
 			{
 				// Restore every root constant and resource used by the contact table.
-				m_job.m_cmd_list.SetPipelineState(m_resolver.m_cs_resolve.m_pso.get());
+				m_job.m_cmd_list.SetPipelineState(SweepStep(m_resolver.m_cs_resolve, m_resolver.m_cs_resolve_fused).m_pso.get());
 				m_job.m_cmd_list.SetComputeRootSignature(m_resolver.m_cs_resolve.m_sig.get());
 				m_job.m_cmd_list.AddComputeRoot32BitConstants(m_cb);
 				m_job.m_cmd_list.AddComputeRootShaderResourceView(m_counters);

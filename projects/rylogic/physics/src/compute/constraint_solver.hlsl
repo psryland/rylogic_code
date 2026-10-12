@@ -834,6 +834,99 @@ void CSApplyConstraintPosition(int3 DTID(dtid))
 	g_constraint_bodies[dtid.x] = body;
 }
 
+// ----- Fused colour sweeps -----
+// A single thread group walks every occupied colour in the same order as the per-colour dispatches, with a group-wide device-memory barrier between colours.
+// This removes one dispatch and one UAV barrier per colour, which dominate small constraint sets. The CPU chooses this path only for small slot counts
+// because one group processes every slot. UAV writes are coherent within one thread group, so the barrier makes each colour's writes visible to the next.
+// These entry points exist only in HLSL because the C++ replay emulator cannot synchronise the threads of a group.
+#ifndef __cplusplus
+
+// Solver operations shared by the fused entry points.
+static const uint EFusedConstraintOp_ApplyWarmStart = 0;
+static const uint EFusedConstraintOp_SolvePosition = 1;
+static const uint EFusedConstraintOp_SolveVelocity = 2;
+
+groupshared uint gs_fused_used_colours;
+
+// Apply one solver operation to one constraint block.
+void ApplyFusedConstraintOp(uint op, uint slot_idx)
+{
+	// 'op' is a compile-time constant in each entry point, so this switch is removed after inlining.
+	switch (op)
+	{
+		case EFusedConstraintOp_ApplyWarmStart: { ApplyConstraintBlockWarmStart(slot_idx); break; }
+		case EFusedConstraintOp_SolvePosition: { SolveConstraintPositionBlock(slot_idx); break; }
+		case EFusedConstraintOp_SolveVelocity: { SolveConstraintVelocityBlock(slot_idx); break; }
+	}
+}
+
+// Run one complete colour sweep inside one thread group. Must be called by every thread of a group of ConstraintThreadCount threads.
+void FusedConstraintSweep(uint op, uint thread)
+{
+	// The overflow flag is the same for every thread, so the serial fallback keeps the whole group on one path. It matches the per-colour colour-zero fallback.
+	if (g_constraint_state[0].colour_overflow != 0u)
+	{
+		if (thread != 0)
+			return;
+
+		for (uint slot_idx = 0; slot_idx != (uint)g.slot_count; ++slot_idx)
+			if (AllSet(g_blocks[slot_idx].flags, ConstraintBlockFlags_Active))
+				ApplyFusedConstraintOp(op, slot_idx);
+		return;
+	}
+
+	// Collect the occupied colours so empty colours cost no group barrier. Colour assignments do not change during a sweep.
+	if (thread == 0)
+		gs_fused_used_colours = 0;
+
+	GroupMemoryBarrierWithGroupSync();
+	for (int i = (int)thread; i < g.slot_count; i += ConstraintThreadCount)
+	{
+		uint colour = g_blocks[i].colour;
+		if (colour < MaxColours)
+			InterlockedOr(gs_fused_used_colours, 1u << colour);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Process the colours in ascending order, as the per-colour dispatches do. 'used' is the same in every thread, so every thread reaches each barrier.
+	uint used = gs_fused_used_colours;
+	while (used != 0)
+	{
+		// Blocks within one colour never share a dynamic body, so threads can process them in any order.
+		uint colour = firstbitlow(used);
+		used &= used - 1;
+		for (int j = (int)thread; j < g.slot_count; j += ConstraintThreadCount)
+		{
+			if (g_blocks[j].colour == colour)
+				ApplyFusedConstraintOp(op, (uint)j);
+		}
+		DeviceMemoryBarrierWithGroupSync();
+	}
+}
+
+// Single-group form of CSApplyConstraintWarmStart. Dispatch exactly one group.
+numthreads(CSApplyConstraintWarmStartFused, ConstraintThreadCount, 1, 1)
+void CSApplyConstraintWarmStartFused(int3 GTID(gtid))
+{
+	FusedConstraintSweep(EFusedConstraintOp_ApplyWarmStart, gtid.x);
+}
+
+// Single-group form of CSSolveConstraintPosition. Dispatch exactly one group.
+numthreads(CSSolveConstraintPositionFused, ConstraintThreadCount, 1, 1)
+void CSSolveConstraintPositionFused(int3 GTID(gtid))
+{
+	FusedConstraintSweep(EFusedConstraintOp_SolvePosition, gtid.x);
+}
+
+// Single-group form of CSSolveConstraintVelocity. Dispatch exactly one group.
+numthreads(CSSolveConstraintVelocityFused, ConstraintThreadCount, 1, 1)
+void CSSolveConstraintVelocityFused(int3 GTID(gtid))
+{
+	FusedConstraintSweep(EFusedConstraintOp_SolveVelocity, gtid.x);
+}
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

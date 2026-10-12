@@ -1176,6 +1176,77 @@ namespace pr::physics::tests
 			}
 		}
 
+		// The single-group fused colour sweep must give the same bodies as one dispatch per colour.
+		PRUnitTestMethod(HardwareFusedColourSweepMatchesPerColour, Extended)
+		{
+			// A chain needs two colours and a star hub needs one colour per spoke, and the slot count exceeds one group's threads.
+			constexpr auto ChainSlots = 150;
+			constexpr auto StarSpokes = 6;
+			constexpr auto BodyCount = ChainSlots + 1 + 1 + StarSpokes;
+			auto upload = GpuConstraintUpload{};
+			auto add_slot = [&](int body_a, int body_b)
+			{
+				// Lock every axis so each slot exchanges impulses between its two dynamic bodies.
+				auto& endpoint = upload.m_endpoints.emplace_back();
+				endpoint.body_idx_a = body_a;
+				endpoint.body_idx_b = body_b;
+				endpoint.flags = GpuConstraintEndpointFlags_Enabled;
+				endpoint.generation = 1;
+				upload.m_endpoint_identities.emplace_back();
+				auto& descriptor = upload.m_descriptors.emplace_back();
+				descriptor.frame_a.rotation = float4{0, 0, 0, 1};
+				descriptor.frame_b.rotation = float4{0, 0, 0, 1};
+				for (int axis_idx = 0; axis_idx != GpuConstraintRowsPerBlock; ++axis_idx)
+				{
+					descriptor.axes[axis_idx].mode = GpuConstraintAxisMode_Locked;
+					descriptor.axes[axis_idx].max_force = 1000.0f;
+				}
+			};
+			for (int slot_idx = 0; slot_idx != ChainSlots; ++slot_idx)
+				add_slot(slot_idx, slot_idx + 1);
+			for (int spoke = 0; spoke != StarSpokes; ++spoke)
+				add_slot(ChainSlots + 1, ChainSlots + 2 + spoke);
+
+			upload.m_rigid_active_count = isize(upload.m_endpoints);
+
+			// Give every body a distinct velocity so each colour has real work.
+			auto initial = std::vector<GpuRigidBody>{};
+			for (int body_idx = 0; body_idx != BodyCount; ++body_idx)
+			{
+				auto rigid_body = MakeConstraintGpuBody(1.0f + 0.01f * body_idx);
+				auto const phase = 0.37f * body_idx;
+				rigid_body.VelocityWS(v8motion{v4{std::sin(phase), std::cos(phase), 0.5f * std::sin(2 * phase), 0}, v4{0.3f * std::cos(phase), 0.2f, -0.4f * std::sin(phase), 0}});
+				initial.push_back(PackDynamics(rigid_body, body_idx));
+			}
+
+			// Solve two frames per form so retained warm starts are compared as well.
+			auto run = [&](int fused_limit, int& dispatch_count)
+			{
+				auto config = EngineConfig{};
+				config.solver_iterations = 3;
+				config.push_out_iterations = 2;
+				config.constraint_warm_start_factor = 0.8f;
+				config.fused_colour_sweep_limit = fused_limit;
+				auto solver = GpuConstraintSolver{ConstraintTestGpu(), config};
+				auto bodies = initial;
+				solver.Solve(ConstraintTestGpu().m_job, 1.0f / 60.0f, upload, bodies);
+				solver.Solve(ConstraintTestGpu().m_job, 1.0f / 60.0f, upload, bodies);
+				dispatch_count = solver.Stats().m_dispatch_count;
+				return bodies;
+			};
+			auto per_colour_dispatches = 0;
+			auto fused_dispatches = 0;
+			auto const per_colour = run(0, per_colour_dispatches);
+			auto const fused = run(256, fused_dispatches);
+			PR_EXPECT(fused_dispatches < per_colour_dispatches);
+			for (int body_idx = 0; body_idx != BodyCount; ++body_idx)
+			{
+				PR_EXPECT(FEqlAbsolute(fused[body_idx].o2w, per_colour[body_idx].o2w, 1.0e-5f));
+				PR_EXPECT(FEqlAbsolute(fused[body_idx].momentum_lin, per_colour[body_idx].momentum_lin, 1.0e-5f));
+				PR_EXPECT(FEqlAbsolute(fused[body_idx].momentum_ang, per_colour[body_idx].momentum_ang, 1.0e-5f));
+			}
+		}
+
 		// Read a production compute-shader overload latch back through the solver's single diagnostic transaction.
 		PRUnitTestMethod(HardwareReportsBreakState, Extended)
 		{

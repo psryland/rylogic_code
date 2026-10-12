@@ -73,6 +73,9 @@ namespace pr::physics::shader_code
 	extern ByteCode const store_warm_start;
 	extern ByteCode const position_solve;
 	extern ByteCode const resolve;
+	extern ByteCode const apply_warm_start_fused;
+	extern ByteCode const position_solve_fused;
+	extern ByteCode const resolve_fused;
 	extern ByteCode const clear_coupled_contacts;
 	extern ByteCode const prepare_coupled_contacts;
 	extern ByteCode const prepare_coupled_contact_position;
@@ -97,6 +100,9 @@ namespace pr::physics::shader_code
 	extern ByteCode const apply_constraint_position;
 	extern ByteCode const solve_constraint_velocity;
 	extern ByteCode const detect_broken_constraints;
+	extern ByteCode const apply_constraint_warm_start_fused;
+	extern ByteCode const solve_constraint_position_fused;
+	extern ByteCode const solve_constraint_velocity_fused;
 	extern ByteCode const prepare_coupled_constraints;
 	extern ByteCode const prepare_coupled_position_preconditioners;
 	extern ByteCode const clear_coupled_position_state;

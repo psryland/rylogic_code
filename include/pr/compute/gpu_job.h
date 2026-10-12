@@ -148,12 +148,7 @@ namespace pr::compute
 			auto const execute_beg = timestamp();
 
 			// Run the job.
-			CmdListCollection cmd_lists = { m_cmd_list.get() };
-			m_queue->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
-
-			// Record the sync point for when the command will be finished
-			m_pending_sync_point = m_gsync.AddSyncPoint(m_queue.get());
-			m_cmd_list.SyncPoint(m_pending_sync_point);
+			m_pending_sync_point = ExecuteRecorded();
 
 			if (profile != nullptr)
 			{
@@ -167,6 +162,22 @@ namespace pr::compute
 			}
 
 			return RunHandle{ m_pending_sync_point };
+		}
+
+		// Execute the commands recorded so far without waiting, then continue recording into a fresh command list.
+		// The queue executes work in order, so the handle from the next 'Submit' also covers the flushed commands.
+		// Resource-state tracking restarts as it does after 'Submit', so callers must not rely on a non-default state set before the flush.
+		void Flush()
+		{
+			// Flushing is part of recording, which is not possible while a submission is pending.
+			if (m_pending_sync_point != 0)
+				throw std::runtime_error("GpuJob::Flush called while a submission is pending");
+
+			// Execute the recorded prefix, then record later commands with an allocator the GPU is not using.
+			m_barriers.Commit();
+			m_cmd_list.Close();
+			ExecuteRecorded();
+			ResetRecording();
 		}
 
 		// Wait for a submitted job, then reset command recording for the next submission.
@@ -196,11 +207,7 @@ namespace pr::compute
 			m_gsync.Poll();
 
 			// Reset for the next job
-			m_cmd_list.Reset(m_cmd_pool.Get());
-
-			// Rebind the view heap after reset
-			auto heaps = { m_view_heap.get() };
-			m_cmd_list.SetDescriptorHeaps({ heaps.begin(), heaps.size() });
+			ResetRecording();
 
 			if (profile != nullptr)
 			{
@@ -245,6 +252,30 @@ namespace pr::compute
 			Complete(handle, profile);
 		}
 
+	private:
+
+		// Execute the closed command list and return the sync point that marks its completion.
+		uint64_t ExecuteRecorded()
+		{
+			// The allocator cannot be reused until the GPU reaches the sync point that follows these commands.
+			CmdListCollection cmd_lists = { m_cmd_list.get() };
+			m_queue->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
+			auto sync_point = m_gsync.AddSyncPoint(m_queue.get());
+			m_cmd_list.SyncPoint(sync_point);
+			return sync_point;
+		}
+
+		// Reopen the command list with an available allocator, ready for further recording.
+		void ResetRecording()
+		{
+			// Reset clears the bound descriptor heaps, so rebind the view heap.
+			m_cmd_list.Reset(m_cmd_pool.Get());
+			auto heaps = { m_view_heap.get() };
+			m_cmd_list.SetDescriptorHeaps({ heaps.begin(), heaps.size() });
+		}
+
+	public:
+
 		// Get a pointer to the queue
 		static D3DPtr<ID3D12CommandQueue> GetQueue(ID3D12Device4* device)
 		{
@@ -264,7 +295,7 @@ namespace pr::compute
 		{
 			assert(job.m_cmd_list.ResState(res).Mip0State() == D3D12_RESOURCE_STATE_COPY_DEST && "'res' should be in the COPY_DEST state");
 
-			auto upload_buffer = job.m_upload.Alloc<T>(data.size());
+			auto upload_buffer = job.m_upload.Alloc<T>(static_cast<int>(data.size()));
 			memcpy(upload_buffer.ptr<T>(), data.data(), data.size() * sizeof(T));
 			job.m_cmd_list.CopyBufferRegion(res, 0, upload_buffer);
 		}
