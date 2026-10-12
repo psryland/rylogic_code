@@ -396,6 +396,9 @@ namespace pr::physics
 			// Terrain heights applied to every water configuration, or null for deep water.
 			std::shared_ptr<pr::physics::terrain::water::Bathymetry const> m_water_bathymetry;
 
+			// The wind sea applied to every water configuration, or null for table-maximum wind-sea amplitudes.
+			std::shared_ptr<pr::physics::terrain::water::WindSea const> m_water_wind_sea;
+
 			// Atmospheres use the engine's device but not the engine's GPU state. Declared after 'm_engine' so they are destroyed first.
 			std::vector<ObjectSlot<AtmosphereRecord>> m_atmospheres;
 
@@ -2117,6 +2120,7 @@ extern "C"
 				case PhysicsStructId::AtmosphereDesc: { *size = sizeof(pr::physics::AtmosphereDesc); break; }
 				case PhysicsStructId::AtmosphereStep: { *size = sizeof(pr::physics::AtmosphereStepDesc); break; }
 				case PhysicsStructId::AtmosphereStats: { *size = sizeof(pr::physics::AtmosphereStats); break; }
+		case PhysicsStructId::WindSea: { *size = sizeof(pr::physics::WindSeaDesc); break; }
 				default: throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Unknown physics structure identifier");
 			}
 		});
@@ -2453,6 +2457,7 @@ extern "C"
 					field.BreakingRatio(c.breaking_ratio);
 					field.RepeatPeriod(c.repeat_period);
 					field.TerrainHeights(record.m_water_bathymetry);
+					field.WindSea(record.m_water_wind_sea);
 					config = pr::physics::WaterConfig{
 						.m_field = std::move(field),
 						.m_density = c.density,
@@ -2511,19 +2516,83 @@ extern "C"
 		});
 	}
 
-	// Return the wind-driven target amplitude of each spectrum component.
-	PhysicsStatus __stdcall Physics_WaveSpectrumTargets(pr::physics::WaveSpectrumDesc const* desc, float wind_speed, float fetch, float* amplitudes, std::int32_t count)
+	// Replace the wind sea applied to water; null leaves wind-sea elements at their table-maximum amplitude.
+	PhysicsStatus __stdcall Physics_EngineWaterWindSeaSet(PhysicsEngineHandle engine, pr::physics::WindSeaDesc const* wind_sea)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			auto scope = pr::physics::EngineScope(engine);
+			auto& record = *scope;
+			pr::physics::RequireOwner(record);
+			pr::physics::RequireIdle(record);
+
+			// Build and validate the replacement before changing any state.
+			auto replacement = std::shared_ptr<pr::physics::terrain::water::WindSea const>{};
+			if (wind_sea != nullptr)
+			{
+				auto const& c = pr::physics::RequireStruct(wind_sea);
+				if (c.width < 0 || c.height < 0 || c.band_count < 0 || c.speed_count < 0 || c.level_count < 0 || c.table == nullptr || c.winds == nullptr)
+					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wind sea grid");
+
+				try
+				{
+					// The ABI vectors have the same layout but weaker alignment than the shared types, so copy rather than reinterpret.
+					using namespace pr::physics::terrain::water;
+					auto const grid = WindSeaGrid{
+						.origin = { c.origin.x, c.origin.y },
+						.cell_size = c.cell_size,
+						.speed_step = c.speed_step,
+						.dims = { c.width, c.height },
+						.band_count = c.band_count,
+						.speed_count = c.speed_count,
+						.level_count = c.level_count,
+					};
+					auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(c.band_count) * static_cast<size_t>(c.speed_count));
+					std::memcpy(table.data(), c.table, table.size() * sizeof(pr::physics::Vector4));
+					auto winds = std::vector<pr::v2>(static_cast<size_t>(c.width) * static_cast<size_t>(c.height) * static_cast<size_t>(c.level_count));
+					std::memcpy(winds.data(), c.winds, winds.size() * sizeof(pr::physics::Vector2));
+					replacement = std::make_shared<WindSea const>(grid, table, winds);
+				}
+				catch (std::exception const& ex)
+				{
+					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
+				}
+			}
+
+			// Apply the wind sea to the current water immediately; later water replacements pick it up from the record.
+			if (auto current = record.m_engine->Water(); current != nullptr)
+			{
+				auto config = *current;
+				try
+				{
+					config.m_field.WindSea(replacement);
+				}
+				catch (std::exception const& ex)
+				{
+					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
+				}
+				record.m_engine->Water(std::move(config));
+			}
+			record.m_water_wind_sea = std::move(replacement);
+		});
+	}
+
+	// Write the wind-sea table of the spectrum for a wind blowing over 'fetch' metres.
+	PhysicsStatus __stdcall Physics_WaveSpectrumSeaTable(pr::physics::WaveSpectrumDesc const* desc, float fetch, float speed_step, pr::physics::Vector4* rows, std::int32_t row_count)
 	{
 		return pr::physics::ApiCall([&]
 		{
 			using namespace pr::physics::terrain::water;
-			if (desc == nullptr || amplitudes == nullptr || count < 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum or amplitude array");
+			if (desc == nullptr || rows == nullptr || row_count < 0)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum or table array");
 
 			try
 			{
+				// The ABI vector has the same layout but weaker alignment than the shared row, so build locally and copy out.
 				auto const spectrum = WaveSpectrum{ ToWaveSpectrumLayout(*desc) };
-				spectrum.Targets(WaveWeather{ .m_wind_speed = wind_speed, .m_fetch = fetch }, std::span{ amplitudes, static_cast<size_t>(count) });
+				auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(row_count));
+				spectrum.SeaTable(fetch, speed_step, table);
+				std::memcpy(rows, table.data(), table.size() * sizeof(pr::physics::Vector4));
 			}
 			catch (std::exception const& ex)
 			{
@@ -2532,18 +2601,18 @@ extern "C"
 		});
 	}
 
-	// Move each amplitude towards its target over 'dt' seconds with time constant 'time_constant' seconds.
-	PhysicsStatus __stdcall Physics_WaveSpectrumRelax(float* amplitudes, float const* targets, std::int32_t count, float dt, float time_constant)
+	// Move each value towards its target over 'dt' seconds with time constant 'time_constant' seconds.
+	PhysicsStatus __stdcall Physics_WaveSpectrumRelax(float* values, float const* targets, std::int32_t count, float dt, float time_constant)
 	{
 		return pr::physics::ApiCall([&]
 		{
 			using namespace pr::physics::terrain::water;
-			if (amplitudes == nullptr || targets == nullptr || count < 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum amplitude arrays");
+			if (values == nullptr || targets == nullptr || count < 0)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid relax arrays");
 
 			try
 			{
-				WaveSpectrum::Relax(std::span{ amplitudes, static_cast<size_t>(count) }, std::span{ targets, static_cast<size_t>(count) }, dt, time_constant);
+				WaveSpectrum::Relax(std::span{ values, static_cast<size_t>(count) }, std::span{ targets, static_cast<size_t>(count) }, dt, time_constant);
 			}
 			catch (std::exception const& ex)
 			{
@@ -2552,43 +2621,25 @@ extern "C"
 		});
 	}
 
-	// Return the crest sharpness of wind-driven waves for 'wind_speed'.
-	PhysicsStatus __stdcall Physics_WaveSpectrumCrestSharpness(float wind_speed, float* sharpness)
+	// Build wind-sea water elements for the spectrum components with a wavelength of at least 'min_wavelength' that the table can excite.
+	PhysicsStatus __stdcall Physics_WaveSpectrumElements(pr::physics::WaveSpectrumDesc const* desc, pr::physics::Vector4 const* rows, std::int32_t row_count, float min_wavelength, pr::physics::WaterElement* elements, std::int32_t capacity, std::int32_t* element_count)
 	{
 		return pr::physics::ApiCall([&]
 		{
 			using namespace pr::physics::terrain::water;
-			if (sharpness == nullptr)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid crest sharpness output");
-
-			try
-			{
-				*sharpness = WaveSpectrum::CrestSharpness(wind_speed);
-			}
-			catch (std::exception const& ex)
-			{
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
-			}
-		});
-	}
-
-	// Build water elements for the spectrum components with non-zero amplitude and a wavelength of at least 'min_wavelength'.
-	PhysicsStatus __stdcall Physics_WaveSpectrumElements(pr::physics::WaveSpectrumDesc const* desc, float const* amplitudes, std::int32_t count, float heading, float sharpness, float min_wavelength, pr::physics::WaterElement* elements, std::int32_t capacity, std::int32_t* element_count)
-	{
-		return pr::physics::ApiCall([&]
-		{
-			using namespace pr::physics::terrain::water;
-			if (desc == nullptr || amplitudes == nullptr || count < 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum or amplitude array");
+			if (desc == nullptr || rows == nullptr || row_count < 0)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum or table array");
 			if (elements == nullptr || capacity < 0 || element_count == nullptr)
 				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid wave spectrum element output");
 
 			try
 			{
-				// The ABI element has the same layout but weaker alignment than the shared element, so build locally and copy out.
+				// The ABI types have the same layout but weaker alignment than the shared types, so copy in, build locally and copy out.
 				auto const spectrum = WaveSpectrum{ ToWaveSpectrumLayout(*desc) };
+				auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(row_count));
+				std::memcpy(table.data(), rows, table.size() * sizeof(pr::physics::Vector4));
 				auto built = std::array<WaterFieldElement, MaxElementCount>{};
-				auto const n = spectrum.Elements(std::span{ amplitudes, static_cast<size_t>(count) }, heading, sharpness, min_wavelength, built);
+				auto const n = spectrum.Elements(table, min_wavelength, built);
 				if (n > capacity)
 					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Wave spectrum element output is too small");
 

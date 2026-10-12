@@ -8,6 +8,7 @@
 #include "pr/physics/terrain/water/water_field.hlsli"
 #include "pr/physics/terrain/water/water_depth.hlsli"
 #include "pr/physics/terrain/water/wave_spectrum.h"
+#include "pr/physics/terrain/water/wind_sea.h"
 #include <algorithm>
 #include <array>
 
@@ -332,53 +333,52 @@ namespace pr::physics::terrain::water::tests
 			PR_EXPECT(dry.MinHeight(v2d{-5.0, -5.0}, v2d{5.0, 5.0}) == 0.0);
 		}
 
-		// Spectrum amplitudes follow the wind, relax towards targets, and produce elements that repeat after the repeat period.
+		// The wind-sea table follows the wind, and the spectrum produces band-tagged elements that bound the table and repeat after the repeat period.
 		PRUnitTestMethod(WaveSpectrumFollowsWeather, Quick)
 		{
 			auto const spectrum = WaveSpectrum{};
+			auto const bands = spectrum.Layout().m_bands;
 			auto const count = static_cast<size_t>(spectrum.ComponentCount());
-			auto targets = std::vector<float>(count);
-			PR_EXPECT(spectrum.ComponentCount() == 64);
+			PR_EXPECT(spectrum.ComponentCount() == 96);
 
-			// A 10 m/s wind over 10 km gives a significant wave height of about 0.6 m.
-			auto const total_variance = [&](std::span<float const> amplitudes)
+			// Build tables of 81 rows per band, from calm to 40 m/s.
+			constexpr int speed_count = 81;
+			constexpr float speed_step = 0.5f;
+			auto const sea_table = [&](float fetch)
 			{
-				auto variance = 0.0;
-				for (auto a : amplitudes)
-					variance += 0.5 * a * a;
-
-				return variance;
+				auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(bands) * speed_count);
+				spectrum.SeaTable(fetch, speed_step, table);
+				return table;
 			};
-			spectrum.Targets(WaveWeather{.m_wind_speed = 10.0f, .m_fetch = 10000.0f}, targets);
-			auto const variance = total_variance(targets);
+			auto const row = [&](std::span<WindSeaTableRow const> table, int b, float wind_speed) -> WindSeaTableRow const&
+			{
+				return table[static_cast<size_t>(b) * speed_count + static_cast<int>(wind_speed / speed_step)];
+			};
+			auto const table = sea_table(10000.0f);
+
+			// A 10 m/s wind over 10 km gives a significant wave height of about 0.6 m. Each band's variance is half the downwind amplitude squared
+			// times the sum of its alignment weights.
+			auto variance = 0.0;
+			for (int b = 0; b != bands; ++b)
+			{
+				auto const& r = row(table, b, 10.0f);
+				variance += 0.5 * r.x * r.x * r.w;
+			}
 			auto const hs = 4.0 * std::sqrt(variance);
 			PR_EXPECT(hs > 0.45 && hs < 0.85);
 
-			// Every direction lies within a quarter turn of downwind, and the energy-weighted mean direction is close to downwind.
-			auto weighted_cos = 0.0;
-			for (auto i = 0; i != spectrum.ComponentCount(); ++i)
+			// Calm air makes no waves, and the crest sharpness follows CrestSharpness.
+			for (int b = 0; b != bands; ++b)
 			{
-				auto const& direction = spectrum.Components()[i].m_direction;
-				PR_EXPECT(direction.x > 0.0f);
-				weighted_cos += 0.5 * targets[i] * targets[i] * direction.x;
+				PR_EXPECT(row(table, b, 0.0f).x == 0.0f);
+				PR_EXPECT(row(table, b, 10.0f).z == WaveSpectrum::CrestSharpness(10.0f));
 			}
-			PR_EXPECT(weighted_cos / variance > 0.8);
 
-			// A gale's spectrum peak is longer than every band, yet its energy is still concentrated closer to downwind than a fresh breeze's.
-			auto const mean_cos = [&](float wind_speed)
-			{
-				auto gale = std::vector<float>(count);
-				spectrum.Targets(WaveWeather{.m_wind_speed = wind_speed, .m_fetch = 500000.0f}, gale);
-				auto cos_sum = 0.0;
-				for (auto i = 0; i != spectrum.ComponentCount(); ++i)
-					cos_sum += 0.5 * gale[i] * gale[i] * spectrum.Components()[i].m_direction.x;
+			// A gale's spectrum peak is longer than every band, yet its long waves are still more closely aligned with the wind than a fresh breeze's.
+			auto const ocean = sea_table(500000.0f);
+			PR_EXPECT(row(ocean, bands - 1, 30.0f).y > row(ocean, bands - 1, 8.0f).y);
 
-				return cos_sum / total_variance(gale);
-			};
-			PR_EXPECT(mean_cos(30.0f) > mean_cos(8.0f));
-			PR_EXPECT(mean_cos(30.0f) > 0.9);
-
-			// Every component has its own wavelength and direction. Directions crowd near downwind, so 'distinct' means more than about a quarter degree apart.
+			// Every component has its own wavelength and direction.
 			for (auto i = 0; i != spectrum.ComponentCount(); ++i)
 			{
 				for (auto j = i + 1; j != spectrum.ComponentCount(); ++j)
@@ -390,44 +390,46 @@ namespace pr::physics::terrain::water::tests
 				}
 			}
 
-			// Layouts must describe a non-empty range and at most MaxElementCount components.
+			// Layouts must describe a non-empty range and at most MaxElementCount components, and tables need at least two rows per band.
 			PR_THROWS(WaveSpectrum(WaveSpectrumLayout{.m_min_wavelength = 4.0f, .m_max_wavelength = 2.0f}), std::invalid_argument);
-			PR_THROWS(WaveSpectrum(WaveSpectrumLayout{.m_bands = 17, .m_directions = 4}), std::invalid_argument);
+			PR_THROWS(WaveSpectrum(WaveSpectrumLayout{.m_bands = 13, .m_directions = 8}), std::invalid_argument);
 			PR_THROWS(WaveSpectrum(WaveSpectrumLayout{.m_directions = 0}), std::invalid_argument);
-
-			// Calm air makes no waves.
-			auto calm = std::vector<float>(count);
-			spectrum.Targets(WaveWeather{.m_wind_speed = 0.0f, .m_fetch = 10000.0f}, calm);
-			PR_EXPECT(std::ranges::all_of(calm, [](float a) { return a == 0.0f; }));
+			auto short_table = std::vector<WindSeaTableRow>(static_cast<size_t>(bands));
+			PR_THROWS(spectrum.SeaTable(10000.0f, speed_step, short_table), std::invalid_argument);
 
 			// Relaxing moves part way towards the targets, then reaches them.
-			auto amps = std::vector<float>(count);
-			WaveSpectrum::Relax(amps, targets, 20.0f, 20.0f);
-			auto const i_max = std::ranges::max_element(targets) - targets.begin();
-			PR_EXPECT(FEqlAbsolute(amps[i_max], targets[i_max] * (1.0f - std::exp(-1.0f)), 1e-4f));
-			WaveSpectrum::Relax(amps, targets, 1e4f, 20.0f);
-			PR_EXPECT(FEqlAbsolute(amps[i_max], targets[i_max], 1e-6f));
+			auto values = std::vector<float>{0.0f, 0.0f};
+			auto const targets = std::vector<float>{1.0f, 2.0f};
+			WaveSpectrum::Relax(values, targets, 20.0f, 20.0f);
+			PR_EXPECT(FEqlAbsolute(values[1], 2.0f * (1.0f - std::exp(-1.0f)), 1e-4f));
+			WaveSpectrum::Relax(values, targets, 1e4f, 20.0f);
+			PR_EXPECT(FEqlAbsolute(values[1], 2.0f, 1e-6f));
 
 			// A minimum wavelength removes the short components.
 			auto all = std::vector<WaterFieldElement>(count);
 			auto some = std::vector<WaterFieldElement>(count);
-			auto const n_all = spectrum.Elements(amps, 0.0f, 0.0f, 0.0f, all);
-			auto const n_some = spectrum.Elements(amps, 0.0f, 0.0f, 4.0f, some);
+			auto const n_all = spectrum.Elements(table, 0.0f, all);
+			auto const n_some = spectrum.Elements(table, 4.0f, some);
 			PR_EXPECT(n_all > n_some && n_some > 0);
 			for (auto i = 0; i != n_some; ++i)
 				PR_EXPECT(some[i].wave.y >= 4.0f);
 
-			// The heading rotates every element direction about +Z.
-			auto rotated = std::vector<WaterFieldElement>(count);
-			auto const n_rotated = spectrum.Elements(amps, constants<float>::tau_by_4, 0.0f, 0.0f, rotated);
-			PR_EXPECT(n_rotated == n_all);
+			// Each element is tagged with its band and holds the band's largest table amplitude and sharpness.
 			for (auto i = 0; i != n_all; ++i)
 			{
-				PR_EXPECT(FEqlAbsolute(rotated[i].position.x, -all[i].position.y, 1e-5f));
-				PR_EXPECT(FEqlAbsolute(rotated[i].position.y, +all[i].position.x, 1e-5f));
+				auto const b = shared::WaterFieldWindSeaBand(all[i]);
+				PR_EXPECT(b >= 0 && b < bands);
+				auto max_amplitude = 0.0f;
+				auto max_sharpness = 0.0f;
+				for (int r = 0; r != speed_count; ++r)
+				{
+					max_amplitude = std::max(max_amplitude, table[static_cast<size_t>(b) * speed_count + r].x);
+					max_sharpness = std::max(max_sharpness, table[static_cast<size_t>(b) * speed_count + r].z);
+				}
+				PR_EXPECT(all[i].wave.x == max_amplitude && all[i].timing.x == max_sharpness);
 			}
 
-			// Light winds give sine-shaped crests; stronger winds sharpen them, within the limit, and the sharpness reaches every element.
+			// Light winds give sine-shaped crests; stronger winds sharpen them, within the limit.
 			PR_EXPECT(WaveSpectrum::CrestSharpness(0.0f) == 0.0f && WaveSpectrum::CrestSharpness(4.0f) == 0.0f);
 			auto previous = 0.0f;
 			for (auto wind_speed : {5.0f, 10.0f, 20.0f, 40.0f, 1000.0f})
@@ -437,11 +439,9 @@ namespace pr::physics::terrain::water::tests
 				previous = sharpness;
 			}
 			PR_THROWS(WaveSpectrum::CrestSharpness(-1.0f), std::invalid_argument);
-			auto sharp = std::vector<WaterFieldElement>(count);
-			auto const n_sharp = spectrum.Elements(amps, 0.0f, 0.5f, 0.0f, sharp);
-			PR_EXPECT(n_sharp == n_all && sharp[0].timing.x == 0.5f);
-			PR_THROWS(spectrum.Elements(amps, 0.0f, 0.95f, 0.0f, sharp), std::invalid_argument);
-
+			auto sharp_table = table;
+			sharp_table[1].z = 0.95f;
+			PR_THROWS(spectrum.Elements(sharp_table, 0.0f, all), std::invalid_argument);
 			// The surface repeats after the repeat period, so wrapping the clock does not move it.
 			auto field = WaterField(0.0, std::span{all.data(), static_cast<size_t>(n_all)});
 			field.RepeatPeriod(1024.0);
@@ -453,6 +453,101 @@ namespace pr::physics::terrain::water::tests
 				auto const unwrapped = WaterField(0.0, std::span{all.data(), static_cast<size_t>(n_all)});
 				PR_EXPECT(FEqlAbsolute(field.Height(xy, 1024.0 * 3 + t), unwrapped.Height(xy, t), 1e-3));
 			}
+		}
+
+		// A wind sea scales each element by the local wind, varies smoothly as the wind turns, and stays within the field's height bounds.
+		PRUnitTestMethod(WindSeaFollowsLocalWind, Quick)
+		{
+			auto const spectrum = WaveSpectrum{};
+			auto const bands = spectrum.Layout().m_bands;
+			constexpr int speed_count = 81;
+			auto table = std::vector<WindSeaTableRow>(static_cast<size_t>(bands) * speed_count);
+			spectrum.SeaTable(10000.0f, 0.5f, table);
+			auto elements = std::vector<WaterFieldElement>(static_cast<size_t>(spectrum.ComponentCount()));
+			elements.resize(static_cast<size_t>(spectrum.Elements(table, 0.0f, elements)));
+
+			// A 2x2 grid of 100 m cells, with every band's wind at 'wind' except node (1, 0), which has 'wind10'.
+			auto const grid = WindSeaGrid{.origin = {0.0f, 0.0f}, .cell_size = 100.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = bands, .speed_count = speed_count, .level_count = bands};
+			auto const make_sea = [&](v2 wind, v2 wind10)
+			{
+				auto winds = std::vector<v2>(static_cast<size_t>(4 * bands), wind);
+				for (int b = 0; b != bands; ++b)
+					winds[static_cast<size_t>(1 * bands + b)] = wind10;
+
+				return std::make_shared<WindSea const>(grid, table, winds);
+			};
+
+			// Downwind elements are larger than upwind elements, and the band state is the table row for the wind speed.
+			auto const east = make_sea(v2{10.0f, 0.0f}, v2{10.0f, 0.0f});
+			auto band_states = std::vector<WindSeaBand>(static_cast<size_t>(bands));
+			east->Bands(v2{30.0f, 70.0f}, band_states);
+			auto const peak = static_cast<int>(std::ranges::max_element(band_states, {}, &WindSeaBand::amplitude) - band_states.begin());
+			PR_EXPECT(FEqlAbsolute(band_states[peak].amplitude, table[static_cast<size_t>(peak) * speed_count + 20].x, 1e-6f));
+			PR_EXPECT(FEqlAbsolute(band_states[peak].direction.x, 1.0f, 1e-6f));
+			PR_EXPECT(shared::WindSeaAmplitude(v2{1.0f, 0.0f}, band_states[peak]) > 10.0f * shared::WindSeaAmplitude(v2{-1.0f, 0.0f}, band_states[peak]));
+
+			// Winds are blended between nodes, so the midpoint between an east and a north wind blows north-east.
+			auto const turning = make_sea(v2{10.0f, 0.0f}, v2{0.0f, 10.0f});
+			turning->Bands(v2{50.0f, 0.0f}, band_states);
+			PR_EXPECT(FEqlAbsolute(band_states[peak].direction.x, band_states[peak].direction.y, 1e-5f));
+
+			// The field takes local amplitudes from the wind sea; elements without a band keep their own.
+			auto field = WaterField(0.0, elements);
+			auto const fixed_wave = SineWave(v2{0.0f, 1.0f}, 0.05f, 30.0f, 0.2f);
+			auto mixed = elements;
+			mixed.push_back(fixed_wave);
+			field.Elements(mixed);
+			field.WindSea(east);
+			auto local = std::vector<v2>(mixed.size());
+			field.LocalWaves(v2d{30.0, 70.0}, local);
+			PR_EXPECT(local.back().x == 0.0f && local.back().y == 0.0f);
+			for (size_t i = 0; i != elements.size(); ++i)
+			{
+				auto const b = shared::WaterFieldWindSeaBand(elements[i]);
+				east->Bands(v2{30.0f, 70.0f}, band_states);
+				PR_EXPECT(FEqlAbsolute(local[i].x, shared::WindSeaAmplitude(elements[i].position.xy, band_states[b]), 1e-6f));
+				PR_EXPECT(local[i].x <= elements[i].wave.x);
+			}
+
+			// Turning the wind slightly moves the surface slightly, so a smoothly turning wind never makes the surface jump.
+			auto const angle = 1.0e-3f;
+			auto const turned = make_sea(v2{10.0f * std::cos(angle), 10.0f * std::sin(angle)}, v2{10.0f * std::cos(angle), 10.0f * std::sin(angle)});
+			auto turned_field = field;
+			turned_field.WindSea(turned);
+			for (int i = 0; i != 10; ++i)
+			{
+				auto const xy = v2d{11.0 * i, 9.0 * i};
+				PR_EXPECT(std::abs(field.Height(xy, 3.0 * i) - turned_field.Height(xy, 3.0 * i)) < 1e-2);
+			}
+
+			// The height bounds enclose sampled heights.
+			for (int i = 0; i != 50; ++i)
+			{
+				auto const xy = v2d{17.0 * i - 300.0, 13.0 * i - 200.0};
+				auto const h = field.Height(xy, 1.7 * i);
+				PR_EXPECT(h <= field.MaxHeight() && h >= field.MinHeight());
+			}
+
+			// With two levels, the first band takes the first level's wind, the last band the second level's, and middle bands a blend of both.
+			auto const level_grid = WindSeaGrid{.origin = {0.0f, 0.0f}, .cell_size = 100.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = bands, .speed_count = speed_count, .level_count = 2};
+			auto level_winds = std::vector<v2>(8);
+			for (int n = 0; n != 4; ++n)
+			{
+				level_winds[static_cast<size_t>(2 * n + 0)] = v2{10.0f, 0.0f};
+				level_winds[static_cast<size_t>(2 * n + 1)] = v2{0.0f, 10.0f};
+			}
+			auto const levels = WindSea(level_grid, table, level_winds);
+			levels.Bands(v2{30.0f, 70.0f}, band_states);
+			PR_EXPECT(FEqlAbsolute(band_states.front().direction.x, 1.0f, 1e-6f));
+			PR_EXPECT(FEqlAbsolute(band_states.back().direction.y, 1.0f, 1e-6f));
+			PR_EXPECT(band_states[bands / 2].direction.x > 0.1f && band_states[bands / 2].direction.y > 0.1f);
+			PR_THROWS(WindSea(WindSeaGrid{.origin = {0.0f, 0.0f}, .cell_size = 100.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = bands, .speed_count = speed_count, .level_count = 0}, table, std::span<v2 const>{}), std::invalid_argument);
+
+			// A wind sea must describe every band the elements use.
+			auto const narrow_grid = WindSeaGrid{.origin = {0.0f, 0.0f}, .cell_size = 100.0f, .speed_step = 0.5f, .dims = {2, 2}, .band_count = 1, .speed_count = speed_count, .level_count = 1};
+			auto const narrow = std::make_shared<WindSea const>(narrow_grid, std::span{table}.first(speed_count), std::vector<v2>(4, v2{10.0f, 0.0f}));
+			PR_THROWS(field.WindSea(narrow), std::invalid_argument);
+			PR_THROWS(WindSea(grid, std::span{table}.first(speed_count), std::vector<v2>(static_cast<size_t>(4 * bands))), std::invalid_argument);
 		}
 	};
 }

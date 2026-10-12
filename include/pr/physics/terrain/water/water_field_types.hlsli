@@ -14,7 +14,7 @@ namespace pr::physics::terrain::water::shared
 #endif
 
 // Upper bound on the elements in one water field. Consumers can size constant buffers from it.
-static const int WaterFieldMaxElementCount = 64;
+static const int WaterFieldMaxElementCount = 96;
 
 // Element types stored in WaterFieldElement::info.x. Zero is an inactive element that contributes nothing.
 static const int WaterFieldElementNone = 0;
@@ -34,6 +34,8 @@ static const float WaterFieldMaxCrestSharpness = 0.9f;
 //                 Height is A*P(k*dot(d, xy) - k*c*t + phase). Steepness moves rendered vertices sideways but does not change the sampled height.
 //   RadialPacket: position.xy = source; wave = amplitude (m), wavelength (m), packet half-width (m), propagation speed (m/s);
 //                 timing = age (s), lifetime (s), attack time (s), radial attenuation scale (m).
+// info.y is zero, or for a sine or Gerstner wave that is part of a wind sea, its band index plus one (see wind_sea.hlsli). Consumers that apply
+// the wind sea replace the amplitude and crest sharpness of such elements with the local values; wave.x and timing.x then hold upper bounds.
 // Unused fields must be zero.
 #ifdef __cplusplus
 struct alignas(16) WaterFieldElement

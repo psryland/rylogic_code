@@ -2343,6 +2343,22 @@ VIEW3D_API void __stdcall View3D_ObjectProceduralBufferSet(view3d::Object object
 	CatchAndReport(View3D_ObjectProceduralBufferSet, , );
 }
 
+// Overwrite part of the buffer of every procedural shader used by an object's nuggets.
+VIEW3D_API void __stdcall View3D_ObjectProceduralBufferWrite(view3d::Object object, size_t offset, void const* data, size_t data_size)
+{
+	try
+	{
+		// The shaders validate the range against their buffers.
+		Validate(object);
+		DllLockGuard;
+		if (data == nullptr)
+			throw std::invalid_argument("Procedural buffer data is required");
+
+		Dll().ObjectProceduralBufferWrite(object, offset, std::span(static_cast<std::byte const*>(data), data_size));
+	}
+	CatchAndReport(View3D_ObjectProceduralBufferWrite, , );
+}
+
 // Create objects given in an ldraw string or file.
 // If multiple objects are created, the handle returned is to the first object only.
 // 'ldr_script' - an ldr string, or filepath to a file containing ldr script

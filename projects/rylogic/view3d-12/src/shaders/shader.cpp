@@ -7,6 +7,7 @@
 #include "pr/view3d-12/shaders/shader_procedural.h"
 #include "pr/view3d-12/shaders/shader_ray_cast.h"
 #include "pr/view3d-12/shaders/shader_smap.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12
@@ -57,6 +58,7 @@ namespace pr::rdr12
 		,m_pixel_family()
 		,m_constants()
 		,m_buffer(buffer)
+		,m_writer()
 		,m_name(name)
 	{
 		// A pixel family is all or nothing, and only the forward step has pixel shaders to replace.
@@ -83,6 +85,9 @@ namespace pr::rdr12
 			m_pixel_family.m_code[i] = ShaderCode::ByteCode(std::span<BYTE const>(m_ps_bytecode[i]));
 		}
 	}
+
+	// Release the writer here, where the factory type is complete. Its destructor waits for any queued write to finish.
+	ProceduralShader::~ProceduralShader() = default;
 
 	// True if this shader replaces the stock vertex shader.
 	bool ProceduralShader::HasVertexShader() const
@@ -118,6 +123,26 @@ namespace pr::rdr12
 		// Frames already recorded may still read the old buffer, so its release waits for them.
 		rdr().DeferRelease(m_buffer);
 		m_buffer = buffer;
+	}
+
+	// Overwrite part of the bound buffer for later frames.
+	void ProceduralShader::BufferWrite(size_t offset, std::span<std::byte const> data)
+	{
+		// Shaders read the buffer in 4-byte words, and a write must stay inside it.
+		if (m_buffer == nullptr)
+			throw std::invalid_argument("Procedural shader has no buffer to write");
+		auto const buffer_size = s_cast<size_t>(m_buffer->GetDesc().Width);
+		if (offset % 4 != 0 || data.size() % 4 != 0 || data.empty() || offset > buffer_size || data.size() > buffer_size - offset)
+			throw std::invalid_argument("Procedural shader buffer writes must be non-empty 4-byte aligned ranges within the buffer");
+
+		// Queue on the graphics queue, so the copy is ordered after the frames that read the old values and before the frames that read the new ones.
+		if (m_writer == nullptr)
+			m_writer = std::make_unique<ResourceFactory>(rdr());
+
+		::pr::compute::UpdateSubresourceScope map(m_writer->CmdList(), m_writer->UploadBuffer(), m_buffer.get(), 4, s_cast<int>(offset), s_cast<int>(data.size()));
+		std::memcpy(map.ptr<std::byte>(), data.data(), data.size());
+		map.Commit(::pr::compute::EFinalState::Restore);
+		m_writer->FlushToGpu(EGpuFlush::Async);
 	}
 
 	// Bind the copied constants and optional buffer through the render-step-specific reserved root slots.
