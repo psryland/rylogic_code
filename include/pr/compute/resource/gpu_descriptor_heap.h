@@ -5,7 +5,6 @@
 #pragma once
 #include "pr/compute/forward.h"
 #include "pr/compute/resource/descriptor.h"
-#include "pr/compute/utility/lookup.h"
 #include "pr/compute/utility/gpu_sync.h"
 
 namespace pr::compute
@@ -63,8 +62,35 @@ namespace pr::compute
 		//    
 	private:
 
+		// Hashes a descriptor table by the identity of each descriptor-store slot. The generation distinguishes a slot that was released and reused
+		// before the cache is cleared at the next sync point. Lookups can pass the descriptors directly, so a cache hit does not allocate.
+		struct TableHash
+		{
+			using is_transparent = void;
+			size_t operator()(std::span<Descriptor const> descriptors) const
+			{
+				auto key = hash::FNV_offset_basis64;
+				for (auto& des : descriptors)
+				{
+					key = hash::HashBytes64(&des.m_index, &des.m_index + 1, key);
+					key = hash::HashBytes64(&des.m_generation, &des.m_generation + 1, key);
+				}
+				return s_cast<size_t>(key);
+			}
+		};
+
+		// Compares descriptor tables exactly, so two different tables that have the same hash never share a GPU heap block.
+		struct TableEqual
+		{
+			using is_transparent = void;
+			bool operator()(std::span<Descriptor const> lhs, std::span<Descriptor const> rhs) const
+			{
+				return std::ranges::equal(lhs, rhs, [](Descriptor const& l, Descriptor const& r) { return l.m_index == r.m_index && l.m_generation == r.m_generation; });
+			}
+		};
+
 		using HeapPtr = D3DPtr<ID3D12DescriptorHeap>;
-		using Lookup = Lookup<uint64_t, D3D12_GPU_DESCRIPTOR_HANDLE>;
+		using Lookup = std::unordered_map<std::vector<Descriptor>, D3D12_GPU_DESCRIPTOR_HANDLE, TableHash, TableEqual>;
 		using SyncPoint = struct { uint64_t m_sync_point; int m_index; };
 		using SyncPoints = pr::deque<SyncPoint>;
 
@@ -136,22 +162,8 @@ namespace pr::compute
 			}
 			#endif
 
-			// Hash the full descriptor-table identity to generate a lookup key. The generation distinguishes a descriptor-store slot that has
-			// been released and re-used before the GPU heap cache is cleared at the next sync point.
-			auto key = hash::FNV_offset_basis64;
-			auto const heap_type = static_cast<uint64_t>(HeapType);
-			auto const count64 = static_cast<uint64_t>(descriptors.size());
-			key = hash::HashBytes64(&heap_type, &heap_type + 1, key);
-			key = hash::HashBytes64(&count64, &count64 + 1, key);
-			for (auto& des : descriptors)
-			{
-				auto const index = static_cast<uint64_t>(des.m_index);
-				key = hash::HashBytes64(&index, &index + 1, key);
-				key = hash::HashBytes64(&des.m_generation, &des.m_generation + 1, key);
-			}
-
-			// See if this combination of descriptors has already been added
-			auto iter = m_lookup.find(key);
+			// See if this exact descriptor table has already been added
+			auto iter = m_lookup.find(descriptors);
 			if (iter != end(m_lookup))
 				return iter->second;
 
@@ -175,7 +187,7 @@ namespace pr::compute
 
 			// Return the GPU handle for the start of the block of descriptors
 			m_head = Wrap(m_head + count, 0, m_size);
-			m_lookup[key] = dest_gpu;
+			m_lookup.insert_or_assign(std::vector<Descriptor>(descriptors.begin(), descriptors.end()), dest_gpu);
 			return dest_gpu;
 		}
 		D3D12_GPU_DESCRIPTOR_HANDLE Add(Descriptor const& descriptor)
