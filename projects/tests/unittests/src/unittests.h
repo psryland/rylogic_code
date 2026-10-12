@@ -7,6 +7,7 @@
 #include "pr/algorithm/algorithm.h"
 #include "pr/algorithm/astar_search.h"
 #include "pr/algorithm/dimension_index.h"
+#include "pr/algorithm/fabrik.h"
 #include "pr/algorithm/fast_fourier_transform.h"
 #include "pr/algorithm/fibonacci_sphere.h"
 #include "pr/algorithm/kdtree.h"
