@@ -8,7 +8,7 @@ namespace pr::compute::shader_cache
 {
 	namespace
 	{
-		static constexpr uint32_t CacheFormatVersion = 1;
+		static constexpr uint32_t CacheFormatVersion = 2;
 		static constexpr char ManifestMagic[] = "RDR12SHC";
 
 		struct CacheEntry

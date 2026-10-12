@@ -99,14 +99,25 @@ namespace pr::compute::shader_cache
 		};
 	}
 
-	// Return timestamp and size metadata for a module-backed resource.
+	// Return content metadata for a resource embedded in 'module'.
+	// The version is the size and hash of the resource bytes, so relinking the module without changing the resource keeps cached outputs valid.
 	inline Dependency ResourceDependency(std::string identity, std::wstring type, HMODULE module = nullptr)
 	{
-		auto path = CanonicalPath(win32::ModuleFileName(module));
-		auto dep = FileDependency(path, std::move(identity));
-		dep.m_kind = Dependency::EKind::Resource;
-		dep.m_type = std::move(type);
-		return dep;
+		// Hash the resource bytes rather than using the module's timestamp, which changes whenever any code in the module changes.
+		auto const res = resource::Read<char>(Widen(identity), type, module);
+		auto const hash_value = res.m_len != 0
+			? static_cast<uint64_t>(hash::HashBytes64(res.m_data, res.m_data + res.m_len))
+			: uint64_t{};
+
+		return Dependency{
+			.m_kind = Dependency::EKind::Resource,
+			.m_identity = std::move(identity),
+			.m_path = CanonicalPath(win32::ModuleFileName(module)),
+			.m_type = std::move(type),
+			.m_size = static_cast<uint64_t>(res.m_len),
+			.m_last_write = 0,
+			.m_hash = hash_value,
+		};
 	}
 
 	// Return metadata for source text that is not backed by a timestamped source.
@@ -144,10 +155,18 @@ namespace pr::compute::shader_cache
 				}
 				case Dependency::EKind::Resource:
 				{
-					auto current = FileDependency(dep.m_path, dep.m_identity);
-					current.m_kind = Dependency::EKind::Resource;
-					current.m_type = dep.m_type;
-					return current;
+					// Read the resource from the module in this process if it is loaded, otherwise load the module image as data only.
+					auto module = ::GetModuleHandleW(dep.m_path.c_str());
+					auto loaded = std::unique_ptr<std::remove_pointer_t<HMODULE>, decltype(&::FreeLibrary)>{nullptr, &::FreeLibrary};
+					if (module == nullptr)
+					{
+						loaded.reset(::LoadLibraryExW(dep.m_path.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+						module = loaded.get();
+					}
+					if (module == nullptr)
+						return std::nullopt;
+
+					return ResourceDependency(dep.m_identity, dep.m_type, module);
 				}
 				default:
 				{
