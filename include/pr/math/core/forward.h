@@ -39,11 +39,6 @@
 #  define pr_vectorcall __fastcall
 #endif
 
-// C++11's thread_local
-#ifndef thread_local
-#define thread_local __declspec(thread)
-#endif
-
 // Allow assert handler replacement
 #ifndef pr_assert
 #define pr_assert(x) do { if consteval {} else { assert(x); } } while (0)

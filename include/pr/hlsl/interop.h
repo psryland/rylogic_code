@@ -1311,22 +1311,22 @@ namespace pr::hlsl
 
 	#pragma endregion
 
-	// Execution emulator for running HLSL compute shaders.
+	// Execution emulator for running HLSL compute shaders on the calling thread.
+	// Kernels run on the calling thread because C++ shader resources are thread_local (see interop.hlsli).
 	// Supports kernel functions with any subset of the standard parameters:
 	//   void fn(int3 dtid)
 	//   void fn(int3 dtid, int3 gid)
 	//   void fn(int3 dtid, int3 gid, int3 gtid)
 	//   void fn(int3 dtid, int3 gid, int3 gtid, int gidx)
 	// Usage:
-	//   GpuEmulator emu(CSFaceNormal, CSFaceNormal_NumThreads);                       // serial
-	//   GpuEmulator emu(CSFaceNormal, CSFaceNormal_NumThreads, std::execution::par);  // parallel
-	template <typename Kernel, typename ExecutionPolicy = std::execution::sequenced_policy>
+	//   GpuEmulator emu(CSFaceNormal, CSFaceNormal_NumThreads);
+	template <typename Kernel>
 	struct GpuEmulator
 	{
 		Kernel m_kernel;
 		int3 m_num_threads;
 
-		explicit GpuEmulator(Kernel kernel, int3 num_threads, ExecutionPolicy = std::execution::seq)
+		explicit GpuEmulator(Kernel kernel, int3 num_threads)
 			: m_kernel(kernel)
 			, m_num_threads(num_threads)
 		{
@@ -1352,10 +1352,10 @@ namespace pr::hlsl
 		void RunThreadGroup(int3 group)
 		{
 			int threads_per_group = m_num_threads.x * m_num_threads.y * m_num_threads.z;
-
-			auto threads = std::ranges::views::iota(0, threads_per_group);
-			std::for_each(ExecutionPolicy{}, threads.begin(), threads.end(), [gid = group, this](int i)
+			for (int i = 0; i != threads_per_group; ++i)
 			{
+				auto gid = group;
+
 				// Thread id within the group
 				int3 gtid = {
 					(i / (1                                )) % m_num_threads.x,
@@ -1393,7 +1393,7 @@ namespace pr::hlsl
 					// Crash in kernel.
 					_CrtDbgBreak();
 				}
-			});
+			}
 		}
 	};
 }
