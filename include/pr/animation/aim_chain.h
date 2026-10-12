@@ -116,12 +116,11 @@ namespace pr::animation::tests
 		PRUnitTestMethod(ConeLimit, Quick)
 		{
 			// A cone limit caps each bone's turn
-			auto rig = TestRig();
-			auto bones = rig.bones;
-			for (auto b : rig.chains[1].bones)
-				bones[b].limit = JointLimit{ .kind = fabrik::ELimit::Cone, .max_angle = 0.2f };
+			auto desc = TestRigDesc();
+			for (auto b : desc.chains[1].bones)
+				desc.bones[b].limit = JointLimit{ .kind = fabrik::ELimit::Cone, .max_angle = 0.2f };
 
-			auto limited = Rig(std::move(bones), rig.chains);
+			auto limited = Rig(std::move(desc));
 			auto pose = Pose(limited);
 			auto const& neck = limited.chains[1];
 			AimChain(limited, neck, pose, v4(3.0f, 0.0f, 1.0f, 1));

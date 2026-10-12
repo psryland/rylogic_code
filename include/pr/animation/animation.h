@@ -2,8 +2,8 @@
 // Procedural animation
 //  Copyright (c) Rylogic Ltd 2026
 //*****************************************************************************
-// A reusable procedural animation core. A rig description (bones and role-tagged chains) is posed each frame from model-space targets:
-//  - 'Rig' validates the description and caches derived data (rig.h).
+// A reusable procedural animation core. A rig description (bones, role-tagged chains and contact points) is posed each frame from model-space targets:
+//  - 'Rig' validates the description and caches derived data (rig.h). Rig descriptions are stored as '.rig' JSON files (rig_json.h).
 //  - 'Pose' holds local and model-space bone transforms (pose.h).
 //  - 'TargetPath' and 'Fade' move targets and layer weights smoothly with quintic curves (target_path.h).
 //  - 'Layer' and 'ApplyLayers' combine per-chain targets (targets.h).
@@ -11,6 +11,7 @@
 #pragma once
 #include "pr/animation/forward.h"
 #include "pr/animation/rig.h"
+#include "pr/animation/rig_json.h"
 #include "pr/animation/pose.h"
 #include "pr/animation/two_bone_ik.h"
 #include "pr/animation/spine_fit.h"

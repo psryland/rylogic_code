@@ -189,11 +189,32 @@ namespace
 		std::unordered_map<uint32_t, size_t> m_mesh_index;
 		std::unordered_map<uint32_t, p3d::Str16> m_mat_ids;
 
+		// Skin influences waiting for their skeleton's bone indices
+		struct PendingSkin
+		{
+			size_t m_mesh;
+			uint32_t m_skel_id;
+			std::vector<int> m_offsets;
+			std::vector<uint32_t> m_bone_ids;
+			std::vector<float> m_weights;
+		};
+		std::vector<PendingSkin> m_skins;
+
+		// The p3d name and bone id lookup for each glTF skeleton
+		struct SkeletonRef
+		{
+			std::string m_name;
+			std::unordered_map<uint32_t, int> m_bone_index;
+		};
+		std::unordered_map<uint32_t, SkeletonRef> m_skeletons;
+
 		GltfToP3d(p3d::File& out, std::filesystem::path texture_dir)
 			:m_p3d(out)
 			,m_texture_dir(std::move(texture_dir))
 			,m_mesh_index()
 			,m_mat_ids()
+			,m_skins()
+			,m_skeletons()
 		{}
 
 		// Return the p3d id for a glTF material, adding the material to the scene the first time it is seen.
@@ -277,6 +298,19 @@ namespace
 			for (auto const& v : mesh.m_vbuf)
 				out.add_vert(p3d::FatVert(v.m_vert, v.m_colr, v.m_norm, v.m_tex0));
 
+			// The glTF influences are one-to-one with 'm_vbuf', matching the p3d vertices. They refer to bones by node id,
+			// which is resolved to bone indices once all skeletons have been read.
+			if (mesh.m_skin)
+			{
+				m_skins.push_back(PendingSkin{
+					.m_mesh = m_p3d.m_scene.m_meshes.size() - 1,
+					.m_skel_id = mesh.m_skin.m_skel_id,
+					.m_offsets = {mesh.m_skin.m_offsets.begin(), mesh.m_skin.m_offsets.end()},
+					.m_bone_ids = {mesh.m_skin.m_bones.begin(), mesh.m_skin.m_bones.end()},
+					.m_weights = {mesh.m_skin.m_weights.begin(), mesh.m_skin.m_weights.end()},
+				});
+			}
+
 			// P3D nuggets own their indices, so each nugget takes a copy of its slice of the shared
 			// index buffer. The glTF indices are already absolute into the vertex buffer.
 			auto vcount = mesh.m_vbuf.size();
@@ -318,6 +352,59 @@ namespace
 					m_p3d.m_scene.m_meshes[it->second].m_o2p = n2r;
 			}
 		}
+
+		// Convert a glTF skeleton into a p3d skeleton
+		void CreateSkeleton(gltf::Skeleton const& skel) override
+		{
+			// Skins refer to skeletons by name, so give unnamed or duplicate skeletons a unique name
+			auto name = std::string(skel.m_name);
+			auto taken = [this, &name] { return pr::contains_if(m_p3d.m_scene.m_skeletons, [&name](auto const& s) { return s.m_name == name; }); };
+			if (name.empty() || taken())
+				name = std::format("skel{}", skel.m_skel_id);
+
+			// Bone data is already in depth-first order
+			p3d::Skeleton out;
+			out.m_name = name;
+			out.m_bone_names.assign(skel.m_bone_names.begin(), skel.m_bone_names.end());
+			out.m_o2bp.assign(skel.m_o2bp.begin(), skel.m_o2bp.end());
+			out.m_hierarchy.reserve(skel.m_hierarchy.size());
+			for (auto level : skel.m_hierarchy)
+			{
+				if (level < 0 || level > 255)
+					throw std::runtime_error(std::format("Skeleton '{}' is deeper than 255 levels", name));
+
+				out.m_hierarchy.push_back(s_cast<uint8_t>(level));
+			}
+
+			m_skeletons[skel.m_skel_id] = SkeletonRef{ .m_name = name, .m_bone_index = skel.BoneIndexMap() };
+			m_p3d.m_scene.m_skeletons.push_back(std::move(out));
+		}
+
+		// Attach the influences of skinned meshes now that all skeletons are known
+		void ResolveSkins()
+		{
+			for (auto const& pending : m_skins)
+			{
+				auto it = m_skeletons.find(pending.m_skel_id);
+				if (it == m_skeletons.end())
+					throw std::runtime_error(std::format("Mesh '{}' is skinned to a skeleton that was not read", m_p3d.m_scene.m_meshes[pending.m_mesh].m_name));
+
+				// Map bone node ids to indices into the skeleton's bone list
+				auto& skin = m_p3d.m_scene.m_meshes[pending.m_mesh].m_skin;
+				skin.m_skeleton = it->second.m_name;
+				skin.m_offsets = pending.m_offsets;
+				skin.m_weights = pending.m_weights;
+				skin.m_bones.reserve(pending.m_bone_ids.size());
+				for (auto id : pending.m_bone_ids)
+				{
+					auto bone = it->second.m_bone_index.find(id);
+					if (bone == it->second.m_bone_index.end() || bone->second > 0xFFFF)
+						throw std::runtime_error(std::format("Skin of mesh '{}' references a bone outside its skeleton", m_p3d.m_scene.m_meshes[pending.m_mesh].m_name));
+
+					skin.m_bones.push_back(s_cast<uint16_t>(bone->second));
+				}
+			}
+		}
 	};
 }
 
@@ -332,12 +419,13 @@ std::unique_ptr<p3d::File> CreateFromGLTF(std::filesystem::path const& filepath,
 	auto path_str = filepath.string();
 	gltf::Scene scene(path_str.c_str());
 
-	// P3D stores geometry and materials only, so skeletons and animations are not requested.
+	// Skeletons and skins are included so that rigged models keep their bind data. Animations are not stored in P3D.
 	gltf::ReadOptions opts = {};
-	opts.m_parts = gltf::EParts::Materials | gltf::EParts::Meshes | gltf::EParts::NodeHierarchy;
+	opts.m_parts = gltf::EParts::Materials | gltf::EParts::Meshes | gltf::EParts::NodeHierarchy | gltf::EParts::Skins;
 
 	GltfToP3d out(p3d, texture_dir);
 	scene.Read(out, opts);
+	out.ResolveSkins();
 
 	return std::make_unique<p3d::File>(std::move(p3d));
 }

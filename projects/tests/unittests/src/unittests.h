@@ -20,6 +20,7 @@
 #include "pr/algorithm/vp_tree.h"
 #include "pr/animation/aim_chain.h"
 #include "pr/animation/pose.h"
+#include "pr/animation/rig_json.h"
 #include "pr/animation/rig.h"
 #include "pr/animation/solve.h"
 #include "pr/animation/spine_fit.h"

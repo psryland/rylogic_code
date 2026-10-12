@@ -35,6 +35,7 @@
 		<RylogicNativeView3dImportLib>$(RylogicNativeLibDir)view3d-12.imp</RylogicNativeView3dImportLib>
 		<RylogicNativeView3dUiImportLib>$(RylogicNativeLibDir)view3d-ui.imp</RylogicNativeView3dUiImportLib>
 		<RylogicNativeP3dTool>$(RylogicNativeToolsDir)p3d.exe</RylogicNativeP3dTool>
+		<RylogicNativeBlenderAddonsDir>$(_RylogicNativePackageRootNormalized)tools\blender\</RylogicNativeBlenderAddonsDir>
 	</PropertyGroup>
 
 	<!-- Fail early when a native consumer requests packaged link assets for a configuration the package does not provide. -->

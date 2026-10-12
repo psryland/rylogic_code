@@ -67,6 +67,8 @@
 		<ClCompile Include="src\commands\model_io.cpp" />
 		<ClInclude Include="src\commands\remove_degenerates.h" />
 		<ClCompile Include="src\commands\remove_degenerates.cpp" />
+		<ClInclude Include="src\commands\rig_cook.h" />
+		<ClCompile Include="src\commands\rig_cook.cpp" />
 		<None Include="example_script.ldr" />
 	</ItemGroup>
 

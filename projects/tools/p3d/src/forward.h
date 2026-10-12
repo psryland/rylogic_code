@@ -25,6 +25,7 @@
 #include "pr/script/reader.h"
 
 #include "pr/geometry/p3d.h"
+#include "pr/animation/rig_json.h"
 
 using namespace pr;
 using namespace pr::math;

@@ -19,6 +19,7 @@ void Main(IList<string> args)
 	var skip_if_incomplete = false;
 	string? publish_stamp = null;
 	string? nuget_cache = null;
+	string? release_version = null;
 	var extra_inputs = new List<string>();
 
 	for (var i = 0; i != args.Count;)
@@ -66,6 +67,11 @@ void Main(IList<string> args)
 				nuget_cache = args[i++];
 				break;
 			}
+			case "-releaseversion":
+			{
+				release_version = args[i++];
+				break;
+			}
 			case "-input":
 			{
 				extra_inputs.Add(args[i++]);
@@ -82,8 +88,8 @@ void Main(IList<string> args)
 		throw new ArgumentException("Native runtime staging output path is required.");
 	if (skip_if_incomplete && !require_all_projects)
 		throw new ArgumentException("-skipincomplete requires -requireall.");
-	if (publish_stamp is not null && (!skip_if_incomplete || nuget_cache is null))
-		throw new ArgumentException("-publishstamp requires -skipincomplete and -nugetcache.");
+	if (publish_stamp is not null && (!skip_if_incomplete || nuget_cache is null || release_version is null))
+		throw new ArgumentException("-publishstamp requires -skipincomplete, -nugetcache and -releaseversion.");
 
 	// Preserve the last complete local package when a partial native build cannot provide the full package closure.
 	if (skip_if_incomplete && !NativeRuntimePackage.HasCompleteManifestSet(workspace, platform, config, out var unavailable_inputs))
@@ -118,10 +124,11 @@ void Main(IList<string> args)
 
 	// Skip staging when the last published package was built from identical inputs and is still installed in the NuGet cache.
 	// The stamp holds the input fingerprint on its first line and the published version on its second; see PublishRylogicNativeDevPackage.
+	// The fingerprint includes the release version because a package built for an older release ranks below that release once it is published.
 	string? fingerprint = null;
 	if (publish_stamp is not null)
 	{
-		fingerprint = NativeRuntimePackage.InputFingerprint(workspace, platform, config, extra_inputs);
+		fingerprint = $"{release_version}:{NativeRuntimePackage.InputFingerprint(workspace, platform, config, extra_inputs)}";
 		var stamp = File.Exists(publish_stamp) ? File.ReadAllLines(publish_stamp) : [];
 		if (stamp.Length >= 2 && stamp[0] == fingerprint && File.Exists(IOPath.Combine(nuget_cache!, "rylogic.native", stamp[1], ".nupkg.metadata")))
 		{

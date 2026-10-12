@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
 #include <format>
 #include <span>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 #include "pr/math/math.h"
 #include "pr/math/utils/interpolate_c2.h"
 #include "pr/algorithm/fabrik.h"
+#include "pr/storage/json.h"
 
 namespace pr::animation
 {

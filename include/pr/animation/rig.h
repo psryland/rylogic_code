@@ -70,6 +70,34 @@ namespace pr::animation
 		v4 forward = {};          // Neck: the rest-pose model-space direction that the last bone faces (unit, w = 0)
 	};
 
+	// The part of the body that a contact point belongs to
+	enum class EContactKind
+	{
+		Sole,
+		Toe,
+		Palm,
+		Finger,
+		Tail,
+	};
+
+	// A named point on a bone where the body touches the ground or an object. For example: a sole, a toe tip, or a palm.
+	struct Contact
+	{
+		std::string name;                         // Unique, non-empty name
+		int bone = -1;                            // The index of the bone that the contact moves with
+		v4 offset = v4::Origin();                 // The contact point in bone space (w = 1)
+		v4 normal = v4::ZAxis();                  // The outward surface direction at the contact, in bone space (unit, w = 0)
+		EContactKind kind = EContactKind::Sole;
+	};
+
+	// A complete rig description, as authored and stored. 'Rig' is the validated runtime form.
+	struct RigDesc
+	{
+		std::vector<Bone> bones;
+		std::vector<Chain> chains;
+		std::vector<Contact> contacts;
+	};
+
 	// Return the model-space rest transforms of 'bones'. Parents must come before their children.
 	inline std::vector<xform> RestModelTransforms(std::span<Bone const> bones)
 	{
@@ -117,9 +145,11 @@ namespace pr::animation
 	}
 
 	// Check a rig description. Returns a description of each problem found, or an empty list if the rig is valid.
-	inline std::vector<std::string> Validate(std::span<Bone const> bones, std::span<Chain const> chains)
+	inline std::vector<std::string> Validate(RigDesc const& desc)
 	{
 		std::vector<std::string> errors;
+		auto const& bones = desc.bones;
+		auto const& chains = desc.chains;
 		auto bone_count = static_cast<int>(bones.size());
 		auto pi = math::constants<float>::tau / 2;
 
@@ -284,28 +314,107 @@ namespace pr::animation
 				}
 			}
 		}
+
+		// Contacts must name a bone and give a surface direction so that they can be placed on terrain
+		for (int i = 0, iend = static_cast<int>(desc.contacts.size()); i != iend; ++i)
+		{
+			auto const& contact = desc.contacts[i];
+			if (contact.name.empty())
+				errors.push_back(std::format("Contact {} has no name", i));
+			else if (std::any_of(desc.contacts.begin(), desc.contacts.begin() + i, [&](Contact const& c) { return c.name == contact.name; }))
+				errors.push_back(std::format("Contact '{}' is not uniquely named", contact.name));
+
+			if (contact.bone < 0 || contact.bone >= bone_count)
+				errors.push_back(std::format("Contact '{}' refers to bone {}, which does not exist", contact.name, contact.bone));
+			if (contact.offset.w != 1)
+				errors.push_back(std::format("Contact '{}' has an offset that is not a point (w != 1)", contact.name));
+			if (!FEqlAbsolute(Length(contact.normal), 1.0f, 1e-4f) || contact.normal.w != 0)
+				errors.push_back(std::format("Contact '{}' needs a unit 'normal' direction", contact.name));
+
+			switch (contact.kind)
+			{
+				case EContactKind::Sole:
+				case EContactKind::Toe:
+				case EContactKind::Palm:
+				case EContactKind::Finger:
+				case EContactKind::Tail:
+				{
+					break;
+				}
+				default:
+				{
+					throw std::invalid_argument(std::format("Contact '{}' has an unknown kind", contact.name));
+				}
+			}
+		}
 		return errors;
 	}
 
-	// A validated rig: the skeleton plus its chains, with derived rest-pose data
+	// Return 'desc' with its bones reordered to match 'bone_order', which must name each bone exactly once. Bone references are remapped.
+	// Throws 'std::invalid_argument' if the names do not match. The result needs validating, because the new order may put a child before its parent.
+	inline RigDesc ReorderBones(RigDesc const& desc, std::span<std::string const> bone_order)
+	{
+		// Map each old bone index to its new index
+		auto bone_count = static_cast<int>(desc.bones.size());
+		if (static_cast<int>(bone_order.size()) != bone_count)
+			throw std::invalid_argument(std::format("The rig has {} bones but the new order has {}", bone_count, bone_order.size()));
+
+		std::vector<int> new_index(bone_count, -1);
+		for (int n = 0; n != bone_count; ++n)
+		{
+			// Each name in the new order must match exactly one unclaimed rig bone
+			auto it = std::find_if(desc.bones.begin(), desc.bones.end(), [&](Bone const& b) { return b.name == bone_order[n]; });
+			if (it == desc.bones.end())
+				throw std::invalid_argument(std::format("Bone '{}' is not in the rig", bone_order[n]));
+
+			auto old = static_cast<int>(it - desc.bones.begin());
+			if (new_index[old] != -1)
+				throw std::invalid_argument(std::format("Bone '{}' appears more than once in the new order", bone_order[n]));
+
+			new_index[old] = n;
+		}
+		auto remap = [&](int b) { return b < 0 || b >= bone_count ? b : new_index[b]; };
+
+		// Rest transforms are parent-relative, so they are unchanged when the parents are unchanged
+		RigDesc result = desc;
+		for (int old = 0; old != bone_count; ++old)
+		{
+			auto& bone = result.bones[new_index[old]];
+			bone = desc.bones[old];
+			bone.parent = remap(bone.parent);
+		}
+		for (auto& chain : result.chains)
+		{
+			for (auto& b : chain.bones)
+				b = remap(b);
+		}
+		for (auto& contact : result.contacts)
+			contact.bone = remap(contact.bone);
+
+		return result;
+	}
+
+	// A validated rig: the skeleton plus its chains and contacts, with derived rest-pose data
 	struct Rig
 	{
 		std::vector<Bone> bones;
 		std::vector<Chain> chains;
+		std::vector<Contact> contacts;
 		std::vector<xform> rest_model;                         // The model-space rest transform of each bone
 		std::vector<int> solve_order;                          // Chain indices ordered so that ancestor chains are solved first
 		std::vector<std::vector<fabrik::Joint<float>>> tails;  // FABRIK joints for each tail chain (empty for other roles)
 
 		// Construct from a rig description. Throws 'std::invalid_argument' listing every problem if the description is invalid.
-		Rig(std::vector<Bone> bones_, std::vector<Chain> chains_)
-			: bones(std::move(bones_))
-			, chains(std::move(chains_))
+		explicit Rig(RigDesc desc)
+			: bones()
+			, chains()
+			, contacts()
 			, rest_model()
 			, solve_order()
 			, tails()
 		{
 			// Reject invalid descriptions at the load boundary so the solvers can rely on them
-			auto errors = Validate(bones, chains);
+			auto errors = Validate(desc);
 			if (!errors.empty())
 			{
 				std::string msg = "Invalid rig description:";
@@ -314,6 +423,9 @@ namespace pr::animation
 
 				throw std::invalid_argument(msg);
 			}
+			bones = std::move(desc.bones);
+			chains = std::move(desc.chains);
+			contacts = std::move(desc.contacts);
 
 			// Cache the rest pose and per-chain solver data
 			rest_model = RestModelTransforms(bones);
@@ -350,7 +462,7 @@ namespace pr::animation::tests
 {
 	// A small quadruped for testing. It faces -Y with +Z up, the spine is horizontal at z = 1, legs hang down, and the tail points along +Y.
 	// Chains: 0 spine, 1 neck, 2 left leg, 3 left arm, 4 tail.
-	inline Rig TestRig()
+	inline RigDesc TestRigDesc()
 	{
 		// Bones are given by model-space head and tip positions, then converted to parent-relative transforms
 		struct Def { char const* name; int parent; v4 head; v4 tip; };
@@ -392,7 +504,17 @@ namespace pr::animation::tests
 			Chain{ .role = EChainRole::Arm, .side = ESide::Left, .bones = { 9, 10, 11 }, .pole = v4(0, 1, 0, 0) },
 			Chain{ .role = EChainRole::Tail, .bones = { 12, 13, 14 } },
 		};
-		return Rig(std::move(bones), std::move(chains));
+
+		// The foot's sole is under its head, facing down, and the hand's palm likewise
+		std::vector<Contact> contacts = {
+			Contact{ .name = "sole.L", .bone = 8, .offset = v4(0, 0.1f, 0, 1), .normal = v4(0, 0, 1, 0), .kind = EContactKind::Sole },
+			Contact{ .name = "palm.L", .bone = 11, .offset = v4(0, 0.05f, 0, 1), .normal = v4(0, 0, 1, 0), .kind = EContactKind::Palm },
+		};
+		return RigDesc{ .bones = std::move(bones), .chains = std::move(chains), .contacts = std::move(contacts) };
+	}
+	inline Rig TestRig()
+	{
+		return Rig(TestRigDesc());
 	}
 
 	PRUnitTestClass(AnimationRigTests)
@@ -416,41 +538,53 @@ namespace pr::animation::tests
 		PRUnitTestMethod(ValidationErrors, Quick)
 		{
 			// Each kind of description error is reported
-			auto rig = TestRig();
+			auto const desc = TestRigDesc();
+			auto expect_error = [&](auto&& modify)
 			{
-				auto bones = rig.bones;
-				bones[3].parent = 5;
-				PR_EXPECT(!Validate(bones, rig.chains).empty());
-			}
-			{
-				auto chains = rig.chains;
-				chains[2].bones.pop_back();
-				PR_EXPECT(!Validate(rig.bones, chains).empty());
-			}
-			{
-				auto chains = rig.chains;
-				chains[2].pole = v4(0, 0, 1, 0);
-				PR_EXPECT(!Validate(rig.bones, chains).empty());
-			}
-			{
-				auto chains = rig.chains;
-				chains[4].bones = { 3, 4 };
-				PR_EXPECT(!Validate(rig.bones, chains).empty());
-			}
-			{
-				auto bones = rig.bones;
-				bones[4].limit = JointLimit{ .kind = fabrik::ELimit::Hinge, .axis = v4(1, 0, 0, 0), .min_angle = -1, .max_angle = 1 };
-				PR_EXPECT(!Validate(bones, rig.chains).empty());
-			}
-			PR_EXPECT(Validate(rig.bones, rig.chains).empty());
+				// Apply one error to a copy of the valid description
+				auto bad = desc;
+				modify(bad);
+				PR_EXPECT(!Validate(bad).empty());
+			};
+			expect_error([](RigDesc& d) { d.bones[3].parent = 5; });
+			expect_error([](RigDesc& d) { d.chains[2].bones.pop_back(); });
+			expect_error([](RigDesc& d) { d.chains[2].pole = v4(0, 0, 1, 0); });
+			expect_error([](RigDesc& d) { d.chains[4].bones = { 3, 4 }; });
+			expect_error([](RigDesc& d) { d.bones[4].limit = JointLimit{ .kind = fabrik::ELimit::Hinge, .axis = v4(1, 0, 0, 0), .min_angle = -1, .max_angle = 1 }; });
+			expect_error([](RigDesc& d) { d.contacts[1].name = "sole.L"; });
+			expect_error([](RigDesc& d) { d.contacts[0].bone = 99; });
+			expect_error([](RigDesc& d) { d.contacts[0].normal = v4::Zero(); });
+			PR_EXPECT(Validate(desc).empty());
 		}
 		PRUnitTestMethod(InvalidRigThrows, Quick)
 		{
 			// Constructing a rig from an invalid description throws
-			auto rig = TestRig();
-			auto chains = rig.chains;
-			chains[1].forward = v4::Zero();
-			PR_THROWS((void)Rig(rig.bones, chains), std::invalid_argument);
+			auto desc = TestRigDesc();
+			desc.chains[1].forward = v4::Zero();
+			PR_THROWS((void)Rig(desc), std::invalid_argument);
+		}
+		PRUnitTestMethod(ReorderBones, Quick)
+		{
+			// Reversing the tail bones' order puts children before parents, which validation reports, and the round trip restores the description
+			auto const desc = TestRigDesc();
+			std::vector<std::string> order;
+			for (auto const& bone : desc.bones)
+				order.push_back(bone.name);
+
+			std::swap(order[12], order[14]);
+			auto reordered = ReorderBones(desc, order);
+			PR_EXPECT(reordered.bones[14].name == "tail.0");
+			PR_EXPECT(reordered.chains[4].bones == std::vector<int>({ 14, 13, 12 }));
+			PR_EXPECT(!Validate(reordered).empty());
+
+			std::swap(order[12], order[14]);
+			auto restored = ReorderBones(reordered, std::vector<std::string>{ order.begin(), order.end() });
+			PR_EXPECT(restored.bones[12].name == "tail.0" && restored.bones[13].parent == 12);
+			PR_EXPECT(restored.contacts[0].bone == 8);
+			PR_EXPECT(Validate(restored).empty());
+
+			order.back() = "missing";
+			PR_THROWS((void)ReorderBones(desc, order), std::invalid_argument);
 		}
 	};
 }

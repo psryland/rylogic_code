@@ -91,7 +91,7 @@
 
 		<!-- Stage the complete closure into a version-private directory. The script prints why it skips when the closure is incomplete or unchanged. -->
 		<MakeDir Directories="$(_NativePackageOutputDir)" />
-		<Exec Command="dotnet-script &quot;$(ScriptPath)StageNativeRuntimePackage.csx&quot; -platform x64 -config Debug -output &quot;$(_NativeStageDir)&quot; -requireall -skipincomplete -publishstamp &quot;$(_NativePublishStamp)&quot; -nugetcache &quot;$(_NativeCacheRoot)&quot; -input &quot;$(_NativeNuspecPath)&quot;" StandardOutputImportance="high" />
+		<Exec Command="dotnet-script &quot;$(ScriptPath)StageNativeRuntimePackage.csx&quot; -platform x64 -config Debug -output &quot;$(_NativeStageDir)&quot; -requireall -skipincomplete -publishstamp &quot;$(_NativePublishStamp)&quot; -nugetcache &quot;$(_NativeCacheRoot)&quot; -releaseversion &quot;$(RylogicLibraryVersion)&quot; -input &quot;$(_NativeNuspecPath)&quot;" StandardOutputImportance="high" />
 		<PropertyGroup>
 			<_NativePackageComplete Condition="Exists('$(_NativeStageDir)\.complete')">true</_NativePackageComplete>
 		</PropertyGroup>

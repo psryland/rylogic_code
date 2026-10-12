@@ -5055,7 +5055,8 @@ namespace pr::rdr12::ldraw
 			};
 
 			// Select the parts of the model to load
-			auto parts = geometry::ESceneParts::ModelOnly;
+			// Skins are always loaded so that runtime pose sources can drive the model. A skinned model without a pose renders in its bind pose.
+			auto parts = geometry::ESceneParts::SkinnedModels;
 			if (m_anim_info || m_montage) parts = SetBits(parts, geometry::ESceneParts::All, true);
 			if (m_ignore_materials) parts = SetBits(parts, geometry::ESceneParts::Materials, false);
 
