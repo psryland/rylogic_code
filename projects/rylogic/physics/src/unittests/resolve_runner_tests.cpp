@@ -97,7 +97,7 @@ namespace pr::physics::tests
 
 			// Keep the resolver cache but restore identical body/contact input so each colour must apply only its own support.
 			auto& gpu = SharedTestGpu();
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			resolver.m_colour_sweep = sweep;
 			for (int frame = 0; frame != 2; ++frame)
 			{
@@ -139,7 +139,7 @@ namespace pr::physics::tests
 			auto& job = gpu.m_job;
 			auto config = EngineConfig{};
 			config.contact_sort_propagation_scale = 0.0f;
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			auto shape = collision::ShapeBox{v4{1, 1, 1, 0}};
 			auto body = RigidBody{&shape, m4x4::Identity(), Inertia::Box(shape.m_radius, 1.0f)};
 			auto bodies = std::array{PackDynamics(body, 0), PackDynamics(body, 1)};
@@ -232,7 +232,7 @@ namespace pr::physics::tests
 			config.push_out_iterations = 0;
 			config.warm_start_scale = 0;
 			config.contact_sort_propagation_scale = 0;
-			auto resolver = GpuResolver{gpu, config, nullptr};
+			auto resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			auto const capacity = 65536;
 			auto shape = collision::ShapeBox{v4{1, 1, 1, 0}};
 			auto body = RigidBody{&shape, m4x4::Identity(), Inertia::Box(shape.m_radius, 1.0f)};
@@ -789,7 +789,7 @@ namespace pr::physics::tests
 
 			// Run the complete production D3D12 path to prove its sorted graph also selects the fallback and resolves the enabled closing contact.
 			auto& gpu = SharedTestGpu();
-			auto gpu_resolver = GpuResolver{gpu, config, nullptr};
+			auto gpu_resolver = GpuResolver{gpu, config, &SharedTestShaderCache()};
 			gpu_resolver.Resolve(gpu.m_job, buffers.m_dt, contacts, gpu_bodies, materials);
 
 			// Read only the reserved diagnostic slot after the test resolve; production frames never add this readback.

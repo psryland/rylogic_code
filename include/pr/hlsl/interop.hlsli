@@ -24,7 +24,10 @@
 	//   It will be using the HLSL Compiler build type, which doesn't know about the 'SHADER_BUILD' define
 
 	#define numthreads(kernel, x, y, z) static int3 constexpr kernel ## _NumThreads = {x,y,z};
-	#define resource(name, reg_number) name 
+
+	// Shader resources are per-thread in C++ so that independent CPU emulations (e.g. tests running in parallel) can bind their own buffers.
+	// A kernel therefore sees only the resources bound on the thread that runs it, which is why 'GpuEmulator' runs kernels on the calling thread.
+	#define resource(name, reg_number) thread_local name
 	#define semantic(semantic_name)
 	#define arrayout_(ty, name, size) ty (&name)[size]
 	#define inout_(ty) ty&

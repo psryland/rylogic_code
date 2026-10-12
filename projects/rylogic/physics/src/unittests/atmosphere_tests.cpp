@@ -6,6 +6,7 @@
 #include "pr/common/unittests.h"
 #include "pr/physics/physics.h"
 #include "src/utility/gpu.h"
+#include "src/unittests/shared_gpu.h"
 
 namespace pr::physics::tests
 {
@@ -155,9 +156,9 @@ namespace pr::physics::tests
 		PRUnitTestMethod(RestStability, Quick)
 		{
 			// A reference-profile atmosphere with no forcing should stay near rest.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.Rest", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, Config() };
+			auto solver = AtmosphereSolver{ gpu, Config(), &SharedTestShaderCache() };
 			auto state = Run(solver, job, 8, 0.05f);
 			auto stats = solver.Stats(state);
 			std::printf("Atmosphere rest max_speed %.6f rms_div %.6f max_div %.6f\n", stats.m_max_speed, stats.m_rms_divergence, stats.m_max_divergence);
@@ -169,7 +170,7 @@ namespace pr::physics::tests
 		{
 			// Deep, odd-sized multigrid hierarchies with open sides must keep the coarse levels' zero-pressure boundary at the fine domain edge.
 			// A misplaced coarse boundary over-corrects the largest-scale pressure mode, so repeated projections of the same field grow without bound.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.LargeOpenGrid", 0xFF00AAFF, 1 };
 			auto const n = 136;
 			auto const open = EAtmosphereBoundary::Open;
@@ -178,7 +179,7 @@ namespace pr::physics::tests
 				.m_boundaries = AtmosphereBoundaries{ .m_x_min = open, .m_x_max = open, .m_y_min = open, .m_y_max = open },
 			};
 			config.m_open_edge_band = 8;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 
 			// Fill the interior horizontal faces with deterministic noise so every pressure scale has divergence to remove.
 			auto const& grid = config.m_grid;
@@ -215,7 +216,7 @@ namespace pr::physics::tests
 			PR_EXPECT(stats.m_max_speed < 2.0f * initial.m_max_speed);
 		}
 
-		PRUnitTestMethod(MaskedDishRimStaysBounded, Quick)
+		PRUnitTestMethod(MaskedDishRimStaysBounded, Extended)
 		{
 			// A circular active mask removes the vertical cliff between Petri's dish rim and the inactive square corners from the simulated domain.
 			auto const cells = iv3{ 64, 64, 6 };
@@ -251,12 +252,12 @@ namespace pr::physics::tests
 				.m_open_edge_band = 0,
 			};
 
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.MaskedDish", 0xFF00AAFF, 1 };
 			for (auto wind : { 0.0f, 8.0f })
 			{
 				// A few hundred steps should stay finite and bounded for both calm air and wind entering through the ragged mask boundary.
-				auto solver = AtmosphereSolver{ gpu, config };
+				auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 				auto const outside_air = UniformOutsideAir(solver.Config().m_grid, v2{ wind, 0.0f });
 				auto const initial = solver.ReadBack(job);
 				solver.SetOutsideAir(outside_air);
@@ -315,9 +316,9 @@ namespace pr::physics::tests
 				.m_pressure_coarse_smooth = 128,
 				.m_open_edge_band = 0,
 			};
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.MaskedProjection", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto state = solver.ReadBack(job);
 			auto rng = 54321u;
 			auto noise = [&]
@@ -365,11 +366,11 @@ namespace pr::physics::tests
 		PRUnitTestMethod(WarmPlume, Quick)
 		{
 			// A warm sphere near the floor should drive upward motion and warm the lid layer.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.WarmPlume", 0xFF00AAFF, 1 };
 			auto config = Config();
 			config.m_lid_relaxation_rate = 0.0f;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto initial = solver.ReadBack(job);
 			auto const upper_layer = config.m_grid.m_cell_count.z - 2;
 			auto initial_upper = LayerMeanTemperature(config, initial, upper_layer);
@@ -386,9 +387,9 @@ namespace pr::physics::tests
 		PRUnitTestMethod(ColdDrainage, Quick)
 		{
 			// A cold block on the left produces dense air that spreads along the floor toward the warmer right side in this box fixture.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.ColdDrainage", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, Config() };
+			auto solver = AtmosphereSolver{ gpu, Config(), &SharedTestShaderCache() };
 			auto source = AtmosphereHeatSource{ .m_centre = v4{ 3.0f, 8.0f, 1.5f, 1.0f }, .m_radius = 3.0f, .m_heating_rate = -80.0f, .m_target_temperature = 0.0f, .m_relaxation_rate = 0.0f };
 			auto const sources = std::span<AtmosphereHeatSource const>{ &source, 1 };
 			auto state = Run(solver, job, 20, 0.05f, sources);
@@ -401,14 +402,14 @@ namespace pr::physics::tests
 		PRUnitTestMethod(DivergenceProjection, Quick)
 		{
 			// The multigrid projection should reduce a smooth expanding MAC field by at least two orders of magnitude.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.Divergence", 0xFF00AAFF, 1 };
 			auto config = Config();
 			config.m_pressure_vcycles = 3;
 			config.m_pressure_pre_smooth = 256;
 			config.m_pressure_post_smooth = 256;
 			config.m_pressure_coarse_smooth = 512;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto state = ReferenceState(config);
 			auto const& grid = config.m_grid;
 			for (int z = 0; z != grid.m_cell_count.z; ++z)
@@ -437,16 +438,16 @@ namespace pr::physics::tests
 			PR_EXPECT(after_stats.m_max_divergence < before_stats.m_max_divergence * 0.01f);
 		}
 
-		PRUnitTestMethod(SharedGpuStepCost, Quick)
+		PRUnitTestMethod(SharedGpuStepCost, Stress)
 		{
 			// The solver records into a job that shares the same compute device and queue wrapper used by physics GPU work.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTests.SharedGpu", 0xFF00AAFF, 1 };
 			auto const measure = [&](iv3 cells)
 			{
 				// Exclude first-run shader work by constructing the solver and running one warm-up step before timing. The default solver settings are timed.
 				auto config = Config(cells);
-				auto solver = AtmosphereSolver{ gpu, config };
+				auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 				solver.Step(job, 0.025f);
 				job.Run();
 				auto const steps = 5;
@@ -495,10 +496,10 @@ namespace pr::physics::tests
 		PRUnitTestMethod(UniformWindAdvectsAndRespawnsDeterministically, Quick)
 		{
 			// A uniform MAC wind should move every non-respawned tracer by the same distance, while short-lived tracers respawn inside the domain deterministically.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.UniformWind", 0xFF00AAFF, 1 };
 			auto config = Config();
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto state = AtmosphereState{
 				.m_u_faces = std::vector<float>(config.m_grid.UFaceCount(), 1.0f),
 				.m_v_faces = std::vector<float>(config.m_grid.VFaceCount(), 0.0f),
@@ -509,7 +510,7 @@ namespace pr::physics::tests
 			solver.UploadState(job, state);
 			job.Run();
 
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 64, .m_seed = 12345u, .m_max_age = 0.04f } };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 64, .m_seed = 12345u, .m_max_age = 0.04f }, &SharedTestShaderCache() };
 			auto initial = tracers.ReadBack(job);
 			tracers.Advect(job, 0.025f);
 			auto moved = tracers.ReadBack(job);
@@ -534,7 +535,7 @@ namespace pr::physics::tests
 				PR_EXPECT(particle.m_age == 0.0f);
 			}
 
-			auto tracers_again = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 64, .m_seed = 12345u, .m_max_age = 0.04f } };
+			auto tracers_again = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 64, .m_seed = 12345u, .m_max_age = 0.04f }, &SharedTestShaderCache() };
 			auto initial_again = tracers_again.ReadBack(job);
 			for (int i = 0; i != isize(initial); ++i)
 			{
@@ -546,11 +547,11 @@ namespace pr::physics::tests
 		{
 			// Densities 10 at the floor, 1 at a fifth of the height, and 0.1 above sum to 1.18. That places 0.775/1.18 of new tracers
 			// below a tenth of the column and 0.08/1.18 above a fifth.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.GroundDensity", 0xFF00AAFF, 1 };
 			auto config = Config();
-			auto solver = AtmosphereSolver{ gpu, config };
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 16384, .m_seed = 777u, .m_max_age = 10.0f, .m_ground_density = 10.0f, .m_break_density = 1.0f, .m_upper_density = 0.1f, .m_break_height = 0.2f } };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 16384, .m_seed = 777u, .m_max_age = 10.0f, .m_ground_density = 10.0f, .m_break_density = 1.0f, .m_upper_density = 0.1f, .m_break_height = 0.2f }, &SharedTestShaderCache() };
 			auto particles = tracers.ReadBack(job);
 
 			// Count tracers by height band. The fixture floor is at zero, so height over the lid is the column fraction.
@@ -574,7 +575,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(ActiveMaskKeepsTracersInside, Quick)
 		{
 			// Tracer spawning and respawning must ignore inactive columns in a sparse active mask.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.Mask", 0xFF00AAFF, 1 };
 			auto config = Config();
 			config.m_grid.m_active_columns = std::vector<uint8_t>(config.m_grid.ColumnCount(), 0);
@@ -584,8 +585,8 @@ namespace pr::physics::tests
 				for (int x = 2; x != 6; ++x)
 					config.m_grid.m_active_columns[config.m_grid.ColumnIndex(iv2{ x, y })] = 1;
 			}
-			auto solver = AtmosphereSolver{ gpu, config };
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 1024, .m_seed = 123u, .m_max_age = 0.01f } };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 1024, .m_seed = 123u, .m_max_age = 0.01f }, &SharedTestShaderCache() };
 			tracers.Advect(job, 0.02f);
 			job.Run();
 			auto particles = tracers.ReadBack(job);
@@ -611,11 +612,11 @@ namespace pr::physics::tests
 		PRUnitTestMethod(HeldSlotsAreNotWritten, Quick)
 		{
 			// Steps must never write a held slot, must wait on the GPU for a released fence value, and must fail when no slot is free.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.HeldSlots", 0xFF00AAFF, 1 };
 			auto config = Config();
-			auto solver = AtmosphereSolver{ gpu, config };
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 256, .m_seed = 99u, .m_max_age = 0.01f } };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 256, .m_seed = 99u, .m_max_age = 0.01f }, &SharedTestShaderCache() };
 
 			// Hold the initial slot, then step many times. The short maximum age respawns every particle, so a write to the held slot would change it.
 			auto const held = tracers.CurrentSlot();
@@ -677,7 +678,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(StretchedSolidBoxWithHeat, Quick)
 		{
 			// A closed box with stretched layers, a heat source, and thousands of tracers should keep every tracer inside the domain.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.SolidBox", 0xFF00AAFF, 1 };
 			auto const solid = EAtmosphereBoundary::Solid;
 			auto config = AtmosphereConfig{
@@ -685,8 +686,8 @@ namespace pr::physics::tests
 				.m_boundaries = AtmosphereBoundaries{ .m_x_min = solid, .m_x_max = solid, .m_y_min = solid, .m_y_max = solid, .m_z_min = solid, .m_z_max = solid },
 				.m_reference = AtmosphereReferenceProfile{ .m_temperature_at_origin = 288.0f, .m_lapse_rate = -0.004f, .m_min_temperature = 250.0f },
 			};
-			auto solver = AtmosphereSolver{ gpu, config };
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 4096, .m_seed = 12648430u, .m_max_age = 26.0f } };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 4096, .m_seed = 12648430u, .m_max_age = 26.0f }, &SharedTestShaderCache() };
 			auto particles = tracers.ReadBack(job);
 
 			auto heat = AtmosphereHeatSource{ .m_centre = v4{ 0.0f, -80.0f, 28.0f, 1.0f }, .m_radius = 95.0f, .m_heating_rate = 28.0f, .m_target_temperature = 306.0f, .m_relaxation_rate = 0.08f };
@@ -705,7 +706,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(OutsideWindCarriesTracers, Quick)
 		{
 			// A small wind tunnel with open west/east edges should carry tracers downwind at roughly the outside wind speed.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.WindTunnel", 0xFF00AAFF, 1 };
 			auto const open = EAtmosphereBoundary::Open;
 			auto const solid = EAtmosphereBoundary::Solid;
@@ -714,9 +715,9 @@ namespace pr::physics::tests
 				.m_boundaries = AtmosphereBoundaries{ .m_x_min = open, .m_x_max = open, .m_y_min = solid, .m_y_max = solid, .m_z_min = solid, .m_z_max = solid },
 				.m_reference = AtmosphereReferenceProfile{ .m_temperature_at_origin = 288.0f, .m_lapse_rate = -0.004f, .m_min_temperature = 250.0f },
 			};
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			// Initial ages are staggered across the lifetime, so use a lifetime long enough that no tracer expires by age and every respawn is an inflow respawn.
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 512, .m_seed = 12648430u, .m_max_age = 1.0e6f } };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 512, .m_seed = 12648430u, .m_max_age = 1.0e6f }, &SharedTestShaderCache() };
 			auto const outside_air = UniformOutsideAir(config.m_grid, v2{ 5.0f, 0.0f });
 			solver.SetOutsideAir(outside_air);
 			auto const dt = 1.0f / 60.0f;
@@ -766,10 +767,10 @@ namespace pr::physics::tests
 			PR_EXPECT(mean_speed > 3.5f && mean_speed < 6.5f);
 		}
 
-		PRUnitTestMethod(OpposingOutsideWindDrivesCounterFlow, Quick)
+		PRUnitTestMethod(OpposingOutsideWindDrivesCounterFlow, Extended)
 		{
 			// Opposing outside winds on the open ends of a tunnel should drive west-to-east flow in the southern half and east-to-west flow in the northern half.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTracerTests.CounterFlow", 0xFF00AAFF, 1 };
 			auto const open = EAtmosphereBoundary::Open;
 			auto const solid = EAtmosphereBoundary::Solid;
@@ -778,9 +779,9 @@ namespace pr::physics::tests
 				.m_boundaries = AtmosphereBoundaries{ .m_x_min = open, .m_x_max = open, .m_y_min = solid, .m_y_max = solid, .m_z_min = solid, .m_z_max = solid },
 				.m_reference = AtmosphereReferenceProfile{ .m_temperature_at_origin = 288.0f, .m_lapse_rate = -0.004f, .m_min_temperature = 250.0f },
 			};
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			// Initial ages are staggered across the lifetime, so use a lifetime long enough that no tracer expires by age and every respawn is an inflow respawn.
-			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 512, .m_seed = 12648430u, .m_max_age = 1.0e6f } };
+			auto tracers = AtmosphereTracers{ solver, gpu, AtmosphereTracerConfig{ .m_particle_count = 512, .m_seed = 12648430u, .m_max_age = 1.0e6f }, &SharedTestShaderCache() };
 			auto const outside_air = config.m_grid.BuildOutsideAir([](v2 pos)
 			{
 				// The outside air south of the tunnel axis blows east, and north of it blows west.
@@ -843,10 +844,10 @@ namespace pr::physics::tests
 		PRUnitTestMethod(SamplesUniformFieldAndRejectsOutsidePoints, Quick)
 		{
 			// A uniform field must be sampled exactly at points in the air, while points beyond the domain or above the lid report outside.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereProbeTests.Uniform", 0xFF00AAFF, 1 };
 			auto config = FlatOpenConfig();
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto state = AtmosphereState{
 				.m_u_faces = std::vector<float>(config.m_grid.UFaceCount(), 1.5f),
 				.m_v_faces = std::vector<float>(config.m_grid.VFaceCount(), -0.5f),
@@ -857,7 +858,7 @@ namespace pr::physics::tests
 			solver.UploadState(job, state);
 
 			// Sample in the same job as the upload, so the result shows that recorded solver work is visible to the probes.
-			auto probes = AtmosphereProbes{ solver, gpu };
+			auto probes = AtmosphereProbes{ solver, gpu, &SharedTestShaderCache() };
 			auto const points = std::vector<v4>{ v4{ 4.0f, 4.0f, 2.0f, 1.0f }, v4{ -1.0f, 4.0f, 2.0f, 1.0f }, v4{ 4.0f, 4.0f, 5.0f, 1.0f }, v4{ 2.5f, 6.5f, 0.5f, 1.0f } };
 			probes.Record(job, points);
 			job.Run();
@@ -1006,26 +1007,26 @@ namespace pr::physics::tests
 			return sum;
 		}
 
-		PRUnitTestMethod(FalseWindOverMountain, Quick)
+		PRUnitTestMethod(FalseWindOverMountain, Extended)
 		{
 			// Still, stably stratified air over a steep mountain should not create material false wind from the terrain-following pressure metric.
 			auto const cells = iv3{ 96, 96, 16 };
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.FalseWind", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, Config(cells, Mountain(cells)) };
+			auto solver = AtmosphereSolver{ gpu, Config(cells, Mountain(cells)), &SharedTestShaderCache() };
 			auto state = Run(solver, job, 900, 1.0f / 15.0f);
 			auto stats = solver.Stats(state);
 			std::printf("Atmosphere false wind max_speed %.6f m/s threshold 0.100000 rms_div %.9f\n", stats.m_max_speed, stats.m_rms_divergence);
 			PR_EXPECT(stats.m_max_speed < 0.1f);
 		}
 
-		PRUnitTestMethod(FlowAroundOrOverMountain, Quick)
+		PRUnitTestMethod(FlowAroundOrOverMountain, Extended)
 		{
 			// A 5 m/s outside wind should remain bounded and show terrain-induced acceleration or deflection around the mountain fixture.
 			auto const cells = iv3{ 96, 96, 16 };
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.FlowMountain", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, Config(cells, Mountain(cells)) };
+			auto solver = AtmosphereSolver{ gpu, Config(cells, Mountain(cells)), &SharedTestShaderCache() };
 			auto const outside_air = UniformOutsideAir(solver.Config().m_grid, v2{ 5.0f, 0.0f });
 			solver.SetOutsideAir(outside_air);
 			auto state = Run(solver, job, 450, 1.0f / 15.0f);
@@ -1057,13 +1058,13 @@ namespace pr::physics::tests
 			}
 
 			// Solid side walls stop air escaping sideways around the ramp, and a neutral lapse rate removes buoyancy so only the ground's kinematics lift the air.
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.Ramp", 0xFF00AAFF, 1 };
 			auto config = Config(cells, floors);
 			config.m_boundaries.m_y_min = EAtmosphereBoundary::Solid;
 			config.m_boundaries.m_y_max = EAtmosphereBoundary::Solid;
 			config.m_reference.m_lapse_rate = -config.m_gravity / 1004.5f;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 
 			// Start from the outside wind everywhere so a short run measures the developed flow rather than the spin-up from rest.
 			auto const wind = 10.0f;
@@ -1087,7 +1088,7 @@ namespace pr::physics::tests
 			PR_EXPECT(stats.m_max_speed < 2.0f * wind);
 		}
 
-		PRUnitTestMethod(ColdDrainageSlope, Quick)
+		PRUnitTestMethod(ColdDrainageSlope, Extended)
 		{
 			// A cold floor on a real 15 degree slope should produce downslope near-floor flow within one simulated minute.
 			auto const cells = iv3{ 64, 32, 16 };
@@ -1099,11 +1100,11 @@ namespace pr::physics::tests
 				for (int x = 0; x != cells.x; ++x)
 					floors[y * cells.x + x] = (x - 0.5f * cells.x) * 32.0f * slope;
 			}
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.Drainage", 0xFF00AAFF, 1 };
 			auto config = Config(cells, floors);
 			config.m_floor_exchange_rate = 0.25f;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto cold = std::vector<float>(cells.x * cells.y, 278.0f);
 			solver.SetFloorTemperatures(cold);
 			auto state = Run(solver, job, 900, 1.0f / 15.0f);
@@ -1123,10 +1124,10 @@ namespace pr::physics::tests
 				for (int x = 0; x != cells.x; ++x)
 					floors[y * cells.x + x] = -50.0f + 250.0f * static_cast<float>(x) / static_cast<float>(cells.x - 1);
 			}
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.Remap", 0xFF00AAFF, 1 };
 			auto config = Config(cells, floors);
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto before = solver.ReadBack(job);
 			auto before_heat = Heat(solver.Config(), before);
 			auto raised = floors;
@@ -1172,17 +1173,17 @@ namespace pr::physics::tests
 			PR_EXPECT(relative_heat_change < 0.02);
 		}
 
-		PRUnitTestMethod(OpenEdgesOutsideWind, Quick)
+		PRUnitTestMethod(OpenEdgesOutsideWind, Extended)
 		{
 			// Open edges should admit a 5 m/s outside wind without overshoot or material divergence after one simulated minute.
 			auto const cells = iv3{ 96, 96, 16 };
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.OpenEdges", 0xFF00AAFF, 1 };
 			auto config = Config(cells, std::vector<float>(cells.x * cells.y, 0.0f));
 
 			// A sponge reaching the domain centre drives the whole interior toward the outside wind within the test time.
 			config.m_open_edge_band = cells.x / 2;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto const outside_air = UniformOutsideAir(solver.Config().m_grid, v2{ 5.0f, 0.0f });
 			solver.SetOutsideAir(outside_air);
 			auto state = Run(solver, job, 900, 1.0f / 15.0f);
@@ -1194,7 +1195,7 @@ namespace pr::physics::tests
 			PR_EXPECT(stats.m_rms_divergence < 0.005f);
 		}
 
-		PRUnitTestMethod(FlowAroundSolidCylinder, Quick)
+		PRUnitTestMethod(FlowAroundSolidCylinder, Extended)
 		{
 			// Columns whose floor reaches the lid are solid. Wind should pass around them without crossing any of their faces, speeding up
 			// beside the obstacle and slowing in its wake, while the projection stays divergence-free.
@@ -1219,9 +1220,9 @@ namespace pr::physics::tests
 			}
 			config.m_boundaries.m_y_min = EAtmosphereBoundary::Solid;
 			config.m_boundaries.m_y_max = EAtmosphereBoundary::Solid;
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.SolidCylinder", 0xFF00AAFF, 1 };
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto const& grid = solver.Config().m_grid;
 			auto const outside_air = UniformOutsideAir(grid, v2{ 5.0f, 0.0f });
 			solver.SetOutsideAir(outside_air);
@@ -1263,7 +1264,7 @@ namespace pr::physics::tests
 			PR_EXPECT(stats.m_rms_divergence < 0.005f);
 		}
 
-		PRUnitTestMethod(FloorDragSlowsNearFloorFlow, Quick)
+		PRUnitTestMethod(FloorDragSlowsNearFloorFlow, Extended)
 		{
 			// Floor drag should slow the wind in the lowest layer, leave the upper layers close to the outside wind, and have no effect when zero.
 			// Thin, even layers make the drag on the 12.5 m bottom layer strong enough to measure over a short run.
@@ -1276,10 +1277,10 @@ namespace pr::physics::tests
 			config.m_open_edge_band = 4;
 			auto dragged_config = config;
 			dragged_config.m_wall_drag.m_z_min = 0.05f;
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.FloorDrag", 0xFF00AAFF, 1 };
-			auto free_solver = AtmosphereSolver{ gpu, config };
-			auto dragged_solver = AtmosphereSolver{ gpu, dragged_config };
+			auto free_solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto dragged_solver = AtmosphereSolver{ gpu, dragged_config, &SharedTestShaderCache() };
 			auto const outside_air = UniformOutsideAir(free_solver.Config().m_grid, v2{ 5.0f, 0.0f });
 			free_solver.SetOutsideAir(outside_air);
 			auto const free_state = Run(free_solver, job, 300, 1.0f / 15.0f);
@@ -1302,7 +1303,7 @@ namespace pr::physics::tests
 			PR_EXPECT(stats.m_rms_divergence < 0.005f);
 		}
 
-		PRUnitTestMethod(VerticalViscositySpreadsFloorDrag, Quick)
+		PRUnitTestMethod(VerticalViscositySpreadsFloorDrag, Extended)
 		{
 			// Vertical viscosity should carry the floor drag up into the layers above, and in return speed up the bottom layer.
 			// Uses the same thin, even layers as FloorDragSlowsNearFloorFlow so the effect is measurable over a short run.
@@ -1316,10 +1317,10 @@ namespace pr::physics::tests
 			config.m_wall_drag.m_z_min = 0.05f;
 			auto mixed_config = config;
 			mixed_config.m_vertical_viscosity = 50.0f;
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.VerticalViscosity", 0xFF00AAFF, 1 };
-			auto unmixed_solver = AtmosphereSolver{ gpu, config };
-			auto mixed_solver = AtmosphereSolver{ gpu, mixed_config };
+			auto unmixed_solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
+			auto mixed_solver = AtmosphereSolver{ gpu, mixed_config, &SharedTestShaderCache() };
 			auto const outside_air = UniformOutsideAir(unmixed_solver.Config().m_grid, v2{ 5.0f, 0.0f });
 			unmixed_solver.SetOutsideAir(outside_air);
 			auto const unmixed_state = Run(unmixed_solver, job, 300, 1.0f / 15.0f);
@@ -1347,14 +1348,14 @@ namespace pr::physics::tests
 		{
 			// Warm outside air should warm the inflow edge and cold outside air should cool it, relative to the reference profile.
 			auto const cells = iv3{ 64, 64, 16 };
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.OutsideTemperature", 0xFF00AAFF, 1 };
-			auto warm_solver = AtmosphereSolver{ gpu, Config(cells, std::vector<float>(cells.x * cells.y, 0.0f)) };
+			auto warm_solver = AtmosphereSolver{ gpu, Config(cells, std::vector<float>(cells.x * cells.y, 0.0f)), &SharedTestShaderCache() };
 			auto const& grid = warm_solver.Config().m_grid;
 			auto const warm_air = UniformOutsideAir(grid, v2{ 5.0f, 0.0f }, +4.0f);
 			warm_solver.SetOutsideAir(warm_air);
 			auto const warm_state = Run(warm_solver, job, 20, 1.0f / 15.0f);
-			auto cold_solver = AtmosphereSolver{ gpu, Config(cells, std::vector<float>(cells.x * cells.y, 0.0f)) };
+			auto cold_solver = AtmosphereSolver{ gpu, Config(cells, std::vector<float>(cells.x * cells.y, 0.0f)), &SharedTestShaderCache() };
 			auto const cold_air = UniformOutsideAir(grid, v2{ 5.0f, 0.0f }, -4.0f);
 			cold_solver.SetOutsideAir(cold_air);
 			auto const cold_state = Run(cold_solver, job, 20, 1.0f / 15.0f);
@@ -1369,12 +1370,12 @@ namespace pr::physics::tests
 			PR_EXPECT(cold_dt < -1.0f);
 		}
 
-		PRUnitTestMethod(RuntimeDivergenceReduction, Quick)
+		PRUnitTestMethod(RuntimeDivergenceReduction, Extended)
 		{
 			// The target 250x250x16 terrain grid should remove long-wave divergence that stationary smoothers cannot reach at this scale.
 			auto const cells = iv3{ 250, 250, 16 };
 			auto floors = std::vector<float>(cells.x * cells.y, 0.0f);
-			auto gpu = Gpu{};
+			auto& gpu = SharedTestGpu();
 			auto job = GpuJob{ gpu.m_gpu, "AtmosphereTerrainTests.RuntimeDivergence", 0xFF00AAFF, 1 };
 			auto config = Config(cells, floors);
 			config.m_boundaries.m_x_min = EAtmosphereBoundary::Solid;
@@ -1384,7 +1385,7 @@ namespace pr::physics::tests
 			config.m_pressure_pre_smooth = 64;
 			config.m_pressure_post_smooth = 64;
 			config.m_pressure_coarse_smooth = 256;
-			auto solver = AtmosphereSolver{ gpu, config };
+			auto solver = AtmosphereSolver{ gpu, config, &SharedTestShaderCache() };
 			auto const& grid = solver.Config().m_grid;
 			auto state = AtmosphereState{
 				.m_u_faces = std::vector<float>(grid.UFaceCount(), 0.0f),

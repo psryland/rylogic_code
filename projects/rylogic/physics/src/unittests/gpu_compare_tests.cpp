@@ -20,6 +20,7 @@
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics/physics.h"
+#include "src/unittests/shared_gpu.h"
 #include <fstream>
 #include <format>
 
@@ -46,7 +47,7 @@ namespace pr::physics::tests
 			bodies[1].Shape(collision::shape_cast(&ground_shape), physics::Inertia::Infinite());
 			bodies[1].O2W(m4x4::Translation(0, 0, -1000)); // far away
 
-			physics::Engine engine;
+			auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 			// Apply the external force before stepping
 			bodies[0].ZeroForces();
@@ -253,7 +254,7 @@ namespace pr::physics::tests
 			gpu_bodies[1].Shape(collision::shape_cast(&ground_shape), physics::Inertia::Infinite());
 			gpu_bodies[1].O2W(m4x4::Translation(0, 0, -1000));
 
-			physics::Engine engine;
+			auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 			for (int step = 0; step != 100; ++step)
 			{
@@ -312,7 +313,7 @@ namespace pr::physics::tests
 				bodies[1].VelocityWS(v4::Zero(), vel_b);
 				bodies[0].Collided += [&](auto&, auto&) { result.gpu_collision = true; };
 
-				physics::Engine engine;
+				auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 				for (int step = 0; step != 5000; ++step)
 				{
@@ -338,7 +339,7 @@ namespace pr::physics::tests
 				bodies[1].VelocityWS(v4::Zero(), vel_b);
 				bodies[0].Collided += [&](auto&, auto&) { result.cpu_collision = true; };
 
-				physics::Engine engine;
+				auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 				for (int step = 0; step != 5000; ++step)
 				{
@@ -440,7 +441,7 @@ namespace pr::physics::tests
 			bodies[1].Shape(collision::shape_cast(&ground_shape), physics::Inertia::Infinite());
 			bodies[1].O2W(m4x4::Translation(0, 0, -1000));
 
-			physics::Engine engine;
+			auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 			for (int step = 0; step != 100; ++step)
 			{
@@ -477,7 +478,7 @@ namespace pr::physics::tests
 			bodies[1].Shape(collision::shape_cast(&ground_shape), physics::Inertia::Infinite());
 			bodies[1].O2W(m4x4::Translation(0, 0, -1000));
 
-			physics::Engine engine;
+			auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 			auto ke0 = bodies[0].KineticEnergy();
 			float max_drift = 0.0f;
@@ -516,7 +517,7 @@ namespace pr::physics::tests
 			bodies[1].O2W(m4x4::Translation(+5, 0, 0));
 			bodies[1].VelocityWS(v4::Zero(), v4{0, 0, 0, 0});
 
-			physics::Engine engine;
+			auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 
 			// Detect collision via the Collided event on the bodies
 			bool collision_detected = false;
@@ -568,7 +569,7 @@ namespace pr::physics::tests
 				bodies[1].VelocityWS(v4::Zero(), v4{-3, 0, 0, 0});
 				bodies[0].Collided += [&](auto&, auto&) { collision_done = true; };
 
-				physics::Engine engine;
+				auto engine = physics::Engine{{}, &SharedTestShaderCache()};
 				engine.UseGpuDetect(gpu_detect);
 				engine.UseGpuResolve(gpu_resolve);
 

@@ -1574,7 +1574,7 @@ namespace pr::physics::tests
 		// Keep each failed-recording witness on a separate engine so its command list cannot affect another test.
 		static void ExerciseSleepIslandRefresh(bool coupled)
 		{
-			auto engine = Engine{};
+			auto engine = Engine{{}, &SharedTestShaderCache()};
 			ConfigureCoupledEngine(engine);
 			auto config = engine.Config();
 			config.max_collision_pairs = 16;

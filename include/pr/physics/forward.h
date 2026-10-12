@@ -48,6 +48,7 @@
 #include "pr/hlsl/interop.h"
 #include "pr/compute/gpu_job.h"
 #include "pr/compute/shaders/shader_cache.h"
+#include "pr/compute/shaders/shader_precompile.h"
 
 // Physics diagnostics/profile code defaults to debug-only. Define these explicitly to opt in/out per build.
 #ifndef PR_DBG_PHYSICS
@@ -76,6 +77,7 @@ namespace pr::physics
 
 	using BBox = math::BoundingBox<float>;
 	using IShaderCache = ::pr::compute::shader_cache::IShaderCache;
+	using ShaderRecipe = ::pr::compute::ShaderRecipe;
 
 	// Physics work is submitted to DIRECT queues, not COMPUTE queues. NVIDIA drivers (seen on RTX 3080 Ti/4090 with drivers 610.60-616.64)
 	// can corrupt the private (local) memory of a compute shader running on a COMPUTE queue while another DIRECT queue renders with pixel shaders

@@ -636,7 +636,7 @@ namespace pr::physics::tests
 			auto replay = ArticulationMidpointInteropRunner{};
 			replay.Run(expected, 0.0005f, 3);
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			engine.BeginStep(Engine::StepInput{
 				.m_articulations = std::span{forest},
 				.m_elapsed_seconds = 0.0015f,
@@ -692,7 +692,7 @@ namespace pr::physics::tests
 			auto forest = std::array{&articulation};
 			auto const root_to_world = articulation.RootToWorld();
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			engine.Step(Engine::StepInput{
 				.m_articulations = std::span{forest},
 				.m_elapsed_seconds = 0.001f,
@@ -721,7 +721,7 @@ namespace pr::physics::tests
 			config.sleep_velocity_threshold_lin = 0.01f;
 			config.sleep_velocity_threshold_ang = 0.01f;
 			config.sleep_delay_s = 0.015f;
-			auto engine = Engine{config};
+			auto engine = Engine{config, &SharedTestShaderCache()};
 
 			// Two quiet frames cross the tree-owned delay without allowing individual links to sleep early.
 			engine.Step(Engine::StepInput{
@@ -776,7 +776,7 @@ namespace pr::physics::tests
 			auto forest = std::array{&articulation};
 			auto const accepted = PackGpuArticulations(forest);
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			engine.Step(Engine::StepInput{
 				.m_articulations = std::span{forest},
 				.m_elapsed_seconds = 0.0f,
@@ -801,7 +801,7 @@ namespace pr::physics::tests
 			auto articulation = BuildMidpointArticulation(false);
 			ApplyMidpointForces(articulation);
 			auto forest = std::array{&articulation};
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			engine.Step(Engine::StepInput{
 				.m_articulations = std::span{forest},
 				.m_elapsed_seconds = 0.001f,
@@ -835,7 +835,7 @@ namespace pr::physics::tests
 			auto body_ptrs = std::array<RigidBody*, 1>{&body};
 			auto const position_x = body.O2W().pos.x;
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			engine.Step(Engine::StepInput{
 				.m_bodies = std::span{body_ptrs},
 				.m_articulations = std::span{forest},
@@ -876,7 +876,7 @@ namespace pr::physics::tests
 				expected.m_articulation.Integrate(dt);
 			}
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			auto callback_count = 0;
 			auto const child_force_seed_ws = actual.m_articulation.LinkDescription(actual.m_child).m_inertia.Mass() * child_gravity;
 			engine.ExternalForces += [&](Engine& sender, Engine::ExternalForceArgs const& args)
@@ -923,7 +923,7 @@ namespace pr::physics::tests
 			auto const body_force = body.ForceWS();
 			auto const body_flags = body.StateFlags();
 
-			auto engine = Engine{MidpointEngineConfig()};
+			auto engine = Engine{MidpointEngineConfig(), &SharedTestShaderCache()};
 			PR_THROWS(engine.Step(Engine::StepInput{
 				.m_bodies = std::span{body_ptrs},
 				.m_articulations = std::span{failed_forest},

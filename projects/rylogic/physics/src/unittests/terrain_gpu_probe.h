@@ -19,7 +19,7 @@ namespace pr::physics::tests::terrain_probe
 		auto const source_dir = std::filesystem::path(__FILE__).parent_path();
 		auto const root = source_dir.parent_path().parent_path().parent_path().parent_path().parent_path();
 		auto resolver = shader_cache::FileSourceResolver(std::vector<std::filesystem::path>{root / "include", root / "projects\\rylogic", source_dir / "..\\terrain\\landscape"});
-		return ShaderCompiler().Source(file, resolver).EntryPoint(entry).ShaderModel(model).HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Arg(fp32 ? L"-DPR_TERRAIN_FP32=1" : L"-DPR_TERRAIN_FP32=0").Optimise(optimise).Compile();
+		return ShaderCompiler().Cache(&SharedTestShaderCache()).Source(file, resolver).EntryPoint(entry).ShaderModel(model).HlslVersion(EHlslVersion::Hlsl2021).Arg(L"-Gis").Arg(fp32 ? L"-DPR_TERRAIN_FP32=1" : L"-DPR_TERRAIN_FP32=0").Optimise(optimise).Compile();
 	}
 
 	// Reject unsupported hardware rather than silently executing a reduced-precision landscape.

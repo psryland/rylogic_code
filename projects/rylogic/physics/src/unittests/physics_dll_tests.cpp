@@ -26,6 +26,7 @@ namespace pr::unittests
 			decltype(&Physics_Initialise) Initialise;
 			decltype(&Physics_Shutdown) Shutdown;
 			decltype(&Physics_ShaderCacheDirectorySet) ShaderCacheDirectorySet;
+			decltype(&Physics_ShaderPrecompile) ShaderPrecompile;
 			decltype(&Physics_ApiVersion) ApiVersion;
 			decltype(&Physics_StructSize) StructSize;
 			decltype(&Physics_LastError) LastError;
@@ -96,6 +97,7 @@ namespace pr::unittests
 				, Initialise(m_module.Proc<decltype(Initialise)>("Physics_Initialise"))
 				, Shutdown(m_module.Proc<decltype(Shutdown)>("Physics_Shutdown"))
 				, ShaderCacheDirectorySet(m_module.Proc<decltype(ShaderCacheDirectorySet)>("Physics_ShaderCacheDirectorySet"))
+				, ShaderPrecompile(m_module.Proc<decltype(ShaderPrecompile)>("Physics_ShaderPrecompile"))
 				, ApiVersion(m_module.Proc<decltype(ApiVersion)>("Physics_ApiVersion"))
 				, StructSize(m_module.Proc<decltype(StructSize)>("Physics_StructSize"))
 				, LastError(m_module.Proc<decltype(LastError)>("Physics_LastError"))
@@ -1199,7 +1201,7 @@ namespace pr::unittests
 						PR_EXPECT(evt.points[i].w == 1);
 						auto midpoint_depth = boundary ? std::hypot(evt.points[i].x, evt.points[i].y) - 100.0f : position.w.z - 0.49f - evt.points[i].z;
 						if (std::abs(midpoint_depth - 0.5f * evt.depth) >= 0.0011f)
-							pr::unittests::TestFramework::out() << "World contact: boundary=" << boundary << ", moving=" << moving << ", substep=" << evt.substep_index << ", midpoint depth=" << midpoint_depth << ", depth=" << evt.depth << '\n';
+							log_stream() << "World contact: boundary=" << boundary << ", moving=" << moving << ", substep=" << evt.substep_index << ", midpoint depth=" << midpoint_depth << ", depth=" << evt.depth << '\n';
 
 						PR_EXPECT(std::abs(midpoint_depth - 0.5f * evt.depth) < 0.0011f);
 					}
@@ -1762,6 +1764,76 @@ namespace pr::unittests
 			PR_EXPECT(cached > 0);
 			create_engine_and_atmosphere();
 			PR_EXPECT(count_files() == cached);
+
+			// The cache is shared by the whole process, so restore the uncached default for later tests.
+			PR_EXPECT(api.ShaderCacheDirectorySet(fix.m_context, nullptr) == EStatus::Success);
+			std::filesystem::remove_all(cache_dir);
+		}
+		PRUnitTestMethod(ShaderPrecompileFillsCacheForEngineCreation, Extended)
+		{
+			auto fix = PhysicsFixture{};
+			auto& api = fix.m_api;
+			auto const cache_dir = std::filesystem::temp_directory_path() / std::format("physics-shader-precompile-{}", GetCurrentProcessId());
+			std::filesystem::remove_all(cache_dir);
+
+			// Count the compiled kernel entries in the cache. The pipeline library file is excluded because only device users write it.
+			auto count_kernels = [&]
+			{
+				auto count = 0;
+				if (std::filesystem::exists(cache_dir))
+				{
+					for (auto const& entry : std::filesystem::recursive_directory_iterator(cache_dir))
+						count += entry.is_regular_file() && entry.path().filename() == L"manifest.bin" ? 1 : 0;
+				}
+				return count;
+			};
+
+			// Record every progress report so the sequence can be checked after the call.
+			struct Progress
+			{
+				std::vector<std::pair<int, int>> m_reports;
+				int m_cancel_after = -1;
+
+				static int __stdcall Report(void* ctx, int completed, int total)
+				{
+					// Continue until the requested number of completions has been reported.
+					auto& self = *static_cast<Progress*>(ctx);
+					self.m_reports.push_back({ completed, total });
+					return self.m_cancel_after < 0 || completed < self.m_cancel_after ? 1 : 0;
+				}
+			};
+
+			// Contract errors: invalid context, no worker threads, and no cache.
+			PR_EXPECT(api.ShaderPrecompile(nullptr, 1, nullptr, nullptr) == EStatus::InvalidHandle);
+			PR_EXPECT(api.ShaderPrecompile(fix.m_context, 0, nullptr, nullptr) == EStatus::InvalidArgument);
+			PR_EXPECT(api.ShaderPrecompile(fix.m_context, 1, nullptr, nullptr) == EStatus::InvalidArgument);
+
+			// Cancelling at the first report compiles nothing and still succeeds.
+			PR_EXPECT(api.ShaderCacheDirectorySet(fix.m_context, cache_dir.c_str()) == EStatus::Success);
+			auto cancelled = Progress{ .m_cancel_after = 0 };
+			PR_EXPECT(api.ShaderPrecompile(fix.m_context, 4, &Progress::Report, &cancelled) == EStatus::Success);
+			PR_EXPECT(cancelled.m_reports.size() == 1U && cancelled.m_reports[0].first == 0);
+			PR_EXPECT(count_kernels() == 0);
+
+			// A full run reports increasing progress that ends at the total, and stores one entry per kernel.
+			auto progress = Progress{};
+			PR_EXPECT(api.ShaderPrecompile(fix.m_context, 4, &Progress::Report, &progress) == EStatus::Success);
+			PR_EXPECT(!progress.m_reports.empty());
+			auto const total = progress.m_reports.back().second;
+			PR_EXPECT(total > 0 && progress.m_reports.back().first == total);
+			for (size_t i = 1; i < progress.m_reports.size(); ++i)
+				PR_EXPECT(progress.m_reports[i].first > progress.m_reports[i - 1].first);
+
+			PR_EXPECT(count_kernels() == total);
+
+			// Engine and atmosphere creation find every kernel they compile already in the cache.
+			auto engine = EngineHandle{};
+			PR_EXPECT(api.EngineCreate(fix.m_context, nullptr, fix.m_external_device, &engine) == EStatus::Success);
+			auto desc = MakeAtmosphereDesc();
+			auto atmosphere = AtmosphereHandle{};
+			PR_EXPECT(api.AtmosphereCreate(engine, &desc, &atmosphere) == EStatus::Success);
+			PR_EXPECT(api.EngineDestroy(engine) == EStatus::Success);
+			PR_EXPECT(count_kernels() == total);
 
 			// The cache is shared by the whole process, so restore the uncached default for later tests.
 			PR_EXPECT(api.ShaderCacheDirectorySet(fix.m_context, nullptr) == EStatus::Success);

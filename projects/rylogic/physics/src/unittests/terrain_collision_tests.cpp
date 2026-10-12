@@ -96,7 +96,7 @@ namespace pr::physics::tests
 				auto impactor = RigidBody(&shape, m4x4::Translation(0.599f, 0, 0), Inertia::Sphere(0.3f, 1));
 				auto bodies = std::array{&body, &impactor};
 				auto& gpu = SharedTestGpu();
-				auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 				body.Sleep();
 				engine.UpdateSleepIslands(bodies);
@@ -127,7 +127,8 @@ namespace pr::physics::tests
 			auto index = cache.GetOrAdd(shape);
 			auto body = RigidBody(&shape, m4x4::Translation(0, 0, 20), Inertia::Sphere(0.5f, 1));
 			auto bodies = std::array{PackDynamics(body, index)};
-			auto world = GpuWorldContacts(gpu, FlatTerrain(), surface::DefaultSpacing, CylindricalBoundaryConfig{});
+			auto pipeline = GpuWorldContactPipeline(gpu, &SharedTestShaderCache());
+			auto world = GpuWorldContacts(gpu, pipeline, FlatTerrain(), surface::DefaultSpacing, CylindricalBoundaryConfig{});
 			world.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			auto terrain_count = world.m_ranges[index].m_sample_count;
@@ -146,7 +147,7 @@ namespace pr::physics::tests
 			world.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			PR_EXPECT(world.m_plans.get() == plans && world.m_patch_buffer.get() == patches && world.m_patches.data() == patch_data);
-			auto terrain_only = GpuWorldContacts(gpu, FlatTerrain(), surface::DefaultSpacing);
+			auto terrain_only = GpuWorldContacts(gpu, pipeline, FlatTerrain(), surface::DefaultSpacing);
 			terrain_only.Upload(gpu.m_job, cache, bodies, 1);
 			gpu.m_job.Run();
 			PR_EXPECT(terrain_only.m_ranges[index].m_sample_count == terrain_count);
@@ -157,7 +158,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(AzimuthNormalsDepthAndHeight, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			auto config = CylindricalBoundaryConfig{.m_centre_x = 12, .m_centre_y = -7, .m_material_id = 7};
 			engine.CylindricalBoundary(config);
 			auto shape = collision::ShapeSphere(0.3f);
@@ -206,7 +207,7 @@ namespace pr::physics::tests
 			auto poly = collision::BuildPolytopeFromPoints(vertices, m4x4::Identity(), 0, Shape::EFlags::None, 0);
 			auto shapes = std::array<Shape const*, 5>{&capsule.m_base, &thin.m_base, &point.m_base, &triangle.m_base, &poly.as<collision::ShapePolytope>().m_base};
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			for (auto shape : shapes)
 			{
@@ -242,7 +243,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(RadialContainmentSlidingAndFreefall, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 			auto shape = collision::ShapeSphere(0.3f);
@@ -267,7 +268,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(FastOneMetreActor, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 			auto shape = collision::ShapeSphere(0.5f);
@@ -290,7 +291,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(BoxAndTerrain, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			engine.Terrain(FlatTerrain());
 			engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
@@ -333,7 +334,7 @@ namespace pr::physics::tests
 			auto centre = v4{};
 			auto shape = builder.BuildShape(storage, mass, centre);
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 			auto body = RigidBody(shape, m4x4::Translation(3999.05f, 0, 20), Inertia::Sphere(1, 1));
@@ -373,7 +374,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(SleepWakeAndCapacity, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			auto shape = collision::ShapeSphere(0.3f);
 			auto body = RigidBody(&shape, m4x4::Translation(3999.7f, 0, 50), Inertia::Sphere(0.3f, 1));
@@ -410,7 +411,7 @@ namespace pr::physics::tests
 			auto box = collision::ShapeBox(v4(0.6f, 0.6f, 0.6f, 0));
 			auto crowded = RigidBody(&box, m4x4::Translation(3999.72f, 0, 50), Inertia::Sphere(1, 1));
 			auto crowded_bodies = std::array{&crowded};
-			auto limited = Engine(EngineConfig{.max_collision_pairs = 1}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto limited = Engine(EngineConfig{.max_collision_pairs = 1}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			limited.CylindricalBoundary(CylindricalBoundaryConfig{});
 			before = crowded.O2W();
 			PR_THROWS(limited.Step(0.00001f, crowded_bodies), std::runtime_error);
@@ -421,7 +422,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(ValidationAndAtomicFailure, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			auto invalid = CylindricalBoundaryConfig{};
 			invalid.m_radius = std::numeric_limits<double>::infinity();
@@ -450,7 +451,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(DistantFastRolling, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			auto shape = collision::ShapeSphere(0.5f);
 			auto body = RigidBody(&shape, m4x4::Translation(60, 80, 10000), Inertia::Sphere(0.5f, 1));
@@ -471,7 +472,7 @@ namespace pr::physics::tests
 			for (auto dt : {1.0f / 240, 1.0f / 60, 0.1f})
 			{
 				auto& gpu = SharedTestGpu();
-				auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 				engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 				auto shape = collision::ShapeSphere(0.5f);
@@ -498,7 +499,7 @@ namespace pr::physics::tests
 			for (auto spin : {0.0f, 200.0f})
 			{
 				auto& gpu = SharedTestGpu();
-				auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 				auto shape = collision::ShapeSphere(0.5f);
 				auto body = RigidBody(&shape, m4x4::Translation(4005, 0, 10000), Inertia::Sphere(0.5f, 1));
@@ -525,7 +526,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(LargeRadialContact, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			auto shape = collision::ShapeSphere(0.5f);
 			auto body = RigidBody(&shape, m4x4::Translation(1.0e20f, 0, 0), Inertia::Sphere(0.5f, 1));
@@ -547,7 +548,7 @@ namespace pr::physics::tests
 		PRUnitTestMethod(OffsetRotationUsesCurrentPose, Extended)
 		{
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 			auto shape = collision::ShapeSphere(0.5f, m4x4::Translation(-3, 0, 0));
 			auto body = RigidBody(&shape, m4x4::Translation(3998, 0, 10000), Inertia::Sphere(0.5f, 1));
@@ -576,7 +577,7 @@ namespace pr::physics::tests
 				auto shape = collision::ShapeSphere(0.5f);
 				auto body = RigidBody(&shape, m4x4::Translation(v4(0, 0, 10000, 1) + 3998.5f * radial), Inertia::Sphere(0.5f, 1));
 				body.VelocityWS(v4::Zero(), 20 * radial + 3 * tangent + v4(0, 0, -100, 0));
-				auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				engine.Terrain(terrain::landscape::BaselineSurface(terrain::landscape::BaselineSurfaceConfig{.m_seed = 42}), 0.16f);
 				engine.CylindricalBoundary(CylindricalBoundaryConfig{});
 				engine.Material(Material{.m_friction_static = 0.3f, .m_elasticity_norm = 0.05f, .m_elasticity_tang = 0, .m_elasticity_tors = 0, .m_density = 1});
@@ -616,7 +617,7 @@ namespace pr::physics::tests
 				auto ground = RigidBody(&ground_shape, m4x4::Translation(0, 0, -0.5f), Inertia::Infinite());
 				distant.NeverSleep(true);
 				auto& gpu = SharedTestGpu();
-				auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				if (sampled)
 					engine.Terrain(FlatTerrain());
 
@@ -679,7 +680,7 @@ namespace pr::physics::tests
 
 				// Both support representations use the same solver settings and material.
 				auto& gpu = SharedTestGpu();
-				auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+				auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 				engine.Material(Material{.m_friction_static = 0.3f, .m_elasticity_norm = 0.05f});
 				if (sampled)
 					engine.Terrain(FlatTerrain());
@@ -749,7 +750,7 @@ namespace pr::physics::tests
 			auto impactor = RigidBody(&shape, m4x4::Translation(5, 0, 0.5f), Inertia::Box(v4(0.5f, 0.5f, 0.5f, 0), 1));
 			auto bodies = std::array{&body, &impactor};
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Terrain(FlatTerrain());
 			engine.Step(0.00001f, bodies);
 			body.O2W(m4x4::Translation(0, 0, 0.49f));
@@ -791,7 +792,7 @@ namespace pr::physics::tests
 			auto articulations = std::array{&articulation};
 			auto bodies = std::array{&distant};
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Terrain(FlatTerrain());
 			auto input = Engine::StepInput{.m_bodies = bodies, .m_articulations = articulations, .m_elapsed_seconds = 1.0f / 60, .m_substep_count = 4};
 			engine.Step(input);
@@ -846,7 +847,7 @@ namespace pr::physics::tests
 			auto shape = collision::ShapeBox(v4(1, 1, 1, 0));
 			auto body = RigidBody(&shape, m4x4::Translation(0, 0, 1), Inertia::Box(v4(0.5f, 0.5f, 0.5f, 0), 1));
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Material(Material{.m_friction_static = 0.5f, .m_elasticity_norm = 0});
 			engine.Terrain(FlatTerrain());
 			auto bodies = std::array{&body};
@@ -895,7 +896,7 @@ namespace pr::physics::tests
 
 			// Disable solver motion so contact geometry can be checked at the chosen pose.
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Terrain(FlatTerrain());
 			auto contact_count = 0;
 
@@ -958,7 +959,7 @@ namespace pr::physics::tests
 			auto shape = collision::ShapeSphere(0.3f);
 			auto body = RigidBody(&shape, m4x4::Translation(0, 0, 3), Inertia::Sphere(0.3f, 1));
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			auto bodies = std::array{&body};
 
 			// Clearing an absent source must preserve an already sleeping body's state.
@@ -989,7 +990,7 @@ namespace pr::physics::tests
 			auto body = RigidBody(&point, m4x4::Identity(), Inertia::Sphere(1, 1));
 			body.VelocityWS(v4::Zero(), v4(0, 0, -1, 0));
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 1, .push_out_iterations = 0, .velocity_baumgarte = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 1, .push_out_iterations = 0, .velocity_baumgarte = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Material(Material{.m_friction_static = 0, .m_elasticity_norm = 0});
 			engine.Terrain(FlatTerrain());
 			auto bodies = std::array{&body};
@@ -1007,7 +1008,7 @@ namespace pr::physics::tests
 			auto box = collision::ShapeBox(v4(1, 1, 1, 0));
 			auto crowded = RigidBody(&box, m4x4::Translation(0, 0, 0.4f), Inertia::Sphere(1, 1));
 			auto before = crowded.O2W();
-			auto limited = Engine(EngineConfig{.max_collision_pairs = 1}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto limited = Engine(EngineConfig{.max_collision_pairs = 1}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			limited.Terrain(FlatTerrain());
 			auto limited_bodies = std::array{&crowded};
 			PR_THROWS(limited.Step(0.00001f, limited_bodies), std::runtime_error);
@@ -1055,7 +1056,7 @@ namespace pr::physics::tests
 			auto shape = collision::ShapeBox(v4(0.6f, 0.6f, 0.6f, 0));
 			auto body = RigidBody(&shape, m4x4::Translation(static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(best + 0.28)), Inertia::Sphere(0.3f, 1));
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine(EngineConfig{.solver_iterations = 0, .push_out_iterations = 0, .selective_refresh_passes = 0}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Terrain(source);
 			auto min_x = 1.0f, max_x = -1.0f;
 			auto count = 0;
@@ -1092,7 +1093,7 @@ namespace pr::physics::tests
 			auto body = RigidBody(&shape, m4x4::Translation(0, 0, 3), Inertia::Sphere(0.3f, 1));
 			body.VelocityWS(v4::Zero(), v4(0, 0, -20, 0));
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Material(Material{.m_friction_static = 0.5f, .m_elasticity_norm = 0});
 			engine.Terrain(FlatTerrain());
 			auto bodies = std::array{&body};
@@ -1155,7 +1156,7 @@ namespace pr::physics::tests
 			auto articulation = builder.Build();
 			auto articulations = std::array{&articulation};
 			auto& gpu = SharedTestGpu();
-			auto engine = Engine({}, nullptr, gpu, gpu.m_job.m_queue.get());
+			auto engine = Engine({}, &SharedTestShaderCache(), gpu, gpu.m_job.m_queue.get());
 			engine.Material(Material{.m_friction_static = 0.5f, .m_elasticity_norm = 0});
 			engine.Terrain(FlatTerrain());
 

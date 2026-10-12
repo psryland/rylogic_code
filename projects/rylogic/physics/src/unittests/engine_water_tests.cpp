@@ -256,9 +256,10 @@ namespace pr::physics::tests
 			auto config = engine.Config();
 			config.sleeping_enabled = false;
 			engine.Config(config);
-			engine.Water(FlatWater(2.0, 2.0f, 0.5f, 0.5f));
+			// Near-critical linear drag settles the bob in a few seconds. Drag does not move the equilibrium, so the draft check is unaffected.
+			engine.Water(FlatWater(2.0, 6.0f, 0.5f, 0.5f));
 			body.O2W(m4x4::Translation(0, 0, 2.4f));
-			Run(engine, body, 600, 4);
+			Run(engine, body, 180, 4);
 			ClearWater(engine);
 
 			PR_EXPECT(FEqlAbsolute(body.O2W().pos.z, 2.0f, 0.01f));

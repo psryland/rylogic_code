@@ -12,6 +12,18 @@
 
 namespace pr::physics
 {
+	// The compiled sampled world-contact kernels. They do not depend on the world sources, so one pipeline serves every set of sources on a device.
+	struct GpuWorldContactPipeline
+	{
+		ComputeStep m_samples;
+		ComputeStep m_step;
+		ComputeStep m_dispatch;
+
+		// Compile the kernels and create their pipelines. 'shader_cache' is optional; when given, compiled kernels are reused across runs.
+		// Throws if the device lacks the FP64 and Int64 shader operations the kernels need.
+		GpuWorldContactPipeline(Gpu& gpu, IShaderCache* shader_cache);
+	};
+
 	// Sampled world surfaces share primitive plans and one owned static solver endpoint.
 	struct GpuWorldContacts
 	{
@@ -39,6 +51,7 @@ namespace pr::physics
 		};
 
 		Gpu& m_gpu;
+		GpuWorldContactPipeline& m_pipeline;
 		std::optional<terrain::landscape::BaselineSurface> m_surface;
 		std::optional<CylindricalBoundaryConfig> m_boundary;
 		float m_terrain_spacing;
@@ -46,9 +59,6 @@ namespace pr::physics
 		uint32_t m_boundary_plan_offset = 0;
 		float m_height_upper;
 		RigidBody m_endpoint;
-		ComputeStep m_samples;
-		ComputeStep m_step;
-		ComputeStep m_dispatch;
 		std::vector<surface::SurfacePatch> m_patches;
 		std::vector<Range> m_ranges;
 		std::vector<Instance> m_instances;
@@ -62,8 +72,8 @@ namespace pr::physics
 		uint32_t m_query_capacity = 0, m_query_count = 0;
 		uint64_t m_frequency = 0;
 
-		// Validate and own independent world sources and their shared contact pipeline.
-		GpuWorldContacts(Gpu& gpu, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary = {});
+		// Validate and own independent world sources. 'pipeline' must outlive this object.
+		GpuWorldContacts(Gpu& gpu, GpuWorldContactPipeline& pipeline, std::optional<terrain::landscape::BaselineSurface> surface, float spacing, std::optional<CylindricalBoundaryConfig> boundary = {});
 
 		// Invalidate shape-indexed plans after the engine has retired their GPU work.
 		void Reset();
