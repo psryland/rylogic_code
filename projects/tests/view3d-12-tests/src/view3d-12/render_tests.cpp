@@ -2776,6 +2776,35 @@ namespace render_tests
 		std::cout << "PASS environment map capture exclusion\n";
 	}
 
+	// Check that translucent surfaces composite in depth order regardless of add order, and that back faces are still drawn.
+	void AlphaLayeringTests(int samples)
+	{
+		// Half-transparent red behind half-transparent green, over black: red = 0.5 * 0.5, green = 0.5.
+		auto fixture = Fixture(samples);
+		fixture.Quad(20, 0x80FF0000);
+		fixture.Quad(10, 0x8000FF00);
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Reversing the add order must not change the depth-ordered result.
+		fixture.Clear();
+		fixture.Quad(10, 0x8000FF00);
+		fixture.Quad(20, 0x80FF0000);
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Turn the near quad around so it faces away from the camera; a single cull-none alpha draw must still include it.
+		fixture.Clear();
+		fixture.Quad(20, 0x80FF0000);
+		auto back = fixture.Quad(10, 0x8000FF00);
+		api::Mat4x4 turned{{-1,0,0,0}, {0,1,0,0}, {0,0,-1,0}, {0,0,-20,1}};
+		View3D_ObjectO2WSet(back, turned, nullptr);
+		fixture.CheckErrors();
+		Expect(fixture.Image(), 0.25f, 0.5f, 0);
+
+		// Any GPU validation error fails the fixture.
+		fixture.CheckDebugLayer();
+		std::cout << "PASS alpha layering (" << samples << "x)\n";
+	}
+
 	// Check that detail normals tilt lighting only while layers are set, and can be removed.
 	void DetailNormalsTests()
 	{
@@ -3228,6 +3257,11 @@ namespace pr::unittests::view3d12
 	PRUnitTest(View3d12_EnvMapCaptureExclude, Extended)
 	{
 		render_tests::EnvMapCaptureExcludeTests();
+	}
+	PRUnitTest(View3d12_AlphaLayering, Extended)
+	{
+		render_tests::AlphaLayeringTests(1);
+		render_tests::AlphaLayeringTests(4);
 	}
 	PRUnitTest(View3d12_DetailNormals, Extended)
 	{

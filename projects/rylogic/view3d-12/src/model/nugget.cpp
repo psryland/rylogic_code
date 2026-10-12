@@ -178,50 +178,25 @@ namespace pr::rdr12
 		if (!enable)
 			return;
 
-		// Create the AlphaFront nugget
-		{
-			AddDependent(factory,
-				NuggetDesc(*this)
-				.variant(AlphaNugget)
-				.sort_key(ESortGroup::AlphaFront)
-				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
-				.pso<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO)
-				.pso<EPipeState::BlendState0>({
-					.BlendEnable = TRUE,
-					.LogicOpEnable = FALSE,
-					.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
-					.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
-					.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
-					.SrcBlendAlpha = D3D12_BLEND_ONE,
-					.DestBlendAlpha = D3D12_BLEND_ONE,
-					.BlendOpAlpha = D3D12_BLEND_OP_MAX,
-					.LogicOp = D3D12_LOGIC_OP_CLEAR,
-					.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
-					}));
-		}
-
-		// Create the AlphaBack nugget. Only triangle data needs back faces rendered
-		if (TopoGroup(m_topo) == ETopoGroup::Triangles)
-		{
-			AddDependent(factory,
-				NuggetDesc(*this)
-				.variant(AlphaNugget)
-				.sort_key(ESortGroup::AlphaBack)
-				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT)
-				.pso<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO)
-				.pso<EPipeState::BlendState0>({
-					.BlendEnable = TRUE,
-					.LogicOpEnable = FALSE,
-					.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
-					.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
-					.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
-					.SrcBlendAlpha = D3D12_BLEND_ONE,
-					.DestBlendAlpha = D3D12_BLEND_ONE,
-					.BlendOpAlpha = D3D12_BLEND_OP_MAX,
-					.LogicOp = D3D12_LOGIC_OP_CLEAR,
-					.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
-					}));
-		}
+		// Create the alpha nugget. Both faces are drawn in one pass because the K-buffer orders fragments by depth per pixel.
+		AddDependent(factory,
+			NuggetDesc(*this)
+			.variant(AlphaNugget)
+			.sort_key(ESortGroup::Alpha)
+			.pso<EPipeState::CullMode>(D3D12_CULL_MODE_NONE)
+			.pso<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO)
+			.pso<EPipeState::BlendState0>({
+				.BlendEnable = TRUE,
+				.LogicOpEnable = FALSE,
+				.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
+				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
+				.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
+				.SrcBlendAlpha = D3D12_BLEND_ONE,
+				.DestBlendAlpha = D3D12_BLEND_ONE,
+				.BlendOpAlpha = D3D12_BLEND_OP_MAX,
+				.LogicOp = D3D12_LOGIC_OP_CLEAR,
+				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+				}));
 	}
 
 	// Ref-counting clean up function

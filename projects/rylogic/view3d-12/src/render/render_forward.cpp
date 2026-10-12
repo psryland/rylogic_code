@@ -178,10 +178,6 @@ namespace pr::rdr12
 				if (auto* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride))
 					sk = sko->Combine(sk);
 
-				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.FillMode() == EFillMode::Points && sk.Group() == ESortGroup::AlphaBack)
-					break;
-
 				// Let the material add pass-specific sort key information.
 				sk = pass->AddSortKey(m_step_id, inst, material, nug, sk);
 
@@ -331,7 +327,7 @@ namespace pr::rdr12
 
 			// Draw the opaques
 			auto drawlist = m_drawlist.lock();
-			auto opaques = std::span{ *drawlist }.subspan(0, s_cast<size_t>(kbuf ? boundaries[ESortGroup::AlphaBack] : s_cast<int>(drawlist->size())));
+			auto opaques = std::span{ *drawlist }.subspan(0, s_cast<size_t>(kbuf ? boundaries[ESortGroup::Alpha] : s_cast<int>(drawlist->size())));
 			auto pix_opaque = pix::EventScope<ID3D12GraphicsCommandList>(m_cmd_list.get(), 0xFF7EB8E5, "View3D::Opaque");
 			DrawNuggets(frame, m_cmd_list, pipe_state, opaques, 0, ESubPass::Opaque);
 		}
@@ -356,7 +352,7 @@ namespace pr::rdr12
 
 			// Draw the alphas
 			auto drawlist = m_drawlist.lock();
-			auto alpha_start = boundaries[ESortGroup::AlphaBack];
+			auto alpha_start = boundaries[ESortGroup::Alpha];
 			auto alpha_end = boundaries[ESortGroup::PostAlpha];
 
 			// Use the alpha collect shader and disable depth writes for the alpha pass
@@ -552,7 +548,7 @@ namespace pr::rdr12
 		for (auto& dle : drawlist)
 		{
 			// The alpha collection must never collect background or overlay fragments.
-			if (sub_pass == ESubPass::Alpha && dle.m_sort_key.Group() < ESortGroup::AlphaBack)
+			if (sub_pass == ESubPass::Alpha && dle.m_sort_key.Group() < ESortGroup::Alpha)
 				continue;
 
 			// Something not rendering?

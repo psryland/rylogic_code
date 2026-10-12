@@ -353,10 +353,9 @@ namespace Rylogic.Gfx
 			Default = 64,          // Make opaques the middle group
 			Skybox,                // Sky-box after opaques
 			PostOpaques,           // 
-			PreAlpha = Default + 16, // Last group before the alpha groups
-			AlphaBack,             // 
-			AlphaFront,            // 
-			PostAlpha,             // First group after the alpha groups
+			PreAlpha = Default + 16, // Last group before the alpha group
+			Alpha,                 // Alpha nuggets, collected into the K-buffer
+			PostAlpha,             // First group after the alpha group
 			Max = 127,             // The maximum sort group value
 		}
 		public enum ESceneBounds : int
