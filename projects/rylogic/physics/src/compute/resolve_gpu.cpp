@@ -133,7 +133,7 @@ namespace pr::physics
 				;
 
 			m_cs_compute_times.m_sig = sig.Create(m_gpu, "Physics:ComputeTimesSig");
-			m_cs_compute_times.m_pso = ComputePSO(m_cs_compute_times.m_sig.get(), shader_code::compute_collision_times).Create(m_gpu, "Physics:ComputeTimesPSO");
+			m_cs_compute_times.m_pso = ComputePSO(m_cs_compute_times.m_sig.get(), shader_code::compute_collision_times).Cache(shader_cache).Create(m_gpu, "Physics:ComputeTimesPSO");
 		}
 
 		// Shock-priority passes: build dynamic body adjacency, propagate priority in parallel, and finalise sort keys.
@@ -154,7 +154,7 @@ namespace pr::physics
 					.UAV(EReg::ContactNextA)
 					.UAV(EReg::ContactNextB)
 					.Create(m_gpu, sig_name.c_str());
-				step.m_pso = ComputePSO(step.m_sig.get(), bytecode).Create(m_gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(step.m_sig.get(), bytecode).Cache(shader_cache).Create(m_gpu, pso_name.c_str());
 			};
 
 			compile_step(m_cs_clear_shock_lists, shader_code::clear_shock_lists, "ClearShockLists");
@@ -176,7 +176,7 @@ namespace pr::physics
 				.UAV(EReg::ColourDispatch);
 
 			m_cs_assign_colours.m_sig = sig.Create(m_gpu, "Physics:AssignColoursSig");
-			m_cs_assign_colours.m_pso = ComputePSO(m_cs_assign_colours.m_sig.get(), shader_code::assign_colours).Create(m_gpu, "Physics:AssignColoursPSO");
+			m_cs_assign_colours.m_pso = ComputePSO(m_cs_assign_colours.m_sig.get(), shader_code::assign_colours).Cache(shader_cache).Create(m_gpu, "Physics:AssignColoursPSO");
 		}
 
 		// Warm-start passes: clear cache, apply previous-frame impulses, then store this frame's final impulses.
@@ -195,7 +195,7 @@ namespace pr::physics
 					.UAV(EReg::WarmStartPrev)
 					.UAV(EReg::WarmStartCurr)
 					.Create(m_gpu, sig_name.c_str());
-				step.m_pso = ComputePSO(step.m_sig.get(), bytecode).Create(m_gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(step.m_sig.get(), bytecode).Cache(shader_cache).Create(m_gpu, pso_name.c_str());
 			};
 
 			compile_step(m_cs_warm_start_clear, shader_code::warm_start_clear, "WarmStartClear");
@@ -216,7 +216,7 @@ namespace pr::physics
 				.UAV(EReg::PositionPseudo);
 
 			m_cs_position_solve.m_sig = sig.Create(m_gpu, "Physics:PositionSolveSig");
-			m_cs_position_solve.m_pso = ComputePSO(m_cs_position_solve.m_sig.get(), shader_code::position_solve).Create(m_gpu, "Physics:PositionSolvePSO");
+			m_cs_position_solve.m_pso = ComputePSO(m_cs_position_solve.m_sig.get(), shader_code::position_solve).Cache(shader_cache).Create(m_gpu, "Physics:PositionSolvePSO");
 		}
 
 		// m_cs_resolve
@@ -231,17 +231,17 @@ namespace pr::physics
 				.UAV(EReg::ContactOrder);
 
 			m_cs_resolve.m_sig = sig.Create(m_gpu, "Physics:ResolveSig");
-			m_cs_resolve.m_pso = ComputePSO(m_cs_resolve.m_sig.get(), shader_code::resolve).Create(m_gpu, "Physics:ResolvePSO");
+			m_cs_resolve.m_pso = ComputePSO(m_cs_resolve.m_sig.get(), shader_code::resolve).Cache(shader_cache).Create(m_gpu, "Physics:ResolvePSO");
 		}
 
 		// Fused colour sweeps bind exactly the same resources as their per-colour forms, so they share those root signatures.
 		{
 			m_cs_apply_warm_start_fused.m_sig = m_cs_apply_warm_start.m_sig;
-			m_cs_apply_warm_start_fused.m_pso = ComputePSO(m_cs_apply_warm_start_fused.m_sig.get(), shader_code::apply_warm_start_fused).Create(m_gpu, "Physics:ApplyWarmStartFusedPSO");
+			m_cs_apply_warm_start_fused.m_pso = ComputePSO(m_cs_apply_warm_start_fused.m_sig.get(), shader_code::apply_warm_start_fused).Cache(shader_cache).Create(m_gpu, "Physics:ApplyWarmStartFusedPSO");
 			m_cs_position_solve_fused.m_sig = m_cs_position_solve.m_sig;
-			m_cs_position_solve_fused.m_pso = ComputePSO(m_cs_position_solve_fused.m_sig.get(), shader_code::position_solve_fused).Create(m_gpu, "Physics:PositionSolveFusedPSO");
+			m_cs_position_solve_fused.m_pso = ComputePSO(m_cs_position_solve_fused.m_sig.get(), shader_code::position_solve_fused).Cache(shader_cache).Create(m_gpu, "Physics:PositionSolveFusedPSO");
 			m_cs_resolve_fused.m_sig = m_cs_resolve.m_sig;
-			m_cs_resolve_fused.m_pso = ComputePSO(m_cs_resolve_fused.m_sig.get(), shader_code::resolve_fused).Create(m_gpu, "Physics:ResolveFusedPSO");
+			m_cs_resolve_fused.m_pso = ComputePSO(m_cs_resolve_fused.m_sig.get(), shader_code::resolve_fused).Cache(shader_cache).Create(m_gpu, "Physics:ResolveFusedPSO");
 		}
 
 		// Create a command signature for indirect dispatch

@@ -8,6 +8,7 @@
 #include "pr/compute/shaders/shader_compiler.h"
 #include "pr/compute/utility/root_signature.h"
 #include "src/utility/gpu.h"
+#include "src/utility/shader_recipes.h"
 
 namespace pr::physics::atmosphere
 {
@@ -15,6 +16,21 @@ namespace pr::physics::atmosphere
 
 	namespace
 	{
+		// Every atmosphere kernel entry point, including the tracer, probe and surface-wind kernels.
+		constexpr wchar_t const* AtmosphereEntryPoints[] = {
+			L"CSInitialise", L"CSAdvect", L"CSVorticity", L"CSForcesHeat", L"CSDivergence", L"CSMgSmooth", L"CSMgSmallLevels", L"CSMgResidual",
+			L"CSMgRestrict", L"CSMgProlongate", L"CSNormalisePressure", L"CSProject", L"CSInitialiseTracers", L"CSAdvectTracers", L"CSSampleProbes",
+			L"CSSampleSurfaceWind",
+		};
+
+		// Compile one atmosphere kernel. Constructors and precompilation share this so their cache keys match.
+		std::vector<uint8_t> CompileAtmosphereKernel(wchar_t const* entry_point, IShaderCache* cache)
+		{
+			// Runtime compilation matches the other physics GPU modules and uses the embedded resource resolver. The optional cache skips DXC when the source is unchanged.
+			auto resolver = shader_cache::ResourceSourceResolver{};
+			return ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(entry_point).Compile();
+		}
+
 		// The kernels cover cells and all three face arrays with one conservative dispatch extent.
 		constexpr auto AtmosphereThreadGroup = iv3{ 8, 8, 4 };
 
@@ -718,12 +734,6 @@ namespace pr::physics::atmosphere
 			m_config.Validate();
 			m_all_columns_active = std::ranges::all_of(m_config.m_grid.m_active_columns, [](uint8_t active) { return active != 0; });
 			BuildMultigridLevels();
-			auto resolver = shader_cache::ResourceSourceResolver{};
-			auto compile = [&](wchar_t const* entry_point)
-			{
-				// Runtime compilation matches the other physics GPU modules and uses the embedded resource resolver. The optional cache skips DXC when the source is unchanged.
-				return ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(entry_point).Compile();
-			};
 
 			// Every kernel shares one root signature so the field views stay bound across pipeline changes within a step. The order must match ERootParam.
 			m_sig = RootSig(ERootSigFlags::ComputeOnly)
@@ -735,10 +745,10 @@ namespace pr::physics::atmosphere
 			{
 				// Each kernel only needs its own pipeline state on top of the shared root signature.
 				auto step = ComputeStep{};
-				auto code = compile(entry_point);
+				auto code = CompileAtmosphereKernel(entry_point, cache);
 				auto pso_name = std::format("Physics.Atmosphere.{}.PSO", name);
 				step.m_sig = m_sig;
-				step.m_pso = ComputePSO(m_sig.get(), code).Create(gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(m_sig.get(), code).Cache(cache).Create(gpu, pso_name.c_str());
 				return step;
 			};
 
@@ -1610,17 +1620,11 @@ namespace pr::physics::atmosphere
 		{
 			// Tracer state is valid only when its solver and buffers have a defined lifetime.
 			m_config.Validate();
-			auto resolver = shader_cache::ResourceSourceResolver{};
-			auto compile = [&](wchar_t const* entry_point)
-			{
-				// Runtime compilation uses the same embedded source and optional cache as the solver kernels.
-				return ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(entry_point).Compile();
-			};
 			auto make_step = [&](wchar_t const* entry_point, char const* name)
 			{
 				// The tracer kernels share the atmosphere root layout so they can sample the solver buffers directly.
 				auto step = ComputeStep{};
-				auto code = compile(entry_point);
+				auto code = CompileAtmosphereKernel(entry_point, cache);
 				auto sig_name = std::format("Physics.Atmosphere.Tracers.{}.RootSig", name);
 				auto pso_name = std::format("Physics.Atmosphere.Tracers.{}.PSO", name);
 				step.m_sig = RootSig(ERootSigFlags::ComputeOnly)
@@ -1629,7 +1633,7 @@ namespace pr::physics::atmosphere
 					.UAV(hlsl::EUAVReg::u7)
 					.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t3).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t9)
 					.Create(gpu, sig_name.c_str());
-				step.m_pso = ComputePSO(step.m_sig.get(), code).Create(gpu, pso_name.c_str());
+				step.m_pso = ComputePSO(step.m_sig.get(), code).Cache(cache).Create(gpu, pso_name.c_str());
 				return step;
 			};
 
@@ -1884,15 +1888,14 @@ namespace pr::physics::atmosphere
 			, m_pending_count(0)
 		{
 			// The kernel reads the same solver buffers as the tracer kernels, plus the probe points, and writes only the sample buffer.
-			auto resolver = shader_cache::ResourceSourceResolver{};
-			auto code = ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(L"CSSampleProbes").Compile();
+			auto code = CompileAtmosphereKernel(L"CSSampleProbes", cache);
 			m_sample.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 				.U32<CBufAtmosphere>(hlsl::ECBufReg::b0)
 				.U32<CBufAtmosphereProbes>(hlsl::ECBufReg::b2)
 				.UAV(hlsl::EUAVReg::u8)
 				.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t3).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t8)
 				.Create(gpu, "Physics.Atmosphere.Probes.RootSig");
-			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Create(gpu, "Physics.Atmosphere.Probes.PSO");
+			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Cache(cache).Create(gpu, "Physics.Atmosphere.Probes.PSO");
 			m_samples = CreateBuffer<GpuProbeSample>(gpu, gpu.m_job, MaxPoints, "Atmosphere:ProbeSamples");
 			gpu.m_job.RetireRecordedWork();
 		}
@@ -2001,15 +2004,14 @@ namespace pr::physics::atmosphere
 			, m_pending_readback()
 		{
 			// The kernel reads the solver's wind, floors, and outside air, and writes only the per-column result.
-			auto resolver = shader_cache::ResourceSourceResolver{};
-			auto code = ShaderCompiler{}.Source("src/atmosphere/atmosphere.hlsl", resolver).Cache(cache).HlslVersion(EHlslVersion::Hlsl2021).Define(L"SHADER_BUILD").Optimise(true).ShaderModel(L"cs_6_6").EntryPoint(L"CSSampleSurfaceWind").Compile();
+			auto code = CompileAtmosphereKernel(L"CSSampleSurfaceWind", cache);
 			m_sample.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 				.U32<CBufAtmosphere>(hlsl::ECBufReg::b0)
 				.U32<CBufAtmosphereSurfaceWind>(hlsl::ECBufReg::b3)
 				.UAV(hlsl::EUAVReg::u9)
 				.SRV(hlsl::ESRVReg::t0).SRV(hlsl::ESRVReg::t1).SRV(hlsl::ESRVReg::t2).SRV(hlsl::ESRVReg::t6).SRV(hlsl::ESRVReg::t7)
 				.Create(gpu, "Physics.Atmosphere.SurfaceWind.RootSig");
-			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Create(gpu, "Physics.Atmosphere.SurfaceWind.PSO");
+			m_sample.m_pso = ComputePSO(m_sample.m_sig.get(), code).Cache(cache).Create(gpu, "Physics.Atmosphere.SurfaceWind.PSO");
 			m_wind = CreateBuffer<v2>(gpu, gpu.m_job, solver.Config().m_grid.ColumnCount(), "Atmosphere:SurfaceWind");
 			gpu.m_job.RetireRecordedWork();
 		}
@@ -2080,5 +2082,18 @@ namespace pr::physics::atmosphere
 		auto wind = std::vector<v2>(src, src + count);
 		impl.m_pending_readback = {};
 		return wind;
+	}
+
+	// Add a recipe for every atmosphere kernel.
+	void AppendAtmosphereShaderRecipes(std::vector<ShaderRecipe>& recipes)
+	{
+		// Each recipe compiles exactly as the owning constructor does.
+		for (auto entry_point : AtmosphereEntryPoints)
+		{
+			recipes.push_back({
+				.m_name = std::format("Atmosphere.{}", Narrow(std::wstring_view(entry_point))),
+				.m_compile = [entry_point](IShaderCache* cache) { return CompileAtmosphereKernel(entry_point, cache); },
+			});
+		}
 	}
 }

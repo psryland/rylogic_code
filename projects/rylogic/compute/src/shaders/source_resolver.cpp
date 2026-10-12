@@ -105,7 +105,7 @@ namespace pr::compute::shader_cache
 		return std::format("resource:{}:{}", Narrow(shader_cache::CanonicalPath(win32::ModuleFileName(m_module)).wstring()), Narrow(m_type));
 	}
 
-	// Resolve a resource name to source text and module timestamp metadata.
+	// Resolve a resource name to source text and resource content metadata.
 	Source ResourceSourceResolver::Resolve(std::string_view source_name) const
 	{
 		auto name = resource::Name(Widen(source_name));

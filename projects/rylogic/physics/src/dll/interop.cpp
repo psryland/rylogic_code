@@ -12,6 +12,7 @@
 #include "physics/src/dll/context.h"
 #include "physics/src/dll/interop.h"
 #include "physics/src/utility/gpu.h"
+#include "physics/src/utility/shader_recipes.h"
 
 // The ABI water element is reinterpreted as the shared element, so their layouts must match exactly.
 static_assert(sizeof(pr::physics::WaterElement) == sizeof(pr::physics::terrain::water::WaterFieldElement));
@@ -2162,6 +2163,34 @@ extern "C"
 			dll->m_interop->m_shader_cache = directory != nullptr
 				? std::make_shared<pr::compute::shader_cache::ShaderCacheFS>(std::filesystem::path(directory), "physics")
 				: nullptr;
+		});
+	}
+
+	PhysicsStatus __stdcall Physics_ShaderPrecompile(pr::physics::DllHandle context, int thread_count, int(__stdcall* progress)(void* ctx, int completed, int total), void* ctx)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			// Copy the current cache under the registry lock, then compile without holding it so other contexts and engines are not blocked.
+			auto dll = pr::physics::PinDll();
+			auto cache = std::shared_ptr<pr::physics::IShaderCache>{};
+			{
+				pr::physics::LockGuard lock(dll->m_mutex);
+				if (!dll->m_inits.contains(context))
+					throw pr::physics::ApiException(PhysicsStatus::InvalidHandle, "DLL context handle is invalid");
+				if (thread_count < 1)
+					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Shader precompile thread count must be at least one");
+
+				cache = dll->m_interop->m_shader_cache;
+				if (cache == nullptr)
+					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Shader precompile requires a shader cache directory");
+			}
+
+			// Forward progress to the caller; a zero return cancels the remaining kernels.
+			auto recipes = pr::physics::ShaderRecipes();
+			pr::compute::PrecompileShaders(recipes, *cache, thread_count, [&](int completed, int total)
+			{
+				return progress == nullptr || progress(ctx, completed, total) != 0;
+			});
 		});
 	}
 
