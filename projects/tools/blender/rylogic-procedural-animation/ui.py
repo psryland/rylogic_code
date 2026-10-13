@@ -44,7 +44,6 @@ class RYLOGIC_PT_rig(Panel):
 		armature = context.active_object.data
 		rig = armature.rylogic_rig
 		row = layout.row(align=True)
-		row.operator("rylogic_rig.propose", icon="LIGHT")
 		row.operator("rylogic_rig.validate", icon="CHECKMARK")
 		row.operator("rylogic_rig.validate_native", icon="CHECKMARK")
 		row = layout.row(align=True)
@@ -58,6 +57,18 @@ class RYLOGIC_PT_rig(Panel):
 				box.label(text=line, icon="CHECKMARK" if line.startswith("Valid") else "ERROR")
 			if len(operators.LAST_REPORT) > 12:
 				box.label(text=f"... and {len(operators.LAST_REPORT) - 12} more (see the Info editor)")
+
+		# Range of motion: capture extreme poses into an action, then derive the joint limits from them
+		layout.label(text="Range of Motion")
+		box = layout.box()
+		box.prop(rig, "rom_action")
+		row = box.row(align=True)
+		row.prop(rig, "rom_padding")
+		row.prop(rig, "rom_mirror", toggle=True, icon="MOD_MIRROR")
+		row = box.row(align=True)
+		row.operator("rylogic_rig.capture_pose", icon="KEYFRAME")
+		row.operator("rylogic_rig.derive_limits", icon="CON_ROTLIMIT")
+		row.operator("rylogic_rig.symmetrize_limits", icon="MOD_MIRROR")
 
 		# Chains, with the active chain's details
 		layout.label(text="Chains")
@@ -110,19 +121,17 @@ class RYLOGIC_PT_rig_bone(Panel):
 		return context.bone is not None
 
 	def draw(self, context):
-		# Show only the parameters that the limit kind uses
+		# Show each range as a min/max pair, only when the limit is used
 		layout = self.layout
 		joint = context.bone.rylogic_rig
-		layout.prop(joint, "limit_kind")
-		match joint.limit_kind:
-			case "CONE":
-				layout.prop(joint, "cone_angle")
-			case "HINGE":
-				layout.prop(joint, "hinge_axis")
-				layout.prop(joint, "hinge_min")
-				layout.prop(joint, "hinge_max")
-			case _:
-				pass
+		layout.prop(joint, "use_limit")
+		column = layout.column(align=True)
+		column.active = joint.use_limit
+		for label, low, high in (("Swing X", "swing_x_min", "swing_x_max"), ("Swing Z", "swing_z_min", "swing_z_max"), ("Twist", "twist_min", "twist_max")):
+			row = column.row(align=True)
+			row.label(text=label)
+			row.prop(joint, low, text="Min")
+			row.prop(joint, high, text="Max")
 
 		layout.prop(joint, "stiffness")
 

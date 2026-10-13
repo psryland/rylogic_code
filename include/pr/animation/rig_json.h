@@ -5,15 +5,18 @@
 // A '.rig' file is a JSON rig description. Bones, chains and contacts refer to bones by name. Angles are in radians and lengths are in model units.
 //
 //  {
-//    "schema_version": 1,
+//    "schema_version": 2,
 //    "bones": [{
 //      "name": "thigh.L",
 //      "parent": "hips",                 // or null for a root bone
 //      "position": [x, y, z],            // rest position relative to the parent bone (model space for root bones)
 //      "rotation": [x, y, z, w],         // rest rotation relative to the parent bone, as a unit quaternion
 //      "length": 0.1,                    // head to tip, along the bone's local +Y axis
-//      "limit": { "kind": "cone", "max_angle": 0.5 },                                          // optional. Or:
-//      "limit": { "kind": "hinge", "axis": [x, y, z], "min_angle": -1.0, "max_angle": 0.2 },  // axis in rest-pose model space
+//      "limit": {                        // optional. The rotation range from the rest pose (see 'JointLimit'). No limit allows any rotation.
+//        "swing_x": [-0.3, 1.2],         //   [min, max] swing about the bone's rest +X axis
+//        "swing_z": [0.0, 0.0],          //   [min, max] swing about the bone's rest +Z axis. A zero-width range makes a hinge about +X.
+//        "twist": [-0.1, 0.1]            //   [min, max] twist about the bone's +Y axis. Each range is within [-pi, pi] and contains 0.
+//      },
 //      "stiffness": 0.2                  // optional, in [0,1]
 //    }],
 //    "chains": [{
@@ -38,14 +41,13 @@
 namespace pr::animation
 {
 	// The '.rig' schema version that this code reads and writes
-	inline constexpr int RigSchemaVersion = 1;
+	inline constexpr int RigSchemaVersion = 2;
 
 	namespace rig_json
 	{
 		// The file names of the description enums. Each list is in enum order.
 		inline constexpr std::array<std::string_view, 6> ChainRoleNames = { "spine", "neck", "leg", "arm", "tail", "digit" };
 		inline constexpr std::array<std::string_view, 3> SideNames = { "centre", "left", "right" };
-		inline constexpr std::array<std::string_view, 3> LimitNames = { "none", "cone", "hinge" };
 		inline constexpr std::array<std::string_view, 5> ContactKindNames = { "sole", "toe", "palm", "finger", "tail" };
 
 		// Return the file name of an enum value
@@ -138,6 +140,15 @@ namespace pr::animation
 
 			return quat(ReadFloat(arr[0], context), ReadFloat(arr[1], context), ReadFloat(arr[2], context), ReadFloat(arr[3], context));
 		}
+		inline std::pair<float, float> ReadRange(json::Value const& value, std::string_view context)
+		{
+			// Ranges are stored as [min, max]
+			auto const& arr = ReadArray(value, context);
+			if (arr.size() != 2)
+				throw std::runtime_error(std::format("{}: expected 2 numbers", context));
+
+			return { ReadFloat(arr[0], context), ReadFloat(arr[1], context) };
+		}
 
 		// Write vectors and rotations in the file layout
 		inline json::Array WriteVec(v4 const& v)
@@ -204,33 +215,12 @@ namespace pr::animation
 
 			if (auto limit_value = obj.find("limit"))
 			{
-				// The limit parameters depend on the limit kind
+				// A limit gives all three ranges
 				auto limit_context = context + ".limit";
 				auto const& limit = ReadObject(*limit_value, limit_context);
-				bone.limit.kind = ParseEnum<fabrik::ELimit>(ReadString(Member(limit, "kind", limit_context), limit_context + ".kind"), LimitNames, limit_context + ".kind");
-				switch (bone.limit.kind)
-				{
-					case fabrik::ELimit::None:
-					{
-						break;
-					}
-					case fabrik::ELimit::Cone:
-					{
-						bone.limit.max_angle = ReadFloat(Member(limit, "max_angle", limit_context), limit_context + ".max_angle");
-						break;
-					}
-					case fabrik::ELimit::Hinge:
-					{
-						bone.limit.axis = ReadVec(Member(limit, "axis", limit_context), 0, limit_context + ".axis");
-						bone.limit.min_angle = ReadFloat(Member(limit, "min_angle", limit_context), limit_context + ".min_angle");
-						bone.limit.max_angle = ReadFloat(Member(limit, "max_angle", limit_context), limit_context + ".max_angle");
-						break;
-					}
-					default:
-					{
-						throw std::invalid_argument(std::format("{}: unknown limit kind", limit_context));
-					}
-				}
+				std::tie(bone.limit.swing.min_x, bone.limit.swing.max_x) = ReadRange(Member(limit, "swing_x", limit_context), limit_context + ".swing_x");
+				std::tie(bone.limit.swing.min_z, bone.limit.swing.max_z) = ReadRange(Member(limit, "swing_z", limit_context), limit_context + ".swing_z");
+				std::tie(bone.limit.min_twist, bone.limit.max_twist) = ReadRange(Member(limit, "twist", limit_context), limit_context + ".twist");
 			}
 		}
 
@@ -292,31 +282,13 @@ namespace pr::animation
 			obj["position"] = WriteVec(bone.rest.pos);
 			obj["rotation"] = WriteQuat(bone.rest.rot);
 			obj["length"] = bone.length;
-			switch (bone.limit.kind)
+			if (!bone.limit.IsFree())
 			{
-				case fabrik::ELimit::None:
-				{
-					break;
-				}
-				case fabrik::ELimit::Cone:
-				{
-					obj["limit"] = json::Object{ { "kind", EnumName(bone.limit.kind, LimitNames) }, { "max_angle", bone.limit.max_angle } };
-					break;
-				}
-				case fabrik::ELimit::Hinge:
-				{
-					obj["limit"] = json::Object{
-						{ "kind", EnumName(bone.limit.kind, LimitNames) },
-						{ "axis", WriteVec(bone.limit.axis) },
-						{ "min_angle", bone.limit.min_angle },
-						{ "max_angle", bone.limit.max_angle },
-					};
-					break;
-				}
-				default:
-				{
-					throw std::invalid_argument(std::format("Bone '{}' has an unknown limit kind", bone.name));
-				}
+				obj["limit"] = json::Object{
+					{ "swing_x", json::Array{ bone.limit.swing.min_x, bone.limit.swing.max_x } },
+					{ "swing_z", json::Array{ bone.limit.swing.min_z, bone.limit.swing.max_z } },
+					{ "twist", json::Array{ bone.limit.min_twist, bone.limit.max_twist } },
+				};
 			}
 			if (bone.stiffness != 0)
 				obj["stiffness"] = bone.stiffness;
@@ -412,8 +384,8 @@ namespace pr::animation::tests
 		{
 			// Writing then reading a description reproduces it
 			auto desc = TestRigDesc();
-			desc.bones[13].limit = JointLimit{ .kind = fabrik::ELimit::Hinge, .axis = v4(1, 0, 0, 0), .min_angle = -0.5f, .max_angle = 0.25f };
-			desc.bones[14].limit = JointLimit{ .kind = fabrik::ELimit::Cone, .max_angle = 0.3f };
+			desc.bones[13].limit = JointLimit{ .swing = { .min_x = -0.5f, .max_x = 0.25f, .min_z = 0.0f, .max_z = 0.0f } };
+			desc.bones[14].limit = JointLimit{ .swing = { .min_x = -0.3f, .max_x = 0.3f, .min_z = -0.2f, .max_z = 0.4f }, .min_twist = -0.1f, .max_twist = 0.15f };
 			desc.bones[14].stiffness = 0.4f;
 
 			auto text = json::Write(WriteRigDesc(desc));
@@ -426,8 +398,9 @@ namespace pr::animation::tests
 				auto const& r = desc.bones[i];
 				PR_EXPECT(l.name == r.name && l.parent == r.parent && l.length == r.length && l.stiffness == r.stiffness);
 				PR_EXPECT(FEql(l.rest.pos, r.rest.pos) && FEql(l.rest.rot, r.rest.rot));
-				PR_EXPECT(l.limit.kind == r.limit.kind && l.limit.min_angle == r.limit.min_angle && l.limit.max_angle == r.limit.max_angle);
-				PR_EXPECT(l.limit.kind != fabrik::ELimit::Hinge || FEql(l.limit.axis, r.limit.axis));
+				PR_EXPECT(l.limit.swing.min_x == r.limit.swing.min_x && l.limit.swing.max_x == r.limit.swing.max_x);
+				PR_EXPECT(l.limit.swing.min_z == r.limit.swing.min_z && l.limit.swing.max_z == r.limit.swing.max_z);
+				PR_EXPECT(l.limit.min_twist == r.limit.min_twist && l.limit.max_twist == r.limit.max_twist);
 			}
 			PR_EXPECT(read.chains.size() == desc.chains.size());
 			for (size_t i = 0; i != desc.chains.size(); ++i)
@@ -447,7 +420,9 @@ namespace pr::animation::tests
 		PRUnitTestMethod(SchemaErrors, Quick)
 		{
 			// Schema errors name the offending field
-			auto text = json::Write(WriteRigDesc(TestRigDesc()));
+			auto desc = TestRigDesc();
+			desc.bones[14].limit = JointLimit{ .min_twist = -0.1f, .max_twist = 0.1f };
+			auto text = json::Write(WriteRigDesc(desc));
 			auto expect_error = [&](std::string_view from, std::string_view to, std::string_view field)
 			{
 				// Replace the first occurrence of 'from' and check the reported field
@@ -465,10 +440,11 @@ namespace pr::animation::tests
 					PR_EXPECT(std::string_view(ex.what()).find(field) != std::string_view::npos);
 				}
 			};
-			expect_error("\"schema_version\": 1", "\"schema_version\": 2", "schema_version");
+			expect_error("\"schema_version\": 2", "\"schema_version\": 1", "schema_version");
 			expect_error("\"parent\": \"root\"", "\"parent\": \"nobody\"", "rig.bones[1].parent");
 			expect_error("\"role\": \"spine\"", "\"role\": \"wing\"", "rig.chains[0].role");
 			expect_error("\"kind\": \"sole\"", "\"kind\": \"hoof\"", "rig.contacts[0].kind");
+			expect_error("\"twist\"", "\"spin\"", "rig.bones[14].limit");
 		}
 	};
 }
