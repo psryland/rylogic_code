@@ -161,6 +161,87 @@ namespace pr::physics::terrain::landscape
 		return m_recipe;
 	}
 
+	// Prepare a single-precision recipe that samples positions relative to 'origin_xy'.
+	shared::BaselineLocalRecipe BaselineSurface::LocalRecipe(Position origin_xy, double radius_m) const
+	{
+		// The sampled square must lie in the range that the CPU surface supports.
+		if (!std::isfinite(origin_xy.x) || !std::isfinite(origin_xy.y))
+			throw std::invalid_argument("Terrain local recipe origin must be finite");
+
+		RequirePositive(radius_m, "local recipe radius_m");
+		if (std::abs(origin_xy.x) + radius_m > m_config.m_supported_coordinate_abs_m || std::abs(origin_xy.y) + radius_m > m_config.m_supported_coordinate_abs_m)
+			throw std::out_of_range("Terrain local recipe exceeds the supported absolute range");
+
+		// Bound the domain warp offset. Each noise octave is within [-2, 2], so this bound is conservative.
+		auto const& warp = m_recipe.m_fields[6];
+		auto warp_reach_m = 0.0;
+		auto warp_amplitude = warp.m_amplitude;
+		for (int octave = 0; octave != warp.m_octave_count; ++octave)
+		{
+			warp_reach_m += 2 * std::abs(warp_amplitude);
+			warp_amplitude *= warp.m_persistence;
+		}
+		auto const reach_m = std::max(std::abs(origin_xy.x), std::abs(origin_xy.y)) + radius_m + warp_reach_m;
+
+		// Repeat BaselineFractal's double-precision frequency, amplitude and slice sequences, and split the origin's lattice phase at each octave.
+		auto local = shared::BaselineLocalRecipe{};
+		for (int field = 0; field != _countof(m_recipe.m_fields); ++field)
+		{
+			// Only the mountain band is ridged; see BaselineEvaluate.
+			auto const& band = m_recipe.m_fields[field];
+			auto& out = local.m_fields[field];
+			auto const ridged = field == 5;
+			out.m_roundness = static_cast<float>(band.m_roundness);
+			out.m_weight_gain = static_cast<float>(band.m_weight_gain);
+			out.m_seed = band.m_seed;
+			out.m_octave_count = band.m_octave_count;
+			auto frequency = double(1) / band.m_wavelength_m;
+			auto amplitude = band.m_amplitude;
+			auto slice = ridged
+				? 0.38196601125010515 + static_cast<double>(band.m_seed) * (double(1) / double(65539))
+				: 0.17320508075688773 + static_cast<double>(band.m_seed) * (double(1) / double(65537));
+			for (int octave = 0; octave != band.m_octave_count; ++octave)
+			{
+				// Every lattice cell the shader can reach must fit in a 32-bit integer.
+				if (!(reach_m * frequency < 1073741824.0))
+					throw std::out_of_range("Terrain local recipe lattice coordinates exceed 32 bits");
+
+				// Split the origin and slice into exact integer cells and single-precision fractions. A fraction that rounds up to one moves to the next cell.
+				auto const z = slice + octave * (ridged ? 0.4142135623730950 : 0.6180339887498949);
+				auto const cell_x = std::floor(origin_xy.x * frequency);
+				auto const cell_y = std::floor(origin_xy.y * frequency);
+				auto cell_z = std::floor(z);
+				auto frac_z = static_cast<float>(z - cell_z);
+				if (frac_z == 1.0f)
+				{
+					cell_z += 1;
+					frac_z = 0.0f;
+				}
+				out.m_octaves[octave] = {
+					.m_frequency = static_cast<float>(frequency),
+					.m_amplitude = static_cast<float>(amplitude),
+					.m_origin_cell_x = static_cast<int>(cell_x),
+					.m_origin_cell_y = static_cast<int>(cell_y),
+					.m_origin_frac_x = static_cast<float>(origin_xy.x * frequency - cell_x),
+					.m_origin_frac_y = static_cast<float>(origin_xy.y * frequency - cell_y),
+					.m_cell_z = static_cast<int>(cell_z),
+					.m_frac_z = frac_z,
+				};
+				frequency *= band.m_lacunarity;
+				amplitude *= band.m_persistence;
+			}
+		}
+
+		// The height datum and blend constants are small, so single precision keeps them within the shader's rounding.
+		local.m_sea_level_bias_m = static_cast<float>(m_recipe.m_sea_level_bias_m);
+		local.m_uplift_height_m = static_cast<float>(m_recipe.m_uplift_height_m);
+		local.m_mountain_base_height_m = static_cast<float>(m_recipe.m_mountain_base_height_m);
+		local.m_basin_depth_m = static_cast<float>(m_recipe.m_basin_depth_m);
+		local.m_basin_threshold = static_cast<float>(m_recipe.m_basin_threshold);
+		local.m_material_id = m_recipe.m_material_id;
+		return local;
+	}
+
 	// Sample one world-space XY position and return its double-precision terrain result.
 	SurfaceSample BaselineSurface::Sample(Position position_xy) const
 	{

@@ -2749,6 +2749,26 @@ extern "C"
 		});
 	}
 
+	// Prepare a single-precision recipe centred on a caller-chosen origin.
+	PhysicsStatus __stdcall Physics_LandscapeLocalRecipe(pr::physics::LandscapeHandle landscape, double const* origin_xy, double radius_m, pr::physics::terrain::landscape::shared::BaselineLocalRecipe* recipe)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			// The library reports bad origins, radii, and unsupported squares as distinct exceptions; the ABI reports them all as invalid input.
+			if (landscape == nullptr || origin_xy == nullptr || recipe == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Landscape, origin, and recipe output are required");
+
+			try
+			{
+				*recipe = landscape->m_surface.LocalRecipe(pr::physics::terrain::v2d{origin_xy[0], origin_xy[1]}, radius_m);
+			}
+			catch (std::exception const& ex)
+			{
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
+			}
+		});
+	}
+
 	// Sample a batch of positions in order without retaining the caller's buffers.
 	PhysicsStatus __stdcall Physics_LandscapeSample(pr::physics::LandscapeHandle landscape, double const* positions_xy, pr::physics::SurfaceSampleDesc* samples, std::uint32_t count)
 	{

@@ -236,6 +236,46 @@ and the shared fixture's bounded transfer-pool blocks add allocation overhead.
 Results are copied before resources and slices are released; only one batch is
 in flight. Production consumers own their own bounded scheduling policy.
 
+## Single-precision local evaluator
+
+```hlsl
+#define PR_TERRAIN_FP32 1
+#include "pr/physics/terrain/landscape/baseline_surface_local.hlsli"
+
+// The consumer chooses the register, the byte offset and the lifetime of the recipe bytes.
+ByteAddressBuffer terrain_local : register(t3);
+
+// float4 weights; // (plains, hills, mountains, basin), summing to one
+// BaselineLocalResult sample = BaselineEvaluateLocal(terrain_local, 0, world_xy - origin_xy, weights);
+// Use sample only when sample.m_status == 0.
+```
+
+`BaselineEvaluateLocal` samples the same surface with **no double-precision
+arithmetic**, for renderers that should not require FP64 shader support. The CPU
+prepares `surface.LocalRecipe(origin_xy, radius_m)` (2480 bytes,
+`BaselineLocalRecipe`) and the shader samples positions relative to `origin_xy`.
+Local positions must satisfy `|x|, |y| <= radius_m`.
+
+The preparer stores each octave's lattice phase at the origin as an exact
+integer cell plus a float fraction, so the shader adds only `local * frequency`
+in float. Position error is therefore about one float rounding of `local`,
+independent of how far the origin is from zero. Lattice cells stay in 32-bit
+integers; the 64-bit seed hash is unchanged, so shaders still need
+`Int64ShaderOps`. The blend arithmetic (`BaselineCompose`) and noise core
+(`NoiseCellWithDerivatives`) are shared with the double-precision evaluator.
+
+The preparer throws `invalid_argument` for a non-finite origin or non-positive
+radius, and `out_of_range` when the square leaves the supported range or a
+lattice cell would not fit in 30 bits. Status is 0 or 2, as above.
+
+`TerrainBaselineGpuTests.LocalEvaluatorPrecisionAndStages` compares a 4 km
+square at origins up to `(-995000, 995000)` against the CPU surface, and checks
+that a vertex-stage consumer's DXIL declares no double-precision features. On an
+RTX 3080 Ti the maxima were 2.0 mm in height and `6e-4` in each gradient component.
+The gates are **3 mm in height** and **1e-3 in gradient**. The exception is the
+`Lattice` stress recipe, whose 0.001 ridge roundness amplifies float error in the
+slope by about 1/roundness (up to `0.07`); its gradient gate is `0.1`.
+
 ## Validation
 
 The component tests are imported by `projects\tests\unittests\unittests.vcxproj`.

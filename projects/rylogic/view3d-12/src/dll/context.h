@@ -86,6 +86,9 @@ namespace pr::rdr12
 		// Overwrite 'data' at byte 'offset' of each distinct buffer bound to the procedural shaders on the nuggets of 'object'.
 		void ObjectProceduralBufferWrite(ldraw::LdrObject* object, size_t offset, std::span<std::byte const> data);
 
+		// Run caller compute once over each distinct buffer bound to the procedural shaders on the nuggets of 'object'. See ProceduralShader::BufferDispatch.
+		void ObjectProceduralBufferDispatch(ldraw::LdrObject* object, std::span<BYTE const> cs_bytecode, std::span<std::byte const> constants, iv3 groups);
+
 		// Replace the detail-normal layers of every nugget of 'object' that has detail normals.
 		void ObjectDetailNormalLayers(ldraw::LdrObject* object, std::span<materials::DetailNormalLayer const> layers, float base_slope_variance);
 		void ObjectDetailStrengthMap(ldraw::LdrObject* object, materials::DetailStrengthMapPtr map);

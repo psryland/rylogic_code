@@ -494,6 +494,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_surface.hlsli">
       <Filter>src\terrain\landscape</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_surface_local.hlsli">
+      <Filter>src\terrain\landscape</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_types.hlsli">
       <Filter>src\compute</Filter>
     </ClInclude>
@@ -521,6 +524,9 @@
       <Filter>src\terrain\landscape</Filter>
     </None>
     <None Include="src\terrain\landscape\baseline_probe.hlsl">
+      <Filter>src\terrain\landscape</Filter>
+    </None>
+    <None Include="src\terrain\landscape\baseline_local_probe.hlsl">
       <Filter>src\terrain\landscape</Filter>
     </None>
     <None Include="src\compute\constraint_algebra.hlsli">

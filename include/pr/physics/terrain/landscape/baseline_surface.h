@@ -80,6 +80,11 @@ namespace pr::physics::terrain::landscape
 		// Return the immutable 560-byte StructuredBuffer recipe used by baseline_surface.hlsli in any shader stage.
 		shared::BaselineRecipe const& Recipe() const noexcept;
 
+		// Prepare a single-precision recipe for baseline_surface_local.hlsli, which samples positions relative to 'origin_xy'.
+		// The shader may sample any local position with |x| and |y| at most 'radius_m'. That square must lie within Config()'s supported range.
+		// A non-finite origin or a non-positive radius throws invalid_argument; an unsupported square throws out_of_range.
+		shared::BaselineLocalRecipe LocalRecipe(Position origin_xy, double radius_m) const;
+
 		// Sample one world-space XY position in metres, returning double height and dimensionless XY derivatives.
 		// Nonfinite coordinates throw invalid_argument; coordinates outside Config()'s square bound throw out_of_range.
 		// Unsupported intermediate arithmetic (including lattice coordinates outside [-2^63, 2^63)) throws runtime_error.
