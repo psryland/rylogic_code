@@ -112,6 +112,22 @@ namespace pr::physics
 			return idx;
 		}
 
+		// Update the packed transform and bounds of a cached leaf shape after its 'm_s2r' changed in place.
+		// Shapes not in the cache need nothing, because they are packed from current data when first seen.
+		void RefreshTransform(Shape const& shape)
+		{
+			// Only the transform-derived fields change, so the entry keeps its slot and its vertex, face, and edge ranges.
+			assert(shape.m_type != collision::EShape::Array && "Compound shapes keep absolute child transforms; refresh is for leaf shapes");
+			auto it = m_entries.find(&shape);
+			if (it == m_entries.end())
+				return;
+
+			auto& gpu = m_shapes[it->second.gpu_index];
+			gpu.s2rb = shape.m_s2r;
+			gpu.rb_bbox = shape.m_s2r * shape.m_bbox;
+			m_changed = true;
+		}
+
 		// Evict shapes that haven't been used for StaleFrameLimit frames.
 		// This is called periodically (not every frame) to keep the cache compact.
 		// After eviction, the shape/vert arrays are rebuilt from surviving entries.

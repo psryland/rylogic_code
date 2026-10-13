@@ -19,6 +19,8 @@
 #include "pr/algorithm/umap.h"
 #include "pr/algorithm/vp_tree.h"
 #include "pr/animation/aim_chain.h"
+#include "pr/animation/gait.h"
+#include "pr/animation/locomotion.h"
 #include "pr/animation/pose.h"
 #include "pr/animation/rig_json.h"
 #include "pr/animation/rig.h"

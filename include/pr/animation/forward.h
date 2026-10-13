@@ -8,6 +8,7 @@
 #include <cmath>
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
