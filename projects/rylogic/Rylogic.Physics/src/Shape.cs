@@ -1,4 +1,5 @@
 using System;
+using Rylogic.Maths;
 
 namespace Rylogic.Physics;
 
@@ -36,6 +37,17 @@ public sealed class Shape :IDisposable
 
 			return m_handle;
 		}
+	}
+
+	/// <summary>
+	/// Replace this leaf shape's placement within the bodies that use it. Every body sharing the shape sees the change;
+	/// compounds built from it keep their own copy. Mass properties are unchanged, and sleeping bodies must be woken by the caller.
+	/// </summary>
+	public unsafe void SetShapeToRoot(m4x4 shape_to_root)
+	{
+		// The native engine updates the shape and its packed collision data in place.
+		Engine.EnsureOwner();
+		Native.Check(Native.Physics_ShapeSetTransform(Engine.Handle, Handle.Value, &shape_to_root));
 	}
 
 	/// <summary>Destroy this shape after all bodies referencing it have been destroyed.</summary>

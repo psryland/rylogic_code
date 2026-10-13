@@ -74,7 +74,7 @@ namespace pr::rdr12
 		// Split the depth range into cascades. Each cascade covers the bounding sphere of its slice of the camera view.
 		auto count = std::clamp(settings.m_cascade_count, 1, MaxShadowCascades);
 		float splits[MaxShadowCascades + 1];
-		ShadowCascadeSplits(zn, zf, count, std::clamp(settings.m_cascade_split_blend, 0.0f, 1.0f), { &splits[0], s_cast<size_t>(count + 1) });
+		count = ShadowCascadeSplits(zn, zf, count, std::clamp(settings.m_cascade_split_blend, 0.0f, 1.0f), settings.m_first_cascade_distance, { &splits[0], s_cast<size_t>(count + 1) });
 
 		// Add a view of the sphere ('view_centre', 'view_radius'). Receivers and casters outside a view's depth range are clamped to its near
 		// or far plane, where they can no longer be ordered. The depth range therefore covers all casters as well as the view's sphere,
@@ -249,12 +249,25 @@ namespace pr::rdr12
 		}
 	}
 
-	// Return the distances from the camera to the cascade boundaries for 'count' cascades over [zn, zf]
-	void ShadowCascadeSplits(float zn, float zf, int count, float blend, std::span<float> out)
+	// Return the distances from the camera to the cascade boundaries for at most 'count' cascades over [zn, zf]
+	int ShadowCascadeSplits(float zn, float zf, int count, float blend, float first, std::span<float> out)
 	{
+		// A fixed first cascade ends at 'first'. One cascade covers the whole range when 'first' reaches 'zf'. Otherwise the remaining
+		// cascades are spread over the rest of the range.
+		pr_assert(zn > 0 && zf > zn && count >= 1 && first >= 0 && isize(out) >= count + 1);
+		if (first > zn && count > 1)
+		{
+			out[0] = zn;
+			if (first >= zf)
+			{
+				out[1] = zf;
+				return 1;
+			}
+			return 1 + ShadowCascadeSplits(first, zf, count - 1, blend, 0.0f, out.subspan(1));
+		}
+
 		// Even spacing gives the same depth range to each cascade. Logarithmic spacing gives each cascade the same ratio of far to near
 		// distance, which keeps shadow texels a similar size on screen but can make the first cascade very short.
-		pr_assert(zn > 0 && zf > zn && count >= 1 && isize(out) >= count + 1);
 		out[0] = zn;
 		for (int i = 1; i != count; ++i)
 		{
@@ -264,6 +277,7 @@ namespace pr::rdr12
 			out[i] = Lerp(even, logarithmic, blend);
 		}
 		out[count] = zf;
+		return count;
 	}
 
 	// Assign square atlas regions for views with the requested sizes

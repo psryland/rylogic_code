@@ -334,6 +334,8 @@ namespace pr::physics
 		Sleep = 10,
 	};
 
+	// Mass properties in the body's model space. 'diagonal' (xx, yy, zz) and 'products' (xy, xz, yz) are the unit inertia (inertia / mass) about the
+	// centre of mass. 'centre_of_mass_and_mass.xyz' is the offset from the model origin to the centre of mass, and '.w' is the mass.
 	struct InertiaProperties
 	{
 		Vector4 diagonal;
@@ -1109,6 +1111,13 @@ extern "C"
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShapeCreatePolytope(pr::physics::EngineHandle engine, pr::physics::ShapeCommon const* common, pr::physics::Vector4 const* points, std::uint32_t point_count, pr::physics::ShapeHandle* shape);
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShapeCreateCompound(pr::physics::EngineHandle engine, pr::physics::ShapeCommon const* common, pr::physics::ShapeHandle const* children, std::uint32_t child_count, pr::physics::ShapeHandle* shape);
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShapeDestroy(pr::physics::EngineHandle engine, pr::physics::ShapeHandle shape);
+
+	// Move a leaf (non-compound) shape within its owning body by replacing its shape-to-root transform in place.
+	// Every body that uses the shape sees the new placement from the next step. Compound shapes are rejected, and
+	// compounds built from this shape keep their own copy. Body mass properties are not derived from shapes, so they
+	// do not change; set them through the body state if they should follow the shape. Sleeping bodies stay asleep
+	// until woken, so wake them if the move should take effect immediately.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_ShapeSetTransform(pr::physics::EngineHandle engine, pr::physics::ShapeHandle shape, pr::physics::Matrix4 const* shape_to_root);
 
 	// Rigid-body creation, lifetime, and state.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_BodyCreate(pr::physics::EngineHandle engine, pr::physics::BodyDesc const* desc, pr::physics::BodyHandle* body);

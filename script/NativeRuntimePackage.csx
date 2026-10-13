@@ -19,6 +19,10 @@ public static class NativeRuntimePackage
 	public static readonly IReadOnlyList<string> PackagedToolNames = ["p3d"];
 	public static readonly IReadOnlyList<string> PackagedToolLibraries = ["gltf.dll"];
 
+	// The Blender add-ons carried by the package, as directories under 'projects/tools/blender'. They are platform
+	// independent Python, so they are staged once under 'tools/blender' rather than per runtime identifier.
+	public static readonly IReadOnlyList<string> PackagedBlenderAddons = ["rylogic-procedural-animation"];
+
 	private const string IncludeDisposition = "Include";
 	private const string ExcludeDisposition = "Exclude";
 	private const uint LoadLibrarySearchDllLoadDir = 0x00000100;
@@ -88,6 +92,8 @@ public static class NativeRuntimePackage
 		}
 		foreach (var tool_name in PackagedToolNames)
 			inputs[$"tools/{tool_name}.exe"] = PackagedToolPath(workspace, tool_name, platform, config);
+		foreach (var addon_file in BlenderAddonFiles(workspace))
+			inputs[$"tools/blender/{addon_file.Key}"] = addon_file.Value;
 
 		// Headers, the package props, and caller-supplied package definition files complete the payload.
 		var header_dir = IOPath.Combine(workspace, "include", "pr");
@@ -481,6 +487,31 @@ public static class NativeRuntimePackage
 				throw new FileNotFoundException($"Packaged tool has not been built for {platform}|{config}: {tool_name}", source_path);
 
 			File.Copy(source_path, IOPath.Combine(target_dir, IOPath.GetFileName(source_path)), overwrite: true);
+		}
+
+		// Blender add-ons are shared by every platform, so they sit beside the platform tool folders.
+		var blender_dir = IOPath.Combine(staging_dir, "tools", "blender");
+		foreach (var addon_file in BlenderAddonFiles(workspace))
+		{
+			var target_path = IOPath.Combine(blender_dir, addon_file.Key);
+			Directory.CreateDirectory(IOPath.GetDirectoryName(target_path) ?? throw new InvalidOperationException("Unable to determine the add-on staging directory."));
+			File.Copy(addon_file.Value, target_path, overwrite: true);
+		}
+	}
+
+	// Returns the source files of the packaged Blender add-ons, keyed by their path relative to 'projects/tools/blender'.
+	private static IEnumerable<KeyValuePair<string, string>> BlenderAddonFiles(string workspace)
+	{
+		// Only Python sources are packaged; byte-code caches written by a local Blender session are machine state.
+		var addons_root = IOPath.Combine(workspace, "projects", "tools", "blender");
+		foreach (var addon_name in PackagedBlenderAddons)
+		{
+			var addon_dir = IOPath.Combine(addons_root, addon_name);
+			if (!Directory.Exists(addon_dir))
+				throw new DirectoryNotFoundException($"Packaged Blender add-on is missing: {addon_dir}");
+
+			foreach (var source_path in Directory.EnumerateFiles(addon_dir, "*.py", SearchOption.AllDirectories).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+				yield return KeyValuePair.Create(IOPath.GetRelativePath(addons_root, source_path).Replace('\\', '/'), source_path);
 		}
 	}
 

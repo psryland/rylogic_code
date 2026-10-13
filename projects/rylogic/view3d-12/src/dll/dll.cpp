@@ -15,6 +15,7 @@
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/ldraw/ldraw_ui_script_editor.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/pose.h"
 #include "pr/view3d-12/material/components/detail_normals.h"
 #include "pr/view3d-12/material/components/normal_map.h"
 #include "pr/view3d-12/material/components/procedural_surface.h"
@@ -2164,6 +2165,7 @@ VIEW3D_API view3d::ShadowSettings __stdcall View3D_ShadowSettingsGet(view3d::Win
 			.m_cascade_count = s.m_cascade_count,
 			.m_shadow_distance = s.m_shadow_distance,
 			.m_cascade_split_blend = s.m_cascade_split_blend,
+			.m_first_cascade_distance = s.m_first_cascade_distance,
 			.m_filter_size = s.m_filter_size,
 			.m_depth_bias = s.m_depth_bias,
 			.m_slope_bias = s.m_slope_bias,
@@ -2189,6 +2191,7 @@ VIEW3D_API void __stdcall View3D_ShadowSettingsSet(view3d::Window window, view3d
 		s.m_cascade_count = settings.m_cascade_count;
 		s.m_shadow_distance = settings.m_shadow_distance;
 		s.m_cascade_split_blend = settings.m_cascade_split_blend;
+		s.m_first_cascade_distance = settings.m_first_cascade_distance;
 		s.m_filter_size = settings.m_filter_size;
 		s.m_depth_bias = settings.m_depth_bias;
 		s.m_slope_bias = settings.m_slope_bias;
@@ -2956,7 +2959,7 @@ VIEW3D_API void __stdcall View3D_ObjectO2PSet(view3d::Object object, view3d::Mat
 }
 
 // Get/Set the animation time to apply to 'object'
-VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(view3d::Object object, char const* name)
+VIEW3D_API double __stdcall View3D_ObjectAnimTimeGet(view3d::Object object, char const* name)
 {
 	try
 	{
@@ -2965,9 +2968,9 @@ VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(view3d::Object object, char 
 		DllLockGuard;
 		return object->AnimTime(name);
 	}
-	CatchAndReport(View3D_ObjectAnimTimeGet, , 0.0f);
+	CatchAndReport(View3D_ObjectAnimTimeGet, , 0.0);
 }
-VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(view3d::Object object, float time_s, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(view3d::Object object, double time_s, char const* name)
 {
 	try
 	{
@@ -2977,6 +2980,69 @@ VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(view3d::Object object, float 
 		object->AnimTime(time_s, name);
 	}
 	CatchAndReport(View3D_ObjectAnimTimeSet, ,);
+}
+
+// Drive the skinned model of 'object' (or children matching 'name') from caller-published bone poses
+VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotsCreate(view3d::Object object, char const* name)
+{
+	try
+	{
+		// The skeleton comes from the first skinned model in the matching objects
+		Validate(object);
+		DllLockGuard;
+		SkeletonPtr skeleton;
+		object->Apply([&](rdr12::ldraw::LdrObject* ob)
+		{
+			// Stop at the first object with a skinned model
+			if (!ob->m_model || !ob->m_model->m_skin)
+				return true;
+
+			skeleton = ob->m_model->m_skin.m_skeleton;
+			return false;
+		}, name);
+		if (skeleton == nullptr)
+			throw std::runtime_error("Object has no skinned model");
+
+		// One pose, shared by every matching object, so that all skinned parts of the hierarchy move together
+		ResourceFactory factory(Dll().m_rdr);
+		auto animator = AnimatorPtr{ ::pr::compute::New<Animator_PoseSnapshots>(skeleton), true };
+		auto pose = PosePtr{ ::pr::compute::New<Pose>(factory, skeleton, animator, EAnimStyle::Continuous, EAnimFlags::None, TimeRange{ 0, 0 }, 1.0, 0.0), true };
+		object->Apply([&](rdr12::ldraw::LdrObject* ob)
+		{
+			// Window animation steps only advance objects flagged as animated
+			ob->m_pose = pose;
+			ob->Flags(rdr12::ldraw::ELdrFlags::Animated, true);
+			return true;
+		}, name);
+	}
+	CatchAndReport(View3D_ObjectPoseSnapshotsCreate, ,);
+}
+
+// Publish a new bone pose for 'object'. 'bones' are bone-to-parent transforms in skeleton bone order, and 'time_s' must increase with each call.
+VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotPublish(view3d::Object object, view3d::Mat4x4 const* bones, int bone_count, double time_s, char const* name)
+{
+	try
+	{
+		// Find the snapshot animator created by 'View3D_ObjectPoseSnapshotsCreate'
+		Validate(object);
+		DllLockGuard;
+		auto obj = object->Child(name);
+		auto animator = obj && obj->m_pose ? dynamic_cast<Animator_PoseSnapshots*>(obj->m_pose->m_animator.get()) : nullptr;
+		if (animator == nullptr)
+			throw std::runtime_error("Object does not have a pose snapshot animator");
+
+		// Validate the snapshot at the DLL boundary, since 'Publish' only asserts
+		if (bone_count != animator->m_bone_count)
+			throw std::runtime_error(std::format("Expected {} bones, got {}", animator->m_bone_count, bone_count));
+		if (!(time_s > animator->m_time[1]))
+			throw std::runtime_error("Pose snapshot times must increase");
+
+		// The view3d and maths matrix types share the same layout
+		static_assert(sizeof(view3d::Mat4x4) == sizeof(m4x4));
+		animator->Publish({ reinterpret_cast<m4x4 const*>(bones), s_cast<size_t>(bone_count) }, time_s);
+		obj->m_pose->InvalidateGpuData();
+	}
+	CatchAndReport(View3D_ObjectPoseSnapshotPublish, ,);
 }
 
 // Return the model space bounding box for 'object'

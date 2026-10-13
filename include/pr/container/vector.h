@@ -567,7 +567,7 @@ namespace pr
 		}
 
 		// construct from [first, lastt), with optional allocator
-		template <class iter> vector(iter first, iter lastt, allocator_type const& allocator = allocator_type())
+		template <std::input_iterator iter> vector(iter first, iter lastt, allocator_type const& allocator = allocator_type())
 			:vector(allocator)
 		{
 			insert(end(), first, lastt);
@@ -935,7 +935,7 @@ namespace pr
 		}
 
 		// assign [first, lastt), iterators
-		template <typename iter> void assign(iter first, iter lastt)
+		template <std::input_iterator iter> void assign(iter first, iter lastt)
 		{
 			erase(begin(), end());
 			insert(end(), first, lastt);
@@ -1017,7 +1017,7 @@ namespace pr
 		}
 
 		// insert [first, lastt) at pos
-		template <typename iter>
+		template <std::input_iterator iter>
 		iterator insert(const_iterator pos, iter first, iter lastt)
 		{
 			// Note: Can't assume 'first' and 'lastt' define operators < or -.

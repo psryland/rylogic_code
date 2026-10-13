@@ -32,6 +32,17 @@ void DoGenNorms(p3d::Mesh& mesh, float smoothing_angle, p3d::Nugget& nug, VIdx* 
 			if (new_idx == s_cast<int>(mesh.m_diff.size())) mesh.m_diff.push_back(mesh.m_diff[orig_idx]);
 			if (new_idx == s_cast<int>(mesh.m_norm.size())) mesh.m_norm.push_back(mesh.m_norm[orig_idx]);
 			if (new_idx == s_cast<int>(mesh.m_tex0.size())) mesh.m_tex0.push_back(mesh.m_tex0[orig_idx]);
+			if (mesh.m_skin && new_idx == mesh.m_skin.vert_count())
+			{
+				// A duplicated vertex deforms the same as the original, so it gets a copy of the original's influences
+				auto& skin = mesh.m_skin;
+				for (auto k = skin.m_offsets[orig_idx]; k != skin.m_offsets[orig_idx + 1]; ++k)
+				{
+					skin.m_bones.push_back(skin.m_bones[k]);
+					skin.m_weights.push_back(skin.m_weights[k]);
+				}
+				skin.m_offsets.push_back(isize(skin.m_bones));
+			}
 			mesh.m_norm[new_idx] = normal;
 		},
 		[&](int i0, int i1, int i2) // iout()

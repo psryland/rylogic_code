@@ -1557,13 +1557,16 @@ namespace pr::rdr12
 			// Notes:
 			//  - Each 'mesh' can contain nested child meshes.
 			//    Create models for each and emit the tree structure of models
+			//  - P3D bones have no external ids, so bone ids are bone indices and skeleton ids are the skeleton's order in the file.
 			using MatCont = std::vector<p3d::Material>;
+			using SkelMap = std::unordered_map<std::string, SkeletonPtr>;
 
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
 			IModelOut& m_out;
 			Cache<> m_cache;
 			MatCont m_mats;
+			SkelMap m_skels;
 
 			ModelOut(ResourceFactory& factory, CreateOptions const* opts, IModelOut& out)
 				: m_factory(factory)
@@ -1571,12 +1574,34 @@ namespace pr::rdr12
 				, m_out(out)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
 				, m_mats()
+				, m_skels()
 			{}
 
 			// Functor called from 'ExtractMaterials'
 			bool operator ()(p3d::Material&& mat)
 			{
 				m_mats.push_back(std::forward<p3d::Material>(mat));
+				return false;
+			}
+
+			// Functor called from 'ExtractSkeletons'
+			bool operator()(p3d::Skeleton&& p3dskel)
+			{
+				// Apply the caller's skeleton filter
+				if (!m_out.SkeletonFilter(p3dskel.m_name))
+					return false;
+
+				// Convert to the renderer skeleton
+				constexpr auto ToString32 = [](std::string const& x) -> string32 { return static_cast<string32>(x); };
+				auto skel_id = s_cast<uint32_t>(m_skels.size());
+				auto bone_ids = vector<uint32_t>(p3dskel.bone_count());
+				std::iota(bone_ids.begin(), bone_ids.end(), 0U);
+				auto bone_names = transform<Skeleton::Names>(p3dskel.m_bone_names, ToString32);
+				auto hierarchy = Skeleton::Hierarchy(p3dskel.m_hierarchy.begin(), p3dskel.m_hierarchy.end());
+
+				SkeletonPtr skel(::pr::compute::New<Skeleton>(skel_id, bone_ids, bone_names, p3dskel.m_o2bp, hierarchy), true);
+				m_skels[p3dskel.m_name] = skel;
+				m_out.Skeleton(std::move(skel));
 				return false;
 			}
 
@@ -1602,13 +1627,15 @@ namespace pr::rdr12
 				m_cache.m_bbox = mesh.m_bbox;
 				m_cache.m_m2root = o2w;
 
-				// Copy the verts
+				// Copy the verts. Skinned vertices index their influences by vertex index.
 				m_cache.m_vcont.resize(mesh.vcount());
 				auto vptr = m_cache.m_vcont.data();
+				auto vidx = 0;
 				for (auto const& mvert : mesh.fat_verts())
 				{
-					SetPCNT(*vptr, GetP(mvert), GetC(mvert), GetN(mvert), GetT(mvert));
+					SetPCNTI(*vptr, GetP(mvert), GetC(mvert), GetN(mvert), GetT(mvert), iv2{ vidx, 0 });
 					++vptr;
+					++vidx;
 				}
 
 				// Copy nuggets. Meshes with more vertices than a 16-bit index can address need the wider stride,
@@ -1649,6 +1676,11 @@ namespace pr::rdr12
 
 				// Return the renderer model
 				auto model = Create(m_factory, m_cache, m_opts);
+
+				// Add skinning data if present and requested
+				if (mesh.m_skin && AllSet(m_out.Parts(), ESceneParts::Skins))
+					model->m_skin = CreateSkin(mesh.m_skin);
+
 				tree.push_back(ModelTreeNode{
 					.m_o2p = m4x4::Identity(),
 					.m_name = mesh.m_name,
@@ -1660,11 +1692,48 @@ namespace pr::rdr12
 				for (auto& child : mesh.m_children)
 					BuildModelTree(tree, child, level + 1, o2w);
 			}
+
+			// Create the renderer skin for the mesh currently in 'm_cache'
+			Skin CreateSkin(p3d::Skin const& skin)
+			{
+				// The skeleton must have been read, and the influences must cover the cached vertices
+				auto it = m_skels.find(skin.m_skeleton);
+				if (it == m_skels.end())
+					throw std::runtime_error(std::format("Skin references unknown skeleton '{}'", skin.m_skeleton));
+				if (skin.vert_count() != isize(m_cache.m_vcont))
+					throw std::runtime_error("Skin vertex count does not match the mesh vertex count");
+
+				// Convert to fixed-size influences. Extra influences beyond the renderer limit are dropped.
+				constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
+				vector<Skinfluence> influences(skin.vert_count());
+				for (int vidx = 0, vcount = skin.vert_count(); vidx != vcount; ++vidx)
+				{
+					auto ibase = skin.m_offsets[vidx];
+					auto count = skin.m_offsets[vidx + 1] - ibase;
+					if (count > max_influences_per_vertex)
+						OutputDebugStringA(PR_LINK "Unsupported number of bone influences\n");
+
+					auto& influence = influences[vidx];
+					for (int i = 0; i != count && i != max_influences_per_vertex; ++i)
+					{
+						influence.m_bones[i] = s_cast<int16_t>(skin.m_bones[ibase + i]);
+						influence.m_weights[i] = s_cast<uint16_t>(std::clamp(skin.m_weights[ibase + i], 0.0f, 1.0f) * 65535);
+					}
+				}
+
+				auto skin_index_range = model_generator::SkinIndexRange(std::span<Vert const>(m_cache.m_vcont));
+				auto skin_bone_bounds = model_generator::SkinBoneBounds(std::span<Vert const>(m_cache.m_vcont), influences, m_cache.m_m2root);
+				return Skin(m_factory, influences, it->second, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
+			}
 		};
 		ModelOut model_out(factory, opts, out);
 
 		// Material read from the p3d model, extended with associated renderer resources.
 		p3d::ExtractMaterials<std::istream, ModelOut&>(src, model_out);
+
+		// Skeletons must be read before the meshes whose skins refer to them
+		if (AllSet(out.Parts(), ESceneParts::Skeletons))
+			p3d::ExtractSkeletons<std::istream, ModelOut&>(src, model_out);
 
 		// Load each mesh in the P3D stream and emit it as a model
 		p3d::ExtractMeshes<std::istream, ModelOut&>(src, model_out);
@@ -1932,7 +2001,8 @@ namespace pr::rdr12
 					assert(m_skels.contains(skin.m_skel_id) && m_skels[skin.m_skel_id] != nullptr);
 					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
 
-					auto const& skel = *m_skels[skin.m_skel_id].get();
+					auto skeleton = m_skels[skin.m_skel_id];
+					auto const& skel = *skeleton.get();
 					auto id_to_idx16 = [&skel](uint32_t id)
 					{
 						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
@@ -1964,7 +2034,7 @@ namespace pr::rdr12
 
 					auto skin_index_range = model_generator::SkinIndexRange(std::span<Vert const>(m_cache.m_vcont));
 					auto skin_bone_bounds = model_generator::SkinBoneBounds(std::span<Vert const>(m_cache.m_vcont), influences, m_cache.m_m2root);
-					model->m_skin = Skin(m_factory, influences, skin.m_skel_id, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
+					model->m_skin = Skin(m_factory, influences, skeleton, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
 				}
 
 				// Store the created mesh
@@ -2195,7 +2265,8 @@ namespace pr::rdr12
 					assert(m_skels.contains(skin.m_skel_id) && m_skels[skin.m_skel_id] != nullptr);
 					constexpr int max_influences_per_vertex = _countof(Skinfluence::m_bones);
 
-					auto const& skel = *m_skels[skin.m_skel_id].get();
+					auto skeleton = m_skels[skin.m_skel_id];
+					auto const& skel = *skeleton.get();
 					auto id_to_idx16 = [&skel](uint32_t id)
 					{
 						auto idx = s_cast<int16_t>(index_of(skel.m_bone_ids, id));
@@ -2226,7 +2297,7 @@ namespace pr::rdr12
 
 					auto skin_index_range = model_generator::SkinIndexRange(std::span<Vert const>(m_cache.m_vcont));
 					auto skin_bone_bounds = model_generator::SkinBoneBounds(std::span<Vert const>(m_cache.m_vcont), influences, m_cache.m_m2root);
-					model->m_skin = Skin(m_factory, influences, skin.m_skel_id, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
+					model->m_skin = Skin(m_factory, influences, skeleton, skin_index_range.m_min, skin_index_range.m_max, skin_bone_bounds.m_bone_indices, skin_bone_bounds.m_spheres);
 				}
 
 				// Store the created mesh

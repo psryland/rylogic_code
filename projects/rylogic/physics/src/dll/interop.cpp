@@ -1627,7 +1627,7 @@ namespace pr::physics
 			state.body = handle;
 			state.shape = record.m_shape;
 			CopyLayout(state.object_to_world, record.m_body->O2W());
-			CopyLayout(state.inertia, record.m_body->InertiaOS());
+			CopyLayout(state.inertia, Inertia(record.m_body->InertiaOS(), record.m_body->CentreOfMassOS()));
 			CopyLayout(state.momentum, record.m_body->MomentumWS());
 			CopyLayout(state.velocity, record.m_body->VelocityWS());
 			CopyLayout(state.force, record.m_body->ForceWS());
@@ -1637,10 +1637,19 @@ namespace pr::physics
 			state.flags = BodyFlags(record);
 		}
 
+		// Set a body's mass properties from ABI inertia: the unit inertia at the centre of mass, the offset from the model origin to the centre of mass, and the mass.
+		void SetBodyInertia(RigidBody& body, PhysicsInertia const& value)
+		{
+			// The body takes the inertia measured at the model origin, so move it there from the centre of mass
+			auto const com = ToNative(value.centre_of_mass_and_mass).w0();
+			auto const at_com = Inertia{ToNative(value.diagonal), ToNative(value.products), value.centre_of_mass_and_mass.w};
+			body.SetMassProperties(Translate(at_com, com, ETranslateInertia::AwayFromCoM), com);
+		}
+
 		void ApplyBodyState(BodyRecord& record, PhysicsBodyState const& state)
 		{
 			record.m_body->O2W(ToNative(state.object_to_world));
-			record.m_body->SetMassProperties(ToNative(state.inertia), ToNative(state.inertia.centre_of_mass_and_mass).w0());
+			SetBodyInertia(*record.m_body, state.inertia);
 			record.m_body->MomentumWS(ToForce(state.momentum));
 			record.m_body->ForceWS(ToForce(state.force));
 			record.m_body->GravityWS(ToNative(state.gravity));
@@ -3048,6 +3057,30 @@ extern "C"
 		});
 	}
 
+	PhysicsStatus __stdcall Physics_ShapeSetTransform(PhysicsEngineHandle engine, PhysicsShapeHandle shape, PhysicsMatrix4 const* shape_to_root)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			auto scope = pr::physics::EngineScope(engine);
+			auto& record = *scope;
+			pr::physics::RequireOwner(record);
+			pr::physics::RequireIdle(record);
+			if (shape_to_root == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Shape transform pointer is null");
+
+			// Compound children hold absolute transforms within the compound, so moving a compound root is not a single-field update.
+			auto& shape_record = pr::physics::RequireShape(record, shape);
+			auto& native = *shape_record.Shape();
+			if (native.m_type == pr::collision::EShape::Array)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Compound shapes cannot be moved with Physics_ShapeSetTransform");
+
+			// The shape blob is shared by every body that uses it, so updating it in place moves them all. The engine
+			// caches packed copies by shape address, which must be refreshed to match.
+			native.m_s2r = pr::physics::ToNative(*shape_to_root);
+			record.m_engine->RefreshShapeTransform(native);
+		});
+	}
+
 	PhysicsStatus __stdcall Physics_BodyCreate(PhysicsEngineHandle engine, PhysicsBodyDesc const* desc, PhysicsBodyHandle* body)
 	{
 		return pr::physics::ApiCall([&]
@@ -3065,18 +3098,14 @@ extern "C"
 
 			auto& shape_record = pr::physics::RequireShape(record, value.shape);
 			auto body_record = std::make_unique<pr::physics::BodyRecord>();
-			body_record->m_body = std::make_unique<pr::physics::RigidBody>(
-				shape_record.Shape(),
-				pr::physics::ToNative(value.object_to_world),
-				value.motion_type == PhysicsMotionType::Dynamic && value.mass_mode == PhysicsMassMode::ExplicitInertia
-					? pr::physics::ToNative(value.inertia)
-					: pr::physics::Inertia::Infinite());
+			body_record->m_body = std::make_unique<pr::physics::RigidBody>(shape_record.Shape(), pr::physics::ToNative(value.object_to_world), pr::physics::Inertia::Infinite());
 			if (value.motion_type == PhysicsMotionType::Dynamic)
 			{
 				switch (value.mass_mode)
 				{
 					case PhysicsMassMode::ExplicitInertia:
 					{
+						pr::physics::SetBodyInertia(*body_record->m_body, value.inertia);
 						break;
 					}
 					case PhysicsMassMode::Mass:
@@ -4000,10 +4029,7 @@ extern "C"
 				auto& slot = imported_bodies[index];
 				slot.m_generation = pr::physics::ChildGeneration(value.body);
 				slot.m_object = std::make_unique<pr::physics::BodyRecord>();
-				slot.m_object->m_body = std::make_unique<pr::physics::RigidBody>(
-					shape_record.Shape(),
-					pr::physics::ToNative(value.object_to_world),
-					pr::physics::ToNative(value.inertia));
+				slot.m_object->m_body = std::make_unique<pr::physics::RigidBody>(shape_record.Shape(), pr::physics::ToNative(value.object_to_world), pr::physics::Inertia::Infinite());
 				slot.m_object->m_shape = value.shape;
 				pr::physics::ApplyBodyState(*slot.m_object, value);
 				imported_body_handles.emplace(slot.m_object->m_body.get(), value.body);

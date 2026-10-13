@@ -437,6 +437,7 @@ internal static unsafe partial class Native
 	[DllImport(Dll)] internal static extern EStatus Physics_ShapeCreatePolytope(ulong engine, ShapeCommon* common, v4* points, uint point_count, out ulong shape);
 	[DllImport(Dll)] internal static extern EStatus Physics_ShapeCreateCompound(ulong engine, ShapeCommon* common, ShapeHandle* children, uint child_count, out ulong shape);
 	[DllImport(Dll)] internal static extern EStatus Physics_ShapeDestroy(ulong engine, ulong shape);
+	[DllImport(Dll)] internal static extern EStatus Physics_ShapeSetTransform(ulong engine, ulong shape, m4x4* shape_to_root);
 
 	[DllImport(Dll)] internal static extern EStatus Physics_BodyCreate(ulong engine, BodyDesc* desc, out ulong body);
 	[DllImport(Dll)] internal static extern EStatus Physics_BodyDestroy(ulong engine, ulong body);

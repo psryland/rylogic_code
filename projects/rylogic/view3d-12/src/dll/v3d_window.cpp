@@ -2134,7 +2134,7 @@ namespace pr::rdr12
 	void V3dWindow::AnimationStep(view3d::EAnimCommand command, seconds_t anim_time)
 	{
 		// Update all animated objects in this window
-		auto anim_time_s = static_cast<float>(anim_time.count());
+		auto anim_time_s = anim_time.count();
 		for (auto& obj : m_objects)
 		{
 			// Only animate children if the parent is animated

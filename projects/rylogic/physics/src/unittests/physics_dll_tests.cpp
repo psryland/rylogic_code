@@ -48,6 +48,7 @@ namespace pr::unittests
 			decltype(&Physics_ShapeCreatePolytope) ShapeCreatePolytope;
 			decltype(&Physics_ShapeCreateCompound) ShapeCreateCompound;
 			decltype(&Physics_ShapeDestroy) ShapeDestroy;
+			decltype(&Physics_ShapeSetTransform) ShapeSetTransform;
 			decltype(&Physics_BodyCreate) BodyCreate;
 			decltype(&Physics_BodyDestroy) BodyDestroy;
 			decltype(&Physics_BodyStateGet) BodyStateGet;
@@ -124,6 +125,7 @@ namespace pr::unittests
 				, ShapeCreatePolytope(m_module.Proc<decltype(ShapeCreatePolytope)>("Physics_ShapeCreatePolytope"))
 				, ShapeCreateCompound(m_module.Proc<decltype(ShapeCreateCompound)>("Physics_ShapeCreateCompound"))
 				, ShapeDestroy(m_module.Proc<decltype(ShapeDestroy)>("Physics_ShapeDestroy"))
+				, ShapeSetTransform(m_module.Proc<decltype(ShapeSetTransform)>("Physics_ShapeSetTransform"))
 				, BodyCreate(m_module.Proc<decltype(BodyCreate)>("Physics_BodyCreate"))
 				, BodyDestroy(m_module.Proc<decltype(BodyDestroy)>("Physics_BodyDestroy"))
 				, BodyStateGet(m_module.Proc<decltype(BodyStateGet)>("Physics_BodyStateGet"))
@@ -707,6 +709,107 @@ namespace pr::unittests
 			PR_EXPECT(fix.m_api.BodyDestroy(fix.m_engine, body) == EStatus::Success);
 			for (auto shape : shapes)
 				PR_EXPECT(fix.m_api.ShapeDestroy(fix.m_engine, shape) == EStatus::Success);
+		}
+		PRUnitTestMethod(ShapeTransformMovesCollisionGeometry, Extended)
+		{
+			// A box resting on static ground with its shape centred on the body origin.
+			auto fix = PhysicsFixture{};
+			auto ground_shape = MakeBox(fix.m_api, fix.m_engine, {10, 10, 1, 0});
+			auto ground = MakeBody(fix.m_api, fix.m_engine, ground_shape, Translation(0, 0, -0.5f), EMotionType::Static);
+			auto shape = MakeBox(fix.m_api, fix.m_engine, {0.5f, 0.5f, 0.5f, 0});
+			auto body = MakeBody(fix.m_api, fix.m_engine, shape, Translation(0, 0, 0.25f), EMotionType::Dynamic);
+			auto state = BodyState{};
+			PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+			state.flags = static_cast<EBodyFlags>(static_cast<std::uint32_t>(state.flags) | static_cast<std::uint32_t>(EBodyFlags::NeverSleep));
+			PR_EXPECT(fix.m_api.BodyStateSet(fix.m_engine, body, &state) == EStatus::Success);
+
+			// Step under gravity, which the engine consumes each step, and return the lowest height of the body origin.
+			auto lowest = [&](int steps)
+			{
+				auto min_z = std::numeric_limits<float>::max();
+				for (auto i = 0; i != steps; ++i)
+				{
+					// Re-apply gravity because it only lasts for one step.
+					PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+					state.gravity = {0, 0, -9.8f, 0};
+					PR_EXPECT(fix.m_api.BodyStateSet(fix.m_engine, body, &state) == EStatus::Success);
+					PR_EXPECT(fix.m_api.Step(fix.m_engine, 1.0f / 60.0f, 0.0, nullptr, 0) == EStatus::Success);
+
+					PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+					min_z = std::min(min_z, state.object_to_world.w.z);
+				}
+				return min_z;
+			};
+			PR_EXPECT(FEqlAbsolute(lowest(60), 0.25f, 0.02f));
+
+			// Raising the shape inside the body lets the body origin fall about 0.5 below its old rest height before the ground stops it,
+			// which proves the packed collision data follows the in-place change after it was first cached.
+			auto raised = Translation(0, 0, 0.5f);
+			PR_EXPECT(fix.m_api.ShapeSetTransform(fix.m_engine, shape, &raised) == EStatus::Success);
+			auto min_z = lowest(60);
+			PR_EXPECT(min_z < -0.2f && min_z > -0.35f);
+
+			// Invalid requests are rejected: a null transform, a compound shape, and a change during a pending step.
+			auto compound = ShapeHandle{};
+			auto common = MakeCommon();
+			PR_EXPECT(fix.m_api.ShapeCreateCompound(fix.m_engine, &common, &shape, 1, &compound) == EStatus::Success);
+			PR_EXPECT(fix.m_api.ShapeSetTransform(fix.m_engine, shape, nullptr) == EStatus::InvalidArgument);
+			PR_EXPECT(fix.m_api.ShapeSetTransform(fix.m_engine, compound, &raised) == EStatus::InvalidArgument);
+			PR_EXPECT(fix.m_api.BeginStep(fix.m_engine, 1.0f / 60.0f, 0.0, nullptr, 0) == EStatus::Success);
+			PR_EXPECT(fix.m_api.ShapeSetTransform(fix.m_engine, shape, &raised) == EStatus::StepPending);
+			PR_EXPECT(fix.m_api.CompleteStep(fix.m_engine) == EStatus::Success);
+
+			PR_EXPECT(fix.m_api.ShapeDestroy(fix.m_engine, compound) == EStatus::Success);
+			PR_EXPECT(fix.m_api.BodyDestroy(fix.m_engine, body) == EStatus::Success);
+			PR_EXPECT(fix.m_api.BodyDestroy(fix.m_engine, ground) == EStatus::Success);
+			PR_EXPECT(fix.m_api.ShapeDestroy(fix.m_engine, shape) == EStatus::Success);
+			PR_EXPECT(fix.m_api.ShapeDestroy(fix.m_engine, ground_shape) == EStatus::Success);
+		}
+		PRUnitTestMethod(BodyStateRoundTripsCentreOfMassInertia, Extended)
+		{
+			// A free body whose centre of mass is offset from its model origin.
+			auto fix = PhysicsFixture{};
+			auto shape = MakeBox(fix.m_api, fix.m_engine, {0.5f, 0.5f, 0.5f, 0});
+			auto body = MakeBody(fix.m_api, fix.m_engine, shape, Identity(), EMotionType::Dynamic);
+			auto state = BodyState{};
+			PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+			state.inertia = {
+				.diagonal = {0.1f, 0.2f, 0.3f, 0},
+				.products = {0.01f, 0.02f, 0.03f, 0},
+				.centre_of_mass_and_mass = {0.1f, -0.2f, 0.5f, 2.0f},
+			};
+			state.flags = static_cast<EBodyFlags>(static_cast<std::uint32_t>(state.flags) | static_cast<std::uint32_t>(EBodyFlags::NeverSleep));
+
+			// The inertia about the centre of mass and its offset survive repeated set/get round trips unchanged.
+			auto expected = state.inertia;
+			for (auto i = 0; i != 2; ++i)
+			{
+				// Write the state back exactly as it was read.
+				PR_EXPECT(fix.m_api.BodyStateSet(fix.m_engine, body, &state) == EStatus::Success);
+				PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+				PR_EXPECT(FEqlAbsolute(state.inertia.diagonal.x, expected.diagonal.x, 1e-5f) && FEqlAbsolute(state.inertia.diagonal.y, expected.diagonal.y, 1e-5f) && FEqlAbsolute(state.inertia.diagonal.z, expected.diagonal.z, 1e-5f));
+				PR_EXPECT(FEqlAbsolute(state.inertia.products.x, expected.products.x, 1e-5f) && FEqlAbsolute(state.inertia.products.y, expected.products.y, 1e-5f) && FEqlAbsolute(state.inertia.products.z, expected.products.z, 1e-5f));
+				PR_EXPECT(FEqlAbsolute(state.inertia.centre_of_mass_and_mass.x, expected.centre_of_mass_and_mass.x, 1e-5f));
+				PR_EXPECT(FEqlAbsolute(state.inertia.centre_of_mass_and_mass.y, expected.centre_of_mass_and_mass.y, 1e-5f));
+				PR_EXPECT(FEqlAbsolute(state.inertia.centre_of_mass_and_mass.z, expected.centre_of_mass_and_mass.z, 1e-5f));
+				PR_EXPECT(FEqlAbsolute(state.inertia.centre_of_mass_and_mass.w, expected.centre_of_mass_and_mass.w, 1e-5f));
+			}
+
+			// Gravity acts through the centre of mass, so the falling body must not start to spin.
+			for (auto i = 0; i != 30; ++i)
+			{
+				// Re-apply gravity because it only lasts for one step.
+				PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+				state.gravity = {0, 0, -9.8f, 0};
+				PR_EXPECT(fix.m_api.BodyStateSet(fix.m_engine, body, &state) == EStatus::Success);
+				PR_EXPECT(fix.m_api.Step(fix.m_engine, 1.0f / 60.0f, 0.0, nullptr, 0) == EStatus::Success);
+			}
+			PR_EXPECT(fix.m_api.BodyStateGet(fix.m_engine, body, &state) == EStatus::Success);
+			PR_EXPECT(FEqlAbsolute(state.object_to_world.x.x, 1.0f, 1e-4f) && FEqlAbsolute(state.object_to_world.y.y, 1.0f, 1e-4f) && FEqlAbsolute(state.object_to_world.z.z, 1.0f, 1e-4f));
+			PR_EXPECT(state.object_to_world.w.z < -1.0f);
+
+			PR_EXPECT(fix.m_api.BodyDestroy(fix.m_engine, body) == EStatus::Success);
+			PR_EXPECT(fix.m_api.ShapeDestroy(fix.m_engine, shape) == EStatus::Success);
 		}
 		PRUnitTestMethod(HandlesThreadsStepsAndBuffers, Extended)
 		{

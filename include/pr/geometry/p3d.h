@@ -48,13 +48,15 @@ namespace pr::geometry::p3d
 	//    i.e. This means a mesh cannot have some verts with normals and some without. Either all verts have
 	//    normals or none.
 	//  Although there will be some redundancy with vertex position data, it's the only option for fast loading.
+	//  Skinned meshes carry a skin that holds the bone influences for each vertex. The skin names a skeleton in
+	//  the scene, which holds the bones in depth-first order with their inverse bind poses.
 	//
 	// TODO:
-	//  - Add structures for animation data (skeletons, skinning weights, and bone-tracks)
+	//  - Add structures for bone-track animation data
 
 	struct ChunkHeader;
 	struct ChunkIndex;
-	static constexpr uint32_t Version = 0x00010102U;
+	static constexpr uint32_t Version = 0x00010103U;
 	static constexpr uint32_t NoIndex = ~0U;
 	ChunkIndex const& NullChunk();
 
@@ -71,6 +73,8 @@ namespace pr::geometry::p3d
 		x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
 		x(MaterialPbr           ,= 0x00002115)/*    │     ├─ PBR properties (f32 metallic, f32 roughness, Colour emissive, f32 cutoff, u8 mode, u8 two-sided) */\
 		x(Texture               ,= 0x00002120)/*    │     └─ Texture (Str id, u8 type, u8 addr_mode, u16 flags, [sampler, texcoord, scale, uv-xform]) */\
+		x(Skeletons             ,= 0x00005000)/*    ├─ Skeletons                                                                                 */\
+		x(Skeleton              ,= 0x00005100)/*    │  └─ Skeleton (Str name, pad, u32 count, count*[m4x4 o2bp], count*[u8 level], pad, count*[Str bone name], pad) */\
 		x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
 		x(Mesh                  ,= 0x00003100)/*       ├─ Mesh (can be nested)                                                                   */\
 		x(MeshName              ,= 0x00003101)/*       │  ├─ Name (cstr)                                                                         */\
@@ -80,6 +84,7 @@ namespace pr::geometry::p3d
 		x(MeshNorms             ,= 0x00003310)/*       │  ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
 		x(MeshColours           ,= 0x00003320)/*       │  ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
 		x(MeshUVs               ,= 0x00003330)/*       │  ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
+		x(MeshSkin              ,= 0x00003400)/*       │  ├─ Skin (Str skeleton, pad, u32 vcount, u32 icount, vcount*[u8 count], pad, icount*[u16 bone], icount*[u16 weight], pad) */\
 		x(MeshNugget            ,= 0x00004000)/*       │  └─ Nugget (topo, geom)                                                                 */\
 		x(MeshMatId             ,= 0x00004001)/*       │     ├─ Material id (cstr)                                                               */\
 		x(MeshVIdx              ,= 0x00004010)/*       │     └─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
@@ -299,9 +304,8 @@ namespace pr::geometry::p3d
 	struct Nugget;
 	struct Mesh;
 	struct Material;
-	struct Bone;
-	using StrCont = std::vector<Str16>;
-	using BoneCont = std::vector<Bone>;
+	struct Skeleton;
+	using SkelCont = std::vector<Skeleton>;
 	using Nuggets = std::vector<Nugget>;
 	using MatCont = std::vector<Material>;
 	using MeshCont = std::vector<Mesh>;
@@ -476,19 +480,56 @@ namespace pr::geometry::p3d
 			return nullptr;
 		}
 	};
-	struct Bone
-	{
-		m4x4 m_o2p;
-	};
 	struct Skeleton
 	{
-		// A tree of named bones
-		BoneCont m_bones;
-		StrCont m_names;
+		// Notes:
+		//  - Bones are in depth-first order. Each bone's parent is the nearest earlier bone with a smaller level.
+		//  - 'm_o2bp' is the inverse of each bone's bind pose, in the root object space shared with the meshes that are skinned to it.
+		//  - The per-bone containers all have one entry per bone.
+
+		// A unique name for the skeleton. Skins refer to their skeleton by this name.
+		std::string m_name;
+
+		// Per-bone data
+		std::vector<std::string> m_bone_names;
+		std::vector<m4x4> m_o2bp;
+		std::vector<uint8_t> m_hierarchy;
+
+		// The number of bones in the skeleton
+		int bone_count() const
+		{
+			return s_cast<int>(m_bone_names.size());
+		}
 	};
-	struct Rig
+	struct Skin
 	{
-		// Groups of verts that are attached to bones
+		// Notes:
+		//  - Influences are one-to-one with the vertices of the owning mesh.
+		//    Vertex 'i' uses the influences in the range [m_offsets[i], m_offsets[i+1]).
+		//  - Bone indices refer to the bones of the skeleton named by 'm_skeleton'.
+		//  - Weights are stored with 16-bit precision, so they round trip to within 1/65535.
+
+		// The name of the skeleton this skin is bound to. Empty means 'no skin'.
+		std::string m_skeleton;
+
+		// Influence ranges per vertex. Length is the vertex count + 1 when the skin is present.
+		std::vector<int> m_offsets;
+
+		// The influencing bone index and weight for each influence
+		std::vector<uint16_t> m_bones;
+		std::vector<float> m_weights;
+
+		// The number of vertices the skin has influences for
+		int vert_count() const
+		{
+			return m_offsets.empty() ? 0 : s_cast<int>(m_offsets.size()) - 1;
+		}
+
+		// True if the skin is present
+		explicit operator bool() const
+		{
+			return !m_skeleton.empty();
+		}
 	};
 	struct Nugget
 	{
@@ -626,6 +667,9 @@ namespace pr::geometry::p3d
 		NCont m_norm;
 		TCont m_tex0;
 
+		// Bone influences for each vertex (optional)
+		Skin m_skin;
+
 		// Index data
 		Nuggets m_nugget;
 
@@ -645,6 +689,7 @@ namespace pr::geometry::p3d
 			,m_diff()
 			,m_norm()
 			,m_tex0()
+			,m_skin()
 			,m_nugget()
 			,m_bbox(BBox::Reset())
 			,m_o2p(m4x4::Identity())
@@ -743,10 +788,12 @@ namespace pr::geometry::p3d
 	struct Scene
 	{
 		MatCont m_materials;
+		SkelCont m_skeletons;
 		MeshCont m_meshes;
 
 		Scene()
 			:m_materials()
+			,m_skeletons()
 			,m_meshes()
 		{}
 	};
@@ -1243,6 +1290,56 @@ namespace pr::geometry::p3d
 		return hdr.m_length;
 	}
 
+	// Write a skeleton to 'out'
+	template <typename TOut> uint32_t WriteSkeleton(TOut& out, Skeleton const& skel)
+	{
+		// The per-bone containers must agree, otherwise the bones cannot be read back consistently
+		auto count = skel.bone_count();
+		if (isize(skel.m_o2bp) != count || isize(skel.m_hierarchy) != count)
+			throw std::runtime_error(Fmt("Skeleton '%s' has inconsistent per-bone data", skel.m_name.c_str()));
+
+		auto offset = traits<TOut>::tellp(out);
+		ChunkHeader hdr(EChunkId::Skeleton, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// Skeleton name
+		hdr.m_length += WriteStr(out, skel.m_name);
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		// Bone count, inverse bind poses, and hierarchy levels
+		hdr.m_length += Write(out, s_cast<uint32_t>(count));
+		hdr.m_length += Write(out, skel.m_o2bp.data(), skel.m_o2bp.size());
+		hdr.m_length += Write(out, skel.m_hierarchy.data(), skel.m_hierarchy.size());
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		// Bone names
+		for (auto const& name : skel.m_bone_names)
+			hdr.m_length += WriteStr(out, name);
+
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+
+	// Write a collection of skeletons to 'out'
+	template <typename TOut> uint32_t WriteSkeletons(TOut& out, std::span<Skeleton const> skels)
+	{
+		if (skels.empty())
+			return 0;
+
+		auto offset = traits<TOut>::tellp(out);
+		ChunkHeader hdr(EChunkId::Skeletons, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// Skeleton data
+		for (auto const& skel : skels)
+			hdr.m_length += WriteSkeleton(out, skel);
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+
 	// Write a bounding box to 'out'
 	template <typename TOut> uint32_t WriteMeshBBox(TOut& out, BBox const& bbox)
 	{
@@ -1683,6 +1780,56 @@ namespace pr::geometry::p3d
 		return hdr.m_length;
 	}
 
+	// Write the bone influences of a mesh to 'out'. 'vcount' is the vertex count of the owning mesh.
+	template <typename TOut> uint32_t WriteMeshSkin(TOut& out, Skin const& skin, size_t vcount)
+	{
+		if (!skin)
+			return 0;
+
+		// The influences must cover the mesh vertices exactly and the ranges must be consistent
+		if (s_cast<size_t>(skin.vert_count()) != vcount)
+			throw std::runtime_error("Skin vertex count does not match the mesh vertex count");
+		if (skin.m_bones.size() != skin.m_weights.size() || s_cast<size_t>(skin.m_offsets.back()) != skin.m_bones.size())
+			throw std::runtime_error("Skin influence data is inconsistent");
+
+		auto offset = traits<TOut>::tellp(out);
+		ChunkHeader hdr(EChunkId::MeshSkin, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// Skeleton name
+		hdr.m_length += WriteStr(out, skin.m_skeleton);
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		// Vertex and influence counts
+		hdr.m_length += Write(out, s_cast<uint32_t>(vcount));
+		hdr.m_length += Write(out, s_cast<uint32_t>(skin.m_bones.size()));
+
+		// The influence count for each vertex. Counts are bytes, so a vertex can have at most 255 influences.
+		std::vector<uint8_t> counts(vcount);
+		for (size_t i = 0; i != vcount; ++i)
+		{
+			auto n = skin.m_offsets[i + 1] - skin.m_offsets[i];
+			if (n < 0 || n > 255)
+				throw std::runtime_error("Skin influence count per vertex must be in the range [0,255]");
+
+			counts[i] = s_cast<uint8_t>(n);
+		}
+		hdr.m_length += Write(out, counts.data(), counts.size());
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		// Bone indices, then weights quantised to 16-bit normalised values
+		std::vector<uint16_t> weights(skin.m_weights.size());
+		for (size_t i = 0; i != weights.size(); ++i)
+			weights[i] = s_cast<uint16_t>(std::lround(std::clamp(skin.m_weights[i], 0.0f, 1.0f) * 65535.0f));
+
+		hdr.m_length += Write(out, skin.m_bones.data(), skin.m_bones.size());
+		hdr.m_length += Write(out, weights.data(), weights.size());
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+
 	// Write a mesh to 'out'
 	template <typename TOut> uint32_t WriteMesh(TOut& out, Mesh const& mesh, EFlags flags)
 	{
@@ -1712,6 +1859,9 @@ namespace pr::geometry::p3d
 
 		// UV data
 		hdr.m_length += WriteTexCoords(out, mesh.m_tex0, flags);
+
+		// Skinning data
+		hdr.m_length += WriteMeshSkin(out, mesh.m_skin, mesh.vcount());
 
 		// Write each nugget
 		for (auto const& nugget : mesh.m_nugget)
@@ -1748,6 +1898,9 @@ namespace pr::geometry::p3d
 
 		// Scene materials
 		hdr.m_length += WriteMaterials(out, scene.m_materials);
+
+		// Scene skeletons. These precede the meshes so that readers can resolve skins as meshes are read.
+		hdr.m_length += WriteSkeletons(out, scene.m_skeletons);
 
 		// Scene meshes
 		hdr.m_length += WriteMeshes(out, scene.m_meshes, flags);
@@ -1859,6 +2012,15 @@ namespace pr::geometry::p3d
 		TStr str(count, '\0');
 		Read(src, str.data(), str.size());
 		return str;
+	}
+
+	// Skip the padding written after 'consumed' bytes of a chunk (including the chunk header) to reach a 4-byte boundary
+	template <typename TSrc> inline uint32_t SkipPad(TSrc& src, uint32_t consumed)
+	{
+		char pad[4];
+		auto n = Pad<uint32_t>(consumed, s_cast<int>(sizeof(uint32_t)));
+		Read(src, &pad[0], n);
+		return n;
 	}
 
 	// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
@@ -2267,6 +2429,81 @@ namespace pr::geometry::p3d
 		return nugget;
 	}
 
+	// Read a skeleton. 'src' is assumed to point to the start of EChunkId::Skeleton chunk data
+	template <typename TSrc> Skeleton ReadSkeleton(TSrc& src, uint32_t)
+	{
+		Skeleton skel;
+
+		// Offsets are measured from the start of the chunk header, matching the writer's padding
+		auto consumed = s_cast<uint32_t>(sizeof(ChunkHeader));
+
+		// Skeleton name
+		skel.m_name = ReadStr(src, 0U);
+		consumed += s_cast<uint32_t>(sizeof(uint32_t) + skel.m_name.size());
+		consumed += SkipPad(src, consumed);
+
+		// Bone count, inverse bind poses, and hierarchy levels
+		auto count = Read<uint32_t>(src);
+		skel.m_o2bp.resize(count);
+		skel.m_hierarchy.resize(count);
+		Read(src, skel.m_o2bp.data(), count);
+		Read(src, skel.m_hierarchy.data(), count);
+		consumed += s_cast<uint32_t>(sizeof(uint32_t) + count * (sizeof(m4x4) + sizeof(uint8_t)));
+		consumed += SkipPad(src, consumed);
+
+		// Bone names
+		skel.m_bone_names.reserve(count);
+		for (uint32_t i = 0; i != count; ++i)
+			skel.m_bone_names.push_back(ReadStr(src, 0U));
+
+		return skel;
+	}
+
+	// Read the bone influences of a mesh. 'src' is assumed to point to the start of EChunkId::MeshSkin chunk data
+	template <typename TSrc> Skin ReadMeshSkin(TSrc& src, uint32_t)
+	{
+		Skin skin;
+
+		// Offsets are measured from the start of the chunk header, matching the writer's padding
+		auto consumed = s_cast<uint32_t>(sizeof(ChunkHeader));
+
+		// Skeleton name
+		skin.m_skeleton = ReadStr(src, 0U);
+		consumed += s_cast<uint32_t>(sizeof(uint32_t) + skin.m_skeleton.size());
+		consumed += SkipPad(src, consumed);
+
+		// Vertex and influence counts
+		auto vcount = Read<uint32_t>(src);
+		auto icount = Read<uint32_t>(src);
+		consumed += 2 * sizeof(uint32_t);
+
+		// Convert the per-vertex counts into influence ranges
+		std::vector<uint8_t> counts(vcount);
+		Read(src, counts.data(), counts.size());
+		consumed += vcount;
+		consumed += SkipPad(src, consumed);
+
+		skin.m_offsets.resize(vcount + 1);
+		skin.m_offsets[0] = 0;
+		for (uint32_t i = 0; i != vcount; ++i)
+			skin.m_offsets[i + 1] = skin.m_offsets[i] + counts[i];
+
+		if (s_cast<uint32_t>(skin.m_offsets.back()) != icount)
+			throw std::runtime_error("Skin influence counts do not match the influence total");
+
+		// Bone indices and normalised weights
+		std::vector<uint16_t> weights(icount);
+		skin.m_bones.resize(icount);
+		Read(src, skin.m_bones.data(), skin.m_bones.size());
+		Read(src, weights.data(), weights.size());
+
+		skin.m_weights.resize(icount);
+		for (uint32_t i = 0; i != icount; ++i)
+			skin.m_weights[i] = weights[i] / 65535.0f;
+
+		return skin;
+	}
+
 	// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
 	template <typename TSrc> Mesh ReadMesh(TSrc& src, uint32_t len)
 	{
@@ -2310,6 +2547,11 @@ namespace pr::geometry::p3d
 					mesh.m_tex0 = ReadMeshUVs(src, hdr.payload());
 					break;
 				}
+				case EChunkId::MeshSkin:
+				{
+					mesh.m_skin = ReadMeshSkin(src, hdr.payload());
+					break;
+				}
 				case EChunkId::MeshNugget:
 				{
 					mesh.m_nugget.emplace_back(ReadMeshNugget(src, hdr.payload()));
@@ -2344,6 +2586,25 @@ namespace pr::geometry::p3d
 		return mats;
 	}
 
+	// Fill a container of skeletons. 'src' is assumed to point to the start of EChunkId::Skeletons chunk data
+	template <typename TSrc> SkelCont ReadSceneSkeletons(TSrc& src, uint32_t len)
+	{
+		SkelCont skels;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+		{
+			switch (hdr.m_id)
+			{
+				case EChunkId::Skeleton:
+				{
+					skels.emplace_back(ReadSkeleton(src, hdr.payload()));
+					break;
+				}
+			}
+			return false;
+		});
+		return skels;
+	}
+
 	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
 	template <typename TSrc> MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
 	{
@@ -2372,6 +2633,11 @@ namespace pr::geometry::p3d
 				case EChunkId::Materials:
 					{
 						scene.m_materials = ReadSceneMaterials(src, hdr.payload());
+						break;
+					}
+				case EChunkId::Skeletons:
+					{
+						scene.m_skeletons = ReadSceneSkeletons(src, hdr.payload());
 						break;
 					}
 				case EChunkId::Meshes:
@@ -2432,6 +2698,25 @@ namespace pr::geometry::p3d
 					// Extract the material. 'out' returns true to stop
 					if (hdr.m_id != EChunkId::Material) return false;
 					return out(ReadMaterial(src, hdr.payload()));
+				});
+		}
+	}
+
+	// Extract the skeletons in the given P3D stream
+	template <typename TSrc, typename TOut> void ExtractSkeletons(TSrc& src, TOut out)
+	{
+		// Restore the src position on return
+		auto save = SaveG(src);
+
+		// Find the skeletons chunk
+		auto skeletons = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Skeletons});
+		if (skeletons.m_id == EChunkId::Skeletons)
+		{
+			Find(src, skeletons.payload(), [&](ChunkHeader hdr, TSrc& src)
+				{
+					// Extract the skeleton. 'out' returns true to stop
+					if (hdr.m_id != EChunkId::Skeleton) return false;
+					return out(ReadSkeleton(src, hdr.payload()));
 				});
 		}
 	}
@@ -2743,8 +3028,21 @@ namespace pr::geometry
 			nug.m_vidx.append<uint16_t>({ 0, 1, 2 });
 			mesh.m_nugget.emplace_back(std::move(nug));
 
+			// Odd-length names and counts exercise the chunk padding
+			Skeleton skel;
+			skel.m_name = "rig";
+			skel.m_bone_names = { "root", "hip", "spine01" };
+			skel.m_o2bp = { m4x4::Identity(), m4x4::Translation(0, -1, 0), m4x4::Translation(0, -2, 0) };
+			skel.m_hierarchy = { 0, 1, 2 };
+
+			mesh.m_skin.m_skeleton = "rig";
+			mesh.m_skin.m_offsets = { 0, 1, 3, 6 };
+			mesh.m_skin.m_bones = { 0, 0, 1, 0, 1, 2 };
+			mesh.m_skin.m_weights = { 1.0f, 0.25f, 0.75f, 0.1f, 0.2f, 0.7f };
+
 			file.m_version = Version;
 			file.m_scene.m_materials.push_back(mat);
+			file.m_scene.m_skeletons.push_back(skel);
 			file.m_scene.m_meshes.push_back(mesh);
 		}
 
@@ -2806,6 +3104,18 @@ namespace pr::geometry
 					PR_EXPECT(All(t0.m_uv_transform.m_y == t1.m_uv_transform.m_y));
 				}
 			}
+			PR_EXPECT(cmp.m_scene.m_skeletons.size() == file.m_scene.m_skeletons.size());
+			for (size_t i = 0; i != file.m_scene.m_skeletons.size(); ++i)
+			{
+				auto& s0 = cmp.m_scene.m_skeletons[i];
+				auto& s1 = file.m_scene.m_skeletons[i];
+				PR_EXPECT(s0.m_name == s1.m_name);
+				PR_EXPECT(s0.m_bone_names == s1.m_bone_names);
+				PR_EXPECT(s0.m_hierarchy == s1.m_hierarchy);
+				PR_EXPECT(s0.m_o2bp.size() == s1.m_o2bp.size());
+				for (size_t j = 0; j != s1.m_o2bp.size(); ++j)
+					PR_EXPECT(FEql(s0.m_o2bp[j], s1.m_o2bp[j]));
+			}
 			for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
 			{
 				auto& m0 = cmp.m_scene.m_meshes[i];
@@ -2816,6 +3126,14 @@ namespace pr::geometry
 				PR_EXPECT(m0.m_norm.size() == m1.m_norm.size());
 				PR_EXPECT(m0.m_tex0.size() == m1.m_tex0.size());
 				PR_EXPECT(m0.m_nugget.size() == m1.m_nugget.size());
+
+				// Weights are quantised to 16 bits in the file
+				PR_EXPECT(m0.m_skin.m_skeleton == m1.m_skin.m_skeleton);
+				PR_EXPECT(m0.m_skin.m_offsets == m1.m_skin.m_offsets);
+				PR_EXPECT(m0.m_skin.m_bones == m1.m_skin.m_bones);
+				PR_EXPECT(m0.m_skin.m_weights.size() == m1.m_skin.m_weights.size());
+				for (size_t j = 0; j != m1.m_skin.m_weights.size(); ++j)
+					PR_EXPECT(std::abs(m0.m_skin.m_weights[j] - m1.m_skin.m_weights[j]) <= 1.0f / 65535.0f);
 				for (int j = 0; j != (int)m1.m_vert.size(); ++j)
 				{
 					auto& v0 = m0.m_vert[j];

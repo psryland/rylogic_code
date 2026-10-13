@@ -787,7 +787,8 @@ namespace pr
 			int   m_cascade_count;          // The number of cascades for directional lights, in [1,4]
 			float m_shadow_distance;        // Distance from the camera beyond which directional lights cast no shadows. Shadows fade out over the last 10% of this distance. Zero means fit to the shadow casters
 			float m_cascade_split_blend;    // Cascade split distribution in [0,1]. 0 = even spacing, 1 = logarithmic spacing
-			int   m_filter_size;            // Width of the shadow edge filter (in shadow texels). Either 5 or 7
+			float m_first_cascade_distance; // Distance from the camera to the far end of the first cascade. Zero means the first cascade is spaced like the others
+			int   m_filter_size;             // Width of the shadow edge filter (in shadow texels). Either 5 or 7
 			int   m_depth_bias;             // Constant depth bias (in units of the smallest depth step)
 			float m_slope_bias;             // Depth bias scaled by the depth slope of each triangle
 			float m_normal_bias;            // Receiver offset along the surface normal (in shadow texels)
@@ -1668,8 +1669,15 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_ObjectO2PSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2p, char const* name);
 
 	// Get/Set the animation time to apply to 'object'
-	VIEW3D_API float __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
-	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, float time_s, char const* name);
+	VIEW3D_API double __stdcall View3D_ObjectAnimTimeGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectAnimTimeSet(pr::view3d::Object object, double time_s, char const* name);
+
+	// Drive the skinned model of 'object' (or children matching 'name') from caller-published bone poses.
+	// Rendering interpolates between the two most recent snapshots using the object's animation time, and holds the pose outside that interval.
+	VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotsCreate(pr::view3d::Object object, char const* name);
+
+	// Publish a bone pose at 'time_s' (in object animation time, increasing with each call). 'bones' are bone-to-parent transforms without scale, in skeleton bone order.
+	VIEW3D_API void __stdcall View3D_ObjectPoseSnapshotPublish(pr::view3d::Object object, pr::view3d::Mat4x4 const* bones, int bone_count, double time_s, char const* name);
 
 	// Return the model space bounding box for 'object'
 	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, pr::view3d::EBBoxFlags bbox_flags);

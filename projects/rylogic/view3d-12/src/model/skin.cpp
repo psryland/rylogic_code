@@ -13,7 +13,7 @@ namespace pr::rdr12
 	Skin::Skin()
 		: m_res()
 		, m_srv()
-		, m_skel_id()
+		, m_skeleton()
 		, m_influence_count()
 		, m_max_bone_index()
 		, m_min_skin_index()
@@ -22,10 +22,10 @@ namespace pr::rdr12
 		, m_bound_spheres()
 	{
 	}
-	Skin::Skin(ResourceFactory& factory, std::span<Skinfluence const> verts, uint32_t skel_id, int min_skin_index, int max_skin_index, std::span<int const> bound_bone_indices, std::span<v4 const> bound_spheres)
+	Skin::Skin(ResourceFactory& factory, 	std::span<Skinfluence const> verts, SkeletonPtr skeleton, int min_skin_index, int max_skin_index, std::span<int const> bound_bone_indices, std::span<v4 const> bound_spheres)
 		: m_res()
 		, m_srv()
-		, m_skel_id(skel_id)
+			, m_skeleton(skeleton)
 		, m_influence_count(isize(verts))
 		, m_max_bone_index()
 		, m_min_skin_index(min_skin_index)
@@ -33,6 +33,7 @@ namespace pr::rdr12
 		, m_bound_bone_indices(bound_bone_indices.begin(), bound_bone_indices.end())
 		, m_bound_spheres(bound_spheres.begin(), bound_spheres.end())
 	{
+		assert(skeleton != nullptr && "A skin requires the skeleton its influences index into");
 		assert(bound_bone_indices.size() == bound_spheres.size() && "Skinned bound bone indices and spheres should be parallel arrays");
 
 		for (auto const& influence : verts)

@@ -66,6 +66,25 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 	// And, the buffers of the mesh that contain values
 	auto v0 = mesh.m_vert.data();
 
+	// True if vertices 'a' and 'b' have identical bone influences
+	auto same_skin = [&skin = mesh.m_skin](int a, int b)
+	{
+		// Influences are compared exactly, since skins from the same source share identical values
+		auto na = skin.m_offsets[a + 1] - skin.m_offsets[a];
+		auto nb = skin.m_offsets[b + 1] - skin.m_offsets[b];
+		if (na != nb)
+			return false;
+
+		for (int k = 0; k != na; ++k)
+		{
+			auto ia = skin.m_offsets[a] + k;
+			auto ib = skin.m_offsets[b] + k;
+			if (skin.m_bones[ia] != skin.m_bones[ib] || skin.m_weights[ia] != skin.m_weights[ib])
+				return false;
+		}
+		return true;
+	};
+
 	// Set each 'kept' pointer to the first in the set of verts degenerate with 'orig'
 	// Since the verts are only sorted by position, all verts need to be checked back to where the positions changes.
 	auto unique_count = map.size();
@@ -110,6 +129,10 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 					continue;
 			}
 
+			// Not a degenerate if the vertices are skinned differently, because merging would change how they deform
+			if (mesh.m_skin && !same_skin(s_cast<int>(map[i].orig - v0), s_cast<int>(map[j].kept - v0)))
+				continue;
+
 			// 'vi' is degenerate with 'vj'.
 			// Set the 'kept' pointer for 'vi' to the same as 'vj' which will
 			// be the first in the set of all verts degenerate with 'vi' and 'vj'.
@@ -136,6 +159,13 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 	p3d::CCont diffs;
 	p3d::NCont norms;
 	p3d::TCont tex0s;
+	p3d::Skin skin;
+	if (mesh.m_skin)
+	{
+		skin.m_skeleton = mesh.m_skin.m_skeleton;
+		skin.m_offsets.reserve(unique_count + 1);
+		skin.m_offsets.push_back(0);
+	}
 
 	// Create a collection of verts without degenerates
 	auto vout = verts.data();
@@ -198,6 +228,18 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 			tex0 += mesh.m_tex0[s_cast<int>(map[i].orig - v0)];
 			tex0s.push_back(tex0 / degen_count);
 		}
+
+		// Merged vertices share identical influences, so copy those of the kept vertex
+		if (mesh.m_skin)
+		{
+			auto vi = s_cast<int>(map[i].orig - v0);
+			for (auto k = mesh.m_skin.m_offsets[vi]; k != mesh.m_skin.m_offsets[vi + 1]; ++k)
+			{
+				skin.m_bones.push_back(mesh.m_skin.m_bones[k]);
+				skin.m_weights.push_back(mesh.m_skin.m_weights[k]);
+			}
+			skin.m_offsets.push_back(isize(skin.m_bones));
+		}
 	}
 
 	// Re-sort the map back to the original order of mesh.m_vert
@@ -223,6 +265,8 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 		mesh_.m_norm = std::move(norms);
 	if (AllSet(geom, EGeom::Tex0))
 		mesh_.m_tex0 = std::move(tex0s);
+	if (mesh.m_skin)
+		mesh_.m_skin = std::move(skin);
 }
 
 // Remove degenerate verts. Use -1.0f to ignore normals, colours, or UVs

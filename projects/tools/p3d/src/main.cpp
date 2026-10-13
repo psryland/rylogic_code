@@ -6,6 +6,7 @@
 #include "src/forward.h"
 #include "src/commands/model_io.h"
 #include "src/commands/remove_degenerates.h"
+#include "src/commands/rig_cook.h"
 #include "src/commands/generate_normals.h"
 //#include "rc/commands/NEW_COMMAND.h"
 
@@ -107,6 +108,12 @@ struct Main
 			"    -Transform <o2w>\n"
 			"        Apply a transform to the model.\n"
 			"        <o2w> - A 4x4 matrix given as pr script. e.g '*euler{20 30 20} *pos{0 1 0}'\n"
+			"\n"
+			"    -Rig <in.rig> <out.rig>\n"
+			"        Cook a '.rig' rig description against the model's skeleton.\n"
+			"        The rig is validated, checked against the skeleton's bone names, parents and bind pose,\n"
+			"        and written with its bones in skeleton order. Fails, listing every problem, if the rig does not match.\n"
+			"        The model must contain exactly one skeleton.\n"
 			"\n"
 			// NEW_COMMAND - add a help string
 			"\n"
@@ -235,6 +242,15 @@ struct Main
 							ss << "*Transform {" << Narrow(*arg) << "}\n";
 							break;
 						}
+						if (str::EqualI(option, "-Rig"))
+						{
+							if (arg == arg_end || IsOption(*arg) || std::next(arg) == arg_end || IsOption(*std::next(arg)))
+								throw std::runtime_error("Rig - expected an input and an output '.rig' file path");
+
+							ss << "*Rig {*In {" << Quote(*arg++) << "} ";
+							ss << "*Out {" << Quote(*arg++) << "}}\n";
+							break;
+						}
 						if (str::EqualI(option, "--help"))
 						{
 							return false;
@@ -337,6 +353,11 @@ struct Main
 				if (str::EqualI(kw, "Transform"))
 				{
 					Transform(reader);
+					continue;
+				}
+				if (str::EqualI(kw, "Rig"))
+				{
+					Rig(reader);
 					continue;
 				}
 				// NEW_COMMAND
@@ -605,6 +626,39 @@ struct Main
 			}
 			mesh.m_bbox = bbox;
 		}
+	}
+
+	// Cook a rig description against the model's skeleton
+	void Rig(script::Reader& reader) const
+	{
+		// Read the input and output paths. Relative paths are relative to the script (or the working directory).
+		// Adjacent string literals in a script join into one string, so each path has its own keyword.
+		std::string infile, outfile;
+		reader.SectionStart();
+		for (char kw[32]; reader.NextKeywordS(kw);)
+		{
+			if (str::EqualI(kw, "In"))
+			{
+				reader.CStringS(infile);
+				continue;
+			}
+			if (str::EqualI(kw, "Out"))
+			{
+				reader.CStringS(outfile);
+				continue;
+			}
+			throw std::runtime_error(FmtS("Rig - unknown keyword: %s", kw));
+		}
+		reader.SectionEnd();
+		if (infile.empty() || outfile.empty())
+			throw std::runtime_error("Rig - both *In and *Out file paths are required");
+
+		// A rig is meaningless without the model that it animates
+		if (m_model == nullptr)
+			throw std::runtime_error("Rig - no model has been loaded (use -fi before -Rig)");
+
+		auto resolve = [&](path p) { return p.is_relative() ? m_base_dir / p : p; };
+		CookRig(*m_model, resolve(infile), resolve(outfile), m_verbosity);
 	}
 };
 

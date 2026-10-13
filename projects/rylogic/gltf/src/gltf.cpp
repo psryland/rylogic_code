@@ -861,22 +861,33 @@ namespace pr::geometry::gltf
 
 			skin.m_skel_id = SkinIndex(m_data, cgskin);
 
-			// Read joint/weight attributes from the mesh primitives
+			// Read joint/weight attributes from the mesh primitives. Influence ranges must stay one-to-one with the vertices
+			// that 'ReadMesh' appends for each primitive, so the running influence count spans all primitives.
+			int count = 0;
 			for (cgltf_size pi = 0; pi != cgmesh.primitives_count; ++pi)
 			{
 				auto const& prim = cgmesh.primitives[pi];
+				auto const* pos_acc = cgltf_find_accessor(&prim, cgltf_attribute_type_position, 0);
+				if (pos_acc == nullptr) continue;
+
 				auto const* joints_acc = cgltf_find_accessor(&prim, cgltf_attribute_type_joints, 0);
 				auto const* weights_acc = cgltf_find_accessor(&prim, cgltf_attribute_type_weights, 0);
-				if (joints_acc == nullptr || weights_acc == nullptr) continue;
+				auto vert_count = s_cast<int>(pos_acc->count);
 
-				auto vert_count = s_cast<int>(joints_acc->count);
+				// Vertices of unskinned primitives have no influences
+				if (joints_acc == nullptr || weights_acc == nullptr)
+				{
+					for (int vi = 0; vi != vert_count; ++vi)
+						skin.m_offsets.push_back(count);
+
+					continue;
+				}
+
 				auto influences_per_vert = s_cast<int>(cgltf_num_components(joints_acc->type));
+				skin.m_offsets.reserve(skin.m_offsets.size() + vert_count + 1);
+				skin.m_bones.reserve(skin.m_bones.size() + vert_count * influences_per_vert);
+				skin.m_weights.reserve(skin.m_weights.size() + vert_count * influences_per_vert);
 
-				skin.m_offsets.reserve(vert_count + 1);
-				skin.m_bones.reserve(vert_count * influences_per_vert);
-				skin.m_weights.reserve(vert_count * influences_per_vert);
-
-				int count = 0;
 				for (int vi = 0; vi != vert_count; ++vi)
 				{
 					skin.m_offsets.push_back(count);
@@ -901,8 +912,8 @@ namespace pr::geometry::gltf
 						}
 					}
 				}
-				skin.m_offsets.push_back(count);
 			}
+			skin.m_offsets.push_back(count);
 		}
 
 		// Read skeletons from the glTF scene
@@ -945,25 +956,38 @@ namespace pr::geometry::gltf
 					}
 				}
 
-				// Build the skeleton data
-				for (cgltf_size ji = 0; ji != cgskin.joints_count; ++ji)
+				// Build the skeleton data. Renderers require bones in depth-first order (each bone's parent is the nearest earlier
+				// bone with a smaller level), but glTF joint order is arbitrary. Skins refer to bones by node id, so reordering is safe.
+				vector<int> joint_parent(bone_count, -1);
+				for (int ji = 0; ji != bone_count; ++ji)
 				{
-					auto const* joint = cgskin.joints[ji];
-					auto bone_id = NodeIndex(m_data, joint);
-					auto bone_name = std::string(joint->name ? joint->name : "");
-
-					// Determine hierarchy level by walking up the parent chain
-					int level = 0;
-					for (auto* p = joint->parent; p != nullptr; p = p->parent)
+					// The nearest ancestor that is also a joint of this skin
+					for (auto* p = cgskin.joints[ji]->parent; p != nullptr; p = p->parent)
 					{
-						if (joint_map.count(p) == 0) break;
-						++level;
+						auto it = joint_map.find(p);
+						if (it == joint_map.end()) continue;
+						joint_parent[ji] = it->second;
+						break;
 					}
-
-					skel.m_bone_ids.push_back(bone_id);
-					skel.m_bone_names.push_back(bone_name);
+				}
+				auto emit = [&](auto& self, int ji, int level) -> void
+				{
+					// Add this joint, then its descendants
+					auto const* joint = cgskin.joints[ji];
+					skel.m_bone_ids.push_back(NodeIndex(m_data, joint));
+					skel.m_bone_names.push_back(std::string(joint->name ? joint->name : ""));
 					skel.m_o2bp.push_back(ibm[ji]);
 					skel.m_hierarchy.push_back(level);
+					for (int ci = 0; ci != bone_count; ++ci)
+					{
+						if (joint_parent[ci] != ji) continue;
+						self(self, ci, level + 1);
+					}
+				};
+				for (int ji = 0; ji != bone_count; ++ji)
+				{
+					if (joint_parent[ji] != -1) continue;
+					emit(emit, ji, 0);
 				}
 
 				m_out.CreateSkeleton(skel);

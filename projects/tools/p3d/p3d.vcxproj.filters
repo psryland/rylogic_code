@@ -60,6 +60,12 @@
     <ClInclude Include="src\commands\remove_degenerates.h">
       <Filter>src\commands</Filter>
     </ClInclude>
+    <ClCompile Include="src\commands\rig_cook.cpp">
+      <Filter>src\commands</Filter>
+    </ClCompile>
+    <ClInclude Include="src\commands\rig_cook.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>

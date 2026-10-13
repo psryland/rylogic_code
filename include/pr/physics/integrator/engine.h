@@ -414,6 +414,11 @@ namespace pr::physics
 		// single engine via SharedEngine().
 		void ResetCaches();
 
+		// Refresh cached data derived from a leaf shape's transform after the caller changed its 'm_s2r' in place.
+		// Bodies that use the shape collide with the new placement from the next step. Mass properties are not
+		// derived from shapes, so they are unchanged; callers update them with 'RigidBody::SetMassProperties' if needed.
+		void RefreshShapeTransform(collision::Shape const& shape);
+
 		// Timing from the most recent call to Step().
 		StepProfile const& LastStepProfile() const
 		{

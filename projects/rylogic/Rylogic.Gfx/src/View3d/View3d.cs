@@ -1200,6 +1200,9 @@ namespace Rylogic.Gfx
 			/// <summary>Cascade split distribution in [0,1]. 0 = even spacing, 1 = logarithmic spacing (more detail near the camera)</summary>
 			public float CascadeSplitBlend;
 
+			/// <summary>Distance from the camera to the far end of the first cascade. The other cascades share the rest of the range. Zero means the first cascade is spaced like the others</summary>
+			public float FirstCascadeDistance;
+
 			/// <summary>Width of the shadow edge filter (in shadow texels). Either 5 or 7</summary>
 			public int FilterSize;
 
@@ -1228,6 +1231,7 @@ namespace Rylogic.Gfx
 					CascadeCount = 3,
 					ShadowDistance = 0.0f,
 					CascadeSplitBlend = 0.9f,
+					FirstCascadeDistance = 0.0f,
 					FilterSize = 5,
 					DepthBias = 0,
 					SlopeBias = 2.0f,
@@ -2384,6 +2388,14 @@ namespace Rylogic.Gfx
 		// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}".
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ObjectO2PGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the animation time to apply to an object
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern double View3D_ObjectAnimTimeGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectAnimTimeSet(HObject obj, double time_s, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Drive the skinned model of an object from caller-published bone poses
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectPoseSnapshotsCreate(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectPoseSnapshotPublish(HObject obj, ref m4x4 bones, int bone_count, double time_s, [MarshalAs(UnmanagedType.LPStr)] string? name);
 
 		// Return the model space bounding box for 'object'
 		[DllImport(Dll)] private static extern BBox View3D_ObjectBBoxMS(HObject obj, EBBoxFlags bbox_flags);

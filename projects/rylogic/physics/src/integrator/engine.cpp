@@ -555,6 +555,16 @@ namespace pr::physics
 		}
 	}
 
+	// Refresh cached data derived from a leaf shape's transform.
+	void Engine::RefreshShapeTransform(collision::Shape const& shape)
+	{
+		// The packed shape buffer is read by an in-flight step, so it can only change between steps.
+		if (m_pending_step.m_active)
+			throw std::runtime_error("Engine::RefreshShapeTransform cannot run while a step is pending");
+
+		m_cache->m_shape_cache.RefreshTransform(shape);
+	}
+
 	// Drop all internally-cached references to caller-supplied data.
 	void Engine::ResetCaches()
 	{
