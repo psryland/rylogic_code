@@ -13,11 +13,11 @@
 #endif
 
 // Single-precision baseline evaluator for positions relative to a prepared origin. It uses no double-precision arithmetic.
-// The recipe comes from BaselineSurface::LocalRecipe(origin, radius) and is read from a ByteAddressBuffer at a caller-chosen byte offset.
-// Positions are 'local' = world - origin, and the caller must keep them within the prepared radius. The lattice phase of the origin is prepared
+// The recipe comes from BaselineSurface::LocalRecipe(origin, radius) and is read from a ByteAddressBuffer or RWByteAddressBuffer at a caller-chosen
+// byte offset. Positions are 'local' = world - origin, and the caller must keep them within the prepared radius. The lattice phase of the origin is prepared
 // in double precision, so the position error is about one float rounding of 'local' (about 0.25 mm at 4 km), independent of the origin.
 // It shares the noise and blend arithmetic with BaselineEvaluate, so its results agree with the CPU surface within single-precision rounding.
-// The evaluator is stage-neutral: no registers, barriers or dispatch intrinsics. Compile with -Gis, like baseline_surface.hlsli.
+// The evaluator is stage-neutral: no registers, barriers or dispatch intrinsics. Compile with HLSL 2021 and -Gis, like baseline_surface.hlsli.
 
 // One local evaluator sample. Height includes the sea-level datum. Status is 0 on success, or 2 for unsupported arithmetic (a malformed recipe).
 struct BaselineLocalResult
@@ -30,7 +30,8 @@ struct BaselineLocalResult
 };
 
 // Evaluate one fractal band of a local recipe at 'local'. 'band_offset' is the byte offset of the band within 'recipe'.
-BaselineField BaselineLocalFractal(ByteAddressBuffer recipe, uint band_offset, float2 local, bool ridged)
+template <typename RecipeBuffer>
+BaselineField BaselineLocalFractal(RecipeBuffer recipe, uint band_offset, float2 local, bool ridged)
 {
 	// Read the band header. A malformed recipe cannot cause an unbounded shader loop.
 	uint4 header = recipe.Load4(band_offset);
@@ -77,7 +78,8 @@ BaselineField BaselineLocalFractal(ByteAddressBuffer recipe, uint band_offset, f
 
 // Sample a local recipe at 'local' (= world - origin) and return its normalized (plains, hills, mountains, basins) weights.
 // 'offset' is the byte offset of the BaselineLocalRecipe within 'recipe'. Inspect m_status before using either output.
-BaselineLocalResult BaselineEvaluateLocal(ByteAddressBuffer recipe, uint offset, float2 local, out float4 region_weights)
+template <typename RecipeBuffer>
+BaselineLocalResult BaselineEvaluateLocal(RecipeBuffer recipe, uint offset, float2 local, out float4 region_weights)
 {
 	// Apply the same smooth domain warp to all regional and detail fields.
 	BaselineLocalResult result;

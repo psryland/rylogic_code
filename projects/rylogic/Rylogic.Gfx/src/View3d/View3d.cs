@@ -2433,6 +2433,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_ObjectDetailStrengthMapSet(HObject obj, IntPtr map);
 		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferSet(HObject obj, IntPtr buffer);
 		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferWrite(HObject obj, nuint offset, IntPtr data, nuint data_size);
+		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferDispatch(HObject obj, IntPtr cs_bytecode, nuint cs_bytecode_size, IntPtr constants, nuint constants_size, int groups_x, int groups_y, int groups_z);
 
 		// Materials ******************************
 

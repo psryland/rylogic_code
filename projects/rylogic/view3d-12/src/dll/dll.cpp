@@ -2333,6 +2333,52 @@ VIEW3D_API void __stdcall View3D_ObjectProceduralBufferWrite(view3d::Object obje
 	CatchAndReport(View3D_ObjectProceduralBufferWrite, , );
 }
 
+// Run caller compute over the buffer of every procedural shader used by an object's nuggets.
+VIEW3D_API void __stdcall View3D_ObjectProceduralBufferDispatch(view3d::Object object, void const* cs_bytecode, size_t cs_bytecode_size, void const* constants, size_t constants_size, int groups_x, int groups_y, int groups_z)
+{
+	try
+	{
+		// The shaders validate the bytecode, constants, and group counts against their buffers.
+		Validate(object);
+		DllLockGuard;
+		if (cs_bytecode == nullptr || constants == nullptr)
+			throw std::invalid_argument("Procedural buffer dispatch bytecode and constants are required");
+
+		auto bytecode = std::span(static_cast<BYTE const*>(cs_bytecode), cs_bytecode_size);
+		auto data = std::span(static_cast<std::byte const*>(constants), constants_size);
+		Dll().ObjectProceduralBufferDispatch(object, bytecode, data, iv3(groups_x, groups_y, groups_z));
+	}
+	CatchAndReport(View3D_ObjectProceduralBufferDispatch, , );
+}
+
+// Create a buffer on the renderer's device for binding with View3D_ObjectProceduralBufferSet.
+VIEW3D_API void* __stdcall View3D_ProceduralBufferCreate(size_t size, void const* init_data, size_t init_size, BOOL unordered_access, char const* name)
+{
+	try
+	{
+		// The buffer is addressed in 4-byte words by ByteAddressBuffer loads, like the buffers of View3D_ShaderCreate.
+		DllLockGuard;
+		if (size == 0 || size % 4 != 0 || size > view3d::ProceduralBinding::MaxBufferSize)
+			throw std::invalid_argument("Procedural buffer size must be a non-zero multiple of 4 bytes within the supported maximum");
+		if ((init_data == nullptr) != (init_size == 0) || init_size % 4 != 0 || init_size > size)
+			throw std::invalid_argument("Procedural buffer initial data must be a multiple of 4 bytes within the buffer, and present exactly when its size is non-zero");
+
+		// Upload the initial bytes into a default-heap resource that rests in the state that procedural shaders expect.
+		ResourceFactory factory(Dll().m_rdr);
+		auto data = std::span<std::byte const>(static_cast<std::byte const*>(init_data), init_size);
+		auto rdesc = ResDesc::Buf(s_cast<int64_t>(size / 4), 4, data, 4).def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		if (unordered_access)
+			rdesc.usage(EUsage::UnorderedAccess);
+
+		auto buffer = factory.CreateResource(rdesc, name != nullptr ? name : "ProceduralBuffer");
+
+		// The caller receives its own reference.
+		buffer->AddRef();
+		return buffer.get();
+	}
+	CatchAndReport(View3D_ProceduralBufferCreate, , nullptr);
+}
+
 // Create objects given in an ldraw string or file.
 // If multiple objects are created, the handle returned is to the first object only.
 // 'ldr_script' - an ldr string, or filepath to a file containing ldr script

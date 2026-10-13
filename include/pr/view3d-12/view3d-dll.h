@@ -1531,14 +1531,27 @@ extern "C"
 
 	// Replace the buffer (an ID3D12Resource, or null to unbind) of every procedural shader on the object's own nuggets. Later frames bind the new buffer
 	// at VIEW3D_PROCEDURAL_BUFFER_REGISTER. The shaders take their own references; the caller keeps its reference. The caller keeps the buffer contents
-	// valid until the frames that use them have finished on the graphics queue (see View3D_GfxQueueSyncPointAdd). Shaders are shared by reference,
+	// valid until the frames that use them have finished on the graphics queue (see View3D_GfxQueueSyncPointAdd). The buffer must rest in
+	// D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE whenever the graphics queue is not updating it. Shaders are shared by reference,
 	// so other objects that use the same shader handles also see the change. A shader that declares the buffer must not be drawn while none is bound.
 	VIEW3D_API void __stdcall View3D_ObjectProceduralBufferSet(pr::view3d::Object object, void* buffer);
 
 	// Overwrite 'data_size' bytes at byte 'offset' of each distinct buffer bound to the procedural shaders on the object's own nuggets. The copy runs
 	// on the graphics queue after the frames already submitted and before later frames, so no frame sees a partial write. 'offset' and 'data_size'
-	// must be multiples of 4, with 'data_size' non-zero, inside every such buffer. Only buffers copied by View3D_ShaderCreate may be written.
+	// must be multiples of 4, with 'data_size' non-zero, inside every such buffer. Other queues must not use the buffers while this work is in flight.
 	VIEW3D_API void __stdcall View3D_ObjectProceduralBufferWrite(pr::view3d::Object object, size_t offset, void const* data, size_t data_size);
+
+	// Run a caller-compiled compute shader once over each distinct buffer bound to the procedural shaders on the object's own nuggets. The shader sees
+	// a copy of the 1 to 65536 'constants' bytes at b0 and the whole buffer as a RWByteAddressBuffer at u0. Like View3D_ObjectProceduralBufferWrite,
+	// the dispatch runs on the graphics queue after the frames already submitted and before later frames. Each buffer must have been created with
+	// D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, and every group count must be positive. The pipeline for the most recent bytecode is cached per shader.
+	VIEW3D_API void __stdcall View3D_ObjectProceduralBufferDispatch(pr::view3d::Object object, void const* cs_bytecode, size_t cs_bytecode_size, void const* constants, size_t constants_size, int groups_x, int groups_y, int groups_z);
+
+	// Create a buffer of 'size' bytes on the renderer's device, for binding to procedural shaders with View3D_ObjectProceduralBufferSet. The first
+	// 'init_size' bytes are copied from 'init_data', and the rest are unspecified. Sizes are multiples of 4, with 'size' non-zero and at most
+	// ProceduralBinding::MaxBufferSize. Non-zero 'unordered_access' allows View3D_ObjectProceduralBufferDispatch. The buffer rests in
+	// D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE. Returns an owned ID3D12Resource reference, which the caller releases exactly once with IUnknown::Release.
+	VIEW3D_API void* __stdcall View3D_ProceduralBufferCreate(size_t size, void const* init_data, size_t init_size, BOOL unordered_access, char const* name);
 
 	// Create an graphics object from ldr script, either a string or a file 
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);

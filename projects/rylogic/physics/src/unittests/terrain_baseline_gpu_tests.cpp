@@ -279,7 +279,9 @@ namespace pr::physics::tests
 						{
 							auto surface = BaselineSurface(ProbeConfig(seed, variant));
 							auto positions = DomainPositions(surface.Recipe());
-							PR_EXPECT(positions.size() == 2485);
+
+							// 33x33 grid + 32x32 jitter + 4x33 cancellation probes, plus 30 boundary probes for each of the 9 detail bands.
+							PR_EXPECT(positions.size() == 2515);
 							auto reference = std::vector<terrain::SurfaceSample>(positions.size());
 							surface.Sample(positions, reference);
 							auto fields = SampleBaselineGpu(gpu, field_step, surface.Recipe(), positions);
