@@ -1300,15 +1300,15 @@ VIEW3D_API void __stdcall View3D_WindowEnvMapCapture(view3d::Window window, view
 	CatchAndReport(View3D_WindowEnvMapCapture, window, );
 }
 
-// Enable the window's time-sliced environment map probe, or disable it with 'face_size' == 0
-VIEW3D_API void __stdcall View3D_WindowEnvMapProbeSet(view3d::Window window, int face_size)
+// Size the window's time-sliced environment map probe, or release it with 'face_size' == 0, and set whether it is enabled
+VIEW3D_API void __stdcall View3D_WindowEnvMapProbeSet(view3d::Window window, int face_size, BOOL enabled)
 {
 	try
 	{
 		Validate(window);
 
 		DllLockGuard;
-		window->EnvMapProbe(face_size);
+		window->EnvMapProbe(face_size, enabled != 0);
 	}
 	CatchAndReport(View3D_WindowEnvMapProbeSet, window, );
 }
