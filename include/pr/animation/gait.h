@@ -2,33 +2,52 @@
 // Procedural animation - gait description
 //  Copyright (c) Rylogic Ltd 2026
 //*****************************************************************************
-// A gait description gives the stepping pattern of a character's walking limbs. The locomotion controller (see locomotion.h) blends from a
-// walk at low speed to a trot at high speed. Lengths are in model units, speeds in model units per second, and times in seconds.
+// A gait description guides how a character moves. It is extracted from example movement cycles (for example, walk cycles authored in
+// Blender), but it holds only guidance: the stance, the footfall pattern, the stride, and the size and timing of the body's motion. The
+// locomotion controller (see locomotion.h) generates the actual movement procedurally from this guidance and from the body's motion.
+//
+// The movement is grouped into families, such as "bipedal" and "quadruped". The caller chooses the family. Within a family, the cycles are
+// ordered by speed, and the controller blends between the two cycles either side of the current speed.
+//
+// Lengths are in model units, speeds in model units per second, and angles in radians. A cycle's phase is in [0,1), and phase 0 is the start of
+// the example cycle. Footfalls and body motion share this phase.
 //
 // A '.gait' file is a JSON gait description:
 //
 //  {
-//    "schema_version": 1,
-//    "limbs": [{
-//      "role": "leg" | "arm",            // the limb is the rig chain with this role and side
-//      "side": "left" | "right",
-//      "walk_phase": 0.0,                // in [0,1]. The fraction of the step cycle at which the foot touches down, in the walk.
-//      "trot_phase": 0.0                 // in [0,1]. As 'walk_phase', in the trot.
-//    }],
-//    "walk_speed": 0.9,
-//    "trot_speed": 1.4,
-//    "stand_speed": 0.09,
-//    "walk_duty": 0.75,
-//    "trot_duty": 0.5,
-//    "stride_min": 0.1,
-//    "stride_per_speed": 0.2,
-//    "max_stance_travel": 0.2,
-//    "swing_height": 0.05,
-//    "settle_distance": 0.03,
-//    "body_response": 0.2,
-//    "posture_time": 0.6,
-//    "rear_delay": 1.0
+//    "schema_version": 2,
+//    "families": [{
+//      "name": "quadruped",
+//      "stance": [{                        // The family's standing pose. Bones that are not listed keep their rest rotation.
+//        "bone": "hips",
+//        "rotation": [x, y, z, w],         // rotation relative to the parent bone, as a unit quaternion
+//        "position": [x, y, z]             // root bones only, and optional: the model-space position
+//      }],
+//      "cycles": [{
+//        "name": "walk",
+//        "speed": 0.5,                     // the body's speed in the example cycle
+//        "stride": 0.3,                    // the distance the body moves in one cycle of the example
+//        "swing_height": 0.04,             // the height that a foot is lifted in the middle of its swing
+//        "footfalls": [{                   // the walking limbs. Every cycle of a family has the same limbs in the same order.
+//          "role": "leg" | "arm",          // the limb is the rig chain with this role and side
+//          "side": "left" | "right",
+//          "touchdown": 0.0,               // in [0,1). The phase at which the foot touches the ground.
+//          "duty": 0.75                    // in (0,1). The fraction of the cycle that the foot is on the ground.
+//        }],
+//        "motion": [{                      // the repeating motion of bones outside the walking limbs
+//          "bone": "spine",
+//          "channel": "rotation" | "position",
+//          "harmonics": [                  // the first and second harmonics of the offset from the stance
+//            { "cos": [x, y, z], "sin": [x, y, z] },
+//            { "cos": [x, y, z], "sin": [x, y, z] }
+//          ]
+//        }]
+//      }]
+//    }]
 //  }
+//
+// A "rotation" motion is a rotation vector (axis * angle) in the bone's own frame, applied after the bone's stance rotation. A "position" motion
+// is a model-space offset of a root bone's stance position. Either is the sum over harmonics k = 1, 2 of cos(2 pi k phase) * cos_k + sin(2 pi k phase) * sin_k.
 #pragma once
 #include "pr/animation/forward.h"
 #include "pr/animation/rig.h"
@@ -37,37 +56,101 @@
 namespace pr::animation
 {
 	// The '.gait' schema version that this code reads and writes
-	inline constexpr int GaitSchemaVersion = 1;
+	inline constexpr int GaitSchemaVersion = 2;
 
-	// One walking limb: a Leg or Arm chain, and when its foot touches down in each gait.
-	//  - Phases are fractions of the step cycle. The controller blends linearly between the walk and trot phases, so choose values that do
-	//    not cross a whole cycle between the two gaits (for example, 0.75 to 1.0 rather than 0.75 to 0.0).
-	struct GaitLimb
+	// The number of harmonics in each bone motion
+	inline constexpr int GaitHarmonics = 2;
+
+	// When a walking limb's foot is on the ground during a cycle
+	struct Footfall
 	{
 		EChainRole role = EChainRole::Leg;
 		ESide side = ESide::Left;
-		float walk_phase = 0.0f;
-		float trot_phase = 0.0f;
+		float touchdown = 0.0f;     // In [0,1). The phase at which the foot touches the ground.
+		float duty = 0.75f;         // In (0,1). The fraction of the cycle that the foot is on the ground.
 	};
 
-	// How a character steps. See the file layout above for the units.
+	// What a bone motion moves
+	enum class EMotionChannel
+	{
+		// A rotation vector in the bone's own frame, applied after its stance rotation
+		Rotation,
+
+		// A model-space offset from a root bone's stance position
+		Position,
+	};
+
+	// One harmonic of a bone motion. Directions have w = 0.
+	struct Harmonic
+	{
+		v4 cos = {};
+		v4 sin = {};
+	};
+
+	// The repeating motion of one bone over a cycle, as an offset from the stance
+	struct BoneMotion
+	{
+		std::string bone;
+		EMotionChannel channel = EMotionChannel::Rotation;
+		std::array<Harmonic, GaitHarmonics> harmonics = {};
+	};
+
+	// One example movement cycle
+	struct GaitCycle
+	{
+		std::string name;
+		float speed = 1.0f;                // The body's speed in the example. Must be positive.
+		float stride = 0.5f;               // The distance the body moves per cycle in the example. Must be positive.
+		float swing_height = 0.05f;        // The height that a foot is lifted in the middle of its swing. Must not be negative.
+		std::vector<Footfall> footfalls;   // The walking limbs
+		std::vector<BoneMotion> motion;    // The repeating motion of bones outside the walking limbs
+	};
+
+	// One bone of a family's stance
+	struct StanceBone
+	{
+		std::string bone;
+		quat rotation = Identity<quat>();  // Relative to the parent bone
+		std::optional<v4> position;        // Root bones only: the model-space position (w = 1)
+	};
+
+	// A group of movement cycles that share a stance and a set of walking limbs
+	struct GaitFamily
+	{
+		std::string name;
+		std::vector<StanceBone> stance;
+		std::vector<GaitCycle> cycles;     // Ordered by increasing speed
+	};
+
+	// How a character moves. See the top of this file.
 	struct GaitDesc
 	{
-		std::vector<GaitLimb> limbs;    // The limbs that step. Other limb chains keep their rest targets.
-		float walk_speed = 1.0f;        // At and below this speed the gait is a walk
-		float trot_speed = 2.0f;        // At and above this speed the gait is a trot. Must be greater than 'walk_speed'.
-		float stand_speed = 0.1f;       // Below this speed the character stands, stepping only to bring its feet back under its body
-		float walk_duty = 0.75f;        // In (0,1). The fraction of the cycle that each foot is on the ground, in the walk.
-		float trot_duty = 0.5f;         // In (0,1). As 'walk_duty', in the trot.
-		float stride_min = 0.1f;        // The distance the body moves per cycle at the slowest speeds. Must be positive.
-		float stride_per_speed = 0.2f;  // The growth of the stride with speed (seconds). The stride is also limited by 'max_stance_travel'.
-		float max_stance_travel = 0.2f; // The longest distance that the body may move over a planted foot. Must be positive.
-		float swing_height = 0.05f;     // The height that a foot is lifted at the middle of its swing
-		float settle_distance = 0.03f;  // A standing character steps any foot further than this from its neutral position
-		float body_response = 0.2f;     // The time for the body to follow changes in the ground beneath its feet. Must be positive.
-		float posture_time = 0.6f;      // The time to change between the standing and walking postures (see locomotion.h). Must be positive.
-		float rear_delay = 1.0f;        // How long a character stands still before it returns to the standing posture. Must not be negative.
+		std::vector<GaitFamily> families;
 	};
+
+	// The names of 'EMotionChannel' values in the file, in enum order
+	inline constexpr std::array<std::string_view, 2> MotionChannelNames = { "rotation", "position" };
+
+	// Evaluate a bone motion at 'phase'
+	inline v4 Evaluate(std::array<Harmonic, GaitHarmonics> const& harmonics, float phase)
+	{
+		// Harmonic k repeats k times per cycle
+		auto value = v4::Zero();
+		for (int k = 0; k != GaitHarmonics; ++k)
+		{
+			auto angle = math::constants<float>::tau * static_cast<float>(k + 1) * phase;
+			value += harmonics[k].cos * std::cos(angle) + harmonics[k].sin * std::sin(angle);
+		}
+		return value;
+	}
+
+	// The rotation given by a rotation vector (axis * angle, w = 0)
+	inline quat RotationFromVector(v4 const& rotation_vector)
+	{
+		// A zero vector has no axis
+		auto angle = Length(rotation_vector);
+		return angle > tiny<float> ? quat(rotation_vector / angle, angle) : Identity<quat>();
+	}
 
 	// Return the index of the contact that a limb chain stands on (a sole for legs, a palm for arms), or -1 if it has none
 	inline int LimbContact(Rig const& rig, Chain const& chain)
@@ -94,119 +177,108 @@ namespace pr::animation
 		return -1;
 	}
 
+	// Return the index of the family called 'name', or -1 if there is none
+	inline int FamilyIndex(GaitDesc const& gait, std::string_view name)
+	{
+		// Gaits have few families
+		for (int i = 0, iend = static_cast<int>(gait.families.size()); i != iend; ++i)
+		{
+			if (gait.families[i].name == name)
+				return i;
+		}
+		return -1;
+	}
+
 	// Check 'gait' against 'rig'. Returns a description of each problem, or an empty list if the gait is valid.
 	inline std::vector<std::string> Validate(GaitDesc const& gait, Rig const& rig)
 	{
 		std::vector<std::string> errors;
 
-		// Each limb must name a distinct limb chain that has a contact to stand on
-		for (size_t i = 0; i != gait.limbs.size(); ++i)
+		// A gait needs at least one family, and families are chosen by name
+		if (gait.families.empty())
+			errors.push_back("The gait has no families");
+
+		for (size_t f = 0; f != gait.families.size(); ++f)
 		{
-			auto const& limb = gait.limbs[i];
-			if (limb.role != EChainRole::Leg && limb.role != EChainRole::Arm)
+			// Family names must be unique and each family needs a cycle
+			auto const& family = gait.families[f];
+			auto ctx = std::format("Family '{}'", family.name);
+			if (FamilyIndex(gait, family.name) != static_cast<int>(f))
+				errors.push_back(std::format("{} repeats an earlier family's name", ctx));
+			if (family.cycles.empty())
+				errors.push_back(std::format("{} has no cycles", ctx));
+
+			// Stance bones must exist, appear once, and give positions only for root bones
+			for (size_t s = 0; s != family.stance.size(); ++s)
 			{
-				errors.push_back(std::format("Limb {} is not a leg or an arm", i));
-				continue;
+				auto const& bone = family.stance[s];
+				auto index = rig.BoneIndex(bone.bone);
+				if (index < 0)
+					errors.push_back(std::format("{} stance names unknown bone '{}'", ctx, bone.bone));
+				else if (bone.position && rig.bones[index].parent >= 0)
+					errors.push_back(std::format("{} stance gives a position for '{}', which is not a root bone", ctx, bone.bone));
+
+				for (size_t t = 0; t != s; ++t)
+				{
+					if (family.stance[t].bone == bone.bone)
+						errors.push_back(std::format("{} stance repeats bone '{}'", ctx, bone.bone));
+				}
 			}
-			auto chain = LimbChain(rig, limb.role, limb.side);
-			if (chain < 0)
-				errors.push_back(std::format("Limb {} has no matching chain in the rig", i));
-			else if (LimbContact(rig, rig.chains[chain]) < 0)
-				errors.push_back(std::format("Limb {} has no sole or palm contact on its end bone", i));
 
-			if (!(limb.walk_phase >= 0 && limb.walk_phase <= 1) || !(limb.trot_phase >= 0 && limb.trot_phase <= 1))
-				errors.push_back(std::format("Limb {} has a phase outside [0,1]", i));
-
-			for (size_t j = 0; j != i; ++j)
+			for (size_t c = 0; c != family.cycles.size(); ++c)
 			{
-				if (gait.limbs[j].role == limb.role && gait.limbs[j].side == limb.side)
-					errors.push_back(std::format("Limb {} repeats limb {}", i, j));
+				// Cycles are ordered by speed so that the controller can find the two either side of a speed
+				auto const& cycle = family.cycles[c];
+				auto cctx = std::format("{} cycle '{}'", ctx, cycle.name);
+				if (!(cycle.speed > 0) || (c != 0 && !(cycle.speed > family.cycles[c - 1].speed)))
+					errors.push_back(std::format("{} must have a positive speed, faster than the cycle before it", cctx));
+				if (!(cycle.stride > 0) || !(cycle.swing_height >= 0))
+					errors.push_back(std::format("{} must have a positive stride and a swing height that is not negative", cctx));
+
+				// The walking limbs must match the family's first cycle, so that cycles blend limb by limb
+				auto const& first = family.cycles[0].footfalls;
+				if (cycle.footfalls.size() != first.size())
+					errors.push_back(std::format("{} has different walking limbs to the family's first cycle", cctx));
+
+				for (size_t i = 0; i != cycle.footfalls.size(); ++i)
+				{
+					// Each footfall names a distinct limb chain that has a contact to stand on
+					auto const& foot = cycle.footfalls[i];
+					auto fctx = std::format("{} footfall {}", cctx, i);
+					if (foot.role != EChainRole::Leg && foot.role != EChainRole::Arm)
+					{
+						errors.push_back(std::format("{} is not a leg or an arm", fctx));
+						continue;
+					}
+					auto chain = LimbChain(rig, foot.role, foot.side);
+					if (chain < 0)
+						errors.push_back(std::format("{} has no matching chain in the rig", fctx));
+					else if (LimbContact(rig, rig.chains[chain]) < 0)
+						errors.push_back(std::format("{} has no sole or palm contact on its end bone", fctx));
+					if (!(foot.touchdown >= 0 && foot.touchdown < 1) || !(foot.duty > 0 && foot.duty < 1))
+						errors.push_back(std::format("{} must have a touchdown in [0,1) and a duty in (0,1)", fctx));
+					if (i < first.size() && (first[i].role != foot.role || first[i].side != foot.side))
+						errors.push_back(std::format("{} is not the same limb as in the family's first cycle", fctx));
+
+					for (size_t j = 0; j != i; ++j)
+					{
+						if (cycle.footfalls[j].role == foot.role && cycle.footfalls[j].side == foot.side)
+							errors.push_back(std::format("{} repeats footfall {}", fctx, j));
+					}
+				}
+
+				for (auto const& motion : cycle.motion)
+				{
+					// Motion bones must exist, and only root bones have a position motion
+					auto index = rig.BoneIndex(motion.bone);
+					if (index < 0)
+						errors.push_back(std::format("{} motion names unknown bone '{}'", cctx, motion.bone));
+					else if (motion.channel == EMotionChannel::Position && rig.bones[index].parent >= 0)
+						errors.push_back(std::format("{} has a position motion for '{}', which is not a root bone", cctx, motion.bone));
+				}
 			}
 		}
-
-		// The speeds must be ordered and the cycle parameters in range
-		if (!(gait.stand_speed >= 0 && gait.stand_speed < gait.walk_speed && gait.walk_speed < gait.trot_speed))
-			errors.push_back("Speeds must satisfy 0 <= stand_speed < walk_speed < trot_speed");
-		if (!(gait.walk_duty > 0 && gait.walk_duty < 1) || !(gait.trot_duty > 0 && gait.trot_duty < 1))
-			errors.push_back("Duty factors must be in (0,1)");
-		if (!(gait.stride_min > 0) || !(gait.stride_per_speed >= 0) || !(gait.max_stance_travel > 0))
-			errors.push_back("Stride parameters must be positive");
-		if (!(gait.swing_height >= 0) || !(gait.settle_distance >= 0) || !(gait.body_response > 0))
-			errors.push_back("Swing height and settle distance must not be negative, and the body response must be positive");
-		if (!(gait.posture_time > 0) || !(gait.rear_delay >= 0))
-			errors.push_back("The posture time must be positive and the rear delay must not be negative");
-
 		return errors;
-	}
-
-	// Return a gait for 'rig' derived from its proportions: a lateral-sequence walk blending to a trot. Every Leg and Arm chain with a
-	// left or right side and a sole or palm contact is a walking limb. Speeds assume that model units are metres.
-	inline GaitDesc DefaultGait(Rig const& rig)
-	{
-		GaitDesc gait;
-
-		// Hind limbs are legs and fore limbs are arms. A lateral-sequence walk steps left hind, left fore, right hind, right fore, and the trot
-		// moves diagonal pairs together. With no arms, the legs alternate.
-		auto has_arms = false;
-		for (auto const& chain : rig.chains)
-			has_arms |= chain.role == EChainRole::Arm && chain.side != ESide::Centre && LimbContact(rig, chain) >= 0;
-
-		auto add = [&](EChainRole role, ESide side, float walk_phase, float trot_phase)
-		{
-			// Only limbs that the rig has, and that can stand, step
-			auto chain = LimbChain(rig, role, side);
-			if (chain >= 0 && LimbContact(rig, rig.chains[chain]) >= 0)
-				gait.limbs.push_back(GaitLimb{ .role = role, .side = side, .walk_phase = walk_phase, .trot_phase = trot_phase });
-		};
-		if (has_arms)
-		{
-			add(EChainRole::Leg, ESide::Left, 0.0f, 0.0f);
-			add(EChainRole::Arm, ESide::Left, 0.25f, 0.5f);
-			add(EChainRole::Leg, ESide::Right, 0.5f, 0.5f);
-			add(EChainRole::Arm, ESide::Right, 0.75f, 1.0f);
-		}
-		else
-		{
-			add(EChainRole::Leg, ESide::Left, 0.0f, 0.0f);
-			add(EChainRole::Leg, ESide::Right, 0.5f, 0.5f);
-		}
-
-		// Measure the limbs: the mean height of their roots above their contacts, and the shortest distance that an ankle can move forward or
-		// back from its rest position before the limb is straight. Sprawled or straight rest poses reach little, so the reach has a floor.
-		auto hip_height = 0.0f;
-		auto reach = std::numeric_limits<float>::max();
-		for (auto const& limb : gait.limbs)
-		{
-			auto const& chain = rig.chains[LimbChain(rig, limb.role, limb.side)];
-			auto const& contact = rig.contacts[LimbContact(rig, chain)];
-			auto root = rig.rest_model[chain.bones[0]].pos;
-			auto ankle = rig.rest_model[chain.bones[2]].pos;
-			auto length = rig.bones[chain.bones[0]].length + rig.bones[chain.bones[1]].length;
-			hip_height += root.z - (rig.rest_model[contact.bone] * contact.offset).z;
-			reach = std::min(reach, std::max(Sqrt(std::max(Sqr(length) - LengthSq(ankle - root), 0.0f)), 0.25f * length));
-		}
-		if (gait.limbs.empty())
-			return gait;
-
-		hip_height /= static_cast<float>(gait.limbs.size());
-
-		// Animals change gait at similar values of speed squared over (gravity * hip height). The walk stride uses most of the reach.
-		constexpr float gravity = 9.81f;
-		gait.walk_speed = Sqrt(0.25f * gravity * hip_height);
-		gait.trot_speed = Sqrt(0.6f * gravity * hip_height);
-		gait.stand_speed = 0.1f * gait.walk_speed;
-		gait.walk_duty = 0.75f;
-		gait.trot_duty = 0.5f;
-		gait.max_stance_travel = 1.6f * reach;
-		auto walk_stride = 0.8f * gait.max_stance_travel / gait.walk_duty;
-		gait.stride_min = 0.4f * walk_stride;
-		gait.stride_per_speed = (walk_stride - gait.stride_min) / gait.walk_speed;
-		gait.swing_height = 0.15f * hip_height;
-		gait.settle_distance = 0.25f * gait.stride_min;
-		gait.body_response = 0.2f;
-		gait.posture_time = 0.6f;
-		gait.rear_delay = 1.0f;
-		return gait;
 	}
 
 	// Read a gait description from a parsed '.gait' document. Throws 'std::runtime_error' if the document does not follow the schema.
@@ -222,38 +294,78 @@ namespace pr::animation
 		if (version != GaitSchemaVersion)
 			throw std::runtime_error(std::format("gait.schema_version: unsupported version {} (expected {})", version, GaitSchemaVersion));
 
-		// Read the limbs
-		auto const& limbs = ReadArray(Member(root, "limbs", "gait"), "gait.limbs");
-		for (size_t i = 0; i != limbs.size(); ++i)
+		auto const& families = ReadArray(Member(root, "families", "gait"), "gait.families");
+		for (size_t f = 0; f != families.size(); ++f)
 		{
-			auto context = std::format("gait.limbs[{}]", i);
-			auto const& obj = ReadObject(limbs[i], context);
-			gait.limbs.push_back(GaitLimb{
-				.role = ParseEnum<EChainRole>(ReadString(Member(obj, "role", context), context + ".role"), ChainRoleNames, context + ".role"),
-				.side = ParseEnum<ESide>(ReadString(Member(obj, "side", context), context + ".side"), SideNames, context + ".side"),
-				.walk_phase = ReadFloat(Member(obj, "walk_phase", context), context + ".walk_phase"),
-				.trot_phase = ReadFloat(Member(obj, "trot_phase", context), context + ".trot_phase"),
-			});
-		}
+			// Read the family's name and stance
+			auto fctx = std::format("gait.families[{}]", f);
+			auto const& fobj = ReadObject(families[f], fctx);
+			auto& family = gait.families.emplace_back(GaitFamily{ .name = ReadString(Member(fobj, "name", fctx), fctx + ".name") });
+			auto const& stance = ReadArray(Member(fobj, "stance", fctx), fctx + ".stance");
+			for (size_t s = 0; s != stance.size(); ++s)
+			{
+				// The position is optional
+				auto sctx = std::format("{}.stance[{}]", fctx, s);
+				auto const& sobj = ReadObject(stance[s], sctx);
+				auto& bone = family.stance.emplace_back(StanceBone{
+					.bone = ReadString(Member(sobj, "bone", sctx), sctx + ".bone"),
+					.rotation = ReadQuat(Member(sobj, "rotation", sctx), sctx + ".rotation"),
+				});
+				if (auto position = sobj.find("position"))
+					bone.position = ReadVec(*position, 1, sctx + ".position");
+			}
 
-		// Read the cycle parameters, which are all required
-		auto read = [&](std::string_view key)
-		{
-			return ReadFloat(Member(root, key, "gait"), std::format("gait.{}", key));
-		};
-		gait.walk_speed = read("walk_speed");
-		gait.trot_speed = read("trot_speed");
-		gait.stand_speed = read("stand_speed");
-		gait.walk_duty = read("walk_duty");
-		gait.trot_duty = read("trot_duty");
-		gait.stride_min = read("stride_min");
-		gait.stride_per_speed = read("stride_per_speed");
-		gait.max_stance_travel = read("max_stance_travel");
-		gait.swing_height = read("swing_height");
-		gait.settle_distance = read("settle_distance");
-		gait.body_response = read("body_response");
-		gait.posture_time = read("posture_time");
-		gait.rear_delay = read("rear_delay");
+			auto const& cycles = ReadArray(Member(fobj, "cycles", fctx), fctx + ".cycles");
+			for (size_t c = 0; c != cycles.size(); ++c)
+			{
+				// Read the cycle's measurements
+				auto cctx = std::format("{}.cycles[{}]", fctx, c);
+				auto const& cobj = ReadObject(cycles[c], cctx);
+				auto& cycle = family.cycles.emplace_back(GaitCycle{
+					.name = ReadString(Member(cobj, "name", cctx), cctx + ".name"),
+					.speed = ReadFloat(Member(cobj, "speed", cctx), cctx + ".speed"),
+					.stride = ReadFloat(Member(cobj, "stride", cctx), cctx + ".stride"),
+					.swing_height = ReadFloat(Member(cobj, "swing_height", cctx), cctx + ".swing_height"),
+				});
+
+				// Read the footfalls
+				auto const& footfalls = ReadArray(Member(cobj, "footfalls", cctx), cctx + ".footfalls");
+				for (size_t i = 0; i != footfalls.size(); ++i)
+				{
+					auto ictx = std::format("{}.footfalls[{}]", cctx, i);
+					auto const& obj = ReadObject(footfalls[i], ictx);
+					cycle.footfalls.push_back(Footfall{
+						.role = ParseEnum<EChainRole>(ReadString(Member(obj, "role", ictx), ictx + ".role"), ChainRoleNames, ictx + ".role"),
+						.side = ParseEnum<ESide>(ReadString(Member(obj, "side", ictx), ictx + ".side"), SideNames, ictx + ".side"),
+						.touchdown = ReadFloat(Member(obj, "touchdown", ictx), ictx + ".touchdown"),
+						.duty = ReadFloat(Member(obj, "duty", ictx), ictx + ".duty"),
+					});
+				}
+
+				// Read the bone motions, which have exactly one entry per harmonic
+				auto const& motions = ReadArray(Member(cobj, "motion", cctx), cctx + ".motion");
+				for (size_t m = 0; m != motions.size(); ++m)
+				{
+					auto mctx = std::format("{}.motion[{}]", cctx, m);
+					auto const& obj = ReadObject(motions[m], mctx);
+					auto& motion = cycle.motion.emplace_back(BoneMotion{
+						.bone = ReadString(Member(obj, "bone", mctx), mctx + ".bone"),
+						.channel = ParseEnum<EMotionChannel>(ReadString(Member(obj, "channel", mctx), mctx + ".channel"), MotionChannelNames, mctx + ".channel"),
+					});
+					auto const& harmonics = ReadArray(Member(obj, "harmonics", mctx), mctx + ".harmonics");
+					if (harmonics.size() != GaitHarmonics)
+						throw std::runtime_error(std::format("{}.harmonics: expected {} harmonics", mctx, GaitHarmonics));
+
+					for (int k = 0; k != GaitHarmonics; ++k)
+					{
+						auto hctx = std::format("{}.harmonics[{}]", mctx, k);
+						auto const& hobj = ReadObject(harmonics[k], hctx);
+						motion.harmonics[k].cos = ReadVec(Member(hobj, "cos", hctx), 0, hctx + ".cos");
+						motion.harmonics[k].sin = ReadVec(Member(hobj, "sin", hctx), 0, hctx + ".sin");
+					}
+				}
+			}
+		}
 		return gait;
 	}
 
@@ -265,33 +377,63 @@ namespace pr::animation
 		auto& root = doc.root();
 		root["schema_version"] = GaitSchemaVersion;
 
-		// Write the limbs
-		json::Array limbs;
-		for (auto const& limb : gait.limbs)
+		json::Array families;
+		for (auto const& family : gait.families)
 		{
-			limbs.push_back(json::Object{
-				{ "role", EnumName(limb.role, ChainRoleNames) },
-				{ "side", EnumName(limb.side, SideNames) },
-				{ "walk_phase", limb.walk_phase },
-				{ "trot_phase", limb.trot_phase },
+			// Write the stance. Only root bones may have a position.
+			json::Array stance;
+			for (auto const& bone : family.stance)
+			{
+				json::Object obj{ { "bone", bone.bone }, { "rotation", WriteQuat(bone.rotation) } };
+				if (bone.position)
+					obj["position"] = WriteVec(*bone.position);
+
+				stance.push_back(std::move(obj));
+			}
+
+			json::Array cycles;
+			for (auto const& cycle : family.cycles)
+			{
+				// Write the footfalls and the bone motions
+				json::Array footfalls;
+				for (auto const& foot : cycle.footfalls)
+				{
+					footfalls.push_back(json::Object{
+						{ "role", EnumName(foot.role, ChainRoleNames) },
+						{ "side", EnumName(foot.side, SideNames) },
+						{ "touchdown", foot.touchdown },
+						{ "duty", foot.duty },
+					});
+				}
+				json::Array motions;
+				for (auto const& motion : cycle.motion)
+				{
+					json::Array harmonics;
+					for (auto const& h : motion.harmonics)
+						harmonics.push_back(json::Object{ { "cos", WriteVec(h.cos) }, { "sin", WriteVec(h.sin) } });
+
+					motions.push_back(json::Object{
+						{ "bone", motion.bone },
+						{ "channel", EnumName(motion.channel, MotionChannelNames) },
+						{ "harmonics", std::move(harmonics) },
+					});
+				}
+				cycles.push_back(json::Object{
+					{ "name", cycle.name },
+					{ "speed", cycle.speed },
+					{ "stride", cycle.stride },
+					{ "swing_height", cycle.swing_height },
+					{ "footfalls", std::move(footfalls) },
+					{ "motion", std::move(motions) },
+				});
+			}
+			families.push_back(json::Object{
+				{ "name", family.name },
+				{ "stance", std::move(stance) },
+				{ "cycles", std::move(cycles) },
 			});
 		}
-		root["limbs"] = std::move(limbs);
-
-		// Write the cycle parameters
-		root["walk_speed"] = gait.walk_speed;
-		root["trot_speed"] = gait.trot_speed;
-		root["stand_speed"] = gait.stand_speed;
-		root["walk_duty"] = gait.walk_duty;
-		root["trot_duty"] = gait.trot_duty;
-		root["stride_min"] = gait.stride_min;
-		root["stride_per_speed"] = gait.stride_per_speed;
-		root["max_stance_travel"] = gait.max_stance_travel;
-		root["swing_height"] = gait.swing_height;
-		root["settle_distance"] = gait.settle_distance;
-		root["body_response"] = gait.body_response;
-		root["posture_time"] = gait.posture_time;
-		root["rear_delay"] = gait.rear_delay;
+		root["families"] = std::move(families);
 		return doc;
 	}
 
@@ -319,46 +461,94 @@ namespace pr::animation
 #include "pr/common/unittests.h"
 namespace pr::animation::tests
 {
+	// A gait for the test rig (see 'TestRigDesc'), whose stances are its rest pose:
+	//  - "quadruped": the leg and arm step half a cycle apart, in a walk and a faster trot. The walk sways the spine and bobs the root.
+	//  - "bipedal": only the leg steps, and the arm hangs.
+	inline GaitDesc TestGait()
+	{
+		// Both families stand in the rest pose, so their stances are empty
+		auto walk = GaitCycle{
+			.name = "walk",
+			.speed = 0.8f,
+			.stride = 0.5f,
+			.swing_height = 0.1f,
+			.footfalls = {
+				Footfall{ .role = EChainRole::Leg, .side = ESide::Left, .touchdown = 0.0f, .duty = 0.75f },
+				Footfall{ .role = EChainRole::Arm, .side = ESide::Left, .touchdown = 0.5f, .duty = 0.75f },
+			},
+			.motion = {
+				BoneMotion{ .bone = "spine", .channel = EMotionChannel::Rotation, .harmonics = { Harmonic{ .sin = v4(0, 0, 0.1f, 0) }, Harmonic{} } },
+				BoneMotion{ .bone = "root", .channel = EMotionChannel::Position, .harmonics = { Harmonic{}, Harmonic{ .cos = v4(0, 0, 0.02f, 0) } } },
+			},
+		};
+		auto trot = GaitCycle{
+			.name = "trot",
+			.speed = 1.6f,
+			.stride = 0.8f,
+			.swing_height = 0.15f,
+			.footfalls = {
+				Footfall{ .role = EChainRole::Leg, .side = ESide::Left, .touchdown = 0.0f, .duty = 0.5f },
+				Footfall{ .role = EChainRole::Arm, .side = ESide::Left, .touchdown = 0.5f, .duty = 0.5f },
+			},
+		};
+		auto biped = GaitCycle{
+			.name = "walk",
+			.speed = 0.8f,
+			.stride = 0.5f,
+			.swing_height = 0.1f,
+			.footfalls = { Footfall{ .role = EChainRole::Leg, .side = ESide::Left, .touchdown = 0.0f, .duty = 0.6f } },
+		};
+		return GaitDesc{
+			.families = {
+				GaitFamily{ .name = "quadruped", .cycles = { walk, trot } },
+				GaitFamily{ .name = "bipedal", .cycles = { biped } },
+			},
+		};
+	}
+
 	PRUnitTestClass(AnimationGaitTests)
 	{
-		PRUnitTestMethod(DefaultsFromRig, Quick)
-		{
-			// The test rig has one leg and one arm, both on the left, which step half a cycle apart in the walk
-			auto rig = TestRig();
-			auto gait = DefaultGait(rig);
-			PR_EXPECT(Validate(gait, rig).empty());
-			PR_EXPECT(gait.limbs.size() == 2);
-			PR_EXPECT(gait.limbs[0].role == EChainRole::Leg && gait.limbs[1].role == EChainRole::Arm);
-			PR_EXPECT(FEql(gait.walk_speed, Sqrt(0.25f * 9.81f * 1.0f)));
-			PR_EXPECT(gait.max_stance_travel / gait.walk_duty > gait.stride_min + gait.stride_per_speed * gait.walk_speed - 1e-5f);
-		}
 		PRUnitTestMethod(RoundTrip, Quick)
 		{
-			// Writing then reading a gait reproduces it
+			// Writing then reading a gait reproduces it, including stance positions and harmonics
 			auto rig = TestRig();
-			auto gait = DefaultGait(rig);
-			gait.swing_height = 0.123f;
+			auto gait = TestGait();
+			gait.families[0].stance.push_back(StanceBone{ .bone = "root", .rotation = quat(v4::ZAxis(), 0.1f), .position = v4(0, 0, 0.1f, 1) });
+			gait.families[0].stance.push_back(StanceBone{ .bone = "spine", .rotation = quat(v4::XAxis(), 0.2f) });
+			PR_EXPECT(Validate(gait, rig).empty());
+
 			auto text = json::Write(WriteGaitDesc(gait));
 			auto read = ReadGaitDesc(json::Read(std::string_view(text)));
 			PR_EXPECT(Validate(read, rig).empty());
-			PR_EXPECT(read.limbs.size() == gait.limbs.size());
-			for (size_t i = 0; i != gait.limbs.size(); ++i)
-			{
-				auto const& l = read.limbs[i];
-				auto const& r = gait.limbs[i];
-				PR_EXPECT(l.role == r.role && l.side == r.side && l.walk_phase == r.walk_phase && l.trot_phase == r.trot_phase);
-			}
-			PR_EXPECT(read.walk_speed == gait.walk_speed && read.trot_speed == gait.trot_speed && read.stand_speed == gait.stand_speed);
-			PR_EXPECT(read.walk_duty == gait.walk_duty && read.trot_duty == gait.trot_duty);
-			PR_EXPECT(read.stride_min == gait.stride_min && read.stride_per_speed == gait.stride_per_speed && read.max_stance_travel == gait.max_stance_travel);
-			PR_EXPECT(read.swing_height == gait.swing_height && read.settle_distance == gait.settle_distance && read.body_response == gait.body_response);
-						PR_EXPECT(read.posture_time == gait.posture_time && read.rear_delay == gait.rear_delay);
-					}
+			PR_EXPECT(read.families.size() == 2);
+			PR_EXPECT(read.families[0].name == "quadruped" && read.families[1].name == "bipedal");
+
+			auto const& stance = read.families[0].stance;
+			PR_EXPECT(stance.size() == 2 && stance[0].position && !stance[1].position);
+			PR_EXPECT(FEqlAbsolute(*stance[0].position, v4(0, 0, 0.1f, 1), 1e-6f));
+			PR_EXPECT(FEqlOrientation(stance[1].rotation, quat(v4::XAxis(), 0.2f), 1e-6f));
+
+			auto const& l = read.families[0].cycles[0];
+			auto const& r = gait.families[0].cycles[0];
+			PR_EXPECT(l.name == r.name && l.speed == r.speed && l.stride == r.stride && l.swing_height == r.swing_height);
+			PR_EXPECT(l.footfalls.size() == 2 && l.footfalls[1].role == EChainRole::Arm && l.footfalls[1].touchdown == 0.5f && l.footfalls[1].duty == 0.75f);
+			PR_EXPECT(l.motion.size() == 2 && l.motion[1].channel == EMotionChannel::Position);
+			PR_EXPECT(FEqlAbsolute(l.motion[0].harmonics[0].sin, r.motion[0].harmonics[0].sin, 1e-6f));
+			PR_EXPECT(FEqlAbsolute(l.motion[1].harmonics[1].cos, r.motion[1].harmonics[1].cos, 1e-6f));
+		}
+		PRUnitTestMethod(EvaluateHarmonics, Quick)
+		{
+			// The first harmonic repeats once per cycle and the second twice
+			auto harmonics = std::array<Harmonic, GaitHarmonics>{ Harmonic{ .sin = v4(1, 0, 0, 0) }, Harmonic{ .cos = v4(0, 1, 0, 0) } };
+			PR_EXPECT(FEqlAbsolute(Evaluate(harmonics, 0.0f), v4(0, 1, 0, 0), 1e-6f));
+			PR_EXPECT(FEqlAbsolute(Evaluate(harmonics, 0.25f), v4(1, -1, 0, 0), 1e-5f));
+			PR_EXPECT(FEqlAbsolute(Evaluate(harmonics, 0.5f), v4(0, 1, 0, 0), 1e-5f));
+		}
 		PRUnitTestMethod(Errors, Quick)
 		{
-			// Schema errors name the field, and gaits that do not fit the rig are reported
+			// Schema errors name the field
 			auto rig = TestRig();
-			auto text = json::Write(WriteGaitDesc(DefaultGait(rig)));
+			auto text = json::Write(WriteGaitDesc(TestGait()));
 			auto bad = text;
 			bad.replace(bad.find("\"leg\""), 5, "\"wing\"");
 			try
@@ -368,13 +558,16 @@ namespace pr::animation::tests
 			}
 			catch (std::runtime_error const& ex)
 			{
-				PR_EXPECT(std::string_view(ex.what()).find("gait.limbs[0].role") != std::string_view::npos);
+				PR_EXPECT(std::string_view(ex.what()).find("gait.families[0].cycles[0].footfalls[0].role") != std::string_view::npos);
 			}
 
-			auto gait = DefaultGait(rig);
-			gait.limbs.push_back(GaitLimb{ .role = EChainRole::Leg, .side = ESide::Right });
-			gait.trot_speed = gait.walk_speed;
-			PR_EXPECT(Validate(gait, rig).size() == 2);
+			// Gaits that do not fit the rig are reported: unordered speeds, a limb missing from one cycle, and a position on a non-root bone
+			auto gait = TestGait();
+			auto& quad = gait.families[0];
+			quad.cycles[1].speed = quad.cycles[0].speed;
+			quad.cycles[1].footfalls.pop_back();
+			quad.cycles[0].motion[0].channel = EMotionChannel::Position;
+			PR_EXPECT(Validate(gait, rig).size() == 3);
 		}
 	};
 }

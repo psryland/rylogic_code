@@ -120,8 +120,15 @@ class RYLOGIC_PG_RigContact(PropertyGroup):
 	normal: FloatVectorProperty(name="Normal", size=3, default=(0.0, 0.0, -1.0), description="The outward surface direction in the bone's rest space")
 
 
+class RYLOGIC_PG_GaitCycle(PropertyGroup):
+	"""An example movement cycle: a looping action that moves the root bone forward by one stride. The name is the built-in 'name' property."""
+
+	action: PointerProperty(name="Action", type=bpy.types.Action, description="The cycle's action. Its frame range covers exactly one cycle")
+	family: StringProperty(name="Family", default="quadruped", description="The group of cycles that share a stance and walking limbs, e.g. 'bipedal' or 'quadruped'")
+
+
 class RYLOGIC_PG_Rig(PropertyGroup):
-	"""The chains and contacts of an armature."""
+	"""The chains, contacts and movement cycles of an armature."""
 
 	chains: CollectionProperty(name="Chains", type=RYLOGIC_PG_RigChain)
 	active_chain: IntProperty(name="Active Chain", default=0, update=_OnActiveChainChanged, description="The chain shown below. Selecting a chain selects its bones")
@@ -135,6 +142,8 @@ class RYLOGIC_PG_Rig(PropertyGroup):
 	rom_action: PointerProperty(name="Range of Motion", type=bpy.types.Action, description="An action whose keyframes pose the armature at the extremes of each joint's range of motion")
 	rom_mirror: BoolProperty(name="Mirror Samples", default=True, description="Derive the same, mirrored, limits for left and right bones from the poses of either side. Turn off for asymmetric rigs")
 	rom_padding: FloatProperty(name="Padding", subtype="ANGLE", min=0.0, max=math.radians(45), default=math.radians(5), description="Extra range added beyond the posed extremes when deriving limits")
+	cycles: CollectionProperty(name="Movement Cycles", type=RYLOGIC_PG_GaitCycle)
+	active_cycle: IntProperty(name="Active Cycle", default=0)
 
 
 # The active bone of each armature when last seen, so that only a change of active bone moves the contact selection
@@ -175,6 +184,7 @@ CLASSES = (
 	RYLOGIC_PG_RigBoneRef,
 	RYLOGIC_PG_RigChain,
 	RYLOGIC_PG_RigContact,
+	RYLOGIC_PG_GaitCycle,
 	RYLOGIC_PG_Rig,
 )
 

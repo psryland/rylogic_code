@@ -73,7 +73,7 @@ namespace pr::animation::tests
 			// Solving rest targets reproduces the rest pose
 			auto rig = TestRig();
 			auto pose = Pose(rig);
-			auto targets = RestTargets(rig);
+			auto targets = PoseTargets(rig, rig.rest_model);
 			SolvePose(rig, targets, pose);
 			for (int b = 0, bend = static_cast<int>(rig.bones.size()); b != bend; ++b)
 				PR_EXPECT(FEqlAbsolute(pose.model[b].pos, rig.rest_model[b].pos, 1e-4f) && FEqlOrientation(pose.model[b].rot, rig.rest_model[b].rot, 1e-3f));
@@ -83,7 +83,7 @@ namespace pr::animation::tests
 			// Lowering and leaning the body keeps the foot and hand planted, and the limbs follow the spine
 			auto rig = TestRig();
 			auto pose = Pose(rig);
-			auto targets = RestTargets(rig);
+			auto targets = PoseTargets(rig, rig.rest_model);
 			auto lean = quat(v4::XAxis(), 0.2f);
 			auto const& spine = rig.chains[0];
 			targets[0].base = xform(v4(0, 0.0f, 0.9f, 1), lean * rig.rest_model[spine.bones.front()].rot);

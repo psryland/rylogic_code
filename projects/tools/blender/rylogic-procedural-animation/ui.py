@@ -26,6 +26,16 @@ class RYLOGIC_UL_rig_contacts(UIList):
 		row.label(text=f"{item.kind.title()} on {item.bone}")
 
 
+class RYLOGIC_UL_rig_cycles(UIList):
+	"""Lists an armature's movement cycles."""
+
+	def draw_item(self, context, layout, data, item, icon, active_data, active_property, index):
+		# Show the editable name with its family and action
+		row = layout.row()
+		row.prop(item, "name", text="", emboss=False, icon="ANIM")
+		row.label(text=f"{item.family}: {item.action.name if item.action else '(no action)'}")
+
+
 class RYLOGIC_PT_rig(Panel):
 	"""The armature's procedural-animation rig: chains, contacts and tools."""
 
@@ -114,6 +124,24 @@ class RYLOGIC_PT_rig(Panel):
 			box.prop_search(contact, "bone", armature, "bones")
 			box.prop(contact, "kind")
 
+		# Movement cycles: example actions that guide the runtime's procedural locomotion, exported as a '.gait'
+		layout.label(text="Movement Cycles")
+		row = layout.row()
+		row.template_list("RYLOGIC_UL_rig_cycles", "", rig, "cycles", rig, "active_cycle", rows=3)
+		column = row.column(align=True)
+		column.operator("rylogic_rig.item_add", icon="ADD", text="").collection = "CYCLES"
+		column.operator("rylogic_rig.item_remove", icon="REMOVE", text="").collection = "CYCLES"
+		column.operator_menu_enum("rylogic_rig.gait_template", "template", icon="PRESET_NEW", text="")
+		if 0 <= rig.active_cycle < len(rig.cycles):
+			cycle = rig.cycles[rig.active_cycle]
+			box = layout.box()
+			box.prop(cycle, "family")
+			box.prop(cycle, "action")
+
+		row = layout.row(align=True)
+		row.operator("rylogic_rig.gait_validate", icon="CHECKMARK")
+		row.operator("rylogic_rig.gait_export", icon="EXPORT")
+
 
 class RYLOGIC_PT_rig_bone(Panel):
 	"""The active bone's joint limit and stiffness."""
@@ -146,6 +174,7 @@ class RYLOGIC_PT_rig_bone(Panel):
 CLASSES = (
 	RYLOGIC_UL_rig_chains,
 	RYLOGIC_UL_rig_contacts,
+	RYLOGIC_UL_rig_cycles,
 	RYLOGIC_PT_rig,
 	RYLOGIC_PT_rig_bone,
 )

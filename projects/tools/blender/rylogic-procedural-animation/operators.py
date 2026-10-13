@@ -11,7 +11,7 @@ from bpy_extras import view3d_utils
 from bpy_extras.io_utils import ExportHelper
 from mathutils import Vector
 
-from . import limits, props, rig_desc, validate
+from . import gait_desc, gait_template, limits, props, rig_desc, validate
 
 # The result of the most recent validation, shown in the Rig panel
 LAST_REPORT: list[str] = []
@@ -31,6 +31,16 @@ def WriteRig(armature_obj: bpy.types.Object, path: Path) -> None:
 		raise ValueError(f"Rig '{armature_obj.name}' is invalid:\n  " + "\n  ".join(errors))
 
 	rig_desc.WriteRigDesc(desc, path)
+
+
+def WriteGait(armature_obj: bpy.types.Object, path: Path, context: bpy.types.Context | None = None) -> None:
+	"""Measure, check and write the '.gait' description of the armature's movement cycles. Raises ValueError listing every problem if it is invalid."""
+	desc = gait_desc.BuildGaitDesc(armature_obj, context or bpy.context)
+	errors = gait_desc.ValidateGaitDesc(desc)
+	if errors:
+		raise ValueError(f"Gait of '{armature_obj.name}' is invalid:\n  " + "\n  ".join(errors))
+
+	gait_desc.WriteGaitDesc(desc, path)
 
 
 def _SetReport(lines: list[str]) -> None:
@@ -151,17 +161,7 @@ class RYLOGIC_OT_rig_capture_pose(_ArmatureOperator):
 		frames, _ = limits.RangeOfMotionFrames(rig.rom_action)
 		frame = int(frames[-1]) + 1 if frames else 1
 		for pose_bone in armature_obj.pose.bones:
-			match pose_bone.rotation_mode:
-				case "QUATERNION":
-					path = "rotation_quaternion"
-				case "AXIS_ANGLE":
-					path = "rotation_axis_angle"
-				case "XYZ" | "XZY" | "YXZ" | "YZX" | "ZXY" | "ZYX":
-					path = "rotation_euler"
-				case _:
-					raise ValueError(f"Bone '{pose_bone.name}' has an unknown rotation mode '{pose_bone.rotation_mode}'")
-
-			pose_bone.keyframe_insert(path, frame=frame, group=pose_bone.name)
+			pose_bone.keyframe_insert(gait_template.RotationPath(pose_bone), frame=frame, group=pose_bone.name)
 
 		context.scene.frame_set(frame)
 		self.report({"INFO"}, f"Captured pose {len(frames) + 1} at frame {frame} in '{rig.rom_action.name}'")
@@ -336,14 +336,91 @@ def _ReportUnmatched(operator: Operator, unmatched: list[str]) -> None:
 		operator.report({"WARNING"}, f"Not mirrored, as no bone is their exact mirror image: {', '.join(unmatched)}")
 
 
+# The rig's editable lists
+_COLLECTIONS = [("CHAINS", "Chains", ""), ("CONTACTS", "Contacts", ""), ("CYCLES", "Movement Cycles", "")]
+
+
+class RYLOGIC_OT_gait_validate(_ArmatureOperator):
+	"""Measure the movement cycles and check the gait for the rules that the runtime relies on"""
+
+	bl_idname = "rylogic_rig.gait_validate"
+	bl_label = "Validate Gait"
+
+	def execute(self, context):
+		# Measuring plays each cycle, which can fail as well as the checks
+		try:
+			desc = gait_desc.BuildGaitDesc(ActiveArmature(context), context)
+			errors = gait_desc.ValidateGaitDesc(desc)
+		except ValueError as error:
+			desc, errors = None, [str(error)]
+
+		# Summarise each measured cycle, so that its footfalls can be checked against the intended pattern
+		lines = list(errors)
+		if not errors:
+			lines.append("Valid gait")
+			for family in desc["families"]:
+				for cycle in family["cycles"]:
+					steps = ", ".join(f"{f['role']} {f['side']} @{f['touchdown']:.2f}/{f['duty']:.2f}" for f in cycle["footfalls"])
+					lines.append(f"{family['name']}.{cycle['name']}: speed {cycle['speed']:.3g}, stride {cycle['stride']:.3g}; {steps}")
+
+		_SetReport(lines)
+		for error in errors:
+			self.report({"WARNING"}, error)
+
+		self.report({"ERROR"} if errors else {"INFO"}, f"{len(errors)} problems" if errors else "The gait is valid")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_gait_export(_ArmatureOperator, ExportHelper):
+	"""Write the movement cycles to a '.gait' file"""
+
+	bl_idname = "rylogic_rig.gait_export"
+	bl_label = "Export .gait"
+
+	filename_ext = ".gait"
+	filter_glob: StringProperty(default="*.gait", options={"HIDDEN"})
+
+	def execute(self, context):
+		# Refuse to write an invalid gait
+		try:
+			WriteGait(ActiveArmature(context), Path(self.filepath), context)
+		except ValueError as error:
+			self.report({"ERROR"}, str(error))
+			return {"CANCELLED"}
+
+		self.report({"INFO"}, f"Wrote {self.filepath}")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_gait_template(_ArmatureOperator):
+	"""Add a movement cycle keyed with a standard footfall pattern, as a starting point to refine by hand"""
+
+	bl_idname = "rylogic_rig.gait_template"
+	bl_label = "Add Template Cycle"
+	bl_options = {"REGISTER", "UNDO"}
+
+	template: EnumProperty(name="Template", items=gait_template.TEMPLATE_ITEMS)
+
+	def execute(self, context):
+		# The template needs the walking limbs' chains and contacts
+		try:
+			action = gait_template.GenerateTemplate(ActiveArmature(context), context, self.template)
+		except ValueError as error:
+			self.report({"ERROR"}, str(error))
+			return {"CANCELLED"}
+
+		self.report({"INFO"}, f"Added movement cycle '{action.name}'")
+		return {"FINISHED"}
+
+
 class RYLOGIC_OT_rig_item_add(_ArmatureOperator):
-	"""Add a chain or contact"""
+	"""Add a chain, contact or movement cycle"""
 
 	bl_idname = "rylogic_rig.item_add"
 	bl_label = "Add"
 	bl_options = {"REGISTER", "UNDO"}
 
-	collection: EnumProperty(items=[("CHAINS", "Chains", ""), ("CONTACTS", "Contacts", "")])
+	collection: EnumProperty(items=_COLLECTIONS)
 
 	def execute(self, context):
 		# Append a new item and make it active
@@ -356,6 +433,10 @@ class RYLOGIC_OT_rig_item_add(_ArmatureOperator):
 				contact = rig.contacts.add()
 				contact.name = f"contact.{len(rig.contacts)}"
 				rig.active_contact = len(rig.contacts) - 1
+			case "CYCLES":
+				cycle = rig.cycles.add()
+				cycle.name = f"cycle.{len(rig.cycles)}"
+				rig.active_cycle = len(rig.cycles) - 1
 			case _:
 				raise ValueError(f"Unknown collection '{self.collection}'")
 
@@ -363,13 +444,13 @@ class RYLOGIC_OT_rig_item_add(_ArmatureOperator):
 
 
 class RYLOGIC_OT_rig_item_remove(_ArmatureOperator):
-	"""Remove the active chain or contact"""
+	"""Remove the active chain, contact or movement cycle"""
 
 	bl_idname = "rylogic_rig.item_remove"
 	bl_label = "Remove"
 	bl_options = {"REGISTER", "UNDO"}
 
-	collection: EnumProperty(items=[("CHAINS", "Chains", ""), ("CONTACTS", "Contacts", "")])
+	collection: EnumProperty(items=_COLLECTIONS)
 
 	def execute(self, context):
 		# Remove the active item and keep the selection in range
@@ -383,6 +464,10 @@ class RYLOGIC_OT_rig_item_remove(_ArmatureOperator):
 				if 0 <= rig.active_contact < len(rig.contacts):
 					rig.contacts.remove(rig.active_contact)
 					rig.active_contact = max(0, min(rig.active_contact, len(rig.contacts) - 1))
+			case "CYCLES":
+				if 0 <= rig.active_cycle < len(rig.cycles):
+					rig.cycles.remove(rig.active_cycle)
+					rig.active_cycle = max(0, min(rig.active_cycle, len(rig.cycles) - 1))
 			case _:
 				raise ValueError(f"Unknown collection '{self.collection}'")
 
@@ -467,6 +552,9 @@ CLASSES = (
 	RYLOGIC_OT_rig_derive_limits,
 	RYLOGIC_OT_rig_symmetrize_limits,
 	RYLOGIC_OT_rig_contact_pick,
+	RYLOGIC_OT_gait_validate,
+	RYLOGIC_OT_gait_export,
+	RYLOGIC_OT_gait_template,
 	RYLOGIC_OT_rig_item_add,
 	RYLOGIC_OT_rig_item_remove,
 	RYLOGIC_OT_rig_chain_assign,

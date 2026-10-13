@@ -29,19 +29,31 @@ The viewport overlay draws swing limits (orange), twist limits (yellow), limb po
 (green). Limb poles and facing directions are fixed rest-pose model-space directions. The toggles under 'Show Overlay' hide each type. In Pose Mode
 with bones selected, only the overlays of the selected bones are drawn.
 
+Movement cycles are example actions that guide the runtime's procedural locomotion. They are not played back: the runtime measures stride, speed,
+footfall order and timing, and the body's sway from them, then places the feet itself. Each cycle belongs to a family (e.g. 'bipedal', 'quadruped',
+'climb'), and game logic chooses the family. Within a family, the runtime blends the cycles by speed. To author a cycle:
+	1. Under 'Movement Cycles', add a cycle from a template (the preset button), or add an empty cycle and assign an action. A template keys a
+	   standard footfall pattern from the rig's leg chains and sole/palm contacts, as a starting point.
+	2. Refine the action by hand. Its frame range is one loop: the pose at the last frame is the pose at the first frame, moved forward by one
+	   stride. The root bone travels forward at a steady speed, and each foot is planted, still on the ground, for part of the loop.
+	3. 'Validate Gait' measures every cycle and lists the footfalls it found. 'Export .gait' writes them all to a '.gait' JSON file next to the
+	   '.rig'. The schema is owned by 'pr/animation/gait.h'.
+The walking limbs are the LEG chains ending on a SOLE contact and the ARM chains ending on a PALM contact.
+
 Scripted use, e.g. from an asset exporter:
 	addon = importlib.import_module("rylogic-procedural-animation")
 	addon.register()  # the rig properties are read through registered property groups
-	addon.WriteRig(armature_obj, path)
+	addon.WriteRig(armature_obj, rig_path)
+	addon.WriteGait(armature_obj, gait_path)
 """
 
 bl_info = {
 	"name": "Rylogic Procedural Animation",
 	"author": "Paul Ryland",
-	"version": (2, 0, 0),
+	"version": (2, 1, 0),
 	"blender": (4, 2, 0),
-	"description": "Author and export rig descriptions for the Rylogic procedural animation system",
-	"location": "Properties > Armature > Rylogic Rig, and Properties > Bone > Rylogic Rig Joint",
+	"description": "Author and export rig and gait descriptions for the Rylogic procedural animation system",
+	"location": "Properties > Armature > Rylogic Rig (including Movement Cycles), and Properties > Bone > Rylogic Rig Joint",
 	"category": "Animation",
 }
 
@@ -51,15 +63,16 @@ import bpy
 # Dependencies come before the modules that import names from them.
 if "operators" in locals():
 	import importlib
-	for _module in (limits, rig_desc, validate, props, operators, ui, draw):
+	for _module in (limits, rig_desc, gait_desc, gait_template, validate, props, operators, ui, draw):
 		importlib.reload(_module)
 
 from . import draw, operators, props, ui
-from .operators import WriteRig
+from .gait_desc import BuildGaitDesc, ValidateGaitDesc, WriteGaitDesc
+from .operators import WriteGait, WriteRig
 from .rig_desc import BuildRigDesc, WriteRigDesc
 from .validate import ValidateRigDesc
 
-__all__ = ["BuildRigDesc", "ValidateRigDesc", "WriteRig", "WriteRigDesc", "register", "unregister"]
+__all__ = ["BuildGaitDesc", "BuildRigDesc", "ValidateGaitDesc", "ValidateRigDesc", "WriteGait", "WriteGaitDesc", "WriteRig", "WriteRigDesc", "register", "unregister"]
 
 
 def register() -> None:

@@ -39,6 +39,12 @@ class ModelSpace:
 		location, rotation, _ = bone.matrix_local.decompose()
 		return Matrix.LocRotScale(self.location + self.rotation @ (location * self.scale), self.rotation @ rotation, None)
 
+	def BonePose(self, pose_bone: bpy.types.PoseBone) -> Matrix:
+		"""Return the rigid model-space transform of 'pose_bone' in its current pose. Any pose scale is dropped."""
+		# Pose matrices are in armature space, like rest matrices, so the same conversion applies
+		location, rotation, _ = pose_bone.matrix.decompose()
+		return Matrix.LocRotScale(self.location + self.rotation @ (location * self.scale), self.rotation @ rotation, None)
+
 	def Direction(self, direction: Vector) -> Vector:
 		"""Return an armature-space direction in model space, normalised."""
 		return (self.rotation @ Vector(direction)).normalized()

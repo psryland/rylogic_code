@@ -21,23 +21,32 @@ namespace pr::animation
 		v4 pole = {};
 	};
 
-	// Return one target per chain of 'rig' that reproduces the rest pose
-	inline std::vector<Target> RestTargets(Rig const& rig)
+	// Write into 'out' one target per chain of 'rig' that reproduces the pose whose model-space bone transforms are 'model'
+	inline void PoseTargets(Rig const& rig, std::span<xform const> model, std::span<Target> out)
 	{
-		// Read each chain's goal from the rest pose
-		std::vector<Target> targets(rig.chains.size());
+		// Read each chain's goal from the pose
+		pr_assert(model.size() == rig.bones.size() && out.size() == rig.chains.size() && "One transform per bone and one target per chain are required");
 		for (int c = 0, cend = static_cast<int>(rig.chains.size()); c != cend; ++c)
 		{
+			// The rest-pose directions turn with the bone that carries them
 			auto const& chain = rig.chains[c];
-			auto& target = targets[c];
-			target.frame = rig.rest_model[chain.bones.back()];
-			target.base = rig.rest_model[chain.bones.front()];
-			target.pole = chain.pole;
+			auto first = chain.bones.front();
+			auto last = chain.bones.back();
+			auto& target = out[c];
+			target.frame = model[last];
+			target.base = model[first];
+			target.pole = Rotate(model[first].rot * ~rig.rest_model[first].rot, chain.pole);
 
 			// A neck faces a point ahead along its forward direction. A distant point keeps the facing steady when the head moves slightly.
 			if (chain.role == EChainRole::Neck)
-				target.frame.pos += chain.forward * 100.0f * rig.bones[chain.bones.back()].length;
+				target.frame.pos += Rotate(model[last].rot * ~rig.rest_model[last].rot, chain.forward) * 100.0f * rig.bones[last].length;
 		}
+	}
+	inline std::vector<Target> PoseTargets(Rig const& rig, std::span<xform const> model)
+	{
+		// Allocate the targets, then fill them
+		std::vector<Target> targets(rig.chains.size());
+		PoseTargets(rig, model, targets);
 		return targets;
 	}
 
@@ -94,7 +103,7 @@ namespace pr::animation::tests
 		{
 			// A full-weight layer replaces its channel, a half-weight layer blends, and other channels are untouched
 			auto rig = TestRig();
-			auto base = RestTargets(rig);
+			auto base = PoseTargets(rig, rig.rest_model);
 			auto hand = Target{ .frame = xform(v4(1, 1, 1, 1), quat(v4::ZAxis(), 1.0f)), .pole = v4(0, 0, 1, 0) };
 			auto look = Target{ .frame = xform(v4(5, 0, 1, 1), Identity<quat>()) };
 
