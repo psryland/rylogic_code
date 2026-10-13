@@ -91,7 +91,8 @@ auto sample = surface.Sample(BaselineSurface::Position{-125.5, 300.0});
 auto const& recipe = surface.Recipe();
 ```
 
-Link `physics-landscape.lib` or `physics-static.lib`. The ordinary public header
+Link `physics-static.lib`. Consumers of `physics.dll` use the context-free
+`Physics_Landscape*` functions in `physics-dll.h` instead. The ordinary public header
 does not include physics engine, device, queue, or GPU resource headers. The
 existing `Config()`, scalar/batch `Sample()`, surface result, material identifiers,
 seed expansion, and double-valued configuration remain the CPU interface.
