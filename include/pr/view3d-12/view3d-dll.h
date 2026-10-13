@@ -1328,10 +1328,11 @@ extern "C"
 	// so repeated captures at the same face size are much cheaper than the first. Objects with ELdrFlags::EnvMapCaptureExclude are not captured.
 	VIEW3D_API void __stdcall View3D_WindowEnvMapCapture(pr::view3d::Window window, pr::view3d::CubeMap env_map, pr::view3d::Vec4 position);
 
-	// Enable the window's time-sliced environment map probe with 'face_size' pixels per face edge, or disable it with 0. While enabled, the probe owns the window's
-	// environment map. Each View3D_WindowEnvMapProbeUpdate renders one face, and every six updates complete a new cube that fades in over the previous one.
-	// Setting an environment map with View3D_WindowEnvMapSet disables the probe.
-	VIEW3D_API void __stdcall View3D_WindowEnvMapProbeSet(pr::view3d::Window window, int face_size);
+	// Size the window's time-sliced environment map probe with 'face_size' pixels per face edge, or release it with 0, and set whether it is enabled. Sizing creates
+	// the probe's resources, so a probe sized while disabled can be enabled later without that cost. While enabled, the probe owns the window's environment map.
+	// Each View3D_WindowEnvMapProbeUpdate renders one face, and every six updates complete a new cube that fades in over the previous one. Enabling restarts the
+	// capture. Setting an environment map with View3D_WindowEnvMapSet disables the probe but keeps its resources.
+	VIEW3D_API void __stdcall View3D_WindowEnvMapProbeSet(pr::view3d::Window window, int face_size, BOOL enabled);
 
 	// Render the next face of the window's environment map probe. 'position' is sampled when the first face of each cube is rendered. Call once per frame before rendering.
 	VIEW3D_API void __stdcall View3D_WindowEnvMapProbeUpdate(pr::view3d::Window window, pr::view3d::Vec4 position);
