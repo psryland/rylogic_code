@@ -50,10 +50,13 @@
 	</Target>
 
 	<!-- Persist explicitly supported native link assets so packages can expose import/static libraries without wildcards. -->
-	<Target Name="WriteRylogicNativeLinkManifest" AfterTargets="Deploy" Condition="'@(RylogicNativeLinkArtifacts)' != ''">
-		<Error Condition="!Exists('%(RylogicNativeLinkArtifacts.Identity)')" Text="Declared Rylogic.Native link asset is missing: %(RylogicNativeLinkArtifacts.Identity)" />
-		<MakeDir Directories="$(RylogicNativeLinkManifestDir)" />
-		<WriteLinesToFile File="$(RylogicNativeLinkManifest)" Lines="@(RylogicNativeLinkArtifacts->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" />
-		<Message Text="Declared Rylogic.Native link assets --> $(RylogicNativeLinkManifest)" Importance="normal" />
+	<Target Name="WriteRylogicNativeLinkManifest" AfterTargets="Deploy">
+		<!-- A project that no longer declares link assets must not leave an earlier manifest for packaging to pick up. -->
+		<Delete Condition="'@(RylogicNativeLinkArtifacts)' == ''" Files="$(RylogicNativeLinkManifest)" />
+
+		<Error Condition="'@(RylogicNativeLinkArtifacts)' != '' AND !Exists('%(RylogicNativeLinkArtifacts.Identity)')" Text="Declared Rylogic.Native link asset is missing: %(RylogicNativeLinkArtifacts.Identity)" />
+		<MakeDir Condition="'@(RylogicNativeLinkArtifacts)' != ''" Directories="$(RylogicNativeLinkManifestDir)" />
+		<WriteLinesToFile Condition="'@(RylogicNativeLinkArtifacts)' != ''" File="$(RylogicNativeLinkManifest)" Lines="@(RylogicNativeLinkArtifacts->'%(FullPath)')" Overwrite="true" Encoding="UTF-8" />
+		<Message Condition="'@(RylogicNativeLinkArtifacts)' != ''" Text="Declared Rylogic.Native link assets --> $(RylogicNativeLinkManifest)" Importance="normal" />
 	</Target>
 </Project>

@@ -10,6 +10,7 @@
 #include <unknwn.h>
 #include "pr/physics/physics-dll.h"
 #include "pr/physics/terrain/landscape/baseline_surface.h"
+#include "pr/physics/terrain/landscape/baseline_surface.hlsli"
 #include "src/dll_test.h"
 #include "src/unittests/shared_gpu.h"
 
@@ -91,6 +92,10 @@ namespace pr::unittests
 			decltype(&Physics_AtmosphereTracersAcquire) AtmosphereTracersAcquire;
 			decltype(&Physics_AtmosphereTracersRelease) AtmosphereTracersRelease;
 			decltype(&Physics_AtmosphereCellStatesCopy) AtmosphereCellStatesCopy;
+			decltype(&Physics_LandscapeCreate) LandscapeCreate;
+			decltype(&Physics_LandscapeDestroy) LandscapeDestroy;
+			decltype(&Physics_LandscapeRecipe) LandscapeRecipe;
+			decltype(&Physics_LandscapeSample) LandscapeSample;
 
 			PhysicsApi()
 				: m_module(__FILE__, L"physics.dll", L"physics.dll")
@@ -162,12 +167,48 @@ namespace pr::unittests
 				, AtmosphereTracersAcquire(m_module.Proc<decltype(AtmosphereTracersAcquire)>("Physics_AtmosphereTracersAcquire"))
 				, AtmosphereTracersRelease(m_module.Proc<decltype(AtmosphereTracersRelease)>("Physics_AtmosphereTracersRelease"))
 				, AtmosphereCellStatesCopy(m_module.Proc<decltype(AtmosphereCellStatesCopy)>("Physics_AtmosphereCellStatesCopy"))
+				, LandscapeCreate(m_module.Proc<decltype(LandscapeCreate)>("Physics_LandscapeCreate"))
+				, LandscapeDestroy(m_module.Proc<decltype(LandscapeDestroy)>("Physics_LandscapeDestroy"))
+				, LandscapeRecipe(m_module.Proc<decltype(LandscapeRecipe)>("Physics_LandscapeRecipe"))
+				, LandscapeSample(m_module.Proc<decltype(LandscapeSample)>("Physics_LandscapeSample"))
 			{}
 		};
 
 		// Ignore expected diagnostics while retaining the public callback contract.
 		void __stdcall SwallowError(void*, char const*, char const*, int, std::int64_t)
 		{}
+
+		// Express a library terrain configuration as the equivalent ABI descriptor.
+		TerrainDesc MakeTerrainDesc(terrain::landscape::BaselineSurfaceConfig const& config)
+		{
+			// Unused shape terms take the library defaults so only the mountain band carries real values.
+			auto band = [](auto const& value)
+			{
+				return TerrainBand{value.m_amplitude, value.m_wavelength_m, value.m_lacunarity, value.m_persistence, 0.2, 1, value.m_octave_count, 0};
+			};
+			auto desc = TerrainDesc{
+				.header = {sizeof(TerrainDesc), PHYSICS_STRUCT_VERSION},
+				.seed = config.m_seed,
+				.material_id = config.m_material_id,
+				.supported_coordinate = config.m_supported_coordinate_abs_m,
+				.sea_level_bias = config.m_sea_level_bias_m,
+				.uplift_height = config.m_uplift_height_m,
+				.mountain_base = config.m_mountain_base_height_m,
+				.basin_depth = config.m_basin_depth_m,
+				.basin_threshold = config.m_basin_threshold,
+				.regional_base = band(config.m_regional_base),
+				.region_selector = band(config.m_region_selector),
+				.region_uplift = band(config.m_region_uplift),
+				.domain_warp = {config.m_domain_warp.m_amplitude_m, config.m_domain_warp.m_wavelength_m, config.m_domain_warp.m_lacunarity, config.m_domain_warp.m_persistence, 0.2, 1, config.m_domain_warp.m_octave_count, 0},
+				.plains = band(config.m_plains),
+				.hills = band(config.m_hills),
+				.mountains = band(config.m_mountains),
+				.basin_selector = band(config.m_basin_selector),
+			};
+			desc.mountains.roundness = config.m_mountains.m_roundness;
+			desc.mountains.weight_gain = config.m_mountains.m_weight_gain;
+			return desc;
+		}
 
 		// Count lifecycle diagnostics reported through the process callback.
 		void __stdcall CountError(void* context, char const*, char const*, int, std::int64_t)
@@ -1121,31 +1162,7 @@ namespace pr::unittests
 					config.m_uplift_height_m = config.m_mountain_base_height_m = 0;
 
 					// Use the same immutable recipe for reference height and the ABI-owned terrain copy.
-					auto band = [](auto const& value)
-					{
-						return TerrainBand{value.m_amplitude, value.m_wavelength_m, value.m_lacunarity, value.m_persistence, 0.2, 1, value.m_octave_count, 0};
-					};
-					auto desc = TerrainDesc{
-						.header = {sizeof(TerrainDesc), PHYSICS_STRUCT_VERSION},
-						.seed = config.m_seed,
-						.material_id = config.m_material_id,
-						.supported_coordinate = config.m_supported_coordinate_abs_m,
-						.sea_level_bias = config.m_sea_level_bias_m,
-						.uplift_height = config.m_uplift_height_m,
-						.mountain_base = config.m_mountain_base_height_m,
-						.basin_depth = config.m_basin_depth_m,
-						.basin_threshold = config.m_basin_threshold,
-						.regional_base = band(config.m_regional_base),
-						.region_selector = band(config.m_region_selector),
-						.region_uplift = band(config.m_region_uplift),
-						.domain_warp = {config.m_domain_warp.m_amplitude_m, config.m_domain_warp.m_wavelength_m, config.m_domain_warp.m_lacunarity, config.m_domain_warp.m_persistence, 0.2, 1, config.m_domain_warp.m_octave_count, 0},
-						.plains = band(config.m_plains),
-						.hills = band(config.m_hills),
-						.mountains = band(config.m_mountains),
-						.basin_selector = band(config.m_basin_selector),
-					};
-					desc.mountains.roundness = config.m_mountains.m_roundness;
-					desc.mountains.weight_gain = config.m_mountains.m_weight_gain;
+					auto desc = MakeTerrainDesc(config);
 					auto surface = terrain::landscape::BaselineSurface(config);
 					position = Translation(0, 0, static_cast<float>(surface.Sample({0, 0}).m_height) + 0.49f);
 					PR_EXPECT(fix.m_api.EngineTerrainSet(fix.m_engine, &desc) == EStatus::Success);
@@ -1216,6 +1233,86 @@ namespace pr::unittests
 				PR_EXPECT(fix.m_api.EventsCopy(fix.m_engine, nullptr, 0, &required) == EStatus::Success);
 				PR_EXPECT(required == 0);
 			}
+		}
+	};
+
+	// Verify the context-free landscape matches the library surface and rejects caller contract violations.
+	PRUnitTestClass(PhysicsDllLandscapeTests)
+	{
+		PRUnitTestMethod(SamplesAndRecipeMatchLibrarySurface, Extended)
+		{
+			// Build the reference surface and the DLL-owned copy from the same seeded configuration.
+			auto api = PhysicsApi{};
+			auto config = terrain::landscape::BaselineSurfaceConfig{.m_seed = 42};
+			auto reference = terrain::landscape::BaselineSurface(config);
+			auto desc = MakeTerrainDesc(config);
+			auto landscape = LandscapeHandle{};
+			PR_EXPECT(api.LandscapeCreate(&desc, &landscape) == EStatus::Success);
+			PR_EXPECT(landscape != nullptr);
+
+			// The recipe must be byte-identical so shader consumers evaluate the same terrain.
+			auto recipe = terrain::landscape::shared::BaselineRecipe{};
+			PR_EXPECT(api.LandscapeRecipe(landscape, &recipe) == EStatus::Success);
+			PR_EXPECT(std::memcmp(&recipe, &reference.Recipe(), sizeof(recipe)) == 0);
+
+			// Batched samples must preserve order and agree with both scalar library sampling and recipe evaluation.
+			auto const limit = config.m_supported_coordinate_abs_m;
+			auto positions = std::vector<double>{0, 0, -125.5, 300.0, 1234.25, -987.75, limit, -limit, -0.5 * limit, 0.25 * limit};
+			auto const count = static_cast<std::uint32_t>(positions.size() / 2);
+			auto samples = std::vector<SurfaceSampleDesc>(count);
+			PR_EXPECT(api.LandscapeSample(landscape, positions.data(), samples.data(), count) == EStatus::Success);
+			for (auto i = 0U; i != count; ++i)
+			{
+				// Compare every field because the DLL converts the library sample field by field.
+				auto const x = positions[2 * i + 0];
+				auto const y = positions[2 * i + 1];
+				auto const expected = reference.Sample({x, y});
+				PR_EXPECT(samples[i].height == expected.m_height);
+				PR_EXPECT(samples[i].gradient.x == expected.m_gradient_xy.x && samples[i].gradient.y == expected.m_gradient_xy.y);
+				PR_EXPECT(samples[i].material_id == expected.m_material_id && samples[i].reserved == 0);
+
+				auto const evaluated = terrain::landscape::shared::BaselineEvaluate(recipe, terrain::v2d{x, y});
+				PR_EXPECT(evaluated.m_status == 0);
+				PR_EXPECT(evaluated.m_height == samples[i].height);
+				PR_EXPECT(evaluated.m_dx == samples[i].gradient.x && evaluated.m_dy == samples[i].gradient.y);
+			}
+
+			// An empty batch needs no buffers, and null destroy is a no-op.
+			PR_EXPECT(api.LandscapeSample(landscape, nullptr, nullptr, 0) == EStatus::Success);
+			api.LandscapeDestroy(landscape);
+			api.LandscapeDestroy(nullptr);
+		}
+		PRUnitTestMethod(RejectsInvalidInputs, Extended)
+		{
+			// Invalid descriptors fail and leave the output handle null.
+			auto api = PhysicsApi{};
+			auto desc = MakeTerrainDesc(terrain::landscape::BaselineSurfaceConfig{.m_seed = 7});
+			auto landscape = reinterpret_cast<LandscapeHandle>(std::uintptr_t{1});
+			PR_EXPECT(api.LandscapeCreate(nullptr, &landscape) == EStatus::InvalidArgument);
+			PR_EXPECT(landscape == nullptr);
+			PR_EXPECT(api.LandscapeCreate(&desc, nullptr) == EStatus::InvalidArgument);
+			auto bad = desc;
+			bad.hills.reserved = 1;
+			PR_EXPECT(api.LandscapeCreate(&bad, &landscape) == EStatus::InvalidArgument);
+			PR_EXPECT(landscape == nullptr);
+			bad = desc;
+			bad.plains.wavelength = -1;
+			PR_EXPECT(api.LandscapeCreate(&bad, &landscape) == EStatus::InvalidArgument);
+			PR_EXPECT(landscape == nullptr);
+
+			// Missing buffers, nonfinite coordinates, and coordinates outside the supported square are rejected.
+			PR_EXPECT(api.LandscapeCreate(&desc, &landscape) == EStatus::Success);
+			auto sample = SurfaceSampleDesc{};
+			auto position = std::array<double, 2>{0, 0};
+			PR_EXPECT(api.LandscapeSample(nullptr, position.data(), &sample, 1) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeSample(landscape, nullptr, &sample, 1) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeSample(landscape, position.data(), nullptr, 1) == EStatus::InvalidArgument);
+			position = {std::numeric_limits<double>::quiet_NaN(), 0};
+			PR_EXPECT(api.LandscapeSample(landscape, position.data(), &sample, 1) == EStatus::InvalidArgument);
+			position = {2 * desc.supported_coordinate, 0};
+			PR_EXPECT(api.LandscapeSample(landscape, position.data(), &sample, 1) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeRecipe(landscape, nullptr) == EStatus::InvalidArgument);
+			api.LandscapeDestroy(landscape);
 		}
 	};
 

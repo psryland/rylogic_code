@@ -48,7 +48,7 @@ namespace pr::physics
 
 namespace pr::physics
 {
-	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00060000U;
+	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00060100U;
 	inline constexpr std::uint32_t PHYSICS_STRUCT_VERSION = 2U;
 	inline constexpr std::uint32_t PHYSICS_CHECKPOINT_VERSION = 3U;
 
@@ -64,6 +64,18 @@ namespace pr::physics
 	using ArticulationHandle = std::uint64_t;
 	using PersistentConstraintHandle = std::uint64_t;
 	using AtmosphereHandle = std::uint64_t;
+
+	// An immutable landscape owned by the caller. Handles are not validated: passing a destroyed or foreign handle is undefined behaviour.
+	struct Landscape;
+	using LandscapeHandle = Landscape*;
+}
+namespace pr::physics::terrain::landscape::shared
+{
+	// The shader-ready landscape recipe, defined in 'pr/physics/terrain/landscape/baseline_types.hlsli'.
+	struct BaselineRecipe;
+}
+namespace pr::physics
+{
 
 	enum class EStatus : std::int32_t
 	{
@@ -574,6 +586,16 @@ namespace pr::physics
 		std::uint32_t reserved;
 	};
 
+	// One landscape sample: height in metres, dimensionless XY height derivatives, and the surface material.
+	struct SurfaceSampleDesc
+	{
+		double height;
+		Vector2d gradient;
+		std::int32_t material_id;
+		std::uint32_t reserved;
+	};
+	static_assert(sizeof(SurfaceSampleDesc) == 32);
+
 	// Infinite-height inward cylinder and surface-sample spacing; all distances are metres.
 	struct CylindricalBoundaryDesc
 	{
@@ -1056,6 +1078,18 @@ extern "C"
 	// sharpness; a wind sea (see Physics_EngineWaterWindSeaSet) supplies the local values. Steepness is zero. Fails when more than 'capacity'
 	// elements are needed.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_WaveSpectrumElements(pr::physics::WaveSpectrumDesc const* spectrum, pr::physics::Vector4 const* rows, std::int32_t row_count, float min_wavelength, pr::physics::WaterElement* elements, std::int32_t capacity, std::int32_t* element_count);
+
+	// Create an immutable landscape from 'desc' without an engine or GPU device. 'desc->surface_spacing' is not used.
+	// The landscape is safe to sample from many threads at once. Destroy it with Physics_LandscapeDestroy.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_LandscapeCreate(pr::physics::TerrainDesc const* desc, pr::physics::LandscapeHandle* landscape);
+	PHYSICS_API void __stdcall Physics_LandscapeDestroy(pr::physics::LandscapeHandle landscape);
+
+	// Copy the landscape's recipe, for evaluating the surface with 'baseline_surface.hlsli' on the CPU or in a shader.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_LandscapeRecipe(pr::physics::LandscapeHandle landscape, pr::physics::terrain::landscape::shared::BaselineRecipe* recipe);
+
+	// Sample 'count' XY positions in metres, given as consecutive (x, y) pairs in 'positions_xy'. Fails with InvalidArgument if any position is
+	// not finite, is outside the landscape's supported coordinate range, or exceeds supported arithmetic; the contents of 'samples' are then undefined.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_LandscapeSample(pr::physics::LandscapeHandle landscape, double const* positions_xy, pr::physics::SurfaceSampleDesc* samples, std::uint32_t count);
 
 	// Material properties.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_MaterialGet(pr::physics::EngineHandle engine, std::int32_t material_id, pr::physics::MaterialProperties* material);
