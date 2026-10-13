@@ -376,6 +376,10 @@ namespace pr::compute::tests
 			auto addr_8 = job.m_upload.Add(item, 8, true).VirtualAddress();
 			PR_EXPECT(addr_8 % 8 == 0 && addr_8 != addr_4);
 
+			// Invalid alignments are rejected even when the item would be a cache hit
+			PR_THROWS(job.m_upload.Add(CollisionA, 0, true), std::runtime_error);
+			PR_THROWS(job.m_upload.Add(CollisionA, 12, true), std::runtime_error);
+
 			// Complete the job so the upload buffer's pending sync point is signalled before it is destroyed
 			job.Run();
 		}

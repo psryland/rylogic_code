@@ -121,12 +121,8 @@ namespace pr::compute
 		// Allocate some upload buffer space
 		Allocation Alloc(int64_t size, int alignment)
 		{
-			if (alignment <= 0)
-				throw std::runtime_error("Alloc alignment must be a positive power of two");
-			if (alignment > m_blk_align)
-				throw std::runtime_error("Cannot use alignment larger than the block alignment");
-
 			// Make sure there's space
+			CheckAlignment(alignment);
 			EnsureCapacity(size, alignment);
 			auto& block = m_used.back();
 
@@ -158,7 +154,8 @@ namespace pr::compute
 		template <typename Item>
 		GpuAddress Add(Item const& item, int alignment, bool might_reuse) requires (std::is_trivially_copyable_v<Item> && std::is_standard_layout_v<Item>)
 		{
-			// Reuse an identical upload made since the last sync point
+			// Reuse an identical upload made since the last sync point. The cache test uses 'alignment' as a divisor, so validate it first.
+			CheckAlignment(alignment);
 			auto bytes = std::as_bytes(std::span{ &item, 1 });
 			if (might_reuse)
 			{
@@ -240,6 +237,16 @@ namespace pr::compute
 		ID3D12Device* device() const
 		{
 			return m_gsync->D3DDevice();
+		}
+
+		// Throw unless 'alignment' is a positive power of two no larger than the block alignment.
+		void CheckAlignment(int alignment) const
+		{
+			// Padding and the reuse test both require a non-zero power-of-two divisor that blocks can satisfy
+			if (alignment <= 0 || (alignment & (alignment - 1)) != 0)
+				throw std::runtime_error("Upload alignment must be a positive power of two");
+			if (alignment > m_blk_align)
+				throw std::runtime_error("Cannot use alignment larger than the block alignment");
 		}
 
 		// Make sure there is room in the buffers for 'sz' bytes of shader constant data.
