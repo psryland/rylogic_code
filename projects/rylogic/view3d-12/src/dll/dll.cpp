@@ -2165,6 +2165,7 @@ VIEW3D_API view3d::ShadowSettings __stdcall View3D_ShadowSettingsGet(view3d::Win
 			.m_cascade_count = s.m_cascade_count,
 			.m_shadow_distance = s.m_shadow_distance,
 			.m_cascade_split_blend = s.m_cascade_split_blend,
+			.m_first_cascade_distance = s.m_first_cascade_distance,
 			.m_filter_size = s.m_filter_size,
 			.m_depth_bias = s.m_depth_bias,
 			.m_slope_bias = s.m_slope_bias,
@@ -2190,6 +2191,7 @@ VIEW3D_API void __stdcall View3D_ShadowSettingsSet(view3d::Window window, view3d
 		s.m_cascade_count = settings.m_cascade_count;
 		s.m_shadow_distance = settings.m_shadow_distance;
 		s.m_cascade_split_blend = settings.m_cascade_split_blend;
+		s.m_first_cascade_distance = settings.m_first_cascade_distance;
 		s.m_filter_size = settings.m_filter_size;
 		s.m_depth_bias = settings.m_depth_bias;
 		s.m_slope_bias = settings.m_slope_bias;

@@ -787,7 +787,8 @@ namespace pr
 			int   m_cascade_count;          // The number of cascades for directional lights, in [1,4]
 			float m_shadow_distance;        // Distance from the camera beyond which directional lights cast no shadows. Shadows fade out over the last 10% of this distance. Zero means fit to the shadow casters
 			float m_cascade_split_blend;    // Cascade split distribution in [0,1]. 0 = even spacing, 1 = logarithmic spacing
-			int   m_filter_size;            // Width of the shadow edge filter (in shadow texels). Either 5 or 7
+			float m_first_cascade_distance; // Distance from the camera to the far end of the first cascade. Zero means the first cascade is spaced like the others
+			int   m_filter_size;             // Width of the shadow edge filter (in shadow texels). Either 5 or 7
 			int   m_depth_bias;             // Constant depth bias (in units of the smallest depth step)
 			float m_slope_bias;             // Depth bias scaled by the depth slope of each triangle
 			float m_normal_bias;            // Receiver offset along the surface normal (in shadow texels)

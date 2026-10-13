@@ -1200,6 +1200,9 @@ namespace Rylogic.Gfx
 			/// <summary>Cascade split distribution in [0,1]. 0 = even spacing, 1 = logarithmic spacing (more detail near the camera)</summary>
 			public float CascadeSplitBlend;
 
+			/// <summary>Distance from the camera to the far end of the first cascade. The other cascades share the rest of the range. Zero means the first cascade is spaced like the others</summary>
+			public float FirstCascadeDistance;
+
 			/// <summary>Width of the shadow edge filter (in shadow texels). Either 5 or 7</summary>
 			public int FilterSize;
 
@@ -1228,6 +1231,7 @@ namespace Rylogic.Gfx
 					CascadeCount = 3,
 					ShadowDistance = 0.0f,
 					CascadeSplitBlend = 0.9f,
+					FirstCascadeDistance = 0.0f,
 					FilterSize = 5,
 					DepthBias = 0,
 					SlopeBias = 2.0f,

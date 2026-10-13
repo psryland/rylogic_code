@@ -28,7 +28,8 @@ namespace pr::rdr12
 		int   m_cascade_count;          // The number of cascades for directional lights, in [1, MaxShadowCascades]
 		float m_shadow_distance;        // Distance from the camera beyond which directional lights cast no shadows. Shadows fade out over the last 10% of this distance. Zero means fit to the shadow casters
 		float m_cascade_split_blend;    // Cascade split distribution in [0,1]. 0 = even spacing, 1 = logarithmic spacing (more detail near the camera)
-		int   m_filter_size;            // Width of the shadow edge filter (in shadow texels). Either 5 or 7
+		float m_first_cascade_distance; // Distance from the camera to the far end of the first cascade. The other cascades share the rest of the range. Zero means the first cascade is spaced like the others
+		int   m_filter_size;             // Width of the shadow edge filter (in shadow texels). Either 5 or 7
 		int   m_depth_bias;             // Constant depth bias applied when rendering shadow depth (in units of the smallest depth step)
 		float m_slope_bias;             // Depth bias scaled by the depth slope of each triangle
 		float m_normal_bias;            // Distance to move receiver positions along their normal before the shadow test (in shadow texels)
@@ -43,6 +44,7 @@ namespace pr::rdr12
 			,m_cascade_count(3)
 			,m_shadow_distance(0.0f)
 			,m_cascade_split_blend(0.9f)
+			,m_first_cascade_distance(0.0f)
 			,m_filter_size(5)
 			,m_depth_bias(0)
 			,m_slope_bias(2.0f)
@@ -104,9 +106,10 @@ namespace pr::rdr12
 	// texels so shadows do not shimmer when the camera moves. Point and spot light views are sized by how much of the screen the light covers.
 	void BuildShadowViews(std::span<Light const> lights, BBox const& caster_bounds, ShadowCamera const& camera, ShadowSettings const& settings, ShadowViewSet& out);
 
-	// Return the distances from the camera to the cascade boundaries for 'count' cascades over [zn, zf]. 'out' receives 'count + 1' values.
-	// 'blend' mixes even spacing (0) with logarithmic spacing (1).
-	void ShadowCascadeSplits(float zn, float zf, int count, float blend, std::span<float> out);
+	// Return the distances from the camera to the cascade boundaries for at most 'count' cascades over [zn, zf], and return the number of cascades used.
+	// 'out' receives one more value than the returned count. 'blend' mixes even spacing (0) with logarithmic spacing (1). When 'first' is greater
+	// than 'zn', the first cascade ends at 'first' (or at 'zf', as the only cascade) and the remaining cascades are spaced over the rest of the range.
+	int ShadowCascadeSplits(float zn, float zf, int count, float blend, float first, std::span<float> out);
 
 	// Assign square atlas regions for views with the requested sizes. Sizes are rounded down to powers of two and clamped to the atlas size.
 	// When the views do not fit, the largest views are halved until they do. The result is deterministic for the same inputs.
@@ -291,12 +294,23 @@ namespace pr::rdr12::tests
 		// Cascade splits cover the range in increasing order, and blend between even and logarithmic spacing
 		{
 			float splits[4];
-			ShadowCascadeSplits(1.0f, 1000.0f, 3, 0.0f, splits);
+			PR_EXPECT(ShadowCascadeSplits(1.0f, 1000.0f, 3, 0.0f, 0.0f, splits) == 3);
 			PR_EXPECT(FEql(splits[0], 1.0f) && FEql(splits[1], 334.0f) && FEql(splits[2], 667.0f) && FEql(splits[3], 1000.0f));
-			ShadowCascadeSplits(1.0f, 1000.0f, 3, 1.0f, splits);
+			ShadowCascadeSplits(1.0f, 1000.0f, 3, 1.0f, 0.0f, splits);
 			PR_EXPECT(FEql(splits[1], 10.0f) && FEql(splits[2], 100.0f) && FEql(splits[3], 1000.0f));
-			ShadowCascadeSplits(1.0f, 1000.0f, 3, 0.5f, splits);
+			ShadowCascadeSplits(1.0f, 1000.0f, 3, 0.5f, 0.0f, splits);
 			PR_EXPECT(FEql(splits[1], 172.0f) && FEql(splits[2], 383.5f));
+		}
+
+		// A fixed first cascade ends at the given distance and the others share the rest of the range. It covers everything when it reaches the far end.
+		{
+			float splits[4];
+			PR_EXPECT(ShadowCascadeSplits(0.1f, 1000.0f, 3, 1.0f, 10.0f, splits) == 3);
+			PR_EXPECT(FEql(splits[0], 0.1f) && FEql(splits[1], 10.0f) && FEql(splits[2], 100.0f) && FEql(splits[3], 1000.0f));
+			PR_EXPECT(ShadowCascadeSplits(0.1f, 5.0f, 3, 1.0f, 10.0f, splits) == 1);
+			PR_EXPECT(FEql(splits[0], 0.1f) && FEql(splits[1], 5.0f));
+			PR_EXPECT(ShadowCascadeSplits(20.0f, 1000.0f, 2, 1.0f, 10.0f, splits) == 2);
+			PR_EXPECT(FEql(splits[0], 20.0f) && FEql(splits[2], 1000.0f));
 		}
 
 		// Directional lights get cascades when the casters extend beyond what the first cascade covers.
