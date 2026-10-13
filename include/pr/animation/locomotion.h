@@ -53,7 +53,7 @@ namespace pr::animation
 		xform model_to_world = xform::Identity();
 		v4 velocity = {};           // Linear velocity (w = 0)
 		v4 angular_velocity = {};   // Axis * radians per second (w = 0)
-		bool supported = true;      // False while the body is not resting on the ground, for example when falling
+		bool supported = true;      // False while the body is not resting on the ground, for example when falling. Brief losses are ignored, see 'Locomotion::AirborneDelay'.
 	};
 
 	// What a walking limb's foot is doing
@@ -119,6 +119,7 @@ namespace pr::animation
 			, m_look(v4::Origin())
 			, m_look_weight(0.0f)
 			, m_phase(0.0f)
+			, m_unsupported_s(0.0f)
 			, m_started(false)
 		{
 			// Reject gaits that do not fit the rig at the construction boundary so that stepping can rely on them
@@ -237,6 +238,11 @@ namespace pr::animation
 				m_started = true;
 			}
 
+			// Contact with the ground can drop out for a moment, for example as the body bumps over uneven ground, while the feet are still on it.
+			// Only a support loss that lasts longer than 'AirborneDelay' lifts the feet off the ground, so brief losses do not interrupt the stepping.
+			m_unsupported_s = body.supported ? 0.0f : m_unsupported_s + dt;
+			auto airborne = m_unsupported_s > AirborneDelay;
+
 			// Measure the speed that the feet must keep up with, including turning on the spot. The family's slowest cycle sets what counts as moving.
 			auto const& family = m_gait.families[m_family];
 			auto const& slowest = family.cycles.front();
@@ -244,7 +250,7 @@ namespace pr::animation
 			auto horizontal = body.velocity - up * Dot(body.velocity, up);
 			auto turn = Dot(body.angular_velocity, up) * TurnRadius();
 			auto speed = Sqrt(LengthSq(horizontal) + Sqr(turn));
-			auto moving = body.supported && speed >= StandSpeedFraction * slowest.speed;
+			auto moving = !airborne && speed >= StandSpeedFraction * slowest.speed;
 
 			// The cycle blend and the body motion follow a smoothed speed, so that footfall timing and body motion change gradually
 			m_gait_speed += ((moving ? speed : 0.0f) - m_gait_speed) * std::min(dt / BodyResponse, 1.0f);
@@ -254,7 +260,7 @@ namespace pr::animation
 			UpdateLimbs();
 
 			// Advance the cycle. A standing body that is out of place steps at the slowest cycle's cadence.
-			auto cadence = !body.supported ? 0.0f : moving ? speed / Stride(family, speed) : NeedsSettling() ? slowest.speed / slowest.stride : 0.0f;
+			auto cadence = airborne ? 0.0f : moving ? speed / Stride(family, speed) : NeedsSettling() ? slowest.speed / slowest.stride : 0.0f;
 			auto dphase = cadence * dt;
 			m_phase = Frac(m_phase + dphase);
 
@@ -262,7 +268,7 @@ namespace pr::animation
 			m_landings.clear();
 			m_probe_points.clear();
 			for (int i = 0, iend = static_cast<int>(m_limbs.size()); i != iend; ++i)
-				AdvanceLimb(i, body, moving, cadence, dphase);
+				AdvanceLimb(i, body, airborne, moving, cadence, dphase);
 
 			// Aim the swinging feet at the ground beneath their predicted landings
 			auto hits = ProbeGround(ground);
@@ -305,6 +311,9 @@ namespace pr::animation
 
 		// The fraction of the slowest cycle's speed below which the body is standing
 		static constexpr float StandSpeedFraction = 0.1f;
+
+		// How long, in seconds, the body must be continuously unsupported before its feet leave the ground
+		static constexpr float AirborneDelay = 0.1f;
 
 		// The fraction of the slowest cycle's stride that a planted foot may be from its neutral position before a standing body steps
 		static constexpr float SettleFraction = 0.15f;
@@ -377,7 +386,8 @@ namespace pr::animation
 		v4 m_look;                  // World-space look point
 		Fade m_look_weight;         // How strongly the necks face 'm_look'
 		float m_phase;              // The step cycle position in [0,1)
-		bool m_started;             // False until the feet have been planted
+		float m_unsupported_s;      // How long the body has been continuously unsupported, in seconds
+		bool m_started;              // False until the feet have been planted
 
 		// Return the fractional part of 'x'
 		static float Frac(float x)
@@ -680,12 +690,12 @@ namespace pr::animation
 		}
 
 		// Advance limb 'i' through its stance and swing. A swinging foot that still needs a landing adds its query to 'm_probe_points'.
-		void AdvanceLimb(int i, BodyState const& body, bool moving, float cadence, float dphase)
+		void AdvanceLimb(int i, BodyState const& body, bool airborne, bool moving, float cadence, float dphase)
 		{
-			// An unsupported body holds its feet beneath it in the stance. On regaining support, the feet swing down to the ground.
+			// An airborne body holds its feet beneath it in the stance. On regaining support, the feet swing down to the ground.
 			auto& limb = m_limbs[i];
 			auto duty = limb.footfall.duty;
-			if (!body.supported)
+			if (airborne)
 			{
 				limb.state = EFootState::Air;
 				limb.foot = body.model_to_world * m_families[m_family].stance_model[m_rig.chains[limb.chain].bones.back()];
@@ -995,6 +1005,42 @@ namespace pr::animation::tests
 				PR_EXPECT(limb.state == EFootState::Stance);
 				PR_EXPECT(Length((limb.ground - neutral).w0()) <= 0.15f * walk.stride + 1e-4f);
 			}
+		}
+		PRUnitTestMethod(BriefSupportLossKeepsFeetPlanted, Quick)
+		{
+			// A walking body that loses support for single steps keeps its planted feet fixed, but a sustained loss lifts every foot into the air
+			auto rig = TestRig();
+			auto gait = TestGait();
+			auto const& walk = gait.families[0].cycles[0];
+			auto loco = Locomotion(rig, gait);
+			auto ground = TestGround();
+			auto dt = 1.0f / 60;
+			auto body = BodyState{ .velocity = v4(0, -walk.speed, 0, 0) };
+			loco.Step(0, body, ground);
+			auto previous = std::vector<LimbState>();
+			for (int i = 0; i != 120; ++i)
+			{
+				// Drop support on every fourth step
+				previous.assign(loco.limbs().begin(), loco.limbs().end());
+				body.model_to_world.pos += body.velocity * dt;
+				body.supported = i % 4 != 3;
+				loco.Step(dt, body, ground);
+				for (size_t l = 0; l != previous.size(); ++l)
+				{
+					auto const& limb = loco.limbs()[l];
+					PR_EXPECT(limb.state != EFootState::Air);
+					if (limb.state == EFootState::Stance && previous[l].state == EFootState::Stance)
+						PR_EXPECT(FEqlAbsolute(limb.foot, previous[l].foot, 1e-6f));
+				}
+			}
+
+			// A loss that lasts longer than the delay is a fall
+			body.supported = false;
+			for (int i = 0; i != 10; ++i)
+				loco.Step(dt, body, ground);
+
+			for (auto const& limb : loco.limbs())
+				PR_EXPECT(limb.state == EFootState::Air);
 		}
 		PRUnitTestMethod(SlopePitchesBody, Quick)
 		{
