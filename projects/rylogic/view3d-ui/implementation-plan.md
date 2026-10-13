@@ -446,12 +446,13 @@ Current placement and overflow contract:
 - Layout, drawing, and semantic bounds are viewport-relative DIPs. Client-pixel input and accessibility bounds include the viewport offset and client/target ratio.
   Updating viewport dimensions or DPI recomputes placement from authored values, rather than scaling the previous layout.
 
-Current native API version is `0x00080000`, and every wire struct header uses version `8`. `ControlDesc::visibility` is a signed 32-bit `EVisibility`
+Current native API version is `0x00090000`, and every wire struct header uses version `9`. `ControlDesc::visibility` is a signed 32-bit `EVisibility`
 at the former boolean field's offset; unchanged byte size does not make version-3 callers compatible. `ControlDesc::masked != 0` is an appended
 TextBox-only password flag; zero-initialised older descriptors remain unmasked only when submitted through the current struct version. The private View3D
 host bridge version is unchanged.
 ABI 8 appends ComboBox item encoding: `Transaction::combo_box_items`, `Transaction::combo_box_item_count`, `ControlDesc::combo_item_offset`,
 `combo_item_count`, `selected_index`, and `max_visible_items`, plus the `ComboBoxItem` struct. Native clients and managed mirrors must refresh together.
+ABI 9 appends `StyleVisual::thumb`, the Slider thumb colour, which changes the size of `StyleDesc`.
 Managed callers use `UiControlDesc.Visibility`; replace old `true` with `EVisibility.Visible` and old `false` with `EVisibility.Hidden` to preserve behavior.
 Choose `Collapsed` explicitly when controls should stop reserving space. The native demonstration and existing tests preserve their former Visible/Hidden intent.
 JSON schema version `2` uses `"visibility": "Visible" | "Hidden" | "Collapsed"` (default Visible); schema version `1` and the boolean `visible` property are rejected.
@@ -501,8 +502,9 @@ The event keeps the context-wide accepted revision and monotonic sequence orderi
 The application validates/normalizes the proposal, then reconciles by submitting its chosen value in a later transaction. Until that transaction is accepted,
 drawing and semantics continue to expose the previous accepted value.
 
-The default lookless template supplies `PART_Track` and `PART_Thumb`. The track uses `StyleVisual::fill`; the accepted-range indicator and thumb use
-`StyleVisual::foreground`, with no custom draw callback. Slider participates in normal hover, pressed, focused, disabled, visibility, DPI, layout, and Tab-order
+The default lookless template supplies `PART_Track` and `PART_Thumb`. The track uses `StyleVisual::fill`; the accepted-range indicator uses
+`StyleVisual::foreground` and the thumb uses `StyleVisual::thumb`, with no custom draw callback. The indicator is inset within the border, rounds its left end
+to the track's inner corner radius, and extends to the thumb centre so no track shows between them. Slider participates in normal hover, pressed, focused, disabled, visibility, DPI, layout, and Tab-order
 behaviour. Disabled sliders are not hit-test targets and advertise no SetValue semantic action. SemanticNode exposes Slider role, accepted range/value/step, and
 SetValue/Focus actions. UI Automation maps it to Slider with a writable RangeValue pattern while enabled and a read-only pattern while disabled.
 

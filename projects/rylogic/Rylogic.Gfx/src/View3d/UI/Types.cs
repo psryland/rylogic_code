@@ -660,11 +660,14 @@ public readonly struct Colour : IEquatable<Colour>
 		public readonly float m_corner_radius;
 		public readonly float m_opacity;
 
-		/// <summary>ProgressBar indicator colour; m_fill remains the track colour.</summary>
+		/// <summary>ProgressBar and Slider indicator colour; m_fill remains the track colour.</summary>
 		public readonly Colour m_foreground;
 
+		/// <summary>Slider thumb colour, drawn over the indicator.</summary>
+		public readonly Colour m_thumb;
+
 		/// <summary>Create a state-channel visual.</summary>
-		public StyleVisual(Colour fill, Colour border_colour = default, float border_thickness = 0, float corner_radius = 0, float opacity = 1, Colour foreground = default)
+		public StyleVisual(Colour fill, Colour border_colour = default, float border_thickness = 0, float corner_radius = 0, float opacity = 1, Colour foreground = default, Colour thumb = default)
 		{
 			m_fill = fill;
 			m_border_colour = border_colour;
@@ -672,12 +675,13 @@ public readonly struct Colour : IEquatable<Colour>
 			m_corner_radius = corner_radius;
 			m_opacity = opacity;
 			m_foreground = foreground;
+			m_thumb = thumb;
 		}
 
 		/// <inheritdoc/>
 		public bool Equals(StyleVisual other)
 		{
-			return m_fill == other.m_fill && m_border_colour == other.m_border_colour && m_border_thickness == other.m_border_thickness && m_corner_radius == other.m_corner_radius && m_opacity == other.m_opacity && m_foreground == other.m_foreground;
+			return m_fill == other.m_fill && m_border_colour == other.m_border_colour && m_border_thickness == other.m_border_thickness && m_corner_radius == other.m_corner_radius && m_opacity == other.m_opacity && m_foreground == other.m_foreground && m_thumb == other.m_thumb;
 		}
 
 		/// <inheritdoc/>
@@ -686,7 +690,7 @@ public readonly struct Colour : IEquatable<Colour>
 		/// <inheritdoc/>
 		public override int GetHashCode()
 		{
-			return HashUtil.Combine(m_fill, m_border_colour, m_border_thickness, m_corner_radius, m_opacity, m_foreground);
+			return HashUtil.Combine(m_fill, m_border_colour, m_border_thickness, m_corner_radius, m_opacity, m_foreground, m_thumb);
 		}
 
 		/// <summary>Compare two state-channel visuals.</summary>

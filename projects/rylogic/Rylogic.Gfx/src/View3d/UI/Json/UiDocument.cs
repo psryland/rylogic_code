@@ -269,6 +269,7 @@ public sealed class UiDocument
 			writer.WriteNumber("corner_radius", visual.m_corner_radius);
 			writer.WriteNumber("opacity", visual.m_opacity);
 			writer.WriteString("foreground", FormatColour(visual.m_foreground));
+			writer.WriteString("thumb", FormatColour(visual.m_thumb));
 			writer.WriteEndObject();
 
 			var transition = style.GetTransition(channel);
@@ -592,7 +593,8 @@ public sealed class UiDocument
 					border_thickness: GetFloat(visual_element, "border_thickness", visual_path, 0),
 					corner_radius: GetFloat(visual_element, "corner_radius", visual_path, 0),
 					opacity: GetFloat(visual_element, "opacity", visual_path, 1),
-					foreground: ParseColour(visual_element, "foreground", visual_path, Colour.TransparentBlack)
+					foreground: ParseColour(visual_element, "foreground", visual_path, Colour.TransparentBlack),
+					thumb: ParseColour(visual_element, "thumb", visual_path, Colour.TransparentBlack)
 				));
 			}
 			if (state.TryGetProperty("transition", out var transition_element))

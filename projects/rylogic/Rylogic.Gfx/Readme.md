@@ -184,7 +184,7 @@ The accepted descriptor remains authoritative. Click-to-position, captured drag,
 on culture. The proposal retains normal accepted-revision and event-sequence ordering and coalesces per slider. Apply the accepted/normalized value in a later
 transaction; until then visuals and semantics continue to report the previous `UiControlDesc.Value`.
 
-The built-in template uses `PART_Track` and `PART_Thumb`. Style `fill` paints the track and `foreground` paints the accepted-range indicator and thumb. Slider uses
+The built-in template uses `PART_Track` and `PART_Thumb`. Style `fill` paints the track, `foreground` paints the accepted-range indicator, and `thumb` paints the thumb. Slider uses
 the normal layout/DPI, focus traversal, hover/pressed/focused/disabled channels, pointer capture, and visibility model. Disabled sliders emit no proposals.
 `UiSemanticNode` reports `Role = EControlType.Slider`, accepted `RangeValue`, `RangeMinimum`, `RangeMaximum`, `RangeStep`, and SetValue/Focus actions.
 UI Automation exposes Slider with RangeValue; disabled state makes it read-only.
@@ -206,4 +206,4 @@ Schema version `2` represents visibility as `"visibility": "Visible"`, `"Hidden"
 Schema version `1` and the old `"visible"` boolean are rejected, not automatically converted.
 ProgressBar adds optional `"value": 0.25`, `"is_indeterminate": true`, and style visual `"foreground": "#00FF00FF"` properties within schema 2;
 no existing property changes meaning. Canonical serialization writes these fields explicitly.
-Slider adds optional `"minimum"`, `"maximum"`, and `"step"` alongside `"value"` within schema 2; canonical serialization writes them explicitly.
+Slider adds optional `"minimum"`, `"maximum"`, and `"step"` alongside `"value"`, and style visual `"thumb"`, within schema 2; canonical serialization writes them explicitly.

@@ -15,8 +15,8 @@
 
 namespace pr::view3d::ui
 {
-	inline constexpr std::uint32_t VIEW3D_UI_API_VERSION = 0x00080000U;
-	inline constexpr std::uint32_t VIEW3D_UI_STRUCT_VERSION = 8U;
+	inline constexpr std::uint32_t VIEW3D_UI_API_VERSION = 0x00090000U;
+	inline constexpr std::uint32_t VIEW3D_UI_STRUCT_VERSION = 9U;
 
 	// Maximum named parts recorded directly within one TemplateDesc. Bounded so the descriptor
 	// stays fixed-layout; the closed template vocabulary (section 6.3) never needs more than this.
@@ -708,8 +708,11 @@ namespace pr::view3d::ui
 		float corner_radius;
 		float opacity;
 
-		// ProgressBar indicator colour; 'fill' remains the track colour. Ignored by other types.
+		// ProgressBar and Slider indicator colour; 'fill' remains the track colour. Ignored by other types.
 		Colour foreground;
+
+		// Slider thumb colour, drawn over the indicator. Ignored by other types.
+		Colour thumb;
 	};
 
 	// Bounded, host-time-driven visual transition applied when a control's active state channel

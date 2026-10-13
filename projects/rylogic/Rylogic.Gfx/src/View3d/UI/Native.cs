@@ -9,8 +9,8 @@ namespace Rylogic.Gfx.UI;
 internal static unsafe class Native
 {
 	internal const string Dll = "view3d-ui";
-	internal const uint ApiVersion = 0x00080000U;
-	internal const uint StructVersion = 8U;
+	internal const uint ApiVersion = 	0x00090000U;
+		internal const uint StructVersion = 9U;
 	private static IntPtr m_module;
 
 	/// <summary>Load the configuration-appropriate native runtime before the first P/Invoke.</summary>

@@ -278,7 +278,7 @@ namespace pr::view3d::ui
 			rec.desc.id = 0;
 			for (auto i = std::size_t{}; i != static_cast<std::size_t>(EStateChannel::Count); ++i)
 			{
-				rec.desc.visuals[i] = StyleVisual{ Colour{0.82f, 0.82f, 0.82f, 1.0f}, Colour{0.4f, 0.4f, 0.4f, 1.0f}, 1.0f, 0.0f, 1.0f, Colour{0.2f, 0.45f, 0.8f, 1.0f} };
+				rec.desc.visuals[i] = StyleVisual{ Colour{0.82f, 0.82f, 0.82f, 1.0f}, Colour{0.4f, 0.4f, 0.4f, 1.0f}, 1.0f, 0.0f, 1.0f, Colour{0.2f, 0.45f, 0.8f, 1.0f}, Colour{0.95f, 0.95f, 0.95f, 1.0f} };
 				rec.desc.transitions[i] = TransitionDesc{ 0.0f, EEasing::Linear };
 			}
 			return rec;

@@ -134,6 +134,7 @@ namespace pr::view3d::ui
 			Lerp(from.corner_radius, target.corner_radius, eased_t),
 			Lerp(from.opacity, target.opacity, eased_t),
 			Lerp(from.foreground, target.foreground, eased_t),
+			Lerp(from.thumb, target.thumb, eased_t),
 		};
 	}
 
