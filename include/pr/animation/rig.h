@@ -37,16 +37,80 @@ namespace pr::animation
 		Right,
 	};
 
-	// A bone's rotation limit relative to its parent, in the rest pose.
-	//  - Tail chains pass limits to FABRIK, where they limit the bone's direction (see fabrik.h).
-	//  - Neck chains support 'None' and 'Cone' only. A cone limits the bone's total rotation from its rest orientation relative to its parent.
+	// A bone's rotation limit relative to its rest orientation under its parent.
+	//  - The bone's rotation from rest is split into a swing and a twist. The twist is the rotation about the bone's own +Y axis. The swing then moves
+	//    the bone's +Y axis, and is limited about the bone's rest +X and +Z axes (see 'fabrik::SwingLimit'). So a hinge is a swing range on one axis
+	//    with a zero-width range on the other, and a ball joint such as a hip or shoulder uses both swing ranges and a twist range.
+	//  - Bone roll decides the swing axes, so roll a bone until its rest +X axis is the main bend axis of its joint.
+	//  - Every range must lie in [-pi, pi] and contain zero, so the rest pose is always allowed. The default allows any rotation.
+	//  - Tail chains pass the swing limit to FABRIK, which only solves bone directions and so ignores twist (see fabrik.h).
+	//  - Neck chains limit both swing and twist.
 	//  - Other chains ignore limits.
 	struct JointLimit
 	{
-		fabrik::ELimit kind = fabrik::ELimit::None;
-		v4 axis = {};             // Hinge axis in rest-pose model space (unit, w = 0, perpendicular to the bone)
-		float min_angle = 0.0f;   // Hinge: the minimum signed angle (radians)
-		float max_angle = 0.0f;   // Cone: the half-angle (radians). Hinge: the maximum signed angle (radians).
+		static constexpr float pi = math::constants<float>::tau_by_2;
+
+		fabrik::SwingLimit<float> swing;  // The allowed swing of the bone's +Y axis about its rest +X and +Z axes
+		float min_twist = -pi;            // The allowed twist (radians) about the bone's +Y axis
+		float max_twist = +pi;
+
+		// True if the limit allows any rotation
+		bool IsFree() const
+		{
+			return swing.IsFree() && min_twist <= -pi && max_twist >= pi;
+		}
+
+		// True if the ranges are within [-pi, pi] and contain zero
+		bool IsValid() const
+		{
+			return swing.IsValid() && -pi <= min_twist && min_twist <= 0 && 0 <= max_twist && max_twist <= pi;
+		}
+
+		// A bone rotation split into a swing vector (radians about the bone's +X and +Z axes, see 'fabrik::SwingLimit') and a twist about +Y
+		struct SwingTwist
+		{
+			v2 swing;
+			float twist;
+		};
+
+		// Split 'rot', a rotation from the rest orientation in bone space ('~rest.rot * local.rot'), into its swing and twist. 'rot' is 'swing * twist'.
+		static SwingTwist Decompose(quat rot)
+		{
+			// Use the positive-w form so that the twist angle is within [-pi, pi]
+			if (rot.w < 0)
+				rot = quat(-rot.x, -rot.y, -rot.z, -rot.w);
+
+			// The twist is the part of the rotation about +Y. When that part is zero the bone is swung by pi, and the twist is taken as zero.
+			auto twist_len = std::sqrt(rot.y * rot.y + rot.w * rot.w);
+			auto twist = twist_len > 0 ? quat(0, rot.y / twist_len, 0, rot.w / twist_len) : Identity<quat>();
+			auto twist_angle = 2.0f * std::atan2(twist.y, twist.w);
+
+			// The swing is what remains. Its axis is in the bone's XZ plane, and its w is not negative.
+			auto sw = rot * ~twist;
+			auto sin_half = std::sqrt(sw.x * sw.x + sw.z * sw.z);
+			auto swing_angle = 2.0f * std::atan2(sin_half, sw.w);
+			auto scale = sin_half > 0 ? swing_angle / sin_half : 2.0f;
+			return SwingTwist{ .swing = v2(sw.x * scale, sw.z * scale), .twist = twist_angle };
+		}
+
+		// Combine a swing and twist into a rotation from the rest orientation in bone space. The inverse of 'Decompose'.
+		static quat Compose(SwingTwist st)
+		{
+			// Build the swing from its swing vector, then apply the twist first
+			auto swing_angle = Length(st.swing);
+			auto swing_rot = swing_angle > 0 ? quat(v4(st.swing.x / swing_angle, 0, st.swing.y / swing_angle, 0), swing_angle) : Identity<quat>();
+			return Normalise(swing_rot * quat(v4::YAxis(), st.twist));
+		}
+
+		// Return the allowed rotation nearest to 'rot', a rotation from the rest orientation in bone space. The swing and twist are clamped separately.
+		quat Clamp(quat rot) const
+		{
+			// Clamp each part within its own range
+			auto st = Decompose(rot);
+			st.swing = swing.Clamp(st.swing);
+			st.twist = math::Clamp(st.twist, min_twist, max_twist);
+			return Compose(st);
+		}
 	};
 
 	// One bone of the skeleton
@@ -124,20 +188,21 @@ namespace pr::animation
 		auto const& last = rest_model[chain.bones.back()];
 		positions[count] = last * v4(0, bones[chain.bones.back()].length, 0, 1);
 
-		// One FABRIK joint per position, each with the limit and stiffness of the bone that ends there
+		// One FABRIK joint per position, each with the limit and stiffness of the bone that ends there.
+		// The swing axis is the bone's rest +X axis, made exactly perpendicular to the link in case the link is not along the bone's +Y axis.
 		std::vector<fabrik::Joint<float>> joints(count + 1);
 		for (int k = 1; k <= count; ++k)
 		{
 			auto const& bone = bones[chain.bones[k - 1]];
 			auto offset = positions[k] - positions[k - 1];
+			auto rest_dir = Normalise(offset);
+			auto bone_x = Rotate(rest_model[chain.bones[k - 1]].rot, v4::XAxis());
 			joints[k] = fabrik::Joint<float>{
 				.parent = k - 1,
-				.rest_dir = Normalise(offset),
+				.rest_dir = rest_dir,
 				.length = Length(offset),
-				.limit = bone.limit.kind,
-				.axis = bone.limit.axis,
-				.min_angle = bone.limit.min_angle,
-				.max_angle = bone.limit.max_angle,
+				.swing_axis = Normalise(bone_x - rest_dir * Dot(bone_x, rest_dir), Perpendicular(rest_dir)),
+				.limit = bone.limit.swing,
 				.stiffness = bone.stiffness,
 			};
 		}
@@ -151,7 +216,6 @@ namespace pr::animation
 		auto const& bones = desc.bones;
 		auto const& chains = desc.chains;
 		auto bone_count = static_cast<int>(bones.size());
-		auto pi = math::constants<float>::tau / 2;
 
 		// Check each bone on its own
 		if (bones.empty())
@@ -180,34 +244,9 @@ namespace pr::animation
 			if (bone.stiffness < 0 || bone.stiffness > 1)
 				errors.push_back(std::format("Bone '{}' has stiffness outside [0,1]", bone.name));
 
-			// The limit parameters must suit the limit kind
-			switch (bone.limit.kind)
-			{
-				case fabrik::ELimit::None:
-				{
-					break;
-				}
-				case fabrik::ELimit::Cone:
-				{
-					if (!(bone.limit.max_angle > 0 && bone.limit.max_angle <= pi))
-						errors.push_back(std::format("Bone '{}' has a cone limit outside (0, pi]", bone.name));
-
-					break;
-				}
-				case fabrik::ELimit::Hinge:
-				{
-					if (!FEqlAbsolute(Length(bone.limit.axis), 1.0f, 1e-4f) || bone.limit.axis.w != 0)
-						errors.push_back(std::format("Bone '{}' has a hinge axis that is not a unit direction", bone.name));
-					if (!(bone.limit.min_angle <= bone.limit.max_angle && bone.limit.min_angle >= -pi && bone.limit.max_angle <= pi))
-						errors.push_back(std::format("Bone '{}' has a hinge range outside [-pi, pi] or with min > max", bone.name));
-
-					break;
-				}
-				default:
-				{
-					throw std::invalid_argument(std::format("Bone '{}' has an unknown limit kind", bone.name));
-				}
-			}
+			// The limit ranges must contain the rest pose
+			if (!bone.limit.IsValid())
+				errors.push_back(std::format("Bone '{}' has a limit range outside [-pi, pi] or not containing zero", bone.name));
 		}
 
 		// Chain checks need a consistent hierarchy
@@ -266,15 +305,10 @@ namespace pr::animation
 				}
 				case EChainRole::Neck:
 				{
-					// The aim needs a facing direction, and only supports cone limits
+					// The aim needs a facing direction
 					if (!FEqlAbsolute(Length(chain.forward), 1.0f, 1e-4f) || chain.forward.w != 0)
 						errors.push_back(std::format("Neck chain {} needs a unit 'forward' direction", c));
 
-					for (auto b : chain.bones)
-					{
-						if (bones[b].limit.kind == fabrik::ELimit::Hinge)
-							errors.push_back(std::format("Neck chain {}: bone '{}' has a hinge limit, which aim chains do not support", c, bones[b].name));
-					}
 					break;
 				}
 				case EChainRole::Leg:
@@ -550,7 +584,8 @@ namespace pr::animation::tests
 			expect_error([](RigDesc& d) { d.chains[2].bones.pop_back(); });
 			expect_error([](RigDesc& d) { d.chains[2].pole = v4(0, 0, 1, 0); });
 			expect_error([](RigDesc& d) { d.chains[4].bones = { 3, 4 }; });
-			expect_error([](RigDesc& d) { d.bones[4].limit = JointLimit{ .kind = fabrik::ELimit::Hinge, .axis = v4(1, 0, 0, 0), .min_angle = -1, .max_angle = 1 }; });
+			expect_error([](RigDesc& d) { d.bones[4].limit = JointLimit{ .swing = { .min_x = 0.1f } }; });
+			expect_error([](RigDesc& d) { d.bones[4].limit = JointLimit{ .min_twist = -1, .max_twist = -0.5f }; });
 			expect_error([](RigDesc& d) { d.contacts[1].name = "sole.L"; });
 			expect_error([](RigDesc& d) { d.contacts[0].bone = 99; });
 			expect_error([](RigDesc& d) { d.contacts[0].normal = v4::Zero(); });

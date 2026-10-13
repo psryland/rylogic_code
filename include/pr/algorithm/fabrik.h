@@ -22,25 +22,62 @@ namespace pr::algorithm::fabrik
 	//    to the weighted mean of those proposals, weighted by the total effector weight below each child.
 	//  - Joints with no effector below them are not pulled in the backward pass. The forward pass drags them behind their moved parents, like a rope,
 	//    unless stiffness returns them towards their rest direction.
-	//  - Rest directions, hinge axes and limits are all given in rest-pose model space. During a solve, each bone carries a frame: the rotation from
+	//  - Rest directions, swing axes and limits are all given in rest-pose model space. During a solve, each bone carries a frame: the rotation from
 	//    rest-pose model space to its current world orientation. A bone's frame is its parent's frame followed by the shortest-arc rotation from its
 	//    rotated rest direction to its current direction. So limits follow the chain as it bends, and the solver never adds twist about a bone.
-	//    Twist limits are not supported.
+	//    Only the direction of a bone is solved, so only its swing can be limited (see 'SwingLimit').
 	//  - Stiffness and limits change the forward pass result, so a target can be missed even when it is reachable. Stiffness is a soft preference
 	//    for the rest shape, not an exact constraint.
 	//  - The input positions are the starting point, so passing the previous frame's result gives temporally stable results.
 
-	// The kind of limit applied to a joint's bone relative to its parent's bone
-	enum class ELimit
+	// The allowed swing of a bone away from its rest direction.
+	//  - A swing is a rotation about an axis perpendicular to the bone. It is measured as a swing vector: the rotation axis scaled by the rotation angle
+	//    (radians). The vector has two components, 'x' and 'z', along two perpendicular swing axes that are both perpendicular to the bone.
+	//  - Each component has a range [min, max]. The allowed region is the ellipse whose half-axes are the range ends, with a different half-axis on each
+	//    side of zero. So a range that is the same on both axes is a cone, and a range of zero width on one axis is a hinge about the other axis.
+	//  - Every range must lie in [-pi, pi] and contain zero, so the rest direction is always allowed. The default allows any swing.
+	template <ScalarTypeFP S>
+	struct SwingLimit
 	{
-		// The bone can point in any direction
-		None,
+		using Vec2 = math::Vec2<S>;
+		static constexpr S pi = math::constants<S>::tau_by_2;
 
-		// The bone stays within a cone of half-angle 'max_angle' about its rest direction
-		Cone,
+		S min_x = -pi;             // The range of the swing about the 'x' swing axis
+		S max_x = +pi;
+		S min_z = -pi;             // The range of the swing about the 'z' swing axis
+		S max_z = +pi;
 
-		// The bone rotates only about 'axis', by a signed angle in [min_angle, max_angle] from its rest direction
-		Hinge,
+		// True if the limit allows any swing. A swing angle is never more than pi, so the full range cannot restrict it.
+		bool IsFree() const
+		{
+			return min_x <= -pi && max_x >= pi && min_z <= -pi && max_z >= pi;
+		}
+
+		// True if the ranges are within [-pi, pi] and contain zero
+		bool IsValid() const
+		{
+			return -pi <= min_x && min_x <= S(0) && S(0) <= max_x && max_x <= pi && -pi <= min_z && min_z <= S(0) && S(0) <= max_z && max_z <= pi;
+		}
+
+		// Return an allowed swing vector near 'swing'. Swings that are already allowed are returned unchanged.
+		Vec2 Clamp(Vec2 swing) const
+		{
+			// Clamp each component to its range first. This sets a component with a zero-width range to zero, so a hinge stays in its plane.
+			auto x = math::Clamp(swing.x, min_x, max_x);
+			auto z = math::Clamp(swing.y, min_z, max_z);
+
+			// Then scale towards zero onto the ellipse of the quadrant that the swing is in. A zero half-axis adds nothing because its component is zero.
+			auto rx = x >= S(0) ? max_x : -min_x;
+			auto rz = z >= S(0) ? max_z : -min_z;
+			auto e = (rx > S(0) ? Sqr(x / rx) : S(0)) + (rz > S(0) ? Sqr(z / rz) : S(0));
+			if (e > S(1))
+			{
+				auto scale = S(1) / Sqrt(e);
+				x *= scale;
+				z *= scale;
+			}
+			return Vec2{ x, z };
+		}
 	};
 
 	// One joint in the skeleton. The bone of joint 'i' runs from its parent's position to its own position.
@@ -52,10 +89,9 @@ namespace pr::algorithm::fabrik
 		int parent = -1;           // The index of the parent joint, or -1 for the root (joint 0 only). Parents must come before their children.
 		Vec4 rest_dir = {};        // The unit direction from the parent to this joint in the rest pose, in model space (w = 0). Ignored for the root.
 		S length = S(0);           // The length of the bone from the parent to this joint. Must be positive. Ignored for the root.
-		ELimit limit = ELimit::None;
-		Vec4 axis = {};            // The hinge axis in rest-pose model space (unit, w = 0, perpendicular to 'rest_dir'). Used by 'ELimit::Hinge' only.
-		S min_angle = S(0);        // Hinge: the minimum signed angle (radians) about 'axis' from 'rest_dir'.
-		S max_angle = S(0);        // Cone: the half-angle (radians). Hinge: the maximum signed angle (radians) about 'axis' from 'rest_dir'.
+		Vec4 swing_axis = {};      // The 'x' swing axis in rest-pose model space (unit, w = 0, perpendicular to 'rest_dir'). The 'z' swing axis is
+		                           // 'Cross(swing_axis, rest_dir)'. Only needed if 'limit' is not free.
+		SwingLimit<S> limit = {};  // The allowed swing from the rest direction under the parent's frame
 		S stiffness = S(0);        // In [0,1]. The fraction of the way the bone is rotated towards its rest direction on each forward pass.
 	};
 
@@ -107,34 +143,11 @@ namespace pr::algorithm::fabrik
 			if (joint.stiffness < S(0) || joint.stiffness > S(1))
 				return false;
 
-			// Check the limit parameters
-			switch (joint.limit)
-			{
-				case ELimit::None:
-				{
-					break;
-				}
-				case ELimit::Cone:
-				{
-					if (joint.max_angle < S(0))
-						return false;
-
-					break;
-				}
-				case ELimit::Hinge:
-				{
-					if (joint.axis.w != S(0) || !FEql(LengthSq(joint.axis), S(1)) || !FEql(Dot(joint.axis, joint.rest_dir), S(0)))
-						return false;
-					if (joint.min_angle > joint.max_angle)
-						return false;
-
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown joint limit kind");
-				}
-			}
+			// Check the limit ranges, and the swing axis when the limit uses it
+			if (!joint.limit.IsValid())
+				return false;
+			if (!joint.limit.IsFree() && (joint.swing_axis.w != S(0) || !FEql(LengthSq(joint.swing_axis), S(1)) || !FEql(Dot(joint.swing_axis, joint.rest_dir), S(0))))
+				return false;
 		}
 		return true;
 	}
@@ -267,39 +280,31 @@ namespace pr::algorithm::fabrik
 		// Return 'dir' moved to the nearest direction allowed by the joint's limit. 'rest' is the rest direction under the parent's frame.
 		static Vec4 ApplyLimit(Joint<S> const& joint, Quat parent_frame, Vec4 rest, Vec4 dir)
 		{
-			switch (joint.limit)
-			{
-				case ELimit::None:
-				{
-					// Any direction is allowed
-					return dir;
-				}
-				case ELimit::Cone:
-				{
-					// Rotate back onto the cone's surface about the axis between the rest and current directions.
-					// When the directions are opposite, any axis perpendicular to the rest direction works.
-					auto angle = Acos(Clamp(Dot(rest, dir), S(-1), S(1)));
-					if (angle <= joint.max_angle)
-						return dir;
+			// Any direction is allowed by a free limit
+			if (joint.limit.IsFree())
+				return dir;
 
-					auto axis = Normalise(Cross(rest, dir), Perpendicular(rest));
-					return Rotate(Quat(axis, joint.max_angle), rest);
-				}
-				case ELimit::Hinge:
-				{
-					// Project the direction onto the hinge plane, then clamp its signed angle about the hinge axis.
-					// A direction along the axis has no defined hinge angle, so it takes the rest direction.
-					auto axis = Rotate(parent_frame, joint.axis);
-					auto planar = Normalise(dir - axis * Dot(dir, axis), rest);
-					auto angle = Atan2(Dot(Cross(rest, planar), axis), Dot(rest, planar));
-					auto clamped = Clamp(angle, joint.min_angle, joint.max_angle);
-					return Rotate(Quat(axis, clamped), rest);
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown joint limit kind");
-				}
-			}
+			// Find the swing axes under the parent's frame. 'z' completes a right-handed frame with the bone as 'y'.
+			auto x_axis = Rotate(parent_frame, joint.swing_axis);
+			auto z_axis = Cross(x_axis, rest);
+
+			// Measure the shortest-arc swing from 'rest' to 'dir' as a swing vector in the (x, z) plane.
+			// When the directions are opposite, any axis perpendicular to the rest direction works.
+			auto angle = Acos(Clamp(Dot(rest, dir), S(-1), S(1)));
+			auto axis = Normalise(Cross(rest, dir), Perpendicular(rest));
+			auto swing = math::Vec2<S>{ Dot(axis, x_axis) * angle, Dot(axis, z_axis) * angle };
+
+			// Clamp the swing, then rebuild the direction from it. A zero swing is the rest direction.
+			auto clamped = joint.limit.Clamp(swing);
+			if (clamped.x == swing.x && clamped.y == swing.y)
+				return dir;
+
+			auto clamped_angle = Length(clamped);
+			if (clamped_angle == S(0))
+				return rest;
+
+			auto clamped_axis = (x_axis * clamped.x + z_axis * clamped.y) / clamped_angle;
+			return Rotate(Quat(clamped_axis, clamped_angle), rest);
 		}
 
 		// The largest distance from an effector's joint to its target
@@ -414,29 +419,44 @@ namespace pr::algorithm::tests
 			PR_EXPECT(result.error <= 1e-5);
 			PR_EXPECT(LengthsPreserved(joints, positions));
 		}
+		PRUnitTestMethod(SwingClamp, Quick)
+		{
+			// Allowed swings are unchanged, a zero-width range flattens its component, and other swings scale onto their quadrant's ellipse
+			auto limit = fabrik::SwingLimit<S>{ .min_x = -0.5, .max_x = 1.0, .min_z = 0.0, .max_z = 0.0 };
+			PR_EXPECT(limit.IsValid() && !limit.IsFree());
+			PR_EXPECT(FEql(limit.Clamp(math::Vec2<S>{ 0.7, 0.0 }), math::Vec2<S>{ 0.7, 0.0 }));
+			PR_EXPECT(FEql(limit.Clamp(math::Vec2<S>{ -0.9, 0.3 }), math::Vec2<S>{ -0.5, 0.0 }));
+
+			auto ellipse = fabrik::SwingLimit<S>{ .min_x = -0.2, .max_x = 0.4, .min_z = -0.6, .max_z = 0.8 };
+			auto clamped = ellipse.Clamp(math::Vec2<S>{ 0.4, -0.6 });
+			PR_EXPECT(FEql(Sqr(clamped.x / 0.4) + Sqr(clamped.y / 0.6), S(1)));
+			PR_EXPECT(FEql(clamped.x * 0.6, -clamped.y * 0.4));
+			PR_EXPECT(fabrik::SwingLimit<S>{}.IsFree());
+			PR_EXPECT(!fabrik::SwingLimit<S>{ .min_x = 0.1 }.IsValid());
+		}
 		PRUnitTestMethod(ConeLimit, Quick)
 		{
-			// A cone-limited bone cannot bend further than its half-angle from the parent bone's direction
+			// A symmetric swing limit is a cone. The bone cannot bend further than its half-angle from the parent bone's direction.
 			auto joints = Chain(3);
-			joints[2].limit = fabrik::ELimit::Cone;
-			joints[2].max_angle = math::DegreesToRadians(S(30));
+			auto half_angle = math::DegreesToRadians(S(30));
+			joints[2].swing_axis = Vec4::YAxis();
+			joints[2].limit = fabrik::SwingLimit<S>{ .min_x = -half_angle, .max_x = half_angle, .min_z = -half_angle, .max_z = half_angle };
 			auto positions = RestPositions(joints);
 			Effector effectors[] = { {.joint = 2, .target = Vec4{0, 1, 0, 1}} };
 			fabrik::Solver<S> solver;
 			solver.Solve(joints, effectors, positions, Identity<Quat>(), Settings{ .max_iterations = 50 });
 			auto bone1 = Normalise(positions[1] - positions[0]);
 			auto bone2 = Normalise(positions[2] - positions[1]);
-			PR_EXPECT(Acos(Clamp(Dot(bone1, bone2), S(-1), S(1))) <= joints[2].max_angle + 1e-9);
+			PR_EXPECT(Acos(Clamp(Dot(bone1, bone2), S(-1), S(1))) <= half_angle + 1e-9);
 			PR_EXPECT(LengthsPreserved(joints, positions));
 		}
 		PRUnitTestMethod(HingeLimit, Quick)
 		{
-			// A hinged bone stays in the plane perpendicular to its axis and within its angle range, even when the target is out of that plane
+			// A swing range of zero width on 'z' is a hinge about the 'x' swing axis. The bone stays in the plane perpendicular to that axis
+			// and within its angle range, even when the target is out of that plane.
 			auto joints = Chain(3);
-			joints[2].limit = fabrik::ELimit::Hinge;
-			joints[2].axis = Vec4::ZAxis();
-			joints[2].min_angle = S(0);
-			joints[2].max_angle = math::DegreesToRadians(S(90));
+			joints[2].swing_axis = Vec4::ZAxis();
+			joints[2].limit = fabrik::SwingLimit<S>{ .min_x = 0, .max_x = math::DegreesToRadians(S(90)), .min_z = 0, .max_z = 0 };
 			auto positions = RestPositions(joints);
 			Effector effectors[] = { {.joint = 2, .target = Vec4{1, -0.5, 0.8, 1}} };
 			fabrik::Solver<S> solver;
@@ -444,12 +464,37 @@ namespace pr::algorithm::tests
 			solver.Solve(joints, effectors, positions, Identity<Quat>(), Settings{ .max_iterations = 50 }, frames);
 
 			// Measure the second bone's hinge angle in the first bone's frame
-			auto axis = Rotate(frames[1], joints[2].axis);
+			auto axis = Rotate(frames[1], joints[2].swing_axis);
 			auto bone1 = Normalise(positions[1] - positions[0]);
 			auto bone2 = Normalise(positions[2] - positions[1]);
 			auto angle = Atan2(Dot(Cross(bone1, bone2), axis), Dot(bone1, bone2));
 			PR_EXPECT(FEqlAbsolute(Dot(bone2, axis), S(0), S(1e-9)));
-			PR_EXPECT(angle >= joints[2].min_angle - 1e-9 && angle <= joints[2].max_angle + 1e-9);
+			PR_EXPECT(angle >= joints[2].limit.min_x - 1e-9 && angle <= joints[2].limit.max_x + 1e-9);
+			PR_EXPECT(LengthsPreserved(joints, positions));
+		}
+		PRUnitTestMethod(EllipticalSwingLimit, Quick)
+		{
+			// An asymmetric swing limit allows more bend about one axis than the other
+			auto joints = Chain(3);
+			joints[2].swing_axis = Vec4::ZAxis();
+			joints[2].limit = fabrik::SwingLimit<S>{ .min_x = -0.2, .max_x = 1.0, .min_z = -0.3, .max_z = 0.3 };
+			auto positions = RestPositions(joints);
+			Effector effectors[] = { {.joint = 2, .target = Vec4{1, 0.8, -0.9, 1}} };
+			fabrik::Solver<S> solver;
+			std::vector<Quat> frames(joints.size());
+			solver.Solve(joints, effectors, positions, Identity<Quat>(), Settings{ .max_iterations = 50 }, frames);
+
+			// Measure the final swing vector in the parent's frame. It must be inside its quadrant's ellipse.
+			auto rest = Normalise(positions[1] - positions[0]);
+			auto dir = Normalise(positions[2] - positions[1]);
+			auto x_axis = Rotate(frames[1], joints[2].swing_axis);
+			auto z_axis = Cross(x_axis, rest);
+			auto angle = Acos(Clamp(Dot(rest, dir), S(-1), S(1)));
+			auto axis = Normalise(Cross(rest, dir), x_axis);
+			auto swing = math::Vec2<S>{ Dot(axis, x_axis) * angle, Dot(axis, z_axis) * angle };
+			auto rx = swing.x >= 0 ? joints[2].limit.max_x : -joints[2].limit.min_x;
+			auto rz = swing.y >= 0 ? joints[2].limit.max_z : -joints[2].limit.min_z;
+			PR_EXPECT(Sqr(swing.x / rx) + Sqr(swing.y / rz) <= S(1) + 1e-9);
 			PR_EXPECT(LengthsPreserved(joints, positions));
 		}
 		PRUnitTestMethod(StiffnessStraightens, Quick)
