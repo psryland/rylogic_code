@@ -323,9 +323,9 @@ float4 CloudSheet(int layer, float3 cam, float3 dir, float pixel_angle, float lo
 	if (s.layer_cover <= 0)
 		return 0;
 
-	// Opacity rises over the soft band above the cloud edge.
+	// Opacity rises over the soft band above the cloud edge, and heavy cover fills the gaps (see CloudSheetCoverage).
 	float field = CloudField(clouds, c, lod, s.lump_scale);
-	float coverage = saturate(CloudEdge(s, field, CloudFray(clouds, layer, c, 0, lod)) / s.softness);
+	float coverage = CloudSheetCoverage(s, CloudEdge(s, field, CloudFray(clouds, layer, c, 0, lod)));
 	if (coverage <= 0)
 		return 0;
 

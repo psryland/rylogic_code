@@ -74,6 +74,7 @@ uint ForwardPbrAlphaRtAttrs(PSIn In, float4 diff, bool is_front_face)
 	}\
 	void PS##Prefix##AlphaCollect(PSIn In, bool is_front_face : SV_IsFrontFace)\
 	{\
+		ClipAlphaHiddenByOpaque(In.ss_vert);\
 		float4 diff = Shade(In, is_front_face);\
 		CollectAlphaLayer(In, diff, ForwardPbrAlphaRtAttrs(In, diff, is_front_face));\
 	}

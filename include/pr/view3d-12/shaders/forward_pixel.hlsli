@@ -53,6 +53,7 @@
 	}\
 	void PS##Prefix##AlphaCollect(PSIn In, bool is_front_face : SV_IsFrontFace)\
 	{\
+		ClipAlphaHiddenByOpaque(In.ss_vert);\
 		float4 diff = Shade(In, is_front_face);\
 		CollectAlphaLayer(In, diff, AlphaRtAttributes(In, diff, is_front_face));\
 	}

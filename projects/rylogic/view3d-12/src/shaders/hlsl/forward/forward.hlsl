@@ -505,14 +505,12 @@ PSOut PSForwardPbrTexN(PSInTexN In, bool is_front_face : SV_IsFrontFace)
 	return Out;
 }
 
-// Collect one transparent fragment into the forward alpha K-buffer.
-void CollectAlphaLayer(PSIn In, float4 diff, uint rt_attrs)
+// Discard a transparent fragment that is hidden behind the opaque pass.
+// Alpha-collect entry points call this before shading, because the alpha pass has no hardware depth test to reject hidden fragments early.
+void ClipAlphaHiddenByOpaque(float4 ss_vert)
 {
-	// Discard fully transparent fragments before accessing the ordered layer buffers.
-	clip(diff.a - (1.0f / 255.0f));
-
-	// Reject transparent fragments hidden behind the opaque pass.
-	uint2 pix = uint2(In.ss_vert.xy);
+	// Find the nearest opaque sample in this pixel.
+	uint2 pix = uint2(ss_vert.xy);
 	uint width, height, sample_count;
 	g_opaque_depth.GetDimensions(width, height, sample_count);
 
@@ -520,8 +518,18 @@ void CollectAlphaLayer(PSIn In, float4 diff, uint rt_attrs)
 	float opaque_depth = 0.0f;
 	for (uint sample = 0; sample != sample_count; ++sample)
 		opaque_depth = max(opaque_depth, g_opaque_depth.Load(pix, sample));
-	if (In.ss_vert.z <= opaque_depth)
+
+	if (ss_vert.z <= opaque_depth)
 		discard;
+}
+
+// Collect one transparent fragment into the forward alpha K-buffer.
+// The caller must have called 'ClipAlphaHiddenByOpaque' for this fragment.
+void CollectAlphaLayer(PSIn In, float4 diff, uint rt_attrs)
+{
+	// Discard fully transparent fragments before accessing the ordered layer buffers.
+	clip(diff.a - (1.0f / 255.0f));
+	uint2 pix = uint2(In.ss_vert.xy);
 
 	// Pack view-space depth, colour, and optional RT side-buffer metadata for later resolve.
 	float view_z = -mul(In.ws_vert, g_frame.cam.w2c).z;
@@ -541,6 +549,9 @@ void CollectAlphaLayer(PSIn In, float4 diff, uint rt_attrs)
 // Collect transparent PBR fragments with optional texture-coordinate lanes into the alpha K-buffer.
 void PSForwardPbrTexNAlphaCollect(PSInTexN In, bool is_front_face : SV_IsFrontFace)
 {
+	// Skip shading for fragments behind opaque geometry.
+	ClipAlphaHiddenByOpaque(In.ss_vert);
+
 	// Resolve optional texture-coordinate lanes before storing the final PBR alpha attributes.
 	PSIn base = ToPSIn(In);
 	float4 diff = PSForwardPbrImpl(In, is_front_face).diff;
