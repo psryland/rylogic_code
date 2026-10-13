@@ -9,7 +9,7 @@ from typing import Any
 
 from mathutils import Matrix, Quaternion, Vector
 
-LIMIT_KINDS = ("cone", "hinge")
+LIMIT_RANGES = ("swing_x", "swing_z", "twist")
 CHAIN_ROLES = ("spine", "neck", "leg", "arm", "tail", "digit")
 SIDES = ("centre", "left", "right")
 CONTACT_KINDS = ("sole", "toe", "palm", "finger", "tail")
@@ -19,7 +19,7 @@ def ValidateRigDesc(desc: dict[str, Any]) -> list[str]:
 	"""Return a description of each problem in a '.rig' description, or an empty list if it is valid."""
 	# The file-level structure must match the schema before its contents can be checked
 	errors: list[str] = []
-	if desc.get("schema_version") != 1:
+	if desc.get("schema_version") != 2:
 		errors.append(f"Unsupported schema_version {desc.get('schema_version')!r}")
 
 	bones = desc.get("bones", [])
@@ -85,23 +85,18 @@ def ValidateRigDesc(desc: dict[str, Any]) -> list[str]:
 
 
 def _ValidateLimit(name: str, limit: dict[str, Any] | None) -> list[str]:
-	"""Check that a bone's limit parameters suit its limit kind."""
+	"""Check that each of a bone's limit ranges lies in [-pi, pi] and contains the rest pose."""
 	# A missing limit means the joint is free
 	if limit is None:
 		return []
 
 	errors: list[str] = []
-	match limit.get("kind"):
-		case "cone":
-			if not 0 < limit["max_angle"] <= math.pi:
-				errors.append(f"Bone '{name}' has a cone limit outside (0, pi]")
-		case "hinge":
-			if not math.isclose(Vector(limit["axis"]).length, 1.0, abs_tol=1e-4):
-				errors.append(f"Bone '{name}' has a hinge axis that is not a unit direction")
-			if not (-math.pi <= limit["min_angle"] <= limit["max_angle"] <= math.pi):
-				errors.append(f"Bone '{name}' has a hinge range outside [-pi, pi] or with min > max")
-		case kind:
-			errors.append(f"Bone '{name}' has an unknown limit kind '{kind}'")
+	for key in LIMIT_RANGES:
+		bounds = limit.get(key)
+		if not isinstance(bounds, list) or len(bounds) != 2:
+			errors.append(f"Bone '{name}' has a limit without a '{key}' [min, max] range")
+		elif not -math.pi - 1e-6 <= bounds[0] <= 0 <= bounds[1] <= math.pi + 1e-6:
+			errors.append(f"Bone '{name}' has a '{key}' range that is outside [-pi, pi] or does not contain 0")
 
 	return errors
 
@@ -140,12 +135,9 @@ def _ValidateChain(c: int, chain: dict[str, Any], bones: list[dict[str, Any]], i
 				if (heads[k] - heads[k - 1]).length <= 1e-6:
 					errors.append(f"Spine chain {c}: bone '{names[k]}' has the same head as its parent")
 		case "neck":
-			# The aim needs a facing direction, and only supports cone limits
+			# The aim needs a facing direction
 			if not math.isclose(Vector(chain.get("forward", (0, 0, 0))).length, 1.0, abs_tol=1e-4):
 				errors.append(f"Neck chain {c} needs a unit 'forward' direction")
-			for name in names:
-				if bones[index_of[name]].get("limit", {}).get("kind") == "hinge":
-					errors.append(f"Neck chain {c}: bone '{name}' has a hinge limit, which aim chains do not support")
 		case "leg" | "arm":
 			# Two-bone IK needs exactly three bones and a pole that defines a bend plane
 			if len(names) != 3:
@@ -164,12 +156,8 @@ def _ValidateChain(c: int, chain: dict[str, Any], bones: list[dict[str, Any]], i
 			last = rest_model[index_of[names[-1]]]
 			joints = heads + [last @ Vector((0, bones[index_of[names[-1]]]["length"], 0))]
 			for k, name in enumerate(names):
-				link = joints[k + 1] - joints[k]
-				limit = bones[index_of[name]].get("limit")
-				if link.length <= 1e-6:
+				if (joints[k + 1] - joints[k]).length <= 1e-6:
 					errors.append(f"Tail chain {c}: bone '{name}' has a zero-length link")
-				elif limit is not None and limit["kind"] == "hinge" and abs(Vector(limit["axis"]).dot(link.normalized())) > 1e-4:
-					errors.append(f"Tail chain {c}: bone '{name}' has a hinge axis that is not perpendicular to its link")
 		case "digit":
 			pass
 		case _:
