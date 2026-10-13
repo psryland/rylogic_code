@@ -7,9 +7,11 @@ from pathlib import Path
 import bpy
 from bpy.props import EnumProperty, StringProperty
 from bpy.types import Operator
+from bpy_extras import view3d_utils
 from bpy_extras.io_utils import ExportHelper
+from mathutils import Vector
 
-from . import propose, rig_desc, validate
+from . import limits, props, rig_desc, validate
 
 # The result of the most recent validation, shown in the Rig panel
 LAST_REPORT: list[str] = []
@@ -43,32 +45,6 @@ class _ArmatureOperator(Operator):
 	@classmethod
 	def poll(cls, context):
 		return ActiveArmature(context) is not None
-
-
-class RYLOGIC_OT_rig_propose(_ArmatureOperator):
-	"""Replace the chains, contacts and chain joint limits with a proposal based on bone names and topology"""
-
-	bl_idname = "rylogic_rig.propose"
-	bl_label = "Auto-propose"
-	bl_options = {"REGISTER", "UNDO"}
-
-	def invoke(self, context, event):
-		return context.window_manager.invoke_confirm(self, event)
-
-	def execute(self, context):
-		# Propose, then check the result so that problems are visible straight away
-		armature_obj = ActiveArmature(context)
-		try:
-			propose.ProposeRig(armature_obj)
-		except ValueError as error:
-			self.report({"ERROR"}, str(error))
-			return {"CANCELLED"}
-
-		rig = armature_obj.data.rylogic_rig
-		errors = validate.ValidateRigDesc(rig_desc.BuildRigDesc(armature_obj))
-		_SetReport(errors or ["Valid"])
-		self.report({"WARNING"} if errors else {"INFO"}, f"Proposed {len(rig.chains)} chains and {len(rig.contacts)} contacts" + (f"; {len(errors)} problems" if errors else ""))
-		return {"FINISHED"}
 
 
 class RYLOGIC_OT_rig_validate(_ArmatureOperator):
@@ -153,6 +129,213 @@ class RYLOGIC_OT_rig_export(_ArmatureOperator, ExportHelper):
 		return {"FINISHED"}
 
 
+class RYLOGIC_OT_rig_capture_pose(_ArmatureOperator):
+	"""Key the rotation of every bone into the range-of-motion action, as a new pose after the existing ones. Creates the action if there is none"""
+
+	bl_idname = "rylogic_rig.capture_pose"
+	bl_label = "Capture Pose"
+	bl_options = {"REGISTER", "UNDO"}
+
+	def execute(self, context):
+		# Keys are inserted into the armature's active action, so make the range-of-motion action active
+		armature_obj = ActiveArmature(context)
+		rig = armature_obj.data.rylogic_rig
+		if rig.rom_action is None:
+			rig.rom_action = bpy.data.actions.new(f"{armature_obj.name}.RangeOfMotion")
+
+		animation_data = armature_obj.animation_data or armature_obj.animation_data_create()
+		if animation_data.action != rig.rom_action:
+			animation_data.action = rig.rom_action
+
+		# Key every bone, so that no bone's sample is interpolated from other poses
+		frames, _ = limits.RangeOfMotionFrames(rig.rom_action)
+		frame = int(frames[-1]) + 1 if frames else 1
+		for pose_bone in armature_obj.pose.bones:
+			match pose_bone.rotation_mode:
+				case "QUATERNION":
+					path = "rotation_quaternion"
+				case "AXIS_ANGLE":
+					path = "rotation_axis_angle"
+				case "XYZ" | "XZY" | "YXZ" | "YZX" | "ZXY" | "ZYX":
+					path = "rotation_euler"
+				case _:
+					raise ValueError(f"Bone '{pose_bone.name}' has an unknown rotation mode '{pose_bone.rotation_mode}'")
+
+			pose_bone.keyframe_insert(path, frame=frame, group=pose_bone.name)
+
+		context.scene.frame_set(frame)
+		self.report({"INFO"}, f"Captured pose {len(frames) + 1} at frame {frame} in '{rig.rom_action.name}'")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_rig_derive_limits(_ArmatureOperator):
+	"""Set the limit of each bone that moves in the range-of-motion action to contain every keyframed pose, plus the padding. Other bones are unchanged"""
+
+	bl_idname = "rylogic_rig.derive_limits"
+	bl_label = "Derive Limits"
+	bl_options = {"REGISTER", "UNDO"}
+
+	def execute(self, context):
+		# The poses come from the armature's range-of-motion action
+		armature_obj = ActiveArmature(context)
+		rig = armature_obj.data.rylogic_rig
+		if rig.rom_action is None:
+			self.report({"ERROR"}, "Choose a range-of-motion action first")
+			return {"CANCELLED"}
+
+		changed, poses, unmatched = limits.DeriveLimits(armature_obj, rig.rom_action, rig.rom_padding, rig.rom_mirror)
+		_ReportUnmatched(self, unmatched)
+		self.report({"INFO"}, f"Derived limits for {changed} bones from {poses} poses")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_rig_symmetrize_limits(_ArmatureOperator):
+	"""Copy the joint limit and stiffness of each selected bone, mirrored, to its left/right partner"""
+
+	bl_idname = "rylogic_rig.symmetrize_limits"
+	bl_label = "Symmetrize Limits"
+	bl_options = {"REGISTER", "UNDO"}
+
+	def execute(self, context):
+		# A pair with both bones selected has no clear source, so it is skipped
+		armature_obj = ActiveArmature(context)
+		bones = armature_obj.data.bones
+		selected = set(props.SelectedBoneNames(armature_obj))
+		partners, unmatched = limits.MirrorPartners(armature_obj.data)
+		copied, ambiguous = 0, []
+		for name in sorted(selected):
+			if name not in partners:
+				continue
+			if partners[name] in selected:
+				ambiguous.append(name)
+				continue
+
+			limits.MirrorJoint(bones[name].rylogic_rig, bones[partners[name]].rylogic_rig)
+			copied += 1
+
+		# Explain anything that was not copied
+		_ReportUnmatched(self, [name for name in unmatched if name in selected])
+		if ambiguous:
+			self.report({"WARNING"}, f"Skipped {len(ambiguous)} bones whose mirror partner is also selected: {', '.join(ambiguous)}")
+
+		self.report({"INFO"}, f"Mirrored the limits of {copied} bones")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_rig_contact_pick(_ArmatureOperator):
+	"""Click on the armature's mesh to place the active contact there, facing out of the surface, on the bone that most deforms that spot"""
+
+	bl_idname = "rylogic_rig.contact_pick"
+	bl_label = "Pick on Surface"
+	bl_options = {"REGISTER", "UNDO"}
+
+	@classmethod
+	def poll(cls, context):
+		armature_obj = ActiveArmature(context)
+		return armature_obj is not None and 0 <= armature_obj.data.rylogic_rig.active_contact < len(armature_obj.data.rylogic_rig.contacts)
+
+	def invoke(self, context, event):
+		# Wait for a click anywhere in the window, because the button lives in the Properties editor rather than the 3D view
+		self.armature_name = ActiveArmature(context).name
+		context.window.cursor_modal_set("EYEDROPPER")
+		context.workspace.status_text_set("Click the mesh where the contact touches the ground.  Esc / Right-click: cancel")
+		context.window_manager.modal_handler_add(self)
+		return {"RUNNING_MODAL"}
+
+	def modal(self, context, event):
+		# Leave view navigation working while picking
+		if event.type in {"ESC", "RIGHTMOUSE"} and event.value == "PRESS":
+			self._End(context)
+			return {"CANCELLED"}
+		if event.type != "LEFTMOUSE" or event.value != "PRESS":
+			return {"PASS_THROUGH"}
+
+		# A click away from a 3D view, or off the mesh, leaves the pick running so the user can try again
+		armature_obj = bpy.data.objects.get(self.armature_name)
+		ray = _MouseRay(context, event)
+		if armature_obj is None or ray is None:
+			return {"RUNNING_MODAL"}
+
+		depsgraph = context.evaluated_depsgraph_get()
+		hit, location, normal, face, mesh_obj, _ = context.scene.ray_cast(depsgraph, *ray)
+		if not hit or not _Deforms(mesh_obj, armature_obj):
+			self.report({"WARNING"}, f"Click on a mesh deformed by '{armature_obj.name}'")
+			return {"RUNNING_MODAL"}
+
+		try:
+			bone, offset, direction = ContactFromSurface(armature_obj, mesh_obj.evaluated_get(depsgraph), location, normal, face)
+		except ValueError as error:
+			self.report({"WARNING"}, str(error))
+			return {"RUNNING_MODAL"}
+
+		# Place the active contact
+		rig = armature_obj.data.rylogic_rig
+		contact = rig.contacts[rig.active_contact]
+		contact.bone, contact.offset, contact.normal = bone, offset, direction
+		self.report({"INFO"}, f"Placed '{contact.name}' on '{bone}'")
+		self._End(context)
+		return {"FINISHED"}
+
+	def _End(self, context) -> None:
+		"""Restore the cursor and status bar, and redraw so that the panel shows the new values."""
+		context.window.cursor_modal_restore()
+		context.workspace.status_text_set(None)
+		for area in context.window.screen.areas:
+			area.tag_redraw()
+
+
+def ContactFromSurface(armature_obj: bpy.types.Object, mesh_eval: bpy.types.Object, location: Vector, normal: Vector, face: int) -> tuple[str, Vector, Vector]:
+	"""Return the bone, bone-space offset and bone-space normal of a contact at a world-space surface point of an evaluated (posed) mesh.
+
+	The bone is the deforming bone with the most weight over the vertices of the hit face. Raises ValueError if no bone of the armature weights that face.
+	"""
+	# Total each bone's weight over the hit face's vertices
+	bones = armature_obj.data.bones
+	mesh = mesh_eval.data
+	totals: dict[str, float] = {}
+	for vertex in mesh.polygons[face].vertices:
+		for element in mesh.vertices[vertex].groups:
+			name = mesh_eval.vertex_groups[element.group].name
+			if name in bones and bones[name].use_deform:
+				totals[name] = totals.get(name, 0.0) + element.weight
+
+	if not totals:
+		raise ValueError("No bone deforms the picked face")
+
+	# Express the point and direction in the bone's current frame, which has the same axes as its rest frame
+	name = max(totals, key=totals.get)
+	frame = armature_obj.matrix_world @ armature_obj.pose.bones[name].matrix
+	offset = frame.inverted_safe() @ location
+	direction = (frame.to_3x3().inverted_safe() @ normal).normalized()
+	return name, offset, direction
+
+
+def _MouseRay(context: bpy.types.Context, event: bpy.types.Event) -> tuple[Vector, Vector] | None:
+	"""Return the world-space origin and direction of the view ray under the mouse, or None if the mouse is not over a 3D view."""
+	# Window coordinates select the 3D view region under the mouse, then region coordinates give the ray
+	for area in context.window.screen.areas:
+		if area.type != "VIEW_3D":
+			continue
+		for region in area.regions:
+			x, y = event.mouse_x - region.x, event.mouse_y - region.y
+			if region.type == "WINDOW" and 0 <= x < region.width and 0 <= y < region.height:
+				view = area.spaces.active.region_3d
+				return view3d_utils.region_2d_to_origin_3d(region, view, (x, y)), view3d_utils.region_2d_to_vector_3d(region, view, (x, y))
+
+	return None
+
+
+def _Deforms(obj: bpy.types.Object | None, armature_obj: bpy.types.Object) -> bool:
+	"""Return true if 'obj' is a mesh with an armature modifier that uses 'armature_obj'."""
+	return obj is not None and obj.type == "MESH" and any(modifier.type == "ARMATURE" and modifier.object == armature_obj for modifier in obj.modifiers)
+
+
+def _ReportUnmatched(operator: Operator, unmatched: list[str]) -> None:
+	"""Warn about side-named bones that have no mirror partner, or whose partner's rest transform is not their mirror image."""
+	if unmatched:
+		operator.report({"WARNING"}, f"Not mirrored, as no bone is their exact mirror image: {', '.join(unmatched)}")
+
+
 class RYLOGIC_OT_rig_item_add(_ArmatureOperator):
 	"""Add a chain or contact"""
 
@@ -221,7 +404,9 @@ class RYLOGIC_OT_rig_chain_assign(_ArmatureOperator):
 			self.report({"ERROR"}, "No active chain")
 			return {"CANCELLED"}
 
-		selected = [bone for bone in armature.bones if bone.select]
+		armature_obj = ActiveArmature(context)
+		bones = armature.edit_bones if armature_obj.mode == "EDIT" else armature.bones
+		selected = [bones[name] for name in props.SelectedBoneNames(armature_obj)]
 		selected.sort(key=lambda bone: len(bone.parent_recursive))
 		chain = rig.chains[rig.active_chain]
 		chain.bones.clear()
@@ -275,10 +460,13 @@ class RYLOGIC_AP_preferences(bpy.types.AddonPreferences):
 
 
 CLASSES = (
-	RYLOGIC_OT_rig_propose,
 	RYLOGIC_OT_rig_validate,
 	RYLOGIC_OT_rig_validate_native,
 	RYLOGIC_OT_rig_export,
+	RYLOGIC_OT_rig_capture_pose,
+	RYLOGIC_OT_rig_derive_limits,
+	RYLOGIC_OT_rig_symmetrize_limits,
+	RYLOGIC_OT_rig_contact_pick,
 	RYLOGIC_OT_rig_item_add,
 	RYLOGIC_OT_rig_item_remove,
 	RYLOGIC_OT_rig_chain_assign,

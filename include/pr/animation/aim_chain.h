@@ -12,8 +12,8 @@ namespace pr::animation
 	// Turn a Neck chain so that its last bone faces 'target' (a model-space point, w = 1).
 	//  - The turn is shared out along the chain: each bone, from the base, takes an equal share of the turn that is still needed.
 	//    So a neck curves smoothly instead of bending at one joint.
-	//  - Each bone's 'Cone' limit caps its total rotation from its rest orientation relative to its parent. If a limit is hit, later bones take
-	//    more of the turn, and the last bone may not reach the target.
+	//  - Each bone's limit caps its swing and twist from its rest orientation relative to its parent (see 'JointLimit'). If a limit is hit, later bones
+	//    take more of the turn, and the last bone may not reach the target.
 	//  - The chain's bones keep their parent-relative positions. Only their rotations change, starting from the current pose.
 	//  - The model transforms of the chain's ancestors must be current. The chain's descendants are not updated.
 	inline void AimChain(Rig const& rig, Chain const& chain, Pose& pose, v4 target)
@@ -44,33 +44,15 @@ namespace pr::animation
 			auto remaining = quat(face, want);
 			auto share = Slerp(Identity<quat>(), remaining, 1.0f / (count - i));
 
-			// Apply the share in model space, then express it as a rotation from the rest local orientation so the limit can cap it
+			// Apply the share in model space, then limit the bone's rotation from its rest orientation in bone space
 			auto b = bones[i];
 			auto const& bone = rig.bones[b];
 			auto parent_rot = bone.parent < 0 ? Identity<quat>() : pose.model[bone.parent].rot;
 			auto local_rot = ~parent_rot * share * pose.model[b].rot;
-			auto delta = local_rot * ~bone.rest.rot;
-			switch (bone.limit.kind)
-			{
-				case fabrik::ELimit::None:
-				{
-					break;
-				}
-				case fabrik::ELimit::Cone:
-				{
-					// Scale the rotation back to the cone's half-angle
-					auto aa = AxisAngle(delta);
-					if (aa.angle > bone.limit.max_angle)
-						delta = quat(aa.axis, bone.limit.max_angle);
+			if (!bone.limit.IsFree())
+				local_rot = bone.rest.rot * bone.limit.Clamp(~bone.rest.rot * local_rot);
 
-					break;
-				}
-				default:
-				{
-					throw std::invalid_argument(std::format("Bone '{}' has a limit kind that aim chains do not support", bone.name));
-				}
-			}
-			pose.local[b].rot = Normalise(delta * bone.rest.rot);
+			pose.local[b].rot = Normalise(local_rot);
 
 			// Recompute the model transforms of this bone and the rest of the chain
 			for (int j = i; j != count; ++j)
@@ -113,19 +95,40 @@ namespace pr::animation::tests
 			auto turn1 = AxisAngle(pose.local[head].rot * ~rig.bones[head].rest.rot).angle;
 			PR_EXPECT(turn0 > 0.1f && turn1 > 0.1f);
 		}
-		PRUnitTestMethod(ConeLimit, Quick)
+		PRUnitTestMethod(SwingTwistLimit, Quick)
 		{
-			// A cone limit caps each bone's turn
+			// A swing-twist limit caps each bone's swing and twist separately
 			auto desc = TestRigDesc();
+			auto limit = JointLimit{ .swing = { .min_x = -0.1f, .max_x = 0.2f, .min_z = -0.15f, .max_z = 0.15f }, .min_twist = -0.05f, .max_twist = 0.05f };
 			for (auto b : desc.chains[1].bones)
-				desc.bones[b].limit = JointLimit{ .kind = fabrik::ELimit::Cone, .max_angle = 0.2f };
+				desc.bones[b].limit = limit;
 
 			auto limited = Rig(std::move(desc));
 			auto pose = Pose(limited);
 			auto const& neck = limited.chains[1];
-			AimChain(limited, neck, pose, v4(3.0f, 0.0f, 1.0f, 1));
+			AimChain(limited, neck, pose, v4(3.0f, -2.0f, 1.0f, 1));
 			for (auto b : neck.bones)
-				PR_EXPECT(AxisAngle(pose.local[b].rot * ~limited.bones[b].rest.rot).angle <= 0.2f + 1e-4f);
+			{
+				// The final rotation from rest must be within the limit
+				auto st = JointLimit::Decompose(~limited.bones[b].rest.rot * pose.local[b].rot);
+				auto rx = st.swing.x >= 0 ? limit.swing.max_x : -limit.swing.min_x;
+				auto rz = st.swing.y >= 0 ? limit.swing.max_z : -limit.swing.min_z;
+				PR_EXPECT(Sqr(st.swing.x / rx) + Sqr(st.swing.y / rz) <= 1.0f + 1e-3f);
+				PR_EXPECT(st.twist >= limit.min_twist - 1e-4f && st.twist <= limit.max_twist + 1e-4f);
+			}
+		}
+		PRUnitTestMethod(SwingTwistRoundTrip, Quick)
+		{
+			// Decompose and Compose are inverses, and the swing never has a component about +Y
+			auto rot = Normalise(quat(v4::XAxis(), 0.7f) * quat(v4::ZAxis(), -0.4f) * quat(v4::YAxis(), 1.1f));
+			auto st = JointLimit::Decompose(rot);
+			PR_EXPECT(FEqlOrientation(JointLimit::Compose(st), rot, 1e-4f));
+
+			auto twist_only = JointLimit::Decompose(quat(v4::YAxis(), -0.6f));
+			PR_EXPECT(FEqlAbsolute(twist_only.twist, -0.6f, 1e-5f) && FEqlAbsolute(Length(twist_only.swing), 0.0f, 1e-5f));
+
+			auto swing_only = JointLimit::Decompose(quat(v4::XAxis(), 0.5f));
+			PR_EXPECT(FEqlAbsolute(swing_only.swing, v2(0.5f, 0.0f), 1e-5f) && FEqlAbsolute(swing_only.twist, 0.0f, 1e-5f));
 		}
 	};
 }

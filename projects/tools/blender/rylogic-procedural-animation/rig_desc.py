@@ -12,7 +12,7 @@ from typing import Any
 import bpy
 from mathutils import Matrix, Vector
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class ModelSpace:
@@ -79,18 +79,14 @@ def BuildRigDesc(armature_obj: bpy.types.Object) -> dict[str, Any]:
 			"length": bone.length * space.scale,
 		}
 
-		# Add the optional joint limit. The hinge axis is authored in bone space, but the file stores it in model space.
+		# Add the optional joint limit. Its ranges are measured about the bone's own rest axes, which the export keeps unchanged.
 		joint = bone.rylogic_rig
-		match joint.limit_kind:
-			case "NONE":
-				pass
-			case "CONE":
-				desc["limit"] = {"kind": "cone", "max_angle": joint.cone_angle}
-			case "HINGE":
-				axis = (rest.to_quaternion() @ Vector(joint.hinge_axis)).normalized()
-				desc["limit"] = {"kind": "hinge", "axis": _List(axis), "min_angle": joint.hinge_min, "max_angle": joint.hinge_max}
-			case _:
-				raise ValueError(f"Bone '{bone.name}' has an unknown limit kind '{joint.limit_kind}'")
+		if joint.use_limit:
+			desc["limit"] = {
+				"swing_x": [joint.swing_x_min, joint.swing_x_max],
+				"swing_z": [joint.swing_z_min, joint.swing_z_max],
+				"twist": [joint.twist_min, joint.twist_max],
+			}
 
 		if joint.stiffness != 0:
 			desc["stiffness"] = joint.stiffness
