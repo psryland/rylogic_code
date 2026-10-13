@@ -693,13 +693,15 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>
-			/// Enable the time-sliced environment map probe with 'face_size' pixels per face edge, or disable it with 0.
+			/// Size the time-sliced environment map probe with 'face_size' pixels per face edge, or release it with 0, and set whether it is
+			/// 'enabled'. Sizing creates the probe's resources, so a probe sized while disabled can be enabled later without that cost.
 			/// While enabled, the probe owns the window's environment map. Each 'EnvMapProbeUpdate' renders one face, and every six updates
-			/// complete a new cube that fades in over the previous one. Setting 'EnvironmentMap' disables the probe.
+			/// complete a new cube that fades in over the previous one. Enabling restarts the capture. Setting 'EnvironmentMap' disables the
+			/// probe but keeps its resources.
 			/// </summary>
-			public void EnvMapProbe(int face_size)
+			public void EnvMapProbe(int face_size, bool enabled)
 			{
-				View3D_WindowEnvMapProbeSet(Handle, face_size);
+				View3D_WindowEnvMapProbeSet(Handle, face_size, enabled);
 			}
 
 			/// <summary>

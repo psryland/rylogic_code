@@ -12,7 +12,7 @@ namespace pr::rdr12
 	// The shader has a procedural vertex shader, a forward pixel family that replaces the stock simple-material or PBR pixel shaders, or both. Without a
 	// vertex shader the stock vertex shader is used, so a pixel-only shader suits any vertex source. A procedural vertex shader requires a ProceduralVertexId model.
 	// An optional GPU buffer is bound as a raw SRV at VIEW3D_PROCEDURAL_BUFFER_REGISTER for every draw. The caller keeps its contents valid while frames
-	// that use it are in flight; the buffer may be replaced, or partly overwritten with BufferWrite, between frames.
+	// that use it are in flight; the buffer may be replaced, or updated with BufferWrite or BufferDispatch, between frames.
 	struct ProceduralShader :Shader
 	{
 		static constexpr size_t ConstantsSize = 1024;
@@ -23,7 +23,10 @@ namespace pr::rdr12
 		ForwardPixelFamily m_pixel_family;
 		std::array<std::byte, ConstantsSize> m_constants;
 		D3DPtr<ID3D12Resource> m_buffer;
-		std::unique_ptr<ResourceFactory> m_writer; // Created by the first BufferWrite. It persists because a temporary factory waits for the GPU when destroyed.
+		std::unique_ptr<ResourceFactory> m_writer; // Created by the first buffer update. It persists because a temporary factory waits for the GPU when destroyed.
+		std::vector<BYTE> m_dispatch_cs;           // Compute bytecode of the cached BufferDispatch pipeline. Callers usually repeat the same shader every frame.
+		D3DPtr<ID3D12RootSignature> m_dispatch_sig;
+		D3DPtr<ID3D12PipelineState> m_dispatch_pso;
 		string32 m_name;
 
 		// Copy the validated bytecode and exactly ConstantsSize bytes for one supported raster render step.
@@ -46,14 +49,19 @@ namespace pr::rdr12
 		// Replace the copied constants with exactly ConstantsSize caller bytes. Draws recorded after this call use the new values.
 		void Constants(std::span<std::byte const> constants);
 
-		// Replace the bound buffer, or unbind it with null. Draws recorded after this call use the new buffer. 'buffer' must be readable as a shader
-		// resource by the graphics queue, and a shader that declares the buffer must not be drawn while none is bound.
+		// Replace the bound buffer, or unbind it with null. Draws recorded after this call use the new buffer. 'buffer' must rest in
+		// D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE whenever the graphics queue is not updating it, and a shader that declares the buffer must not be drawn while none is bound.
 		void Buffer(D3DPtr<ID3D12Resource> buffer);
 
 		// Overwrite 'data' at byte 'offset' of the bound buffer. The copy runs on the graphics queue after the frames already submitted and before
 		// later frames, so no frame sees a partial write. 'offset' and the size of 'data' must be multiples of 4 that lie within the buffer. The buffer
-		// must rest in D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE and must not be used by other queues, as buffers copied by View3D_ShaderCreate are.
+		// must not be used by other queues while frames or updates that use it are in flight.
 		void BufferWrite(size_t offset, std::span<std::byte const> data);
+
+		// Run the compute shader 'cs_bytecode' over the bound buffer with 'groups' thread groups. The shader sees a copy of 'constants' at b0 and the
+		// whole buffer as a RWByteAddressBuffer at u0. Like BufferWrite, it runs on the graphics queue between the frames already submitted and later
+		// frames. 'constants' holds 1 to 65536 bytes, and the buffer must have been created with D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS.
+		void BufferDispatch(std::span<BYTE const> cs_bytecode, std::span<std::byte const> constants, iv3 groups);
 
 		// Bind the current procedural constants for one draw.
 		void SetupElement(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& upload, Scene const&, CameraTransforms const&, DrawListElement const*) override;

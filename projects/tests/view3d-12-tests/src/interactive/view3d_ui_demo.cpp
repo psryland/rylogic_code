@@ -11,6 +11,7 @@
 #include <vector>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <stdexcept>
 #include "pr/common/cast.h"
 #include "pr/common/min_max_fix.h"
@@ -57,6 +58,8 @@ namespace view3d_test
 		inline constexpr ControlId UI_MaskedTextBox = 30;
 		inline constexpr ControlId UI_ComboLabel = 31;
 		inline constexpr ControlId UI_ServiceCombo = 32;
+		inline constexpr ControlId UI_SliderLabel = 33;
+		inline constexpr ControlId UI_Slider = 34;
 
 		// Stable per-control ids for the three clickable world-anchored roots.
 		inline constexpr ControlId UI_WorldOverlayRoot = 40;
@@ -81,6 +84,7 @@ namespace view3d_test
 		inline constexpr StyleId UI_WorldDepthStyle = 210;
 		inline constexpr StyleId UI_WorldFadeStyle = 211;
 		inline constexpr StyleId UI_ProgressStyle = 212;
+		inline constexpr StyleId UI_SliderStyle = 213;
 		inline constexpr TemplateId UI_TextBoxTemplate = 300;
 		inline constexpr TemplateId UI_ButtonTemplate = 301;
 
@@ -105,7 +109,7 @@ namespace view3d_test
 			desc.style_id = style_id;
 			desc.enabled = 1;
 			desc.visibility = EVisibility::Visible;
-			desc.focusable = type == EControlType::TextBox || type == EControlType::Button || type == EControlType::ComboBox;
+			desc.focusable = type == EControlType::TextBox || type == EControlType::Button || type == EControlType::ComboBox || type == EControlType::Slider;
 			desc.validation_state = EValidationState::NotApplicable;
 			desc.layout = layout;
 			desc.max_text_length = 32;
@@ -283,6 +287,7 @@ namespace view3d_test
 		std::uint32_t m_gallery_status_sequence;
 		std::uint32_t m_progress_step;
 		std::int32_t m_ai_service_index;
+		float m_slider_value;
 		std::vector<pr::view3d::ui::Event> m_ui_events;
 		std::vector<std::byte> m_ui_event_payload;
 
@@ -302,11 +307,13 @@ namespace view3d_test
 			, m_gallery_status_sequence(0)
 			, m_progress_step(0)
 			, m_ai_service_index(0)
+			, m_slider_value(0.5f)
 		{
 			ApplyInitialUI();
 		}
 
 		void ApplyInitialUI();
+		void UpsertSlider(pr::view3d::ui::TransactionBuilder& builder) const;
 		void ApplyUIState();
 		void ApplyProgressState();
 		void SetGalleryStatus(std::string_view action);
@@ -355,6 +362,16 @@ namespace view3d_test
 			// Use a bright indicator against the shared dark track in every interaction state.
 			visual.foreground = UIColour{0.20f, 0.68f, 1.0f, 1.0f};
 		}
+		auto slider_style = UIStyle(UI_SliderStyle, UIColour{0.08f, 0.10f, 0.14f, 1.0f}, UIColour{0.34f, 0.39f, 0.48f, 1.0f}, 1.0f, 9.0f);
+		for (auto& visual : slider_style.visuals)
+		{
+			// Use a warm indicator with a light thumb so the slider is distinct from the progress bars.
+			visual.foreground = UIColour{1.0f, 0.62f, 0.20f, 1.0f};
+			visual.thumb = UIColour{0.96f, 0.94f, 0.90f, 1.0f};
+		}
+		slider_style.visuals[static_cast<std::size_t>(EStateChannel::Hover)].border_colour = UIColour{0.7f, 0.7f, 0.7f, 1};
+		slider_style.visuals[static_cast<std::size_t>(EStateChannel::Focused)].border_colour = UIColour{0.15f, 0.5f, 1.0f, 1};
+		slider_style.visuals[static_cast<std::size_t>(EStateChannel::Focused)].border_thickness = 2.0f;
 		builder.AddStyle(root_style);
 		builder.AddStyle(panel_style);
 		builder.AddStyle(section_style);
@@ -368,6 +385,7 @@ namespace view3d_test
 		builder.AddStyle(world_depth_style);
 		builder.AddStyle(world_fade_style);
 		builder.AddStyle(progress_style);
+		builder.AddStyle(slider_style);
 
 		auto textbox_template = TemplateDesc{};
 		textbox_template.header = UIHeader<TemplateDesc>();
@@ -390,7 +408,7 @@ namespace view3d_test
 
 		// Screen-space gallery: vertical composition containing examples of every layout mode.
 		auto root_layout = UILayout(0, 0, EHAlign::Stretch, EVAlign::Stretch);
-		auto panel_layout = UILayout(430, 800, EHAlign::Right, EVAlign::Top);
+		auto panel_layout = UILayout(430, 860, EHAlign::Right, EVAlign::Top);
 		panel_layout.margin_top = 24;
 		panel_layout.margin_right = 24;
 		panel_layout.padding_left = 16;
@@ -489,6 +507,7 @@ namespace view3d_test
 		auto indeterminate_progress = UIControl(UI_IndeterminateProgress, UI_ProgressSection, EControlType::ProgressBar, ELayoutMode::Overlay, UILayout(374, 18, EHAlign::Stretch), UI_ProgressStyle);
 		indeterminate_progress.is_indeterminate = 1;
 		builder.Upsert(indeterminate_progress, {}, "Indeterminate progress");
+		UpsertSlider(builder);
 		builder.Upsert(UIControl(UI_MaskedLabel, UI_Panel, EControlType::Text, ELayoutMode::Overlay, UILayout(398, 22, EHAlign::Stretch), UI_TextStyle), "Masked TextBox", "Masked TextBox label");
 		auto masked_textbox = UIControl(UI_MaskedTextBox, UI_Panel, EControlType::TextBox, ELayoutMode::Overlay, UILayout(398, 40, EHAlign::Stretch), UI_TextBoxStyle, UI_TextBoxTemplate);
 		masked_textbox.masked = 1;
@@ -509,7 +528,7 @@ namespace view3d_test
 		builder.Upsert(UIControl(UI_WorldFadeButton, UI_WorldFadeRoot, EControlType::Button, ELayoutMode::Overlay, world_button_layout, UI_WorldFadeStyle, UI_ButtonTemplate), "Occlusion Fade", "Occlusion-faded world button");
 
 		builder.Reorder(UI_Root, {UI_Panel});
-		builder.Reorder(UI_Panel, {UI_Title, UI_DimensionSection, UI_ButtonLabel, UI_ButtonRow, UI_OverlayPanel, UI_CanvasPanel, UI_ScrollPanel, UI_Status, UI_ProgressSection, UI_MaskedLabel, UI_MaskedTextBox, UI_ComboLabel, UI_ServiceCombo});
+		builder.Reorder(UI_Panel, {UI_Title, UI_DimensionSection, UI_ButtonLabel, UI_ButtonRow, UI_OverlayPanel, UI_CanvasPanel, UI_ScrollPanel, UI_Status, UI_ProgressSection, UI_SliderLabel, UI_Slider, UI_MaskedLabel, UI_MaskedTextBox, UI_ComboLabel, UI_ServiceCombo});
 		builder.Reorder(UI_DimensionSection, {UI_Label, UI_DimensionRow});
 		builder.Reorder(UI_DimensionRow, {UI_Dimension, UI_Update});
 		builder.Reorder(UI_ButtonRow, {UI_SoftButton, UI_PillButton, UI_DisabledButton});
@@ -544,9 +563,28 @@ namespace view3d_test
 		service_combo.selected_index = m_ai_service_index;
 		AddAIServiceItems(builder, service_combo);
 		builder.Upsert(service_combo, {}, "AI service", "A drop-down list of AI service providers");
+		UpsertSlider(builder);
 
 		m_ui.TransactionApply(builder.Build(m_ui_revision, m_ui_revision + 1));
 		++m_ui_revision;
+	}
+
+	// Add the slider and its value label, both describing the application's accepted slider value.
+	void View3dUiDemo::Impl::UpsertSlider(pr::view3d::ui::TransactionBuilder& builder) const
+	{
+		using namespace pr::view3d::ui;
+
+		// The label echoes the accepted value so snapping to the step is visible.
+		auto const label = std::format("Slider (0 to 1, step 0.05): {:.2f}", m_slider_value);
+		builder.Upsert(UIControl(UI_SliderLabel, UI_Panel, EControlType::Text, ELayoutMode::Overlay, UILayout(398, 22, EHAlign::Stretch), UI_TextStyle), label, "Slider label");
+
+		// The descriptor value is authoritative; interaction only proposes replacements.
+		auto slider = UIControl(UI_Slider, UI_Panel, EControlType::Slider, ELayoutMode::Overlay, UILayout(398, 24, EHAlign::Stretch), UI_SliderStyle);
+		slider.minimum = 0.0f;
+		slider.maximum = 1.0f;
+		slider.step = 0.05f;
+		slider.value = m_slider_value;
+		builder.Upsert(slider, {}, "Example slider", "A horizontal slider whose value the application accepts");
 	}
 
 	// Submit a quantised determinate value only when its visible percentage changes.
@@ -629,12 +667,26 @@ namespace view3d_test
 				}
 				case pr::view3d::ui::EEventKind::ValueChangeProposed:
 				{
-					// ComboBox proposals are item indices; the gallery accepts them directly.
-					if (event.control_id == UI_ServiceCombo && event.has_numeric_value != 0)
+					if (event.has_numeric_value == 0)
+						break;
+
+					switch (event.control_id)
 					{
-						// Reconcile the accepted selection through the retained descriptor model.
-						m_ai_service_index = static_cast<std::int32_t>(event.numeric_value);
-						SetGalleryStatus("AI service changed");
+						case UI_ServiceCombo:
+						{
+							// ComboBox proposals are item indices; the gallery accepts them directly.
+							m_ai_service_index = static_cast<std::int32_t>(event.numeric_value);
+							SetGalleryStatus("AI service changed");
+							break;
+						}
+						case UI_Slider:
+						{
+							// Slider proposals are already snapped and in range; accept them without changing the status line during drags.
+							m_slider_value = static_cast<float>(event.numeric_value);
+							ApplyUIState();
+							break;
+						}
+						default: break;
 					}
 					break;
 				}

@@ -345,7 +345,7 @@ namespace pr::rdr12
 		}
 
 		// Move the clouds by the wind over the elapsed time. The first update, and time going backwards, do not move them.
-		auto wind = settings.m_wind_speed * dt * v2(s_cast<float>(std::cos(wind_direction)), s_cast<float>(std::sin(wind_direction)));
+		auto wind = settings.m_wind_speed * s_cast<float>(dt) * v2(s_cast<float>(std::cos(wind_direction)), s_cast<float>(std::sin(wind_direction)));
 		v4 const layers[] = { v4(PR_SKY_CLOUD_LAYER0), v4(PR_SKY_CLOUD_LAYER1), v4(PR_SKY_CLOUD_LAYER2) };
 		m_low_cloud_drift[0] += s_cast<double>(wind.x * layers[0].w);
 		m_low_cloud_drift[1] += s_cast<double>(wind.y * layers[0].w);

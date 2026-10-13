@@ -48,24 +48,44 @@ namespace pr::view3d::ui
 			if (width <= 0.0f || height <= 0.0f)
 				return;
 
-			// Foreground fills the accepted portion of the track.
-			if (fraction > 0.0f)
-			{
-				auto indicator = DrawItem{};
-				indicator.control_id = node.desc.id;
-				indicator.bounds = Rect{ bounds.x + inset, bounds.y + inset, width * fraction, height };
-				indicator.fill = visual.foreground;
-				indicator.opacity = visual.opacity;
-				indicator.primitive = EVisualPrimitive::SolidBox;
-				out.items.push_back(std::move(indicator));
-			}
-
 			// The thumb remains visible at both endpoints and scales with the root's apparent DIP scale.
 			auto const thumb_width = std::min(width, std::max(4.0f * scale, height * 0.5f));
+			auto const thumb_x = bounds.x + inset + (width - thumb_width) * fraction;
+			auto const thumb_centre = thumb_x + thumb_width * 0.5f;
+
+			// Foreground fills the accepted portion of the track, ending at the thumb centre so no track shows between
+			// the fill and the thumb's rounded corners. The left end follows the track's inner corner radius, and a
+			// square box over the right end removes the rounded corners there, so the fill meets the thumb cleanly.
+			if (fraction > 0.0f)
+			{
+				auto const left = bounds.x + inset;
+				auto const fill_width = thumb_centre - left;
+				auto const radius = std::clamp(visual.corner_radius * scale - inset, 0.0f, std::min(fill_width, height) * 0.5f);
+
+				auto indicator = DrawItem{};
+				indicator.control_id = node.desc.id;
+				indicator.bounds = Rect{ left, bounds.y + inset, fill_width, height };
+				indicator.fill = visual.foreground;
+				indicator.opacity = visual.opacity;
+				indicator.corner_radius = radius;
+				indicator.primitive = radius > 0.0f ? EVisualPrimitive::RoundedBox : EVisualPrimitive::SolidBox;
+				out.items.push_back(indicator);
+
+				if (radius > 0.0f)
+				{
+					// Square off the right end so only the left end is rounded.
+					indicator.bounds = Rect{ left + radius, bounds.y + inset, fill_width - radius, height };
+					indicator.corner_radius = 0.0f;
+					indicator.primitive = EVisualPrimitive::SolidBox;
+					out.items.push_back(std::move(indicator));
+				}
+			}
+
+			// The thumb is drawn last, in its own colour, so it sits on top of the indicator.
 			auto thumb = DrawItem{};
 			thumb.control_id = node.desc.id;
-			thumb.bounds = Rect{ bounds.x + inset + (width - thumb_width) * fraction, bounds.y + inset, thumb_width, height };
-			thumb.fill = visual.foreground;
+			thumb.bounds = Rect{ thumb_x, bounds.y + inset, thumb_width, height };
+			thumb.fill = visual.thumb;
 			thumb.opacity = visual.opacity;
 			thumb.corner_radius = std::min(thumb_width, height) * 0.5f;
 			thumb.primitive = EVisualPrimitive::RoundedBox;

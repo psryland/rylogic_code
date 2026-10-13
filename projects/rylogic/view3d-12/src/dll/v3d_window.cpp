@@ -1497,11 +1497,11 @@ namespace pr::rdr12
 	}
 	void V3dWindow::EnvMap(TextureCube* env_map)
 	{
-		// An explicit environment map replaces the probe's maps
-		if (EnvMap() == env_map && m_envmap_probe == nullptr)
+		// An explicit environment map replaces the probe's maps. The probe keeps its resources, so enabling it again does not recreate them.
+		if (EnvMap() == env_map && !m_envmap_probe_enabled)
 			return;
 
-		m_envmap_probe = nullptr;
+		m_envmap_probe_enabled = false;
 		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
 		m_scene.m_global_envmap_prev = nullptr;
 		m_scene.m_global_envmap_blend = 1.0f;
@@ -1851,17 +1851,41 @@ namespace pr::rdr12
 		}
 	};
 
-	// Enable the time-sliced environment map probe with 'face_size' pixel faces, or disable it with 0
-	void V3dWindow::EnvMapProbe(int face_size)
+	// Size the time-sliced environment map probe's resources with 'face_size' pixel faces, or release them with 0, and choose whether the probe owns the environment map
+	void V3dWindow::EnvMapProbe(int face_size, bool enabled)
 	{
-		// Keep the probe's progress if nothing has changed
+		// An enabled probe needs resources to capture into
 		if (face_size < 0)
 			throw std::runtime_error("Environment map probe face size must not be negative");
-		if (face_size == (m_envmap_probe != nullptr ? m_envmap_probe->m_face_size : 0))
+		if (face_size == 0 && enabled)
+			throw std::runtime_error("An enabled environment map probe requires a non-zero face size");
+
+		// Create the cubes and the shared capture resources together, so that the first update after enabling does not create either
+		auto const resized = face_size != (m_envmap_probe != nullptr ? m_envmap_probe->m_face_size : 0);
+		if (resized)
+		{
+			m_envmap_probe = nullptr;
+			if (face_size != 0)
+			{
+				m_envmap_probe = std::make_unique<EnvMapProbeResources>(*m_rdr, face_size);
+				EnvMapCaptureResources::Get(*this, face_size);
+			}
+		}
+
+		// Keep the displayed map unless the probe starts or stops owning it, or an enabled probe was resized. A probe that starts owning the map
+		// restarts its capture, because its cubes may have been captured elsewhere. The map is cleared until the probe completes a cube.
+		auto const restart = enabled && (resized || !m_envmap_probe_enabled);
+		auto const stop = !enabled && m_envmap_probe_enabled;
+		m_envmap_probe_enabled = enabled;
+		if (!restart && !stop)
 			return;
 
-		// The probe owns the global environment map, so changing the probe clears it until the new probe completes a cube
-		m_envmap_probe = face_size != 0 ? std::make_unique<EnvMapProbeResources>(*m_rdr, face_size) : nullptr;
+		if (restart)
+		{
+			m_envmap_probe->m_face = 0;
+			m_envmap_probe->m_fade = 0;
+			m_envmap_probe->m_complete = 0;
+		}
 		m_scene.m_global_envmap = nullptr;
 		m_scene.m_global_envmap_prev = nullptr;
 		m_scene.m_global_envmap_blend = 1.0f;
@@ -1875,7 +1899,7 @@ namespace pr::rdr12
 	{
 		// Capture uses the window's scene state and objects, so it has the same thread affinity as 'Render'
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		if (m_envmap_probe == nullptr)
+		if (!m_envmap_probe_enabled)
 			throw std::runtime_error("Environment map probe is not enabled");
 
 		// Render the next face. The position and distance scale are fixed for the whole cube so that its faces agree.

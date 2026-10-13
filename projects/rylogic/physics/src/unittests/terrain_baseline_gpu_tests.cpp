@@ -127,6 +127,33 @@ namespace pr::physics::tests
 			}
 			return positions;
 		}
+
+		// Read the shader feature flags (the 'SFI0' part) of a compiled DXIL container. Missing flags mean the shader needs no optional features.
+		uint64_t ShaderFeatureFlags(std::span<uint8_t const> container)
+		{
+			// The container header is: fourcc, 16-byte digest, version, size, part count, then one byte offset per part.
+			auto read32 = [&](size_t offset)
+			{
+				// Bounds-checked unaligned read.
+				if (offset + 4 > container.size())
+					throw std::runtime_error("Truncated DXIL container");
+
+				uint32_t value;
+				std::memcpy(&value, container.data() + offset, sizeof(value));
+				return value;
+			};
+			auto const part_count = read32(28);
+			for (uint32_t part = 0; part != part_count; ++part)
+			{
+				// Each part starts with its fourcc and byte size.
+				auto const offset = read32(32 + 4 * size_t(part));
+				if (read32(offset) != 0x30494653u /*'SFI0'*/)
+					continue;
+
+				return read32(offset + 8) | (uint64_t(read32(offset + 12)) << 32);
+			}
+			return 0;
+		}
 	}
 
 	// Validate the canonical evaluator on hardware, without contact or throughput fixtures.
@@ -252,7 +279,9 @@ namespace pr::physics::tests
 						{
 							auto surface = BaselineSurface(ProbeConfig(seed, variant));
 							auto positions = DomainPositions(surface.Recipe());
-							PR_EXPECT(positions.size() == 2485);
+
+							// 33x33 grid + 32x32 jitter + 4x33 cancellation probes, plus 30 boundary probes for each of the 9 detail bands.
+							PR_EXPECT(positions.size() == 2515);
 							auto reference = std::vector<terrain::SurfaceSample>(positions.size());
 							surface.Sample(positions, reference);
 							auto fields = SampleBaselineGpu(gpu, field_step, surface.Recipe(), positions);
@@ -315,6 +344,104 @@ namespace pr::physics::tests
 					PR_THROWS(SampleBaselineGpu(gpu, field_step, source.Recipe(), oversized), std::length_error);
 				}
 			}
+		}
+
+		// The single-precision local evaluator must match the double-precision CPU surface around near and far origins, and must not use doubles.
+		PRUnitTestMethod(LocalEvaluatorPrecisionAndStages, Quick)
+		{
+			auto& gpu = SharedTestGpu();
+			auto constexpr radius_m = 4096.0;
+
+			// The vertex consumer must not require double-precision support. The double-precision vertex probe is the negative control.
+			// These are the 'Doubles' (0x1) and '11_1 double extensions' (0x20) shader feature flags from d3dcompiler.h.
+			auto const doubles = uint64_t{0x1 | 0x20};
+			auto local_vs = CompileBaselineProbe(L"VSBaselineLocalProbe", L"vs_6_0", true, true, "baseline_local_probe.hlsl");
+			auto double_vs = CompileBaselineProbe(L"VSBaselineProbe", L"vs_6_0", true, false);
+			PR_EXPECT((ShaderFeatureFlags(local_vs) & doubles) == 0);
+			PR_EXPECT((ShaderFeatureFlags(double_vs) & doubles) != 0);
+
+			// The compute probe widens the float results into the shared result layout.
+			auto code = CompileBaselineProbe(L"CSBaselineLocalProbe", L"cs_6_0", true, true, "baseline_local_probe.hlsl");
+			auto step = ComputeStep{};
+			step.m_sig = RootSig(ERootSigFlags::ComputeOnly).U32<uint32_t>(ECBufReg::b0).SRV(ESRVReg::t0).SRV(ESRVReg::t1).UAV(EUAVReg::u0).Create(gpu, "Terrain:LocalSig");
+			step.m_pso = ComputePSO(step.m_sig.get(), ByteCode(code)).Create(gpu, "Terrain:LocalPSO");
+
+			// Sample a jittered grid over the whole prepared square, plus millimetre steps at the origin. Local positions are float-representable.
+			auto locals = std::vector<v2d>{};
+			auto state = uint32_t{0x9e3779b9};
+			for (int y = 0; y != 48; ++y)
+			{
+				for (int x = 0; x != 48; ++x)
+				{
+					// One jittered sample per cell.
+					state = 1664525u * state + 1013904223u;
+					auto u = (state + 0.5) / 4294967296.0;
+					state = 1664525u * state + 1013904223u;
+					auto v = (state + 0.5) / 4294967296.0;
+					locals.push_back({static_cast<float>(-radius_m + (x + u) * (2 * radius_m / 48)), static_cast<float>(-radius_m + (y + v) * (2 * radius_m / 48))});
+				}
+			}
+			for (int i = -16; i != 17; ++i)
+				locals.push_back({static_cast<float>(i * 0.001), static_cast<float>(-i * 0.0005)});
+
+			// Compare against the CPU surface at the same world positions, for several recipes and origins.
+			auto maximum = Errors{};
+			auto failed = 0;
+			for (uint32_t seed : {0u, 42u, 0xa53e7a21u})
+			{
+				for (auto variant : {ERecipe::Default, ERecipe::Lattice, ERecipe::HighDatum, ERecipe::ChangedBands})
+				{
+					auto surface = BaselineSurface(ProbeConfig(seed, variant));
+					auto variant_maximum = Errors{};
+					auto slope_at_worst = 0.0;
+					for (auto origin : {v2d{0, 0}, v2d{4000.25, -4000.75}, v2d{731234.5, -642198.25}, v2d{-995000.125, 995000.375}})
+					{
+						// CPU references are computed independently of the GPU result.
+						auto world = std::vector<v2d>(locals.size());
+						for (size_t index = 0; index != locals.size(); ++index)
+							world[index] = origin + locals[index];
+
+						auto reference = std::vector<terrain::SurfaceSample>(world.size());
+						surface.Sample(world, reference);
+						auto results = SampleBaselineGpu(gpu, step, surface.LocalRecipe(origin, radius_m), locals);
+						for (size_t index = 0; index != locals.size(); ++index)
+						{
+							// Height and gradient only; the local evaluator has no normal output.
+							auto const& r = results[index];
+							auto ok = r.m_status == 0 && r.m_material_id == reference[index].m_material_id && std::isfinite(r.m_height) && std::isfinite(r.m_dx) && std::isfinite(r.m_dy);
+							auto error = ok ? Errors{std::abs(r.m_height - reference[index].m_height), std::abs(r.m_dx - reference[index].m_gradient_xy.x), std::abs(r.m_dy - reference[index].m_gradient_xy.y)} : Errors{INFINITY, INFINITY, INFINITY};
+							maximum.m_height = std::max(maximum.m_height, error.m_height);
+							maximum.m_dx = std::max(maximum.m_dx, error.m_dx);
+							maximum.m_dy = std::max(maximum.m_dy, error.m_dy);
+							if (std::max(error.m_dx, error.m_dy) > std::max(variant_maximum.m_dx, variant_maximum.m_dy))
+								slope_at_worst = Length(reference[index].m_gradient_xy);
+
+							variant_maximum.m_height = std::max(variant_maximum.m_height, error.m_height);
+							variant_maximum.m_dx = std::max(variant_maximum.m_dx, error.m_dx);
+							variant_maximum.m_dy = std::max(variant_maximum.m_dy, error.m_dy);
+							// The Lattice recipe's 0.001 ridge roundness puts a near-kink in the mountain band, which amplifies single-precision noise error
+							// in the slope by about 1/roundness. Its height is still gated normally.
+							auto const slope_gate = variant == ERecipe::Lattice ? 0.1 : 1e-3;
+							auto accepted = error.m_height <= 0.003 && error.m_dx <= slope_gate && error.m_dy <= slope_gate;
+							if (!accepted && failed < 8)
+								log_stream() << std::format("Terrain local FAILED seed={} variant={} origin=({:.17g},{:.17g}) local=({:.9g},{:.9g}) height={:.9g} dx={:.9g} dy={:.9g}\n",
+									seed, static_cast<int>(variant), origin.x, origin.y, locals[index].x, locals[index].y, error.m_height, error.m_dx, error.m_dy);
+
+							failed += !accepted;
+						}
+					}
+					log_stream() << std::format("Terrain local seed={} variant={} height={:.9g} dx={:.9g} dy={:.9g} slope_at_worst={:.9g}\n",
+						seed, static_cast<int>(variant), variant_maximum.m_height, variant_maximum.m_dx, variant_maximum.m_dy, slope_at_worst);
+				}
+			}
+			log_stream() << std::format("Terrain local TOTAL failed={} height={:.9g} dx={:.9g} dy={:.9g}\n", failed, maximum.m_height, maximum.m_dx, maximum.m_dy);
+			PR_EXPECT(failed == 0);
+
+			// The preparer rejects squares that leave the supported range and invalid inputs.
+			auto source = BaselineSurface{};
+			PR_THROWS(source.LocalRecipe({999000, 0}, radius_m), std::out_of_range);
+			PR_THROWS(source.LocalRecipe({0, 0}, 0), std::invalid_argument);
+			PR_THROWS(source.LocalRecipe({std::numeric_limits<double>::quiet_NaN(), 0}, radius_m), std::invalid_argument);
 		}
 	};
 }

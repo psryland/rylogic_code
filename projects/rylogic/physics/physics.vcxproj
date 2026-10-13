@@ -20,7 +20,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <ShaderBuildStampDir>$(ProjectDir)src\compute\compiled\$(Configuration)\</ShaderBuildStampDir>
-    <RylogicNativeLinkPackage>Include</RylogicNativeLinkPackage>
   </PropertyGroup>
   <Import Project="$(PropsPath)shader_build.props" />
   <Import Project="$(PropsPath)lib.props" />
@@ -176,13 +175,12 @@
     <ClCompile Include="src\integrator\integrator.cpp" />
     <ClCompile Include="src\rigid_body\rigid_body.cpp" />
     <ClCompile Include="src\shape\inertia.cpp" />
-    <!-- These sources are also packaged as the standalone physics-landscape.lib, so they must not contain header unit tests that need the rest of the physics and compute libraries. -->
-    <ClCompile Include="src\terrain\landscape\baseline_surface.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
-    <ClCompile Include="src\terrain\landscape\height_bounds.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
-    <ClCompile Include="src\terrain\water\water_field.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
-    <ClCompile Include="src\terrain\water\bathymetry.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
-    <ClCompile Include="src\terrain\water\wave_spectrum.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
-    <ClCompile Include="src\terrain\water\wind_sea.cpp" UndefinePreprocessorDefinitions="PR_UNITTESTS" />
+    <ClCompile Include="src\terrain\landscape\baseline_surface.cpp" />
+    <ClCompile Include="src\terrain\landscape\height_bounds.cpp" />
+    <ClCompile Include="src\terrain\water\water_field.cpp" />
+    <ClCompile Include="src\terrain\water\bathymetry.cpp" />
+    <ClCompile Include="src\terrain\water\wave_spectrum.cpp" />
+    <ClCompile Include="src\terrain\water\wind_sea.cpp" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field_types.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\water_field.hlsli" />
@@ -193,11 +191,13 @@
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\water\wind_sea.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_types.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_surface.hlsli" />
+    <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\baseline_surface_local.hlsli" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\terrain\landscape\height_bounds.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\algorithm\perlin_noise_derivatives.hlsli" />
     <None Include="$(RylogicRoot)include\pr\physics\terrain\landscape\README.md" />
     <!-- TerrainBaselineGpuTests executes compute probes and compiles vertex probes with -Gis. -->
     <None Include="src\terrain\landscape\baseline_probe.hlsl" />
+    <None Include="src\terrain\landscape\baseline_local_probe.hlsl" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\collision\broadphase_brute.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\collision\contact.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\physics\constants.h" />
@@ -319,20 +319,11 @@
     <ResourceCompile Include="src\compute\compute_shaders_physics.rc" />
   </ItemGroup>
   <ItemGroup>
-    <BuildArtifacts Include="$(OutDir)physics-landscape.lib" />
     <BuildArtifacts Include="$(OutDir)compute_shaders_physics.res" />
-    <RylogicNativeLinkArtifacts Include="$(OutDir)physics-landscape.lib" />
   </ItemGroup>
   <!--
   Targets
   -->
-  <!-- Incremental so an unchanged build does not rewrite the library; lib.exe embeds timestamps, so a needless rewrite looks like a content change to anything that consumes the library. -->
-  <ItemGroup>
-    <LandscapeLibraryObj Include="$(IntDir)baseline_surface.obj;$(IntDir)height_bounds.obj;$(IntDir)water_field.obj;$(IntDir)bathymetry.obj;$(IntDir)wave_spectrum.obj;$(IntDir)wind_sea.obj" />
-  </ItemGroup>
-  <Target Name="BuildLandscapeLibrary" AfterTargets="Lib" Condition="Exists('$(IntDir)baseline_surface.obj')" Inputs="@(LandscapeLibraryObj)" Outputs="$(OutDir)physics-landscape.lib">
-    <Exec Command="lib.exe /nologo /out:&quot;$(OutDir)physics-landscape.lib&quot; @(LandscapeLibraryObj->'&quot;%(Identity)&quot;', ' ')" />
-  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 </Project>

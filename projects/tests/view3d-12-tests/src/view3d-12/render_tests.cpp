@@ -3159,7 +3159,7 @@ namespace render_tests
 		};
 
 		// No environment map is bound until the first cube is complete
-		View3D_WindowEnvMapProbeSet(fixture.m_window, 32);
+		View3D_WindowEnvMapProbeSet(fixture.m_window, 32, TRUE);
 		fixture.CheckErrors();
 		Require(scene.m_global_envmap == nullptr, "Probe bound an environment map before any capture");
 		update(5);
@@ -3195,10 +3195,32 @@ namespace render_tests
 		Require(scene.m_global_envmap->m_distance != nullptr && scene.m_global_envmap_prev->m_distance != nullptr, "Probe cubes did not create distance cubes");
 		Expect(fixture.Image(), 1, 0, 0);
 
-		// Setting an explicit environment map disables the probe and removes the fade
+		// Setting an explicit environment map disables the probe and removes the fade, but keeps the probe's cubes
+		auto* probe = fixture.m_window->m_envmap_probe.get();
 		View3D_WindowEnvMapSet(fixture.m_window, nullptr);
 		fixture.CheckErrors();
-		Require(scene.m_global_envmap == nullptr && scene.m_global_envmap_prev == nullptr && fixture.m_window->m_envmap_probe == nullptr, "Environment map set did not disable the probe");
+		Require(scene.m_global_envmap == nullptr && scene.m_global_envmap_prev == nullptr && !fixture.m_window->m_envmap_probe_enabled, "Environment map set did not disable the probe");
+		Require(fixture.m_window->m_envmap_probe.get() == probe, "Environment map set released the probe's resources");
+
+		// Sizing a disabled probe creates its resources but leaves the explicit environment map in place
+		auto explicit_map = api::CubeMapPtr(View3D_CubeMapCreate(32));
+		View3D_WindowEnvMapSet(fixture.m_window, explicit_map.get());
+		View3D_WindowEnvMapProbeSet(fixture.m_window, 16, FALSE);
+		fixture.CheckErrors();
+		probe = fixture.m_window->m_envmap_probe.get();
+		Require(scene.m_global_envmap.get() == explicit_map.get() && probe != nullptr && !fixture.m_window->m_envmap_probe_enabled, "Sizing a disabled probe changed the environment map");
+
+		// Enabling the sized probe reuses its cubes and restarts the capture, so no map is bound until a new cube is complete
+		View3D_WindowEnvMapProbeSet(fixture.m_window, 16, TRUE);
+		fixture.CheckErrors();
+		Require(scene.m_global_envmap == nullptr && fixture.m_window->m_envmap_probe.get() == probe, "Enabling the probe did not restart its capture");
+		update(6);
+		Require(scene.m_global_envmap != nullptr && scene.m_global_envmap_prev == nullptr, "Restarted probe did not complete a cube");
+
+		// A face size of zero releases the probe
+		View3D_WindowEnvMapProbeSet(fixture.m_window, 0, FALSE);
+		fixture.CheckErrors();
+		Require(scene.m_global_envmap == nullptr && fixture.m_window->m_envmap_probe == nullptr, "Probe was not released");
 
 		// Any GPU validation error fails the fixture.
 		fixture.CheckDebugLayer();

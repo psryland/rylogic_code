@@ -2145,8 +2145,8 @@ namespace Rylogic.Gfx
 		// Render the window's objects into a new cube map centred at 'position'
 		[DllImport(Dll)] private static extern void View3D_WindowEnvMapCapture(HWindow window, HCubeMap env_map, v4 position);
 
-		// Enable/Disable the window's time-sliced environment map probe
-		[DllImport(Dll)] private static extern void View3D_WindowEnvMapProbeSet(HWindow window, int face_size);
+		// Size the window's time-sliced environment map probe and set whether it is enabled
+		[DllImport(Dll)] private static extern void View3D_WindowEnvMapProbeSet(HWindow window, int face_size, bool enabled);
 
 		// Render the next face of the window's environment map probe
 		[DllImport(Dll)] private static extern void View3D_WindowEnvMapProbeUpdate(HWindow window, v4 position);
@@ -2445,6 +2445,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_ObjectDetailStrengthMapSet(HObject obj, IntPtr map);
 		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferSet(HObject obj, IntPtr buffer);
 		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferWrite(HObject obj, nuint offset, IntPtr data, nuint data_size);
+		[DllImport(Dll)] private static extern void View3D_ObjectProceduralBufferDispatch(HObject obj, IntPtr cs_bytecode, nuint cs_bytecode_size, IntPtr constants, nuint constants_size, int groups_x, int groups_y, int groups_z);
 
 		// Materials ******************************
 

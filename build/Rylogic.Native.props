@@ -24,7 +24,6 @@
 		<RylogicNativeRuntimeDir>$(_RylogicNativePackageRootNormalized)runtimes\$(RylogicNativeRuntimeRid)\native\</RylogicNativeRuntimeDir>
 		<RylogicNativeToolsDir>$(_RylogicNativePackageRootNormalized)tools\$(RylogicNativeRuntimeRid)\</RylogicNativeToolsDir>
 
-		<RylogicNativeLandscapeLib>$(RylogicNativeLibDir)physics-landscape.lib</RylogicNativeLandscapeLib>
 		<RylogicNativeAudioImportLib>$(RylogicNativeLibDir)audio.imp</RylogicNativeAudioImportLib>
 		<RylogicNativeFbxImportLib>$(RylogicNativeLibDir)fbx.imp</RylogicNativeFbxImportLib>
 		<RylogicNativeGltfImportLib>$(RylogicNativeLibDir)gltf.imp</RylogicNativeGltfImportLib>

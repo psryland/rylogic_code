@@ -59,7 +59,9 @@ namespace pr::physics::tests::terrain_probe
 	}
 
 	// Execute one bounded synchronous proof batch; resources live until the shared job has completed.
-	inline std::vector<BaselineResult> SampleBaselineGpu(Gpu& gpu, ComputeStep& step, BaselineRecipe const& recipe, std::span<v2d const> positions, double* gpu_ms = nullptr)
+	// 'Recipe' is the trivially copyable upload type bound at t0, either BaselineRecipe or BaselineLocalRecipe.
+	template <typename Recipe>
+	inline std::vector<BaselineResult> SampleBaselineGpu(Gpu& gpu, ComputeStep& step, Recipe const& recipe, std::span<v2d const> positions, double* gpu_ms = nullptr)
 	{
 		if (positions.size() > 4096)
 			throw std::length_error("Terrain proof batch exceeds 4096 queries");
@@ -70,10 +72,10 @@ namespace pr::physics::tests::terrain_probe
 		auto const count = static_cast<uint32_t>(positions.size());
 		auto output = std::vector<BaselineResult>(count);
 		auto& job = gpu.m_job;
-		auto recipe_buffer = gpu.CreateResource(ResDesc::Buf<BaselineRecipe>(1, {}), job.m_cmd_list, "Terrain:Recipe");
+		auto recipe_buffer = gpu.CreateResource(ResDesc::Buf<Recipe>(1, {}), job.m_cmd_list, "Terrain:Recipe");
 		auto positions_buffer = gpu.CreateResource(ResDesc::Buf<v2d>(count, {}), job.m_cmd_list, "Terrain:Positions");
 		auto results_buffer = gpu.CreateResource(ResDesc::Buf<BaselineResult>(count, {}).usage(EUsage::UnorderedAccess), job.m_cmd_list, "Terrain:Results");
-		auto recipe_upload = job.m_upload.Alloc<BaselineRecipe>(1);
+		auto recipe_upload = job.m_upload.Alloc<Recipe>(1);
 		auto positions_upload = job.m_upload.Alloc<v2d>(static_cast<int>(count));
 		auto readback = job.m_readback.Alloc<BaselineResult>(static_cast<int>(count));
 		auto timestamps = job.m_readback.Alloc<uint64_t>(2);
@@ -82,7 +84,7 @@ namespace pr::physics::tests::terrain_probe
 		Check(gpu->CreateQueryHeap(&heap_desc, __uuidof(ID3D12QueryHeap), (void**)heap.address_of()));
 		uint64_t frequency = 0;
 		Check(job.m_queue->GetTimestampFrequency(&frequency));
-		*recipe_upload.ptr<BaselineRecipe>() = recipe;
+		*recipe_upload.ptr<Recipe>() = recipe;
 		std::copy(positions.begin(), positions.end(), positions_upload.ptr<v2d>());
 
 		// Upload allocations must belong to the job's fence, not a separate resource-creation queue.

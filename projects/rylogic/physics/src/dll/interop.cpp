@@ -1130,6 +1130,60 @@ namespace pr::physics
 				throw ApiException(PhysicsStatus::InvalidArgument, "Material ID is out of range");
 		}
 
+		// Convert the ABI terrain description to the landscape configuration. Every field is transferred so library defaults cannot alter a caller's recipe.
+		// Only the ABI-owned fields are checked here; the landscape validates the values when it is constructed.
+		terrain::landscape::BaselineSurfaceConfig ToBaselineSurfaceConfig(TerrainDesc const& desc)
+		{
+			// Reject reserved fields so they remain available for future use.
+			RequireMaterialId(desc.material_id);
+			if (desc.reserved != 0)
+				throw ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain reserved field");
+
+			auto band = [](TerrainBand const& b)
+			{
+				// Ordinary bands ignore the mountain-only roundness and weight gain.
+				if (b.reserved != 0)
+					throw ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain band reserved field");
+
+				return terrain::landscape::FractalConfig{b.amplitude, b.wavelength, b.octaves, b.lacunarity, b.persistence};
+			};
+			auto const warp = band(desc.domain_warp);
+			auto const mountains = band(desc.mountains);
+			return terrain::landscape::BaselineSurfaceConfig{
+				.m_seed = desc.seed,
+				.m_material_id = desc.material_id,
+				.m_supported_coordinate_abs_m = desc.supported_coordinate,
+				.m_sea_level_bias_m = desc.sea_level_bias,
+				.m_uplift_height_m = desc.uplift_height,
+				.m_mountain_base_height_m = desc.mountain_base,
+				.m_basin_depth_m = desc.basin_depth,
+				.m_basin_threshold = desc.basin_threshold,
+				.m_regional_base = band(desc.regional_base),
+				.m_region_selector = band(desc.region_selector),
+				.m_region_uplift = band(desc.region_uplift),
+				.m_domain_warp = {warp.m_amplitude, warp.m_wavelength_m, warp.m_octave_count, warp.m_lacunarity, warp.m_persistence},
+				.m_plains = band(desc.plains),
+				.m_hills = band(desc.hills),
+				.m_mountains = {mountains.m_amplitude, mountains.m_wavelength_m, mountains.m_octave_count, mountains.m_lacunarity, mountains.m_persistence, desc.mountains.roundness, desc.mountains.weight_gain},
+				.m_basin_selector = band(desc.basin_selector),
+			};
+		}
+
+		// Construct a landscape surface, reporting configuration errors as invalid arguments.
+		terrain::landscape::BaselineSurface MakeBaselineSurface(TerrainDesc const& desc)
+		{
+			// Conversion errors already carry their status; only library validation needs translating.
+			auto config = ToBaselineSurfaceConfig(desc);
+			try
+			{
+				return terrain::landscape::BaselineSurface(config);
+			}
+			catch (std::exception const& ex)
+			{
+				throw ApiException(PhysicsStatus::InvalidArgument, ex.what());
+			}
+		}
+
 		PhysicsShapeCommon const& RequireShapeCommon(PhysicsShapeCommon const* common)
 		{
 			auto const& value = RequireStruct(common);
@@ -2084,6 +2138,12 @@ namespace pr::physics
 		m_gpu_backends.push_back(std::move(backend));
 		return result;
 	}
+
+	// The object behind a LandscapeHandle. Immutable after construction, so concurrent sampling needs no lock.
+	struct Landscape
+	{
+		terrain::landscape::BaselineSurface m_surface;
+	};
 }
 
 using namespace pr::physics;
@@ -2393,40 +2453,11 @@ extern "C"
 
 			// Preserve explicit saved settings; the native evaluator validates the resulting configuration.
 			auto const& c = pr::physics::RequireStruct(terrain);
-			pr::physics::RequireMaterialId(c.material_id);
-			if (!std::isfinite(c.surface_spacing) || c.surface_spacing < 0 || c.reserved != 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain surface spacing or reserved field");
-
-			auto band = [](pr::physics::TerrainBand const& b)
-			{
-				if (b.reserved != 0)
-					throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain band reserved field");
-
-				return pr::physics::terrain::landscape::FractalConfig{b.amplitude, b.wavelength, b.octaves, b.lacunarity, b.persistence};
-			};
-			auto config = pr::physics::terrain::landscape::BaselineSurfaceConfig{
-				.m_seed = c.seed,
-				.m_material_id = c.material_id,
-				.m_supported_coordinate_abs_m = c.supported_coordinate,
-				.m_sea_level_bias_m = c.sea_level_bias,
-				.m_uplift_height_m = c.uplift_height,
-				.m_mountain_base_height_m = c.mountain_base,
-				.m_basin_depth_m = c.basin_depth,
-				.m_basin_threshold = c.basin_threshold,
-				.m_regional_base = band(c.regional_base),
-				.m_region_selector = band(c.region_selector),
-				.m_region_uplift = band(c.region_uplift),
-				.m_domain_warp = {c.domain_warp.amplitude, c.domain_warp.wavelength, c.domain_warp.octaves, c.domain_warp.lacunarity, c.domain_warp.persistence},
-				.m_plains = band(c.plains),
-				.m_hills = band(c.hills),
-				.m_mountains = {c.mountains.amplitude, c.mountains.wavelength, c.mountains.octaves, c.mountains.lacunarity, c.mountains.persistence, c.mountains.roundness, c.mountains.weight_gain},
-				.m_basin_selector = band(c.basin_selector),
-			};
-			if (c.domain_warp.reserved != 0 || c.mountains.reserved != 0)
-				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain band reserved field");
+			if (!std::isfinite(c.surface_spacing) || c.surface_spacing < 0)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Invalid terrain surface spacing");
 
 			// Commit the presence flag only after source creation succeeds.
-			record.m_engine->Terrain(pr::physics::terrain::landscape::BaselineSurface(config), c.surface_spacing == 0 ? pr::physics::surface::DefaultSpacing : c.surface_spacing);
+			record.m_engine->Terrain(pr::physics::MakeBaselineSurface(c), c.surface_spacing == 0 ? pr::physics::surface::DefaultSpacing : c.surface_spacing);
 			record.m_has_terrain = true;
 		});
 	}
@@ -2683,6 +2714,91 @@ extern "C"
 
 				std::memcpy(elements, built.data(), static_cast<size_t>(n) * sizeof(pr::physics::WaterElement));
 				*element_count = n;
+			}
+			catch (std::exception const& ex)
+			{
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
+			}
+		});
+	}
+
+	// Create a context-free immutable landscape owned by the caller.
+	PhysicsStatus __stdcall Physics_LandscapeCreate(pr::physics::TerrainDesc const* desc, pr::physics::LandscapeHandle* landscape)
+	{
+		// Clear the output first so a failed call never leaves a stale handle for the caller to destroy.
+		if (landscape != nullptr)
+			*landscape = nullptr;
+
+		return pr::physics::ApiCall([&]
+		{
+			// The engine-independent landscape ignores surface spacing, which only affects engine contact sampling.
+			if (landscape == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Landscape output pointer is null");
+
+			auto const& c = pr::physics::RequireStruct(desc);
+			*landscape = new pr::physics::Landscape{pr::physics::MakeBaselineSurface(c)};
+		});
+	}
+
+	// Release a landscape created by Physics_LandscapeCreate; null is ignored.
+	void __stdcall Physics_LandscapeDestroy(pr::physics::LandscapeHandle landscape)
+	{
+		delete landscape;
+	}
+
+	// Copy the landscape's shader-ready recipe.
+	PhysicsStatus __stdcall Physics_LandscapeRecipe(pr::physics::LandscapeHandle landscape, pr::physics::terrain::landscape::shared::BaselineRecipe* recipe)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			if (landscape == nullptr || recipe == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Landscape and recipe output are required");
+
+			*recipe = landscape->m_surface.Recipe();
+		});
+	}
+
+	// Prepare a single-precision recipe centred on a caller-chosen origin.
+	PhysicsStatus __stdcall Physics_LandscapeLocalRecipe(pr::physics::LandscapeHandle landscape, double const* origin_xy, double radius_m, pr::physics::terrain::landscape::shared::BaselineLocalRecipe* recipe)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			// The library reports bad origins, radii, and unsupported squares as distinct exceptions; the ABI reports them all as invalid input.
+			if (landscape == nullptr || origin_xy == nullptr || recipe == nullptr)
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Landscape, origin, and recipe output are required");
+
+			try
+			{
+				*recipe = landscape->m_surface.LocalRecipe(pr::physics::terrain::v2d{origin_xy[0], origin_xy[1]}, radius_m);
+			}
+			catch (std::exception const& ex)
+			{
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, ex.what());
+			}
+		});
+	}
+
+	// Sample a batch of positions in order without retaining the caller's buffers.
+	PhysicsStatus __stdcall Physics_LandscapeSample(pr::physics::LandscapeHandle landscape, double const* positions_xy, pr::physics::SurfaceSampleDesc* samples, std::uint32_t count)
+	{
+		return pr::physics::ApiCall([&]
+		{
+			if (landscape == nullptr || (count != 0 && (positions_xy == nullptr || samples == nullptr)))
+				throw pr::physics::ApiException(PhysicsStatus::InvalidArgument, "Landscape, positions, and sample output are required");
+
+			try
+			{
+				// Copy field by field because the library sample may use stronger vector alignment than the ABI record.
+				for (auto i = std::uint32_t{}; i != count; ++i)
+				{
+					auto const s = landscape->m_surface.Sample(pr::physics::terrain::v2d{positions_xy[2 * i + 0], positions_xy[2 * i + 1]});
+					samples[i] = pr::physics::SurfaceSampleDesc{
+						.height = s.m_height,
+						.gradient = {s.m_gradient_xy.x, s.m_gradient_xy.y},
+						.material_id = s.m_material_id,
+						.reserved = 0,
+					};
+				}
 			}
 			catch (std::exception const& ex)
 			{

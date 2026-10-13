@@ -234,7 +234,7 @@ namespace pr::view3d::ui::tests
 		PR_EXPECT(found != nodes.end() && found->progress_value == 2.0f);
 	}
 
-	// Lookless rendering uses track fill plus foreground indicator/thumb and DPI-scaled geometry.
+	// Lookless rendering uses track fill, a foreground indicator ending at the thumb centre, a separately coloured thumb, and DPI-scaled geometry.
 	PRUnitTest(SliderDrawPacketUsesExistingStylePrimitives, Quick)
 	{
 		// Resolve one half-range slider through the ordinary style and draw-packet pipeline.
@@ -247,6 +247,7 @@ namespace pr::view3d::ui::tests
 		{
 			visual.fill = Colour{ 0.1f, 0.1f, 0.1f, 1.0f };
 			visual.foreground = Colour{ 0.0f, 1.0f, 0.0f, 1.0f };
+			visual.thumb = Colour{ 0.0f, 0.0f, 1.0f, 1.0f };
 		}
 		auto transaction = TxnBuilder{};
 		transaction.AddStyle(style);
@@ -257,7 +258,49 @@ namespace pr::view3d::ui::tests
 		auto const& items = engine.DrawPackets().items;
 		PR_EXPECT(items.size() == 4);
 		PR_EXPECT(items[2].primitive == EVisualPrimitive::SolidBox && items[2].fill.g == 1.0f);
-		PR_EXPECT(items[3].primitive == EVisualPrimitive::RoundedBox && items[3].fill.g == 1.0f);
+		PR_EXPECT(items[3].primitive == EVisualPrimitive::RoundedBox && items[3].fill.b == 1.0f && items[3].fill.g == 0.0f);
+
+		// The indicator reaches the thumb centre so no track shows between them.
+		auto const thumb_centre = items[3].bounds.x + items[3].bounds.w * 0.5f;
+		PR_EXPECT(std::abs(items[2].bounds.x + items[2].bounds.w - thumb_centre) < 1e-3f);
+	}
+
+	// A rounded track gives the indicator a matching rounded left end and a square right end under the thumb.
+	PRUnitTest(SliderIndicatorFollowsTrackCornerRadius, Quick)
+	{
+		// Author a rounded, bordered track so the inner corner radius is the outer radius minus the border.
+		auto engine = UiEngine(MakeConfig());
+		auto slider = MakeControl(2, 1, EControlType::Slider, ELayoutMode::Overlay, Lp(100.0f, 20.0f));
+		slider.value = 0.5f;
+		slider.style_id = 10;
+		auto style = MakeStyle(10);
+		for (auto& visual : style.visuals)
+		{
+			visual.border_thickness = 1.0f;
+			visual.corner_radius = 8.0f;
+			visual.foreground = Colour{ 0.0f, 1.0f, 0.0f, 1.0f };
+			visual.thumb = Colour{ 0.0f, 0.0f, 1.0f, 1.0f };
+		}
+		auto transaction = TxnBuilder{};
+		transaction.AddStyle(style);
+		transaction.Upsert(MakeControl(1, 0, EControlType::Root, ELayoutMode::Overlay, Lp(200.0f, 80.0f)));
+		transaction.Upsert(slider);
+		engine.TransactionApply(transaction.Build(0, 1));
+		engine.Update(Viewport(200, 80));
+
+		// Expect: root, track, rounded indicator, square right-end cover, thumb.
+		auto const& items = engine.DrawPackets().items;
+		PR_EXPECT(items.size() == 5);
+		auto const& rounded = items[2];
+		auto const& square = items[3];
+		auto const& thumb = items[4];
+		PR_EXPECT(rounded.primitive == EVisualPrimitive::RoundedBox && rounded.fill.g == 1.0f);
+		PR_EXPECT(std::abs(rounded.corner_radius - 7.0f) < 1e-3f);
+		PR_EXPECT(std::abs(rounded.bounds.x - (items[1].bounds.x + 1.0f)) < 1e-3f);
+		PR_EXPECT(square.primitive == EVisualPrimitive::SolidBox && square.fill.g == 1.0f);
+		PR_EXPECT(std::abs(square.bounds.x + square.bounds.w - (rounded.bounds.x + rounded.bounds.w)) < 1e-3f);
+		PR_EXPECT(thumb.primitive == EVisualPrimitive::RoundedBox && thumb.fill.b == 1.0f);
+		PR_EXPECT(std::abs(rounded.bounds.x + rounded.bounds.w - (thumb.bounds.x + thumb.bounds.w * 0.5f)) < 1e-3f);
 	}
 
 	// A hovered Slider selects the standard hand cursor without installing a custom cursor resource.

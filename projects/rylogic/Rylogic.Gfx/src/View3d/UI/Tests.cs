@@ -49,7 +49,7 @@ public sealed class TestUiProgressBar
 		const string json = """
 			{
 			  "schema_version": 2,
-			  "styles": [{"id": 10, "states": {"Normal": {"visual": {"fill": "#202020FF", "foreground": "#00FF00FF"}}}}],
+			  "styles": [{"id": 10, "states": {"Normal": {"visual": {"fill": "#202020FF", "foreground": "#00FF00FF", "thumb": "#0000FFFF"}}}}],
 			  "tree": [{"id": 1, "type": "Root", "children": [
 			    {"id": 2, "type": "ProgressBar", "style_id": 10, "value": 0.25, "is_indeterminate": true, "layout": {"width": 100, "height": 20}}
 			  ]}]
@@ -64,7 +64,8 @@ public sealed class TestUiProgressBar
 		Assert.Equal(0.25f, parsed.ToTransactionBuilder().DebugControls[1].m_value);
 		Assert.Equal(1, parsed.ToTransactionBuilder().DebugControls[1].m_is_indeterminate);
 		Assert.Equal(new Colour(0, 1, 0, 1), parsed.Styles[0].GetVisual(EStateChannel.Normal).m_foreground);
-		foreach (var value in new[] { "-0.01", "1.01", "1e100" })
+				Assert.Equal(new Colour(0, 0, 1, 1), parsed.Styles[0].GetVisual(EStateChannel.Normal).m_thumb);
+				foreach (var value in new[] { "-0.01", "1.01", "1e100" })
 		{
 			Assert.Throws<UiJsonException>(() => UiDocument.Parse(json.Replace("\"value\": 0.25", "\"value\": " + value)));
 		}
@@ -73,12 +74,12 @@ public sealed class TestUiProgressBar
 		Assert.Equal(false, defaults.Controls[1].IsIndeterminate);
 	}
 
-	/// <summary>ABI 7's changed records match their native layouts and expose decoded numeric semantics.</summary>
+	/// <summary>The changed ABI records match their native layouts and expose decoded numeric semantics.</summary>
 	[Test]
 	public void AbiAndSemantics()
 	{
 		Native.EnsureLoaded();
-		Assert.Equal(0x00080000U, Native.View3DUI_ApiVersion());
+		Assert.Equal(0x00090000U, Native.View3DUI_ApiVersion());
 		Native.Check(Native.View3DUI_StructSize(EStructId.Control, out var control_size));
 		Native.Check(Native.View3DUI_StructSize(EStructId.Style, out var style_size));
 		Native.Check(Native.View3DUI_StructSize(EStructId.SemanticNode, out var semantic_size));

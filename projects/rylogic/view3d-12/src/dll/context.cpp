@@ -585,8 +585,10 @@ namespace pr::rdr12
 		ResourceFactory factory(m_rdr);
 		DispatchVertexGenerator(factory, model->m_vb.get(), model->m_vcount, bytecode, constants, {}, thread_group_size_x);
 
-		// Acceleration structures were built from the previous vertex contents.
+		// Caches keyed on the model revision (e.g. shadow maps) and structures built from the previous vertex contents are now stale.
+		++model->m_revision;
 		model->m_ray_tracing.Invalidate(model->rdr());
+		model->rdr().SkinnedGeometry().Invalidate(*model.get());
 	}
 
 	// Apply 'apply' to every procedural shader used by the nuggets of 'object's own model. Throws if there are none.
@@ -656,6 +658,23 @@ namespace pr::rdr12
 
 			shader.BufferWrite(offset, data);
 			written.push_back(buffer);
+		});
+	}
+
+	// Run caller compute once over each distinct buffer used by the procedural shaders of 'object'.
+	void Context::ObjectProceduralBufferDispatch(ldraw::LdrObject* object, std::span<BYTE const> cs_bytecode, std::span<std::byte const> constants, iv3 groups)
+	{
+		// Shaders may share one buffer, and a second dispatch would apply the update twice.
+		auto dispatched = pr::vector<ID3D12Resource*, 4>{};
+		ForEachProceduralShader(object, [&](ProceduralShader& shader)
+		{
+			// Each buffer is updated once, by the first shader that binds it.
+			auto* buffer = shader.m_buffer.get();
+			if (std::find(dispatched.begin(), dispatched.end(), buffer) != dispatched.end())
+				return;
+
+			shader.BufferDispatch(cs_bytecode, constants, groups);
+			dispatched.push_back(buffer);
 		});
 	}
 

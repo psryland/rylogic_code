@@ -59,6 +59,9 @@ namespace pr::rdr12
 		,m_constants()
 		,m_buffer(buffer)
 		,m_writer()
+		,m_dispatch_cs()
+		,m_dispatch_sig()
+		,m_dispatch_pso()
 		,m_name(name)
 	{
 		// A pixel family is all or nothing, and only the forward step has pixel shaders to replace.
@@ -123,6 +126,10 @@ namespace pr::rdr12
 		// Frames already recorded may still read the old buffer, so its release waits for them.
 		rdr().DeferRelease(m_buffer);
 		m_buffer = buffer;
+
+		// Record the resting state so that graphics-queue updates transition from, and back to, the state that draws expect.
+		if (m_buffer != nullptr)
+			::pr::compute::DefaultResState(m_buffer.get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	}
 
 	// Overwrite part of the bound buffer for later frames.
@@ -142,6 +149,60 @@ namespace pr::rdr12
 		::pr::compute::UpdateSubresourceScope map(m_writer->CmdList(), m_writer->UploadBuffer(), m_buffer.get(), 4, s_cast<int>(offset), s_cast<int>(data.size()));
 		std::memcpy(map.ptr<std::byte>(), data.data(), data.size());
 		map.Commit(::pr::compute::EFinalState::Restore);
+		m_writer->FlushToGpu(EGpuFlush::Async);
+	}
+
+	// Run caller compute over the bound buffer for later frames.
+	void ProceduralShader::BufferDispatch(std::span<BYTE const> cs_bytecode, std::span<std::byte const> constants, iv3 groups)
+	{
+		// Validate the dispatch contract before recording GPU work.
+		if (m_buffer == nullptr)
+			throw std::invalid_argument("Procedural shader has no buffer to dispatch over");
+		if (!AllSet(m_buffer->GetDesc().Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
+			throw std::invalid_argument("Procedural buffer dispatch requires a buffer that allows unordered access");
+		if (cs_bytecode.empty())
+			throw std::invalid_argument("Procedural buffer dispatch requires compute bytecode");
+		if (constants.empty() || constants.size() > D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16ULL)
+			throw std::invalid_argument("Procedural buffer dispatch constants must contain 1 to 65536 bytes");
+		for (int i = 0; i != 3; ++i)
+		{
+			// Each dimension must be a positive count within the D3D12 limit.
+			if (groups[i] <= 0 || groups[i] > D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION)
+				throw std::invalid_argument("Procedural buffer dispatch thread-group counts are invalid");
+		}
+
+		// Rebuild the pipeline only when the bytecode changes. Queued dispatches may still reference the old pipeline, so its release is deferred.
+		if (!std::ranges::equal(cs_bytecode, m_dispatch_cs))
+		{
+			rdr().DeferRelease(m_dispatch_pso);
+			rdr().DeferRelease(m_dispatch_sig);
+			m_dispatch_cs.assign(cs_bytecode.begin(), cs_bytecode.end());
+			m_dispatch_sig = ::pr::compute::RootSig(::pr::compute::ERootSigFlags::ComputeOnly)
+				.CBuf(hlsl::ECBufReg::b0)
+				.UAV(hlsl::EUAVReg::u0)
+				.Create(rdr().d3d(), "Procedural buffer dispatch root signature");
+			m_dispatch_pso = ::pr::compute::ComputePSO(m_dispatch_sig.get(), std::span<BYTE const>(m_dispatch_cs)).Create(rdr().d3d(), "Procedural buffer dispatch pipeline");
+		}
+
+		// Queue on the graphics queue, so the dispatch is ordered after the frames that read the old values and before the frames that read the new ones.
+		if (m_writer == nullptr)
+			m_writer = std::make_unique<ResourceFactory>(rdr());
+
+		auto cbuf = m_writer->UploadBuffer().Alloc(s_cast<int>(constants.size()), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		std::memcpy(cbuf.m_mem + cbuf.m_ofs, constants.data(), constants.size());
+
+		// Expose the buffer for writing, dispatch, then return it to the state that draws read it in. The transition back also orders the writes before later reads.
+		auto& cmd_list = m_writer->CmdList();
+		::pr::compute::BarrierBatch barriers(cmd_list);
+		barriers.Transition(m_buffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		barriers.Commit();
+		cmd_list.SetPipelineState(m_dispatch_pso.get());
+		cmd_list.SetComputeRootSignature(m_dispatch_sig.get());
+		cmd_list.SetComputeRootConstantBufferView(0, cbuf);
+		cmd_list.SetComputeRootUnorderedAccessView(1, m_buffer.get());
+		cmd_list.Dispatch(groups);
+		barriers.Transition(m_buffer.get(), D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		barriers.Commit();
 		m_writer->FlushToGpu(EGpuFlush::Async);
 	}
 
@@ -185,8 +246,10 @@ namespace pr::rdr12
 	// Destroy the concrete shader rather than the base subobject.
 	void ProceduralShader::Delete()
 	{
-		// Release copied bytecode and constants with the shader handle. The GPU may still be reading the buffer from in-flight frames.
+		// Release copied bytecode and constants with the shader handle. The GPU may still be reading the buffer, or running a queued dispatch, from in-flight work.
 		rdr().DeferRelease(m_buffer);
+		rdr().DeferRelease(m_dispatch_pso);
+		rdr().DeferRelease(m_dispatch_sig);
 		::pr::compute::Delete<ProceduralShader>(this);
 	}
 
