@@ -585,8 +585,10 @@ namespace pr::rdr12
 		ResourceFactory factory(m_rdr);
 		DispatchVertexGenerator(factory, model->m_vb.get(), model->m_vcount, bytecode, constants, {}, thread_group_size_x);
 
-		// Acceleration structures were built from the previous vertex contents.
+		// Caches keyed on the model revision (e.g. shadow maps) and structures built from the previous vertex contents are now stale.
+		++model->m_revision;
 		model->m_ray_tracing.Invalidate(model->rdr());
+		model->rdr().SkinnedGeometry().Invalidate(*model.get());
 	}
 
 	// Apply 'apply' to every procedural shader used by the nuggets of 'object's own model. Throws if there are none.
