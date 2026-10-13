@@ -118,32 +118,12 @@ inline NoiseReal NoiseDot(NoiseReal3 gradient, NoiseReal x, NoiseReal y, NoiseRe
 	return gradient.x * x + gradient.y * y + gradient.z * z;
 }
 
-// Evaluate the canonical noise and derivative blend with full lattice phase; unsupported lattice inputs return NaN.
-inline NoiseSample NoiseWithDerivatives(uint seed, double x, double y, double z, int period)
+// Evaluate the noise and derivative blend inside one resolved lattice cell.
+// 'cell_*0' and 'cell_*1' are the hashed lower and upper corner coordinates, and 'local_*' is the position within the cell, in [0, 1).
+inline NoiseSample NoiseCellWithDerivatives(uint seed, int64_t cell_x0, int64_t cell_y0, int64_t cell_z0, int64_t cell_x1, int64_t cell_y1, int64_t cell_z1, NoiseReal local_x, NoiseReal local_y, NoiseReal local_z)
 {
-	NoiseSample result;
-	result.m_value = (NoiseReal)NoiseNaN();
-	result.m_dx = result.m_dy = result.m_dz = result.m_value;
-	if (!(x >= -9223372036854775808.0L && x < 9223372036854775808.0L &&
-		y >= -9223372036854775808.0L && y < 9223372036854775808.0L &&
-		z >= -9223372036854775808.0L && z < 9223372036854775808.0L))
-		return result;
-
-	// Keep full coordinate phase before hashing and optional periodic wrapping.
-	double floor_x = NoiseFloor(x);
-	double floor_y = NoiseFloor(y);
-	double floor_z = NoiseFloor(z);
-	int64_t cell_x0 = NoiseWrap((int64_t)floor_x, period);
-	int64_t cell_y0 = NoiseWrap((int64_t)floor_y, period);
-	int64_t cell_z0 = NoiseWrap((int64_t)floor_z, period);
-	int64_t cell_x1 = NoiseWrap((int64_t)floor_x + 1, period);
-	int64_t cell_y1 = NoiseWrap((int64_t)floor_y + 1, period);
-	int64_t cell_z1 = NoiseWrap((int64_t)floor_z + 1, period);
-	NoiseReal local_x = (NoiseReal)(x - floor_x);
-	NoiseReal local_y = (NoiseReal)(y - floor_y);
-	NoiseReal local_z = (NoiseReal)(z - floor_z);
-
 	// Evaluate the corner ramps once and differentiate their nested interpolation.
+	NoiseSample result;
 	NoiseReal u = NoiseFade(local_x), v = NoiseFade(local_y), w = NoiseFade(local_z);
 	NoiseReal du = NoiseFadeDerivative(local_x), dv = NoiseFadeDerivative(local_y), dw = NoiseFadeDerivative(local_z);
 	NoiseReal3 g000 = NoiseGradient(NoiseHash(seed, cell_x0, cell_y0, cell_z0));
@@ -191,6 +171,33 @@ inline NoiseSample NoiseWithDerivatives(uint seed, double x, double y, double z,
 	result.m_dy = NoiseLerp(w, dnxy0_dy, dnxy1_dy);
 	result.m_dz = NoiseLerp(w, dnxy0_dz, dnxy1_dz) + dw * (nxy1 - nxy0);
 	return result;
+}
+
+// Evaluate the canonical noise and derivative blend with full lattice phase; unsupported lattice inputs return NaN.
+inline NoiseSample NoiseWithDerivatives(uint seed, double x, double y, double z, int period)
+{
+	NoiseSample result;
+	result.m_value = (NoiseReal)NoiseNaN();
+	result.m_dx = result.m_dy = result.m_dz = result.m_value;
+	if (!(x >= -9223372036854775808.0L && x < 9223372036854775808.0L &&
+		y >= -9223372036854775808.0L && y < 9223372036854775808.0L &&
+		z >= -9223372036854775808.0L && z < 9223372036854775808.0L))
+		return result;
+
+	// Keep full coordinate phase before hashing and optional periodic wrapping.
+	double floor_x = NoiseFloor(x);
+	double floor_y = NoiseFloor(y);
+	double floor_z = NoiseFloor(z);
+	int64_t cell_x0 = NoiseWrap((int64_t)floor_x, period);
+	int64_t cell_y0 = NoiseWrap((int64_t)floor_y, period);
+	int64_t cell_z0 = NoiseWrap((int64_t)floor_z, period);
+	int64_t cell_x1 = NoiseWrap((int64_t)floor_x + 1, period);
+	int64_t cell_y1 = NoiseWrap((int64_t)floor_y + 1, period);
+	int64_t cell_z1 = NoiseWrap((int64_t)floor_z + 1, period);
+	NoiseReal local_x = (NoiseReal)(x - floor_x);
+	NoiseReal local_y = (NoiseReal)(y - floor_y);
+	NoiseReal local_z = (NoiseReal)(z - floor_z);
+	return NoiseCellWithDerivatives(seed, cell_x0, cell_y0, cell_z0, cell_x1, cell_y1, cell_z1, local_x, local_y, local_z);
 }
 #ifdef __cplusplus
 }

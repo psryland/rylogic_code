@@ -48,7 +48,7 @@ namespace pr::physics
 
 namespace pr::physics
 {
-	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00060100U;
+	inline constexpr std::uint32_t PHYSICS_API_VERSION = 0x00060200U;
 	inline constexpr std::uint32_t PHYSICS_STRUCT_VERSION = 2U;
 	inline constexpr std::uint32_t PHYSICS_CHECKPOINT_VERSION = 3U;
 
@@ -71,8 +71,9 @@ namespace pr::physics
 }
 namespace pr::physics::terrain::landscape::shared
 {
-	// The shader-ready landscape recipe, defined in 'pr/physics/terrain/landscape/baseline_types.hlsli'.
+	// The shader-ready landscape recipes, defined in 'pr/physics/terrain/landscape/baseline_types.hlsli'.
 	struct BaselineRecipe;
+	struct BaselineLocalRecipe;
 }
 namespace pr::physics
 {
@@ -1086,6 +1087,11 @@ extern "C"
 
 	// Copy the landscape's recipe, for evaluating the surface with 'baseline_surface.hlsli' on the CPU or in a shader.
 	PHYSICS_API pr::physics::EStatus __stdcall Physics_LandscapeRecipe(pr::physics::LandscapeHandle landscape, pr::physics::terrain::landscape::shared::BaselineRecipe* recipe);
+
+	// Prepare a single-precision recipe for 'baseline_surface_local.hlsli', which samples positions relative to 'origin_xy' (an x, y pair in metres).
+	// The shader may sample any local position with |x| and |y| at most 'radius_m'. Fails with InvalidArgument if the origin is not finite, the
+	// radius is not positive, or that square is not within the landscape's supported coordinate range.
+	PHYSICS_API pr::physics::EStatus __stdcall Physics_LandscapeLocalRecipe(pr::physics::LandscapeHandle landscape, double const* origin_xy, double radius_m, pr::physics::terrain::landscape::shared::BaselineLocalRecipe* recipe);
 
 	// Sample 'count' XY positions in metres, given as consecutive (x, y) pairs in 'positions_xy'. Fails with InvalidArgument if any position is
 	// not finite, is outside the landscape's supported coordinate range, or exceeds supported arithmetic; the contents of 'samples' are then undefined.

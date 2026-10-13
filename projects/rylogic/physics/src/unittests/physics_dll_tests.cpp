@@ -95,6 +95,7 @@ namespace pr::unittests
 			decltype(&Physics_LandscapeCreate) LandscapeCreate;
 			decltype(&Physics_LandscapeDestroy) LandscapeDestroy;
 			decltype(&Physics_LandscapeRecipe) LandscapeRecipe;
+			decltype(&Physics_LandscapeLocalRecipe) LandscapeLocalRecipe;
 			decltype(&Physics_LandscapeSample) LandscapeSample;
 
 			PhysicsApi()
@@ -170,6 +171,7 @@ namespace pr::unittests
 				, LandscapeCreate(m_module.Proc<decltype(LandscapeCreate)>("Physics_LandscapeCreate"))
 				, LandscapeDestroy(m_module.Proc<decltype(LandscapeDestroy)>("Physics_LandscapeDestroy"))
 				, LandscapeRecipe(m_module.Proc<decltype(LandscapeRecipe)>("Physics_LandscapeRecipe"))
+				, LandscapeLocalRecipe(m_module.Proc<decltype(LandscapeLocalRecipe)>("Physics_LandscapeLocalRecipe"))
 				, LandscapeSample(m_module.Proc<decltype(LandscapeSample)>("Physics_LandscapeSample"))
 			{}
 		};
@@ -1255,6 +1257,13 @@ namespace pr::unittests
 			PR_EXPECT(api.LandscapeRecipe(landscape, &recipe) == EStatus::Success);
 			PR_EXPECT(std::memcmp(&recipe, &reference.Recipe(), sizeof(recipe)) == 0);
 
+			// The local recipe must also be byte-identical to the library's for the same origin and radius.
+			auto const origin = std::array<double, 2>{1234.5, -678.25};
+			auto local = terrain::landscape::shared::BaselineLocalRecipe{};
+			PR_EXPECT(api.LandscapeLocalRecipe(landscape, origin.data(), 4096.0, &local) == EStatus::Success);
+			auto const expected_local = reference.LocalRecipe({origin[0], origin[1]}, 4096.0);
+			PR_EXPECT(std::memcmp(&local, &expected_local, sizeof(local)) == 0);
+
 			// Batched samples must preserve order and agree with both scalar library sampling and recipe evaluation.
 			auto const limit = config.m_supported_coordinate_abs_m;
 			auto positions = std::vector<double>{0, 0, -125.5, 300.0, 1234.25, -987.75, limit, -limit, -0.5 * limit, 0.25 * limit};
@@ -1312,6 +1321,14 @@ namespace pr::unittests
 			position = {2 * desc.supported_coordinate, 0};
 			PR_EXPECT(api.LandscapeSample(landscape, position.data(), &sample, 1) == EStatus::InvalidArgument);
 			PR_EXPECT(api.LandscapeRecipe(landscape, nullptr) == EStatus::InvalidArgument);
+
+			// Local recipes need an origin and output, a positive radius, and a supported square.
+			auto local = terrain::landscape::shared::BaselineLocalRecipe{};
+			auto origin = std::array<double, 2>{0, 0};
+			PR_EXPECT(api.LandscapeLocalRecipe(landscape, nullptr, 100.0, &local) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeLocalRecipe(landscape, origin.data(), 100.0, nullptr) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeLocalRecipe(landscape, origin.data(), 0.0, &local) == EStatus::InvalidArgument);
+			PR_EXPECT(api.LandscapeLocalRecipe(landscape, origin.data(), 2 * desc.supported_coordinate, &local) == EStatus::InvalidArgument);
 			api.LandscapeDestroy(landscape);
 		}
 	};
