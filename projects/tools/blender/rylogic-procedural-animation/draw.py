@@ -51,6 +51,7 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 	# In Pose Mode with bones selected, show only the overlays that belong to the selected bones, so that one joint can be inspected without clutter
 	world = obj.matrix_world
 	pose = obj.pose
+	rig = obj.data.rylogic_rig
 	selected = {pose_bone.name for pose_bone in pose.bones if pose_bone.select} if obj.mode == "POSE" else set()
 	def Shown(names) -> bool:
 		return not selected or any(name in selected for name in names)
@@ -59,7 +60,7 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 	for pose_bone in pose.bones:
 		bone = pose_bone.bone
 		joint = bone.rylogic_rig
-		if not joint.use_limit or not Shown([pose_bone.name]):
+		if not rig.show_limits or not joint.use_limit or not Shown([pose_bone.name]):
 			continue
 
 		parent_frame = world @ pose_bone.parent.matrix if pose_bone.parent else world
@@ -73,7 +74,6 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 			_AddTwist(lines.setdefault(COLOUR_TWIST, []), apex, frame.to_3x3(), joint.twist_min, joint.twist_max, length)
 
 	# Limb poles from the middle joint, and the neck's facing direction from its last bone
-	rig = obj.data.rylogic_rig
 	rotation = world.to_quaternion()
 	for chain in rig.chains:
 		bones = [pose.bones.get(ref.name) for ref in chain.bones]
@@ -81,11 +81,11 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 			continue
 
 		match chain.role:
-			case "LEG" | "ARM" if len(bones) == 3:
+			case "LEG" | "ARM" if rig.show_poles and len(bones) == 3:
 				start = (world @ bones[1].matrix).to_translation()
 				size = sum(bone.bone.length for bone in bones) * 0.3 * world.to_scale().y
 				lines.setdefault(COLOUR_POLE, []).extend([start, start + (rotation @ Vector(chain.pole)).normalized() * size])
-			case "NECK":
+			case "NECK" if rig.show_facing:
 				start = (world @ bones[-1].matrix).to_translation()
 				size = sum(bone.bone.length for bone in bones) * world.to_scale().y
 				lines.setdefault(COLOUR_FORWARD, []).extend([start, start + (rotation @ Vector(chain.forward)).normalized() * size])
@@ -93,7 +93,7 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 				pass
 
 	# Contacts as a small cross with a normal line
-	for contact in rig.contacts:
+	for contact in rig.contacts if rig.show_contacts else []:
 		pose_bone = pose.bones.get(contact.bone)
 		if pose_bone is None or not Shown([contact.bone]):
 			continue

@@ -6,6 +6,7 @@ Bones are referred to by name. See 'rig_desc.py' for how these properties map to
 
 import math
 import bpy
+from bpy.app.handlers import persistent
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, FloatProperty, FloatVectorProperty, IntProperty, PointerProperty, StringProperty
 from bpy.types import PropertyGroup
 
@@ -127,9 +128,46 @@ class RYLOGIC_PG_Rig(PropertyGroup):
 	contacts: CollectionProperty(name="Contacts", type=RYLOGIC_PG_RigContact)
 	active_contact: IntProperty(name="Active Contact", default=0)
 	show_overlay: BoolProperty(name="Show Overlay", default=True, description="Draw joint limits, poles, facing directions and contacts in the viewport")
+	show_limits: BoolProperty(name="Limits", default=True, description="Draw each joint's swing (orange) and twist (yellow) limits")
+	show_poles: BoolProperty(name="Poles", default=True, description="Draw the outward bend direction (magenta) of each leg and arm chain")
+	show_facing: BoolProperty(name="Facing", default=True, description="Draw the forward direction (sky blue) of each neck chain")
+	show_contacts: BoolProperty(name="Contacts", default=True, description="Draw each contact point and its surface normal (green)")
 	rom_action: PointerProperty(name="Range of Motion", type=bpy.types.Action, description="An action whose keyframes pose the armature at the extremes of each joint's range of motion")
 	rom_mirror: BoolProperty(name="Mirror Samples", default=True, description="Derive the same, mirrored, limits for left and right bones from the poses of either side. Turn off for asymmetric rigs")
 	rom_padding: FloatProperty(name="Padding", subtype="ANGLE", min=0.0, max=math.radians(45), default=math.radians(5), description="Extra range added beyond the posed extremes when deriving limits")
+
+
+# The active bone of each armature when last seen, so that only a change of active bone moves the contact selection
+_LAST_ACTIVE_BONE: dict[str, str] = {}
+
+
+@persistent
+def _OnDepsgraphUpdate(scene, depsgraph) -> None:
+	"""Make a chain and a contact that contain the newly active bone the active ones, so that selecting a bone shows its chain and contact."""
+	# Selection changes are only visible as scene updates, so react only when the active armature's active bone differs from last time
+	armature_obj = bpy.context.view_layer.objects.active
+	if armature_obj is None or armature_obj.type != "ARMATURE":
+		return
+
+	armature = armature_obj.data
+	bone = armature.edit_bones.active if armature_obj.mode == "EDIT" else armature.bones.active
+	name = bone.name if bone is not None else ""
+	if _LAST_ACTIVE_BONE.get(armature.name_full) == name:
+		return
+
+	# Keep the active chain if it already contains this bone. Set the raw value, because the update callback would replace the user's bone selection.
+	_LAST_ACTIVE_BONE[armature.name_full] = name
+	rig = armature.rylogic_rig
+	if not (0 <= rig.active_chain < len(rig.chains) and any(ref.name == name for ref in rig.chains[rig.active_chain].bones)):
+		index = next((i for i, chain in enumerate(rig.chains) if any(ref.name == name for ref in chain.bones)), None)
+		if index is not None:
+			rig["active_chain"] = index
+
+	# Keep the active contact if it is already on this bone, as a bone can have several contacts
+	if not (0 <= rig.active_contact < len(rig.contacts) and rig.contacts[rig.active_contact].bone == name):
+		index = next((i for i, contact in enumerate(rig.contacts) if contact.bone == name), None)
+		if index is not None:
+			rig.active_contact = index
 
 
 CLASSES = (
@@ -148,10 +186,12 @@ def Register() -> None:
 
 	bpy.types.Bone.rylogic_rig = PointerProperty(type=RYLOGIC_PG_RigBone)
 	bpy.types.Armature.rylogic_rig = PointerProperty(type=RYLOGIC_PG_Rig)
+	bpy.app.handlers.depsgraph_update_post.append(_OnDepsgraphUpdate)
 
 
 def Unregister() -> None:
 	"""Detach and unregister the property groups. Stored values remain in the .blend file."""
+	bpy.app.handlers.depsgraph_update_post.remove(_OnDepsgraphUpdate)
 	del bpy.types.Armature.rylogic_rig
 	del bpy.types.Bone.rylogic_rig
 	for cls in reversed(CLASSES):

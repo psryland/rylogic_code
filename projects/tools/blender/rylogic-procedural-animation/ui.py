@@ -50,6 +50,14 @@ class RYLOGIC_PT_rig(Panel):
 		row.operator("rylogic_rig.export", icon="EXPORT")
 		row.prop(rig, "show_overlay", toggle=True, icon="OVERLAY")
 
+		# Visibility of each type of overlay, greyed out while the whole overlay is hidden
+		row = layout.row(align=True)
+		row.active = rig.show_overlay
+		row.prop(rig, "show_limits", toggle=True)
+		row.prop(rig, "show_poles", toggle=True)
+		row.prop(rig, "show_facing", toggle=True)
+		row.prop(rig, "show_contacts", toggle=True)
+
 		# The most recent validation result
 		if operators.LAST_REPORT:
 			box = layout.box()
@@ -102,10 +110,9 @@ class RYLOGIC_PT_rig(Panel):
 		if 0 <= rig.active_contact < len(rig.contacts):
 			contact = rig.contacts[rig.active_contact]
 			box = layout.box()
+			box.operator("rylogic_rig.contact_pick", icon="EYEDROPPER")
 			box.prop_search(contact, "bone", armature, "bones")
 			box.prop(contact, "kind")
-			box.prop(contact, "offset")
-			box.prop(contact, "normal")
 
 
 class RYLOGIC_PT_rig_bone(Panel):
