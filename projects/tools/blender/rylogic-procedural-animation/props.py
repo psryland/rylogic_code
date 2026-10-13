@@ -96,6 +96,16 @@ def _OnActiveChainChanged(rig: "RYLOGIC_PG_Rig", context: bpy.types.Context) -> 
 	SelectBones(armature_obj, [ref.name for ref in rig.chains[rig.active_chain].bones])
 
 
+def _OnPinLiveChanged(rig: "RYLOGIC_PG_Rig", context: bpy.types.Context) -> None:
+	"""Pin or release the selected bones of the armature whose toggle changed."""
+	# Imported here because the pin module uses this module's selection helpers
+	from . import pin
+
+	armature_obj = context.active_object
+	if armature_obj is not None and armature_obj.data == rig.id_data:
+		pin.Sync(armature_obj)
+
+
 class RYLOGIC_PG_RigBoneRef(PropertyGroup):
 	"""A reference to a bone by name. The name is the built-in 'name' property."""
 
@@ -135,7 +145,7 @@ class RYLOGIC_PG_Rig(PropertyGroup):
 	contacts: CollectionProperty(name="Contacts", type=RYLOGIC_PG_RigContact)
 	active_contact: IntProperty(name="Active Contact", default=0)
 	show_overlay: BoolProperty(name="Show Overlay", default=True, description="Draw joint limits, poles, facing directions and contacts in the viewport")
-	show_limits: BoolProperty(name="Limits", default=True, description="Draw each joint's swing (orange) and twist (yellow) limits")
+	show_limits: BoolProperty(name="Limits", default=True, description="Draw each joint's swing (orange) and twist (yellow) limits. A bone outside its limit is drawn in red even when this is off")
 	show_poles: BoolProperty(name="Poles", default=True, description="Draw the outward bend direction (magenta) of each leg and arm chain")
 	show_facing: BoolProperty(name="Facing", default=True, description="Draw the forward direction (sky blue) of each neck chain")
 	show_contacts: BoolProperty(name="Contacts", default=True, description="Draw each contact point and its surface normal (green)")
@@ -144,6 +154,7 @@ class RYLOGIC_PG_Rig(PropertyGroup):
 	rom_padding: FloatProperty(name="Padding", subtype="ANGLE", min=0.0, max=math.radians(45), default=math.radians(5), description="Extra range added beyond the posed extremes when deriving limits")
 	cycles: CollectionProperty(name="Movement Cycles", type=RYLOGIC_PG_GaitCycle)
 	active_cycle: IntProperty(name="Active Cycle", default=0)
+	pin_live: BoolProperty(name="Live Pin", default=False, update=lambda rig, context: _OnPinLiveChanged(rig, context), description="In Pose Mode, hold the selected chain bones still as the frame changes, bending the chains above them with IK. With Auto Key on, each frame change keys the solved pose")
 
 
 # The active bone of each armature when last seen, so that only a change of active bone moves the contact selection

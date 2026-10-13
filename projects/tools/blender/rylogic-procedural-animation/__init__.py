@@ -16,6 +16,9 @@ hinge about the other. Limits can be set by hand in the Bone properties, or deri
 	   single capture can pose the left leg forward and the right leg back. Turn it off for asymmetric rigs.
 	3. Review the limits in the viewport overlay and adjust them in the Bone properties. 'Symmetrize Limits' copies the selected bones' limits,
 	   mirrored, to their left/right partners.
+	4. Press 'Copy to IK Limits' to set Blender's own IK limits from the joint limits. Then dragging a foot or tail tip with Auto IK (Pose Options in
+	   the Tool sidebar; Page Up/Down sets the chain length while dragging) keeps roughly within range. Blender limits each axis separately, so this is
+	   an approximation; press it again after changing limits.
 Mirroring needs left and right bones whose names differ only by side and whose rest transforms are mirror images, as Blender's Symmetrize makes them.
 
 Contacts are points on a bone, with an outward surface normal, that are placed on surfaces, e.g. the soles of the feet. Point the normal out of the
@@ -27,7 +30,10 @@ Selecting a chain in the panel selects its bones. Selecting a bone makes a chain
 
 The viewport overlay draws swing limits (orange), twist limits (yellow), limb poles (magenta), the neck's facing direction (sky blue) and contacts
 (green). Limb poles and facing directions are fixed rest-pose model-space directions. The toggles under 'Show Overlay' hide each type. In Pose Mode
-with bones selected, only the overlays of the selected bones are drawn.
+with bones selected, only the overlays of the selected bones are drawn. A bone whose current pose is outside its joint limit is drawn in red, with its
+limit, whatever the selection and the 'Limits' toggle, so that animating past a limit is noticed while posing or playing an action. 'Check Limits'
+plays the active movement cycle's action and lists each bone that leaves its limit, by how much, and on which frames. Both check the evaluated pose,
+so constraints and IK count.
 
 Movement cycles are example actions that guide the runtime's procedural locomotion. They are not played back: the runtime measures stride, speed,
 footfall order and timing, and the body's sway from them, then places the feet itself. Each cycle belongs to a family (e.g. 'bipedal', 'quadruped',
@@ -35,7 +41,12 @@ footfall order and timing, and the body's sway from them, then places the feet i
 	1. Under 'Movement Cycles', add a cycle from a template (the preset button), or add an empty cycle and assign an action. A template keys a
 	   standard footfall pattern from the rig's leg chains and sole/palm contacts, as a starting point.
 	2. Refine the action by hand. Its frame range is one loop: the pose at the last frame is the pose at the first frame, moved forward by one
-	   stride. The root bone travels forward at a steady speed, and each foot is planted, still on the ground, for part of the loop.
+	   stride. The root bone travels forward at a steady speed, and each foot is planted, still on the ground, for part of the loop. Export
+	   rejects a cycle whose last frame does not match its first frame within 1° and 1% of the stride, and names the worst bones.
+	   To plant feet, key the root's travel first, then turn on 'Live Pin' and Auto Key, and select the planted foot and hand bones. Each selected
+	   chain bone holds still while the frame changes, the bones of its chain above it bend with IK to reach it, and each frame change keys the
+	   result. Step through the frames one at a time, changing the selection as feet lift and land. 'Copy to IK Limits' first keeps the bending
+	   within the joint limits.
 	3. 'Validate Gait' measures every cycle and lists the footfalls it found. 'Export .gait' writes them all to a '.gait' JSON file next to the
 	   '.rig'. The schema is owned by 'pr/animation/gait.h'.
 The walking limbs are the LEG chains ending on a SOLE contact and the ARM chains ending on a PALM contact.
@@ -63,10 +74,12 @@ import bpy
 # Dependencies come before the modules that import names from them.
 if "operators" in locals():
 	import importlib
-	for _module in (limits, rig_desc, gait_desc, gait_template, validate, props, operators, ui, draw):
-		importlib.reload(_module)
+	for _name in ("limits", "rig_desc", "gait_desc", "gait_template", "validate", "props", "pin", "operators", "ui", "draw"):
+		# A module added since the last load has not been imported yet, and is imported below
+		if _name in locals():
+			importlib.reload(locals()[_name])
 
-from . import draw, operators, props, ui
+from . import draw, operators, pin, props, ui
 from .gait_desc import BuildGaitDesc, ValidateGaitDesc, WriteGaitDesc
 from .operators import WriteGait, WriteRig
 from .rig_desc import BuildRigDesc, WriteRigDesc
@@ -79,6 +92,7 @@ def register() -> None:
 	"""Register the add-on's properties, operators, panels and viewport overlay."""
 	# The overlay needs a viewport, so it is skipped when Blender runs without a user interface
 	props.Register()
+	pin.Register()
 	operators.Register()
 	ui.Register()
 	if not bpy.app.background:
@@ -90,4 +104,5 @@ def unregister() -> None:
 	draw.Unregister()
 	ui.Unregister()
 	operators.Unregister()
+	pin.Unregister()
 	props.Unregister()

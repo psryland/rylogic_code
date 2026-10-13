@@ -1,5 +1,6 @@
 """Operators for authoring, checking and exporting a rig description."""
 
+import math
 import subprocess
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ from bpy.types import Operator
 from bpy_extras import view3d_utils
 from bpy_extras.io_utils import ExportHelper
 from mathutils import Vector
+from mathutils.interpolate import poly_3d_calc
 
 from . import gait_desc, gait_template, limits, props, rig_desc, validate
 
@@ -189,6 +191,54 @@ class RYLOGIC_OT_rig_derive_limits(_ArmatureOperator):
 		return {"FINISHED"}
 
 
+class RYLOGIC_OT_rig_copy_ik_limits(_ArmatureOperator):
+	"""Set Blender's IK limits of every bone from its joint limit, so that dragging with Auto IK or IK constraints stays roughly within range. Blender limits each axis separately, so this is an approximation"""
+
+	bl_idname = "rylogic_rig.copy_ik_limits"
+	bl_label = "Copy to IK Limits"
+	bl_options = {"REGISTER", "UNDO"}
+
+	def execute(self, context):
+		# Overwrites any IK limits set by hand
+		count = limits.CopyToIkLimits(ActiveArmature(context))
+		self.report({"INFO"}, f"Set the IK limits of {count} bones")
+		return {"FINISHED"}
+
+
+class RYLOGIC_OT_rig_check_limits(_ArmatureOperator):
+	"""Play the active movement cycle's action and list each bone that leaves its joint limit, with the frames where it does"""
+
+	bl_idname = "rylogic_rig.check_limits"
+	bl_label = "Check Limits"
+
+	@classmethod
+	def poll(cls, context):
+		# Needs an active cycle with an action
+		armature_obj = ActiveArmature(context)
+		if armature_obj is None:
+			return False
+
+		rig = armature_obj.data.rylogic_rig
+		return 0 <= rig.active_cycle < len(rig.cycles) and rig.cycles[rig.active_cycle].action is not None
+
+	def execute(self, context):
+		# Report each bone outside its limit, worst first, in the Rig panel and the Info editor
+		armature_obj = ActiveArmature(context)
+		rig = armature_obj.data.rylogic_rig
+		action = rig.cycles[rig.active_cycle].action
+		violations = limits.CheckAction(armature_obj, context.scene, action)
+		lines = [
+			f"{v.bone}: {math.degrees(v.worst_excess):.1f}° over at frame {v.worst_frame} (frames {limits.FrameRanges(v.frames)})"
+			for v in violations
+		]
+		_SetReport(lines or [f"Valid: '{action.name}' stays within the joint limits"])
+		for line in lines:
+			self.report({"WARNING"}, line)
+
+		self.report({"WARNING"} if lines else {"INFO"}, f"{len(lines)} bones leave their limits in '{action.name}'" if lines else f"'{action.name}' stays within the joint limits")
+		return {"FINISHED"}
+
+
 class RYLOGIC_OT_rig_symmetrize_limits(_ArmatureOperator):
 	"""Copy the joint limit and stiffness of each selected bone, mirrored, to its left/right partner"""
 
@@ -257,13 +307,13 @@ class RYLOGIC_OT_rig_contact_pick(_ArmatureOperator):
 			return {"RUNNING_MODAL"}
 
 		depsgraph = context.evaluated_depsgraph_get()
-		hit, location, normal, face, mesh_obj, _ = context.scene.ray_cast(depsgraph, *ray)
+		hit, location, _, face, mesh_obj, _ = context.scene.ray_cast(depsgraph, *ray)
 		if not hit or not _Deforms(mesh_obj, armature_obj):
 			self.report({"WARNING"}, f"Click on a mesh deformed by '{armature_obj.name}'")
 			return {"RUNNING_MODAL"}
 
 		try:
-			bone, offset, direction = ContactFromSurface(armature_obj, mesh_obj.evaluated_get(depsgraph), location, normal, face)
+			bone, offset, direction = ContactFromSurface(armature_obj, mesh_obj.evaluated_get(depsgraph), location, face)
 		except ValueError as error:
 			self.report({"WARNING"}, str(error))
 			return {"RUNNING_MODAL"}
@@ -284,8 +334,10 @@ class RYLOGIC_OT_rig_contact_pick(_ArmatureOperator):
 			area.tag_redraw()
 
 
-def ContactFromSurface(armature_obj: bpy.types.Object, mesh_eval: bpy.types.Object, location: Vector, normal: Vector, face: int) -> tuple[str, Vector, Vector]:
+def ContactFromSurface(armature_obj: bpy.types.Object, mesh_eval: bpy.types.Object, location: Vector, face: int) -> tuple[str, Vector, Vector]:
 	"""Return the bone, bone-space offset and bone-space normal of a contact at a world-space surface point of an evaluated (posed) mesh.
+
+	The normal is the shaded normal at the point (see ShadedNormal), so it follows the smooth surface that is rendered rather than the faceted mesh.
 
 	The bone is the deforming bone with the most weight over the vertices of the hit face. Raises ValueError if no bone of the armature weights that face.
 	"""
@@ -306,8 +358,24 @@ def ContactFromSurface(armature_obj: bpy.types.Object, mesh_eval: bpy.types.Obje
 	name = max(totals, key=totals.get)
 	frame = armature_obj.matrix_world @ armature_obj.pose.bones[name].matrix
 	offset = frame.inverted_safe() @ location
-	direction = (frame.to_3x3().inverted_safe() @ normal).normalized()
+	direction = (frame.to_3x3().inverted_safe() @ ShadedNormal(mesh_eval, location, face)).normalized()
 	return name, offset, direction
+
+
+def ShadedNormal(mesh_eval: bpy.types.Object, location: Vector, face: int) -> Vector:
+	"""Return the world-space normal used for shading at a world-space point on a face of an evaluated mesh.
+
+	For a smooth-shaded face this blends the face's corner normals by the point's position within the face. For a flat-shaded face it is the face normal.
+	"""
+	# Weight each corner of the face by the point's position within it, in object space
+	mesh = mesh_eval.data
+	polygon = mesh.polygons[face]
+	point = mesh_eval.matrix_world.inverted_safe() @ location
+	weights = poly_3d_calc([mesh.vertices[vertex].co for vertex in polygon.vertices], point)
+	normal = sum((weight * mesh.corner_normals[corner].vector for weight, corner in zip(weights, polygon.loop_indices)), Vector())
+
+	# Normals transform by the inverse transpose so that they stay perpendicular to the surface under non-uniform scale
+	return (mesh_eval.matrix_world.to_3x3().inverted_safe().transposed() @ normal).normalized()
 
 
 def _MouseRay(context: bpy.types.Context, event: bpy.types.Event) -> tuple[Vector, Vector] | None:
@@ -551,6 +619,8 @@ CLASSES = (
 	RYLOGIC_OT_rig_capture_pose,
 	RYLOGIC_OT_rig_derive_limits,
 	RYLOGIC_OT_rig_symmetrize_limits,
+	RYLOGIC_OT_rig_check_limits,
+	RYLOGIC_OT_rig_copy_ik_limits,
 	RYLOGIC_OT_rig_contact_pick,
 	RYLOGIC_OT_gait_validate,
 	RYLOGIC_OT_gait_export,

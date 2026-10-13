@@ -37,6 +37,11 @@ MIN_POSITION_FRACTION = 0.01
 # Stance rotations closer to the rest rotation than this, in radians, are left out
 MIN_STANCE_ANGLE = math.radians(0.1)
 
+# A cycle loops if every bone's pose at the last frame matches its pose at the first frame, after removing the travel, within these tolerances:
+# radians for rotations, and a fraction of the stride for positions
+LOOP_ROTATION_TOLERANCE = math.radians(1.0)
+LOOP_POSITION_FRACTION = 0.01
+
 
 @dataclass
 class _Limb:
@@ -175,13 +180,18 @@ def _SampleAction(armature_obj: bpy.types.Object, context: bpy.types.Context, sp
 
 
 def _MeasureCycle(armature: bpy.types.Armature, space: ModelSpace, root: str, limbs: list[_Limb], name: str, samples: _Samples) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-	"""Measure one sampled cycle. Returns its '.gait' cycle and the stance of its mean pose. Raises ValueError if the root bone does not move forward."""
+	"""Measure one sampled cycle. Returns its '.gait' cycle and the stance of its mean pose.
+
+	Raises ValueError if the root bone does not move forward, or if the cycle does not loop (see '_CheckLoops').
+	"""
 	# The body moves steadily by one stride per cycle. Body-relative values remove that travel.
 	n = samples.frames
 	travel = samples.model[n][root].to_translation() - samples.model[0][root].to_translation()
 	stride = travel.length
 	if stride < 1e-6:
 		raise ValueError(f"Cycle '{name}' does not move the root bone '{root}' forward")
+
+	_CheckLoops(name, samples, travel)
 
 	speed = stride * samples.fps / n
 	phases = [i / n for i in range(n)]
@@ -251,6 +261,29 @@ def _MeasureCycle(armature: bpy.types.Armature, space: ModelSpace, root: str, li
 
 	cycle = {"name": name, "speed": speed, "stride": stride, "swing_height": swing_height, "footfalls": footfalls, "motion": motion}
 	return cycle, stance
+
+
+def _CheckLoops(name: str, samples: _Samples, travel: Vector) -> None:
+	"""Raise ValueError, naming the worst bones, if the pose at the last frame is not the pose at the first frame moved forward by 'travel'."""
+	# Compare each bone's model-space rotation and travel-corrected position between the first and last frames
+	first, last = samples.model[0], samples.model[samples.frames]
+	position_tolerance = LOOP_POSITION_FRACTION * travel.length
+	mismatches: list[tuple[float, str]] = []
+	for bone, start in first.items():
+		angle = start.to_quaternion().rotation_difference(last[bone].to_quaternion()).angle
+		distance = (last[bone].to_translation() - travel - start.to_translation()).length
+		if angle > LOOP_ROTATION_TOLERANCE or distance > position_tolerance:
+			score = max(angle / LOOP_ROTATION_TOLERANCE, distance / position_tolerance)
+			mismatches.append((score, f"'{bone}' ({math.degrees(angle):.1f}°, {distance:.3g} apart)"))
+
+	if not mismatches:
+		return
+
+	# Report the worst few, because one wrong parent key moves every bone below it
+	mismatches.sort(reverse=True)
+	worst = ", ".join(text for _, text in mismatches[:3])
+	more = f" and {len(mismatches) - 3} more" if len(mismatches) > 3 else ""
+	raise ValueError(f"Cycle '{name}' does not loop: the last frame does not match the first frame moved forward by one stride. Worst bones: {worst}{more}")
 
 
 def _ContactPoints(limb: _Limb, samples: _Samples, scale: float) -> list[Vector]:

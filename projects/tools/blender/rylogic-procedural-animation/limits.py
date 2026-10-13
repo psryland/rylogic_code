@@ -21,6 +21,9 @@ from mathutils import Matrix, Quaternion, Vector
 
 BONE_PATH = re.compile(r'^pose\.bones\["(?P<name>(?:[^"\\]|\\.)*)"\]\.')
 
+# Rotations within this angle of a joint's limit count as inside it, so that poses keyed exactly at a limit are not reported
+LIMIT_TOLERANCE = math.radians(0.1)
+
 
 @dataclass
 class SwingTwist:
@@ -108,6 +111,121 @@ def SwingExcess(joint, swing_x: float, swing_z: float) -> float:
 			return math.inf
 
 	return excess
+
+
+def PoseRotation(pose_bone: bpy.types.PoseBone) -> Quaternion:
+	"""Return the bone's current rotation from its rest pose, in its rest space, including the effect of constraints and IK."""
+	# The rest frame follows the parent's current pose, which is how the solver applies limits. Scale is removed from both frames.
+	bone = pose_bone.bone
+	parent_pose = pose_bone.parent.matrix if pose_bone.parent else Matrix.Identity(4)
+	parent_rest = bone.parent.matrix_local if bone.parent else Matrix.Identity(4)
+	rest = (parent_pose @ parent_rest.inverted() @ bone.matrix_local).to_3x3().normalized()
+	return (rest.inverted() @ pose_bone.matrix.to_3x3().normalized()).to_quaternion()
+
+
+def LimitExcess(joint, rot: Quaternion) -> float:
+	"""Return roughly how far, in radians, a rotation from rest is outside the joint's limit. Zero when it is inside, or the joint is unlimited."""
+	# An unlimited joint accepts every rotation
+	if not joint.use_limit:
+		return 0.0
+
+	# Twist is outside its range by a plain angle difference
+	st = Decompose(rot)
+	twist = max(joint.twist_min - st.twist, st.twist - joint.twist_max, 0.0)
+
+	# Swing on an axis with no range that way is all outside. On the other axes, swing is outside by the part of its length beyond the ellipse.
+	blocked = 0.0
+	inside: list[tuple[float, float]] = []
+	for value, low, high in ((st.swing_x, joint.swing_x_min, joint.swing_x_max), (st.swing_z, joint.swing_z_min, joint.swing_z_max)):
+		radius = high if value >= 0 else -low
+		if radius > 0:
+			inside.append((value, radius))
+		else:
+			blocked = math.hypot(blocked, value)
+
+	excess = sum((value / radius) ** 2 for value, radius in inside)
+	beyond = math.hypot(*(value for value, _ in inside)) * (1.0 - 1.0 / math.sqrt(excess)) if excess > 1.0 else 0.0
+	return max(math.hypot(blocked, beyond), twist)
+
+
+@dataclass
+class LimitViolation:
+	"""A bone that leaves its joint limit during an action."""
+
+	bone: str
+	frames: list[int]
+	worst_frame: int
+	worst_excess: float
+
+
+def CheckAction(armature_obj: bpy.types.Object, scene: bpy.types.Scene, action: bpy.types.Action) -> list[LimitViolation]:
+	"""Play 'action' on the armature over its frame range and return each bone that leaves its joint limit, worst first.
+
+	The evaluated pose is checked, so constraints and IK count. The armature's action and the scene's frame are restored afterwards.
+	"""
+	# Evaluate every frame of the range, including the last
+	start, end = (int(round(f)) for f in action.frame_range)
+	animation_data = armature_obj.animation_data or armature_obj.animation_data_create()
+	saved_action, saved_frame = animation_data.action, scene.frame_current
+	found: dict[str, LimitViolation] = {}
+	try:
+		animation_data.action = action
+		for frame in range(start, end + 1):
+			# Record each bone outside its limit, keeping its worst frame
+			scene.frame_set(frame)
+			for pose_bone in armature_obj.pose.bones:
+				excess = LimitExcess(pose_bone.bone.rylogic_rig, PoseRotation(pose_bone))
+				if excess <= LIMIT_TOLERANCE:
+					continue
+
+				violation = found.setdefault(pose_bone.name, LimitViolation(pose_bone.name, [], frame, 0.0))
+				violation.frames.append(frame)
+				if excess > violation.worst_excess:
+					violation.worst_frame, violation.worst_excess = frame, excess
+	finally:
+		# Leave the authoring state as it was
+		animation_data.action = saved_action
+		scene.frame_set(saved_frame)
+
+	return sorted(found.values(), key=lambda violation: -violation.worst_excess)
+
+
+def CopyToIkLimits(armature_obj: bpy.types.Object) -> int:
+	"""Set each pose bone's Blender IK limits from its joint limit, so that Blender's IK, including Auto IK, keeps roughly within it.
+
+	Swing X and Z map to the IK X and Z ranges and twist maps to the IK Y range. Blender limits each axis separately, so the swing ellipse becomes the
+	box around it, and the result is an approximation. Blender's ranges must contain the rest pose, so they are widened to include zero. A zero-width
+	range locks its axis. Bones without a joint limit have their IK limits cleared. Returns the number of bones with IK limits.
+	"""
+	# Configure the three IK axes of every bone
+	count = 0
+	for pose_bone in armature_obj.pose.bones:
+		joint = pose_bone.bone.rylogic_rig
+		ranges = {"x": (joint.swing_x_min, joint.swing_x_max), "y": (joint.twist_min, joint.twist_max), "z": (joint.swing_z_min, joint.swing_z_max)}
+		for axis, (low, high) in ranges.items():
+			low, high = min(low, 0.0), max(high, 0.0)
+			locked = joint.use_limit and high - low <= LIMIT_TOLERANCE
+			setattr(pose_bone, f"lock_ik_{axis}", locked)
+			setattr(pose_bone, f"use_ik_limit_{axis}", joint.use_limit and not locked)
+			setattr(pose_bone, f"ik_min_{axis}", low if joint.use_limit else -math.pi)
+			setattr(pose_bone, f"ik_max_{axis}", high if joint.use_limit else math.pi)
+
+		count += joint.use_limit
+
+	return count
+
+
+def FrameRanges(frames: list[int]) -> str:
+	"""Describe ascending frame numbers as runs, e.g. '3-7, 12'."""
+	# Start a new run at each gap
+	runs: list[list[int]] = []
+	for frame in frames:
+		if runs and frame == runs[-1][1] + 1:
+			runs[-1][1] = frame
+		else:
+			runs.append([frame, frame])
+
+	return ", ".join(f"{low}-{high}" if high != low else f"{low}" for low, high in runs)
 
 
 def RangeOfMotionFrames(action: bpy.types.Action) -> tuple[list[float], set[str]]:
