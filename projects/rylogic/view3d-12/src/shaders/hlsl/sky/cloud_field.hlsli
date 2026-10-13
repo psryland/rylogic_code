@@ -173,6 +173,7 @@ struct CloudShape
 	float height;      // Low cloud only: the slab's height above its base plane, in world units.
 	float sigma;       // Low cloud only: the extinction per world unit of the densest cloud.
 	float opacity;     // Mid-level and cirrus only: the optical thickness of the sheet's densest cloud, seen straight up.
+	float deck;        // Mid-level only: how far the gaps are filled by a continuous sheet, from 0 (separate clouds) to 1 (no gaps).
 };
 
 // The shape of 'layer' where the cover is 'cover'. 'c' is the layer's noise coordinates there, and 'lod' its mip level.
@@ -212,7 +213,18 @@ CloudShape CloudLayerShape(CloudConstants clouds, int layer, float cover, CloudC
 
 	// The thin sheets are partly translucent while the cover is sparse. Mid-level cloud is thicker than cirrus, and faint until its cover ramp completes.
 	s.opacity = layer == 0 ? 0.0 : (layer == 1 ? 3.0 * mid_ramp : 0.8) * lerp(0.5, 1.0, s.build);
+
+	// Heavy cover closes the mid-level gaps with a continuous sheet, so the sky above cannot show through the low cloud.
+	// The sheet's grey still follows the field (see CloudSheet), so a full sheet keeps lighter and darker regions.
+	s.deck = layer == 1 ? smoothstep(0.6, 0.8, cover) : 0.0;
 	return s;
+}
+
+// The coverage in [0,1] of a mid-level or cirrus sheet at a point with edge distance 'edge' (see CloudEdge). The deck fills the gaps.
+float CloudSheetCoverage(CloudShape s, float edge)
+{
+	// Opacity rises over the soft band above the cloud edge.
+	return lerp(saturate(edge / s.softness), 1.0, s.deck);
 }
 
 // How far a point with cloud field 'field' and fray 'fray' lies inside the cloud edge, in field units. Negative outside the cloud.
@@ -323,7 +335,7 @@ float CloudShadow(CloudConstants clouds, float3 ws_pos, float3 ws_to_light, floa
 		float2 xy = pos.xy + travel * (altitude - pos.z);
 		CloudCoords c = CloudUV(clouds, 1, xy);
 		CloudShape s = CloudLayerShape(clouds, 1, CloudCover(clouds, xy), c, lod, lower_scale);
-		float coverage = saturate(CloudEdge(s, CloudField(clouds, c, lod, s.lump_scale), 0.0) / s.softness);
+		float coverage = CloudSheetCoverage(s, CloudEdge(s, CloudField(clouds, c, lod, s.lump_scale), 0.0));
 		float alpha = 1.0 - exp(-coverage * coverage * s.opacity * slant);
 		transmit *= 1.0 - 0.4 * alpha;
 	}
