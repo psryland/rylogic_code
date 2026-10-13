@@ -12,13 +12,14 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 from mathutils import Matrix, Vector
 
-from .limits import SwingRotation
+from .limits import LIMIT_TOLERANCE, LimitExcess, PoseRotation, SwingRotation
 
 COLOUR_SWING = (1.0, 0.45, 0.1, 1.0)
 COLOUR_TWIST = (1.0, 0.85, 0.1, 1.0)
 COLOUR_POLE = (0.9, 0.2, 0.9, 1.0)
 COLOUR_FORWARD = (0.1, 0.85, 0.95, 1.0)
 COLOUR_CONTACT = (0.2, 0.95, 0.3, 1.0)
+COLOUR_VIOLATION = (1.0, 0.1, 0.1, 1.0)
 SEGMENTS = 24
 
 _handle = None
@@ -56,11 +57,16 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 	def Shown(names) -> bool:
 		return not selected or any(name in selected for name in names)
 
-	# Joint limits, about each bone's rest direction under its parent's current frame
+	# Joint limits, about each bone's rest direction under its parent's current frame.
+	# A bone outside its limit is always drawn, in red along with the bone itself, so that animating past a limit is noticed.
 	for pose_bone in pose.bones:
 		bone = pose_bone.bone
 		joint = bone.rylogic_rig
-		if not rig.show_limits or not joint.use_limit or not Shown([pose_bone.name]):
+		if not joint.use_limit:
+			continue
+
+		violated = LimitExcess(joint, PoseRotation(pose_bone)) > LIMIT_TOLERANCE
+		if not violated and (not rig.show_limits or not Shown([pose_bone.name])):
 			continue
 
 		parent_frame = world @ pose_bone.parent.matrix if pose_bone.parent else world
@@ -68,10 +74,12 @@ def _AddArmature(obj: bpy.types.Object, lines: dict[tuple, list[Vector]]) -> Non
 		frame = (parent_frame @ parent_rest.inverted() @ bone.matrix_local).normalized()
 		apex = (world @ pose_bone.matrix).to_translation()
 		length = bone.length * world.to_scale().y
+		if violated:
+			lines.setdefault(COLOUR_VIOLATION, []).extend([apex, (world @ pose_bone.matrix @ Vector((0, bone.length, 0)))])
 		if not (_IsFull(joint.swing_x_min, joint.swing_x_max) and _IsFull(joint.swing_z_min, joint.swing_z_max)):
-			_AddSwing(lines.setdefault(COLOUR_SWING, []), apex, frame.to_3x3(), joint, length)
+			_AddSwing(lines.setdefault(COLOUR_VIOLATION if violated else COLOUR_SWING, []), apex, frame.to_3x3(), joint, length)
 		if not _IsFull(joint.twist_min, joint.twist_max):
-			_AddTwist(lines.setdefault(COLOUR_TWIST, []), apex, frame.to_3x3(), joint.twist_min, joint.twist_max, length)
+			_AddTwist(lines.setdefault(COLOUR_VIOLATION if violated else COLOUR_TWIST, []), apex, frame.to_3x3(), joint.twist_min, joint.twist_max, length)
 
 	# Limb poles from the middle joint, and the neck's facing direction from its last bone
 	rotation = world.to_quaternion()

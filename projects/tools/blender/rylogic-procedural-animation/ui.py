@@ -3,7 +3,7 @@
 import bpy
 from bpy.types import Panel, UIList
 
-from . import operators
+from . import operators, pin
 
 
 class RYLOGIC_UL_rig_chains(UIList):
@@ -87,6 +87,7 @@ class RYLOGIC_PT_rig(Panel):
 		row.operator("rylogic_rig.capture_pose", icon="KEYFRAME")
 		row.operator("rylogic_rig.derive_limits", icon="CON_ROTLIMIT")
 		row.operator("rylogic_rig.symmetrize_limits", icon="MOD_MIRROR")
+		box.operator("rylogic_rig.copy_ik_limits", icon="CON_KINEMATIC")
 
 		# Chains, with the active chain's details
 		layout.label(text="Chains")
@@ -138,7 +139,14 @@ class RYLOGIC_PT_rig(Panel):
 			box.prop(cycle, "family")
 			box.prop(cycle, "action")
 
+		# Hold planted feet still while the body moves over them
+		layout.prop(rig, "pin_live", icon="PINNED", toggle=True)
+		pinned = pin.PinnedBones(context.active_object) if rig.pin_live and context.active_object.data == armature else []
+		if pinned:
+			layout.label(text=f"Pinned: {', '.join(pinned)}")
+
 		row = layout.row(align=True)
+		row.operator("rylogic_rig.check_limits", icon="CON_ROTLIMIT")
 		row.operator("rylogic_rig.gait_validate", icon="CHECKMARK")
 		row.operator("rylogic_rig.gait_export", icon="EXPORT")
 
