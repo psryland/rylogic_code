@@ -695,8 +695,21 @@ namespace pr::console
 					rhs.m_what = Unknown;
 					rhs.m_ptr = 0;
 				}
-				Item& operator = (Item const& rhs) { this->~Item(); new (this) Item(rhs); }
-				Item& operator = (Item&& rhs)      { this->~Item(); new (this) Item((Item&&)rhs); }
+				Item& operator = (Item const& rhs)
+				{
+					// Copy first so a failed allocation leaves this item unchanged, then swap so the temporary frees the old value
+					if (this != &rhs)
+						*this = Item(rhs);
+
+					return *this;
+				}
+				Item& operator = (Item&& rhs) noexcept
+				{
+					// Swap so 'rhs' frees the old value when it is destroyed
+					std::swap(m_what, rhs.m_what);
+					std::swap(m_ptr, rhs.m_ptr);
+					return *this;
+				}
 			};
 
 			Console*          m_cons; // The console that this pad belongs to
