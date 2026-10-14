@@ -27,7 +27,8 @@ HARMONICS = 2
 # A foot is planted while it moves slower than this fraction of the body's speed...
 PLANTED_SPEED_FRACTION = 0.1
 
-# ...and is within this fraction of its vertical travel above its lowest point
+# ...and is near the lowest height at which it is still: within this fraction of its vertical travel. Measuring from the still heights, rather than
+# the lowest of all heights, keeps a foot planted when its swing dips lower than where it stands.
 PLANTED_HEIGHT_FRACTION = 0.25
 
 # Motion smaller than these amplitudes is dropped: radians for rotations, and a fraction of the stride for positions
@@ -80,16 +81,19 @@ def WalkingLimbs(armature: bpy.types.Armature) -> list[_Limb]:
 
 
 def BuildGaitDesc(armature_obj: bpy.types.Object, context: bpy.types.Context) -> dict[str, Any]:
-	"""Return the '.gait' description of an armature's movement cycles as a JSON-compatible dictionary.
+	"""Return the '.gait' description of an armature's movement cycles as a JSON-compatible dictionary. Cycles with 'use_export' off are left out.
 
 	Plays each cycle's action on the armature to measure it, then restores the armature's action and the scene's frame. Raises ValueError if a cycle
 	cannot be measured. The description is not validated; see 'ValidateGaitDesc'.
 	"""
-	# Group the cycles by family, keeping the order in which families first appear
+	# Group the exported cycles by family, keeping the order in which families first appear. Unexported cycles are not measured, so they may be unfinished.
 	space = ModelSpace(armature_obj)
 	limbs = WalkingLimbs(armature_obj.data)
 	families: dict[str, list[tuple[str, _Samples]]] = {}
 	for cycle in armature_obj.data.rylogic_rig.cycles:
+		if not cycle.use_export:
+			continue
+
 		if cycle.action is None:
 			raise ValueError(f"Cycle '{cycle.name}' has no action")
 
@@ -112,7 +116,7 @@ def ValidateGaitDesc(desc: dict[str, Any]) -> list[str]:
 	"""
 	errors: list[str] = []
 	if not desc["families"]:
-		errors.append("There are no movement cycles")
+		errors.append("There are no exported movement cycles")
 
 	names = [family["name"] for family in desc["families"]]
 	for family in desc["families"]:
@@ -204,7 +208,7 @@ def _MeasureCycle(armature: bpy.types.Armature, space: ModelSpace, root: str, li
 	feet_centre = Vector()
 	for limb in limbs:
 		points = _ContactPoints(limb, samples, space.scale)
-		footfall, lift = _Footfall(limb, points, samples, speed)
+		footfall, lift = _Footfall(limb, points, samples, stride)
 		if footfall is not None:
 			footfalls.append(footfall)
 			walking.update(limb.bones)
@@ -294,16 +298,21 @@ def _ContactPoints(limb: _Limb, samples: _Samples, scale: float) -> list[Vector]
 	return [samples.model[i][end] @ offset for i in range(samples.frames + 1)]
 
 
-def _Footfall(limb: _Limb, points: list[Vector], samples: _Samples, body_speed: float) -> tuple[dict[str, Any] | None, float]:
-	"""Find when a limb's contact is planted from its sampled positions. Returns its footfall, or None if the limb does not walk, and the height that it lifts."""
-	# A contact is planted from frame i to i+1 while it stays still and near its lowest point, so the planted frames count the time spent planted
+def _Footfall(limb: _Limb, points: list[Vector], samples: _Samples, stride: float) -> tuple[dict[str, Any] | None, float]:
+	"""Find when a limb's contact is planted from its sampled positions, in a cycle whose body moves 'stride' forward.
+	Returns its footfall, or None if the limb does not walk, and the height that it lifts."""
+	# A contact is planted from frame i to i+1 while it stays still and near the ground, so the planted frames count the time spent planted.
+	# The ground is the lowest still height, which excludes a foot paused high in its swing and a swing that dips below the ground.
 	n = samples.frames
+	body_speed = stride * samples.fps / n
 	heights = [p.z for p in points[:n]]
 	low, high = min(heights), max(heights)
-	planted = []
-	for i in range(n):
-		speed = (points[i + 1] - points[i]).length * samples.fps
-		planted.append(speed < PLANTED_SPEED_FRACTION * body_speed and heights[i] <= low + max(PLANTED_HEIGHT_FRACTION * (high - low), 1e-5))
+	still = [(points[i + 1] - points[i]).length * samples.fps < PLANTED_SPEED_FRACTION * body_speed for i in range(n)]
+	if not any(still):
+		return None, 0.0
+
+	ground = min(heights[i] for i in range(n) if still[i]) + max(PLANTED_HEIGHT_FRACTION * (high - low), 1e-5)
+	planted = [still[i] and heights[i] <= ground for i in range(n)]
 
 	# The limb walks if it is planted for part of the cycle. Touchdown is the start of the longest planted run.
 	count = sum(planted)
