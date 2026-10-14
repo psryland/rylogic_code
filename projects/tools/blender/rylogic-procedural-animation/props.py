@@ -136,6 +136,7 @@ class RYLOGIC_PG_GaitCycle(PropertyGroup):
 	action: PointerProperty(name="Action", type=bpy.types.Action, description="The cycle's action. Its frame range covers exactly one cycle")
 	family: StringProperty(name="Family", default="quadruped", description="The group of cycles that share a stance and walking limbs, e.g. 'bipedal' or 'quadruped'")
 	use_export: BoolProperty(name="Export", default=True, description="Include the cycle in the '.gait'. Turn off to keep an unfinished cycle without validating or exporting it")
+	hip_height: FloatProperty(name="Hip Height", default=0.5, min=0.05, max=1.0, description="The height at which the legs carry the hip joints above the ground, as a fraction of the legs' reach, e.g. 0.5 for a crouching quadruped or 0.9 for an upright biped. The runtime sets the body's height from this, not from the action's poses")
 
 
 class RYLOGIC_PG_Rig(PropertyGroup):
