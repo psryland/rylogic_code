@@ -39,7 +39,6 @@ namespace pr
 				auto cp = reinterpret_cast<LPCREATESTRUCT>(lparam);
 				self = reinterpret_cast<DummyWindow*>(cp->lpCreateParams);
 				SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(self));
-				self->m_hwnd = hwnd;
 			} 
 			else
 			{
@@ -82,7 +81,8 @@ namespace pr
 					throw std::runtime_error(HrMsg(GetLastError()).c_str());
 			}
 
-			::CreateWindowExW(0, (LPCWSTR)MAKEINTATOM(atom), L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, m_hinstance, this);
+			// Take the handle only from a successful creation. Creation can fail after WM_NCCREATE, and the system has then already destroyed the window.
+			m_hwnd = ::CreateWindowExW(0, (LPCWSTR)MAKEINTATOM(atom), L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, m_hinstance, this);
 			if (m_hwnd == nullptr)
 				throw std::runtime_error(HrMsg(GetLastError()).c_str());
 		}

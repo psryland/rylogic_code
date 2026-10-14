@@ -674,7 +674,21 @@ namespace pr::console
 				Item(std::wstring line) :m_what(WString)     ,m_linew(new std::wstring(line)) {}
 				Item(Colours colour)    :m_what(SetColours)  ,m_colour(new Colours(colour)) {}
 				Item(Coord coord)       :m_what(SetCursor)   ,m_cursor(new Coord(coord)) {}
-				~Item() { delete m_ptr; }
+				~Item()
+				{
+					// Delete through the active union member so the owned value is destroyed with its own type
+					switch (m_what)
+					{
+					case Unknown:      break;
+					case NewLine:      break;
+					case CurrentInput: break;
+					case AString:      delete m_linea; break;
+					case WString:      delete m_linew; break;
+					case SetColours:   delete m_colour; break;
+					case SetCursor:    delete m_cursor; break;
+					default:           assert(false && "Unknown item type"); break;
+					}
+				}
 
 				Item(Item const& rhs) :m_what(rhs.m_what) ,m_ptr()
 				{
