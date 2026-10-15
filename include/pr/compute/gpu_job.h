@@ -474,7 +474,7 @@ namespace pr::compute::tests
 		{
 			ComGpu gpu;
 			ComputeJob job(gpu, "DefaultResState", 0xFF000000);
-			auto buf = gpu.CreateResource(ResDesc::Buf<int>(4, {}), job.m_cmd_list, "DefaultState");
+			auto buf = gpu.CreateResource(ResDesc::Buf<int>(4, {}), job, "DefaultState");
 			DefaultResState(buf.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 			PR_EXPECT(DefaultResState(static_cast<ID3D12Resource const*>(buf.get())) == D3D12_RESOURCE_STATE_COPY_DEST);
 			DefaultResState(buf.get(), D3D12_RESOURCE_STATE_COMMON);
@@ -488,7 +488,7 @@ namespace pr::compute::tests
 			// A 5x3 texture with two mips needs an aligned offset before mip 1
 			GfxGpu gpu;
 			GraphicsJob job(gpu, "UpdateSubresourceMips", 0xFF000000);
-			auto tex = gpu.CreateResource(ResDesc::Tex2D(Image(5, 3, nullptr, DXGI_FORMAT_R32_FLOAT), 2), job.m_cmd_list, "Mips");
+			auto tex = gpu.CreateResource(ResDesc::Tex2D(Image(5, 3, nullptr, DXGI_FORMAT_R32_FLOAT), 2), job, "Mips");
 			GfxUpdateSubresourceScope update(job.m_cmd_list, job.m_upload, tex.get(), 0, 0, 2, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 			// The last row of the last mip must end inside the allocation. The padding after the last row is not needed by the copy.
@@ -512,7 +512,7 @@ namespace pr::compute::tests
 			// Update a 3x2 box at (1,1) of a zero-initialised 5x3 texture
 			GfxGpu gpu;
 			GraphicsJob job(gpu, "UpdateSubresourceBox", 0xFF000000);
-			auto tex = gpu.CreateResource(ResDesc::Tex2D(Image(5, 3, nullptr, DXGI_FORMAT_R32_FLOAT), 1), job.m_cmd_list, "Box");
+			auto tex = gpu.CreateResource(ResDesc::Tex2D(Image(5, 3, nullptr, DXGI_FORMAT_R32_FLOAT), 1), job, "Box");
 			float const box[] = { 1, 2, 3, 4, 5, 6 };
 			GfxUpdateSubresourceScope update(job.m_cmd_list, job.m_upload, tex.get(), 0, 0, 1, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, { 1, 1, 0 }, { 3, 2, 1 });
 			update.Write(Image(3, 2, box, DXGI_FORMAT_R32_FLOAT));
@@ -540,7 +540,7 @@ namespace pr::compute::tests
 			GraphicsJob job(gpu, "UpdateSubresourceRestore", 0xFF000000);
 			auto desc = ResDesc::Tex2D(Image(4, 4, nullptr, DXGI_FORMAT_R32_FLOAT), 1);
 			desc.DepthOrArraySize = 2;
-			auto tex = gpu.CreateResource(desc, job.m_cmd_list, "Array");
+			auto tex = gpu.CreateResource(desc, job, "Array");
 			job.m_barriers.Transition(tex.get(), D3D12_RESOURCE_STATE_COPY_SOURCE, 1);
 			job.m_barriers.Commit();
 
@@ -555,6 +555,22 @@ namespace pr::compute::tests
 			PR_EXPECT(state[0] == D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 			PR_EXPECT(state[1] == D3D12_RESOURCE_STATE_COPY_SOURCE);
 			job.Run();
+		}
+
+		// Initial data must be staged and copied by the job that creates the resource, and the 'Gpu' must not wait on work it never submitted.
+		PRUnitTestMethod(CreateResourceStagesInitialDataInJob, Extended)
+		{
+			// Create a buffer with initial data and read it back in the same job
+			ComGpu gpu;
+			ComputeJob job(gpu, "CreateResourceInitData", 0xFF000000);
+			int const data[] = { 3, 1, 4, 1, 5 };
+			auto buf = gpu.CreateResource(ResDesc::Buf<int>(_countof(data), data).def_state(D3D12_RESOURCE_STATE_COPY_SOURCE), job, "InitData");
+			auto readback = job.m_readback.Alloc(sizeof(data), alignof(int));
+			job.m_cmd_list.CopyBufferRegion(readback.m_res, readback.m_ofs, buf.get(), 0, sizeof(data));
+			job.Run();
+
+			// The read back values match the initial data
+			PR_EXPECT(std::equal(std::begin(data), std::end(data), readback.ptr<int>()));
 		}
 	};
 }
