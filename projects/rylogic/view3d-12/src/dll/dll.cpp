@@ -2022,15 +2022,21 @@ static view3d::Light ToDllLight(rdr12::Light const& light)
 		.m_inner_angle    = light.m_inner_angle,
 		.m_outer_angle    = light.m_outer_angle,
 		.m_cast_shadow    = light.m_cast_shadow,
+		.m_shadow_cascades   = light.m_shadow_cascades,
+		.m_shadow_resolution = light.m_shadow_resolution,
+		.m_shadow_distance   = light.m_shadow_distance,
+		.m_shadow_fade_start = light.m_shadow_fade_start,
 		.m_cam_relative   = light.m_cam_relative,
 		.m_on             = light.m_on,
 	};
 }
 static rdr12::Light ToRdrLight(view3d::Light const& light)
 {
-	// Validate caller-supplied light positions at the DLL boundary
+	// Validate caller-supplied light positions and shadow layout at the DLL boundary
 	if (light.m_position.w != 1.0f)
 		throw std::invalid_argument("Light position must have w = 1");
+	if (light.m_shadow_cascades < 0 || light.m_shadow_cascades > rdr12::MaxShadowCascades || light.m_shadow_resolution < 0 || !(light.m_shadow_distance >= 0) || !(light.m_shadow_fade_start >= 0))
+		throw std::invalid_argument(std::format("Light shadow cascades must be in [0, {}], and the shadow resolution, distance, and fade start must not be negative", rdr12::MaxShadowCascades));
 
 	rdr12::Light result;
 	result.m_position       = To<v4>(light.m_position);
@@ -2045,6 +2051,10 @@ static rdr12::Light ToRdrLight(view3d::Light const& light)
 	result.m_inner_angle    = light.m_inner_angle;
 	result.m_outer_angle    = light.m_outer_angle;
 	result.m_cast_shadow    = light.m_cast_shadow;
+	result.m_shadow_cascades   = light.m_shadow_cascades;
+	result.m_shadow_resolution = light.m_shadow_resolution;
+	result.m_shadow_distance   = light.m_shadow_distance;
+	result.m_shadow_fade_start = light.m_shadow_fade_start;
 	result.m_cam_relative   = light.m_cam_relative != 0;
 	result.m_on             = light.m_on != 0;
 	return result;
@@ -2159,6 +2169,7 @@ VIEW3D_API view3d::ShadowSettings __stdcall View3D_ShadowSettingsGet(view3d::Win
 		return view3d::ShadowSettings{
 			.m_atlas_size = s.m_atlas_size,
 			.m_directional_resolution = s.m_directional_resolution,
+			.m_far_cascade_resolution = s.m_far_cascade_resolution,
 			.m_spot_resolution = s.m_spot_resolution,
 			.m_point_resolution = s.m_point_resolution,
 			.m_max_shadow_lights = s.m_max_shadow_lights,
@@ -2185,6 +2196,7 @@ VIEW3D_API void __stdcall View3D_ShadowSettingsSet(view3d::Window window, view3d
 		auto s = rdr12::ShadowSettings{};
 		s.m_atlas_size = settings.m_atlas_size;
 		s.m_directional_resolution = settings.m_directional_resolution;
+		s.m_far_cascade_resolution = settings.m_far_cascade_resolution;
 		s.m_spot_resolution = settings.m_spot_resolution;
 		s.m_point_resolution = settings.m_point_resolution;
 		s.m_max_shadow_lights = settings.m_max_shadow_lights;

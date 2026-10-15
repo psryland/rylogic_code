@@ -774,6 +774,10 @@ namespace pr
 			float m_inner_angle;
 			float m_outer_angle;
 			float m_cast_shadow;
+			int   m_shadow_cascades;   // Directional lights only: the number of shadow cascades. Zero means use the scene shadow settings
+			int   m_shadow_resolution; // Directional lights only: requested size of each shadow cascade view (in pixels). Zero means use the scene shadow settings
+			float m_shadow_distance;   // Directional lights only: distance from the camera beyond which the light casts no shadows. Zero means use the scene shadow settings
+			float m_shadow_fade_start; // Directional lights only: distance from the camera at which shadows start to fade out. Zero means 90% of the shadow distance
 			BOOL m_cam_relative;
 			BOOL m_on;
 		};
@@ -781,7 +785,8 @@ namespace pr
 		{
 			int   m_atlas_size;             // Width and height of the square shadow atlas (in pixels). Must be a power of two
 			int   m_directional_resolution; // Requested size of each directional light cascade view (in pixels)
-			int   m_spot_resolution;        // Largest size of a spot light shadow view (in pixels)
+			int   m_far_cascade_resolution; // Requested size of each directional light cascade after the first (in pixels). Zero means the same as 'm_directional_resolution'
+			int   m_spot_resolution;          // Largest size of a spot light shadow view (in pixels)
 			int   m_point_resolution;       // Largest size of each of the six point light shadow views (in pixels)
 			int   m_max_shadow_lights;      // The maximum number of lights that cast shadows. Zero disables shadows
 			int   m_cascade_count;          // The number of cascades for directional lights, in [1,4]
