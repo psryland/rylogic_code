@@ -69,7 +69,7 @@ namespace pr::compute
 		D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = { .HighestShaderModel = D3D_SHADER_MODEL_5_1 };
 		Check(m_device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL)));
 		if (ShaderModel.HighestShaderModel < D3D_SHADER_MODEL_5_1)
-			throw std::runtime_error("DirectX device does not support Compute Shaders 4.x");
+			throw std::runtime_error("DirectX device does not support Shader Model 5.1");
 	}
 
 	// Allocate a DX resource
